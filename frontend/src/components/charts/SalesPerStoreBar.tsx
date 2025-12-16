@@ -1,0 +1,163 @@
+import React from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { Download } from 'lucide-react';
+import { getStoreColor, THEME_COLORS } from '../../constants/colors';
+import { formatCurrency, formatPercentage, calculatePercentageChange } from '../../utils/dateCalculations';
+import { exportChartAsImage } from '../../utils/chartExport';
+
+interface StoreData {
+  store_name: string;
+  current_sales: number;
+  previous_sales: number;
+  color?: string;
+}
+
+interface SalesPerStoreBarProps {
+  data: StoreData[];
+  isLoading?: boolean;
+}
+
+export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
+  data,
+  isLoading = false,
+}) => {
+  if (isLoading) {
+    return (
+      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[350px]">
+        <h3 className="text-lg font-bold text-white mb-4">Sales per Store</h3>
+        <div className="flex items-center justify-center h-[280px]">
+          <div className="animate-pulse text-gray-400">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[350px]">
+        <h3 className="text-lg font-bold text-white mb-4">Sales per Store</h3>
+        <div className="flex items-center justify-center h-[280px] text-gray-400">
+          No data available
+        </div>
+      </div>
+    );
+  }
+
+  // Filter out stores with no data, sort by sales (highest to lowest) and add colors
+  const chartData = [...data]
+    .filter((item) => item.current_sales > 0 || item.previous_sales > 0)
+    .sort((a, b) => b.current_sales - a.current_sales)
+    .map((item) => ({
+      ...item,
+      color: getStoreColor(item.store_name),
+      percentageChange: calculatePercentageChange(item.current_sales, item.previous_sales),
+    }));
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-3 shadow-lg">
+          <p className="text-white font-semibold">{data.store_name}</p>
+          <p className="text-[#00d2ff] font-bold">{formatCurrency(data.current_sales)}</p>
+          <p
+            className="text-sm font-semibold"
+            style={{
+              color: data.percentageChange >= 0
+                ? THEME_COLORS.positiveChange
+                : THEME_COLORS.negativeChange,
+            }}
+          >
+            {formatPercentage(data.percentageChange)} vs previous period
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const CustomLabel = (props: any) => {
+    const { x, y, width, index } = props;
+    const item = chartData[index];
+
+    if (!item) return null;
+
+    const percentageChange = item.percentageChange;
+    const isPositive = percentageChange >= 0;
+
+    return (
+      <g>
+        <rect
+          x={x + width / 2 - 30}
+          y={y - 25}
+          width={60}
+          height={20}
+          fill={isPositive ? THEME_COLORS.positiveChange : THEME_COLORS.negativeChange}
+          rx={4}
+          opacity={0.9}
+        />
+        <text
+          x={x + width / 2}
+          y={y - 12}
+          fill="white"
+          textAnchor="middle"
+          fontSize={11}
+          fontWeight="bold"
+        >
+          {formatPercentage(percentageChange)}
+        </text>
+      </g>
+    );
+  };
+
+  const handleExport = () => {
+    exportChartAsImage('sales-per-store-chart', 'sales-per-store');
+  };
+
+  return (
+    <div id="sales-per-store-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[350px]">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-bold text-white">Sales per Store</h3>
+        <button
+          onClick={handleExport}
+          className="flex items-center gap-2 px-3 py-1.5 bg-[#2e303d] hover:bg-[#3a3c4a] text-white rounded-lg transition-colors text-sm"
+          title="Export as image"
+        >
+          <Download size={16} />
+          Export
+        </button>
+      </div>
+      <ResponsiveContainer width="100%" height={280}>
+        <BarChart
+          data={chartData}
+          margin={{ top: 30, right: 20, left: 20, bottom: 5 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke={THEME_COLORS.gridLines} />
+          <XAxis
+            dataKey="store_name"
+            stroke={THEME_COLORS.primaryText}
+            tick={{ fill: THEME_COLORS.primaryText, fontSize: 11 }}
+            angle={-15}
+            textAnchor="end"
+            height={60}
+          />
+          <YAxis
+            stroke={THEME_COLORS.primaryText}
+            tick={{ fill: THEME_COLORS.primaryText, fontSize: 11 }}
+            tickFormatter={(value) => `₱${(value / 1000).toFixed(0)}k`}
+          />
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }} />
+          <Bar
+            dataKey="current_sales"
+            label={<CustomLabel />}
+            radius={[8, 8, 0, 0]}
+          >
+            {chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};

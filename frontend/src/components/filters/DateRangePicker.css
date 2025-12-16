@@ -1,0 +1,280 @@
+/* Date Range Picker Dark Theme Styles */
+
+.date-range-picker-container {
+  background: #1c1e26;
+  border: 1px solid #2e303d;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* Override react-day-picker default styles for dark theme */
+.custom-day-picker {
+  --rdp-cell-size: 40px;
+  --rdp-accent-color: #00d2ff;
+  --rdp-background-color: rgba(0, 210, 255, 0.2);
+  --rdp-accent-color-dark: #00b8e6;
+  --rdp-background-color-dark: rgba(0, 210, 255, 0.1);
+  --rdp-outline: 2px solid var(--rdp-accent-color);
+  --rdp-outline-selected: 2px solid var(--rdp-accent-color);
+}
+
+/* Calendar container */
+.custom-day-picker .rdp-months {
+  display: flex;
+  gap: 30px;
+}
+
+.custom-day-picker .rdp-month {
+  background: transparent;
+}
+
+/* Month caption */
+.custom-day-picker .rdp-caption {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 0 20px 0;
+  color: #fff;
+}
+
+.custom-day-picker .rdp-caption_label {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* Navigation buttons */
+.custom-day-picker .rdp-nav {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.custom-day-picker .rdp-nav_button {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #2e303d;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.custom-day-picker .rdp-nav_button:hover {
+  background: #3a3c4a;
+  transform: scale(1.05);
+}
+
+.custom-day-picker .rdp-nav_button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Weekday headers */
+.custom-day-picker .rdp-head_cell {
+  color: #9ca3af;
+  font-weight: 500;
+  font-size: 12px;
+  text-transform: uppercase;
+  padding: 8px 0;
+}
+
+/* Day cells */
+.custom-day-picker .rdp-cell {
+  padding: 2px;
+}
+
+.custom-day-picker .rdp-day {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #e5e7eb;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+/* Hover state */
+.custom-day-picker .rdp-day:hover:not(.rdp-day_selected):not(.rdp-day_disabled) {
+  background: rgba(52, 152, 219, 0.1);
+  color: #00d2ff;
+}
+
+/* Disabled days */
+.custom-day-picker .rdp-day_disabled {
+  color: #4b5563;
+  cursor: not-allowed;
+  opacity: 0.3;
+}
+
+/* Outside month days */
+.custom-day-picker .rdp-day_outside {
+  color: #6b7280;
+  opacity: 0.5;
+}
+
+/* Today */
+.custom-day-picker .rdp-day_today:not(.rdp-day_selected) {
+  font-weight: 700;
+  color: #00d2ff;
+  background: rgba(0, 210, 255, 0.1);
+  border: 1px solid rgba(0, 210, 255, 0.3);
+}
+
+/* Selected range start */
+.custom-day-picker .rdp-day_range_start {
+  background: #00d2ff !important;
+  color: #fff !important;
+  font-weight: 700;
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* Selected range end */
+.custom-day-picker .rdp-day_range_end {
+  background: #00d2ff !important;
+  color: #fff !important;
+  font-weight: 700;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/* When start and end are the same day */
+.custom-day-picker .rdp-day_range_start.rdp-day_range_end {
+  border-radius: 8px;
+}
+
+/* Days in the middle of range */
+.custom-day-picker .rdp-day_range_middle {
+  background: rgba(0, 210, 255, 0.2) !important;
+  color: #e5e7eb !important;
+  border-radius: 0;
+}
+
+/* Hover preview for range */
+.custom-day-picker .rdp-day_range_middle:hover {
+  background: rgba(0, 210, 255, 0.3) !important;
+}
+
+/* Footer section */
+.date-range-picker-footer {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #2e303d;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.date-range-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+}
+
+.date-hint {
+  color: #9ca3af;
+  font-size: 13px;
+  font-style: italic;
+}
+
+.date-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: #2e303d;
+}
+
+.date-badge.start {
+  border-left: 3px solid #00d2ff;
+}
+
+.date-badge.end {
+  border-left: 3px solid #00d2ff;
+}
+
+.date-badge .label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #9ca3af;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.date-badge .date {
+  font-size: 14px;
+  color: #fff;
+  font-weight: 600;
+}
+
+.arrow {
+  color: #9ca3af;
+  font-size: 16px;
+}
+
+.date-range-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.date-range-actions button {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.date-range-actions .btn-primary {
+  background: linear-gradient(135deg, #00d2ff 0%, #3a47d5 100%);
+  color: #fff;
+}
+
+.date-range-actions .btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 210, 255, 0.4);
+}
+
+.date-range-actions .btn-primary:disabled {
+  background: #2e303d;
+  color: #6b7280;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.date-range-actions .btn-secondary {
+  background: #2e303d;
+  color: #e5e7eb;
+}
+
+.date-range-actions .btn-secondary:hover:not(:disabled) {
+  background: #3a3c4a;
+}
+
+.date-range-actions .btn-secondary:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .custom-day-picker .rdp-months {
+    flex-direction: column;
+    gap: 20px;
+  }
+}
