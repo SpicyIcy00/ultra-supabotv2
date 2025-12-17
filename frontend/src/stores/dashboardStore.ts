@@ -86,7 +86,7 @@ export const useDashboardStore = create<DashboardState>()(
       // Fetch stores from API
       fetchStores: async () => {
         try {
-          let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+          let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
           // Sanitize URL: remove trailing slash and /api/v1 if present
           apiUrl = apiUrl.replace(/\/$/, '').replace(/\/api\/v1$/, '');
           const response = await fetch(`${apiUrl}/api/v1/analytics/stores`);

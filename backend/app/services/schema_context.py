@@ -168,7 +168,8 @@ class SchemaContext:
                         'field': 'is_cancelled',
                         'value': False,
                         'always_apply': True,
-                        'description': 'Filter out cancelled transactions'
+                        'description': 'Filter out cancelled transactions',
+                        'sql_template': 'is_cancelled = false'
                     }
                 ],
                 'date_defaults': {

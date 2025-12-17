@@ -76,7 +76,7 @@ class SQLGenerator:
     """
 
     def __init__(self):
-        self.client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        self.client = Anthropic(api_key=settings.ANTHROPIC_API_KEY, timeout=60.0)
         self.circuit_breaker = CircuitBreaker(failure_threshold=5, timeout=60)
         self.schema = SchemaContext.get_schema()
         self.business_rules = SchemaContext.get_business_rules()
@@ -120,7 +120,7 @@ class SQLGenerator:
             # Call Claude API with timeout
             response = await asyncio.wait_for(
                 self._call_claude_api(prompt),
-                timeout=15.0  # 15 second timeout
+                timeout=60.0  # 60 second timeout
             )
 
             # Parse the response
@@ -133,7 +133,7 @@ class SQLGenerator:
 
         except asyncio.TimeoutError:
             self.circuit_breaker.record_failure()
-            raise APITimeoutError("SQL generation timed out after 15 seconds")
+            raise APITimeoutError("SQL generation timed out after 60 seconds")
 
         except (APIError, Exception) as e:
             self.circuit_breaker.record_failure()

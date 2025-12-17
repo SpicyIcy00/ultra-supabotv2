@@ -10,7 +10,7 @@ from typing import List, Dict, Any, Optional, Literal
 
 class ChatRequest(BaseModel):
     """Request to ask a question to the chatbot"""
-    question: str = Field(..., min_length=1, max_length=1000, description="Natural language question")
+    question: str = Field(..., min_length=1, max_length=10000, description="Natural language question")
     store_id: Optional[str] = Field(None, description="Optional store filter")
     date_range: Optional[Dict[str, str]] = Field(None, description="Optional date range filter")
 

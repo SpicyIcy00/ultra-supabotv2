@@ -11,7 +11,7 @@ const GOOGLE_SHEETS_WEB_APP_URL = import.meta.env.VITE_GOOGLE_SHEETS_URL || '';
  */
 export const fetchStores = async (): Promise<Store[]> => {
   // Use the analytics/stores endpoint which is already available
-  const response = await axios.get<Array<{id: string, name: string}>>(`${API_BASE_URL}${API_V1_PREFIX}/analytics/stores`);
+  const response = await axios.get<Array<{ id: string, name: string }>>(`${API_BASE_URL}${API_V1_PREFIX}/analytics/stores`);
   // Map to Store type (analytics endpoint returns minimal data)
   return response.data.map(store => ({
     ...store,
@@ -108,29 +108,54 @@ export const fetchProductSalesReport = async (
  * @param data - Report data to export
  * @param storeName - Name of the primary store for the filename
  */
-export const exportReportToCSV = (data: ProductSalesReportResponse, storeName: string): void => {
-  // CSV header - exact order as specified
+export const exportReportToCSV = (data: ProductSalesReportResponse, salesStoreName: string, allStores: Store[]): void => {
+  // Base headers
   const headers = [
-    'product_name',
-    'sku',
-    'product_id',
-    'quantity_sold',
-    'store_inv',
-    'warehouse_inv',
+    'Product Name',
+    'SKU',
+    'Product ID',
+    'Quantity Sold',
+    'Revenue',
+    `${salesStoreName} Inv`, // Sales store inventory
   ];
+
+  // Add headers for each comparison store
+  data.meta.compare_store_ids.forEach(storeId => {
+    const store = allStores.find(s => s.id === storeId);
+    const storeName = store ? store.name : storeId;
+    headers.push(`${storeName} Qty`);
+    headers.push(`${storeName} Inv`);
+    headers.push(`${storeName} Rev`);
+  });
 
   // Convert rows to CSV format
   const csvRows = [
     headers.join(','), // Header row
     ...data.rows.map(row => {
-      return [
+      const baseColumns = [
         escapeCsvValue(row.product_name),
         escapeCsvValue(row.sku ?? ''),
         escapeCsvValue(row.product_id),
         row.quantity_sold.toString(),
-        row.inventory_store_a.toString(),
-        row.inventory_store_b.toString(),
-      ].join(',');
+        row.revenue.toFixed(2),
+        row.inventory_sales_store.toString(),
+      ];
+
+      // Add columns for each comparison store
+      const comparisonColumns: string[] = [];
+      data.meta.compare_store_ids.forEach(storeId => {
+        const compData = row.comparison_stores[storeId];
+        if (compData) {
+          comparisonColumns.push(compData.quantity_sold.toString());
+          comparisonColumns.push(compData.inventory.toString());
+          comparisonColumns.push(compData.revenue.toFixed(2));
+        } else {
+          // Fallback if data is missing for some reason
+          comparisonColumns.push('0', '0', '0.00');
+        }
+      });
+
+      return [...baseColumns, ...comparisonColumns].join(',');
     }),
   ];
 
@@ -143,8 +168,8 @@ export const exportReportToCSV = (data: ProductSalesReportResponse, storeName: s
 
   // Generate filename with store name and timestamp
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  // Sanitize store name for use in filename (remove special characters)
-  const sanitizedStoreName = storeName.replace(/[^a-zA-Z0-9-_]/g, '_');
+  // Sanitize store name for use in filename
+  const sanitizedStoreName = salesStoreName.replace(/[^a-zA-Z0-9-_]/g, '_');
   const filename = `product-sales-report-${sanitizedStoreName}-${timestamp}.csv`;
 
   link.setAttribute('href', url);

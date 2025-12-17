@@ -45,109 +45,128 @@ async def generate_chat_stream(
     5. error: If anything fails
     """
 
-    try:
-        # Step 1: Generate SQL
-        yield format_sse_event(ChatEventStatus(
-            type="status",
-            message="Generating SQL query..."
-        ))
+    max_retries = 1
+    retry_count = 0
+    last_error = None
+    
+    while retry_count <= max_retries:
+        try:
+            # Step 1: Generate SQL (with previous error context if retrying)
+            if retry_count == 0:
+                yield format_sse_event(ChatEventStatus(
+                    type="status",
+                    message="Generating SQL query..."
+                ))
+            else:
+                 yield format_sse_event(ChatEventStatus(
+                    type="status",
+                    message=f"Retrying query generation (attempt {retry_count + 1})..."
+                ))
 
-        await asyncio.sleep(0.1)  # Small delay for UI responsiveness
+            await asyncio.sleep(0.1)  # Small delay for UI responsiveness
 
-        generator = SQLGenerator()
-        sql_result = await generator.generate_sql(question)
+            generator = SQLGenerator()
+            sql_result = await generator.generate_sql(
+                question, 
+                retry_on_failure=True,
+                previous_error=last_error
+            )
 
-        # Step 2: Validate and execute
-        yield format_sse_event(ChatEventStatus(
-            type="status",
-            message="Executing query...",
-            sql=sql_result["sql"]
-        ))
+            # Step 2: Validate and execute
+            yield format_sse_event(ChatEventStatus(
+                type="status",
+                message="Executing query...",
+                sql=sql_result["sql"]
+            ))
 
-        await asyncio.sleep(0.1)
+            await asyncio.sleep(0.1)
 
-        executor = QueryExecutor(db)
-        execution_result = await executor.execute_query(
-            sql_result["sql"],
-            timeout=10,
-            validate=True
-        )
+            executor = QueryExecutor(db)
+            execution_result = await executor.execute_query(
+                sql_result["sql"],
+                timeout=10,
+                validate=True
+            )
 
-        # Step 3: Analyze results
-        yield format_sse_event(ChatEventStatus(
-            type="status",
-            message=f"Analyzing {execution_result['row_count']} results...",
-            row_count=execution_result['row_count']
-        ))
+            # Step 3: Analyze results
+            yield format_sse_event(ChatEventStatus(
+                type="status",
+                message=f"Analyzing {execution_result['row_count']} results...",
+                row_count=execution_result['row_count']
+            ))
 
-        await asyncio.sleep(0.1)
+            await asyncio.sleep(0.1)
 
-        # Generate chart configuration
-        chart_intel = ChartIntelligence()
-        chart_config = chart_intel.select_chart(
-            user_question=question,
-            results=execution_result["results"]
-        )
+            # Generate chart configuration
+            chart_intel = ChartIntelligence()
+            chart_config = chart_intel.select_chart(
+                user_question=question,
+                results=execution_result["results"]
+            )
 
-        # Extract chart data from config (or use original results)
-        chart_data = chart_config.get("data") if chart_config else None
+            # Extract chart data from config (or use original results)
+            chart_data = chart_config.get("data") if chart_config else None
 
-        # Format response text
-        formatter = ResponseFormatter()
-        formatted_text = formatter.format_response(
-            user_question=question,
-            results=execution_result["results"],
-            chart_data=chart_data
-        )
+            # Format response text
+            formatter = ResponseFormatter()
+            formatted_text = formatter.format_response(
+                user_question=question,
+                results=execution_result["results"],
+                chart_data=chart_data
+            )
 
-        # Step 4: Send final response
-        final_event = ChatEventFinal(
-            type="final",
-            question=question,
-            sql=sql_result["sql"],
-            data=execution_result["results"],
-            row_count=execution_result["row_count"],
-            execution_time_ms=execution_result["execution_time_ms"],
-            chart=chart_config,
-            chart_data=chart_data,
-            final_text=formatted_text,
-            query_type=sql_result.get("query_type"),
-            assumptions=sql_result.get("assumptions", [])
-        )
+            # Step 4: Send final response
+            final_event = ChatEventFinal(
+                type="final",
+                question=question,
+                sql=sql_result["sql"],
+                data=execution_result["results"],
+                row_count=execution_result["row_count"],
+                execution_time_ms=execution_result["execution_time_ms"],
+                chart=chart_config,
+                chart_data=chart_data,
+                final_text=formatted_text,
+                query_type=sql_result.get("query_type"),
+                assumptions=sql_result.get("assumptions", [])
+            )
 
-        yield format_sse_event(final_event)
+            yield format_sse_event(final_event)
+            return  # Success, exit function
 
-    except CircuitOpenError as e:
-        yield format_sse_event(ChatEventError(
-            type="error",
-            message=str(e),
-            error_type="circuit_breaker",
-            suggestion="The AI service is temporarily unavailable. Please try again in a few moments."
-        ))
+        except (QueryValidationError, QueryExecutionError) as e:
+            last_error = str(e)
+            retry_count += 1
+            
+            if retry_count > max_retries:
+                # Max retries exceeded, yield error
+                error_type = "validation" if isinstance(e, QueryValidationError) else "execution"
+                yield format_sse_event(ChatEventError(
+                    type="error",
+                    message=f"Query failed after retry: {last_error}",
+                    error_type=error_type, 
+                    suggestion="The generated query was problematic. Try simpler questions."
+                ))
+                return
+            
+            # Continue to next iteration for retry
 
-    except QueryValidationError as e:
-        yield format_sse_event(ChatEventError(
-            type="error",
-            message=f"Query validation failed: {str(e)}",
-            error_type="validation",
-            suggestion="The generated query was not safe to execute. Try rephrasing your question."
-        ))
+        except CircuitOpenError as e:
+            yield format_sse_event(ChatEventError(
+                type="error",
+                message=str(e),
+                error_type="circuit_breaker",
+                suggestion="The AI service is temporarily unavailable. Please try again in a few moments."
+            ))
+            return
 
-    except QueryExecutionError as e:
-        yield format_sse_event(ChatEventError(
-            type="error",
-            message=f"Query execution failed: {str(e)}",
-            error_type="execution",
-            suggestion="Try narrowing your date range or adding more specific filters."
-        ))
-
-    except Exception as e:
-        yield format_sse_event(ChatEventError(
-            type="error",
-            message=f"An unexpected error occurred: {str(e)}",
-            error_type="unknown",
-            suggestion="Please try rephrasing your question or contact support if the issue persists."
-        ))
+        except Exception as e:
+            yield format_sse_event(ChatEventError(
+                type="error",
+                message=f"An unexpected error occurred: {str(e)}",
+                error_type="unknown",
+                suggestion="Please try rephrasing your question or contact support if the issue persists."
+            ))
+            return
 
 
 def format_sse_event(event: ChatEventStatus | ChatEventFinal | ChatEventError) -> str:
@@ -197,61 +216,74 @@ async def query_chatbot(
     Returns complete result in one response.
     """
 
-    try:
-        # Generate SQL
-        generator = SQLGenerator()
-        sql_result = await generator.generate_sql(request.question)
+    max_retries = 1
+    retry_count = 0
+    last_error = None
+    
+    while retry_count <= max_retries:
+        try:
+            # Generate SQL
+            generator = SQLGenerator()
+            sql_result = await generator.generate_sql(
+                request.question,
+                retry_on_failure=True,
+                previous_error=last_error
+            )
 
-        # Execute query
-        executor = QueryExecutor(db)
-        execution_result = await executor.execute_query(
-            sql_result["sql"],
-            timeout=10,
-            validate=True
-        )
+            # Execute query
+            executor = QueryExecutor(db)
+            execution_result = await executor.execute_query(
+                sql_result["sql"],
+                timeout=10,
+                validate=True
+            )
 
-        # Generate chart
-        chart_intel = ChartIntelligence()
-        chart_config = chart_intel.select_chart(
-            user_question=request.question,
-            results=execution_result["results"]
-        )
+            # Generate chart
+            chart_intel = ChartIntelligence()
+            chart_config = chart_intel.select_chart(
+                user_question=request.question,
+                results=execution_result["results"]
+            )
 
-        # Extract chart data from config (or use original results)
-        chart_data = chart_config.get("data") if chart_config else None
+            # Extract chart data from config (or use original results)
+            chart_data = chart_config.get("data") if chart_config else None
 
-        # Format response
-        formatter = ResponseFormatter()
-        formatted_text = formatter.format_response(
-            user_question=request.question,
-            results=execution_result["results"],
-            chart_data=chart_data
-        )
+            # Format response
+            formatter = ResponseFormatter()
+            formatted_text = formatter.format_response(
+                user_question=request.question,
+                results=execution_result["results"],
+                chart_data=chart_data
+            )
 
-        return {
-            "question": request.question,
-            "sql": sql_result["sql"],
-            "data": execution_result["results"],
-            "row_count": execution_result["row_count"],
-            "execution_time_ms": execution_result["execution_time_ms"],
-            "chart": chart_config,
-            "chart_data": chart_data,
-            "final_text": formatted_text,
-            "query_type": sql_result.get("query_type"),
-            "assumptions": sql_result.get("assumptions", [])
-        }
+            return {
+                "question": request.question,
+                "sql": sql_result["sql"],
+                "data": execution_result["results"],
+                "row_count": execution_result["row_count"],
+                "execution_time_ms": execution_result["execution_time_ms"],
+                "chart": chart_config,
+                "chart_data": chart_data,
+                "final_text": formatted_text,
+                "query_type": sql_result.get("query_type"),
+                "assumptions": sql_result.get("assumptions", [])
+            }
+        
+        except (QueryValidationError, QueryExecutionError) as e:
+            last_error = str(e)
+            retry_count += 1
+            if retry_count > max_retries:
+                # Re-raise appropriate exception
+                status_code = 400 if isinstance(e, QueryValidationError) else 500
+                raise HTTPException(status_code=status_code, detail=f"Query failed after retry: {last_error}")
+            
+            # Continue loop
 
-    except CircuitOpenError as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        except CircuitOpenError as e:
+            raise HTTPException(status_code=503, detail=str(e))
 
-    except QueryValidationError as e:
-        raise HTTPException(status_code=400, detail=f"Query validation failed: {str(e)}")
-
-    except QueryExecutionError as e:
-        raise HTTPException(status_code=500, detail=f"Query execution failed: {str(e)}")
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
 
 @router.post("/feedback")

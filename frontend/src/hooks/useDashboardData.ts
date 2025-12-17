@@ -9,7 +9,7 @@ import {
 } from '../utils/dateCalculations';
 
 const getBaseUrl = () => {
-  let url = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+  let url = import.meta.env.VITE_API_URL || 'http://localhost:8000';
   // Remove trailing slash if present
   url = url.replace(/\/$/, '');
   // Append /api/v1 if not present

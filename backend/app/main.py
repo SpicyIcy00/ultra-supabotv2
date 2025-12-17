@@ -27,12 +27,6 @@ async def startup_event():
         database_url=settings.DATABASE_URL,
         business_rules_path=str(business_rules_path)
     )
-    # Initialize schema context with database connection
-    business_rules_path = Path(__file__).parent.parent / "business_rules.yaml"
-    SchemaContext.initialize(
-        database_url=settings.DATABASE_URL,
-        business_rules_path=str(business_rules_path)
-    )
     print("SchemaContext initialized")
     print("REGISTERED ROUTES START")
     for route in app.routes:

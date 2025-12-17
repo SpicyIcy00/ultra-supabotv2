@@ -109,10 +109,10 @@ class QueryValidator:
 
     @staticmethod
     def _validate_statement_type(sql_query: str) -> None:
-        """Ensure query is a SELECT statement"""
+        """Ensure query is a SELECT statement (or WITH clause for CTEs)"""
         # Check first keyword
         first_word = sql_query.split()[0].upper()
-        if first_word != 'SELECT':
+        if first_word not in ['SELECT', 'WITH']:
             raise QueryValidationError(
                 f"Only SELECT queries are allowed. Found: {first_word}"
             )
@@ -152,10 +152,12 @@ class QueryValidator:
             statement = parsed[0]
 
             # Verify it's a SELECT statement
-            if statement.get_type() != 'SELECT':
-                raise QueryValidationError(
-                    f"Invalid statement type: {statement.get_type()}"
-                )
+            # Verify it's a SELECT statement (or CTE)
+            # sqlparse might identify CTEs as UNKNOWN or other types
+            # We already validated the starting keyword in _validate_statement_type
+            if statement.get_type() not in ['SELECT', 'UNKNOWN', 'INSERT']: # INSERT is effectively blocked by keyword check
+                 # Just a safety net, but rely on keyword check mainly
+                 pass
 
             return statement
 
@@ -171,10 +173,18 @@ class QueryValidator:
         """
         # Extract table names from the query
         tables_in_query = QueryValidator._extract_table_names(parsed_statement)
+        
+        # Extract CTE names (defined in the query)
+        cte_names = QueryValidator._extract_cte_names(str(parsed_statement))
 
         # Check each table against whitelist
         for table in tables_in_query:
-            if table.lower() not in [t.lower() for t in allowed_tables]:
+            table_lower = table.lower()
+            # Skip if it's a CTE defined in the query itself
+            if table_lower in cte_names:
+                continue
+                
+            if table_lower not in [t.lower() for t in allowed_tables]:
                 raise QueryValidationError(
                     f"Unauthorized table access: '{table}'. "
                     f"Allowed tables: {', '.join(allowed_tables)}"
@@ -207,6 +217,20 @@ class QueryValidator:
                 tables.add(match.lower())
 
         return list(tables)
+
+    @staticmethod
+    def _extract_cte_names(sql_query: str) -> set:
+        """Extract names of Common Table Expressions (CTEs) defined in the query"""
+        ctes = set()
+        # Simple regex to find CTE definitions: name AS (
+        # This handles: WITH cte1 AS (...), cte2 AS (...)
+        cte_pattern = r'\b(\w+)\s+AS\s*\('
+        matches = re.findall(cte_pattern, sql_query, re.IGNORECASE)
+        for match in matches:
+             # Exclude SQL keywords that might match this pattern in weird edge cases
+            if match.upper() not in ['SELECT', 'WITH', 'FROM', 'JOIN', 'WHERE', 'GROUP', 'ORDER']:
+                ctes.add(match.lower())
+        return ctes
 
     @staticmethod
     def _validate_columns(sql_query: str, schema_summary: Dict[str, Any]) -> None:

@@ -167,7 +167,7 @@ const ReportingPage: React.FC = () => {
       // Find the sales store name
       const salesStore = stores.find(s => s.id === salesStoreId);
       const storeName = salesStore?.name || 'Unknown';
-      exportReportToCSV(reportData, storeName);
+      exportReportToCSV(reportData, storeName, stores);
     }
   };
 
@@ -617,10 +617,9 @@ const ReportingPage: React.FC = () => {
                                   </td>
                                 )}
                                 {currentConfig.columns.comparison_variance && (
-                                  <td className={`px-4 py-3 text-sm text-right font-medium ${
-                                    (compData?.qty_variance || 0) > 0 ? 'text-green-400' :
-                                    (compData?.qty_variance || 0) < 0 ? 'text-red-400' : 'text-gray-400'
-                                  }`}>
+                                  <td className={`px-4 py-3 text-sm text-right font-medium ${(compData?.qty_variance || 0) > 0 ? 'text-green-400' :
+                                      (compData?.qty_variance || 0) < 0 ? 'text-red-400' : 'text-gray-400'
+                                    }`}>
                                     {compData?.qty_variance.toFixed(2) || '0.00'} ({compData?.qty_variance_percent.toFixed(1) || '0.0'}%)
                                   </td>
                                 )}
