@@ -22,22 +22,22 @@ export const CategoryPerformanceMatrix: React.FC<CategoryPerformanceMatrixProps>
 
     // Get unique store IDs from the data
     const storesSet = new Set<string>();
-    data.matrix.forEach(item => {
-      Object.keys(item.stores).forEach(storeId => storesSet.add(storeId));
+    data.matrix.forEach((item: any) => {
+      Object.keys(item.stores).forEach((storeId: string) => storesSet.add(storeId));
     });
     // Filter to ensure we only include requested stores (though API should handle this)
     const storeIdsList = Array.from(storesSet).filter(id => storeIds.includes(id));
 
     // Calculate total revenue per category across all stores
-    const categoriesWithTotals = data.matrix.map(item => ({
+    const categoriesWithTotals = data.matrix.map((item: any) => ({
       category: item.category,
       stores: item.stores, // Keyed by store_id
-      total: storeIdsList.reduce((sum, id) => sum + (item.stores[id] || 0), 0),
+      total: storeIdsList.reduce((sum: number, id: string) => sum + (item.stores[id] || 0), 0),
     }));
 
     // Sort by total revenue descending and take top 15
     const topCategories = categoriesWithTotals
-      .sort((a, b) => b.total - a.total)
+      .sort((a: any, b: any) => b.total - a.total)
       .slice(0, 15);
 
     return { categories: topCategories, storeIds: storeIdsList };
@@ -99,9 +99,9 @@ export const CategoryPerformanceMatrix: React.FC<CategoryPerformanceMatrixProps>
           </tr>
         </thead>
         <tbody>
-          {processedData.categories.map((category, idx) => {
+          {processedData.categories.map((category: any, idx: number) => {
             // Find max value in this row for color scaling
-            const maxInRow = Math.max(...processedData.storeIds.map(id => category.stores[id] || 0));
+            const maxInRow = Math.max(...processedData.storeIds.map((id: string) => category.stores[id] || 0));
 
             return (
               <tr
@@ -142,9 +142,9 @@ export const CategoryPerformanceMatrix: React.FC<CategoryPerformanceMatrixProps>
             <td className="py-3 px-4 text-white font-semibold sticky left-0 bg-[#252833] z-10">
               Total by Store
             </td>
-            {processedData.storeIds.map((id) => {
+            {processedData.storeIds.map((id: string) => {
               const storeTotal = processedData.categories.reduce(
-                (sum, cat) => sum + (cat.stores[id] || 0),
+                (sum: number, cat: any) => sum + (cat.stores[id] || 0),
                 0
               );
               return (
@@ -154,7 +154,7 @@ export const CategoryPerformanceMatrix: React.FC<CategoryPerformanceMatrixProps>
               );
             })}
             <td className="py-3 px-4 text-right text-blue-400 font-semibold">
-              {formatCurrency(processedData.categories.reduce((sum, cat) => sum + cat.total, 0))}
+              {formatCurrency(processedData.categories.reduce((sum: number, cat: any) => sum + cat.total, 0))}
             </td>
           </tr>
         </tfoot>

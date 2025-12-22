@@ -9,3 +9,13 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+export const queryKeys = {
+  analytics: {
+    salesByHour: (params: any) => ['analytics', 'salesByHour', params],
+    storePerformance: (params: any) => ['analytics', 'storePerformance', params],
+    dailyTrend: (params: any) => ['analytics', 'dailyTrend', params],
+    kpiMetrics: () => ['analytics', 'kpiMetrics'],
+    productPerformance: (params: any) => ['analytics', 'productPerformance', params],
+  },
+};

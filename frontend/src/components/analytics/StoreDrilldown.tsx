@@ -9,8 +9,9 @@ interface StoreDrilldownProps {
 export const StoreDrilldown: React.FC<StoreDrilldownProps> = ({ stores }) => {
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
 
-  const categories = useStoreCategories(selectedStoreId);
-  const topProducts = useStoreTopProducts(selectedStoreId);
+  const storeIdString = selectedStoreId ? String(selectedStoreId) : null;
+  const categories = useStoreCategories(storeIdString);
+  const topProducts = useStoreTopProducts(storeIdString);
 
   const isLoading = categories.isLoading || topProducts.isLoading;
 
@@ -105,15 +106,14 @@ export const StoreDrilldown: React.FC<StoreDrilldownProps> = ({ stores }) => {
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <span
-                        className={`font-bold text-lg ${
-                          index === 0
+                        className={`font-bold text-lg ${index === 0
                             ? 'text-yellow-400'
                             : index === 1
-                            ? 'text-gray-300'
-                            : index === 2
-                            ? 'text-orange-400'
-                            : 'text-blue-400'
-                        }`}
+                              ? 'text-gray-300'
+                              : index === 2
+                                ? 'text-orange-400'
+                                : 'text-blue-400'
+                          }`}
                       >
                         #{index + 1}
                       </span>

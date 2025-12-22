@@ -78,7 +78,7 @@ export const TopMovers: React.FC<TopMoversProps> = ({
               Top Gainers ({data.products_up.length})
             </h4>
             <div className="space-y-2">
-              {data.products_up.map((item, idx) => (
+              {data.products_up.map((item: any, idx: number) => (
                 <MoverItem key={idx} item={item} isPositive={true} />
               ))}
             </div>
@@ -95,7 +95,7 @@ export const TopMovers: React.FC<TopMoversProps> = ({
               Top Decliners ({data.products_down.length})
             </h4>
             <div className="space-y-2">
-              {data.products_down.map((item, idx) => (
+              {data.products_down.map((item: any, idx: number) => (
                 <MoverItem key={idx} item={item} isPositive={false} />
               ))}
             </div>
@@ -117,7 +117,7 @@ export const TopMovers: React.FC<TopMoversProps> = ({
               Top Gainers ({data.categories_up.length})
             </h4>
             <div className="space-y-2">
-              {data.categories_up.map((item, idx) => (
+              {data.categories_up.map((item: any, idx: number) => (
                 <MoverItem key={idx} item={item} isPositive={true} />
               ))}
             </div>
@@ -134,7 +134,7 @@ export const TopMovers: React.FC<TopMoversProps> = ({
               Top Decliners ({data.categories_down.length})
             </h4>
             <div className="space-y-2">
-              {data.categories_down.map((item, idx) => (
+              {data.categories_down.map((item: any, idx: number) => (
                 <MoverItem key={idx} item={item} isPositive={false} />
               ))}
             </div>

@@ -5,7 +5,7 @@
  */
 
 import { create } from 'zustand';
-import type { ReportPreset, PresetConfig, DEFAULT_PRESET_CONFIG } from '../types/preset';
+import type { ReportPreset, PresetConfig } from '../types/preset';
 import { DEFAULT_PRESET_CONFIG as DEFAULT_CONFIG } from '../types/preset';
 import * as presetApi from '../services/presetApi';
 
@@ -90,26 +90,27 @@ export const usePresetStore = create<PresetState>((set, get) => ({
 
     // Ensure comparison fields exist (for presets created before these fields were added)
     if (config.columns) {
-      const compValue = (config.columns as any).comparison_stores ?? true;
+      const cols = config.columns as any;
+      const compValue = cols.comparison_stores ?? true;
       if (!('comparison_qty_sold' in config.columns)) {
-        config.columns.comparison_qty_sold = compValue;
+        cols.comparison_qty_sold = compValue;
       }
       if (!('comparison_inventory' in config.columns)) {
-        config.columns.comparison_inventory = compValue;
+        cols.comparison_inventory = compValue;
       }
       if (!('comparison_revenue' in config.columns)) {
-        config.columns.comparison_revenue = compValue;
+        cols.comparison_revenue = compValue;
       }
       if (!('comparison_variance' in config.columns)) {
-        config.columns.comparison_variance = compValue;
+        cols.comparison_variance = compValue;
       }
       // Remove old comparison_stores field if it exists
-      delete (config.columns as any).comparison_stores;
+      delete cols.comparison_stores;
     }
 
     // Migrate old compare_store_id to compare_store_ids
-    if (config.compare_store_id && !config.compare_store_ids) {
-      config.compare_store_ids = [config.compare_store_id];
+    if ((config as any).compare_store_id && !config.compare_store_ids) {
+      config.compare_store_ids = [(config as any).compare_store_id];
       delete (config as any).compare_store_id;
     }
 

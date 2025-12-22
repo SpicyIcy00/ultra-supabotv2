@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 import { Download } from 'lucide-react';
 import { THEME_COLORS } from '../../constants/colors';
 import { formatCurrency, formatPercentage, calculatePercentageChange } from '../../utils/dateCalculations';
@@ -80,7 +80,7 @@ export const TopProductsBar: React.FC<TopProductsBarProps> = ({
   };
 
   const renderCustomLabel = (props: any) => {
-    const { x, y, width, value, percentageChange } = props;
+    const { x, y, width, percentageChange } = props;
     const isPositive = percentageChange >= 0;
 
     return (

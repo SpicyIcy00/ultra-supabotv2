@@ -4,16 +4,11 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { analyticsApi } from '../services/analyticsApi';
-import { queryKeys } from '../lib/queryClient';
+import { queryKeys } from '../services/queryClient';
 import type {
-  SalesByHourResponse,
   SalesByHourParams,
-  StorePerformanceResponse,
   StorePerformanceParams,
-  DailyTrendResponse,
   DailyTrendParams,
-  KPIMetrics,
-  ProductPerformanceResponse,
   ProductPerformanceParams,
 } from '../types/analytics';
 

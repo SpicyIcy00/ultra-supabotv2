@@ -83,7 +83,7 @@ export const TopCategoriesBar: React.FC<TopCategoriesBarProps> = ({
   };
 
   const renderCustomLabel = (props: any) => {
-    const { x, y, width, value, percentageChange } = props;
+    const { x, y, width, percentageChange } = props;
     const isPositive = percentageChange >= 0;
 
     return (

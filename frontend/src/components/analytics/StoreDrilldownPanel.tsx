@@ -85,8 +85,8 @@ export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
               <div className="flex items-center justify-between mb-2">
                 <span className="text-gray-300 font-medium">Transaction Count Impact</span>
                 <span className={`font-semibold ${(data.transaction_count - data.best_performer_transaction_count) * data.best_performer_avg_ticket < 0
-                    ? 'text-red-400'
-                    : 'text-green-400'
+                  ? 'text-red-400'
+                  : 'text-green-400'
                   }`}>
                   {((data.transaction_count - data.best_performer_transaction_count) * data.best_performer_avg_ticket) < 0 ? '' : '+'}
                   {formatCurrency((data.transaction_count - data.best_performer_transaction_count) * data.best_performer_avg_ticket)}
@@ -102,8 +102,8 @@ export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
               <div className="flex items-center justify-between mb-2">
                 <span className="text-gray-300 font-medium">Avg Ticket Impact</span>
                 <span className={`font-semibold ${(data.avg_ticket - data.best_performer_avg_ticket) * data.transaction_count < 0
-                    ? 'text-red-400'
-                    : 'text-green-400'
+                  ? 'text-red-400'
+                  : 'text-green-400'
                   }`}>
                   {((data.avg_ticket - data.best_performer_avg_ticket) * data.transaction_count) < 0 ? '' : '+'}
                   {formatCurrency((data.avg_ticket - data.best_performer_avg_ticket) * data.transaction_count)}
@@ -119,10 +119,10 @@ export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
               <div className="flex items-center justify-between mb-2">
                 <span className="text-gray-300 font-medium">Category Mix Impact (Residual)</span>
                 <span className={`font-semibold ${data.revenue_gap_amount -
-                    ((data.transaction_count - data.best_performer_transaction_count) * data.best_performer_avg_ticket +
-                      (data.avg_ticket - data.best_performer_avg_ticket) * data.transaction_count) < 0
-                    ? 'text-red-400'
-                    : 'text-green-400'
+                  ((data.transaction_count - data.best_performer_transaction_count) * data.best_performer_avg_ticket +
+                    (data.avg_ticket - data.best_performer_avg_ticket) * data.transaction_count) < 0
+                  ? 'text-red-400'
+                  : 'text-green-400'
                   }`}>
                   {(data.revenue_gap_amount -
                     ((data.transaction_count - data.best_performer_transaction_count) * data.best_performer_avg_ticket +
@@ -221,7 +221,7 @@ export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
 
           {data.top_categories && data.top_categories.length > 0 ? (
             <div className="space-y-3">
-              {data.top_categories.map((category, index) => (
+              {data.top_categories.map((category: any, index: number) => (
                 <div
                   key={index}
                   className="bg-[#252833] rounded-lg p-4"
@@ -280,11 +280,11 @@ export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
           {data.revenue_gap_pct > 10 && (
             <div>• Revenue is {data.revenue_gap_pct.toFixed(1)}% below the best performer. Focus on increasing transaction volume and average ticket size.</div>
           )}
-          {data.top_categories && data.top_categories.filter(c => c.vs_avg_pct < -15).length > 0 && (
+          {data.top_categories && data.top_categories.filter((c: any) => c.vs_avg_pct < -15).length > 0 && (
             <div>• Some categories are significantly underperforming vs store average. Consider inventory optimization or promotional strategies.</div>
           )}
-          {data.top_categories && data.top_categories.filter(c => c.vs_avg_pct > 15).length > 0 && (
-            <div>• Strong performance in {data.top_categories.filter(c => c.vs_avg_pct > 15).map(c => c.category).join(', ')}. Consider expanding these product lines.</div>
+          {data.top_categories && data.top_categories.filter((c: any) => c.vs_avg_pct > 15).length > 0 && (
+            <div>• Strong performance in {data.top_categories.filter((c: any) => c.vs_avg_pct > 15).map((c: any) => c.category).join(', ')}. Consider expanding these product lines.</div>
           )}
         </div>
       </div>

@@ -39,7 +39,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
         }
     };
 
-    const handleLogout = () => {
+    const _handleLogout = () => {
         setIsAuthenticated(false);
         localStorage.removeItem('bi_dashboard_auth');
     };
