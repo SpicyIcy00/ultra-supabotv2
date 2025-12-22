@@ -21,13 +21,13 @@ export const StoreWeeklyTrends: React.FC<StoreWeeklyTrendsProps> = ({ storeIds }
 
     return Object.entries(data.trends)
       .filter(([storeId]) => storeIds.includes(storeId))
-      .map(([storeId, weeklyData]: [string, any[]]) => {
+      .map(([storeId, weeklyData]: [string, any]) => {
         // Ensure we have exactly 8 weeks of data
         const trend = weeklyData.slice(-8);
 
         // Calculate momentum
-        const recentAvg = trend.slice(-3).reduce((sum, w) => sum + w.revenue, 0) / 3;
-        const olderAvg = trend.slice(0, 3).reduce((sum, w) => sum + w.revenue, 0) / 3;
+        const recentAvg = trend.slice(-3).reduce((sum: number, w: any) => sum + w.revenue, 0) / 3;
+        const olderAvg = trend.slice(0, 3).reduce((sum: number, w: any) => sum + w.revenue, 0) / 3;
         const momentum = olderAvg > 0 ? ((recentAvg - olderAvg) / olderAvg) * 100 : 0;
 
         // Determine trend direction
@@ -40,7 +40,7 @@ export const StoreWeeklyTrends: React.FC<StoreWeeklyTrendsProps> = ({ storeIds }
           trend,
           momentum,
           direction,
-          totalRevenue: trend.reduce((sum, w) => sum + w.revenue, 0),
+          totalRevenue: trend.reduce((sum: number, w: any) => sum + w.revenue, 0),
         };
       });
   }, [data, storeIds, storesList]);
@@ -97,10 +97,10 @@ export const StoreWeeklyTrends: React.FC<StoreWeeklyTrendsProps> = ({ storeIds }
             <h3 className="text-white font-semibold">{store.storeName}</h3>
             <div
               className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold ${store.direction === 'up'
-                  ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                  : store.direction === 'down'
-                    ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                    : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                : store.direction === 'down'
+                  ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                  : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
                 }`}
               title={`Trend: ${store.direction === 'up' ? 'Growing' : store.direction === 'down' ? 'Declining' : 'Stable'}`}
             >
@@ -157,8 +157,8 @@ export const StoreWeeklyTrends: React.FC<StoreWeeklyTrendsProps> = ({ storeIds }
               />
 
               {/* Data points */}
-              {store.trend.map((week, idx) => {
-                const values = store.trend.map(d => d.revenue);
+              {store.trend.map((week: any, idx: number) => {
+                const values = store.trend.map((d: any) => d.revenue);
                 const max = Math.max(...values);
                 const min = Math.min(...values);
                 const range = max - min;

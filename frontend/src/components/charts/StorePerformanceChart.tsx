@@ -106,7 +106,7 @@ export function StorePerformanceChart({
             radius={[0, 8, 8, 0]}
             name="Total Sales"
           >
-            {sortedData.map((entry, index) => (
+            {sortedData.map((_entry, index) => (
               <Cell
                 key={`cell-${index}`}
                 fill={COLORS[index % COLORS.length]}

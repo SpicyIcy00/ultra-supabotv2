@@ -53,9 +53,6 @@ export function transformDataForSheets(reportData: any[]) {
     const firstStoreInventory = comparisonStoreIds[0]
       ? (row.comparison_stores[comparisonStoreIds[0]]?.inventory || 0)
       : 0;
-    const secondStoreInventory = comparisonStoreIds[1]
-      ? (row.comparison_stores[comparisonStoreIds[1]]?.inventory || 0)
-      : 0;
 
     return {
       product_name: row.product_name || '',

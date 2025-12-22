@@ -6,7 +6,6 @@
  * - CSV (for table data)
  */
 
-import type { QueryResult} from '../types/chatbot';
 
 /**
  * Export chart as image (PNG, JPG, or SVG)
@@ -141,7 +140,7 @@ async function exportAsRasterImage(
  * Export table data as CSV
  */
 export function exportAsCSV(
-  data: QueryResult[],
+  data: any[],
   filename: string
 ): void {
   if (data.length === 0) {
@@ -213,7 +212,7 @@ function downloadBlob(blob: Blob, filename: string): void {
 /**
  * Copy table data to clipboard as tab-separated values (for pasting into Excel)
  */
-export async function copyTableToClipboard(data: QueryResult[]): Promise<void> {
+export async function copyTableToClipboard(data: any[]): Promise<void> {
   if (data.length === 0) {
     throw new Error('No data to copy');
   }
@@ -245,7 +244,7 @@ export async function copyTableToClipboard(data: QueryResult[]): Promise<void> {
 /**
  * Analyze data to determine best chart type
  */
-export function detectChartType(data: QueryResult[]): {
+export function detectChartType(data: any[]): {
   type: 'line' | 'bar' | 'pie' | 'area' | 'table';
   xKey?: string;
   yKeys?: string[];

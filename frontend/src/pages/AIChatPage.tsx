@@ -6,7 +6,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, Code, Table as TableIcon, BarChart3 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import type { ChatMessage, ChatEvent } from '../types/chatbot';
+import type { ChatMessage } from '../types/chatbot';
 import { streamChatQuery, getSuggestions } from '../services/chatbotApi';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -72,19 +72,19 @@ export default function AIChatPage() {
             prev.map((msg) =>
               msg.id === assistantMessage.id
                 ? {
-                    ...msg,
-                    content: event.final_text,
-                    sql: event.sql,
-                    data: event.data,
-                    row_count: event.row_count,
-                    execution_time_ms: event.execution_time_ms,
-                    chart: event.chart || null,
-                    chart_data: event.chart_data || null,
-                    query_type: event.query_type,
-                    assumptions: event.assumptions,
-                    isLoading: false,
-                    status: undefined,
-                  }
+                  ...msg,
+                  content: event.final_text,
+                  sql: event.sql,
+                  data: event.data,
+                  row_count: event.row_count,
+                  execution_time_ms: event.execution_time_ms,
+                  chart: event.chart || null,
+                  chart_data: event.chart_data || null,
+                  query_type: event.query_type,
+                  assumptions: event.assumptions,
+                  isLoading: false,
+                  status: undefined,
+                }
                 : msg
             )
           );
@@ -94,13 +94,13 @@ export default function AIChatPage() {
             prev.map((msg) =>
               msg.id === assistantMessage.id
                 ? {
-                    ...msg,
-                    content: `Error: ${event.message}`,
-                    error: event.message,
-                    suggestion: event.suggestion,
-                    isLoading: false,
-                    status: undefined,
-                  }
+                  ...msg,
+                  content: `Error: ${event.message}`,
+                  error: event.message,
+                  suggestion: event.suggestion,
+                  isLoading: false,
+                  status: undefined,
+                }
                 : msg
             )
           );
@@ -112,12 +112,12 @@ export default function AIChatPage() {
         prev.map((msg) =>
           msg.id === assistantMessage.id
             ? {
-                ...msg,
-                content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                error: error instanceof Error ? error.message : 'Unknown error',
-                isLoading: false,
-                status: undefined,
-              }
+              ...msg,
+              content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+              error: error instanceof Error ? error.message : 'Unknown error',
+              isLoading: false,
+              status: undefined,
+            }
             : msg
         )
       );
@@ -353,7 +353,7 @@ function ChartRenderer({ config, data }: { config: any; data: any[] }) {
             outerRadius={80}
             label
           >
-            {data.map((entry, index) => (
+            {data.map((_entry, index) => (
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>

@@ -96,7 +96,7 @@ export function ProductPerformanceChart({
               color: '#F3F4F6',
               maxWidth: '300px',
             }}
-            formatter={(value: number, name: string, props: any) => {
+            formatter={(value: number, name: string) => {
               if (name === 'total_revenue') {
                 return [
                   `₱${value.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`,
@@ -136,7 +136,7 @@ export function ProductPerformanceChart({
             radius={[8, 8, 0, 0]}
             name="Total Revenue"
           >
-            {topProducts.map((entry, index) => (
+            {topProducts.map((_entry, index) => (
               <Cell
                 key={`cell-${index}`}
                 fill={COLORS[index % COLORS.length]}

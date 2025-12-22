@@ -110,7 +110,6 @@ export function calculateWTDPeriod(): PeriodDateRanges {
  * Compare to the 7 days before that
  */
 export function calculate7DPeriod(): PeriodDateRanges {
-  const today = getToday();
 
   // Current: 7 days ago to yesterday
   const currentEnd = getYesterday();
@@ -183,7 +182,6 @@ export function calculateMTDPeriod(): PeriodDateRanges {
  * Compare to the 30 days before that
  */
 export function calculate30DPeriod(): PeriodDateRanges {
-  const today = getToday();
 
   // Current: 30 days ago to yesterday
   const currentEnd = getYesterday();
@@ -220,7 +218,6 @@ export function calculate30DPeriod(): PeriodDateRanges {
  * Compare to the 90 days before that
  */
 export function calculate90DPeriod(): PeriodDateRanges {
-  const today = getToday();
 
   // Current: 90 days ago to yesterday
   const currentEnd = getYesterday();

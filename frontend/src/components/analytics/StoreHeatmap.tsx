@@ -22,7 +22,6 @@ interface StoreHeatmapProps {
   onStoreClick: (storeName: string) => void;
 }
 
-type MetricKey = 'revenue' | 'transaction_count' | 'avg_ticket' | 'margin_pct';
 
 export const StoreHeatmap: React.FC<StoreHeatmapProps> = ({ stores, onStoreClick }) => {
   // Calculate percentiles for color coding
@@ -160,11 +159,10 @@ export const StoreHeatmap: React.FC<StoreHeatmapProps> = ({ stores, onStoreClick
                   </div>
                 </td>
                 <td className="py-3 px-4 text-right">
-                  <div className={`inline-block px-3 py-2 rounded-lg ${
-                    revenueChange >= 10 ? 'bg-green-500/20 text-green-400' :
-                    revenueChange <= -10 ? 'bg-red-500/20 text-red-400' :
-                    'bg-gray-500/10 text-gray-300'
-                  }`}>
+                  <div className={`inline-block px-3 py-2 rounded-lg ${revenueChange >= 10 ? 'bg-green-500/20 text-green-400' :
+                      revenueChange <= -10 ? 'bg-red-500/20 text-red-400' :
+                        'bg-gray-500/10 text-gray-300'
+                    }`}>
                     <div className="font-semibold">
                       {revenueChange >= 0 ? '+' : ''}{revenueChange.toFixed(1)}%
                     </div>

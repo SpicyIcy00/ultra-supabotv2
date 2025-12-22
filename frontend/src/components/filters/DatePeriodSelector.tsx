@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import type { PeriodType } from '../../utils/dateCalculations';
-import { getPeriodLabel, formatDateRangeLabel, calculatePeriodDateRanges } from '../../utils/dateCalculations';
+import { getPeriodLabel, calculatePeriodDateRanges } from '../../utils/dateCalculations';
 import { DateRangePicker } from './DateRangePicker';
 import { format } from 'date-fns';
 
@@ -21,14 +21,12 @@ const PERIODS: { value: PeriodType; label: string }[] = [
 export const DatePeriodSelector: React.FC = () => {
   const selectedPeriod = useDashboardStore((state) => state.selectedPeriod);
   const customDateRange = useDashboardStore((state) => state.customDateRange);
-  const dateRanges = useDashboardStore((state) => state.dateRanges);
   const setPeriod = useDashboardStore((state) => state.setPeriod);
   const setCustomDates = useDashboardStore((state) => state.setCustomDates);
 
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [tempStartDate, setTempStartDate] = useState<Date | null>(null);
   const [tempEndDate, setTempEndDate] = useState<Date | null>(null);
-  const [selectedInput, setSelectedInput] = useState<'start' | 'end'>('start');
 
   // Helper function to get formatted date range for a period
   const getDateRangeText = (period: PeriodType): string => {
@@ -67,27 +65,6 @@ export const DatePeriodSelector: React.FC = () => {
     setPeriod(period);
   };
 
-  const handleDateSelect = (dateStr: string) => {
-    const selectedDate = new Date(dateStr);
-
-    if (selectedInput === 'start') {
-      setTempStartDate(selectedDate);
-      // If end date is before start date, clear end date
-      if (tempEndDate && selectedDate > tempEndDate) {
-        setTempEndDate(null);
-      }
-      // Auto-switch to end date selection
-      setSelectedInput('end');
-    } else {
-      // Only allow selecting end date if it's after start date
-      if (tempStartDate && selectedDate >= tempStartDate) {
-        setTempEndDate(selectedDate);
-      } else if (!tempStartDate) {
-        setTempStartDate(selectedDate);
-        setSelectedInput('end');
-      }
-    }
-  };
 
   const handleApplyCustomDates = () => {
     if (tempStartDate && tempEndDate) {
@@ -100,7 +77,6 @@ export const DatePeriodSelector: React.FC = () => {
     setShowCustomPicker(false);
     setTempStartDate(null);
     setTempEndDate(null);
-    setSelectedInput('start');
   };
 
   return (
@@ -115,10 +91,9 @@ export const DatePeriodSelector: React.FC = () => {
               onClick={() => handlePeriodClick(period.value)}
               className={`
                 px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-200
-                ${
-                  selectedPeriod === period.value
-                    ? 'bg-gradient-to-r from-[#00d2ff] to-[#3a47d5] text-white shadow-lg'
-                    : 'bg-[#1c1e26] text-white hover:bg-[#2e303d]'
+                ${selectedPeriod === period.value
+                  ? 'bg-gradient-to-r from-[#00d2ff] to-[#3a47d5] text-white shadow-lg'
+                  : 'bg-[#1c1e26] text-white hover:bg-[#2e303d]'
                 }
               `}
               title={getPeriodLabel(period.value)}

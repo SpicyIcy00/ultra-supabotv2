@@ -39,10 +39,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
         }
     };
 
-    const _handleLogout = () => {
-        setIsAuthenticated(false);
-        localStorage.removeItem('bi_dashboard_auth');
-    };
 
     if (loading) {
         return <div className="min-h-screen bg-slate-900 flex items-center justify-center">

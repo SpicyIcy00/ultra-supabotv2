@@ -12,7 +12,7 @@ export const PresetSaveDialog: React.FC<PresetSaveDialogProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { createPreset, activePreset, updatePreset, currentConfig } = usePresetStore();
+  const { createPreset, activePreset } = usePresetStore();
   const [presetName, setPresetName] = useState(activePreset?.name || '');
   const [setAsDefault, setSetAsDefault] = useState(false);
   const [saving, setSaving] = useState(false);

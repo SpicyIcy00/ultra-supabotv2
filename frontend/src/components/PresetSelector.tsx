@@ -9,7 +9,6 @@ export const PresetSelector: React.FC<PresetSelectorProps> = ({ onSaveClick }) =
   const {
     presets,
     activePreset,
-    defaultPresetId,
     isLoading,
     selectPreset,
     deletePreset,
@@ -157,9 +156,8 @@ export const PresetSelector: React.FC<PresetSelectorProps> = ({ onSaveClick }) =
             presets.map((preset) => (
               <div
                 key={preset.id}
-                className={`relative overflow-visible ${
-                  activePreset?.id === preset.id ? 'bg-gray-600' : 'hover:bg-gray-600'
-                }`}
+                className={`relative overflow-visible ${activePreset?.id === preset.id ? 'bg-gray-600' : 'hover:bg-gray-600'
+                  }`}
               >
                 {renamingPreset === preset.id ? (
                   <div className="px-4 py-3 flex items-center gap-2">

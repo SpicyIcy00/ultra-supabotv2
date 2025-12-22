@@ -1,7 +1,7 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { Download } from 'lucide-react';
-import { getCategoryColor, THEME_COLORS } from '../../constants/colors';
+import { getCategoryColor } from '../../constants/colors';
 import { formatCurrency } from '../../utils/dateCalculations';
 import { exportChartAsImage } from '../../utils/chartExport';
 
