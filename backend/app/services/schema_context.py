@@ -43,7 +43,7 @@ class SchemaContext:
 
         # Create sync engine for inspection (inspector doesn't support async)
         if instance._sync_engine is None:
-            sync_url = database_url.replace('+asyncpg', '')
+            sync_url = database_url.replace('+asyncpg', '+psycopg')
             instance._sync_engine = create_engine(sync_url, pool_pre_ping=True)
 
         # Load business rules from YAML
