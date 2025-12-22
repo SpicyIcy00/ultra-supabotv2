@@ -27,6 +27,22 @@ async def startup_event():
         database_url=settings.DATABASE_URL,
         business_rules_path=str(business_rules_path)
     )
+    
+    # Debug: Print database connection info (redacted)
+    try:
+        from app.core.config import settings
+        db_url = settings.DATABASE_URL
+        if "@" in db_url:
+            # simple redaction
+            prefix = db_url.split("@")[0]
+            suffix = db_url.split("@")[1]
+            redacted_prefix = prefix.split(":")[0] + ":****"
+            print(f"DEBUG: Connecting to database at: {redacted_prefix}@{suffix}")
+        else:
+            print(f"DEBUG: Connecting to database at: {db_url}")
+    except Exception as e:
+        print(f"DEBUG: Error logging DB info: {e}")
+            
     print("SchemaContext initialized")
     print("REGISTERED ROUTES START")
     for route in app.routes:

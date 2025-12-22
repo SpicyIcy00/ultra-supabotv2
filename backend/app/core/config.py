@@ -22,6 +22,21 @@ class Settings(BaseSettings):
     DATABASE_URL: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/bidashboard"
     )
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_db_connection(cls, v: str | None) -> str:
+        if not v:
+            return "postgresql+asyncpg://postgres:postgres@localhost:5432/bidashboard"
+        
+        # Handle cases where the URL is provided without the driver
+        if v.startswith("postgres://"):
+            v = v.replace("postgres://", "postgresql://", 1)
+            
+        if v.startswith("postgresql://") and "+asyncpg" not in v:
+            v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
+            
+        return v
     DATABASE_POOL_SIZE: int = 20
     DATABASE_MAX_OVERFLOW: int = 10
 
