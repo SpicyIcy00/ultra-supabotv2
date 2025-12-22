@@ -21,12 +21,6 @@ app = FastAPI(
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on application startup"""
-    # Initialize schema context with database connection
-    business_rules_path = Path(__file__).parent.parent / "business_rules.yaml"
-    SchemaContext.initialize(
-        database_url=settings.DATABASE_URL,
-        business_rules_path=str(business_rules_path)
-    )
     
     # Debug: Print database connection info (redacted)
     try:
@@ -41,6 +35,13 @@ async def startup_event():
             print(f"DEBUG: Connecting to database at: {db_url}")
     except Exception as e:
         print(f"DEBUG: Error logging DB info: {e}")
+
+    # Initialize schema context with database connection
+    business_rules_path = Path(__file__).parent.parent / "business_rules.yaml"
+    SchemaContext.initialize(
+        database_url=settings.DATABASE_URL,
+        business_rules_path=str(business_rules_path)
+    )
             
     print("SchemaContext initialized")
     print("REGISTERED ROUTES START")
