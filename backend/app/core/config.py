@@ -1,4 +1,5 @@
 from typing import Any, List
+import os
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import json
@@ -19,9 +20,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
 
     # Database
-    DATABASE_URL: str = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/bidashboard"
-    )
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/bidashboard")
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
