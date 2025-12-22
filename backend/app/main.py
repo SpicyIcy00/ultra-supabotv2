@@ -30,7 +30,6 @@ async def startup_event():
     
     # Debug: Print database connection info (redacted)
     try:
-        from app.core.config import settings
         db_url = settings.DATABASE_URL
         if "@" in db_url:
             # simple redaction
