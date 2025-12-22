@@ -46,10 +46,10 @@ REDIS_ENABLED=false
 - Generate a new SECRET_KEY for production (you can use: `openssl rand -hex 32`)
 
 ### Step 4: Configure Build Settings
-Railway should auto-detect your Python app. Verify these settings:
+Railway should auto-detect your Python app. **You MUST verify these settings:**
 
-- **Root Directory**: `backend`
-- **Build Command**: `poetry install --no-dev`
+- **Root Directory**: `/backend`  <-- **CRITICAL: Must set this or build fails!**
+- **Build Command**: `pip install -r requirements.txt` (since we switched to nixpacks/pip)
 - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 
 ### Step 5: Deploy
@@ -162,8 +162,9 @@ Both Vercel and Railway are now set up for automatic deployments:
 - Ensure all npm dependencies are in `package.json`
 
 **Backend:**
+- **Error "Script start.sh not found"**: You forgot to set **Root Directory** to `/backend` in Settings.
 - Check Railway build logs
-- Ensure all Python dependencies are in `pyproject.toml`
+- Ensure all Python dependencies are in `requirements.txt`
 
 ---
 
