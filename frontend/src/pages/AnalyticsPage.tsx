@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { DayOfWeekPatterns } from '../components/charts/DayOfWeekPatterns';
 import { ProductCombosTable } from '../components/tables/ProductCombosTable';
 import { SalesAnomaliesList } from '../components/lists/SalesAnomaliesList';
-import { StoreDrilldown } from '../components/analytics/StoreDrilldown';
 import { StoreComparisonV2 } from '../components/analytics/StoreComparisonV2';
 import { DatePeriodSelector } from '../components/filters/DatePeriodSelector';
 import {
@@ -12,7 +11,7 @@ import {
   useSalesAnomalies,
 } from '../hooks/useDashboardData';
 
-type TabType = 'store-comparison' | 'store-drilldown' | 'day-patterns' | 'product-combos' | 'anomalies';
+type TabType = 'store-comparison' | 'day-patterns' | 'product-combos' | 'anomalies';
 
 export const AnalyticsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('store-comparison');
@@ -22,24 +21,11 @@ export const AnalyticsPage: React.FC = () => {
   const productCombos = useProductCombos();
   const salesAnomalies = useSalesAnomalies();
 
-  // Extract unique stores from store comparison data
-  const stores = React.useMemo(() => {
-    if (!storeComparison.data) return [];
-    return storeComparison.data
-      .map((store, index) => ({ id: index + 1, name: store.store_name }))
-      .filter(store => !['Aji Ichiban Food Products', 'AJI Disposal', 'Aji Packing', 'Test stoee', 'AJI PINA', 'Digital Store', 'AJI CMG', 'AJI BARN', 'AJI ONLINE'].includes(store.name));
-  }, [storeComparison.data]);
-
   const tabs = [
     {
       id: 'store-comparison' as TabType,
       label: 'Store Comparison',
       description: 'Compare performance across all stores',
-    },
-    {
-      id: 'store-drilldown' as TabType,
-      label: 'Store Drilldown',
-      description: 'Deep dive into store performance',
     },
     {
       id: 'day-patterns' as TabType,
@@ -85,7 +71,7 @@ export const AnalyticsPage: React.FC = () => {
         </div>
 
         {/* Date Filter for applicable tabs */}
-        {(activeTab === 'store-drilldown' || activeTab === 'product-combos') && (
+        {activeTab === 'product-combos' && (
           <div className="flex items-center gap-4 bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4">
             <DatePeriodSelector />
           </div>
@@ -128,10 +114,6 @@ export const AnalyticsPage: React.FC = () => {
                 data={productCombos.data || []}
                 isLoading={getLoadingState()}
               />
-            )}
-
-            {activeTab === 'store-drilldown' && (
-              <StoreDrilldown stores={stores} />
             )}
 
             {activeTab === 'anomalies' && (

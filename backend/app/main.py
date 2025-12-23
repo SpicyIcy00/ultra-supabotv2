@@ -16,6 +16,22 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_PREFIX}/openapi.json"
 )
 
+# CRITICAL: CORS must be added IMMEDIATELY after app creation and BEFORE routes
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://ultra-supabotv2.vercel.app",
+        "https://ultra-supabotv2-i0daqfszt-spicyicy00s-projects.vercel.app",
+        "https://*.vercel.app",
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "*"  # Fallback for development
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
 
 # Startup event: Initialize SchemaContext
 @app.on_event("startup")
@@ -57,16 +73,6 @@ async def shutdown_event():
     """Clean up resources on application shutdown"""
     SchemaContext.shutdown()
     print("SchemaContext shut down")
-
-# CRITICAL: CORS middleware MUST be added BEFORE importing routes
-# This ensures CORS headers are properly added to all responses
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS if settings.CORS_ORIGINS else ["*"],  # Use settings or allow all
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 from app.api.v1.routes import analytics, chatbot, stores, products, reports, report_presets
 
