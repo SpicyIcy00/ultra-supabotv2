@@ -1,0 +1,441 @@
+# Business Rules Configuration for AI SQL Generator
+# This file provides context to Claude for generating accurate SQL queries
+
+# =============================================================================
+# STORE CONFIGURATION
+# =============================================================================
+stores:
+  - Rockwell
+  - Greenhills
+  - Magnolia
+  - North Edsa
+  - Fairview
+  - Opus
+
+# =============================================================================
+# DATABASE SCHEMA DOCUMENTATION
+# =============================================================================
+schema_docs:
+  tables:
+    stores:
+      description: "Physical retail store locations"
+      primary_key: "id (24-char MongoDB ObjectID)"
+      key_columns:
+        - name: "Unique store name (e.g., 'Rockwell', 'Greenhills')"
+      usage: "JOIN with transactions via store_id, inventory via store_id"
+      
+    products:
+      description: "Product catalog with pricing information"
+      primary_key: "id (24-char MongoDB ObjectID)"
+      key_columns:
+        - name: "Product display name"
+        - sku: "Stock keeping unit code"
+        - barcode: "Product barcode"
+        - category: "Product category (e.g., 'Beverages', 'Snacks')"
+        - unit_price: "Current selling price"
+        - cost: "Product cost for profit calculation"
+      usage: "JOIN with transaction_items via product_id, inventory via product_id"
+      
+    new_transactions:
+      description: "Transaction headers - one record per customer transaction"
+      primary_key: "ref_id"
+      key_columns:
+        - ref_id: "Unique transaction identifier"
+        - store_id: "FK to stores.id"
+        - transaction_time: "TIMESTAMP WITH TIMEZONE - when transaction occurred (Asia/Manila)"
+        - total: "Final transaction total after discounts/tax"
+        - sub_total: "Transaction total before adjustments"
+        - discount: "Total discount applied"
+        - tax: "Total tax amount"
+        - is_cancelled: "BOOLEAN - ALWAYS filter is_cancelled = false"
+        - transaction_type: "Type of transaction (SALE, REFUND, etc.)"
+      indexes: 
+        - "idx_transaction_time_store ON (transaction_time, store_id)"
+        - "idx_transaction_type_time ON (transaction_type, transaction_time)"
+      usage: "Main table for sales analytics. JOIN with items via ref_id"
+      
+    new_transaction_items:
+      description: "Line items within transactions - one record per product in a transaction"
+      primary_key: "id (auto-increment)"
+      key_columns:
+        - transaction_ref_id: "FK to new_transactions.ref_id"
+        - product_id: "FK to products.id"
+        - quantity: "Number of units sold (can be decimal for weighted items)"
+        - unit_price: "Price at time of sale (may be NULL)"
+        - item_total: "Final line item total (revenue) - USE THIS FOR REVENUE"
+        - item_subtotal: "Line item total before adjustments"
+        - discount: "Line item discount"
+      indexes:
+        - "idx_product_transaction ON (product_id, transaction_ref_id)"
+      usage: "Use for product-level sales analysis. MUST JOIN with transactions for date filtering"
+      
+    inventory:
+      description: "Current stock levels per product per store"
+      primary_key: "Composite (product_id, store_id)"
+      key_columns:
+        - product_id: "FK to products.id"
+        - store_id: "FK to stores.id"
+        - quantity_on_hand: "Current stock level"
+        - warning_stock: "Low stock warning threshold"
+        - ideal_stock: "Optimal stock level"
+      usage: "For inventory analysis. Use LEFT JOIN from products to include products with 0 inventory"
+
+# =============================================================================
+# COLUMN SYNONYMS - Maps user terminology to actual column names
+# =============================================================================
+column_synonyms:
+  # Product name synonyms
+  name:
+    - product_name
+    - name
+    - item
+    - title
+    - product
+    
+  # Revenue/sales amount synonyms
+  revenue:
+    - item_total          # This is the correct column for revenue in transaction_items
+    - net_amount
+    - revenue
+    - total_revenue
+    - amount
+    - sales
+    - total_sales
+    
+  # Quantity/units synonyms
+  units:
+    - quantity            # Actual column name
+    - units
+    - qty
+    - units_sold
+    - total_quantity
+    - quantity_sold
+    
+  # Date/time synonyms
+  date:
+    - transaction_time    # Primary timestamp column
+    - created_at
+    - date
+    - day
+    - month
+    - hour
+    - timestamp
+    - time
+    
+  # Store synonyms
+  store:
+    - store_name          # Use s.name with alias
+    - store
+    - location
+    - branch
+    - outlet
+    
+  # Category synonyms
+  category:
+    - category            # products.category
+    - category_name
+    - product_category
+    - type
+    
+  # Profit synonyms
+  profit:
+    - profit
+    - margin
+    - net_profit
+    - gross_profit
+    # Note: profit = (item_total - (cost * quantity))
+
+# =============================================================================
+# DEFAULT FILTERS - Always apply these unless explicitly overridden
+# =============================================================================
+default_filters:
+  - table: new_transactions
+    field: is_cancelled
+    value: false
+    always_apply: true
+    description: "Filter out cancelled transactions"
+    sql_template: "t.is_cancelled = false"
+
+# =============================================================================
+# DATE HANDLING CONFIGURATION
+# =============================================================================
+date_defaults:
+  timezone: "Asia/Manila"
+  week_start: "Monday"
+  time_format: "12-hour"
+  fiscal_year_start: "January"
+  
+# Date interpretation rules for natural language  
+date_interpretation:
+  today: "CURRENT_DATE AT TIME ZONE 'Asia/Manila'"
+  yesterday: "(CURRENT_DATE - INTERVAL '1 day') AT TIME ZONE 'Asia/Manila'"
+  this_week: "From Monday 00:00:00 to current moment"
+  last_week: "Previous Monday 00:00:00 to Sunday 23:59:59"
+  this_month: "First day of current month to current moment"
+  last_month: "First to last day of previous month"
+  last_7_days: "CURRENT_DATE - INTERVAL '7 days' to now"
+  last_30_days: "CURRENT_DATE - INTERVAL '30 days' to now"
+
+# =============================================================================
+# QUERY OPTIMIZATION SETTINGS
+# =============================================================================
+optimization:
+  default_limit: 100
+  max_limit: 1000
+  enable_caching: true
+  timeout_seconds: 30
+  
+# Performance tips for Claude
+query_tips:
+  - "Always filter by transaction_time early in WHERE clause - it's indexed"
+  - "Use store_id index when filtering by specific stores"
+  - "Use product_id index when filtering by specific products"
+  - "Avoid SELECT * - specify needed columns"
+  - "Use table aliases: t=transactions, ti=transaction_items, p=products, s=stores, i=inventory"
+
+# =============================================================================
+# BUSINESS LOGIC RULES
+# =============================================================================
+business_logic:
+  revenue_calculation: "SUM(ti.item_total) - this is the net revenue after discounts"
+  profit_calculation: "SUM(ti.item_total - (p.cost * ti.quantity)) - requires JOIN with products"
+  average_order_value: "SUM(t.total) / COUNT(DISTINCT t.ref_id)"
+  units_sold: "SUM(ti.quantity)"
+  transaction_count: "COUNT(DISTINCT t.ref_id)"
+  
+  ranking_rules:
+    top_selling: "ORDER BY revenue DESC (total sales in money)"
+    most_units: "ORDER BY quantity DESC (units sold)"
+    most_profitable: "ORDER BY profit DESC"
+    most_transactions: "ORDER BY transaction_count DESC"
+
+# =============================================================================
+# TRAINING EXAMPLES - Critical for Claude to understand query patterns
+# =============================================================================
+training:
+  examples:
+    # Example 1: Top selling products by revenue
+    - question: "What are the top 10 selling products this month?"
+      sql: |
+        SELECT 
+            p.name AS product_name,
+            p.sku,
+            p.category,
+            SUM(ti.quantity) AS total_quantity_sold,
+            SUM(ti.item_total) AS total_revenue,
+            COUNT(DISTINCT t.ref_id) AS transaction_count
+        FROM new_transaction_items ti
+        INNER JOIN new_transactions t ON ti.transaction_ref_id = t.ref_id
+        INNER JOIN products p ON ti.product_id = p.id
+        WHERE t.is_cancelled = false
+          AND t.transaction_time >= DATE_TRUNC('month', CURRENT_DATE AT TIME ZONE 'Asia/Manila')
+          AND t.transaction_time < DATE_TRUNC('month', CURRENT_DATE AT TIME ZONE 'Asia/Manila') + INTERVAL '1 month'
+        GROUP BY p.id, p.name, p.sku, p.category
+        ORDER BY total_revenue DESC
+        LIMIT 10;
+      type: ranking
+      explanation: "Returns top 10 products by total revenue for current month"
+      
+    # Example 2: Sales by store
+    - question: "Show me sales by store for the last 7 days"
+      sql: |
+        SELECT 
+            s.name AS store_name,
+            SUM(t.total) AS total_sales,
+            COUNT(DISTINCT t.ref_id) AS transaction_count,
+            SUM(t.total) / NULLIF(COUNT(DISTINCT t.ref_id), 0) AS avg_transaction_value
+        FROM new_transactions t
+        INNER JOIN stores s ON t.store_id = s.id
+        WHERE t.is_cancelled = false
+          AND t.transaction_time >= (CURRENT_DATE - INTERVAL '7 days') AT TIME ZONE 'Asia/Manila'
+        GROUP BY s.id, s.name
+        ORDER BY total_sales DESC;
+      type: comparison
+      explanation: "Compares sales performance across all stores"
+      
+    # Example 3: Hourly sales trend
+    - question: "What is the hourly sales trend for today?"
+      sql: |
+        SELECT 
+            EXTRACT(HOUR FROM t.transaction_time AT TIME ZONE 'Asia/Manila') AS hour,
+            TO_CHAR(t.transaction_time AT TIME ZONE 'Asia/Manila', 'HH12 AM') AS hour_label,
+            SUM(t.total) AS total_sales,
+            COUNT(DISTINCT t.ref_id) AS transaction_count
+        FROM new_transactions t
+        WHERE t.is_cancelled = false
+          AND DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') = CURRENT_DATE
+        GROUP BY 
+            EXTRACT(HOUR FROM t.transaction_time AT TIME ZONE 'Asia/Manila'),
+            TO_CHAR(t.transaction_time AT TIME ZONE 'Asia/Manila', 'HH12 AM')
+        ORDER BY hour;
+      type: time_series
+      explanation: "Shows sales distribution across hours of the day"
+      
+    # Example 4: Most profitable products
+    - question: "Which products are most profitable?"
+      sql: |
+        SELECT 
+            p.name AS product_name,
+            p.category,
+            SUM(ti.quantity) AS total_quantity_sold,
+            SUM(ti.item_total) AS total_revenue,
+            SUM(ti.item_total - (COALESCE(p.cost, 0) * ti.quantity)) AS total_profit,
+            CASE 
+                WHEN SUM(ti.item_total) > 0 
+                THEN ROUND(SUM(ti.item_total - (COALESCE(p.cost, 0) * ti.quantity)) / SUM(ti.item_total) * 100, 2)
+                ELSE 0 
+            END AS profit_margin_pct
+        FROM new_transaction_items ti
+        INNER JOIN new_transactions t ON ti.transaction_ref_id = t.ref_id
+        INNER JOIN products p ON ti.product_id = p.id
+        WHERE t.is_cancelled = false
+          AND t.transaction_time >= (CURRENT_DATE - INTERVAL '30 days') AT TIME ZONE 'Asia/Manila'
+        GROUP BY p.id, p.name, p.category
+        HAVING SUM(ti.item_total) > 0
+        ORDER BY total_profit DESC
+        LIMIT 20;
+      type: ranking
+      explanation: "Ranks products by profit contribution"
+      
+    # Example 5: Low stock items
+    - question: "Show me low stock items across all stores"
+      sql: |
+        SELECT 
+            p.name AS product_name,
+            p.sku,
+            p.category,
+            s.name AS store_name,
+            i.quantity_on_hand,
+            i.warning_stock,
+            i.ideal_stock,
+            CASE 
+                WHEN i.warning_stock IS NOT NULL AND i.quantity_on_hand <= i.warning_stock THEN 'LOW STOCK'
+                WHEN i.quantity_on_hand = 0 THEN 'OUT OF STOCK'
+                ELSE 'OK'
+            END AS stock_status
+        FROM inventory i
+        INNER JOIN products p ON i.product_id = p.id
+        INNER JOIN stores s ON i.store_id = s.id
+        WHERE i.quantity_on_hand <= COALESCE(i.warning_stock, 10)
+        ORDER BY i.quantity_on_hand ASC, s.name, p.name
+        LIMIT 50;
+      type: listing
+      explanation: "Lists products with low or zero inventory"
+      
+    # Example 6: Sales by category
+    - question: "What are the best selling categories this week?"
+      sql: |
+        SELECT 
+            COALESCE(p.category, 'Uncategorized') AS category,
+            SUM(ti.quantity) AS total_quantity_sold,
+            SUM(ti.item_total) AS total_revenue,
+            COUNT(DISTINCT ti.product_id) AS unique_products_sold,
+            COUNT(DISTINCT t.ref_id) AS transaction_count
+        FROM new_transaction_items ti
+        INNER JOIN new_transactions t ON ti.transaction_ref_id = t.ref_id
+        INNER JOIN products p ON ti.product_id = p.id
+        WHERE t.is_cancelled = false
+          AND t.transaction_time >= DATE_TRUNC('week', CURRENT_DATE AT TIME ZONE 'Asia/Manila')
+        GROUP BY p.category
+        ORDER BY total_revenue DESC
+        LIMIT 20;
+      type: ranking
+      explanation: "Ranks product categories by total revenue"
+      
+    # Example 7: Compare two stores
+    - question: "Compare sales between Rockwell and Greenhills stores"
+      sql: |
+        SELECT 
+            s.name AS store_name,
+            SUM(t.total) AS total_sales,
+            COUNT(DISTINCT t.ref_id) AS transaction_count,
+            SUM(t.total) / NULLIF(COUNT(DISTINCT t.ref_id), 0) AS avg_transaction_value,
+            SUM(t.discount) AS total_discounts
+        FROM new_transactions t
+        INNER JOIN stores s ON t.store_id = s.id
+        WHERE t.is_cancelled = false
+          AND s.name IN ('Rockwell', 'Greenhills')
+          AND t.transaction_time >= (CURRENT_DATE - INTERVAL '30 days') AT TIME ZONE 'Asia/Manila'
+        GROUP BY s.id, s.name
+        ORDER BY total_sales DESC;
+      type: comparison
+      explanation: "Side-by-side comparison of two stores"
+      
+    # Example 8: Daily sales trend
+    - question: "Show me transaction count by day for the last month"
+      sql: |
+        SELECT 
+            DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') AS date,
+            TO_CHAR(t.transaction_time AT TIME ZONE 'Asia/Manila', 'Day') AS day_name,
+            COUNT(DISTINCT t.ref_id) AS transaction_count,
+            SUM(t.total) AS total_sales
+        FROM new_transactions t
+        WHERE t.is_cancelled = false
+          AND t.transaction_time >= (CURRENT_DATE - INTERVAL '30 days') AT TIME ZONE 'Asia/Manila'
+        GROUP BY 
+            DATE(t.transaction_time AT TIME ZONE 'Asia/Manila'),
+            TO_CHAR(t.transaction_time AT TIME ZONE 'Asia/Manila', 'Day')
+        ORDER BY date;
+      type: time_series
+      explanation: "Daily sales trend for the past month"
+      
+    # Example 9: Product sales by store
+    - question: "Show me Aji Mix sales by store"
+      sql: |
+        SELECT 
+            s.name AS store_name,
+            p.name AS product_name,
+            SUM(ti.quantity) AS total_quantity_sold,
+            SUM(ti.item_total) AS total_revenue
+        FROM new_transaction_items ti
+        INNER JOIN new_transactions t ON ti.transaction_ref_id = t.ref_id
+        INNER JOIN products p ON ti.product_id = p.id
+        INNER JOIN stores s ON t.store_id = s.id
+        WHERE t.is_cancelled = false
+          AND LOWER(p.name) LIKE '%aji mix%'
+          AND t.transaction_time >= (CURRENT_DATE - INTERVAL '30 days') AT TIME ZONE 'Asia/Manila'
+        GROUP BY s.id, s.name, p.id, p.name
+        ORDER BY total_revenue DESC;
+      type: comparison
+      explanation: "Product performance breakdown by store"
+      
+    # Example 10: Inventory value by store
+    - question: "What is the total inventory value by store?"
+      sql: |
+        SELECT 
+            s.name AS store_name,
+            COUNT(DISTINCT i.product_id) AS products_in_stock,
+            SUM(i.quantity_on_hand) AS total_units,
+            SUM(i.quantity_on_hand * COALESCE(p.cost, 0)) AS inventory_cost_value,
+            SUM(i.quantity_on_hand * COALESCE(p.unit_price, 0)) AS inventory_retail_value
+        FROM inventory i
+        INNER JOIN stores s ON i.store_id = s.id
+        INNER JOIN products p ON i.product_id = p.id
+        WHERE i.quantity_on_hand > 0
+        GROUP BY s.id, s.name
+        ORDER BY inventory_retail_value DESC;
+      type: aggregate
+      explanation: "Summarizes inventory value at each store location"
+
+# =============================================================================
+# QUERY TYPE DEFINITIONS
+# =============================================================================
+query_types:
+  ranking:
+    description: "Top N or Bottom N queries ordered by a metric"
+    chart_suggestion: "bar_chart"
+  time_series:
+    description: "Data over time (hourly, daily, weekly, monthly)"
+    chart_suggestion: "line_chart"
+  comparison:
+    description: "Comparing metrics across categories/stores/products"
+    chart_suggestion: "grouped_bar_chart"
+  aggregate:
+    description: "Summary statistics and totals"
+    chart_suggestion: "kpi_cards"
+  distribution:
+    description: "Breakdown or distribution of values"
+    chart_suggestion: "pie_chart"
+  listing:
+    description: "Detailed list of items matching criteria"
+    chart_suggestion: "table"
