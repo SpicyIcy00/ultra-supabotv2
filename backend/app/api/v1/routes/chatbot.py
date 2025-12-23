@@ -65,9 +65,20 @@ async def generate_chat_stream(
 
             await asyncio.sleep(0.1)  # Small delay for UI responsiveness
 
-            generator = SQLGenerator()
+            try:
+                generator = SQLGenerator()
+            except ValueError as ve:
+                # API key not set
+                yield format_sse_event(ChatEventError(
+                    type="error",
+                    message=str(ve),
+                    error_type="configuration",
+                    suggestion="Please contact your administrator to configure the ANTHROPIC_API_KEY environment variable."
+                ))
+                return
+
             sql_result = await generator.generate_sql(
-                question, 
+                question,
                 retry_on_failure=True,
                 previous_error=last_error
             )
@@ -223,7 +234,15 @@ async def query_chatbot(
     while retry_count <= max_retries:
         try:
             # Generate SQL
-            generator = SQLGenerator()
+            try:
+                generator = SQLGenerator()
+            except ValueError as ve:
+                # API key not set
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"{str(ve)} Please contact your administrator."
+                )
+
             sql_result = await generator.generate_sql(
                 request.question,
                 retry_on_failure=True,
@@ -332,7 +351,16 @@ async def get_status() -> CircuitBreakerStatus:
     Useful for monitoring circuit breaker state.
     """
 
-    generator = SQLGenerator()
-    status = generator.get_circuit_breaker_status()
-
-    return CircuitBreakerStatus(**status)
+    try:
+        generator = SQLGenerator()
+        status = generator.get_circuit_breaker_status()
+        return CircuitBreakerStatus(**status)
+    except ValueError as ve:
+        # API key not set - return a special status
+        return CircuitBreakerStatus(
+            is_open=True,
+            failures=0,
+            threshold=0,
+            last_failure=None,
+            message=str(ve)
+        )

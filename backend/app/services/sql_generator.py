@@ -76,6 +76,13 @@ class SQLGenerator:
     """
 
     def __init__(self):
+        # Check if API key is set
+        if not settings.ANTHROPIC_API_KEY or settings.ANTHROPIC_API_KEY == "":
+            raise ValueError(
+                "ANTHROPIC_API_KEY environment variable is not set. "
+                "Please set it in your Railway environment variables to enable AI Chat functionality."
+            )
+
         self.client = Anthropic(api_key=settings.ANTHROPIC_API_KEY, timeout=60.0)
         self.circuit_breaker = CircuitBreaker(failure_threshold=5, timeout=60)
         self.schema = SchemaContext.get_schema()

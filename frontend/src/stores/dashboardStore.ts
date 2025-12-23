@@ -40,11 +40,11 @@ interface DashboardState {
 // Specific default stores as requested
 const DEFAULT_STORE_NAMES = [
   'Rockwell',
-  'OPUS',
   'Greenhills',
   'Magnolia',
   'North Edsa',
-  'Fairview'
+  'Fairview',
+  'Opus'
 ];
 
 export const useDashboardStore = create<DashboardState>()(

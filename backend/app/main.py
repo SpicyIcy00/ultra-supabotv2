@@ -58,10 +58,11 @@ async def shutdown_event():
     SchemaContext.shutdown()
     print("SchemaContext shut down")
 
-# CORS middleware - Allow all localhost origins for development
+# CRITICAL: CORS middleware MUST be added BEFORE importing routes
+# This ensures CORS headers are properly added to all responses
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins in development
+    allow_origins=settings.CORS_ORIGINS if settings.CORS_ORIGINS else ["*"],  # Use settings or allow all
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

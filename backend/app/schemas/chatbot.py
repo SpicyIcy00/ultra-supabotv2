@@ -81,3 +81,4 @@ class CircuitBreakerStatus(BaseModel):
     failures: int = Field(..., description="Number of consecutive failures")
     threshold: int = Field(..., description="Failure threshold")
     last_failure: Optional[str] = Field(None, description="Timestamp of last failure")
+    message: Optional[str] = Field(None, description="Optional status or error message")

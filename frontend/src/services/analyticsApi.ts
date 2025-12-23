@@ -15,9 +15,15 @@ import type {
   ProductPerformanceParams,
 } from '../types/analytics';
 
+// Get base URL and ensure /api/v1 is handled consistently
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'https://ultra-supabotv2-production.up.railway.app';
+const API_BASE_URL = `${BASE_URL.replace(/\/$/, '').replace(/\/api\/v1$/, '')}/api/v1`;
+
+console.log('Analytics API Base URL:', API_BASE_URL);
+
 // Create axios instance
 const api = axios.create({
-  baseURL: '/api/v1',  // Use relative URL to go through Vite proxy
+  baseURL: API_BASE_URL,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
