@@ -8,8 +8,8 @@ import type {
 } from '@/types';
 
 // Get base URL and ensure /api/v1 is appended consistently
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'https://ultra-supabotv2-production.up.railway.app';
-const API_BASE_URL = `${BASE_URL.replace(/\/api\/v1$/, '')}/api/v1`;
+// Use relative URL to leverage proxy in Dev and Rewrites in Vercel
+const API_BASE_URL = '/api/v1';
 
 console.log('API Base URL:', API_BASE_URL);
 
