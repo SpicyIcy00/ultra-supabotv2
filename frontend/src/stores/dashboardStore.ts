@@ -86,11 +86,10 @@ export const useDashboardStore = create<DashboardState>()(
       // Fetch stores from API
       fetchStores: async () => {
         try {
-          let apiUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'https://ultra-supabotv2-production.up.railway.app';
-          // Sanitize URL: remove trailing slash and /api/v1 if present
-          apiUrl = apiUrl.replace(/\/$/, '').replace(/\/api\/v1$/, '');
-          console.log('Fetching stores from:', `${apiUrl}/api/v1/analytics/stores`);
-          const response = await fetch(`${apiUrl}/api/v1/analytics/stores`);
+          // Use relative URL to leverage Vercel rewrite proxy (avoids CORS)
+          const apiUrl = '/api/v1';
+          console.log('Fetching stores from:', `${apiUrl}/analytics/stores`);
+          const response = await fetch(`${apiUrl}/analytics/stores`);
           if (!response.ok) throw new Error('Failed to fetch stores');
 
           const stores: StoredStore[] = await response.json();

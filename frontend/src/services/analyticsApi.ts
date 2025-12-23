@@ -15,12 +15,9 @@ import type {
   ProductPerformanceParams,
 } from '../types/analytics';
 
-// Get base URL and ensure /api/v1 is handled consistently
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'https://ultra-supabotv2-production.up.railway.app';
-const sanitizedBaseURL = BASE_URL.replace(/\/$/, '').replace(/\/api\/v1$/, '');
-
+// Use relative URL to leverage Vercel rewrite proxy (avoids CORS)
 const api = axios.create({
-  baseURL: `${sanitizedBaseURL}/api/v1`,
+  baseURL: '/api/v1',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',

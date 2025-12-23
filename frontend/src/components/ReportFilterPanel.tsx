@@ -3,7 +3,8 @@ import { usePresetStore } from '../stores/presetStore';
 import { SORT_FIELD_OPTIONS } from '../types/preset';
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+// Use relative URL to leverage Vercel rewrite proxy (avoids CORS)
+const API_BASE_URL = '';
 
 export const ReportFilterPanel: React.FC = () => {
   const { currentConfig, updateCurrentConfig } = usePresetStore();
@@ -171,11 +172,10 @@ export const ReportFilterPanel: React.FC = () => {
               <button
                 key={category}
                 onClick={() => toggleCategory(category)}
-                className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                  selectedCategories.includes(category)
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${selectedCategories.includes(category)
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
+                  }`}
               >
                 {category}
               </button>
@@ -341,11 +341,10 @@ export const ReportFilterPanel: React.FC = () => {
             <button
               key={day}
               onClick={() => toggleDayOfWeek(day.toLowerCase())}
-              className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                daysOfWeek.includes(day.toLowerCase())
+              className={`px-3 py-1 text-xs rounded-full transition-colors ${daysOfWeek.includes(day.toLowerCase())
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
+                }`}
             >
               {day.substring(0, 3)}
             </button>

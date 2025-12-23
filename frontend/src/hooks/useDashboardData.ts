@@ -8,18 +8,8 @@ import {
   getComparisonLabel,
 } from '../utils/dateCalculations';
 
-const getBaseUrl = () => {
-  let url = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'https://ultra-supabotv2-production.up.railway.app';
-  // Remove trailing slash if present
-  url = url.replace(/\/$/, '');
-  // Append /api/v1 if not present
-  if (!url.endsWith('/api/v1')) {
-    url = `${url}/api/v1`;
-  }
-  return url;
-};
-
-const API_BASE_URL = getBaseUrl();
+// Use relative URL to leverage Vercel rewrite proxy (avoids CORS)
+const API_BASE_URL = '/api/v1';
 
 console.log('Dashboard API Base URL:', API_BASE_URL);
 

@@ -2,9 +2,8 @@ import axios from 'axios';
 import type { ProductSalesReportResponse, Store } from '../types/report';
 import { transformDataForSheets } from '../config/sheetsMapping';
 
-// Get base URL and ensure /api/v1 is handled consistently
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'https://ultra-supabotv2-production.up.railway.app';
-const API_BASE_URL = BASE_URL.replace(/\/$/, '').replace(/\/api\/v1$/, '');
+// Use relative URL to leverage Vercel rewrite proxy (avoids CORS)
+const API_BASE_URL = '';  // Empty because we append /api/v1 below
 const API_V1_PREFIX = '/api/v1';
 const GOOGLE_SHEETS_WEB_APP_URL = import.meta.env.VITE_GOOGLE_SHEETS_URL || '';
 

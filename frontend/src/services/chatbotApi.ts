@@ -5,9 +5,8 @@
 
 import type { ChatRequest, ChatEvent, FeedbackRequest, SuggestionResponse } from '../types/chatbot';
 
-// Get base URL and ensure /api/v1 is handled consistently
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'https://ultra-supabotv2-production.up.railway.app';
-const API_BASE_URL = `${BASE_URL.replace(/\/$/, '').replace(/\/api\/v1$/, '')}/api/v1/chatbot`;
+// Use relative URL to leverage Vercel rewrite proxy (avoids CORS)
+const API_BASE_URL = '/api/v1/chatbot';
 
 /**
  * Stream query with Server-Sent Events
