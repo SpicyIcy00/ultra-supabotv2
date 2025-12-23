@@ -59,10 +59,10 @@ async def get_product_sales_report(
     if not end or not end.strip():
         raise HTTPException(status_code=400, detail="end datetime is required")
 
-    # Validate datetime format
+    # Validate datetime format and convert to datetime objects (asyncpg requires datetime, not strings)
     try:
-        datetime.fromisoformat(start.replace('Z', '+00:00'))
-        datetime.fromisoformat(end.replace('Z', '+00:00'))
+        start_dt = datetime.fromisoformat(start.replace('Z', '+00:00'))
+        end_dt = datetime.fromisoformat(end.replace('Z', '+00:00'))
     except ValueError as e:
         raise HTTPException(
             status_code=400,
@@ -254,11 +254,11 @@ async def get_product_sales_report(
 
     query = text(query_str)
 
-    # Build parameters dict
+    # Build parameters dict (use datetime objects for asyncpg compatibility)
     params = {
         "sales_store_id": sales_store_id,
-        "start": start,
-        "end": end,
+        "start": start_dt,
+        "end": end_dt,
     }
 
     # Add compare store ID parameters
