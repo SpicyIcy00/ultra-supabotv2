@@ -50,8 +50,9 @@ async def post_to_google_sheets(request: PostToSheetsRequest):
     print(f"Provided sheetsUrl from frontend: {request.sheetsUrl}")
     print(f"Environment GOOGLE_SHEETS_URL: {GOOGLE_SHEETS_URL}")
     
-    # Use provided URL or fall back to environment variable
-    sheets_url = request.sheetsUrl or GOOGLE_SHEETS_URL
+    # PRIORITY: Backend environment variable takes precedence over frontend URL
+    # This ensures Railway's GOOGLE_SHEETS_URL is used, avoiding stale frontend env vars
+    sheets_url = GOOGLE_SHEETS_URL or request.sheetsUrl
     
     print(f"Final URL to use: {sheets_url}")
     
