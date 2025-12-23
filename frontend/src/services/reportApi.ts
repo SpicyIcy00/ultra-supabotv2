@@ -201,7 +201,7 @@ function escapeCsvValue(value: string | null | undefined): string {
 }
 
 /**
- * Post report data to Google Sheets
+ * Post report data to Google Sheets via backend proxy (avoids CORS issues)
  *
  * @param data - Report data to post
  * @param sheetName - Name of the sheet tab to post to (corresponds to store name)
@@ -215,10 +215,6 @@ export const postReportToSheets = async (
 ): Promise<{ success: boolean; message: string; rowsWritten?: number; sheetName?: string }> => {
   const url = sheetsUrl || GOOGLE_SHEETS_WEB_APP_URL;
 
-  if (!url) {
-    throw new Error('Google Sheets URL is not configured. Please set VITE_GOOGLE_SHEETS_URL in your .env file.');
-  }
-
   if (!sheetName) {
     throw new Error('Sheet name is required. Please select a store.');
   }
@@ -227,95 +223,30 @@ export const postReportToSheets = async (
     // Transform data according to mapping configuration
     const transformedData = transformDataForSheets(data.rows);
 
-    console.log('=== Posting to Google Sheets ===');
-    console.log('URL:', url);
+    console.log('=== Posting to Google Sheets via Backend Proxy ===');
     console.log('Sheet Name:', sheetName);
     console.log('Row Count:', transformedData.length);
     console.log('Sample Data (first 3 rows):', transformedData.slice(0, 3));
-    console.log('Full Payload:', JSON.stringify({
+
+    // Use backend proxy to avoid CORS issues
+    const response = await axios.post(`${API_BASE_URL}${API_V1_PREFIX}/sheets/post-to-sheets`, {
       sheetName: sheetName,
-      data: transformedData
-    }, null, 2).substring(0, 500) + '...');
+      data: transformedData,
+      sheetsUrl: url || undefined  // Pass the URL to backend if configured
+    });
 
-    // Try with CORS first to get actual response
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    console.log('=== Backend Proxy Response ===');
+    console.log('Response:', response.data);
 
-    let response;
-    let responseData = null;
-
-    try {
-      // Try normal CORS request first
-      response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sheetName: sheetName,
-          data: transformedData
-        }),
-        redirect: 'follow',
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      console.log('=== Response received (with CORS) ===');
-      console.log('Status:', response.status);
-      console.log('Status Text:', response.statusText);
-      console.log('Type:', response.type);
-
-      // Try to read response body
-      const responseText = await response.text();
-      console.log('Response Body:', responseText);
-
-      try {
-        responseData = JSON.parse(responseText);
-        console.log('Parsed Response:', responseData);
-      } catch (e) {
-        console.log('Could not parse response as JSON');
-      }
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}, body: ${responseText}`);
-      }
-
+    if (response.data.success) {
       return {
         success: true,
-        message: `Posted ${transformedData.length} rows to "${sheetName}" tab`,
-        rowsWritten: responseData?.rowsWritten || transformedData.length,
+        message: response.data.message || `Posted ${transformedData.length} rows to "${sheetName}" tab`,
+        rowsWritten: response.data.rowsWritten || transformedData.length,
         sheetName: sheetName,
       };
-
-    } catch (corsError) {
-      console.warn('CORS request failed, this is normal for Google Apps Script:', corsError);
-      console.log('Falling back to no-cors mode...');
-
-      // Fallback to no-cors mode
-      const noCorsResponse = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sheetName: sheetName,
-          data: transformedData
-        }),
-        mode: 'no-cors',
-        redirect: 'follow',
-      });
-
-      console.log('=== Response received (no-cors mode) ===');
-      console.log('Type:', noCorsResponse.type);
-
-      // With no-cors, we can't read the response, so we assume success if no error was thrown
-      return {
-        success: true,
-        message: `Posted ${transformedData.length} rows to "${sheetName}" tab (no-cors mode - check Google Sheets to verify)`,
-        rowsWritten: transformedData.length,
-        sheetName: sheetName,
-      };
+    } else {
+      throw new Error(response.data.error || response.data.message || 'Unknown error');
     }
 
   } catch (error: any) {
@@ -323,15 +254,17 @@ export const postReportToSheets = async (
     console.error('Google Sheets Post Error Details:', {
       message: error.message,
       name: error.name,
-      stack: error.stack
+      response: error.response?.data
     });
 
     // Handle various error scenarios
-    if (error.name === 'AbortError') {
-      throw new Error('Request timed out after 30 seconds. Please try again.');
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    } else if (error.response?.data?.error) {
+      throw new Error(error.response.data.error);
     } else {
-      // For any other error
-      throw new Error(`Failed to post to Google Sheets: ${error.message}. Check browser console for details and see GOOGLE_SHEETS_TROUBLESHOOTING.md`);
+      throw new Error(`Failed to post to Google Sheets: ${error.message}`);
     }
   }
 };
+
