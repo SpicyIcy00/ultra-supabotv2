@@ -19,14 +19,8 @@ app = FastAPI(
 # CRITICAL: CORS must be added IMMEDIATELY after app creation and BEFORE routes
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://ultra-supabotv2.vercel.app",
-        "https://ultra-supabotv2-i0daqfszt-spicyicy00s-projects.vercel.app",
-        "https://*.vercel.app",
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "*"  # Fallback for development
-    ],
+    allow_origins=settings.CORS_ORIGINS,
+    allow_origin_regex=settings.CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

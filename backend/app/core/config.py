@@ -49,17 +49,28 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:3000"]
+    # CORS
+    # Default allowed origins
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:5173", 
+        "http://localhost:5174", 
+        "http://localhost:5175", 
+        "http://localhost:3000",
+        "https://ultra-supabotv2.vercel.app",
+        "https://ultra-supabotv2-8iqmvzzur-spicyicy00s-projects.vercel.app"
+    ]
+
+    # Regex for Vercel preview deployments (matches https://ultra-supabotv2-*.vercel.app)
+    CORS_ORIGIN_REGEX: str = r"https://ultra-supabotv2.*\.vercel\.app"
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, v: Any) -> List[str]:
-        if isinstance(v, str):
-            try:
-                return json.loads(v)
-            except json.JSONDecodeError:
-                return [i.strip() for i in v.split(",")]
-        return v
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip() for i in v.split(",")]
+        elif isinstance(v, (list, str)):
+            return v
+        return []
 
     # API Keys
     ANTHROPIC_API_KEY: str = ""
