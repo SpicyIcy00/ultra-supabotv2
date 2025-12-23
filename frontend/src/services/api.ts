@@ -8,10 +8,12 @@ import type {
 } from '@/types';
 
 // Get base URL and ensure /api/v1 is appended consistently
-// Use relative URL to leverage proxy in Dev and Rewrites in Vercel
+// IMPORTANT: Use relative URL to leverage proxy in Dev (vite.config.ts) and Production (Vercel rewrites)
+// This bypasses CORS issues entirely by making same-origin requests
+// DO NOT use environment variables here - they cause direct Railway calls which trigger CORS
 const API_BASE_URL = '/api/v1';
 
-console.log('API Base URL:', API_BASE_URL);
+console.log('API Base URL (using proxy):', API_BASE_URL);
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
