@@ -1,7 +1,7 @@
 /**
  * Dashboard Layout with Sidebar and Header
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 interface LayoutProps {
@@ -13,12 +13,14 @@ interface NavItemProps {
   icon: React.ReactNode;
   label: string;
   isActive: boolean;
+  onClick?: () => void;
 }
 
-function NavItem({ to, icon, label, isActive }: NavItemProps) {
+function NavItem({ to, icon, label, isActive, onClick }: NavItemProps) {
   return (
     <Link
       to={to}
+      onClick={onClick}
       className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
         isActive
           ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white border border-blue-500/30'
@@ -33,15 +35,52 @@ function NavItem({ to, icon, label, isActive }: NavItemProps) {
 
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Default closed on mobile
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 1024; // lg breakpoint
+      setIsMobile(mobile);
+      if (!mobile) {
+        setSidebarOpen(true); // Always open on desktop
+      }
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Close sidebar on mobile when route changes
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  }, [location.pathname, isMobile]);
+
+  const handleNavClick = () => {
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#0e1117] text-gray-100">
+      {/* Mobile Overlay */}
+      {isMobile && sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full bg-gray-900/50 border-r border-gray-800 backdrop-blur-sm transition-all duration-300 z-30 ${
-          sidebarOpen ? 'w-64' : 'w-0 -translate-x-full'
-        }`}
+        className={`fixed top-0 left-0 h-full bg-gray-900/95 border-r border-gray-800 backdrop-blur-sm transition-all duration-300 z-30 ${
+          sidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full lg:translate-x-0'
+        } ${!sidebarOpen && !isMobile ? 'lg:w-0' : ''}`}
       >
         <div className="p-6">
           {/* Logo */}
@@ -85,6 +124,7 @@ export function Layout({ children }: LayoutProps) {
               }
               label="Dashboard"
               isActive={location.pathname === '/'}
+              onClick={handleNavClick}
             />
 
             <NavItem
@@ -101,6 +141,7 @@ export function Layout({ children }: LayoutProps) {
               }
               label="Analytics"
               isActive={location.pathname === '/analytics'}
+              onClick={handleNavClick}
             />
 
             <NavItem
@@ -117,6 +158,7 @@ export function Layout({ children }: LayoutProps) {
               }
               label="AI Chat"
               isActive={location.pathname === '/ai-chat'}
+              onClick={handleNavClick}
             />
 
             <NavItem
@@ -133,6 +175,7 @@ export function Layout({ children }: LayoutProps) {
               }
               label="Reports"
               isActive={location.pathname === '/reports/product-sales'}
+              onClick={handleNavClick}
             />
 
             <NavItem
@@ -155,6 +198,7 @@ export function Layout({ children }: LayoutProps) {
               }
               label="Settings"
               isActive={location.pathname === '/settings'}
+              onClick={handleNavClick}
             />
           </nav>
         </div>

@@ -5,7 +5,9 @@
 
 import type { ChatRequest, ChatEvent, FeedbackRequest, SuggestionResponse } from '../types/chatbot';
 
-const API_BASE_URL = '/api/v1/chatbot';
+// Use the same API URL pattern as the main API service
+const API_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'https://ultra-supabotv2-production.up.railway.app/api/v1';
+const API_BASE_URL = `${API_URL.replace(/\/api\/v1$/, '')}/api/v1/chatbot`;
 
 /**
  * Stream query with Server-Sent Events
