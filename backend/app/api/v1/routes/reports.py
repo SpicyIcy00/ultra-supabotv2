@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from typing import List
 from datetime import datetime
+import traceback
 from app.core.database import get_db
 from app.schemas.report import ProductSalesReportResponse, ReportMeta, ReportRow, ComparisonStoreData
 
@@ -292,10 +293,18 @@ async def get_product_sales_report(
         params["max_profit_margin"] = max_profit_margin
 
     # Execute query with parameters
-    result = await db.execute(query, params)
+    try:
+        result = await db.execute(query, params)
 
-    # Fetch all rows
-    rows_data = result.fetchall()
+        # Fetch all rows
+        rows_data = result.fetchall()
+    except Exception as e:
+        print(f"DATABASE ERROR in product-sales: {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database query error: {str(e)}"
+        )
 
     # Convert to ReportRow objects with dynamic comparison stores
     rows = []
