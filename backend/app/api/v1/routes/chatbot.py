@@ -2,14 +2,16 @@
 Chatbot API Routes
 
 Handles natural language to SQL query generation and execution.
+Enhanced with AI insights, conversation memory, and better error handling.
 """
 
 import json
 import asyncio
-from fastapi import APIRouter, Depends, HTTPException
+import uuid
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 
 from app.core.database import get_db
 from app.schemas.chatbot import (
@@ -26,6 +28,8 @@ from app.services.query_executor import QueryExecutor, QueryExecutionError
 from app.services.query_validator import QueryValidationError
 from app.services.chart_intelligence import ChartIntelligence
 from app.services.response_formatter import ResponseFormatter
+from app.services.insight_generator import InsightGenerator
+from app.services.conversation_memory import get_memory, add_exchange, get_context
 
 router = APIRouter(tags=["chatbot"])
 
@@ -224,12 +228,18 @@ async def query_chatbot(
 ):
     """
     Non-streaming endpoint for simple request-response.
-    Returns complete result in one response.
+    Returns complete result with AI insights, source preview, and follow-up suggestions.
     """
-
+    
+    # Generate or use provided session ID
+    session_id = request.session_id or str(uuid.uuid4())
+    
     max_retries = 1
     retry_count = 0
     last_error = None
+    
+    # Get conversation context for follow-up questions
+    conversation_context = get_context(session_id) if request.session_id else ""
     
     while retry_count <= max_retries:
         try:
@@ -266,6 +276,8 @@ async def query_chatbot(
 
             # Extract chart data from config (or use original results)
             chart_data = chart_config.get("data") if chart_config else None
+            
+            query_type = sql_result.get("query_type", "unknown")
 
             # Format response
             formatter = ResponseFormatter()
@@ -273,6 +285,38 @@ async def query_chatbot(
                 user_question=request.question,
                 results=execution_result["results"],
                 chart_data=chart_data
+            )
+            
+            # Generate AI insights (non-blocking, with fallback)
+            insights = None
+            try:
+                insight_gen = InsightGenerator()
+                insights = await insight_gen.generate_insights(
+                    question=request.question,
+                    results=execution_result["results"],
+                    query_type=query_type
+                )
+            except Exception as e:
+                print(f"Insight generation failed: {e}")
+                insights = None
+            
+            # Prepare source preview (first 5 rows)
+            source_preview = execution_result["results"][:5] if execution_result["results"] else []
+            
+            # Generate follow-up suggestions based on query type
+            follow_up_suggestions = _generate_follow_ups(request.question, query_type)
+            
+            # Store in conversation memory
+            answer_summary = f"Found {execution_result['row_count']} results"
+            if insights and insights.get("summary"):
+                answer_summary = insights["summary"]
+            
+            add_exchange(
+                session_id=session_id,
+                question=request.question,
+                sql=sql_result["sql"],
+                answer_summary=answer_summary,
+                results_count=execution_result["row_count"]
             )
 
             return {
@@ -284,25 +328,145 @@ async def query_chatbot(
                 "chart": chart_config,
                 "chart_data": chart_data,
                 "final_text": formatted_text,
-                "query_type": sql_result.get("query_type"),
-                "assumptions": sql_result.get("assumptions", [])
+                "query_type": query_type,
+                "assumptions": sql_result.get("assumptions", []),
+                # New enhanced fields
+                "insights": insights,
+                "source_preview": source_preview,
+                "follow_up_suggestions": follow_up_suggestions,
+                "session_id": session_id
             }
         
         except (QueryValidationError, QueryExecutionError) as e:
             last_error = str(e)
             retry_count += 1
             if retry_count > max_retries:
-                # Re-raise appropriate exception
-                status_code = 400 if isinstance(e, QueryValidationError) else 500
-                raise HTTPException(status_code=status_code, detail=f"Query failed after retry: {last_error}")
+                # Provide helpful error with suggestions
+                error_suggestions = _get_error_suggestions(str(e), request.question)
+                raise HTTPException(
+                    status_code=400 if isinstance(e, QueryValidationError) else 500,
+                    detail={
+                        "message": f"Query failed: {last_error}",
+                        "suggestions": error_suggestions,
+                        "try_instead": _get_alternative_questions(request.question)
+                    }
+                )
             
             # Continue loop
 
         except CircuitOpenError as e:
-            raise HTTPException(status_code=503, detail=str(e))
+            raise HTTPException(
+                status_code=503, 
+                detail={
+                    "message": str(e),
+                    "suggestions": ["Wait a moment and try again", "The AI service is temporarily unavailable"]
+                }
+            )
 
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+            raise HTTPException(
+                status_code=500, 
+                detail={
+                    "message": f"An error occurred: {str(e)}",
+                    "suggestions": ["Try rephrasing your question", "Use simpler terms"]
+                }
+            )
+
+
+def _generate_follow_ups(question: str, query_type: str) -> List[str]:
+    """Generate contextual follow-up question suggestions."""
+    question_lower = question.lower()
+    
+    if query_type == "ranking":
+        suggestions = [
+            "Show me the bottom performers instead",
+            "Break this down by store",
+            "How does this compare to last week?"
+        ]
+        if "product" in question_lower:
+            suggestions.append("What categories do these belong to?")
+    elif query_type == "time_series":
+        suggestions = [
+            "Compare to the previous period",
+            "Break this down by store",
+            "What's the peak hour?"
+        ]
+    elif query_type == "comparison":
+        suggestions = [
+            "Add more items to compare",
+            "Show this over time",
+            "Which has the best margins?"
+        ]
+    elif query_type == "aggregate":
+        suggestions = [
+            "Break this down by store",
+            "Show me the trend over time",
+            "Compare to yesterday"
+        ]
+    else:
+        suggestions = [
+            "Show more details",
+            "Compare to last week",
+            "Filter by specific store"
+        ]
+    
+    return suggestions[:3]
+
+
+def _get_error_suggestions(error: str, question: str) -> List[str]:
+    """Generate helpful suggestions based on error type."""
+    suggestions = []
+    error_lower = error.lower()
+    
+    if "column" in error_lower or "does not exist" in error_lower:
+        suggestions.append("Try using simpler terms like 'sales', 'revenue', or 'products'")
+    if "syntax" in error_lower:
+        suggestions.append("Rephrase your question more clearly")
+    if "timeout" in error_lower:
+        suggestions.append("Try a shorter date range")
+        suggestions.append("Limit to a specific store")
+    if "ambiguous" in error_lower:
+        suggestions.append("Be more specific about what you're looking for")
+    
+    if not suggestions:
+        suggestions = [
+            "Try simpler wording",
+            "Specify a date range like 'this week' or 'last month'"
+        ]
+    
+    return suggestions[:3]
+
+
+def _get_alternative_questions(question: str) -> List[str]:
+    """Suggest alternative questions based on failed question."""
+    alternatives = [
+        "What are the top 10 selling products this week?",
+        "Show me sales by store for the last 7 days",
+        "What is our total sales today?"
+    ]
+    
+    question_lower = question.lower()
+    if "product" in question_lower:
+        alternatives = [
+            "Top 10 selling products this month",
+            "Which products have the highest revenue?",
+            "Show me products by category"
+        ]
+    elif "store" in question_lower:
+        alternatives = [
+            "Sales by store for last 7 days",
+            "Compare Rockwell and Greenhills",
+            "Which store has the highest sales?"
+        ]
+    elif "today" in question_lower or "hour" in question_lower:
+        alternatives = [
+            "Hourly sales trend for today",
+            "How many transactions today?",
+            "Total sales today"
+        ]
+    
+    return alternatives[:3]
+
 
 
 @router.post("/feedback")

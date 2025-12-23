@@ -11,6 +11,7 @@ from typing import List, Dict, Any, Optional, Literal
 class ChatRequest(BaseModel):
     """Request to ask a question to the chatbot"""
     question: str = Field(..., min_length=1, max_length=10000, description="Natural language question")
+    session_id: Optional[str] = Field(None, description="Session ID for conversation memory")
     store_id: Optional[str] = Field(None, description="Optional store filter")
     date_range: Optional[Dict[str, str]] = Field(None, description="Optional date range filter")
 
@@ -46,6 +47,11 @@ class ChatEventFinal(BaseModel):
     final_text: str = Field(..., description="Formatted markdown response")
     query_type: Optional[str] = Field(None, description="Detected query type")
     assumptions: Optional[List[str]] = Field(default_factory=list, description="Assumptions made")
+    # New fields for enhanced features
+    insights: Optional[Dict[str, Any]] = Field(None, description="AI-generated insights")
+    source_preview: Optional[List[Dict[str, Any]]] = Field(None, description="First 5 raw data rows")
+    follow_up_suggestions: Optional[List[str]] = Field(default_factory=list, description="Suggested follow-up questions")
+    session_id: Optional[str] = Field(None, description="Session ID for conversation memory")
 
 
 class ChatEventError(BaseModel):

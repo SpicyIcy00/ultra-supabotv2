@@ -294,7 +294,22 @@ class ChartIntelligence:
             "x_label": self._format_label(x_axis),
             "y_label": self._format_label(y_axis),
             "is_currency": is_currency_axis,  # Hint for frontend formatting
-            "units_column": units_col  # Units column name for tooltip
+            "units_column": units_col,  # Units column name for tooltip
+            # Smart formatting options
+            "formatting": {
+                "abbreviate_numbers": True,  # Use K, M, B suffixes
+                "currency_symbol": "₱" if is_currency_axis else None,
+                "decimal_places": 0 if is_currency_axis else 2,
+                "show_grid": True,
+                "show_labels": len(chart_data) <= 10,  # Hide labels if too many
+                "label_rotation": 45 if len(chart_data) > 5 else 0,
+                "max_label_length": 15  # Truncate long labels
+            },
+            "tooltip": {
+                "show_percentage": chart_type == "pie",
+                "show_units": units_col is not None,
+                "currency_format": is_currency_axis
+            }
         }
 
         return config

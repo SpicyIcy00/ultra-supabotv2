@@ -7,6 +7,8 @@ NO AI calls - pure deterministic formatting for speed and consistency.
 
 from typing import Any, Dict, List, Tuple
 from decimal import Decimal
+from datetime import datetime, date
+import re
 
 
 class ResponseFormatter:
@@ -14,6 +16,11 @@ class ResponseFormatter:
 
     def __init__(self, max_words: int = 200):
         self.max_words = max_words
+        # Date/time format patterns
+        self.date_format = "%b %d, %Y"  # Dec 23, 2025
+        self.time_format = "%I:%M %p"   # 3:45 PM
+        self.datetime_format = "%b %d, %Y at %I:%M %p"  # Dec 23, 2025 at 3:45 PM
+
 
     def format_response(
         self,
@@ -467,22 +474,122 @@ class ResponseFormatter:
 
         # Check if it's a currency column
         is_currency = any(kw in column_name.lower() for kw in ['revenue', 'sales', 'price', 'cost', 'profit', 'total', 'amount'])
+        
+        # Check if it's a date/time column
+        is_date = any(kw in column_name.lower() for kw in ['date', 'time', 'created', 'updated', 'day'])
+        
+        # Check if it's a percentage column
+        is_percent = any(kw in column_name.lower() for kw in ['pct', 'percent', 'percentage', 'ratio', 'margin'])
 
+        # Format dates and datetimes
+        if isinstance(value, datetime):
+            return self._format_datetime(value)
+        elif isinstance(value, date):
+            return self._format_date(value)
+        
         # Format numbers
         if isinstance(value, (int, float, Decimal)):
-            # Round to nearest integer for currency
-            int_value = int(round(float(value)))
-
+            float_val = float(value)
+            
+            # Percentages
+            if is_percent:
+                return f"{float_val:.1f}%"
+            
+            # Currency - keep decimals for smaller amounts
             if is_currency:
-                return f"₱{int_value:,}"
-            else:
-                # Check if it's a large number (probably quantity)
-                if int_value >= 1000:
-                    return f"{int_value:,} units"
+                if float_val >= 1000000:
+                    return f"₱{float_val/1000000:.2f}M"
+                elif float_val >= 1000:
+                    return f"₱{float_val:,.0f}"
                 else:
-                    return f"{int_value:,}"
+                    return f"₱{float_val:,.2f}"
+            
+            # Large numbers - abbreviate
+            if float_val >= 1000000:
+                return f"{float_val/1000000:.2f}M"
+            elif float_val >= 1000:
+                return f"{int(float_val):,}"
+            else:
+                # Small numbers - keep decimals if they exist
+                if float_val == int(float_val):
+                    return f"{int(float_val):,}"
+                else:
+                    return f"{float_val:,.2f}"
+
+        # Format strings - check for date patterns
+        if isinstance(value, str) and is_date:
+            formatted = self._try_format_date_string(value)
+            if formatted:
+                return formatted
 
         return str(value)
+
+    def _format_date(self, value: date) -> str:
+        """Format a date object to human-readable string.
+        
+        Example: 2025-12-23 -> Dec 23, 2025
+        """
+        return value.strftime(self.date_format)
+    
+    def _format_datetime(self, value: datetime) -> str:
+        """Format a datetime object to human-readable string.
+        
+        Example: 2025-12-23 15:45:00 -> Dec 23, 2025 at 3:45 PM
+        """
+        return value.strftime(self.datetime_format)
+    
+    def _format_time(self, value: datetime) -> str:
+        """Format a time to human-readable string.
+        
+        Example: 15:45:00 -> 3:45 PM
+        """
+        return value.strftime(self.time_format)
+    
+    def _try_format_date_string(self, value: str) -> str | None:
+        """Try to parse and format a date string.
+        
+        Returns formatted date or None if not a date.
+        """
+        # Common date patterns to try
+        patterns = [
+            "%Y-%m-%d",
+            "%Y-%m-%dT%H:%M:%S",
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%dT%H:%M:%S.%f",
+            "%Y-%m-%dT%H:%M:%S%z",
+        ]
+        
+        for pattern in patterns:
+            try:
+                # Handle timezone offset format
+                clean_value = value.replace('+00:00', '+0000').replace('-00:00', '-0000')
+                dt = datetime.strptime(clean_value, pattern)
+                if pattern in ["%Y-%m-%d"]:
+                    return dt.strftime(self.date_format)
+                else:
+                    return dt.strftime(self.datetime_format)
+            except ValueError:
+                continue
+        
+        return None
+    
+    def _format_number_abbreviated(self, value: float) -> str:
+        """Format large numbers with K/M/B suffixes.
+        
+        Examples:
+            1234 -> 1.2K
+            1234567 -> 1.2M
+            1234567890 -> 1.2B
+        """
+        if value >= 1_000_000_000:
+            return f"{value / 1_000_000_000:.1f}B"
+        elif value >= 1_000_000:
+            return f"{value / 1_000_000:.1f}M"
+        elif value >= 1_000:
+            return f"{value / 1_000:.1f}K"
+        else:
+            return f"{value:.0f}"
+
 
     def _generate_insights_ranking(self, results: List[Dict[str, Any]]) -> List[str]:
         """Generate insights for ranking queries."""
