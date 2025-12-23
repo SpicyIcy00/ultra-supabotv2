@@ -11,7 +11,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator, Optional, List
 
 from app.core.database import get_db
 from app.schemas.chatbot import (
