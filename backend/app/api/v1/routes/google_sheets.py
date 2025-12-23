@@ -43,13 +43,29 @@ async def post_to_google_sheets(request: PostToSheetsRequest):
     Proxy endpoint to post data to Google Sheets.
     This avoids CORS issues by making the request server-side.
     """
+    # Log incoming request for debugging
+    print(f"=== Google Sheets Proxy Request ===")
+    print(f"Sheet Name: {request.sheetName}")
+    print(f"Data rows: {len(request.data) if request.data else 0}")
+    print(f"Provided sheetsUrl from frontend: {request.sheetsUrl}")
+    print(f"Environment GOOGLE_SHEETS_URL: {GOOGLE_SHEETS_URL}")
+    
     # Use provided URL or fall back to environment variable
     sheets_url = request.sheetsUrl or GOOGLE_SHEETS_URL
+    
+    print(f"Final URL to use: {sheets_url}")
     
     if not sheets_url:
         raise HTTPException(
             status_code=400,
-            detail="Google Sheets URL not configured. Set GOOGLE_SHEETS_URL environment variable."
+            detail="Google Sheets URL not configured. Set GOOGLE_SHEETS_URL environment variable in Railway."
+        )
+    
+    # Validate URL format
+    if not sheets_url.startswith("https://script.google.com/"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid Google Sheets URL. Must start with 'https://script.google.com/'. Got: {sheets_url[:50]}..."
         )
     
     if not request.sheetName:
