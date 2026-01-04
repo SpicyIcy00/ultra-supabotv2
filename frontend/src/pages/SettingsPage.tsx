@@ -1,18 +1,24 @@
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
+import axios from 'axios';
 
 export const SettingsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
 
   const handleRefreshData = async () => {
     setIsRefreshing(true);
     setShowSuccess(false);
+    setShowError(false);
 
     try {
-      // Invalidate all queries to force fresh data fetch
+      // First, clear backend Redis cache
+      await axios.post('/api/v1/analytics/invalidate-cache');
+
+      // Then invalidate frontend React Query cache
       await queryClient.invalidateQueries();
 
       // Show success message
@@ -20,6 +26,8 @@ export const SettingsPage: React.FC = () => {
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
       console.error('Error refreshing data:', error);
+      setShowError(true);
+      setTimeout(() => setShowError(false), 5000);
     } finally {
       setIsRefreshing(false);
     }
@@ -44,8 +52,9 @@ export const SettingsPage: React.FC = () => {
               <div className="flex-1">
                 <h3 className="text-lg font-medium text-white mb-1">Refresh All Data</h3>
                 <p className="text-sm text-gray-400">
-                  Force a fresh fetch of all dashboard data from the server. Use this if you've made changes
-                  to your data source and want to see them immediately.
+                  Clears both backend (Redis) and frontend (React Query) caches to force a fresh fetch of all
+                  dashboard data from the database. Use this if you've made changes to your data source and
+                  want to see them immediately.
                 </p>
                 <div className="mt-3 text-xs text-gray-500">
                   <p>Data cache times:</p>
@@ -71,6 +80,12 @@ export const SettingsPage: React.FC = () => {
                 {showSuccess && (
                   <div className="text-sm text-green-400 font-medium">
                     Data refreshed successfully!
+                  </div>
+                )}
+
+                {showError && (
+                  <div className="text-sm text-red-400 font-medium">
+                    Error refreshing data. Please try again.
                   </div>
                 )}
               </div>

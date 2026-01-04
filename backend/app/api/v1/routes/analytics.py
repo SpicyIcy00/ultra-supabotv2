@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List
 from app.core.database import get_db
 from app.services.analytics_service import AnalyticsService
+from app.core.cache import invalidate_cache
 from app.schemas.analytics import (
     SalesByHourResponse,
     StorePerformanceResponse,
@@ -815,4 +816,36 @@ async def get_top_movers(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error fetching top movers: {str(e)}"
+        )
+
+
+@router.post(
+    "/invalidate-cache",
+    summary="Clear all analytics cache",
+    description="Invalidates all Redis cache for analytics endpoints. Use this to force fresh data."
+)
+async def invalidate_analytics_cache():
+    """
+    Clear all analytics cache to force fresh data fetch.
+
+    This endpoint clears all cached analytics data stored in Redis.
+    After calling this endpoint, all subsequent analytics requests will
+    fetch fresh data from the database.
+
+    Returns:
+        Dictionary with number of cache keys deleted
+    """
+    try:
+        # Invalidate all analytics-related caches
+        deleted_count = await invalidate_cache("analytics:*")
+
+        return {
+            "success": True,
+            "message": f"Successfully invalidated {deleted_count} cache entries",
+            "deleted_count": deleted_count
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error invalidating cache: {str(e)}"
         )

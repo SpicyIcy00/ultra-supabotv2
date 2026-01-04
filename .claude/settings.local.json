@@ -69,7 +69,10 @@
       "Bash(backend/openapi_current.json)",
       "Bash(del \"c:\\New folder (3)\\backend\\check_category_data.py\")",
       "Bash(git remote add:*)",
-      "Bash(git branch:*)"
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(start.bat)",
+      "Bash(cmd /c start.bat)"
     ],
     "deny": [],
     "ask": []
