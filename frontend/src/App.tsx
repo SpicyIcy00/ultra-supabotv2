@@ -9,17 +9,7 @@ import { Dashboard } from './pages/Dashboard';
 import AnalyticsPage from './pages/AnalyticsPage';
 import AIChatPage from './pages/AIChatPage';
 import ReportingPage from './pages/ReportingPage';
-
-function SettingsPage() {
-  return (
-    <div className="text-center py-20">
-      <h1 className="text-3xl font-bold text-white mb-4">Settings</h1>
-      <p className="text-gray-400">Dashboard settings coming soon...</p>
-    </div>
-  );
-}
-
-
+import { SettingsPage } from './pages/SettingsPage';
 import { AuthGuard } from './components/AuthGuard';
 
 function App() {
