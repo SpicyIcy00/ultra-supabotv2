@@ -31,28 +31,50 @@ const PERIODS: { value: PeriodType; label: string }[] = [
 
 export const AnalyticsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('store-comparison');
+
+  // Day patterns state
   const [dayPatternsPeriod, setDayPatternsPeriod] = useState<PeriodType>('30D');
-  const [showCustomPicker, setShowCustomPicker] = useState(false);
-  const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
-  const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
+  const [dayPatternsShowCustomPicker, setDayPatternsShowCustomPicker] = useState(false);
+  const [dayPatternsCustomStartDate, setDayPatternsCustomStartDate] = useState<Date | null>(null);
+  const [dayPatternsCustomEndDate, setDayPatternsCustomEndDate] = useState<Date | null>(null);
+
+  // Product combos state
+  const [productCombosPeriod, setProductCombosPeriod] = useState<PeriodType>('30D');
+  const [productCombosShowCustomPicker, setProductCombosShowCustomPicker] = useState(false);
+  const [productCombosCustomStartDate, setProductCombosCustomStartDate] = useState<Date | null>(null);
+  const [productCombosCustomEndDate, setProductCombosCustomEndDate] = useState<Date | null>(null);
 
   // Calculate date ranges for day patterns
-  const { startDate, endDate } = useMemo(() => {
+  const { startDate: dayPatternsStartDate, endDate: dayPatternsEndDate } = useMemo(() => {
     const ranges = calculatePeriodDateRanges(
       dayPatternsPeriod,
-      customStartDate || undefined,
-      customEndDate || undefined
+      dayPatternsCustomStartDate || undefined,
+      dayPatternsCustomEndDate || undefined
     );
 
     return {
       startDate: ranges.current.start,
       endDate: ranges.current.end,
     };
-  }, [dayPatternsPeriod, customStartDate, customEndDate]);
+  }, [dayPatternsPeriod, dayPatternsCustomStartDate, dayPatternsCustomEndDate]);
+
+  // Calculate date ranges for product combos
+  const { startDate: productCombosStartDate, endDate: productCombosEndDate } = useMemo(() => {
+    const ranges = calculatePeriodDateRanges(
+      productCombosPeriod,
+      productCombosCustomStartDate || undefined,
+      productCombosCustomEndDate || undefined
+    );
+
+    return {
+      startDate: ranges.current.start,
+      endDate: ranges.current.end,
+    };
+  }, [productCombosPeriod, productCombosCustomStartDate, productCombosCustomEndDate]);
 
   const storeComparison = useStoreComparison();
-  const dayOfWeekPatterns = useDayOfWeekPatterns(startDate, endDate);
-  const productCombos = useProductCombos();
+  const dayOfWeekPatterns = useDayOfWeekPatterns(dayPatternsStartDate, dayPatternsEndDate);
+  const productCombos = useProductCombos(productCombosStartDate, productCombosEndDate);
   const salesAnomalies = useSalesAnomalies();
 
   const tabs = [
@@ -93,6 +115,107 @@ export const AnalyticsPage: React.FC = () => {
     }
   };
 
+  // Render date period selector for a specific tab
+  const renderDateSelector = (
+    currentPeriod: PeriodType,
+    setPeriod: (period: PeriodType) => void,
+    showCustomPicker: boolean,
+    setShowCustomPicker: (show: boolean) => void,
+    customStartDate: Date | null,
+    setCustomStartDate: (date: Date | null) => void,
+    customEndDate: Date | null,
+    setCustomEndDate: (date: Date | null) => void
+  ) => {
+    const getDateRangeText = (period: PeriodType): string => {
+      try {
+        let dateRange;
+        if (period === 'CUSTOM' && customStartDate && customEndDate) {
+          dateRange = calculatePeriodDateRanges(period, customStartDate, customEndDate);
+        } else if (period !== 'CUSTOM') {
+          dateRange = calculatePeriodDateRanges(period);
+        } else {
+          return '';
+        }
+        const startFormatted = format(dateRange.current.start, 'MMM d');
+        const endFormatted = format(dateRange.current.end, 'MMM d, yyyy');
+        return `${startFormatted} - ${endFormatted}`;
+      } catch (error) {
+        return '';
+      }
+    };
+
+    return (
+      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4">
+        <div className="flex flex-col gap-3">
+          <label className="text-sm font-medium text-gray-400">Period:</label>
+          <div className="flex flex-wrap gap-2 items-center relative">
+            {PERIODS.map((period) => {
+              const dateRangeText = getDateRangeText(period.value);
+              return (
+                <button
+                  key={period.value}
+                  onClick={() => {
+                    if (period.value === 'CUSTOM') {
+                      setShowCustomPicker(true);
+                    } else {
+                      setShowCustomPicker(false);
+                    }
+                    setPeriod(period.value);
+                  }}
+                  className={`
+                    px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-200
+                    ${currentPeriod === period.value
+                      ? 'bg-gradient-to-r from-[#00d2ff] to-[#3a47d5] text-white shadow-lg'
+                      : 'bg-[#1c1e26] text-white hover:bg-[#2e303d]'
+                    }
+                  `}
+                  title={getPeriodLabel(period.value)}
+                >
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span>{period.label}</span>
+                    {dateRangeText && currentPeriod === period.value && (
+                      <span className="text-xs opacity-80 font-normal whitespace-nowrap">
+                        {dateRangeText}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+
+            {/* Custom Date Range Picker */}
+            {showCustomPicker && (
+              <div className="absolute top-full left-0 mt-2 z-50">
+                <DateRangePicker
+                  startDate={customStartDate}
+                  endDate={customEndDate}
+                  onRangeSelect={(range) => {
+                    setCustomStartDate(range.start);
+                    setCustomEndDate(range.end);
+                  }}
+                  onClear={() => {
+                    setCustomStartDate(null);
+                    setCustomEndDate(null);
+                  }}
+                  onApply={() => {
+                    if (customStartDate && customEndDate) {
+                      setShowCustomPicker(false);
+                    }
+                  }}
+                  onCancel={() => {
+                    setShowCustomPicker(false);
+                    setCustomStartDate(null);
+                    setCustomEndDate(null);
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-[#0e1117] p-6">
       <div className="max-w-[1920px] mx-auto space-y-6">
@@ -105,93 +228,27 @@ export const AnalyticsPage: React.FC = () => {
         </div>
 
         {/* Date Filter for day patterns */}
-        {activeTab === 'day-patterns' && (
-          <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4">
-            <div className="flex flex-col gap-3">
-              <label className="text-sm font-medium text-gray-400">Period:</label>
-              <div className="flex flex-wrap gap-2 items-center relative">
-                {PERIODS.map((period) => {
-                  const getDateRangeText = (period: PeriodType): string => {
-                    try {
-                      let dateRange;
-                      if (period === 'CUSTOM' && customStartDate && customEndDate) {
-                        dateRange = calculatePeriodDateRanges(period, customStartDate, customEndDate);
-                      } else if (period !== 'CUSTOM') {
-                        dateRange = calculatePeriodDateRanges(period);
-                      } else {
-                        return '';
-                      }
-                      const startFormatted = format(dateRange.current.start, 'MMM d');
-                      const endFormatted = format(dateRange.current.end, 'MMM d, yyyy');
-                      return `${startFormatted} - ${endFormatted}`;
-                    } catch (error) {
-                      return '';
-                    }
-                  };
+        {activeTab === 'day-patterns' && renderDateSelector(
+          dayPatternsPeriod,
+          setDayPatternsPeriod,
+          dayPatternsShowCustomPicker,
+          setDayPatternsShowCustomPicker,
+          dayPatternsCustomStartDate,
+          setDayPatternsCustomStartDate,
+          dayPatternsCustomEndDate,
+          setDayPatternsCustomEndDate
+        )}
 
-                  const dateRangeText = getDateRangeText(period.value);
-                  return (
-                    <button
-                      key={period.value}
-                      onClick={() => {
-                        if (period.value === 'CUSTOM') {
-                          setShowCustomPicker(true);
-                        } else {
-                          setShowCustomPicker(false);
-                        }
-                        setDayPatternsPeriod(period.value);
-                      }}
-                      className={`
-                        px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-200
-                        ${dayPatternsPeriod === period.value
-                          ? 'bg-gradient-to-r from-[#00d2ff] to-[#3a47d5] text-white shadow-lg'
-                          : 'bg-[#1c1e26] text-white hover:bg-[#2e303d]'
-                        }
-                      `}
-                      title={getPeriodLabel(period.value)}
-                    >
-                      <div className="flex flex-col items-center gap-0.5">
-                        <span>{period.label}</span>
-                        {dateRangeText && dayPatternsPeriod === period.value && (
-                          <span className="text-xs opacity-80 font-normal whitespace-nowrap">
-                            {dateRangeText}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-
-                {/* Custom Date Range Picker */}
-                {showCustomPicker && (
-                  <div className="absolute top-full left-0 mt-2 z-50">
-                    <DateRangePicker
-                      startDate={customStartDate}
-                      endDate={customEndDate}
-                      onRangeSelect={(range) => {
-                        setCustomStartDate(range.start);
-                        setCustomEndDate(range.end);
-                      }}
-                      onClear={() => {
-                        setCustomStartDate(null);
-                        setCustomEndDate(null);
-                      }}
-                      onApply={() => {
-                        if (customStartDate && customEndDate) {
-                          setShowCustomPicker(false);
-                        }
-                      }}
-                      onCancel={() => {
-                        setShowCustomPicker(false);
-                        setCustomStartDate(null);
-                        setCustomEndDate(null);
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+        {/* Date Filter for product combos */}
+        {activeTab === 'product-combos' && renderDateSelector(
+          productCombosPeriod,
+          setProductCombosPeriod,
+          productCombosShowCustomPicker,
+          setProductCombosShowCustomPicker,
+          productCombosCustomStartDate,
+          setProductCombosCustomStartDate,
+          productCombosCustomEndDate,
+          setProductCombosCustomEndDate
         )}
 
         {/* Tabs */}

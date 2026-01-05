@@ -334,15 +334,19 @@ interface ProductComboData {
   pct_of_transactions: number;
 }
 
-export const useProductCombos = () => {
+export const useProductCombos = (startDate?: Date, endDate?: Date) => {
   const { dateRanges } = useDashboardStore();
 
+  // Use provided dates or fall back to dashboard store dates
+  const effectiveStartDate = startDate || dateRanges.current.start;
+  const effectiveEndDate = endDate || dateRanges.current.end;
+
   return useQuery({
-    queryKey: ['product-combos', dateRanges],
+    queryKey: ['product-combos', effectiveStartDate, effectiveEndDate],
     queryFn: async () => {
       const params = {
-        start_date: formatDateForAPI(dateRanges.current.start),
-        end_date: formatDateForAPI(dateRanges.current.end),
+        start_date: formatDateForAPI(effectiveStartDate),
+        end_date: formatDateForAPI(effectiveEndDate),
         limit: 15,
       };
 
