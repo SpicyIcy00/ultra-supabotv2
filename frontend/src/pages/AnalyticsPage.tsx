@@ -37,21 +37,16 @@ export const AnalyticsPage: React.FC = () => {
   const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
 
   // Calculate date ranges for day patterns
-  const { startDate, endDate, dateRangeLabel } = useMemo(() => {
+  const { startDate, endDate } = useMemo(() => {
     const ranges = calculatePeriodDateRanges(
       dayPatternsPeriod,
       customStartDate || undefined,
       customEndDate || undefined
     );
 
-    const formatDate = (d: Date) => format(d, 'MMM d');
-    const formatDateFull = (d: Date) => format(d, 'MMM d, yyyy');
-    const dateRangeLabel = `${formatDate(ranges.current.start)} - ${formatDateFull(ranges.current.end)}`;
-
     return {
       startDate: ranges.current.start,
       endDate: ranges.current.end,
-      dateRangeLabel,
     };
   }, [dayPatternsPeriod, customStartDate, customEndDate]);
 

@@ -1,8 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../services/analyticsApi';
 
-type TimePeriod = 'wtd' | 'mtd' | 'ytd';
-
 interface StoreComparisonData {
   stores: Array<{
     store_id: string;
@@ -21,71 +19,6 @@ interface StoreComparisonData {
     };
   }>;
 }
-
-const calculateDateRanges = (period: TimePeriod) => {
-  const now = new Date();
-  let currentStart: Date, currentEnd: Date, previousStart: Date, previousEnd: Date;
-
-  switch (period) {
-    case 'wtd': {
-      const dayOfWeek = now.getDay();
-      const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-
-      currentStart = new Date(now);
-      currentStart.setDate(now.getDate() - diffToMonday);
-      currentStart.setHours(0, 0, 0, 0);
-
-      currentEnd = new Date(now);
-      currentEnd.setHours(23, 59, 59, 999);
-
-      previousStart = new Date(currentStart);
-      previousStart.setDate(currentStart.getDate() - 7);
-
-      previousEnd = new Date(currentEnd);
-      previousEnd.setDate(currentEnd.getDate() - 7);
-      break;
-    }
-    case 'mtd': {
-      const dayOfMonth = now.getDate();
-
-      currentStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      currentStart.setHours(0, 0, 0, 0);
-
-      currentEnd = new Date(now);
-      currentEnd.setHours(23, 59, 59, 999);
-
-      const prevMonth = now.getMonth() - 1;
-      const prevYear = prevMonth < 0 ? now.getFullYear() - 1 : now.getFullYear();
-      const actualPrevMonth = prevMonth < 0 ? 11 : prevMonth;
-
-      previousStart = new Date(prevYear, actualPrevMonth, 1);
-      previousStart.setHours(0, 0, 0, 0);
-
-      previousEnd = new Date(prevYear, actualPrevMonth, Math.min(dayOfMonth, new Date(prevYear, actualPrevMonth + 1, 0).getDate()));
-      previousEnd.setHours(23, 59, 59, 999);
-      break;
-    }
-    case 'ytd': {
-      currentStart = new Date(now.getFullYear(), 0, 1);
-      currentStart.setHours(0, 0, 0, 0);
-
-      currentEnd = new Date(now);
-      currentEnd.setHours(23, 59, 59, 999);
-
-      const dayOfYear = Math.floor((currentEnd.getTime() - currentStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-
-      previousStart = new Date(now.getFullYear() - 1, 0, 1);
-      previousStart.setHours(0, 0, 0, 0);
-
-      previousEnd = new Date(previousStart);
-      previousEnd.setDate(previousStart.getDate() + dayOfYear - 1);
-      previousEnd.setHours(23, 59, 59, 999);
-      break;
-    }
-  }
-
-  return { currentStart, currentEnd, previousStart, previousEnd };
-};
 
 export const useStoreComparisonV2 = (
   currentStart: Date,

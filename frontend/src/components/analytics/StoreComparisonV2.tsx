@@ -49,15 +49,15 @@ export const StoreComparisonV2: React.FC = () => {
 
     let dateRangeLabel = `${formatDate(ranges.current.start)} - ${formatDateFull(ranges.current.end)}`;
 
-    if (ranges.previous) {
-      dateRangeLabel += ` vs ${formatDate(ranges.previous.start)} - ${formatDateFull(ranges.previous.end)}`;
+    if (ranges.comparison) {
+      dateRangeLabel += ` vs ${formatDate(ranges.comparison.start)} - ${formatDateFull(ranges.comparison.end)}`;
     }
 
     return {
       currentStart: ranges.current.start,
       currentEnd: ranges.current.end,
-      previousStart: ranges.previous?.start || ranges.current.start,
-      previousEnd: ranges.previous?.end || ranges.current.end,
+      previousStart: ranges.comparison?.start || ranges.current.start,
+      previousEnd: ranges.comparison?.end || ranges.current.end,
       dateRangeLabel,
     };
   }, [timePeriod, customStartDate, customEndDate]);
