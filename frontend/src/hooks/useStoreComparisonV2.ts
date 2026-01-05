@@ -87,11 +87,15 @@ const calculateDateRanges = (period: TimePeriod) => {
   return { currentStart, currentEnd, previousStart, previousEnd };
 };
 
-export const useStoreComparisonV2 = (period: TimePeriod, storeIds: string[] = []) => {
-  const { currentStart, currentEnd, previousStart, previousEnd } = calculateDateRanges(period);
-
+export const useStoreComparisonV2 = (
+  currentStart: Date,
+  currentEnd: Date,
+  previousStart: Date,
+  previousEnd: Date,
+  storeIds: string[] = []
+) => {
   return useQuery<StoreComparisonData, Error>({
-    queryKey: ['store-comparison-v2', period, storeIds],
+    queryKey: ['store-comparison-v2', currentStart, currentEnd, previousStart, previousEnd, storeIds],
     queryFn: async () => {
       const params = new URLSearchParams({
         start_date: currentStart.toISOString(),

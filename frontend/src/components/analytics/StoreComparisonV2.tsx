@@ -6,99 +6,69 @@ import { StoreWeeklyTrends } from './StoreWeeklyTrends';
 import { TopMovers } from './TopMovers';
 import { useStoreComparisonV2 } from '../../hooks/useStoreComparisonV2';
 import { useDashboardStore } from '../../stores/dashboardStore';
+import { DateRangePicker } from '../filters/DateRangePicker';
+import type { PeriodType } from '../../utils/dateCalculations';
+import { calculatePeriodDateRanges, getPeriodLabel } from '../../utils/dateCalculations';
+import { format } from 'date-fns';
 
-type TimePeriod = 'wtd' | 'mtd' | 'ytd';
 type StoreFilter = 'all' | 'top-3' | 'bottom-3' | 'custom';
 
+const PERIODS: { value: PeriodType; label: string }[] = [
+  { value: '1D', label: '1D' },
+  { value: 'WTD', label: 'WTD' },
+  { value: '7D', label: '7D' },
+  { value: 'MTD', label: 'MTD' },
+  { value: '30D', label: '30D' },
+  { value: '3MTD', label: '3MTD' },
+  { value: '90D', label: '90D' },
+  { value: '6MTD', label: '6MTD' },
+  { value: 'YTD', label: 'YTD' },
+  { value: 'CUSTOM', label: 'Custom' },
+];
+
 export const StoreComparisonV2: React.FC = () => {
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>('mtd');
+  const [timePeriod, setTimePeriod] = useState<PeriodType>('MTD');
   const [storeFilter, setStoreFilter] = useState<StoreFilter>('all');
   const [selectedStore, setSelectedStore] = useState<string | null>(null);
+  const [showCustomPicker, setShowCustomPicker] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
+  const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
 
   const { stores, selectedStores, setStores } = useDashboardStore();
 
-  const { data, isLoading, error } = useStoreComparisonV2(timePeriod, selectedStores);
-
   // Calculate date ranges based on selected period
   const { currentStart, currentEnd, previousStart, previousEnd, dateRangeLabel } = useMemo(() => {
-    const now = new Date();
-    let currentStart: Date, currentEnd: Date, previousStart: Date, previousEnd: Date;
-    let dateRangeLabel: string;
+    const ranges = calculatePeriodDateRanges(
+      timePeriod,
+      customStartDate || undefined,
+      customEndDate || undefined
+    );
 
-    switch (timePeriod) {
-      case 'wtd': {
-        // Week-to-Date
-        const dayOfWeek = now.getDay();
-        const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const formatDate = (d: Date) => format(d, 'MMM d');
+    const formatDateFull = (d: Date) => format(d, 'MMM d, yyyy');
 
-        currentStart = new Date(now);
-        currentStart.setDate(now.getDate() - diffToMonday);
-        currentStart.setHours(0, 0, 0, 0);
+    let dateRangeLabel = `${formatDate(ranges.current.start)} - ${formatDateFull(ranges.current.end)}`;
 
-        currentEnd = new Date(now);
-        currentEnd.setHours(23, 59, 59, 999);
-
-        // Previous week
-        previousStart = new Date(currentStart);
-        previousStart.setDate(currentStart.getDate() - 7);
-
-        previousEnd = new Date(currentEnd);
-        previousEnd.setDate(currentEnd.getDate() - 7);
-
-        const formatDate = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`;
-        dateRangeLabel = `${formatDate(currentStart)}-${formatDate(currentEnd)} vs ${formatDate(previousStart)}-${formatDate(previousEnd)}`;
-        break;
-      }
-      case 'mtd': {
-        // Month-to-Date
-        const dayOfMonth = now.getDate();
-
-        currentStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        currentStart.setHours(0, 0, 0, 0);
-
-        currentEnd = new Date(now);
-        currentEnd.setHours(23, 59, 59, 999);
-
-        // Previous month
-        const prevMonth = now.getMonth() - 1;
-        const prevYear = prevMonth < 0 ? now.getFullYear() - 1 : now.getFullYear();
-        const actualPrevMonth = prevMonth < 0 ? 11 : prevMonth;
-
-        previousStart = new Date(prevYear, actualPrevMonth, 1);
-        previousStart.setHours(0, 0, 0, 0);
-
-        previousEnd = new Date(prevYear, actualPrevMonth, Math.min(dayOfMonth, new Date(prevYear, actualPrevMonth + 1, 0).getDate()));
-        previousEnd.setHours(23, 59, 59, 999);
-
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        dateRangeLabel = `${monthNames[now.getMonth()]} 1-${dayOfMonth} vs ${monthNames[actualPrevMonth]} 1-${previousEnd.getDate()}`;
-        break;
-      }
-      case 'ytd': {
-        // Year-to-Date
-        currentStart = new Date(now.getFullYear(), 0, 1);
-        currentStart.setHours(0, 0, 0, 0);
-
-        currentEnd = new Date(now);
-        currentEnd.setHours(23, 59, 59, 999);
-
-        // Previous year
-        const dayOfYear = Math.floor((currentEnd.getTime() - currentStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-
-        previousStart = new Date(now.getFullYear() - 1, 0, 1);
-        previousStart.setHours(0, 0, 0, 0);
-
-        previousEnd = new Date(previousStart);
-        previousEnd.setDate(previousStart.getDate() + dayOfYear - 1);
-        previousEnd.setHours(23, 59, 59, 999);
-
-        dateRangeLabel = `YTD ${now.getFullYear()} (${dayOfYear} days) vs YTD ${now.getFullYear() - 1} (${dayOfYear} days)`;
-        break;
-      }
+    if (ranges.previous) {
+      dateRangeLabel += ` vs ${formatDate(ranges.previous.start)} - ${formatDateFull(ranges.previous.end)}`;
     }
 
-    return { currentStart, currentEnd, previousStart, previousEnd, dateRangeLabel };
-  }, [timePeriod]);
+    return {
+      currentStart: ranges.current.start,
+      currentEnd: ranges.current.end,
+      previousStart: ranges.previous?.start || ranges.current.start,
+      previousEnd: ranges.previous?.end || ranges.current.end,
+      dateRangeLabel,
+    };
+  }, [timePeriod, customStartDate, customEndDate]);
+
+  const { data, isLoading, error } = useStoreComparisonV2(
+    currentStart,
+    currentEnd,
+    previousStart,
+    previousEnd,
+    selectedStores
+  );
 
   // Handle store filter changes
   const handleStoreFilterChange = (filter: StoreFilter) => {
@@ -163,40 +133,137 @@ export const StoreComparisonV2: React.FC = () => {
     );
   }
 
+  const handlePeriodClick = (period: PeriodType) => {
+    if (period === 'CUSTOM') {
+      setShowCustomPicker(true);
+      // Initialize with current custom range if exists
+      if (customStartDate && customEndDate) {
+        // Keep existing custom dates
+      } else {
+        setCustomStartDate(null);
+        setCustomEndDate(null);
+      }
+    } else {
+      setShowCustomPicker(false);
+    }
+    setTimePeriod(period);
+  };
+
+  const handleApplyCustomDates = () => {
+    if (customStartDate && customEndDate) {
+      setShowCustomPicker(false);
+    }
+  };
+
+  const handleCancelCustomDates = () => {
+    setShowCustomPicker(false);
+    setCustomStartDate(null);
+    setCustomEndDate(null);
+  };
+
+  const getDateRangeText = (period: PeriodType): string => {
+    try {
+      let dateRange;
+      if (period === 'CUSTOM' && customStartDate && customEndDate) {
+        dateRange = calculatePeriodDateRanges(period, customStartDate, customEndDate);
+      } else if (period !== 'CUSTOM') {
+        dateRange = calculatePeriodDateRanges(period);
+      } else {
+        return '';
+      }
+
+      const startFormatted = format(dateRange.current.start, 'MMM d');
+      const endFormatted = format(dateRange.current.end, 'MMM d, yyyy');
+      return `${startFormatted} - ${endFormatted}`;
+    } catch (error) {
+      return '';
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-col gap-2 flex-1">
-          <div className="flex items-center gap-4">
-            {/* Time Period Selector */}
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-400">Time Period:</label>
-              <select
-                value={timePeriod}
-                onChange={(e) => setTimePeriod(e.target.value as TimePeriod)}
-                className="bg-[#252833] border border-[#2e303d] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
-              >
-                <option value="wtd">Week-to-Date</option>
-                <option value="mtd">Month-to-Date</option>
-                <option value="ytd">Year-to-Date</option>
-              </select>
-            </div>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          {/* Time Period Selector */}
+          <div className="flex flex-col gap-3">
+            <label className="text-sm font-medium text-gray-400">Period:</label>
+            <div className="flex flex-wrap gap-2 items-center relative">
+              {PERIODS.map((period) => {
+                const dateRangeText = getDateRangeText(period.value);
+                return (
+                  <button
+                    key={period.value}
+                    onClick={() => handlePeriodClick(period.value)}
+                    className={`
+                      px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-200
+                      ${timePeriod === period.value
+                        ? 'bg-gradient-to-r from-[#00d2ff] to-[#3a47d5] text-white shadow-lg'
+                        : 'bg-[#1c1e26] text-white hover:bg-[#2e303d]'
+                      }
+                    `}
+                    title={getPeriodLabel(period.value)}
+                  >
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span>{period.label}</span>
+                      {dateRangeText && timePeriod === period.value && (
+                        <span className="text-xs opacity-80 font-normal whitespace-nowrap">
+                          {dateRangeText}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
 
-            {/* Store Filter */}
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-400">Show:</label>
-              <select
-                value={storeFilter}
-                onChange={(e) => handleStoreFilterChange(e.target.value as StoreFilter)}
-                className="bg-[#252833] border border-[#2e303d] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
-              >
-                <option value="all">All Stores</option>
-                <option value="top-3">Top 3 Performers</option>
-                <option value="bottom-3">Bottom 3 Performers</option>
-                <option value="custom">Custom Selection</option>
-              </select>
+              {/* Custom Date Range Picker */}
+              {showCustomPicker && (
+                <div className="absolute top-full left-0 mt-2 z-50">
+                  <DateRangePicker
+                    startDate={customStartDate}
+                    endDate={customEndDate}
+                    onRangeSelect={(range) => {
+                      setCustomStartDate(range.start);
+                      setCustomEndDate(range.end);
+                    }}
+                    onClear={() => {
+                      setCustomStartDate(null);
+                      setCustomEndDate(null);
+                    }}
+                    onApply={handleApplyCustomDates}
+                    onCancel={handleCancelCustomDates}
+                  />
+                </div>
+              )}
             </div>
+          </div>
+
+          {/* Export Button */}
+          <button
+            onClick={handleExportCSV}
+            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 self-start"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Export CSV
+          </button>
+        </div>
+
+        {/* Store Filter and Date Range Label */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-400">Show:</label>
+            <select
+              value={storeFilter}
+              onChange={(e) => handleStoreFilterChange(e.target.value as StoreFilter)}
+              className="bg-[#252833] border border-[#2e303d] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+            >
+              <option value="all">All Stores</option>
+              <option value="top-3">Top 3 Performers</option>
+              <option value="bottom-3">Bottom 3 Performers</option>
+              <option value="custom">Custom Selection</option>
+            </select>
           </div>
 
           {/* Date Range Label */}
@@ -204,17 +271,6 @@ export const StoreComparisonV2: React.FC = () => {
             Comparing: {dateRangeLabel}
           </div>
         </div>
-
-        {/* Export Button */}
-        <button
-          onClick={handleExportCSV}
-          className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          Export CSV
-        </button>
       </div>
 
       {/* Custom Store Selection */}

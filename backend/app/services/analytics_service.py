@@ -1091,15 +1091,18 @@ class AnalyticsService:
         ]
 
     @cached(expire=300, prefix="analytics")
-    async def get_day_of_week_patterns(self) -> Dict[str, Any]:
+    async def get_day_of_week_patterns(self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> Dict[str, Any]:
         """
-        Get day of week patterns for the last 8 weeks.
+        Get day of week patterns for a date range.
 
         Returns sales, profit, transaction count, and avg transaction value by day of week.
+        If start_date and end_date are not provided, defaults to last 8 weeks.
         """
-        # Get last 8 weeks of data
-        end_date = datetime.now()
-        start_date = end_date - timedelta(weeks=8)
+        # Default to last 8 weeks if not provided
+        if end_date is None:
+            end_date = datetime.now()
+        if start_date is None:
+            start_date = end_date - timedelta(weeks=8)
 
         query = text("""
             WITH daily_data AS (
@@ -1122,16 +1125,16 @@ class AnalyticsService:
             SELECT
                 day_of_week,
                 TRIM(day_name) as day_name,
-                COALESCE(SUM(total_sales), 0)::float as total_sales,
-                COALESCE(SUM(total_profit), 0)::float as total_profit,
-                COALESCE(SUM(transaction_count), 0)::int as transaction_count,
+                COALESCE(AVG(total_sales), 0)::float as total_sales,
+                COALESCE(AVG(total_profit), 0)::float as total_profit,
+                COALESCE(AVG(transaction_count), 0)::float as transaction_count,
                 CASE
-                    WHEN SUM(transaction_count) > 0 THEN (SUM(total_sales) / SUM(transaction_count))::float
+                    WHEN AVG(transaction_count) > 0 THEN (AVG(total_sales) / AVG(transaction_count))::float
                     ELSE 0::float
                 END as avg_transaction_value
             FROM daily_data
             GROUP BY day_of_week, day_name
-            ORDER BY day_of_week
+            ORDER BY CASE WHEN day_of_week = 0 THEN 7 ELSE day_of_week END
         """)
 
         result = await self.db.execute(query, {
@@ -1140,6 +1143,10 @@ class AnalyticsService:
         })
         rows = result.fetchall()
 
+        # Calculate number of weeks in the date range
+        days_diff = (end_date - start_date).days
+        weeks_count = max(1, round(days_diff / 7))
+
         return {
             "data": [
                 {
@@ -1147,12 +1154,12 @@ class AnalyticsService:
                     "day_name": row.day_name,
                     "total_sales": float(row.total_sales or 0),
                     "total_profit": float(row.total_profit or 0),
-                    "transaction_count": int(row.transaction_count or 0),
+                    "transaction_count": float(row.transaction_count or 0),
                     "avg_transaction_value": float(row.avg_transaction_value or 0)
                 }
                 for row in rows
             ],
-            "weeks": 8,
+            "weeks": weeks_count,
             "start_date": start_date.isoformat(),
             "end_date": end_date.isoformat()
         }

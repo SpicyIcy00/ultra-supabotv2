@@ -306,11 +306,19 @@ interface DayOfWeekResponse {
   end_date: string;
 }
 
-export const useDayOfWeekPatterns = () => {
+export const useDayOfWeekPatterns = (startDate?: Date, endDate?: Date) => {
   return useQuery({
-    queryKey: ['day-of-week-patterns'],
+    queryKey: ['day-of-week-patterns', startDate, endDate],
     queryFn: async () => {
-      const response = await api.get<DayOfWeekResponse>('/analytics/day-of-week-patterns');
+      const params = new URLSearchParams();
+      if (startDate) {
+        params.append('start_date', startDate.toISOString());
+      }
+      if (endDate) {
+        params.append('end_date', endDate.toISOString());
+      }
+      const url = `/analytics/day-of-week-patterns${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await api.get<DayOfWeekResponse>(url);
       return response.data;
     },
     staleTime: 1000 * 60 * 30, // 30 minutes - this data changes less frequently

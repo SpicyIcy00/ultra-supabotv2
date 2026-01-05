@@ -564,18 +564,31 @@ async def get_store_comparison(
     summary="Get day of week patterns"
 )
 async def get_day_of_week_patterns(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Get day of week patterns for the last 8 weeks showing:
+    Get day of week patterns showing:
     - Sales by Day
     - Profit by Day
     - Transaction Count by Day
     - Avg Transaction Value by Day
+
+    If start_date and end_date are not provided, defaults to last 8 weeks.
     """
     try:
         service = AnalyticsService(db)
-        result = await service.get_day_of_week_patterns()
+
+        # Parse dates if provided
+        start_dt = None
+        end_dt = None
+        if start_date:
+            start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        if end_date:
+            end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+
+        result = await service.get_day_of_week_patterns(start_date=start_dt, end_date=end_dt)
         return result
     except Exception as e:
         raise HTTPException(
