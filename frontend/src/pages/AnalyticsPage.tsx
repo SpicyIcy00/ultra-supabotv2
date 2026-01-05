@@ -227,30 +227,6 @@ export const AnalyticsPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Date Filter for day patterns */}
-        {activeTab === 'day-patterns' && renderDateSelector(
-          dayPatternsPeriod,
-          setDayPatternsPeriod,
-          dayPatternsShowCustomPicker,
-          setDayPatternsShowCustomPicker,
-          dayPatternsCustomStartDate,
-          setDayPatternsCustomStartDate,
-          dayPatternsCustomEndDate,
-          setDayPatternsCustomEndDate
-        )}
-
-        {/* Date Filter for product combos */}
-        {activeTab === 'product-combos' && renderDateSelector(
-          productCombosPeriod,
-          setProductCombosPeriod,
-          productCombosShowCustomPicker,
-          setProductCombosShowCustomPicker,
-          productCombosCustomStartDate,
-          setProductCombosCustomStartDate,
-          productCombosCustomEndDate,
-          setProductCombosCustomEndDate
-        )}
-
         {/* Tabs */}
         <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg overflow-hidden">
           <div className="flex overflow-x-auto">
@@ -277,17 +253,45 @@ export const AnalyticsPage: React.FC = () => {
             )}
 
             {activeTab === 'day-patterns' && (
-              <DayOfWeekPatterns
-                data={dayOfWeekPatterns.data?.data || []}
-                isLoading={getLoadingState()}
-              />
+              <div className="space-y-6">
+                {/* Date Filter for day patterns */}
+                {renderDateSelector(
+                  dayPatternsPeriod,
+                  setDayPatternsPeriod,
+                  dayPatternsShowCustomPicker,
+                  setDayPatternsShowCustomPicker,
+                  dayPatternsCustomStartDate,
+                  setDayPatternsCustomStartDate,
+                  dayPatternsCustomEndDate,
+                  setDayPatternsCustomEndDate
+                )}
+
+                <DayOfWeekPatterns
+                  data={dayOfWeekPatterns.data?.data || []}
+                  isLoading={getLoadingState()}
+                />
+              </div>
             )}
 
             {activeTab === 'product-combos' && (
-              <ProductCombosTable
-                data={productCombos.data || []}
-                isLoading={getLoadingState()}
-              />
+              <div className="space-y-6">
+                {/* Date Filter for product combos */}
+                {renderDateSelector(
+                  productCombosPeriod,
+                  setProductCombosPeriod,
+                  productCombosShowCustomPicker,
+                  setProductCombosShowCustomPicker,
+                  productCombosCustomStartDate,
+                  setProductCombosCustomStartDate,
+                  productCombosCustomEndDate,
+                  setProductCombosCustomEndDate
+                )}
+
+                <ProductCombosTable
+                  data={productCombos.data || []}
+                  isLoading={getLoadingState()}
+                />
+              </div>
             )}
 
             {activeTab === 'anomalies' && (
