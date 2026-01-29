@@ -7,18 +7,28 @@ import { PresetSelector } from '../components/PresetSelector';
 import { PresetSaveDialog } from '../components/PresetSaveDialog';
 import { ColumnVisibilityPanel } from '../components/ColumnVisibilityPanel';
 import { ReportFilterPanel } from '../components/ReportFilterPanel';
+import { ReplenishmentDashboard } from '../components/replenishment/ReplenishmentDashboard';
+import { ShipmentPlanTable } from '../components/replenishment/ShipmentPlanTable';
+import { WarehousePicklist } from '../components/replenishment/WarehousePicklist';
+import { ExceptionsPanel } from '../components/replenishment/ExceptionsPanel';
+import { StoreTierConfig } from '../components/replenishment/StoreTierConfig';
+import { SeasonalityCalendar } from '../components/replenishment/SeasonalityCalendar';
+import { WarehouseInventoryManager } from '../components/replenishment/WarehouseInventoryManager';
+import { PipelineManager } from '../components/replenishment/PipelineManager';
+
+type ReportTab = 'product-sales' | 'replenishment';
+type ReplenishmentSubTab = 'dashboard' | 'shipment-plan' | 'picklist' | 'exceptions' | 'configuration';
+type ConfigSubTab = 'store-tiers' | 'seasonality' | 'warehouse' | 'pipeline';
 
 /**
- * Product Sales Reporting Page
- *
- * Allows users to:
- * - Select a Sales Store (Store A)
- * - Select a Compare Inventory Store (Store B)
- * - Pick a Date Range (Asia/Manila timezone)
- * - Generate a grouped report of product sales with inventories
- * - Download the result as CSV with exact 7 columns in order
+ * Reporting Page with tabs for Product Sales and Replenishment
  */
 const ReportingPage: React.FC = () => {
+  // Tab navigation state
+  const [activeTab, setActiveTab] = useState<ReportTab>('product-sales');
+  const [replenishmentSubTab, setReplenishmentSubTab] = useState<ReplenishmentSubTab>('dashboard');
+  const [configSubTab, setConfigSubTab] = useState<ConfigSubTab>('store-tiers');
+
   // State for form inputs
   const [stores, setStores] = useState<Store[]>([]);
   const [salesStoreId, setSalesStoreId] = useState<string>('');
@@ -237,6 +247,42 @@ const ReportingPage: React.FC = () => {
     return new Map([...groups.entries()].sort((a, b) => a[0].localeCompare(b[0])));
   }, [reportData, currentConfig.group_by_category]);
 
+  const renderReplenishmentContent = () => {
+    if (replenishmentSubTab === 'dashboard') return <ReplenishmentDashboard />;
+    if (replenishmentSubTab === 'shipment-plan') return <ShipmentPlanTable />;
+    if (replenishmentSubTab === 'picklist') return <WarehousePicklist />;
+    if (replenishmentSubTab === 'exceptions') return <ExceptionsPanel />;
+    if (replenishmentSubTab === 'configuration') {
+      return (
+        <div className="space-y-4">
+          {/* Config sub-tabs */}
+          <div className="flex gap-1 bg-[#1c1e26] border border-[#2e303d] rounded-lg p-1">
+            {([
+              { key: 'store-tiers' as ConfigSubTab, label: 'Store Tiers' },
+              { key: 'seasonality' as ConfigSubTab, label: 'Seasonality' },
+              { key: 'warehouse' as ConfigSubTab, label: 'Warehouse Inventory' },
+              { key: 'pipeline' as ConfigSubTab, label: 'Pipeline (On-Order)' },
+            ]).map(tab => (
+              <button key={tab.key} onClick={() => setConfigSubTab(tab.key)}
+                className={`px-4 py-2 text-sm rounded-md transition-colors ${
+                  configSubTab === tab.key
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                }`}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          {configSubTab === 'store-tiers' && <StoreTierConfig />}
+          {configSubTab === 'seasonality' && <SeasonalityCalendar />}
+          {configSubTab === 'warehouse' && <WarehouseInventoryManager />}
+          {configSubTab === 'pipeline' && <PipelineManager />}
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="h-full">
       <div className="w-full">
@@ -248,6 +294,54 @@ const ReportingPage: React.FC = () => {
           </p>
         </div>
 
+        {/* Main Tab Navigation */}
+        <div className="flex gap-1 bg-[#1c1e26] border border-[#2e303d] rounded-lg p-1 mb-6">
+          <button onClick={() => setActiveTab('product-sales')}
+            className={`px-5 py-2.5 text-sm font-medium rounded-md transition-colors ${
+              activeTab === 'product-sales'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+            }`}>
+            Product Sales
+          </button>
+          <button onClick={() => setActiveTab('replenishment')}
+            className={`px-5 py-2.5 text-sm font-medium rounded-md transition-colors ${
+              activeTab === 'replenishment'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+            }`}>
+            Replenishment
+          </button>
+        </div>
+
+        {/* Replenishment Tab */}
+        {activeTab === 'replenishment' && (
+          <div className="space-y-4">
+            {/* Replenishment Sub-tabs */}
+            <div className="flex gap-1 bg-[#1c1e26] border border-[#2e303d] rounded-lg p-1">
+              {([
+                { key: 'dashboard' as ReplenishmentSubTab, label: 'Dashboard' },
+                { key: 'shipment-plan' as ReplenishmentSubTab, label: 'Shipment Plan' },
+                { key: 'picklist' as ReplenishmentSubTab, label: 'Picklist' },
+                { key: 'exceptions' as ReplenishmentSubTab, label: 'Exceptions' },
+                { key: 'configuration' as ReplenishmentSubTab, label: 'Configuration' },
+              ]).map(tab => (
+                <button key={tab.key} onClick={() => setReplenishmentSubTab(tab.key)}
+                  className={`px-4 py-2 text-sm rounded-md transition-colors ${
+                    replenishmentSubTab === tab.key
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                  }`}>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            {renderReplenishmentContent()}
+          </div>
+        )}
+
+        {/* Product Sales Tab */}
+        {activeTab === 'product-sales' && <>
         {/* Preset Selector & Filters Toggle */}
         <div className="bg-gray-800/50 border border-gray-700 rounded-lg shadow-sm p-6 mb-6">
           <div className="flex flex-col md:flex-row gap-4">
@@ -635,6 +729,8 @@ const ReportingPage: React.FC = () => {
             ))}
           </div>
         )}
+
+        </>}
 
         {/* Save Dialog */}
         <PresetSaveDialog

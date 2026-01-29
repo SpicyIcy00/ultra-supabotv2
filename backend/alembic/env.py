@@ -16,13 +16,12 @@ import app.models  # Import all models
 config = context.config
 
 # Set database URL from settings
-# For migrations, use synchronous psycopg
+# For migrations, use synchronous psycopg (v3) driver
 sync_db_url = settings.DATABASE_URL
 if "+asyncpg" in sync_db_url:
     sync_db_url = sync_db_url.replace("+asyncpg", "+psycopg")
-# Remove async marker from psycopg URL for synchronous operations
-if "+psycopg" in sync_db_url:
-    sync_db_url = sync_db_url.replace("+psycopg", "")  # Use standard postgresql:// for sync
+elif "+psycopg" not in sync_db_url and "postgresql://" in sync_db_url:
+    sync_db_url = sync_db_url.replace("postgresql://", "postgresql+psycopg://")
 config.set_main_option("sqlalchemy.url", sync_db_url)
 
 # Interpret the config file for Python logging
