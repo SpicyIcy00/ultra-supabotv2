@@ -289,18 +289,88 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
         </div>
       )}
 
-      {/* CSV Download */}
+      {/* Shipment Plan Table */}
       {latestPlan && latestPlan.items.length > 0 && (
-        <div className="flex justify-end">
-          <button
-            onClick={handleDownloadCsv}
-            className="flex items-center gap-2 px-4 py-2 bg-[#1c1e26] border border-[#2e303d] text-gray-300 text-sm rounded-lg hover:border-blue-500/50 hover:text-white transition-all"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Download CSV
-          </button>
+        <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-gray-300">
+              Shipment Plan ({latestPlan.items.length} items)
+            </h3>
+            <button
+              onClick={handleDownloadCsv}
+              className="flex items-center gap-2 px-3 py-1.5 bg-[#0e1117] border border-[#2e303d] text-gray-300 text-xs rounded-lg hover:border-blue-500/50 hover:text-white transition-all"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Download CSV
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead>
+                <tr className="border-b border-[#2e303d] text-gray-400">
+                  <th className="py-2 pr-3 font-medium whitespace-nowrap">Product</th>
+                  <th className="py-2 px-3 font-medium whitespace-nowrap">Category</th>
+                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Avg Daily</th>
+                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">On Hand</th>
+                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">On Order</th>
+                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Min</th>
+                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Max</th>
+                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Requested</th>
+                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Allocated</th>
+                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Days of Stock</th>
+                  <th className="py-2 pl-3 font-medium whitespace-nowrap text-right">Priority</th>
+                </tr>
+              </thead>
+              <tbody>
+                {latestPlan.items.map((item, idx) => {
+                  const isShort = item.allocated_ship_qty < item.requested_ship_qty;
+                  const isOverstock = item.days_of_stock > 120;
+                  const isNegative = item.on_hand < 0;
+                  const rowHighlight = isNegative
+                    ? 'bg-red-900/10'
+                    : isShort
+                    ? 'bg-yellow-900/10'
+                    : isOverstock
+                    ? 'bg-orange-900/10'
+                    : idx % 2 === 0
+                    ? 'bg-[#0e1117]'
+                    : '';
+                  return (
+                    <tr
+                      key={`${item.store_id}-${item.sku_id}`}
+                      className={`border-b border-[#2e303d]/50 ${rowHighlight}`}
+                    >
+                      <td className="py-2 pr-3 text-white whitespace-nowrap max-w-[200px] truncate">
+                        {item.product_name ?? item.sku_id}
+                      </td>
+                      <td className="py-2 px-3 text-gray-400 whitespace-nowrap">{item.category ?? '-'}</td>
+                      <td className="py-2 px-3 text-gray-300 text-right tabular-nums">{item.avg_daily_sales.toFixed(1)}</td>
+                      <td className={`py-2 px-3 text-right tabular-nums ${item.on_hand < 0 ? 'text-red-400' : 'text-gray-300'}`}>
+                        {item.on_hand}
+                      </td>
+                      <td className="py-2 px-3 text-gray-300 text-right tabular-nums">{item.on_order}</td>
+                      <td className="py-2 px-3 text-gray-400 text-right tabular-nums">{item.min_level.toFixed(0)}</td>
+                      <td className="py-2 px-3 text-gray-400 text-right tabular-nums">{item.final_max.toFixed(0)}</td>
+                      <td className="py-2 px-3 text-gray-300 text-right tabular-nums">{item.requested_ship_qty}</td>
+                      <td className={`py-2 px-3 text-right tabular-nums font-medium ${
+                        isShort ? 'text-yellow-400' : item.allocated_ship_qty > 0 ? 'text-green-400' : 'text-gray-500'
+                      }`}>
+                        {item.allocated_ship_qty}
+                      </td>
+                      <td className={`py-2 px-3 text-right tabular-nums ${
+                        item.days_of_stock > 120 ? 'text-orange-400' : item.days_of_stock < 3 ? 'text-red-400' : 'text-gray-300'
+                      }`}>
+                        {item.days_of_stock.toFixed(1)}
+                      </td>
+                      <td className="py-2 pl-3 text-gray-400 text-right tabular-nums">{item.priority_score.toFixed(2)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
