@@ -15,8 +15,13 @@ const API_BASE = '/api/v1/replenishment';
 
 // --- Main Operations ---
 
-export const runReplenishment = async (runDate?: string): Promise<ReplenishmentRunResponse> => {
-  const params = runDate ? { run_date: runDate } : {};
+export const runReplenishment = async (
+  runDate?: string,
+  storeId?: string
+): Promise<ReplenishmentRunResponse> => {
+  const params: Record<string, string> = {};
+  if (runDate) params.run_date = runDate;
+  if (storeId) params.store_id = storeId;
   const response = await axios.post<ReplenishmentRunResponse>(`${API_BASE}/run`, null, { params });
   return response.data;
 };

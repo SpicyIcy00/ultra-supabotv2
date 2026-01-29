@@ -197,11 +197,12 @@ class ReplenishmentService:
     # ----------------------------------------------------------------
 
     async def _batch_get_daily_sales_fallback(
-        self, lookback_days: int = 28
+        self, lookback_days: int = 28, store_id: Optional[str] = None
     ) -> Dict[Tuple[str, str], List[float]]:
-        """Batch fetch daily sales for ALL store-SKU pairs (fallback mode)."""
+        """Batch fetch daily sales for store-SKU pairs (fallback mode)."""
         cutoff = date.today() - timedelta(days=lookback_days)
-        query = text("""
+        store_filter = "AND t.store_id = :store_id" if store_id else ""
+        query = text(f"""
             SELECT
                 t.store_id,
                 ti.product_id,
@@ -212,10 +213,14 @@ class ReplenishmentService:
             WHERE t.transaction_time >= :cutoff
               AND t.transaction_time < CURRENT_DATE
               AND t.is_cancelled = false
+              {store_filter}
             GROUP BY t.store_id, ti.product_id, sale_date
             ORDER BY t.store_id, ti.product_id, sale_date
         """)
-        result = await self.db.execute(query, {"cutoff": cutoff})
+        params: Dict[str, Any] = {"cutoff": cutoff}
+        if store_id:
+            params["store_id"] = store_id
+        result = await self.db.execute(query, params)
         rows = result.fetchall()
 
         sales_map: Dict[Tuple[str, str], List[float]] = {}
@@ -229,11 +234,12 @@ class ReplenishmentService:
         return sales_map
 
     async def _batch_get_daily_sales_snapshot(
-        self, lookback_days: int = 28
+        self, lookback_days: int = 28, store_id: Optional[str] = None
     ) -> Dict[Tuple[str, str], List[float]]:
-        """Batch fetch daily sales for ALL store-SKU pairs (snapshot mode)."""
+        """Batch fetch daily sales for store-SKU pairs (snapshot mode)."""
         cutoff = date.today() - timedelta(days=lookback_days)
-        query = text("""
+        store_filter = "AND t.store_id = :store_id" if store_id else ""
+        query = text(f"""
             SELECT
                 t.store_id,
                 ti.product_id,
@@ -249,10 +255,14 @@ class ReplenishmentService:
               AND t.transaction_time < CURRENT_DATE
               AND t.is_cancelled = false
               AND snap.quantity_on_hand > 0
+              {store_filter}
             GROUP BY t.store_id, ti.product_id, sale_date
             ORDER BY t.store_id, ti.product_id, sale_date
         """)
-        result = await self.db.execute(query, {"cutoff": cutoff})
+        params: Dict[str, Any] = {"cutoff": cutoff}
+        if store_id:
+            params["store_id"] = store_id
+        result = await self.db.execute(query, params)
         rows = result.fetchall()
 
         sales_map: Dict[Tuple[str, str], List[float]] = {}
@@ -266,9 +276,9 @@ class ReplenishmentService:
         return sales_map
 
     async def run_replenishment_calculation(
-        self, run_date: Optional[date] = None
+        self, run_date: Optional[date] = None, store_id: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Execute the full replenishment calculation for all store-SKU combinations."""
+        """Execute the replenishment calculation, optionally filtered to a single store."""
         if run_date is None:
             run_date = date.today()
 
@@ -279,14 +289,19 @@ class ReplenishmentService:
         # Get seasonality multiplier for today
         seasonality_multiplier = await self.get_seasonality_multiplier(run_date)
 
-        # Get all store-SKU combinations with inventory (products that track stock)
-        store_sku_query = text("""
+        # Get store-SKU combinations with inventory (products that track stock)
+        store_filter = "AND i.store_id = :store_id" if store_id else ""
+        store_sku_query = text(f"""
             SELECT DISTINCT i.store_id, i.product_id, i.quantity_on_hand
             FROM inventory i
             JOIN products p ON i.product_id = p.id
             WHERE p.track_stock_level = true
+              {store_filter}
         """)
-        result = await self.db.execute(store_sku_query)
+        params: Dict[str, Any] = {}
+        if store_id:
+            params["store_id"] = store_id
+        result = await self.db.execute(store_sku_query, params)
         store_sku_rows = result.fetchall()
 
         # Pre-load all tier params
@@ -312,16 +327,17 @@ class ReplenishmentService:
         for w in wh_result.scalars().all():
             wh_cache[w.sku_id] = w.wh_on_hand_units
 
-        # Batch fetch ALL daily sales in one query
+        # Batch fetch daily sales in one query
         if calc_mode == "snapshot":
-            sales_cache = await self._batch_get_daily_sales_snapshot()
+            sales_cache = await self._batch_get_daily_sales_snapshot(store_id=store_id)
         else:
-            sales_cache = await self._batch_get_daily_sales_fallback()
+            sales_cache = await self._batch_get_daily_sales_fallback(store_id=store_id)
 
-        # Delete previous plans for this run_date
-        await self.db.execute(
-            delete(ShipmentPlan).where(ShipmentPlan.run_date == run_date)
-        )
+        # Delete previous plans for this run_date (and store if filtered)
+        delete_q = delete(ShipmentPlan).where(ShipmentPlan.run_date == run_date)
+        if store_id:
+            delete_q = delete_q.where(ShipmentPlan.store_id == store_id)
+        await self.db.execute(delete_q)
 
         # Calculate for each store-SKU
         plan_items: List[ShipmentPlan] = []

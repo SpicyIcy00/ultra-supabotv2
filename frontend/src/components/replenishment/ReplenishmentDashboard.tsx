@@ -4,12 +4,14 @@ import {
   getLatestPlan,
   getExceptions,
   getDataReadiness,
+  getStoreTiers,
 } from '../../services/replenishmentApi';
 import type {
   ReplenishmentRunResponse,
   ShipmentPlanResponse,
   ExceptionsResponse,
   DataReadiness,
+  StoreTier,
 } from '../../types/replenishment';
 
 interface Props {
@@ -25,21 +27,26 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [stores, setStores] = useState<StoreTier[]>([]);
+  const [selectedStoreId, setSelectedStoreId] = useState<string>('');
+
   useEffect(() => {
-    loadData();
+    loadInitialData();
   }, []);
 
-  const loadData = async () => {
+  const loadInitialData = async () => {
     setLoading(true);
     try {
-      const [readiness, plan, exc] = await Promise.all([
+      const [readiness, plan, exc, tiers] = await Promise.all([
         getDataReadiness(),
         getLatestPlan(),
         getExceptions(),
+        getStoreTiers(),
       ]);
       setDataReadiness(readiness);
       setLatestPlan(plan);
       setExceptions(exc);
+      setStores(tiers);
     } catch {
       // Data may not exist yet
     } finally {
@@ -47,19 +54,89 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
     }
   };
 
+  const loadPlanData = async () => {
+    try {
+      const storeFilter = selectedStoreId ? [selectedStoreId] : undefined;
+      const [plan, exc] = await Promise.all([
+        getLatestPlan(storeFilter),
+        getExceptions(),
+      ]);
+      setLatestPlan(plan);
+      setExceptions(exc);
+    } catch {
+      // ignore
+    }
+  };
+
   const handleRun = async () => {
+    if (!selectedStoreId) {
+      setError('Please select a store before running.');
+      return;
+    }
     setIsRunning(true);
     setError(null);
     try {
-      const result = await runReplenishment();
+      const result = await runReplenishment(undefined, selectedStoreId);
       setRunResult(result);
-      await loadData();
+      await loadPlanData();
       onRunComplete?.();
     } catch (err: any) {
       setError(err?.response?.data?.detail || 'Failed to run replenishment calculation');
     } finally {
       setIsRunning(false);
     }
+  };
+
+  const handleDownloadCsv = () => {
+    if (!latestPlan || !latestPlan.items.length) return;
+
+    const headers = [
+      'Store', 'Product', 'Category', 'Avg Daily Sales', 'Season Adj Daily Sales',
+      'Safety Stock', 'Min Level', 'Max Level', 'Expiry Cap', 'Final Max',
+      'On Hand', 'On Order', 'Inventory Position',
+      'Requested Qty', 'Allocated Qty', 'Priority Score', 'Days of Stock',
+    ];
+
+    const rows = latestPlan.items.map((item) => [
+      item.store_name ?? item.store_id,
+      item.product_name ?? item.sku_id,
+      item.category ?? '',
+      item.avg_daily_sales.toFixed(2),
+      item.season_adjusted_daily_sales.toFixed(2),
+      item.safety_stock.toFixed(2),
+      item.min_level.toFixed(2),
+      item.max_level.toFixed(2),
+      item.expiry_cap.toFixed(2),
+      item.final_max.toFixed(2),
+      item.on_hand,
+      item.on_order,
+      item.inventory_position,
+      item.requested_ship_qty,
+      item.allocated_ship_qty,
+      item.priority_score.toFixed(4),
+      item.days_of_stock.toFixed(2),
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((r) =>
+        r.map((v) => {
+          const s = String(v);
+          return s.includes(',') ? `"${s}"` : s;
+        }).join(',')
+      ),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const storeName = stores.find((s) => s.store_id === selectedStoreId)?.store_name ?? 'all';
+    link.download = `replenishment_${storeName}_${latestPlan.run_date ?? 'latest'}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   if (loading) {
@@ -104,7 +181,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
 
       {/* Run Controls */}
       <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h3 className="text-lg font-semibold text-white">Weekly Replenishment</h3>
             {latestPlan?.run_date && (
@@ -118,20 +195,35 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
               </p>
             )}
           </div>
-          <button
-            onClick={handleRun}
-            disabled={isRunning}
-            className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            {isRunning ? (
-              <span className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                Running...
-              </span>
-            ) : (
-              'Run Weekly Replenishment'
-            )}
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Store Dropdown */}
+            <select
+              value={selectedStoreId}
+              onChange={(e) => setSelectedStoreId(e.target.value)}
+              className="bg-[#0e1117] border border-[#2e303d] text-gray-200 text-sm rounded-lg px-3 py-2.5 focus:border-blue-500 focus:outline-none"
+            >
+              <option value="">Select a store...</option>
+              {stores.map((s) => (
+                <option key={s.store_id} value={s.store_id}>
+                  {s.store_name ?? s.store_id} (Tier {s.tier})
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleRun}
+              disabled={isRunning || !selectedStoreId}
+              className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+            >
+              {isRunning ? (
+                <span className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  Running...
+                </span>
+              ) : (
+                'Run Replenishment'
+              )}
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -143,7 +235,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
         {runResult && !error && (
           <div className="mt-4 bg-blue-900/20 border border-blue-600/30 rounded-lg p-3">
             <p className="text-blue-400 text-sm">
-              Calculation complete: {runResult.total_items} items across {runResult.stores_processed} stores.
+              Calculation complete: {runResult.total_items} items across {runResult.stores_processed} store(s).
               {runResult.exceptions_count > 0 && (
                 <span className="text-yellow-400 ml-1">
                   {runResult.exceptions_count} exceptions flagged.
@@ -194,6 +286,21 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
             }
             highlight={!!(exceptions && exceptions.total_exceptions > 0)}
           />
+        </div>
+      )}
+
+      {/* CSV Download */}
+      {latestPlan && latestPlan.items.length > 0 && (
+        <div className="flex justify-end">
+          <button
+            onClick={handleDownloadCsv}
+            className="flex items-center gap-2 px-4 py-2 bg-[#1c1e26] border border-[#2e303d] text-gray-300 text-sm rounded-lg hover:border-blue-500/50 hover:text-white transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Download CSV
+          </button>
         </div>
       )}
 

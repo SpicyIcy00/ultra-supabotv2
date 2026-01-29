@@ -27,10 +27,11 @@ def _get_service(db: AsyncSession = Depends(get_db)) -> ReplenishmentService:
 @router.post("/run")
 async def run_replenishment(
     run_date: Optional[date] = Query(None),
+    store_id: Optional[str] = Query(None),
     service: ReplenishmentService = Depends(_get_service),
 ):
-    """Run the full replenishment calculation for all store-SKU combinations."""
-    result = await service.run_replenishment_calculation(run_date)
+    """Run the replenishment calculation, optionally filtered to a single store."""
+    result = await service.run_replenishment_calculation(run_date, store_id)
     return result
 
 
