@@ -196,6 +196,75 @@ class ReplenishmentService:
     # Main Replenishment Calculation
     # ----------------------------------------------------------------
 
+    async def _batch_get_daily_sales_fallback(
+        self, lookback_days: int = 28
+    ) -> Dict[Tuple[str, str], List[float]]:
+        """Batch fetch daily sales for ALL store-SKU pairs (fallback mode)."""
+        cutoff = date.today() - timedelta(days=lookback_days)
+        query = text("""
+            SELECT
+                t.store_id,
+                ti.product_id,
+                DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') AS sale_date,
+                COALESCE(SUM(ti.quantity), 0)::float AS daily_qty
+            FROM new_transactions t
+            JOIN new_transaction_items ti ON t.ref_id = ti.transaction_ref_id
+            WHERE t.transaction_time >= :cutoff
+              AND t.transaction_time < CURRENT_DATE
+              AND t.is_cancelled = false
+            GROUP BY t.store_id, ti.product_id, sale_date
+            ORDER BY t.store_id, ti.product_id, sale_date
+        """)
+        result = await self.db.execute(query, {"cutoff": cutoff})
+        rows = result.fetchall()
+
+        sales_map: Dict[Tuple[str, str], List[float]] = {}
+        for row in rows:
+            key = (row[0], row[1])
+            qty = float(row[3])
+            if qty > 0:  # Filter zero-sales days as proxy for stockouts
+                if key not in sales_map:
+                    sales_map[key] = []
+                sales_map[key].append(qty)
+        return sales_map
+
+    async def _batch_get_daily_sales_snapshot(
+        self, lookback_days: int = 28
+    ) -> Dict[Tuple[str, str], List[float]]:
+        """Batch fetch daily sales for ALL store-SKU pairs (snapshot mode)."""
+        cutoff = date.today() - timedelta(days=lookback_days)
+        query = text("""
+            SELECT
+                t.store_id,
+                ti.product_id,
+                DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') AS sale_date,
+                COALESCE(SUM(ti.quantity), 0)::float AS daily_qty
+            FROM new_transactions t
+            JOIN new_transaction_items ti ON t.ref_id = ti.transaction_ref_id
+            JOIN inventory_snapshots snap
+                ON snap.product_id = ti.product_id
+                AND snap.store_id = t.store_id
+                AND snap.snapshot_date = DATE(t.transaction_time AT TIME ZONE 'Asia/Manila')
+            WHERE t.transaction_time >= :cutoff
+              AND t.transaction_time < CURRENT_DATE
+              AND t.is_cancelled = false
+              AND snap.quantity_on_hand > 0
+            GROUP BY t.store_id, ti.product_id, sale_date
+            ORDER BY t.store_id, ti.product_id, sale_date
+        """)
+        result = await self.db.execute(query, {"cutoff": cutoff})
+        rows = result.fetchall()
+
+        sales_map: Dict[Tuple[str, str], List[float]] = {}
+        for row in rows:
+            key = (row[0], row[1])
+            qty = float(row[3])
+            if qty > 0:
+                if key not in sales_map:
+                    sales_map[key] = []
+                sales_map[key].append(qty)
+        return sales_map
+
     async def run_replenishment_calculation(
         self, run_date: Optional[date] = None
     ) -> Dict[str, Any]:
@@ -243,6 +312,12 @@ class ReplenishmentService:
         for w in wh_result.scalars().all():
             wh_cache[w.sku_id] = w.wh_on_hand_units
 
+        # Batch fetch ALL daily sales in one query
+        if calc_mode == "snapshot":
+            sales_cache = await self._batch_get_daily_sales_snapshot()
+        else:
+            sales_cache = await self._batch_get_daily_sales_fallback()
+
         # Delete previous plans for this run_date
         await self.db.execute(
             delete(ShipmentPlan).where(ShipmentPlan.run_date == run_date)
@@ -266,10 +341,8 @@ class ReplenishmentService:
                 "expiry_window_days": 60,
             })
 
-            # Get daily sales
-            daily_sales = await self.get_daily_sales(
-                store_id, sku_id, calc_mode
-            )
+            # Get daily sales from pre-loaded cache
+            daily_sales = sales_cache.get((store_id, sku_id), [])
 
             # Calculate median (AvgDailySales)
             if daily_sales:
