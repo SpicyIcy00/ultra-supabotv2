@@ -536,7 +536,7 @@ class ReplenishmentService:
                 },
             }
 
-        # Build query with joins for names
+        # Build query with joins for names + warehouse inventory
         query = text("""
             SELECT
                 sp.store_id,
@@ -558,15 +558,19 @@ class ReplenishmentService:
                 sp.allocated_ship_qty,
                 sp.priority_score::float,
                 sp.days_of_stock::float,
-                sp.calculation_mode
+                sp.calculation_mode,
+                COALESCE(wh_inv.quantity_on_hand, 0) AS wh_on_hand
             FROM shipment_plans sp
             JOIN stores s ON sp.store_id = s.id
             JOIN products p ON sp.sku_id = p.id
+            LEFT JOIN inventory wh_inv
+                ON wh_inv.product_id = sp.sku_id
+                AND wh_inv.store_id = :wh_store_id
             WHERE sp.run_date = :run_date
             ORDER BY sp.priority_score DESC
         """)
 
-        result = await self.db.execute(query, {"run_date": latest_date})
+        result = await self.db.execute(query, {"run_date": latest_date, "wh_store_id": WAREHOUSE_STORE_ID})
         rows = result.fetchall()
 
         items = []
@@ -600,9 +604,10 @@ class ReplenishmentService:
                 "allocated_ship_qty": row[16],
                 "priority_score": row[17],
                 "days_of_stock": row[18],
+                "wh_on_hand": int(row[20]),
             })
 
-        calc_mode = rows[0][19] if rows else "none"
+        calc_mode = rows[0][19] if rows else "none"  # calculation_mode column
         snapshot_days = await self.get_snapshot_days_available()
 
         return {

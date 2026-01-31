@@ -61,6 +61,7 @@ export interface ShipmentPlanItem {
   allocated_ship_qty: number;
   priority_score: number;
   days_of_stock: number;
+  wh_on_hand: number;
 }
 
 export interface ShipmentPlanSummary {
