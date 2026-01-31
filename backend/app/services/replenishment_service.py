@@ -25,6 +25,7 @@ from app.models.inventory import Inventory
 REVIEW_PERIOD_DAYS = 7
 LEAD_TIME_DAYS = 2
 COVER_DAYS = REVIEW_PERIOD_DAYS + LEAD_TIME_DAYS  # 9
+WAREHOUSE_STORE_ID = "667bde393126e50006c8058c"  # AJI BARN
 
 
 class ReplenishmentService:
@@ -296,9 +297,10 @@ class ReplenishmentService:
             FROM inventory i
             JOIN products p ON i.product_id = p.id
             WHERE p.track_stock_level = true
+              AND i.store_id != :wh_store_id
               {store_filter}
         """)
-        params: Dict[str, Any] = {}
+        params: Dict[str, Any] = {"wh_store_id": WAREHOUSE_STORE_ID}
         if store_id:
             params["store_id"] = store_id
         result = await self.db.execute(store_sku_query, params)
@@ -321,11 +323,16 @@ class ReplenishmentService:
         for p in pipeline_result.scalars().all():
             pipeline_cache[(p.store_id, p.sku_id)] = p.on_order_units
 
-        # Pre-load warehouse inventory
+        # Pre-load warehouse (AJI BARN) inventory from the inventory table
         wh_cache: Dict[str, int] = {}
-        wh_result = await self.db.execute(select(WarehouseInventory))
-        for w in wh_result.scalars().all():
-            wh_cache[w.sku_id] = w.wh_on_hand_units
+        wh_query = text("""
+            SELECT product_id, quantity_on_hand
+            FROM inventory
+            WHERE store_id = :wh_store_id
+        """)
+        wh_result = await self.db.execute(wh_query, {"wh_store_id": WAREHOUSE_STORE_ID})
+        for row in wh_result.fetchall():
+            wh_cache[row[0]] = int(row[1])
 
         # Batch fetch daily sales in one query
         if calc_mode == "snapshot":
