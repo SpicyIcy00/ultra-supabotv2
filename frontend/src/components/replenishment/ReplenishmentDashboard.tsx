@@ -29,6 +29,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
 
   const [stores, setStores] = useState<StoreTier[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
+  const [hideZeroSales, setHideZeroSales] = useState(false);
 
   useEffect(() => {
     loadInitialData();
@@ -87,8 +88,12 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
     }
   };
 
-  const sortedItems = (items: ShipmentPlanResponse['items']) => {
-    return [...items].sort((a, b) => {
+  const filteredAndSorted = (items: ShipmentPlanResponse['items']) => {
+    let filtered = items;
+    if (hideZeroSales) {
+      filtered = filtered.filter((i) => i.avg_daily_sales > 0);
+    }
+    return [...filtered].sort((a, b) => {
       const catA = (a.category ?? '').toLowerCase();
       const catB = (b.category ?? '').toLowerCase();
       if (catA !== catB) return catA.localeCompare(catB);
@@ -105,7 +110,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
       'Store Inv', 'Warehouse Inv', 'Requested Qty', 'Allocated Qty', 'Days of Stock',
     ];
 
-    const sorted = sortedItems(latestPlan.items);
+    const sorted = filteredAndSorted(latestPlan.items);
     const rows = sorted.map((item) => [
       item.store_name ?? item.store_id,
       item.product_name ?? item.sku_id,
@@ -300,6 +305,15 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
             <h3 className="text-sm font-semibold text-gray-300">
               Shipment Plan ({latestPlan.items.length} items)
             </h3>
+            <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={hideZeroSales}
+                onChange={(e) => setHideZeroSales(e.target.checked)}
+                className="rounded border-[#2e303d] bg-[#0e1117] text-blue-500 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+              />
+              Hide 0 daily sales
+            </label>
             <button
               onClick={handleDownloadCsv}
               className="flex items-center gap-2 px-3 py-1.5 bg-[#0e1117] border border-[#2e303d] text-gray-300 text-xs rounded-lg hover:border-blue-500/50 hover:text-white transition-all"
@@ -327,7 +341,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
               </thead>
               <tbody>
                 {(() => {
-                  const sorted = sortedItems(latestPlan.items);
+                  const sorted = filteredAndSorted(latestPlan.items);
                   let lastCategory = '';
                   return sorted.map((item, idx) => {
                     const cat = item.category ?? '-';
