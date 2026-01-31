@@ -391,6 +391,10 @@ class ReplenishmentService:
             # Requested ship quantity
             requested_ship_qty = max(0, math.ceil(final_max - inventory_position))
 
+            # Skip products that don't need replenishment
+            if requested_ship_qty == 0:
+                continue
+
             # Days of stock
             days_of_stock = (
                 on_hand / max(season_adj_sales, 0.1)
