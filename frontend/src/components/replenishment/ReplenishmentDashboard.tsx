@@ -87,6 +87,15 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
     }
   };
 
+  const sortedItems = (items: ShipmentPlanResponse['items']) => {
+    return [...items].sort((a, b) => {
+      const catA = (a.category ?? '').toLowerCase();
+      const catB = (b.category ?? '').toLowerCase();
+      if (catA !== catB) return catA.localeCompare(catB);
+      return b.allocated_ship_qty - a.allocated_ship_qty;
+    });
+  };
+
   const handleDownloadCsv = () => {
     if (!latestPlan || !latestPlan.items.length) return;
 
@@ -94,10 +103,11 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
       'Store', 'Product', 'Category', 'Avg Daily Sales', 'Season Adj Daily Sales',
       'Safety Stock', 'Min Level', 'Max Level', 'Expiry Cap', 'Final Max',
       'On Hand', 'On Order', 'Inventory Position',
-      'Requested Qty', 'Allocated Qty', 'Priority Score', 'Days of Stock',
+      'Requested Qty', 'Allocated Qty', 'Days of Stock',
     ];
 
-    const rows = latestPlan.items.map((item) => [
+    const sorted = sortedItems(latestPlan.items);
+    const rows = sorted.map((item) => [
       item.store_name ?? item.store_id,
       item.product_name ?? item.sku_id,
       item.category ?? '',
@@ -113,7 +123,6 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
       item.inventory_position,
       item.requested_ship_qty,
       item.allocated_ship_qty,
-      item.priority_score.toFixed(4),
       item.days_of_stock.toFixed(2),
     ]);
 
@@ -311,7 +320,6 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
               <thead>
                 <tr className="border-b border-[#2e303d] text-gray-400">
                   <th className="py-2 pr-3 font-medium whitespace-nowrap">Product</th>
-                  <th className="py-2 px-3 font-medium whitespace-nowrap">Category</th>
                   <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Avg Daily</th>
                   <th className="py-2 px-3 font-medium whitespace-nowrap text-right">On Hand</th>
                   <th className="py-2 px-3 font-medium whitespace-nowrap text-right">On Order</th>
@@ -319,55 +327,65 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                   <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Max</th>
                   <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Requested</th>
                   <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Allocated</th>
-                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Days of Stock</th>
-                  <th className="py-2 pl-3 font-medium whitespace-nowrap text-right">Priority</th>
+                  <th className="py-2 pl-3 font-medium whitespace-nowrap text-right">Days of Stock</th>
                 </tr>
               </thead>
               <tbody>
-                {latestPlan.items.map((item, idx) => {
-                  const isShort = item.allocated_ship_qty < item.requested_ship_qty;
-                  const isOverstock = item.days_of_stock > 120;
-                  const isNegative = item.on_hand < 0;
-                  const rowHighlight = isNegative
-                    ? 'bg-red-900/10'
-                    : isShort
-                    ? 'bg-yellow-900/10'
-                    : isOverstock
-                    ? 'bg-orange-900/10'
-                    : idx % 2 === 0
-                    ? 'bg-[#0e1117]'
-                    : '';
-                  return (
-                    <tr
-                      key={`${item.store_id}-${item.sku_id}`}
-                      className={`border-b border-[#2e303d]/50 ${rowHighlight}`}
-                    >
-                      <td className="py-2 pr-3 text-white whitespace-nowrap max-w-[200px] truncate">
-                        {item.product_name ?? item.sku_id}
-                      </td>
-                      <td className="py-2 px-3 text-gray-400 whitespace-nowrap">{item.category ?? '-'}</td>
-                      <td className="py-2 px-3 text-gray-300 text-right tabular-nums">{item.avg_daily_sales.toFixed(1)}</td>
-                      <td className={`py-2 px-3 text-right tabular-nums ${item.on_hand < 0 ? 'text-red-400' : 'text-gray-300'}`}>
-                        {item.on_hand}
-                      </td>
-                      <td className="py-2 px-3 text-gray-300 text-right tabular-nums">{item.on_order}</td>
-                      <td className="py-2 px-3 text-gray-400 text-right tabular-nums">{item.min_level.toFixed(0)}</td>
-                      <td className="py-2 px-3 text-gray-400 text-right tabular-nums">{item.final_max.toFixed(0)}</td>
-                      <td className="py-2 px-3 text-gray-300 text-right tabular-nums">{item.requested_ship_qty}</td>
-                      <td className={`py-2 px-3 text-right tabular-nums font-medium ${
-                        isShort ? 'text-yellow-400' : item.allocated_ship_qty > 0 ? 'text-green-400' : 'text-gray-500'
-                      }`}>
-                        {item.allocated_ship_qty}
-                      </td>
-                      <td className={`py-2 px-3 text-right tabular-nums ${
-                        item.days_of_stock > 120 ? 'text-orange-400' : item.days_of_stock < 3 ? 'text-red-400' : 'text-gray-300'
-                      }`}>
-                        {item.days_of_stock.toFixed(1)}
-                      </td>
-                      <td className="py-2 pl-3 text-gray-400 text-right tabular-nums">{item.priority_score.toFixed(2)}</td>
-                    </tr>
-                  );
-                })}
+                {(() => {
+                  const sorted = sortedItems(latestPlan.items);
+                  let lastCategory = '';
+                  return sorted.map((item, idx) => {
+                    const cat = item.category ?? '-';
+                    const showCategoryHeader = cat !== lastCategory;
+                    lastCategory = cat;
+                    const isShort = item.allocated_ship_qty < item.requested_ship_qty;
+                    const isOverstock = item.days_of_stock > 120;
+                    const isNegative = item.on_hand < 0;
+                    const rowHighlight = isNegative
+                      ? 'bg-red-900/10'
+                      : isShort
+                      ? 'bg-yellow-900/10'
+                      : isOverstock
+                      ? 'bg-orange-900/10'
+                      : idx % 2 === 0
+                      ? 'bg-[#0e1117]'
+                      : '';
+                    return (
+                      <React.Fragment key={`${item.store_id}-${item.sku_id}`}>
+                        {showCategoryHeader && (
+                          <tr className="border-b border-[#2e303d]">
+                            <td colSpan={9} className="py-2 pt-4 text-xs font-semibold text-blue-400 uppercase tracking-wider">
+                              {cat}
+                            </td>
+                          </tr>
+                        )}
+                        <tr className={`border-b border-[#2e303d]/50 ${rowHighlight}`}>
+                          <td className="py-2 pr-3 text-white whitespace-nowrap max-w-[200px] truncate">
+                            {item.product_name ?? item.sku_id}
+                          </td>
+                          <td className="py-2 px-3 text-gray-300 text-right tabular-nums">{item.avg_daily_sales.toFixed(1)}</td>
+                          <td className={`py-2 px-3 text-right tabular-nums ${item.on_hand < 0 ? 'text-red-400' : 'text-gray-300'}`}>
+                            {item.on_hand}
+                          </td>
+                          <td className="py-2 px-3 text-gray-300 text-right tabular-nums">{item.on_order}</td>
+                          <td className="py-2 px-3 text-gray-400 text-right tabular-nums">{item.min_level.toFixed(0)}</td>
+                          <td className="py-2 px-3 text-gray-400 text-right tabular-nums">{item.final_max.toFixed(0)}</td>
+                          <td className="py-2 px-3 text-gray-300 text-right tabular-nums">{item.requested_ship_qty}</td>
+                          <td className={`py-2 px-3 text-right tabular-nums font-medium ${
+                            isShort ? 'text-yellow-400' : item.allocated_ship_qty > 0 ? 'text-green-400' : 'text-gray-500'
+                          }`}>
+                            {item.allocated_ship_qty}
+                          </td>
+                          <td className={`py-2 pl-3 text-right tabular-nums ${
+                            item.days_of_stock > 120 ? 'text-orange-400' : item.days_of_stock < 3 ? 'text-red-400' : 'text-gray-300'
+                          }`}>
+                            {item.days_of_stock.toFixed(1)}
+                          </td>
+                        </tr>
+                      </React.Fragment>
+                    );
+                  });
+                })()}
               </tbody>
             </table>
           </div>
