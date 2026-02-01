@@ -98,7 +98,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
       const catA = (a.category ?? '').toLowerCase();
       const catB = (b.category ?? '').toLowerCase();
       if (catA !== catB) return catA.localeCompare(catB);
-      return b.allocated_ship_qty - a.allocated_ship_qty;
+      return b.requested_ship_qty - a.requested_ship_qty;
     });
   };
 
@@ -106,9 +106,9 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
     if (!latestPlan || !latestPlan.items.length) return;
 
     const headers = [
-      'Store',
+      'Store', 'Product',
       ...(showIds ? ['Product ID', 'SKU'] : []),
-      'Product', 'Category', 'Avg Daily Sales',
+      'Category', 'Avg Daily Sales',
       'Safety Stock', 'Min Level',
       'Store Inv', 'Warehouse Inv', 'Requested Qty', 'Allocated Qty', 'Days of Stock',
     ];
@@ -116,8 +116,8 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
     const sorted = filteredAndSorted(latestPlan.items);
     const rows = sorted.map((item) => [
       item.store_name ?? item.store_id,
-      ...(showIds ? [item.sku_id, item.product_sku ?? ''] : []),
       item.product_name ?? item.sku_id,
+      ...(showIds ? [item.sku_id, item.product_sku ?? ''] : []),
       item.category ?? '',
       item.avg_daily_sales.toFixed(2),
       item.safety_stock.toFixed(2),
