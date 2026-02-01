@@ -30,6 +30,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const [stores, setStores] = useState<StoreTier[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
   const [hideZeroSales, setHideZeroSales] = useState(false);
+  const [showIds, setShowIds] = useState(false);
 
   useEffect(() => {
     loadInitialData();
@@ -105,7 +106,9 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
     if (!latestPlan || !latestPlan.items.length) return;
 
     const headers = [
-      'Store', 'Product', 'Category', 'Avg Daily Sales',
+      'Store',
+      ...(showIds ? ['Product ID', 'SKU'] : []),
+      'Product', 'Category', 'Avg Daily Sales',
       'Safety Stock', 'Min Level',
       'Store Inv', 'Warehouse Inv', 'Requested Qty', 'Allocated Qty', 'Days of Stock',
     ];
@@ -113,6 +116,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
     const sorted = filteredAndSorted(latestPlan.items);
     const rows = sorted.map((item) => [
       item.store_name ?? item.store_id,
+      ...(showIds ? [item.sku_id, item.product_sku ?? ''] : []),
       item.product_name ?? item.sku_id,
       item.category ?? '',
       item.avg_daily_sales.toFixed(2),
@@ -304,15 +308,26 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
             <h3 className="text-sm font-semibold text-gray-300">
               Shipment Plan ({latestPlan.items.length} items)
             </h3>
-            <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={hideZeroSales}
-                onChange={(e) => setHideZeroSales(e.target.checked)}
-                className="rounded border-[#2e303d] bg-[#0e1117] text-blue-500 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
-              />
-              Hide 0 daily sales
-            </label>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={hideZeroSales}
+                  onChange={(e) => setHideZeroSales(e.target.checked)}
+                  className="rounded border-[#2e303d] bg-[#0e1117] text-blue-500 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+                />
+                Hide 0 daily sales
+              </label>
+              <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={showIds}
+                  onChange={(e) => setShowIds(e.target.checked)}
+                  className="rounded border-[#2e303d] bg-[#0e1117] text-blue-500 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+                />
+                Show IDs
+              </label>
+            </div>
             <button
               onClick={handleDownloadCsv}
               className="flex items-center gap-2 px-3 py-1.5 bg-[#0e1117] border border-[#2e303d] text-gray-300 text-xs rounded-lg hover:border-blue-500/50 hover:text-white transition-all"
@@ -327,6 +342,8 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
             <table className="w-full text-xs text-left">
               <thead>
                 <tr className="border-b border-[#2e303d] text-gray-400">
+                  {showIds && <th className="py-2 pr-3 font-medium whitespace-nowrap">Product ID</th>}
+                  {showIds && <th className="py-2 px-3 font-medium whitespace-nowrap">SKU</th>}
                   <th className="py-2 pr-3 font-medium whitespace-nowrap">Product</th>
                   <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Avg Daily</th>
                   <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Store Inv</th>
@@ -361,12 +378,22 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                       <React.Fragment key={`${item.store_id}-${item.sku_id}`}>
                         {showCategoryHeader && (
                           <tr className="border-b border-[#2e303d]">
-                            <td colSpan={8} className="py-2 pt-4 text-xs font-semibold text-blue-400 uppercase tracking-wider">
+                            <td colSpan={showIds ? 10 : 8} className="py-2 pt-4 text-xs font-semibold text-blue-400 uppercase tracking-wider">
                               {cat}
                             </td>
                           </tr>
                         )}
                         <tr className={`border-b border-[#2e303d]/50 ${rowHighlight}`}>
+                          {showIds && (
+                            <td className="py-2 pr-3 text-gray-500 whitespace-nowrap text-[10px] font-mono max-w-[120px] truncate">
+                              {item.sku_id}
+                            </td>
+                          )}
+                          {showIds && (
+                            <td className="py-2 px-3 text-gray-500 whitespace-nowrap text-[10px] font-mono max-w-[100px] truncate">
+                              {item.product_sku ?? ''}
+                            </td>
+                          )}
                           <td className="py-2 pr-3 text-white whitespace-nowrap max-w-[200px] truncate">
                             {item.product_name ?? item.sku_id}
                           </td>

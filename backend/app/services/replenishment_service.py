@@ -550,7 +550,8 @@ class ReplenishmentService:
                 sp.priority_score::float,
                 sp.days_of_stock::float,
                 sp.calculation_mode,
-                COALESCE(wh_inv.quantity_on_hand, 0) AS wh_on_hand
+                COALESCE(wh_inv.quantity_on_hand, 0) AS wh_on_hand,
+                p.sku AS product_sku
             FROM shipment_plans sp
             JOIN stores s ON sp.store_id = s.id
             JOIN products p ON sp.sku_id = p.id
@@ -596,6 +597,7 @@ class ReplenishmentService:
                 "priority_score": row[17],
                 "days_of_stock": row[18],
                 "wh_on_hand": int(row[20]),
+                "product_sku": row[21] or "",
             })
 
         calc_mode = rows[0][19] if rows else "none"  # calculation_mode column

@@ -62,6 +62,7 @@ export interface ShipmentPlanItem {
   priority_score: number;
   days_of_stock: number;
   wh_on_hand: number;
+  product_sku?: string;
 }
 
 export interface ShipmentPlanSummary {
