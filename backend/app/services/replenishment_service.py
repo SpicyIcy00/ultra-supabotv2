@@ -382,21 +382,12 @@ class ReplenishmentService:
             # Min = (SeasonAdjustedDailySales × CoverDays) + SafetyStock
             min_level = (season_adj_sales * COVER_DAYS) + safety_stock
 
-            # Max = Min + (SeasonAdjustedDailySales × TargetCoverDays)
-            max_level = min_level + (season_adj_sales * tier_params["target_cover_days"])
-
-            # Expiry cap
-            expiry_cap = season_adj_sales * tier_params["expiry_window_days"]
-
-            # Final max
-            final_max = min(max_level, expiry_cap)
-
             # Inventory position
             on_order = pipeline_cache.get((store_id, sku_id), 0)
             inventory_position = on_hand + on_order
 
-            # Requested ship quantity
-            requested_ship_qty = max(0, math.ceil(final_max - inventory_position))
+            # Requested ship quantity (bring store up to min level)
+            requested_ship_qty = max(0, math.ceil(min_level - inventory_position))
 
             # Skip products that don't need replenishment
             if requested_ship_qty == 0:
@@ -421,9 +412,9 @@ class ReplenishmentService:
                 season_adjusted_daily_sales=round(season_adj_sales, 4),
                 safety_stock=round(safety_stock, 2),
                 min_level=round(min_level, 2),
-                max_level=round(max_level, 2),
-                expiry_cap=round(expiry_cap, 2),
-                final_max=round(final_max, 2),
+                max_level=0,
+                expiry_cap=0,
+                final_max=round(min_level, 2),
                 on_hand=on_hand,
                 on_order=on_order,
                 inventory_position=inventory_position,

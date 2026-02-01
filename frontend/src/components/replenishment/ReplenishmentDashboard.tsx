@@ -106,7 +106,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
 
     const headers = [
       'Store', 'Product', 'Category', 'Avg Daily Sales',
-      'Safety Stock', 'Min Level', 'Final Max',
+      'Safety Stock', 'Min Level',
       'Store Inv', 'Warehouse Inv', 'Requested Qty', 'Allocated Qty', 'Days of Stock',
     ];
 
@@ -118,7 +118,6 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
       item.avg_daily_sales.toFixed(2),
       item.safety_stock.toFixed(2),
       item.min_level.toFixed(2),
-      item.final_max.toFixed(2),
       item.on_hand,
       item.wh_on_hand ?? 0,
       item.requested_ship_qty,
@@ -333,7 +332,6 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                   <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Store Inv</th>
                   <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Warehouse Inv</th>
                   <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Min</th>
-                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Max</th>
                   <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Requested</th>
                   <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Allocated</th>
                   <th className="py-2 pl-3 font-medium whitespace-nowrap text-right">Days of Stock</th>
@@ -363,7 +361,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                       <React.Fragment key={`${item.store_id}-${item.sku_id}`}>
                         {showCategoryHeader && (
                           <tr className="border-b border-[#2e303d]">
-                            <td colSpan={9} className="py-2 pt-4 text-xs font-semibold text-blue-400 uppercase tracking-wider">
+                            <td colSpan={8} className="py-2 pt-4 text-xs font-semibold text-blue-400 uppercase tracking-wider">
                               {cat}
                             </td>
                           </tr>
@@ -380,7 +378,6 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                             {item.wh_on_hand ?? 0}
                           </td>
                           <td className="py-2 px-3 text-gray-400 text-right tabular-nums">{item.min_level.toFixed(0)}</td>
-                          <td className="py-2 px-3 text-gray-400 text-right tabular-nums">{item.final_max.toFixed(0)}</td>
                           <td className="py-2 px-3 text-gray-300 text-right tabular-nums">{item.requested_ship_qty}</td>
                           <td className={`py-2 px-3 text-right tabular-nums font-medium ${
                             isShort ? 'text-yellow-400' : item.allocated_ship_qty > 0 ? 'text-green-400' : 'text-gray-500'

@@ -85,9 +85,9 @@ export const StoreTierConfig: React.FC = () => {
 
   const handleTierPreset = (tier: 'A' | 'B') => {
     if (tier === 'A') {
-      setForm(f => ({ ...f, tier: 'A', safety_days: 4, target_cover_days: 10, expiry_window_days: 90 }));
+      setForm(f => ({ ...f, tier: 'A', safety_days: 4 }));
     } else {
-      setForm(f => ({ ...f, tier: 'B', safety_days: 3, target_cover_days: 7, expiry_window_days: 60 }));
+      setForm(f => ({ ...f, tier: 'B', safety_days: 3 }));
     }
   };
 
@@ -144,23 +144,11 @@ export const StoreTierConfig: React.FC = () => {
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div>
               <label className="text-xs text-gray-400 mb-1 block">Safety Days</label>
               <input type="number" min={1} value={form.safety_days}
                 onChange={e => setForm(f => ({ ...f, safety_days: parseInt(e.target.value) || 1 }))}
-                className="w-full bg-[#0e1117] border border-[#2e303d] rounded-lg px-3 py-2 text-sm text-white" />
-            </div>
-            <div>
-              <label className="text-xs text-gray-400 mb-1 block">Target Cover Days</label>
-              <input type="number" min={1} value={form.target_cover_days}
-                onChange={e => setForm(f => ({ ...f, target_cover_days: parseInt(e.target.value) || 1 }))}
-                className="w-full bg-[#0e1117] border border-[#2e303d] rounded-lg px-3 py-2 text-sm text-white" />
-            </div>
-            <div>
-              <label className="text-xs text-gray-400 mb-1 block">Expiry Window Days</label>
-              <input type="number" min={1} value={form.expiry_window_days}
-                onChange={e => setForm(f => ({ ...f, expiry_window_days: parseInt(e.target.value) || 1 }))}
                 className="w-full bg-[#0e1117] border border-[#2e303d] rounded-lg px-3 py-2 text-sm text-white" />
             </div>
           </div>
@@ -184,8 +172,6 @@ export const StoreTierConfig: React.FC = () => {
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-400">Store</th>
               <th className="px-4 py-3 text-center text-xs font-medium text-gray-400">Tier</th>
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-400">Safety Days</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-400">Cover Days</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-400">Expiry Window</th>
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-400">Actions</th>
             </tr>
           </thead>
@@ -201,8 +187,6 @@ export const StoreTierConfig: React.FC = () => {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-sm text-right text-gray-300">{tier.safety_days}</td>
-                <td className="px-4 py-3 text-sm text-right text-gray-300">{tier.target_cover_days}</td>
-                <td className="px-4 py-3 text-sm text-right text-gray-300">{tier.expiry_window_days}</td>
                 <td className="px-4 py-3 text-right">
                   <button onClick={() => handleEdit(tier)} className="text-xs text-blue-400 hover:text-blue-300 mr-3">Edit</button>
                   <button onClick={() => handleDelete(tier.store_id)} className="text-xs text-red-400 hover:text-red-300">Delete</button>
@@ -210,7 +194,7 @@ export const StoreTierConfig: React.FC = () => {
               </tr>
             ))}
             {tiers.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500 text-sm">No store tiers configured</td></tr>
+              <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-500 text-sm">No store tiers configured</td></tr>
             )}
           </tbody>
         </table>
