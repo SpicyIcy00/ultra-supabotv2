@@ -119,20 +119,36 @@ class ConversationMemory:
             if not history:
                 return ""
             
-            # Format history for Claude
+            # Format history for Claude - last exchange is most important
             context_parts = ["## Previous Conversation Context\n"]
-            context_parts.append("The user has asked the following questions in this session:\n")
-            
-            for idx, exchange in enumerate(history[-3:], 1):  # Last 3 exchanges
-                context_parts.append(f"""
-**Exchange {idx}:**
-- Question: "{exchange['question']}"
-- SQL: `{exchange['sql'][:100]}...` (truncated)
-- Result: {exchange['answer_summary']} ({exchange['results_count']} rows)
+
+            # Get the most recent exchange for special attention
+            last_exchange = history[-1]
+            context_parts.append(f"""
+**MOST RECENT QUERY (this is what the user's follow-up likely refers to):**
+- User asked: "{last_exchange['question']}"
+- The query returned {last_exchange['results_count']} rows
+- SQL used: `{last_exchange['sql'][:200]}...`
 """)
-            
+
+            # Add older exchanges if any
+            if len(history) > 1:
+                context_parts.append("\n**Earlier questions in this session:**")
+                for idx, exchange in enumerate(history[-3:-1], 1):  # Previous exchanges (not the last one)
+                    context_parts.append(f"""
+{idx}. "{exchange['question']}" ({exchange['results_count']} rows)""")
+
             context_parts.append("""
-**Important:** If the current question references previous results (e.g., "show me more details", "what about last week", "break this down by store"), use the context above to understand what "this" or "that" refers to.
+
+**CRITICAL - FOLLOW-UP QUESTION HANDLING:**
+If the current question is a follow-up (e.g., "how about rockwell only", "what about last week", "show me just the top 3", "break this down by store"):
+1. Use the MOST RECENT QUERY as the base - keep the same type of analysis
+2. Apply the modification the user is asking for (different store, different time period, different limit, etc.)
+3. For "how about X only" or "just X" - filter to that specific entity while keeping the same metrics/groupings
+4. For "what about [time period]" - change the date filter while keeping the same analysis
+
+Example: If user asked "top 5 selling products this month" and then asks "how about rockwell only",
+generate SQL for "top 5 selling products this month at Rockwell store".
 """)
             
             return "\n".join(context_parts)

@@ -149,6 +149,18 @@ async def generate_chat_stream(
             )
 
             yield format_sse_event(final_event)
+
+            # Store in conversation memory for follow-up questions
+            if session_id:
+                answer_summary = f"Found {execution_result['row_count']} results for: {question[:50]}"
+                add_exchange(
+                    session_id=session_id,
+                    question=question,
+                    sql=sql_result["sql"],
+                    answer_summary=answer_summary,
+                    results_count=execution_result["row_count"]
+                )
+
             return  # Success, exit function
 
         except (QueryValidationError, QueryExecutionError) as e:
