@@ -10,7 +10,6 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import AIChatPage from './pages/AIChatPage';
 import ReportingPage from './pages/ReportingPage';
 import { SettingsPage } from './pages/SettingsPage';
-import { StoreFiltersPage } from './pages/StoreFiltersPage';
 import { AuthGuard } from './components/AuthGuard';
 
 function App() {
@@ -25,7 +24,6 @@ function App() {
               <Route path="/ai-chat" element={<AIChatPage />} />
               <Route path="/reports/product-sales" element={<ReportingPage />} />
               <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/store-filters" element={<StoreFiltersPage />} />
             </Routes>
           </Layout>
         </AuthGuard>

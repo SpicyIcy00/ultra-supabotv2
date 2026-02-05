@@ -22,25 +22,42 @@ from app.schemas.store_filter import (
 router = APIRouter(tags=["store-filters"])
 
 
+def _get_default_config() -> StoreFilterConfig:
+    """Return default store filter configuration."""
+    return StoreFilterConfig(
+        sales_stores=["Rockwell", "Greenhills", "Magnolia", "North Edsa", "Fairview", "Opus"],
+        inventory_stores=["Rockwell", "Greenhills", "Magnolia", "North Edsa", "Fairview", "Opus", "AJI BARN"]
+    )
+
+
 @router.get("", response_model=StoreFilterConfig)
 async def get_store_filters(db: AsyncSession = Depends(get_db)):
     """
     Get current store filter configuration grouped by type.
+    Returns defaults if table doesn't exist yet.
     """
-    result = await db.execute(
-        select(StoreFilter).order_by(StoreFilter.filter_type, StoreFilter.store_name)
-    )
-    filters = result.scalars().all()
+    try:
+        result = await db.execute(
+            select(StoreFilter).order_by(StoreFilter.filter_type, StoreFilter.store_name)
+        )
+        filters = result.scalars().all()
 
-    config = StoreFilterConfig(sales_stores=[], inventory_stores=[])
+        # If no filters in DB, return defaults
+        if not filters:
+            return _get_default_config()
 
-    for f in filters:
-        if f.filter_type == "sales":
-            config.sales_stores.append(f.store_name)
-        elif f.filter_type == "inventory":
-            config.inventory_stores.append(f.store_name)
+        config = StoreFilterConfig(sales_stores=[], inventory_stores=[])
 
-    return config
+        for f in filters:
+            if f.filter_type == "sales":
+                config.sales_stores.append(f.store_name)
+            elif f.filter_type == "inventory":
+                config.inventory_stores.append(f.store_name)
+
+        return config
+    except Exception:
+        # Table doesn't exist yet - return defaults
+        return _get_default_config()
 
 
 @router.put("", response_model=StoreFilterConfig)
@@ -51,34 +68,40 @@ async def update_store_filters(
     """
     Update store filter configuration (replaces all existing filters).
     """
-    # Delete all existing filters
-    await db.execute(delete(StoreFilter))
+    try:
+        # Delete all existing filters
+        await db.execute(delete(StoreFilter))
 
-    # Insert new sales filters
-    for store_name in config.sales_stores:
-        filter_record = StoreFilter(
-            id=str(uuid.uuid4()),
-            filter_type="sales",
-            store_name=store_name
+        # Insert new sales filters
+        for store_name in config.sales_stores:
+            filter_record = StoreFilter(
+                id=str(uuid.uuid4()),
+                filter_type="sales",
+                store_name=store_name
+            )
+            db.add(filter_record)
+
+        # Insert new inventory filters
+        for store_name in config.inventory_stores:
+            filter_record = StoreFilter(
+                id=str(uuid.uuid4()),
+                filter_type="inventory",
+                store_name=store_name
+            )
+            db.add(filter_record)
+
+        await db.commit()
+
+        # Return updated config
+        return StoreFilterConfig(
+            sales_stores=config.sales_stores,
+            inventory_stores=config.inventory_stores
         )
-        db.add(filter_record)
-
-    # Insert new inventory filters
-    for store_name in config.inventory_stores:
-        filter_record = StoreFilter(
-            id=str(uuid.uuid4()),
-            filter_type="inventory",
-            store_name=store_name
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database table not initialized. Please run migrations first. Error: {str(e)}"
         )
-        db.add(filter_record)
-
-    await db.commit()
-
-    # Return updated config
-    return StoreFilterConfig(
-        sales_stores=config.sales_stores,
-        inventory_stores=config.inventory_stores
-    )
 
 
 @router.get("/available-stores", response_model=AvailableStoresResponse)
