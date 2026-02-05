@@ -322,9 +322,13 @@ Please fix the issue and generate a corrected query.
 {filter_rules}
 
 **Date Handling:**
+- TODAY'S DATE: {datetime.now().strftime('%Y-%m-%d')} (use this as reference for all relative dates!)
 - Timezone: {self.business_rules.get('date_defaults', {}).get('timezone', 'Asia/Manila')}
 - Week starts on: {self.business_rules.get('date_defaults', {}).get('week_start', 'Monday')}
 - Always use inclusive date ranges
+- "this month" = current month of {datetime.now().strftime('%Y')}
+- "last month" = previous month relative to today
+- "January" or any month name WITHOUT a year = that month in the CURRENT YEAR ({datetime.now().year})
 
 ## SQL Generation Rules
 
