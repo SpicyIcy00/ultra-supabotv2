@@ -372,6 +372,43 @@ function DataTable({ data }: { data: any[] }) {
 
   const columns = Object.keys(data[0]);
 
+  // Columns that should be formatted as currency (peso)
+  const currencyColumns = ['revenue', 'total_revenue', 'sales', 'total_sales', 'amount', 'price', 'cost', 'profit', 'total', 'value'];
+  // Columns that should be formatted as numbers with commas
+  const numberColumns = ['quantity', 'total_quantity', 'total_quantity_sold', 'count', 'transaction_count', 'units', 'stock'];
+
+  const formatCellValue = (value: any, columnName: string): string => {
+    if (value === null || value === undefined) return '-';
+
+    const colLower = columnName.toLowerCase();
+
+    // Check if it's a currency column
+    if (currencyColumns.some(c => colLower.includes(c))) {
+      const num = typeof value === 'number' ? value : parseFloat(value);
+      if (!isNaN(num)) {
+        return `₱${num.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }
+    }
+
+    // Check if it's a number column that should have commas
+    if (numberColumns.some(c => colLower.includes(c))) {
+      const num = typeof value === 'number' ? value : parseFloat(value);
+      if (!isNaN(num)) {
+        return num.toLocaleString('en-PH');
+      }
+    }
+
+    // For other numeric values, just add commas if it's a large number
+    if (typeof value === 'number') {
+      if (Number.isInteger(value)) {
+        return value.toLocaleString('en-PH');
+      }
+      return value.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    return String(value);
+  };
+
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-sm">
@@ -389,7 +426,7 @@ function DataTable({ data }: { data: any[] }) {
             <tr key={idx} className="border-t border-gray-800">
               {columns.map((col) => (
                 <td key={col} className="px-3 py-2 text-gray-300">
-                  {row[col] !== null && row[col] !== undefined ? String(row[col]) : '-'}
+                  {formatCellValue(row[col], col)}
                 </td>
               ))}
             </tr>
