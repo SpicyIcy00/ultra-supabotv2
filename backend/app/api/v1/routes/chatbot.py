@@ -36,7 +36,8 @@ router = APIRouter(tags=["chatbot"])
 
 async def generate_chat_stream(
     question: str,
-    db: AsyncSession
+    db: AsyncSession,
+    session_id: Optional[str] = None
 ) -> AsyncGenerator[str, None]:
     """
     Generate Server-Sent Events stream for chat query processing.
@@ -83,6 +84,7 @@ async def generate_chat_stream(
 
             sql_result = await generator.generate_sql(
                 question,
+                session_id=session_id,
                 retry_on_failure=True,
                 previous_error=last_error
             )
@@ -127,7 +129,8 @@ async def generate_chat_stream(
             formatted_text = formatter.format_response(
                 user_question=question,
                 results=execution_result["results"],
-                chart_data=chart_data
+                chart_data=chart_data,
+                query_type=sql_result.get("query_type")
             )
 
             # Step 4: Send final response
@@ -209,9 +212,11 @@ async def stream_query(
     - final: Complete response with results
     - error: If processing fails
     """
+    # Generate or use provided session ID
+    session_id = request.session_id or str(uuid.uuid4())
 
     return StreamingResponse(
-        generate_chat_stream(request.question, db),
+        generate_chat_stream(request.question, db, session_id),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -255,6 +260,7 @@ async def query_chatbot(
 
             sql_result = await generator.generate_sql(
                 request.question,
+                session_id=session_id,
                 retry_on_failure=True,
                 previous_error=last_error
             )
@@ -284,7 +290,8 @@ async def query_chatbot(
             formatted_text = formatter.format_response(
                 user_question=request.question,
                 results=execution_result["results"],
-                chart_data=chart_data
+                chart_data=chart_data,
+                query_type=query_type
             )
             
             # Generate AI insights (non-blocking, with fallback)

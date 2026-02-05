@@ -216,8 +216,15 @@ training:
   examples:
     # Example 1: Top selling products by revenue
     - question: "What are the top 10 selling products this month?"
+      variations:
+        - "top 10 products this month"
+        - "best sellers this month"
+        - "what's selling well"
+        - "top sellers rn"
+        - "best selling items"
+        - "highest selling products"
       sql: |
-        SELECT 
+        SELECT
             p.name AS product_name,
             p.sku,
             p.category,
@@ -238,8 +245,14 @@ training:
       
     # Example 2: Sales by store
     - question: "Show me sales by store for the last 7 days"
+      variations:
+        - "sales by store last week"
+        - "store performance this week"
+        - "which store sold the most"
+        - "compare store sales"
+        - "breakdown by store"
       sql: |
-        SELECT 
+        SELECT
             s.name AS store_name,
             SUM(t.total) AS total_sales,
             COUNT(DISTINCT t.ref_id) AS transaction_count,
@@ -697,7 +710,7 @@ training:
     # Example 25: Multiple store filter
     - question: "Show sales for Rockwell, Greenhills and Magnolia"
       sql: |
-        SELECT 
+        SELECT
             s.name AS store_name,
             SUM(t.total) AS total_sales,
             COUNT(DISTINCT t.ref_id) AS transaction_count,
@@ -711,6 +724,115 @@ training:
         ORDER BY total_sales DESC;
       type: comparison
       explanation: "Multiple store comparison"
+
+    # ==========================================================================
+    # EDGE CASE EXAMPLES - Negation, ranges, percentages, relative dates
+    # ==========================================================================
+
+    # Example 26: Negation - Products NOT in a category
+    - question: "Products NOT in the Snacks category"
+      variations:
+        - "products except snacks"
+        - "everything but snacks"
+        - "exclude snacks category"
+      sql: |
+        SELECT
+            p.name AS product_name,
+            p.sku,
+            p.category,
+            p.unit_price
+        FROM products p
+        WHERE p.category != 'Snacks' OR p.category IS NULL
+        ORDER BY p.category, p.name
+        LIMIT 50;
+      type: listing
+      explanation: "Lists products excluding a specific category"
+
+    # Example 27: Price range query
+    - question: "Products priced between 100 and 500 pesos"
+      variations:
+        - "products from 100 to 500"
+        - "items between 100-500"
+        - "products in the 100-500 range"
+      sql: |
+        SELECT
+            p.name AS product_name,
+            p.sku,
+            p.category,
+            p.unit_price
+        FROM products p
+        WHERE p.unit_price BETWEEN 100 AND 500
+        ORDER BY p.unit_price
+        LIMIT 50;
+      type: listing
+      explanation: "Products within a price range"
+
+    # Example 28: Percentage of total
+    - question: "What percentage of sales comes from Rockwell?"
+      variations:
+        - "rockwell share of sales"
+        - "what % is rockwell"
+        - "rockwell sales percentage"
+      sql: |
+        WITH total AS (
+            SELECT SUM(t.total) as all_sales
+            FROM new_transactions t
+            WHERE t.is_cancelled = false
+              AND t.transaction_time >= (CURRENT_DATE - INTERVAL '30 days') AT TIME ZONE 'Asia/Manila'
+        ),
+        store_sales AS (
+            SELECT SUM(t.total) as store_sales
+            FROM new_transactions t
+            INNER JOIN stores s ON t.store_id = s.id
+            WHERE t.is_cancelled = false
+              AND s.name = 'Rockwell'
+              AND t.transaction_time >= (CURRENT_DATE - INTERVAL '30 days') AT TIME ZONE 'Asia/Manila'
+        )
+        SELECT
+            store_sales AS rockwell_sales,
+            all_sales AS total_sales,
+            ROUND(store_sales / NULLIF(all_sales, 0) * 100, 2) AS percentage
+        FROM total, store_sales;
+      type: aggregate
+      explanation: "Calculates a store's percentage of total sales"
+
+    # Example 29: Relative date - X days/weeks ago
+    - question: "Sales from 2 weeks ago"
+      variations:
+        - "sales two weeks back"
+        - "what did we sell 2 weeks ago"
+        - "14 days ago sales"
+      sql: |
+        SELECT
+            SUM(t.total) AS total_sales,
+            COUNT(DISTINCT t.ref_id) AS transaction_count
+        FROM new_transactions t
+        WHERE t.is_cancelled = false
+          AND t.transaction_time >= (CURRENT_DATE - INTERVAL '2 weeks') AT TIME ZONE 'Asia/Manila'
+          AND t.transaction_time < (CURRENT_DATE - INTERVAL '1 week') AT TIME ZONE 'Asia/Manila';
+      type: aggregate
+      explanation: "Sales for the week that was 2 weeks ago"
+
+    # Example 30: Average per day/store
+    - question: "Average daily sales per store"
+      variations:
+        - "daily avg by store"
+        - "average sales per day per store"
+        - "store daily averages"
+      sql: |
+        SELECT
+            s.name AS store_name,
+            COUNT(DISTINCT DATE(t.transaction_time AT TIME ZONE 'Asia/Manila')) AS days_active,
+            SUM(t.total) AS total_sales,
+            SUM(t.total) / NULLIF(COUNT(DISTINCT DATE(t.transaction_time AT TIME ZONE 'Asia/Manila')), 0) AS avg_daily_sales
+        FROM new_transactions t
+        INNER JOIN stores s ON t.store_id = s.id
+        WHERE t.is_cancelled = false
+          AND t.transaction_time >= (CURRENT_DATE - INTERVAL '30 days') AT TIME ZONE 'Asia/Manila'
+        GROUP BY s.id, s.name
+        ORDER BY avg_daily_sales DESC;
+      type: comparison
+      explanation: "Average daily sales for each store"
 
 # =============================================================================
 # NEGATIVE EXAMPLES - Common mistakes to AVOID
@@ -810,3 +932,14 @@ follow_up_templates:
     - "How does this compare to yesterday?"
     - "What products contributed most?"
 
+# =============================================================================
+# FORMATTING CONFIGURATION
+# =============================================================================
+formatting:
+  currency_symbol: "₱"
+  currency_code: "PHP"
+  decimal_places: 2
+  thousands_separator: ","
+  date_format: "%b %d, %Y"
+  time_format: "%I:%M %p"
+  datetime_format: "%b %d, %Y at %I:%M %p"

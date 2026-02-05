@@ -10,23 +10,39 @@ from decimal import Decimal
 from datetime import datetime, date
 import re
 
+from app.services.schema_context import SchemaContext
+
 
 class ResponseFormatter:
     """Formats query results into structured markdown responses."""
 
     def __init__(self, max_words: int = 200):
         self.max_words = max_words
+
+        # Load formatting config from business rules
+        try:
+            business_rules = SchemaContext.get_business_rules()
+            formatting_config = business_rules.get('formatting', {})
+        except RuntimeError:
+            formatting_config = {}
+
+        # Currency and number formatting
+        self.currency_symbol = formatting_config.get('currency_symbol', '₱')
+        self.decimal_places = formatting_config.get('decimal_places', 2)
+        self.thousands_separator = formatting_config.get('thousands_separator', ',')
+
         # Date/time format patterns
-        self.date_format = "%b %d, %Y"  # Dec 23, 2025
-        self.time_format = "%I:%M %p"   # 3:45 PM
-        self.datetime_format = "%b %d, %Y at %I:%M %p"  # Dec 23, 2025 at 3:45 PM
+        self.date_format = formatting_config.get('date_format', "%b %d, %Y")
+        self.time_format = formatting_config.get('time_format', "%I:%M %p")
+        self.datetime_format = formatting_config.get('datetime_format', "%b %d, %Y at %I:%M %p")
 
 
     def format_response(
         self,
         user_question: str,
         results: List[Dict[str, Any]],
-        chart_data: Dict[str, Any] | None = None
+        chart_data: Dict[str, Any] | None = None,
+        query_type: str | None = None
     ) -> str:
         """
         Format results into structured markdown.
@@ -35,6 +51,7 @@ class ResponseFormatter:
             user_question: Original user query
             results: SQL query results
             chart_data: Chart configuration from chart intelligence module
+            query_type: Query type from SQL generator (ranking, time_series, etc.)
 
         Returns:
             Formatted markdown string
@@ -42,8 +59,9 @@ class ResponseFormatter:
         if not results:
             return self._format_empty_results(user_question)
 
-        # Detect query type
-        query_type = self._detect_query_type(user_question, results)
+        # Use provided query_type from Claude, fallback to detection
+        if not query_type or query_type == "unknown":
+            query_type = self._detect_query_type(user_question, results)
 
         # Format based on type
         if query_type == "ranking":
@@ -134,7 +152,7 @@ class ResponseFormatter:
             sections.append("")
 
         # Follow-up Questions
-        follow_ups = self._generate_follow_ups(question, "ranking")
+        follow_ups = self._generate_follow_ups(question, "ranking", results)
         if follow_ups:
             sections.append("### Follow-up Questions")
             for idx, fq in enumerate(follow_ups[:3], 1):
@@ -180,7 +198,7 @@ class ResponseFormatter:
             sections.append("")
 
         # Follow-up Questions
-        follow_ups = self._generate_follow_ups(question, "comparison")
+        follow_ups = self._generate_follow_ups(question, "comparison", results)
         if follow_ups:
             sections.append("### Follow-up Questions")
             for idx, fq in enumerate(follow_ups[:3], 1):
@@ -222,7 +240,7 @@ class ResponseFormatter:
             sections.append("")
 
         # Follow-up Questions
-        follow_ups = self._generate_follow_ups(question, "time_series")
+        follow_ups = self._generate_follow_ups(question, "time_series", results)
         if follow_ups:
             sections.append("### Follow-up Questions")
             for idx, fq in enumerate(follow_ups[:3], 1):
@@ -248,7 +266,7 @@ class ResponseFormatter:
         sections.append("")
 
         # Follow-up Questions
-        follow_ups = self._generate_follow_ups(question, "aggregate")
+        follow_ups = self._generate_follow_ups(question, "aggregate", results)
         if follow_ups:
             sections.append("### Follow-up Questions")
             for idx, fq in enumerate(follow_ups[:3], 1):
@@ -447,11 +465,11 @@ class ResponseFormatter:
 
     def _format_currency(self, value: float) -> str:
         """
-        Format currency with Philippine Peso symbol and 2 decimal places.
+        Format currency with configured symbol and decimal places.
 
         Example: 234523.50 -> ₱234,523.50
         """
-        return f"₱{value:,.2f}"
+        return f"{self.currency_symbol}{value:,.{self.decimal_places}f}"
 
     def _format_units(self, value: float | None) -> str:
         """
@@ -469,7 +487,16 @@ class ResponseFormatter:
 
     def _format_value(self, value: Any, column_name: str = "") -> str:
         """Format a value based on its type and column name."""
+        # Robust NULL/empty handling
         if value is None:
+            return "N/A"
+
+        # Handle NaN for floats
+        if isinstance(value, float) and (value != value):  # NaN check
+            return "N/A"
+
+        # Handle empty strings
+        if isinstance(value, str) and not value.strip():
             return "N/A"
 
         # Check if it's a currency column
@@ -498,11 +525,11 @@ class ResponseFormatter:
             # Currency - keep decimals for smaller amounts
             if is_currency:
                 if float_val >= 1000000:
-                    return f"₱{float_val/1000000:.2f}M"
+                    return f"{self.currency_symbol}{float_val/1000000:.2f}M"
                 elif float_val >= 1000:
-                    return f"₱{float_val:,.0f}"
+                    return f"{self.currency_symbol}{float_val:,.0f}"
                 else:
-                    return f"₱{float_val:,.2f}"
+                    return f"{self.currency_symbol}{float_val:,.{self.decimal_places}f}"
             
             # Large numbers - abbreviate
             if float_val >= 1000000:
@@ -766,39 +793,78 @@ class ResponseFormatter:
 
         return f"Over {len(results)} periods: Total {self._format_value(total, metric_col)}, Average {self._format_value(avg, metric_col)}, Range {self._format_value(min_val, metric_col)} - {self._format_value(max_val, metric_col)}"
 
-    def _generate_follow_ups(self, question: str, query_type: str) -> List[str]:
-        """Generate contextual follow-up questions."""
+    def _generate_follow_ups(
+        self,
+        question: str,
+        query_type: str,
+        results: List[Dict[str, Any]] | None = None
+    ) -> List[str]:
+        """
+        Generate contextual follow-up questions based on actual data.
+
+        Args:
+            question: Original user question
+            query_type: Type of query (ranking, comparison, etc.)
+            results: Query results for data-aware suggestions
+
+        Returns:
+            List of follow-up question suggestions
+        """
         follow_ups = []
 
+        # Extract entity name from first result if available
+        top_name = None
+        if results and len(results) > 0:
+            first_row = results[0]
+            # Find name column
+            for key in ['product_name', 'name', 'item', 'store_name', 'category']:
+                if key in first_row and first_row[key]:
+                    top_name = str(first_row[key])
+                    break
+
         if query_type == "ranking":
-            follow_ups = [
-                "How does this compare to last month's rankings?",
-                "What are the profit margins on these top items?",
-                "Are there any supply chain concerns for high performers?"
-            ]
+            if top_name:
+                follow_ups = [
+                    f"Show me {top_name} sales trend over the past month",
+                    f"Which stores sell the most {top_name}?",
+                    "How does this compare to last week's rankings?"
+                ]
+            else:
+                follow_ups = [
+                    "How does this compare to last month's rankings?",
+                    "Break this down by store",
+                    "What are the profit margins on these items?"
+                ]
         elif query_type == "comparison":
-            follow_ups = [
-                "What's driving the performance difference?",
-                "How do profit margins compare?",
-                "Should we adjust inventory distribution?"
-            ]
+            if top_name:
+                follow_ups = [
+                    f"Show me the trend for {top_name} over time",
+                    "Add more items to this comparison",
+                    "What's driving the performance difference?"
+                ]
+            else:
+                follow_ups = [
+                    "What's driving the performance difference?",
+                    "Show this comparison over time",
+                    "How do profit margins compare?"
+                ]
         elif query_type == "time_series":
             follow_ups = [
-                "How does this pattern compare to previous periods?",
-                "What products drive the peak periods?",
-                "Should we adjust staffing based on these patterns?"
+                "Compare to the same period last week",
+                "Which products drive the peak periods?",
+                "Break this down by store"
             ]
         elif query_type == "aggregate":
             follow_ups = [
-                "How does this compare to previous periods?",
-                "What's the breakdown by category or store?",
-                "What trends are driving these numbers?"
+                "Break this down by store",
+                "Show me the trend over time",
+                "How does this compare to yesterday?"
             ]
         else:
             follow_ups = [
-                "Would you like to see this data broken down differently?",
+                "Break this down differently",
                 "How does this compare over time?",
-                "What additional metrics would be helpful?"
+                "Filter by a specific store"
             ]
 
         return follow_ups[:3]

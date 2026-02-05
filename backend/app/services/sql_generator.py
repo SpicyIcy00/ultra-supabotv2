@@ -7,12 +7,14 @@ Includes circuit breaker pattern for reliability and retry logic for robustness.
 
 import re
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any, List
+from difflib import get_close_matches
+from typing import Optional, Dict, Any, List, Tuple
 from anthropic import Anthropic, APIError, APITimeoutError
 import asyncio
 
 from app.core.config import settings
 from app.services.schema_context import SchemaContext
+from app.services.conversation_memory import get_context as get_conversation_context
 
 
 class CircuitBreaker:
@@ -91,6 +93,7 @@ class SQLGenerator:
     async def generate_sql(
         self,
         user_question: str,
+        session_id: Optional[str] = None,
         retry_on_failure: bool = True,
         previous_error: Optional[str] = None
     ) -> Dict[str, Any]:
@@ -99,6 +102,7 @@ class SQLGenerator:
 
         Args:
             user_question: Natural language question from user
+            session_id: Optional session ID for conversation context
             retry_on_failure: Whether to retry on validation failure
             previous_error: Error from previous attempt (for retry context)
 
@@ -108,6 +112,7 @@ class SQLGenerator:
                 - explanation: Plain English explanation
                 - assumptions: List of assumptions made
                 - query_type: Type of query (ranking, time_series, comparison, etc.)
+                - corrections: List of entity name corrections made (if any)
 
         Raises:
             CircuitOpenError: If circuit breaker is open
@@ -121,8 +126,16 @@ class SQLGenerator:
             )
 
         try:
+            # Preprocess question for entity name corrections
+            processed_question, corrections = self._preprocess_question(user_question)
+
+            # Get conversation context if session_id provided
+            conversation_context = ""
+            if session_id:
+                conversation_context = get_conversation_context(session_id)
+
             # Build the prompt
-            prompt = self._build_prompt(user_question, previous_error)
+            prompt = self._build_prompt(processed_question, previous_error, conversation_context)
 
             # Call Claude API with timeout
             response = await asyncio.wait_for(
@@ -132,6 +145,12 @@ class SQLGenerator:
 
             # Parse the response
             result = self._parse_response(response, user_question)
+
+            # Add corrections to result
+            if corrections:
+                result["corrections"] = corrections
+                # Also add to assumptions
+                result["assumptions"] = corrections + result.get("assumptions", [])
 
             # Record success
             self.circuit_breaker.record_success()
@@ -169,12 +188,22 @@ class SQLGenerator:
         response = await loop.run_in_executor(None, _sync_call)
         return response
 
-    def _build_prompt(self, user_question: str, previous_error: Optional[str] = None) -> str:
+    def _build_prompt(
+        self,
+        user_question: str,
+        previous_error: Optional[str] = None,
+        conversation_context: str = ""
+    ) -> str:
         """Build the prompt for Claude"""
 
-        # Get training examples from business rules
-        examples = self.business_rules.get('training', {}).get('examples', [])
-        example_text = self._format_examples(examples[:5])  # Use top 5 examples
+        # Get training examples from business rules - use intelligent selection
+        all_examples = self.business_rules.get('training', {}).get('examples', [])
+        relevant_examples = self._select_relevant_examples(user_question, all_examples, max_examples=8)
+        example_text = self._format_examples(relevant_examples)
+
+        # Get and format negative examples
+        negative_examples = self.business_rules.get('negative_examples', [])
+        negative_text = self._format_negative_examples(negative_examples[:5])
 
         # Get default filters
         default_filters = SchemaContext.get_default_filters()
@@ -238,9 +267,15 @@ Please fix the issue and generate a corrected query.
 - Use existing indexes on transaction_time, store_id, product_id
 - Avoid SELECT * - specify columns explicitly
 
+## Common Mistakes to AVOID
+
+{negative_text}
+
 ## Example Queries
 
 {example_text}
+
+{conversation_context}
 
 {retry_context}
 
@@ -289,6 +324,172 @@ Question: "{example['question']}"
 Type: {example.get('type', 'unknown')}
 """)
         return "\n".join(formatted)
+
+    def _select_relevant_examples(
+        self,
+        question: str,
+        examples: List[Dict[str, Any]],
+        max_examples: int = 8
+    ) -> List[Dict[str, Any]]:
+        """
+        Select the most relevant examples based on question similarity.
+
+        Uses keyword matching and query type detection to find the best examples
+        for the current question.
+
+        Args:
+            question: User's question
+            examples: All available training examples
+            max_examples: Maximum number of examples to return
+
+        Returns:
+            List of most relevant examples
+        """
+        question_lower = question.lower()
+        question_words = set(question_lower.split())
+
+        # Keywords that strongly indicate query type
+        type_indicators = {
+            'ranking': {'top', 'best', 'worst', 'highest', 'lowest', 'most', 'least', 'leading'},
+            'time_series': {'trend', 'hourly', 'daily', 'weekly', 'monthly', 'over time', 'by day', 'by hour'},
+            'comparison': {'compare', 'vs', 'versus', 'between', 'difference', 'against'},
+            'aggregate': {'total', 'sum', 'count', 'average', 'how much', 'how many'},
+            'distribution': {'breakdown', 'distribution', 'percentage', 'proportion', 'share'}
+        }
+
+        # Detect likely query type from question
+        detected_types = set()
+        for qtype, keywords in type_indicators.items():
+            if any(kw in question_lower for kw in keywords):
+                detected_types.add(qtype)
+
+        scored_examples = []
+        for example in examples:
+            score = 0
+            example_question = example.get('question', '').lower()
+            example_words = set(example_question.split())
+            example_type = example.get('type', 'unknown')
+
+            # Score 1: Word overlap between questions
+            overlap = len(question_words & example_words)
+            score += overlap * 2
+
+            # Score 2: Query type match
+            if example_type in detected_types:
+                score += 5
+
+            # Score 3: Entity type match (store, product, category, etc.)
+            entity_keywords = ['store', 'product', 'category', 'inventory', 'stock']
+            for entity in entity_keywords:
+                if entity in question_lower and entity in example_question:
+                    score += 3
+
+            # Score 4: Time period match
+            time_keywords = ['today', 'yesterday', 'week', 'month', 'year', 'days']
+            for time_kw in time_keywords:
+                if time_kw in question_lower and time_kw in example_question:
+                    score += 2
+
+            # Score 5: Specific store name match
+            stores = self.business_rules.get('stores', [])
+            for store in stores:
+                if store.lower() in question_lower and store.lower() in example_question:
+                    score += 4
+
+            scored_examples.append((score, example))
+
+        # Sort by score descending
+        scored_examples.sort(key=lambda x: x[0], reverse=True)
+
+        # Return top examples
+        return [ex for _, ex in scored_examples[:max_examples]]
+
+    def _format_negative_examples(self, negative_examples: List[Dict[str, Any]]) -> str:
+        """
+        Format negative examples showing common mistakes to avoid.
+
+        Args:
+            negative_examples: List of negative example dictionaries
+
+        Returns:
+            Formatted string for prompt
+        """
+        if not negative_examples:
+            return "No common mistakes to highlight."
+
+        formatted = []
+        for idx, example in enumerate(negative_examples, 1):
+            wrong = example.get('wrong', '').strip()
+            correct = example.get('correct', '').strip()
+            mistake = example.get('mistake', example.get('description', 'Unknown mistake'))
+
+            formatted.append(f"""
+**Mistake {idx}: {mistake}**
+WRONG:
+```sql
+{wrong}
+```
+CORRECT:
+```sql
+{correct}
+```
+""")
+
+        return "\n".join(formatted)
+
+    def _preprocess_question(self, question: str) -> Tuple[str, List[str]]:
+        """
+        Preprocess user question to fix entity name typos.
+
+        Uses fuzzy matching to detect and correct misspelled store names,
+        and potentially product names or categories.
+
+        Args:
+            question: Original user question
+
+        Returns:
+            Tuple of (corrected question, list of corrections made)
+        """
+        corrections = []
+        words = question.split()
+
+        # Get entity lists
+        stores = self.business_rules.get('stores', [])
+
+        # Create lowercase lookup for stores
+        store_lower_map = {s.lower(): s for s in stores}
+        store_names_lower = list(store_lower_map.keys())
+
+        for i, word in enumerate(words):
+            word_lower = word.lower().strip('.,?!')
+
+            # Skip short words or common words
+            if len(word_lower) < 4:
+                continue
+
+            # Check if it's already an exact match
+            if word_lower in store_names_lower:
+                # Correct case if needed
+                correct_name = store_lower_map[word_lower]
+                if word != correct_name:
+                    words[i] = correct_name
+                continue
+
+            # Try fuzzy matching for stores
+            matches = get_close_matches(word_lower, store_names_lower, n=1, cutoff=0.7)
+            if matches:
+                correct_name = store_lower_map[matches[0]]
+                # Only correct if it's not an exact match
+                if word_lower != matches[0]:
+                    corrections.append(f"Interpreted '{word}' as '{correct_name}'")
+                    # Preserve punctuation
+                    suffix = ''
+                    if word and word[-1] in '.,?!':
+                        suffix = word[-1]
+                    words[i] = correct_name + suffix
+
+        corrected_question = ' '.join(words)
+        return corrected_question, corrections
 
     def _parse_response(self, response: str, user_question: str) -> Dict[str, Any]:
         """Parse Claude's response into structured format"""
