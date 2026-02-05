@@ -376,29 +376,29 @@ function DataTable({ data }: { data: any[] }) {
 
   const columns = Object.keys(data[0]);
 
+  // Columns that should be formatted as plain numbers (check these FIRST)
+  const numberColumns = ['quantity', 'qty', 'count', 'units', 'stock', 'on_hand', 'items'];
   // Columns that should be formatted as currency (peso)
-  const currencyColumns = ['revenue', 'total_revenue', 'sales', 'total_sales', 'amount', 'price', 'cost', 'profit', 'total', 'value'];
-  // Columns that should be formatted as numbers with commas
-  const numberColumns = ['quantity', 'total_quantity', 'total_quantity_sold', 'count', 'transaction_count', 'units', 'stock'];
+  const currencyColumns = ['revenue', 'sales', 'amount', 'price', 'cost', 'profit', 'value', 'avg_transaction'];
 
   const formatCellValue = (value: any, columnName: string): string => {
     if (value === null || value === undefined) return '-';
 
     const colLower = columnName.toLowerCase();
 
+    // Check number columns FIRST (before currency) to avoid "total_quantity" matching "total"
+    if (numberColumns.some(c => colLower.includes(c))) {
+      const num = typeof value === 'number' ? value : parseFloat(value);
+      if (!isNaN(num)) {
+        return num.toLocaleString('en-PH');
+      }
+    }
+
     // Check if it's a currency column
     if (currencyColumns.some(c => colLower.includes(c))) {
       const num = typeof value === 'number' ? value : parseFloat(value);
       if (!isNaN(num)) {
         return `₱${num.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-      }
-    }
-
-    // Check if it's a number column that should have commas
-    if (numberColumns.some(c => colLower.includes(c))) {
-      const num = typeof value === 'number' ? value : parseFloat(value);
-      if (!isNaN(num)) {
-        return num.toLocaleString('en-PH');
       }
     }
 
