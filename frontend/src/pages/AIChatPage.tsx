@@ -3,12 +3,13 @@
  * Natural language interface for querying business data
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Loader2, Code, Table as TableIcon, BarChart3 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import type { ChatMessage } from '../types/chatbot';
 import { streamChatQuery, getSuggestions } from '../services/chatbotApi';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { EnhancedChartRenderer } from '../components/chat/EnhancedChartRenderer';
+import type { ChartState } from '../types/enhancedChart';
 
 // Generate a unique session ID for conversation memory
 const generateSessionId = () => `session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -134,6 +135,27 @@ export default function AIChatPage() {
     setInput(suggestion);
   };
 
+  // Handle chart customization changes and persist them
+  const handleChartCustomizationChange = useCallback((messageId: string, customization: ChartState) => {
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId
+          ? {
+              ...msg,
+              chartCustomization: {
+                chartType: customization.chartType,
+                colorTheme: customization.colorTheme,
+                showLegend: customization.showLegend,
+                showGrid: customization.showGrid,
+                customTitle: customization.title,
+                isAnimated: customization.isAnimated,
+              },
+            }
+          : msg
+      )
+    );
+  }, []);
+
   return (
     <div className="flex flex-col h-[calc(100vh-120px)]">
       {/* Header */}
@@ -172,7 +194,11 @@ export default function AIChatPage() {
         )}
 
         {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
+          <MessageBubble
+            key={message.id}
+            message={message}
+            onChartCustomizationChange={handleChartCustomizationChange}
+          />
         ))}
 
         <div ref={messagesEndRef} />
@@ -210,7 +236,12 @@ export default function AIChatPage() {
   );
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
+interface MessageBubbleProps {
+  message: ChatMessage;
+  onChartCustomizationChange: (messageId: string, customization: ChartState) => void;
+}
+
+function MessageBubble({ message, onChartCustomizationChange }: MessageBubbleProps) {
   const [showSQL, setShowSQL] = useState(false);
   const [showData, setShowData] = useState(false);
 
@@ -246,10 +277,23 @@ function MessageBubble({ message }: { message: ChatMessage }) {
               <ReactMarkdown>{message.content}</ReactMarkdown>
             </div>
 
-            {/* Chart */}
+            {/* Chart - Using Enhanced Chart Renderer with 15+ chart types */}
             {message.chart && message.chart_data && (
               <div className="mt-4">
-                <ChartRenderer config={message.chart} data={message.chart_data} />
+                <EnhancedChartRenderer
+                  config={message.chart as any}
+                  data={message.chart_data as any}
+                  messageId={message.id}
+                  initialCustomization={message.chartCustomization ? {
+                    chartType: message.chartCustomization.chartType as any,
+                    colorTheme: message.chartCustomization.colorTheme,
+                    showLegend: message.chartCustomization.showLegend,
+                    showGrid: message.chartCustomization.showGrid,
+                    title: message.chartCustomization.customTitle || '',
+                    isAnimated: message.chartCustomization.isAnimated,
+                  } : undefined}
+                  onCustomizationChange={(state) => onChartCustomizationChange(message.id, state)}
+                />
               </div>
             )}
 
@@ -310,66 +354,8 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   );
 }
 
-function ChartRenderer({ config, data }: { config: any; data: any[] }) {
-  const COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
-
-  // Chart data from backend already uses 'name' and 'value' keys
-  // No need to look at x_axis/y_axis - those are just metadata
-
-  if (config.type === 'bar') {
-    return (
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-          <XAxis dataKey="name" stroke="#9ca3af" />
-          <YAxis stroke="#9ca3af" />
-          <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }} />
-          <Bar dataKey="value" fill="#3b82f6" />
-        </BarChart>
-      </ResponsiveContainer>
-    );
-  }
-
-  if (config.type === 'line') {
-    return (
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-          <XAxis dataKey="name" stroke="#9ca3af" />
-          <YAxis stroke="#9ca3af" />
-          <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }} />
-          <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} />
-        </LineChart>
-      </ResponsiveContainer>
-    );
-  }
-
-  if (config.type === 'pie') {
-    return (
-      <ResponsiveContainer width="100%" height={300}>
-        <PieChart>
-          <Pie
-            data={data}
-            dataKey="value"
-            nameKey="name"
-            cx="50%"
-            cy="50%"
-            outerRadius={80}
-            label
-          >
-            {data.map((_entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }} />
-          <Legend />
-        </PieChart>
-      </ResponsiveContainer>
-    );
-  }
-
-  return null;
-}
+// Note: ChartRenderer has been replaced with EnhancedChartRenderer component
+// which supports 15+ chart types with export, customization, and interactivity
 
 function DataTable({ data }: { data: any[] }) {
   if (!data || data.length === 0) return null;

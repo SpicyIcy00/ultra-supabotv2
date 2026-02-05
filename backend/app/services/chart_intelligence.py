@@ -13,13 +13,21 @@ class ChartIntelligence:
     """Intelligent chart selection, validation, and auto-repair."""
 
     def __init__(self):
-        # Chart type rules
+        # Chart type rules - Extended with 15+ chart types
         self.chart_rules = {
+            # Core charts
             "bar": {
                 "use_for": ["ranking", "comparison", "categorical"],
                 "min_points": 1,
                 "max_points": 20,
                 "requires": ["categorical_axis", "numeric_value"]
+            },
+            "horizontal_bar": {
+                "use_for": ["ranking"],
+                "min_points": 3,
+                "max_points": 15,
+                "requires": ["categorical_axis", "numeric_value"],
+                "prefer_when": "long_labels"
             },
             "line": {
                 "use_for": ["time_series", "trend"],
@@ -27,10 +35,97 @@ class ChartIntelligence:
                 "max_points": 100,
                 "requires": ["time_axis", "numeric_value"]
             },
+            "area": {
+                "use_for": ["time_series", "cumulative", "trend"],
+                "min_points": 5,
+                "max_points": 100,
+                "requires": ["time_axis", "numeric_value"]
+            },
             "pie": {
                 "use_for": ["proportion", "distribution"],
                 "min_points": 2,
                 "max_points": 8,
+                "requires": ["categorical_axis", "numeric_value"]
+            },
+            "stacked_bar": {
+                "use_for": ["composition", "breakdown", "multi_series"],
+                "min_points": 2,
+                "max_points": 15,
+                "requires": ["categorical_axis", "multiple_numeric_values"]
+            },
+            "scatter": {
+                "use_for": ["correlation", "relationship"],
+                "min_points": 10,
+                "max_points": 500,
+                "requires": ["two_numeric_axes"]
+            },
+            "bubble": {
+                "use_for": ["3d_correlation", "multi_dimension"],
+                "min_points": 5,
+                "max_points": 100,
+                "requires": ["three_numeric_columns"]
+            },
+            "combo": {
+                "use_for": ["dual_metric", "comparison_with_trend"],
+                "min_points": 5,
+                "max_points": 50,
+                "requires": ["categorical_axis", "two_numeric_values"]
+            },
+            # Advanced charts
+            "treemap": {
+                "use_for": ["hierarchy", "nested_categories", "composition"],
+                "min_points": 5,
+                "max_points": 50,
+                "requires": ["categorical_axis", "numeric_value"]
+            },
+            "radar": {
+                "use_for": ["multi_metric_comparison", "profile"],
+                "min_points": 3,
+                "max_points": 10,
+                "max_metrics": 8,
+                "requires": ["categorical_axis", "multiple_numeric_values"]
+            },
+            "gauge": {
+                "use_for": ["kpi", "progress", "target"],
+                "min_points": 1,
+                "max_points": 1,
+                "requires": ["single_numeric_value"]
+            },
+            "waterfall": {
+                "use_for": ["breakdown", "incremental", "profit_loss"],
+                "min_points": 3,
+                "max_points": 15,
+                "requires": ["categorical_axis", "numeric_value"]
+            },
+            "funnel": {
+                "use_for": ["conversion", "stages", "pipeline"],
+                "min_points": 2,
+                "max_points": 8,
+                "requires": ["categorical_axis", "numeric_value"]
+            },
+            # Business intelligence charts
+            "pareto": {
+                "use_for": ["80_20", "top_contributors", "cumulative_impact"],
+                "min_points": 5,
+                "max_points": 20,
+                "requires": ["categorical_axis", "numeric_value"]
+            },
+            "bullet": {
+                "use_for": ["kpi_vs_target", "performance"],
+                "min_points": 1,
+                "max_points": 1,
+                "requires": ["single_numeric_value"]
+            },
+            "calendar_heatmap": {
+                "use_for": ["daily_patterns", "yearly_view"],
+                "min_points": 30,
+                "max_points": 366,
+                "requires": ["date_column", "numeric_value"]
+            },
+            "lollipop": {
+                "use_for": ["ranking", "comparison"],
+                "min_points": 3,
+                "max_points": 15,
                 "requires": ["categorical_axis", "numeric_value"]
             }
         }
@@ -89,9 +184,11 @@ class ChartIntelligence:
             "column_types": {},
             "has_time_column": False,
             "has_categorical_column": False,
+            "has_multiple_numeric_columns": False,
             "numeric_columns": [],
             "categorical_columns": [],
-            "time_columns": []
+            "time_columns": [],
+            "max_label_length": 0
         }
 
         # Analyze each column
@@ -107,6 +204,14 @@ class ChartIntelligence:
             elif col_type == "categorical":
                 profile["categorical_columns"].append(col_name)
                 profile["has_categorical_column"] = True
+                # Track max label length for horizontal bar decision
+                for row in results:
+                    val = row.get(col_name, "")
+                    if isinstance(val, str):
+                        profile["max_label_length"] = max(profile["max_label_length"], len(val))
+
+        # Check for multiple numeric columns (for stacked/radar/combo charts)
+        profile["has_multiple_numeric_columns"] = len(profile["numeric_columns"]) >= 2
 
         return profile
 
@@ -163,6 +268,69 @@ class ChartIntelligence:
     def _detect_query_type(self, question: str, data_profile: Dict[str, Any]) -> str:
         """Detect the query type from question and data."""
         question_lower = question.lower()
+        row_count = data_profile.get("row_count", 0)
+        numeric_cols = len(data_profile.get("numeric_columns", []))
+        categorical_cols = len(data_profile.get("categorical_columns", []))
+
+        # KPI/Progress/Target queries (single value) -> gauge/bullet
+        kpi_keywords = ['progress', 'target', 'goal', 'kpi', 'achievement', 'status']
+        if any(kw in question_lower for kw in kpi_keywords):
+            if row_count == 1:
+                return "kpi"
+
+        # Pareto/80-20 analysis
+        pareto_keywords = ['pareto', '80/20', '80-20', 'top contributors', 'cumulative impact']
+        if any(kw in question_lower for kw in pareto_keywords):
+            if row_count >= 5:
+                return "pareto"
+
+        # Funnel/Conversion queries
+        funnel_keywords = ['funnel', 'conversion', 'stages', 'pipeline', 'drop-off', 'dropoff']
+        if any(kw in question_lower for kw in funnel_keywords):
+            if 2 <= row_count <= 8:
+                return "funnel"
+
+        # Waterfall/Incremental queries
+        waterfall_keywords = ['waterfall', 'incremental', 'step by step', 'profit breakdown', 'revenue breakdown']
+        if any(kw in question_lower for kw in waterfall_keywords):
+            if 3 <= row_count <= 15:
+                return "waterfall"
+
+        # Radar/Multi-metric comparison
+        radar_keywords = ['radar', 'spider', 'compare across metrics', 'multi-metric', 'profile comparison']
+        if any(kw in question_lower for kw in radar_keywords):
+            if 3 <= row_count <= 10 and numeric_cols >= 3:
+                return "radar"
+
+        # Treemap/Hierarchy queries
+        treemap_keywords = ['treemap', 'hierarchy', 'nested', 'category breakdown']
+        if any(kw in question_lower for kw in treemap_keywords):
+            if row_count >= 5:
+                return "treemap"
+
+        # Correlation/Scatter queries
+        correlation_keywords = ['correlation', 'relationship', 'scatter', 'plotted against']
+        if any(kw in question_lower for kw in correlation_keywords):
+            if row_count >= 10 and numeric_cols >= 2:
+                return "correlation"
+
+        # Calendar heatmap
+        calendar_keywords = ['calendar', 'daily pattern', 'heatmap', 'by day']
+        if any(kw in question_lower for kw in calendar_keywords):
+            if row_count >= 30 and data_profile.get("has_time_column"):
+                return "calendar_heatmap"
+
+        # Composition/Stacked breakdown queries
+        composition_keywords = ['composition', 'split by', 'breakdown by', 'stacked', 'by category and']
+        if any(kw in question_lower for kw in composition_keywords):
+            if row_count >= 2 and numeric_cols >= 2:
+                return "composition"
+
+        # Cumulative/Area queries
+        cumulative_keywords = ['cumulative', 'running total', 'accumulated', 'area']
+        if any(kw in question_lower for kw in cumulative_keywords):
+            if row_count >= 5 and data_profile.get("has_time_column"):
+                return "cumulative"
 
         # Ranking queries
         ranking_keywords = ['top', 'best', 'worst', 'highest', 'lowest', 'most', 'least']
@@ -173,7 +341,7 @@ class ChartIntelligence:
         time_keywords = ['trend', 'over time', 'hourly', 'daily', 'weekly', 'monthly', 'pattern', 'history']
         if any(kw in question_lower for kw in time_keywords) or data_profile.get("has_time_column"):
             # Must have enough points for a line chart
-            if data_profile.get("row_count", 0) >= 5:
+            if row_count >= 5:
                 return "time_series"
 
         # Comparison queries
@@ -184,11 +352,11 @@ class ChartIntelligence:
         # Distribution/proportion queries
         distribution_keywords = ['distribution', 'breakdown', 'proportion', 'share', 'percentage']
         if any(kw in question_lower for kw in distribution_keywords):
-            if 2 <= data_profile.get("row_count", 0) <= 8:
+            if 2 <= row_count <= 8:
                 return "distribution"
 
         # Default based on data
-        if data_profile.get("has_time_column") and data_profile.get("row_count", 0) >= 5:
+        if data_profile.get("has_time_column") and row_count >= 5:
             return "time_series"
         elif data_profile.get("has_categorical_column"):
             return "ranking"
@@ -198,31 +366,83 @@ class ChartIntelligence:
     def _select_chart_type(self, query_type: str, data_profile: Dict[str, Any]) -> str | None:
         """Select the best chart type based on query type and data profile."""
         row_count = data_profile.get("row_count", 0)
+        numeric_cols = len(data_profile.get("numeric_columns", []))
+        categorical_cols = data_profile.get("categorical_columns", [])
 
+        # KPI/Progress -> Gauge or Bullet
+        if query_type == "kpi":
+            if row_count == 1:
+                return "gauge"
+
+        # Pareto (80/20) analysis
+        if query_type == "pareto":
+            if row_count >= 5:
+                return "pareto"
+
+        # Funnel chart
+        if query_type == "funnel":
+            if 2 <= row_count <= 8:
+                return "funnel"
+
+        # Waterfall chart
+        if query_type == "waterfall":
+            if 3 <= row_count <= 15:
+                return "waterfall"
+
+        # Radar chart
+        if query_type == "radar":
+            if 3 <= row_count <= 10 and numeric_cols >= 3:
+                return "radar"
+
+        # Treemap
+        if query_type == "treemap":
+            if row_count >= 5:
+                return "treemap"
+
+        # Scatter/Correlation
+        if query_type == "correlation":
+            if row_count >= 10 and numeric_cols >= 2:
+                return "scatter"
+
+        # Calendar heatmap
+        if query_type == "calendar_heatmap":
+            if row_count >= 30:
+                return "calendar_heatmap"
+
+        # Composition -> Stacked bar
+        if query_type == "composition":
+            if row_count >= 2 and numeric_cols >= 2:
+                return "stacked_bar"
+
+        # Cumulative -> Area chart
+        if query_type == "cumulative":
+            if row_count >= 5 and data_profile.get("has_time_column"):
+                return "area"
+
+        # Ranking queries
         if query_type == "ranking":
-            # ALWAYS bar chart for rankings (top N) - NEVER line
-            # Must have at least 2 rows for meaningful chart, fallback to table if less than 3
             if row_count >= 3:
+                # Check for long category names -> horizontal bar
+                if categorical_cols and self._has_long_labels(data_profile):
+                    return "horizontal_bar"
                 return "bar"
             else:
-                # Less than 3 rows → table fallback
                 return None
 
+        # Time series
         elif query_type == "time_series":
-            # Line chart ONLY for explicit time series (must have 5+ points and time column)
             if row_count >= 5 and data_profile.get("has_time_column"):
                 return "line"
-            # If time series but too few points, switch to bar
             elif row_count >= 3:
                 return "bar"
 
+        # Comparison
         elif query_type == "comparison":
-            # Bar chart for comparisons
             if 2 <= row_count <= 10:
                 return "bar"
 
+        # Distribution
         elif query_type == "distribution":
-            # Pie chart for distributions (2-8 categories)
             if 2 <= row_count <= 8:
                 return "pie"
 
@@ -231,6 +451,11 @@ class ChartIntelligence:
             return "bar"
 
         return None
+
+    def _has_long_labels(self, data_profile: Dict[str, Any]) -> bool:
+        """Check if categorical labels are long (>20 chars)."""
+        max_label_length = data_profile.get("max_label_length", 0)
+        return max_label_length > 20
 
     def _build_chart_config(
         self,
@@ -415,42 +640,84 @@ class ChartIntelligence:
         # Validation 3: Point/Bar count guarantee
         data_count = len(valid_data)
 
-        if chart_type == "bar":
-            # For ranking/bar charts: bars MUST equal number of rows (after filtering)
-            # Cap at top 20 if more than 20 rows
+        # Bar chart validation
+        if chart_type in ["bar", "horizontal_bar", "lollipop"]:
             if data_count > 20:
                 valid_data = valid_data[:20]
                 data_count = 20
-            # If less than 3 rows with valid data, return None (table fallback)
             if data_count < 3:
                 return None
 
-        elif chart_type == "line":
-            # For time series: points MUST equal unique x buckets
-            # Line chart needs minimum 5 points
+        # Line/Area chart validation
+        elif chart_type in ["line", "area"]:
             if data_count < 5:
-                # Switch to bar chart if insufficient points
+                chart_config["type"] = "bar"
+                chart_type = "bar"
+            unique_x = len(set(point.get("name") for point in valid_data))
+            if unique_x != data_count:
+                if unique_x < 3:
+                    return None
+
+        # Pie chart validation
+        elif chart_type == "pie":
+            if data_count < 2 or data_count > 8:
                 chart_config["type"] = "bar"
                 chart_type = "bar"
 
-            # Check for unique x values
-            unique_x = len(set(point.get("name") for point in valid_data))
-            if unique_x != data_count:
-                # Mismatch detected - rebuild or downgrade to table
-                if unique_x < 3:
-                    return None  # Table fallback
-
-        elif chart_type == "pie":
-            # Pie chart needs 2-8 slices
+        # Funnel validation
+        elif chart_type == "funnel":
             if data_count < 2 or data_count > 8:
-                # Switch to bar chart
+                chart_config["type"] = "bar"
+                chart_type = "bar"
+
+        # Gauge/Bullet validation (single value only)
+        elif chart_type in ["gauge", "bullet"]:
+            if data_count != 1:
+                # Take first value only
+                valid_data = valid_data[:1] if valid_data else []
+                if not valid_data:
+                    return None
+
+        # Waterfall validation
+        elif chart_type == "waterfall":
+            if data_count < 3 or data_count > 15:
+                chart_config["type"] = "bar"
+                chart_type = "bar"
+
+        # Pareto validation
+        elif chart_type == "pareto":
+            if data_count < 5:
+                chart_config["type"] = "bar"
+                chart_type = "bar"
+
+        # Treemap validation
+        elif chart_type == "treemap":
+            if data_count < 5:
+                chart_config["type"] = "pie"
+                chart_type = "pie"
+
+        # Radar validation
+        elif chart_type == "radar":
+            if data_count < 3 or data_count > 10:
+                chart_config["type"] = "bar"
+                chart_type = "bar"
+
+        # Calendar heatmap validation
+        elif chart_type == "calendar_heatmap":
+            if data_count < 30:
+                chart_config["type"] = "line"
+                chart_type = "line"
+
+        # Scatter/Bubble validation
+        elif chart_type in ["scatter", "bubble"]:
+            if data_count < 10:
                 chart_config["type"] = "bar"
                 chart_type = "bar"
 
         chart_config["data"] = valid_data
 
         # Validation 4: Sort data appropriately
-        if chart_type in ["bar", "pie"]:
+        if chart_type in ["bar", "horizontal_bar", "pie", "pareto", "lollipop", "treemap"]:
             # Sort by value descending for rankings
             chart_config["data"] = sorted(
                 chart_config["data"],

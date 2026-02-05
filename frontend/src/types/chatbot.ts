@@ -88,6 +88,16 @@ export interface ChatMessage {
   // UI state
   isLoading?: boolean;
   status?: string;
+
+  // Chart customization state (persisted user changes)
+  chartCustomization?: {
+    chartType?: string;
+    colorTheme?: string;
+    showLegend?: boolean;
+    showGrid?: boolean;
+    customTitle?: string;
+    isAnimated?: boolean;
+  };
 }
 
 export interface FeedbackRequest {
