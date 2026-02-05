@@ -10,11 +10,15 @@ import type { ChatMessage } from '../types/chatbot';
 import { streamChatQuery, getSuggestions } from '../services/chatbotApi';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
+// Generate a unique session ID for conversation memory
+const generateSessionId = () => `session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
 export default function AIChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [sessionId] = useState(() => generateSessionId()); // Persist session ID across conversation
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load suggestions on mount
@@ -54,7 +58,7 @@ export default function AIChatPage() {
     setIsLoading(true);
 
     try {
-      const stream = streamChatQuery({ question: input });
+      const stream = streamChatQuery({ question: input, session_id: sessionId });
 
       for await (const event of stream) {
         if (event.type === 'status') {

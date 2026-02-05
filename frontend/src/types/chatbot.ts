@@ -6,6 +6,7 @@
 
 export interface ChatRequest {
   question: string;
+  session_id?: string;
   store_id?: string;
   date_range?: {
     start_date: string;
