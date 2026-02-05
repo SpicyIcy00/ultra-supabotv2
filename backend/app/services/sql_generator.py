@@ -11,8 +11,11 @@ from difflib import get_close_matches
 from typing import Optional, Dict, Any, List, Tuple
 from anthropic import Anthropic, APIError, APITimeoutError
 import asyncio
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.database import AsyncSessionLocal
 from app.services.schema_context import SchemaContext
 from app.services.conversation_memory import get_context as get_conversation_context
 
@@ -90,6 +93,61 @@ class SQLGenerator:
         self.schema = SchemaContext.get_schema()
         self.business_rules = SchemaContext.get_business_rules()
 
+    async def _get_store_filters(self) -> Dict[str, List[str]]:
+        """
+        Fetch store filters from database.
+
+        Returns:
+            Dictionary with 'sales_stores' and 'inventory_stores' lists.
+            Returns defaults if no filters configured.
+        """
+        try:
+            from app.models.store_filter import StoreFilter
+
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(
+                    select(StoreFilter).order_by(StoreFilter.filter_type, StoreFilter.store_name)
+                )
+                filters = result.scalars().all()
+
+                store_filters = {
+                    'sales_stores': [],
+                    'inventory_stores': []
+                }
+
+                for f in filters:
+                    if f.filter_type == "sales":
+                        store_filters['sales_stores'].append(f.store_name)
+                    elif f.filter_type == "inventory":
+                        store_filters['inventory_stores'].append(f.store_name)
+
+                # Return defaults if empty (not yet initialized)
+                if not store_filters['sales_stores']:
+                    store_filters['sales_stores'] = [
+                        "Rockwell", "Greenhills", "Magnolia",
+                        "North Edsa", "Fairview", "Opus"
+                    ]
+                if not store_filters['inventory_stores']:
+                    store_filters['inventory_stores'] = [
+                        "Rockwell", "Greenhills", "Magnolia",
+                        "North Edsa", "Fairview", "Opus", "AJI BARN"
+                    ]
+
+                return store_filters
+        except Exception as e:
+            # Fallback to defaults on any error
+            print(f"Warning: Could not fetch store filters from DB: {e}")
+            return {
+                'sales_stores': [
+                    "Rockwell", "Greenhills", "Magnolia",
+                    "North Edsa", "Fairview", "Opus"
+                ],
+                'inventory_stores': [
+                    "Rockwell", "Greenhills", "Magnolia",
+                    "North Edsa", "Fairview", "Opus", "AJI BARN"
+                ]
+            }
+
     async def generate_sql(
         self,
         user_question: str,
@@ -134,8 +192,11 @@ class SQLGenerator:
             if session_id:
                 conversation_context = get_conversation_context(session_id)
 
+            # Get store filters from database
+            store_filters = await self._get_store_filters()
+
             # Build the prompt
-            prompt = self._build_prompt(processed_question, previous_error, conversation_context)
+            prompt = self._build_prompt(processed_question, previous_error, conversation_context, store_filters)
 
             # Call Claude API with timeout
             response = await asyncio.wait_for(
@@ -192,7 +253,8 @@ class SQLGenerator:
         self,
         user_question: str,
         previous_error: Optional[str] = None,
-        conversation_context: str = ""
+        conversation_context: str = "",
+        store_filters: Optional[Dict[str, List[str]]] = None
     ) -> str:
         """Build the prompt for Claude"""
 
@@ -211,6 +273,25 @@ class SQLGenerator:
             f"- {f['description']}: `{f['sql_template']}`"
             for f in default_filters
         ])
+
+        # Build store filter rules
+        store_filter_rules = ""
+        if store_filters:
+            sales_stores = store_filters.get('sales_stores', [])
+            inventory_stores = store_filters.get('inventory_stores', [])
+
+            if sales_stores or inventory_stores:
+                sales_list = ', '.join([f"'{s}'" for s in sales_stores])
+                inventory_list = ', '.join([f"'{s}'" for s in inventory_stores])
+
+                store_filter_rules = f"""
+**IMPORTANT - AUTOMATIC STORE FILTERING:**
+- For SALES/TRANSACTION queries (revenue, sales, orders, transactions): ALWAYS filter to these stores: {', '.join(sales_stores)}
+  SQL: `s.name IN ({sales_list})`
+- For INVENTORY queries (stock, on hand, warehouse): Include these stores: {', '.join(inventory_stores)}
+  SQL: `s.name IN ({inventory_list})`
+- EXCEPTION: If the user explicitly asks for a specific store (e.g., "Rockwell sales") or says "all stores", use their specification instead.
+"""
 
         # Build retry context if this is a retry
         retry_context = ""
@@ -235,6 +316,7 @@ Please fix the issue and generate a corrected query.
 **Store Information:**
 - 6 physical stores: {', '.join(self.business_rules.get('stores', []))}
 - All timestamps are in {self.business_rules.get('date_defaults', {}).get('timezone', 'Asia/Manila')} timezone
+{store_filter_rules}
 
 **Required Filters:**
 {filter_rules}
