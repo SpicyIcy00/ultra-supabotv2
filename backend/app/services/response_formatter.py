@@ -113,8 +113,8 @@ class ResponseFormatter:
 
         sections = []
 
-        # Header
-        sections.append(f"**Here is a summary of {context} based on the query results:**\n")
+        # Header - more natural description
+        sections.append(f"**Here are your {context}:**\n")
 
         # Deterministic Summary with exact template
         sections.append("### Summary")
@@ -170,7 +170,7 @@ class ResponseFormatter:
         context = self._extract_context(question)
 
         sections = []
-        sections.append(f"**Here is a summary of {context} based on the query results:**\n")
+        sections.append(f"**Here are your {context}:**\n")
 
         # Summary
         sections.append("### Summary")
@@ -216,7 +216,7 @@ class ResponseFormatter:
         context = self._extract_context(question)
 
         sections = []
-        sections.append(f"**Here is a summary of {context} based on the query results:**\n")
+        sections.append(f"**Here are your {context}:**\n")
 
         # Summary
         sections.append("### Summary")
@@ -253,7 +253,7 @@ class ResponseFormatter:
         context = self._extract_context(question)
 
         sections = []
-        sections.append(f"**Here is a summary of {context} based on the query results:**\n")
+        sections.append(f"**Here are your {context}:**\n")
 
         sections.append("### Summary")
 
@@ -284,7 +284,7 @@ class ResponseFormatter:
         context = self._extract_context(question)
 
         sections = []
-        sections.append(f"**Here is a summary of {context} based on the query results:**\n")
+        sections.append(f"**Here are your {context}:**\n")
 
         sections.append("### Summary")
         sections.append(f"Found {len(results)} result(s):")
@@ -303,23 +303,84 @@ class ResponseFormatter:
         return f"**No data found for your query.**\n\nTry adjusting your search criteria or time range."
 
     def _extract_context(self, question: str) -> str:
-        """Extract context from question for header."""
-        # Simple heuristic - use first meaningful phrase
-        words = question.lower().split()
-        if 'top' in words or 'best' in words:
-            return "your top performers"
-        elif 'compare' in words:
-            return "the comparison"
-        elif 'sales' in words:
-            return "sales data"
-        elif 'revenue' in words:
-            return "revenue data"
-        elif 'product' in words:
-            return "product information"
-        elif 'store' in words:
-            return "store performance"
+        """Extract detailed context from question for header."""
+        question_lower = question.lower()
+        parts = []
+
+        # Extract what we're looking at (subject)
+        if 'top' in question_lower or 'best' in question_lower:
+            # Try to get the number
+            import re
+            num_match = re.search(r'top\s*(\d+)', question_lower)
+            num = num_match.group(1) if num_match else ""
+
+            if 'product' in question_lower:
+                parts.append(f"top {num} selling products" if num else "top selling products")
+            elif 'store' in question_lower:
+                parts.append(f"top {num} stores" if num else "top stores")
+            elif 'category' in question_lower or 'categories' in question_lower:
+                parts.append(f"top {num} categories" if num else "top categories")
+            else:
+                parts.append(f"top {num} items" if num else "top performers")
+        elif 'compare' in question_lower:
+            parts.append("comparison")
+        elif 'sales' in question_lower:
+            parts.append("sales")
+        elif 'revenue' in question_lower:
+            parts.append("revenue")
+        elif 'product' in question_lower:
+            parts.append("product data")
+        elif 'inventory' in question_lower or 'stock' in question_lower:
+            parts.append("inventory")
         else:
-            return "the data"
+            parts.append("the data")
+
+        # Extract store name
+        stores = ['rockwell', 'greenhills', 'magnolia', 'north edsa', 'fairview', 'opus', 'aji barn']
+        for store in stores:
+            if store in question_lower:
+                parts.append(f"at {store.title()}")
+                break
+
+        # Extract time period
+        if 'today' in question_lower:
+            parts.append("for today")
+        elif 'yesterday' in question_lower:
+            parts.append("for yesterday")
+        elif 'this week' in question_lower:
+            parts.append("this week")
+        elif 'last week' in question_lower:
+            parts.append("last week")
+        elif 'this month' in question_lower:
+            parts.append("this month")
+        elif 'last month' in question_lower:
+            parts.append("last month")
+        elif 'january' in question_lower:
+            parts.append("for January")
+        elif 'february' in question_lower:
+            parts.append("for February")
+        elif 'march' in question_lower:
+            parts.append("for March")
+        elif 'april' in question_lower:
+            parts.append("for April")
+        elif 'may' in question_lower:
+            parts.append("for May")
+        elif 'june' in question_lower:
+            parts.append("for June")
+        elif 'july' in question_lower:
+            parts.append("for July")
+        elif 'august' in question_lower:
+            parts.append("for August")
+        elif 'september' in question_lower:
+            parts.append("for September")
+        elif 'october' in question_lower:
+            parts.append("for October")
+        elif 'november' in question_lower:
+            parts.append("for November")
+        elif 'december' in question_lower:
+            parts.append("for December")
+
+        return " ".join(parts) if parts else "the data"
 
     def _generate_summary_description(self, question: str, results: List[Dict[str, Any]]) -> str:
         """Generate description for summary section."""
