@@ -6,9 +6,11 @@
  * - CSV (for table data)
  */
 
+import html2canvas from 'html2canvas';
 
 /**
  * Export chart as image (PNG, JPG, or SVG)
+ * Uses html2canvas for reliable capture of Recharts components
  */
 export async function exportChartAsImage(
   chartElement: HTMLElement,
@@ -17,23 +19,59 @@ export async function exportChartAsImage(
   quality: number = 0.95
 ): Promise<void> {
   try {
-    // Find the SVG element inside the chart container
-    const svgElement = chartElement.querySelector('svg');
-
-    if (!svgElement) {
-      throw new Error('No SVG element found in chart');
-    }
-
     if (format === 'svg') {
-      // Export as SVG (vector format)
-      await exportAsSVG(svgElement, filename);
-    } else {
-      // Export as raster image (PNG or JPG)
-      await exportAsRasterImage(svgElement, filename, format, quality);
+      // For SVG, try to find and export the SVG element directly
+      const svgElement = chartElement.querySelector('svg');
+      if (svgElement) {
+        await exportAsSVG(svgElement, filename);
+        return;
+      }
     }
+
+    // Use html2canvas for PNG/JPG - more reliable for Recharts
+    const canvas = await html2canvas(chartElement, {
+      backgroundColor: '#1c1e26', // Dark background matching theme
+      scale: 2, // 2x scale for retina/high DPI
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+      // Ensure SVG rendering works properly
+      onclone: (clonedDoc) => {
+        // Find all SVG elements and ensure they have proper dimensions
+        const svgs = clonedDoc.querySelectorAll('svg');
+        svgs.forEach((svg) => {
+          const bbox = svg.getBoundingClientRect();
+          if (!svg.getAttribute('width')) {
+            svg.setAttribute('width', `${bbox.width}`);
+          }
+          if (!svg.getAttribute('height')) {
+            svg.setAttribute('height', `${bbox.height}`);
+          }
+        });
+      }
+    });
+
+    // Convert canvas to blob and download
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          downloadBlob(blob, `${filename}.${format}`);
+        } else {
+          throw new Error('Failed to create image blob');
+        }
+      },
+      format === 'jpg' ? 'image/jpeg' : 'image/png',
+      quality
+    );
   } catch (error) {
     console.error('Export failed:', error);
-    throw error;
+    // Fallback to SVG-based export
+    const svgElement = chartElement.querySelector('svg');
+    if (svgElement && format !== 'svg') {
+      await exportAsRasterImage(svgElement, filename, format as 'png' | 'jpg', quality);
+    } else {
+      throw error;
+    }
   }
 }
 

@@ -61,7 +61,7 @@ interface EnhancedChartRendererProps {
 
 export function EnhancedChartRenderer({
   config,
-  data,
+  data: rawData,
   messageId,
   initialCustomization,
   onCustomizationChange,
@@ -70,6 +70,37 @@ export function EnhancedChartRenderer({
   const chartRef = useRef<HTMLDivElement>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+
+  // Data mapping state (which fields to use for X and Y axis)
+  const [dataMapping, setDataMapping] = useState({
+    xAxis: 'name',
+    yAxis: 'value',
+  });
+
+  // Get available fields from data
+  const availableFields = useMemo(() => {
+    if (!rawData || rawData.length === 0) return ['name', 'value'];
+    return Object.keys(rawData[0]);
+  }, [rawData]);
+
+  // Map data based on current mapping (allows users to change what's displayed)
+  const data = useMemo(() => {
+    if (!rawData || rawData.length === 0) return rawData;
+    // If using default mapping, return raw data as-is
+    if (dataMapping.xAxis === 'name' && dataMapping.yAxis === 'value') {
+      return rawData;
+    }
+    // Re-map data to use selected fields
+    return rawData.map(item => {
+      const anyItem = item as any;
+      return {
+        ...item,
+        name: anyItem[dataMapping.xAxis] ?? item.name,
+        value: anyItem[dataMapping.yAxis] ?? item.value,
+        fullName: anyItem[dataMapping.xAxis] ?? item.fullName ?? item.name,
+      };
+    });
+  }, [rawData, dataMapping]);
 
   // Chart state with defaults
   const [chartState, setChartState] = useState<ChartState>({
@@ -87,6 +118,11 @@ export function EnhancedChartRenderer({
     const newState = { ...chartState, ...updates };
     setChartState(newState);
     onCustomizationChange?.(newState);
+  };
+
+  // Handle data mapping changes
+  const handleDataMappingChange = (mapping: { xAxis: string; yAxis: string }) => {
+    setDataMapping(mapping);
   };
 
   // Handle click for drill-down
@@ -222,8 +258,9 @@ export function EnhancedChartRenderer({
 
   const renderStackedBarChart = () => {
     // Get all numeric keys except 'name' for stacking
+    const firstItem = data[0] as any;
     const seriesKeys = config.series ||
-      (data[0] ? Object.keys(data[0]).filter(k => k !== 'name' && k !== 'fullName' && typeof data[0][k] === 'number') : ['value']);
+      (firstItem ? Object.keys(firstItem).filter(k => k !== 'name' && k !== 'fullName' && typeof firstItem[k] === 'number') : ['value']);
 
     return (
       <BarChart data={data} onClick={handleChartClick}>
@@ -387,8 +424,9 @@ export function EnhancedChartRenderer({
   );
 
   const renderRadarChart = () => {
+    const radarFirstItem = data[0] as any;
     const metrics = config.radar?.metrics ||
-      (data[0] ? Object.keys(data[0]).filter(k => k !== 'name' && typeof data[0][k] === 'number') : ['value']);
+      (radarFirstItem ? Object.keys(radarFirstItem).filter(k => k !== 'name' && typeof radarFirstItem[k] === 'number') : ['value']);
 
     return (
       <RadarChart data={data} cx="50%" cy="50%" outerRadius="80%">
@@ -675,13 +713,16 @@ export function EnhancedChartRenderer({
         </svg>
         {/* Right axis */}
         <div className="flex flex-col gap-2">
-          {data.slice(0, 5).map((item, idx) => (
-            <div key={idx} className="flex items-center gap-2">
-              <span className="text-white font-medium">
-                {config.is_currency ? formatCurrency(item.value2 || item.value) : (item.value2 || item.value)}
-              </span>
-            </div>
-          ))}
+          {data.slice(0, 5).map((item, idx) => {
+            const anyItem = item as any;
+            return (
+              <div key={idx} className="flex items-center gap-2">
+                <span className="text-white font-medium">
+                  {config.is_currency ? formatCurrency(anyItem.value2 || item.value) : (anyItem.value2 || item.value)}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
     );
@@ -784,7 +825,10 @@ export function EnhancedChartRenderer({
           <ChartCustomizationPanel
             chartState={chartState}
             currentType={config.type as ChartType}
+            availableFields={availableFields}
+            data={rawData}
             onStateChange={handleStateChange}
+            onDataMappingChange={handleDataMappingChange}
             onClose={() => setShowSettings(false)}
           />
         </div>
