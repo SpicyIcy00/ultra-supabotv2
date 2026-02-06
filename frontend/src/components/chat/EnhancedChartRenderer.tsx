@@ -556,9 +556,6 @@ export function EnhancedChartRenderer({
       );
     };
 
-    // For many items, show labels only for significant slices
-    const showLabels = data.length <= 12;
-
     return (
       <PieChart margin={{ top: 60, right: 140, bottom: 60, left: 140 }}>
         <Pie
@@ -569,9 +566,8 @@ export function EnhancedChartRenderer({
           cy="50%"
           outerRadius={110}
           innerRadius={45}
-          label={showLabels ? renderPieLabel : false}
-          labelLine={showLabels ? { stroke: '#6b7280', strokeWidth: 1, strokeDasharray: '3 3' } : false}
-          paddingAngle={2}
+          label={renderPieLabel}
+          labelLine={{ stroke: '#6b7280', strokeWidth: 1 }}
           {...commonProps}
         >
           {data.map((_, index) => (
