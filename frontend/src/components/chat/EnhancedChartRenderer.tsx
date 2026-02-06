@@ -499,56 +499,74 @@ export function EnhancedChartRenderer({
 
   const renderPieChart = () => {
     // Custom label renderer - always visible, positioned outside the pie
-    const renderPieLabel = ({
-      cx,
-      cy,
-      midAngle,
-      outerRadius,
-      name,
-      fullName,
-      percent,
-      index,
-    }: any) => {
+    // Recharts passes: cx, cy, midAngle, innerRadius, outerRadius, percent, index, name, value, payload
+    const renderPieLabel = (props: any) => {
+      const {
+        cx,
+        cy,
+        midAngle,
+        outerRadius,
+        percent,
+        index,
+        payload, // This contains the full data object
+      } = props;
+
+      // Skip very small slices
+      if (percent < 0.03) return null;
+
       const RADIAN = Math.PI / 180;
-      // Position label outside the pie
-      const radius = outerRadius + 30;
+      // Position label outside the pie with enough distance
+      const radius = outerRadius + 25;
       const x = cx + radius * Math.cos(-midAngle * RADIAN);
       const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
-      const displayName = fullName || name || data[index]?.fullName || data[index]?.name || `Item ${index + 1}`;
-      const shortName = displayName.length > 12 ? `${displayName.slice(0, 10)}...` : displayName;
+      // Get display name from payload (the actual data object)
+      const displayName = payload?.fullName || payload?.name || data[index]?.fullName || data[index]?.name || `Item ${index + 1}`;
+      const shortName = String(displayName).length > 15 ? `${String(displayName).slice(0, 12)}...` : String(displayName);
       const percentText = `${(percent * 100).toFixed(0)}%`;
 
-      // Don't show label for very small slices
-      if (percent < 0.02) return null;
-
       return (
-        <text
-          x={x}
-          y={y}
-          fill="#e5e7eb"
-          textAnchor={x > cx ? 'start' : 'end'}
-          dominantBaseline="central"
-          fontSize={12}
-          fontWeight={500}
-        >
-          {shortName} ({percentText})
-        </text>
+        <g>
+          <text
+            x={x}
+            y={y}
+            fill="#e5e7eb"
+            textAnchor={x > cx ? 'start' : 'end'}
+            dominantBaseline="central"
+            fontSize={11}
+            fontWeight={500}
+          >
+            {shortName}
+          </text>
+          <text
+            x={x}
+            y={y + 14}
+            fill="#9ca3af"
+            textAnchor={x > cx ? 'start' : 'end'}
+            dominantBaseline="central"
+            fontSize={10}
+          >
+            {percentText}
+          </text>
+        </g>
       );
     };
 
+    // For many items, show labels only for significant slices
+    const showLabels = data.length <= 10;
+
     return (
-      <PieChart>
+      <PieChart margin={{ top: 40, right: 100, bottom: 40, left: 100 }}>
         <Pie
           data={data}
           dataKey="value"
           nameKey="name"
           cx="50%"
           cy="50%"
-          outerRadius={80}
-          innerRadius={35}
-          label={renderPieLabel}
-          labelLine={{ stroke: '#6b7280', strokeWidth: 1 }}
+          outerRadius={70}
+          innerRadius={30}
+          label={showLabels ? renderPieLabel : false}
+          labelLine={showLabels ? { stroke: '#6b7280', strokeWidth: 1 } : false}
           {...commonProps}
         >
           {data.map((_, index) => (
@@ -985,6 +1003,8 @@ export function EnhancedChartRenderer({
         return 80;
       case 'gauge':
         return 200;
+      case 'pie':
+        return 350; // Extra height for labels
       default:
         return 300;
     }
