@@ -283,6 +283,7 @@ function MessageBubble({ message, onChartCustomizationChange }: MessageBubblePro
                 <EnhancedChartRenderer
                   config={message.chart as any}
                   data={message.chart_data as any}
+                  originalData={message.data}
                   messageId={message.id}
                   initialCustomization={message.chartCustomization ? {
                     chartType: message.chartCustomization.chartType as any,

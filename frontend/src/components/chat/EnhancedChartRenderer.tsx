@@ -53,6 +53,7 @@ import type {
 interface EnhancedChartRendererProps {
   config: EnhancedChartConfig;
   data: ChartDataPoint[];
+  originalData?: Record<string, any>[]; // Original data with all fields for customization
   messageId: string;
   initialCustomization?: Partial<ChartState>;
   onCustomizationChange?: (state: ChartState) => void;
@@ -62,12 +63,14 @@ interface EnhancedChartRendererProps {
 export function EnhancedChartRenderer({
   config,
   data: rawData,
+  originalData,
   messageId,
   initialCustomization,
   onCustomizationChange,
   onDrillDown,
 }: EnhancedChartRendererProps) {
   const chartRef = useRef<HTMLDivElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null); // Separate ref for export (excludes toolbar)
   const [showSettings, setShowSettings] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -77,30 +80,34 @@ export function EnhancedChartRenderer({
     yAxis: 'value',
   });
 
-  // Get available fields from data
+  // Get available fields from original data (if provided) or chart data
+  // originalData has all fields from the SQL query, rawData (chart_data) is pre-processed
+  const sourceDataForFields = originalData && originalData.length > 0 ? originalData : rawData;
   const availableFields = useMemo(() => {
-    if (!rawData || rawData.length === 0) return ['name', 'value'];
-    return Object.keys(rawData[0]);
-  }, [rawData]);
+    if (!sourceDataForFields || sourceDataForFields.length === 0) return ['name', 'value'];
+    return Object.keys(sourceDataForFields[0]);
+  }, [sourceDataForFields]);
 
   // Map data based on current mapping (allows users to change what's displayed)
+  // Use originalData if available (has all fields), otherwise fall back to rawData
+  const dataSource = originalData && originalData.length > 0 ? originalData : rawData;
   const data = useMemo(() => {
-    if (!rawData || rawData.length === 0) return rawData;
-    // If using default mapping, return raw data as-is
-    if (dataMapping.xAxis === 'name' && dataMapping.yAxis === 'value') {
+    if (!dataSource || dataSource.length === 0) return rawData;
+    // If using default mapping and no originalData, return raw data as-is
+    if (dataMapping.xAxis === 'name' && dataMapping.yAxis === 'value' && !originalData) {
       return rawData;
     }
     // Re-map data to use selected fields
-    return rawData.map(item => {
+    return dataSource.map(item => {
       const anyItem = item as any;
       return {
         ...item,
-        name: anyItem[dataMapping.xAxis] ?? item.name,
-        value: anyItem[dataMapping.yAxis] ?? item.value,
-        fullName: anyItem[dataMapping.xAxis] ?? item.fullName ?? item.name,
+        name: String(anyItem[dataMapping.xAxis] ?? anyItem.name ?? ''),
+        value: Number(anyItem[dataMapping.yAxis] ?? anyItem.value ?? 0),
+        fullName: String(anyItem[dataMapping.xAxis] ?? anyItem.fullName ?? anyItem.name ?? ''),
       };
     });
-  }, [rawData, dataMapping]);
+  }, [dataSource, rawData, originalData, dataMapping]);
 
   // Chart state with defaults
   const [chartState, setChartState] = useState<ChartState>({
@@ -800,19 +807,14 @@ export function EnhancedChartRenderer({
         setShowSettings(false);
       }}
     >
-      {/* Title */}
-      {chartState.title && (
-        <h4 className="text-sm font-medium text-gray-300 mb-2">{chartState.title}</h4>
-      )}
-
-      {/* Toolbar - appears on hover */}
+      {/* Toolbar - appears on hover (outside export ref so it's not captured in image) */}
       <div
         className={`absolute top-2 right-2 z-10 transition-opacity duration-200 ${
           isHovered ? 'opacity-100' : 'opacity-0'
         }`}
       >
         <ChartToolbar
-          chartRef={chartRef}
+          chartRef={exportRef}
           data={data}
           title={chartState.title || config.title || 'chart'}
           onSettingsClick={() => setShowSettings(!showSettings)}
@@ -826,7 +828,7 @@ export function EnhancedChartRenderer({
             chartState={chartState}
             currentType={config.type as ChartType}
             availableFields={availableFields}
-            data={rawData}
+            data={sourceDataForFields}
             onStateChange={handleStateChange}
             onDataMappingChange={handleDataMappingChange}
             onClose={() => setShowSettings(false)}
@@ -834,10 +836,18 @@ export function EnhancedChartRenderer({
         </div>
       )}
 
-      {/* Chart */}
-      <ResponsiveContainer width="100%" height={getChartHeight()}>
-        {renderChart()}
-      </ResponsiveContainer>
+      {/* Export container - wraps only title + chart for clean image export */}
+      <div ref={exportRef}>
+        {/* Title */}
+        {chartState.title && (
+          <h4 className="text-sm font-medium text-gray-300 mb-2">{chartState.title}</h4>
+        )}
+
+        {/* Chart */}
+        <ResponsiveContainer width="100%" height={getChartHeight()}>
+          {renderChart()}
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

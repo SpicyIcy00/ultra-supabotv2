@@ -90,10 +90,44 @@ export function ChartCustomizationPanel({
 }: ChartCustomizationPanelProps) {
   const [activeTab, setActiveTab] = useState<'type' | 'data' | 'style'>('type');
   const [expandedCategory, setExpandedCategory] = useState<string | null>('Basic');
-  const [selectedXAxis, setSelectedXAxis] = useState(availableFields[0] || 'name');
-  const [selectedYAxis, setSelectedYAxis] = useState(
-    availableFields.find(f => f === 'value' || f.includes('revenue') || f.includes('sales')) || availableFields[1] || 'value'
-  );
+
+  // Find best default Y-axis (prefer numeric fields with revenue/sales/quantity in name)
+  const getDefaultYAxis = () => {
+    const preferred = availableFields.find(f =>
+      f.toLowerCase().includes('revenue') ||
+      f.toLowerCase().includes('sales') ||
+      f.toLowerCase().includes('total') ||
+      f.toLowerCase().includes('quantity') ||
+      f.toLowerCase().includes('amount')
+    );
+    if (preferred) return preferred;
+    // Fall back to first numeric field
+    if (data && data.length > 0) {
+      const numericField = availableFields.find(f => typeof data[0][f] === 'number');
+      if (numericField) return numericField;
+    }
+    return availableFields[1] || 'value';
+  };
+
+  // Find best default X-axis (prefer string fields with name/category in name)
+  const getDefaultXAxis = () => {
+    const preferred = availableFields.find(f =>
+      f.toLowerCase().includes('name') ||
+      f.toLowerCase().includes('category') ||
+      f.toLowerCase().includes('product') ||
+      f.toLowerCase().includes('store')
+    );
+    if (preferred) return preferred;
+    // Fall back to first string field
+    if (data && data.length > 0) {
+      const stringField = availableFields.find(f => typeof data[0][f] === 'string');
+      if (stringField) return stringField;
+    }
+    return availableFields[0] || 'name';
+  };
+
+  const [selectedXAxis, setSelectedXAxis] = useState(getDefaultXAxis());
+  const [selectedYAxis, setSelectedYAxis] = useState(getDefaultYAxis());
 
   // Detect numeric vs categorical fields
   const numericFields = availableFields.filter(field => {
@@ -112,13 +146,20 @@ export function ChartCustomizationPanel({
     onStateChange({ chartType: type });
   };
 
-  const handleDataMappingChange = () => {
+  // Apply data mapping with specific values (called from onChange with new value)
+  const applyDataMapping = (xAxis: string, yAxis: string) => {
     if (onDataMappingChange) {
       onDataMappingChange({
-        xAxis: selectedXAxis,
-        yAxis: selectedYAxis,
+        xAxis,
+        yAxis,
       });
     }
+  };
+
+  // Handle Apply button click
+  const handleApply = () => {
+    applyDataMapping(selectedXAxis, selectedYAxis);
+    onClose();
   };
 
   return (
@@ -229,8 +270,10 @@ export function ChartCustomizationPanel({
               <select
                 value={selectedXAxis}
                 onChange={(e) => {
-                  setSelectedXAxis(e.target.value);
-                  handleDataMappingChange();
+                  const newValue = e.target.value;
+                  setSelectedXAxis(newValue);
+                  // Apply immediately with the new value
+                  applyDataMapping(newValue, selectedYAxis);
                 }}
                 className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
               >
@@ -253,8 +296,10 @@ export function ChartCustomizationPanel({
               <select
                 value={selectedYAxis}
                 onChange={(e) => {
-                  setSelectedYAxis(e.target.value);
-                  handleDataMappingChange();
+                  const newValue = e.target.value;
+                  setSelectedYAxis(newValue);
+                  // Apply immediately with the new value
+                  applyDataMapping(selectedXAxis, newValue);
                 }}
                 className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
               >
@@ -395,7 +440,7 @@ export function ChartCustomizationPanel({
       {/* Footer with Apply button */}
       <div className="border-t border-gray-700 p-3 bg-gray-850 flex-shrink-0">
         <button
-          onClick={onClose}
+          onClick={handleApply}
           className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded text-sm font-medium transition-colors"
         >
           Apply Changes
