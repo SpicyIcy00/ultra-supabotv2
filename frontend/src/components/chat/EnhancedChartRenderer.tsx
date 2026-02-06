@@ -107,16 +107,42 @@ export function EnhancedChartRenderer({
   // Only use originalData when user explicitly changes the data mapping to custom fields
   const isUsingDefaultMapping = dataMapping.xAxis === 'name' && dataMapping.yAxis === 'value';
 
+  // Helper to find the best name field from original data
+  const findNameFromOriginal = (index: number): string | null => {
+    if (!originalData || !originalData[index]) return null;
+    const item = originalData[index];
+    // Try common name fields in order of preference
+    const nameFields = ['product_name', 'name', 'store_name', 'category', 'label', 'title'];
+    for (const field of nameFields) {
+      if (item[field] && String(item[field]).trim()) {
+        return String(item[field]);
+      }
+    }
+    // Fall back to first string field
+    for (const key of Object.keys(item)) {
+      if (typeof item[key] === 'string' && item[key].trim() && !key.toLowerCase().includes('id')) {
+        return item[key];
+      }
+    }
+    return null;
+  };
+
   const data = useMemo(() => {
     // If using default mapping, use the pre-formatted chart_data (rawData)
-    // This is the recommended visualization from the backend
+    // But supplement with names from originalData if rawData names are missing
     if (isUsingDefaultMapping) {
-      // Ensure rawData has valid names
-      return rawData.map((item, index) => ({
-        ...item,
-        name: item.name || item.fullName || `Item ${index + 1}`,
-        fullName: item.fullName || item.name || `Item ${index + 1}`,
-      }));
+      return rawData.map((item, index) => {
+        // Get name from rawData first, then try originalData, then fallback
+        let displayName = item.name || item.fullName;
+        if (!displayName || displayName === 'undefined' || displayName === 'null') {
+          displayName = findNameFromOriginal(index) || `Item ${index + 1}`;
+        }
+        return {
+          ...item,
+          name: displayName,
+          fullName: displayName,
+        };
+      });
     }
 
     // User has customized the mapping - use originalData if available
