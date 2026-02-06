@@ -111,7 +111,12 @@ export function EnhancedChartRenderer({
     // If using default mapping, use the pre-formatted chart_data (rawData)
     // This is the recommended visualization from the backend
     if (isUsingDefaultMapping) {
-      return rawData;
+      // Ensure rawData has valid names
+      return rawData.map((item, index) => ({
+        ...item,
+        name: item.name || item.fullName || `Item ${index + 1}`,
+        fullName: item.fullName || item.name || `Item ${index + 1}`,
+      }));
     }
 
     // User has customized the mapping - use originalData if available
@@ -119,13 +124,15 @@ export function EnhancedChartRenderer({
     if (!dataSource || dataSource.length === 0) return rawData;
 
     // Re-map data to use the user's selected fields
-    return dataSource.map(item => {
+    return dataSource.map((item, index) => {
       const anyItem = item as any;
+      const nameValue = anyItem[dataMapping.xAxis] ?? anyItem.name;
+      const displayName = nameValue ? String(nameValue) : `Item ${index + 1}`;
       return {
         ...item,
-        name: String(anyItem[dataMapping.xAxis] ?? anyItem.name ?? ''),
+        name: displayName,
         value: Number(anyItem[dataMapping.yAxis] ?? anyItem.value ?? 0),
-        fullName: String(anyItem[dataMapping.xAxis] ?? anyItem.fullName ?? anyItem.name ?? ''),
+        fullName: displayName,
       };
     });
   }, [rawData, originalData, dataMapping, isUsingDefaultMapping]);
@@ -166,12 +173,17 @@ export function EnhancedChartRenderer({
     }
   };
 
+  // Helper to get display name from data point
+  const getDisplayName = (item: any): string => {
+    return item?.fullName || item?.name || item?.label || item?.category || 'Unknown';
+  };
+
   // Custom tooltip component
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
 
     const dataPoint = payload[0]?.payload;
-    const displayLabel = dataPoint?.fullName || label;
+    const displayLabel = getDisplayName(dataPoint) || label || 'Item';
 
     return (
       <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 shadow-xl">
@@ -182,7 +194,7 @@ export function EnhancedChartRenderer({
               className="w-3 h-3 rounded"
               style={{ backgroundColor: entry.color }}
             />
-            <span className="text-gray-400">{entry.name || 'Value'}:</span>
+            <span className="text-gray-400">{entry.dataKey === 'value' ? 'Value' : entry.name || 'Value'}:</span>
             <span className="text-white font-medium">
               {config.is_currency
                 ? formatCurrency(entry.value)
@@ -228,6 +240,15 @@ export function EnhancedChartRenderer({
   // CHART RENDERERS
   // ============================================
 
+  // Format X-axis tick to handle missing/long names
+  const formatXAxisTick = (value: any, index: number) => {
+    if (!value || value === 'undefined' || value === 'null') {
+      return `Item ${index + 1}`;
+    }
+    const str = String(value);
+    return str.length > 12 ? `${str.slice(0, 10)}...` : str;
+  };
+
   const renderBarChart = () => (
     <BarChart data={data} onClick={handleChartClick}>
       {renderGrid()}
@@ -236,6 +257,7 @@ export function EnhancedChartRenderer({
         stroke="#9ca3af"
         tick={{ fontSize: 12 }}
         tickLine={{ stroke: '#4b5563' }}
+        tickFormatter={formatXAxisTick}
       />
       <YAxis
         stroke="#9ca3af"
@@ -270,7 +292,11 @@ export function EnhancedChartRenderer({
         width={120}
         stroke="#9ca3af"
         tick={{ fontSize: 11 }}
-        tickFormatter={(value) => (value.length > 15 ? `${value.slice(0, 15)}...` : value)}
+        tickFormatter={(value, index) => {
+          if (!value || value === 'undefined' || value === 'null') return `Item ${index + 1}`;
+          const str = String(value);
+          return str.length > 15 ? `${str.slice(0, 15)}...` : str;
+        }}
       />
       <Tooltip content={<CustomTooltip />} />
       {renderLegend()}
@@ -293,7 +319,7 @@ export function EnhancedChartRenderer({
     return (
       <BarChart data={data} onClick={handleChartClick}>
         {renderGrid()}
-        <XAxis dataKey="name" stroke="#9ca3af" tick={{ fontSize: 12 }} />
+        <XAxis dataKey="name" stroke="#9ca3af" tick={{ fontSize: 12 }} tickFormatter={formatXAxisTick} />
         <YAxis stroke="#9ca3af" tickFormatter={formatYAxis} tick={{ fontSize: 12 }} />
         <Tooltip content={<CustomTooltip />} />
         {renderLegend()}
@@ -314,7 +340,7 @@ export function EnhancedChartRenderer({
   const renderLineChart = () => (
     <LineChart data={data} onClick={handleChartClick}>
       {renderGrid()}
-      <XAxis dataKey="name" stroke="#9ca3af" tick={{ fontSize: 12 }} />
+      <XAxis dataKey="name" stroke="#9ca3af" tick={{ fontSize: 12 }} tickFormatter={formatXAxisTick} />
       <YAxis stroke="#9ca3af" tickFormatter={formatYAxis} tick={{ fontSize: 12 }} />
       <Tooltip content={<CustomTooltip />} />
       {renderLegend()}
@@ -348,7 +374,7 @@ export function EnhancedChartRenderer({
         </linearGradient>
       </defs>
       {renderGrid()}
-      <XAxis dataKey="name" stroke="#9ca3af" tick={{ fontSize: 12 }} />
+      <XAxis dataKey="name" stroke="#9ca3af" tick={{ fontSize: 12 }} tickFormatter={formatXAxisTick} />
       <YAxis stroke="#9ca3af" tickFormatter={formatYAxis} tick={{ fontSize: 12 }} />
       <Tooltip content={<CustomTooltip />} />
       {renderLegend()}
@@ -366,33 +392,42 @@ export function EnhancedChartRenderer({
     </AreaChart>
   );
 
-  const renderPieChart = () => (
-    <PieChart>
-      <Pie
-        data={data}
-        dataKey="value"
-        nameKey="name"
-        cx="50%"
-        cy="50%"
-        outerRadius={100}
-        innerRadius={40}
-        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-        labelLine={{ stroke: '#6b7280' }}
-        {...commonProps}
-      >
-        {data.map((_, index) => (
-          <Cell
-            key={`cell-${index}`}
-            fill={colors[index % colors.length]}
-            cursor="pointer"
-            onClick={() => handleChartClick({ payload: data[index] })}
-          />
-        ))}
-      </Pie>
-      <Tooltip content={<CustomTooltip />} />
-      {renderLegend()}
-    </PieChart>
-  );
+  const renderPieChart = () => {
+    // Custom label renderer that handles missing names
+    const renderPieLabel = ({ name, fullName, percent, index }: any) => {
+      const displayName = fullName || name || data[index]?.fullName || data[index]?.name || `Item ${index + 1}`;
+      const shortName = displayName.length > 15 ? `${displayName.slice(0, 12)}...` : displayName;
+      return `${shortName} (${(percent * 100).toFixed(0)}%)`;
+    };
+
+    return (
+      <PieChart>
+        <Pie
+          data={data}
+          dataKey="value"
+          nameKey="name"
+          cx="50%"
+          cy="50%"
+          outerRadius={100}
+          innerRadius={40}
+          label={renderPieLabel}
+          labelLine={{ stroke: '#6b7280' }}
+          {...commonProps}
+        >
+          {data.map((_, index) => (
+            <Cell
+              key={`cell-${index}`}
+              fill={colors[index % colors.length]}
+              cursor="pointer"
+              onClick={() => handleChartClick({ payload: data[index] })}
+            />
+          ))}
+        </Pie>
+        <Tooltip content={<CustomTooltip />} />
+        {renderLegend()}
+      </PieChart>
+    );
+  };
 
   const renderScatterChart = () => (
     <ScatterChart>
