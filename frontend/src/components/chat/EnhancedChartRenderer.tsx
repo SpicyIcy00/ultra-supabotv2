@@ -75,9 +75,15 @@ export function EnhancedChartRenderer({
   const [isHovered, setIsHovered] = useState(false);
 
   // Data mapping state (which fields to use for X and Y axis)
-  const [dataMapping, setDataMapping] = useState({
+  const [dataMapping, setDataMapping] = useState<{
+    xAxis: string;
+    yAxis: string;
+    sortBy?: 'value_desc' | 'value_asc' | 'name_asc' | 'name_desc';
+    limit?: number;
+  }>({
     xAxis: 'name',
     yAxis: 'value',
+    sortBy: 'value_desc',
   });
 
   // Get available fields - combine rawData fields (name, value) with originalData fields
@@ -128,10 +134,12 @@ export function EnhancedChartRenderer({
   };
 
   const data = useMemo(() => {
+    let result: any[];
+
     // If using default mapping, use the pre-formatted chart_data (rawData)
     // But supplement with names from originalData if rawData names are missing
     if (isUsingDefaultMapping) {
-      return rawData.map((item, index) => {
+      result = rawData.map((item, index) => {
         // Get name from rawData first, then try originalData, then fallback
         let displayName = item.name || item.fullName;
         if (!displayName || displayName === 'undefined' || displayName === 'null') {
@@ -143,24 +151,49 @@ export function EnhancedChartRenderer({
           fullName: displayName,
         };
       });
+    } else {
+      // User has customized the mapping - use originalData if available
+      const dataSource = originalData && originalData.length > 0 ? originalData : rawData;
+      if (!dataSource || dataSource.length === 0) return rawData;
+
+      // Re-map data to use the user's selected fields
+      result = dataSource.map((item, index) => {
+        const anyItem = item as any;
+        const nameValue = anyItem[dataMapping.xAxis] ?? anyItem.name;
+        const displayName = nameValue ? String(nameValue) : `Item ${index + 1}`;
+        return {
+          ...item,
+          name: displayName,
+          value: Number(anyItem[dataMapping.yAxis] ?? anyItem.value ?? 0),
+          fullName: displayName,
+        };
+      });
     }
 
-    // User has customized the mapping - use originalData if available
-    const dataSource = originalData && originalData.length > 0 ? originalData : rawData;
-    if (!dataSource || dataSource.length === 0) return rawData;
+    // Apply sorting
+    if (dataMapping.sortBy) {
+      result = [...result].sort((a, b) => {
+        switch (dataMapping.sortBy) {
+          case 'value_desc':
+            return Number(b.value) - Number(a.value);
+          case 'value_asc':
+            return Number(a.value) - Number(b.value);
+          case 'name_asc':
+            return String(a.name).localeCompare(String(b.name));
+          case 'name_desc':
+            return String(b.name).localeCompare(String(a.name));
+          default:
+            return 0;
+        }
+      });
+    }
 
-    // Re-map data to use the user's selected fields
-    return dataSource.map((item, index) => {
-      const anyItem = item as any;
-      const nameValue = anyItem[dataMapping.xAxis] ?? anyItem.name;
-      const displayName = nameValue ? String(nameValue) : `Item ${index + 1}`;
-      return {
-        ...item,
-        name: displayName,
-        value: Number(anyItem[dataMapping.yAxis] ?? anyItem.value ?? 0),
-        fullName: displayName,
-      };
-    });
+    // Apply limit
+    if (dataMapping.limit && dataMapping.limit > 0) {
+      result = result.slice(0, dataMapping.limit);
+    }
+
+    return result;
   }, [rawData, originalData, dataMapping, isUsingDefaultMapping]);
 
   // Chart state with defaults
@@ -885,14 +918,14 @@ export function EnhancedChartRenderer({
       className="relative group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {
+        // Only hide toolbar, don't close settings panel (user might be interacting with it)
         setIsHovered(false);
-        setShowSettings(false);
       }}
     >
-      {/* Toolbar - appears on hover (outside export ref so it's not captured in image) */}
+      {/* Toolbar - appears on hover OR when settings are open */}
       <div
         className={`absolute top-2 right-2 z-10 transition-opacity duration-200 ${
-          isHovered ? 'opacity-100' : 'opacity-0'
+          isHovered || showSettings ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >
         <ChartToolbar
@@ -905,7 +938,7 @@ export function EnhancedChartRenderer({
 
       {/* Customization Panel */}
       {showSettings && (
-        <div className="absolute top-12 right-2 z-20">
+        <div className="absolute top-12 right-2 z-30">
           <ChartCustomizationPanel
             chartState={chartState}
             currentType={config.type as ChartType}
