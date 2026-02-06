@@ -13,6 +13,7 @@ interface ChartCustomizationPanelProps {
   currentType: ChartType;
   availableFields: string[];
   data: any[];
+  currentMapping?: DataMapping; // Current data mapping to restore state
   onStateChange: (state: Partial<ChartState>) => void;
   onDataMappingChange?: (mapping: DataMapping) => void;
   onClose: () => void;
@@ -85,6 +86,7 @@ export function ChartCustomizationPanel({
   currentType,
   availableFields,
   data,
+  currentMapping,
   onStateChange,
   onDataMappingChange,
   onClose,
@@ -126,41 +128,64 @@ export function ChartCustomizationPanel({
   const numericFields = availableFields.filter(f => fieldTypes[f] === 'number');
   const categoricalFields = availableFields.filter(f => fieldTypes[f] === 'string' || fieldTypes[f] === 'mixed');
 
-  // Find best defaults
+  // Find best defaults - prefer real field names from originalData over 'name'/'value'
   const getDefaultXAxis = () => {
-    if (availableFields.includes('name')) return 'name';
+    // First check for real name fields (not the synthetic 'name' field)
+    const realNameFields = ['product_name', 'store_name', 'category_name', 'category'];
+    for (const field of realNameFields) {
+      if (availableFields.includes(field)) return field;
+    }
+    // Then check for any field containing 'name'
     const preferred = availableFields.find(f =>
-      f.toLowerCase().includes('name') ||
-      f.toLowerCase().includes('category') ||
-      f.toLowerCase().includes('product') ||
-      f.toLowerCase().includes('store')
+      f.toLowerCase().includes('name') && f !== 'name' && f !== 'fullName'
     );
     if (preferred) return preferred;
+    // Fall back to 'name' if it exists
+    if (availableFields.includes('name')) return 'name';
+    // Fall back to first string field
     const stringField = categoricalFields[0];
     if (stringField) return stringField;
     return availableFields[0] || 'name';
   };
 
   const getDefaultYAxis = () => {
-    if (availableFields.includes('value')) return 'value';
+    // First check for real value fields (not the synthetic 'value' field)
+    const realValueFields = ['total_revenue', 'revenue', 'total_sales', 'sales', 'total_quantity_sold', 'quantity', 'amount'];
+    for (const field of realValueFields) {
+      if (availableFields.includes(field)) return field;
+    }
+    // Then check for any field containing value-like names
     const preferred = availableFields.find(f =>
-      f.toLowerCase().includes('revenue') ||
+      (f.toLowerCase().includes('revenue') ||
       f.toLowerCase().includes('sales') ||
       f.toLowerCase().includes('total') ||
       f.toLowerCase().includes('quantity') ||
-      f.toLowerCase().includes('amount')
+      f.toLowerCase().includes('amount')) && f !== 'value'
     );
     if (preferred) return preferred;
+    // Fall back to 'value' if it exists
+    if (availableFields.includes('value')) return 'value';
+    // Fall back to first numeric field
     const numField = numericFields[0];
     if (numField) return numField;
     return availableFields[1] || 'value';
   };
 
-  // Local state for pending changes
-  const [selectedXAxis, setSelectedXAxis] = useState(getDefaultXAxis);
-  const [selectedYAxis, setSelectedYAxis] = useState(getDefaultYAxis);
-  const [sortBy, setSortBy] = useState<'value_desc' | 'value_asc' | 'name_asc' | 'name_desc'>('value_desc');
-  const [limit, setLimit] = useState<number>(0); // 0 = show all
+  // Local state for pending changes - initialize from currentMapping if provided
+  const [selectedXAxis, setSelectedXAxis] = useState(() =>
+    currentMapping?.xAxis && availableFields.includes(currentMapping.xAxis)
+      ? currentMapping.xAxis
+      : getDefaultXAxis()
+  );
+  const [selectedYAxis, setSelectedYAxis] = useState(() =>
+    currentMapping?.yAxis && availableFields.includes(currentMapping.yAxis)
+      ? currentMapping.yAxis
+      : getDefaultYAxis()
+  );
+  const [sortBy, setSortBy] = useState<'value_desc' | 'value_asc' | 'name_asc' | 'name_desc'>(
+    currentMapping?.sortBy || 'value_desc'
+  );
+  const [limit, setLimit] = useState<number>(currentMapping?.limit || 0); // 0 = show all
 
   // Apply all data changes at once
   const applyDataMapping = () => {

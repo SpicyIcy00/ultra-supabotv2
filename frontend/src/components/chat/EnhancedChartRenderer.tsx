@@ -74,16 +74,46 @@ export function EnhancedChartRenderer({
   const [showSettings, setShowSettings] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
+  // Helper to detect best initial field names from data
+  const detectInitialFields = () => {
+    const source = originalData && originalData.length > 0 ? originalData[0] : (rawData && rawData.length > 0 ? rawData[0] : null);
+    if (!source) return { xAxis: 'name', yAxis: 'value' };
+
+    // Find best X-axis (name field)
+    const nameFields = ['product_name', 'name', 'store_name', 'category_name', 'category', 'label', 'title'];
+    let xAxis = 'name';
+    for (const field of nameFields) {
+      if (source[field] !== undefined) {
+        xAxis = field;
+        break;
+      }
+    }
+
+    // Find best Y-axis (value field)
+    const valueFields = ['total_revenue', 'revenue', 'value', 'total_sales', 'sales', 'total_quantity_sold', 'quantity', 'amount'];
+    let yAxis = 'value';
+    for (const field of valueFields) {
+      if (source[field] !== undefined) {
+        yAxis = field;
+        break;
+      }
+    }
+
+    return { xAxis, yAxis };
+  };
+
   // Data mapping state (which fields to use for X and Y axis)
   const [dataMapping, setDataMapping] = useState<{
     xAxis: string;
     yAxis: string;
     sortBy?: 'value_desc' | 'value_asc' | 'name_asc' | 'name_desc';
     limit?: number;
-  }>({
-    xAxis: 'name',
-    yAxis: 'value',
-    sortBy: 'value_desc',
+  }>(() => {
+    const initial = detectInitialFields();
+    return {
+      ...initial,
+      sortBy: 'value_desc',
+    };
   });
 
   // Get available fields - combine rawData fields (name, value) with originalData fields
@@ -108,10 +138,8 @@ export function EnhancedChartRenderer({
   // Source data for the customization panel (for type detection)
   const sourceDataForFields = originalData && originalData.length > 0 ? originalData : rawData;
 
-  // Map data based on current mapping (allows users to change what's displayed)
-  // Default: use rawData (chart_data) which is already properly formatted by the backend
-  // Only use originalData when user explicitly changes the data mapping to custom fields
-  const isUsingDefaultMapping = dataMapping.xAxis === 'name' && dataMapping.yAxis === 'value';
+  // We always use the explicit field mapping now - no more "default" mode
+  // This ensures consistent behavior whether fields are 'name'/'value' or real column names
 
   // Helper to find the best name field from a data item
   const findBestNameField = (item: any): string | null => {
@@ -160,34 +188,33 @@ export function EnhancedChartRenderer({
     const dataSource = originalData && originalData.length > 0 ? originalData : rawData;
     if (!dataSource || dataSource.length === 0) return [];
 
-    let result: any[];
+    // Map data using the current field mapping
+    let result = dataSource.map((item, index) => {
+      const anyItem = item as any;
 
-    if (isUsingDefaultMapping) {
-      // Auto-detect best name and value fields from data
-      result = dataSource.map((item, index) => {
-        const displayName = findBestNameField(item) || `Item ${index + 1}`;
-        const value = findBestValueField(item);
-        return {
-          ...item,
-          name: displayName,
-          value: value,
-          fullName: displayName,
-        };
-      });
-    } else {
-      // User has customized the mapping - use their selected fields
-      result = dataSource.map((item, index) => {
-        const anyItem = item as any;
-        const nameValue = anyItem[dataMapping.xAxis];
-        const displayName = nameValue ? String(nameValue) : `Item ${index + 1}`;
-        return {
-          ...item,
-          name: displayName,
-          value: Number(anyItem[dataMapping.yAxis] ?? 0),
-          fullName: displayName,
-        };
-      });
-    }
+      // Get name from the selected xAxis field, or use fallback detection
+      let displayName = anyItem[dataMapping.xAxis];
+      if (!displayName || displayName === 'undefined' || displayName === 'null') {
+        displayName = findBestNameField(item) || `Item ${index + 1}`;
+      } else {
+        displayName = String(displayName);
+      }
+
+      // Get value from the selected yAxis field, or use fallback detection
+      let value = anyItem[dataMapping.yAxis];
+      if (value === undefined || value === null || isNaN(Number(value))) {
+        value = findBestValueField(item);
+      } else {
+        value = Number(value);
+      }
+
+      return {
+        ...item,
+        name: displayName,
+        value: value,
+        fullName: displayName,
+      };
+    });
 
     // Apply sorting
     if (dataMapping.sortBy) {
@@ -213,7 +240,7 @@ export function EnhancedChartRenderer({
     }
 
     return result;
-  }, [rawData, originalData, dataMapping, isUsingDefaultMapping]);
+  }, [rawData, originalData, dataMapping]);
 
   // Chart state with defaults
   const [chartState, setChartState] = useState<ChartState>({
@@ -963,6 +990,7 @@ export function EnhancedChartRenderer({
             currentType={config.type as ChartType}
             availableFields={availableFields}
             data={sourceDataForFields}
+            currentMapping={dataMapping}
             onStateChange={handleStateChange}
             onDataMappingChange={handleDataMappingChange}
             onClose={() => setShowSettings(false)}
