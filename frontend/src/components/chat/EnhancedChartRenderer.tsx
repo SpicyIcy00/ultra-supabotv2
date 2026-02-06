@@ -568,7 +568,7 @@ export function EnhancedChartRenderer({
           innerRadius={45}
           label={renderPieLabel}
           labelLine={{ stroke: '#6b7280', strokeWidth: 1 }}
-          {...commonProps}
+          isAnimationActive={false}
         >
           {data.map((_, index) => (
             <Cell
@@ -580,7 +580,6 @@ export function EnhancedChartRenderer({
           ))}
         </Pie>
         <Tooltip content={<CustomTooltip />} />
-        {renderLegend()}
       </PieChart>
     );
   };
