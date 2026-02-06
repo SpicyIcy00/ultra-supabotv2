@@ -187,16 +187,47 @@ export function ChartCustomizationPanel({
   );
   const [limit, setLimit] = useState<number>(currentMapping?.limit || 0); // 0 = show all
 
-  // Apply all data changes at once
-  const applyDataMapping = () => {
+  // Helper to apply data mapping immediately (for live updates)
+  const applyMappingNow = (
+    xAxis: string,
+    yAxis: string,
+    sort: 'value_desc' | 'value_asc' | 'name_asc' | 'name_desc',
+    lim: number
+  ) => {
     if (onDataMappingChange) {
       onDataMappingChange({
-        xAxis: selectedXAxis,
-        yAxis: selectedYAxis,
-        sortBy,
-        limit: limit || undefined,
+        xAxis,
+        yAxis,
+        sortBy: sort,
+        limit: lim || undefined,
       });
     }
+  };
+
+  // Handlers that update state AND apply immediately for live updates
+  const handleXAxisChange = (value: string) => {
+    setSelectedXAxis(value);
+    applyMappingNow(value, selectedYAxis, sortBy, limit);
+  };
+
+  const handleYAxisChange = (value: string) => {
+    setSelectedYAxis(value);
+    applyMappingNow(selectedXAxis, value, sortBy, limit);
+  };
+
+  const handleSortChange = (value: 'value_desc' | 'value_asc' | 'name_asc' | 'name_desc') => {
+    setSortBy(value);
+    applyMappingNow(selectedXAxis, selectedYAxis, value, limit);
+  };
+
+  const handleLimitChange = (value: number) => {
+    setLimit(value);
+    applyMappingNow(selectedXAxis, selectedYAxis, sortBy, value);
+  };
+
+  // Apply all data changes at once (kept for Apply button)
+  const applyDataMapping = () => {
+    applyMappingNow(selectedXAxis, selectedYAxis, sortBy, limit);
   };
 
   // Reset to defaults
@@ -389,7 +420,7 @@ export function ChartCustomizationPanel({
               </label>
               <select
                 value={selectedXAxis}
-                onChange={(e) => setSelectedXAxis(e.target.value)}
+                onChange={(e) => handleXAxisChange(e.target.value)}
                 className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
               >
                 {availableFields.map((field) => (
@@ -407,7 +438,7 @@ export function ChartCustomizationPanel({
               </label>
               <select
                 value={selectedYAxis}
-                onChange={(e) => setSelectedYAxis(e.target.value)}
+                onChange={(e) => handleYAxisChange(e.target.value)}
                 className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
               >
                 {availableFields.map((field) => (
@@ -425,7 +456,7 @@ export function ChartCustomizationPanel({
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  onClick={() => setSortBy('value_desc')}
+                  onClick={() => handleSortChange('value_desc')}
                   className={`px-3 py-2 text-xs rounded transition-colors ${
                     sortBy === 'value_desc' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   }`}
@@ -433,7 +464,7 @@ export function ChartCustomizationPanel({
                   Value ↓
                 </button>
                 <button
-                  onClick={() => setSortBy('value_asc')}
+                  onClick={() => handleSortChange('value_asc')}
                   className={`px-3 py-2 text-xs rounded transition-colors ${
                     sortBy === 'value_asc' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   }`}
@@ -441,7 +472,7 @@ export function ChartCustomizationPanel({
                   Value ↑
                 </button>
                 <button
-                  onClick={() => setSortBy('name_asc')}
+                  onClick={() => handleSortChange('name_asc')}
                   className={`px-3 py-2 text-xs rounded transition-colors ${
                     sortBy === 'name_asc' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   }`}
@@ -449,7 +480,7 @@ export function ChartCustomizationPanel({
                   Name A→Z
                 </button>
                 <button
-                  onClick={() => setSortBy('name_desc')}
+                  onClick={() => handleSortChange('name_desc')}
                   className={`px-3 py-2 text-xs rounded transition-colors ${
                     sortBy === 'name_desc' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   }`}
@@ -468,7 +499,7 @@ export function ChartCustomizationPanel({
                 {[0, 5, 10, 20].map((n) => (
                   <button
                     key={n}
-                    onClick={() => setLimit(n)}
+                    onClick={() => handleLimitChange(n)}
                     className={`flex-1 px-3 py-2 text-xs rounded transition-colors ${
                       limit === n ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     }`}

@@ -498,11 +498,43 @@ export function EnhancedChartRenderer({
   );
 
   const renderPieChart = () => {
-    // Custom label renderer that handles missing names
-    const renderPieLabel = ({ name, fullName, percent, index }: any) => {
+    // Custom label renderer - always visible, positioned outside the pie
+    const renderPieLabel = ({
+      cx,
+      cy,
+      midAngle,
+      outerRadius,
+      name,
+      fullName,
+      percent,
+      index,
+    }: any) => {
+      const RADIAN = Math.PI / 180;
+      // Position label outside the pie
+      const radius = outerRadius + 30;
+      const x = cx + radius * Math.cos(-midAngle * RADIAN);
+      const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
       const displayName = fullName || name || data[index]?.fullName || data[index]?.name || `Item ${index + 1}`;
-      const shortName = displayName.length > 15 ? `${displayName.slice(0, 12)}...` : displayName;
-      return `${shortName} (${(percent * 100).toFixed(0)}%)`;
+      const shortName = displayName.length > 12 ? `${displayName.slice(0, 10)}...` : displayName;
+      const percentText = `${(percent * 100).toFixed(0)}%`;
+
+      // Don't show label for very small slices
+      if (percent < 0.02) return null;
+
+      return (
+        <text
+          x={x}
+          y={y}
+          fill="#e5e7eb"
+          textAnchor={x > cx ? 'start' : 'end'}
+          dominantBaseline="central"
+          fontSize={12}
+          fontWeight={500}
+        >
+          {shortName} ({percentText})
+        </text>
+      );
     };
 
     return (
@@ -513,10 +545,10 @@ export function EnhancedChartRenderer({
           nameKey="name"
           cx="50%"
           cy="50%"
-          outerRadius={100}
-          innerRadius={40}
+          outerRadius={80}
+          innerRadius={35}
           label={renderPieLabel}
-          labelLine={{ stroke: '#6b7280' }}
+          labelLine={{ stroke: '#6b7280', strokeWidth: 1 }}
           {...commonProps}
         >
           {data.map((_, index) => (
@@ -982,19 +1014,24 @@ export function EnhancedChartRenderer({
         />
       </div>
 
-      {/* Customization Panel */}
+      {/* Customization Panel - positioned to the left of toolbar to not cover chart */}
       {showSettings && (
-        <div className="absolute top-12 right-2 z-30">
-          <ChartCustomizationPanel
-            chartState={chartState}
-            currentType={config.type as ChartType}
-            availableFields={availableFields}
-            data={sourceDataForFields}
-            currentMapping={dataMapping}
-            onStateChange={handleStateChange}
-            onDataMappingChange={handleDataMappingChange}
-            onClose={() => setShowSettings(false)}
-          />
+        <div className="fixed inset-0 z-40" onClick={() => setShowSettings(false)}>
+          <div
+            className="absolute top-20 right-4 z-50"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ChartCustomizationPanel
+              chartState={chartState}
+              currentType={config.type as ChartType}
+              availableFields={availableFields}
+              data={sourceDataForFields}
+              currentMapping={dataMapping}
+              onStateChange={handleStateChange}
+              onDataMappingChange={handleDataMappingChange}
+              onClose={() => setShowSettings(false)}
+            />
+          </div>
         </div>
       )}
 
