@@ -80,24 +80,45 @@ export function EnhancedChartRenderer({
     yAxis: 'value',
   });
 
-  // Get available fields from original data (if provided) or chart data
-  // originalData has all fields from the SQL query, rawData (chart_data) is pre-processed
-  const sourceDataForFields = originalData && originalData.length > 0 ? originalData : rawData;
+  // Get available fields - combine rawData fields (name, value) with originalData fields
+  // This allows users to see what's currently displayed AND switch to other fields
   const availableFields = useMemo(() => {
-    if (!sourceDataForFields || sourceDataForFields.length === 0) return ['name', 'value'];
-    return Object.keys(sourceDataForFields[0]);
-  }, [sourceDataForFields]);
+    const fields = new Set<string>();
+
+    // Add rawData fields first (these are the defaults: name, value, fullName)
+    if (rawData && rawData.length > 0) {
+      Object.keys(rawData[0]).forEach(key => fields.add(key));
+    }
+
+    // Add originalData fields (all SQL result columns)
+    if (originalData && originalData.length > 0) {
+      Object.keys(originalData[0]).forEach(key => fields.add(key));
+    }
+
+    if (fields.size === 0) return ['name', 'value'];
+    return Array.from(fields);
+  }, [rawData, originalData]);
+
+  // Source data for the customization panel (for type detection)
+  const sourceDataForFields = originalData && originalData.length > 0 ? originalData : rawData;
 
   // Map data based on current mapping (allows users to change what's displayed)
-  // Use originalData if available (has all fields), otherwise fall back to rawData
-  const dataSource = originalData && originalData.length > 0 ? originalData : rawData;
+  // Default: use rawData (chart_data) which is already properly formatted by the backend
+  // Only use originalData when user explicitly changes the data mapping to custom fields
+  const isUsingDefaultMapping = dataMapping.xAxis === 'name' && dataMapping.yAxis === 'value';
+
   const data = useMemo(() => {
-    if (!dataSource || dataSource.length === 0) return rawData;
-    // If using default mapping and no originalData, return raw data as-is
-    if (dataMapping.xAxis === 'name' && dataMapping.yAxis === 'value' && !originalData) {
+    // If using default mapping, use the pre-formatted chart_data (rawData)
+    // This is the recommended visualization from the backend
+    if (isUsingDefaultMapping) {
       return rawData;
     }
-    // Re-map data to use selected fields
+
+    // User has customized the mapping - use originalData if available
+    const dataSource = originalData && originalData.length > 0 ? originalData : rawData;
+    if (!dataSource || dataSource.length === 0) return rawData;
+
+    // Re-map data to use the user's selected fields
     return dataSource.map(item => {
       const anyItem = item as any;
       return {
@@ -107,7 +128,7 @@ export function EnhancedChartRenderer({
         fullName: String(anyItem[dataMapping.xAxis] ?? anyItem.fullName ?? anyItem.name ?? ''),
       };
     });
-  }, [dataSource, rawData, originalData, dataMapping]);
+  }, [rawData, originalData, dataMapping, isUsingDefaultMapping]);
 
   // Chart state with defaults
   const [chartState, setChartState] = useState<ChartState>({

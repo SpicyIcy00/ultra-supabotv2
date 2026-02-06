@@ -91,8 +91,31 @@ export function ChartCustomizationPanel({
   const [activeTab, setActiveTab] = useState<'type' | 'data' | 'style'>('type');
   const [expandedCategory, setExpandedCategory] = useState<string | null>('Basic');
 
-  // Find best default Y-axis (prefer numeric fields with revenue/sales/quantity in name)
+  // Default to 'name' and 'value' to match the pre-formatted chart_data from backend
+  // These are what the chart shows by default - user can change to see different fields
+  const getDefaultXAxis = () => {
+    // If 'name' exists in fields, use it (matches chart_data format)
+    if (availableFields.includes('name')) return 'name';
+    // Otherwise find a good categorical field
+    const preferred = availableFields.find(f =>
+      f.toLowerCase().includes('name') ||
+      f.toLowerCase().includes('category') ||
+      f.toLowerCase().includes('product') ||
+      f.toLowerCase().includes('store')
+    );
+    if (preferred) return preferred;
+    // Fall back to first string field
+    if (data && data.length > 0) {
+      const stringField = availableFields.find(f => typeof data[0][f] === 'string');
+      if (stringField) return stringField;
+    }
+    return availableFields[0] || 'name';
+  };
+
   const getDefaultYAxis = () => {
+    // If 'value' exists in fields, use it (matches chart_data format)
+    if (availableFields.includes('value')) return 'value';
+    // Otherwise find a good numeric field
     const preferred = availableFields.find(f =>
       f.toLowerCase().includes('revenue') ||
       f.toLowerCase().includes('sales') ||
@@ -107,23 +130,6 @@ export function ChartCustomizationPanel({
       if (numericField) return numericField;
     }
     return availableFields[1] || 'value';
-  };
-
-  // Find best default X-axis (prefer string fields with name/category in name)
-  const getDefaultXAxis = () => {
-    const preferred = availableFields.find(f =>
-      f.toLowerCase().includes('name') ||
-      f.toLowerCase().includes('category') ||
-      f.toLowerCase().includes('product') ||
-      f.toLowerCase().includes('store')
-    );
-    if (preferred) return preferred;
-    // Fall back to first string field
-    if (data && data.length > 0) {
-      const stringField = availableFields.find(f => typeof data[0][f] === 'string');
-      if (stringField) return stringField;
-    }
-    return availableFields[0] || 'name';
   };
 
   const [selectedXAxis, setSelectedXAxis] = useState(getDefaultXAxis());
