@@ -113,58 +113,77 @@ export function EnhancedChartRenderer({
   // Only use originalData when user explicitly changes the data mapping to custom fields
   const isUsingDefaultMapping = dataMapping.xAxis === 'name' && dataMapping.yAxis === 'value';
 
-  // Helper to find the best name field from original data
-  const findNameFromOriginal = (index: number): string | null => {
-    if (!originalData || !originalData[index]) return null;
-    const item = originalData[index];
+  // Helper to find the best name field from a data item
+  const findBestNameField = (item: any): string | null => {
+    if (!item) return null;
     // Try common name fields in order of preference
-    const nameFields = ['product_name', 'name', 'store_name', 'category', 'label', 'title'];
+    const nameFields = ['product_name', 'name', 'store_name', 'category_name', 'category', 'label', 'title', 'fullName'];
     for (const field of nameFields) {
-      if (item[field] && String(item[field]).trim()) {
-        return String(item[field]);
+      const val = item[field];
+      if (val && String(val).trim() && val !== 'undefined' && val !== 'null') {
+        return String(val);
       }
     }
-    // Fall back to first string field
+    // Fall back to first string field that's not an ID
     for (const key of Object.keys(item)) {
-      if (typeof item[key] === 'string' && item[key].trim() && !key.toLowerCase().includes('id')) {
-        return item[key];
+      const val = item[key];
+      if (typeof val === 'string' && val.trim() && !key.toLowerCase().includes('id') && !key.toLowerCase().includes('sku')) {
+        return val;
       }
     }
     return null;
   };
 
+  // Helper to find the best value field from a data item
+  const findBestValueField = (item: any): number => {
+    if (!item) return 0;
+    // Try common value fields
+    const valueFields = ['value', 'total_revenue', 'revenue', 'total_sales', 'sales', 'total_quantity_sold', 'quantity', 'amount', 'count'];
+    for (const field of valueFields) {
+      const val = item[field];
+      if (val !== undefined && val !== null && !isNaN(Number(val))) {
+        return Number(val);
+      }
+    }
+    // Fall back to first numeric field
+    for (const key of Object.keys(item)) {
+      const val = item[key];
+      if (typeof val === 'number' && !key.toLowerCase().includes('id')) {
+        return val;
+      }
+    }
+    return 0;
+  };
+
   const data = useMemo(() => {
+    // Always prefer originalData when available - it has all the real field names
+    const dataSource = originalData && originalData.length > 0 ? originalData : rawData;
+    if (!dataSource || dataSource.length === 0) return [];
+
     let result: any[];
 
-    // If using default mapping, use the pre-formatted chart_data (rawData)
-    // But supplement with names from originalData if rawData names are missing
     if (isUsingDefaultMapping) {
-      result = rawData.map((item, index) => {
-        // Get name from rawData first, then try originalData, then fallback
-        let displayName = item.name || item.fullName;
-        if (!displayName || displayName === 'undefined' || displayName === 'null') {
-          displayName = findNameFromOriginal(index) || `Item ${index + 1}`;
-        }
+      // Auto-detect best name and value fields from data
+      result = dataSource.map((item, index) => {
+        const displayName = findBestNameField(item) || `Item ${index + 1}`;
+        const value = findBestValueField(item);
         return {
           ...item,
           name: displayName,
+          value: value,
           fullName: displayName,
         };
       });
     } else {
-      // User has customized the mapping - use originalData if available
-      const dataSource = originalData && originalData.length > 0 ? originalData : rawData;
-      if (!dataSource || dataSource.length === 0) return rawData;
-
-      // Re-map data to use the user's selected fields
+      // User has customized the mapping - use their selected fields
       result = dataSource.map((item, index) => {
         const anyItem = item as any;
-        const nameValue = anyItem[dataMapping.xAxis] ?? anyItem.name;
+        const nameValue = anyItem[dataMapping.xAxis];
         const displayName = nameValue ? String(nameValue) : `Item ${index + 1}`;
         return {
           ...item,
           name: displayName,
-          value: Number(anyItem[dataMapping.yAxis] ?? anyItem.value ?? 0),
+          value: Number(anyItem[dataMapping.yAxis] ?? 0),
           fullName: displayName,
         };
       });
