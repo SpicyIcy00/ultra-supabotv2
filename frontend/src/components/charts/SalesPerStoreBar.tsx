@@ -23,7 +23,7 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[350px]">
+      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[420px]">
         <h3 className="text-lg font-bold text-white mb-4">Sales per Store</h3>
         <div className="flex items-center justify-center h-[280px]">
           <div className="animate-pulse text-gray-400">Loading...</div>
@@ -34,7 +34,7 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
 
   if (!data || data.length === 0) {
     return (
-      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[350px]">
+      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[420px]">
         <h3 className="text-lg font-bold text-white mb-4">Sales per Store</h3>
         <div className="flex items-center justify-center h-[280px] text-gray-400">
           No data available
@@ -115,8 +115,8 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
   };
 
   return (
-    <div id="sales-per-store-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[350px]">
-      <div className="flex justify-between items-center mb-4">
+    <div id="sales-per-store-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[420px]">
+      <div className="flex justify-between items-center mb-2">
         <h3 className="text-lg font-bold text-white">Sales per Store</h3>
         <button
           onClick={handleExport}
@@ -127,7 +127,7 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
           Export
         </button>
       </div>
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height={370}>
         <BarChart
           data={chartData}
           margin={{ top: 30, right: 20, left: 20, bottom: 5 }}
