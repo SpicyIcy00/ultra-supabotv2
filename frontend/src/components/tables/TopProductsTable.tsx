@@ -85,7 +85,6 @@ export const TopProductsTable: React.FC<TopProductsTableProps> = ({
               <th className="text-right py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Current Sales</th>
               <th className="text-right py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Previous Sales</th>
               <th className="text-right py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Change</th>
-              <th className="text-center py-3 px-2 text-xs font-semibold text-gray-400 uppercase">Trend</th>
             </tr>
           </thead>
           <tbody>
@@ -108,18 +107,13 @@ export const TopProductsTable: React.FC<TopProductsTableProps> = ({
                   <td className="py-3 px-4 text-right text-sm text-gray-400">
                     {formatCurrency(item.previous_sales)}
                   </td>
-                  <td className="py-3 px-4 text-right">
+                  <td className="py-3 px-4 text-right whitespace-nowrap">
                     <span
                       className={`text-sm font-bold ${
                         isPositive ? 'text-green-400' : 'text-red-400'
                       }`}
                     >
                       {formatPercentage(item.percentageChange)}
-                    </span>
-                  </td>
-                  <td className="py-3 px-2 text-center">
-                    <span className={`text-xl ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-                      {isPositive ? '↑' : '↓'}
                     </span>
                   </td>
                 </tr>
