@@ -121,7 +121,7 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
       <ResponsiveContainer width="100%" height={370}>
         <BarChart
           data={chartData}
-          margin={{ top: 25, right: 20, left: 10, bottom: 5 }}
+          margin={{ top: 25, right: 30, left: 15, bottom: 10 }}
         >
           <CartesianGrid vertical={true} horizontal={false} stroke={THEME_COLORS.gridLines} />
           <XAxis
