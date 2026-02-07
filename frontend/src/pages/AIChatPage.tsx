@@ -10,6 +10,7 @@ import type { ChatMessage } from '../types/chatbot';
 import { streamChatQuery, getSuggestions } from '../services/chatbotApi';
 import { EnhancedChartRenderer } from '../components/chat/EnhancedChartRenderer';
 import type { ChartState } from '../types/enhancedChart';
+import { STORE_COLORS, CATEGORY_COLORS } from '../constants/colors';
 
 // Generate a unique session ID for conversation memory
 const generateSessionId = () => `session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -236,6 +237,97 @@ export default function AIChatPage() {
   );
 }
 
+// Build a lookup of all entity names to their colors (stores + categories)
+const ENTITY_COLORS: Record<string, string> = { ...STORE_COLORS, ...CATEGORY_COLORS };
+
+// Build a regex that matches any store or category name (case-insensitive, whole word)
+const entityNames = Object.keys(ENTITY_COLORS).sort((a, b) => b.length - a.length); // longest first
+const entityPattern = new RegExp(
+  `(${entityNames.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`,
+  'gi'
+);
+
+// Find the matching entity color (case-insensitive)
+function getEntityColor(name: string): string | null {
+  const entry = Object.entries(ENTITY_COLORS).find(
+    ([k]) => k.toLowerCase() === name.toLowerCase()
+  );
+  return entry ? entry[1] : null;
+}
+
+// Component that highlights store/category names with their mapped colors
+function ColoredText({ children }: { children: string }) {
+  if (!children || typeof children !== 'string') return <>{children}</>;
+
+  const parts = children.split(entityPattern);
+  if (parts.length === 1) return <>{children}</>;
+
+  return (
+    <>
+      {parts.map((part, i) => {
+        const color = getEntityColor(part);
+        if (color) {
+          return (
+            <span
+              key={i}
+              className="font-semibold px-1 rounded"
+              style={{ color, borderBottom: `2px solid ${color}` }}
+            >
+              {part}
+            </span>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+}
+
+// Custom ReactMarkdown components to inject entity color highlighting into text nodes
+const markdownComponents = {
+  p: ({ children, ...props }: any) => (
+    <p {...props}>
+      {processChildren(children)}
+    </p>
+  ),
+  li: ({ children, ...props }: any) => (
+    <li {...props}>
+      {processChildren(children)}
+    </li>
+  ),
+  strong: ({ children, ...props }: any) => (
+    <strong {...props}>
+      {processChildren(children)}
+    </strong>
+  ),
+  em: ({ children, ...props }: any) => (
+    <em {...props}>
+      {processChildren(children)}
+    </em>
+  ),
+  td: ({ children, ...props }: any) => (
+    <td {...props}>
+      {processChildren(children)}
+    </td>
+  ),
+};
+
+// Recursively process children to highlight entity names in text nodes
+function processChildren(children: React.ReactNode): React.ReactNode {
+  if (typeof children === 'string') {
+    return <ColoredText>{children}</ColoredText>;
+  }
+  if (Array.isArray(children)) {
+    return children.map((child, i) => {
+      if (typeof child === 'string') {
+        return <ColoredText key={i}>{child}</ColoredText>;
+      }
+      return child;
+    });
+  }
+  return children;
+}
+
 interface MessageBubbleProps {
   message: ChatMessage;
   onChartCustomizationChange: (messageId: string, customization: ChartState) => void;
@@ -274,7 +366,7 @@ function MessageBubble({ message, onChartCustomizationChange }: MessageBubblePro
           <div className="space-y-4">
             {/* Formatted Response */}
             <div className="prose prose-invert max-w-none">
-              <ReactMarkdown>{message.content}</ReactMarkdown>
+              <ReactMarkdown components={markdownComponents}>{message.content}</ReactMarkdown>
             </div>
 
             {/* Chart - Using Enhanced Chart Renderer with 15+ chart types */}
@@ -400,6 +492,26 @@ function DataTable({ data }: { data: any[] }) {
     return String(value);
   };
 
+  // Render a cell with optional entity color indicator
+  const renderCell = (value: any, columnName: string) => {
+    const formatted = formatCellValue(value, columnName);
+    if (value === null || value === undefined) return <span>{formatted}</span>;
+
+    const color = getEntityColor(String(value));
+    if (color) {
+      return (
+        <span className="flex items-center gap-1.5">
+          <span
+            className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
+            style={{ backgroundColor: color }}
+          />
+          <span style={{ color }}>{formatted}</span>
+        </span>
+      );
+    }
+    return <span>{formatted}</span>;
+  };
+
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-sm">
@@ -417,7 +529,7 @@ function DataTable({ data }: { data: any[] }) {
             <tr key={idx} className="border-t border-gray-800">
               {columns.map((col) => (
                 <td key={col} className="px-3 py-2 text-gray-300">
-                  {formatCellValue(row[col], col)}
+                  {renderCell(row[col], col)}
                 </td>
               ))}
             </tr>

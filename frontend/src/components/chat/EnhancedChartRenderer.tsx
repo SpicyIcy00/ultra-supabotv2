@@ -43,6 +43,7 @@ import {
   formatCurrency,
   abbreviateNumber,
 } from '../../types/enhancedChart';
+import { STORE_COLORS, CATEGORY_COLORS } from '../../constants/colors';
 import type {
   ChartType,
   ChartState,
@@ -251,7 +252,29 @@ export function EnhancedChartRenderer({
   });
 
   // Get colors from current theme
-  const colors = useMemo(() => getThemeColors(chartState.colorTheme), [chartState.colorTheme]);
+  const themeColors = useMemo(() => getThemeColors(chartState.colorTheme), [chartState.colorTheme]);
+
+  // Build entity-aware color array: use store/category colors when data matches, fallback to theme
+  const colors = useMemo(() => {
+    if (!data || data.length === 0) return themeColors;
+
+    // Check if data names match stores or categories
+    const storeNames = Object.keys(STORE_COLORS);
+    const categoryNames = Object.keys(CATEGORY_COLORS);
+
+    const hasStoreMatch = data.some(d => storeNames.some(s => s.toLowerCase() === String(d.name).toLowerCase()));
+    const hasCategoryMatch = data.some(d => categoryNames.some(c => c.toLowerCase() === String(d.name).toLowerCase()));
+
+    if (!hasStoreMatch && !hasCategoryMatch) return themeColors;
+
+    // Map each data point to its entity color or fallback to theme color
+    const lookup = hasStoreMatch ? STORE_COLORS : CATEGORY_COLORS;
+    return data.map((d, idx) => {
+      const name = String(d.name);
+      const match = Object.entries(lookup).find(([k]) => k.toLowerCase() === name.toLowerCase());
+      return match ? match[1] : themeColors[idx % themeColors.length];
+    });
+  }, [data, themeColors]);
 
   // Handle state changes
   const handleStateChange = (updates: Partial<ChartState>) => {
@@ -378,7 +401,11 @@ export function EnhancedChartRenderer({
         cursor="pointer"
         radius={[4, 4, 0, 0]}
         {...commonProps}
-      />
+      >
+        {data.map((_, index) => (
+          <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+        ))}
+      </Bar>
     </BarChart>
   );
 
@@ -411,7 +438,11 @@ export function EnhancedChartRenderer({
         cursor="pointer"
         radius={[0, 4, 4, 0]}
         {...commonProps}
-      />
+      >
+        {data.map((_, index) => (
+          <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+        ))}
+      </Bar>
     </BarChart>
   );
 
@@ -814,7 +845,11 @@ export function EnhancedChartRenderer({
       <Tooltip content={<CustomTooltip />} />
       {renderLegend()}
       {/* Line from origin to point */}
-      <Bar dataKey="value" fill={colors[0]} barSize={3} {...commonProps} />
+      <Bar dataKey="value" fill={colors[0]} barSize={3} {...commonProps}>
+        {data.map((_, index) => (
+          <Cell key={`bar-${index}`} fill={colors[index % colors.length]} />
+        ))}
+      </Bar>
       {/* Circle at end */}
       <Scatter dataKey="value" fill={colors[0]}>
         {data.map((_, index) => (
