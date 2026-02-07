@@ -85,7 +85,6 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
     const pctChange = item.percentageChange;
     const isPositive = pctChange >= 0;
     const color = isPositive ? THEME_COLORS.positiveChange : THEME_COLORS.negativeChange;
-    const arrow = isPositive ? '\u2191' : '\u2193';
 
     return (
       <text
@@ -96,7 +95,7 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
         fontSize={11}
         fontWeight="bold"
       >
-        {arrow} {formatPercentage(pctChange)}
+        {formatPercentage(pctChange)}
       </text>
     );
   };
