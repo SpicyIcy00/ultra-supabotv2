@@ -121,18 +121,20 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
       <ResponsiveContainer width="100%" height={370}>
         <BarChart
           data={chartData}
-          margin={{ top: 25, right: 30, left: 15, bottom: 10 }}
+          margin={{ top: 25, right: 40, left: 5, bottom: 5 }}
         >
           <CartesianGrid vertical={true} horizontal={false} stroke={THEME_COLORS.gridLines} />
           <XAxis
             dataKey="store_name"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: '#f3f4f6', fontSize: 12, fontWeight: 500 }}
+            tick={{ fill: '#f3f4f6', fontSize: 11, fontWeight: 500 }}
+            interval={0}
           />
           <YAxis
             axisLine={false}
             tickLine={false}
+            width={55}
             tick={{ fill: '#9ca3af', fontSize: 11 }}
             tickFormatter={(value) => `₱${(value / 1000).toFixed(0)}k`}
           />
