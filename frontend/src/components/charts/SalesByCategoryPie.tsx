@@ -1,5 +1,5 @@
 import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Download } from 'lucide-react';
 import { getCategoryColor } from '../../constants/colors';
 import { formatCurrency } from '../../utils/dateCalculations';
@@ -65,30 +65,54 @@ export const SalesByCategoryPie: React.FC<SalesByCategoryPieProps> = ({
     return null;
   };
 
-  const renderLegend = (props: any) => {
-    const { payload } = props;
-    return (
-      <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-4">
-        {payload.map((entry: any, index: number) => (
-          <div key={`legend-${index}`} className="flex items-center gap-2">
-            <div
-              className="w-3 h-3 rounded"
-              style={{ backgroundColor: entry.color }}
-            />
-            <span className="text-xs text-gray-300">{entry.value}</span>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
   const handleExport = () => {
     exportChartAsImage('sales-by-category-chart', 'sales-by-category');
   };
 
+  const renderPieLabel = (props: any) => {
+    const { cx, cy, midAngle, outerRadius, percent, index } = props;
+    if (percent < 0.02) return null;
+
+    const RADIAN = Math.PI / 180;
+    const radius = outerRadius + 30;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    const entry = chartData[index];
+    const displayName = entry?.name || `Item ${index + 1}`;
+    const shortName = displayName.length > 18 ? `${displayName.slice(0, 15)}...` : displayName;
+    const percentText = `${(percent * 100).toFixed(1)}%`;
+
+    return (
+      <g>
+        <text
+          x={x}
+          y={y - 8}
+          fill="#f3f4f6"
+          textAnchor={x > cx ? 'start' : 'end'}
+          dominantBaseline="central"
+          fontSize={11}
+          fontWeight={600}
+        >
+          {shortName}
+        </text>
+        <text
+          x={x}
+          y={y + 8}
+          fill="#9ca3af"
+          textAnchor={x > cx ? 'start' : 'end'}
+          dominantBaseline="central"
+          fontSize={10}
+        >
+          {formatCurrency(entry.value)} ({percentText})
+        </text>
+      </g>
+    );
+  };
+
   return (
-    <div id="sales-by-category-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[350px]">
-      <div className="flex justify-between items-center mb-4">
+    <div id="sales-by-category-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[420px]">
+      <div className="flex justify-between items-center mb-2">
         <h3 className="text-lg font-bold text-white">Sales by Category</h3>
         <button
           onClick={handleExport}
@@ -99,24 +123,24 @@ export const SalesByCategoryPie: React.FC<SalesByCategoryPieProps> = ({
           Export
         </button>
       </div>
-      <ResponsiveContainer width="100%" height={280}>
-        <PieChart>
+      <ResponsiveContainer width="100%" height={370}>
+        <PieChart margin={{ top: 40, right: 120, bottom: 40, left: 120 }}>
           <Pie
             data={chartData}
             cx="50%"
-            cy="45%"
-            labelLine={false}
-            label={({ percentage }) => `${percentage}%`}
-            outerRadius={80}
-            fill="#8884d8"
+            cy="50%"
+            outerRadius={100}
+            innerRadius={40}
+            label={renderPieLabel}
+            labelLine={{ stroke: '#6b7280', strokeWidth: 1 }}
             dataKey="value"
+            isAnimationActive={false}
           >
             {chartData.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.color} />
             ))}
           </Pie>
           <Tooltip content={<CustomTooltip />} />
-          <Legend content={renderLegend} />
         </PieChart>
       </ResponsiveContainer>
     </div>
