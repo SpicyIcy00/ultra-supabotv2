@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Download } from 'lucide-react';
 import { getStoreColor, THEME_COLORS } from '../../constants/colors';
 import { formatCurrency, formatPercentage, calculatePercentageChange } from '../../utils/dateCalculations';
@@ -53,6 +53,8 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
       percentageChange: calculatePercentageChange(item.current_sales, item.previous_sales),
     }));
 
+  const maxSales = Math.max(...chartData.map((d) => d.current_sales));
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
@@ -76,35 +78,59 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
     return null;
   };
 
+  // Horizontal bar label: value + percentage badge at end of bar
   const CustomLabel = (props: any) => {
-    const { x, y, width, index } = props;
+    const { x, y, width, height, index } = props;
     const item = chartData[index];
-
     if (!item) return null;
 
-    const percentageChange = item.percentageChange;
-    const isPositive = percentageChange >= 0;
+    const pctChange = item.percentageChange;
+    const isPositive = pctChange >= 0;
+    const barEnd = x + width;
+
+    // Value label right after bar
+    const valueX = barEnd + 8;
+    const centerY = y + height / 2;
+
+    // Percentage badge after value
+    const valueText = formatCurrency(item.current_sales);
+    const pctText = formatPercentage(pctChange);
+    const badgeX = barEnd + 8;
 
     return (
       <g>
+        {/* Value text */}
+        <text
+          x={valueX}
+          y={centerY - 7}
+          fill="#f3f4f6"
+          textAnchor="start"
+          dominantBaseline="central"
+          fontSize={12}
+          fontWeight={600}
+        >
+          {valueText}
+        </text>
+        {/* Percentage badge */}
         <rect
-          x={x + width / 2 - 30}
-          y={y - 25}
-          width={60}
-          height={20}
+          x={badgeX}
+          y={centerY + 2}
+          width={52}
+          height={16}
           fill={isPositive ? THEME_COLORS.positiveChange : THEME_COLORS.negativeChange}
-          rx={4}
+          rx={3}
           opacity={0.9}
         />
         <text
-          x={x + width / 2}
-          y={y - 12}
+          x={badgeX + 26}
+          y={centerY + 10}
           fill="white"
           textAnchor="middle"
-          fontSize={11}
+          dominantBaseline="central"
+          fontSize={10}
           fontWeight="bold"
         >
-          {formatPercentage(percentageChange)}
+          {pctText}
         </text>
       </g>
     );
@@ -130,27 +156,28 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
       <ResponsiveContainer width="100%" height={370}>
         <BarChart
           data={chartData}
-          margin={{ top: 30, right: 20, left: 20, bottom: 5 }}
+          layout="vertical"
+          margin={{ top: 10, right: 130, left: 10, bottom: 10 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke={THEME_COLORS.gridLines} />
           <XAxis
-            dataKey="store_name"
-            stroke={THEME_COLORS.primaryText}
-            tick={{ fill: THEME_COLORS.primaryText, fontSize: 11 }}
-            angle={-15}
-            textAnchor="end"
-            height={60}
+            type="number"
+            hide
+            domain={[0, maxSales * 1.1]}
           />
           <YAxis
-            stroke={THEME_COLORS.primaryText}
-            tick={{ fill: THEME_COLORS.primaryText, fontSize: 11 }}
-            tickFormatter={(value) => `₱${(value / 1000).toFixed(0)}k`}
+            type="category"
+            dataKey="store_name"
+            width={90}
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: '#f3f4f6', fontSize: 13, fontWeight: 500 }}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }} />
           <Bar
             dataKey="current_sales"
             label={<CustomLabel />}
-            radius={[8, 8, 0, 0]}
+            radius={[0, 6, 6, 0]}
+            barSize={28}
           >
             {chartData.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.color} />
