@@ -270,12 +270,11 @@ class ReplenishmentService:
     ) -> Dict[Tuple[str, str], List[float]]:
         """Batch fetch daily sales for store-SKU pairs (fallback mode).
 
-        When include_zero_days is True, days with zero sales are kept and
-        dates with no transactions at all are padded with 0.0 so that the
-        median reflects true demand (not inflated by excluding zeros).
+        When include_zero_days is True, the returned list contains a single
+        value: total_sales / lookback_days (true daily average). This avoids
+        the median being zeroed out by padding with 0.0 on no-sale days.
         """
-        today = date.today()
-        cutoff = today - timedelta(days=lookback_days)
+        cutoff = date.today() - timedelta(days=lookback_days)
         store_filter = "AND t.store_id = :store_id" if store_id else ""
         query = text(f"""
             SELECT
@@ -299,27 +298,18 @@ class ReplenishmentService:
         rows = result.fetchall()
 
         if include_zero_days:
-            # Build the full set of dates in the lookback window
-            all_dates = set()
-            for d in range(1, lookback_days + 1):
-                all_dates.add(today - timedelta(days=d))
-
-            sales_map: Dict[Tuple[str, str], List[float]] = {}
-            dates_seen: Dict[Tuple[str, str], set] = {}
+            # Sum total sales per store-SKU, then divide by lookback_days
+            # to get the true daily average (including days with no sales).
+            totals: Dict[Tuple[str, str], float] = {}
             for row in rows:
                 key = (row[0], row[1])
-                sale_date = row[2] if isinstance(row[2], date) else row[2]
                 qty = float(row[3])
-                if key not in sales_map:
-                    sales_map[key] = []
-                    dates_seen[key] = set()
-                sales_map[key].append(qty)
-                dates_seen[key].add(sale_date)
+                totals[key] = totals.get(key, 0.0) + qty
 
-            # Pad missing dates with 0.0
-            for key in sales_map:
-                missing_count = len(all_dates - dates_seen[key])
-                sales_map[key].extend([0.0] * missing_count)
+            sales_map: Dict[Tuple[str, str], List[float]] = {}
+            for key, total in totals.items():
+                # Store as single-element list so median() returns the value
+                sales_map[key] = [total / lookback_days]
         else:
             sales_map = {}
             for row in rows:
