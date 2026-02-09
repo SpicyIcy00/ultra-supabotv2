@@ -265,10 +265,17 @@ class ReplenishmentService:
     # ----------------------------------------------------------------
 
     async def _batch_get_daily_sales_fallback(
-        self, lookback_days: int = 28, store_id: Optional[str] = None
+        self, lookback_days: int = 28, store_id: Optional[str] = None,
+        include_zero_days: bool = False,
     ) -> Dict[Tuple[str, str], List[float]]:
-        """Batch fetch daily sales for store-SKU pairs (fallback mode)."""
-        cutoff = date.today() - timedelta(days=lookback_days)
+        """Batch fetch daily sales for store-SKU pairs (fallback mode).
+
+        When include_zero_days is True, days with zero sales are kept and
+        dates with no transactions at all are padded with 0.0 so that the
+        median reflects true demand (not inflated by excluding zeros).
+        """
+        today = date.today()
+        cutoff = today - timedelta(days=lookback_days)
         store_filter = "AND t.store_id = :store_id" if store_id else ""
         query = text(f"""
             SELECT
@@ -291,14 +298,38 @@ class ReplenishmentService:
         result = await self.db.execute(query, params)
         rows = result.fetchall()
 
-        sales_map: Dict[Tuple[str, str], List[float]] = {}
-        for row in rows:
-            key = (row[0], row[1])
-            qty = float(row[3])
-            if qty > 0:  # Filter zero-sales days as proxy for stockouts
+        if include_zero_days:
+            # Build the full set of dates in the lookback window
+            all_dates = set()
+            for d in range(1, lookback_days + 1):
+                all_dates.add(today - timedelta(days=d))
+
+            sales_map: Dict[Tuple[str, str], List[float]] = {}
+            dates_seen: Dict[Tuple[str, str], set] = {}
+            for row in rows:
+                key = (row[0], row[1])
+                sale_date = row[2] if isinstance(row[2], date) else row[2]
+                qty = float(row[3])
                 if key not in sales_map:
                     sales_map[key] = []
+                    dates_seen[key] = set()
                 sales_map[key].append(qty)
+                dates_seen[key].add(sale_date)
+
+            # Pad missing dates with 0.0
+            for key in sales_map:
+                missing_count = len(all_dates - dates_seen[key])
+                sales_map[key].extend([0.0] * missing_count)
+        else:
+            sales_map = {}
+            for row in rows:
+                key = (row[0], row[1])
+                qty = float(row[3])
+                if qty > 0:  # Filter zero-sales days as proxy for stockouts
+                    if key not in sales_map:
+                        sales_map[key] = []
+                    sales_map[key].append(qty)
+
         return sales_map
 
     async def _batch_get_daily_sales_snapshot(
@@ -409,7 +440,12 @@ class ReplenishmentService:
         if calc_mode == "snapshot":
             sales_cache = await self._batch_get_daily_sales_snapshot(store_id=store_id)
         else:
-            sales_cache = await self._batch_get_daily_sales_fallback(store_id=store_id)
+            # When inventory snapshots are disabled, include zero-sales days
+            # so the median is not inflated by excluding them
+            include_zeros = not config["use_inventory_snapshots"]
+            sales_cache = await self._batch_get_daily_sales_fallback(
+                store_id=store_id, include_zero_days=include_zeros,
+            )
 
         # Delete previous plans for this run_date (and store if filtered)
         delete_q = delete(ShipmentPlan).where(ShipmentPlan.run_date == run_date)

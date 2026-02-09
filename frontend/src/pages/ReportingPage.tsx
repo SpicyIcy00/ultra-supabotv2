@@ -306,11 +306,11 @@ const ReportingPage: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 <div>
-                  <p className="text-white font-medium text-sm">Use Inventory Snapshots (28-day)</p>
+                  <p className="text-white font-medium text-sm">Exclude Zero-Sales Days (Stockout Detection)</p>
                   <p className="text-gray-400 text-xs mt-1">
                     {replenishmentConfig?.use_inventory_snapshots !== false
-                      ? 'Enabled — uses inventory snapshot data to exclude stockout days from sales calculations.'
-                      : 'Disabled — using sales-only mode. Calculations ignore inventory levels.'}
+                      ? 'Enabled — days with zero sales are excluded from the average, assuming they were stockouts. This can inflate daily sales for low-demand products.'
+                      : 'Disabled — all days (including zero-sales days) are included in the average. Use this if inventory data is incomplete.'}
                   </p>
                 </div>
               </div>
