@@ -39,14 +39,30 @@ class ReplenishmentService:
     # Configuration
     # ----------------------------------------------------------------
 
+    async def _ensure_config_table(self) -> None:
+        """Create replenishment_config table if it doesn't exist."""
+        await self.db.execute(text("""
+            CREATE TABLE IF NOT EXISTS replenishment_config (
+                id INTEGER PRIMARY KEY,
+                use_inventory_snapshots BOOLEAN NOT NULL DEFAULT true,
+                updated_at TIMESTAMPTZ DEFAULT timezone('Asia/Manila', now())
+            )
+        """))
+        # Seed default row if empty
+        await self.db.execute(text("""
+            INSERT INTO replenishment_config (id, use_inventory_snapshots)
+            VALUES (1, true)
+            ON CONFLICT (id) DO NOTHING
+        """))
+
     async def get_config(self) -> Dict[str, Any]:
         """Get replenishment configuration."""
+        await self._ensure_config_table()
         result = await self.db.execute(
             select(ReplenishmentConfig).where(ReplenishmentConfig.id == 1)
         )
         config = result.scalar_one_or_none()
         if config is None:
-            # Auto-create default row
             config = ReplenishmentConfig(id=1, use_inventory_snapshots=True)
             self.db.add(config)
             await self.db.flush()
@@ -57,6 +73,7 @@ class ReplenishmentService:
 
     async def update_config(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Update replenishment configuration."""
+        await self._ensure_config_table()
         result = await self.db.execute(
             select(ReplenishmentConfig).where(ReplenishmentConfig.id == 1)
         )
