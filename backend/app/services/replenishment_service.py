@@ -15,6 +15,7 @@ from app.models.replenishment import (
     SeasonalityCalendar,
     ShipmentPlan,
     InventorySnapshot,
+    ReplenishmentConfig,
 )
 from app.models.store import Store
 from app.models.product import Product
@@ -35,6 +36,45 @@ class ReplenishmentService:
         self.db = db
 
     # ----------------------------------------------------------------
+    # Configuration
+    # ----------------------------------------------------------------
+
+    async def get_config(self) -> Dict[str, Any]:
+        """Get replenishment configuration."""
+        result = await self.db.execute(
+            select(ReplenishmentConfig).where(ReplenishmentConfig.id == 1)
+        )
+        config = result.scalar_one_or_none()
+        if config is None:
+            # Auto-create default row
+            config = ReplenishmentConfig(id=1, use_inventory_snapshots=True)
+            self.db.add(config)
+            await self.db.flush()
+        return {
+            "use_inventory_snapshots": config.use_inventory_snapshots,
+            "updated_at": config.updated_at.isoformat() if config.updated_at else None,
+        }
+
+    async def update_config(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Update replenishment configuration."""
+        result = await self.db.execute(
+            select(ReplenishmentConfig).where(ReplenishmentConfig.id == 1)
+        )
+        config = result.scalar_one_or_none()
+        if config is None:
+            config = ReplenishmentConfig(id=1)
+            self.db.add(config)
+
+        if "use_inventory_snapshots" in data:
+            config.use_inventory_snapshots = data["use_inventory_snapshots"]
+
+        await self.db.flush()
+        return {
+            "use_inventory_snapshots": config.use_inventory_snapshots,
+            "updated_at": config.updated_at.isoformat() if config.updated_at else None,
+        }
+
+    # ----------------------------------------------------------------
     # Data Readiness
     # ----------------------------------------------------------------
 
@@ -49,10 +89,18 @@ class ReplenishmentService:
 
     async def get_data_readiness(self) -> Dict[str, Any]:
         """Get snapshot data readiness information."""
+        config = await self.get_config()
+        use_snapshots = config["use_inventory_snapshots"]
+
         snapshot_days = await self.get_snapshot_days_available()
         days_until_full = max(0, 28 - snapshot_days)
         full_accuracy_date = date.today() + timedelta(days=days_until_full)
-        calc_mode = "snapshot" if snapshot_days >= 28 else "fallback"
+
+        # If snapshots are disabled via config, always report fallback
+        if not use_snapshots:
+            calc_mode = "fallback"
+        else:
+            calc_mode = "snapshot" if snapshot_days >= 28 else "fallback"
 
         # Get stores that have snapshot data
         query = (
@@ -63,16 +111,21 @@ class ReplenishmentService:
         result = await self.db.execute(query)
         stores_with_snapshots = [row[0] for row in result.fetchall()]
 
+        if not use_snapshots:
+            message = "Inventory snapshots disabled. Using sales-only mode."
+        elif calc_mode == "snapshot":
+            message = f"Snapshot history: {snapshot_days}/28 days. Full accuracy mode active."
+        else:
+            message = f"Snapshot history: {snapshot_days}/28 days. Using transaction-based fallback."
+
         return {
             "snapshot_days_available": snapshot_days,
             "days_until_full_accuracy": days_until_full,
             "full_accuracy_date": full_accuracy_date.isoformat(),
             "calculation_mode": calc_mode,
+            "use_inventory_snapshots": use_snapshots,
             "stores_with_snapshots": stores_with_snapshots,
-            "message": (
-                f"Snapshot history: {snapshot_days}/28 days. "
-                f"{'Full accuracy mode active.' if calc_mode == 'snapshot' else 'Using transaction-based fallback.'}"
-            ),
+            "message": message,
         }
 
     # ----------------------------------------------------------------
@@ -283,9 +336,13 @@ class ReplenishmentService:
         if run_date is None:
             run_date = date.today()
 
-        # Determine calculation mode
+        # Determine calculation mode (respect config override)
+        config = await self.get_config()
         snapshot_days = await self.get_snapshot_days_available()
-        calc_mode = "snapshot" if snapshot_days >= 28 else "fallback"
+        if not config["use_inventory_snapshots"]:
+            calc_mode = "fallback"
+        else:
+            calc_mode = "snapshot" if snapshot_days >= 28 else "fallback"
 
         # Get seasonality multiplier for today
         seasonality_multiplier = await self.get_seasonality_multiplier(run_date)

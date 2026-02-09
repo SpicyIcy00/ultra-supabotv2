@@ -9,6 +9,7 @@ import type {
   SeasonalityPeriod,
   WarehouseInventoryItem,
   PipelineItem,
+  ReplenishmentConfig,
 } from '../types/replenishment';
 
 const API_BASE = '/api/v1/replenishment';
@@ -54,6 +55,18 @@ export const getExceptions = async (runDate?: string): Promise<ExceptionsRespons
 
 export const getDataReadiness = async (): Promise<DataReadiness> => {
   const response = await axios.get<DataReadiness>(`${API_BASE}/data-readiness`);
+  return response.data;
+};
+
+export const getReplenishmentConfig = async (): Promise<ReplenishmentConfig> => {
+  const response = await axios.get<ReplenishmentConfig>(`${API_BASE}/config`);
+  return response.data;
+};
+
+export const updateReplenishmentConfig = async (
+  config: { use_inventory_snapshots: boolean }
+): Promise<ReplenishmentConfig> => {
+  const response = await axios.put<ReplenishmentConfig>(`${API_BASE}/config`, config);
   return response.data;
 };
 

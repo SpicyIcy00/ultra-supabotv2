@@ -163,6 +163,22 @@ class ShipmentPlan(Base):
     )
 
 
+class ReplenishmentConfig(Base):
+    """Single-row configuration table for replenishment settings."""
+    __tablename__ = "replenishment_config"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    use_inventory_snapshots: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.timezone('Asia/Manila', func.now()),
+        onupdate=func.timezone('Asia/Manila', func.now())
+    )
+
+
 class InventorySnapshot(Base):
     """Maps to the existing inventory_snapshots table in Supabase (created via n8n).
     This model is read-only for the replenishment module."""

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.services.replenishment_service import ReplenishmentService
+from pydantic import BaseModel
 from app.schemas.replenishment import (
     StoreTierCreate,
     StoreTierUpdate,
@@ -12,6 +13,10 @@ from app.schemas.replenishment import (
     SeasonalityCalendarCreate,
     SeasonalityCalendarUpdate,
 )
+
+
+class ReplenishmentConfigUpdate(BaseModel):
+    use_inventory_snapshots: bool
 
 router = APIRouter()
 
@@ -69,6 +74,27 @@ async def get_data_readiness(
 ):
     """Get snapshot data availability and calculation mode status."""
     return await service.get_data_readiness()
+
+
+# ----------------------------------------------------------------
+# Configuration
+# ----------------------------------------------------------------
+
+@router.get("/config")
+async def get_config(
+    service: ReplenishmentService = Depends(_get_service),
+):
+    """Get replenishment configuration."""
+    return await service.get_config()
+
+
+@router.put("/config")
+async def update_config(
+    body: ReplenishmentConfigUpdate,
+    service: ReplenishmentService = Depends(_get_service),
+):
+    """Update replenishment configuration."""
+    return await service.update_config(body.model_dump())
 
 
 # ----------------------------------------------------------------
