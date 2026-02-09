@@ -48,7 +48,6 @@ class ReplenishmentService:
                 updated_at TIMESTAMPTZ DEFAULT timezone('Asia/Manila', now())
             )
         """))
-        # Seed default row if empty
         await self.db.execute(text("""
             INSERT INTO replenishment_config (id, use_inventory_snapshots)
             VALUES (1, true)
@@ -56,39 +55,37 @@ class ReplenishmentService:
         """))
 
     async def get_config(self) -> Dict[str, Any]:
-        """Get replenishment configuration."""
+        """Get replenishment configuration (pure SQL, no ORM)."""
         await self._ensure_config_table()
-        result = await self.db.execute(
-            select(ReplenishmentConfig).where(ReplenishmentConfig.id == 1)
-        )
-        config = result.scalar_one_or_none()
-        if config is None:
-            config = ReplenishmentConfig(id=1, use_inventory_snapshots=True)
-            self.db.add(config)
-            await self.db.flush()
+        result = await self.db.execute(text(
+            "SELECT use_inventory_snapshots, updated_at FROM replenishment_config WHERE id = 1"
+        ))
+        row = result.fetchone()
         return {
-            "use_inventory_snapshots": config.use_inventory_snapshots,
-            "updated_at": config.updated_at.isoformat() if config.updated_at else None,
+            "use_inventory_snapshots": bool(row[0]) if row else True,
+            "updated_at": row[1].isoformat() if row and row[1] else None,
         }
 
     async def update_config(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Update replenishment configuration."""
+        """Update replenishment configuration (pure SQL, no ORM)."""
         await self._ensure_config_table()
-        result = await self.db.execute(
-            select(ReplenishmentConfig).where(ReplenishmentConfig.id == 1)
-        )
-        config = result.scalar_one_or_none()
-        if config is None:
-            config = ReplenishmentConfig(id=1)
-            self.db.add(config)
-
         if "use_inventory_snapshots" in data:
-            config.use_inventory_snapshots = data["use_inventory_snapshots"]
-
-        await self.db.flush()
+            await self.db.execute(
+                text("""
+                    UPDATE replenishment_config
+                    SET use_inventory_snapshots = :val,
+                        updated_at = timezone('Asia/Manila', now())
+                    WHERE id = 1
+                """),
+                {"val": data["use_inventory_snapshots"]},
+            )
+        result = await self.db.execute(text(
+            "SELECT use_inventory_snapshots, updated_at FROM replenishment_config WHERE id = 1"
+        ))
+        row = result.fetchone()
         return {
-            "use_inventory_snapshots": config.use_inventory_snapshots,
-            "updated_at": config.updated_at.isoformat() if config.updated_at else None,
+            "use_inventory_snapshots": bool(row[0]) if row else True,
+            "updated_at": row[1].isoformat() if row and row[1] else None,
         }
 
     # ----------------------------------------------------------------
