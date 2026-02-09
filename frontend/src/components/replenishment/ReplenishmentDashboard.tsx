@@ -5,8 +5,6 @@ import {
   getExceptions,
   getDataReadiness,
   getStoreTiers,
-  getReplenishmentConfig,
-  updateReplenishmentConfig,
 } from '../../services/replenishmentApi';
 import type {
   ReplenishmentRunResponse,
@@ -14,7 +12,6 @@ import type {
   ExceptionsResponse,
   DataReadiness,
   StoreTier,
-  ReplenishmentConfig,
 } from '../../types/replenishment';
 
 interface Props {
@@ -34,8 +31,6 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
   const [hideZeroSales, setHideZeroSales] = useState(false);
   const [showIds, setShowIds] = useState(false);
-  const [config, setConfig] = useState<ReplenishmentConfig | null>(null);
-  const [togglingSnapshots, setTogglingSnapshots] = useState(false);
 
   useEffect(() => {
     loadInitialData();
@@ -44,18 +39,16 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const loadInitialData = async () => {
     setLoading(true);
     try {
-      const [readiness, plan, exc, tiers, cfg] = await Promise.all([
-        getDataReadiness(),
+      const [readiness, plan, exc, tiers] = await Promise.all([
+        getDataReadiness().catch(() => null),
         getLatestPlan(),
         getExceptions(),
         getStoreTiers(),
-        getReplenishmentConfig(),
       ]);
-      setDataReadiness(readiness);
+      if (readiness) setDataReadiness(readiness);
       setLatestPlan(plan);
       setExceptions(exc);
       setStores(tiers);
-      setConfig(cfg);
     } catch {
       // Data may not exist yet
     } finally {
@@ -158,24 +151,6 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
     URL.revokeObjectURL(url);
   };
 
-  const handleToggleSnapshots = async () => {
-    if (!config) return;
-    setTogglingSnapshots(true);
-    try {
-      const updated = await updateReplenishmentConfig({
-        use_inventory_snapshots: !config.use_inventory_snapshots,
-      });
-      setConfig(updated);
-      // Refresh data readiness to reflect new mode
-      const readiness = await getDataReadiness();
-      setDataReadiness(readiness);
-    } catch {
-      // ignore
-    } finally {
-      setTogglingSnapshots(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -186,47 +161,8 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
 
   return (
     <div className="space-y-6">
-      {/* Inventory Snapshots Toggle */}
-      {config && (
-        <div className={`border rounded-lg p-4 ${
-          config.use_inventory_snapshots
-            ? 'bg-[#1c1e26] border-[#2e303d]'
-            : 'bg-blue-900/20 border-blue-600/30'
-        }`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-start gap-3">
-              <svg className="w-5 h-5 text-gray-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <div>
-                <p className="text-white font-medium text-sm">Use Inventory Snapshots (28-day)</p>
-                <p className="text-gray-400 text-xs mt-1">
-                  {config.use_inventory_snapshots
-                    ? 'Enabled — uses inventory snapshot data to exclude stockout days from sales calculations.'
-                    : 'Disabled — using sales-only mode. Calculations ignore inventory levels.'}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={handleToggleSnapshots}
-              disabled={togglingSnapshots}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${
-                config.use_inventory_snapshots ? 'bg-blue-500' : 'bg-gray-600'
-              }`}
-            >
-              <span
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  config.use_inventory_snapshots ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Data Readiness Banner */}
-      {dataReadiness && config?.use_inventory_snapshots && dataReadiness.calculation_mode === 'fallback' && (
+      {dataReadiness && dataReadiness.calculation_mode === 'fallback' && (
         <div className="bg-yellow-900/30 border border-yellow-600/50 rounded-lg p-4">
           <div className="flex items-start gap-3">
             <svg className="w-5 h-5 text-yellow-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -244,7 +180,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
         </div>
       )}
 
-      {dataReadiness && config?.use_inventory_snapshots && dataReadiness.calculation_mode === 'snapshot' && (
+      {dataReadiness && dataReadiness.calculation_mode === 'snapshot' && (
         <div className="bg-green-900/30 border border-green-600/50 rounded-lg p-4">
           <div className="flex items-center gap-3">
             <svg className="w-5 h-5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -7,6 +7,8 @@ import { PresetSelector } from '../components/PresetSelector';
 import { PresetSaveDialog } from '../components/PresetSaveDialog';
 import { ColumnVisibilityPanel } from '../components/ColumnVisibilityPanel';
 import { ReportFilterPanel } from '../components/ReportFilterPanel';
+import { getReplenishmentConfig, updateReplenishmentConfig } from '../services/replenishmentApi';
+import type { ReplenishmentConfig } from '../types/replenishment';
 import { ReplenishmentDashboard } from '../components/replenishment/ReplenishmentDashboard';
 import { ShipmentPlanTable } from '../components/replenishment/ShipmentPlanTable';
 import { WarehousePicklist } from '../components/replenishment/WarehousePicklist';
@@ -28,6 +30,10 @@ const ReportingPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ReportTab>('product-sales');
   const [replenishmentSubTab, setReplenishmentSubTab] = useState<ReplenishmentSubTab>('dashboard');
   const [configSubTab, setConfigSubTab] = useState<ConfigSubTab>('store-tiers');
+
+  // Replenishment config state
+  const [replenishmentConfig, setReplenishmentConfig] = useState<ReplenishmentConfig | null>(null);
+  const [togglingSnapshots, setTogglingSnapshots] = useState(false);
 
   // State for form inputs
   const [stores, setStores] = useState<Store[]>([]);
@@ -58,6 +64,30 @@ const ReportingPage: React.FC = () => {
     setDefaultDateRange();
     loadPresets('product-sales');
   }, []);
+
+  // Load replenishment config when switching to configuration tab
+  useEffect(() => {
+    if (replenishmentSubTab === 'configuration' && !replenishmentConfig) {
+      getReplenishmentConfig()
+        .then(setReplenishmentConfig)
+        .catch(() => {});
+    }
+  }, [replenishmentSubTab]);
+
+  const handleToggleSnapshots = async () => {
+    if (!replenishmentConfig) return;
+    setTogglingSnapshots(true);
+    try {
+      const updated = await updateReplenishmentConfig({
+        use_inventory_snapshots: !replenishmentConfig.use_inventory_snapshots,
+      });
+      setReplenishmentConfig(updated);
+    } catch {
+      // ignore
+    } finally {
+      setTogglingSnapshots(false);
+    }
+  };
 
   /**
    * Load available stores from API
@@ -255,6 +285,43 @@ const ReportingPage: React.FC = () => {
     if (replenishmentSubTab === 'configuration') {
       return (
         <div className="space-y-4">
+          {/* Inventory Snapshots Toggle */}
+          <div className={`border rounded-lg p-4 ${
+            replenishmentConfig?.use_inventory_snapshots === false
+              ? 'bg-blue-900/20 border-blue-600/30'
+              : 'bg-[#1c1e26] border-[#2e303d]'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-start gap-3">
+                <svg className="w-5 h-5 text-gray-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <div>
+                  <p className="text-white font-medium text-sm">Use Inventory Snapshots (28-day)</p>
+                  <p className="text-gray-400 text-xs mt-1">
+                    {replenishmentConfig?.use_inventory_snapshots !== false
+                      ? 'Enabled — uses inventory snapshot data to exclude stockout days from sales calculations.'
+                      : 'Disabled — using sales-only mode. Calculations ignore inventory levels.'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleToggleSnapshots}
+                disabled={togglingSnapshots || !replenishmentConfig}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${
+                  replenishmentConfig?.use_inventory_snapshots !== false ? 'bg-blue-500' : 'bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    replenishmentConfig?.use_inventory_snapshots !== false ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
           {/* Config sub-tabs */}
           <div className="flex gap-1 bg-[#1c1e26] border border-[#2e303d] rounded-lg p-1">
             {([
