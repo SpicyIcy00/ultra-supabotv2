@@ -70,20 +70,28 @@ const ReportingPage: React.FC = () => {
     if (replenishmentSubTab === 'configuration' && !replenishmentConfig) {
       getReplenishmentConfig()
         .then(setReplenishmentConfig)
-        .catch(() => {});
+        .catch(() => {
+          // Table may not exist yet — default to enabled
+          setReplenishmentConfig({ use_inventory_snapshots: true, updated_at: null });
+        });
     }
   }, [replenishmentSubTab]);
 
   const handleToggleSnapshots = async () => {
     if (!replenishmentConfig) return;
+    const previous = replenishmentConfig;
+    const newValue = !replenishmentConfig.use_inventory_snapshots;
+    // Optimistic update
+    setReplenishmentConfig({ ...replenishmentConfig, use_inventory_snapshots: newValue });
     setTogglingSnapshots(true);
     try {
       const updated = await updateReplenishmentConfig({
-        use_inventory_snapshots: !replenishmentConfig.use_inventory_snapshots,
+        use_inventory_snapshots: newValue,
       });
       setReplenishmentConfig(updated);
     } catch {
-      // ignore
+      // Revert on failure
+      setReplenishmentConfig(previous);
     } finally {
       setTogglingSnapshots(false);
     }
