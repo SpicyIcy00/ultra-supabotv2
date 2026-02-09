@@ -139,13 +139,6 @@ export interface DataReadiness {
   days_until_full_accuracy: number;
   full_accuracy_date: string;
   calculation_mode: string;
-  use_inventory_snapshots: boolean;
   stores_with_snapshots: string[];
   message: string;
-}
-
-// --- Config ---
-export interface ReplenishmentConfig {
-  use_inventory_snapshots: boolean;
-  updated_at: string | null;
 }

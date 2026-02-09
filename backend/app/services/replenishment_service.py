@@ -15,7 +15,6 @@ from app.models.replenishment import (
     SeasonalityCalendar,
     ShipmentPlan,
     InventorySnapshot,
-    ReplenishmentConfig,
 )
 from app.models.store import Store
 from app.models.product import Product
@@ -36,59 +35,6 @@ class ReplenishmentService:
         self.db = db
 
     # ----------------------------------------------------------------
-    # Configuration
-    # ----------------------------------------------------------------
-
-    async def _ensure_config_table(self) -> None:
-        """Create replenishment_config table if it doesn't exist."""
-        await self.db.execute(text("""
-            CREATE TABLE IF NOT EXISTS replenishment_config (
-                id INTEGER PRIMARY KEY,
-                use_inventory_snapshots BOOLEAN NOT NULL DEFAULT true,
-                updated_at TIMESTAMPTZ DEFAULT timezone('Asia/Manila', now())
-            )
-        """))
-        await self.db.execute(text("""
-            INSERT INTO replenishment_config (id, use_inventory_snapshots)
-            VALUES (1, true)
-            ON CONFLICT (id) DO NOTHING
-        """))
-
-    async def get_config(self) -> Dict[str, Any]:
-        """Get replenishment configuration (pure SQL, no ORM)."""
-        await self._ensure_config_table()
-        result = await self.db.execute(text(
-            "SELECT use_inventory_snapshots, updated_at FROM replenishment_config WHERE id = 1"
-        ))
-        row = result.fetchone()
-        return {
-            "use_inventory_snapshots": bool(row[0]) if row else True,
-            "updated_at": row[1].isoformat() if row and row[1] else None,
-        }
-
-    async def update_config(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Update replenishment configuration (pure SQL, no ORM)."""
-        await self._ensure_config_table()
-        if "use_inventory_snapshots" in data:
-            await self.db.execute(
-                text("""
-                    UPDATE replenishment_config
-                    SET use_inventory_snapshots = :val,
-                        updated_at = timezone('Asia/Manila', now())
-                    WHERE id = 1
-                """),
-                {"val": data["use_inventory_snapshots"]},
-            )
-        result = await self.db.execute(text(
-            "SELECT use_inventory_snapshots, updated_at FROM replenishment_config WHERE id = 1"
-        ))
-        row = result.fetchone()
-        return {
-            "use_inventory_snapshots": bool(row[0]) if row else True,
-            "updated_at": row[1].isoformat() if row and row[1] else None,
-        }
-
-    # ----------------------------------------------------------------
     # Data Readiness
     # ----------------------------------------------------------------
 
@@ -103,18 +49,10 @@ class ReplenishmentService:
 
     async def get_data_readiness(self) -> Dict[str, Any]:
         """Get snapshot data readiness information."""
-        config = await self.get_config()
-        use_snapshots = config["use_inventory_snapshots"]
-
         snapshot_days = await self.get_snapshot_days_available()
         days_until_full = max(0, 28 - snapshot_days)
         full_accuracy_date = date.today() + timedelta(days=days_until_full)
-
-        # If snapshots are disabled via config, always report fallback
-        if not use_snapshots:
-            calc_mode = "fallback"
-        else:
-            calc_mode = "snapshot" if snapshot_days >= 28 else "fallback"
+        calc_mode = "snapshot" if snapshot_days >= 28 else "fallback"
 
         # Get stores that have snapshot data
         query = (
@@ -125,21 +63,16 @@ class ReplenishmentService:
         result = await self.db.execute(query)
         stores_with_snapshots = [row[0] for row in result.fetchall()]
 
-        if not use_snapshots:
-            message = "Inventory snapshots disabled. Using sales-only mode."
-        elif calc_mode == "snapshot":
-            message = f"Snapshot history: {snapshot_days}/28 days. Full accuracy mode active."
-        else:
-            message = f"Snapshot history: {snapshot_days}/28 days. Using transaction-based fallback."
-
         return {
             "snapshot_days_available": snapshot_days,
             "days_until_full_accuracy": days_until_full,
             "full_accuracy_date": full_accuracy_date.isoformat(),
             "calculation_mode": calc_mode,
-            "use_inventory_snapshots": use_snapshots,
             "stores_with_snapshots": stores_with_snapshots,
-            "message": message,
+            "message": (
+                f"Snapshot history: {snapshot_days}/28 days. "
+                f"{'Full accuracy mode active.' if calc_mode == 'snapshot' else 'Using transaction-based fallback.'}"
+            ),
         }
 
     # ----------------------------------------------------------------
@@ -265,15 +198,9 @@ class ReplenishmentService:
     # ----------------------------------------------------------------
 
     async def _batch_get_daily_sales_fallback(
-        self, lookback_days: int = 28, store_id: Optional[str] = None,
-        include_zero_days: bool = False,
+        self, lookback_days: int = 28, store_id: Optional[str] = None
     ) -> Dict[Tuple[str, str], List[float]]:
-        """Batch fetch daily sales for store-SKU pairs (fallback mode).
-
-        When include_zero_days is True, the returned list contains a single
-        value: total_sales / lookback_days (true daily average). This avoids
-        the median being zeroed out by padding with 0.0 on no-sale days.
-        """
+        """Batch fetch daily sales for store-SKU pairs (fallback mode)."""
         cutoff = date.today() - timedelta(days=lookback_days)
         store_filter = "AND t.store_id = :store_id" if store_id else ""
         query = text(f"""
@@ -297,29 +224,14 @@ class ReplenishmentService:
         result = await self.db.execute(query, params)
         rows = result.fetchall()
 
-        if include_zero_days:
-            # Sum total sales per store-SKU, then divide by lookback_days
-            # to get the true daily average (including days with no sales).
-            totals: Dict[Tuple[str, str], float] = {}
-            for row in rows:
-                key = (row[0], row[1])
-                qty = float(row[3])
-                totals[key] = totals.get(key, 0.0) + qty
-
-            sales_map: Dict[Tuple[str, str], List[float]] = {}
-            for key, total in totals.items():
-                # Store as single-element list so median() returns the value
-                sales_map[key] = [total / lookback_days]
-        else:
-            sales_map = {}
-            for row in rows:
-                key = (row[0], row[1])
-                qty = float(row[3])
-                if qty > 0:  # Filter zero-sales days as proxy for stockouts
-                    if key not in sales_map:
-                        sales_map[key] = []
-                    sales_map[key].append(qty)
-
+        sales_map: Dict[Tuple[str, str], List[float]] = {}
+        for row in rows:
+            key = (row[0], row[1])
+            qty = float(row[3])
+            if qty > 0:  # Filter zero-sales days as proxy for stockouts
+                if key not in sales_map:
+                    sales_map[key] = []
+                sales_map[key].append(qty)
         return sales_map
 
     async def _batch_get_daily_sales_snapshot(
@@ -371,13 +283,9 @@ class ReplenishmentService:
         if run_date is None:
             run_date = date.today()
 
-        # Determine calculation mode (respect config override)
-        config = await self.get_config()
+        # Determine calculation mode
         snapshot_days = await self.get_snapshot_days_available()
-        if not config["use_inventory_snapshots"]:
-            calc_mode = "fallback"
-        else:
-            calc_mode = "snapshot" if snapshot_days >= 28 else "fallback"
+        calc_mode = "snapshot" if snapshot_days >= 28 else "fallback"
 
         # Get seasonality multiplier for today
         seasonality_multiplier = await self.get_seasonality_multiplier(run_date)
@@ -430,12 +338,7 @@ class ReplenishmentService:
         if calc_mode == "snapshot":
             sales_cache = await self._batch_get_daily_sales_snapshot(store_id=store_id)
         else:
-            # When inventory snapshots are disabled, include zero-sales days
-            # so the median is not inflated by excluding them
-            include_zeros = not config["use_inventory_snapshots"]
-            sales_cache = await self._batch_get_daily_sales_fallback(
-                store_id=store_id, include_zero_days=include_zeros,
-            )
+            sales_cache = await self._batch_get_daily_sales_fallback(store_id=store_id)
 
         # Delete previous plans for this run_date (and store if filtered)
         delete_q = delete(ShipmentPlan).where(ShipmentPlan.run_date == run_date)

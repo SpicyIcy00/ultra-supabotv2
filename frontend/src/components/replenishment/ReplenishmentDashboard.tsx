@@ -40,12 +40,12 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
     setLoading(true);
     try {
       const [readiness, plan, exc, tiers] = await Promise.all([
-        getDataReadiness().catch(() => null),
+        getDataReadiness(),
         getLatestPlan(),
         getExceptions(),
         getStoreTiers(),
       ]);
-      if (readiness) setDataReadiness(readiness);
+      setDataReadiness(readiness);
       setLatestPlan(plan);
       setExceptions(exc);
       setStores(tiers);
