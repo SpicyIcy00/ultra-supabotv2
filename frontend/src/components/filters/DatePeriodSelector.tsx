@@ -18,11 +18,37 @@ const PERIODS: { value: PeriodType; label: string }[] = [
   { value: 'CUSTOM', label: 'Custom' },
 ];
 
-export const DatePeriodSelector: React.FC = () => {
-  const selectedPeriod = useDashboardStore((state) => state.selectedPeriod);
-  const customDateRange = useDashboardStore((state) => state.customDateRange);
-  const setPeriod = useDashboardStore((state) => state.setPeriod);
-  const setCustomDates = useDashboardStore((state) => state.setCustomDates);
+interface DatePeriodSelectorProps {
+  /** Controlled period value. If omitted, reads from dashboard store. */
+  period?: PeriodType;
+  /** Called when period changes. If omitted, writes to dashboard store. */
+  onPeriodChange?: (period: PeriodType) => void;
+  /** Controlled custom date range. If omitted, reads from dashboard store. */
+  customDateRange?: { start: Date; end: Date } | null;
+  /** Called when custom dates are applied. If omitted, writes to dashboard store. */
+  onCustomDatesChange?: (start: Date, end: Date) => void;
+}
+
+export const DatePeriodSelector: React.FC<DatePeriodSelectorProps> = ({
+  period: controlledPeriod,
+  onPeriodChange,
+  customDateRange: controlledCustomRange,
+  onCustomDatesChange,
+}) => {
+  // Store values (used when not controlled)
+  const storePeriod = useDashboardStore((state) => state.selectedPeriod);
+  const storeCustomRange = useDashboardStore((state) => state.customDateRange);
+  const storeSetPeriod = useDashboardStore((state) => state.setPeriod);
+  const storeSetCustomDates = useDashboardStore((state) => state.setCustomDates);
+
+  // Resolve controlled vs store
+  const isControlled = controlledPeriod !== undefined;
+  const selectedPeriod = isControlled ? controlledPeriod : storePeriod;
+  const customDateRange = isControlled ? (controlledCustomRange ?? null) : storeCustomRange;
+  const setPeriod = isControlled ? (onPeriodChange ?? (() => {})) : storeSetPeriod;
+  const setCustomDates = isControlled
+    ? (onCustomDatesChange ?? (() => {}))
+    : storeSetCustomDates;
 
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [tempStartDate, setTempStartDate] = useState<Date | null>(null);
