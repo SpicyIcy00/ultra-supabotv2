@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { DayOfWeekPatterns } from '../components/charts/DayOfWeekPatterns';
 import { ProductCombosTable } from '../components/tables/ProductCombosTable';
 import { SalesAnomaliesList } from '../components/lists/SalesAnomaliesList';
@@ -13,10 +13,8 @@ import {
 import type { PeriodType } from '../utils/dateCalculations';
 import { calculatePeriodDateRanges, getPeriodLabel } from '../utils/dateCalculations';
 import { format } from 'date-fns';
-import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 
 type TabType = 'store-comparison' | 'day-patterns' | 'product-combos' | 'anomalies';
-const TAB_ORDER: TabType[] = ['store-comparison', 'day-patterns', 'product-combos', 'anomalies'];
 
 const PERIODS: { value: PeriodType; label: string }[] = [
   { value: '1D', label: '1D' },
@@ -33,21 +31,6 @@ const PERIODS: { value: PeriodType; label: string }[] = [
 
 export const AnalyticsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('store-comparison');
-
-  const swipeToNext = useCallback(() => {
-    const idx = TAB_ORDER.indexOf(activeTab);
-    if (idx < TAB_ORDER.length - 1) setActiveTab(TAB_ORDER[idx + 1]);
-  }, [activeTab]);
-
-  const swipeToPrev = useCallback(() => {
-    const idx = TAB_ORDER.indexOf(activeTab);
-    if (idx > 0) setActiveTab(TAB_ORDER[idx - 1]);
-  }, [activeTab]);
-
-  const swipeHandlers = useSwipeNavigation({
-    onSwipeLeft: swipeToNext,
-    onSwipeRight: swipeToPrev,
-  });
 
   // Day patterns state
   const [dayPatternsPeriod, setDayPatternsPeriod] = useState<PeriodType>('30D');
@@ -162,47 +145,47 @@ export const AnalyticsPage: React.FC = () => {
     };
 
     return (
-      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-3 sm:p-4">
-        <div className="flex flex-col gap-3">
-          <label className="text-sm font-medium text-gray-400">Period:</label>
-          <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center relative">
-            {PERIODS.map((period) => {
-              const dateRangeText = getDateRangeText(period.value);
-              return (
-                <button
-                  key={period.value}
-                  onClick={() => {
-                    if (period.value === 'CUSTOM') {
-                      setShowCustomPicker(true);
-                    } else {
-                      setShowCustomPicker(false);
-                    }
-                    setPeriod(period.value);
-                  }}
-                  className={`
-                    px-3 py-2 sm:px-6 sm:py-3 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200
-                    ${currentPeriod === period.value
-                      ? 'bg-gradient-to-r from-[#00d2ff] to-[#3a47d5] text-white shadow-lg'
-                      : 'bg-[#1c1e26] text-white hover:bg-[#2e303d]'
-                    }
-                  `}
-                  title={getPeriodLabel(period.value)}
-                >
-                  <div className="flex flex-col items-center gap-0.5">
-                    <span>{period.label}</span>
-                    {dateRangeText && currentPeriod === period.value && (
-                      <span className="text-xs opacity-80 font-normal whitespace-nowrap hidden sm:block">
-                        {dateRangeText}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        <span className="text-sm font-medium text-gray-400 sm:mr-2">Period:</span>
+        <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center relative">
+          {PERIODS.map((period) => {
+            const dateRangeText = getDateRangeText(period.value);
+            return (
+              <button
+                key={period.value}
+                onClick={() => {
+                  if (period.value === 'CUSTOM') {
+                    setShowCustomPicker(true);
+                  } else {
+                    setShowCustomPicker(false);
+                  }
+                  setPeriod(period.value);
+                }}
+                className={`
+                  px-3 py-2 sm:px-6 sm:py-3 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200
+                  ${currentPeriod === period.value
+                    ? 'bg-gradient-to-r from-[#00d2ff] to-[#3a47d5] text-white shadow-lg'
+                    : 'bg-[#1c1e26] text-white hover:bg-[#2e303d]'
+                  }
+                `}
+                title={getPeriodLabel(period.value)}
+              >
+                <div className="flex flex-col items-center gap-0.5">
+                  <span>{period.label}</span>
+                  {dateRangeText && currentPeriod === period.value && (
+                    <span className="text-xs opacity-80 font-normal whitespace-nowrap hidden sm:block">
+                      {dateRangeText}
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
 
-            {/* Custom Date Range Picker */}
-            {showCustomPicker && (
-              <div className="absolute top-full left-0 mt-2 z-50">
+          {/* Custom Date Range Picker */}
+          {showCustomPicker && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 sm:bg-transparent sm:absolute sm:inset-auto sm:top-full sm:left-0 sm:mt-2">
+              <div className="sm:contents">
                 <DateRangePicker
                   startDate={customStartDate}
                   endDate={customEndDate}
@@ -226,8 +209,8 @@ export const AnalyticsPage: React.FC = () => {
                   }}
                 />
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -263,8 +246,8 @@ export const AnalyticsPage: React.FC = () => {
             ))}
           </div>
 
-          {/* Tab Content — swipe left/right to navigate between tabs */}
-          <div className="p-3 sm:p-4 lg:p-6" {...swipeHandlers}>
+          {/* Tab Content */}
+          <div className="p-3 sm:p-4 lg:p-6">
             {activeTab === 'store-comparison' && (
               <StoreComparisonV2 />
             )}
@@ -272,16 +255,18 @@ export const AnalyticsPage: React.FC = () => {
             {activeTab === 'day-patterns' && (
               <div className="space-y-6">
                 {/* Date Filter for day patterns */}
-                {renderDateSelector(
-                  dayPatternsPeriod,
-                  setDayPatternsPeriod,
-                  dayPatternsShowCustomPicker,
-                  setDayPatternsShowCustomPicker,
-                  dayPatternsCustomStartDate,
-                  setDayPatternsCustomStartDate,
-                  dayPatternsCustomEndDate,
-                  setDayPatternsCustomEndDate
-                )}
+                <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-3 sm:p-4">
+                  {renderDateSelector(
+                    dayPatternsPeriod,
+                    setDayPatternsPeriod,
+                    dayPatternsShowCustomPicker,
+                    setDayPatternsShowCustomPicker,
+                    dayPatternsCustomStartDate,
+                    setDayPatternsCustomStartDate,
+                    dayPatternsCustomEndDate,
+                    setDayPatternsCustomEndDate
+                  )}
+                </div>
 
                 <DayOfWeekPatterns
                   data={dayOfWeekPatterns.data?.data || []}
@@ -293,16 +278,18 @@ export const AnalyticsPage: React.FC = () => {
             {activeTab === 'product-combos' && (
               <div className="space-y-6">
                 {/* Date Filter for product combos */}
-                {renderDateSelector(
-                  productCombosPeriod,
-                  setProductCombosPeriod,
-                  productCombosShowCustomPicker,
-                  setProductCombosShowCustomPicker,
-                  productCombosCustomStartDate,
-                  setProductCombosCustomStartDate,
-                  productCombosCustomEndDate,
-                  setProductCombosCustomEndDate
-                )}
+                <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-3 sm:p-4">
+                  {renderDateSelector(
+                    productCombosPeriod,
+                    setProductCombosPeriod,
+                    productCombosShowCustomPicker,
+                    setProductCombosShowCustomPicker,
+                    productCombosCustomStartDate,
+                    setProductCombosCustomStartDate,
+                    productCombosCustomEndDate,
+                    setProductCombosCustomEndDate
+                  )}
+                </div>
 
                 <ProductCombosTable
                   data={productCombos.data || []}
