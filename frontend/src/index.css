@@ -12,4 +12,16 @@ body {
   background-color: #0e1117;
   color: white;
   font-family: system-ui, -apple-system, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile touch target enforcement */
+@media (pointer: coarse) {
+  button, a, [role="button"], label[for], input[type="checkbox"] + label {
+    min-height: 44px;
+  }
+
+  button, a, [role="button"] {
+    touch-action: manipulation;
+  }
 }

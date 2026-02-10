@@ -1,4 +1,5 @@
 import React from 'react';
+import { PullToRefresh } from '../components/mobile/PullToRefresh';
 import { DatePeriodSelector } from '../components/filters/DatePeriodSelector';
 import { StoreSelector } from '../components/filters/StoreSelector';
 import { KPICard } from '../components/KPICard';
@@ -34,18 +35,19 @@ export const Dashboard: React.FC = () => {
   const granularity = getGranularityForPeriod(selectedPeriod);
 
   return (
-    <div className="min-h-screen bg-[#0e1117] p-6">
-      <div className="max-w-[1920px] mx-auto space-y-6">
+    <PullToRefresh>
+    <div className="min-h-screen bg-[#0e1117]">
+      <div className="max-w-[1920px] mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Business Intelligence Dashboard</h1>
-          <p className="text-gray-400">Real-time analytics and performance metrics</p>
+        <div className="mb-4 sm:mb-8">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1 sm:mb-2">Business Intelligence Dashboard</h1>
+          <p className="text-sm sm:text-base text-gray-400">Real-time analytics and performance metrics</p>
         </div>
 
         {/* ROW 1: FILTERS & SELECTORS */}
-        <div className="flex flex-wrap items-center gap-4 bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 bg-[#1c1e26] border border-[#2e303d] rounded-lg p-3 sm:p-4">
           <DatePeriodSelector />
-          <div className="w-px h-8 bg-[#2e303d]" /> {/* Divider */}
+          <div className="w-px h-8 bg-[#2e303d] hidden sm:block" /> {/* Divider - hidden on mobile */}
           <StoreSelector />
         </div>
 
@@ -69,7 +71,7 @@ export const Dashboard: React.FC = () => {
         )}
 
         {/* ROW 2: KPI CARDS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           <KPICard
             icon=""
             title="Total Sales"
@@ -158,6 +160,7 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
     </div>
+    </PullToRefresh>
   );
 };
 

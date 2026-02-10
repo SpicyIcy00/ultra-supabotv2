@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Download } from 'lucide-react';
 import { formatCurrency, formatPercentage, calculatePercentageChange } from '../../utils/dateCalculations';
 import { getCategoryColor } from '../../constants/colors';
@@ -19,6 +19,14 @@ export const TopCategoriesTable: React.FC<TopCategoriesTableProps> = ({
   data,
   isLoading = false,
 }) => {
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 640);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   if (isLoading) {
     return (
       <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6">
@@ -77,58 +85,95 @@ export const TopCategoriesTable: React.FC<TopCategoriesTableProps> = ({
         </button>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-[#2e303d]">
-              <th className="text-left py-3 px-2 text-xs font-semibold text-gray-400 uppercase">Rank</th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Category</th>
-              <th className="text-right py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Current Sales</th>
-              <th className="text-right py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Previous Sales</th>
-              <th className="text-right py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Change</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedData.map((item, index) => {
-              const isPositive = item.percentageChange >= 0;
-              const bgColor = index % 2 === 0 ? 'bg-[#0e1117]' : 'bg-[#1c1e26]';
+      {isMobile ? (
+        <div className="space-y-2">
+          {sortedData.map((item, index) => {
+            const isPositive = item.percentageChange >= 0;
+            const bgColor = index % 2 === 0 ? 'bg-[#0e1117]' : 'bg-[#1c1e26]';
+            return (
+              <div
+                key={item.category}
+                className={`${bgColor} rounded-lg p-3`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs font-bold text-gray-400 shrink-0">#{item.rank}</span>
+                    <div
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-sm font-medium text-white truncate">{item.category}</span>
+                  </div>
+                  <span
+                    className={`text-xs font-bold shrink-0 ml-2 ${
+                      isPositive ? 'text-green-400' : 'text-red-400'
+                    }`}
+                  >
+                    {formatPercentage(item.percentageChange)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-[#00d2ff]">{formatCurrency(item.current_sales)}</span>
+                  <span className="text-xs text-gray-400">prev: {formatCurrency(item.previous_sales)}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-[#2e303d]">
+                <th className="text-left py-3 px-2 text-xs font-semibold text-gray-400 uppercase">Rank</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Category</th>
+                <th className="text-right py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Current Sales</th>
+                <th className="text-right py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Previous Sales</th>
+                <th className="text-right py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Change</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedData.map((item, index) => {
+                const isPositive = item.percentageChange >= 0;
+                const bgColor = index % 2 === 0 ? 'bg-[#0e1117]' : 'bg-[#1c1e26]';
 
-              return (
-                <tr
-                  key={item.category}
-                  className={`${bgColor} hover:bg-[#2e303d] transition-colors`}
-                >
-                  <td className="py-3 px-2 text-sm font-bold text-white">#{item.rank}</td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: item.color }}
-                      />
-                      <span className="text-sm font-medium text-white">{item.category}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-right text-sm font-semibold text-[#00d2ff]">
-                    {formatCurrency(item.current_sales)}
-                  </td>
-                  <td className="py-3 px-4 text-right text-sm text-gray-400">
-                    {formatCurrency(item.previous_sales)}
-                  </td>
-                  <td className="py-3 px-4 text-right whitespace-nowrap">
-                    <span
-                      className={`text-sm font-bold ${
-                        isPositive ? 'text-green-400' : 'text-red-400'
-                      }`}
-                    >
-                      {formatPercentage(item.percentageChange)}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                return (
+                  <tr
+                    key={item.category}
+                    className={`${bgColor} hover:bg-[#2e303d] transition-colors`}
+                  >
+                    <td className="py-3 px-2 text-sm font-bold text-white">#{item.rank}</td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="text-sm font-medium text-white">{item.category}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 text-right text-sm font-semibold text-[#00d2ff]">
+                      {formatCurrency(item.current_sales)}
+                    </td>
+                    <td className="py-3 px-4 text-right text-sm text-gray-400">
+                      {formatCurrency(item.previous_sales)}
+                    </td>
+                    <td className="py-3 px-4 text-right whitespace-nowrap">
+                      <span
+                        className={`text-sm font-bold ${
+                          isPositive ? 'text-green-400' : 'text-red-400'
+                        }`}
+                      >
+                        {formatPercentage(item.percentageChange)}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };

@@ -4,6 +4,7 @@ import { Download } from 'lucide-react';
 import { getCategoryColor } from '../../constants/colors';
 import { formatCurrency } from '../../utils/dateCalculations';
 import { exportChartAsImage } from '../../utils/chartExport';
+import { useChartDimensions } from '../../hooks/useChartDimensions';
 
 interface CategoryData {
   category: string;
@@ -20,9 +21,11 @@ export const SalesByCategoryPie: React.FC<SalesByCategoryPieProps> = ({
   data,
   isLoading = false,
 }) => {
+  const dims = useChartDimensions();
+
   if (isLoading) {
     return (
-      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[350px]">
+      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[280px] sm:h-[320px] lg:h-[350px]">
         <h3 className="text-lg font-bold text-white mb-4">Sales by Category</h3>
         <div className="flex items-center justify-center h-[280px]">
           <div className="animate-pulse text-gray-400">Loading...</div>
@@ -33,7 +36,7 @@ export const SalesByCategoryPie: React.FC<SalesByCategoryPieProps> = ({
 
   if (!data || data.length === 0) {
     return (
-      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[350px]">
+      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[280px] sm:h-[320px] lg:h-[350px]">
         <h3 className="text-lg font-bold text-white mb-4">Sales by Category</h3>
         <div className="flex items-center justify-center h-[280px] text-gray-400">
           No data available
@@ -111,7 +114,7 @@ export const SalesByCategoryPie: React.FC<SalesByCategoryPieProps> = ({
   };
 
   return (
-    <div id="sales-by-category-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[420px]">
+    <div id="sales-by-category-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[280px] sm:h-[350px] lg:h-[420px]">
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-lg font-bold text-white">Sales by Category</h3>
         <button
@@ -120,19 +123,19 @@ export const SalesByCategoryPie: React.FC<SalesByCategoryPieProps> = ({
           title="Export as image"
         >
           <Download size={16} />
-          Export
+          <span className="hidden sm:inline">Export</span>
         </button>
       </div>
-      <ResponsiveContainer width="100%" height={370}>
-        <PieChart margin={{ top: 40, right: 120, bottom: 40, left: 120 }}>
+      <ResponsiveContainer width="100%" height={dims.chartHeight}>
+        <PieChart margin={dims.pieMargin}>
           <Pie
             data={chartData}
             cx="50%"
             cy="50%"
-            outerRadius={100}
-            innerRadius={40}
-            label={renderPieLabel}
-            labelLine={{ stroke: '#6b7280', strokeWidth: 1 }}
+            outerRadius={dims.outerRadius}
+            innerRadius={dims.innerRadius}
+            label={dims.showPieLabels ? renderPieLabel : false}
+            labelLine={dims.showPieLabels ? { stroke: '#6b7280', strokeWidth: 1 } : false}
             dataKey="value"
             isAnimationActive={false}
           >

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { DayOfWeekPatterns } from '../components/charts/DayOfWeekPatterns';
 import { ProductCombosTable } from '../components/tables/ProductCombosTable';
 import { SalesAnomaliesList } from '../components/lists/SalesAnomaliesList';
@@ -13,8 +13,10 @@ import {
 import type { PeriodType } from '../utils/dateCalculations';
 import { calculatePeriodDateRanges, getPeriodLabel } from '../utils/dateCalculations';
 import { format } from 'date-fns';
+import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 
 type TabType = 'store-comparison' | 'day-patterns' | 'product-combos' | 'anomalies';
+const TAB_ORDER: TabType[] = ['store-comparison', 'day-patterns', 'product-combos', 'anomalies'];
 
 const PERIODS: { value: PeriodType; label: string }[] = [
   { value: '1D', label: '1D' },
@@ -31,6 +33,21 @@ const PERIODS: { value: PeriodType; label: string }[] = [
 
 export const AnalyticsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('store-comparison');
+
+  const swipeToNext = useCallback(() => {
+    const idx = TAB_ORDER.indexOf(activeTab);
+    if (idx < TAB_ORDER.length - 1) setActiveTab(TAB_ORDER[idx + 1]);
+  }, [activeTab]);
+
+  const swipeToPrev = useCallback(() => {
+    const idx = TAB_ORDER.indexOf(activeTab);
+    if (idx > 0) setActiveTab(TAB_ORDER[idx - 1]);
+  }, [activeTab]);
+
+  const swipeHandlers = useSwipeNavigation({
+    onSwipeLeft: swipeToNext,
+    onSwipeRight: swipeToPrev,
+  });
 
   // Day patterns state
   const [dayPatternsPeriod, setDayPatternsPeriod] = useState<PeriodType>('30D');
@@ -145,10 +162,10 @@ export const AnalyticsPage: React.FC = () => {
     };
 
     return (
-      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4">
+      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-3 sm:p-4">
         <div className="flex flex-col gap-3">
           <label className="text-sm font-medium text-gray-400">Period:</label>
-          <div className="flex flex-wrap gap-2 items-center relative">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center relative">
             {PERIODS.map((period) => {
               const dateRangeText = getDateRangeText(period.value);
               return (
@@ -163,7 +180,7 @@ export const AnalyticsPage: React.FC = () => {
                     setPeriod(period.value);
                   }}
                   className={`
-                    px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-200
+                    px-3 py-2 sm:px-6 sm:py-3 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200
                     ${currentPeriod === period.value
                       ? 'bg-gradient-to-r from-[#00d2ff] to-[#3a47d5] text-white shadow-lg'
                       : 'bg-[#1c1e26] text-white hover:bg-[#2e303d]'
@@ -174,7 +191,7 @@ export const AnalyticsPage: React.FC = () => {
                   <div className="flex flex-col items-center gap-0.5">
                     <span>{period.label}</span>
                     {dateRangeText && currentPeriod === period.value && (
-                      <span className="text-xs opacity-80 font-normal whitespace-nowrap">
+                      <span className="text-xs opacity-80 font-normal whitespace-nowrap hidden sm:block">
                         {dateRangeText}
                       </span>
                     )}
@@ -217,12 +234,12 @@ export const AnalyticsPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0e1117] p-6">
-      <div className="max-w-[1920px] mx-auto space-y-6">
+    <div className="min-h-screen bg-[#0e1117]">
+      <div className="max-w-[1920px] mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Advanced Analytics</h1>
-          <p className="text-gray-400">
+        <div className="mb-4 sm:mb-8">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1 sm:mb-2">Advanced Analytics</h1>
+          <p className="text-sm sm:text-base text-gray-400">
             Deep dive into your business metrics and insights
           </p>
         </div>
@@ -234,20 +251,20 @@ export const AnalyticsPage: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 min-w-[200px] px-6 py-4 text-left border-b-2 transition-colors ${
+                className={`flex-1 min-w-0 sm:min-w-[160px] px-3 py-3 sm:px-6 sm:py-4 text-left border-b-2 transition-colors ${
                   activeTab === tab.id
                     ? 'border-blue-500 bg-blue-500/10 text-white'
                     : 'border-transparent text-gray-400 hover:text-white hover:bg-[#252833]'
                 }`}
               >
-                <div className="font-semibold text-sm">{tab.label}</div>
-                <div className="text-xs mt-1 opacity-75">{tab.description}</div>
+                <div className="font-semibold text-xs sm:text-sm">{tab.label}</div>
+                <div className="text-xs mt-1 opacity-75 hidden sm:block">{tab.description}</div>
               </button>
             ))}
           </div>
 
-          {/* Tab Content */}
-          <div className="p-6">
+          {/* Tab Content — swipe left/right to navigate between tabs */}
+          <div className="p-3 sm:p-4 lg:p-6" {...swipeHandlers}>
             {activeTab === 'store-comparison' && (
               <StoreComparisonV2 />
             )}

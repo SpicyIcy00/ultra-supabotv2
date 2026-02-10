@@ -273,8 +273,42 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .date-range-picker-container {
+    padding: 12px;
+    border-radius: 12px;
+    max-width: calc(100vw - 32px);
+  }
+
   .custom-day-picker .rdp-months {
     flex-direction: column;
     gap: 20px;
+  }
+
+  .custom-day-picker {
+    --rdp-cell-size: 44px;
+  }
+
+  .custom-day-picker .rdp-day {
+    width: 44px;
+    height: 44px;
+  }
+
+  .custom-day-picker .rdp-nav_button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .date-range-display {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .date-range-actions {
+    flex-direction: column;
+  }
+
+  .date-range-actions button {
+    width: 100%;
+    padding: 12px 20px;
   }
 }

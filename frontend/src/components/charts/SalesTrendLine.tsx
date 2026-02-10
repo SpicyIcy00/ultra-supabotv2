@@ -13,6 +13,7 @@ import { Download } from 'lucide-react';
 import { THEME_COLORS } from '../../constants/colors';
 import { formatCurrency, formatHourLabel } from '../../utils/dateCalculations';
 import { exportChartAsImage } from '../../utils/chartExport';
+import { useChartDimensions } from '../../hooks/useChartDimensions';
 
 interface TrendData {
   date: string;
@@ -36,10 +37,12 @@ export const SalesTrendLine: React.FC<SalesTrendLineProps> = ({
   granularity,
   isLoading = false,
 }) => {
+  const dims = useChartDimensions();
+
   if (isLoading) {
     return (
-      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[350px]">
-        <h3 className="text-lg font-bold text-white mb-4">Sales Trend - Current vs Previous Period</h3>
+      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[280px] sm:h-[320px] lg:h-[350px]">
+        <h3 className="text-sm sm:text-lg font-bold text-white mb-4">Sales Trend - Current vs Previous Period</h3>
         <div className="flex items-center justify-center h-[280px]">
           <div className="animate-pulse text-gray-400">Loading...</div>
         </div>
@@ -49,8 +52,8 @@ export const SalesTrendLine: React.FC<SalesTrendLineProps> = ({
 
   if (!currentData || currentData.length === 0) {
     return (
-      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[350px]">
-        <h3 className="text-lg font-bold text-white mb-4">Sales Trend - Current vs Previous Period</h3>
+      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[280px] sm:h-[320px] lg:h-[350px]">
+        <h3 className="text-sm sm:text-lg font-bold text-white mb-4">Sales Trend - Current vs Previous Period</h3>
         <div className="flex items-center justify-center h-[280px] text-gray-400">
           No data available
         </div>
@@ -109,35 +112,35 @@ export const SalesTrendLine: React.FC<SalesTrendLineProps> = ({
   };
 
   return (
-    <div id="sales-trend-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[350px]">
+    <div id="sales-trend-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[280px] sm:h-[320px] lg:h-[350px]">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-white">Sales Trend - Current vs Previous Period</h3>
+        <h3 className="text-sm sm:text-lg font-bold text-white">Sales Trend - Current vs Previous Period</h3>
         <button
           onClick={handleExport}
           className="flex items-center gap-2 px-3 py-1.5 bg-[#2e303d] hover:bg-[#3a3c4a] text-white rounded-lg transition-colors text-sm"
           title="Export as image"
         >
           <Download size={16} />
-          Export
+          <span className="hidden sm:inline">Export</span>
         </button>
       </div>
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height={dims.chartHeight}>
         <LineChart
           data={chartData}
-          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+          margin={dims.margin}
         >
           <CartesianGrid strokeDasharray="3 3" stroke={THEME_COLORS.gridLines} />
           <XAxis
             dataKey="label"
             stroke={THEME_COLORS.primaryText}
-            tick={{ fill: THEME_COLORS.primaryText, fontSize: 10 }}
+            tick={{ fill: THEME_COLORS.primaryText, fontSize: dims.fontSize.axis }}
             angle={granularity === 'hour' ? -45 : 0}
             textAnchor={granularity === 'hour' ? 'end' : 'middle'}
             height={granularity === 'hour' ? 60 : 30}
           />
           <YAxis
             stroke={THEME_COLORS.primaryText}
-            tick={{ fill: THEME_COLORS.primaryText, fontSize: 10 }}
+            tick={{ fill: THEME_COLORS.primaryText, fontSize: dims.fontSize.axis }}
             tickFormatter={(value) => `₱${(value / 1000).toFixed(0)}k`}
           />
           <Tooltip content={<CustomTooltip />} />
@@ -145,7 +148,7 @@ export const SalesTrendLine: React.FC<SalesTrendLineProps> = ({
             wrapperStyle={{ paddingTop: '10px' }}
             iconType="line"
             formatter={(value) => (
-              <span style={{ color: THEME_COLORS.primaryText, fontSize: '12px' }}>
+              <span style={{ color: THEME_COLORS.primaryText, fontSize: dims.isMobile ? '10px' : '12px' }}>
                 {value}
               </span>
             )}
@@ -156,7 +159,7 @@ export const SalesTrendLine: React.FC<SalesTrendLineProps> = ({
             name={periodLabel}
             stroke={THEME_COLORS.primaryAccent}
             strokeWidth={2}
-            dot={{ fill: THEME_COLORS.primaryAccent, r: 4 }}
+            dot={{ fill: THEME_COLORS.primaryAccent, r: dims.isMobile ? 2 : 4 }}
             activeDot={{ r: 6 }}
           />
           <Line
@@ -166,7 +169,7 @@ export const SalesTrendLine: React.FC<SalesTrendLineProps> = ({
             stroke={THEME_COLORS.negativeChange}
             strokeWidth={2}
             strokeDasharray="5 5"
-            dot={{ fill: THEME_COLORS.negativeChange, r: 4 }}
+            dot={{ fill: THEME_COLORS.negativeChange, r: dims.isMobile ? 2 : 4 }}
             activeDot={{ r: 6 }}
           />
         </LineChart>

@@ -6,6 +6,9 @@ export default {
   ],
   theme: {
     extend: {
+      screens: {
+        'xs': '475px',
+      },
       colors: {
         background: '#0e1117',
         foreground: '#ffffff',
@@ -17,6 +20,15 @@ export default {
           DEFAULT: '#3a47d5',
           foreground: '#ffffff',
         },
+      },
+      minHeight: {
+        'touch': '44px',
+      },
+      minWidth: {
+        'touch': '44px',
+      },
+      spacing: {
+        'safe-bottom': 'env(safe-area-inset-bottom)',
       },
     },
   },

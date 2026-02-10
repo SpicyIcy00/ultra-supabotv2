@@ -4,6 +4,7 @@ import { Download } from 'lucide-react';
 import { THEME_COLORS } from '../../constants/colors';
 import { formatCurrency, formatHourLabel } from '../../utils/dateCalculations';
 import { exportChartAsImage } from '../../utils/chartExport';
+import { useChartDimensions } from '../../hooks/useChartDimensions';
 
 interface HourlyData {
   hour: number;
@@ -20,9 +21,11 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
   data,
   isLoading = false,
 }) => {
+  const dims = useChartDimensions();
+
   if (isLoading) {
     return (
-      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[350px]">
+      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[280px] sm:h-[320px] lg:h-[350px]">
         <h3 className="text-lg font-bold text-white mb-4">Sales per Hour</h3>
         <div className="flex items-center justify-center h-[280px]">
           <div className="animate-pulse text-gray-400">Loading...</div>
@@ -34,7 +37,7 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
   // Validate data is an array
   if (!data || !Array.isArray(data) || data.length === 0) {
     return (
-      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[350px]">
+      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[280px] sm:h-[320px] lg:h-[350px]">
         <h3 className="text-lg font-bold text-white mb-4">Sales per Hour</h3>
         <div className="flex items-center justify-center h-[280px] text-gray-400">
           No data available
@@ -81,7 +84,7 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
   };
 
   return (
-    <div id="sales-per-hour-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[350px]">
+    <div id="sales-per-hour-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[280px] sm:h-[320px] lg:h-[350px]">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-white">Sales per Hour</h3>
         <div className="flex items-center gap-3">
@@ -94,28 +97,28 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
             title="Export as image"
           >
             <Download size={16} />
-            Export
+            <span className="hidden sm:inline">Export</span>
           </button>
         </div>
       </div>
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height={dims.chartHeight}>
         <BarChart
           data={chartData}
-          margin={{ top: 5, right: 20, left: 20, bottom: 60 }}
+          margin={{ top: 5, right: dims.margin.right, left: dims.margin.left, bottom: dims.isMobile ? 40 : 60 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke={THEME_COLORS.gridLines} />
           <XAxis
             dataKey="hour_label"
             stroke={THEME_COLORS.primaryText}
-            tick={{ fill: THEME_COLORS.primaryText, fontSize: 9 }}
+            tick={{ fill: THEME_COLORS.primaryText, fontSize: dims.fontSize.axis }}
             angle={-45}
             textAnchor="end"
-            height={60}
-            interval={1} // Show every hour label
+            height={dims.isMobile ? 40 : 60}
+            interval={dims.isMobile ? 2 : 1}
           />
           <YAxis
             stroke={THEME_COLORS.primaryText}
-            tick={{ fill: THEME_COLORS.primaryText, fontSize: 10 }}
+            tick={{ fill: THEME_COLORS.primaryText, fontSize: dims.fontSize.axis }}
             tickFormatter={(value) => `₱${(value / 1000).toFixed(0)}k`}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }} />

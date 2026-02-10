@@ -4,6 +4,7 @@ import { Download } from 'lucide-react';
 import { getStoreColor, THEME_COLORS } from '../../constants/colors';
 import { formatCurrency, formatPercentage, calculatePercentageChange } from '../../utils/dateCalculations';
 import { exportChartAsImage } from '../../utils/chartExport';
+import { useChartDimensions } from '../../hooks/useChartDimensions';
 
 interface StoreData {
   store_name: string;
@@ -21,9 +22,11 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
   data,
   isLoading = false,
 }) => {
+  const dims = useChartDimensions();
+
   if (isLoading) {
     return (
-      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[420px]">
+      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[280px] sm:h-[350px] lg:h-[420px]">
         <h3 className="text-lg font-bold text-white mb-4">Sales per Store</h3>
         <div className="flex items-center justify-center h-[280px]">
           <div className="animate-pulse text-gray-400">Loading...</div>
@@ -34,7 +37,7 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
 
   if (!data || data.length === 0) {
     return (
-      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[420px]">
+      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[280px] sm:h-[350px] lg:h-[420px]">
         <h3 className="text-lg font-bold text-white mb-4">Sales per Store</h3>
         <div className="flex items-center justify-center h-[280px] text-gray-400">
           No data available
@@ -92,7 +95,7 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
         y={y - 8}
         fill={color}
         textAnchor="middle"
-        fontSize={11}
+        fontSize={dims.fontSize.label}
         fontWeight="bold"
       >
         {formatPercentage(pctChange)}
@@ -105,7 +108,7 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
   };
 
   return (
-    <div id="sales-per-store-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6 h-[420px]">
+    <div id="sales-per-store-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[280px] sm:h-[350px] lg:h-[420px]">
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-lg font-bold text-white">Sales per Store</h3>
         <button
@@ -114,27 +117,30 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
           title="Export as image"
         >
           <Download size={16} />
-          Export
+          <span className="hidden sm:inline">Export</span>
         </button>
       </div>
-      <ResponsiveContainer width="100%" height={370}>
+      <ResponsiveContainer width="100%" height={dims.chartHeight}>
         <BarChart
           data={chartData}
-          margin={{ top: 25, right: 40, left: 5, bottom: 5 }}
+          margin={dims.margin}
         >
           <CartesianGrid vertical={true} horizontal={false} stroke={THEME_COLORS.gridLines} />
           <XAxis
             dataKey="store_name"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: '#f3f4f6', fontSize: 11, fontWeight: 500 }}
+            tick={{ fill: '#f3f4f6', fontSize: dims.fontSize.axis, fontWeight: 500 }}
             interval={0}
+            angle={dims.isMobile ? -45 : 0}
+            textAnchor={dims.isMobile ? 'end' : 'middle'}
+            height={dims.isMobile ? 60 : 30}
           />
           <YAxis
             axisLine={false}
             tickLine={false}
-            width={55}
-            tick={{ fill: '#9ca3af', fontSize: 11 }}
+            width={dims.isMobile ? 40 : 55}
+            tick={{ fill: '#9ca3af', fontSize: dims.fontSize.axis }}
             tickFormatter={(value) => `₱${(value / 1000).toFixed(0)}k`}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }} />

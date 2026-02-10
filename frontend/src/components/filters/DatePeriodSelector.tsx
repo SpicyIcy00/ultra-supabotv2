@@ -80,9 +80,9 @@ export const DatePeriodSelector: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm font-medium text-gray-400 mr-2">Period:</span>
-      <div className="flex flex-wrap gap-2 items-center relative">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+      <span className="text-sm font-medium text-gray-400 sm:mr-2">Period:</span>
+      <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center relative">
         {PERIODS.map((period) => {
           const dateRangeText = getDateRangeText(period.value);
           return (
@@ -90,7 +90,7 @@ export const DatePeriodSelector: React.FC = () => {
               key={period.value}
               onClick={() => handlePeriodClick(period.value)}
               className={`
-                px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-200
+                px-3 py-2 sm:px-6 sm:py-3 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200
                 ${selectedPeriod === period.value
                   ? 'bg-gradient-to-r from-[#00d2ff] to-[#3a47d5] text-white shadow-lg'
                   : 'bg-[#1c1e26] text-white hover:bg-[#2e303d]'
@@ -101,7 +101,7 @@ export const DatePeriodSelector: React.FC = () => {
               <div className="flex flex-col items-center gap-0.5">
                 <span>{period.label}</span>
                 {dateRangeText && selectedPeriod === period.value && (
-                  <span className="text-xs opacity-80 font-normal whitespace-nowrap">
+                  <span className="text-xs opacity-80 font-normal whitespace-nowrap hidden sm:block">
                     {dateRangeText}
                   </span>
                 )}
@@ -112,21 +112,23 @@ export const DatePeriodSelector: React.FC = () => {
 
         {/* Custom Date Range Picker */}
         {showCustomPicker && (
-          <div className="absolute top-full left-0 mt-2 z-50">
-            <DateRangePicker
-              startDate={tempStartDate}
-              endDate={tempEndDate}
-              onRangeSelect={(range) => {
-                setTempStartDate(range.start);
-                setTempEndDate(range.end);
-              }}
-              onClear={() => {
-                setTempStartDate(null);
-                setTempEndDate(null);
-              }}
-              onApply={handleApplyCustomDates}
-              onCancel={handleCancelCustomDates}
-            />
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 sm:bg-transparent sm:absolute sm:inset-auto sm:top-full sm:left-0 sm:mt-2">
+            <div className="sm:contents">
+              <DateRangePicker
+                startDate={tempStartDate}
+                endDate={tempEndDate}
+                onRangeSelect={(range) => {
+                  setTempStartDate(range.start);
+                  setTempEndDate(range.end);
+                }}
+                onClear={() => {
+                  setTempStartDate(null);
+                  setTempEndDate(null);
+                }}
+                onApply={handleApplyCustomDates}
+                onCancel={handleCancelCustomDates}
+              />
+            </div>
           </div>
         )}
       </div>

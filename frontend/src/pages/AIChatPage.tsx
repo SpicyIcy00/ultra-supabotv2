@@ -3,13 +3,16 @@
  * Natural language interface for querying business data
  */
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
 import { Send, Loader2, Code, Table as TableIcon, BarChart3 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import type { ChatMessage } from '../types/chatbot';
 import { streamChatQuery, getSuggestions } from '../services/chatbotApi';
-import { EnhancedChartRenderer } from '../components/chat/EnhancedChartRenderer';
 import type { ChartState } from '../types/enhancedChart';
+
+const EnhancedChartRenderer = React.lazy(() =>
+  import('../components/chat/EnhancedChartRenderer').then(m => ({ default: m.EnhancedChartRenderer }))
+);
 import { STORE_COLORS, CATEGORY_COLORS } from '../constants/colors';
 
 // Generate a unique session ID for conversation memory
@@ -158,13 +161,13 @@ export default function AIChatPage() {
   }, []);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-120px)]">
+    <div className="flex flex-col h-[calc(100vh-140px)] md:h-[calc(100vh-120px)]">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+      <div className="mb-3 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
           AI Chat Assistant
         </h1>
-        <p className="text-gray-400 mt-2">Ask questions about your business data in natural language</p>
+        <p className="text-sm sm:text-base text-gray-400 mt-1 sm:mt-2">Ask questions about your business data in natural language</p>
       </div>
 
       {/* Messages Container */}
@@ -218,17 +221,17 @@ export default function AIChatPage() {
         <button
           type="submit"
           disabled={isLoading || !input.trim()}
-          className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-medium hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
+          className="px-4 py-3 sm:px-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-medium hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
         >
           {isLoading ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              Processing
+              <span className="hidden sm:inline">Processing</span>
             </>
           ) : (
             <>
               <Send className="w-5 h-5" />
-              Send
+              <span className="hidden sm:inline">Send</span>
             </>
           )}
         </button>
@@ -340,7 +343,7 @@ function MessageBubble({ message, onChartCustomizationChange }: MessageBubblePro
   if (message.role === 'user') {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[70%] px-4 py-3 bg-blue-600 text-white rounded-lg">
+        <div className="max-w-[85%] sm:max-w-[70%] px-4 py-3 bg-blue-600 text-white rounded-lg">
           {message.content}
         </div>
       </div>
@@ -349,7 +352,7 @@ function MessageBubble({ message, onChartCustomizationChange }: MessageBubblePro
 
   return (
     <div className="flex justify-start">
-      <div className="max-w-[90%] px-6 py-4 bg-gray-800/50 border border-gray-700 rounded-lg">
+      <div className="max-w-full sm:max-w-[90%] px-4 py-3 sm:px-6 sm:py-4 bg-gray-800/50 border border-gray-700 rounded-lg">
         {message.isLoading ? (
           <div className="flex items-center gap-3 text-gray-400">
             <Loader2 className="w-5 h-5 animate-spin" />
@@ -372,21 +375,23 @@ function MessageBubble({ message, onChartCustomizationChange }: MessageBubblePro
             {/* Chart - Using Enhanced Chart Renderer with 15+ chart types */}
             {message.chart && message.chart_data && (
               <div className="mt-4">
-                <EnhancedChartRenderer
-                  config={message.chart as any}
-                  data={message.chart_data as any}
-                  originalData={message.data}
-                  messageId={message.id}
-                  initialCustomization={message.chartCustomization ? {
-                    chartType: message.chartCustomization.chartType as any,
-                    colorTheme: message.chartCustomization.colorTheme,
-                    showLegend: message.chartCustomization.showLegend,
-                    showGrid: message.chartCustomization.showGrid,
-                    title: message.chartCustomization.customTitle || '',
-                    isAnimated: message.chartCustomization.isAnimated,
-                  } : undefined}
-                  onCustomizationChange={(state) => onChartCustomizationChange(message.id, state)}
-                />
+                <Suspense fallback={<div className="flex items-center justify-center h-[200px]"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#00d2ff]" /></div>}>
+                  <EnhancedChartRenderer
+                    config={message.chart as any}
+                    data={message.chart_data as any}
+                    originalData={message.data}
+                    messageId={message.id}
+                    initialCustomization={message.chartCustomization ? {
+                      chartType: message.chartCustomization.chartType as any,
+                      colorTheme: message.chartCustomization.colorTheme,
+                      showLegend: message.chartCustomization.showLegend,
+                      showGrid: message.chartCustomization.showGrid,
+                      title: message.chartCustomization.customTitle || '',
+                      isAnimated: message.chartCustomization.isAnimated,
+                    } : undefined}
+                    onCustomizationChange={(state) => onChartCustomizationChange(message.id, state)}
+                  />
+                </Suspense>
               </div>
             )}
 

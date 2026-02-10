@@ -1,5 +1,3 @@
-import html2canvas from 'html2canvas';
-
 /**
  * Export a chart element as a PNG image
  * @param elementId - The ID of the chart container element
@@ -16,6 +14,9 @@ export const exportChartAsImage = async (
       console.error(`Element with ID "${elementId}" not found`);
       return;
     }
+
+    // Dynamically import html2canvas only when needed (~500KB savings on initial load)
+    const { default: html2canvas } = await import('html2canvas');
 
     // Generate canvas from the element
     const canvas = await html2canvas(element, {

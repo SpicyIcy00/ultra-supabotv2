@@ -52,8 +52,8 @@ export const PresetSaveDialog: React.FC<PresetSaveDialogProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-0">
+      <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold text-white mb-4">
           Save as Preset
         </h2>
@@ -100,7 +100,7 @@ export const PresetSaveDialog: React.FC<PresetSaveDialogProps> = ({
           </div>
         </div>
 
-        <div className="flex gap-3 mt-6">
+        <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 mt-6">
           <button
             onClick={handleClose}
             className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"

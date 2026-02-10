@@ -26,6 +26,13 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     from: startDate || undefined,
     to: endDate || undefined,
   });
+  const [isPhone, setIsPhone] = React.useState(typeof window !== 'undefined' && window.innerWidth < 768);
+
+  React.useEffect(() => {
+    const handleResize = () => setIsPhone(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleSelect = (selectedRange: DateRange | undefined) => {
     setRange(selectedRange);
@@ -87,7 +94,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
         mode="range"
         selected={range}
         onSelect={handleSelect}
-        numberOfMonths={2}
+        numberOfMonths={isPhone ? 1 : 2}
         footer={footer}
         className="custom-day-picker"
       />

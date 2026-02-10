@@ -4,8 +4,11 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 30, // 30 min cache for offline resilience
       refetchOnWindowFocus: false,
-      retry: 1,
+      refetchOnReconnect: true,
+      retry: 2,
+      networkMode: 'offlineFirst',
     },
   },
 });
