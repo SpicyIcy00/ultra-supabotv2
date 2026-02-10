@@ -6,33 +6,18 @@ import { StoreWeeklyTrends } from './StoreWeeklyTrends';
 import { TopMovers } from './TopMovers';
 import { useStoreComparisonV2 } from '../../hooks/useStoreComparisonV2';
 import { useDashboardStore } from '../../stores/dashboardStore';
-import { DateRangePicker } from '../filters/DateRangePicker';
+import { DatePeriodSelector } from '../filters/DatePeriodSelector';
 import type { PeriodType } from '../../utils/dateCalculations';
-import { calculatePeriodDateRanges, getPeriodLabel } from '../../utils/dateCalculations';
+import { calculatePeriodDateRanges } from '../../utils/dateCalculations';
 import { format } from 'date-fns';
 
 type StoreFilter = 'all' | 'top-3' | 'bottom-3' | 'custom';
-
-const PERIODS: { value: PeriodType; label: string }[] = [
-  { value: '1D', label: '1D' },
-  { value: 'WTD', label: 'WTD' },
-  { value: '7D', label: '7D' },
-  { value: 'MTD', label: 'MTD' },
-  { value: '30D', label: '30D' },
-  { value: '3MTD', label: '3MTD' },
-  { value: '90D', label: '90D' },
-  { value: '6MTD', label: '6MTD' },
-  { value: 'YTD', label: 'YTD' },
-  { value: 'CUSTOM', label: 'Custom' },
-];
 
 export const StoreComparisonV2: React.FC = () => {
   const [timePeriod, setTimePeriod] = useState<PeriodType>('MTD');
   const [storeFilter, setStoreFilter] = useState<StoreFilter>('all');
   const [selectedStore, setSelectedStore] = useState<string | null>(null);
-  const [showCustomPicker, setShowCustomPicker] = useState(false);
-  const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
-  const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
+  const [customRange, setCustomRange] = useState<{ start: Date; end: Date } | null>(null);
 
   const { stores, selectedStores, setStores } = useDashboardStore();
 
@@ -40,8 +25,8 @@ export const StoreComparisonV2: React.FC = () => {
   const { currentStart, currentEnd, previousStart, previousEnd, dateRangeLabel } = useMemo(() => {
     const ranges = calculatePeriodDateRanges(
       timePeriod,
-      customStartDate || undefined,
-      customEndDate || undefined
+      customRange?.start || undefined,
+      customRange?.end || undefined
     );
 
     const formatDate = (d: Date) => format(d, 'MMM d');
@@ -60,7 +45,7 @@ export const StoreComparisonV2: React.FC = () => {
       previousEnd: ranges.comparison?.end || ranges.current.end,
       dateRangeLabel,
     };
-  }, [timePeriod, customStartDate, customEndDate]);
+  }, [timePeriod, customRange]);
 
   const { data, isLoading, error } = useStoreComparisonV2(
     currentStart,
@@ -133,109 +118,19 @@ export const StoreComparisonV2: React.FC = () => {
     );
   }
 
-  const handlePeriodClick = (period: PeriodType) => {
-    if (period === 'CUSTOM') {
-      setShowCustomPicker(true);
-      // Initialize with current custom range if exists
-      if (customStartDate && customEndDate) {
-        // Keep existing custom dates
-      } else {
-        setCustomStartDate(null);
-        setCustomEndDate(null);
-      }
-    } else {
-      setShowCustomPicker(false);
-    }
-    setTimePeriod(period);
-  };
-
-  const handleApplyCustomDates = () => {
-    if (customStartDate && customEndDate) {
-      setShowCustomPicker(false);
-    }
-  };
-
-  const handleCancelCustomDates = () => {
-    setShowCustomPicker(false);
-    setCustomStartDate(null);
-    setCustomEndDate(null);
-  };
-
-  const getDateRangeText = (period: PeriodType): string => {
-    try {
-      let dateRange;
-      if (period === 'CUSTOM' && customStartDate && customEndDate) {
-        dateRange = calculatePeriodDateRanges(period, customStartDate, customEndDate);
-      } else if (period !== 'CUSTOM') {
-        dateRange = calculatePeriodDateRanges(period);
-      } else {
-        return '';
-      }
-
-      const startFormatted = format(dateRange.current.start, 'MMM d');
-      const endFormatted = format(dateRange.current.end, 'MMM d, yyyy');
-      return `${startFormatted} - ${endFormatted}`;
-    } catch (error) {
-      return '';
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Controls */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          {/* Time Period Selector */}
-          <div className="flex flex-col gap-3">
-            <label className="text-sm font-medium text-gray-400">Period:</label>
-            <div className="flex flex-wrap gap-2 items-center relative">
-              {PERIODS.map((period) => {
-                const dateRangeText = getDateRangeText(period.value);
-                return (
-                  <button
-                    key={period.value}
-                    onClick={() => handlePeriodClick(period.value)}
-                    className={`
-                      px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-200
-                      ${timePeriod === period.value
-                        ? 'bg-gradient-to-r from-[#00d2ff] to-[#3a47d5] text-white shadow-lg'
-                        : 'bg-[#1c1e26] text-white hover:bg-[#2e303d]'
-                      }
-                    `}
-                    title={getPeriodLabel(period.value)}
-                  >
-                    <div className="flex flex-col items-center gap-0.5">
-                      <span>{period.label}</span>
-                      {dateRangeText && timePeriod === period.value && (
-                        <span className="text-xs opacity-80 font-normal whitespace-nowrap">
-                          {dateRangeText}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-
-              {/* Custom Date Range Picker */}
-              {showCustomPicker && (
-                <div className="absolute top-full left-0 mt-2 z-50">
-                  <DateRangePicker
-                    startDate={customStartDate}
-                    endDate={customEndDate}
-                    onRangeSelect={(range) => {
-                      setCustomStartDate(range.start);
-                      setCustomEndDate(range.end);
-                    }}
-                    onClear={() => {
-                      setCustomStartDate(null);
-                      setCustomEndDate(null);
-                    }}
-                    onApply={handleApplyCustomDates}
-                    onCancel={handleCancelCustomDates}
-                  />
-                </div>
-              )}
-            </div>
+          {/* Time Period Selector — same component as Dashboard */}
+          <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-3 sm:p-4 flex-1">
+            <DatePeriodSelector
+              period={timePeriod}
+              onPeriodChange={setTimePeriod}
+              customDateRange={customRange}
+              onCustomDatesChange={(start, end) => setCustomRange({ start, end })}
+            />
           </div>
 
           {/* Export Button */}
