@@ -114,7 +114,7 @@ export const SalesByCategoryPie: React.FC<SalesByCategoryPieProps> = ({
   };
 
   return (
-    <div id="sales-by-category-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[280px] sm:h-[350px] lg:h-[420px]">
+    <div id="sales-by-category-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-auto sm:h-[350px] lg:h-[420px]">
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-lg font-bold text-white">Sales by Category</h3>
         <button
@@ -146,6 +146,18 @@ export const SalesByCategoryPie: React.FC<SalesByCategoryPieProps> = ({
           <Tooltip content={<CustomTooltip />} />
         </PieChart>
       </ResponsiveContainer>
+      {/* Mobile legend */}
+      {!dims.showPieLabels && (
+        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+          {chartData.map((entry) => (
+            <div key={entry.name} className="flex items-center gap-1.5 text-xs">
+              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
+              <span className="text-gray-300 truncate max-w-[100px]">{entry.name}</span>
+              <span className="text-gray-500">{entry.percentage}%</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

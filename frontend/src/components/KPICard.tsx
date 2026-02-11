@@ -62,7 +62,7 @@ export const KPICard: React.FC<KPICardProps> = ({
             </span>
           ) : (
             <span
-              className="text-sm font-bold"
+              className="text-sm font-bold whitespace-nowrap"
               style={{
                 color: isPositive ? THEME_COLORS.positiveChange : THEME_COLORS.negativeChange,
               }}
