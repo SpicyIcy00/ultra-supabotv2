@@ -6,46 +6,34 @@ import { StoreWeeklyTrends } from './StoreWeeklyTrends';
 import { TopMovers } from './TopMovers';
 import { useStoreComparisonV2 } from '../../hooks/useStoreComparisonV2';
 import { useDashboardStore } from '../../stores/dashboardStore';
-import { DatePeriodSelector } from '../filters/DatePeriodSelector';
-import type { PeriodType } from '../../utils/dateCalculations';
-import { calculatePeriodDateRanges } from '../../utils/dateCalculations';
 import { format } from 'date-fns';
 
 type StoreFilter = 'all' | 'top-3' | 'bottom-3' | 'custom';
 
 export const StoreComparisonV2: React.FC = () => {
-  const [timePeriod, setTimePeriod] = useState<PeriodType>('MTD');
   const [storeFilter, setStoreFilter] = useState<StoreFilter>('all');
   const [selectedStore, setSelectedStore] = useState<string | null>(null);
-  const [customRange, setCustomRange] = useState<{ start: Date; end: Date } | null>(null);
 
-  const { stores, selectedStores, setStores } = useDashboardStore();
+  const { stores, selectedStores, setStores, dateRanges } = useDashboardStore();
 
-  // Calculate date ranges based on selected period
   const { currentStart, currentEnd, previousStart, previousEnd, dateRangeLabel } = useMemo(() => {
-    const ranges = calculatePeriodDateRanges(
-      timePeriod,
-      customRange?.start || undefined,
-      customRange?.end || undefined
-    );
-
     const formatDate = (d: Date) => format(d, 'MMM d');
     const formatDateFull = (d: Date) => format(d, 'MMM d, yyyy');
 
-    let dateRangeLabel = `${formatDate(ranges.current.start)} - ${formatDateFull(ranges.current.end)}`;
+    let dateRangeLabel = `${formatDate(dateRanges.current.start)} - ${formatDateFull(dateRanges.current.end)}`;
 
-    if (ranges.comparison) {
-      dateRangeLabel += ` vs ${formatDate(ranges.comparison.start)} - ${formatDateFull(ranges.comparison.end)}`;
+    if (dateRanges.comparison) {
+      dateRangeLabel += ` vs ${formatDate(dateRanges.comparison.start)} - ${formatDateFull(dateRanges.comparison.end)}`;
     }
 
     return {
-      currentStart: ranges.current.start,
-      currentEnd: ranges.current.end,
-      previousStart: ranges.comparison?.start || ranges.current.start,
-      previousEnd: ranges.comparison?.end || ranges.current.end,
+      currentStart: dateRanges.current.start,
+      currentEnd: dateRanges.current.end,
+      previousStart: dateRanges.comparison?.start || dateRanges.current.start,
+      previousEnd: dateRanges.comparison?.end || dateRanges.current.end,
       dateRangeLabel,
     };
-  }, [timePeriod, customRange]);
+  }, [dateRanges]);
 
   const { data, isLoading, error } = useStoreComparisonV2(
     currentStart,
@@ -97,7 +85,7 @@ export const StoreComparisonV2: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `store-comparison-${timePeriod}-${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `store-comparison-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -121,50 +109,35 @@ export const StoreComparisonV2: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Controls */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          {/* Time Period Selector — same component as Dashboard */}
-          <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-3 sm:p-4 flex-1">
-            <DatePeriodSelector
-              period={timePeriod}
-              onPeriodChange={setTimePeriod}
-              customDateRange={customRange}
-              onCustomDatesChange={(start, end) => setCustomRange({ start, end })}
-            />
-          </div>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-gray-400">Show:</label>
+          <select
+            value={storeFilter}
+            onChange={(e) => handleStoreFilterChange(e.target.value as StoreFilter)}
+            className="bg-[#252833] border border-[#2e303d] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+          >
+            <option value="all">All Stores</option>
+            <option value="top-3">Top 3 Performers</option>
+            <option value="bottom-3">Bottom 3 Performers</option>
+            <option value="custom">Custom Selection</option>
+          </select>
+        </div>
 
-          {/* Export Button */}
+        {/* Export Button */}
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-blue-400 font-medium hidden sm:block">
+            Comparing: {dateRangeLabel}
+          </div>
           <button
             onClick={handleExportCSV}
-            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 self-start"
+            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             Export CSV
           </button>
-        </div>
-
-        {/* Store Filter and Date Range Label */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-400">Show:</label>
-            <select
-              value={storeFilter}
-              onChange={(e) => handleStoreFilterChange(e.target.value as StoreFilter)}
-              className="bg-[#252833] border border-[#2e303d] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
-            >
-              <option value="all">All Stores</option>
-              <option value="top-3">Top 3 Performers</option>
-              <option value="bottom-3">Bottom 3 Performers</option>
-              <option value="custom">Custom Selection</option>
-            </select>
-          </div>
-
-          {/* Date Range Label */}
-          <div className="text-sm text-blue-400 font-medium">
-            Comparing: {dateRangeLabel}
-          </div>
         </div>
       </div>
 

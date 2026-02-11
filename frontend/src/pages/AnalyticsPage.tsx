@@ -1,62 +1,25 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { DayOfWeekPatterns } from '../components/charts/DayOfWeekPatterns';
 import { ProductCombosTable } from '../components/tables/ProductCombosTable';
 import { SalesAnomaliesList } from '../components/lists/SalesAnomaliesList';
 import { StoreComparisonV2 } from '../components/analytics/StoreComparisonV2';
 import { DatePeriodSelector } from '../components/filters/DatePeriodSelector';
 import {
-  useStoreComparison,
   useDayOfWeekPatterns,
   useProductCombos,
   useSalesAnomalies,
 } from '../hooks/useDashboardData';
-import type { PeriodType } from '../utils/dateCalculations';
-import { calculatePeriodDateRanges } from '../utils/dateCalculations';
+import { useDashboardStore } from '../stores/dashboardStore';
 
 type TabType = 'store-comparison' | 'day-patterns' | 'product-combos' | 'anomalies';
 
 export const AnalyticsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('store-comparison');
 
-  // Day patterns state
-  const [dayPatternsPeriod, setDayPatternsPeriod] = useState<PeriodType>('30D');
-  const [dayPatternsCustomRange, setDayPatternsCustomRange] = useState<{ start: Date; end: Date } | null>(null);
+  const dateRanges = useDashboardStore((state) => state.dateRanges);
 
-  // Product combos state
-  const [productCombosPeriod, setProductCombosPeriod] = useState<PeriodType>('30D');
-  const [productCombosCustomRange, setProductCombosCustomRange] = useState<{ start: Date; end: Date } | null>(null);
-
-  // Calculate date ranges for day patterns
-  const { startDate: dayPatternsStartDate, endDate: dayPatternsEndDate } = useMemo(() => {
-    const ranges = calculatePeriodDateRanges(
-      dayPatternsPeriod,
-      dayPatternsCustomRange?.start || undefined,
-      dayPatternsCustomRange?.end || undefined
-    );
-
-    return {
-      startDate: ranges.current.start,
-      endDate: ranges.current.end,
-    };
-  }, [dayPatternsPeriod, dayPatternsCustomRange]);
-
-  // Calculate date ranges for product combos
-  const { startDate: productCombosStartDate, endDate: productCombosEndDate } = useMemo(() => {
-    const ranges = calculatePeriodDateRanges(
-      productCombosPeriod,
-      productCombosCustomRange?.start || undefined,
-      productCombosCustomRange?.end || undefined
-    );
-
-    return {
-      startDate: ranges.current.start,
-      endDate: ranges.current.end,
-    };
-  }, [productCombosPeriod, productCombosCustomRange]);
-
-  const storeComparison = useStoreComparison();
-  const dayOfWeekPatterns = useDayOfWeekPatterns(dayPatternsStartDate, dayPatternsEndDate);
-  const productCombos = useProductCombos(productCombosStartDate, productCombosEndDate);
+  const dayOfWeekPatterns = useDayOfWeekPatterns(dateRanges.current.start, dateRanges.current.end);
+  const productCombos = useProductCombos(dateRanges.current.start, dateRanges.current.end);
   const salesAnomalies = useSalesAnomalies();
 
   const tabs = [
@@ -84,8 +47,6 @@ export const AnalyticsPage: React.FC = () => {
 
   const getLoadingState = () => {
     switch (activeTab) {
-      case 'store-comparison':
-        return storeComparison.isLoading;
       case 'day-patterns':
         return dayOfWeekPatterns.isLoading;
       case 'product-combos':
@@ -106,6 +67,11 @@ export const AnalyticsPage: React.FC = () => {
           <p className="text-sm sm:text-base text-gray-400">
             Deep dive into your business metrics and insights
           </p>
+        </div>
+
+        {/* Filters - same layout as Dashboard */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 bg-[#1c1e26] border border-[#2e303d] rounded-lg p-3 sm:p-4">
+          <DatePeriodSelector />
         </div>
 
         {/* Tabs */}
@@ -134,39 +100,17 @@ export const AnalyticsPage: React.FC = () => {
             )}
 
             {activeTab === 'day-patterns' && (
-              <div className="space-y-6">
-                <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-3 sm:p-4">
-                  <DatePeriodSelector
-                    period={dayPatternsPeriod}
-                    onPeriodChange={setDayPatternsPeriod}
-                    customDateRange={dayPatternsCustomRange}
-                    onCustomDatesChange={(start, end) => setDayPatternsCustomRange({ start, end })}
-                  />
-                </div>
-
-                <DayOfWeekPatterns
-                  data={dayOfWeekPatterns.data?.data || []}
-                  isLoading={getLoadingState()}
-                />
-              </div>
+              <DayOfWeekPatterns
+                data={dayOfWeekPatterns.data?.data || []}
+                isLoading={getLoadingState()}
+              />
             )}
 
             {activeTab === 'product-combos' && (
-              <div className="space-y-6">
-                <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-3 sm:p-4">
-                  <DatePeriodSelector
-                    period={productCombosPeriod}
-                    onPeriodChange={setProductCombosPeriod}
-                    customDateRange={productCombosCustomRange}
-                    onCustomDatesChange={(start, end) => setProductCombosCustomRange({ start, end })}
-                  />
-                </div>
-
-                <ProductCombosTable
-                  data={productCombos.data || []}
-                  isLoading={getLoadingState()}
-                />
-              </div>
+              <ProductCombosTable
+                data={productCombos.data || []}
+                isLoading={getLoadingState()}
+              />
             )}
 
             {activeTab === 'anomalies' && (
