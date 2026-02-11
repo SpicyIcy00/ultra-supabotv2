@@ -6,7 +6,7 @@
  */
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { QuickActions } from './mobile/QuickActions';
+
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -249,8 +249,6 @@ export function Layout({ children }: LayoutProps) {
         </nav>
       )}
 
-      {/* Mobile Quick Actions FAB */}
-      <QuickActions />
     </div>
   );
 }
