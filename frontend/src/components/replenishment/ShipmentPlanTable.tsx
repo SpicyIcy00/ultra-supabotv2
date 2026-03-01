@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getLatestPlan } from '../../services/replenishmentApi';
-import { fetchStores } from '../../services/reportApi';
+import { fetchStores, postReplenishmentToSheets } from '../../services/reportApi';
 import type { ShipmentPlanItem, ShipmentPlanResponse } from '../../types/replenishment';
+import { Loader2, Upload } from 'lucide-react';
 
 type SortColumn = keyof ShipmentPlanItem;
 type SortDirection = 'asc' | 'desc';
@@ -14,6 +15,9 @@ export const ShipmentPlanTable: React.FC = () => {
   const [sortColumn, setSortColumn] = useState<SortColumn>('priority_score');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [loading, setLoading] = useState(true);
+  const [postingToSheets, setPostingToSheets] = useState(false);
+  const [sheetsSuccess, setSheetsSuccess] = useState<string | null>(null);
+  const [sheetsError, setSheetsError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -124,6 +128,35 @@ export const ShipmentPlanTable: React.FC = () => {
     URL.revokeObjectURL(link.href);
   };
 
+  const postToSheets = async () => {
+    if (!selectedStore) {
+      setSheetsError('Please select a specific store before posting to Google Sheets.');
+      setTimeout(() => setSheetsError(null), 6000);
+      return;
+    }
+    if (!filteredAndSorted.length) {
+      setSheetsError('No data to post.');
+      setTimeout(() => setSheetsError(null), 6000);
+      return;
+    }
+
+    const storeName = stores.find(s => s.id === selectedStore)?.name || selectedStore;
+    setPostingToSheets(true);
+    setSheetsSuccess(null);
+    setSheetsError(null);
+
+    try {
+      const result = await postReplenishmentToSheets(filteredAndSorted, storeName);
+      setSheetsSuccess(result.message);
+      setTimeout(() => setSheetsSuccess(null), 5000);
+    } catch (err: any) {
+      setSheetsError(err.message || 'Failed to post to Google Sheets');
+      setTimeout(() => setSheetsError(null), 8000);
+    } finally {
+      setPostingToSheets(false);
+    }
+  };
+
   const SortHeader: React.FC<{ col: SortColumn; label: string; align?: string }> = ({
     col, label, align = 'right',
   }) => (
@@ -190,10 +223,33 @@ export const ShipmentPlanTable: React.FC = () => {
           >
             Export CSV
           </button>
+          <button
+            onClick={postToSheets}
+            disabled={postingToSheets || !filteredAndSorted.length}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors"
+          >
+            {postingToSheets ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Posting...
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4" />
+                Post to Sheets
+              </>
+            )}
+          </button>
         </div>
         <p className="text-xs text-gray-500 mt-2">
           Showing {filteredAndSorted.length} of {plan.items.length} items | Run: {plan.run_date}
         </p>
+        {sheetsSuccess && (
+          <p className="text-xs text-green-400 mt-1">{sheetsSuccess}</p>
+        )}
+        {sheetsError && (
+          <p className="text-xs text-red-400 mt-1">{sheetsError}</p>
+        )}
       </div>
 
       {/* Table */}

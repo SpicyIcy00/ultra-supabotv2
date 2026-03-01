@@ -41,6 +41,25 @@ export const SHEETS_COLUMN_ORDER: (keyof SheetsColumnMapping)[] = [
 ];
 
 /**
+ * Transforms replenishment shipment plan items to match Google Sheets format.
+ * Uses the same column structure as product sales:
+ *   A: product_name, B: sku, C: product_id (sku_id),
+ *   D: requested_ship_qty → "Ordered Qty",
+ *   E: on_hand → "Store Inventory",
+ *   F: wh_on_hand → "Warehouse Inventory"
+ */
+export function transformReplenishmentForSheets(items: any[]) {
+  return items.map(item => ({
+    product_name: item.product_name || '',
+    sku: item.product_sku || item.sku_id || '',
+    product_id: item.sku_id || '',
+    quantity_sold: item.requested_ship_qty ?? 0,
+    inventory_store_a: item.on_hand ?? 0,
+    inventory_store_b: item.wh_on_hand ?? 0,
+  }));
+}
+
+/**
  * Transforms report data to match Google Sheets format
  * @param reportData Array of report rows
  * @returns Formatted data ready for Google Sheets
