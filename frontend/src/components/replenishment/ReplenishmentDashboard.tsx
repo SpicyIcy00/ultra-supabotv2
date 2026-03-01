@@ -6,6 +6,8 @@ import {
   getDataReadiness,
   getStoreTiers,
 } from '../../services/replenishmentApi';
+import { postReplenishmentToSheets } from '../../services/reportApi';
+import { Loader2, Upload } from 'lucide-react';
 import type {
   ReplenishmentRunResponse,
   ShipmentPlanResponse,
@@ -31,6 +33,9 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
   const [hideZeroSales, setHideZeroSales] = useState(false);
   const [showIds, setShowIds] = useState(false);
+  const [postingToSheets, setPostingToSheets] = useState(false);
+  const [sheetsSuccess, setSheetsSuccess] = useState<string | null>(null);
+  const [sheetsError, setSheetsError] = useState<string | null>(null);
 
   useEffect(() => {
     loadInitialData();
@@ -149,6 +154,28 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const handlePostToSheets = async () => {
+    if (!latestPlan || !latestPlan.items.length) return;
+
+    const visibleItems = filteredAndSorted(latestPlan.items);
+    const storeName = stores.find((s) => s.store_id === selectedStoreId)?.store_name ?? 'Replenishment';
+
+    setPostingToSheets(true);
+    setSheetsSuccess(null);
+    setSheetsError(null);
+
+    try {
+      const result = await postReplenishmentToSheets(visibleItems, storeName);
+      setSheetsSuccess(result.message);
+      setTimeout(() => setSheetsSuccess(null), 5000);
+    } catch (err: any) {
+      setSheetsError(err.message || 'Failed to post to Google Sheets');
+      setTimeout(() => setSheetsError(null), 8000);
+    } finally {
+      setPostingToSheets(false);
+    }
   };
 
   if (loading) {
@@ -304,7 +331,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
       {/* Shipment Plan Table */}
       {latestPlan && latestPlan.items.length > 0 && (
         <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <h3 className="text-sm font-semibold text-gray-300">
               Shipment Plan ({latestPlan.items.length} items)
             </h3>
@@ -328,16 +355,41 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                 Show IDs
               </label>
             </div>
-            <button
-              onClick={handleDownloadCsv}
-              className="flex items-center gap-2 px-3 py-1.5 bg-[#0e1117] border border-[#2e303d] text-gray-300 text-xs rounded-lg hover:border-blue-500/50 hover:text-white transition-all"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Download CSV
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDownloadCsv}
+                className="flex items-center gap-2 px-3 py-1.5 bg-[#0e1117] border border-[#2e303d] text-gray-300 text-xs rounded-lg hover:border-blue-500/50 hover:text-white transition-all"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Download CSV
+              </button>
+              <button
+                onClick={handlePostToSheets}
+                disabled={postingToSheets}
+                className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-xs rounded-lg transition-all"
+              >
+                {postingToSheets ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Posting...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-3.5 h-3.5" />
+                    Post to Sheets
+                  </>
+                )}
+              </button>
+            </div>
           </div>
+          {sheetsSuccess && (
+            <p className="text-xs text-green-400 mb-3">{sheetsSuccess}</p>
+          )}
+          {sheetsError && (
+            <p className="text-xs text-red-400 mb-3">{sheetsError}</p>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
               <thead>
