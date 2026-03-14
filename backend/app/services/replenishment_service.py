@@ -277,7 +277,10 @@ class ReplenishmentService:
         return sales_map
 
     async def run_replenishment_calculation(
-        self, run_date: Optional[date] = None, store_id: Optional[str] = None
+        self,
+        run_date: Optional[date] = None,
+        store_id: Optional[str] = None,
+        apply_stockout_buffer: bool = True,
     ) -> Dict[str, Any]:
         """Execute the replenishment calculation, optionally filtered to a single store."""
         if run_date is None:
@@ -388,6 +391,24 @@ class ReplenishmentService:
 
             # Requested ship quantity (bring store up to min level)
             requested_ship_qty = max(0, math.ceil(min_level - inventory_position))
+
+            # Stockout-day buffer (optional)
+            # Predicts which day stock runs out using on_hand only, then adds a buffer
+            # based on how urgently the weekend gap needs covering:
+            #   Mon–Fri stockout → +20% (enters weekend without stock)
+            #   Sat–Sun stockout → +10% (mid-weekend)
+            #   Beyond review week → no buffer
+            if apply_stockout_buffer and requested_ship_qty > 0 and season_adj_sales > 0 and on_hand >= 0:
+                projected_stockout = run_date + timedelta(
+                    days=int(on_hand / max(season_adj_sales, 0.1))
+                )
+                end_of_review_week = run_date + timedelta(days=REVIEW_PERIOD_DAYS)
+                if projected_stockout <= end_of_review_week:
+                    # weekday(): 0=Mon … 4=Fri, 5=Sat, 6=Sun
+                    if projected_stockout.weekday() <= 4:   # Mon–Fri → +20%
+                        requested_ship_qty = math.ceil(requested_ship_qty * 1.20)
+                    else:                                    # Sat–Sun → +10%
+                        requested_ship_qty = math.ceil(requested_ship_qty * 1.10)
 
             # Skip products that don't need replenishment
             if requested_ship_qty == 0:

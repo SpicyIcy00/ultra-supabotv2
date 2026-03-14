@@ -31,6 +31,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
   const [hideZeroSales, setHideZeroSales] = useState(false);
   const [showIds, setShowIds] = useState(false);
+  const [applyStockoutBuffer, setApplyStockoutBuffer] = useState(true);
 
   useEffect(() => {
     loadInitialData();
@@ -78,7 +79,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
     setIsRunning(true);
     setError(null);
     try {
-      const result = await runReplenishment(undefined, selectedStoreId);
+      const result = await runReplenishment(undefined, selectedStoreId, applyStockoutBuffer);
       setRunResult(result);
       await loadPlanData();
       onRunComplete?.();
@@ -207,7 +208,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
               </p>
             )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {/* Store Dropdown */}
             <select
               value={selectedStoreId}
@@ -221,6 +222,17 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                 </option>
               ))}
             </select>
+            {/* Stockout buffer toggle */}
+            <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={applyStockoutBuffer}
+                onChange={(e) => setApplyStockoutBuffer(e.target.checked)}
+                className="rounded border-[#2e303d] bg-[#0e1117] text-blue-500 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+              />
+              Stockout buffer
+              <span className="text-xs text-gray-500">(+20% Mon–Fri, +10% Sat–Sun)</span>
+            </label>
             <button
               onClick={handleRun}
               disabled={isRunning || !selectedStoreId}
