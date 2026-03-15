@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type { ProductSalesReportResponse, Store } from '../types/report';
-import { transformDataForSheets } from '../config/sheetsMapping';
+import { transformDataForSheets, transformReplenishmentForSheets } from '../config/sheetsMapping';
 
 // Use relative URL to leverage Vercel rewrite proxy (avoids CORS)
 const API_BASE_URL = '';  // Empty because we append /api/v1 below
@@ -258,6 +258,43 @@ export const postReportToSheets = async (
     });
 
     // Handle various error scenarios
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    } else if (error.response?.data?.error) {
+      throw new Error(error.response.data.error);
+    } else {
+      throw new Error(`Failed to post to Google Sheets: ${error.message}`);
+    }
+  }
+};
+
+export const postReplenishmentToSheets = async (
+  items: any[],
+  sheetName: string,
+): Promise<{ success: boolean; message: string; rowsWritten?: number; sheetName?: string }> => {
+  if (!sheetName) {
+    throw new Error('Sheet name is required. Please select a store.');
+  }
+
+  const transformedData = transformReplenishmentForSheets(items);
+
+  try {
+    const response = await axios.post(`${API_BASE_URL}${API_V1_PREFIX}/sheets/post-to-sheets`, {
+      sheetName,
+      data: transformedData,
+    });
+
+    if (response.data.success) {
+      return {
+        success: true,
+        message: response.data.message || `Posted ${transformedData.length} rows to "${sheetName}" tab`,
+        rowsWritten: response.data.rowsWritten || transformedData.length,
+        sheetName,
+      };
+    } else {
+      throw new Error(response.data.error || response.data.message || 'Unknown error');
+    }
+  } catch (error: any) {
     if (error.response?.data?.detail) {
       throw new Error(error.response.data.detail);
     } else if (error.response?.data?.error) {
