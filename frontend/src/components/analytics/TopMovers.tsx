@@ -41,26 +41,35 @@ export const TopMovers: React.FC<TopMoversProps> = ({
     return <div className="text-center text-gray-400 py-8">No data available</div>;
   }
 
-  const MoverItem = ({ item, isPositive }: { item: any; isPositive: boolean }) => (
-    <div className="bg-[#1c1e26] rounded-lg p-3 border-l-4" style={{
-      borderLeftColor: isPositive ? '#10b981' : '#ef4444'
-    }}>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-white font-medium text-sm">{item.name}</span>
-        <span className={`font-bold text-sm ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-          {isPositive ? '+' : ''}{formatCurrency(item.revenue_change)}
-        </span>
+  const MoverItem = ({ item, isPositive }: { item: any; isPositive: boolean }) => {
+    const isNew = isPositive && item.previous_revenue === 0;
+    return (
+      <div className="bg-[#1c1e26] rounded-lg p-3 border-l-4" style={{
+        borderLeftColor: isPositive ? '#10b981' : '#ef4444'
+      }}>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-white font-medium text-sm">{item.name}</span>
+          <span className={`font-bold text-sm ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+            {isPositive ? '+' : ''}{formatCurrency(item.revenue_change)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-xs text-gray-400">
+          <span>
+            {formatCurrency(item.previous_revenue)} → {formatCurrency(item.current_revenue)}
+          </span>
+          {isNew ? (
+            <span className="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-1.5 py-0.5 rounded text-xs font-medium">
+              New
+            </span>
+          ) : (
+            <span className={isPositive ? 'text-green-400' : 'text-red-400'}>
+              {isPositive ? '+' : ''}{item.change_pct != null ? item.change_pct.toFixed(1) : '0.0'}%
+            </span>
+          )}
+        </div>
       </div>
-      <div className="flex items-center justify-between text-xs text-gray-400">
-        <span>
-          {formatCurrency(item.previous_revenue)} → {formatCurrency(item.current_revenue)}
-        </span>
-        <span className={isPositive ? 'text-green-400' : 'text-red-400'}>
-          {isPositive ? '+' : ''}{item.change_pct.toFixed(1)}%
-        </span>
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

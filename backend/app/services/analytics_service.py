@@ -9,14 +9,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from app.core.cache import cached
 
-_UUID_RE = re.compile(
-    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+_STORE_ID_RE = re.compile(
+    r'^([0-9a-f]{24}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$',
     re.IGNORECASE
 )
 
 def _is_valid_uuid(value: str) -> bool:
-    """Return True if value is a valid UUID string."""
-    return bool(_UUID_RE.match(str(value)))
+    """Return True if value is a valid store ID (MongoDB ObjectID or UUID)."""
+    return bool(_STORE_ID_RE.match(str(value)))
 
 
 class AnalyticsService:
@@ -1928,8 +1928,8 @@ class AnalyticsService:
                 store_ids_str = "', '".join(validated_ids)
                 store_filter = f"AND s.id IN ('{store_ids_str}')"
 
-        # Get product movers
-        product_query = text(f"""
+        # Get product movers — separate queries for gainers and decliners so both always have representation
+        product_cte = f"""
             WITH current_products AS (
                 SELECT
                     p.id,
@@ -1960,29 +1960,49 @@ class AnalyticsService:
                     AND t.is_cancelled = false
                     {store_filter}
                 GROUP BY p.id
+            ),
+            product_changes AS (
+                SELECT
+                    cp.name as product_name,
+                    cp.revenue as current_revenue,
+                    COALESCE(pp.revenue, 0)::float as previous_revenue,
+                    (cp.revenue - COALESCE(pp.revenue, 0))::float as revenue_change
+                FROM current_products cp
+                LEFT JOIN previous_products pp ON cp.id = pp.id
+                WHERE
+                    (cp.revenue > 0 OR COALESCE(pp.revenue, 0) > 0)
+                    AND GREATEST(cp.revenue, COALESCE(pp.revenue, 0)) >= 5000
             )
-            SELECT
-                cp.name as product_name,
-                cp.revenue as current_revenue,
-                COALESCE(pp.revenue, 0)::float as previous_revenue,
-                (cp.revenue - COALESCE(pp.revenue, 0))::float as revenue_change
-            FROM current_products cp
-            LEFT JOIN previous_products pp ON cp.id = pp.id
-            WHERE cp.revenue > 0 OR COALESCE(pp.revenue, 0) > 0
-            ORDER BY ABS(cp.revenue - COALESCE(pp.revenue, 0)) DESC
-            LIMIT 10
+        """
+
+        product_gainers_query = text(product_cte + """
+            SELECT * FROM product_changes
+            WHERE revenue_change > 0
+            ORDER BY revenue_change DESC
+            LIMIT 5
         """)
 
-        product_result = await self.db.execute(product_query, {
+        product_decliners_query = text(product_cte + """
+            SELECT * FROM product_changes
+            WHERE revenue_change < 0
+            ORDER BY revenue_change ASC
+            LIMIT 5
+        """)
+
+        params = {
             "start_date": start_date,
             "end_date": end_date_inclusive,
             "compare_start_date": compare_start_date,
             "compare_end_date": compare_end_date_inclusive
-        })
-        product_rows = product_result.fetchall()
+        }
 
-        # Get category movers
-        category_query = text(f"""
+        product_gainers_result = await self.db.execute(product_gainers_query, params)
+        product_gainers_rows = product_gainers_result.fetchall()
+        product_decliners_result = await self.db.execute(product_decliners_query, params)
+        product_decliners_rows = product_decliners_result.fetchall()
+
+        # Get category movers — separate queries for gainers and decliners
+        category_cte = f"""
             WITH current_categories AS (
                 SELECT
                     COALESCE(p.category, 'Uncategorized') as category,
@@ -2012,68 +2032,64 @@ class AnalyticsService:
                     AND t.is_cancelled = false
                     {store_filter}
                 GROUP BY p.category
+            ),
+            category_changes AS (
+                SELECT
+                    cc.category,
+                    cc.revenue as current_revenue,
+                    COALESCE(pc.revenue, 0)::float as previous_revenue,
+                    (cc.revenue - COALESCE(pc.revenue, 0))::float as revenue_change
+                FROM current_categories cc
+                LEFT JOIN previous_categories pc ON cc.category = pc.category
+                WHERE cc.revenue > 0 OR COALESCE(pc.revenue, 0) > 0
             )
-            SELECT
-                cc.category,
-                cc.revenue as current_revenue,
-                COALESCE(pc.revenue, 0)::float as previous_revenue,
-                (cc.revenue - COALESCE(pc.revenue, 0))::float as revenue_change
-            FROM current_categories cc
-            LEFT JOIN previous_categories pc ON cc.category = pc.category
-            WHERE cc.revenue > 0 OR COALESCE(pc.revenue, 0) > 0
-            ORDER BY ABS(cc.revenue - COALESCE(pc.revenue, 0)) DESC
-            LIMIT 6
+        """
+
+        category_gainers_query = text(category_cte + """
+            SELECT * FROM category_changes
+            WHERE revenue_change > 0
+            ORDER BY revenue_change DESC
+            LIMIT 3
         """)
 
-        category_result = await self.db.execute(category_query, {
-            "start_date": start_date,
-            "end_date": end_date_inclusive,
-            "compare_start_date": compare_start_date,
-            "compare_end_date": compare_end_date_inclusive
-        })
-        category_rows = category_result.fetchall()
+        category_decliners_query = text(category_cte + """
+            SELECT * FROM category_changes
+            WHERE revenue_change < 0
+            ORDER BY revenue_change ASC
+            LIMIT 3
+        """)
 
-        # Process results
-        products_up = []
-        products_down = []
-        for row in product_rows:
-            item = {
+        category_gainers_result = await self.db.execute(category_gainers_query, params)
+        category_gainers_rows = category_gainers_result.fetchall()
+        category_decliners_result = await self.db.execute(category_decliners_query, params)
+        category_decliners_rows = category_decliners_result.fetchall()
+
+        def build_product_item(row):
+            prev = float(row.previous_revenue or 0)
+            change = float(row.revenue_change or 0)
+            return {
                 "name": row.product_name,
                 "current_revenue": float(row.current_revenue or 0),
-                "previous_revenue": float(row.previous_revenue or 0),
-                "revenue_change": float(row.revenue_change or 0),
-                "change_pct": (
-                    ((float(row.revenue_change or 0) / float(row.previous_revenue)) * 100)
-                    if row.previous_revenue and row.previous_revenue > 0 else 0
-                )
+                "previous_revenue": prev,
+                "revenue_change": change,
+                "change_pct": ((change / prev) * 100) if prev > 0 else None
             }
-            if item["revenue_change"] > 0:
-                products_up.append(item)
-            else:
-                products_down.append(item)
 
-        categories_up = []
-        categories_down = []
-        for row in category_rows:
-            item = {
+        def build_category_item(row):
+            prev = float(row.previous_revenue or 0)
+            change = float(row.revenue_change or 0)
+            return {
                 "name": row.category,
                 "current_revenue": float(row.current_revenue or 0),
-                "previous_revenue": float(row.previous_revenue or 0),
-                "revenue_change": float(row.revenue_change or 0),
-                "change_pct": (
-                    ((float(row.revenue_change or 0) / float(row.previous_revenue)) * 100)
-                    if row.previous_revenue and row.previous_revenue > 0 else 0
-                )
+                "previous_revenue": prev,
+                "revenue_change": change,
+                "change_pct": ((change / prev) * 100) if prev > 0 else None
             }
-            if item["revenue_change"] > 0:
-                categories_up.append(item)
-            else:
-                categories_down.append(item)
 
         return {
-            "products_up": products_up[:5],
-            "products_down": products_down[:5],
-            "categories_up": categories_up[:3],
-            "categories_down": categories_down[:3]
+            "products_up": [build_product_item(r) for r in product_gainers_rows],
+            "products_down": [build_product_item(r) for r in product_decliners_rows],
+            "categories_up": [build_category_item(r) for r in category_gainers_rows],
+            "categories_down": [build_category_item(r) for r in category_decliners_rows]
         }
  
