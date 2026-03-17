@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, LineChart, Line,
+  ResponsiveContainer, Legend,
 } from 'recharts';
 import { formatCurrency, formatNumber } from '../../utils/dateCalculations';
 import { useStoreDrilldownV2 } from '../../hooks/useStoreComparisonV2';
@@ -18,20 +18,8 @@ interface StoreDrilldownPanelProps {
 
 // ── Small helpers ────────────────────────────────────────────────────────────
 
-const Delta = ({ value, pct, unit = '' }: { value: number; pct: number | null; unit?: string }) => {
-  const up = value >= 0;
-  const color = up ? 'text-green-400' : 'text-red-400';
-  const arrow = up ? '▲' : '▼';
-  return (
-    <span className={`text-xs font-medium ${color}`}>
-      {arrow} {up ? '+' : ''}{unit}{formatNumber(Math.abs(value))}
-      {pct != null && ` (${up ? '+' : ''}${pct.toFixed(1)}%)`}
-    </span>
-  );
-};
-
 const KpiCard = ({
-  label, current, prior, change, changePct, format = 'currency', unit = '',
+  label, current, prior, change, changePct, format = 'currency',
 }: {
   label: string;
   current: number;
@@ -39,7 +27,6 @@ const KpiCard = ({
   change: number;
   changePct: number | null;
   format?: 'currency' | 'number' | 'pct' | 'decimal';
-  unit?: string;
 }) => {
   const fmt = (v: number) => {
     if (format === 'currency') return formatCurrency(v);
