@@ -735,8 +735,8 @@ async def get_store_drilldown_v2(
     store_id: str = Query(...),
     start_date: datetime = Query(...),
     end_date: datetime = Query(...),
-    compare_start_date: datetime = Query(...),
-    compare_end_date: datetime = Query(...),
+    compare_start_date: Optional[datetime] = Query(default=None),
+    compare_end_date: Optional[datetime] = Query(default=None),
     store_ids: List[str] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
 ):
@@ -747,9 +747,11 @@ async def get_store_drilldown_v2(
     """
     try:
         service = AnalyticsService(db)
+        # Fall back to same period (zero-change) if no comparison dates provided
+        csd = compare_start_date or start_date
+        ced = compare_end_date or end_date
         result = await service.get_store_drilldown_v2(
-            store_id, start_date, end_date,
-            compare_start_date, compare_end_date, store_ids
+            store_id, start_date, end_date, csd, ced, store_ids
         )
         return result
     except Exception as e:

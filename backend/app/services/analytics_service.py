@@ -2035,7 +2035,7 @@ class AnalyticsService:
         def row_to_day(r):
             return {
                 "date": r.day_date.isoformat(),
-                "label": r.day_date.strftime("%a %-d"),
+                "label": r.day_date.strftime("%a") + " " + str(r.day_date.day),
                 "revenue": float(r.revenue or 0),
                 "transactions": int(r.transactions or 0),
                 "avg_ticket": float(r.avg_ticket or 0),
