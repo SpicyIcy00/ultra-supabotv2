@@ -115,6 +115,34 @@ const MoverRow = ({ item, positive }: { item: any; positive: boolean }) => {
   );
 };
 
+// ── Collapsible Section ───────────────────────────────────────────────────────
+
+const CollapsibleSection = ({
+  title, subtitle, defaultOpen = false, children,
+}: {
+  title: string; subtitle?: string; defaultOpen?: boolean; children: React.ReactNode;
+}) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="border-t border-[#2e303d] pt-4">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-2 w-full text-left group mb-1"
+      >
+        <svg
+          className={`w-4 h-4 text-gray-500 flex-shrink-0 transition-transform duration-150 ${open ? 'rotate-90' : ''}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+        <span className="text-sm font-semibold text-gray-300 group-hover:text-white transition-colors">{title}</span>
+        {subtitle && <span className="text-xs text-gray-600">{subtitle}</span>}
+      </button>
+      {open && <div className="mt-3">{children}</div>}
+    </div>
+  );
+};
+
 // ── Main Panel ────────────────────────────────────────────────────────────────
 
 export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
@@ -228,114 +256,120 @@ export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
           </div>
         )}
 
-        {/* ── Transaction Distribution ── */}
+        {/* ── Transaction Distribution (compact) ── */}
         {distribution.length > 0 && (
-          <div>
-            <h3 className="text-sm font-semibold text-gray-300 mb-3">Transaction Size Distribution</h3>
-            <div className="grid grid-cols-4 gap-2">
-              {distribution.map((b: any) => {
-                const diff = b.current_count - b.prior_count;
-                const up   = diff >= 0;
-                return (
-                  <div key={b.bucket} className="bg-[#252833] rounded-lg p-3 text-center">
-                    <div className="text-[11px] text-gray-500 mb-1">{b.bucket}</div>
-                    <div className="text-base font-bold text-white">{formatNumber(b.current_count)}</div>
-                    <div className="text-[11px] text-gray-600 mb-1">txns</div>
-                    <div className={`text-xs font-semibold ${up ? 'text-green-400' : 'text-red-400'}`}>
-                      {up ? '+' : ''}{diff} vs prior
-                    </div>
+          <div className="flex gap-2">
+            {distribution.map((b: any) => {
+              const diff = b.current_count - b.prior_count;
+              const up   = diff >= 0;
+              return (
+                <div key={b.bucket} className="flex-1 bg-[#252833] rounded-lg px-3 py-2 flex items-center justify-between gap-2">
+                  <span className="text-[11px] text-gray-500 flex-shrink-0">{b.bucket}</span>
+                  <div className="text-right">
+                    <span className="text-sm font-bold text-white">{formatNumber(b.current_count)}</span>
+                    <span className={`text-[11px] ml-1.5 font-semibold ${up ? 'text-green-400' : 'text-red-400'}`}>
+                      {up ? '+' : ''}{diff}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
-        {/* ── Products + Categories ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-          {/* Product Movers */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-300 mb-3">Product Movers</h3>
-            {product_movers.gainers.length === 0 && product_movers.decliners.length === 0
-              ? <div className="text-sm text-gray-600">No data</div>
-              : <div className="space-y-4">
-                  {product_movers.gainers.length > 0 && (
-                    <div>
-                      <div className="text-xs text-green-500 font-medium mb-1">▲ Gainers ({product_movers.gainers.length})</div>
-                      {product_movers.gainers.map((item: any, i: number) => <MoverRow key={i} item={item} positive />)}
-                    </div>
-                  )}
-                  {product_movers.decliners.length > 0 && (
-                    <div>
-                      <div className="text-xs text-red-500 font-medium mb-1">▼ Decliners ({product_movers.decliners.length})</div>
-                      {product_movers.decliners.map((item: any, i: number) => <MoverRow key={i} item={item} positive={false} />)}
-                    </div>
-                  )}
-                </div>
-            }
-          </div>
-
-          {/* Category Movers */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-300 mb-3">Category Performance</h3>
-            {catGainers.length === 0 && catDecliners.length === 0
-              ? <div className="text-sm text-gray-600">No data</div>
-              : <div className="space-y-4">
-                  {catGainers.length > 0 && (
-                    <div>
-                      <div className="text-xs text-green-500 font-medium mb-1">▲ Gainers ({catGainers.length})</div>
-                      {catGainers.map((cat: any, i: number) => <MoverRow key={i} item={toMoverItem(cat)} positive />)}
-                    </div>
-                  )}
-                  {catDecliners.length > 0 && (
-                    <div>
-                      <div className="text-xs text-red-500 font-medium mb-1">▼ Decliners ({catDecliners.length})</div>
-                      {catDecliners.map((cat: any, i: number) => <MoverRow key={i} item={toMoverItem(cat)} positive={false} />)}
-                    </div>
-                  )}
-                </div>
-            }
-          </div>
-        </div>
-
-        {/* ── Zero-Sales & New Products ── */}
-        {(zero_sales.length > 0 || new_products.length > 0) && (
+        {/* ── Product Movers + Category Performance (collapsible) ── */}
+        <CollapsibleSection
+          title="Product Movers & Category Performance"
+          subtitle={`${product_movers.gainers.length + product_movers.decliners.length} products · ${catGainers.length + catDecliners.length} categories`}
+          defaultOpen
+        >
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-            {zero_sales.length > 0 && (
-              <div>
-                <div className="text-xs text-red-500 font-medium mb-1">● Zero Sales This Period ({zero_sales.length})</div>
-                <div className="text-[11px] text-gray-600 mb-2">Sold in prior period — possible stockout or discontinuation</div>
-                {zero_sales.map((p: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between py-2 border-b border-[#2e303d] last:border-0">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="w-1 h-4 rounded-full flex-shrink-0 bg-red-500" />
-                      <span className="text-sm text-white truncate">{p.name}</span>
-                    </div>
-                    <span className="text-xs text-gray-500 flex-shrink-0 ml-2">{formatCurrency(p.prior_revenue)} prior</span>
+            <div>
+              <div className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2">Product Movers</div>
+              {product_movers.gainers.length === 0 && product_movers.decliners.length === 0
+                ? <div className="text-sm text-gray-600">No data</div>
+                : <div className="space-y-4">
+                    {product_movers.gainers.length > 0 && (
+                      <div>
+                        <div className="text-xs text-green-500 font-medium mb-1">▲ Gainers ({product_movers.gainers.length})</div>
+                        {product_movers.gainers.map((item: any, i: number) => <MoverRow key={i} item={item} positive />)}
+                      </div>
+                    )}
+                    {product_movers.decliners.length > 0 && (
+                      <div>
+                        <div className="text-xs text-red-500 font-medium mb-1">▼ Decliners ({product_movers.decliners.length})</div>
+                        {product_movers.decliners.map((item: any, i: number) => <MoverRow key={i} item={item} positive={false} />)}
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
-
-            {new_products.length > 0 && (
-              <div>
-                <div className="text-xs text-blue-400 font-medium mb-1">● New This Period ({new_products.length})</div>
-                <div className="text-[11px] text-gray-600 mb-2">No sales in prior period — new or recently introduced</div>
-                {new_products.map((p: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between py-2 border-b border-[#2e303d] last:border-0">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="w-1 h-4 rounded-full flex-shrink-0 bg-blue-500" />
-                      <span className="text-sm text-white truncate">{p.name}</span>
-                    </div>
-                    <span className="text-xs text-blue-400 font-semibold flex-shrink-0 ml-2">{formatCurrency(p.current_revenue)}</span>
+              }
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2">Category Performance</div>
+              {catGainers.length === 0 && catDecliners.length === 0
+                ? <div className="text-sm text-gray-600">No data</div>
+                : <div className="space-y-4">
+                    {catGainers.length > 0 && (
+                      <div>
+                        <div className="text-xs text-green-500 font-medium mb-1">▲ Gainers ({catGainers.length})</div>
+                        {catGainers.map((cat: any, i: number) => <MoverRow key={i} item={toMoverItem(cat)} positive />)}
+                      </div>
+                    )}
+                    {catDecliners.length > 0 && (
+                      <div>
+                        <div className="text-xs text-red-500 font-medium mb-1">▼ Decliners ({catDecliners.length})</div>
+                        {catDecliners.map((cat: any, i: number) => <MoverRow key={i} item={toMoverItem(cat)} positive={false} />)}
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
-
+              }
+            </div>
           </div>
+        </CollapsibleSection>
+
+        {/* ── Zero Sales + New Products (collapsible) ── */}
+        {(zero_sales.length > 0 || new_products.length > 0) && (
+          <CollapsibleSection
+            title="Zero Sales & New Products"
+            subtitle={`${zero_sales.length} zero-sales · ${new_products.length} new`}
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {zero_sales.length > 0 && (
+                <div>
+                  <div className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2">
+                    Zero Sales This Period <span className="text-red-500 normal-case">({zero_sales.length})</span>
+                  </div>
+                  <div className="text-[11px] text-gray-600 mb-2">Sold in prior period — possible stockout</div>
+                  {zero_sales.map((p: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between py-2 border-b border-[#2e303d] last:border-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-1 h-4 rounded-full flex-shrink-0 bg-red-500" />
+                        <span className="text-sm text-white truncate">{p.name}</span>
+                      </div>
+                      <span className="text-xs text-gray-500 flex-shrink-0 ml-2">{formatCurrency(p.prior_revenue)} prior</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {new_products.length > 0 && (
+                <div>
+                  <div className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2">
+                    New This Period <span className="text-blue-400 normal-case">({new_products.length})</span>
+                  </div>
+                  <div className="text-[11px] text-gray-600 mb-2">No prior sales — new or recently introduced</div>
+                  {new_products.map((p: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between py-2 border-b border-[#2e303d] last:border-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-1 h-4 rounded-full flex-shrink-0 bg-blue-500" />
+                        <span className="text-sm text-white truncate">{p.name}</span>
+                      </div>
+                      <span className="text-xs text-blue-400 font-semibold flex-shrink-0 ml-2">{formatCurrency(p.current_revenue)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CollapsibleSection>
         )}
 
       </div>
