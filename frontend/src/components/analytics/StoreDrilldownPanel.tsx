@@ -154,7 +154,9 @@ export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
   const priKey    = `prior_${metric}`;
   const fmtY      = (v: number) => metric === 'transactions' ? formatNumber(v) : formatCurrency(v);
 
-  const maxRev = Math.max(...(categories || []).map((c: any) => c.current_revenue), 1);
+  const catGainers   = (categories || []).filter((c: any) => c.revenue_change >= 0).sort((a: any, b: any) => b.revenue_change - a.revenue_change);
+  const catDecliners = (categories || []).filter((c: any) => c.revenue_change < 0).sort((a: any, b: any) => a.revenue_change - b.revenue_change);
+  const toMoverItem  = (c: any) => ({ ...c, name: c.category, previous_revenue: c.previous_revenue ?? 0, current_revenue: c.current_revenue ?? 0 });
 
   return (
     <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg overflow-hidden">
@@ -226,62 +228,6 @@ export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
           </div>
         )}
 
-        {/* ── Products + Categories ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-          {/* Products */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-300 mb-3">Product Movers</h3>
-            {product_movers.gainers.length === 0 && product_movers.decliners.length === 0
-              ? <div className="text-sm text-gray-600">No data</div>
-              : <div className="space-y-4">
-                  {product_movers.gainers.length > 0 && (
-                    <div>
-                      <div className="text-xs text-green-500 font-medium mb-1">▲ Gainers</div>
-                      {product_movers.gainers.map((item: any, i: number) => <MoverRow key={i} item={item} positive />)}
-                    </div>
-                  )}
-                  {product_movers.decliners.length > 0 && (
-                    <div>
-                      <div className="text-xs text-red-500 font-medium mb-1">▼ Decliners</div>
-                      {product_movers.decliners.map((item: any, i: number) => <MoverRow key={i} item={item} positive={false} />)}
-                    </div>
-                  )}
-                </div>
-            }
-          </div>
-
-          {/* Categories */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-300 mb-3">Categories</h3>
-            {categories.length === 0
-              ? <div className="text-sm text-gray-600">No data</div>
-              : <div className="space-y-3">
-                  {categories.map((cat: any, i: number) => {
-                    const up  = cat.revenue_change >= 0;
-                    const bar = (cat.current_revenue / maxRev) * 100;
-                    return (
-                      <div key={i}>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm text-white truncate max-w-[55%]">{cat.category}</span>
-                          <div className="flex items-center gap-2 text-xs">
-                            <span className="text-gray-400">{formatCurrency(cat.current_revenue)}</span>
-                            <span className={`font-semibold ${up ? 'text-green-400' : 'text-red-400'}`}>
-                              {up ? '+' : ''}{cat.change_pct != null ? `${cat.change_pct.toFixed(1)}%` : 'New'}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="h-1.5 bg-[#252833] rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${up ? 'bg-blue-500' : 'bg-orange-500'}`} style={{ width: `${bar}%` }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-            }
-          </div>
-        </div>
-
         {/* ── Transaction Distribution ── */}
         {distribution.length > 0 && (
           <div>
@@ -305,42 +251,87 @@ export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
           </div>
         )}
 
+        {/* ── Products + Categories ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+          {/* Product Movers */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-300 mb-3">Product Movers</h3>
+            {product_movers.gainers.length === 0 && product_movers.decliners.length === 0
+              ? <div className="text-sm text-gray-600">No data</div>
+              : <div className="space-y-4">
+                  {product_movers.gainers.length > 0 && (
+                    <div>
+                      <div className="text-xs text-green-500 font-medium mb-1">▲ Gainers ({product_movers.gainers.length})</div>
+                      {product_movers.gainers.map((item: any, i: number) => <MoverRow key={i} item={item} positive />)}
+                    </div>
+                  )}
+                  {product_movers.decliners.length > 0 && (
+                    <div>
+                      <div className="text-xs text-red-500 font-medium mb-1">▼ Decliners ({product_movers.decliners.length})</div>
+                      {product_movers.decliners.map((item: any, i: number) => <MoverRow key={i} item={item} positive={false} />)}
+                    </div>
+                  )}
+                </div>
+            }
+          </div>
+
+          {/* Category Movers */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-300 mb-3">Category Performance</h3>
+            {catGainers.length === 0 && catDecliners.length === 0
+              ? <div className="text-sm text-gray-600">No data</div>
+              : <div className="space-y-4">
+                  {catGainers.length > 0 && (
+                    <div>
+                      <div className="text-xs text-green-500 font-medium mb-1">▲ Gainers ({catGainers.length})</div>
+                      {catGainers.map((cat: any, i: number) => <MoverRow key={i} item={toMoverItem(cat)} positive />)}
+                    </div>
+                  )}
+                  {catDecliners.length > 0 && (
+                    <div>
+                      <div className="text-xs text-red-500 font-medium mb-1">▼ Decliners ({catDecliners.length})</div>
+                      {catDecliners.map((cat: any, i: number) => <MoverRow key={i} item={toMoverItem(cat)} positive={false} />)}
+                    </div>
+                  )}
+                </div>
+            }
+          </div>
+        </div>
+
         {/* ── Zero-Sales & New Products ── */}
         {(zero_sales.length > 0 || new_products.length > 0) && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             {zero_sales.length > 0 && (
               <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
-                  <h3 className="text-sm font-semibold text-gray-300">Zero Sales ({zero_sales.length})</h3>
-                  <span className="text-xs text-gray-600">— possible stockout</span>
-                </div>
-                <div className="space-y-1 max-h-40 overflow-y-auto">
-                  {zero_sales.map((p: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between py-1.5 border-b border-[#2e303d] last:border-0">
-                      <span className="text-sm text-white truncate max-w-[65%]">{p.name}</span>
-                      <span className="text-xs text-red-400 font-medium">{formatCurrency(p.prior_revenue)}</span>
+                <div className="text-xs text-red-500 font-medium mb-1">● Zero Sales This Period ({zero_sales.length})</div>
+                <div className="text-[11px] text-gray-600 mb-2">Sold in prior period — possible stockout or discontinuation</div>
+                {zero_sales.map((p: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between py-2 border-b border-[#2e303d] last:border-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-1 h-4 rounded-full flex-shrink-0 bg-red-500" />
+                      <span className="text-sm text-white truncate">{p.name}</span>
                     </div>
-                  ))}
-                </div>
+                    <span className="text-xs text-gray-500 flex-shrink-0 ml-2">{formatCurrency(p.prior_revenue)} prior</span>
+                  </div>
+                ))}
               </div>
             )}
 
             {new_products.length > 0 && (
               <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
-                  <h3 className="text-sm font-semibold text-gray-300">New This Period ({new_products.length})</h3>
-                </div>
-                <div className="space-y-1 max-h-40 overflow-y-auto">
-                  {new_products.map((p: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between py-1.5 border-b border-[#2e303d] last:border-0">
-                      <span className="text-sm text-white truncate max-w-[65%]">{p.name}</span>
-                      <span className="text-xs text-blue-400 font-medium">{formatCurrency(p.current_revenue)}</span>
+                <div className="text-xs text-blue-400 font-medium mb-1">● New This Period ({new_products.length})</div>
+                <div className="text-[11px] text-gray-600 mb-2">No sales in prior period — new or recently introduced</div>
+                {new_products.map((p: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between py-2 border-b border-[#2e303d] last:border-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-1 h-4 rounded-full flex-shrink-0 bg-blue-500" />
+                      <span className="text-sm text-white truncate">{p.name}</span>
                     </div>
-                  ))}
-                </div>
+                    <span className="text-xs text-blue-400 font-semibold flex-shrink-0 ml-2">{formatCurrency(p.current_revenue)}</span>
+                  </div>
+                ))}
               </div>
             )}
 
