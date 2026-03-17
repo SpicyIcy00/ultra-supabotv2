@@ -132,10 +132,10 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-[#0e1117] text-gray-100">
-      {/* Mobile Overlay (tablet sidebar only) */}
-      {isMobile && !isPhone && sidebarOpen && (
+      {/* Overlay when sidebar is open (all non-phone sizes) */}
+      {!isPhone && sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-20"
+          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -143,9 +143,9 @@ export function Layout({ children }: LayoutProps) {
       {/* Sidebar — hidden on phone, slide-out on tablet, persistent on desktop */}
       {!isPhone && (
         <aside
-          className={`fixed top-0 left-0 h-full bg-gray-900/95 border-r border-gray-800 backdrop-blur-sm transition-all duration-300 z-30 ${
-            sidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full lg:translate-x-0'
-          } ${!sidebarOpen && !isMobile ? 'lg:w-0' : ''}`}
+          className={`fixed top-0 left-0 h-full w-64 bg-gray-900/95 border-r border-gray-800 backdrop-blur-sm transition-transform duration-300 z-30 ${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
         >
           <div className="p-6">
             {/* Logo */}
@@ -188,11 +188,7 @@ export function Layout({ children }: LayoutProps) {
       )}
 
       {/* Main Content */}
-      <div
-        className={`transition-all duration-300 ${
-          !isPhone && sidebarOpen ? 'ml-64' : 'ml-0'
-        }`}
-      >
+      <div className="transition-all duration-300 ml-0">
         {/* Header */}
         <header className="sticky top-0 z-20 bg-gray-900/80 backdrop-blur-sm border-b border-gray-800">
           <div className="px-4 py-3 md:px-6 md:py-4">

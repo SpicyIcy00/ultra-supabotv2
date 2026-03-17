@@ -218,11 +218,31 @@ export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
           <KpiCard label="Margin %"     current={summary.current.margin_pct}   prior={summary.prior.margin_pct}   change={summary.margin_change}       changePct={null}                        format="pct"      />
         </div>
 
+        {/* ── Transaction Distribution (compact) ── */}
+        {distribution.length > 0 && (
+          <div className="flex gap-2">
+            {distribution.map((b: any) => {
+              const diff = b.current_count - b.prior_count;
+              const up   = diff >= 0;
+              return (
+                <div key={b.bucket} className="flex-1 bg-[#252833] rounded-lg px-3 py-2 flex items-center justify-between gap-2">
+                  <span className="text-[11px] text-gray-500 flex-shrink-0">{b.bucket}</span>
+                  <div className="text-right">
+                    <span className="text-sm font-bold text-white">{formatNumber(b.current_count)}</span>
+                    <span className={`text-[11px] ml-1.5 font-semibold ${up ? 'text-green-400' : 'text-red-400'}`}>
+                      {up ? '+' : ''}{diff}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* ── Chart ── */}
         {chartData?.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              {/* Period toggle */}
               <div className="flex gap-1 bg-[#252833] rounded-lg p-1">
                 {(['daily', 'hourly'] as PeriodTab[]).map(p => (
                   <button key={p} className={btn(period === p)} onClick={() => setPeriod(p)}>
@@ -230,7 +250,6 @@ export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
                   </button>
                 ))}
               </div>
-              {/* Metric toggle */}
               <div className="flex gap-1">
                 {(Object.keys(METRIC_LABELS) as MetricTab[]).map(m => (
                   <button key={m} className={btn(metric === m)} onClick={() => setMetric(m)}>
@@ -253,27 +272,6 @@ export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
               <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-3 h-2 rounded-sm bg-blue-500 inline-block" />Current</span>
               <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-3 h-2 rounded-sm bg-[#374151] inline-block" />Prior</span>
             </div>
-          </div>
-        )}
-
-        {/* ── Transaction Distribution (compact) ── */}
-        {distribution.length > 0 && (
-          <div className="flex gap-2">
-            {distribution.map((b: any) => {
-              const diff = b.current_count - b.prior_count;
-              const up   = diff >= 0;
-              return (
-                <div key={b.bucket} className="flex-1 bg-[#252833] rounded-lg px-3 py-2 flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-gray-500 flex-shrink-0">{b.bucket}</span>
-                  <div className="text-right">
-                    <span className="text-sm font-bold text-white">{formatNumber(b.current_count)}</span>
-                    <span className={`text-[11px] ml-1.5 font-semibold ${up ? 'text-green-400' : 'text-red-400'}`}>
-                      {up ? '+' : ''}{diff}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
           </div>
         )}
 
