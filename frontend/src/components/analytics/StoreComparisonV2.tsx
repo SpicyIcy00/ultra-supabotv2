@@ -115,7 +115,10 @@ export const StoreComparisonV2: React.FC = () => {
       <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6">
         <h2 className="text-xl font-semibold text-white mb-4">Store Performance Heatmap</h2>
         <StoreHeatmapCompact
-          stores={(data?.stores || []).filter(s => s.current.revenue > 0 || s.current.transaction_count > 0)}
+          stores={(data?.stores || []).filter(s =>
+            (s.current.revenue > 0 || s.current.transaction_count > 0) &&
+            (selectedStores.length === 0 || selectedStores.includes(s.store_id))
+          )}
           onStoreClick={(storeId) => setSelectedStore(storeId)}
         />
       </div>
