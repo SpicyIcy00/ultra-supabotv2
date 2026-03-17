@@ -1818,13 +1818,16 @@ class AnalyticsService:
         })
         rows = result.fetchall()
 
-        # Organize data by category
+        # Organize data by category; collect store_id → store_name mapping
         matrix = {}
+        store_names: dict = {}
         for row in rows:
             category = row.category
             if category not in matrix:
                 matrix[category] = {}
-            matrix[category][str(row.store_id)] = float(row.revenue or 0)
+            store_id_str = str(row.store_id)
+            matrix[category][store_id_str] = float(row.revenue or 0)
+            store_names[store_id_str] = row.store_name
 
         # Convert to list format
         matrix_list = [
@@ -1835,7 +1838,7 @@ class AnalyticsService:
             for category, stores_data in matrix.items()
         ]
 
-        return {"matrix": matrix_list}
+        return {"matrix": matrix_list, "store_names": store_names}
 
     @cached(expire=300, prefix="analytics")
     async def get_store_weekly_trends(

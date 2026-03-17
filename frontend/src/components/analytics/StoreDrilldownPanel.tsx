@@ -19,7 +19,8 @@ export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
   const { data, isLoading, error } = useStoreDrilldownV2(storeId, startDate, endDate);
   const storesList = useDashboardStore((state) => state.stores);
 
-  const storeName = storesList.find(s => s.id === storeId)?.name || storeId;
+  // Use store_name from API response when available; fall back to local store list then raw ID
+  const storeName = data?.store_name || storesList.find(s => s.id === storeId)?.name || storeId;
 
   if (isLoading) {
     return (

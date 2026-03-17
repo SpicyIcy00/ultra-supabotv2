@@ -25,8 +25,10 @@ export const CategoryPerformanceMatrix: React.FC<CategoryPerformanceMatrixProps>
     data.matrix.forEach((item: any) => {
       Object.keys(item.stores).forEach((storeId: string) => storesSet.add(storeId));
     });
-    // Filter to ensure we only include requested stores (though API should handle this)
-    const storeIdsList = Array.from(storesSet).filter(id => storeIds.includes(id));
+    // Filter to only include requested stores; if storeIds is empty show all
+    const storeIdsList = Array.from(storesSet).filter(id =>
+      storeIds.length === 0 || storeIds.includes(id)
+    );
 
     // Calculate total revenue per category across all stores
     const categoriesWithTotals = data.matrix.map((item: any) => ({
@@ -57,6 +59,8 @@ export const CategoryPerformanceMatrix: React.FC<CategoryPerformanceMatrixProps>
   };
 
   const getStoreName = (id: string) => {
+    // Prefer name from API response; fall back to local store list then raw ID
+    if (data?.store_names?.[id]) return data.store_names[id];
     const store = storesList.find(s => s.id === id);
     return store ? store.name : id;
   };

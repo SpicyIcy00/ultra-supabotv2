@@ -175,6 +175,7 @@ export const useDashboardStore = create<DashboardState>()(
       name: 'dashboard-storage', // localStorage key
       partialize: (state) => ({
         selectedPeriod: state.selectedPeriod,
+        stores: state.stores,
         selectedStores: state.selectedStores,
         isAllStoresSelected: state.isAllStoresSelected,
       }),

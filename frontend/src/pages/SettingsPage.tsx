@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { RefreshCw, Store, Plus, X, Save } from 'lucide-react';
+import { RefreshCw, Store, Plus, X, Save, LayoutDashboard } from 'lucide-react';
 import axios from 'axios';
 import { getStoreFilters, updateStoreFilters, getAvailableStores } from '../services/storeFiltersApi';
 import type { StoreFilterConfig } from '../types/storeFilters';
+import { useDashboardStore } from '../stores/dashboardStore';
 
-type TabType = 'general' | 'store-filters';
+type TabType = 'general' | 'store-filters' | 'dashboard-stores';
 
 export const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('general');
@@ -42,11 +43,23 @@ export const SettingsPage: React.FC = () => {
             <Store className="w-4 h-4" />
             AI Chat Store Filters
           </button>
+          <button
+            onClick={() => setActiveTab('dashboard-stores')}
+            className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
+              activeTab === 'dashboard-stores'
+                ? 'text-white border-b-2 border-blue-500'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            Dashboard Stores
+          </button>
         </div>
 
         {/* Tab Content */}
         {activeTab === 'general' && <GeneralSettings />}
         {activeTab === 'store-filters' && <StoreFiltersSettings />}
+        {activeTab === 'dashboard-stores' && <DashboardStoresSettings />}
       </div>
     </div>
   );
@@ -283,6 +296,116 @@ const StoreFiltersSettings: React.FC = () => {
   );
 };
 
+// Dashboard Stores Settings Tab
+const DashboardStoresSettings: React.FC = () => {
+  const { stores, selectedStores, setStores, fetchStores } = useDashboardStore();
+  const [localSelected, setLocalSelected] = useState<string[]>([]);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    if (stores.length === 0) fetchStores();
+  }, []);
+
+  // Sync local state when store loads
+  useEffect(() => {
+    setLocalSelected(selectedStores);
+  }, [selectedStores]);
+
+  const selectedNames = localSelected
+    .map(id => stores.find(s => s.id === id)?.name)
+    .filter(Boolean) as string[];
+
+  const availableNames = stores
+    .filter(s => !localSelected.includes(s.id))
+    .map(s => s.name);
+
+  const handleAdd = (name: string) => {
+    const store = stores.find(s => s.name === name);
+    if (!store) return;
+    setLocalSelected(prev => [...prev, store.id]);
+    setHasChanges(true);
+  };
+
+  const handleRemove = (name: string) => {
+    const store = stores.find(s => s.name === name);
+    if (!store) return;
+    setLocalSelected(prev => prev.filter(id => id !== store.id));
+    setHasChanges(true);
+  };
+
+  const handleSave = () => {
+    if (localSelected.length === 0) return;
+    setStores(localSelected);
+    setHasChanges(false);
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 3000);
+  };
+
+  if (stores.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="flex items-center gap-3 text-gray-400">
+          <RefreshCw className="w-6 h-6 animate-spin" />
+          <span>Loading stores...</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header with Save Button */}
+      <div className="flex items-center justify-between">
+        <p className="text-gray-400">Configure which stores are shown by default across the dashboard</p>
+        <button
+          onClick={handleSave}
+          disabled={!hasChanges || localSelected.length === 0}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
+        >
+          <Save className="w-4 h-4" />
+          {success ? 'Saved!' : 'Save Changes'}
+        </button>
+      </div>
+
+      {success && (
+        <div className="p-4 bg-green-900/30 border border-green-600/50 rounded-lg text-green-300">
+          Dashboard store defaults updated successfully!
+        </div>
+      )}
+
+      {/* Info Box */}
+      <div className="p-4 bg-blue-950/20 border border-blue-900/50 rounded-lg">
+        <div className="flex items-start gap-3">
+          <div className="text-blue-400 mt-0.5">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h4 className="text-sm font-medium text-blue-300 mb-1">How Dashboard Stores Work</h4>
+            <p className="text-xs text-blue-200/70">
+              These stores are pre-selected across all dashboard pages — KPIs, analytics, replenishment, and more.
+              You can still change the selection per session using the store picker in the toolbar.
+              Saving here updates your persistent default.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <StoreFilterSection
+        title="Default Dashboard Stores"
+        description="Stores pre-selected on every dashboard page load"
+        stores={selectedNames}
+        availableStores={availableNames}
+        onAdd={handleAdd}
+        onRemove={handleRemove}
+        color="blue"
+      />
+    </div>
+  );
+};
+
 // Store Filter Section Component
 interface StoreFilterSectionProps {
   title: string;
@@ -291,7 +414,7 @@ interface StoreFilterSectionProps {
   availableStores: string[];
   onAdd: (store: string) => void;
   onRemove: (store: string) => void;
-  color: 'purple' | 'green';
+  color: 'purple' | 'green' | 'blue';
 }
 
 const StoreFilterSection: React.FC<StoreFilterSectionProps> = ({
@@ -312,11 +435,11 @@ const StoreFilterSection: React.FC<StoreFilterSectionProps> = ({
     }
   };
 
-  const borderColor = color === 'purple' ? 'border-purple-600/30' : 'border-green-600/30';
-  const headerBg = color === 'purple' ? 'bg-purple-900/20' : 'bg-green-900/20';
-  const tagBg = color === 'purple' ? 'bg-purple-900/40' : 'bg-green-900/40';
-  const tagBorder = color === 'purple' ? 'border-purple-600/30' : 'border-green-600/30';
-  const tagText = color === 'purple' ? 'text-purple-200' : 'text-green-200';
+  const borderColor = color === 'purple' ? 'border-purple-600/30' : color === 'green' ? 'border-green-600/30' : 'border-blue-600/30';
+  const headerBg = color === 'purple' ? 'bg-purple-900/20' : color === 'green' ? 'bg-green-900/20' : 'bg-blue-900/20';
+  const tagBg = color === 'purple' ? 'bg-purple-900/40' : color === 'green' ? 'bg-green-900/40' : 'bg-blue-900/40';
+  const tagBorder = color === 'purple' ? 'border-purple-600/30' : color === 'green' ? 'border-green-600/30' : 'border-blue-600/30';
+  const tagText = color === 'purple' ? 'text-purple-200' : color === 'green' ? 'text-green-200' : 'text-blue-200';
 
   return (
     <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg overflow-hidden">
