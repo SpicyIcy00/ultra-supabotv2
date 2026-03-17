@@ -108,6 +108,13 @@ export const StoreComparisonV2: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* No comparison period warning */}
+      {!dateRanges.comparison && (
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-4 py-2 text-yellow-400 text-sm">
+          No comparison period selected — period-over-period changes show as 0%. Set a comparison period in the date picker.
+        </div>
+      )}
+
       {/* Controls */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
@@ -210,7 +217,7 @@ export const StoreComparisonV2: React.FC = () => {
       {/* 5. TIME TREND COMPARISON */}
       <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6">
         <h2 className="text-xl font-semibold text-white mb-4">8-Week Sales Trends</h2>
-        <StoreWeeklyTrends storeIds={selectedStores} />
+        <StoreWeeklyTrends storeIds={selectedStores} startDate={currentStart} endDate={currentEnd} />
       </div>
     </div>
   );

@@ -4,9 +4,19 @@ Contains business logic for all analytics queries.
 """
 from datetime import datetime, date, timedelta
 from typing import List, Optional, Dict, Any
+import re
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from app.core.cache import cached
+
+_UUID_RE = re.compile(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+    re.IGNORECASE
+)
+
+def _is_valid_uuid(value: str) -> bool:
+    """Return True if value is a valid UUID string."""
+    return bool(_UUID_RE.match(str(value)))
 
 
 class AnalyticsService:
@@ -1448,8 +1458,10 @@ class AnalyticsService:
         # Build store filter
         store_filter = ""
         if store_ids:
-            store_ids_str = "', '".join(store_ids)
-            store_filter = f"AND s.id IN ('{store_ids_str}')"
+            validated_ids = [sid for sid in store_ids if _is_valid_uuid(sid)]
+            if validated_ids:
+                store_ids_str = "', '".join(validated_ids)
+                store_filter = f"AND s.id IN ('{store_ids_str}')"
 
         query = text(f"""
             WITH current_period AS (
@@ -1475,7 +1487,7 @@ class AnalyticsService:
                 SELECT
                     t.store_id,
                     COALESCE(SUM(v.item_total_resolved - (COALESCE(p.cost, 0) * v.quantity)), 0)::float AS profit,
-                    COALESCE(SUM(v.item_total_resolved), 0)::float as total_revenue
+                    COALESCE(SUM(t.total), 0)::float as total_revenue
                 FROM new_transactions t
                 JOIN v_new_transaction_items_resolved v ON t.ref_id = v.transaction_ref_id
                 JOIN products p ON v.product_id = p.id
@@ -1509,7 +1521,7 @@ class AnalyticsService:
                 SELECT
                     t.store_id,
                     COALESCE(SUM(v.item_total_resolved - (COALESCE(p.cost, 0) * v.quantity)), 0)::float AS profit,
-                    COALESCE(SUM(v.item_total_resolved), 0)::float as total_revenue
+                    COALESCE(SUM(t.total), 0)::float as total_revenue
                 FROM new_transactions t
                 JOIN v_new_transaction_items_resolved v ON t.ref_id = v.transaction_ref_id
                 JOIN products p ON v.product_id = p.id
@@ -1654,6 +1666,7 @@ class AnalyticsService:
                     JOIN stores s ON t.store_id = s.id
                     WHERE
                         1=1
+                        AND t.store_id != :store_id
                         AND t.transaction_time >= :start_date
                         AND t.transaction_time < :end_date
                         AND t.is_cancelled = false
@@ -1742,8 +1755,10 @@ class AnalyticsService:
 
         store_filter = ""
         if store_ids:
-            store_ids_str = "', '".join(store_ids)
-            store_filter = f"AND s.id IN ('{store_ids_str}')"
+            validated_ids = [sid for sid in store_ids if _is_valid_uuid(sid)]
+            if validated_ids:
+                store_ids_str = "', '".join(validated_ids)
+                store_filter = f"AND s.id IN ('{store_ids_str}')"
 
         query = text(f"""
             WITH category_store_sales AS (
@@ -1825,20 +1840,22 @@ class AnalyticsService:
     @cached(expire=300, prefix="analytics")
     async def get_store_weekly_trends(
         self,
+        start_date: datetime,
+        end_date: datetime,
         store_ids: List[str] = []
     ) -> Dict[str, Any]:
         """
-        Get weekly sales trends for the last 8 weeks for each store.
+        Get weekly sales trends within the given date range for each store.
         Returns sparkline data for time trend visualization.
         """
-        # Get data for last 8 weeks
-        end_date = datetime.now()
-        start_date = end_date - timedelta(weeks=8)
+        end_date_inclusive = end_date + timedelta(days=1)
 
         store_filter = ""
         if store_ids:
-            store_ids_str = "', '".join(store_ids)
-            store_filter = f"AND s.id IN ('{store_ids_str}')"
+            validated_ids = [sid for sid in store_ids if _is_valid_uuid(sid)]
+            if validated_ids:
+                store_ids_str = "', '".join(validated_ids)
+                store_filter = f"AND s.id IN ('{store_ids_str}')"
 
         query = text(f"""
             WITH weekly_data AS (
@@ -1863,11 +1880,12 @@ class AnalyticsService:
                 week_start,
                 weekly_revenue
             FROM weekly_data
+            WHERE week_start IS NOT NULL
         """)
 
         result = await self.db.execute(query, {
             "start_date": start_date,
-            "end_date": end_date
+            "end_date": end_date_inclusive
         })
         rows = result.fetchall()
 
@@ -1878,7 +1896,7 @@ class AnalyticsService:
             if store_id not in trends:
                 trends[store_id] = []
             trends[store_id].append({
-                "week": row.week_start.isoformat() if row.week_start else None,
+                "week": row.week_start.isoformat(),
                 "revenue": float(row.weekly_revenue or 0)
             })
 
@@ -1902,8 +1920,10 @@ class AnalyticsService:
 
         store_filter = ""
         if store_ids:
-            store_ids_str = "', '".join(store_ids)
-            store_filter = f"AND s.id IN ('{store_ids_str}')"
+            validated_ids = [sid for sid in store_ids if _is_valid_uuid(sid)]
+            if validated_ids:
+                store_ids_str = "', '".join(validated_ids)
+                store_filter = f"AND s.id IN ('{store_ids_str}')"
 
         # Get product movers
         product_query = text(f"""

@@ -5,10 +5,12 @@ import { useDashboardStore } from '../../stores/dashboardStore';
 
 interface StoreWeeklyTrendsProps {
   storeIds: string[];
+  startDate: Date;
+  endDate: Date;
 }
 
-export const StoreWeeklyTrends: React.FC<StoreWeeklyTrendsProps> = ({ storeIds }) => {
-  const { data, isLoading, error } = useStoreWeeklyTrends(storeIds);
+export const StoreWeeklyTrends: React.FC<StoreWeeklyTrendsProps> = ({ storeIds, startDate, endDate }) => {
+  const { data, isLoading, error } = useStoreWeeklyTrends(startDate, endDate, storeIds);
   const storesList = useDashboardStore((state) => state.stores);
 
   const getStoreName = (id: string) => {
@@ -20,7 +22,7 @@ export const StoreWeeklyTrends: React.FC<StoreWeeklyTrendsProps> = ({ storeIds }
     if (!data?.trends) return [];
 
     return Object.entries(data.trends)
-      .filter(([storeId]) => storeIds.includes(storeId))
+      .filter(([storeId]) => storeIds.length === 0 || storeIds.includes(storeId))
       .map(([storeId, weeklyData]: [string, any]) => {
         // Ensure we have exactly 8 weeks of data
         const trend = weeklyData.slice(-8);

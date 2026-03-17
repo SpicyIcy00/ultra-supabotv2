@@ -82,11 +82,14 @@ export const useCategoryPerformanceMatrix = (startDate: Date, endDate: Date, sto
   });
 };
 
-export const useStoreWeeklyTrends = (storeIds: string[] = []) => {
+export const useStoreWeeklyTrends = (startDate: Date, endDate: Date, storeIds: string[] = []) => {
   return useQuery({
-    queryKey: ['store-weekly-trends', storeIds],
+    queryKey: ['store-weekly-trends', startDate, endDate, storeIds],
     queryFn: async () => {
-      const params = new URLSearchParams();
+      const params = new URLSearchParams({
+        start_date: startDate.toISOString(),
+        end_date: endDate.toISOString(),
+      });
       storeIds.forEach(id => params.append('store_ids', id));
 
       const response = await apiClient.get(`/analytics/store-weekly-trends?${params.toString()}`);

@@ -61,6 +61,11 @@ export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
     );
   }
 
+  // Waterfall decomposition: (best - store) so positive = portion of gap explained by this factor
+  const txnImpact = (data.best_performer_transaction_count - data.transaction_count) * data.best_performer_avg_ticket;
+  const avgImpact = (data.best_performer_avg_ticket - data.avg_ticket) * data.transaction_count;
+  const residual = data.revenue_gap_amount - txnImpact - avgImpact;
+
   return (
     <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6">
       <div className="flex items-center justify-between mb-6">
@@ -84,16 +89,12 @@ export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
             <div className="bg-[#1c1e26] rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-gray-300 font-medium">Transaction Count Impact</span>
-                <span className={`font-semibold ${(data.transaction_count - data.best_performer_transaction_count) * data.best_performer_avg_ticket < 0
-                  ? 'text-red-400'
-                  : 'text-green-400'
-                  }`}>
-                  {((data.transaction_count - data.best_performer_transaction_count) * data.best_performer_avg_ticket) < 0 ? '' : '+'}
-                  {formatCurrency((data.transaction_count - data.best_performer_transaction_count) * data.best_performer_avg_ticket)}
+                <span className={`font-semibold ${txnImpact > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                  {txnImpact > 0 ? '-' : '+'}{formatCurrency(Math.abs(txnImpact))}
                 </span>
               </div>
               <div className="text-xs text-gray-400 font-mono">
-                = (Your Txns: {formatNumber(data.transaction_count)} - Best Txns: {formatNumber(data.best_performer_transaction_count)}) × Best Avg Ticket: {formatCurrency(data.best_performer_avg_ticket)}
+                = (Best Txns: {formatNumber(data.best_performer_transaction_count)} - Your Txns: {formatNumber(data.transaction_count)}) × Best Avg Ticket: {formatCurrency(data.best_performer_avg_ticket)}
               </div>
             </div>
 
@@ -101,16 +102,12 @@ export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
             <div className="bg-[#1c1e26] rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-gray-300 font-medium">Avg Ticket Impact</span>
-                <span className={`font-semibold ${(data.avg_ticket - data.best_performer_avg_ticket) * data.transaction_count < 0
-                  ? 'text-red-400'
-                  : 'text-green-400'
-                  }`}>
-                  {((data.avg_ticket - data.best_performer_avg_ticket) * data.transaction_count) < 0 ? '' : '+'}
-                  {formatCurrency((data.avg_ticket - data.best_performer_avg_ticket) * data.transaction_count)}
+                <span className={`font-semibold ${avgImpact > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                  {avgImpact > 0 ? '-' : '+'}{formatCurrency(Math.abs(avgImpact))}
                 </span>
               </div>
               <div className="text-xs text-gray-400 font-mono">
-                = (Your Avg: {formatCurrency(data.avg_ticket)} - Best Avg: {formatCurrency(data.best_performer_avg_ticket)}) × Your Txns: {formatNumber(data.transaction_count)}
+                = (Best Avg: {formatCurrency(data.best_performer_avg_ticket)} - Your Avg: {formatCurrency(data.avg_ticket)}) × Your Txns: {formatNumber(data.transaction_count)}
               </div>
             </div>
 
@@ -118,20 +115,8 @@ export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
             <div className="bg-[#1c1e26] rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-gray-300 font-medium">Category Mix Impact (Residual)</span>
-                <span className={`font-semibold ${data.revenue_gap_amount -
-                  ((data.transaction_count - data.best_performer_transaction_count) * data.best_performer_avg_ticket +
-                    (data.avg_ticket - data.best_performer_avg_ticket) * data.transaction_count) < 0
-                  ? 'text-red-400'
-                  : 'text-green-400'
-                  }`}>
-                  {(data.revenue_gap_amount -
-                    ((data.transaction_count - data.best_performer_transaction_count) * data.best_performer_avg_ticket +
-                      (data.avg_ticket - data.best_performer_avg_ticket) * data.transaction_count)) < 0 ? '' : '+'}
-                  {formatCurrency(
-                    data.revenue_gap_amount -
-                    ((data.transaction_count - data.best_performer_transaction_count) * data.best_performer_avg_ticket +
-                      (data.avg_ticket - data.best_performer_avg_ticket) * data.transaction_count)
-                  )}
+                <span className={`font-semibold ${residual > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                  {residual > 0 ? '-' : '+'}{formatCurrency(Math.abs(residual))}
                 </span>
               </div>
               <div className="text-xs text-gray-400 font-mono">

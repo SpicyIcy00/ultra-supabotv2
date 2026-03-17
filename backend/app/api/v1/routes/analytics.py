@@ -785,16 +785,18 @@ async def get_category_performance_matrix(
     summary="Get weekly sales trends for stores"
 )
 async def get_store_weekly_trends(
+    start_date: datetime = Query(...),
+    end_date: datetime = Query(...),
     store_ids: List[str] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Get weekly sales trends for the last 8 weeks for each store.
+    Get weekly sales trends within the given date range for each store.
     Returns sparkline data showing momentum (going up, down, flat).
     """
     try:
         service = AnalyticsService(db)
-        result = await service.get_store_weekly_trends(store_ids)
+        result = await service.get_store_weekly_trends(start_date, end_date, store_ids)
         return result
     except Exception as e:
         raise HTTPException(
