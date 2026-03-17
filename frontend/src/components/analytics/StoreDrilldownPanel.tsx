@@ -184,7 +184,7 @@ export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
 
   const catGainers   = (categories || []).filter((c: any) => c.revenue_change >= 0).sort((a: any, b: any) => b.revenue_change - a.revenue_change).slice(0, 5);
   const catDecliners = (categories || []).filter((c: any) => c.revenue_change < 0).sort((a: any, b: any) => a.revenue_change - b.revenue_change).slice(0, 5);
-  const toMoverItem  = (c: any) => ({ ...c, name: c.category, previous_revenue: c.previous_revenue ?? 0, current_revenue: c.current_revenue ?? 0 });
+  const toMoverItem  = (c: any) => ({ ...c, name: c.category, previous_revenue: c.prior_revenue ?? c.previous_revenue ?? 0, current_revenue: c.current_revenue ?? 0 });
 
   return (
     <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg overflow-hidden">
