@@ -735,18 +735,22 @@ async def get_store_drilldown_v2(
     store_id: str = Query(...),
     start_date: datetime = Query(...),
     end_date: datetime = Query(...),
+    compare_start_date: datetime = Query(...),
+    compare_end_date: datetime = Query(...),
+    store_ids: List[str] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Get detailed drill-down data for a specific store including:
-    - Revenue gap vs best performer ($ and %)
-    - Transaction count breakdown
-    - Average ticket size comparison
-    - Top 5 categories by revenue for that store vs store average
+    Full store drilldown vs prior period: KPIs, daily breakdown, hour-of-day,
+    product movers, category movers, transaction size distribution,
+    zero-sales/new products, and store rank.
     """
     try:
         service = AnalyticsService(db)
-        result = await service.get_store_drilldown_v2(store_id, start_date, end_date)
+        result = await service.get_store_drilldown_v2(
+            store_id, start_date, end_date,
+            compare_start_date, compare_end_date, store_ids
+        )
         return result
     except Exception as e:
         raise HTTPException(

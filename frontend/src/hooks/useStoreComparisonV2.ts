@@ -46,15 +46,25 @@ export const useStoreComparisonV2 = (
   });
 };
 
-export const useStoreDrilldownV2 = (storeId: string, startDate: Date, endDate: Date) => {
+export const useStoreDrilldownV2 = (
+  storeId: string,
+  startDate: Date,
+  endDate: Date,
+  compareStartDate: Date,
+  compareEndDate: Date,
+  storeIds: string[] = []
+) => {
   return useQuery({
-    queryKey: ['store-drilldown-v2', storeId, startDate, endDate],
+    queryKey: ['store-drilldown-v2', storeId, startDate, endDate, compareStartDate, compareEndDate, storeIds],
     queryFn: async () => {
       const params = new URLSearchParams({
         store_id: storeId,
         start_date: startDate.toISOString(),
         end_date: endDate.toISOString(),
+        compare_start_date: compareStartDate.toISOString(),
+        compare_end_date: compareEndDate.toISOString(),
       });
+      storeIds.forEach(id => params.append('store_ids', id));
 
       const response = await apiClient.get(`/analytics/store-drilldown-v2?${params.toString()}`);
       return response.data;

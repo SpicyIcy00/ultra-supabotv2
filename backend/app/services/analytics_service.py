@@ -1591,154 +1591,567 @@ class AnalyticsService:
         self,
         store_id: str,
         start_date: datetime,
-        end_date: datetime
+        end_date: datetime,
+        compare_start_date: datetime,
+        compare_end_date: datetime,
+        store_ids: List[str] = []
     ) -> Dict[str, Any]:
         """
-        Get detailed drill-down data for a specific store including:
-        - Revenue breakdown vs best performer
-        - Top 5 categories for this store vs average
-        - Best performer metrics for variance analysis
+        Full store drilldown: summary KPIs vs prior period, daily breakdown,
+        hour-of-day, product movers, category movers, transaction size distribution,
+        zero-sales/new products, and store rank.
         """
         end_date_inclusive = end_date + timedelta(days=1)
+        compare_end_date_inclusive = compare_end_date + timedelta(days=1)
 
-        query = text("""
-            WITH store_metrics AS (
+        base_params = {
+            "store_id": store_id,
+            "start_date": start_date,
+            "end_date": end_date_inclusive,
+            "compare_start_date": compare_start_date,
+            "compare_end_date": compare_end_date_inclusive,
+        }
+
+        # ── 1. SUMMARY KPIs ──────────────────────────────────────────────────
+        summary_query = text("""
+            WITH cur AS (
                 SELECT
-                    s.id as store_id,
-                    s.name as store_name,
-                    COALESCE(SUM(t.total), 0)::float as revenue,
-                    COUNT(DISTINCT t.ref_id)::int as transaction_count,
-                    CASE
-                        WHEN COUNT(DISTINCT t.ref_id) > 0 THEN (COALESCE(SUM(t.total), 0) / COUNT(DISTINCT t.ref_id))::float
-                        ELSE 0::float
-                    END as avg_ticket
+                    s.name                                                  AS store_name,
+                    COALESCE(SUM(t.total), 0)::float                       AS revenue,
+                    COUNT(DISTINCT t.ref_id)::int                          AS transactions,
+                    CASE WHEN COUNT(DISTINCT t.ref_id) > 0
+                         THEN (SUM(t.total) / COUNT(DISTINCT t.ref_id))::float
+                         ELSE 0::float END                                  AS avg_ticket
                 FROM stores s
-                LEFT JOIN new_transactions t ON s.id = t.store_id
+                LEFT JOIN new_transactions t
+                    ON s.id = t.store_id
                     AND t.transaction_time >= :start_date
                     AND t.transaction_time < :end_date
                     AND t.is_cancelled = false
-                WHERE 1=1
+                WHERE s.id = :store_id
                 GROUP BY s.id, s.name
             ),
-            best_performer AS (
+            pri AS (
                 SELECT
-                    revenue as max_revenue,
-                    transaction_count as max_transaction_count,
-                    avg_ticket as max_avg_ticket
-                FROM store_metrics
-                ORDER BY revenue DESC
-                LIMIT 1
+                    COALESCE(SUM(t.total), 0)::float                       AS revenue,
+                    COUNT(DISTINCT t.ref_id)::int                          AS transactions,
+                    CASE WHEN COUNT(DISTINCT t.ref_id) > 0
+                         THEN (SUM(t.total) / COUNT(DISTINCT t.ref_id))::float
+                         ELSE 0::float END                                  AS avg_ticket
+                FROM new_transactions t
+                WHERE t.store_id = :store_id
+                    AND t.transaction_time >= :compare_start_date
+                    AND t.transaction_time < :compare_end_date
+                    AND t.is_cancelled = false
             ),
-            target_store AS (
-                SELECT *
-                FROM store_metrics
-                WHERE store_id = :store_id
-            ),
-            store_categories AS (
+            cur_items AS (
                 SELECT
-                    COALESCE(p.category, 'Uncategorized') as category,
-                    COALESCE(SUM(v.item_total_resolved), 0)::float as revenue
+                    COALESCE(SUM(v.item_total_resolved), 0)::float         AS item_revenue,
+                    COALESCE(SUM(v.quantity * p.cost), 0)::float           AS item_cost,
+                    COALESCE(SUM(v.quantity), 0)::float                    AS total_units,
+                    COUNT(DISTINCT t.ref_id)::int                          AS txn_count
                 FROM new_transactions t
                 JOIN v_new_transaction_items_resolved v ON t.ref_id = v.transaction_ref_id
                 JOIN products p ON v.product_id = p.id
-                JOIN stores s ON t.store_id = s.id
-                WHERE
-                    s.id = :store_id
+                WHERE t.store_id = :store_id
+                    AND t.transaction_time >= :start_date
+                    AND t.transaction_time < :end_date
+                    AND t.is_cancelled = false
+            ),
+            pri_items AS (
+                SELECT
+                    COALESCE(SUM(v.item_total_resolved), 0)::float         AS item_revenue,
+                    COALESCE(SUM(v.quantity * p.cost), 0)::float           AS item_cost,
+                    COALESCE(SUM(v.quantity), 0)::float                    AS total_units,
+                    COUNT(DISTINCT t.ref_id)::int                          AS txn_count
+                FROM new_transactions t
+                JOIN v_new_transaction_items_resolved v ON t.ref_id = v.transaction_ref_id
+                JOIN products p ON v.product_id = p.id
+                WHERE t.store_id = :store_id
+                    AND t.transaction_time >= :compare_start_date
+                    AND t.transaction_time < :compare_end_date
+                    AND t.is_cancelled = false
+            ),
+            cur_basket AS (
+                SELECT AVG(product_count)::float AS avg_products_per_txn
+                FROM (
+                    SELECT t.ref_id, COUNT(DISTINCT v.product_id) AS product_count
+                    FROM new_transactions t
+                    JOIN v_new_transaction_items_resolved v ON t.ref_id = v.transaction_ref_id
+                    WHERE t.store_id = :store_id
+                        AND t.transaction_time >= :start_date
+                        AND t.transaction_time < :end_date
+                        AND t.is_cancelled = false
+                    GROUP BY t.ref_id
+                ) sub
+            ),
+            pri_basket AS (
+                SELECT AVG(product_count)::float AS avg_products_per_txn
+                FROM (
+                    SELECT t.ref_id, COUNT(DISTINCT v.product_id) AS product_count
+                    FROM new_transactions t
+                    JOIN v_new_transaction_items_resolved v ON t.ref_id = v.transaction_ref_id
+                    WHERE t.store_id = :store_id
+                        AND t.transaction_time >= :compare_start_date
+                        AND t.transaction_time < :compare_end_date
+                        AND t.is_cancelled = false
+                    GROUP BY t.ref_id
+                ) sub
+            )
+            SELECT
+                cur.store_name,
+                cur.revenue               AS cur_revenue,
+                cur.transactions          AS cur_transactions,
+                cur.avg_ticket            AS cur_avg_ticket,
+                pri.revenue               AS pri_revenue,
+                pri.transactions          AS pri_transactions,
+                pri.avg_ticket            AS pri_avg_ticket,
+                cur_items.item_revenue    AS cur_item_revenue,
+                cur_items.item_cost       AS cur_item_cost,
+                pri_items.item_revenue    AS pri_item_revenue,
+                pri_items.item_cost       AS pri_item_cost,
+                cur_basket.avg_products_per_txn AS cur_skus_per_txn,
+                pri_basket.avg_products_per_txn AS pri_skus_per_txn
+            FROM cur, pri, cur_items, pri_items, cur_basket, pri_basket
+        """)
+
+        # ── 2. DAILY BREAKDOWN ───────────────────────────────────────────────
+        daily_sql = text("""
+            SELECT
+                DATE(t.transaction_time AT TIME ZONE 'Asia/Manila')        AS day_date,
+                COALESCE(SUM(t.total), 0)::float                           AS revenue,
+                COUNT(DISTINCT t.ref_id)::int                              AS transactions,
+                CASE WHEN COUNT(DISTINCT t.ref_id) > 0
+                     THEN (SUM(t.total) / COUNT(DISTINCT t.ref_id))::float
+                     ELSE 0::float END                                      AS avg_ticket
+            FROM new_transactions t
+            WHERE t.store_id = :store_id
+                AND t.transaction_time >= :start_date
+                AND t.transaction_time < :end_date
+                AND t.is_cancelled = false
+            GROUP BY 1 ORDER BY 1
+        """)
+
+        daily_prior_sql = text("""
+            SELECT
+                DATE(t.transaction_time AT TIME ZONE 'Asia/Manila')        AS day_date,
+                COALESCE(SUM(t.total), 0)::float                           AS revenue,
+                COUNT(DISTINCT t.ref_id)::int                              AS transactions,
+                CASE WHEN COUNT(DISTINCT t.ref_id) > 0
+                     THEN (SUM(t.total) / COUNT(DISTINCT t.ref_id))::float
+                     ELSE 0::float END                                      AS avg_ticket
+            FROM new_transactions t
+            WHERE t.store_id = :store_id
+                AND t.transaction_time >= :compare_start_date
+                AND t.transaction_time < :compare_end_date
+                AND t.is_cancelled = false
+            GROUP BY 1 ORDER BY 1
+        """)
+
+        # ── 3. HOUR OF DAY ───────────────────────────────────────────────────
+        hourly_sql = text("""
+            SELECT
+                EXTRACT(HOUR FROM t.transaction_time AT TIME ZONE 'Asia/Manila')::int AS hour,
+                COALESCE(SUM(t.total), 0)::float                           AS revenue,
+                COUNT(DISTINCT t.ref_id)::int                              AS transactions
+            FROM new_transactions t
+            WHERE t.store_id = :store_id
+                AND t.transaction_time >= :start_date
+                AND t.transaction_time < :end_date
+                AND t.is_cancelled = false
+            GROUP BY 1 ORDER BY 1
+        """)
+
+        hourly_prior_sql = text("""
+            SELECT
+                EXTRACT(HOUR FROM t.transaction_time AT TIME ZONE 'Asia/Manila')::int AS hour,
+                COALESCE(SUM(t.total), 0)::float                           AS revenue,
+                COUNT(DISTINCT t.ref_id)::int                              AS transactions
+            FROM new_transactions t
+            WHERE t.store_id = :store_id
+                AND t.transaction_time >= :compare_start_date
+                AND t.transaction_time < :compare_end_date
+                AND t.is_cancelled = false
+            GROUP BY 1 ORDER BY 1
+        """)
+
+        # ── 4. PRODUCT MOVERS ────────────────────────────────────────────────
+        product_cte = """
+            WITH cur_prods AS (
+                SELECT p.id, p.name,
+                    COALESCE(SUM(v.item_total_resolved), 0)::float AS revenue
+                FROM v_new_transaction_items_resolved v
+                JOIN products p ON v.product_id = p.id
+                JOIN new_transactions t ON v.transaction_ref_id = t.ref_id
+                WHERE t.store_id = :store_id
+                    AND t.transaction_time >= :start_date
+                    AND t.transaction_time < :end_date
+                    AND t.is_cancelled = false
+                GROUP BY p.id, p.name
+            ),
+            pri_prods AS (
+                SELECT p.id,
+                    COALESCE(SUM(v.item_total_resolved), 0)::float AS revenue
+                FROM v_new_transaction_items_resolved v
+                JOIN products p ON v.product_id = p.id
+                JOIN new_transactions t ON v.transaction_ref_id = t.ref_id
+                WHERE t.store_id = :store_id
+                    AND t.transaction_time >= :compare_start_date
+                    AND t.transaction_time < :compare_end_date
+                    AND t.is_cancelled = false
+                GROUP BY p.id
+            ),
+            changes AS (
+                SELECT
+                    cp.name,
+                    cp.revenue                              AS current_revenue,
+                    COALESCE(pp.revenue, 0)::float          AS previous_revenue,
+                    (cp.revenue - COALESCE(pp.revenue, 0))::float AS revenue_change
+                FROM cur_prods cp
+                LEFT JOIN pri_prods pp ON cp.id = pp.id
+                WHERE GREATEST(cp.revenue, COALESCE(pp.revenue, 0)) >= 1000
+            )
+        """
+
+        prod_gainers_sql  = text(product_cte + "SELECT * FROM changes WHERE revenue_change > 0 ORDER BY revenue_change DESC LIMIT 5")
+        prod_decliners_sql = text(product_cte + "SELECT * FROM changes WHERE revenue_change < 0 ORDER BY revenue_change ASC LIMIT 5")
+
+        # ── 5. CATEGORY MOVERS ───────────────────────────────────────────────
+        cat_query = text("""
+            WITH cur_cats AS (
+                SELECT COALESCE(p.category, 'Uncategorized') AS category,
+                    COALESCE(SUM(v.item_total_resolved), 0)::float AS revenue
+                FROM v_new_transaction_items_resolved v
+                JOIN products p ON v.product_id = p.id
+                JOIN new_transactions t ON v.transaction_ref_id = t.ref_id
+                WHERE t.store_id = :store_id
                     AND t.transaction_time >= :start_date
                     AND t.transaction_time < :end_date
                     AND t.is_cancelled = false
                 GROUP BY p.category
-                ORDER BY revenue DESC
-                LIMIT 5
             ),
-            avg_categories AS (
-                SELECT
-                    COALESCE(subq.category, 'Uncategorized') as category,
-                    AVG(category_revenue) as avg_revenue
-                FROM (
-                    SELECT
-                        t.store_id,
-                        p.category,
-                        COALESCE(SUM(v.item_total_resolved), 0) as category_revenue
-                    FROM new_transactions t
-                    JOIN v_new_transaction_items_resolved v ON t.ref_id = v.transaction_ref_id
-                    JOIN products p ON v.product_id = p.id
-                    JOIN stores s ON t.store_id = s.id
-                    WHERE
-                        1=1
-                        AND t.store_id != :store_id
-                        AND t.transaction_time >= :start_date
-                        AND t.transaction_time < :end_date
-                        AND t.is_cancelled = false
-                    GROUP BY t.store_id, p.category
-                ) subq
-                GROUP BY subq.category
+            pri_cats AS (
+                SELECT COALESCE(p.category, 'Uncategorized') AS category,
+                    COALESCE(SUM(v.item_total_resolved), 0)::float AS revenue
+                FROM v_new_transaction_items_resolved v
+                JOIN products p ON v.product_id = p.id
+                JOIN new_transactions t ON v.transaction_ref_id = t.ref_id
+                WHERE t.store_id = :store_id
+                    AND t.transaction_time >= :compare_start_date
+                    AND t.transaction_time < :compare_end_date
+                    AND t.is_cancelled = false
+                GROUP BY p.category
             )
             SELECT
-                ts.store_name,
-                ts.revenue as store_revenue,
-                ts.transaction_count,
-                ts.avg_ticket,
-                bp.max_revenue as best_performer_revenue,
-                bp.max_transaction_count as best_performer_transaction_count,
-                bp.max_avg_ticket as best_performer_avg_ticket,
-                (bp.max_revenue - ts.revenue)::float as revenue_gap_amount,
-                CASE
-                    WHEN bp.max_revenue > 0 THEN (((bp.max_revenue - ts.revenue) / bp.max_revenue) * 100)::float
-                    ELSE 0::float
-                END as revenue_gap_pct,
-                sc.category,
-                sc.revenue as category_revenue,
-                COALESCE(ac.avg_revenue, 0)::float as category_avg_revenue
-            FROM target_store ts
-            CROSS JOIN best_performer bp
-            LEFT JOIN store_categories sc ON true
-            LEFT JOIN avg_categories ac ON sc.category = ac.category
+                cc.category,
+                cc.revenue                              AS current_revenue,
+                COALESCE(pc.revenue, 0)::float          AS prior_revenue,
+                (cc.revenue - COALESCE(pc.revenue, 0))::float AS revenue_change
+            FROM cur_cats cc
+            LEFT JOIN pri_cats pc ON cc.category = pc.category
+            ORDER BY ABS(cc.revenue - COALESCE(pc.revenue, 0)) DESC
         """)
 
-        result = await self.db.execute(query, {
-            "store_id": store_id,
-            "start_date": start_date,
-            "end_date": end_date_inclusive
-        })
-        rows = result.fetchall()
+        # ── 6. TRANSACTION SIZE DISTRIBUTION ────────────────────────────────
+        txn_dist_sql = text("""
+            SELECT
+                CASE
+                    WHEN t.total < 200   THEN 1
+                    WHEN t.total < 500   THEN 2
+                    WHEN t.total < 1000  THEN 3
+                    ELSE 4
+                END AS bucket_order,
+                CASE
+                    WHEN t.total < 200   THEN '<₱200'
+                    WHEN t.total < 500   THEN '₱200-500'
+                    WHEN t.total < 1000  THEN '₱500-1k'
+                    ELSE '₱1k+'
+                END AS bucket,
+                COUNT(*)::int              AS count,
+                COALESCE(SUM(t.total), 0)::float AS revenue
+            FROM new_transactions t
+            WHERE t.store_id = :store_id
+                AND t.transaction_time >= :start_date
+                AND t.transaction_time < :end_date
+                AND t.is_cancelled = false
+            GROUP BY 1, 2 ORDER BY 1
+        """)
 
-        if not rows:
+        txn_dist_prior_sql = text("""
+            SELECT
+                CASE
+                    WHEN t.total < 200   THEN 1
+                    WHEN t.total < 500   THEN 2
+                    WHEN t.total < 1000  THEN 3
+                    ELSE 4
+                END AS bucket_order,
+                CASE
+                    WHEN t.total < 200   THEN '<₱200'
+                    WHEN t.total < 500   THEN '₱200-500'
+                    WHEN t.total < 1000  THEN '₱500-1k'
+                    ELSE '₱1k+'
+                END AS bucket,
+                COUNT(*)::int              AS count,
+                COALESCE(SUM(t.total), 0)::float AS revenue
+            FROM new_transactions t
+            WHERE t.store_id = :store_id
+                AND t.transaction_time >= :compare_start_date
+                AND t.transaction_time < :compare_end_date
+                AND t.is_cancelled = false
+            GROUP BY 1, 2 ORDER BY 1
+        """)
+
+        # ── 7. ZERO-SALES & NEW PRODUCTS ─────────────────────────────────────
+        zero_sales_sql = text("""
+            WITH cur_ids AS (
+                SELECT DISTINCT v.product_id
+                FROM v_new_transaction_items_resolved v
+                JOIN new_transactions t ON v.transaction_ref_id = t.ref_id
+                WHERE t.store_id = :store_id
+                    AND t.transaction_time >= :start_date
+                    AND t.transaction_time < :end_date
+                    AND t.is_cancelled = false
+            ),
+            pri_prods AS (
+                SELECT p.id, p.name,
+                    COALESCE(SUM(v.item_total_resolved), 0)::float AS prior_revenue
+                FROM v_new_transaction_items_resolved v
+                JOIN products p ON v.product_id = p.id
+                JOIN new_transactions t ON v.transaction_ref_id = t.ref_id
+                WHERE t.store_id = :store_id
+                    AND t.transaction_time >= :compare_start_date
+                    AND t.transaction_time < :compare_end_date
+                    AND t.is_cancelled = false
+                GROUP BY p.id, p.name
+                HAVING COALESCE(SUM(v.item_total_resolved), 0) >= 1000
+            )
+            SELECT pp.name, pp.prior_revenue
+            FROM pri_prods pp
+            LEFT JOIN cur_ids ci ON pp.id = ci.product_id
+            WHERE ci.product_id IS NULL
+            ORDER BY pp.prior_revenue DESC
+            LIMIT 10
+        """)
+
+        new_products_sql = text("""
+            WITH pri_ids AS (
+                SELECT DISTINCT v.product_id
+                FROM v_new_transaction_items_resolved v
+                JOIN new_transactions t ON v.transaction_ref_id = t.ref_id
+                WHERE t.store_id = :store_id
+                    AND t.transaction_time >= :compare_start_date
+                    AND t.transaction_time < :compare_end_date
+                    AND t.is_cancelled = false
+            ),
+            cur_prods AS (
+                SELECT p.id, p.name,
+                    COALESCE(SUM(v.item_total_resolved), 0)::float AS current_revenue
+                FROM v_new_transaction_items_resolved v
+                JOIN products p ON v.product_id = p.id
+                JOIN new_transactions t ON v.transaction_ref_id = t.ref_id
+                WHERE t.store_id = :store_id
+                    AND t.transaction_time >= :start_date
+                    AND t.transaction_time < :end_date
+                    AND t.is_cancelled = false
+                GROUP BY p.id, p.name
+                HAVING COALESCE(SUM(v.item_total_resolved), 0) >= 1000
+            )
+            SELECT cp.name, cp.current_revenue
+            FROM cur_prods cp
+            LEFT JOIN pri_ids pi ON cp.id = pi.product_id
+            WHERE pi.product_id IS NULL
+            ORDER BY cp.current_revenue DESC
+            LIMIT 10
+        """)
+
+        # ── 8. STORE RANK ────────────────────────────────────────────────────
+        rank_store_filter = ""
+        if store_ids:
+            validated = [sid for sid in store_ids if _is_valid_uuid(sid)]
+            if validated:
+                ids_str = "', '".join(validated)
+                rank_store_filter = f"AND t.store_id IN ('{ids_str}')"
+
+        rank_sql = text(f"""
+            SELECT store_id, rank, total_stores
+            FROM (
+                SELECT
+                    t.store_id,
+                    COALESCE(SUM(t.total), 0)::float                           AS revenue,
+                    RANK() OVER (ORDER BY COALESCE(SUM(t.total), 0) DESC)::int AS rank,
+                    COUNT(*) OVER ()::int                                       AS total_stores
+                FROM new_transactions t
+                WHERE t.transaction_time >= :start_date
+                    AND t.transaction_time < :end_date
+                    AND t.is_cancelled = false
+                    {rank_store_filter}
+                GROUP BY t.store_id
+            ) ranked
+            WHERE store_id = :store_id
+        """)
+
+        # ── EXECUTE ALL QUERIES ───────────────────────────────────────────────
+        summary_row       = (await self.db.execute(summary_query,       base_params)).fetchone()
+        daily_rows        = (await self.db.execute(daily_sql,           base_params)).fetchall()
+        daily_prior_rows  = (await self.db.execute(daily_prior_sql,     base_params)).fetchall()
+        hourly_rows       = (await self.db.execute(hourly_sql,          base_params)).fetchall()
+        hourly_prior_rows = (await self.db.execute(hourly_prior_sql,    base_params)).fetchall()
+        gainers_rows      = (await self.db.execute(prod_gainers_sql,    base_params)).fetchall()
+        decliners_rows    = (await self.db.execute(prod_decliners_sql,  base_params)).fetchall()
+        cat_rows          = (await self.db.execute(cat_query,           base_params)).fetchall()
+        dist_rows         = (await self.db.execute(txn_dist_sql,        base_params)).fetchall()
+        dist_prior_rows   = (await self.db.execute(txn_dist_prior_sql,  base_params)).fetchall()
+        zero_rows         = (await self.db.execute(zero_sales_sql,      base_params)).fetchall()
+        new_rows          = (await self.db.execute(new_products_sql,    base_params)).fetchall()
+        rank_row          = (await self.db.execute(rank_sql,            base_params)).fetchone()
+
+        if not summary_row:
+            return {"store_name": store_id, "error": "No data found"}
+
+        # ── PROCESS SUMMARY ───────────────────────────────────────────────────
+        def safe_pct(cur, pri):
+            if pri and pri > 0:
+                return round((cur - pri) / pri * 100, 2)
+            return None
+
+        cur_rev   = float(summary_row.cur_revenue or 0)
+        pri_rev   = float(summary_row.pri_revenue or 0)
+        cur_txn   = int(summary_row.cur_transactions or 0)
+        pri_txn   = int(summary_row.pri_transactions or 0)
+        cur_avg   = float(summary_row.cur_avg_ticket or 0)
+        pri_avg   = float(summary_row.pri_avg_ticket or 0)
+        cur_skus  = float(summary_row.cur_skus_per_txn or 0)
+        pri_skus  = float(summary_row.pri_skus_per_txn or 0)
+
+        cur_item_rev  = float(summary_row.cur_item_revenue or 0)
+        cur_item_cost = float(summary_row.cur_item_cost or 0)
+        pri_item_rev  = float(summary_row.pri_item_revenue or 0)
+        pri_item_cost = float(summary_row.pri_item_cost or 0)
+
+        cur_margin = round((cur_item_rev - cur_item_cost) / cur_item_rev * 100, 2) if cur_item_rev > 0 else 0
+        pri_margin = round((pri_item_rev - pri_item_cost) / pri_item_rev * 100, 2) if pri_item_rev > 0 else 0
+
+        # ── PROCESS DAILY ─────────────────────────────────────────────────────
+        def row_to_day(r):
             return {
-                "store_name": store_id,
-                "revenue": 0,
-                "transaction_count": 0,
-                "avg_ticket": 0,
-                "revenue_gap_amount": 0,
-                "revenue_gap_pct": 0,
-                "top_categories": []
+                "date": r.day_date.isoformat(),
+                "label": r.day_date.strftime("%a %-d"),
+                "revenue": float(r.revenue or 0),
+                "transactions": int(r.transactions or 0),
+                "avg_ticket": float(r.avg_ticket or 0),
             }
 
-        first_row = rows[0]
-        categories = []
-        for row in rows:
-            if row.category:
-                categories.append({
-                    "category": row.category,
-                    "revenue": float(row.category_revenue or 0),
-                    "avg_revenue": float(row.category_avg_revenue or 0),
-                    "vs_avg_pct": (
-                        ((float(row.category_revenue or 0) - float(row.category_avg_revenue or 0)) / float(row.category_avg_revenue or 0) * 100)
-                        if row.category_avg_revenue and row.category_avg_revenue > 0 else 0
-                    )
-                })
+        cur_days  = [row_to_day(r) for r in daily_rows]
+        pri_days  = [row_to_day(r) for r in daily_prior_rows]
+
+        daily = []
+        for i, day in enumerate(cur_days):
+            prior = pri_days[i] if i < len(pri_days) else {}
+            daily.append({
+                "label":               day["label"],
+                "cur_date":            day["date"],
+                "pri_date":            prior.get("date"),
+                "pri_label":           prior.get("label"),
+                "current_revenue":     day["revenue"],
+                "prior_revenue":       prior.get("revenue", 0),
+                "current_transactions": day["transactions"],
+                "prior_transactions":  prior.get("transactions", 0),
+                "current_avg_ticket":  day["avg_ticket"],
+                "prior_avg_ticket":    prior.get("avg_ticket", 0),
+            })
+
+        # ── PROCESS HOURLY ────────────────────────────────────────────────────
+        def fmt_hour(h):
+            if h == 0: return "12 AM"
+            if h < 12: return f"{h} AM"
+            if h == 12: return "12 PM"
+            return f"{h - 12} PM"
+
+        cur_hourly  = {r.hour: r for r in hourly_rows}
+        pri_hourly  = {r.hour: r for r in hourly_prior_rows}
+        all_hours   = sorted(set(cur_hourly) | set(pri_hourly))
+        hourly = []
+        for h in all_hours:
+            cr = cur_hourly.get(h)
+            pr = pri_hourly.get(h)
+            hourly.append({
+                "hour":                h,
+                "hour_label":          fmt_hour(h),
+                "current_revenue":     float(cr.revenue or 0) if cr else 0,
+                "prior_revenue":       float(pr.revenue or 0) if pr else 0,
+                "current_transactions": int(cr.transactions or 0) if cr else 0,
+                "prior_transactions":  int(pr.transactions or 0) if pr else 0,
+            })
+
+        # ── PROCESS PRODUCT MOVERS ────────────────────────────────────────────
+        def build_mover(r, name_col="name"):
+            prev = float(r.previous_revenue or 0)
+            chg  = float(r.revenue_change or 0)
+            return {
+                "name":             getattr(r, name_col),
+                "current_revenue":  float(r.current_revenue or 0),
+                "previous_revenue": prev,
+                "revenue_change":   chg,
+                "change_pct":       round(chg / prev * 100, 2) if prev > 0 else None,
+            }
+
+        # ── PROCESS CATEGORIES ────────────────────────────────────────────────
+        def build_cat(r):
+            prev = float(r.prior_revenue or 0)
+            cur  = float(r.current_revenue or 0)
+            chg  = float(r.revenue_change or 0)
+            return {
+                "category":         r.category,
+                "current_revenue":  cur,
+                "prior_revenue":    prev,
+                "revenue_change":   chg,
+                "change_pct":       round(chg / prev * 100, 2) if prev > 0 else None,
+            }
+
+        # ── PROCESS DISTRIBUTION ─────────────────────────────────────────────
+        all_buckets = ["<₱200", "₱200-500", "₱500-1k", "₱1k+"]
+        cur_dist  = {r.bucket: {"count": r.count, "revenue": float(r.revenue or 0)} for r in dist_rows}
+        pri_dist  = {r.bucket: {"count": r.count, "revenue": float(r.revenue or 0)} for r in dist_prior_rows}
+        distribution = [
+            {
+                "bucket":              b,
+                "current_count":       cur_dist.get(b, {}).get("count", 0),
+                "prior_count":         pri_dist.get(b, {}).get("count", 0),
+                "current_revenue":     cur_dist.get(b, {}).get("revenue", 0),
+                "prior_revenue":       pri_dist.get(b, {}).get("revenue", 0),
+            }
+            for b in all_buckets
+        ]
 
         return {
-            "store_name": first_row.store_name,
-            "revenue": float(first_row.store_revenue or 0),
-            "transaction_count": int(first_row.transaction_count or 0),
-            "avg_ticket": float(first_row.avg_ticket or 0),
-            "best_performer_revenue": float(first_row.best_performer_revenue or 0),
-            "best_performer_transaction_count": int(first_row.best_performer_transaction_count or 0),
-            "best_performer_avg_ticket": float(first_row.best_performer_avg_ticket or 0),
-            "revenue_gap_amount": float(first_row.revenue_gap_amount or 0),
-            "revenue_gap_pct": float(first_row.revenue_gap_pct or 0),
-            "top_categories": categories
+            "store_name": summary_row.store_name,
+            "summary": {
+                "current":  {"revenue": cur_rev, "transactions": cur_txn, "avg_ticket": cur_avg, "skus_per_txn": round(cur_skus, 1), "margin_pct": cur_margin},
+                "prior":    {"revenue": pri_rev, "transactions": pri_txn, "avg_ticket": pri_avg, "skus_per_txn": round(pri_skus, 1), "margin_pct": pri_margin},
+                "revenue_change":      cur_rev - pri_rev,
+                "revenue_change_pct":  safe_pct(cur_rev, pri_rev),
+                "txn_change":          cur_txn - pri_txn,
+                "txn_change_pct":      safe_pct(cur_txn, pri_txn),
+                "avg_ticket_change":   round(cur_avg - pri_avg, 2),
+                "avg_ticket_change_pct": safe_pct(cur_avg, pri_avg),
+                "skus_change":         round(cur_skus - pri_skus, 2),
+                "skus_change_pct":     safe_pct(cur_skus, pri_skus),
+                "margin_change":       round(cur_margin - pri_margin, 2),
+            },
+            "rank": {
+                "rank":         int(rank_row.rank) if rank_row else None,
+                "total_stores": int(rank_row.total_stores) if rank_row else None,
+            },
+            "daily":        daily,
+            "hourly":       hourly,
+            "product_movers": {
+                "gainers":   [build_mover(r) for r in gainers_rows],
+                "decliners": [build_mover(r) for r in decliners_rows],
+            },
+            "categories":   [build_cat(r) for r in cat_rows],
+            "distribution": distribution,
+            "zero_sales":   [{"name": r.name, "prior_revenue": float(r.prior_revenue or 0)} for r in zero_rows],
+            "new_products": [{"name": r.name, "current_revenue": float(r.current_revenue or 0)} for r in new_rows],
         }
 
     @cached(expire=300, prefix="analytics")

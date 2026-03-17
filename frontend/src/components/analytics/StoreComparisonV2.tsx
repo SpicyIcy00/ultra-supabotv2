@@ -129,6 +129,9 @@ export const StoreComparisonV2: React.FC = () => {
           storeId={selectedStore}
           startDate={currentStart}
           endDate={currentEnd}
+          compareStartDate={previousStart}
+          compareEndDate={previousEnd}
+          storeIds={selectedStores}
           onClose={() => setSelectedStore(null)}
         />
       )}
