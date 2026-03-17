@@ -3,7 +3,6 @@ import { StoreHeatmapCompact } from './StoreHeatmapCompact';
 import { StoreDrilldownPanel } from './StoreDrilldownPanel';
 import { CategoryPerformanceMatrix } from './CategoryPerformanceMatrix';
 import { StoreWeeklyTrends } from './StoreWeeklyTrends';
-import { TopMovers } from './TopMovers';
 import { useStoreComparisonV2 } from '../../hooks/useStoreComparisonV2';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import { format } from 'date-fns';
@@ -136,19 +135,7 @@ export const StoreComparisonV2: React.FC = () => {
         />
       )}
 
-      {/* 3. TOP MOVERS */}
-      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6">
-        <h2 className="text-xl font-semibold text-white mb-4">Top Movers: Products & Categories</h2>
-        <TopMovers
-          startDate={currentStart}
-          endDate={currentEnd}
-          compareStartDate={previousStart}
-          compareEndDate={previousEnd}
-          storeIds={selectedStores}
-        />
-      </div>
-
-      {/* 4. CATEGORY PERFORMANCE MATRIX */}
+      {/* 3. CATEGORY PERFORMANCE MATRIX */}
       <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6">
         <h2 className="text-xl font-semibold text-white mb-4">Category Performance Matrix</h2>
         <CategoryPerformanceMatrix
