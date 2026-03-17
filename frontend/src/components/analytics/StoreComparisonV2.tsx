@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { StoreHeatmapCompact } from './StoreHeatmapCompact';
 import { StoreDrilldownPanel } from './StoreDrilldownPanel';
 import { CategoryPerformanceMatrix } from './CategoryPerformanceMatrix';
-import { StoreWeeklyTrends } from './StoreWeeklyTrends';
 import { useStoreComparisonV2 } from '../../hooks/useStoreComparisonV2';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import { format } from 'date-fns';
@@ -146,10 +145,6 @@ export const StoreComparisonV2: React.FC = () => {
       </div>
 
       {/* 5. TIME TREND COMPARISON */}
-      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6">
-        <h2 className="text-xl font-semibold text-white mb-4">8-Week Sales Trends</h2>
-        <StoreWeeklyTrends storeIds={selectedStores} startDate={currentStart} endDate={currentEnd} />
-      </div>
     </div>
   );
 };
