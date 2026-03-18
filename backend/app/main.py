@@ -46,6 +46,18 @@ async def startup_event():
     except Exception as e:
         print(f"DEBUG: Error logging DB info: {e}")
 
+    # Apply any pending schema changes that bypass alembic
+    try:
+        from app.core.database import engine
+        from sqlalchemy import text
+        async with engine.begin() as conn:
+            await conn.execute(text(
+                "ALTER TABLE store_tiers ADD COLUMN IF NOT EXISTS max_cover_days INTEGER NOT NULL DEFAULT 10"
+            ))
+        print("Schema migration: max_cover_days column ensured")
+    except Exception as e:
+        print(f"Schema migration warning: {e}")
+
     # Initialize schema context with database connection
     business_rules_path = Path(__file__).parent.parent / "business_rules.yaml"
     SchemaContext.initialize(
