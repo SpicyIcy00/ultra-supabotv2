@@ -19,6 +19,7 @@ class StoreTier(Base):
     tier: Mapped[str] = mapped_column(String(1), nullable=False)  # 'A' or 'B'
     safety_days: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
     target_cover_days: Mapped[int] = mapped_column(Integer, nullable=False, default=7)
+    max_cover_days: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
     expiry_window_days: Mapped[int] = mapped_column(Integer, nullable=False, default=60)
 
     created_at: Mapped[datetime] = mapped_column(

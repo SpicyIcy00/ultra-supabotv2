@@ -5,6 +5,7 @@ export interface StoreTier {
   tier: 'A' | 'B';
   safety_days: number;
   target_cover_days: number;
+  max_cover_days: number;
   expiry_window_days: number;
   created_at?: string;
   updated_at?: string;

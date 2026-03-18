@@ -11,6 +11,7 @@ class StoreTierCreate(BaseModel):
     tier: Literal["A", "B"]
     safety_days: int = Field(default=3, ge=1)
     target_cover_days: int = Field(default=7, ge=1)
+    max_cover_days: int = Field(default=10, ge=1)
     expiry_window_days: int = Field(default=60, ge=1)
 
 
@@ -18,6 +19,7 @@ class StoreTierUpdate(BaseModel):
     tier: Optional[Literal["A", "B"]] = None
     safety_days: Optional[int] = Field(None, ge=1)
     target_cover_days: Optional[int] = Field(None, ge=1)
+    max_cover_days: Optional[int] = Field(None, ge=1)
     expiry_window_days: Optional[int] = Field(None, ge=1)
 
 
@@ -27,6 +29,7 @@ class StoreTierResponse(BaseModel):
     tier: str
     safety_days: int
     target_cover_days: int
+    max_cover_days: int
     expiry_window_days: int
     created_at: datetime
     updated_at: datetime

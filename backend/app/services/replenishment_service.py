@@ -183,6 +183,7 @@ class ReplenishmentService:
                 "tier": tier.tier,
                 "safety_days": tier.safety_days,
                 "target_cover_days": tier.target_cover_days,
+                "max_cover_days": tier.max_cover_days,
                 "expiry_window_days": tier.expiry_window_days,
             }
         # Default to Tier B if not configured
@@ -190,6 +191,7 @@ class ReplenishmentService:
             "tier": "B",
             "safety_days": 3,
             "target_cover_days": 7,
+            "max_cover_days": 10,
             "expiry_window_days": 60,
         }
 
@@ -281,6 +283,7 @@ class ReplenishmentService:
         run_date: Optional[date] = None,
         store_id: Optional[str] = None,
         apply_stockout_buffer: bool = True,
+        normalize_priority: bool = True,
     ) -> Dict[str, Any]:
         """Execute the replenishment calculation, optionally filtered to a single store."""
         if run_date is None:
@@ -317,6 +320,7 @@ class ReplenishmentService:
                 "tier": tier.tier,
                 "safety_days": tier.safety_days,
                 "target_cover_days": tier.target_cover_days,
+                "max_cover_days": tier.max_cover_days,
                 "expiry_window_days": tier.expiry_window_days,
             }
 
@@ -364,6 +368,7 @@ class ReplenishmentService:
                 "tier": "B",
                 "safety_days": 3,
                 "target_cover_days": 7,
+                "max_cover_days": 10,
                 "expiry_window_days": 60,
             })
 
@@ -383,14 +388,31 @@ class ReplenishmentService:
             safety_stock = season_adj_sales * tier_params["safety_days"]
 
             # Min = (SeasonAdjustedDailySales × CoverDays) + SafetyStock
-            min_level = (season_adj_sales * COVER_DAYS) + safety_stock
+            # Use tier's target_cover_days + lead time so Tier A/B can have different windows
+            effective_cover_days = tier_params["target_cover_days"] + LEAD_TIME_DAYS
+            min_level = (season_adj_sales * effective_cover_days) + safety_stock
+
+            # Treat negative on_hand as 0 for calculations (raw value kept for exception flagging)
+            calc_on_hand = max(0, on_hand)
 
             # Inventory position
             on_order = pipeline_cache.get((store_id, sku_id), 0)
-            inventory_position = on_hand + on_order
+            inventory_position = calc_on_hand + on_order
 
-            # Requested ship quantity (bring store up to min level)
+            # Max level: how high we're willing to stock (configurable per tier)
+            max_level = season_adj_sales * (tier_params["max_cover_days"] + LEAD_TIME_DAYS)
+
+            # Expiry cap: don't order more than can be sold within the expiry window
+            expiry_cap = season_adj_sales * tier_params["expiry_window_days"]
+
+            # Final max: binding upper cap (most restrictive of the two)
+            final_max = min(max_level, expiry_cap) if expiry_cap > 0 else max_level
+
+            # Requested ship quantity: bring store up to min level, capped at final_max
             requested_ship_qty = max(0, math.ceil(min_level - inventory_position))
+            if final_max > 0:
+                max_shippable = max(0, math.ceil(final_max - inventory_position))
+                requested_ship_qty = min(requested_ship_qty, max_shippable)
 
             # Stockout-day buffer (optional)
             # Predicts which day stock runs out using on_hand only, then adds a buffer
@@ -398,9 +420,9 @@ class ReplenishmentService:
             #   Mon–Fri stockout → +20% (enters weekend without stock)
             #   Sat–Sun stockout → +10% (mid-weekend)
             #   Beyond review week → no buffer
-            if apply_stockout_buffer and requested_ship_qty > 0 and season_adj_sales > 0 and on_hand >= 0:
+            if apply_stockout_buffer and requested_ship_qty > 0 and season_adj_sales > 0:
                 projected_stockout = run_date + timedelta(
-                    days=int(on_hand / max(season_adj_sales, 0.1))
+                    days=int(calc_on_hand / max(season_adj_sales, 0.1))
                 )
                 end_of_review_week = run_date + timedelta(days=REVIEW_PERIOD_DAYS)
                 if projected_stockout <= end_of_review_week:
@@ -416,14 +438,19 @@ class ReplenishmentService:
 
             # Days of stock
             days_of_stock = (
-                on_hand / max(season_adj_sales, 0.1)
-                if season_adj_sales > 0 or on_hand > 0
+                calc_on_hand / max(season_adj_sales, 0.1)
+                if season_adj_sales > 0 or calc_on_hand > 0
                 else 0.0
             )
 
             # Stockout risk and priority
             stockout_risk = 1.0 / max(days_of_stock, 0.1)
-            priority_score = (season_adj_sales * 0.6) + (stockout_risk * 0.4)
+            if normalize_priority:
+                # log1p compresses sales scale so urgency isn't drowned out by high volume
+                velocity_score = math.log1p(season_adj_sales)
+            else:
+                velocity_score = season_adj_sales
+            priority_score = (velocity_score * 0.6) + (stockout_risk * 0.4)
 
             plan = ShipmentPlan(
                 run_date=run_date,
@@ -433,9 +460,9 @@ class ReplenishmentService:
                 season_adjusted_daily_sales=round(season_adj_sales, 4),
                 safety_stock=round(safety_stock, 2),
                 min_level=round(min_level, 2),
-                max_level=0,
-                expiry_cap=0,
-                final_max=round(min_level, 2),
+                max_level=round(max_level, 2),
+                expiry_cap=round(expiry_cap, 2),
+                final_max=round(final_max, 2),
                 on_hand=on_hand,
                 on_order=on_order,
                 inventory_position=inventory_position,
@@ -473,11 +500,7 @@ class ReplenishmentService:
                     remaining -= allocated
                     if remaining <= 0:
                         break
-                # Zero out remaining stores
-                for req in requests:
-                    if remaining <= 0 and req["plan"].allocated_ship_qty == req["plan"].requested_ship_qty:
-                        pass  # Already handled
-                    # Ensure stores after depletion get 0
+                # Ensure stores after depletion get 0
                 for i, req in enumerate(requests):
                     if i > 0 and sum(
                         r["plan"].allocated_ship_qty for r in requests[:i+1]
@@ -795,6 +818,7 @@ class ReplenishmentService:
                 st.tier,
                 st.safety_days,
                 st.target_cover_days,
+                st.max_cover_days,
                 st.expiry_window_days,
                 st.created_at,
                 st.updated_at
@@ -811,9 +835,10 @@ class ReplenishmentService:
                 "tier": r[2],
                 "safety_days": r[3],
                 "target_cover_days": r[4],
-                "expiry_window_days": r[5],
-                "created_at": r[6].isoformat() if r[6] else None,
-                "updated_at": r[7].isoformat() if r[7] else None,
+                "max_cover_days": r[5],
+                "expiry_window_days": r[6],
+                "created_at": r[7].isoformat() if r[7] else None,
+                "updated_at": r[8].isoformat() if r[8] else None,
             }
             for r in rows
         ]
