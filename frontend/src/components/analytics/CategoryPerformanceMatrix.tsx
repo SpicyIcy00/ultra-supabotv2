@@ -45,16 +45,16 @@ export const CategoryPerformanceMatrix: React.FC<CategoryPerformanceMatrixProps>
     return { categories: topCategories, storeIds: storeIdsList };
   }, [data, storeIds]);
 
-  // Get color intensity based on value
-  const getHeatColor = (value: number, maxValue: number): string => {
+  // Get color based on store's share of category total revenue
+  const getHeatColor = (value: number, rowTotal: number): string => {
     if (value === 0) return 'bg-gray-800/50 text-gray-500';
 
-    const intensity = (value / maxValue) * 100;
+    const share = (value / rowTotal) * 100;
 
-    if (intensity >= 80) return 'bg-green-500/30 text-green-300 border-green-500/40';
-    if (intensity >= 60) return 'bg-blue-500/25 text-blue-300 border-blue-500/30';
-    if (intensity >= 40) return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/25';
-    if (intensity >= 20) return 'bg-orange-500/15 text-orange-300 border-orange-500/20';
+    if (share >= 40) return 'bg-green-500/30 text-green-300 border-green-500/40';
+    if (share >= 25) return 'bg-blue-500/25 text-blue-300 border-blue-500/30';
+    if (share >= 10) return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/25';
+    if (share >= 5)  return 'bg-orange-500/15 text-orange-300 border-orange-500/20';
     return 'bg-red-500/10 text-red-300 border-red-500/15';
   };
 
@@ -104,8 +104,7 @@ export const CategoryPerformanceMatrix: React.FC<CategoryPerformanceMatrixProps>
         </thead>
         <tbody>
           {processedData.categories.map((category: any, idx: number) => {
-            // Find max value in this row for color scaling
-            const maxInRow = Math.max(...processedData.storeIds.map((id: string) => category.stores[id] || 0));
+            const rowTotal = category.total;
 
             return (
               <tr
@@ -117,15 +116,15 @@ export const CategoryPerformanceMatrix: React.FC<CategoryPerformanceMatrixProps>
                 </td>
                 {processedData.storeIds.map((id) => {
                   const value = category.stores[id] || 0;
-                  const colorClass = getHeatColor(value, maxInRow);
+                  const colorClass = getHeatColor(value, rowTotal);
 
                   return (
                     <td key={id} className="py-3 px-4 text-right">
                       <div className={`inline-block px-3 py-2 rounded-lg border ${colorClass} min-w-[100px]`}>
                         <div className="font-semibold">{formatCurrency(value)}</div>
-                        {maxInRow > 0 && (
+                        {rowTotal > 0 && value > 0 && (
                           <div className="text-xs opacity-75">
-                            {((value / maxInRow) * 100).toFixed(0)}%
+                            {((value / rowTotal) * 100).toFixed(0)}% share
                           </div>
                         )}
                       </div>
@@ -167,28 +166,28 @@ export const CategoryPerformanceMatrix: React.FC<CategoryPerformanceMatrixProps>
       <div className="mt-4 flex items-center justify-center gap-6 text-sm text-gray-400">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded border bg-green-500/30 border-green-500/40"></div>
-          <span>Top performer (80-100%)</span>
+          <span>Dominant (&ge;40%)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded border bg-blue-500/25 border-blue-500/30"></div>
-          <span>Strong (60-80%)</span>
+          <span>Major (25–40%)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded border bg-yellow-500/20 border-yellow-500/25"></div>
-          <span>Average (40-60%)</span>
+          <span>Moderate (10–25%)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded border bg-orange-500/15 border-orange-500/20"></div>
-          <span>Below average (20-40%)</span>
+          <span>Minor (5–10%)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded border bg-red-500/10 border-red-500/15"></div>
-          <span>Weak (0-20%)</span>
+          <span>Marginal (&lt;5%)</span>
         </div>
       </div>
 
       <div className="mt-2 text-center text-xs text-gray-500">
-        Showing top 15 categories by total revenue. Colors indicate relative performance within each category.
+        Showing top 15 categories by total revenue. Colors indicate each store's share of that category's total revenue.
       </div>
     </div>
   );
