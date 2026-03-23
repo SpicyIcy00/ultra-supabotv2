@@ -139,11 +139,8 @@ async def generate_barcodes(
     if missing:
         raise HTTPException(status_code=404, detail=f"Products not found: {list(missing)}")
 
-    # Find which products already have barcodes
-    existing_result = await db.execute(
-        select(ProductBarcode).where(ProductBarcode.product_id.in_(request.product_ids))
-    )
-    existing_by_product = {pb.product_id: pb for pb in existing_result.scalars().all()}
+    # Skip only products that already have a barcode confirmed in StoreHub (products.barcode)
+    # If a product only has a product_barcodes entry but no products.barcode, allow regeneration.
 
     # Find the highest existing sequence for this prefix to avoid collisions
     all_barcodes_result = await db.execute(
@@ -167,9 +164,18 @@ async def generate_barcodes(
     for product_id in request.product_ids:
         product = products[product_id]
 
-        if product_id in existing_by_product:
+        # Skip if barcode is already confirmed in StoreHub
+        if product.barcode:
             skipped.append(product_id)
             continue
+
+        # Delete any stale product_barcodes entry so we can create a fresh one
+        stale_result = await db.execute(
+            select(ProductBarcode).where(ProductBarcode.product_id == product_id)
+        )
+        stale = stale_result.scalar_one_or_none()
+        if stale:
+            await db.delete(stale)
 
         barcode_str, base = _build_ean13(prefix, next_seq)
         next_seq += 1

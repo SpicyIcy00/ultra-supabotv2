@@ -404,28 +404,27 @@ const BarcodePage: React.FC = () => {
   const [postingSheets, setPostingSheets] = useState(false);
   const [sheetsMsg, setSheetsMsg] = useState<string | null>(null);
 
-  // ── product_id → barcode (from product_barcodes OR products.barcode) ──────
+  // ── product_id → barcode from products.barcode (StoreHub confirmed only) ───
   const productBarcodeMap = useMemo(() => {
     const map = new Map<string, string>();
-    records.forEach((r) => map.set(r.product_id, r.barcode));
-    products.forEach((p) => { if (p.barcode && !map.has(p.id)) map.set(p.id, p.barcode); });
+    products.forEach((p) => { if (p.barcode) map.set(p.id, p.barcode); });
     return map;
-  }, [records, products]);
+  }, [products]);
 
-  // ── Combined rows for Database tab ────────────────────────────────────────
+  // ── Database tab rows: only products whose barcode is confirmed in StoreHub ─
   const allBarcodeRows = useMemo((): BarcodeRow[] => {
-    const rows: BarcodeRow[] = [];
-    records.forEach((r) => rows.push({
-      key: `pb_${r.id}`,
-      product_id: r.product_id,
-      product_name: r.product_name,
-      sku: r.sku,
-      barcode: r.barcode,
-      generated_at: r.generated_at,
-      dbId: r.id,
-    }));
-    return rows;
-  }, [records]);
+    return products
+      .filter((p) => p.barcode)
+      .map((p) => ({
+        key: `sh_${p.id}`,
+        product_id: p.id,
+        product_name: p.name,
+        sku: p.sku,
+        barcode: p.barcode!,
+        generated_at: null,
+        dbId: null,
+      }));
+  }, [products]);
 
   // ── Filtered DB records ───────────────────────────────────────────────────
   const filteredDbRecords = useMemo(() => {
@@ -837,12 +836,10 @@ const BarcodePage: React.FC = () => {
             </div>
           ) : (
             <div className="bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden">
-              <div className="grid grid-cols-[minmax(0,1fr)_110px_180px_160px_90px] gap-2 px-4 py-2.5 bg-gray-800/60 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+              <div className="grid grid-cols-[minmax(0,1fr)_110px_180px] gap-2 px-4 py-2.5 bg-gray-800/60 text-xs font-semibold text-gray-400 uppercase tracking-wide">
                 <div>Product</div>
                 <div>SKU</div>
-                <div>EAN-13 Barcode</div>
-                <div>Generated</div>
-                <div className="text-right">Action</div>
+                <div>EAN-13 Barcode (StoreHub)</div>
               </div>
 
               <div className="divide-y divide-gray-800/60 max-h-[560px] overflow-y-auto">
@@ -856,12 +853,12 @@ const BarcodePage: React.FC = () => {
                   filteredDbRecords.map((r) => (
                     <div
                       key={r.key}
-                      className="grid grid-cols-[minmax(0,1fr)_110px_180px_160px_90px] gap-2 px-4 py-3 hover:bg-gray-800/30 transition-colors items-center"
+                      className="grid grid-cols-[minmax(0,1fr)_110px_180px] gap-2 px-4 py-3 hover:bg-gray-800/30 transition-colors items-center"
                     >
                       <div className="truncate text-sm text-gray-200">{r.product_name}</div>
                       <div className="text-xs text-gray-400 font-mono truncate">{r.sku ?? '—'}</div>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-blue-300 text-sm tracking-widest">
+                        <span className="font-mono text-green-300 text-sm tracking-widest">
                           {fmtBarcode(r.barcode)}
                         </span>
                         <button
@@ -873,20 +870,6 @@ const BarcodePage: React.FC = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                               d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                           </svg>
-                        </button>
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {r.generated_at
-                          ? new Date(r.generated_at).toLocaleDateString('en-PH', { dateStyle: 'medium' })
-                          : '—'}
-                      </div>
-                      <div className="text-right">
-                        <button
-                          onClick={() => handleDelete(r.dbId!)}
-                          disabled={deletingId === r.dbId}
-                          className="text-red-400 hover:text-red-300 disabled:opacity-40 text-xs transition-colors"
-                        >
-                          {deletingId === r.dbId ? 'Deleting…' : 'Delete'}
                         </button>
                       </div>
                     </div>
