@@ -187,7 +187,7 @@ const BarcodePage: React.FC = () => {
     setProductsLoading(true);
     setProductsError(null);
     try {
-      const res = await axios.get<Product[]>('/api/v1/products', { params: { limit: 1000 } });
+      const res = await axios.get<Product[]>('/api/v1/products/', { params: { limit: 1000 } });
       setProducts(Array.isArray(res.data) ? res.data : []);
     } catch (e: any) {
       setProductsError(e?.response?.data?.detail || e.message || 'Failed to load products');
