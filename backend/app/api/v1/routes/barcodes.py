@@ -351,10 +351,12 @@ async def process_storehub_csv(
             rows[i][barcode_col] = barcode_by_sku[sku]
             patched += 1
 
-    # Write back — quote all fields, same as StoreHub exports
+    # Write back — Row 0: headers, Row 1+: data only (skip instruction row)
+    # StoreHub will try to import the instruction row as a product and fail.
     out = io.StringIO()
     writer = csv.writer(out, quoting=csv.QUOTE_ALL)
-    writer.writerows(rows)
+    writer.writerow(rows[0])       # column headers
+    writer.writerows(rows[2:])     # product data only (skip rows[1] = instruction row)
 
     return Response(
         content=out.getvalue().encode("utf-8"),
