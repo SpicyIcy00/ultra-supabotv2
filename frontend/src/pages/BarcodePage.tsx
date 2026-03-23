@@ -145,6 +145,17 @@ function downloadCSV(content: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+// ── Types ──────────────────────────────────────────────────────────────────────
+interface BarcodeRow {
+  key: string;
+  product_id: string;
+  product_name: string;
+  sku: string | null;
+  barcode: string;
+  generated_at: string | null;  // null = came from products.barcode field
+  dbId: number | null;          // null = not in product_barcodes table
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 const BarcodePage: React.FC = () => {
@@ -365,32 +376,7 @@ const BarcodePage: React.FC = () => {
     downloadCSV(csv, `barcodes-export-${new Date().toISOString().slice(0, 10)}.csv`);
   }
 
-  // ── Delete ────────────────────────────────────────────────────────────────
-  async function handleDelete(id: number) {
-    setDeletingId(id);
-    try {
-      await deleteBarcode(id);
-      setRecords((prev) => prev.filter((r) => r.id !== id));
-    } catch (e: any) {
-      alert(e?.response?.data?.detail || 'Failed to delete');
-    } finally {
-      setDeletingId(null);
-    }
-  }
-
-  // ── Filtered DB records ───────────────────────────────────────────────────
-  const filteredDbRecords = useMemo(() => {
-    const q = dbSearch.toLowerCase();
-    if (!q) return allBarcodeRows;
-    return allBarcodeRows.filter(
-      (r) =>
-        r.product_name.toLowerCase().includes(q) ||
-        r.barcode.includes(q) ||
-        (r.sku ?? '').toLowerCase().includes(q)
-    );
-  }, [allBarcodeRows, dbSearch]);
-
-  // ── Post to Sheets ────────────────────────────────────────────────────────
+  // ── Post to Sheets state ─────────────────────────────────────────────────
   const [postingSheets, setPostingSheets] = useState(false);
   const [sheetsMsg, setSheetsMsg] = useState<string | null>(null);
 
@@ -403,15 +389,6 @@ const BarcodePage: React.FC = () => {
   }, [records, products]);
 
   // ── Combined rows for Database tab ────────────────────────────────────────
-  interface BarcodeRow {
-    key: string;
-    product_id: string;
-    product_name: string;
-    sku: string | null;
-    barcode: string;
-    generated_at: string | null;   // null = came from products.barcode
-    dbId: number | null;           // null = not in product_barcodes table
-  }
   const allBarcodeRows = useMemo((): BarcodeRow[] => {
     const rows: BarcodeRow[] = [];
     records.forEach((r) => rows.push({
@@ -438,6 +415,31 @@ const BarcodePage: React.FC = () => {
     });
     return rows;
   }, [records, products]);
+
+  // ── Filtered DB records ───────────────────────────────────────────────────
+  const filteredDbRecords = useMemo(() => {
+    const q = dbSearch.toLowerCase();
+    if (!q) return allBarcodeRows;
+    return allBarcodeRows.filter(
+      (r) =>
+        r.product_name.toLowerCase().includes(q) ||
+        r.barcode.includes(q) ||
+        (r.sku ?? '').toLowerCase().includes(q)
+    );
+  }, [allBarcodeRows, dbSearch]);
+
+  // ── Delete ────────────────────────────────────────────────────────────────
+  async function handleDelete(id: number) {
+    setDeletingId(id);
+    try {
+      await deleteBarcode(id);
+      setRecords((prev) => prev.filter((r) => r.id !== id));
+    } catch (e: any) {
+      alert(e?.response?.data?.detail || 'Failed to delete');
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
