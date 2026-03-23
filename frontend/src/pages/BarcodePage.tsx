@@ -125,17 +125,20 @@ function buildStoreHubCSV(rows: ExportRow[]): string {
   while (instr.length < totalCols) instr.push('');
   lines.push(instr.slice(0, totalCols).map(v => csvEscape(v)).join(','));
 
-  // Data rows — only fill what's needed to update the barcode.
-  // Leave price/cost/category/inventory blank so StoreHub won't overwrite them.
+  // Data rows — keep all existing product data as-is; only the Barcode column is new.
+  const VALID_PRICE_TYPES = ['Fixed', 'Variable', 'Unit'];
   for (const { product: p, barcode } of rows) {
     const cells = Array<string>(totalCols).fill('');
-    cells[0]  = p.sku ?? '';                       // SKU (required — matches existing product)
-    cells[2]  = p.name;                            // Product Name (required)
-    cells[4]  = p.price_type ?? 'Fixed';           // Price Type (required)
-    cells[13] = p.track_stock_level ? '1' : '0';  // Track Stock Levels (required)
-    cells[14] = barcode;                           // Barcode ← the only thing we're changing
-    cells[15] = '0';                               // SC/PWD Discount (required)
-    cells[16] = '0';                               // Solo Parent Discount (required)
+    cells[0]  = p.sku ?? '';                                                              // SKU
+    cells[2]  = p.name;                                                                   // Product Name
+    cells[3]  = p.category ?? '';                                                         // Category
+    cells[4]  = VALID_PRICE_TYPES.includes(p.price_type ?? '') ? p.price_type! : 'Fixed'; // Price Type
+    cells[6]  = p.unit_price != null ? String(p.unit_price) : '';                        // Tax-Inclusive Price
+    cells[9]  = p.cost != null ? String(p.cost) : '';                                    // Cost
+    cells[13] = p.track_stock_level ? '1' : '0';                                         // Track Stock Levels
+    cells[14] = barcode;                                                                   // Barcode ← updated
+    cells[15] = '0';                                                                       // SC/PWD Discount
+    cells[16] = '0';                                                                       // Solo Parent Discount
     lines.push(cells.map(v => csvEscape(v)).join(','));
   }
 
