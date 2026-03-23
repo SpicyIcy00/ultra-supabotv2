@@ -16,6 +16,7 @@ import axios from 'axios';
 import {
   generateBarcodes,
   listBarcodes,
+  processStoreHubCsv,
 } from '../services/barcodeApi';
 import type { BarcodeEntry, BarcodeRecord } from '../services/barcodeApi';
 
@@ -293,6 +294,27 @@ const BarcodePage: React.FC = () => {
     }
   }
 
+  // ── Process StoreHub CSV upload ───────────────────────────────────────────
+  async function handleProcessCsv() {
+    if (!csvFile) return;
+    setProcessingCsv(true);
+    setCsvMsg(null);
+    try {
+      const { blob, patchedCount } = await processStoreHubCsv(csvFile);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `storehub_import_barcodes_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setCsvMsg(`Done — ${patchedCount} barcode(s) patched. File downloaded.`);
+    } catch (e: any) {
+      setCsvMsg(`Error: ${e?.response?.data?.detail || e.message}`);
+    } finally {
+      setProcessingCsv(false);
+    }
+  }
+
   // ── Export helpers ────────────────────────────────────────────────────────
 
   /** Build a minimal Product for CSV from the data we already have in the entry/row. */
@@ -395,6 +417,9 @@ const BarcodePage: React.FC = () => {
 
   // ── Post to Sheets state ─────────────────────────────────────────────────
   const [postingSheets, setPostingSheets] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [processingCsv, setProcessingCsv] = useState(false);
+  const [csvMsg, setCsvMsg] = useState<string | null>(null);
   const [sheetsMsg, setSheetsMsg] = useState<string | null>(null);
 
   // ── product_id → barcode from products.barcode (StoreHub confirmed only) ───
@@ -751,6 +776,42 @@ const BarcodePage: React.FC = () => {
           ════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'database' && (
         <div>
+
+          {/* ── StoreHub CSV patcher ─────────────────────────────────────── */}
+          <div className="mb-6 p-4 rounded-xl bg-gray-900/60 border border-gray-700">
+            <p className="text-sm font-semibold text-gray-200 mb-1">Patch StoreHub Export CSV</p>
+            <p className="text-xs text-gray-400 mb-3">
+              Export your products from StoreHub → upload here → we fill in the Barcode column using generated barcodes → download and import back to StoreHub.
+            </p>
+            <div className="flex flex-wrap gap-3 items-center">
+              <label className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded-lg cursor-pointer text-sm text-gray-300 transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M8 12l4-4m0 0l4 4m-4-4v12" />
+                </svg>
+                {csvFile ? csvFile.name : 'Choose StoreHub export CSV…'}
+                <input
+                  type="file"
+                  accept=".csv"
+                  className="hidden"
+                  onChange={(e) => { setCsvFile(e.target.files?.[0] ?? null); setCsvMsg(null); }}
+                />
+              </label>
+              <button
+                onClick={handleProcessCsv}
+                disabled={!csvFile || processingCsv}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+              >
+                {processingCsv ? 'Processing…' : 'Patch & Download'}
+              </button>
+              {csvMsg && (
+                <span className={`text-xs ${csvMsg.startsWith('Error') ? 'text-red-400' : 'text-green-400'}`}>
+                  {csvMsg}
+                </span>
+              )}
+            </div>
+          </div>
+
           {/* Toolbar */}
           <div className="flex flex-wrap gap-3 mb-4 items-end">
             <div className="flex-1 min-w-[200px]">

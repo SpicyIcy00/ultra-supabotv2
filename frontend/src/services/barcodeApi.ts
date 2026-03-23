@@ -53,6 +53,21 @@ export const deleteBarcode = async (barcodeId: number): Promise<void> => {
 };
 
 /**
+ * Upload a StoreHub Products export CSV, patch the Barcode column from
+ * product_barcodes (matched by SKU), and return the modified CSV blob.
+ */
+export const processStoreHubCsv = async (file: File): Promise<{ blob: Blob; patchedCount: number }> => {
+  const form = new FormData();
+  form.append('file', file);
+  const response = await axios.post(`${API_V1}/barcodes/process-csv`, form, {
+    responseType: 'blob',
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  const patchedCount = parseInt(response.headers['x-patched-count'] ?? '0', 10);
+  return { blob: response.data as Blob, patchedCount };
+};
+
+/**
  * Fetch products from the live StoreHub API (read-only).
  * StoreHub has no product update endpoint — barcodes must be entered manually
  * in the StoreHub Back Office.

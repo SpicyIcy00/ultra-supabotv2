@@ -6,13 +6,16 @@ Barcode management routes.
 - List existing barcode assignments
 - StoreHub proxy: read products from StoreHub API (note: StoreHub has no product UPDATE endpoint)
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, distinct, text
 from pydantic import BaseModel
 from typing import List, Optional
 import httpx
 import os
+import csv
+import io
 
 from app.core.database import get_db
 from app.models.product import Product
@@ -288,6 +291,79 @@ async def list_product_categories(
         .order_by(Product.category)
     )
     return [cat for cat in result.scalars().all() if cat]
+
+
+@router.post("/process-csv")
+async def process_storehub_csv(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Accept a StoreHub Products export CSV, patch ONLY the Barcode column using
+    product_barcodes entries (matched by SKU), and return the modified CSV.
+
+    CSV structure expected:
+      Row 0  — column names  (SKU, Product Name, Barcode, …)
+      Row 1  — instruction / description row  (#Required…, Required, Optional…)
+      Row 2+ — product data
+    """
+    raw = await file.read()
+    # Handle UTF-8 BOM that Excel sometimes adds
+    text = raw.decode("utf-8-sig")
+
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+
+    if len(rows) < 3:
+        raise HTTPException(status_code=400, detail="CSV must have at least a header row, instruction row, and one data row.")
+
+    headers = rows[0]
+    try:
+        sku_col     = headers.index("SKU")
+        barcode_col = headers.index("Barcode")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Column not found in CSV: {e}")
+
+    # Collect all SKUs from data rows (row index 2+)
+    skus = [
+        row[sku_col]
+        for row in rows[2:]
+        if len(row) > sku_col and row[sku_col].strip()
+    ]
+
+    # Look up barcodes from product_barcodes joined to products (match by SKU)
+    result = await db.execute(
+        select(ProductBarcode, Product)
+        .join(Product, ProductBarcode.product_id == Product.id)
+        .where(Product.sku.in_(skus))
+    )
+    barcode_by_sku: dict[str, str] = {
+        p.sku: pb.barcode for pb, p in result.all() if p.sku
+    }
+
+    patched = 0
+    for i in range(2, len(rows)):
+        row = rows[i]
+        if len(row) <= max(sku_col, barcode_col):
+            continue
+        sku = row[sku_col].strip()
+        if sku in barcode_by_sku:
+            rows[i][barcode_col] = barcode_by_sku[sku]
+            patched += 1
+
+    # Write back — quote all fields, same as StoreHub exports
+    out = io.StringIO()
+    writer = csv.writer(out, quoting=csv.QUOTE_ALL)
+    writer.writerows(rows)
+
+    return Response(
+        content=out.getvalue().encode("utf-8"),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": 'attachment; filename="storehub_import_barcodes.csv"',
+            "X-Patched-Count": str(patched),
+        },
+    )
 
 
 @router.get("/storehub/products", response_model=StoreHubProductsResponse)
