@@ -16,7 +16,6 @@ import axios from 'axios';
 import {
   generateBarcodes,
   listBarcodes,
-  deleteBarcode,
 } from '../services/barcodeApi';
 import type { BarcodeEntry, BarcodeRecord } from '../services/barcodeApi';
 
