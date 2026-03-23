@@ -54,7 +54,22 @@ async def startup_event():
             await conn.execute(text(
                 "ALTER TABLE store_tiers ADD COLUMN IF NOT EXISTS max_cover_days INTEGER NOT NULL DEFAULT 10"
             ))
-        print("Schema migration: max_cover_days column ensured")
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS product_barcodes (
+                    id SERIAL PRIMARY KEY,
+                    product_id VARCHAR(24) NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+                    barcode VARCHAR(13) NOT NULL UNIQUE,
+                    base_digits VARCHAR(12),
+                    generated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Manila', now())
+                )
+            """))
+            await conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_product_barcodes_product_id ON product_barcodes (product_id)"
+            ))
+            await conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_product_barcodes_barcode ON product_barcodes (barcode)"
+            ))
+        print("Schema migration: max_cover_days + product_barcodes ensured")
     except Exception as e:
         print(f"Schema migration warning: {e}")
 
@@ -80,7 +95,7 @@ async def shutdown_event():
     SchemaContext.shutdown()
     print("SchemaContext shut down")
 
-from app.api.v1.routes import analytics, chatbot, stores, products, reports, report_presets, google_sheets, saved_queries, replenishment, store_filters
+from app.api.v1.routes import analytics, chatbot, stores, products, reports, report_presets, google_sheets, saved_queries, replenishment, store_filters, barcodes
 
 app.include_router(analytics.router, prefix=f"{settings.API_V1_PREFIX}/analytics")
 app.include_router(chatbot.router, prefix=f"{settings.API_V1_PREFIX}/chatbot")
@@ -92,6 +107,7 @@ app.include_router(google_sheets.router, prefix=f"{settings.API_V1_PREFIX}/sheet
 app.include_router(saved_queries.router, prefix=f"{settings.API_V1_PREFIX}/saved-queries", tags=["saved-queries"])
 app.include_router(replenishment.router, prefix=f"{settings.API_V1_PREFIX}/replenishment", tags=["replenishment"])
 app.include_router(store_filters.router, prefix=f"{settings.API_V1_PREFIX}/store-filters", tags=["store-filters"])
+app.include_router(barcodes.router, prefix=f"{settings.API_V1_PREFIX}/barcodes", tags=["barcodes"])
 
 
 @app.get("/")

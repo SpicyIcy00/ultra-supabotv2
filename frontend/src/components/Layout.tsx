@@ -83,6 +83,12 @@ const navIcons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   ),
+  barcode: (
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M3 9V5a2 2 0 012-2h2M3 15v4a2 2 0 002 2h2m10-18h2a2 2 0 012 2v4m0 6v4a2 2 0 01-2 2h-2M9 7v10M12 7v10M15 7v10" />
+    </svg>
+  ),
 };
 
 const navItems = [
@@ -90,6 +96,7 @@ const navItems = [
   { to: '/analytics', icon: navIcons.analytics, label: 'Analytics', match: (p: string) => p === '/analytics' },
   { to: '/ai-chat', icon: navIcons.chat, label: 'AI Chat', match: (p: string) => p === '/ai-chat' },
   { to: '/reports/product-sales', icon: navIcons.reports, label: 'Reports', match: (p: string) => p === '/reports/product-sales' },
+  { to: '/barcodes', icon: navIcons.barcode, label: 'Barcodes', match: (p: string) => p === '/barcodes' },
   { to: '/settings', icon: navIcons.settings, label: 'Settings', match: (p: string) => p === '/settings' },
 ];
 
