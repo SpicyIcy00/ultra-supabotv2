@@ -299,18 +299,32 @@ const BarcodePage: React.FC = () => {
 
   // ── Export helpers ────────────────────────────────────────────────────────
 
+  /** Build a minimal Product for CSV from the data we already have in the entry/row. */
+  function entryToProduct(id: string, name: string, sku: string | null): Product {
+    return (
+      products.find((p) => p.id === id) ?? {
+        id,
+        name,
+        sku,
+        barcode: null,
+        category: null,
+        price_type: 'Fixed',
+        unit_price: null,
+        cost: null,
+        track_stock_level: true,
+      }
+    );
+  }
+
   function buildExportRows(result: { generated: BarcodeEntry[]; skipped: string[] }): ExportRow[] {
-    const productMap = Object.fromEntries(products.map((p) => [p.id, p]));
     const rows: ExportRow[] = [];
     result.generated.forEach((b) => {
-      const p = productMap[b.product_id];
-      if (p) rows.push({ product: p, barcode: b.barcode });
+      rows.push({ product: entryToProduct(b.product_id, b.product_name, b.sku), barcode: b.barcode });
     });
-    // Include skipped — look up their barcodes from productBarcodeMap
     result.skipped.forEach((pid) => {
-      const p = productMap[pid];
       const bc = productBarcodeMap.get(pid);
-      if (p && bc) rows.push({ product: p, barcode: bc });
+      const row = allBarcodeRows.find((r) => r.product_id === pid);
+      if (bc && row) rows.push({ product: entryToProduct(pid, row.product_name, row.sku), barcode: bc });
     });
     return rows;
   }
@@ -347,10 +361,10 @@ const BarcodePage: React.FC = () => {
   /** Export all DB barcode records to StoreHub import template */
   function exportDbToTemplate() {
     if (filteredDbRecords.length === 0) return;
-    const productMap = Object.fromEntries(products.map((p) => [p.id, p]));
-    const rows: ExportRow[] = filteredDbRecords
-      .map((r) => ({ product: productMap[r.product_id], barcode: r.barcode }))
-      .filter((r) => r.product);
+    const rows: ExportRow[] = filteredDbRecords.map((r) => ({
+      product: entryToProduct(r.product_id, r.product_name, r.sku),
+      barcode: r.barcode,
+    }));
     const csv = buildStoreHubCSV(rows);
     downloadCSV(csv, `storehub-barcodes-${new Date().toISOString().slice(0, 10)}.csv`);
   }
