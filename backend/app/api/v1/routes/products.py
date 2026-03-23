@@ -20,7 +20,7 @@ async def list_categories(
     return categories
 
 
-@router.get("", response_model=List[Product])
+@router.get("/", response_model=List[Product])
 async def list_products(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),

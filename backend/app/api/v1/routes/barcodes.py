@@ -8,7 +8,7 @@ Barcode management routes.
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, distinct, text
 from pydantic import BaseModel
 from typing import List, Optional
 import httpx
@@ -57,6 +57,18 @@ class BarcodeRecord(BaseModel):
     barcode: str
     base_digits: Optional[str]
     generated_at: str
+
+
+class ProductForBarcode(BaseModel):
+    id: str
+    name: str
+    sku: Optional[str] = None
+    barcode: Optional[str] = None
+    category: Optional[str] = None
+    price_type: Optional[str] = None
+    unit_price: Optional[float] = None
+    cost: Optional[float] = None
+    track_stock_level: bool = True
 
 
 class StoreHubProductsResponse(BaseModel):
@@ -221,6 +233,55 @@ async def delete_barcode(
         raise HTTPException(status_code=404, detail="Barcode record not found")
     await db.delete(pb)
     await db.commit()
+
+
+@router.get("/products", response_model=List[ProductForBarcode])
+async def list_products_for_barcode(
+    limit: int = 1000,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return all products (lean schema) for the barcode generator page."""
+    result = await db.execute(
+        select(
+            Product.id,
+            Product.name,
+            Product.sku,
+            Product.barcode,
+            Product.category,
+            Product.price_type,
+            Product.unit_price,
+            Product.cost,
+            Product.track_stock_level,
+        ).order_by(Product.name).limit(limit)
+    )
+    rows = result.all()
+    return [
+        ProductForBarcode(
+            id=str(row.id),
+            name=row.name,
+            sku=row.sku,
+            barcode=row.barcode,
+            category=row.category,
+            price_type=row.price_type,
+            unit_price=float(row.unit_price) if row.unit_price is not None else None,
+            cost=float(row.cost) if row.cost is not None else None,
+            track_stock_level=bool(row.track_stock_level),
+        )
+        for row in rows
+    ]
+
+
+@router.get("/categories", response_model=List[str])
+async def list_product_categories(
+    db: AsyncSession = Depends(get_db),
+):
+    """Return all unique product categories for the barcode page filter."""
+    result = await db.execute(
+        select(distinct(Product.category))
+        .where(Product.category.isnot(None))
+        .order_by(Product.category)
+    )
+    return [cat for cat in result.scalars().all() if cat]
 
 
 @router.get("/storehub/products", response_model=StoreHubProductsResponse)
