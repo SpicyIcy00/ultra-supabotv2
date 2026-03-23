@@ -198,7 +198,6 @@ const BarcodePage: React.FC = () => {
   const [records, setRecords] = useState<BarcodeRecord[]>([]);
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [dbSearch, setDbSearch] = useState('');
-  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   useEffect(() => { loadProducts(); loadCategories(); loadRecords(); }, []);
@@ -438,18 +437,6 @@ const BarcodePage: React.FC = () => {
     );
   }, [allBarcodeRows, dbSearch]);
 
-  // ── Delete ────────────────────────────────────────────────────────────────
-  async function handleDelete(id: number) {
-    setDeletingId(id);
-    try {
-      await deleteBarcode(id);
-      setRecords((prev) => prev.filter((r) => r.id !== id));
-    } catch (e: any) {
-      alert(e?.response?.data?.detail || 'Failed to delete');
-    } finally {
-      setDeletingId(null);
-    }
-  }
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
