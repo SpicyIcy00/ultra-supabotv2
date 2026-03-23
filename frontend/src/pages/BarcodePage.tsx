@@ -83,30 +83,6 @@ const STOREHUB_HEADERS = [
   'Online Price','Online Discounted Price','Product Description',
 ];
 
-const STOREHUB_INSTRUCTION_ROW = [
-  '#Required (Must be unique)','','Required','Optional','Required (Fixed/Variable/Unit)',
-  'Required if the price type is Unit. Leave this field empty if the price Type is either Fixed or Variable.',
-  'Optional; 0 by default',
-  'Optional (This field can only be modified when pricing type is variable); The value should be Tax-Inclusive as per your Display Price setting in the BackOffice.',
-  'Optional (This field can only be modified when pricing type is variable); The value should be Tax-Inclusive as per your Display Price setting in the BackOffice.',
-  'Optional',
-  'Optional(this field can only be modified if Fix Supplier Price is selected for at least one store in Account Settings)',
-  'Optional; use semicolon ( ; ) to separate multiple tags',
-  'Optional(Simple/Composite/Serialized; Simple by default if tracking inventory)',
-  'Required; Enter 0 to disable; 1 to enable',
-  'Optional; Must be unique if specified; use semicolon ( ; ) to separate multiple barcodes',
-  'Required; Enter 0 to disable; 1 to enable',
-  'Required; Enter 0 to disable; 1 to enable',
-  '','','','','','',
-  'Optional; use semicolon ( ; ) to separate multiple suppliers',
-  'Optional','Optional',
-  "Optional; Leave it blank for Default Kitchen Station; Enter 'Do Not Print Kitchen Docket' to not print kitchen docket",
-  // store inventory columns — all Optional
-  ...Array(57).fill('Optional; 0 by default if tracking inventory'),
-  'Optional; The value should be Tax-Inclusive as per your Display Price setting in the BackOffice.',
-  'Optional; The value should be Tax-Inclusive as per your Display Price setting in the BackOffice.',
-  'Optional',
-];
 
 interface ExportRow {
   product: Product;
