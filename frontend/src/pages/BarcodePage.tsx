@@ -187,8 +187,8 @@ const BarcodePage: React.FC = () => {
     setProductsLoading(true);
     setProductsError(null);
     try {
-      const res = await axios.get<Product[]>('/api/v1/products/', { params: { limit: 1000 } });
-      setProducts(res.data);
+      const res = await axios.get<Product[]>('/api/v1/products', { params: { limit: 1000 } });
+      setProducts(Array.isArray(res.data) ? res.data : []);
     } catch (e: any) {
       setProductsError(e?.response?.data?.detail || e.message || 'Failed to load products');
     } finally {
@@ -199,14 +199,16 @@ const BarcodePage: React.FC = () => {
   async function loadCategories() {
     try {
       const res = await axios.get<string[]>('/api/v1/products/categories');
-      setCategories(res.data);
+      setCategories(Array.isArray(res.data) ? res.data : []);
     } catch { /* non-critical */ }
   }
 
   async function loadRecords() {
     setRecordsLoading(true);
-    try { setRecords(await listBarcodes()); }
-    catch (e) { console.error(e); }
+    try {
+      const data = await listBarcodes();
+      setRecords(Array.isArray(data) ? data : []);
+    } catch (e) { console.error(e); }
     finally { setRecordsLoading(false); }
   }
 
