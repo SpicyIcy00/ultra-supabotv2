@@ -116,13 +116,8 @@ function buildStoreHubCSV(rows: ExportRow[]): string {
   const totalCols = STOREHUB_HEADERS.length;
   const lines: string[] = [];
 
-  // Row 1 – headers
+  // Row 1 – headers only (no instruction row — StoreHub treats every row after headers as data)
   lines.push(STOREHUB_HEADERS.map(h => csvEscape(h)).join(','));
-
-  // Row 2 – instruction row (pad to match header count)
-  const instr = [...STOREHUB_INSTRUCTION_ROW];
-  while (instr.length < totalCols) instr.push('');
-  lines.push(instr.slice(0, totalCols).map(v => csvEscape(v)).join(','));
 
   // Data rows — keep all existing product data as-is; only the Barcode column is new.
   const VALID_PRICE_TYPES = ['Fixed', 'Variable', 'Unit'];
