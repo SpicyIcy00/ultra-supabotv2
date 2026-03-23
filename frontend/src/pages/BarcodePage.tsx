@@ -51,33 +51,58 @@ function csvEscape(v: string | number | null | undefined): string {
 }
 
 // ── StoreHub CSV export ───────────────────────────────────────────────────────
-// Matches the exact header row from the StoreHub Products Import Template.
-// Core columns are filled; store-specific inventory columns are left empty.
+// Exact headers from the StoreHub Products Import Template.
+// Only required fields + Barcode are filled. All other fields left blank so
+// StoreHub does NOT overwrite existing product data.
 const STOREHUB_HEADERS = [
-  'SKU', 'Parent Product SKU', 'Product Name', 'Category',
-  'Price Type', 'Unit', 'Tax-Inclusive Price', 'Min Price', 'Max Price',
-  'Cost', 'Supplier Price', 'Product Tags', 'Inventory Type',
-  'Track Stock Levels', 'Barcode', 'SC/PWD Discount', 'Solo Parent Discount',
-  'Variant Name 1', 'Variant Value 1', 'Variant Name 2', 'Variant Value 2',
-  'Variant Name 3', 'Variant Value 3', 'Supplier', 'Tax Name',
-  'Store Credits', 'Kitchen Station', 'Online Price', 'Online Discounted Price',
-  'Product Description',
+  'SKU','Parent Product SKU','Product Name','Category','Price Type','Unit',
+  'Tax-Inclusive Price','Min Price','Max Price','Cost','Supplier Price',
+  'Product Tags','Inventory Type','Track Stock Levels','Barcode',
+  'SC/PWD Discount','Solo Parent Discount',
+  'Variant Name 1','Variant Value 1','Variant Name 2','Variant Value 2',
+  'Variant Name 3','Variant Value 3','Supplier','Tax Name','Store Credits',
+  'Kitchen Station',
+  '(1) Aji Ichiban Food Products_Quantity','(1) Aji Ichiban Food Products_Warning Stock Level','(1) Aji Ichiban Food Products_Ideal Stock Level',
+  'AJI PINA_Quantity','AJI PINA_Warning Stock Level','AJI PINA_Ideal Stock Level',
+  'AJI CMG_Quantity','AJI CMG_Warning Stock Level','AJI CMG_Ideal Stock Level',
+  'AJI BARN_Quantity','AJI BARN_Warning Stock Level','AJI BARN_Ideal Stock Level',
+  '(2) Aji Ichiban food products SM Fairview_Quantity','(2) Aji Ichiban food products SM Fairview_Warning Stock Level','(2) Aji Ichiban food products SM Fairview_Ideal Stock Level',
+  'AJI ONLINE_Quantity','AJI ONLINE_Warning Stock Level','AJI ONLINE_Ideal Stock Level',
+  '(3) Ajiichiban Food Products Greenhills_Quantity','(3) Ajiichiban Food Products Greenhills_Warning Stock Level','(3) Ajiichiban Food Products Greenhills_Ideal Stock Level',
+  'AJI Disposal_Quantity','AJI Disposal_Warning Stock Level','AJI Disposal_Ideal Stock Level',
+  '(4) Ajiichiban Food Products SM North Edsa_Quantity','(4) Ajiichiban Food Products SM North Edsa_Warning Stock Level','(4) Ajiichiban Food Products SM North Edsa_Ideal Stock Level',
+  '(5) Ajiichiban food products Magnolia_Quantity','(5) Ajiichiban food products Magnolia_Warning Stock Level','(5) Ajiichiban food products Magnolia_Ideal Stock Level',
+  'Aji Packing_Quantity','Aji Packing_Warning Stock Level','Aji Packing_Ideal Stock Level',
+  '(6) Aji Ichiban  OPUS_Quantity','(6) Aji Ichiban  OPUS_Warning Stock Level','(6) Aji Ichiban  OPUS_Ideal Stock Level',
+  'Test stoee_Quantity','Test stoee_Warning Stock Level','Test stoee_Ideal Stock Level',
+  'Hello AJI vending_Quantity','Hello AJI vending_Warning Stock Level','Hello AJI vending_Ideal Stock Level',
+  'Ajiichiban ROBINSONS super market lucky Chinatown_Quantity','Ajiichiban ROBINSONS super market lucky Chinatown_Warning Stock Level','Ajiichiban ROBINSONS super market lucky Chinatown_Ideal Stock Level',
+  'AJI ROBINSONS supermarket robinsons galleria_Quantity','AJI ROBINSONS supermarket robinsons galleria_Warning Stock Level','AJI ROBINSONS supermarket robinsons galleria_Ideal Stock Level',
+  'AJI VENDO_Quantity','AJI VENDO_Warning Stock Level','AJI VENDO_Ideal Stock Level',
+  'test store 2_Quantity','test store 2_Warning Stock Level','test store 2_Ideal Stock Level',
+  'Online Price','Online Discounted Price','Product Description',
 ];
 
-// Row 2 in the template is an instruction/hint row. We include it so the file
-// is importable straight into StoreHub without modification.
 const STOREHUB_INSTRUCTION_ROW = [
-  '#Required (Must be unique)', '', 'Required', 'Optional',
-  'Required (Fixed/Variable/Unit)',
+  '#Required (Must be unique)','','Required','Optional','Required (Fixed/Variable/Unit)',
   'Required if the price type is Unit. Leave this field empty if the price Type is either Fixed or Variable.',
-  'Optional; 0 by default', 'Optional', 'Optional', 'Optional', 'Optional',
+  'Optional; 0 by default',
+  'Optional (This field can only be modified when pricing type is variable); The value should be Tax-Inclusive as per your Display Price setting in the BackOffice.',
+  'Optional (This field can only be modified when pricing type is variable); The value should be Tax-Inclusive as per your Display Price setting in the BackOffice.',
+  'Optional',
+  'Optional(this field can only be modified if Fix Supplier Price is selected for at least one store in Account Settings)',
   'Optional; use semicolon ( ; ) to separate multiple tags',
   'Optional(Simple/Composite/Serialized; Simple by default if tracking inventory)',
   'Required; Enter 0 to disable; 1 to enable',
   'Optional; Must be unique if specified; use semicolon ( ; ) to separate multiple barcodes',
   'Required; Enter 0 to disable; 1 to enable',
   'Required; Enter 0 to disable; 1 to enable',
-  '', '', '', '', '', '', '', '', '', '',
+  '','','','','','',
+  'Optional; use semicolon ( ; ) to separate multiple suppliers',
+  'Optional','Optional',
+  "Optional; Leave it blank for Default Kitchen Station; Enter 'Do Not Print Kitchen Docket' to not print kitchen docket",
+  // store inventory columns — all Optional
+  ...Array(57).fill('Optional; 0 by default if tracking inventory'),
   'Optional; The value should be Tax-Inclusive as per your Display Price setting in the BackOffice.',
   'Optional; The value should be Tax-Inclusive as per your Display Price setting in the BackOffice.',
   'Optional',
@@ -89,46 +114,28 @@ interface ExportRow {
 }
 
 function buildStoreHubCSV(rows: ExportRow[]): string {
+  const totalCols = STOREHUB_HEADERS.length;
   const lines: string[] = [];
 
   // Row 1 – headers
   lines.push(STOREHUB_HEADERS.map(h => csvEscape(h)).join(','));
 
-  // Row 2 – instructions (pad/trim to match header count)
-  const instrPadded = [...STOREHUB_INSTRUCTION_ROW];
-  while (instrPadded.length < STOREHUB_HEADERS.length) instrPadded.push('');
-  lines.push(instrPadded.slice(0, STOREHUB_HEADERS.length).map(v => csvEscape(v)).join(','));
+  // Row 2 – instruction row (pad to match header count)
+  const instr = [...STOREHUB_INSTRUCTION_ROW];
+  while (instr.length < totalCols) instr.push('');
+  lines.push(instr.slice(0, totalCols).map(v => csvEscape(v)).join(','));
 
-  // Data rows
+  // Data rows — only fill what's needed to update the barcode.
+  // Leave price/cost/category/inventory blank so StoreHub won't overwrite them.
   for (const { product: p, barcode } of rows) {
-    const priceType = p.price_type ?? 'Fixed';
-    const cells: (string | number | null)[] = [
-      p.sku ?? '',                        // SKU
-      '',                                 // Parent Product SKU
-      p.name,                             // Product Name
-      p.category ?? '',                   // Category
-      priceType,                          // Price Type
-      '',                                 // Unit (leave blank for Fixed/Variable)
-      p.unit_price ?? '',                 // Tax-Inclusive Price
-      '',                                 // Min Price
-      '',                                 // Max Price
-      p.cost ?? '',                       // Cost
-      '',                                 // Supplier Price
-      '',                                 // Product Tags
-      'Simple',                           // Inventory Type
-      p.track_stock_level ? '1' : '0',    // Track Stock Levels
-      barcode,                            // Barcode  ← generated EAN-13
-      '0',                                // SC/PWD Discount
-      '0',                                // Solo Parent Discount
-      '', '', '', '', '', '',             // Variant Name/Value 1-3
-      '',                                 // Supplier
-      '',                                 // Tax Name
-      '',                                 // Store Credits
-      '',                                 // Kitchen Station
-      '',                                 // Online Price
-      '',                                 // Online Discounted Price
-      '',                                 // Product Description
-    ];
+    const cells = Array<string>(totalCols).fill('');
+    cells[0]  = p.sku ?? '';                       // SKU (required — matches existing product)
+    cells[2]  = p.name;                            // Product Name (required)
+    cells[4]  = p.price_type ?? 'Fixed';           // Price Type (required)
+    cells[13] = p.track_stock_level ? '1' : '0';  // Track Stock Levels (required)
+    cells[14] = barcode;                           // Barcode ← the only thing we're changing
+    cells[15] = '0';                               // SC/PWD Discount (required)
+    cells[16] = '0';                               // Solo Parent Discount (required)
     lines.push(cells.map(v => csvEscape(v)).join(','));
   }
 
