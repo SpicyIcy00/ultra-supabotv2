@@ -424,21 +424,8 @@ const BarcodePage: React.FC = () => {
       generated_at: r.generated_at,
       dbId: r.id,
     }));
-    products.forEach((p) => {
-      if (p.barcode && !records.some((r) => r.product_id === p.id)) {
-        rows.push({
-          key: `ex_${p.id}`,
-          product_id: p.id,
-          product_name: p.name,
-          sku: p.sku,
-          barcode: p.barcode,
-          generated_at: null,
-          dbId: null,
-        });
-      }
-    });
     return rows;
-  }, [records, products]);
+  }, [records]);
 
   // ── Filtered DB records ───────────────────────────────────────────────────
   const filteredDbRecords = useMemo(() => {
@@ -854,7 +841,7 @@ const BarcodePage: React.FC = () => {
                 <div>Product</div>
                 <div>SKU</div>
                 <div>EAN-13 Barcode</div>
-                <div>Source / Date</div>
+                <div>Generated</div>
                 <div className="text-right">Action</div>
               </div>
 
@@ -889,27 +876,18 @@ const BarcodePage: React.FC = () => {
                         </button>
                       </div>
                       <div className="text-xs text-gray-500">
-                        {r.generated_at ? (
-                          <span>
-                            <span className="text-blue-400/70 mr-1">Generated</span>
-                            {new Date(r.generated_at).toLocaleDateString('en-PH', { dateStyle: 'medium' })}
-                          </span>
-                        ) : (
-                          <span className="text-amber-400/70">Existing (StoreHub)</span>
-                        )}
+                        {r.generated_at
+                          ? new Date(r.generated_at).toLocaleDateString('en-PH', { dateStyle: 'medium' })
+                          : '—'}
                       </div>
                       <div className="text-right">
-                        {r.dbId ? (
-                          <button
-                            onClick={() => handleDelete(r.dbId!)}
-                            disabled={deletingId === r.dbId}
-                            className="text-red-400 hover:text-red-300 disabled:opacity-40 text-xs transition-colors"
-                          >
-                            {deletingId === r.dbId ? 'Deleting…' : 'Delete'}
-                          </button>
-                        ) : (
-                          <span className="text-gray-600 text-xs">—</span>
-                        )}
+                        <button
+                          onClick={() => handleDelete(r.dbId!)}
+                          disabled={deletingId === r.dbId}
+                          className="text-red-400 hover:text-red-300 disabled:opacity-40 text-xs transition-colors"
+                        >
+                          {deletingId === r.dbId ? 'Deleting…' : 'Delete'}
+                        </button>
                       </div>
                     </div>
                   ))
