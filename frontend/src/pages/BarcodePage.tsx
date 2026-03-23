@@ -188,7 +188,13 @@ const BarcodePage: React.FC = () => {
     setProductsError(null);
     try {
       const res = await axios.get<Product[]>('/api/v1/products/', { params: { limit: 1000 } });
-      setProducts(Array.isArray(res.data) ? res.data : []);
+      if (Array.isArray(res.data)) {
+        setProducts(res.data);
+      } else {
+        console.error('Products API returned unexpected data:', res.data);
+        setProductsError(`API returned unexpected data (type: ${typeof res.data}). Check the backend.`);
+        setProducts([]);
+      }
     } catch (e: any) {
       setProductsError(e?.response?.data?.detail || e.message || 'Failed to load products');
     } finally {
@@ -539,8 +545,13 @@ const BarcodePage: React.FC = () => {
             </div>
           ) : productsError ? (
             <div className="p-4 rounded-lg bg-red-900/40 border border-red-600/40 text-red-300 text-sm flex items-center gap-3">
-              {productsError}
-              <button onClick={loadProducts} className="underline">Retry</button>
+              <span className="flex-1">{productsError}</span>
+              <button onClick={loadProducts} className="underline flex-shrink-0">Retry</button>
+            </div>
+          ) : products.length === 0 && !filterName && !filterSku && !filterCategory ? (
+            <div className="p-4 rounded-lg bg-yellow-900/30 border border-yellow-600/40 text-yellow-300 text-sm flex items-center gap-3">
+              <span className="flex-1">No products found in the database. Ensure your products table is populated from StoreHub.</span>
+              <button onClick={loadProducts} className="underline flex-shrink-0">Retry</button>
             </div>
           ) : (
             <div className="bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden">
@@ -566,7 +577,9 @@ const BarcodePage: React.FC = () => {
               <div className="divide-y divide-gray-800/60 max-h-[520px] overflow-y-auto">
                 {filteredProducts.length === 0 ? (
                   <div className="text-center text-gray-500 py-10 text-sm">
-                    No products match your filters.
+                    {products.length === 0
+                      ? 'No products loaded. Make sure the products table is populated, then click Retry.'
+                      : 'No products match your filters — try clearing the name, SKU, or category filter.'}
                   </div>
                 ) : (
                   filteredProducts.map((p) => {
@@ -615,7 +628,11 @@ const BarcodePage: React.FC = () => {
 
               {/* Footer */}
               <div className="px-4 py-2 bg-gray-800/40 text-xs text-gray-500 border-t border-gray-800 flex justify-between">
-                <span>{filteredProducts.length} product(s) · {selected.size} selected</span>
+                <span>
+                  {filteredProducts.length === products.length
+                    ? `${products.length} product(s) · ${selected.size} selected`
+                    : `${filteredProducts.length} of ${products.length} product(s) shown · ${selected.size} selected`}
+                </span>
                 <span>{barcodeProductIds.size} already have barcodes in DB</span>
               </div>
             </div>
