@@ -281,15 +281,49 @@ const BarcodePage: React.FC = () => {
 
   // ── Export helpers ────────────────────────────────────────────────────────
 
-  /** Export newly-generated barcodes to StoreHub import template */
-  function exportGeneratedToTemplate() {
-    if (!generateResult || generateResult.generated.length === 0) return;
+  function buildExportRows(result: { generated: BarcodeEntry[]; skipped: string[] }): ExportRow[] {
     const productMap = Object.fromEntries(products.map((p) => [p.id, p]));
-    const rows: ExportRow[] = generateResult.generated
-      .map((b) => ({ product: productMap[b.product_id], barcode: b.barcode }))
-      .filter((r) => r.product);
+    const rows: ExportRow[] = [];
+    result.generated.forEach((b) => {
+      const p = productMap[b.product_id];
+      if (p) rows.push({ product: p, barcode: b.barcode });
+    });
+    // Include skipped — look up their barcodes from productBarcodeMap
+    result.skipped.forEach((pid) => {
+      const p = productMap[pid];
+      const bc = productBarcodeMap.get(pid);
+      if (p && bc) rows.push({ product: p, barcode: bc });
+    });
+    return rows;
+  }
+
+  /** Export newly-generated (+ skipped) barcodes to StoreHub import template */
+  function exportGeneratedToTemplate() {
+    if (!generateResult) return;
+    const rows = buildExportRows(generateResult);
+    if (rows.length === 0) return;
     const csv = buildStoreHubCSV(rows);
-    downloadCSV(csv, `storehub-import-${new Date().toISOString().slice(0, 10)}.csv`);
+    downloadCSV(csv, `storehub-barcodes-${new Date().toISOString().slice(0, 10)}.csv`);
+  }
+
+  async function postGeneratedToSheets() {
+    if (!generateResult) return;
+    const rows = buildExportRows(generateResult);
+    if (rows.length === 0) return;
+    setPostingSheets(true);
+    setSheetsMsg(null);
+    try {
+      const sheetRows = rows.map(({ product: p, barcode }) => [p.sku ?? '', p.name, barcode]);
+      const res = await axios.post('/api/v1/sheets/post-to-sheets', {
+        sheetName: 'Barcodes',
+        data: sheetRows,
+      });
+      setSheetsMsg(res.data?.message || `Posted ${sheetRows.length} rows to Sheets`);
+    } catch (e: any) {
+      setSheetsMsg(`Failed: ${e?.response?.data?.detail || e.message}`);
+    } finally {
+      setPostingSheets(false);
+    }
   }
 
   /** Export all DB barcode records to StoreHub import template */
@@ -300,14 +334,32 @@ const BarcodePage: React.FC = () => {
       .map((r) => ({ product: productMap[r.product_id], barcode: r.barcode }))
       .filter((r) => r.product);
     const csv = buildStoreHubCSV(rows);
-    downloadCSV(csv, `storehub-import-${new Date().toISOString().slice(0, 10)}.csv`);
+    downloadCSV(csv, `storehub-barcodes-${new Date().toISOString().slice(0, 10)}.csv`);
+  }
+
+  async function postDbToSheets() {
+    if (filteredDbRecords.length === 0) return;
+    setPostingSheets(true);
+    setSheetsMsg(null);
+    try {
+      const sheetRows = filteredDbRecords.map((r) => [r.sku ?? '', r.product_name, r.barcode]);
+      const res = await axios.post('/api/v1/sheets/post-to-sheets', {
+        sheetName: 'Barcodes',
+        data: sheetRows,
+      });
+      setSheetsMsg(res.data?.message || `Posted ${sheetRows.length} rows to Sheets`);
+    } catch (e: any) {
+      setSheetsMsg(`Failed: ${e?.response?.data?.detail || e.message}`);
+    } finally {
+      setPostingSheets(false);
+    }
   }
 
   /** Export raw barcode DB as a plain CSV (all fields) */
   function exportDbToPlainCSV() {
     const rows = [
-      ['Product Name', 'SKU', 'Product ID', 'EAN-13 Barcode', 'Generated At'],
-      ...filteredDbRecords.map((r) => [r.product_name, r.sku ?? '', r.product_id, r.barcode, r.generated_at]),
+      ['Product Name', 'SKU', 'Product ID', 'EAN-13 Barcode', 'Source'],
+      ...filteredDbRecords.map((r) => [r.product_name, r.sku ?? '', r.product_id, r.barcode, r.dbId ? 'Generated' : 'Existing']),
     ];
     const csv = rows.map((r) => r.map((c) => csvEscape(c)).join(',')).join('\n');
     downloadCSV(csv, `barcodes-export-${new Date().toISOString().slice(0, 10)}.csv`);
@@ -329,20 +381,63 @@ const BarcodePage: React.FC = () => {
   // ── Filtered DB records ───────────────────────────────────────────────────
   const filteredDbRecords = useMemo(() => {
     const q = dbSearch.toLowerCase();
-    if (!q) return records;
-    return records.filter(
+    if (!q) return allBarcodeRows;
+    return allBarcodeRows.filter(
       (r) =>
         r.product_name.toLowerCase().includes(q) ||
         r.barcode.includes(q) ||
         (r.sku ?? '').toLowerCase().includes(q)
     );
-  }, [records, dbSearch]);
+  }, [allBarcodeRows, dbSearch]);
 
-  // ── Whether a product already has a barcode in DB ─────────────────────────
-  const barcodeProductIds = useMemo(
-    () => new Set(records.map((r) => r.product_id)),
-    [records]
-  );
+  // ── Post to Sheets ────────────────────────────────────────────────────────
+  const [postingSheets, setPostingSheets] = useState(false);
+  const [sheetsMsg, setSheetsMsg] = useState<string | null>(null);
+
+  // ── product_id → barcode (from product_barcodes OR products.barcode) ──────
+  const productBarcodeMap = useMemo(() => {
+    const map = new Map<string, string>();
+    records.forEach((r) => map.set(r.product_id, r.barcode));
+    products.forEach((p) => { if (p.barcode && !map.has(p.id)) map.set(p.id, p.barcode); });
+    return map;
+  }, [records, products]);
+
+  // ── Combined rows for Database tab ────────────────────────────────────────
+  interface BarcodeRow {
+    key: string;
+    product_id: string;
+    product_name: string;
+    sku: string | null;
+    barcode: string;
+    generated_at: string | null;   // null = came from products.barcode
+    dbId: number | null;           // null = not in product_barcodes table
+  }
+  const allBarcodeRows = useMemo((): BarcodeRow[] => {
+    const rows: BarcodeRow[] = [];
+    records.forEach((r) => rows.push({
+      key: `pb_${r.id}`,
+      product_id: r.product_id,
+      product_name: r.product_name,
+      sku: r.sku,
+      barcode: r.barcode,
+      generated_at: r.generated_at,
+      dbId: r.id,
+    }));
+    products.forEach((p) => {
+      if (p.barcode && !records.some((r) => r.product_id === p.id)) {
+        rows.push({
+          key: `ex_${p.id}`,
+          product_id: p.id,
+          product_name: p.name,
+          sku: p.sku,
+          barcode: p.barcode,
+          generated_at: null,
+          dbId: null,
+        });
+      }
+    });
+    return rows;
+  }, [records, products]);
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -492,17 +587,35 @@ const BarcodePage: React.FC = () => {
                     ` · ${generateResult.skipped.length} skipped (already had barcodes in DB)`}
                 </p>
 
-                {generateResult.generated.length > 0 && (
-                  <button
-                    onClick={exportGeneratedToTemplate}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-lg transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Export to StoreHub Import Template (.csv)
-                  </button>
+                {(generateResult.generated.length > 0 || generateResult.skipped.length > 0) && (
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={exportGeneratedToTemplate}
+                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-lg transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Export StoreHub CSV
+                    </button>
+                    <button
+                      onClick={postGeneratedToSheets}
+                      disabled={postingSheets}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-700 hover:bg-green-600 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" />
+                      </svg>
+                      {postingSheets ? 'Posting…' : 'Post to Sheets'}
+                    </button>
+                  </div>
+                )}
+                {sheetsMsg && (
+                  <p className={`text-xs mt-1 ${sheetsMsg.startsWith('Failed') ? 'text-red-400' : 'text-green-400'}`}>
+                    {sheetsMsg}
+                  </p>
                 )}
               </div>
 
@@ -556,7 +669,7 @@ const BarcodePage: React.FC = () => {
           ) : (
             <div className="bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden">
               {/* Column headers */}
-              <div className="grid grid-cols-[40px_minmax(0,1fr)_120px_160px_90px_90px] gap-2 px-4 py-2.5 bg-gray-800/60 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+              <div className="grid grid-cols-[40px_minmax(0,1fr)_110px_140px_minmax(120px,160px)_80px] gap-2 px-4 py-2.5 bg-gray-800/60 text-xs font-semibold text-gray-400 uppercase tracking-wide">
                 <div className="flex items-center justify-center">
                   <input
                     type="checkbox"
@@ -569,7 +682,7 @@ const BarcodePage: React.FC = () => {
                 <div>Product Name</div>
                 <div>SKU</div>
                 <div>Category</div>
-                <div className="text-center">In DB</div>
+                <div>Barcode</div>
                 <div className="text-right">Price</div>
               </div>
 
@@ -583,12 +696,12 @@ const BarcodePage: React.FC = () => {
                   </div>
                 ) : (
                   filteredProducts.map((p) => {
-                    const hasBarcode = barcodeProductIds.has(p.id);
+                    const existingBarcode = productBarcodeMap.get(p.id) ?? null;
                     return (
                       <div
                         key={p.id}
                         onClick={() => toggleOne(p.id)}
-                        className={`grid grid-cols-[40px_minmax(0,1fr)_120px_160px_90px_90px] gap-2 px-4 py-3 cursor-pointer transition-colors ${
+                        className={`grid grid-cols-[40px_minmax(0,1fr)_110px_140px_minmax(120px,160px)_80px] gap-2 px-4 py-3 cursor-pointer transition-colors ${
                           selected.has(p.id)
                             ? 'bg-blue-500/10 border-l-2 border-blue-500'
                             : 'hover:bg-gray-800/40 border-l-2 border-transparent'
@@ -608,10 +721,10 @@ const BarcodePage: React.FC = () => {
                         <div className="truncate text-sm text-gray-200">{p.name}</div>
                         <div className="text-xs text-gray-400 font-mono truncate">{p.sku ?? '—'}</div>
                         <div className="text-xs text-gray-400 truncate">{p.category ?? '—'}</div>
-                        <div className="flex items-center justify-center">
-                          {hasBarcode ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-900/50 text-green-400 text-xs">
-                              ✓ saved
+                        <div className="flex items-center">
+                          {existingBarcode ? (
+                            <span className="font-mono text-green-400 text-xs tracking-wider truncate" title={existingBarcode}>
+                              {fmtBarcode(existingBarcode)}
                             </span>
                           ) : (
                             <span className="text-xs text-gray-600">—</span>
@@ -633,7 +746,7 @@ const BarcodePage: React.FC = () => {
                     ? `${products.length} product(s) · ${selected.size} selected`
                     : `${filteredProducts.length} of ${products.length} product(s) shown · ${selected.size} selected`}
                 </span>
-                <span>{barcodeProductIds.size} already have barcodes in DB</span>
+                <span>{productBarcodeMap.size} already have barcodes</span>
               </div>
             </div>
           )}
@@ -668,7 +781,20 @@ const BarcodePage: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
-              Export StoreHub Import CSV
+              Export StoreHub CSV
+            </button>
+
+            {/* Post to Sheets */}
+            <button
+              onClick={postDbToSheets}
+              disabled={filteredDbRecords.length === 0 || postingSheets}
+              className="flex items-center gap-2 px-4 py-2 bg-green-700 hover:bg-green-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" />
+              </svg>
+              {postingSheets ? 'Posting…' : 'Post to Sheets'}
             </button>
 
             {/* Plain barcode export */}
@@ -698,26 +824,26 @@ const BarcodePage: React.FC = () => {
             </div>
           ) : (
             <div className="bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden">
-              <div className="grid grid-cols-[minmax(0,1fr)_110px_180px_190px_80px] gap-2 px-4 py-2.5 bg-gray-800/60 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+              <div className="grid grid-cols-[minmax(0,1fr)_110px_180px_160px_90px] gap-2 px-4 py-2.5 bg-gray-800/60 text-xs font-semibold text-gray-400 uppercase tracking-wide">
                 <div>Product</div>
                 <div>SKU</div>
                 <div>EAN-13 Barcode</div>
-                <div>Generated</div>
+                <div>Source / Date</div>
                 <div className="text-right">Action</div>
               </div>
 
               <div className="divide-y divide-gray-800/60 max-h-[560px] overflow-y-auto">
                 {filteredDbRecords.length === 0 ? (
                   <div className="text-center text-gray-500 py-10 text-sm">
-                    {records.length === 0
+                    {allBarcodeRows.length === 0
                       ? 'No barcodes yet — go to "Generate Barcodes" to get started.'
                       : 'No records match your search.'}
                   </div>
                 ) : (
                   filteredDbRecords.map((r) => (
                     <div
-                      key={r.id}
-                      className="grid grid-cols-[minmax(0,1fr)_110px_180px_190px_80px] gap-2 px-4 py-3 hover:bg-gray-800/30 transition-colors items-center"
+                      key={r.key}
+                      className="grid grid-cols-[minmax(0,1fr)_110px_180px_160px_90px] gap-2 px-4 py-3 hover:bg-gray-800/30 transition-colors items-center"
                     >
                       <div className="truncate text-sm text-gray-200">{r.product_name}</div>
                       <div className="text-xs text-gray-400 font-mono truncate">{r.sku ?? '—'}</div>
@@ -737,19 +863,27 @@ const BarcodePage: React.FC = () => {
                         </button>
                       </div>
                       <div className="text-xs text-gray-500">
-                        {new Date(r.generated_at).toLocaleString('en-PH', {
-                          dateStyle: 'medium',
-                          timeStyle: 'short',
-                        })}
+                        {r.generated_at ? (
+                          <span>
+                            <span className="text-blue-400/70 mr-1">Generated</span>
+                            {new Date(r.generated_at).toLocaleDateString('en-PH', { dateStyle: 'medium' })}
+                          </span>
+                        ) : (
+                          <span className="text-amber-400/70">Existing (StoreHub)</span>
+                        )}
                       </div>
                       <div className="text-right">
-                        <button
-                          onClick={() => handleDelete(r.id)}
-                          disabled={deletingId === r.id}
-                          className="text-red-400 hover:text-red-300 disabled:opacity-40 text-xs transition-colors"
-                        >
-                          {deletingId === r.id ? 'Deleting…' : 'Delete'}
-                        </button>
+                        {r.dbId ? (
+                          <button
+                            onClick={() => handleDelete(r.dbId!)}
+                            disabled={deletingId === r.dbId}
+                            className="text-red-400 hover:text-red-300 disabled:opacity-40 text-xs transition-colors"
+                          >
+                            {deletingId === r.dbId ? 'Deleting…' : 'Delete'}
+                          </button>
+                        ) : (
+                          <span className="text-gray-600 text-xs">—</span>
+                        )}
                       </div>
                     </div>
                   ))
@@ -758,7 +892,8 @@ const BarcodePage: React.FC = () => {
 
               <div className="px-4 py-2 bg-gray-800/40 text-xs text-gray-500 border-t border-gray-800">
                 {filteredDbRecords.length} record(s)
-                {filteredDbRecords.length !== records.length && ` (filtered from ${records.length} total)`}
+                {filteredDbRecords.length !== allBarcodeRows.length && ` (filtered from ${allBarcodeRows.length} total)`}
+                {sheetsMsg && <span className={`ml-4 ${sheetsMsg.startsWith('Failed') ? 'text-red-400' : 'text-green-400'}`}>{sheetsMsg}</span>}
               </div>
             </div>
           )}
