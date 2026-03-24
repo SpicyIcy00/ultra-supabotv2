@@ -349,7 +349,7 @@ const BarcodePage: React.FC = () => {
         SKU: p.sku ?? '',
         PRODUCT_NAME: p.name,
         CATEGORY: p.category ?? '',
-        TAX_INCLUSIVE_PRICE: p.unit_price != null ? `P${p.unit_price % 1 === 0 ? Math.floor(p.unit_price) : p.unit_price}` : '',
+        TAX_INCLUSIVE_PRICE: p.unit_price != null && p.unit_price > 0 ? `P${p.unit_price % 1 === 0 ? Math.floor(p.unit_price) : p.unit_price}` : '',
         BARCODE: barcode,
         SUPPLIER: computeSupplier(p.sku),
       }));
@@ -387,7 +387,7 @@ const BarcodePage: React.FC = () => {
           SKU: r.sku ?? '',
           PRODUCT_NAME: r.product_name,
           CATEGORY: p.category ?? '',
-          TAX_INCLUSIVE_PRICE: p.unit_price != null ? `P${p.unit_price % 1 === 0 ? Math.floor(p.unit_price) : p.unit_price}` : '',
+          TAX_INCLUSIVE_PRICE: p.unit_price != null && p.unit_price > 0 ? `P${p.unit_price % 1 === 0 ? Math.floor(p.unit_price) : p.unit_price}` : '',
           BARCODE: r.barcode,
           SUPPLIER: computeSupplier(r.sku),
         };
@@ -421,7 +421,7 @@ const BarcodePage: React.FC = () => {
         PRODUCT_NAME: p.name,
         CATEGORY: p.category ?? '',
         TAX_INCLUSIVE_PRICE:
-          p.unit_price != null
+          p.unit_price != null && p.unit_price > 0
             ? `P${p.unit_price % 1 === 0 ? Math.floor(p.unit_price) : p.unit_price}`
             : '',
         BARCODE: p.barcode ?? '',
