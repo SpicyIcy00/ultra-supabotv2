@@ -26,7 +26,7 @@ class SheetRow(BaseModel):
 
 class PostToSheetsRequest(BaseModel):
     sheetName: str
-    data: List[Dict[str, Any]]
+    data: List[Any]  # accepts both list-of-dicts and list-of-arrays
     sheetsUrl: Optional[str] = None  # Optional override URL
 
 
