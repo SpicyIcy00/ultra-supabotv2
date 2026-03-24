@@ -53,7 +53,8 @@ async def post_to_google_sheets(request: PostToSheetsRequest):
     
     # Route to the barcode DB URL when sheetName is "Barcode Database",
     # otherwise fall back to the general GOOGLE_SHEETS_URL.
-    if request.sheetName == "New May Barcode Database" and GOOGLE_SHEETS_BARCODE_DB_URL:
+    BARCODE_SHEETS = {"New May Barcode Database", "Barcodes"}
+    if request.sheetName in BARCODE_SHEETS and GOOGLE_SHEETS_BARCODE_DB_URL:
         sheets_url = GOOGLE_SHEETS_BARCODE_DB_URL
     else:
         sheets_url = GOOGLE_SHEETS_URL or request.sheetsUrl
