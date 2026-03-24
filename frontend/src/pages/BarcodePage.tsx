@@ -354,7 +354,7 @@ const BarcodePage: React.FC = () => {
         SUPPLIER: computeSupplier(p.sku),
       }));
       const res = await axios.post('/api/v1/sheets/post-to-sheets', {
-        sheetName: 'New May Barcode Database',
+        sheetName: 'Barcodes',
         data: sheetRows,
       });
       setSheetsMsg(res.data?.message || `Posted ${sheetRows.length} rows to Sheets`);
@@ -393,7 +393,7 @@ const BarcodePage: React.FC = () => {
         };
       });
       const res = await axios.post('/api/v1/sheets/post-to-sheets', {
-        sheetName: 'New May Barcode Database',
+        sheetName: 'Barcodes',
         data: sheetRows,
       });
       setSheetsMsg(res.data?.message || `Posted ${sheetRows.length} rows to Sheets`);
@@ -428,7 +428,7 @@ const BarcodePage: React.FC = () => {
         SUPPLIER: computeSupplier(p.sku),
       }));
       const res = await axios.post('/api/v1/sheets/post-to-sheets', {
-        sheetName: 'New May Barcode Database',
+        sheetName: 'Barcodes',
         data: sheetRows,
       });
       setSheetDbMsg(res.data?.message || `Posted ${sheetRows.length} rows to Sheets`);
