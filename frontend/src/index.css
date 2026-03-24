@@ -15,6 +15,26 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Custom scrollbars — matches dark UI */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #374151;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #374151 transparent;
+}
+
 /* Mobile touch target enforcement */
 @media (pointer: coarse) {
   button, a, [role="button"], label[for], input[type="checkbox"] + label {
