@@ -505,11 +505,6 @@ const BarcodePage: React.FC = () => {
         <p className="text-gray-400 text-sm mt-1">
           Generate EAN-13 barcodes and export directly to the StoreHub Products Import Template.
         </p>
-        <div className="mt-3 p-3 rounded-lg bg-amber-900/30 border border-amber-600/40 text-amber-300 text-xs leading-relaxed">
-          <span className="font-semibold">StoreHub import:</span> Download the exported CSV and upload it
-          via <em>StoreHub Back Office → Products → Import CSV</em>.
-          The StoreHub REST API does not support updating products programmatically.
-        </div>
       </div>
 
       {/* Tabs */}
@@ -666,12 +661,12 @@ const BarcodePage: React.FC = () => {
                     </button>
                   </div>
                 )}
-                {sheetsMsg && (
-                  <p className={`text-xs mt-1 ${sheetsMsg.startsWith('Failed') ? 'text-red-400' : 'text-green-400'}`}>
-                    {sheetsMsg}
-                  </p>
-                )}
               </div>
+              {sheetsMsg && (
+                <p className={`text-xs ${sheetsMsg.startsWith('Failed') ? 'text-red-400' : 'text-green-400'}`}>
+                  {sheetsMsg}
+                </p>
+              )}
 
               {/* Generated barcode list */}
               {generateResult.generated.length > 0 && (
