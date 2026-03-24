@@ -116,6 +116,12 @@ function buildStoreHubCSV(rows: ExportRow[]): string {
   return lines.join('\n');
 }
 
+/** Compute SUPPLIER from SKU: strip digits, uppercase letters, prepend "R". */
+function computeSupplier(sku: string | null): string {
+  if (!sku) return 'R';
+  return 'R' + sku.replace(/\d/g, '').toUpperCase();
+}
+
 function downloadCSV(content: string, filename: string) {
   const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -381,6 +387,41 @@ const BarcodePage: React.FC = () => {
     }
   }
 
+  /**
+   * Post all barcoded products to Google Sheets in the 6-column barcode
+   * database format: SKU | PRODUCT_NAME | CATEGORY | TAX_INCLUSIVE_PRICE |
+   * BARCODE | SUPPLIER.  Rows are appended after the last occupied row by
+   * the Google Apps Script on the other end.
+   */
+  async function postProductDbToSheets() {
+    const rows = products.filter((p) => p.barcode);
+    if (rows.length === 0) return;
+    setPostingSheetDb(true);
+    setSheetDbMsg(null);
+    try {
+      const sheetRows = rows.map((p) => ({
+        SKU: p.sku ?? '',
+        PRODUCT_NAME: p.name,
+        CATEGORY: p.category ?? '',
+        TAX_INCLUSIVE_PRICE:
+          p.unit_price != null
+            ? `P${p.unit_price % 1 === 0 ? Math.floor(p.unit_price) : p.unit_price}`
+            : '',
+        BARCODE: p.barcode ?? '',
+        SUPPLIER: computeSupplier(p.sku),
+      }));
+      const res = await axios.post('/api/v1/sheets/post-to-sheets', {
+        sheetName: 'New May Barcode Database',
+        data: sheetRows,
+      });
+      setSheetDbMsg(res.data?.message || `Posted ${sheetRows.length} rows to Sheets`);
+    } catch (e: any) {
+      setSheetDbMsg(`Failed: ${e?.response?.data?.detail || e.message}`);
+    } finally {
+      setPostingSheetDb(false);
+    }
+  }
+
   /** Export raw barcode DB as a plain CSV (all fields) */
   function exportDbToPlainCSV() {
     const rows = [
@@ -393,6 +434,8 @@ const BarcodePage: React.FC = () => {
 
   // ── Post to Sheets state ─────────────────────────────────────────────────
   const [postingSheets, setPostingSheets] = useState(false);
+  const [postingSheetDb, setPostingSheetDb] = useState(false);
+  const [sheetDbMsg, setSheetDbMsg] = useState<string | null>(null);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [processingCsv, setProcessingCsv] = useState(false);
   const [csvMsg, setCsvMsg] = useState<string | null>(null);
@@ -814,7 +857,7 @@ const BarcodePage: React.FC = () => {
               Export StoreHub CSV
             </button>
 
-            {/* Post to Sheets */}
+            {/* Post barcodes-only to Sheets (legacy, 3-col) */}
             <button
               onClick={postDbToSheets}
               disabled={filteredDbRecords.length === 0 || postingSheets}
@@ -826,6 +869,31 @@ const BarcodePage: React.FC = () => {
               </svg>
               {postingSheets ? 'Posting…' : 'Post to Sheets'}
             </button>
+
+            {/* Post full product DB to Sheets (6-col: SKU, Name, Category, Price, Barcode, Supplier) */}
+            <button
+              onClick={postProductDbToSheets}
+              disabled={products.filter((p) => p.barcode).length === 0 || postingSheetDb}
+              className="flex items-center gap-2 px-4 py-2 bg-teal-700 hover:bg-teal-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              {postingSheetDb ? (
+                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M8 12l4-4m0 0l4 4m-4-4v12" />
+                </svg>
+              )}
+              {postingSheetDb ? 'Posting…' : 'Post to Sheet DB'}
+            </button>
+            {sheetDbMsg && (
+              <span className={`text-xs ${sheetDbMsg.startsWith('Failed') ? 'text-red-400' : 'text-teal-300'}`}>
+                {sheetDbMsg}
+              </span>
+            )}
 
             {/* Plain barcode export */}
             <button

@@ -10,8 +10,9 @@ import os
 
 router = APIRouter(tags=["Google Sheets"])
 
-# Get Google Sheets URL from environment
+# Get Google Sheets URLs from environment
 GOOGLE_SHEETS_URL = os.getenv("GOOGLE_SHEETS_URL", "")
+GOOGLE_SHEETS_BARCODE_DB_URL = os.getenv("GOOGLE_SHEETS_BARCODE_DB_URL", "")
 
 
 class SheetRow(BaseModel):
@@ -50,16 +51,19 @@ async def post_to_google_sheets(request: PostToSheetsRequest):
     print(f"Provided sheetsUrl from frontend: {request.sheetsUrl}")
     print(f"Environment GOOGLE_SHEETS_URL: {GOOGLE_SHEETS_URL}")
     
-    # PRIORITY: Backend environment variable takes precedence over frontend URL
-    # This ensures Railway's GOOGLE_SHEETS_URL is used, avoiding stale frontend env vars
-    sheets_url = GOOGLE_SHEETS_URL or request.sheetsUrl
-    
+    # Route to the barcode DB URL when sheetName is "Barcode Database",
+    # otherwise fall back to the general GOOGLE_SHEETS_URL.
+    if request.sheetName == "New May Barcode Database" and GOOGLE_SHEETS_BARCODE_DB_URL:
+        sheets_url = GOOGLE_SHEETS_BARCODE_DB_URL
+    else:
+        sheets_url = GOOGLE_SHEETS_URL or request.sheetsUrl
+
     print(f"Final URL to use: {sheets_url}")
-    
+
     if not sheets_url:
         raise HTTPException(
             status_code=400,
-            detail="Google Sheets URL not configured. Set GOOGLE_SHEETS_URL environment variable in Railway."
+            detail="Google Sheets URL not configured. Set GOOGLE_SHEETS_URL (and optionally GOOGLE_SHEETS_BARCODE_DB_URL) in Railway."
         )
     
     # Validate URL format
