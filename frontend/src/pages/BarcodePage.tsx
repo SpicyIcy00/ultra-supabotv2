@@ -345,9 +345,16 @@ const BarcodePage: React.FC = () => {
     setPostingSheets(true);
     setSheetsMsg(null);
     try {
-      const sheetRows = rows.map(({ product: p, barcode }) => [p.sku ?? '', p.name, barcode]);
+      const sheetRows = rows.map(({ product: p, barcode }) => ({
+        SKU: p.sku ?? '',
+        PRODUCT_NAME: p.name,
+        CATEGORY: p.category ?? '',
+        TAX_INCLUSIVE_PRICE: p.unit_price != null ? `P${p.unit_price % 1 === 0 ? Math.floor(p.unit_price) : p.unit_price}` : '',
+        BARCODE: barcode,
+        SUPPLIER: computeSupplier(p.sku),
+      }));
       const res = await axios.post('/api/v1/sheets/post-to-sheets', {
-        sheetName: 'Barcodes',
+        sheetName: 'New May Barcode Database',
         data: sheetRows,
       });
       setSheetsMsg(res.data?.message || `Posted ${sheetRows.length} rows to Sheets`);
@@ -374,9 +381,19 @@ const BarcodePage: React.FC = () => {
     setPostingSheets(true);
     setSheetsMsg(null);
     try {
-      const sheetRows = filteredDbRecords.map((r) => [r.sku ?? '', r.product_name, r.barcode]);
+      const sheetRows = filteredDbRecords.map((r) => {
+        const p = entryToProduct(r.product_id, r.product_name, r.sku);
+        return {
+          SKU: r.sku ?? '',
+          PRODUCT_NAME: r.product_name,
+          CATEGORY: p.category ?? '',
+          TAX_INCLUSIVE_PRICE: p.unit_price != null ? `P${p.unit_price % 1 === 0 ? Math.floor(p.unit_price) : p.unit_price}` : '',
+          BARCODE: r.barcode,
+          SUPPLIER: computeSupplier(r.sku),
+        };
+      });
       const res = await axios.post('/api/v1/sheets/post-to-sheets', {
-        sheetName: 'Barcodes',
+        sheetName: 'New May Barcode Database',
         data: sheetRows,
       });
       setSheetsMsg(res.data?.message || `Posted ${sheetRows.length} rows to Sheets`);
