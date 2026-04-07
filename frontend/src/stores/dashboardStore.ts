@@ -41,6 +41,8 @@ interface DashboardState {
   setStoreDisplayName: (storeId: string, displayName: string) => void;
   clearStoreDisplayName: (storeId: string) => void;
   getStoreName: (storeId: string) => string;
+  // Resolve display name when only a raw DB name string is available (no ID)
+  getStoreNameByDbName: (dbName: string) => string;
 }
 
 // Specific default stores as requested
@@ -199,6 +201,14 @@ export const useDashboardStore = create<DashboardState>()(
         if (storeDisplayNames[storeId]) return storeDisplayNames[storeId];
         const store = stores.find(s => s.id === storeId);
         return store?.name ?? storeId;
+      },
+
+      // Resolve display name when only the raw DB name is available (no ID)
+      getStoreNameByDbName: (dbName: string) => {
+        const { storeDisplayNames, stores } = get();
+        const store = stores.find(s => s.name === dbName);
+        if (store && storeDisplayNames[store.id]) return storeDisplayNames[store.id];
+        return dbName;
       },
     }),
     {

@@ -11,12 +11,7 @@ interface StoreWeeklyTrendsProps {
 
 export const StoreWeeklyTrends: React.FC<StoreWeeklyTrendsProps> = ({ storeIds, startDate, endDate }) => {
   const { data, isLoading, error } = useStoreWeeklyTrends(startDate, endDate, storeIds);
-  const storesList = useDashboardStore((state) => state.stores);
-
-  const getStoreName = (id: string) => {
-    const store = storesList.find(s => s.id === id);
-    return store ? store.name : id;
-  };
+  const getStoreName = useDashboardStore((state) => state.getStoreName);
 
   const processedData = useMemo(() => {
     if (!data?.trends) return [];

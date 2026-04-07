@@ -13,6 +13,7 @@ import {
   Cell,
 } from 'recharts';
 import type { StorePerformanceItem } from '../../types/analytics';
+import { useDashboardStore } from '../../stores/dashboardStore';
 
 interface StorePerformanceChartProps {
   data: StorePerformanceItem[];
@@ -48,8 +49,12 @@ export function StorePerformanceChart({
     );
   }
 
-  // Sort by total_sales descending
-  const sortedData = [...data].sort((a, b) => b.total_sales - a.total_sales);
+  const getStoreNameByDbName = useDashboardStore((state) => state.getStoreNameByDbName);
+
+  // Sort by total_sales descending and add display names
+  const sortedData = [...data]
+    .sort((a, b) => b.total_sales - a.total_sales)
+    .map((item) => ({ ...item, display_name: getStoreNameByDbName(item.store_name) }));
 
   return (
     <div className="w-full h-96">
@@ -68,7 +73,7 @@ export function StorePerformanceChart({
           />
           <YAxis
             type="category"
-            dataKey="store_name"
+            dataKey="display_name"
             stroke="#9CA3AF"
             style={{ fontSize: '12px' }}
             width={90}
@@ -95,7 +100,7 @@ export function StorePerformanceChart({
               }
               return [value, name];
             }}
-            labelFormatter={(label) => `Store: ${label}`}
+            labelFormatter={(label) => `Store: ${getStoreNameByDbName(String(label))}`}
           />
           <Legend
             wrapperStyle={{ color: '#9CA3AF' }}

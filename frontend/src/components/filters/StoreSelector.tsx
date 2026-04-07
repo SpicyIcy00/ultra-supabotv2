@@ -14,6 +14,7 @@ export const StoreSelector: React.FC = () => {
   const toggleStore = useDashboardStore((state) => state.toggleStore);
   const selectAllStores = useDashboardStore((state) => state.selectAllStores);
   const setStores = useDashboardStore((state) => state.setStores);
+  const getStoreName = useDashboardStore((state) => state.getStoreName);
 
   // Fetch stores on mount
   useEffect(() => {
@@ -58,7 +59,7 @@ export const StoreSelector: React.FC = () => {
     }
     if (selectedStores.length === 1) {
       const store = stores.find(s => s.id === selectedStores[0]);
-      return store ? store.name : 'Unknown Store';
+      return store ? getStoreName(store.id) : 'Unknown Store';
     }
     return `${selectedStores.length} stores selected`;
   };
@@ -119,7 +120,7 @@ export const StoreSelector: React.FC = () => {
                     className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: color }}
                   />
-                  <span className="text-sm text-white">{store.name}</span>
+                  <span className="text-sm text-white">{getStoreName(store.id)}</span>
                 </div>
               </label>
             );

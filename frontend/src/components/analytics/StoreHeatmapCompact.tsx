@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { formatCurrency, formatNumber } from '../../utils/dateCalculations';
+import { useDashboardStore } from '../../stores/dashboardStore';
 
 interface StoreData {
   store_id: string;
@@ -24,6 +25,8 @@ interface StoreHeatmapCompactProps {
 }
 
 export const StoreHeatmapCompact: React.FC<StoreHeatmapCompactProps> = ({ stores, onStoreClick }) => {
+  const getStoreName = useDashboardStore((state) => state.getStoreName);
+  const getStoreNameByDbName = useDashboardStore((state) => state.getStoreNameByDbName);
   // Calculate percentiles for color coding
   const getPercentileRank = (value: number, values: number[]) => {
     const sorted = [...values].sort((a, b) => a - b);
@@ -125,7 +128,7 @@ export const StoreHeatmapCompact: React.FC<StoreHeatmapCompactProps> = ({ stores
                 onClick={() => onStoreClick(store.store_id || store.store_name)}
               >
                 <td className="py-2 px-3 text-white font-medium text-sm sticky left-0 bg-[#1c1e26] group-hover:bg-[#252833]">
-                  {store.store_name}
+                  {store.store_id ? getStoreName(store.store_id) : getStoreNameByDbName(store.store_name)}
                 </td>
                 <td className="py-2 px-3 text-right">
                   <div className={`inline-flex flex-col items-end px-2 py-1.5 rounded border ${getBgColor(revenuePercentile, revenueChange)}`}>

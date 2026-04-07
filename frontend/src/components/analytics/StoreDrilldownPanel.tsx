@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { formatCurrency, formatNumber } from '../../utils/dateCalculations';
 import { useStoreDrilldownV2 } from '../../hooks/useStoreComparisonV2';
+import { useDashboardStore } from '../../stores/dashboardStore';
 
 interface StoreDrilldownPanelProps {
   storeId: string;
@@ -154,6 +155,8 @@ export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
   const { data, isLoading, error } = useStoreDrilldownV2(
     storeId, startDate, endDate, compareStartDate, compareEndDate, storeIds
   );
+  const getStoreName = useDashboardStore((state) => state.getStoreName);
+  const getStoreNameByDbName = useDashboardStore((state) => state.getStoreNameByDbName);
 
   const btnBase = 'px-3 py-1 text-xs rounded font-medium transition-colors';
   const btn     = (active: boolean) => `${btnBase} ${active ? 'bg-[#3b82f6] text-white' : 'text-gray-400 hover:text-white'}`;
@@ -192,7 +195,9 @@ export const StoreDrilldownPanel: React.FC<StoreDrilldownPanelProps> = ({
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-[#2e303d]">
         <div>
-          <h2 className="text-lg font-semibold text-white">{data.store_name}</h2>
+          <h2 className="text-lg font-semibold text-white">
+            {getStoreName(storeId) !== storeId ? getStoreName(storeId) : getStoreNameByDbName(data.store_name)}
+          </h2>
           {rank?.rank && (
             <span className="text-xs text-gray-500">
               Rank <span className="text-blue-400 font-semibold">#{rank.rank}</span>

@@ -173,6 +173,7 @@ const StoresSettings: React.FC = () => {
 
 // ── AI Chat Store Filters (formerly StoreFiltersSettings tab) ──────────────
 const AiChatStoreFilters: React.FC = () => {
+  const getStoreNameByDbName = useDashboardStore(s => s.getStoreNameByDbName);
   const [config, setConfig] = useState<StoreFilterConfig>({ sales_stores: [], inventory_stores: [] });
   const [availableStores, setAvailableStores] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -297,6 +298,7 @@ const AiChatStoreFilters: React.FC = () => {
           onAdd={(store) => addStore('sales', store)}
           onRemove={(store) => removeStore('sales', store)}
           color="purple"
+          getDisplayName={getStoreNameByDbName}
         />
         <StoreFilterSection
           title="Inventory Stores"
@@ -306,6 +308,7 @@ const AiChatStoreFilters: React.FC = () => {
           onAdd={(store) => addStore('inventory', store)}
           onRemove={(store) => removeStore('inventory', store)}
           color="green"
+          getDisplayName={getStoreNameByDbName}
         />
       </div>
     </div>
@@ -314,7 +317,7 @@ const AiChatStoreFilters: React.FC = () => {
 
 // ── Dashboard Store Defaults (formerly DashboardStoresSettings tab) ─────────
 const DashboardStoreDefaults: React.FC = () => {
-  const { stores, selectedStores, setStores, fetchStores } = useDashboardStore();
+  const { stores, selectedStores, setStores, fetchStores, getStoreName } = useDashboardStore();
   const [localSelected, setLocalSelected] = useState<string[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -411,6 +414,10 @@ const DashboardStoreDefaults: React.FC = () => {
         onAdd={handleAdd}
         onRemove={handleRemove}
         color="blue"
+        getDisplayName={(name) => {
+          const store = stores.find(s => s.name === name);
+          return store ? getStoreName(store.id) : name;
+        }}
       />
     </div>
   );
@@ -569,6 +576,7 @@ interface StoreFilterSectionProps {
   onAdd: (store: string) => void;
   onRemove: (store: string) => void;
   color: 'purple' | 'green' | 'blue';
+  getDisplayName?: (name: string) => string;
 }
 
 const StoreFilterSection: React.FC<StoreFilterSectionProps> = ({
@@ -578,8 +586,10 @@ const StoreFilterSection: React.FC<StoreFilterSectionProps> = ({
   availableStores,
   onAdd,
   onRemove,
-  color
+  color,
+  getDisplayName,
 }) => {
+  const label = (name: string) => getDisplayName ? getDisplayName(name) : name;
   const [selectedStore, setSelectedStore] = useState('');
 
   const handleAdd = () => {
@@ -611,7 +621,7 @@ const StoreFilterSection: React.FC<StoreFilterSectionProps> = ({
           >
             <option value="">Select a store to add...</option>
             {availableStores.map((store) => (
-              <option key={store} value={store}>{store}</option>
+              <option key={store} value={store}>{label(store)}</option>
             ))}
           </select>
           <button
@@ -634,7 +644,7 @@ const StoreFilterSection: React.FC<StoreFilterSectionProps> = ({
                   key={store}
                   className={`flex items-center gap-2 px-3 py-1.5 ${tagBg} border ${tagBorder} rounded-full ${tagText} text-sm`}
                 >
-                  <span>{store}</span>
+                  <span>{label(store)}</span>
                   <button
                     onClick={() => onRemove(store)}
                     className="hover:text-red-400 transition-colors"

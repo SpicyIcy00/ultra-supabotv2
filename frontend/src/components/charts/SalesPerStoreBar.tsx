@@ -5,6 +5,7 @@ import { getStoreColor, THEME_COLORS } from '../../constants/colors';
 import { formatCurrency, formatPercentage, calculatePercentageChange } from '../../utils/dateCalculations';
 import { exportChartAsImage } from '../../utils/chartExport';
 import { useChartDimensions } from '../../hooks/useChartDimensions';
+import { useDashboardStore } from '../../stores/dashboardStore';
 
 interface StoreData {
   store_name: string;
@@ -23,6 +24,7 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
   isLoading = false,
 }) => {
   const dims = useChartDimensions();
+  const getStoreNameByDbName = useDashboardStore((state) => state.getStoreNameByDbName);
 
   if (isLoading) {
     return (
@@ -52,6 +54,7 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
     .sort((a, b) => b.current_sales - a.current_sales)
     .map((item) => ({
       ...item,
+      display_name: getStoreNameByDbName(item.store_name),
       color: getStoreColor(item.store_name),
       percentageChange: calculatePercentageChange(item.current_sales, item.previous_sales),
     }));
@@ -61,7 +64,7 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
       const data = payload[0].payload;
       return (
         <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-3 shadow-lg">
-          <p className="text-white font-semibold">{data.store_name}</p>
+          <p className="text-white font-semibold">{data.display_name}</p>
           <p className="text-[#00d2ff] font-bold">{formatCurrency(data.current_sales)}</p>
           <p
             className="text-sm font-semibold"
@@ -127,7 +130,7 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
         >
           <CartesianGrid vertical={true} horizontal={false} stroke={THEME_COLORS.gridLines} />
           <XAxis
-            dataKey="store_name"
+            dataKey="display_name"
             axisLine={false}
             tickLine={false}
             tick={{ fill: '#f3f4f6', fontSize: dims.fontSize.axis, fontWeight: 500 }}
