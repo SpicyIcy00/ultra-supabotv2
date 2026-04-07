@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { getPicklist } from '../../services/replenishmentApi';
 import type { PicklistResponse } from '../../types/replenishment';
+import { useDashboardStore } from '../../stores/dashboardStore';
 
 export const WarehousePicklist: React.FC = () => {
+  const getStoreNameByDbName = useDashboardStore((state) => state.getStoreNameByDbName);
   const [picklist, setPicklist] = useState<PicklistResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedSku, setExpandedSku] = useState<string | null>(null);
@@ -148,7 +150,7 @@ export const WarehousePicklist: React.FC = () => {
                             key={sb.store_id}
                             className="flex items-center justify-between bg-[#1c1e26] rounded px-3 py-2"
                           >
-                            <span className="text-xs text-gray-300">{sb.store_name || sb.store_id}</span>
+                            <span className="text-xs text-gray-300">{sb.store_name ? getStoreNameByDbName(sb.store_name) : sb.store_id}</span>
                             <span className="text-xs font-medium text-white">{sb.quantity}</span>
                           </div>
                         ))}

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { getExceptions } from '../../services/replenishmentApi';
 import type { ExceptionsResponse, ExceptionItem } from '../../types/replenishment';
+import { useDashboardStore } from '../../stores/dashboardStore';
 
 export const ExceptionsPanel: React.FC = () => {
+  const getStoreNameByDbName = useDashboardStore((state) => state.getStoreNameByDbName);
   const [data, setData] = useState<ExceptionsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
@@ -98,7 +100,7 @@ const ExceptionRow: React.FC<{ item: ExceptionItem }> = ({ item }) => {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-white font-medium">
-            {item.product_name} <span className="text-gray-500">@</span> {item.store_name}
+            {item.product_name} <span className="text-gray-500">@</span> {item.store_name ? getStoreNameByDbName(item.store_name) : item.store_id}
           </p>
           <p className="text-xs text-gray-400 mt-1">{item.detail}</p>
         </div>

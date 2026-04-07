@@ -23,6 +23,9 @@ interface Props {
 
 export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const getStoreNameByDbName = useDashboardStore((state) => state.getStoreNameByDbName);
+  const getStoreName = useDashboardStore((state) => state.getStoreName);
+  const fetchStores = useDashboardStore((state) => state.fetchStores);
+  const dashboardStores = useDashboardStore((state) => state.stores);
   const [isRunning, setIsRunning] = useState(false);
   const [runResult, setRunResult] = useState<ReplenishmentRunResponse | null>(null);
   const [latestPlan, setLatestPlan] = useState<ShipmentPlanResponse | null>(null);
@@ -31,7 +34,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [stores, setStores] = useState<StoreTier[]>([]);
+  const [tiers, setTiers] = useState<StoreTier[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
   const [hideZeroSales, setHideZeroSales] = useState(false);
   const [applyStockoutBuffer, setApplyStockoutBuffer] = useState(true);
@@ -41,7 +44,8 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
 
   useEffect(() => {
     loadInitialData();
-  }, []);
+    fetchStores();
+  }, [fetchStores]);
 
   const loadInitialData = async () => {
     setLoading(true);
@@ -55,7 +59,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
       setDataReadiness(readiness);
       setLatestPlan(plan);
       setExceptions(exc);
-      setStores(tiers);
+      setTiers(tiers);
     } catch {
       // Data may not exist yet
     } finally {
@@ -121,7 +125,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
 
     const sorted = filteredAndSorted(latestPlan.items);
     const rows = sorted.map((item) => [
-      item.store_name ?? item.store_id,
+      item.store_name ? getStoreNameByDbName(item.store_name) : item.store_id,
       item.product_name ?? item.sku_id,
       item.category ?? '',
       item.avg_daily_sales.toFixed(2),
@@ -148,7 +152,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    const storeName = stores.find((s) => s.store_id === selectedStoreId)?.store_name ?? 'all';
+    const storeName = selectedStoreId ? getStoreName(selectedStoreId) : 'all';
     link.download = `replenishment_${storeName}_${latestPlan.run_date ?? 'latest'}.csv`;
     document.body.appendChild(link);
     link.click();
@@ -159,7 +163,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const handlePostToSheets = async () => {
     if (!latestPlan || !latestPlan.items.length) return;
     const visibleItems = filteredAndSorted(latestPlan.items);
-    const storeName = stores.find((s) => s.store_id === selectedStoreId)?.store_name ?? 'Replenishment';
+    const storeName = selectedStoreId ? getStoreName(selectedStoreId) : 'Replenishment';
     setPostingToSheets(true);
     setSheetsSuccess(null);
     setSheetsError(null);
@@ -239,11 +243,14 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
               className="bg-[#0e1117] border border-[#2e303d] text-gray-200 text-sm rounded-lg px-3 py-2.5 focus:border-blue-500 focus:outline-none"
             >
               <option value="">Select a store...</option>
-              {stores.map((s) => (
-                <option key={s.store_id} value={s.store_id}>
-                  {getStoreNameByDbName(s.store_name ?? s.store_id)} (Tier {s.tier})
-                </option>
-              ))}
+              {dashboardStores.map((s) => {
+                const tier = tiers.find((t) => t.store_id === s.id);
+                return (
+                  <option key={s.id} value={s.id}>
+                    {getStoreName(s.id)}{tier ? ` (Tier ${tier.tier})` : ''}
+                  </option>
+                );
+              })}
             </select>
             {/* Stockout buffer toggle */}
             <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none">
@@ -479,7 +486,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                   <ExceptionBadge type={item.exception_type} />
                   <div>
                     <p className="text-sm text-white">
-                      {item.product_name} <span className="text-gray-500">@</span> {item.store_name}
+                      {item.product_name} <span className="text-gray-500">@</span> {item.store_name ? getStoreNameByDbName(item.store_name) : item.store_id}
                     </p>
                     <p className="text-xs text-gray-400">{item.detail}</p>
                   </div>

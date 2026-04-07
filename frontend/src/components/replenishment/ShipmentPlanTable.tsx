@@ -95,7 +95,7 @@ export const ShipmentPlanTable: React.FC = () => {
     ];
 
     const rows = filteredAndSorted.map(i => [
-      i.store_name || i.store_id,
+      i.store_name ? getStoreNameByDbName(i.store_name) : i.store_id,
       i.sku_id,
       i.product_name || '',
       i.category || '',

@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { getStoreTiers, upsertStoreTier, deleteStoreTier } from '../../services/replenishmentApi';
 import { fetchStores } from '../../services/reportApi';
 import type { StoreTier } from '../../types/replenishment';
+import { useDashboardStore } from '../../stores/dashboardStore';
 
 export const StoreTierConfig: React.FC = () => {
+  const getStoreName = useDashboardStore((state) => state.getStoreName);
+  const getStoreNameByDbName = useDashboardStore((state) => state.getStoreNameByDbName);
   const [tiers, setTiers] = useState<StoreTier[]>([]);
   const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -121,7 +124,7 @@ export const StoreTierConfig: React.FC = () => {
               >
                 <option value="">Select store...</option>
                 {stores.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
+                  <option key={s.id} value={s.id}>{getStoreName(s.id)}</option>
                 ))}
               </select>
             </div>
@@ -202,7 +205,7 @@ export const StoreTierConfig: React.FC = () => {
           <tbody className="divide-y divide-[#2e303d]">
             {tiers.map(tier => (
               <tr key={tier.store_id} className="hover:bg-gray-700/20">
-                <td className="px-4 py-3 text-sm text-white">{tier.store_name || tier.store_id}</td>
+                <td className="px-4 py-3 text-sm text-white">{tier.store_name ? getStoreNameByDbName(tier.store_name) : tier.store_id}</td>
                 <td className="px-4 py-3 text-center">
                   <span className={`text-xs px-2 py-0.5 rounded ${
                     tier.tier === 'A' ? 'bg-blue-900/50 text-blue-400' : 'bg-gray-700 text-gray-300'
