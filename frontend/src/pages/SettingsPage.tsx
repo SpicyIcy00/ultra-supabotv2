@@ -420,44 +420,30 @@ const DashboardStoreDefaults: React.FC = () => {
 const StoreDisplayNames: React.FC = () => {
   const { stores, storeDisplayNames, setStoreDisplayName, clearStoreDisplayName, fetchStores } =
     useDashboardStore();
-  const [availableNames, setAvailableNames] = useState<string[]>([]);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const init = async () => {
-      if (stores.length === 0) await fetchStores();
-      try {
-        const data = await getAvailableStores();
-        setAvailableNames(data.stores);
-      } finally {
-        setLoading(false);
-      }
-    };
-    init();
+    if (stores.length === 0) fetchStores();
   }, []);
 
-  // Only show stores that are in the curated available-stores list
-  const curatedStores = stores.filter(s => availableNames.includes(s.name));
-
-  // Seed drafts from persisted overrides whenever curated list resolves
+  // Seed drafts from persisted overrides whenever stores load
   useEffect(() => {
-    if (curatedStores.length > 0) {
+    if (stores.length > 0) {
       const initial: Record<string, string> = {};
-      curatedStores.forEach(s => {
+      stores.forEach(s => {
         initial[s.id] = storeDisplayNames[s.id] ?? '';
       });
       setDrafts(initial);
     }
-  }, [curatedStores.length]);
+  }, [stores.length]);
 
   const handleChange = (storeId: string, value: string) => {
     setDrafts(prev => ({ ...prev, [storeId]: value }));
   };
 
   const handleSave = () => {
-    curatedStores.forEach(s => {
+    stores.forEach(s => {
       const val = drafts[s.id]?.trim() ?? '';
       if (val && val !== s.name) {
         setStoreDisplayName(s.id, val);
@@ -474,13 +460,13 @@ const StoreDisplayNames: React.FC = () => {
     setDrafts(prev => ({ ...prev, [storeId]: '' }));
   };
 
-  const hasChanges = curatedStores.some(s => {
+  const hasChanges = stores.some(s => {
     const draft = drafts[s.id]?.trim() ?? '';
     const current = storeDisplayNames[s.id] ?? '';
     return draft !== current;
   });
 
-  if (loading || curatedStores.length === 0) {
+  if (stores.length === 0) {
     return (
       <div className="flex items-center gap-3 text-gray-400 py-6">
         <RefreshCw className="w-5 h-5 animate-spin" />
@@ -536,7 +522,7 @@ const StoreDisplayNames: React.FC = () => {
         </div>
 
         <div className="divide-y divide-[#2e303d]">
-          {curatedStores.map(store => {
+          {stores.map(store => {
             const override = storeDisplayNames[store.id];
             const draft = drafts[store.id] ?? '';
             return (
