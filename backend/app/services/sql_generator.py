@@ -11,7 +11,7 @@ from difflib import get_close_matches
 from typing import Optional, Dict, Any, List, Tuple
 from anthropic import Anthropic, APIError, APITimeoutError
 import asyncio
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -92,6 +92,21 @@ class SQLGenerator:
         self.circuit_breaker = CircuitBreaker(failure_threshold=5, timeout=60)
         self.schema = SchemaContext.get_schema()
         self.business_rules = SchemaContext.get_business_rules()
+
+    async def _get_display_names(self) -> Dict[str, str]:
+        """Fetch store display name overrides from DB. Returns {db_name: display_name}."""
+        try:
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(
+                    text(
+                        "SELECT name, display_name FROM stores "
+                        "WHERE display_name IS NOT NULL AND display_name <> ''"
+                    )
+                )
+                return {row.name: row.display_name for row in result.fetchall()}
+        except Exception as e:
+            print(f"Warning: Could not fetch store display names: {e}")
+            return {}
 
     async def _get_store_filters(self) -> Dict[str, List[str]]:
         """
@@ -192,11 +207,14 @@ class SQLGenerator:
             if session_id:
                 conversation_context = get_conversation_context(session_id)
 
-            # Get store filters from database
-            store_filters = await self._get_store_filters()
+            # Get store filters and display names from database
+            store_filters, display_names = await asyncio.gather(
+                self._get_store_filters(),
+                self._get_display_names(),
+            )
 
             # Build the prompt
-            prompt = self._build_prompt(processed_question, previous_error, conversation_context, store_filters)
+            prompt = self._build_prompt(processed_question, previous_error, conversation_context, store_filters, display_names)
 
             # Call Claude API with timeout
             response = await asyncio.wait_for(
@@ -254,7 +272,8 @@ class SQLGenerator:
         user_question: str,
         previous_error: Optional[str] = None,
         conversation_context: str = "",
-        store_filters: Optional[Dict[str, List[str]]] = None
+        store_filters: Optional[Dict[str, List[str]]] = None,
+        display_names: Optional[Dict[str, str]] = None,
     ) -> str:
         """Build the prompt for Claude"""
 
@@ -293,6 +312,18 @@ class SQLGenerator:
 - EXCEPTION: If the user explicitly asks for a specific store (e.g., "Rockwell sales") or says "all stores", use their specification instead.
 """
 
+        # Build display name context — tells Claude to use friendly names in text responses
+        display_name_rules = ""
+        if display_names:
+            mapping_lines = "\n".join(
+                f"  - DB name '{db}' → refer to it as '{disp}'"
+                for db, disp in display_names.items()
+            )
+            display_name_rules = f"""
+**STORE DISPLAY NAMES** (use these in your response text only — SQL must still use the DB name):
+{mapping_lines}
+"""
+
         # Build retry context if this is a retry
         retry_context = ""
         if previous_error:
@@ -318,6 +349,7 @@ Please fix the issue and generate a corrected query.
 - All timestamps are in {self.business_rules.get('date_defaults', {}).get('timezone', 'Asia/Manila')} timezone
 {store_filter_rules}
 
+{display_name_rules}
 **Required Filters:**
 {filter_rules}
 

@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useDashboardStore } from '../../stores/dashboardStore';
-import { getStoreColor } from '../../constants/colors';
 
 export const StoreSelector: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,6 +14,7 @@ export const StoreSelector: React.FC = () => {
   const selectAllStores = useDashboardStore((state) => state.selectAllStores);
   const setStores = useDashboardStore((state) => state.setStores);
   const getStoreName = useDashboardStore((state) => state.getStoreName);
+  const getStoreColorById = useDashboardStore((state) => state.getStoreColorById);
 
   // Fetch stores on mount
   useEffect(() => {
@@ -94,7 +94,7 @@ export const StoreSelector: React.FC = () => {
           {/* Individual Stores */}
           {stores.map((store) => {
             const isSelected = selectedStores.includes(store.id);
-            const color = getStoreColor(store.name);
+            const color = getStoreColorById(store.id);
 
             return (
               <label

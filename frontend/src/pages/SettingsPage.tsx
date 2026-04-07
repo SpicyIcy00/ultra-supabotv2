@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { RefreshCw, Store, Plus, X, Save, Pencil, RotateCcw } from 'lucide-react';
 import axios from 'axios';
 import { getStoreFilters, updateStoreFilters, getAvailableStores } from '../services/storeFiltersApi';
+import { updateStoreAppearance } from '../services/storesApi';
 import type { StoreFilterConfig } from '../types/storeFilters';
 import { useDashboardStore } from '../stores/dashboardStore';
 
@@ -423,54 +424,80 @@ const DashboardStoreDefaults: React.FC = () => {
   );
 };
 
-// ── Store Display Names ────────────────────────────────────────────────────
+// ── Store Display Names & Colors ───────────────────────────────────────────
+type StoreDraft = { display_name: string; color: string };
+
 const StoreDisplayNames: React.FC = () => {
-  const { stores, storeDisplayNames, setStoreDisplayName, clearStoreDisplayName, fetchStores } =
-    useDashboardStore();
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const { stores, fetchStores } = useDashboardStore();
+  const [drafts, setDrafts] = useState<Record<string, StoreDraft>>({});
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (stores.length === 0) fetchStores();
   }, []);
 
-  // Seed drafts from persisted overrides whenever stores load
+  // Seed drafts from DB values whenever stores load/refresh
   useEffect(() => {
     if (stores.length > 0) {
-      const initial: Record<string, string> = {};
+      const initial: Record<string, StoreDraft> = {};
       stores.forEach(s => {
-        initial[s.id] = storeDisplayNames[s.id] ?? '';
+        initial[s.id] = {
+          display_name: s.display_name ?? '',
+          color: s.color ?? '#00d2ff',
+        };
       });
       setDrafts(initial);
     }
   }, [stores.length]);
 
-  const handleChange = (storeId: string, value: string) => {
-    setDrafts(prev => ({ ...prev, [storeId]: value }));
+  const handleChange = (storeId: string, field: keyof StoreDraft, value: string) => {
+    setDrafts(prev => ({ ...prev, [storeId]: { ...prev[storeId], [field]: value } }));
   };
 
-  const handleSave = () => {
-    stores.forEach(s => {
-      const val = drafts[s.id]?.trim() ?? '';
-      if (val && val !== s.name) {
-        setStoreDisplayName(s.id, val);
-      } else {
-        clearStoreDisplayName(s.id);
-      }
-    });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await Promise.all(
+        stores.map(s => {
+          const draft = drafts[s.id];
+          if (!draft) return Promise.resolve();
+          return updateStoreAppearance(s.id, {
+            display_name: draft.display_name.trim() || null,
+            color: draft.color || null,
+          });
+        })
+      );
+      // Refresh store list so Zustand picks up the new display_name/color from DB
+      await fetchStores();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || e?.message || 'Failed to save');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleReset = (storeId: string) => {
-    clearStoreDisplayName(storeId);
-    setDrafts(prev => ({ ...prev, [storeId]: '' }));
+  const handleReset = async (storeId: string) => {
+    try {
+      await updateStoreAppearance(storeId, { display_name: null, color: null });
+      await fetchStores();
+      setDrafts(prev => ({ ...prev, [storeId]: { display_name: '', color: '#00d2ff' } }));
+    } catch (e: any) {
+      setError(e?.message || 'Failed to reset');
+    }
   };
 
   const hasChanges = stores.some(s => {
-    const draft = drafts[s.id]?.trim() ?? '';
-    const current = storeDisplayNames[s.id] ?? '';
-    return draft !== current;
+    const draft = drafts[s.id];
+    if (!draft) return false;
+    return (
+      (draft.display_name.trim() || null) !== (s.display_name || null) ||
+      (draft.color || null) !== (s.color || null)
+    );
   });
 
   if (stores.length === 0) {
@@ -487,17 +514,20 @@ const StoreDisplayNames: React.FC = () => {
       <div className="flex items-center justify-end">
         <button
           onClick={handleSave}
-          disabled={!hasChanges}
+          disabled={saving || !hasChanges}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
         >
           <Save className="w-4 h-4" />
-          {saved ? 'Saved!' : 'Save Changes'}
+          {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
         </button>
       </div>
 
+      {error && (
+        <div className="p-4 bg-red-900/30 border border-red-600/50 rounded-lg text-red-300">{error}</div>
+      )}
       {saved && (
         <div className="p-4 bg-green-900/30 border border-green-600/50 rounded-lg text-green-300">
-          Display names updated successfully!
+          Store appearances updated and saved to database!
         </div>
       )}
 
@@ -511,9 +541,8 @@ const StoreDisplayNames: React.FC = () => {
           <div className="flex-1">
             <h4 className="text-sm font-medium text-amber-300 mb-1">Display-Only — DB Names Never Change</h4>
             <p className="text-xs text-amber-200/70">
-              These overrides only affect how store names appear in the UI. All database queries, filters,
-              groupBy, and aggregations continue to use the original DB store names. The mapping is purely
-              presentational and stored locally in your browser.
+              Changes are saved to the database and apply to all users and the AI Chat.
+              All SQL queries, filters, and aggregations continue using the original DB store names.
             </p>
           </div>
         </div>
@@ -521,39 +550,51 @@ const StoreDisplayNames: React.FC = () => {
 
       <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg overflow-hidden">
         <div className="p-4 bg-[#1a1c24] border-b border-[#2e303d]">
-          <div className="grid grid-cols-[1fr_1fr_auto] gap-4 text-xs font-medium text-gray-400 uppercase tracking-wider">
+          <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-4 text-xs font-medium text-gray-400 uppercase tracking-wider">
             <span>DB Store Name (read-only)</span>
-            <span>Display Name Override</span>
+            <span>Display Name</span>
+            <span>Color</span>
             <span className="w-8" />
           </div>
         </div>
 
         <div className="divide-y divide-[#2e303d]">
           {stores.map(store => {
-            const override = storeDisplayNames[store.id];
-            const draft = drafts[store.id] ?? '';
+            const draft = drafts[store.id] ?? { display_name: '', color: '#00d2ff' };
+            const hasOverride = !!(store.display_name || store.color);
             return (
-              <div key={store.id} className="grid grid-cols-[1fr_1fr_auto] gap-4 items-center px-4 py-3">
+              <div key={store.id} className="grid grid-cols-[1fr_1fr_auto_auto] gap-4 items-center px-4 py-3">
                 {/* Raw DB name — never editable */}
-                <span className="text-gray-300 text-sm font-mono">{store.name}</span>
+                <span className="text-gray-300 text-sm font-mono truncate">{store.name}</span>
 
                 {/* Display name input */}
                 <div className="relative flex items-center">
                   <Pencil className="absolute left-3 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
                   <input
                     type="text"
-                    value={draft}
-                    onChange={e => handleChange(store.id, e.target.value)}
+                    value={draft.display_name}
+                    onChange={e => handleChange(store.id, 'display_name', e.target.value)}
                     placeholder={store.name}
                     className="w-full pl-8 pr-3 py-1.5 bg-[#0e1117] border border-[#2e303d] rounded-lg text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
                   />
                 </div>
 
-                {/* Reset button — only shown when an override exists */}
+                {/* Color picker */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={draft.color || '#00d2ff'}
+                    onChange={e => handleChange(store.id, 'color', e.target.value)}
+                    className="w-9 h-9 rounded-lg cursor-pointer bg-transparent border border-[#2e303d] p-0.5"
+                    title="Pick store color"
+                  />
+                </div>
+
+                {/* Reset button */}
                 <button
                   onClick={() => handleReset(store.id)}
-                  disabled={!override}
-                  title="Reset to DB name"
+                  disabled={!hasOverride}
+                  title="Reset to defaults"
                   className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   <RotateCcw className="w-4 h-4" />

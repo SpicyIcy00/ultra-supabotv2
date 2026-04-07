@@ -5,7 +5,9 @@ import { calculatePeriodDateRanges } from '../utils/dateCalculations';
 
 export interface StoredStore {
   id: string;
-  name: string;
+  name: string;           // raw DB name — never changed, used in all queries
+  display_name?: string | null; // UI-only label
+  color?: string | null;        // hex color e.g. '#E74C3C'
 }
 
 interface DashboardState {
@@ -27,9 +29,6 @@ interface DashboardState {
   // Calculated date ranges
   dateRanges: PeriodDateRanges;
 
-  // Display name overrides keyed by store ID (purely presentational — never affects DB queries)
-  storeDisplayNames: Record<string, string>;
-
   // Actions
   setPeriod: (period: PeriodType) => void;
   setCustomDates: (start: Date, end: Date) => void;
@@ -38,11 +37,12 @@ interface DashboardState {
   selectAllStores: () => void;
   clearStores: () => void;
   setStores: (storeIds: string[]) => void;
-  setStoreDisplayName: (storeId: string, displayName: string) => void;
-  clearStoreDisplayName: (storeId: string) => void;
+  // Display name helpers — read from store.display_name (DB), never from localStorage
   getStoreName: (storeId: string) => string;
-  // Resolve display name when only a raw DB name string is available (no ID)
   getStoreNameByDbName: (dbName: string) => string;
+  // Color helpers — read from store.color (DB), fall back to default
+  getStoreColorById: (storeId: string) => string;
+  getStoreColorByDbName: (dbName: string) => string;
 }
 
 // Specific default stores as requested
@@ -65,7 +65,6 @@ export const useDashboardStore = create<DashboardState>()(
       selectedStores: [],
       isAllStoresSelected: false, // Default to false to use specific defaults
       dateRanges: calculatePeriodDateRanges('1D'),
-      storeDisplayNames: {},
 
       // Set period and recalculate date ranges
       setPeriod: (period: PeriodType) => {
@@ -180,35 +179,28 @@ export const useDashboardStore = create<DashboardState>()(
         });
       },
 
-      // Set a display name override for a store (purely presentational — never sent to DB)
-      setStoreDisplayName: (storeId: string, displayName: string) => {
-        set(state => ({
-          storeDisplayNames: { ...state.storeDisplayNames, [storeId]: displayName.trim() },
-        }));
-      },
-
-      // Remove a display name override, reverting to the raw DB name
-      clearStoreDisplayName: (storeId: string) => {
-        set(state => {
-          const { [storeId]: _removed, ...rest } = state.storeDisplayNames;
-          return { storeDisplayNames: rest };
-        });
-      },
-
-      // Resolve a store's display name: override first, then raw DB name, then storeId fallback
+      // Resolve display name by store ID (uses store.display_name from DB, falls back to store.name)
       getStoreName: (storeId: string) => {
-        const { storeDisplayNames, stores } = get();
-        if (storeDisplayNames[storeId]) return storeDisplayNames[storeId];
-        const store = stores.find(s => s.id === storeId);
-        return store?.name ?? storeId;
+        const store = get().stores.find(s => s.id === storeId);
+        return store?.display_name || store?.name || storeId;
       },
 
-      // Resolve display name when only the raw DB name is available (no ID)
+      // Resolve display name when only the raw DB name string is available
       getStoreNameByDbName: (dbName: string) => {
-        const { storeDisplayNames, stores } = get();
-        const store = stores.find(s => s.name === dbName);
-        if (store && storeDisplayNames[store.id]) return storeDisplayNames[store.id];
-        return dbName;
+        const store = get().stores.find(s => s.name === dbName);
+        return store?.display_name || dbName;
+      },
+
+      // Resolve color by store ID (uses store.color from DB, falls back to default)
+      getStoreColorById: (storeId: string) => {
+        const store = get().stores.find(s => s.id === storeId);
+        return store?.color || '#00d2ff';
+      },
+
+      // Resolve color by raw DB name
+      getStoreColorByDbName: (dbName: string) => {
+        const store = get().stores.find(s => s.name === dbName);
+        return store?.color || '#00d2ff';
       },
     }),
     {
@@ -218,7 +210,6 @@ export const useDashboardStore = create<DashboardState>()(
         stores: state.stores,
         selectedStores: state.selectedStores,
         isAllStoresSelected: state.isAllStoresSelected,
-        storeDisplayNames: state.storeDisplayNames,
       }),
     }
   )

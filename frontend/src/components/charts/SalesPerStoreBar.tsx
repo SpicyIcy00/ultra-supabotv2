@@ -1,7 +1,7 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Download } from 'lucide-react';
-import { getStoreColor, THEME_COLORS } from '../../constants/colors';
+import { THEME_COLORS } from '../../constants/colors';
 import { formatCurrency, formatPercentage, calculatePercentageChange } from '../../utils/dateCalculations';
 import { exportChartAsImage } from '../../utils/chartExport';
 import { useChartDimensions } from '../../hooks/useChartDimensions';
@@ -25,6 +25,7 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
 }) => {
   const dims = useChartDimensions();
   const getStoreNameByDbName = useDashboardStore((state) => state.getStoreNameByDbName);
+  const getStoreColorByDbName = useDashboardStore((state) => state.getStoreColorByDbName);
 
   if (isLoading) {
     return (
@@ -55,7 +56,7 @@ export const SalesPerStoreBar: React.FC<SalesPerStoreBarProps> = ({
     .map((item) => ({
       ...item,
       display_name: getStoreNameByDbName(item.store_name),
-      color: getStoreColor(item.store_name),
+      color: getStoreColorByDbName(item.store_name),
       percentageChange: calculatePercentageChange(item.current_sales, item.previous_sales),
     }));
 

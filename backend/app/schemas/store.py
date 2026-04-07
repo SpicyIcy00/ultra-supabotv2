@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field, EmailStr, ConfigDict
 # Base schema with common fields
 class StoreBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
+    display_name: Optional[str] = Field(None, max_length=255)
+    color: Optional[str] = Field(None, max_length=20, description="Hex color e.g. #E74C3C")
     address1: Optional[str] = Field(None, max_length=255)
     address2: Optional[str] = Field(None, max_length=255)
     city: Optional[str] = Field(None, max_length=100)
@@ -25,6 +27,8 @@ class StoreCreate(StoreBase):
 # Schema for updating a store
 class StoreUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
+    display_name: Optional[str] = Field(None, max_length=255)
+    color: Optional[str] = Field(None, max_length=20)
     address1: Optional[str] = Field(None, max_length=255)
     address2: Optional[str] = Field(None, max_length=255)
     city: Optional[str] = Field(None, max_length=100)

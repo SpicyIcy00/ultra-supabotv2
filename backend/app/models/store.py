@@ -13,6 +13,8 @@ class Store(Base):
 
     # Store details
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    display_name: Mapped[Optional[str]] = mapped_column(String(255))  # UI-only label (never used in SQL)
+    color: Mapped[Optional[str]] = mapped_column(String(20))          # Hex color e.g. '#E74C3C'
     address1: Mapped[Optional[str]] = mapped_column(String(255))
     address2: Mapped[Optional[str]] = mapped_column(String(255))
     city: Mapped[Optional[str]] = mapped_column(String(100))

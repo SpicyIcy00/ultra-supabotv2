@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from datetime import datetime, timedelta
 from typing import Optional, List
+from pydantic import BaseModel
 from app.core.database import get_db
 from app.services.analytics_service import AnalyticsService
 from app.core.cache import invalidate_cache
@@ -19,15 +20,60 @@ from app.schemas.analytics import (
 )
 
 
+class StoreAppearanceUpdate(BaseModel):
+    display_name: Optional[str] = None
+    color: Optional[str] = None
+
+
 router = APIRouter(tags=["Analytics"])
 
 
 @router.get("/stores", summary="Get all stores")
 async def get_stores(db: AsyncSession = Depends(get_db)):
-    """Get all stores from database"""
-    result = await db.execute(text("SELECT id, name FROM stores ORDER BY name"))
+    """Get all stores from database including display name and color overrides"""
+    result = await db.execute(
+        text("SELECT id, name, display_name, color FROM stores ORDER BY name")
+    )
     stores = result.fetchall()
-    return [{"id": store.id, "name": store.name} for store in stores]
+    return [
+        {"id": s.id, "name": s.name, "display_name": s.display_name, "color": s.color}
+        for s in stores
+    ]
+
+
+@router.patch("/stores/{store_id}", summary="Update store display name and color")
+async def update_store_appearance(
+    store_id: str,
+    body: StoreAppearanceUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Update a store's display_name and/or color. Does not touch the DB name."""
+    result = await db.execute(
+        text("SELECT id FROM stores WHERE id = :id"), {"id": store_id}
+    )
+    if not result.fetchone():
+        raise HTTPException(status_code=404, detail="Store not found")
+
+    updates = {}
+    if body.display_name is not None:
+        updates["display_name"] = body.display_name.strip() or None
+    if body.color is not None:
+        updates["color"] = body.color.strip() or None
+
+    if updates:
+        set_clause = ", ".join(f"{k} = :{k}" for k in updates)
+        await db.execute(
+            text(f"UPDATE stores SET {set_clause} WHERE id = :id"),
+            {**updates, "id": store_id},
+        )
+        await db.commit()
+
+    result = await db.execute(
+        text("SELECT id, name, display_name, color FROM stores WHERE id = :id"),
+        {"id": store_id},
+    )
+    s = result.fetchone()
+    return {"id": s.id, "name": s.name, "display_name": s.display_name, "color": s.color}
 
 
 @router.get(

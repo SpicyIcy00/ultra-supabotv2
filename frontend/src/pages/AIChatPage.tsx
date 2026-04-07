@@ -13,7 +13,8 @@ import type { ChartState } from '../types/enhancedChart';
 const EnhancedChartRenderer = React.lazy(() =>
   import('../components/chat/EnhancedChartRenderer').then(m => ({ default: m.EnhancedChartRenderer }))
 );
-import { STORE_COLORS, CATEGORY_COLORS } from '../constants/colors';
+import { CATEGORY_COLORS } from '../constants/colors';
+import { useDashboardStore } from '../stores/dashboardStore';
 
 // Generate a unique session ID for conversation memory
 const generateSessionId = () => `session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -240,93 +241,18 @@ export default function AIChatPage() {
   );
 }
 
-// Build a lookup of all entity names to their colors (stores + categories)
-const ENTITY_COLORS: Record<string, string> = { ...STORE_COLORS, ...CATEGORY_COLORS };
-
-// Build a regex that matches any store or category name (case-insensitive, whole word)
-const entityNames = Object.keys(ENTITY_COLORS).sort((a, b) => b.length - a.length); // longest first
-const entityPattern = new RegExp(
-  `(${entityNames.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`,
-  'gi'
-);
-
-// Find the matching entity color (case-insensitive)
-function getEntityColor(name: string): string | null {
-  const entry = Object.entries(ENTITY_COLORS).find(
-    ([k]) => k.toLowerCase() === name.toLowerCase()
-  );
-  return entry ? entry[1] : null;
-}
-
-// Component that highlights store/category names with their mapped colors
-function ColoredText({ children }: { children: string }) {
-  if (!children || typeof children !== 'string') return <>{children}</>;
-
-  const parts = children.split(entityPattern);
-  if (parts.length === 1) return <>{children}</>;
-
-  return (
-    <>
-      {parts.map((part, i) => {
-        const color = getEntityColor(part);
-        if (color) {
-          return (
-            <span
-              key={i}
-              className="font-semibold px-1 rounded"
-              style={{ color, borderBottom: `2px solid ${color}` }}
-            >
-              {part}
-            </span>
-          );
-        }
-        return <span key={i}>{part}</span>;
-      })}
-    </>
-  );
-}
-
-// Custom ReactMarkdown components to inject entity color highlighting into text nodes
-const markdownComponents = {
-  p: ({ children, ...props }: any) => (
-    <p {...props}>
-      {processChildren(children)}
-    </p>
-  ),
-  li: ({ children, ...props }: any) => (
-    <li {...props}>
-      {processChildren(children)}
-    </li>
-  ),
-  strong: ({ children, ...props }: any) => (
-    <strong {...props}>
-      {processChildren(children)}
-    </strong>
-  ),
-  em: ({ children, ...props }: any) => (
-    <em {...props}>
-      {processChildren(children)}
-    </em>
-  ),
-  td: ({ children, ...props }: any) => (
-    <td {...props}>
-      {processChildren(children)}
-    </td>
-  ),
-};
-
-// Recursively process children to highlight entity names in text nodes
-function processChildren(children: React.ReactNode): React.ReactNode {
-  if (typeof children === 'string') {
-    return <ColoredText>{children}</ColoredText>;
-  }
+// Recursively process children, substituting a render function for text nodes
+function processChildren(
+  children: React.ReactNode,
+  renderText: (text: string) => React.ReactNode
+): React.ReactNode {
+  if (typeof children === 'string') return renderText(children);
   if (Array.isArray(children)) {
-    return children.map((child, i) => {
-      if (typeof child === 'string') {
-        return <ColoredText key={i}>{child}</ColoredText>;
-      }
-      return child;
-    });
+    return children.map((child, i) =>
+      typeof child === 'string'
+        ? <React.Fragment key={i}>{renderText(child)}</React.Fragment>
+        : child
+    );
   }
   return children;
 }
@@ -339,6 +265,63 @@ interface MessageBubbleProps {
 function MessageBubble({ message, onChartCustomizationChange }: MessageBubbleProps) {
   const [showSQL, setShowSQL] = useState(false);
   const [showData, setShowData] = useState(false);
+  const stores = useDashboardStore((state) => state.stores);
+
+  // Build entity maps from live store data: dbName -> { display, color }
+  const { entityMap, entityPattern } = React.useMemo(() => {
+    const map: Record<string, { display: string; color: string }> = {};
+
+    for (const store of stores) {
+      const color = store.color || '#00d2ff';
+      const display = store.display_name || store.name;
+      // Key by lowercase DB name so AI responses (which use DB names) match
+      map[store.name.toLowerCase()] = { display, color };
+      // Also key by lowercase display name in case AI uses the friendly name
+      if (store.display_name) {
+        map[store.display_name.toLowerCase()] = { display, color };
+      }
+    }
+    // Add category colors (static)
+    for (const [name, color] of Object.entries(CATEGORY_COLORS)) {
+      map[name.toLowerCase()] = { display: name, color };
+    }
+
+    const names = Object.keys(map).sort((a, b) => b.length - a.length);
+    const pattern = names.length
+      ? new RegExp(`(${names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi')
+      : null;
+
+    return { entityMap: map, entityPattern: pattern };
+  }, [stores]);
+
+  const renderText = React.useCallback((text: string): React.ReactNode => {
+    if (!entityPattern) return text;
+    const parts = text.split(entityPattern);
+    if (parts.length === 1) return text;
+    return parts.map((part, i) => {
+      const entry = entityMap[part.toLowerCase()];
+      if (entry) {
+        return (
+          <span
+            key={i}
+            className="font-semibold px-1 rounded"
+            style={{ color: entry.color, borderBottom: `2px solid ${entry.color}` }}
+          >
+            {entry.display}
+          </span>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
+  }, [entityMap, entityPattern]);
+
+  const markdownComponents = React.useMemo(() => ({
+    p: ({ children, ...props }: any) => <p {...props}>{processChildren(children, renderText)}</p>,
+    li: ({ children, ...props }: any) => <li {...props}>{processChildren(children, renderText)}</li>,
+    strong: ({ children, ...props }: any) => <strong {...props}>{processChildren(children, renderText)}</strong>,
+    em: ({ children, ...props }: any) => <em {...props}>{processChildren(children, renderText)}</em>,
+    td: ({ children, ...props }: any) => <td {...props}>{processChildren(children, renderText)}</td>,
+  }), [renderText]);
 
   if (message.role === 'user') {
     return (
