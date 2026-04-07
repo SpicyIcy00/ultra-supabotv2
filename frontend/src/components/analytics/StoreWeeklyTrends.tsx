@@ -40,7 +40,7 @@ export const StoreWeeklyTrends: React.FC<StoreWeeklyTrendsProps> = ({ storeIds, 
           totalRevenue: trend.reduce((sum: number, w: any) => sum + w.revenue, 0),
         };
       });
-  }, [data, storeIds, storesList]);
+  }, [data, storeIds, getStoreName]);
 
   // SVG sparkline generator
   const generateSparkline = (data: any[], width: number = 100, height: number = 40) => {
