@@ -4,7 +4,6 @@ import type { ExceptionsResponse, ExceptionItem } from '../../types/replenishmen
 import { useDashboardStore } from '../../stores/dashboardStore';
 
 export const ExceptionsPanel: React.FC = () => {
-  const getStoreNameByDbName = useDashboardStore((state) => state.getStoreNameByDbName);
   const [data, setData] = useState<ExceptionsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
@@ -87,6 +86,7 @@ const FilterButton: React.FC<{
 );
 
 const ExceptionRow: React.FC<{ item: ExceptionItem }> = ({ item }) => {
+  const getStoreNameByDbName = useDashboardStore((state) => state.getStoreNameByDbName);
   const typeColors: Record<string, string> = {
     warehouse_shortage: 'border-l-red-500',
     negative_stock: 'border-l-red-500',
