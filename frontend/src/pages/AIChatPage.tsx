@@ -410,7 +410,7 @@ function MessageBubble({ message, onChartCustomizationChange }: MessageBubblePro
                   </button>
                   {showData && (
                     <div className="mt-2 overflow-x-auto">
-                      <DataTable data={message.data.slice(0, 10)} />
+                      <DataTable data={message.data.slice(0, 10)} entityMap={entityMap} />
                       {message.data.length > 10 && (
                         <p className="text-xs text-gray-500 mt-2">
                           Showing first 10 of {message.row_count} rows
@@ -438,7 +438,7 @@ function MessageBubble({ message, onChartCustomizationChange }: MessageBubblePro
 // Note: ChartRenderer has been replaced with EnhancedChartRenderer component
 // which supports 15+ chart types with export, customization, and interactivity
 
-function DataTable({ data }: { data: any[] }) {
+function DataTable({ data, entityMap }: { data: any[]; entityMap: Record<string, { display: string; color: string }> }) {
   if (!data || data.length === 0) return null;
 
   const columns = Object.keys(data[0]);
@@ -485,15 +485,15 @@ function DataTable({ data }: { data: any[] }) {
     const formatted = formatCellValue(value, columnName);
     if (value === null || value === undefined) return <span>{formatted}</span>;
 
-    const color = getEntityColor(String(value));
-    if (color) {
+    const entry = entityMap[String(value).toLowerCase()];
+    if (entry) {
       return (
         <span className="flex items-center gap-1.5">
           <span
             className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
-            style={{ backgroundColor: color }}
+            style={{ backgroundColor: entry.color }}
           />
-          <span style={{ color }}>{formatted}</span>
+          <span style={{ color: entry.color }}>{entry.display}</span>
         </span>
       );
     }
