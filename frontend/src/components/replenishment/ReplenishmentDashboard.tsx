@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, Loader2 } from 'lucide-react';
+import { useDashboardStore } from '../../stores/dashboardStore';
 import {
   runReplenishment,
   getLatestPlan,
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
+  const getStoreNameByDbName = useDashboardStore((state) => state.getStoreNameByDbName);
   const [isRunning, setIsRunning] = useState(false);
   const [runResult, setRunResult] = useState<ReplenishmentRunResponse | null>(null);
   const [latestPlan, setLatestPlan] = useState<ShipmentPlanResponse | null>(null);
@@ -239,7 +241,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
               <option value="">Select a store...</option>
               {stores.map((s) => (
                 <option key={s.store_id} value={s.store_id}>
-                  {s.store_name ?? s.store_id} (Tier {s.tier})
+                  {getStoreNameByDbName(s.store_name ?? s.store_id)} (Tier {s.tier})
                 </option>
               ))}
             </select>

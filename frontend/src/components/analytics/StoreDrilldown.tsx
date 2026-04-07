@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { formatCurrency, formatNumber } from '../../utils/dateCalculations';
 import { useStoreCategories, useStoreTopProducts } from '../../hooks/useDashboardData';
+import { useDashboardStore } from '../../stores/dashboardStore';
 
 interface StoreDrilldownProps {
   stores: Array<{ id: number; name: string }>;
@@ -8,6 +9,7 @@ interface StoreDrilldownProps {
 
 export const StoreDrilldown: React.FC<StoreDrilldownProps> = ({ stores }) => {
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
+  const getStoreName = useDashboardStore((state) => state.getStoreName);
 
   const storeIdString = selectedStoreId ? String(selectedStoreId) : null;
   const categories = useStoreCategories(storeIdString);
@@ -30,7 +32,7 @@ export const StoreDrilldown: React.FC<StoreDrilldownProps> = ({ stores }) => {
           <option value="">Choose a store...</option>
           {stores.map((store) => (
             <option key={store.id} value={store.id}>
-              {store.name}
+              {getStoreName(String(store.id))}
             </option>
           ))}
         </select>

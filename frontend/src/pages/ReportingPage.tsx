@@ -3,6 +3,7 @@ import { fetchStores, fetchProductSalesReport, exportReportToCSV, postReportToSh
 import type { ProductSalesReportResponse, Store, ReportRow } from '../types/report';
 import { FileDown, Play, Loader2, Upload } from 'lucide-react';
 import { usePresetStore } from '../stores/presetStore';
+import { useDashboardStore } from '../stores/dashboardStore';
 import { PresetSelector } from '../components/PresetSelector';
 import { PresetSaveDialog } from '../components/PresetSaveDialog';
 import { ColumnVisibilityPanel } from '../components/ColumnVisibilityPanel';
@@ -24,6 +25,7 @@ type ConfigSubTab = 'store-tiers' | 'seasonality' | 'warehouse' | 'pipeline';
  * Reporting Page with tabs for Product Sales and Replenishment
  */
 const ReportingPage: React.FC = () => {
+  const getStoreName = useDashboardStore((state) => state.getStoreName);
   // Tab navigation state
   const [activeTab, setActiveTab] = useState<ReportTab>('product-sales');
   const [replenishmentSubTab, setReplenishmentSubTab] = useState<ReplenishmentSubTab>('dashboard');
@@ -403,7 +405,7 @@ const ReportingPage: React.FC = () => {
                 <option value="">Select store...</option>
                 {stores.map(store => (
                   <option key={store.id} value={store.id}>
-                    {store.name}
+                    {getStoreName(store.id)}
                   </option>
                 ))}
               </select>
@@ -427,7 +429,7 @@ const ReportingPage: React.FC = () => {
                       {compareStoreIds.length} store{compareStoreIds.length !== 1 ? 's' : ''} selected
                       {compareStoreIds.length <= 2 && (
                         <span className="text-gray-400 ml-2">
-                          ({compareStoreIds.map(id => stores.find(s => s.id === id)?.name || id).join(', ')})
+                          ({compareStoreIds.map(id => getStoreName(id)).join(', ')})
                         </span>
                       )}
                     </span>
@@ -455,7 +457,7 @@ const ReportingPage: React.FC = () => {
                             onChange={() => toggleCompareStore(store.id)}
                             className="w-4 h-4 text-blue-600 bg-gray-800 border-gray-500 rounded focus:ring-blue-500 focus:ring-2"
                           />
-                          <span className="text-sm text-white">{store.name}</span>
+                          <span className="text-sm text-white">{getStoreName(store.id)}</span>
                         </label>
                       ))}
                     </div>

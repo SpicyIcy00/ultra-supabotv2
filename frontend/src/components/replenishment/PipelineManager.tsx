@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { getPipeline, updatePipeline } from '../../services/replenishmentApi';
 import { fetchStores } from '../../services/reportApi';
 import type { PipelineItem } from '../../types/replenishment';
+import { useDashboardStore } from '../../stores/dashboardStore';
 
 export const PipelineManager: React.FC = () => {
   const [items, setItems] = useState<PipelineItem[]>([]);
   const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
+  const getStoreName = useDashboardStore((state) => state.getStoreName);
+  const getStoreNameByDbName = useDashboardStore((state) => state.getStoreNameByDbName);
   const [loading, setLoading] = useState(true);
   const [selectedStore, setSelectedStore] = useState<string>('');
   const [edits, setEdits] = useState<Record<string, number>>({});
@@ -60,7 +63,7 @@ export const PipelineManager: React.FC = () => {
           <select value={selectedStore} onChange={e => setSelectedStore(e.target.value)}
             className="bg-[#0e1117] border border-[#2e303d] rounded-lg px-3 py-1.5 text-sm text-white">
             <option value="">All Stores</option>
-            {stores.map(s => (<option key={s.id} value={s.id}>{s.name}</option>))}
+            {stores.map(s => (<option key={s.id} value={s.id}>{getStoreName(s.id)}</option>))}
           </select>
           {hasEdits && (
             <button onClick={handleSave} disabled={saving}
@@ -85,7 +88,7 @@ export const PipelineManager: React.FC = () => {
               const key = `${item.store_id}:${item.sku_id}`;
               return (
                 <tr key={key} className="hover:bg-gray-700/20">
-                  <td className="px-4 py-3 text-sm text-white">{item.store_name || item.store_id}</td>
+                  <td className="px-4 py-3 text-sm text-white">{item.store_name ? getStoreNameByDbName(item.store_name) : item.store_id}</td>
                   <td className="px-4 py-3 text-sm text-white">
                     <div>{item.product_name || item.sku_id}</div>
                     <div className="text-xs text-gray-500">{item.sku_id}</div>

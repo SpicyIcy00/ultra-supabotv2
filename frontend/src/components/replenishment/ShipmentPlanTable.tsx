@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { getLatestPlan } from '../../services/replenishmentApi';
 import { fetchStores } from '../../services/reportApi';
 import type { ShipmentPlanItem, ShipmentPlanResponse } from '../../types/replenishment';
+import { useDashboardStore } from '../../stores/dashboardStore';
 
 type SortColumn = keyof ShipmentPlanItem;
 type SortDirection = 'asc' | 'desc';
@@ -9,6 +10,8 @@ type SortDirection = 'asc' | 'desc';
 export const ShipmentPlanTable: React.FC = () => {
   const [plan, setPlan] = useState<ShipmentPlanResponse | null>(null);
   const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
+  const getStoreName = useDashboardStore((state) => state.getStoreName);
+  const getStoreNameByDbName = useDashboardStore((state) => state.getStoreNameByDbName);
   const [selectedStore, setSelectedStore] = useState<string>('');
   const [search, setSearch] = useState('');
   const [sortColumn, setSortColumn] = useState<SortColumn>('priority_score');
@@ -171,7 +174,7 @@ export const ShipmentPlanTable: React.FC = () => {
             >
               <option value="">All Stores</option>
               {stores.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
+                <option key={s.id} value={s.id}>{getStoreName(s.id)}</option>
               ))}
             </select>
           </div>
@@ -221,7 +224,7 @@ export const ShipmentPlanTable: React.FC = () => {
                     key={`${item.store_id}-${item.sku_id}-${idx}`}
                     className="hover:bg-gray-700/20"
                   >
-                    <td className="px-3 py-2.5 text-sm text-white">{item.store_name || item.store_id}</td>
+                    <td className="px-3 py-2.5 text-sm text-white">{item.store_name ? getStoreNameByDbName(item.store_name) : item.store_id}</td>
                     <td className="px-3 py-2.5 text-sm text-white">
                       <div>{item.product_name || item.sku_id}</div>
                       {item.category && (
