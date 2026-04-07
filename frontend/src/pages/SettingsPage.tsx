@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { RefreshCw, Store, Plus, X, Save, LayoutDashboard } from 'lucide-react';
+import { RefreshCw, Store, Plus, X, Save, Pencil, RotateCcw } from 'lucide-react';
 import axios from 'axios';
 import { getStoreFilters, updateStoreFilters, getAvailableStores } from '../services/storeFiltersApi';
 import type { StoreFilterConfig } from '../types/storeFilters';
 import { useDashboardStore } from '../stores/dashboardStore';
 
-type TabType = 'general' | 'store-filters' | 'dashboard-stores';
+type TabType = 'general' | 'stores';
 
 export const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('general');
@@ -33,33 +33,21 @@ export const SettingsPage: React.FC = () => {
             General
           </button>
           <button
-            onClick={() => setActiveTab('store-filters')}
+            onClick={() => setActiveTab('stores')}
             className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
-              activeTab === 'store-filters'
+              activeTab === 'stores'
                 ? 'text-white border-b-2 border-blue-500'
                 : 'text-gray-400 hover:text-white'
             }`}
           >
             <Store className="w-4 h-4" />
-            AI Chat Store Filters
-          </button>
-          <button
-            onClick={() => setActiveTab('dashboard-stores')}
-            className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
-              activeTab === 'dashboard-stores'
-                ? 'text-white border-b-2 border-blue-500'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <LayoutDashboard className="w-4 h-4" />
-            Dashboard Stores
+            Store Settings
           </button>
         </div>
 
         {/* Tab Content */}
         {activeTab === 'general' && <GeneralSettings />}
-        {activeTab === 'store-filters' && <StoreFiltersSettings />}
-        {activeTab === 'dashboard-stores' && <DashboardStoresSettings />}
+        {activeTab === 'stores' && <StoresSettings />}
       </div>
     </div>
   );
@@ -139,8 +127,52 @@ const GeneralSettings: React.FC = () => {
   );
 };
 
-// Store Filters Settings Tab
-const StoreFiltersSettings: React.FC = () => {
+// Combined Store Settings Tab
+const StoresSettings: React.FC = () => {
+  return (
+    <div className="space-y-10">
+      {/* ── Section 1: AI Chat Store Filters ── */}
+      <section>
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold text-white">AI Chat Store Filters</h2>
+          <p className="text-sm text-gray-400 mt-1">
+            Configure which stores are included in AI Chat queries by default
+          </p>
+        </div>
+        <AiChatStoreFilters />
+      </section>
+
+      <div className="border-t border-[#2e303d]" />
+
+      {/* ── Section 2: Dashboard Store Defaults ── */}
+      <section>
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold text-white">Dashboard Store Defaults</h2>
+          <p className="text-sm text-gray-400 mt-1">
+            Configure which stores are shown by default across the dashboard
+          </p>
+        </div>
+        <DashboardStoreDefaults />
+      </section>
+
+      <div className="border-t border-[#2e303d]" />
+
+      {/* ── Section 3: Store Display Names ── */}
+      <section>
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold text-white">Store Display Names</h2>
+          <p className="text-sm text-gray-400 mt-1">
+            Override how store names appear in the UI. DB names and all queries remain unchanged.
+          </p>
+        </div>
+        <StoreDisplayNames />
+      </section>
+    </div>
+  );
+};
+
+// ── AI Chat Store Filters (formerly StoreFiltersSettings tab) ──────────────
+const AiChatStoreFilters: React.FC = () => {
   const [config, setConfig] = useState<StoreFilterConfig>({ sales_stores: [], inventory_stores: [] });
   const [availableStores, setAvailableStores] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -176,11 +208,9 @@ const StoreFiltersSettings: React.FC = () => {
       setError('Both lists must have at least one store');
       return;
     }
-
     setSaving(true);
     setError(null);
     setSuccess(null);
-
     try {
       await updateStoreFilters(config);
       setSuccess('Store filters saved successfully!');
@@ -197,20 +227,13 @@ const StoreFiltersSettings: React.FC = () => {
     if (!storeName) return;
     const key = type === 'sales' ? 'sales_stores' : 'inventory_stores';
     if (config[key].includes(storeName)) return;
-
-    setConfig(prev => ({
-      ...prev,
-      [key]: [...prev[key], storeName]
-    }));
+    setConfig(prev => ({ ...prev, [key]: [...prev[key], storeName] }));
     setHasChanges(true);
   };
 
   const removeStore = (type: 'sales' | 'inventory', storeName: string) => {
     const key = type === 'sales' ? 'sales_stores' : 'inventory_stores';
-    setConfig(prev => ({
-      ...prev,
-      [key]: prev[key].filter(s => s !== storeName)
-    }));
+    setConfig(prev => ({ ...prev, [key]: prev[key].filter(s => s !== storeName) }));
     setHasChanges(true);
   };
 
@@ -221,20 +244,16 @@ const StoreFiltersSettings: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="flex items-center gap-3 text-gray-400">
-          <RefreshCw className="w-6 h-6 animate-spin" />
-          <span>Loading store filters...</span>
-        </div>
+      <div className="flex items-center gap-3 text-gray-400 py-6">
+        <RefreshCw className="w-5 h-5 animate-spin" />
+        <span>Loading store filters...</span>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header with Save Button */}
-      <div className="flex items-center justify-between">
-        <p className="text-gray-400">Configure which stores are included in AI Chat queries by default</p>
+    <div className="space-y-4">
+      <div className="flex items-center justify-end">
         <button
           onClick={handleSave}
           disabled={saving || !hasChanges}
@@ -245,7 +264,6 @@ const StoreFiltersSettings: React.FC = () => {
         </button>
       </div>
 
-      {/* Messages */}
       {error && (
         <div className="p-4 bg-red-900/30 border border-red-600/50 rounded-lg text-red-300">{error}</div>
       )}
@@ -253,7 +271,6 @@ const StoreFiltersSettings: React.FC = () => {
         <div className="p-4 bg-green-900/30 border border-green-600/50 rounded-lg text-green-300">{success}</div>
       )}
 
-      {/* Info Box */}
       <div className="p-4 bg-blue-950/20 border border-blue-900/50 rounded-lg">
         <div className="flex items-start gap-3">
           <div className="text-blue-400 mt-0.5">
@@ -281,7 +298,6 @@ const StoreFiltersSettings: React.FC = () => {
           onRemove={(store) => removeStore('sales', store)}
           color="purple"
         />
-
         <StoreFilterSection
           title="Inventory Stores"
           description="Stores included in stock and inventory queries (includes warehouse)"
@@ -296,8 +312,8 @@ const StoreFiltersSettings: React.FC = () => {
   );
 };
 
-// Dashboard Stores Settings Tab
-const DashboardStoresSettings: React.FC = () => {
+// ── Dashboard Store Defaults (formerly DashboardStoresSettings tab) ─────────
+const DashboardStoreDefaults: React.FC = () => {
   const { stores, selectedStores, setStores, fetchStores } = useDashboardStore();
   const [localSelected, setLocalSelected] = useState<string[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
@@ -307,7 +323,6 @@ const DashboardStoresSettings: React.FC = () => {
     if (stores.length === 0) fetchStores();
   }, []);
 
-  // Sync local state when store loads
   useEffect(() => {
     setLocalSelected(selectedStores);
   }, [selectedStores]);
@@ -344,20 +359,16 @@ const DashboardStoresSettings: React.FC = () => {
 
   if (stores.length === 0) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="flex items-center gap-3 text-gray-400">
-          <RefreshCw className="w-6 h-6 animate-spin" />
-          <span>Loading stores...</span>
-        </div>
+      <div className="flex items-center gap-3 text-gray-400 py-6">
+        <RefreshCw className="w-5 h-5 animate-spin" />
+        <span>Loading stores...</span>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header with Save Button */}
-      <div className="flex items-center justify-between">
-        <p className="text-gray-400">Configure which stores are shown by default across the dashboard</p>
+    <div className="space-y-4">
+      <div className="flex items-center justify-end">
         <button
           onClick={handleSave}
           disabled={!hasChanges || localSelected.length === 0}
@@ -374,7 +385,6 @@ const DashboardStoresSettings: React.FC = () => {
         </div>
       )}
 
-      {/* Info Box */}
       <div className="p-4 bg-blue-950/20 border border-blue-900/50 rounded-lg">
         <div className="flex items-start gap-3">
           <div className="text-blue-400 mt-0.5">
@@ -406,7 +416,153 @@ const DashboardStoresSettings: React.FC = () => {
   );
 };
 
-// Store Filter Section Component
+// ── Store Display Names ────────────────────────────────────────────────────
+const StoreDisplayNames: React.FC = () => {
+  const { stores, storeDisplayNames, setStoreDisplayName, clearStoreDisplayName, fetchStores } =
+    useDashboardStore();
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (stores.length === 0) fetchStores();
+  }, []);
+
+  // Seed drafts from persisted overrides whenever stores load
+  useEffect(() => {
+    if (stores.length > 0) {
+      const initial: Record<string, string> = {};
+      stores.forEach(s => {
+        initial[s.id] = storeDisplayNames[s.id] ?? '';
+      });
+      setDrafts(initial);
+    }
+  }, [stores]);
+
+  const handleChange = (storeId: string, value: string) => {
+    setDrafts(prev => ({ ...prev, [storeId]: value }));
+  };
+
+  const handleSave = () => {
+    stores.forEach(s => {
+      const val = drafts[s.id]?.trim() ?? '';
+      if (val && val !== s.name) {
+        setStoreDisplayName(s.id, val);
+      } else {
+        clearStoreDisplayName(s.id);
+      }
+    });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  };
+
+  const handleReset = (storeId: string) => {
+    const store = stores.find(s => s.id === storeId);
+    if (!store) return;
+    clearStoreDisplayName(storeId);
+    setDrafts(prev => ({ ...prev, [storeId]: '' }));
+  };
+
+  const hasChanges = stores.some(s => {
+    const draft = drafts[s.id]?.trim() ?? '';
+    const current = storeDisplayNames[s.id] ?? '';
+    return draft !== current;
+  });
+
+  if (stores.length === 0) {
+    return (
+      <div className="flex items-center gap-3 text-gray-400 py-6">
+        <RefreshCw className="w-5 h-5 animate-spin" />
+        <span>Loading stores...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-end">
+        <button
+          onClick={handleSave}
+          disabled={!hasChanges}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
+        >
+          <Save className="w-4 h-4" />
+          {saved ? 'Saved!' : 'Save Changes'}
+        </button>
+      </div>
+
+      {saved && (
+        <div className="p-4 bg-green-900/30 border border-green-600/50 rounded-lg text-green-300">
+          Display names updated successfully!
+        </div>
+      )}
+
+      <div className="p-4 bg-amber-950/20 border border-amber-900/50 rounded-lg">
+        <div className="flex items-start gap-3">
+          <div className="text-amber-400 mt-0.5">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h4 className="text-sm font-medium text-amber-300 mb-1">Display-Only — DB Names Never Change</h4>
+            <p className="text-xs text-amber-200/70">
+              These overrides only affect how store names appear in the UI. All database queries, filters,
+              groupBy, and aggregations continue to use the original DB store names. The mapping is purely
+              presentational and stored locally in your browser.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg overflow-hidden">
+        <div className="p-4 bg-[#1a1c24] border-b border-[#2e303d]">
+          <div className="grid grid-cols-[1fr_1fr_auto] gap-4 text-xs font-medium text-gray-400 uppercase tracking-wider">
+            <span>DB Store Name (read-only)</span>
+            <span>Display Name Override</span>
+            <span className="w-8" />
+          </div>
+        </div>
+
+        <div className="divide-y divide-[#2e303d]">
+          {stores.map(store => {
+            const override = storeDisplayNames[store.id];
+            const draft = drafts[store.id] ?? '';
+            return (
+              <div key={store.id} className="grid grid-cols-[1fr_1fr_auto] gap-4 items-center px-4 py-3">
+                {/* Raw DB name — never editable */}
+                <span className="text-gray-300 text-sm font-mono">{store.name}</span>
+
+                {/* Display name input */}
+                <div className="relative flex items-center">
+                  <Pencil className="absolute left-3 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={draft}
+                    onChange={e => handleChange(store.id, e.target.value)}
+                    placeholder={store.name}
+                    className="w-full pl-8 pr-3 py-1.5 bg-[#0e1117] border border-[#2e303d] rounded-lg text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                {/* Reset button — only shown when an override exists */}
+                <button
+                  onClick={() => handleReset(store.id)}
+                  disabled={!override}
+                  title="Reset to DB name"
+                  className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Shared Store Filter Section Component ──────────────────────────────────
 interface StoreFilterSectionProps {
   title: string;
   description: string;
@@ -444,7 +600,7 @@ const StoreFilterSection: React.FC<StoreFilterSectionProps> = ({
   return (
     <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg overflow-hidden">
       <div className={`p-4 ${headerBg} border-b ${borderColor}`}>
-        <h2 className="text-lg font-semibold text-white mb-1">{title}</h2>
+        <h3 className="text-base font-semibold text-white mb-1">{title}</h3>
         <p className="text-sm text-gray-400">{description}</p>
       </div>
 

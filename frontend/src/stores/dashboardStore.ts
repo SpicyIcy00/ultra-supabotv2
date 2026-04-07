@@ -27,6 +27,9 @@ interface DashboardState {
   // Calculated date ranges
   dateRanges: PeriodDateRanges;
 
+  // Display name overrides keyed by store ID (purely presentational — never affects DB queries)
+  storeDisplayNames: Record<string, string>;
+
   // Actions
   setPeriod: (period: PeriodType) => void;
   setCustomDates: (start: Date, end: Date) => void;
@@ -35,6 +38,9 @@ interface DashboardState {
   selectAllStores: () => void;
   clearStores: () => void;
   setStores: (storeIds: string[]) => void;
+  setStoreDisplayName: (storeId: string, displayName: string) => void;
+  clearStoreDisplayName: (storeId: string) => void;
+  getStoreName: (storeId: string) => string;
 }
 
 // Specific default stores as requested
@@ -57,6 +63,7 @@ export const useDashboardStore = create<DashboardState>()(
       selectedStores: [],
       isAllStoresSelected: false, // Default to false to use specific defaults
       dateRanges: calculatePeriodDateRanges('1D'),
+      storeDisplayNames: {},
 
       // Set period and recalculate date ranges
       setPeriod: (period: PeriodType) => {
@@ -170,6 +177,29 @@ export const useDashboardStore = create<DashboardState>()(
           isAllStoresSelected: isAllSelected,
         });
       },
+
+      // Set a display name override for a store (purely presentational — never sent to DB)
+      setStoreDisplayName: (storeId: string, displayName: string) => {
+        set(state => ({
+          storeDisplayNames: { ...state.storeDisplayNames, [storeId]: displayName.trim() },
+        }));
+      },
+
+      // Remove a display name override, reverting to the raw DB name
+      clearStoreDisplayName: (storeId: string) => {
+        set(state => {
+          const { [storeId]: _removed, ...rest } = state.storeDisplayNames;
+          return { storeDisplayNames: rest };
+        });
+      },
+
+      // Resolve a store's display name: override first, then raw DB name, then storeId fallback
+      getStoreName: (storeId: string) => {
+        const { storeDisplayNames, stores } = get();
+        if (storeDisplayNames[storeId]) return storeDisplayNames[storeId];
+        const store = stores.find(s => s.id === storeId);
+        return store?.name ?? storeId;
+      },
     }),
     {
       name: 'dashboard-storage', // localStorage key
@@ -178,6 +208,7 @@ export const useDashboardStore = create<DashboardState>()(
         stores: state.stores,
         selectedStores: state.selectedStores,
         isAllStoresSelected: state.isAllStoresSelected,
+        storeDisplayNames: state.storeDisplayNames,
       }),
     }
   )
