@@ -379,6 +379,9 @@ Please fix the issue and generate a corrected query.
 - "Most profitable" = ORDER BY profit
 - When ranking products, ALWAYS include both quantity and revenue columns
 - Use column names: total_quantity_sold (for quantity), total_revenue (for revenue)
+- "Available", "in stock", "have stock", "with stock" for inventory queries = WHERE i.quantity_on_hand > 0 (NEVER show zero or negative stock as "available")
+- "Out of stock", "no stock", "zero stock" = WHERE i.quantity_on_hand <= 0
+- "Low stock" = WHERE i.quantity_on_hand > 0 AND i.quantity_on_hand <= i.warning_stock
 
 **Query Optimization:**
 - Filter by dates early in WHERE clause

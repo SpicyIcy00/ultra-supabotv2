@@ -176,9 +176,13 @@ class ResponseFormatter:
         sections.append("### Summary")
         sections.append("Comparison results:")
 
-        for row in results[:5]:  # Limit to 5 items
+        display_limit = 50
+        for row in results[:display_limit]:
             item_text = self._format_comparison_item(row)
             sections.append(f"• {item_text}")
+
+        if len(results) > display_limit:
+            sections.append(f"\n*Showing {display_limit} of {len(results)} results. Refine your query to see a more specific subset.*")
 
         sections.append("")
 
@@ -287,14 +291,21 @@ class ResponseFormatter:
         sections.append(f"**Here are your {context}:**\n")
 
         sections.append("### Summary")
-        sections.append(f"Found {len(results)} result(s):")
+        question_lower = question.lower()
+        if any(w in question_lower for w in ['available', 'in stock', 'have stock', 'with stock']):
+            sections.append(f"Found **{len(results)}** product(s) with stock available:")
+        elif any(w in question_lower for w in ['out of stock', 'no stock', 'zero stock']):
+            sections.append(f"Found **{len(results)}** product(s) out of stock:")
+        else:
+            sections.append(f"Found {len(results)} result(s):")
 
-        for idx, row in enumerate(results[:5], 1):
+        display_limit = 50
+        for idx, row in enumerate(results[:display_limit], 1):
             item_text = self._format_list_item(row)
             sections.append(f"{idx}. {item_text}")
 
-        if len(results) > 5:
-            sections.append(f"... and {len(results) - 5} more")
+        if len(results) > display_limit:
+            sections.append(f"\n*Showing {display_limit} of {len(results)} results. Refine your query to see a more specific subset.*")
 
         return "\n".join(sections)
 
@@ -438,20 +449,30 @@ class ResponseFormatter:
         if name_col:
             parts.append(f"**{row[name_col]}**")
 
-        # Add numeric values
+        # Add remaining values with readable labels for known columns
+        COLUMN_LABELS = {
+            'quantity_on_hand': '{v} units in stock',
+            'warning_stock': 'warning at {v}',
+            'ideal_stock': 'ideal {v}',
+            'store_name': '{v}',
+            'store': '{v}',
+            'sku': 'SKU: {v}',
+            'barcode': 'Barcode: {v}',
+        }
+
         for key, value in row.items():
             if key == name_col:
                 continue
 
             formatted_value = self._format_value(value, key)
-            if formatted_value:
-                clean_key = key.replace('_', ' ').replace('total', '').strip()
-                if clean_key:
-                    parts.append(f"{formatted_value}")
+            if formatted_value and formatted_value != "N/A":
+                key_lower = key.lower()
+                if key_lower in COLUMN_LABELS:
+                    parts.append(COLUMN_LABELS[key_lower].replace('{v}', formatted_value))
                 else:
                     parts.append(formatted_value)
 
-        return " - ".join(parts) if parts else str(row)
+        return " — ".join(parts) if parts else str(row)
 
     def _format_comparison_item(self, row: Dict[str, Any]) -> str:
         """Format comparison row."""
