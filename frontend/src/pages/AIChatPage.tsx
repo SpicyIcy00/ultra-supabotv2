@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
-import { Send, Loader2, Code, Table as TableIcon, BarChart3 } from 'lucide-react';
+import { Send, Loader2, Code, Table as TableIcon, BarChart3, Download, ChevronDown, ChevronUp } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import type { ChatMessage } from '../types/chatbot';
 import { streamChatQuery, getSuggestions } from '../services/chatbotApi';
@@ -265,6 +265,7 @@ interface MessageBubbleProps {
 function MessageBubble({ message, onChartCustomizationChange }: MessageBubbleProps) {
   const [showSQL, setShowSQL] = useState(false);
   const [showData, setShowData] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const stores = useDashboardStore((state) => state.stores);
 
   // Build entity maps from live store data: dbName -> { display, color }
@@ -401,20 +402,57 @@ function MessageBubble({ message, onChartCustomizationChange }: MessageBubblePro
               {/* Data Table */}
               {message.data && message.data.length > 0 && (
                 <div>
-                  <button
-                    onClick={() => setShowData(!showData)}
-                    className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
-                  >
-                    <TableIcon className="w-4 h-4" />
-                    {showData ? 'Hide' : 'Show'} Raw Data ({message.row_count} rows)
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setShowData(!showData)}
+                      className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+                    >
+                      <TableIcon className="w-4 h-4" />
+                      {showData ? 'Hide' : 'Show'} Raw Data ({message.row_count} rows)
+                    </button>
+                    {showData && (
+                      <button
+                        onClick={() => {
+                          const cols = Object.keys(message.data![0]);
+                          const header = cols.join(',');
+                          const rows = message.data!.map(row =>
+                            cols.map(c => {
+                              const v = row[c];
+                              const s = v === null || v === undefined ? '' : String(v);
+                              return s.includes(',') || s.includes('"') || s.includes('\n')
+                                ? `"${s.replace(/"/g, '""')}"` : s;
+                            }).join(',')
+                          );
+                          const csv = [header, ...rows].join('\n');
+                          const blob = new Blob([csv], { type: 'text/csv' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `query_results_${Date.now()}.csv`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Download CSV
+                      </button>
+                    )}
+                  </div>
                   {showData && (
-                    <div className="mt-2 overflow-x-auto">
-                      <DataTable data={message.data.slice(0, 10)} entityMap={entityMap} />
+                    <div className="mt-2">
+                      <DataTable data={showAll ? message.data : message.data.slice(0, 10)} entityMap={entityMap} />
                       {message.data.length > 10 && (
-                        <p className="text-xs text-gray-500 mt-2">
-                          Showing first 10 of {message.row_count} rows
-                        </p>
+                        <button
+                          onClick={() => setShowAll(!showAll)}
+                          className="mt-2 flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors"
+                        >
+                          {showAll ? (
+                            <><ChevronUp className="w-3.5 h-3.5" /> Show less</>
+                          ) : (
+                            <><ChevronDown className="w-3.5 h-3.5" /> Show all {message.row_count} rows</>
+                          )}
+                        </button>
                       )}
                     </div>
                   )}
