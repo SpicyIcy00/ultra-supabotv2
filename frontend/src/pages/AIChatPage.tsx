@@ -479,7 +479,31 @@ function MessageBubble({ message, onChartCustomizationChange }: MessageBubblePro
 function DataTable({ data, entityMap }: { data: any[]; entityMap: Record<string, { display: string; color: string }> }) {
   if (!data || data.length === 0) return null;
 
-  const columns = Object.keys(data[0]);
+  const allColumns = Object.keys(data[0]);
+
+  // Separate grand-total columns (same value in every row) from regular columns.
+  // A column is treated as a "grand total" if its name starts with "grand_" OR
+  // every row has the exact same value (window-function aggregate).
+  const isConstantColumn = (col: string) => {
+    const first = data[0][col];
+    return data.every(row => row[col] === first);
+  };
+
+  const grandCols = allColumns.filter(col => col.startsWith('grand_') && isConstantColumn(col));
+  const columns = allColumns.filter(col => !grandCols.includes(col));
+
+  // Map each grand col → the best-matching regular column to place its total under.
+  // grand_total_sales → total_sales, grand_total_cost → total_cost, etc.
+  const grandTotals: Record<string, { value: any; grandCol: string }> = {};
+  for (const gc of grandCols) {
+    // Strip "grand_" prefix to find the matching detail column
+    const stripped = gc.replace(/^grand_/, '');
+    const target = columns.find(c => c === stripped) ?? columns.find(c => stripped.includes(c) || c.includes(stripped));
+    if (target) {
+      grandTotals[target] = { value: data[0][gc], grandCol: gc };
+    }
+  }
+  const hasTotalsRow = Object.keys(grandTotals).length > 0;
 
   // Columns that should be formatted as plain numbers (check these FIRST)
   const numberColumns = ['quantity', 'qty', 'count', 'units', 'stock', 'on_hand', 'items'];
@@ -560,6 +584,19 @@ function DataTable({ data, entityMap }: { data: any[]; entityMap: Record<string,
               ))}
             </tr>
           ))}
+          {hasTotalsRow && (
+            <tr className="border-t-2 border-gray-600 bg-gray-900/60 font-semibold">
+              {columns.map((col, i) => (
+                <td key={col} className="px-3 py-2 text-white">
+                  {i === 0 ? (
+                    <span className="text-gray-400 font-medium">Grand Total</span>
+                  ) : grandTotals[col] ? (
+                    formatCellValue(grandTotals[col].value, col)
+                  ) : null}
+                </td>
+              ))}
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
