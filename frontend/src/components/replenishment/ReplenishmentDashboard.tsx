@@ -395,9 +395,9 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
           {sheetsError && (
             <p className="text-xs text-red-400 mb-3">{sheetsError}</p>
           )}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
             <table className="w-full text-xs text-left">
-              <thead>
+              <thead className="sticky top-0 z-10 bg-[#1c1e26]">
                 <tr className="border-b border-[#2e303d] text-gray-400">
                   <th className="py-2 pr-3 font-medium whitespace-nowrap">Product</th>
                   <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Avg Daily</th>
