@@ -13,6 +13,7 @@ class ProductBase(BaseModel):
     price_type: Optional[str] = Field(None, max_length=50)
     unit_price: Optional[Decimal] = Field(None, ge=0, decimal_places=4)
     cost: Optional[Decimal] = Field(None, ge=0, decimal_places=4)
+    tags: Optional[str] = None
     track_stock_level: bool = True
     is_parent_product: bool = False
 
@@ -31,6 +32,7 @@ class ProductUpdate(BaseModel):
     price_type: Optional[str] = Field(None, max_length=50)
     unit_price: Optional[Decimal] = Field(None, ge=0, decimal_places=4)
     cost: Optional[Decimal] = Field(None, ge=0, decimal_places=4)
+    tags: Optional[str] = None
     track_stock_level: Optional[bool] = None
     is_parent_product: Optional[bool] = None
 

@@ -382,6 +382,7 @@ Please fix the issue and generate a corrected query.
 - "Available", "in stock", "have stock", "with stock" for inventory queries = WHERE i.quantity_on_hand > 0 (NEVER show zero or negative stock as "available")
 - "Out of stock", "no stock", "zero stock" = WHERE i.quantity_on_hand <= 0
 - "Low stock" = WHERE i.quantity_on_hand > 0 AND i.quantity_on_hand <= i.warning_stock
+- **TAGS**: The `products` table has a `tags` TEXT column. When user mentions products "with [X] tags", "tagged [X]", or "tag [X]", ALWAYS filter using `p.tags ILIKE '%X%'`. NEVER use `p.name LIKE` for tag filtering.
 
 **Query Optimization:**
 - Filter by dates early in WHERE clause

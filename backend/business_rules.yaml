@@ -34,6 +34,7 @@ schema_docs:
         - category: "Product category (e.g., 'Beverages', 'Snacks')"
         - unit_price: "Current selling price"
         - cost: "Product cost for profit calculation"
+        - tags: "Comma-separated product tags (e.g., 'Judy,Promo,New'). Filter with ILIKE '%tag%'"
       usage: "JOIN with transaction_items via product_id, inventory via product_id"
       
     new_transactions:
@@ -813,7 +814,32 @@ training:
       type: aggregate
       explanation: "Sales for the week that was 2 weeks ago"
 
-    # Example 30: Average per day/store
+    # Example 30: Filter by product tag
+    - question: "Give me the total sales and cost of all products with 'Judy' tags for last month"
+      variations:
+        - "sales of products tagged Judy"
+        - "show me products with tag Judy"
+        - "total sales for Judy tagged products"
+        - "how much did Judy products sell"
+      sql: |
+        SELECT
+            SUM(ti.item_total) AS total_sales,
+            SUM(COALESCE(p.cost, 0) * ti.quantity) AS total_cost,
+            SUM(ti.item_total - COALESCE(p.cost, 0) * ti.quantity) AS total_profit,
+            SUM(ti.quantity) AS total_quantity_sold,
+            COUNT(DISTINCT ti.product_id) AS unique_products_sold
+        FROM new_transaction_items ti
+        INNER JOIN new_transactions t ON ti.transaction_ref_id = t.ref_id
+        INNER JOIN products p ON ti.product_id = p.id
+        INNER JOIN stores s ON t.store_id = s.id
+        WHERE t.is_cancelled = false
+          AND p.tags ILIKE '%Judy%'
+          AND t.transaction_time >= DATE_TRUNC('month', CURRENT_DATE AT TIME ZONE 'Asia/Manila') - INTERVAL '1 month'
+          AND t.transaction_time < DATE_TRUNC('month', CURRENT_DATE AT TIME ZONE 'Asia/Manila');
+      type: aggregate
+      explanation: "Total sales and cost for products matching a specific tag"
+
+    # Example 31: Average per day/store
     - question: "Average daily sales per store"
       variations:
         - "daily avg by store"
@@ -883,6 +909,13 @@ negative_examples:
     correct: |
       WHERE DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') = CURRENT_DATE
     mistake: "Not converting to Asia/Manila timezone"
+
+  - description: "NEVER filter tags using p.name - use p.tags column instead"
+    wrong: |
+      WHERE UPPER(p.name) LIKE '%JUDY%'
+    correct: |
+      WHERE p.tags ILIKE '%Judy%'
+    mistake: "Filtering by product name when user asks about tags - always use p.tags ILIKE '%tag%'"
 
 # =============================================================================
 # QUERY TYPE DEFINITIONS

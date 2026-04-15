@@ -22,6 +22,9 @@ class Product(Base):
     unit_price: Mapped[Optional[float]] = mapped_column(Numeric(10, 2))
     cost: Mapped[Optional[float]] = mapped_column(Numeric(10, 2))
 
+    # Tags
+    tags: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
     # Inventory flags
     track_stock_level: Mapped[bool] = mapped_column(Boolean, default=True)
     is_parent_product: Mapped[bool] = mapped_column(Boolean, default=False)
