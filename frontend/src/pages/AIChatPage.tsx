@@ -413,17 +413,38 @@ function MessageBubble({ message, onChartCustomizationChange }: MessageBubblePro
                     {showData && (
                       <button
                         onClick={() => {
-                          const cols = Object.keys(message.data![0]);
+                          const allCols = Object.keys(message.data![0]);
+                          // Detect grand total columns (same value every row, starts with grand_)
+                          const isConstant = (col: string) => {
+                            const first = message.data![0][col];
+                            return message.data!.every(r => r[col] === first);
+                          };
+                          const grandCols = allCols.filter(c => c.startsWith('grand_') && isConstant(c));
+                          const cols = allCols.filter(c => !grandCols.includes(c));
+
+                          const escapeCell = (v: any) => {
+                            const s = v === null || v === undefined ? '' : String(v);
+                            return s.includes(',') || s.includes('"') || s.includes('\n')
+                              ? `"${s.replace(/"/g, '""')}"` : s;
+                          };
+
                           const header = cols.join(',');
-                          const rows = message.data!.map(row =>
-                            cols.map(c => {
-                              const v = row[c];
-                              const s = v === null || v === undefined ? '' : String(v);
-                              return s.includes(',') || s.includes('"') || s.includes('\n')
-                                ? `"${s.replace(/"/g, '""')}"` : s;
-                            }).join(',')
-                          );
-                          const csv = [header, ...rows].join('\n');
+                          const rows = message.data!.map(row => cols.map(c => escapeCell(row[c])).join(','));
+
+                          // Build grand total row if present
+                          const grandTotalMap: Record<string, any> = {};
+                          for (const gc of grandCols) {
+                            const stripped = gc.replace(/^grand_/, '');
+                            const target = cols.find(c => c === stripped) ?? cols.find(c => stripped.includes(c) || c.includes(stripped));
+                            if (target) grandTotalMap[target] = message.data![0][gc];
+                          }
+                          const totalRowParts = cols.map((c, i) => {
+                            if (i === 0) return grandCols.length > 0 ? 'Grand Total' : '';
+                            return grandTotalMap[c] !== undefined ? escapeCell(grandTotalMap[c]) : '';
+                          });
+                          const extraRows = grandCols.length > 0 ? [totalRowParts.join(',')] : [];
+
+                          const csv = [header, ...rows, ...extraRows].join('\n');
                           const blob = new Blob([csv], { type: 'text/csv' });
                           const url = URL.createObjectURL(blob);
                           const a = document.createElement('a');
@@ -563,12 +584,12 @@ function DataTable({ data, entityMap }: { data: any[]; entityMap: Record<string,
   };
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto overflow-y-auto max-h-96">
       <table className="min-w-full text-sm">
-        <thead className="bg-gray-900">
+        <thead className="bg-gray-900 sticky top-0 z-10">
           <tr>
             {columns.map((col) => (
-              <th key={col} className="px-3 py-2 text-left text-gray-400 font-medium">
+              <th key={col} className="px-3 py-2 text-left text-gray-400 font-medium whitespace-nowrap">
                 {col}
               </th>
             ))}
