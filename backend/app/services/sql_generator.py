@@ -93,74 +93,80 @@ class SQLGenerator:
         self.schema = SchemaContext.get_schema()
         self.business_rules = SchemaContext.get_business_rules()
 
-    async def _get_display_names(self) -> Dict[str, str]:
-        """Fetch store display name overrides from DB. Returns {db_name: display_name}."""
+    async def _get_all_store_info(self) -> Dict[str, Dict[str, str]]:
+        """
+        Fetch all stores from DB.
+
+        Returns:
+            {db_name: {'id': ..., 'display_name': ...}} for every store row.
+        """
         try:
             async with AsyncSessionLocal() as db:
                 result = await db.execute(
-                    text(
-                        "SELECT name, display_name FROM stores "
-                        "WHERE display_name IS NOT NULL AND display_name <> ''"
-                    )
+                    text("SELECT id, name, display_name FROM stores ORDER BY name")
                 )
-                return {row.name: row.display_name for row in result.fetchall()}
+                return {
+                    row.name: {
+                        'id': row.id,
+                        'display_name': row.display_name or row.name
+                    }
+                    for row in result.fetchall()
+                }
         except Exception as e:
-            print(f"Warning: Could not fetch store display names: {e}")
+            print(f"Warning: Could not fetch store info: {e}")
             return {}
 
-    async def _get_store_filters(self) -> Dict[str, List[str]]:
+    async def _get_store_filters(self) -> Dict[str, Any]:
         """
-        Fetch store filters from database.
+        Fetch store filters from database and resolve to store IDs.
 
         Returns:
-            Dictionary with 'sales_stores' and 'inventory_stores' lists.
-            Returns defaults if no filters configured.
+            Dictionary with 'sales_store_ids', 'inventory_store_ids',
+            'sales_store_names', 'inventory_store_names'.
         """
         try:
             from app.models.store_filter import StoreFilter
 
             async with AsyncSessionLocal() as db:
+                # Fetch configured filter names
                 result = await db.execute(
                     select(StoreFilter).order_by(StoreFilter.filter_type, StoreFilter.store_name)
                 )
                 filters = result.scalars().all()
 
-                store_filters = {
-                    'sales_stores': [],
-                    'inventory_stores': []
-                }
-
+                sales_names = []
+                inventory_names = []
                 for f in filters:
                     if f.filter_type == "sales":
-                        store_filters['sales_stores'].append(f.store_name)
+                        sales_names.append(f.store_name)
                     elif f.filter_type == "inventory":
-                        store_filters['inventory_stores'].append(f.store_name)
+                        inventory_names.append(f.store_name)
 
-                # Return defaults if empty (not yet initialized)
-                if not store_filters['sales_stores']:
-                    store_filters['sales_stores'] = [
-                        "Rockwell", "Greenhills", "Magnolia",
-                        "North Edsa", "Fairview", "Opus"
-                    ]
-                if not store_filters['inventory_stores']:
-                    store_filters['inventory_stores'] = [
-                        "Rockwell", "Greenhills", "Magnolia",
-                        "North Edsa", "Fairview", "Opus", "AJI BARN"
-                    ]
+                # Apply defaults if not configured
+                if not sales_names:
+                    sales_names = ["Rockwell", "Greenhills", "Magnolia", "North Edsa", "Fairview", "Opus"]
+                if not inventory_names:
+                    inventory_names = ["Rockwell", "Greenhills", "Magnolia", "North Edsa", "Fairview", "Opus", "AJI BARN"]
 
-                return store_filters
+                # Resolve names → IDs
+                store_info = await self._get_all_store_info()
+
+                sales_ids = [store_info[n]['id'] for n in sales_names if n in store_info]
+                inventory_ids = [store_info[n]['id'] for n in inventory_names if n in store_info]
+
+                return {
+                    'sales_store_ids': sales_ids,
+                    'inventory_store_ids': inventory_ids,
+                    'sales_store_names': sales_names,
+                    'inventory_store_names': inventory_names,
+                }
         except Exception as e:
-            # Fallback to defaults on any error
             print(f"Warning: Could not fetch store filters from DB: {e}")
             return {
-                'sales_stores': [
-                    "Rockwell", "Greenhills", "Magnolia",
-                    "North Edsa", "Fairview", "Opus"
-                ],
-                'inventory_stores': [
-                    "Rockwell", "Greenhills", "Magnolia",
-                    "North Edsa", "Fairview", "Opus", "AJI BARN"
-                ]
+                'sales_store_ids': [],
+                'inventory_store_ids': [],
+                'sales_store_names': ["Rockwell", "Greenhills", "Magnolia", "North Edsa", "Fairview", "Opus"],
+                'inventory_store_names': ["Rockwell", "Greenhills", "Magnolia", "North Edsa", "Fairview", "Opus", "AJI BARN"],
             }
 
     async def generate_sql(
@@ -207,14 +213,14 @@ class SQLGenerator:
             if session_id:
                 conversation_context = get_conversation_context(session_id)
 
-            # Get store filters and display names from database
-            store_filters, display_names = await asyncio.gather(
+            # Get store filters and all store info from database
+            store_filters, all_store_info = await asyncio.gather(
                 self._get_store_filters(),
-                self._get_display_names(),
+                self._get_all_store_info(),
             )
 
             # Build the prompt
-            prompt = self._build_prompt(processed_question, previous_error, conversation_context, store_filters, display_names)
+            prompt = self._build_prompt(processed_question, previous_error, conversation_context, store_filters, all_store_info)
 
             # Call Claude API with timeout
             response = await asyncio.wait_for(
@@ -272,8 +278,8 @@ class SQLGenerator:
         user_question: str,
         previous_error: Optional[str] = None,
         conversation_context: str = "",
-        store_filters: Optional[Dict[str, List[str]]] = None,
-        display_names: Optional[Dict[str, str]] = None,
+        store_filters: Optional[Dict[str, Any]] = None,
+        all_store_info: Optional[Dict[str, Dict[str, str]]] = None,
     ) -> str:
         """Build the prompt for Claude"""
 
@@ -293,35 +299,40 @@ class SQLGenerator:
             for f in default_filters
         ])
 
-        # Build store filter rules
-        store_filter_rules = ""
-        if store_filters:
-            sales_stores = store_filters.get('sales_stores', [])
-            inventory_stores = store_filters.get('inventory_stores', [])
-
-            if sales_stores or inventory_stores:
-                sales_list = ', '.join([f"'{s}'" for s in sales_stores])
-                inventory_list = ', '.join([f"'{s}'" for s in inventory_stores])
-
-                store_filter_rules = f"""
-**IMPORTANT - AUTOMATIC STORE FILTERING:**
-- For SALES/TRANSACTION queries (revenue, sales, orders, transactions): ALWAYS filter to these stores: {', '.join(sales_stores)}
-  SQL: `s.name IN ({sales_list})`
-- For INVENTORY queries (stock, on hand, warehouse): Include these stores: {', '.join(inventory_stores)}
-  SQL: `s.name IN ({inventory_list})`
-- EXCEPTION: If the user explicitly asks for a specific store (e.g., "Rockwell sales") or says "all stores", use their specification instead.
+        # Build store name → ID mapping for Claude
+        store_mapping_rules = ""
+        if all_store_info:
+            mapping_lines = "\n".join(
+                f"  - \"{name}\" → id='{info['id']}' (display: \"{info['display_name']}\")"
+                for name, info in all_store_info.items()
+            )
+            store_mapping_rules = f"""
+**STORE NAME → ID MAPPING** (ALWAYS use the store `id` in SQL — NEVER filter by `s.name`):
+{mapping_lines}
+- When user mentions a store by name or display name, look up its ID above and use `t.store_id = 'id'` or `t.store_id IN ('id1', 'id2', ...)`
+- In result output, use the display name shown above (not the raw DB name)
 """
 
-        # Build display name context — tells Claude to use friendly names in text responses
-        display_name_rules = ""
-        if display_names:
-            mapping_lines = "\n".join(
-                f"  - DB name '{db}' → refer to it as '{disp}'"
-                for db, disp in display_names.items()
-            )
-            display_name_rules = f"""
-**STORE DISPLAY NAMES** (use these in your response text only — SQL must still use the DB name):
-{mapping_lines}
+        # Build store filter rules (using IDs)
+        store_filter_rules = ""
+        if store_filters:
+            sales_ids = store_filters.get('sales_store_ids', [])
+            inventory_ids = store_filters.get('inventory_store_ids', [])
+            sales_names = store_filters.get('sales_store_names', [])
+            inventory_names = store_filters.get('inventory_store_names', [])
+
+            if sales_ids or inventory_ids:
+                sales_id_list = ', '.join([f"'{i}'" for i in sales_ids])
+                inventory_id_list = ', '.join([f"'{i}'" for i in inventory_ids])
+
+                store_filter_rules = f"""
+**IMPORTANT - AUTOMATIC STORE FILTERING (use store IDs, NOT names):**
+- For SALES/TRANSACTION queries: ALWAYS filter to these stores ({', '.join(sales_names)})
+  SQL: `t.store_id IN ({sales_id_list})`
+- For INVENTORY queries: Include these stores ({', '.join(inventory_names)})
+  SQL: `i.store_id IN ({inventory_id_list})`
+- When filtering stores, NEVER use `s.name IN (...)` — ALWAYS use `t.store_id IN (...)` or `i.store_id IN (...)`
+- EXCEPTION: If user explicitly asks for "all stores", omit the store_id filter entirely.
 """
 
         # Build retry context if this is a retry
@@ -345,11 +356,10 @@ Please fix the issue and generate a corrected query.
 ## Business Context
 
 **Store Information:**
-- 6 physical stores: {', '.join(self.business_rules.get('stores', []))}
 - All timestamps are in {self.business_rules.get('date_defaults', {}).get('timezone', 'Asia/Manila')} timezone
+{store_mapping_rules}
 {store_filter_rules}
 
-{display_name_rules}
 **Required Filters:**
 {filter_rules}
 

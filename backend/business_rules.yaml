@@ -910,6 +910,13 @@ negative_examples:
       WHERE DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') = CURRENT_DATE
     mistake: "Not converting to Asia/Manila timezone"
 
+  - description: "NEVER filter stores by s.name - always use t.store_id or i.store_id with the store ID"
+    wrong: |
+      WHERE s.name IN ('Rockwell', 'Greenhills')
+    correct: |
+      WHERE t.store_id IN ('id_rockwell', 'id_greenhills')
+    mistake: "Filtering by store name instead of store ID — use the ID from the Store Name → ID Mapping provided"
+
   - description: "NEVER filter tags using p.name - use p.tags column instead"
     wrong: |
       WHERE UPPER(p.name) LIKE '%JUDY%'
