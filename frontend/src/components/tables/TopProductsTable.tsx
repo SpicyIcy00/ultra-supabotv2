@@ -107,7 +107,7 @@ export const TopProductsTable: React.FC<TopProductsTableProps> = ({
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-[#00d2ff]">{formatCurrency(item.current_sales)}</span>
+                  <span className="text-sm font-semibold text-white">{formatCurrency(item.current_sales)}</span>
                   <span className="text-xs text-gray-400">prev: {formatCurrency(item.previous_sales)}</span>
                 </div>
               </div>
@@ -140,7 +140,7 @@ export const TopProductsTable: React.FC<TopProductsTableProps> = ({
                     <td className="py-3 px-4">
                       <span className="text-sm font-medium text-white">{item.product_name}</span>
                     </td>
-                    <td className="py-3 px-4 text-right text-sm font-semibold text-[#00d2ff]">
+                    <td className="py-3 px-4 text-right text-sm font-semibold text-white">
                       {formatCurrency(item.current_sales)}
                     </td>
                     <td className="py-3 px-4 text-right text-sm text-gray-400">

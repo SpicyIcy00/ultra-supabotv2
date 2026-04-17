@@ -124,10 +124,10 @@ export const SalesTrendLine: React.FC<SalesTrendLineProps> = ({
           <span className="hidden sm:inline">Export</span>
         </button>
       </div>
-      <ResponsiveContainer width="100%" height={dims.chartHeight}>
+      <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={chartData}
-          margin={dims.margin}
+          margin={{ ...dims.margin, bottom: granularity === 'hour' ? 70 : 10 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke={THEME_COLORS.gridLines} />
           <XAxis
@@ -136,7 +136,7 @@ export const SalesTrendLine: React.FC<SalesTrendLineProps> = ({
             tick={{ fill: THEME_COLORS.primaryText, fontSize: dims.fontSize.axis }}
             angle={granularity === 'hour' ? -45 : 0}
             textAnchor={granularity === 'hour' ? 'end' : 'middle'}
-            height={granularity === 'hour' ? 60 : 30}
+            height={granularity === 'hour' ? 70 : 30}
           />
           <YAxis
             stroke={THEME_COLORS.primaryText}
@@ -157,9 +157,9 @@ export const SalesTrendLine: React.FC<SalesTrendLineProps> = ({
             type="monotone"
             dataKey="current"
             name={periodLabel}
-            stroke={THEME_COLORS.primaryAccent}
+            stroke="#3b82f6"
             strokeWidth={2}
-            dot={{ fill: THEME_COLORS.primaryAccent, r: dims.isMobile ? 2 : 4 }}
+            dot={{ fill: '#3b82f6', r: dims.isMobile ? 2 : 4 }}
             activeDot={{ r: 6 }}
           />
           <Line

@@ -44,7 +44,7 @@ export const KPICard: React.FC<KPICardProps> = ({
         <h3 className="text-sm font-medium text-gray-400">{title}</h3>
 
         {/* Main Value */}
-        <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-blue-400 truncate">
+        <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white truncate">
           {value}
         </div>
 

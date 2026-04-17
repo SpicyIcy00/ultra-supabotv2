@@ -25,7 +25,7 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
 
   if (isLoading) {
     return (
-      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[280px] sm:h-[320px] lg:h-[350px]">
+      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[320px] sm:h-[360px] lg:h-[400px]">
         <h3 className="text-lg font-bold text-white mb-4">Sales per Hour</h3>
         <div className="flex items-center justify-center h-[280px]">
           <div className="animate-pulse text-gray-400">Loading...</div>
@@ -37,7 +37,7 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
   // Validate data is an array
   if (!data || !Array.isArray(data) || data.length === 0) {
     return (
-      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[280px] sm:h-[320px] lg:h-[350px]">
+      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[320px] sm:h-[360px] lg:h-[400px]">
         <h3 className="text-lg font-bold text-white mb-4">Sales per Hour</h3>
         <div className="flex items-center justify-center h-[280px] text-gray-400">
           No data available
@@ -69,7 +69,7 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
       return (
         <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-3 shadow-lg">
           <p className="text-white font-semibold">{data.hour_label}</p>
-          <p className="text-[#00d2ff] font-bold">{formatCurrency(data.total_sales)}</p>
+          <p className="text-white font-bold">{formatCurrency(data.total_sales)}</p>
           {isPeak && (
             <p className="text-yellow-400 text-xs mt-1">🔥 Peak Hour</p>
           )}
@@ -84,7 +84,7 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
   };
 
   return (
-    <div id="sales-per-hour-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[280px] sm:h-[320px] lg:h-[350px]">
+    <div id="sales-per-hour-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[320px] sm:h-[360px] lg:h-[400px]">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-white">Sales per Hour</h3>
         <div className="flex items-center gap-3">
@@ -101,10 +101,10 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
           </button>
         </div>
       </div>
-      <ResponsiveContainer width="100%" height={dims.chartHeight}>
+      <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={chartData}
-          margin={{ top: 5, right: dims.margin.right, left: dims.margin.left, bottom: dims.isMobile ? 40 : 60 }}
+          margin={{ top: 5, right: dims.margin.right, left: dims.margin.left, bottom: dims.isMobile ? 50 : 70 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke={THEME_COLORS.gridLines} />
           <XAxis
@@ -113,7 +113,7 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
             tick={{ fill: THEME_COLORS.primaryText, fontSize: dims.fontSize.axis }}
             angle={-45}
             textAnchor="end"
-            height={dims.isMobile ? 40 : 60}
+            height={dims.isMobile ? 50 : 70}
             interval={dims.isMobile ? 2 : 1}
           />
           <YAxis
@@ -129,7 +129,7 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
             {chartData.map((entry, index) => (
               <Cell
                 key={`cell-${index}`}
-                fill={entry.hour === peakHour.hour ? '#FFD93D' : THEME_COLORS.primaryAccent}
+                fill={entry.hour === peakHour.hour ? '#FFD93D' : '#3b82f6'}
               />
             ))}
           </Bar>
