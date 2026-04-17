@@ -80,7 +80,7 @@ export const AnalyticsPage: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 min-w-0 sm:min-w-[160px] px-4 py-3 sm:px-6 sm:py-3.5 text-left border-b-2 transition-colors ${
+              className={`flex-1 min-w-0 sm:min-w-[160px] px-4 py-3 sm:px-6 sm:py-3.5 text-left rounded-lg border-b-2 transition-colors ${
                 activeTab === tab.id
                   ? 'border-blue-500 text-blue-400 bg-blue-500/10'
                   : 'border-transparent text-gray-400 hover:text-white'

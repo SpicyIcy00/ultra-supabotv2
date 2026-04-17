@@ -25,7 +25,7 @@ export const SettingsPage: React.FC = () => {
         <div className="flex gap-1 border-b border-[#2e303d]">
           <button
             onClick={() => setActiveTab('general')}
-            className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-5 py-2.5 text-sm font-medium rounded-lg border-b-2 transition-colors ${
               activeTab === 'general'
                 ? 'border-blue-500 text-blue-400 bg-blue-500/10'
                 : 'border-transparent text-gray-400 hover:text-white'

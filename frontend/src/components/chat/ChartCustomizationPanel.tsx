@@ -334,7 +334,7 @@ export function ChartCustomizationPanel({
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex-1 px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+            className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg border-b-2 transition-colors ${
               activeTab === tab.id
                 ? 'border-blue-500 text-blue-400 bg-blue-500/10'
                 : 'border-transparent text-gray-400 hover:text-white'
