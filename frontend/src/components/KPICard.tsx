@@ -1,9 +1,7 @@
 import React from 'react';
-import { THEME_COLORS } from '../constants/colors';
 import { formatPercentage, isNewMetric } from '../utils/dateCalculations';
 
 interface KPICardProps {
-  icon: string;
   title: string;
   value: string;
   currentValue: number;
@@ -13,7 +11,6 @@ interface KPICardProps {
 }
 
 export const KPICard: React.FC<KPICardProps> = ({
-  icon,
   title,
   value,
   currentValue,
@@ -44,13 +41,10 @@ export const KPICard: React.FC<KPICardProps> = ({
     <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-5 lg:p-6 min-h-[100px] sm:min-h-[120px] lg:min-h-[140px] shadow-md hover:shadow-lg transition-shadow">
       <div className="flex flex-col h-full justify-between gap-1">
         {/* Title */}
-        <div className="flex items-center gap-2">
-          <span className="text-xl">{icon}</span>
-          <h3 className="text-sm font-medium text-gray-400">{title}</h3>
-        </div>
+        <h3 className="text-sm font-medium text-gray-400">{title}</h3>
 
         {/* Main Value */}
-        <div className="text-2xl sm:text-3xl lg:text-4xl font-bold truncate" style={{ color: THEME_COLORS.primaryAccent }}>
+        <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-blue-400 truncate">
           {value}
         </div>
 
@@ -61,12 +55,7 @@ export const KPICard: React.FC<KPICardProps> = ({
               New
             </span>
           ) : (
-            <span
-              className="text-sm font-bold whitespace-nowrap"
-              style={{
-                color: isPositive ? THEME_COLORS.positiveChange : THEME_COLORS.negativeChange,
-              }}
-            >
+            <span className={`text-sm font-bold whitespace-nowrap ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
               {formatPercentage(percentageChange)}
             </span>
           )}

@@ -73,8 +73,7 @@ export const Dashboard: React.FC = () => {
         {/* ROW 2: KPI CARDS */}
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           <KPICard
-            icon=""
-            title="Total Sales"
+title="Total Sales"
             value={kpiData ? formatCurrency(kpiData.current.total_sales) : '₱0'}
             currentValue={kpiData?.current.total_sales || 0}
             previousValue={kpiData?.previous.total_sales || 0}
@@ -82,8 +81,7 @@ export const Dashboard: React.FC = () => {
             isLoading={isLoading}
           />
           <KPICard
-            icon=""
-            title="Total Profit"
+title="Total Profit"
             value={kpiData ? formatCurrency(kpiData.current.total_profit) : '₱0'}
             currentValue={kpiData?.current.total_profit || 0}
             previousValue={kpiData?.previous.total_profit || 0}
@@ -91,8 +89,7 @@ export const Dashboard: React.FC = () => {
             isLoading={isLoading}
           />
           <KPICard
-            icon=""
-            title="Transactions"
+title="Transactions"
             value={kpiData ? formatNumber(kpiData.current.transactions) : '0'}
             currentValue={kpiData?.current.transactions || 0}
             previousValue={kpiData?.previous.transactions || 0}
@@ -100,8 +97,7 @@ export const Dashboard: React.FC = () => {
             isLoading={isLoading}
           />
           <KPICard
-            icon=""
-            title="Avg Transaction Value"
+title="Avg Transaction Value"
             value={kpiData ? formatCurrency(kpiData.current.avg_transaction_value) : '₱0'}
             currentValue={kpiData?.current.avg_transaction_value || 0}
             previousValue={kpiData?.previous.avg_transaction_value || 0}
