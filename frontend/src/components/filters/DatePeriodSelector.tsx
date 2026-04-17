@@ -115,13 +115,11 @@ export const DatePeriodSelector: React.FC<DatePeriodSelectorProps> = ({
             <button
               key={period.value}
               onClick={() => handlePeriodClick(period.value)}
-              className={`
-                px-3 py-2 sm:px-6 sm:py-3 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200
-                ${selectedPeriod === period.value
-                  ? 'bg-gradient-to-r from-[#00d2ff] to-[#3a47d5] text-white shadow-lg'
-                  : 'bg-[#1c1e26] text-white hover:bg-[#2e303d]'
-                }
-              `}
+              className={`px-3 py-2 sm:px-6 sm:py-3 rounded-lg font-semibold text-xs sm:text-sm border-b-2 transition-colors ${
+                selectedPeriod === period.value
+                  ? 'border-blue-500 text-blue-400 bg-blue-500/10'
+                  : 'border-transparent text-gray-400 hover:text-white'
+              }`}
               title={getPeriodLabel(period.value)}
             >
               <div className="flex flex-col items-center gap-0.5">
