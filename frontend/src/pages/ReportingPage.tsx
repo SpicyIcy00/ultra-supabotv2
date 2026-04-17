@@ -258,7 +258,7 @@ const ReportingPage: React.FC = () => {
       return (
         <div className="space-y-4">
           {/* Config sub-tabs */}
-          <div className="flex gap-1 bg-[#1c1e26] border border-[#2e303d] rounded-lg p-1">
+          <div className="flex gap-1 border-b border-[#2e303d]">
             {([
               { key: 'store-tiers' as ConfigSubTab, label: 'Store Tiers' },
               { key: 'seasonality' as ConfigSubTab, label: 'Seasonality' },
@@ -266,10 +266,10 @@ const ReportingPage: React.FC = () => {
               { key: 'pipeline' as ConfigSubTab, label: 'Pipeline (On-Order)' },
             ]).map(tab => (
               <button key={tab.key} onClick={() => setConfigSubTab(tab.key)}
-                className={`px-4 py-2 text-sm rounded-md transition-colors ${
+                className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                   configSubTab === tab.key
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                    ? 'border-blue-500 text-blue-400 bg-blue-500/10'
+                    : 'border-transparent text-gray-400 hover:text-white'
                 }`}>
                 {tab.label}
               </button>
@@ -295,20 +295,20 @@ const ReportingPage: React.FC = () => {
         </div>
 
         {/* Main Tab Navigation */}
-        <div className="flex gap-1 bg-[#1c1e26] border border-[#2e303d] rounded-lg p-1 mb-6">
+        <div className="flex gap-1 mb-6 border-b border-[#2e303d]">
           <button onClick={() => setActiveTab('product-sales')}
-            className={`px-5 py-2.5 text-sm font-medium rounded-md transition-colors ${
+            className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'product-sales'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                ? 'border-blue-500 text-blue-400 bg-blue-500/10'
+                : 'border-transparent text-gray-400 hover:text-white'
             }`}>
             Product Sales
           </button>
           <button onClick={() => setActiveTab('replenishment')}
-            className={`px-5 py-2.5 text-sm font-medium rounded-md transition-colors ${
+            className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'replenishment'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                ? 'border-blue-500 text-blue-400 bg-blue-500/10'
+                : 'border-transparent text-gray-400 hover:text-white'
             }`}>
             Replenishment
           </button>
@@ -318,7 +318,7 @@ const ReportingPage: React.FC = () => {
         {activeTab === 'replenishment' && (
           <div className="space-y-4">
             {/* Replenishment Sub-tabs */}
-            <div className="flex gap-1 bg-[#1c1e26] border border-[#2e303d] rounded-lg p-1">
+            <div className="flex gap-1 border-b border-[#2e303d]">
               {([
                 { key: 'dashboard' as ReplenishmentSubTab, label: 'Dashboard' },
                 { key: 'shipment-plan' as ReplenishmentSubTab, label: 'Shipment Plan' },
@@ -327,10 +327,10 @@ const ReportingPage: React.FC = () => {
                 { key: 'configuration' as ReplenishmentSubTab, label: 'Configuration' },
               ]).map(tab => (
                 <button key={tab.key} onClick={() => setReplenishmentSubTab(tab.key)}
-                  className={`px-4 py-2 text-sm rounded-md transition-colors ${
+                  className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                     replenishmentSubTab === tab.key
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                      ? 'border-blue-500 text-blue-400 bg-blue-500/10'
+                      : 'border-transparent text-gray-400 hover:text-white'
                   }`}>
                   {tab.label}
                 </button>

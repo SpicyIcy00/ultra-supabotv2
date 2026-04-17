@@ -325,7 +325,7 @@ export function ChartCustomizationPanel({
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-[#0e1117] border-b border-[#2e303d] p-1 flex-shrink-0">
+      <div className="flex border-b border-[#2e303d] flex-shrink-0">
         {[
           { id: 'type', label: 'Chart Type' },
           { id: 'data', label: 'Data' },
@@ -334,10 +334,10 @@ export function ChartCustomizationPanel({
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            className={`flex-1 px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
               activeTab === tab.id
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-[#2e303d]'
+                ? 'border-blue-500 text-blue-400 bg-blue-500/10'
+                : 'border-transparent text-gray-400 hover:text-white'
             }`}
           >
             {tab.label}

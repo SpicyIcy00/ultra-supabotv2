@@ -75,19 +75,19 @@ export const AnalyticsPage: React.FC = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-[#1c1e26] border border-[#2e303d] rounded-lg p-1 overflow-x-auto">
+        <div className="flex overflow-x-auto border-b border-[#2e303d]">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 min-w-0 sm:min-w-[160px] px-3 py-2 sm:px-4 sm:py-2.5 text-left rounded-md transition-colors ${
+              className={`flex-1 min-w-0 sm:min-w-[160px] px-4 py-3 sm:px-6 sm:py-3.5 text-left border-b-2 transition-colors ${
                 activeTab === tab.id
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-[#2e303d]'
+                  ? 'border-blue-500 text-blue-400 bg-blue-500/10'
+                  : 'border-transparent text-gray-400 hover:text-white'
               }`}
             >
               <div className="font-medium text-xs sm:text-sm">{tab.label}</div>
-              <div className={`text-xs mt-0.5 hidden sm:block ${activeTab === tab.id ? 'text-blue-200' : 'text-gray-500'}`}>{tab.description}</div>
+              <div className={`text-xs mt-0.5 hidden sm:block ${activeTab === tab.id ? 'text-blue-300' : 'text-gray-500'}`}>{tab.description}</div>
             </button>
           ))}
         </div>
