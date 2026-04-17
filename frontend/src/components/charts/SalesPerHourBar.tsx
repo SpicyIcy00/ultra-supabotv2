@@ -84,8 +84,8 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
   };
 
   return (
-    <div id="sales-per-hour-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[320px] sm:h-[360px] lg:h-[400px]">
-      <div className="flex items-center justify-between mb-4">
+    <div id="sales-per-hour-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 flex flex-col h-[320px] sm:h-[360px] lg:h-[400px]">
+      <div className="flex items-center justify-between mb-4 shrink-0">
         <h3 className="text-lg font-bold text-white">Sales per Hour</h3>
         <div className="flex items-center gap-3">
           <div className="text-xs text-gray-400">
@@ -101,6 +101,7 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
           </button>
         </div>
       </div>
+      <div className="flex-1 min-h-0">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={chartData}
@@ -135,6 +136,7 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+      </div>
     </div>
   );
 };

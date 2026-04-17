@@ -112,8 +112,8 @@ export const SalesTrendLine: React.FC<SalesTrendLineProps> = ({
   };
 
   return (
-    <div id="sales-trend-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[280px] sm:h-[320px] lg:h-[350px]">
-      <div className="flex justify-between items-center mb-4">
+    <div id="sales-trend-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 flex flex-col h-[280px] sm:h-[320px] lg:h-[350px]">
+      <div className="flex justify-between items-center mb-4 shrink-0">
         <h3 className="text-sm sm:text-lg font-bold text-white">Sales Trend - Current vs Previous Period</h3>
         <button
           onClick={handleExport}
@@ -124,6 +124,7 @@ export const SalesTrendLine: React.FC<SalesTrendLineProps> = ({
           <span className="hidden sm:inline">Export</span>
         </button>
       </div>
+      <div className="flex-1 min-h-0">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={chartData}
@@ -174,6 +175,7 @@ export const SalesTrendLine: React.FC<SalesTrendLineProps> = ({
           />
         </LineChart>
       </ResponsiveContainer>
+      </div>
     </div>
   );
 };
