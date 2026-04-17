@@ -11,19 +11,19 @@ export const STORE_COLORS: Record<string, string> = {
 };
 
 export const CATEGORY_COLORS: Record<string, string> = {
-  'n/a': '#6D8299', // Cool Gray
-  'aji mix': '#00C9FF', // Neon Cyan
-  bev: '#2D98DA', // Sky Blue
-  ccp: '#FF6B6B', // Bright Coral
-  choco: '#E84118', // Deep Red
-  indi: '#92FE9D', // Mint Green
-  mint: '#38ADA9', // Aqua Teal
-  nuts: '#FF9F43', // Sunset Orange
-  oceana: '#1E90FF', // Vibrant Blue
-  'per gram': '#C65DFF', // Electric Purple
-  seasonal: '#B33771', // Magenta Pink
-  toys: '#FFD93D', // Vivid Yellow
-  tradsnax: '#009432', // Emerald Green
+  'n/a': '#64748b', // Slate
+  'aji mix': '#38bdf8', // Sky Blue
+  bev: '#2dd4bf', // Teal
+  ccp: '#f87171', // Coral
+  choco: '#fb923c', // Orange
+  indi: '#34d399', // Emerald
+  mint: '#67e8f9', // Cyan
+  nuts: '#fbbf24', // Amber
+  oceana: '#60a5fa', // Blue
+  'per gram': '#c084fc', // Violet
+  seasonal: '#f472b6', // Pink
+  toys: '#facc15', // Yellow
+  tradsnax: '#4ade80', // Green
 };
 
 // Theme colors
