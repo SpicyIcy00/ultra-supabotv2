@@ -508,15 +508,15 @@ const BarcodePage: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-gray-800">
+      <div className="flex gap-1 bg-[#1c1e26] border border-[#2e303d] rounded-lg p-1 w-fit mb-6">
         {(['generate', 'database'] as Tab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-5 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
               activeTab === tab
-                ? 'border-blue-500 text-blue-400 bg-blue-500/10'
-                : 'border-transparent text-gray-400 hover:text-white'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-400 hover:text-white hover:bg-[#2e303d]'
             }`}
           >
             {tab === 'generate' ? 'Generate Barcodes' : `Barcode Database${records.length > 0 ? ` (${records.length})` : ''}`}
