@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Upload, Loader2 } from 'lucide-react';
+import { SingleDatePicker } from '../filters/SingleDatePicker';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import {
   runReplenishment,
@@ -40,6 +41,9 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const [applyStockoutBuffer, setApplyStockoutBuffer] = useState(true);
   const [customStartEnabled, setCustomStartEnabled] = useState(false);
   const [salesStartDate, setSalesStartDate] = useState<string>('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [pendingDate, setPendingDate] = useState<Date | null>(null);
+  const datePickerRef = useRef<HTMLDivElement>(null);
   const [postingToSheets, setPostingToSheets] = useState(false);
   const [sheetsSuccess, setSheetsSuccess] = useState<string | null>(null);
   const [sheetsError, setSheetsError] = useState<string | null>(null);
@@ -48,6 +52,16 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
     loadInitialData();
     fetchStores();
   }, [fetchStores]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (datePickerRef.current && !datePickerRef.current.contains(e.target as Node)) {
+        setShowDatePicker(false);
+      }
+    };
+    if (showDatePicker) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDatePicker]);
 
   const loadInitialData = async () => {
     setLoading(true);
@@ -298,16 +312,37 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
               Custom sales window
             </label>
             {customStartEnabled && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500">From</span>
-                <input
-                  type="date"
-                  value={salesStartDate}
-                  max={new Date().toISOString().split('T')[0]}
-                  onChange={(e) => setSalesStartDate(e.target.value)}
-                  className="bg-[#0e1117] border border-[#2e303d] rounded-lg px-3 py-2 text-sm text-white"
-                />
+              <div className="relative flex items-center gap-2" ref={datePickerRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowDatePicker((v) => !v)}
+                  className="bg-[#0e1117] border border-[#2e303d] rounded-lg px-3 py-2 text-sm text-white hover:border-blue-500/50 transition-colors"
+                >
+                  {salesStartDate
+                    ? new Date(salesStartDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    : 'Pick start date'}
+                </button>
                 <span className="text-xs text-gray-500">→ today</span>
+                {showDatePicker && (
+                  <div className="absolute top-full left-0 mt-2 z-50">
+                    <SingleDatePicker
+                      selected={pendingDate}
+                      maxDate={new Date()}
+                      onSelect={(d) => setPendingDate(d)}
+                      onClear={() => {
+                        setPendingDate(null);
+                        setSalesStartDate('');
+                      }}
+                      onCancel={() => setShowDatePicker(false)}
+                      onApply={() => {
+                        if (pendingDate) {
+                          setSalesStartDate(pendingDate.toISOString().split('T')[0]);
+                        }
+                        setShowDatePicker(false);
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             )}
             <button
