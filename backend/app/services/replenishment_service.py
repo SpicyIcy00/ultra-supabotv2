@@ -200,10 +200,11 @@ class ReplenishmentService:
     # ----------------------------------------------------------------
 
     async def _batch_get_daily_sales_fallback(
-        self, lookback_days: int = 28, store_id: Optional[str] = None
+        self, lookback_days: int = 28, store_id: Optional[str] = None,
+        sales_start_date: Optional[date] = None,
     ) -> Dict[Tuple[str, str], List[float]]:
         """Batch fetch daily sales for store-SKU pairs (fallback mode)."""
-        cutoff = date.today() - timedelta(days=lookback_days)
+        cutoff = sales_start_date if sales_start_date is not None else date.today() - timedelta(days=lookback_days)
         store_filter = "AND t.store_id = :store_id" if store_id else ""
         query = text(f"""
             SELECT
@@ -237,10 +238,11 @@ class ReplenishmentService:
         return sales_map
 
     async def _batch_get_daily_sales_snapshot(
-        self, lookback_days: int = 28, store_id: Optional[str] = None
+        self, lookback_days: int = 28, store_id: Optional[str] = None,
+        sales_start_date: Optional[date] = None,
     ) -> Dict[Tuple[str, str], List[float]]:
         """Batch fetch daily sales for store-SKU pairs (snapshot mode)."""
-        cutoff = date.today() - timedelta(days=lookback_days)
+        cutoff = sales_start_date if sales_start_date is not None else date.today() - timedelta(days=lookback_days)
         store_filter = "AND t.store_id = :store_id" if store_id else ""
         query = text(f"""
             SELECT
@@ -284,8 +286,13 @@ class ReplenishmentService:
         store_id: Optional[str] = None,
         apply_stockout_buffer: bool = True,
         normalize_priority: bool = True,
+        sales_start_date: Optional[date] = None,
     ) -> Dict[str, Any]:
-        """Execute the replenishment calculation, optionally filtered to a single store."""
+        """Execute the replenishment calculation, optionally filtered to a single store.
+
+        sales_start_date: if provided, the sales lookback window starts from this date
+        instead of the default 28 days before today.
+        """
         if run_date is None:
             run_date = date.today()
 
@@ -343,9 +350,13 @@ class ReplenishmentService:
 
         # Batch fetch daily sales in one query
         if calc_mode == "snapshot":
-            sales_cache = await self._batch_get_daily_sales_snapshot(store_id=store_id)
+            sales_cache = await self._batch_get_daily_sales_snapshot(
+                store_id=store_id, sales_start_date=sales_start_date
+            )
         else:
-            sales_cache = await self._batch_get_daily_sales_fallback(store_id=store_id)
+            sales_cache = await self._batch_get_daily_sales_fallback(
+                store_id=store_id, sales_start_date=sales_start_date
+            )
 
         # Delete previous plans for this run_date (and store if filtered)
         delete_q = delete(ShipmentPlan).where(ShipmentPlan.run_date == run_date)

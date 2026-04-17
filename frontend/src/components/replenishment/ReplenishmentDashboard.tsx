@@ -38,6 +38,8 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
   const [hideZeroSales, setHideZeroSales] = useState(false);
   const [applyStockoutBuffer, setApplyStockoutBuffer] = useState(true);
+  const [customStartEnabled, setCustomStartEnabled] = useState(false);
+  const [salesStartDate, setSalesStartDate] = useState<string>('');
   const [postingToSheets, setPostingToSheets] = useState(false);
   const [sheetsSuccess, setSheetsSuccess] = useState<string | null>(null);
   const [sheetsError, setSheetsError] = useState<string | null>(null);
@@ -86,10 +88,19 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
       setError('Please select a store before running.');
       return;
     }
+    if (customStartEnabled && !salesStartDate) {
+      setError('Please pick a start date for the custom sales window, or uncheck it.');
+      return;
+    }
     setIsRunning(true);
     setError(null);
     try {
-      const result = await runReplenishment(undefined, selectedStoreId, applyStockoutBuffer);
+      const result = await runReplenishment(
+        undefined,
+        selectedStoreId,
+        applyStockoutBuffer,
+        customStartEnabled && salesStartDate ? salesStartDate : undefined,
+      );
       setRunResult(result);
       await loadPlanData();
       onRunComplete?.();
@@ -273,9 +284,35 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
               />
               Hide 0 daily sales
             </label>
+            {/* Custom sales window start date */}
+            <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={customStartEnabled}
+                onChange={(e) => {
+                  setCustomStartEnabled(e.target.checked);
+                  if (!e.target.checked) setSalesStartDate('');
+                }}
+                className="rounded border-[#2e303d] bg-[#0e1117] text-blue-500 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+              />
+              Custom sales window
+            </label>
+            {customStartEnabled && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">From</span>
+                <input
+                  type="date"
+                  value={salesStartDate}
+                  max={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setSalesStartDate(e.target.value)}
+                  className="bg-[#0e1117] border border-[#2e303d] text-gray-200 text-sm rounded-lg px-2 py-1.5 focus:border-blue-500 focus:outline-none"
+                />
+                <span className="text-xs text-gray-500">→ today</span>
+              </div>
+            )}
             <button
               onClick={handleRun}
-              disabled={isRunning || !selectedStoreId}
+              disabled={isRunning || !selectedStoreId || (customStartEnabled && !salesStartDate)}
               className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
             >
               {isRunning ? (
