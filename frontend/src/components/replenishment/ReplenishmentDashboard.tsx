@@ -305,7 +305,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                   value={salesStartDate}
                   max={new Date().toISOString().split('T')[0]}
                   onChange={(e) => setSalesStartDate(e.target.value)}
-                  className="bg-[#0e1117] border border-[#2e303d] text-gray-200 text-sm rounded-lg px-2 py-1.5 focus:border-blue-500 focus:outline-none"
+                  className="bg-[#0e1117] border border-[#2e303d] rounded-lg px-3 py-2 text-sm text-white"
                 />
                 <span className="text-xs text-gray-500">→ today</span>
               </div>
