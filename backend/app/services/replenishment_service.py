@@ -303,17 +303,35 @@ class ReplenishmentService:
         # Get seasonality multiplier for today
         seasonality_multiplier = await self.get_seasonality_multiplier(run_date)
 
-        # Get store-SKU combinations with inventory (products that track stock)
-        store_filter = "AND i.store_id = :store_id" if store_id else ""
-        store_sku_query = text(f"""
-            SELECT DISTINCT i.store_id, i.product_id, i.quantity_on_hand
-            FROM inventory i
-            JOIN products p ON i.product_id = p.id
-            WHERE p.track_stock_level = true
-              AND i.store_id != :wh_store_id
-              {store_filter}
-        """)
-        params: Dict[str, Any] = {"wh_store_id": WAREHOUSE_STORE_ID}
+        # Get store-SKU combinations with inventory (products that track stock).
+        # When a custom sales_start_date is given, pull on-hand from snapshots for
+        # that date so the calculation is fully grounded in that point in time.
+        if sales_start_date is not None:
+            store_filter = "AND snap.store_id = :store_id" if store_id else ""
+            store_sku_query = text(f"""
+                SELECT DISTINCT snap.store_id, snap.product_id, snap.quantity_on_hand
+                FROM inventory_snapshots snap
+                JOIN products p ON snap.product_id = p.id
+                WHERE p.track_stock_level = true
+                  AND snap.snapshot_date = :snapshot_date
+                  AND snap.store_id != :wh_store_id
+                  {store_filter}
+            """)
+            params: Dict[str, Any] = {
+                "wh_store_id": WAREHOUSE_STORE_ID,
+                "snapshot_date": sales_start_date,
+            }
+        else:
+            store_filter = "AND i.store_id = :store_id" if store_id else ""
+            store_sku_query = text(f"""
+                SELECT DISTINCT i.store_id, i.product_id, i.quantity_on_hand
+                FROM inventory i
+                JOIN products p ON i.product_id = p.id
+                WHERE p.track_stock_level = true
+                  AND i.store_id != :wh_store_id
+                  {store_filter}
+            """)
+            params: Dict[str, Any] = {"wh_store_id": WAREHOUSE_STORE_ID}
         if store_id:
             params["store_id"] = store_id
         result = await self.db.execute(store_sku_query, params)
@@ -337,14 +355,27 @@ class ReplenishmentService:
         for p in pipeline_result.scalars().all():
             pipeline_cache[(p.store_id, p.sku_id)] = p.on_order_units
 
-        # Pre-load warehouse (AJI BARN) inventory from the inventory table
+        # Pre-load warehouse (AJI BARN) inventory.
+        # Use snapshot for the selected date when a custom window is active.
         wh_cache: Dict[str, int] = {}
-        wh_query = text("""
-            SELECT product_id, quantity_on_hand
-            FROM inventory
-            WHERE store_id = :wh_store_id
-        """)
-        wh_result = await self.db.execute(wh_query, {"wh_store_id": WAREHOUSE_STORE_ID})
+        if sales_start_date is not None:
+            wh_query = text("""
+                SELECT product_id, quantity_on_hand
+                FROM inventory_snapshots
+                WHERE store_id = :wh_store_id
+                  AND snapshot_date = :snapshot_date
+            """)
+            wh_result = await self.db.execute(wh_query, {
+                "wh_store_id": WAREHOUSE_STORE_ID,
+                "snapshot_date": sales_start_date,
+            })
+        else:
+            wh_query = text("""
+                SELECT product_id, quantity_on_hand
+                FROM inventory
+                WHERE store_id = :wh_store_id
+            """)
+            wh_result = await self.db.execute(wh_query, {"wh_store_id": WAREHOUSE_STORE_ID})
         for row in wh_result.fetchall():
             wh_cache[row[0]] = int(row[1])
 
