@@ -17,8 +17,8 @@ export const SettingsPage: React.FC = () => {
       <div className="max-w-[1200px] mx-auto space-y-6">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
-          <p className="text-gray-400">Manage your dashboard preferences and data</p>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1 sm:mb-2">Settings</h1>
+          <p className="text-sm sm:text-base text-gray-400">Manage your dashboard preferences and data</p>
         </div>
 
         {/* Tabs */}

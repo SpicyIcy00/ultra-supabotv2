@@ -499,12 +499,8 @@ const BarcodePage: React.FC = () => {
 
       {/* Page header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-          Barcode Manager
-        </h1>
-        <p className="text-gray-400 text-sm mt-1">
-          Generate EAN-13 barcodes and export directly to the StoreHub Products Import Template.
-        </p>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1 sm:mb-2">Barcode Manager</h1>
+        <p className="text-sm sm:text-base text-gray-400">Generate EAN-13 barcodes and export directly to the StoreHub Products Import Template.</p>
       </div>
 
       {/* Tabs */}
