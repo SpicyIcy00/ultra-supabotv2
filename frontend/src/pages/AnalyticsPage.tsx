@@ -75,51 +75,49 @@ export const AnalyticsPage: React.FC = () => {
         </div>
 
         {/* Tabs */}
-        <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg overflow-hidden">
-          <div className="flex gap-1 p-1 overflow-x-auto border-b border-[#2e303d]">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 min-w-0 sm:min-w-[160px] px-3 py-2 sm:px-4 sm:py-2.5 text-left rounded-md transition-colors ${
-                  activeTab === tab.id
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-[#2e303d]'
-                }`}
-              >
-                <div className="font-medium text-xs sm:text-sm">{tab.label}</div>
-                <div className={`text-xs mt-0.5 hidden sm:block ${activeTab === tab.id ? 'text-blue-200' : 'text-gray-500'}`}>{tab.description}</div>
-              </button>
-            ))}
-          </div>
+        <div className="flex gap-1 bg-[#1c1e26] border border-[#2e303d] rounded-lg p-1 overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 min-w-0 sm:min-w-[160px] px-3 py-2 sm:px-4 sm:py-2.5 text-left rounded-md transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-[#2e303d]'
+              }`}
+            >
+              <div className="font-medium text-xs sm:text-sm">{tab.label}</div>
+              <div className={`text-xs mt-0.5 hidden sm:block ${activeTab === tab.id ? 'text-blue-200' : 'text-gray-500'}`}>{tab.description}</div>
+            </button>
+          ))}
+        </div>
 
-          {/* Tab Content */}
-          <div className="p-3 sm:p-4 lg:p-6">
-            {activeTab === 'store-comparison' && (
-              <StoreComparisonV2 />
-            )}
+        {/* Tab Content */}
+        <div>
+          {activeTab === 'store-comparison' && (
+            <StoreComparisonV2 />
+          )}
 
-            {activeTab === 'day-patterns' && (
-              <DayOfWeekPatterns
-                data={dayOfWeekPatterns.data?.data || []}
-                isLoading={getLoadingState()}
-              />
-            )}
+          {activeTab === 'day-patterns' && (
+            <DayOfWeekPatterns
+              data={dayOfWeekPatterns.data?.data || []}
+              isLoading={getLoadingState()}
+            />
+          )}
 
-            {activeTab === 'product-combos' && (
-              <ProductCombosTable
-                data={productCombos.data || []}
-                isLoading={getLoadingState()}
-              />
-            )}
+          {activeTab === 'product-combos' && (
+            <ProductCombosTable
+              data={productCombos.data || []}
+              isLoading={getLoadingState()}
+            />
+          )}
 
-            {activeTab === 'anomalies' && (
-              <SalesAnomaliesList
-                data={salesAnomalies.data || []}
-                isLoading={getLoadingState()}
-              />
-            )}
-          </div>
+          {activeTab === 'anomalies' && (
+            <SalesAnomaliesList
+              data={salesAnomalies.data || []}
+              isLoading={getLoadingState()}
+            />
+          )}
         </div>
 
         {/* Footer */}
