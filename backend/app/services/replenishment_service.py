@@ -450,11 +450,8 @@ class ReplenishmentService:
             # Final max: binding upper cap (most restrictive of the two)
             final_max = max(0, min(max_level, expiry_cap) if expiry_cap > 0 else max_level)
 
-            # Requested ship quantity: bring store up to min level, capped at final_max
-            requested_ship_qty = max(0, math.ceil(min_level - inventory_position))
-            if final_max > 0:
-                max_shippable = max(0, math.ceil(final_max - inventory_position))
-                requested_ship_qty = min(requested_ship_qty, max_shippable)
+            # Requested ship quantity: min_level - store on_hand
+            requested_ship_qty = max(0, math.ceil(min_level - calc_on_hand))
 
             # Stockout-day buffer (optional)
             # Predicts which day stock runs out using on_hand only, then adds a buffer
