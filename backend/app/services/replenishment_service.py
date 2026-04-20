@@ -377,7 +377,7 @@ class ReplenishmentService:
             """)
             wh_result = await self.db.execute(wh_query, {"wh_store_id": WAREHOUSE_STORE_ID})
         for row in wh_result.fetchall():
-            wh_cache[row[0]] = int(row[1])
+            wh_cache[row[0]] = max(0, int(row[1]))
 
         # Batch fetch daily sales in one query
         if calc_mode == "snapshot":
@@ -448,7 +448,7 @@ class ReplenishmentService:
             expiry_cap = season_adj_sales * tier_params["expiry_window_days"]
 
             # Final max: binding upper cap (most restrictive of the two)
-            final_max = min(max_level, expiry_cap) if expiry_cap > 0 else max_level
+            final_max = max(0, min(max_level, expiry_cap) if expiry_cap > 0 else max_level)
 
             # Requested ship quantity: bring store up to min level, capped at final_max
             requested_ship_qty = max(0, math.ceil(min_level - inventory_position))
