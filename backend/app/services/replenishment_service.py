@@ -437,9 +437,9 @@ class ReplenishmentService:
             # Treat negative on_hand as 0 for calculations (raw value kept for exception flagging)
             calc_on_hand = max(0, on_hand)
 
-            # Inventory position
+            # on_order is stored for reference but excluded from position calculation
             on_order = pipeline_cache.get((store_id, sku_id), 0)
-            inventory_position = calc_on_hand + on_order
+            inventory_position = calc_on_hand
 
             # Max level: how high we're willing to stock (configurable per tier)
             max_level = season_adj_sales * (tier_params["max_cover_days"] + LEAD_TIME_DAYS)
