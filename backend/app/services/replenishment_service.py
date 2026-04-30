@@ -120,20 +120,24 @@ class ReplenishmentService:
 
     async def update_algorithm_settings(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Upsert algorithm settings (single-row table, id=1)."""
-        result = await self.db.execute(
-            select(AlgorithmSettings).where(AlgorithmSettings.id == 1)
-        )
-        row = result.scalar_one_or_none()
-        if row:
-            for key, value in data.items():
-                if hasattr(row, key):
-                    setattr(row, key, value)
-        else:
-            row = AlgorithmSettings(id=1, **{k: v for k, v in data.items() if k != "updated_at"})
-            self.db.add(row)
-        await self.db.commit()
-        await self.db.refresh(row)
-        return await self.get_algorithm_settings()
+        try:
+            result = await self.db.execute(
+                select(AlgorithmSettings).where(AlgorithmSettings.id == 1)
+            )
+            row = result.scalar_one_or_none()
+            if row:
+                for key, value in data.items():
+                    if hasattr(row, key):
+                        setattr(row, key, value)
+            else:
+                row = AlgorithmSettings(id=1, **{k: v for k, v in data.items() if k != "updated_at"})
+                self.db.add(row)
+            await self.db.commit()
+            await self.db.refresh(row)
+            return await self.get_algorithm_settings()
+        except Exception as e:
+            await self.db.rollback()
+            raise ValueError(f"Could not save settings — migration may not have run yet: {e}") from e
 
     # ----------------------------------------------------------------
     # Daily Sales Calculation

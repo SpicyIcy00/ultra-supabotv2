@@ -226,4 +226,7 @@ async def update_algorithm_settings(
 ):
     """Update algorithm settings."""
     data = body.model_dump(exclude_unset=True)
-    return await service.update_algorithm_settings(data)
+    try:
+        return await service.update_algorithm_settings(data)
+    except ValueError as e:
+        raise HTTPException(status_code=503, detail=str(e))
