@@ -165,8 +165,9 @@ const BarcodePage: React.FC = () => {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterNoBarcodeOnly, setFilterNoBarcodeOnly] = useState(false);
 
-  // Debounce timer ref so rapid keystrokes don't spam the server
+  // Debounce timer + abort controller so rapid keystrokes cancel previous requests
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchAbortRef = useRef<AbortController | null>(null);
 
   // ── Selection ─────────────────────────────────────────────────────────────
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -189,16 +190,21 @@ const BarcodePage: React.FC = () => {
   useEffect(() => { loadProducts({}); loadCategories(); loadRecords(); }, []);
   useEffect(() => { if (activeTab === 'database') loadRecords(); }, [activeTab]);
 
-  // Re-fetch when filters change (debounced for text inputs)
+  // Re-fetch when filters change — debounced, with abort of previous in-flight request
   useEffect(() => {
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     searchDebounceRef.current = setTimeout(() => {
       loadProducts({ name: filterName, sku: filterSku, category: filterCategory, no_barcode_only: filterNoBarcodeOnly });
-    }, 350);
+    }, 400);
     return () => { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); };
   }, [filterName, filterSku, filterCategory, filterNoBarcodeOnly]);
 
   async function loadProducts(params: { name?: string; sku?: string; category?: string; no_barcode_only?: boolean }) {
+    // Cancel any previous in-flight request so stale responses never overwrite fresh ones
+    if (searchAbortRef.current) searchAbortRef.current.abort();
+    const controller = new AbortController();
+    searchAbortRef.current = controller;
+
     setProductsLoading(true);
     setProductsError(null);
     try {
@@ -207,7 +213,10 @@ const BarcodePage: React.FC = () => {
       if (params.sku) query.sku = params.sku;
       if (params.category) query.category = params.category;
       if (params.no_barcode_only) query.no_barcode_only = 'true';
-      const res = await axios.get<Product[]>('/api/v1/barcodes/products', { params: query });
+      const res = await axios.get<Product[]>('/api/v1/barcodes/products', {
+        params: query,
+        signal: controller.signal,
+      });
       if (Array.isArray(res.data)) {
         setProducts(res.data);
       } else {
@@ -215,6 +224,7 @@ const BarcodePage: React.FC = () => {
         setProducts([]);
       }
     } catch (e: any) {
+      if (axios.isCancel(e) || e?.code === 'ERR_CANCELED') return; // ignore aborted requests
       setProductsError(e?.response?.data?.detail || e.message || 'Failed to load products');
     } finally {
       setProductsLoading(false);
@@ -771,22 +781,18 @@ const BarcodePage: React.FC = () => {
           )}
 
           {/* ── Product table ────────────────────────────────────────────── */}
-          {productsLoading ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
-            </div>
-          ) : productsError ? (
+          {productsError ? (
             <div className="p-4 rounded-lg bg-red-900/40 border border-red-600/40 text-red-300 text-sm flex items-center gap-3">
               <span className="flex-1">{productsError}</span>
               <button onClick={() => loadProducts({ name: filterName, sku: filterSku, category: filterCategory, no_barcode_only: filterNoBarcodeOnly })} className="underline flex-shrink-0">Retry</button>
             </div>
-          ) : products.length === 0 && !filterName && !filterSku && !filterCategory ? (
+          ) : products.length === 0 && !filterName && !filterSku && !filterCategory && !filterNoBarcodeOnly && !productsLoading ? (
             <div className="p-4 rounded-lg bg-yellow-900/30 border border-yellow-600/40 text-yellow-300 text-sm flex items-center gap-3">
               <span className="flex-1">No products found in the database. Ensure your products table is populated from StoreHub.</span>
               <button onClick={() => loadProducts({})} className="underline flex-shrink-0">Retry</button>
             </div>
           ) : (
-            <div className="bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden">
+            <div className={`relative bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden transition-opacity ${productsLoading ? 'opacity-60 pointer-events-none' : 'opacity-100'}`}>
               {/* Column headers */}
               <div className="grid grid-cols-[40px_minmax(0,1fr)_110px_140px_minmax(120px,160px)_80px] gap-2 px-4 py-2.5 bg-gray-800/60 text-xs font-semibold text-gray-400 uppercase tracking-wide">
                 <div className="flex items-center justify-center">
