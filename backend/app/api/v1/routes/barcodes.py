@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, distinct, text
+from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
 from typing import List, Optional
 import httpx
@@ -79,6 +80,18 @@ class StoreHubProductsResponse(BaseModel):
     note: str
 
 
+class BarcodeLookupResult(BaseModel):
+    product_id: str
+    product_name: str
+    sku: Optional[str]
+    barcode: str
+    source: str  # "generated" | "storehub"
+    category: Optional[str]
+    unit_price: Optional[float]
+
+
+
+
 # ---------------------------------------------------------------------------
 # EAN-13 helpers
 # ---------------------------------------------------------------------------
@@ -142,63 +155,74 @@ async def generate_barcodes(
     if missing:
         raise HTTPException(status_code=404, detail=f"Products not found: {list(missing)}")
 
-    # Skip only products that already have a barcode confirmed in StoreHub (products.barcode)
-    # If a product only has a product_barcodes entry but no products.barcode, allow regeneration.
+    # Skip products that already have a StoreHub-confirmed barcode.
+    skipped = [pid for pid in request.product_ids if products[pid].barcode]
+    to_generate = [pid for pid in request.product_ids if not products[pid].barcode]
 
-    # Find the highest existing sequence for this prefix to avoid collisions
-    all_barcodes_result = await db.execute(
-        select(ProductBarcode.base_digits).where(
-            ProductBarcode.base_digits.like(f"{prefix}%")
+    async def _max_sequence() -> int:
+        res = await db.execute(
+            select(ProductBarcode.base_digits).where(
+                ProductBarcode.base_digits.like(f"{prefix}%")
+            )
         )
-    )
-    used_sequences = set()
-    for (bd,) in all_barcodes_result:
-        if bd and len(bd) == 12:
-            try:
-                used_sequences.add(int(bd[3:]))   # last 9 digits = sequence
-            except ValueError:
-                pass
-
-    next_seq = max(used_sequences, default=-1) + 1
+        used: set[int] = set()
+        for (bd,) in res:
+            if bd and len(bd) == 12:
+                try:
+                    used.add(int(bd[3:]))
+                except ValueError:
+                    pass
+        return max(used, default=-1)
 
     generated: List[BarcodeEntry] = []
-    skipped: List[str] = []
 
-    for product_id in request.product_ids:
-        product = products[product_id]
+    # Retry loop guards against concurrent requests colliding on the UNIQUE barcode constraint.
+    for attempt in range(5):
+        try:
+            generated = []
+            # On each retry, offset the starting sequence by the batch size so we
+            # jump past whichever values were just taken by the competing request.
+            next_seq = await _max_sequence() + 1 + attempt * len(to_generate)
 
-        # Skip if barcode is already confirmed in StoreHub
-        if product.barcode:
-            skipped.append(product_id)
-            continue
+            for product_id in to_generate:
+                product = products[product_id]
 
-        # Delete any stale product_barcodes entry so we can create a fresh one
-        stale_result = await db.execute(
-            select(ProductBarcode).where(ProductBarcode.product_id == product_id)
-        )
-        stale = stale_result.scalar_one_or_none()
-        if stale:
-            await db.delete(stale)
+                # Remove any stale product_barcodes entry before creating a fresh one.
+                stale_result = await db.execute(
+                    select(ProductBarcode).where(ProductBarcode.product_id == product_id)
+                )
+                stale = stale_result.scalar_one_or_none()
+                if stale:
+                    await db.delete(stale)
 
-        barcode_str, base = _build_ean13(prefix, next_seq)
-        next_seq += 1
+                barcode_str, base = _build_ean13(prefix, next_seq)
+                next_seq += 1
 
-        pb = ProductBarcode(
-            product_id=product_id,
-            barcode=barcode_str,
-            base_digits=base,
-        )
-        db.add(pb)
+                pb = ProductBarcode(
+                    product_id=product_id,
+                    barcode=barcode_str,
+                    base_digits=base,
+                )
+                db.add(pb)
 
-        generated.append(BarcodeEntry(
-            product_id=product_id,
-            product_name=product.name,
-            sku=product.sku,
-            barcode=barcode_str,
-            base_digits=base,
-        ))
+                generated.append(BarcodeEntry(
+                    product_id=product_id,
+                    product_name=product.name,
+                    sku=product.sku,
+                    barcode=barcode_str,
+                    base_digits=base,
+                ))
 
-    await db.commit()
+            await db.commit()
+            break  # success — exit retry loop
+
+        except IntegrityError:
+            await db.rollback()
+            if attempt == 4:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Barcode sequence collision after 5 retries — please try again",
+                )
 
     return GenerateBarcodesResponse(generated=generated, skipped=skipped)
 
@@ -246,7 +270,6 @@ async def delete_barcode(
 
 @router.get("/products", response_model=List[ProductForBarcode])
 async def list_products_for_barcode(
-    limit: int = 1000,
     db: AsyncSession = Depends(get_db),
 ):
     """Return all products (lean schema) for the barcode generator page."""
@@ -261,7 +284,7 @@ async def list_products_for_barcode(
             Product.unit_price,
             Product.cost,
             Product.track_stock_level,
-        ).order_by(Product.name).limit(limit)
+        ).order_by(Product.name)
     )
     rows = result.all()
     return [
@@ -366,6 +389,51 @@ async def process_storehub_csv(
             "X-Patched-Count": str(patched),
         },
     )
+
+
+@router.get("/lookup/{barcode}", response_model=BarcodeLookupResult)
+async def lookup_barcode(
+    barcode: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Look up a product by barcode value. Searches generated barcodes first, then StoreHub-confirmed."""
+    # Check product_barcodes (generated)
+    pb_result = await db.execute(
+        select(ProductBarcode, Product)
+        .join(Product, ProductBarcode.product_id == Product.id)
+        .where(ProductBarcode.barcode == barcode)
+    )
+    row = pb_result.first()
+    if row:
+        pb, product = row
+        return BarcodeLookupResult(
+            product_id=product.id,
+            product_name=product.name,
+            sku=product.sku,
+            barcode=barcode,
+            source="generated",
+            category=product.category,
+            unit_price=float(product.unit_price) if product.unit_price is not None else None,
+        )
+
+    # Check products.barcode (StoreHub confirmed)
+    p_result = await db.execute(
+        select(Product).where(Product.barcode == barcode)
+    )
+    product = p_result.scalar_one_or_none()
+    if product:
+        return BarcodeLookupResult(
+            product_id=product.id,
+            product_name=product.name,
+            sku=product.sku,
+            barcode=barcode,
+            source="storehub",
+            category=product.category,
+            unit_price=float(product.unit_price) if product.unit_price is not None else None,
+        )
+
+    raise HTTPException(status_code=404, detail="Barcode not found")
+
 
 
 @router.get("/storehub/products", response_model=StoreHubProductsResponse)

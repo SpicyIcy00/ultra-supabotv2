@@ -67,6 +67,22 @@ export const processStoreHubCsv = async (file: File): Promise<{ blob: Blob; patc
   return { blob: response.data as Blob, patchedCount };
 };
 
+export interface BarcodeLookupResult {
+  product_id: string;
+  product_name: string;
+  sku: string | null;
+  barcode: string;
+  source: 'generated' | 'storehub';
+  category: string | null;
+  unit_price: number | null;
+}
+
+/** Look up a product by its EAN-13 barcode value. */
+export const lookupBarcode = async (barcode: string): Promise<BarcodeLookupResult> => {
+  const response = await axios.get<BarcodeLookupResult>(`${API_V1}/barcodes/lookup/${barcode}`);
+  return response.data;
+};
+
 /**
  * Fetch products from the live StoreHub API (read-only).
  * StoreHub has no product update endpoint — barcodes must be entered manually

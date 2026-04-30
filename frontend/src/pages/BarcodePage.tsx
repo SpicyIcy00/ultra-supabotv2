@@ -133,14 +133,19 @@ function downloadCSV(content: string, filename: string) {
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────────
+type BarcodeSource = 'generated' | 'storehub' | 'confirmed' | 'conflict';
+
 interface BarcodeRow {
   key: string;
   product_id: string;
   product_name: string;
   sku: string | null;
-  barcode: string;
-  generated_at: string | null;  // null = came from products.barcode field
-  dbId: number | null;          // null = not in product_barcodes table
+  barcode: string;               // authoritative barcode to display/export
+  generated_barcode: string | null;
+  storehub_barcode: string | null;
+  source: BarcodeSource;
+  generated_at: string | null;
+  dbId: number | null;           // product_barcodes.id — null if StoreHub-only
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -184,7 +189,7 @@ const BarcodePage: React.FC = () => {
     setProductsLoading(true);
     setProductsError(null);
     try {
-      const res = await axios.get<Product[]>('/api/v1/barcodes/products', { params: { limit: 1000 } });
+      const res = await axios.get<Product[]>('/api/v1/barcodes/products');
       if (Array.isArray(res.data)) {
         setProducts(res.data);
       } else {
@@ -458,27 +463,66 @@ const BarcodePage: React.FC = () => {
   const [csvMsg, setCsvMsg] = useState<string | null>(null);
   const [sheetsMsg, setSheetsMsg] = useState<string | null>(null);
 
-  // ── product_id → barcode from products.barcode (StoreHub confirmed only) ───
+  // ── product_id → best available barcode (StoreHub confirmed first, then generated) ─
   const productBarcodeMap = useMemo(() => {
     const map = new Map<string, string>();
-    products.forEach((p) => { if (p.barcode) map.set(p.id, p.barcode); });
+    records.forEach((r) => { map.set(r.product_id, r.barcode); });          // generated (lower priority)
+    products.forEach((p) => { if (p.barcode) map.set(p.id, p.barcode); });  // StoreHub confirmed (wins)
     return map;
-  }, [products]);
+  }, [products, records]);
 
-  // ── Database tab rows: only products whose barcode is confirmed in StoreHub ─
+  // ── Unified Database tab rows: merge product_barcodes + products.barcode ──
   const allBarcodeRows = useMemo((): BarcodeRow[] => {
-    return products
-      .filter((p) => p.barcode)
-      .map((p) => ({
-        key: `sh_${p.id}`,
-        product_id: p.id,
-        product_name: p.name,
-        sku: p.sku,
-        barcode: p.barcode!,
-        generated_at: null,
-        dbId: null,
-      }));
-  }, [products]);
+    const map = new Map<string, BarcodeRow>();
+
+    // Seed with generated barcodes (product_barcodes table)
+    records.forEach((r) => {
+      map.set(r.product_id, {
+        key: `gen_${r.product_id}`,
+        product_id: r.product_id,
+        product_name: r.product_name,
+        sku: r.sku,
+        barcode: r.barcode,
+        generated_barcode: r.barcode,
+        storehub_barcode: null,
+        source: 'generated',
+        generated_at: r.generated_at,
+        dbId: r.id,
+      });
+    });
+
+    // Merge StoreHub-confirmed barcodes (products.barcode)
+    products.filter((p) => p.barcode).forEach((p) => {
+      const existing = map.get(p.id);
+      if (existing) {
+        const source: BarcodeSource =
+          existing.generated_barcode === p.barcode ? 'confirmed' : 'conflict';
+        map.set(p.id, {
+          ...existing,
+          barcode: p.barcode!,        // StoreHub value is authoritative
+          storehub_barcode: p.barcode!,
+          source,
+        });
+      } else {
+        map.set(p.id, {
+          key: `sh_${p.id}`,
+          product_id: p.id,
+          product_name: p.name,
+          sku: p.sku,
+          barcode: p.barcode!,
+          generated_barcode: null,
+          storehub_barcode: p.barcode!,
+          source: 'storehub',
+          generated_at: null,
+          dbId: null,
+        });
+      }
+    });
+
+    return Array.from(map.values()).sort((a, b) =>
+      a.product_name.localeCompare(b.product_name)
+    );
+  }, [products, records]);
 
   // ── Filtered DB records ───────────────────────────────────────────────────
   const filteredDbRecords = useMemo(() => {
@@ -515,7 +559,7 @@ const BarcodePage: React.FC = () => {
                 : 'border-transparent text-gray-400 hover:text-white'
             }`}
           >
-            {tab === 'generate' ? 'Generate Barcodes' : `Barcode Database${records.length > 0 ? ` (${records.length})` : ''}`}
+            {tab === 'generate' ? 'Generate Barcodes' : `Barcode Database${allBarcodeRows.length > 0 ? ` (${allBarcodeRows.length})` : ''}`}
           </button>
         ))}
       </div>
@@ -792,6 +836,7 @@ const BarcodePage: React.FC = () => {
                     : `${filteredProducts.length} of ${products.length} product(s) shown · ${selected.size} selected`}
                 </span>
                 <span>{productBarcodeMap.size} already have barcodes</span>
+                <span>{allBarcodeRows.filter(r => r.source === 'conflict').length > 0 && `· ${allBarcodeRows.filter(r => r.source === 'conflict').length} conflict(s) — check Barcode Database tab`}</span>
               </div>
             </div>
           )}
@@ -930,10 +975,11 @@ const BarcodePage: React.FC = () => {
             </div>
           ) : (
             <div className="bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden">
-              <div className="grid grid-cols-[minmax(0,1fr)_110px_180px] gap-2 px-4 py-2.5 bg-gray-800/60 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+              <div className="grid grid-cols-[minmax(0,1fr)_110px_180px_100px] gap-2 px-4 py-2.5 bg-gray-800/60 text-xs font-semibold text-gray-400 uppercase tracking-wide">
                 <div>Product</div>
                 <div>SKU</div>
-                <div>EAN-13 Barcode (StoreHub)</div>
+                <div>EAN-13 Barcode</div>
+                <div>Source</div>
               </div>
 
               <div className="divide-y divide-gray-800/60 max-h-[560px] overflow-y-auto">
@@ -945,36 +991,62 @@ const BarcodePage: React.FC = () => {
                   </div>
                 ) : (
                   filteredDbRecords.map((r) => (
-                    <div
-                      key={r.key}
-                      className="grid grid-cols-[minmax(0,1fr)_110px_180px] gap-2 px-4 py-3 hover:bg-gray-800/30 transition-colors items-center"
-                    >
-                      <div className="truncate text-sm text-gray-200">{r.product_name}</div>
-                      <div className="text-xs text-gray-400 font-mono truncate">{r.sku ?? '—'}</div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-green-300 text-sm tracking-widest">
-                          {fmtBarcode(r.barcode)}
-                        </span>
-                        <button
-                          onClick={() => navigator.clipboard.writeText(r.barcode)}
-                          title="Copy barcode"
-                          className="text-gray-600 hover:text-white transition-colors flex-shrink-0"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                        </button>
+                    <div key={r.key}>
+                      <div className="grid grid-cols-[minmax(0,1fr)_110px_180px_100px] gap-2 px-4 py-3 hover:bg-gray-800/30 transition-colors items-center">
+                        <div className="truncate text-sm text-gray-200">{r.product_name}</div>
+                        <div className="text-xs text-gray-400 font-mono truncate">{r.sku ?? '—'}</div>
+                        <div className="flex items-center gap-2">
+                          <span className={`font-mono text-sm tracking-widest ${r.source === 'conflict' ? 'text-red-300' : 'text-green-300'}`}>
+                            {fmtBarcode(r.barcode)}
+                          </span>
+                          <button
+                            onClick={() => navigator.clipboard.writeText(r.barcode)}
+                            title="Copy barcode"
+                            className="text-gray-600 hover:text-white transition-colors flex-shrink-0"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                        </div>
+                        <div>
+                          {r.source === 'generated' && (
+                            <span className="px-2 py-0.5 rounded text-xs bg-yellow-900/50 text-yellow-300 border border-yellow-700/40">Generated</span>
+                          )}
+                          {r.source === 'storehub' && (
+                            <span className="px-2 py-0.5 rounded text-xs bg-blue-900/50 text-blue-300 border border-blue-700/40">StoreHub</span>
+                          )}
+                          {r.source === 'confirmed' && (
+                            <span className="px-2 py-0.5 rounded text-xs bg-green-900/50 text-green-300 border border-green-700/40">Confirmed</span>
+                          )}
+                          {r.source === 'conflict' && (
+                            <span className="px-2 py-0.5 rounded text-xs bg-red-900/50 text-red-300 border border-red-700/40">Conflict</span>
+                          )}
+                        </div>
                       </div>
+                      {r.source === 'conflict' && (
+                        <div className="px-4 pb-2 text-xs text-red-400 bg-red-900/10">
+                          Conflict: generated <span className="font-mono">{r.generated_barcode}</span> vs StoreHub <span className="font-mono">{r.storehub_barcode}</span> — delete the generated entry to resolve.
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
               </div>
 
-              <div className="px-4 py-2 bg-gray-800/40 text-xs text-gray-500 border-t border-gray-800">
-                {filteredDbRecords.length} record(s)
-                {filteredDbRecords.length !== allBarcodeRows.length && ` (filtered from ${allBarcodeRows.length} total)`}
-                {sheetsMsg && <span className={`ml-4 ${sheetsMsg.startsWith('Failed') ? 'text-red-400' : 'text-green-400'}`}>{sheetsMsg}</span>}
+              <div className="px-4 py-2 bg-gray-800/40 text-xs text-gray-500 border-t border-gray-800 flex flex-wrap gap-4 items-center">
+                <span>
+                  {filteredDbRecords.length} record(s)
+                  {filteredDbRecords.length !== allBarcodeRows.length && ` (filtered from ${allBarcodeRows.length} total)`}
+                </span>
+                <span className="text-yellow-600">{allBarcodeRows.filter(r => r.source === 'generated').length} pending</span>
+                <span className="text-blue-600">{allBarcodeRows.filter(r => r.source === 'storehub').length} StoreHub only</span>
+                <span className="text-green-600">{allBarcodeRows.filter(r => r.source === 'confirmed').length} confirmed</span>
+                {allBarcodeRows.filter(r => r.source === 'conflict').length > 0 && (
+                  <span className="text-red-400">{allBarcodeRows.filter(r => r.source === 'conflict').length} conflict(s)</span>
+                )}
+                {sheetsMsg && <span className={`${sheetsMsg.startsWith('Failed') ? 'text-red-400' : 'text-green-400'}`}>{sheetsMsg}</span>}
               </div>
             </div>
           )}
