@@ -270,22 +270,45 @@ async def delete_barcode(
 
 @router.get("/products", response_model=List[ProductForBarcode])
 async def list_products_for_barcode(
+    name: Optional[str] = None,
+    sku: Optional[str] = None,
+    category: Optional[str] = None,
+    no_barcode_only: bool = False,
     db: AsyncSession = Depends(get_db),
 ):
-    """Return all products (lean schema) for the barcode generator page."""
-    result = await db.execute(
-        select(
-            Product.id,
-            Product.name,
-            Product.sku,
-            Product.barcode,
-            Product.category,
-            Product.price_type,
-            Product.unit_price,
-            Product.cost,
-            Product.track_stock_level,
-        ).order_by(Product.name)
+    """
+    Return products for the barcode generator page.
+    Supports server-side filtering by name (ILIKE), SKU (ILIKE), category, and
+    no_barcode_only (products with no barcode in either products.barcode or product_barcodes).
+    """
+    query = select(
+        Product.id,
+        Product.name,
+        Product.sku,
+        Product.barcode,
+        Product.category,
+        Product.price_type,
+        Product.unit_price,
+        Product.cost,
+        Product.track_stock_level,
     )
+
+    if name:
+        query = query.where(Product.name.ilike(f"%{name}%"))
+    if sku:
+        query = query.where(Product.sku.ilike(f"%{sku}%"))
+    if category:
+        query = query.where(Product.category == category)
+    if no_barcode_only:
+        # Exclude products that have a StoreHub barcode OR a generated barcode entry
+        generated_ids_subq = select(ProductBarcode.product_id)
+        query = query.where(
+            Product.barcode.is_(None),
+            ~Product.id.in_(generated_ids_subq),
+        )
+
+    query = query.order_by(Product.name)
+    result = await db.execute(query)
     rows = result.all()
     return [
         ProductForBarcode(

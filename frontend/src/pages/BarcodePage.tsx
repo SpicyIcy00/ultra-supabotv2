@@ -11,7 +11,7 @@
  * StoreHub note: Their public API is read-only for products.
  * Upload the exported CSV via StoreHub Back Office → Products → Import.
  */
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import axios from 'axios';
 import {
   generateBarcodes,
@@ -159,10 +159,14 @@ const BarcodePage: React.FC = () => {
   const [productsError, setProductsError] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
 
-  // ── Search filters (Generate tab) ─────────────────────────────────────────
+  // ── Search filters (Generate tab) — sent to server ───────────────────────
   const [filterName, setFilterName] = useState('');
   const [filterSku, setFilterSku] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [filterNoBarcodeOnly, setFilterNoBarcodeOnly] = useState(false);
+
+  // Debounce timer ref so rapid keystrokes don't spam the server
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Selection ─────────────────────────────────────────────────────────────
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -182,18 +186,31 @@ const BarcodePage: React.FC = () => {
   const [dbSearch, setDbSearch] = useState('');
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
-  useEffect(() => { loadProducts(); loadCategories(); loadRecords(); }, []);
+  useEffect(() => { loadProducts({}); loadCategories(); loadRecords(); }, []);
   useEffect(() => { if (activeTab === 'database') loadRecords(); }, [activeTab]);
 
-  async function loadProducts() {
+  // Re-fetch when filters change (debounced for text inputs)
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      loadProducts({ name: filterName, sku: filterSku, category: filterCategory, no_barcode_only: filterNoBarcodeOnly });
+    }, 350);
+    return () => { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); };
+  }, [filterName, filterSku, filterCategory, filterNoBarcodeOnly]);
+
+  async function loadProducts(params: { name?: string; sku?: string; category?: string; no_barcode_only?: boolean }) {
     setProductsLoading(true);
     setProductsError(null);
     try {
-      const res = await axios.get<Product[]>('/api/v1/barcodes/products');
+      const query: Record<string, string> = {};
+      if (params.name) query.name = params.name;
+      if (params.sku) query.sku = params.sku;
+      if (params.category) query.category = params.category;
+      if (params.no_barcode_only) query.no_barcode_only = 'true';
+      const res = await axios.get<Product[]>('/api/v1/barcodes/products', { params: query });
       if (Array.isArray(res.data)) {
         setProducts(res.data);
       } else {
-        console.error('Products API returned unexpected data:', res.data);
         setProductsError(`API returned unexpected data (type: ${typeof res.data}). Check the backend.`);
         setProducts([]);
       }
@@ -220,17 +237,8 @@ const BarcodePage: React.FC = () => {
     finally { setRecordsLoading(false); }
   }
 
-  // ── Filtered products ─────────────────────────────────────────────────────
-  const filteredProducts = useMemo(() => {
-    const name = filterName.toLowerCase();
-    const sku  = filterSku.toLowerCase();
-    return products.filter((p) => {
-      if (filterCategory && p.category !== filterCategory) return false;
-      if (name && !p.name.toLowerCase().includes(name)) return false;
-      if (sku && !(p.sku ?? '').toLowerCase().includes(sku)) return false;
-      return true;
-    });
-  }, [products, filterName, filterSku, filterCategory]);
+  // Products are already filtered server-side; expose directly.
+  const filteredProducts = products;
 
   // ── Selection helpers ─────────────────────────────────────────────────────
   const allFilteredSelected =
@@ -258,6 +266,7 @@ const BarcodePage: React.FC = () => {
     setFilterName('');
     setFilterSku('');
     setFilterCategory('');
+    setFilterNoBarcodeOnly(false);
   }
 
   // ── Generate ──────────────────────────────────────────────────────────────
@@ -571,7 +580,7 @@ const BarcodePage: React.FC = () => {
         <div>
 
           {/* ── Search / filter bar ─────────────────────────────────────── */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
             {/* Name */}
             <div>
               <label className="block text-xs text-gray-400 mb-1">Product name</label>
@@ -611,30 +620,51 @@ const BarcodePage: React.FC = () => {
               </select>
             </div>
 
-            {/* EAN prefix + clear */}
+            {/* EAN prefix */}
             <div>
               <label className="block text-xs text-gray-400 mb-1">
                 EAN-13 prefix <span className="text-gray-500">(3 digits · 200 = in-store)</span>
               </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  maxLength={3}
-                  value={prefix}
-                  onChange={(e) => setPrefix(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                  placeholder="200"
-                  className="w-24 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-blue-500"
-                />
-                {(filterName || filterSku || filterCategory) && (
-                  <button
-                    onClick={clearFilters}
-                    className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-xs text-gray-300 rounded-lg transition-colors"
-                  >
-                    Clear filters
-                  </button>
-                )}
-              </div>
+              <input
+                type="text"
+                maxLength={3}
+                value={prefix}
+                onChange={(e) => setPrefix(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                placeholder="200"
+                className="w-24 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-blue-500"
+              />
             </div>
+          </div>
+
+          {/* ── Toggle row ──────────────────────────────────────────────── */}
+          <div className="flex flex-wrap gap-2 mb-4 items-center">
+            <button
+              onClick={() => setFilterNoBarcodeOnly((v) => !v)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                filterNoBarcodeOnly
+                  ? 'bg-orange-600/20 border-orange-500 text-orange-300'
+                  : 'bg-gray-800 border-gray-700 text-gray-400 hover:text-white'
+              }`}
+            >
+              No barcode only
+            </button>
+            {(filterName || filterSku || filterCategory || filterNoBarcodeOnly) && (
+              <button
+                onClick={clearFilters}
+                className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-xs text-gray-300 rounded-lg transition-colors"
+              >
+                Clear all filters
+              </button>
+            )}
+            {productsLoading && (
+              <span className="text-xs text-gray-500 flex items-center gap-1.5">
+                <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                </svg>
+                Searching…
+              </span>
+            )}
           </div>
 
           {/* ── Action row ──────────────────────────────────────────────── */}
