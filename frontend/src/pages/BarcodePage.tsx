@@ -778,12 +778,12 @@ const BarcodePage: React.FC = () => {
           ) : productsError ? (
             <div className="p-4 rounded-lg bg-red-900/40 border border-red-600/40 text-red-300 text-sm flex items-center gap-3">
               <span className="flex-1">{productsError}</span>
-              <button onClick={loadProducts} className="underline flex-shrink-0">Retry</button>
+              <button onClick={() => loadProducts({ name: filterName, sku: filterSku, category: filterCategory, no_barcode_only: filterNoBarcodeOnly })} className="underline flex-shrink-0">Retry</button>
             </div>
           ) : products.length === 0 && !filterName && !filterSku && !filterCategory ? (
             <div className="p-4 rounded-lg bg-yellow-900/30 border border-yellow-600/40 text-yellow-300 text-sm flex items-center gap-3">
               <span className="flex-1">No products found in the database. Ensure your products table is populated from StoreHub.</span>
-              <button onClick={loadProducts} className="underline flex-shrink-0">Retry</button>
+              <button onClick={() => loadProducts({})} className="underline flex-shrink-0">Retry</button>
             </div>
           ) : (
             <div className="bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden">
