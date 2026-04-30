@@ -95,24 +95,27 @@ class ReplenishmentService:
     }
 
     async def get_algorithm_settings(self) -> Dict[str, Any]:
-        """Return algorithm settings, falling back to defaults if not yet configured."""
-        result = await self.db.execute(
-            select(AlgorithmSettings).where(AlgorithmSettings.id == 1)
-        )
-        row = result.scalar_one_or_none()
-        if row:
-            return {
-                "review_period_days": row.review_period_days,
-                "lead_time_days": row.lead_time_days,
-                "snapshot_required_days": row.snapshot_required_days,
-                "stockout_buffer_weekday_pct": row.stockout_buffer_weekday_pct,
-                "stockout_buffer_weekend_pct": row.stockout_buffer_weekend_pct,
-                "priority_velocity_weight": float(row.priority_velocity_weight),
-                "priority_stockout_weight": float(row.priority_stockout_weight),
-                "overstock_threshold_days": row.overstock_threshold_days,
-                "critical_stock_threshold_days": row.critical_stock_threshold_days,
-                "updated_at": row.updated_at.isoformat() if row.updated_at else None,
-            }
+        """Return algorithm settings, falling back to defaults if table missing or not configured."""
+        try:
+            result = await self.db.execute(
+                select(AlgorithmSettings).where(AlgorithmSettings.id == 1)
+            )
+            row = result.scalar_one_or_none()
+            if row:
+                return {
+                    "review_period_days": row.review_period_days,
+                    "lead_time_days": row.lead_time_days,
+                    "snapshot_required_days": row.snapshot_required_days,
+                    "stockout_buffer_weekday_pct": row.stockout_buffer_weekday_pct,
+                    "stockout_buffer_weekend_pct": row.stockout_buffer_weekend_pct,
+                    "priority_velocity_weight": float(row.priority_velocity_weight),
+                    "priority_stockout_weight": float(row.priority_stockout_weight),
+                    "overstock_threshold_days": row.overstock_threshold_days,
+                    "critical_stock_threshold_days": row.critical_stock_threshold_days,
+                    "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+                }
+        except Exception:
+            await self.db.rollback()
         return {**self._ALGO_DEFAULTS, "updated_at": None}
 
     async def update_algorithm_settings(self, data: Dict[str, Any]) -> Dict[str, Any]:
