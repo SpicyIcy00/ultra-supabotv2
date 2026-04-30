@@ -134,6 +134,20 @@ export interface ExceptionsResponse {
   total_exceptions: number;
 }
 
+// --- Algorithm Settings ---
+export interface AlgorithmSettings {
+  review_period_days: number;
+  lead_time_days: number;
+  snapshot_required_days: number;
+  stockout_buffer_weekday_pct: number;
+  stockout_buffer_weekend_pct: number;
+  priority_velocity_weight: number;
+  priority_stockout_weight: number;
+  overstock_threshold_days: number;
+  critical_stock_threshold_days: number;
+  updated_at?: string | null;
+}
+
 // --- Data Readiness ---
 export interface DataReadiness {
   snapshot_days_available: number;

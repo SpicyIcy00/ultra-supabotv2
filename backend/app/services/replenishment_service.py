@@ -15,6 +15,7 @@ from app.models.replenishment import (
     SeasonalityCalendar,
     ShipmentPlan,
     InventorySnapshot,
+    AlgorithmSettings,
 )
 from app.models.store import Store
 from app.models.product import Product
@@ -49,10 +50,12 @@ class ReplenishmentService:
 
     async def get_data_readiness(self) -> Dict[str, Any]:
         """Get snapshot data readiness information."""
+        algo = await self.get_algorithm_settings()
+        snapshot_required = algo["snapshot_required_days"]
         snapshot_days = await self.get_snapshot_days_available()
-        days_until_full = max(0, 28 - snapshot_days)
+        days_until_full = max(0, snapshot_required - snapshot_days)
         full_accuracy_date = date.today() + timedelta(days=days_until_full)
-        calc_mode = "snapshot" if snapshot_days >= 28 else "fallback"
+        calc_mode = "snapshot" if snapshot_days >= snapshot_required else "fallback"
 
         # Get stores that have snapshot data
         query = (
@@ -70,10 +73,64 @@ class ReplenishmentService:
             "calculation_mode": calc_mode,
             "stores_with_snapshots": stores_with_snapshots,
             "message": (
-                f"Snapshot history: {snapshot_days}/28 days. "
+                f"Snapshot history: {snapshot_days}/{snapshot_required} days. "
                 f"{'Full accuracy mode active.' if calc_mode == 'snapshot' else 'Using transaction-based fallback.'}"
             ),
         }
+
+    # ----------------------------------------------------------------
+    # Algorithm Settings
+    # ----------------------------------------------------------------
+
+    _ALGO_DEFAULTS = {
+        "review_period_days": 7,
+        "lead_time_days": 2,
+        "snapshot_required_days": 28,
+        "stockout_buffer_weekday_pct": 20,
+        "stockout_buffer_weekend_pct": 10,
+        "priority_velocity_weight": 0.60,
+        "priority_stockout_weight": 0.40,
+        "overstock_threshold_days": 120,
+        "critical_stock_threshold_days": 3,
+    }
+
+    async def get_algorithm_settings(self) -> Dict[str, Any]:
+        """Return algorithm settings, falling back to defaults if not yet configured."""
+        result = await self.db.execute(
+            select(AlgorithmSettings).where(AlgorithmSettings.id == 1)
+        )
+        row = result.scalar_one_or_none()
+        if row:
+            return {
+                "review_period_days": row.review_period_days,
+                "lead_time_days": row.lead_time_days,
+                "snapshot_required_days": row.snapshot_required_days,
+                "stockout_buffer_weekday_pct": row.stockout_buffer_weekday_pct,
+                "stockout_buffer_weekend_pct": row.stockout_buffer_weekend_pct,
+                "priority_velocity_weight": float(row.priority_velocity_weight),
+                "priority_stockout_weight": float(row.priority_stockout_weight),
+                "overstock_threshold_days": row.overstock_threshold_days,
+                "critical_stock_threshold_days": row.critical_stock_threshold_days,
+                "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+            }
+        return {**self._ALGO_DEFAULTS, "updated_at": None}
+
+    async def update_algorithm_settings(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Upsert algorithm settings (single-row table, id=1)."""
+        result = await self.db.execute(
+            select(AlgorithmSettings).where(AlgorithmSettings.id == 1)
+        )
+        row = result.scalar_one_or_none()
+        if row:
+            for key, value in data.items():
+                if hasattr(row, key):
+                    setattr(row, key, value)
+        else:
+            row = AlgorithmSettings(id=1, **{k: v for k, v in data.items() if k != "updated_at"})
+            self.db.add(row)
+        await self.db.commit()
+        await self.db.refresh(row)
+        return await self.get_algorithm_settings()
 
     # ----------------------------------------------------------------
     # Daily Sales Calculation
@@ -296,9 +353,20 @@ class ReplenishmentService:
         if run_date is None:
             run_date = date.today()
 
+        # Load algorithm settings
+        algo = await self.get_algorithm_settings()
+        lead_time_days = algo["lead_time_days"]
+        review_period_days = algo["review_period_days"]
+        snapshot_required_days = algo["snapshot_required_days"]
+        buffer_weekday = algo["stockout_buffer_weekday_pct"] / 100.0
+        buffer_weekend = algo["stockout_buffer_weekend_pct"] / 100.0
+        vel_weight = algo["priority_velocity_weight"]
+        risk_weight = algo["priority_stockout_weight"]
+        overstock_days = algo["overstock_threshold_days"]
+
         # Determine calculation mode
         snapshot_days = await self.get_snapshot_days_available()
-        calc_mode = "snapshot" if snapshot_days >= 28 else "fallback"
+        calc_mode = "snapshot" if snapshot_days >= snapshot_required_days else "fallback"
 
         # Get seasonality multiplier for today
         seasonality_multiplier = await self.get_seasonality_multiplier(run_date)
@@ -431,7 +499,7 @@ class ReplenishmentService:
 
             # Min = (SeasonAdjustedDailySales × CoverDays) + SafetyStock
             # Use tier's target_cover_days + lead time so Tier A/B can have different windows
-            effective_cover_days = tier_params["target_cover_days"] + LEAD_TIME_DAYS
+            effective_cover_days = tier_params["target_cover_days"] + lead_time_days
             min_level = (season_adj_sales * effective_cover_days) + safety_stock
 
             # Treat negative on_hand as 0 for calculations (raw value kept for exception flagging)
@@ -442,7 +510,7 @@ class ReplenishmentService:
             inventory_position = calc_on_hand
 
             # Max level: how high we're willing to stock (configurable per tier)
-            max_level = season_adj_sales * (tier_params["max_cover_days"] + LEAD_TIME_DAYS)
+            max_level = season_adj_sales * (tier_params["max_cover_days"] + lead_time_days)
 
             # Expiry cap: don't order more than can be sold within the expiry window
             expiry_cap = season_adj_sales * tier_params["expiry_window_days"]
@@ -463,13 +531,13 @@ class ReplenishmentService:
                 projected_stockout = run_date + timedelta(
                     days=int(calc_on_hand / max(season_adj_sales, 0.1))
                 )
-                end_of_review_week = run_date + timedelta(days=REVIEW_PERIOD_DAYS)
+                end_of_review_week = run_date + timedelta(days=review_period_days)
                 if projected_stockout <= end_of_review_week:
                     # weekday(): 0=Mon … 4=Fri, 5=Sat, 6=Sun
-                    if projected_stockout.weekday() <= 4:   # Mon–Fri → +20%
-                        requested_ship_qty = math.ceil(requested_ship_qty * 1.20)
-                    else:                                    # Sat–Sun → +10%
-                        requested_ship_qty = math.ceil(requested_ship_qty * 1.10)
+                    if projected_stockout.weekday() <= 4:   # Mon–Fri
+                        requested_ship_qty = math.ceil(requested_ship_qty * (1 + buffer_weekday))
+                    else:                                    # Sat–Sun
+                        requested_ship_qty = math.ceil(requested_ship_qty * (1 + buffer_weekend))
 
             # Skip products that don't need replenishment
             if requested_ship_qty == 0:
@@ -485,11 +553,10 @@ class ReplenishmentService:
             # Stockout risk and priority
             stockout_risk = 1.0 / max(days_of_stock, 0.1)
             if normalize_priority:
-                # log1p compresses sales scale so urgency isn't drowned out by high volume
                 velocity_score = math.log1p(season_adj_sales)
             else:
                 velocity_score = season_adj_sales
-            priority_score = (velocity_score * 0.6) + (stockout_risk * 0.4)
+            priority_score = (velocity_score * vel_weight) + (stockout_risk * risk_weight)
 
             plan = ShipmentPlan(
                 run_date=run_date,
@@ -560,7 +627,7 @@ class ReplenishmentService:
             1 for p in plan_items
             if p.allocated_ship_qty < p.requested_ship_qty
             or p.on_hand < 0
-            or p.days_of_stock > 120
+            or p.days_of_stock > overstock_days
         )
 
         unique_stores = set(p.store_id for p in plan_items)
@@ -777,6 +844,9 @@ class ReplenishmentService:
             if run_date is None:
                 return {"run_date": None, "items": [], "total_exceptions": 0}
 
+        algo = await self.get_algorithm_settings()
+        overstock_threshold = algo["overstock_threshold_days"]
+
         query = text("""
             SELECT
                 sp.store_id,
@@ -795,13 +865,13 @@ class ReplenishmentService:
             WHERE sp.run_date = :run_date
               AND (
                   sp.on_hand < 0
-                  OR sp.days_of_stock > 120
+                  OR sp.days_of_stock > :overstock_threshold
                   OR sp.allocated_ship_qty < sp.requested_ship_qty
               )
             ORDER BY sp.priority_score DESC
         """)
 
-        result = await self.db.execute(query, {"run_date": run_date})
+        result = await self.db.execute(query, {"run_date": run_date, "overstock_threshold": overstock_threshold})
         rows = result.fetchall()
 
         items = []
@@ -815,9 +885,9 @@ class ReplenishmentService:
             if on_hand < 0:
                 exc_type = "negative_stock"
                 detail = f"On-hand is {on_hand} (negative)"
-            elif days_of_stock > 120:
+            elif days_of_stock > overstock_threshold:
                 exc_type = "overstock"
-                detail = f"Days of stock: {days_of_stock:.0f} (>120)"
+                detail = f"Days of stock: {days_of_stock:.0f} (>{overstock_threshold})"
             elif allocated < requested:
                 exc_type = "warehouse_shortage"
                 detail = f"Allocated {allocated} of {requested} requested"

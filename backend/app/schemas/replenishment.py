@@ -217,5 +217,32 @@ class DataReadinessResponse(BaseModel):
     message: str
 
 
+# --- Algorithm Settings Schemas ---
+
+class AlgorithmSettingsUpdate(BaseModel):
+    review_period_days: Optional[int] = Field(None, ge=1, le=365)
+    lead_time_days: Optional[int] = Field(None, ge=0, le=30)
+    snapshot_required_days: Optional[int] = Field(None, ge=1, le=365)
+    stockout_buffer_weekday_pct: Optional[int] = Field(None, ge=0, le=200)
+    stockout_buffer_weekend_pct: Optional[int] = Field(None, ge=0, le=200)
+    priority_velocity_weight: Optional[float] = Field(None, ge=0.0, le=1.0)
+    priority_stockout_weight: Optional[float] = Field(None, ge=0.0, le=1.0)
+    overstock_threshold_days: Optional[int] = Field(None, ge=1, le=3650)
+    critical_stock_threshold_days: Optional[int] = Field(None, ge=0, le=365)
+
+
+class AlgorithmSettingsResponse(BaseModel):
+    review_period_days: int
+    lead_time_days: int
+    snapshot_required_days: int
+    stockout_buffer_weekday_pct: int
+    stockout_buffer_weekend_pct: int
+    priority_velocity_weight: float
+    priority_stockout_weight: float
+    overstock_threshold_days: int
+    critical_stock_threshold_days: int
+    updated_at: Optional[str] = None
+
+
 # Rebuild forward refs
 ShipmentPlanResponse.model_rebuild()

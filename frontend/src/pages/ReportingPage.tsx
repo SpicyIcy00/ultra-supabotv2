@@ -7,9 +7,10 @@ import { StoreTierConfig } from '../components/replenishment/StoreTierConfig';
 import { SeasonalityCalendar } from '../components/replenishment/SeasonalityCalendar';
 import { WarehouseInventoryManager } from '../components/replenishment/WarehouseInventoryManager';
 import { PipelineManager } from '../components/replenishment/PipelineManager';
+import { AlgorithmSettings } from '../components/replenishment/AlgorithmSettings';
 
 type ReplenishmentSubTab = 'dashboard' | 'shipment-plan' | 'picklist' | 'exceptions' | 'configuration';
-type ConfigSubTab = 'store-tiers' | 'seasonality' | 'warehouse' | 'pipeline';
+type ConfigSubTab = 'store-tiers' | 'seasonality' | 'warehouse' | 'pipeline' | 'algorithm';
 
 const ReportingPage: React.FC = () => {
   const [replenishmentSubTab, setReplenishmentSubTab] = useState<ReplenishmentSubTab>('dashboard');
@@ -29,6 +30,7 @@ const ReportingPage: React.FC = () => {
               { key: 'seasonality' as ConfigSubTab, label: 'Seasonality' },
               { key: 'warehouse' as ConfigSubTab, label: 'Warehouse Inventory' },
               { key: 'pipeline' as ConfigSubTab, label: 'Pipeline (On-Order)' },
+              { key: 'algorithm' as ConfigSubTab, label: 'Algorithm Settings' },
             ]).map(tab => (
               <button key={tab.key} onClick={() => setConfigSubTab(tab.key)}
                 className={`px-5 py-2.5 text-sm font-medium rounded-lg border-b-2 transition-colors ${
@@ -44,6 +46,7 @@ const ReportingPage: React.FC = () => {
           {configSubTab === 'seasonality' && <SeasonalityCalendar />}
           {configSubTab === 'warehouse' && <WarehouseInventoryManager />}
           {configSubTab === 'pipeline' && <PipelineManager />}
+          {configSubTab === 'algorithm' && <AlgorithmSettings />}
         </div>
       );
     }

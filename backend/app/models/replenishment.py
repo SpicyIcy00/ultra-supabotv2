@@ -164,6 +164,27 @@ class ShipmentPlan(Base):
     )
 
 
+class AlgorithmSettings(Base):
+    __tablename__ = "algorithm_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)  # Always row 1
+    review_period_days: Mapped[int] = mapped_column(Integer, nullable=False, default=7)
+    lead_time_days: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
+    snapshot_required_days: Mapped[int] = mapped_column(Integer, nullable=False, default=28)
+    stockout_buffer_weekday_pct: Mapped[int] = mapped_column(Integer, nullable=False, default=20)
+    stockout_buffer_weekend_pct: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
+    priority_velocity_weight: Mapped[float] = mapped_column(Numeric(4, 2), nullable=False, default=0.60)
+    priority_stockout_weight: Mapped[float] = mapped_column(Numeric(4, 2), nullable=False, default=0.40)
+    overstock_threshold_days: Mapped[int] = mapped_column(Integer, nullable=False, default=120)
+    critical_stock_threshold_days: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.timezone('Asia/Manila', func.now()),
+        onupdate=func.timezone('Asia/Manila', func.now())
+    )
+
+
 class InventorySnapshot(Base):
     """Maps to the existing inventory_snapshots table in Supabase (created via n8n).
     This model is read-only for the replenishment module."""

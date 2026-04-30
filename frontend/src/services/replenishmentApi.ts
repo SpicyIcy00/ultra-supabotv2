@@ -9,6 +9,7 @@ import type {
   SeasonalityPeriod,
   WarehouseInventoryItem,
   PipelineItem,
+  AlgorithmSettings,
 } from '../types/replenishment';
 
 const API_BASE = '/api/v1/replenishment';
@@ -155,4 +156,18 @@ export const updateSeasonality = async (
 
 export const deleteSeasonality = async (id: number): Promise<void> => {
   await axios.delete(`${API_BASE}/seasonality/${id}`);
+};
+
+// --- Algorithm Settings ---
+
+export const getAlgorithmSettings = async (): Promise<AlgorithmSettings> => {
+  const response = await axios.get<AlgorithmSettings>(`${API_BASE}/algorithm-settings`);
+  return response.data;
+};
+
+export const updateAlgorithmSettings = async (
+  settings: Partial<Omit<AlgorithmSettings, 'updated_at'>>
+): Promise<AlgorithmSettings> => {
+  const response = await axios.post<AlgorithmSettings>(`${API_BASE}/algorithm-settings`, settings);
+  return response.data;
 };

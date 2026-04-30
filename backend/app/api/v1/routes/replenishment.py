@@ -11,6 +11,7 @@ from app.schemas.replenishment import (
     WarehouseInventoryBulkUpdate,
     SeasonalityCalendarCreate,
     SeasonalityCalendarUpdate,
+    AlgorithmSettingsUpdate,
 )
 
 router = APIRouter()
@@ -204,3 +205,25 @@ async def delete_seasonality_period(
     if not deleted:
         raise HTTPException(status_code=404, detail="Seasonality period not found")
     return {"status": "deleted", "id": period_id}
+
+
+# ----------------------------------------------------------------
+# Algorithm Settings
+# ----------------------------------------------------------------
+
+@router.get("/algorithm-settings")
+async def get_algorithm_settings(
+    service: ReplenishmentService = Depends(_get_service),
+):
+    """Get current algorithm settings."""
+    return await service.get_algorithm_settings()
+
+
+@router.post("/algorithm-settings")
+async def update_algorithm_settings(
+    body: AlgorithmSettingsUpdate,
+    service: ReplenishmentService = Depends(_get_service),
+):
+    """Update algorithm settings."""
+    data = body.model_dump(exclude_unset=True)
+    return await service.update_algorithm_settings(data)
