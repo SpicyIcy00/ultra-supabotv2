@@ -3,8 +3,6 @@ import { getAlgorithmSettings, updateAlgorithmSettings } from '../../services/re
 import type { AlgorithmSettings as AlgorithmSettingsType } from '../../types/replenishment';
 
 const DEFAULTS: AlgorithmSettingsType = {
-  review_period_days: 7,
-  lead_time_days: 2,
   snapshot_required_days: 28,
   stockout_buffer_weekday_pct: 20,
   stockout_buffer_weekend_pct: 10,
@@ -26,25 +24,13 @@ interface FieldConfig {
 
 const SECTIONS: { title: string; subtitle: string; fields: FieldConfig[] }[] = [
   {
-    title: 'Planning Cycle',
-    subtitle: 'Core timing parameters used in every calculation run.',
+    title: 'Data Mode',
+    subtitle: 'Controls when high-accuracy snapshot mode is used.',
     fields: [
-      {
-        key: 'review_period_days',
-        label: 'Review Period',
-        description: 'How many days ahead each run plans for. Orders cover stock until the next run.',
-        min: 1, max: 30, step: 1, suffix: 'days',
-      },
-      {
-        key: 'lead_time_days',
-        label: 'Lead Time',
-        description: 'Days between placing an order and receiving it at the store. Added to min/max cover targets.',
-        min: 0, max: 14, step: 1, suffix: 'days',
-      },
       {
         key: 'snapshot_required_days',
         label: 'Snapshot Days Required',
-        description: 'Minimum days of inventory snapshot history needed to activate high-accuracy mode.',
+        description: 'Minimum days of inventory snapshot history needed to activate high-accuracy mode. Below this, the fallback (transaction-based) mode is used.',
         min: 1, max: 90, step: 1, suffix: 'days',
       },
     ],

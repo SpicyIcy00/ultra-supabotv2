@@ -220,8 +220,6 @@ class DataReadinessResponse(BaseModel):
 # --- Algorithm Settings Schemas ---
 
 class AlgorithmSettingsUpdate(BaseModel):
-    review_period_days: Optional[int] = Field(None, ge=1, le=365)
-    lead_time_days: Optional[int] = Field(None, ge=0, le=30)
     snapshot_required_days: Optional[int] = Field(None, ge=1, le=365)
     stockout_buffer_weekday_pct: Optional[int] = Field(None, ge=0, le=200)
     stockout_buffer_weekend_pct: Optional[int] = Field(None, ge=0, le=200)
@@ -232,8 +230,6 @@ class AlgorithmSettingsUpdate(BaseModel):
 
 
 class AlgorithmSettingsResponse(BaseModel):
-    review_period_days: int
-    lead_time_days: int
     snapshot_required_days: int
     stockout_buffer_weekday_pct: int
     stockout_buffer_weekend_pct: int

@@ -72,7 +72,9 @@
       "Bash(git branch:*)",
       "Bash(git push:*)",
       "Bash(start.bat)",
-      "Bash(cmd /c start.bat)"
+      "Bash(cmd /c start.bat)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(node_modules/.bin/vite build:*)"
     ],
     "deny": [],
     "ask": []

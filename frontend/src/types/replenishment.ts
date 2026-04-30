@@ -136,8 +136,6 @@ export interface ExceptionsResponse {
 
 // --- Algorithm Settings ---
 export interface AlgorithmSettings {
-  review_period_days: number;
-  lead_time_days: number;
   snapshot_required_days: number;
   stockout_buffer_weekday_pct: number;
   stockout_buffer_weekend_pct: number;

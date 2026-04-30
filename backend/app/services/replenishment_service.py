@@ -83,8 +83,6 @@ class ReplenishmentService:
     # ----------------------------------------------------------------
 
     _ALGO_DEFAULTS = {
-        "review_period_days": 7,
-        "lead_time_days": 2,
         "snapshot_required_days": 28,
         "stockout_buffer_weekday_pct": 20,
         "stockout_buffer_weekend_pct": 10,
@@ -103,8 +101,6 @@ class ReplenishmentService:
             row = result.scalar_one_or_none()
             if row:
                 return {
-                    "review_period_days": row.review_period_days,
-                    "lead_time_days": row.lead_time_days,
                     "snapshot_required_days": row.snapshot_required_days,
                     "stockout_buffer_weekday_pct": row.stockout_buffer_weekday_pct,
                     "stockout_buffer_weekend_pct": row.stockout_buffer_weekend_pct,
@@ -362,8 +358,6 @@ class ReplenishmentService:
 
         # Load algorithm settings
         algo = await self.get_algorithm_settings()
-        lead_time_days = algo["lead_time_days"]
-        review_period_days = algo["review_period_days"]
         snapshot_required_days = algo["snapshot_required_days"]
         buffer_weekday = algo["stockout_buffer_weekday_pct"] / 100.0
         buffer_weekend = algo["stockout_buffer_weekend_pct"] / 100.0
@@ -506,8 +500,7 @@ class ReplenishmentService:
 
             # Min = (SeasonAdjustedDailySales × CoverDays) + SafetyStock
             # Use tier's target_cover_days + lead time so Tier A/B can have different windows
-            effective_cover_days = tier_params["target_cover_days"] + lead_time_days
-            min_level = (season_adj_sales * effective_cover_days) + safety_stock
+            min_level = (season_adj_sales * tier_params["target_cover_days"]) + safety_stock
 
             # Treat negative on_hand as 0 for calculations (raw value kept for exception flagging)
             calc_on_hand = max(0, on_hand)
@@ -517,7 +510,7 @@ class ReplenishmentService:
             inventory_position = calc_on_hand
 
             # Max level: how high we're willing to stock (configurable per tier)
-            max_level = season_adj_sales * (tier_params["max_cover_days"] + lead_time_days)
+            max_level = season_adj_sales * tier_params["max_cover_days"]
 
             # Expiry cap: don't order more than can be sold within the expiry window
             expiry_cap = season_adj_sales * tier_params["expiry_window_days"]
@@ -538,7 +531,7 @@ class ReplenishmentService:
                 projected_stockout = run_date + timedelta(
                     days=int(calc_on_hand / max(season_adj_sales, 0.1))
                 )
-                end_of_review_week = run_date + timedelta(days=review_period_days)
+                end_of_review_week = run_date + timedelta(days=REVIEW_PERIOD_DAYS)
                 if projected_stockout <= end_of_review_week:
                     # weekday(): 0=Mon … 4=Fri, 5=Sat, 6=Sun
                     if projected_stockout.weekday() <= 4:   # Mon–Fri
