@@ -32,7 +32,6 @@ import {
   ZAxis,
   Tooltip,
   Legend,
-  Brush,
   ReferenceLine,
 } from 'recharts';
 import { ChartToolbar } from './ChartToolbar';
@@ -489,15 +488,6 @@ export function EnhancedChartRenderer({
         activeDot={{ r: 6, fill: colors[0] }}
         {...commonProps}
       />
-      {data.length > 10 && (
-        <Brush
-          dataKey="name"
-          height={30}
-          stroke={colors[0]}
-          fill="#1f2937"
-          travellerWidth={10}
-        />
-      )}
     </LineChart>
   );
 
@@ -550,9 +540,6 @@ export function EnhancedChartRenderer({
             {...commonProps}
           />
         ))}
-        {pivotedData.length > 10 && (
-          <Brush dataKey="name" height={30} stroke={themeColors[0]} fill="#1f2937" />
-        )}
       </LineChart>
     );
   };
@@ -578,9 +565,6 @@ export function EnhancedChartRenderer({
         strokeWidth={2}
         {...commonProps}
       />
-      {data.length > 10 && (
-        <Brush dataKey="name" height={30} stroke={colors[0]} fill="#1f2937" />
-      )}
     </AreaChart>
   );
 
