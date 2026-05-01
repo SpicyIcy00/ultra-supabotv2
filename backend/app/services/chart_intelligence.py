@@ -152,6 +152,11 @@ class ChartIntelligence:
         if len(results) == 1:
             return None
 
+        # Year-over-year detection: must happen before generic profiling
+        yoy_config = self._build_multi_line_config(results)
+        if yoy_config:
+            return yoy_config
+
         # Analyze data structure
         data_profile = self._profile_data(results)
 
@@ -171,6 +176,89 @@ class ChartIntelligence:
         chart_config = self._validate_and_repair(chart_config, results)
 
         return chart_config
+
+    def _build_multi_line_config(self, results: List[Dict[str, Any]]) -> Dict[str, Any] | None:
+        """
+        Detect year-over-year / seasonality data and build a multi-line chart config.
+
+        Triggered when results contain a year column + month columns.
+        Pivots rows into: {"name": "Jan", "month_number": 1, "2023": val, "2024": val, ...}
+        """
+        if not results:
+            return None
+
+        columns = list(results[0].keys())
+        col_lower = {c: c.lower() for c in columns}
+
+        year_col = next((c for c in columns if col_lower[c] == 'year'), None)
+        month_num_col = next((c for c in columns if col_lower[c] in ('month_number', 'month_num')), None)
+        month_name_col = next((c for c in columns if col_lower[c] == 'month_name'), None)
+
+        # Require at least year + (month_number or month_name)
+        if not year_col or (not month_num_col and not month_name_col):
+            return None
+
+        # Find the numeric value column (not a year/month column)
+        skip = {col_lower[c] for c in [year_col, month_num_col, month_name_col] if c}
+        value_col = None
+        for c in columns:
+            if col_lower[c] in skip:
+                continue
+            sample = results[0].get(c)
+            if isinstance(sample, (int, float)):
+                value_col = c
+                break
+
+        if not value_col:
+            return None
+
+        # Collect sorted unique years
+        years = sorted({str(int(row[year_col])) for row in results if row.get(year_col) is not None})
+
+        # Pivot: month_number → {name, year_values...}
+        months: dict = {}
+        for row in results:
+            year = str(int(row[year_col]))
+            m_num = int(row[month_num_col]) if month_num_col and row.get(month_num_col) is not None else None
+            m_name = str(row[month_name_col]) if month_name_col and row.get(month_name_col) else (
+                f"M{m_num}" if m_num else "Unknown"
+            )
+            value = float(row.get(value_col) or 0)
+
+            key = m_num if m_num is not None else m_name
+            if key not in months:
+                months[key] = {"name": m_name, "month_number": m_num or 0}
+            months[key][year] = value
+
+        # Sort months by month_number then produce ordered list
+        chart_data = [months[k] for k in sorted(months.keys(), key=lambda x: (int(x) if isinstance(x, (int, str)) and str(x).isdigit() else 99))]
+
+        is_currency = any(kw in value_col.lower() for kw in ('revenue', 'sales', 'price', 'cost', 'profit', 'amount', 'total'))
+
+        return {
+            "type": "multi_line",
+            "data": chart_data,
+            "series": years,
+            "x_axis": "name",
+            "y_axis": value_col,
+            "x_label": "Month",
+            "y_label": self._format_label(value_col),
+            "is_currency": is_currency,
+            "formatting": {
+                "abbreviate_numbers": True,
+                "currency_symbol": "₱" if is_currency else None,
+                "decimal_places": 0 if is_currency else 2,
+                "show_grid": True,
+                "show_labels": True,
+                "label_rotation": 0,
+                "max_label_length": 15,
+            },
+            "tooltip": {
+                "show_percentage": False,
+                "show_units": False,
+                "currency_format": is_currency,
+            },
+        }
 
     def _profile_data(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Profile the data structure to understand what we're working with."""

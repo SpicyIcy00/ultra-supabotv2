@@ -501,6 +501,62 @@ export function EnhancedChartRenderer({
     </LineChart>
   );
 
+  const renderMultiLineChart = () => {
+    // rawData already contains the pivoted data from the backend:
+    // [{ name: "Jan", month_number: 1, "2023": 1500000, "2024": 1800000 }, ...]
+    // We must use rawData directly — originalData holds the un-pivoted SQL rows.
+    const seriesYears: string[] = (config as any).series || [];
+    const pivotedData = [...(rawData as any[])].sort(
+      (a, b) => (a.month_number || 0) - (b.month_number || 0)
+    );
+
+    return (
+      <LineChart data={pivotedData} onClick={handleChartClick}>
+        {renderGrid()}
+        <XAxis dataKey="name" stroke="#9ca3af" tick={{ fontSize: 12 }} />
+        <YAxis stroke="#9ca3af" tickFormatter={formatYAxis} tick={{ fontSize: 12 }} />
+        <Tooltip
+          content={({ active, payload, label }: any) => {
+            if (!active || !payload?.length) return null;
+            return (
+              <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 shadow-xl">
+                <p className="text-white font-semibold mb-2">{label}</p>
+                {payload.map((entry: any, idx: number) => (
+                  <div key={idx} className="flex items-center gap-2 text-sm">
+                    <span className="w-3 h-3 rounded" style={{ backgroundColor: entry.color }} />
+                    <span className="text-gray-400">{entry.name}:</span>
+                    <span className="text-white font-medium">
+                      {config.is_currency
+                        ? formatCurrency(entry.value)
+                        : entry.value?.toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            );
+          }}
+        />
+        <Legend wrapperStyle={{ paddingTop: '10px' }} />
+        {seriesYears.map((year, idx) => (
+          <Line
+            key={year}
+            type="monotone"
+            dataKey={year}
+            name={year}
+            stroke={themeColors[idx % themeColors.length]}
+            strokeWidth={2}
+            dot={{ fill: themeColors[idx % themeColors.length], strokeWidth: 2, r: 4 }}
+            activeDot={{ r: 6 }}
+            {...commonProps}
+          />
+        ))}
+        {pivotedData.length > 10 && (
+          <Brush dataKey="name" height={30} stroke={themeColors[0]} fill="#1f2937" />
+        )}
+      </LineChart>
+    );
+  };
+
   const renderAreaChart = () => (
     <AreaChart data={data} onClick={handleChartClick}>
       <defs>
@@ -992,6 +1048,8 @@ export function EnhancedChartRenderer({
         return renderStackedBarChart();
       case 'line':
         return renderLineChart();
+      case 'multi_line':
+        return renderMultiLineChart();
       case 'area':
         return renderAreaChart();
       case 'pie':

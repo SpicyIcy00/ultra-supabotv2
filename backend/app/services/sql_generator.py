@@ -382,6 +382,23 @@ Please fix the issue and generate a corrected query.
 5. Handle NULL values with COALESCE or IS NULL/IS NOT NULL
 6. Group by all non-aggregated columns when using GROUP BY
 7. Use table aliases for clarity (t for transactions, p for products, s for stores, etc.)
+8. **YEAR-OVER-YEAR / SEASONALITY**: When the user asks for sales/revenue "per month per year", "by month and year", "year over year", or "month by month each year", ALWAYS output these exact column names so the chart renders correctly:
+   - `year` (integer): EXTRACT(YEAR FROM ...) aliased AS year
+   - `month_number` (integer): EXTRACT(MONTH FROM ...) aliased AS month_number
+   - `month_name` (text): TO_CHAR(..., 'Mon') aliased AS month_name
+   - A value column (e.g. `total_revenue`, `total_sales`)
+   - GROUP BY year, month_number, month_name ORDER BY year, month_number
+   Example:
+   ```sql
+   SELECT EXTRACT(YEAR FROM t.transaction_time AT TIME ZONE 'Asia/Manila')::int AS year,
+          EXTRACT(MONTH FROM t.transaction_time AT TIME ZONE 'Asia/Manila')::int AS month_number,
+          TO_CHAR(t.transaction_time AT TIME ZONE 'Asia/Manila', 'Mon') AS month_name,
+          SUM(t.total) AS total_revenue
+   FROM new_transactions t
+   WHERE t.is_cancelled = false AND t.store_id IN (...)
+   GROUP BY year, month_number, month_name
+   ORDER BY year, month_number LIMIT 100
+   ```
 
 **IMPORTANT BUSINESS LOGIC:**
 - "Top selling products" or "best selling" = ORDER BY revenue (total sales in money)

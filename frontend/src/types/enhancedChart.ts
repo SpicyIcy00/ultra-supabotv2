@@ -27,7 +27,8 @@ export type ChartType =
   | 'bullet'
   | 'calendar_heatmap'
   | 'slope'
-  | 'lollipop';
+  | 'lollipop'
+  | 'multi_line';
 
 // Chart state for user customization
 export interface ChartState {
