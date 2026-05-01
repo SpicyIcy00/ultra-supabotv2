@@ -5,6 +5,7 @@ Automatically selects, validates, and repairs chart configurations based on data
 Ensures every chart perfectly fits the dataset with no missing points or wrong chart types.
 """
 
+import re
 from typing import Any, Dict, List, Tuple
 from datetime import datetime, date
 
@@ -180,21 +181,49 @@ class ChartIntelligence:
     # Words to ignore when extracting the subject entity from a question
     _STOP_WORDS = {
         'can', 'you', 'show', 'me', 'the', 'a', 'an', 'for', 'of', 'in', 'at', 'by',
-        'and', 'or', 'sales', 'revenue', 'transactions', 'products', 'store', 'stores',
-        'per', 'month', 'year', 'week', 'day', 'daily', 'monthly', 'yearly', 'annual',
-        'trend', 'compare', 'comparison', 'vs', 'over', 'time', 'what', 'is', 'are',
-        'how', 'many', 'much', 'total', 'average', 'top', 'best', 'worst', 'all',
-        'give', 'get', 'data', 'report', 'chart', 'graph', 'each', 'every', 'by',
-        'between', 'from', 'to', 'with', 'breakdown', 'summary', 'please',
+        'and', 'or', 'sales', 'revenue', 'transactions', 'transaction', 'products',
+        'product', 'store', 'stores', 'per', 'month', 'year', 'week', 'day', 'daily',
+        'monthly', 'yearly', 'annual', 'trend', 'compare', 'comparison', 'vs', 'over',
+        'time', 'what', 'is', 'are', 'how', 'many', 'much', 'total', 'average', 'top',
+        'best', 'worst', 'all', 'give', 'get', 'data', 'report', 'chart', 'graph',
+        'each', 'every', 'between', 'from', 'to', 'with', 'breakdown', 'summary',
+        'please', 'just', 'only', 'also', 'both', 'same', 'this', 'that', 'these',
+        'those', 'its', 'our', 'my', 'your', 'their', 'his', 'her', 'want', 'need',
+        'like', 'see', 'view', 'display', 'list', 'give', 'using', 'use', 'make',
+        'last', 'this', 'next', 'past', 'previous', 'current', 'recent', 'latest',
+        'inventory', 'stock', 'price', 'cost', 'profit', 'margin', 'quantity', 'units',
+        'category', 'categories', 'brand', 'brands', 'item', 'items', 'type', 'types',
     }
 
-    def _extract_subject(self, question: str) -> str:
-        """Return the first meaningful word/phrase from a question (e.g. store name)."""
-        import re
+    # Known entity types that should NEVER be treated as the subject
+    _YEAR_PATTERN = re.compile(r'^\d{4}$')
+
+    def _extract_subject(self, question: str, data: List[Dict[str, Any]] | None = None) -> str:
+        """
+        Return the named entity (store, product, category) from the question.
+
+        Strategy:
+        1. Skip stop words and 4-digit year numbers.
+        2. Require the candidate to be at least 3 chars and consist of letters only
+           (avoids picking up stray numbers or symbols).
+        3. Fall back to a consistent name found in the result data (e.g. store_name column).
+        """
         words = re.split(r'\W+', question.lower())
         for word in words:
-            if word and word not in self._STOP_WORDS and len(word) > 2:
+            if (word
+                    and word not in self._STOP_WORDS
+                    and len(word) >= 3
+                    and word.isalpha()                    # no digits, no symbols
+                    and not self._YEAR_PATTERN.match(word)):
                 return word.title()
+
+        # Fallback: check if every row shares the same store/category name in the data
+        if data:
+            for key in ('store_name', 'store', 'category_name', 'category', 'brand'):
+                values = {str(row.get(key, '')).strip() for row in data if row.get(key)}
+                if len(values) == 1:
+                    return values.pop().title()
+
         return ''
 
     def _generate_title(
@@ -203,9 +232,10 @@ class ChartIntelligence:
         user_question: str,
         y_label: str = '',
         series: List[str] | None = None,
+        data: List[Dict[str, Any]] | None = None,
     ) -> str:
         """Generate a human-readable report title from chart metadata and question."""
-        subject = self._extract_subject(user_question)
+        subject = self._extract_subject(user_question, data)
         metric = y_label.replace('_', ' ').title() if y_label else 'Sales'
         prefix = f"{subject} — " if subject else ""
 
@@ -305,7 +335,7 @@ class ChartIntelligence:
 
         is_currency = any(kw in value_col.lower() for kw in ('revenue', 'sales', 'price', 'cost', 'profit', 'amount', 'total'))
         y_label = self._format_label(value_col)
-        title = self._generate_title('multi_line', user_question, y_label, years)
+        title = self._generate_title('multi_line', user_question, y_label, years, results)
 
         return {
             "type": "multi_line",
@@ -675,7 +705,7 @@ class ChartIntelligence:
 
         config = {
             "type": chart_type,
-            "title": self._generate_title(chart_type, user_question, self._format_label(y_axis) if y_axis else ''),
+            "title": self._generate_title(chart_type, user_question, self._format_label(y_axis) if y_axis else '', data=results),
             "data": chart_data,
             "x_axis": x_axis,
             "y_axis": y_axis,
