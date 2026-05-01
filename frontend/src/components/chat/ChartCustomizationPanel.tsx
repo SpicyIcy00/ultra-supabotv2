@@ -57,6 +57,7 @@ const CHART_TYPE_LABELS: Record<ChartType, string> = {
   calendar_heatmap: 'Calendar Heatmap',
   slope: 'Slope',
   lollipop: 'Lollipop',
+  multi_line: 'Multi-Line (YoY)',
 };
 
 // Chart type descriptions

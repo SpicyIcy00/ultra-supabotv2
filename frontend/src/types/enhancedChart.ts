@@ -232,6 +232,7 @@ export const CHART_COMPATIBILITY: Record<ChartType, ChartType[]> = {
   calendar_heatmap: [],
   slope: [],
   lollipop: ['bar', 'horizontal_bar'],
+  multi_line: ['line'],
 };
 
 // Default chart state
