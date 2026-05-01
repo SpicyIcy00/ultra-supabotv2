@@ -168,6 +168,7 @@ class AlgorithmSettings(Base):
     __tablename__ = "algorithm_settings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)  # Always row 1
+    snapshot_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     snapshot_required_days: Mapped[int] = mapped_column(Integer, nullable=False, default=28)
     stockout_buffer_weekday_pct: Mapped[int] = mapped_column(Integer, nullable=False, default=20)
     stockout_buffer_weekend_pct: Mapped[int] = mapped_column(Integer, nullable=False, default=10)

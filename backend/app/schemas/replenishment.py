@@ -220,6 +220,7 @@ class DataReadinessResponse(BaseModel):
 # --- Algorithm Settings Schemas ---
 
 class AlgorithmSettingsUpdate(BaseModel):
+    snapshot_enabled: Optional[bool] = None
     snapshot_required_days: Optional[int] = Field(None, ge=1, le=365)
     stockout_buffer_weekday_pct: Optional[int] = Field(None, ge=0, le=200)
     stockout_buffer_weekend_pct: Optional[int] = Field(None, ge=0, le=200)
@@ -230,6 +231,7 @@ class AlgorithmSettingsUpdate(BaseModel):
 
 
 class AlgorithmSettingsResponse(BaseModel):
+    snapshot_enabled: bool
     snapshot_required_days: int
     stockout_buffer_weekday_pct: int
     stockout_buffer_weekend_pct: int

@@ -20,6 +20,7 @@ def upgrade() -> None:
     op.create_table(
         'algorithm_settings',
         sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('snapshot_enabled', sa.Boolean(), nullable=False, server_default='true'),
         sa.Column('snapshot_required_days', sa.Integer(), nullable=False, server_default='28'),
         sa.Column('stockout_buffer_weekday_pct', sa.Integer(), nullable=False, server_default='20'),
         sa.Column('stockout_buffer_weekend_pct', sa.Integer(), nullable=False, server_default='10'),

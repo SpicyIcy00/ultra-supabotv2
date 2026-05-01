@@ -52,10 +52,11 @@ class ReplenishmentService:
         """Get snapshot data readiness information."""
         algo = await self.get_algorithm_settings()
         snapshot_required = algo["snapshot_required_days"]
+        snapshot_enabled = algo["snapshot_enabled"]
         snapshot_days = await self.get_snapshot_days_available()
         days_until_full = max(0, snapshot_required - snapshot_days)
         full_accuracy_date = date.today() + timedelta(days=days_until_full)
-        calc_mode = "snapshot" if snapshot_days >= snapshot_required else "fallback"
+        calc_mode = "snapshot" if (snapshot_enabled and snapshot_days >= snapshot_required) else "fallback"
 
         # Get stores that have snapshot data
         query = (
@@ -83,6 +84,7 @@ class ReplenishmentService:
     # ----------------------------------------------------------------
 
     _ALGO_DEFAULTS = {
+        "snapshot_enabled": True,
         "snapshot_required_days": 28,
         "stockout_buffer_weekday_pct": 20,
         "stockout_buffer_weekend_pct": 10,
@@ -101,6 +103,7 @@ class ReplenishmentService:
             row = result.scalar_one_or_none()
             if row:
                 return {
+                    "snapshot_enabled": row.snapshot_enabled,
                     "snapshot_required_days": row.snapshot_required_days,
                     "stockout_buffer_weekday_pct": row.stockout_buffer_weekday_pct,
                     "stockout_buffer_weekend_pct": row.stockout_buffer_weekend_pct,
@@ -358,6 +361,7 @@ class ReplenishmentService:
 
         # Load algorithm settings
         algo = await self.get_algorithm_settings()
+        snapshot_enabled = algo["snapshot_enabled"]
         snapshot_required_days = algo["snapshot_required_days"]
         buffer_weekday = algo["stockout_buffer_weekday_pct"] / 100.0
         buffer_weekend = algo["stockout_buffer_weekend_pct"] / 100.0
@@ -367,7 +371,7 @@ class ReplenishmentService:
 
         # Determine calculation mode
         snapshot_days = await self.get_snapshot_days_available()
-        calc_mode = "snapshot" if snapshot_days >= snapshot_required_days else "fallback"
+        calc_mode = "snapshot" if (snapshot_enabled and snapshot_days >= snapshot_required_days) else "fallback"
 
         # Get seasonality multiplier for today
         seasonality_multiplier = await self.get_seasonality_multiplier(run_date)

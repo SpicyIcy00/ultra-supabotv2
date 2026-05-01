@@ -3,6 +3,7 @@ import { getAlgorithmSettings, updateAlgorithmSettings } from '../../services/re
 import type { AlgorithmSettings as AlgorithmSettingsType } from '../../types/replenishment';
 
 const DEFAULTS: AlgorithmSettingsType = {
+  snapshot_enabled: true,
   snapshot_required_days: 28,
   stockout_buffer_weekday_pct: 20,
   stockout_buffer_weekend_pct: 10,
@@ -12,7 +13,8 @@ const DEFAULTS: AlgorithmSettingsType = {
   critical_stock_threshold_days: 3,
 };
 
-interface FieldConfig {
+interface NumberField {
+  type: 'number';
   key: keyof AlgorithmSettingsType;
   label: string;
   description: string;
@@ -22,15 +24,35 @@ interface FieldConfig {
   suffix?: string;
 }
 
+interface ToggleField {
+  type: 'toggle';
+  key: keyof AlgorithmSettingsType;
+  label: string;
+  description: string;
+  onLabel?: string;
+  offLabel?: string;
+}
+
+type FieldConfig = NumberField | ToggleField;
+
 const SECTIONS: { title: string; subtitle: string; fields: FieldConfig[] }[] = [
   {
     title: 'Data Mode',
-    subtitle: 'Controls when high-accuracy snapshot mode is used.',
+    subtitle: 'Controls whether snapshot-based or transaction-based sales calculation is used.',
     fields: [
       {
+        type: 'toggle',
+        key: 'snapshot_enabled',
+        label: 'Snapshot Mode',
+        description: 'When on, uses daily inventory snapshots to exclude stockout days from the sales average — more accurate. When off, always uses transaction-based fallback.',
+        onLabel: 'Enabled',
+        offLabel: 'Disabled (Fallback)',
+      },
+      {
+        type: 'number',
         key: 'snapshot_required_days',
         label: 'Snapshot Days Required',
-        description: 'Minimum days of inventory snapshot history needed to activate high-accuracy mode. Below this, the fallback (transaction-based) mode is used.',
+        description: 'Minimum days of snapshot history needed to activate snapshot mode.',
         min: 1, max: 90, step: 1, suffix: 'days',
       },
     ],
@@ -40,12 +62,14 @@ const SECTIONS: { title: string; subtitle: string; fields: FieldConfig[] }[] = [
     subtitle: 'Extra quantity added when a stockout is predicted within the review window.',
     fields: [
       {
+        type: 'number',
         key: 'stockout_buffer_weekday_pct',
         label: 'Weekday Buffer (Mon–Fri)',
-        description: 'Extra % added when stockout is predicted on a weekday — entering the weekend without stock.',
+        description: 'Extra % added when stockout is predicted on a weekday.',
         min: 0, max: 100, step: 1, suffix: '%',
       },
       {
+        type: 'number',
         key: 'stockout_buffer_weekend_pct',
         label: 'Weekend Buffer (Sat–Sun)',
         description: 'Extra % added when stockout is predicted on a weekend day.',
@@ -55,15 +79,17 @@ const SECTIONS: { title: string; subtitle: string; fields: FieldConfig[] }[] = [
   },
   {
     title: 'Priority Weights',
-    subtitle: 'Controls how store-SKU pairs are ranked when warehouse stock is scarce. Weights should sum to 1.0.',
+    subtitle: 'Ranks store-SKU pairs when warehouse stock is scarce. Weights should sum to 1.0.',
     fields: [
       {
+        type: 'number',
         key: 'priority_velocity_weight',
         label: 'Velocity Weight',
-        description: 'Weight given to sales velocity (log scale). Higher = prefer high-sellers.',
+        description: 'Weight given to sales velocity. Higher = prefer high-sellers.',
         min: 0, max: 1, step: 0.05,
       },
       {
+        type: 'number',
         key: 'priority_stockout_weight',
         label: 'Stockout Risk Weight',
         description: 'Weight given to stockout urgency (1 ÷ days of stock). Higher = prefer items nearly empty.',
@@ -76,12 +102,14 @@ const SECTIONS: { title: string; subtitle: string; fields: FieldConfig[] }[] = [
     subtitle: 'Thresholds that trigger exception flags on the Exceptions tab.',
     fields: [
       {
+        type: 'number',
         key: 'overstock_threshold_days',
         label: 'Overstock Threshold',
         description: 'Items with more than this many days of stock are flagged as overstock.',
         min: 1, max: 3650, step: 1, suffix: 'days',
       },
       {
+        type: 'number',
         key: 'critical_stock_threshold_days',
         label: 'Critical Stock Threshold',
         description: 'Items with fewer than this many days of stock are flagged as critical.',
@@ -99,9 +127,7 @@ export const AlgorithmSettings: React.FC = () => {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
   const load = async () => {
     setLoading(true);
@@ -118,26 +144,25 @@ export const AlgorithmSettings: React.FC = () => {
 
   const isDirty = JSON.stringify(draft) !== JSON.stringify(settings);
 
-  const handleChange = (key: keyof AlgorithmSettingsType, raw: string) => {
+  const handleNumber = (key: keyof AlgorithmSettingsType, raw: string) => {
     const num = parseFloat(raw);
-    if (!isNaN(num)) {
-      setDraft((prev) => ({ ...prev, [key]: num }));
-    }
+    if (!isNaN(num)) setDraft((prev) => ({ ...prev, [key]: num }));
   };
 
-  const handleReset = () => {
-    setDraft(settings);
-    setError(null);
+  const handleToggle = (key: keyof AlgorithmSettingsType) => {
+    setDraft((prev) => ({ ...prev, [key]: !prev[key] }));
   };
+
+  const handleReset = () => { setDraft(settings); setError(null); };
 
   const handleSave = async () => {
     setSaving(true);
     setError(null);
     try {
       const { updated_at, ...payload } = draft;
-      const saved = await updateAlgorithmSettings(payload);
-      setSettings(saved);
-      setDraft(saved);
+      const result = await updateAlgorithmSettings(payload);
+      setSettings(result);
+      setDraft(result);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err: any) {
@@ -170,18 +195,13 @@ export const AlgorithmSettings: React.FC = () => {
         </div>
         <div className="flex items-center gap-2">
           {isDirty && (
-            <button
-              onClick={handleReset}
-              className="px-3 py-1.5 text-xs text-gray-400 border border-[#2e303d] rounded-lg hover:text-white hover:border-gray-500 transition-colors"
-            >
+            <button onClick={handleReset}
+              className="px-3 py-1.5 text-xs text-gray-400 border border-[#2e303d] rounded-lg hover:text-white hover:border-gray-500 transition-colors">
               Reset
             </button>
           )}
-          <button
-            onClick={handleSave}
-            disabled={!isDirty || saving}
-            className="px-4 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-700 disabled:bg-[#2e303d] disabled:text-gray-500 text-white rounded-lg transition-colors"
-          >
+          <button onClick={handleSave} disabled={!isDirty || saving}
+            className="px-4 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-700 disabled:bg-[#2e303d] disabled:text-gray-500 text-white rounded-lg transition-colors">
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
@@ -192,22 +212,20 @@ export const AlgorithmSettings: React.FC = () => {
           <p className="text-green-400 text-sm">Settings saved. They will apply on the next replenishment run.</p>
         </div>
       )}
-
       {error && (
         <div className="bg-red-900/30 border border-red-600/50 rounded-lg px-4 py-3">
           <p className="text-red-400 text-sm">{error}</p>
         </div>
       )}
-
       {weightWarning && (
         <div className="bg-yellow-900/30 border border-yellow-600/50 rounded-lg px-4 py-3">
           <p className="text-yellow-400 text-sm">
-            Priority weights sum to <strong>{weightSum}</strong> — they should sum to 1.0 for correct scoring.
+            Priority weights sum to <strong>{weightSum}</strong> — they should sum to 1.0.
           </p>
         </div>
       )}
 
-      {/* Settings Sections */}
+      {/* Sections */}
       {SECTIONS.map((section) => (
         <div key={section.title} className="bg-[#1c1e26] border border-[#2e303d] rounded-lg overflow-hidden">
           <div className="px-5 py-4 border-b border-[#2e303d]">
@@ -216,39 +234,56 @@ export const AlgorithmSettings: React.FC = () => {
           </div>
           <div className="divide-y divide-[#2e303d]">
             {section.fields.map((field) => {
-              const value = draft[field.key] as number;
-              const original = settings[field.key] as number;
+              const value = draft[field.key];
+              const original = settings[field.key];
               const changed = value !== original;
+
               return (
-                <div key={field.key} className="px-5 py-4 flex items-start gap-6">
+                <div key={String(field.key)} className="px-5 py-4 flex items-center gap-4">
+                  {/* Label + description */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium text-gray-200">{field.label}</p>
                       {changed && (
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-blue-900/50 text-blue-400">
-                          modified
-                        </span>
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-blue-900/50 text-blue-400">modified</span>
                       )}
                     </div>
                     <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{field.description}</p>
-                    {changed && (
+                    {changed && field.type === 'number' && (
                       <p className="text-xs text-gray-600 mt-1">
-                        Was: <span className="text-gray-400">{original}{field.suffix ? ` ${field.suffix}` : ''}</span>
+                        Was: <span className="text-gray-400">{original as number}{(field as NumberField).suffix ? ` ${(field as NumberField).suffix}` : ''}</span>
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <input
-                      type="number"
-                      min={field.min}
-                      max={field.max}
-                      step={field.step}
-                      value={value}
-                      onChange={(e) => handleChange(field.key, e.target.value)}
-                      className="w-24 bg-[#0e1117] border border-[#2e303d] text-gray-200 text-sm rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none text-right tabular-nums"
-                    />
-                    {field.suffix && (
-                      <span className="text-xs text-gray-500 w-8">{field.suffix}</span>
+
+                  {/* Control — fixed width so all inputs align */}
+                  <div className="shrink-0 w-36 flex items-center justify-end gap-2">
+                    {field.type === 'toggle' ? (
+                      <button
+                        onClick={() => handleToggle(field.key)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                          value ? 'bg-blue-600' : 'bg-[#2e303d]'
+                        }`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          value ? 'translate-x-6' : 'translate-x-1'
+                        }`} />
+                      </button>
+                    ) : (
+                      <>
+                        <input
+                          type="number"
+                          min={(field as NumberField).min}
+                          max={(field as NumberField).max}
+                          step={(field as NumberField).step}
+                          value={value as number}
+                          onChange={(e) => handleNumber(field.key, e.target.value)}
+                          className="w-20 bg-[#0e1117] border border-[#2e303d] text-gray-200 text-sm rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none text-right tabular-nums"
+                        />
+                        <span className="text-xs text-gray-500 w-8 text-left">
+                          {(field as NumberField).suffix ?? ''}
+                        </span>
+                      </>
                     )}
                   </div>
                 </div>

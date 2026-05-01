@@ -136,6 +136,7 @@ export interface ExceptionsResponse {
 
 // --- Algorithm Settings ---
 export interface AlgorithmSettings {
+  snapshot_enabled: boolean;
   snapshot_required_days: number;
   stockout_buffer_weekday_pct: number;
   stockout_buffer_weekend_pct: number;
