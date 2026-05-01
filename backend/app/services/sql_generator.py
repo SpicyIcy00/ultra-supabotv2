@@ -382,23 +382,6 @@ Please fix the issue and generate a corrected query.
 5. Handle NULL values with COALESCE or IS NULL/IS NOT NULL
 6. Group by all non-aggregated columns when using GROUP BY
 7. Use table aliases for clarity (t for transactions, p for products, s for stores, etc.)
-8. **YEAR-OVER-YEAR / SEASONALITY**: When the user asks for sales/revenue "per month per year", "by month and year", "year over year", or "month by month each year", ALWAYS output these exact column names so the chart renders correctly:
-   - `year` (integer): EXTRACT(YEAR FROM ...) aliased AS year
-   - `month_number` (integer): EXTRACT(MONTH FROM ...) aliased AS month_number
-   - `month_name` (text): TO_CHAR(..., 'Mon') aliased AS month_name
-   - A value column (e.g. `total_revenue`, `total_sales`)
-   - GROUP BY year, month_number, month_name ORDER BY year, month_number
-   Example:
-   ```sql
-   SELECT EXTRACT(YEAR FROM t.transaction_time AT TIME ZONE 'Asia/Manila')::int AS year,
-          EXTRACT(MONTH FROM t.transaction_time AT TIME ZONE 'Asia/Manila')::int AS month_number,
-          TO_CHAR(t.transaction_time AT TIME ZONE 'Asia/Manila', 'Mon') AS month_name,
-          SUM(t.total) AS total_revenue
-   FROM new_transactions t
-   WHERE t.is_cancelled = false AND t.store_id IN (...)
-   GROUP BY year, month_number, month_name
-   ORDER BY year, month_number LIMIT 100
-   ```
 
 **IMPORTANT BUSINESS LOGIC:**
 - "Top selling products" or "best selling" = ORDER BY revenue (total sales in money)
@@ -410,6 +393,23 @@ Please fix the issue and generate a corrected query.
 - "Out of stock", "no stock", "zero stock" = WHERE i.quantity_on_hand <= 0
 - "Low stock" = WHERE i.quantity_on_hand > 0 AND i.quantity_on_hand <= i.warning_stock
 - **TAGS**: The `products` table has a `tags` TEXT column. When user mentions products "with [X] tags", "tagged [X]", or "tag [X]", ALWAYS filter using `p.tags ILIKE '%X%'`. NEVER use `p.name LIKE` for tag filtering.
+
+**⚠️ YEAR-OVER-YEAR / SEASONALITY QUERIES — MANDATORY FORMAT:**
+When the user asks for data "per month per year", "by month and year", "year over year", "each year by month", "monthly trend across years", or anything comparing months across multiple years, you MUST use EXACTLY these four column aliases — no exceptions:
+```sql
+SELECT
+    EXTRACT(YEAR FROM t.transaction_time AT TIME ZONE 'Asia/Manila')::int AS year,
+    EXTRACT(MONTH FROM t.transaction_time AT TIME ZONE 'Asia/Manila')::int AS month_number,
+    TO_CHAR(t.transaction_time AT TIME ZONE 'Asia/Manila', 'Mon') AS month_name,
+    SUM(t.total) AS total_revenue
+FROM new_transactions t
+WHERE t.is_cancelled = false
+  AND t.store_id IN (...)
+GROUP BY year, month_number, month_name
+ORDER BY year, month_number
+LIMIT 100
+```
+Do NOT use DATE_TRUNC or a single date column for these queries — you must output separate `year`, `month_number`, and `month_name` columns so the chart can draw one line per year.
 
 **Query Optimization:**
 - Filter by dates early in WHERE clause

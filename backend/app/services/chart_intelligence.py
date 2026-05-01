@@ -187,15 +187,30 @@ class ChartIntelligence:
         if not results:
             return None
 
+        MONTH_ABBR = {1:'Jan',2:'Feb',3:'Mar',4:'Apr',5:'May',6:'Jun',
+                      7:'Jul',8:'Aug',9:'Sep',10:'Oct',11:'Nov',12:'Dec'}
+
         columns = list(results[0].keys())
         col_lower = {c: c.lower() for c in columns}
 
-        year_col = next((c for c in columns if col_lower[c] == 'year'), None)
-        month_num_col = next((c for c in columns if col_lower[c] in ('month_number', 'month_num')), None)
-        month_name_col = next((c for c in columns if col_lower[c] == 'month_name'), None)
+        # Flexible column matching — handles year, month, month_number, month_name, etc.
+        year_col = next((c for c in columns if col_lower[c] in ('year',)), None)
+        month_num_col = next(
+            (c for c in columns if col_lower[c] in ('month', 'month_number', 'month_num', 'month_no', 'month_num_')),
+            None
+        )
+        month_name_col = next(
+            (c for c in columns if 'month_name' in col_lower[c] or col_lower[c] in ('month_label',)),
+            None
+        )
 
-        # Require at least year + (month_number or month_name)
+        # Need at least a year column plus some form of month identifier
         if not year_col or (not month_num_col and not month_name_col):
+            return None
+
+        # Need multiple distinct years to justify a multi-line chart
+        unique_years = {row.get(year_col) for row in results if row.get(year_col) is not None}
+        if len(unique_years) < 1:
             return None
 
         # Find the numeric value column (not a year/month column)
@@ -212,16 +227,21 @@ class ChartIntelligence:
         if not value_col:
             return None
 
-        # Collect sorted unique years
-        years = sorted({str(int(row[year_col])) for row in results if row.get(year_col) is not None})
+        # Collect sorted unique years as strings
+        years = sorted({str(int(y)) for y in unique_years})
 
-        # Pivot: month_number → {name, year_values...}
+        # Pivot: month key → {name, year_values...}
         months: dict = {}
         for row in results:
-            year = str(int(row[year_col]))
+            year_val = row.get(year_col)
+            if year_val is None:
+                continue
+            year = str(int(year_val))
             m_num = int(row[month_num_col]) if month_num_col and row.get(month_num_col) is not None else None
-            m_name = str(row[month_name_col]) if month_name_col and row.get(month_name_col) else (
-                f"M{m_num}" if m_num else "Unknown"
+            m_name = (
+                str(row[month_name_col]) if month_name_col and row.get(month_name_col)
+                else MONTH_ABBR.get(m_num, f"M{m_num}") if m_num
+                else "Unknown"
             )
             value = float(row.get(value_col) or 0)
 
@@ -230,8 +250,11 @@ class ChartIntelligence:
                 months[key] = {"name": m_name, "month_number": m_num or 0}
             months[key][year] = value
 
-        # Sort months by month_number then produce ordered list
-        chart_data = [months[k] for k in sorted(months.keys(), key=lambda x: (int(x) if isinstance(x, (int, str)) and str(x).isdigit() else 99))]
+        # Sort by month number
+        def _month_sort_key(k):
+            return int(k) if isinstance(k, int) or (isinstance(k, str) and k.isdigit()) else 99
+
+        chart_data = [months[k] for k in sorted(months.keys(), key=_month_sort_key)]
 
         is_currency = any(kw in value_col.lower() for kw in ('revenue', 'sales', 'price', 'cost', 'profit', 'amount', 'total'))
 
