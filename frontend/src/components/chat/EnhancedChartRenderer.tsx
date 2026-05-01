@@ -1122,7 +1122,7 @@ export function EnhancedChartRenderer({
         <ChartToolbar
           chartRef={exportRef}
           data={data}
-          title={chartState.title || config.title || 'chart'}
+          title={chartState.title || (config as any).title || 'chart'}
           onSettingsClick={() => setShowSettings(!showSettings)}
         />
       </div>
@@ -1149,10 +1149,12 @@ export function EnhancedChartRenderer({
       )}
 
       {/* Export container - wraps only title + chart for clean image export */}
-      <div ref={exportRef}>
-        {/* Title */}
-        {chartState.title && (
-          <h4 className="text-sm font-medium text-gray-300 mb-2">{chartState.title}</h4>
+      <div ref={exportRef} className="bg-[#1c1e26] p-2 rounded">
+        {/* Report header — shown in export; uses user-set title or auto-generated one */}
+        {(chartState.title || config.title) && (
+          <h4 className="text-sm font-semibold text-white mb-3 px-1">
+            {chartState.title || config.title}
+          </h4>
         )}
 
         {/* Chart */}

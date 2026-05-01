@@ -153,7 +153,7 @@ class ChartIntelligence:
             return None
 
         # Year-over-year detection: must happen before generic profiling
-        yoy_config = self._build_multi_line_config(results)
+        yoy_config = self._build_multi_line_config(results, user_question)
         if yoy_config:
             return yoy_config
 
@@ -170,14 +170,61 @@ class ChartIntelligence:
             return None
 
         # Build chart configuration
-        chart_config = self._build_chart_config(chart_type, results, data_profile)
+        chart_config = self._build_chart_config(chart_type, results, data_profile, user_question)
 
         # Validate and repair
         chart_config = self._validate_and_repair(chart_config, results)
 
         return chart_config
 
-    def _build_multi_line_config(self, results: List[Dict[str, Any]]) -> Dict[str, Any] | None:
+    # Words to ignore when extracting the subject entity from a question
+    _STOP_WORDS = {
+        'can', 'you', 'show', 'me', 'the', 'a', 'an', 'for', 'of', 'in', 'at', 'by',
+        'and', 'or', 'sales', 'revenue', 'transactions', 'products', 'store', 'stores',
+        'per', 'month', 'year', 'week', 'day', 'daily', 'monthly', 'yearly', 'annual',
+        'trend', 'compare', 'comparison', 'vs', 'over', 'time', 'what', 'is', 'are',
+        'how', 'many', 'much', 'total', 'average', 'top', 'best', 'worst', 'all',
+        'give', 'get', 'data', 'report', 'chart', 'graph', 'each', 'every', 'by',
+        'between', 'from', 'to', 'with', 'breakdown', 'summary', 'please',
+    }
+
+    def _extract_subject(self, question: str) -> str:
+        """Return the first meaningful word/phrase from a question (e.g. store name)."""
+        import re
+        words = re.split(r'\W+', question.lower())
+        for word in words:
+            if word and word not in self._STOP_WORDS and len(word) > 2:
+                return word.title()
+        return ''
+
+    def _generate_title(
+        self,
+        chart_type: str,
+        user_question: str,
+        y_label: str = '',
+        series: List[str] | None = None,
+    ) -> str:
+        """Generate a human-readable report title from chart metadata and question."""
+        subject = self._extract_subject(user_question)
+        metric = y_label.replace('_', ' ').title() if y_label else 'Sales'
+        prefix = f"{subject} — " if subject else ""
+
+        if chart_type == 'multi_line' and series:
+            years = ' vs '.join(series)
+            return f"{prefix}Monthly {metric}: {years}"
+        if chart_type in ('line', 'area'):
+            return f"{prefix}{metric} Over Time"
+        if chart_type in ('bar', 'horizontal_bar', 'lollipop', 'pareto'):
+            return f"{prefix}Top {metric}"
+        if chart_type == 'pie':
+            return f"{prefix}{metric} Distribution"
+        if chart_type in ('stacked_bar', 'waterfall'):
+            return f"{prefix}{metric} Breakdown"
+        if chart_type == 'scatter':
+            return f"{prefix}{metric} Correlation"
+        return f"{prefix}{metric} Report"
+
+    def _build_multi_line_config(self, results: List[Dict[str, Any]], user_question: str = '') -> Dict[str, Any] | None:
         """
         Detect year-over-year / seasonality data and build a multi-line chart config.
 
@@ -257,15 +304,18 @@ class ChartIntelligence:
         chart_data = [months[k] for k in sorted(months.keys(), key=_month_sort_key)]
 
         is_currency = any(kw in value_col.lower() for kw in ('revenue', 'sales', 'price', 'cost', 'profit', 'amount', 'total'))
+        y_label = self._format_label(value_col)
+        title = self._generate_title('multi_line', user_question, y_label, years)
 
         return {
             "type": "multi_line",
+            "title": title,
             "data": chart_data,
             "series": years,
             "x_axis": "name",
             "y_axis": value_col,
             "x_label": "Month",
-            "y_label": self._format_label(value_col),
+            "y_label": y_label,
             "is_currency": is_currency,
             "formatting": {
                 "abbreviate_numbers": True,
@@ -572,7 +622,8 @@ class ChartIntelligence:
         self,
         chart_type: str,
         results: List[Dict[str, Any]],
-        data_profile: Dict[str, Any]
+        data_profile: Dict[str, Any],
+        user_question: str = '',
     ) -> Dict[str, Any]:
         """Build the chart configuration with full metadata for tooltips."""
         # Select axes
@@ -624,6 +675,7 @@ class ChartIntelligence:
 
         config = {
             "type": chart_type,
+            "title": self._generate_title(chart_type, user_question, self._format_label(y_axis) if y_axis else ''),
             "data": chart_data,
             "x_axis": x_axis,
             "y_axis": y_axis,
