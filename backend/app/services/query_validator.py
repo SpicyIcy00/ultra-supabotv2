@@ -171,52 +171,65 @@ class QueryValidator:
 
         This prevents queries from accessing system tables or unauthorized tables.
         """
-        # Extract table names from the query
-        tables_in_query = QueryValidator._extract_table_names(parsed_statement)
-        
-        # Extract CTE names (defined in the query)
+        tables_in_query, defined_aliases = QueryValidator._extract_table_names(parsed_statement)
         cte_names = QueryValidator._extract_cte_names(str(parsed_statement))
 
-        # Check each table against whitelist
         for table in tables_in_query:
             table_lower = table.lower()
-            # Skip if it's a CTE defined in the query itself
-            if table_lower in cte_names:
+            # Skip CTEs and table aliases — they are not real table accesses
+            if table_lower in cte_names or table_lower in defined_aliases:
                 continue
-                
+
             if table_lower not in [t.lower() for t in allowed_tables]:
                 raise QueryValidationError(
                     f"Unauthorized table access: '{table}'. "
                     f"Allowed tables: {', '.join(allowed_tables)}"
                 )
 
-    @staticmethod
-    def _extract_table_names(parsed_statement) -> List[str]:
-        """Extract table names from parsed SQL statement"""
-        tables = set()
+    # SQL keywords that may be mistakenly captured as table aliases
+    _SQL_KEYWORDS = {
+        'WHERE', 'ON', 'SET', 'GROUP', 'ORDER', 'HAVING', 'LIMIT', 'INNER',
+        'LEFT', 'RIGHT', 'FULL', 'CROSS', 'JOIN', 'AND', 'OR', 'NOT', 'IN',
+        'BETWEEN', 'LIKE', 'IS', 'NULL', 'AS', 'FROM', 'SELECT', 'WITH',
+        'UNION', 'INTERSECT', 'EXCEPT', 'OFFSET', 'FETCH', 'PARTITION', 'BY',
+        'OVER', 'WINDOW', 'DISTINCT', 'CASE', 'WHEN', 'THEN', 'ELSE', 'END',
+        'RETURNING', 'VALUES', 'INTO',
+    }
 
-        # Convert to string and extract tables using regex for FROM and JOIN clauses
+    @staticmethod
+    def _extract_table_names(parsed_statement) -> tuple:
+        """
+        Extract table names and their aliases from parsed SQL.
+
+        Returns (tables, aliases) where aliases are excluded from validation
+        so that single-letter aliases like 't', 'p', 's' are never flagged
+        as unauthorized table accesses.
+        """
+        tables = set()
+        defined_aliases = set()
         query_str = str(parsed_statement)
 
-        # Pattern to match: FROM table_name or JOIN table_name (with optional AS alias)
-        # This captures the table name, ignoring any alias after it
-        # Matches: FROM table_name [AS] alias or FROM table_name
+        # Each pattern captures (table_name, optional_alias) as two groups.
         patterns = [
-            r'\bFROM\s+(\w+)(?:\s+(?:AS\s+)?\w+)?',
-            r'\bJOIN\s+(\w+)(?:\s+(?:AS\s+)?\w+)?',
-            r'\bINNER\s+JOIN\s+(\w+)(?:\s+(?:AS\s+)?\w+)?',
-            r'\bLEFT\s+(?:OUTER\s+)?JOIN\s+(\w+)(?:\s+(?:AS\s+)?\w+)?',
-            r'\bRIGHT\s+(?:OUTER\s+)?JOIN\s+(\w+)(?:\s+(?:AS\s+)?\w+)?',
-            r'\bFULL\s+(?:OUTER\s+)?JOIN\s+(\w+)(?:\s+(?:AS\s+)?\w+)?',
-            r'\bCROSS\s+JOIN\s+(\w+)(?:\s+(?:AS\s+)?\w+)?',
+            r'\bFROM\s+(\w+)(?:\s+(?:AS\s+)?(\w+))?',
+            r'\bJOIN\s+(\w+)(?:\s+(?:AS\s+)?(\w+))?',
+            r'\bINNER\s+JOIN\s+(\w+)(?:\s+(?:AS\s+)?(\w+))?',
+            r'\bLEFT\s+(?:OUTER\s+)?JOIN\s+(\w+)(?:\s+(?:AS\s+)?(\w+))?',
+            r'\bRIGHT\s+(?:OUTER\s+)?JOIN\s+(\w+)(?:\s+(?:AS\s+)?(\w+))?',
+            r'\bFULL\s+(?:OUTER\s+)?JOIN\s+(\w+)(?:\s+(?:AS\s+)?(\w+))?',
+            r'\bCROSS\s+JOIN\s+(\w+)(?:\s+(?:AS\s+)?(\w+))?',
         ]
 
         for pattern in patterns:
-            matches = re.findall(pattern, query_str, re.IGNORECASE)
-            for match in matches:
-                tables.add(match.lower())
+            for table_name, alias in re.findall(pattern, query_str, re.IGNORECASE):
+                if table_name:
+                    tables.add(table_name.lower())
+                if alias and alias.upper() not in QueryValidator._SQL_KEYWORDS:
+                    defined_aliases.add(alias.lower())
 
-        return list(tables)
+        # Aliases are never real table references; remove any overlap
+        tables -= defined_aliases
+        return list(tables), defined_aliases
 
     @staticmethod
     def _extract_cte_names(sql_query: str) -> set:
