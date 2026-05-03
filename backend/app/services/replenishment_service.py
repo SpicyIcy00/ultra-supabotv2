@@ -147,33 +147,35 @@ class ReplenishmentService:
     async def _get_daily_sales_snapshot_mode(
         self, store_id: str, sku_id: str, lookback_days: int = 28
     ) -> List[float]:
-        """Get daily sales excluding stockout days using inventory snapshots."""
+        """Get avg daily sales for snapshot mode as total_in_stock_sales / in_stock_days."""
         cutoff = date.today() - timedelta(days=lookback_days)
         query = text("""
             SELECT
-                DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') AS sale_date,
-                COALESCE(SUM(ti.quantity), 0)::float AS daily_qty
-            FROM new_transactions t
-            JOIN new_transaction_items ti ON t.ref_id = ti.transaction_ref_id
-            JOIN inventory_snapshots snap
-                ON snap.product_id = ti.product_id
-                AND snap.store_id = t.store_id
-                AND snap.snapshot_date = DATE(t.transaction_time AT TIME ZONE 'Asia/Manila')
-            WHERE ti.product_id = :sku_id
-              AND t.store_id = :store_id
-              AND t.transaction_time >= :cutoff
-              AND t.transaction_time < CURRENT_DATE
-              AND t.is_cancelled = false
+                COUNT(DISTINCT snap.snapshot_date)::float AS in_stock_days,
+                COALESCE(SUM(ti.quantity), 0)::float AS total_qty
+            FROM inventory_snapshots snap
+            LEFT JOIN new_transactions t
+                ON t.store_id = snap.store_id
+                AND DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') = snap.snapshot_date
+                AND t.is_cancelled = false
+            LEFT JOIN new_transaction_items ti
+                ON ti.transaction_ref_id = t.ref_id
+                AND ti.product_id = snap.product_id
+            WHERE snap.product_id = :sku_id
+              AND snap.store_id = :store_id
               AND snap.quantity_on_hand > 0
-            GROUP BY sale_date
-            ORDER BY sale_date
+              AND snap.snapshot_date >= :cutoff
+              AND snap.snapshot_date < CURRENT_DATE
         """)
         result = await self.db.execute(
             query,
             {"sku_id": sku_id, "store_id": store_id, "cutoff": cutoff},
         )
-        rows = result.fetchall()
-        return [float(row[1]) for row in rows if float(row[1]) > 0]
+        row = result.fetchone()
+        if not row or not row[0] or float(row[0]) == 0:
+            return []
+        avg = float(row[1]) / float(row[0])
+        return [avg] if avg > 0 else []
 
     async def _get_daily_sales_fallback_mode(
         self, store_id: str, sku_id: str, lookback_days: int = 28
@@ -306,28 +308,29 @@ class ReplenishmentService:
         sales_start_date: Optional[date] = None,
     ) -> Dict[Tuple[str, str], float]:
         """Batch fetch avg daily sales for store-SKU pairs (snapshot mode).
-        Uses median of in-stock sale days — stockout days are excluded via the snapshot join."""
+        Uses total_in_stock_sales / in_stock_days so slow days with stock are
+        included in the denominator, not just days where a sale occurred."""
         cutoff = sales_start_date if sales_start_date is not None else date.today() - timedelta(days=lookback_days)
-        store_filter = "AND t.store_id = :store_id" if store_id else ""
+        store_filter = "AND snap.store_id = :store_id" if store_id else ""
         query = text(f"""
             SELECT
-                t.store_id,
-                ti.product_id,
-                DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') AS sale_date,
-                COALESCE(SUM(ti.quantity), 0)::float AS daily_qty
-            FROM new_transactions t
-            JOIN new_transaction_items ti ON t.ref_id = ti.transaction_ref_id
-            JOIN inventory_snapshots snap
-                ON snap.product_id = ti.product_id
-                AND snap.store_id = t.store_id
-                AND snap.snapshot_date = DATE(t.transaction_time AT TIME ZONE 'Asia/Manila')
-            WHERE t.transaction_time >= :cutoff
-              AND t.transaction_time < CURRENT_DATE
-              AND t.is_cancelled = false
-              AND snap.quantity_on_hand > 0
+                snap.store_id,
+                snap.product_id,
+                COUNT(DISTINCT snap.snapshot_date)::float AS in_stock_days,
+                COALESCE(SUM(ti.quantity), 0)::float AS total_qty
+            FROM inventory_snapshots snap
+            LEFT JOIN new_transactions t
+                ON t.store_id = snap.store_id
+                AND DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') = snap.snapshot_date
+                AND t.is_cancelled = false
+            LEFT JOIN new_transaction_items ti
+                ON ti.transaction_ref_id = t.ref_id
+                AND ti.product_id = snap.product_id
+            WHERE snap.quantity_on_hand > 0
+              AND snap.snapshot_date >= :cutoff
+              AND snap.snapshot_date < CURRENT_DATE
               {store_filter}
-            GROUP BY t.store_id, ti.product_id, sale_date
-            ORDER BY t.store_id, ti.product_id, sale_date
+            GROUP BY snap.store_id, snap.product_id
         """)
         params: Dict[str, Any] = {"cutoff": cutoff}
         if store_id:
@@ -335,18 +338,10 @@ class ReplenishmentService:
         result = await self.db.execute(query, params)
         rows = result.fetchall()
 
-        daily_by_key: Dict[Tuple[str, str], List[float]] = {}
-        for row in rows:
-            key = (row[0], row[1])
-            qty = float(row[3])
-            if qty > 0:
-                if key not in daily_by_key:
-                    daily_by_key[key] = []
-                daily_by_key[key].append(qty)
-
         return {
-            key: statistics.median(vals)
-            for key, vals in daily_by_key.items()
+            (row[0], row[1]): float(row[3]) / float(row[2])
+            for row in rows
+            if float(row[2]) > 0 and float(row[3]) > 0
         }
 
     async def run_replenishment_calculation(
@@ -573,7 +568,7 @@ class ReplenishmentService:
             #   Beyond review week → no buffer
             if apply_stockout_buffer and requested_ship_qty > 0 and season_adj_sales > 0:
                 projected_stockout = run_date + timedelta(
-                    days=int(calc_on_hand / max(season_adj_sales, 0.1))
+                    days=int(calc_on_hand / season_adj_sales)
                 )
                 end_of_review_week = run_date + timedelta(days=REVIEW_PERIOD_DAYS)
                 if projected_stockout <= end_of_review_week:
