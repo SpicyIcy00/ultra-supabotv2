@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { RefreshCw, Save } from 'lucide-react';
 import {
   getCategoryMultipliers,
@@ -6,10 +6,15 @@ import {
   autoPopulateCategoryMultipliers,
 } from '../../services/replenishmentApi';
 import type { CategoryMultiplier } from '../../types/replenishment';
+import { useDashboardStore } from '../../stores/dashboardStore';
+
+// draft key: `${category}||${store_id}`
+type DraftMap = Record<string, string>;
 
 export const CategoryMultiplierConfig: React.FC = () => {
-  const [categories, setCategories] = useState<CategoryMultiplier[]>([]);
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const getStoreName = useDashboardStore(s => s.getStoreName);
+  const [rows, setRows] = useState<CategoryMultiplier[]>([]);
+  const [drafts, setDrafts] = useState<DraftMap>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [populating, setPopulating] = useState(false);
@@ -22,9 +27,9 @@ export const CategoryMultiplierConfig: React.FC = () => {
     setLoading(true);
     try {
       const data = await getCategoryMultipliers();
-      setCategories(data);
-      const initial: Record<string, string> = {};
-      data.forEach(c => { initial[c.category] = String(c.multiplier); });
+      setRows(data);
+      const initial: DraftMap = {};
+      data.forEach(r => { initial[`${r.category}||${r.store_id}`] = String(r.multiplier); });
       setDrafts(initial);
     } catch {
       setError('Failed to load category multipliers.');
@@ -33,36 +38,45 @@ export const CategoryMultiplierConfig: React.FC = () => {
     }
   };
 
+  // Derive sorted unique categories and stores from data
+  const categories = useMemo(() => [...new Set(rows.map(r => r.category))].sort(), [rows]);
+  const storeIds = useMemo(() => [...new Set(rows.map(r => r.store_id))], [rows]);
+  // Keep store order stable: sort by display name
+  const sortedStores = useMemo(() =>
+    [...storeIds].sort((a, b) => getStoreName(a).localeCompare(getStoreName(b))),
+    [storeIds, getStoreName]
+  );
+
+  const isDirty = rows.some(r => {
+    const key = `${r.category}||${r.store_id}`;
+    return parseFloat(drafts[key] ?? '1') !== r.multiplier;
+  });
+
   const handleAutoPopulate = async () => {
     setPopulating(true);
     setError(null);
     try {
       const result = await autoPopulateCategoryMultipliers();
       await load();
-      setSuccess(`Auto-populated. Total categories: ${result.total_categories}.`);
+      setSuccess(`Synced. ${result.total_categories} category × store combinations.`);
       setTimeout(() => setSuccess(null), 4000);
     } catch (e: any) {
-      setError(e?.response?.data?.detail || 'Failed to auto-populate.');
+      setError(e?.response?.data?.detail || 'Failed to sync.');
     } finally {
       setPopulating(false);
     }
   };
 
-  const isDirty = categories.some(c => {
-    const draft = drafts[c.category];
-    if (draft === undefined) return false;
-    return parseFloat(draft) !== c.multiplier;
-  });
-
   const handleSave = async () => {
-    const items: { category: string; multiplier: number }[] = [];
-    for (const cat of categories) {
-      const val = parseFloat(drafts[cat.category] ?? '1');
+    const items: { category: string; store_id: string; multiplier: number }[] = [];
+    for (const r of rows) {
+      const key = `${r.category}||${r.store_id}`;
+      const val = parseFloat(drafts[key] ?? '1');
       if (isNaN(val) || val <= 0) {
-        setError(`Invalid multiplier for "${cat.category}". Must be a positive number.`);
+        setError(`Invalid multiplier for "${r.category}" @ ${getStoreName(r.store_id)}. Must be a positive number.`);
         return;
       }
-      items.push({ category: cat.category, multiplier: val });
+      items.push({ category: r.category, store_id: r.store_id, multiplier: val });
     }
     setSaving(true);
     setError(null);
@@ -87,12 +101,13 @@ export const CategoryMultiplierConfig: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4 max-w-2xl">
+    <div className="space-y-4">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-base font-semibold text-white">Category Multipliers</h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            Applied per product category during replenishment. 1.0 = no change. Changes take effect on the next run.
+            Per-store multiplier applied to adjusted sales before computing order quantities.
+            1.0 = no change. Takes effect on the next run.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -140,47 +155,66 @@ export const CategoryMultiplierConfig: React.FC = () => {
         </div>
       ) : (
         <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg overflow-hidden">
-          <div className="px-5 py-3 border-b border-[#2e303d] grid grid-cols-[1fr_auto] gap-4">
-            <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Category</span>
-            <span className="text-xs font-medium text-gray-400 uppercase tracking-wider w-28 text-right">Multiplier</span>
-          </div>
-          <div className="divide-y divide-[#2e303d]">
-            {categories.map(cat => {
-              const draftVal = drafts[cat.category] ?? String(cat.multiplier);
-              const numVal = parseFloat(draftVal);
-              const changed = numVal !== cat.multiplier;
-              const isAboveOne = numVal > 1.0;
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-[#2e303d] bg-[#1a1c24]">
+                  <th className="px-4 py-3 text-left font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                    Category
+                  </th>
+                  {sortedStores.map(sid => (
+                    <th key={sid} className="px-3 py-3 text-right font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                      {getStoreName(sid)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#2e303d]">
+                {categories.map(cat => (
+                  <tr key={cat} className="hover:bg-gray-700/10">
+                    <td className="px-4 py-2.5 text-sm text-gray-200 whitespace-nowrap font-medium">
+                      {cat}
+                    </td>
+                    {sortedStores.map(sid => {
+                      const key = `${cat}||${sid}`;
+                      const draftVal = drafts[key];
+                      const original = rows.find(r => r.category === cat && r.store_id === sid)?.multiplier ?? 1;
+                      const numVal = parseFloat(draftVal ?? '1');
+                      const changed = draftVal !== undefined && numVal !== original;
+                      const isAboveOne = numVal > 1.0;
+                      // Cell is missing if this category×store combo doesn't exist yet
+                      const exists = draftVal !== undefined;
 
-              return (
-                <div key={cat.category} className="px-5 py-2.5 grid grid-cols-[1fr_auto] gap-4 items-center">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-200">{cat.category}</span>
-                    {changed && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-blue-900/50 text-blue-400">modified</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min="0.001"
-                      step="0.01"
-                      value={draftVal}
-                      onChange={e => setDrafts(prev => ({ ...prev, [cat.category]: e.target.value }))}
-                      className={`w-24 bg-[#0e1117] border text-sm rounded-lg px-3 py-1.5 focus:outline-none tabular-nums text-right ${
-                        changed ? 'border-blue-500/50 focus:border-blue-400' : 'border-[#2e303d] focus:border-blue-500'
-                      } ${isAboveOne ? 'text-green-400' : 'text-gray-200'}`}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+                      return (
+                        <td key={sid} className="px-3 py-2 text-right">
+                          {exists ? (
+                            <input
+                              type="number"
+                              min="0.001"
+                              step="0.01"
+                              value={draftVal}
+                              onChange={e => setDrafts(prev => ({ ...prev, [key]: e.target.value }))}
+                              className={`w-20 bg-[#0e1117] border text-xs rounded-lg px-2 py-1.5 focus:outline-none tabular-nums text-right ${
+                                changed ? 'border-blue-500/50 focus:border-blue-400' : 'border-[#2e303d] focus:border-blue-500'
+                              } ${isAboveOne ? 'text-green-400' : 'text-gray-300'}`}
+                            />
+                          ) : (
+                            <span className="text-gray-600 text-xs">—</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
       <p className="text-xs text-gray-600">
-        {categories.length} categor{categories.length !== 1 ? 'ies' : 'y'} configured.
-        Use "Sync from Products" to add any newly created product categories.
+        {categories.length} categor{categories.length !== 1 ? 'ies' : 'y'} × {sortedStores.length} store{sortedStores.length !== 1 ? 's' : ''}.
+        Use "Sync from Products" to add newly created categories across all stores.
       </p>
     </div>
   );

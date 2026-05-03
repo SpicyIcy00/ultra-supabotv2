@@ -210,7 +210,7 @@ export const getCategoryMultipliers = async (): Promise<CategoryMultiplier[]> =>
 };
 
 export const bulkUpdateCategoryMultipliers = async (
-  items: { category: string; multiplier: number }[]
+  items: { category: string; store_id: string; multiplier: number }[]
 ): Promise<{ updated: number; created: number }> => {
   const response = await axios.post(`${API_BASE}/category-multipliers`, { items });
   return response.data;

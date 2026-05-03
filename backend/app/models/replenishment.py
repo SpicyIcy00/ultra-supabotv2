@@ -136,6 +136,11 @@ class CategoryMultiplier(Base):
     __tablename__ = "category_multipliers"
 
     category: Mapped[str] = mapped_column(String(100), primary_key=True)
+    store_id: Mapped[str] = mapped_column(
+        String(24),
+        ForeignKey("stores.id", ondelete="CASCADE"),
+        primary_key=True
+    )
     multiplier: Mapped[float] = mapped_column(Numeric(5, 3), nullable=False, default=1.0)
 
     created_at: Mapped[datetime] = mapped_column(
@@ -147,6 +152,8 @@ class CategoryMultiplier(Base):
         server_default=func.timezone('Asia/Manila', func.now()),
         onupdate=func.timezone('Asia/Manila', func.now())
     )
+
+    store: Mapped["Store"] = relationship("Store")
 
 
 class ShipmentPlan(Base):

@@ -387,10 +387,10 @@ class ReplenishmentService:
             for r in vel_rules_result.scalars().all()
         ]
 
-        # Pre-load category multipliers into a dict
+        # Pre-load category multipliers into a dict keyed by (category, store_id)
         cat_mult_result = await self.db.execute(select(CategoryMultiplier))
-        category_multiplier_map: Dict[str, float] = {
-            r.category: float(r.multiplier)
+        category_multiplier_map: Dict[Tuple[str, str], float] = {
+            (r.category, r.store_id): float(r.multiplier)
             for r in cat_mult_result.scalars().all()
         }
 
@@ -528,9 +528,9 @@ class ReplenishmentService:
                     velocity_mult = mult
                     break
 
-            # Category multiplier: looked up by product category
+            # Category multiplier: looked up by (category, store_id)
             category_mult = category_multiplier_map.get(
-                sku_category_map.get(sku_id, ''), 1.0
+                (sku_category_map.get(sku_id, ''), store_id), 1.0
             )
 
             # Season adjusted: seasonality × category only (velocity applied later to order qty)
@@ -1274,42 +1274,34 @@ class ReplenishmentService:
     # ----------------------------------------------------------------
 
     async def get_all_category_multipliers(self) -> List[Dict]:
-        """Get all category multipliers ordered by category name."""
-        result = await self.db.execute(
-            select(CategoryMultiplier).order_by(CategoryMultiplier.category)
-        )
-        rows = result.scalars().all()
+        """Get all category multipliers ordered by category, then store name."""
+        query = text("""
+            SELECT cm.category, cm.store_id, s.name AS store_name, cm.multiplier::float, cm.updated_at
+            FROM category_multipliers cm
+            JOIN stores s ON cm.store_id = s.id
+            ORDER BY cm.category, s.name
+        """)
+        result = await self.db.execute(query)
         return [
             {
-                "category": r.category,
-                "multiplier": float(r.multiplier),
-                "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+                "category": r[0],
+                "store_id": r[1],
+                "store_name": r[2],
+                "multiplier": r[3],
+                "updated_at": r[4].isoformat() if r[4] else None,
             }
-            for r in rows
+            for r in result.fetchall()
         ]
 
-    async def upsert_category_multiplier(self, category: str, multiplier: float) -> Dict:
-        """Create or update a single category multiplier."""
-        result = await self.db.execute(
-            select(CategoryMultiplier).where(CategoryMultiplier.category == category)
-        )
-        row = result.scalar_one_or_none()
-        if row:
-            row.multiplier = multiplier
-        else:
-            row = CategoryMultiplier(category=category, multiplier=multiplier)
-            self.db.add(row)
-        await self.db.flush()
-        return {"category": category, "multiplier": multiplier, "status": "ok"}
-
     async def bulk_upsert_category_multipliers(self, items: List[Dict]) -> Dict:
-        """Bulk create or update category multipliers."""
+        """Bulk create or update category multipliers (per store)."""
         updated = 0
         created = 0
         for item in items:
             result = await self.db.execute(
                 select(CategoryMultiplier).where(
-                    CategoryMultiplier.category == item["category"]
+                    CategoryMultiplier.category == item["category"],
+                    CategoryMultiplier.store_id == item["store_id"],
                 )
             )
             row = result.scalar_one_or_none()
@@ -1318,7 +1310,9 @@ class ReplenishmentService:
                 updated += 1
             else:
                 row = CategoryMultiplier(
-                    category=item["category"], multiplier=item["multiplier"]
+                    category=item["category"],
+                    store_id=item["store_id"],
+                    multiplier=item["multiplier"],
                 )
                 self.db.add(row)
                 created += 1
@@ -1326,13 +1320,14 @@ class ReplenishmentService:
         return {"updated": updated, "created": created}
 
     async def auto_populate_category_multipliers(self) -> Dict:
-        """Insert any categories from products table not yet in category_multipliers."""
+        """Insert any missing category × store combinations at 1.0."""
         await self.db.execute(text("""
-            INSERT INTO category_multipliers (category, multiplier)
-            SELECT DISTINCT category, 1.000
-            FROM products
-            WHERE category IS NOT NULL AND category != ''
-            ON CONFLICT (category) DO NOTHING
+            INSERT INTO category_multipliers (category, store_id, multiplier)
+            SELECT DISTINCT p.category, s.id, 1.000
+            FROM products p
+            CROSS JOIN stores s
+            WHERE p.category IS NOT NULL AND p.category != ''
+            ON CONFLICT (category, store_id) DO NOTHING
         """))
         await self.db.flush()
         result = await self.db.execute(select(func.count()).select_from(CategoryMultiplier))

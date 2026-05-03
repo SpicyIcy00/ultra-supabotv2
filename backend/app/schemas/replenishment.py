@@ -138,6 +138,7 @@ class VelocityMultiplierRuleResponse(BaseModel):
 
 class CategoryMultiplierUpdate(BaseModel):
     category: str = Field(..., max_length=100)
+    store_id: str = Field(..., max_length=24)
     multiplier: Decimal = Field(default=Decimal("1.000"), ge=0, le=10)
 
 
@@ -147,6 +148,8 @@ class CategoryMultiplierBulkUpdate(BaseModel):
 
 class CategoryMultiplierResponse(BaseModel):
     category: str
+    store_id: str
+    store_name: Optional[str] = None
     multiplier: float
     updated_at: Optional[str] = None
 

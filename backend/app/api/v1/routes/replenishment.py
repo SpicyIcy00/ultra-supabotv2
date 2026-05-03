@@ -14,7 +14,6 @@ from app.schemas.replenishment import (
     AlgorithmSettingsUpdate,
     VelocityMultiplierRuleCreate,
     VelocityMultiplierRuleUpdate,
-    CategoryMultiplierUpdate,
     CategoryMultiplierBulkUpdate,
 )
 
@@ -300,24 +299,14 @@ async def bulk_update_category_multipliers(
     body: CategoryMultiplierBulkUpdate,
     service: ReplenishmentService = Depends(_get_service),
 ):
-    """Bulk create or update category multipliers."""
+    """Bulk create or update category multipliers (per store)."""
     items = [item.model_dump() for item in body.items]
     return await service.bulk_upsert_category_multipliers(items)
-
-
-@router.put("/category-multipliers/{category}")
-async def update_category_multiplier(
-    category: str,
-    body: CategoryMultiplierUpdate,
-    service: ReplenishmentService = Depends(_get_service),
-):
-    """Update a single category multiplier."""
-    return await service.upsert_category_multiplier(category, float(body.multiplier))
 
 
 @router.post("/category-multipliers/auto-populate")
 async def auto_populate_category_multipliers(
     service: ReplenishmentService = Depends(_get_service),
 ):
-    """Auto-populate category multipliers from distinct product categories."""
+    """Auto-populate all category × store combinations at 1.0."""
     return await service.auto_populate_category_multipliers()

@@ -54,6 +54,8 @@ export interface VelocityMultiplierRule {
 // --- Category Multipliers ---
 export interface CategoryMultiplier {
   category: string;
+  store_id: string;
+  store_name?: string;
   multiplier: number;
   updated_at?: string;
 }
