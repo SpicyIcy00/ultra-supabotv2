@@ -178,12 +178,10 @@ class ReplenishmentService:
     async def _get_daily_sales_fallback_mode(
         self, store_id: str, sku_id: str, lookback_days: int = 28
     ) -> List[float]:
-        """Get daily sales, filtering out zero-sales days as stockout proxy."""
+        """Get daily sales for fallback mode as total/lookback_days (includes zero-sale days)."""
         cutoff = date.today() - timedelta(days=lookback_days)
         query = text("""
-            SELECT
-                DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') AS sale_date,
-                COALESCE(SUM(ti.quantity), 0)::float AS daily_qty
+            SELECT COALESCE(SUM(ti.quantity), 0)::float AS total_qty
             FROM new_transactions t
             JOIN new_transaction_items ti ON t.ref_id = ti.transaction_ref_id
             WHERE ti.product_id = :sku_id
@@ -191,16 +189,14 @@ class ReplenishmentService:
               AND t.transaction_time >= :cutoff
               AND t.transaction_time < CURRENT_DATE
               AND t.is_cancelled = false
-            GROUP BY sale_date
-            ORDER BY sale_date
         """)
         result = await self.db.execute(
             query,
             {"sku_id": sku_id, "store_id": store_id, "cutoff": cutoff},
         )
-        rows = result.fetchall()
-        # Filter out zero-sales days as proxy for stockouts
-        return [float(row[1]) for row in rows if float(row[1]) > 0]
+        total_qty = result.scalar() or 0.0
+        avg = float(total_qty) / lookback_days
+        return [avg] if avg > 0 else []
 
     async def get_daily_sales(
         self,
@@ -269,24 +265,29 @@ class ReplenishmentService:
     async def _batch_get_daily_sales_fallback(
         self, lookback_days: int = 28, store_id: Optional[str] = None,
         sales_start_date: Optional[date] = None,
-    ) -> Dict[Tuple[str, str], List[float]]:
-        """Batch fetch daily sales for store-SKU pairs (fallback mode)."""
-        cutoff = sales_start_date if sales_start_date is not None else date.today() - timedelta(days=lookback_days)
+    ) -> Dict[Tuple[str, str], float]:
+        """Batch fetch avg daily sales for store-SKU pairs (fallback mode).
+        Uses total_qty / lookback_days so zero-sale days are included in the average."""
+        if sales_start_date is not None:
+            cutoff = sales_start_date
+            actual_days = max(1, (date.today() - sales_start_date).days)
+        else:
+            cutoff = date.today() - timedelta(days=lookback_days)
+            actual_days = lookback_days
+
         store_filter = "AND t.store_id = :store_id" if store_id else ""
         query = text(f"""
             SELECT
                 t.store_id,
                 ti.product_id,
-                DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') AS sale_date,
-                COALESCE(SUM(ti.quantity), 0)::float AS daily_qty
+                COALESCE(SUM(ti.quantity), 0)::float AS total_qty
             FROM new_transactions t
             JOIN new_transaction_items ti ON t.ref_id = ti.transaction_ref_id
             WHERE t.transaction_time >= :cutoff
               AND t.transaction_time < CURRENT_DATE
               AND t.is_cancelled = false
               {store_filter}
-            GROUP BY t.store_id, ti.product_id, sale_date
-            ORDER BY t.store_id, ti.product_id, sale_date
+            GROUP BY t.store_id, ti.product_id
         """)
         params: Dict[str, Any] = {"cutoff": cutoff}
         if store_id:
@@ -294,21 +295,18 @@ class ReplenishmentService:
         result = await self.db.execute(query, params)
         rows = result.fetchall()
 
-        sales_map: Dict[Tuple[str, str], List[float]] = {}
-        for row in rows:
-            key = (row[0], row[1])
-            qty = float(row[3])
-            if qty > 0:  # Filter zero-sales days as proxy for stockouts
-                if key not in sales_map:
-                    sales_map[key] = []
-                sales_map[key].append(qty)
-        return sales_map
+        return {
+            (row[0], row[1]): float(row[2]) / actual_days
+            for row in rows
+            if float(row[2]) > 0
+        }
 
     async def _batch_get_daily_sales_snapshot(
         self, lookback_days: int = 28, store_id: Optional[str] = None,
         sales_start_date: Optional[date] = None,
-    ) -> Dict[Tuple[str, str], List[float]]:
-        """Batch fetch daily sales for store-SKU pairs (snapshot mode)."""
+    ) -> Dict[Tuple[str, str], float]:
+        """Batch fetch avg daily sales for store-SKU pairs (snapshot mode).
+        Uses median of in-stock sale days — stockout days are excluded via the snapshot join."""
         cutoff = sales_start_date if sales_start_date is not None else date.today() - timedelta(days=lookback_days)
         store_filter = "AND t.store_id = :store_id" if store_id else ""
         query = text(f"""
@@ -337,15 +335,19 @@ class ReplenishmentService:
         result = await self.db.execute(query, params)
         rows = result.fetchall()
 
-        sales_map: Dict[Tuple[str, str], List[float]] = {}
+        daily_by_key: Dict[Tuple[str, str], List[float]] = {}
         for row in rows:
             key = (row[0], row[1])
             qty = float(row[3])
             if qty > 0:
-                if key not in sales_map:
-                    sales_map[key] = []
-                sales_map[key].append(qty)
-        return sales_map
+                if key not in daily_by_key:
+                    daily_by_key[key] = []
+                daily_by_key[key].append(qty)
+
+        return {
+            key: statistics.median(vals)
+            for key, vals in daily_by_key.items()
+        }
 
     async def run_replenishment_calculation(
         self,
@@ -514,14 +516,10 @@ class ReplenishmentService:
                 "expiry_window_days": 60,
             })
 
-            # Get daily sales from pre-loaded cache
-            daily_sales = sales_cache.get((store_id, sku_id), [])
-
-            # Calculate median (AvgDailySales)
-            if daily_sales:
-                avg_daily_sales = statistics.median(daily_sales)
-            else:
-                avg_daily_sales = 0.0
+            # Get avg daily sales from pre-loaded cache
+            # Fallback: total_qty / lookback_days (includes zero-sale days)
+            # Snapshot: median of in-stock sale days (stockout days excluded by snapshot join)
+            avg_daily_sales = sales_cache.get((store_id, sku_id), 0.0)
 
             # Velocity multiplier: highest threshold the product meets
             velocity_mult = 1.0
