@@ -533,11 +533,11 @@ class ReplenishmentService:
                 sku_category_map.get(sku_id, ''), 1.0
             )
 
-            # Effective multiplier = seasonality × velocity × category
-            effective_mult = round(seasonality_multiplier * velocity_mult * category_mult, 3)
+            # Season adjusted: seasonality × category only (velocity applied later to order qty)
+            season_adj_sales = avg_daily_sales * seasonality_multiplier * category_mult
 
-            # Season adjusted (full formula)
-            season_adj_sales = avg_daily_sales * effective_mult
+            # effective_mult stored for auditability (all three combined)
+            effective_mult = round(seasonality_multiplier * velocity_mult * category_mult, 3)
 
             # Safety stock
             safety_stock = season_adj_sales * tier_params["safety_days"]
@@ -582,6 +582,10 @@ class ReplenishmentService:
                         requested_ship_qty = math.ceil(requested_ship_qty * (1 + buffer_weekday))
                     else:                                    # Sat–Sun
                         requested_ship_qty = math.ceil(requested_ship_qty * (1 + buffer_weekend))
+
+            # Velocity multiplier applied directly to order quantity
+            if velocity_mult != 1.0 and requested_ship_qty > 0:
+                requested_ship_qty = math.ceil(requested_ship_qty * velocity_mult)
 
             # Skip products that don't need replenishment
             if requested_ship_qty == 0:
