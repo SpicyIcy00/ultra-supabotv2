@@ -223,11 +223,13 @@ class ReplenishmentService:
     # ----------------------------------------------------------------
 
     async def get_seasonality_multiplier(self, target_date: date) -> float:
-        """Get the seasonality multiplier for a given date. Returns 1.0 if none."""
+        """Get the seasonality multiplier for a given date. Returns 1.0 if none.
+        When periods overlap, the one with the latest start_date wins (most specific)."""
         query = (
             select(SeasonalityCalendar.multiplier)
             .where(SeasonalityCalendar.start_date <= target_date)
             .where(SeasonalityCalendar.end_date >= target_date)
+            .order_by(SeasonalityCalendar.start_date.desc())
             .limit(1)
         )
         result = await self.db.execute(query)
@@ -593,8 +595,8 @@ class ReplenishmentService:
 
             # Days of stock
             days_of_stock = (
-                calc_on_hand / max(season_adj_sales, 0.1)
-                if season_adj_sales > 0 or calc_on_hand > 0
+                calc_on_hand / season_adj_sales
+                if season_adj_sales > 0
                 else 0.0
             )
 
