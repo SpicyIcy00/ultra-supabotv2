@@ -8,9 +8,11 @@ import { SeasonalityCalendar } from '../components/replenishment/SeasonalityCale
 import { WarehouseInventoryManager } from '../components/replenishment/WarehouseInventoryManager';
 import { PipelineManager } from '../components/replenishment/PipelineManager';
 import { AlgorithmSettings } from '../components/replenishment/AlgorithmSettings';
+import { VelocityMultiplierConfig } from '../components/replenishment/VelocityMultiplierConfig';
+import { CategoryMultiplierConfig } from '../components/replenishment/CategoryMultiplierConfig';
 
 type ReplenishmentSubTab = 'dashboard' | 'shipment-plan' | 'picklist' | 'exceptions' | 'configuration';
-type ConfigSubTab = 'store-tiers' | 'seasonality' | 'warehouse' | 'pipeline' | 'algorithm';
+type ConfigSubTab = 'store-tiers' | 'seasonality' | 'warehouse' | 'pipeline' | 'algorithm' | 'velocity-multipliers' | 'category-multipliers';
 
 const ReportingPage: React.FC = () => {
   const [replenishmentSubTab, setReplenishmentSubTab] = useState<ReplenishmentSubTab>('dashboard');
@@ -28,6 +30,8 @@ const ReportingPage: React.FC = () => {
             {([
               { key: 'store-tiers' as ConfigSubTab, label: 'Store Tiers' },
               { key: 'seasonality' as ConfigSubTab, label: 'Seasonality' },
+              { key: 'velocity-multipliers' as ConfigSubTab, label: 'Velocity Multipliers' },
+              { key: 'category-multipliers' as ConfigSubTab, label: 'Category Multipliers' },
               { key: 'warehouse' as ConfigSubTab, label: 'Warehouse Inventory' },
               { key: 'pipeline' as ConfigSubTab, label: 'Pipeline (On-Order)' },
               { key: 'algorithm' as ConfigSubTab, label: 'Algorithm Settings' },
@@ -44,6 +48,8 @@ const ReportingPage: React.FC = () => {
           </div>
           {configSubTab === 'store-tiers' && <StoreTierConfig />}
           {configSubTab === 'seasonality' && <SeasonalityCalendar />}
+          {configSubTab === 'velocity-multipliers' && <VelocityMultiplierConfig />}
+          {configSubTab === 'category-multipliers' && <CategoryMultiplierConfig />}
           {configSubTab === 'warehouse' && <WarehouseInventoryManager />}
           {configSubTab === 'pipeline' && <PipelineManager />}
           {configSubTab === 'algorithm' && <AlgorithmSettings />}

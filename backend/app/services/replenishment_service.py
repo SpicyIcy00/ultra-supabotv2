@@ -16,6 +16,8 @@ from app.models.replenishment import (
     ShipmentPlan,
     InventorySnapshot,
     AlgorithmSettings,
+    VelocityMultiplierRule,
+    CategoryMultiplier,
 )
 from app.models.store import Store
 from app.models.product import Product
@@ -376,6 +378,22 @@ class ReplenishmentService:
         # Get seasonality multiplier for today
         seasonality_multiplier = await self.get_seasonality_multiplier(run_date)
 
+        # Pre-load velocity multiplier rules (sorted threshold DESC for lookup)
+        vel_rules_result = await self.db.execute(
+            select(VelocityMultiplierRule).order_by(VelocityMultiplierRule.threshold.desc())
+        )
+        velocity_rules: List[Tuple[float, float]] = [
+            (float(r.threshold), float(r.multiplier))
+            for r in vel_rules_result.scalars().all()
+        ]
+
+        # Pre-load category multipliers into a dict
+        cat_mult_result = await self.db.execute(select(CategoryMultiplier))
+        category_multiplier_map: Dict[str, float] = {
+            r.category: float(r.multiplier)
+            for r in cat_mult_result.scalars().all()
+        }
+
         # Get store-SKU combinations with inventory (products that track stock).
         # When a custom sales_start_date is given, pull on-hand from snapshots for
         # that date so the calculation is fully grounded in that point in time.
@@ -452,6 +470,13 @@ class ReplenishmentService:
         for row in wh_result.fetchall():
             wh_cache[row[0]] = max(0, int(row[1]))
 
+        # Pre-load product categories for category multiplier lookup
+        cat_query = text("SELECT id, category FROM products WHERE category IS NOT NULL")
+        cat_result = await self.db.execute(cat_query)
+        sku_category_map: Dict[str, str] = {
+            row[0]: row[1] for row in cat_result.fetchall()
+        }
+
         # Batch fetch daily sales in one query
         if calc_mode == "snapshot":
             sales_cache = await self._batch_get_daily_sales_snapshot(
@@ -496,8 +521,23 @@ class ReplenishmentService:
             else:
                 avg_daily_sales = 0.0
 
-            # Season adjusted
-            season_adj_sales = avg_daily_sales * seasonality_multiplier
+            # Velocity multiplier: highest threshold the product meets
+            velocity_mult = 1.0
+            for threshold, mult in velocity_rules:
+                if avg_daily_sales >= threshold:
+                    velocity_mult = mult
+                    break
+
+            # Category multiplier: looked up by product category
+            category_mult = category_multiplier_map.get(
+                sku_category_map.get(sku_id, ''), 1.0
+            )
+
+            # Effective multiplier = seasonality × velocity × category
+            effective_mult = round(seasonality_multiplier * velocity_mult * category_mult, 3)
+
+            # Season adjusted (full formula)
+            season_adj_sales = avg_daily_sales * effective_mult
 
             # Safety stock
             safety_stock = season_adj_sales * tier_params["safety_days"]
@@ -580,6 +620,9 @@ class ReplenishmentService:
                 allocated_ship_qty=requested_ship_qty,  # Default: full allocation
                 priority_score=round(priority_score, 4),
                 days_of_stock=round(days_of_stock, 2),
+                velocity_multiplier=round(velocity_mult, 3),
+                category_multiplier=round(category_mult, 3),
+                effective_multiplier=effective_mult,
                 calculation_mode=calc_mode,
             )
             plan_items.append(plan)
@@ -705,7 +748,10 @@ class ReplenishmentService:
                 sp.days_of_stock::float,
                 sp.calculation_mode,
                 COALESCE(wh_inv.quantity_on_hand, 0) AS wh_on_hand,
-                p.sku AS product_sku
+                p.sku AS product_sku,
+                COALESCE(sp.velocity_multiplier, 1.0)::float,
+                COALESCE(sp.category_multiplier, 1.0)::float,
+                COALESCE(sp.effective_multiplier, 1.0)::float
             FROM shipment_plans sp
             JOIN stores s ON sp.store_id = s.id
             JOIN products p ON sp.sku_id = p.id
@@ -752,6 +798,9 @@ class ReplenishmentService:
                 "days_of_stock": row[18],
                 "wh_on_hand": int(row[20]),
                 "product_sku": row[21] or "",
+                "velocity_multiplier": float(row[22]),
+                "category_multiplier": float(row[23]),
+                "effective_multiplier": float(row[24]),
             })
 
         calc_mode = rows[0][19] if rows else "none"  # calculation_mode column
@@ -1161,3 +1210,127 @@ class ReplenishmentService:
 
         await self.db.flush()
         return {"updated": updated, "created": created}
+
+    # ----------------------------------------------------------------
+    # Velocity Multiplier Rules
+    # ----------------------------------------------------------------
+
+    async def get_all_velocity_rules(self) -> List[Dict]:
+        """Get all velocity multiplier rules ordered by threshold."""
+        result = await self.db.execute(
+            select(VelocityMultiplierRule).order_by(VelocityMultiplierRule.threshold)
+        )
+        rules = result.scalars().all()
+        return [
+            {
+                "id": r.id,
+                "threshold": float(r.threshold),
+                "multiplier": float(r.multiplier),
+                "label": r.label,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+                "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+            }
+            for r in rules
+        ]
+
+    async def create_velocity_rule(self, data: Dict) -> Dict:
+        """Create a new velocity multiplier rule."""
+        rule = VelocityMultiplierRule(
+            threshold=data["threshold"],
+            multiplier=data["multiplier"],
+            label=data["label"],
+        )
+        self.db.add(rule)
+        await self.db.flush()
+        return {"id": rule.id, "label": rule.label, "status": "created"}
+
+    async def update_velocity_rule(self, rule_id: int, data: Dict) -> Optional[Dict]:
+        """Update an existing velocity multiplier rule."""
+        result = await self.db.execute(
+            select(VelocityMultiplierRule).where(VelocityMultiplierRule.id == rule_id)
+        )
+        rule = result.scalar_one_or_none()
+        if not rule:
+            return None
+        for key, value in data.items():
+            if value is not None and hasattr(rule, key):
+                setattr(rule, key, value)
+        await self.db.flush()
+        return {"id": rule.id, "label": rule.label, "status": "updated"}
+
+    async def delete_velocity_rule(self, rule_id: int) -> bool:
+        """Delete a velocity multiplier rule."""
+        result = await self.db.execute(
+            delete(VelocityMultiplierRule).where(VelocityMultiplierRule.id == rule_id)
+        )
+        return result.rowcount > 0
+
+    # ----------------------------------------------------------------
+    # Category Multipliers
+    # ----------------------------------------------------------------
+
+    async def get_all_category_multipliers(self) -> List[Dict]:
+        """Get all category multipliers ordered by category name."""
+        result = await self.db.execute(
+            select(CategoryMultiplier).order_by(CategoryMultiplier.category)
+        )
+        rows = result.scalars().all()
+        return [
+            {
+                "category": r.category,
+                "multiplier": float(r.multiplier),
+                "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+            }
+            for r in rows
+        ]
+
+    async def upsert_category_multiplier(self, category: str, multiplier: float) -> Dict:
+        """Create or update a single category multiplier."""
+        result = await self.db.execute(
+            select(CategoryMultiplier).where(CategoryMultiplier.category == category)
+        )
+        row = result.scalar_one_or_none()
+        if row:
+            row.multiplier = multiplier
+        else:
+            row = CategoryMultiplier(category=category, multiplier=multiplier)
+            self.db.add(row)
+        await self.db.flush()
+        return {"category": category, "multiplier": multiplier, "status": "ok"}
+
+    async def bulk_upsert_category_multipliers(self, items: List[Dict]) -> Dict:
+        """Bulk create or update category multipliers."""
+        updated = 0
+        created = 0
+        for item in items:
+            result = await self.db.execute(
+                select(CategoryMultiplier).where(
+                    CategoryMultiplier.category == item["category"]
+                )
+            )
+            row = result.scalar_one_or_none()
+            if row:
+                row.multiplier = item["multiplier"]
+                updated += 1
+            else:
+                row = CategoryMultiplier(
+                    category=item["category"], multiplier=item["multiplier"]
+                )
+                self.db.add(row)
+                created += 1
+        await self.db.flush()
+        return {"updated": updated, "created": created}
+
+    async def auto_populate_category_multipliers(self) -> Dict:
+        """Insert any categories from products table not yet in category_multipliers."""
+        await self.db.execute(text("""
+            INSERT INTO category_multipliers (category, multiplier)
+            SELECT DISTINCT category, 1.000
+            FROM products
+            WHERE category IS NOT NULL AND category != ''
+            ON CONFLICT (category) DO NOTHING
+        """))
+        await self.db.flush()
+        result = await self.db.execute(select(func.count()).select_from(CategoryMultiplier))
+        total = result.scalar() or 0
+        return {"status": "ok", "total_categories": total}

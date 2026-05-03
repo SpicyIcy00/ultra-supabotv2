@@ -41,6 +41,23 @@ export interface PipelineItem {
   updated_at?: string;
 }
 
+// --- Velocity Multiplier Rules ---
+export interface VelocityMultiplierRule {
+  id: number;
+  threshold: number;
+  multiplier: number;
+  label: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// --- Category Multipliers ---
+export interface CategoryMultiplier {
+  category: string;
+  multiplier: number;
+  updated_at?: string;
+}
+
 // --- Shipment Plan ---
 export interface ShipmentPlanItem {
   store_id: string;
@@ -64,6 +81,9 @@ export interface ShipmentPlanItem {
   days_of_stock: number;
   wh_on_hand: number;
   product_sku?: string;
+  velocity_multiplier: number;
+  category_multiplier: number;
+  effective_multiplier: number;
 }
 
 export interface ShipmentPlanSummary {

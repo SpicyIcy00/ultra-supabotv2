@@ -12,6 +12,10 @@ from app.schemas.replenishment import (
     SeasonalityCalendarCreate,
     SeasonalityCalendarUpdate,
     AlgorithmSettingsUpdate,
+    VelocityMultiplierRuleCreate,
+    VelocityMultiplierRuleUpdate,
+    CategoryMultiplierUpdate,
+    CategoryMultiplierBulkUpdate,
 )
 
 router = APIRouter()
@@ -230,3 +234,90 @@ async def update_algorithm_settings(
         return await service.update_algorithm_settings(data)
     except ValueError as e:
         raise HTTPException(status_code=503, detail=str(e))
+
+
+# ----------------------------------------------------------------
+# Velocity Multiplier Rules
+# ----------------------------------------------------------------
+
+@router.get("/velocity-multiplier-rules")
+async def get_velocity_multiplier_rules(
+    service: ReplenishmentService = Depends(_get_service),
+):
+    """Get all velocity multiplier rules."""
+    return await service.get_all_velocity_rules()
+
+
+@router.post("/velocity-multiplier-rules")
+async def create_velocity_multiplier_rule(
+    body: VelocityMultiplierRuleCreate,
+    service: ReplenishmentService = Depends(_get_service),
+):
+    """Create a new velocity multiplier rule."""
+    return await service.create_velocity_rule(body.model_dump())
+
+
+@router.put("/velocity-multiplier-rules/{rule_id}")
+async def update_velocity_multiplier_rule(
+    rule_id: int,
+    body: VelocityMultiplierRuleUpdate,
+    service: ReplenishmentService = Depends(_get_service),
+):
+    """Update a velocity multiplier rule."""
+    data = body.model_dump(exclude_unset=True)
+    result = await service.update_velocity_rule(rule_id, data)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Rule not found")
+    return result
+
+
+@router.delete("/velocity-multiplier-rules/{rule_id}")
+async def delete_velocity_multiplier_rule(
+    rule_id: int,
+    service: ReplenishmentService = Depends(_get_service),
+):
+    """Delete a velocity multiplier rule."""
+    deleted = await service.delete_velocity_rule(rule_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Rule not found")
+    return {"status": "deleted", "id": rule_id}
+
+
+# ----------------------------------------------------------------
+# Category Multipliers
+# ----------------------------------------------------------------
+
+@router.get("/category-multipliers")
+async def get_category_multipliers(
+    service: ReplenishmentService = Depends(_get_service),
+):
+    """Get all category multipliers."""
+    return await service.get_all_category_multipliers()
+
+
+@router.post("/category-multipliers")
+async def bulk_update_category_multipliers(
+    body: CategoryMultiplierBulkUpdate,
+    service: ReplenishmentService = Depends(_get_service),
+):
+    """Bulk create or update category multipliers."""
+    items = [item.model_dump() for item in body.items]
+    return await service.bulk_upsert_category_multipliers(items)
+
+
+@router.put("/category-multipliers/{category}")
+async def update_category_multiplier(
+    category: str,
+    body: CategoryMultiplierUpdate,
+    service: ReplenishmentService = Depends(_get_service),
+):
+    """Update a single category multiplier."""
+    return await service.upsert_category_multiplier(category, float(body.multiplier))
+
+
+@router.post("/category-multipliers/auto-populate")
+async def auto_populate_category_multipliers(
+    service: ReplenishmentService = Depends(_get_service),
+):
+    """Auto-populate category multipliers from distinct product categories."""
+    return await service.auto_populate_category_multipliers()

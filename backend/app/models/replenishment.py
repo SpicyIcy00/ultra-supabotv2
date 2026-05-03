@@ -109,6 +109,46 @@ class SeasonalityCalendar(Base):
     )
 
 
+class VelocityMultiplierRule(Base):
+    __tablename__ = "velocity_multiplier_rules"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    threshold: Mapped[float] = mapped_column(Numeric(10, 4), nullable=False)
+    multiplier: Mapped[float] = mapped_column(Numeric(5, 3), nullable=False, default=1.0)
+    label: Mapped[str] = mapped_column(String(100), nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.timezone('Asia/Manila', func.now())
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.timezone('Asia/Manila', func.now()),
+        onupdate=func.timezone('Asia/Manila', func.now())
+    )
+
+    __table_args__ = (
+        Index('idx_velocity_rules_threshold', 'threshold'),
+    )
+
+
+class CategoryMultiplier(Base):
+    __tablename__ = "category_multipliers"
+
+    category: Mapped[str] = mapped_column(String(100), primary_key=True)
+    multiplier: Mapped[float] = mapped_column(Numeric(5, 3), nullable=False, default=1.0)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.timezone('Asia/Manila', func.now())
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.timezone('Asia/Manila', func.now()),
+        onupdate=func.timezone('Asia/Manila', func.now())
+    )
+
+
 class ShipmentPlan(Base):
     __tablename__ = "shipment_plans"
 
@@ -146,6 +186,11 @@ class ShipmentPlan(Base):
     # Priority and metrics
     priority_score: Mapped[float] = mapped_column(Numeric(12, 4), nullable=False, default=0)
     days_of_stock: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, default=0)
+
+    # Multiplier audit trail
+    velocity_multiplier: Mapped[float] = mapped_column(Numeric(5, 3), nullable=False, default=1.0)
+    category_multiplier: Mapped[float] = mapped_column(Numeric(5, 3), nullable=False, default=1.0)
+    effective_multiplier: Mapped[float] = mapped_column(Numeric(5, 3), nullable=False, default=1.0)
 
     # Metadata
     calculation_mode: Mapped[str] = mapped_column(String(20), nullable=False, default="fallback")

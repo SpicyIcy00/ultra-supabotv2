@@ -146,6 +146,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
       'Category', 'Avg Daily Sales',
       'Safety Stock', 'Min Level',
       'Store Inv', 'Warehouse Inv', 'Requested Qty', 'Allocated Qty', 'Days of Stock',
+      'Velocity ×', 'Category ×', 'Effective ×',
     ];
 
     const sorted = filteredAndSorted(latestPlan.items);
@@ -161,6 +162,9 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
       item.requested_ship_qty,
       item.allocated_ship_qty,
       item.days_of_stock.toFixed(2),
+      (item.velocity_multiplier ?? 1).toFixed(3),
+      (item.category_multiplier ?? 1).toFixed(3),
+      (item.effective_multiplier ?? 1).toFixed(3),
     ]);
 
     const csvContent = [
@@ -478,7 +482,10 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                   <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Min</th>
                   <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Requested</th>
                   <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Allocated</th>
-                  <th className="py-2 pl-3 font-medium whitespace-nowrap text-right">Days of Stock</th>
+                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Days of Stock</th>
+                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Vel ×</th>
+                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Cat ×</th>
+                  <th className="py-2 pl-3 font-medium whitespace-nowrap text-right">Eff ×</th>
                 </tr>
               </thead>
               <tbody>
@@ -505,7 +512,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                       <React.Fragment key={`${item.store_id}-${item.sku_id}`}>
                         {showCategoryHeader && (
                           <tr className="border-b border-[#2e303d]">
-                            <td colSpan={8} className="py-2 pt-4 text-xs font-semibold text-blue-400 uppercase tracking-wider">
+                            <td colSpan={11} className="py-2 pt-4 text-xs font-semibold text-blue-400 uppercase tracking-wider">
                               {cat}
                             </td>
                           </tr>
@@ -528,10 +535,19 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                           }`}>
                             {item.allocated_ship_qty}
                           </td>
-                          <td className={`py-2 pl-3 text-right tabular-nums ${
+                          <td className={`py-2 px-3 text-right tabular-nums ${
                             item.days_of_stock > 120 ? 'text-orange-400' : item.days_of_stock < 3 ? 'text-red-400' : 'text-gray-300'
                           }`}>
                             {item.days_of_stock.toFixed(1)}
+                          </td>
+                          <td className={`py-2 px-3 text-right tabular-nums ${(item.velocity_multiplier ?? 1) > 1 ? 'text-green-400' : 'text-gray-500'}`}>
+                            ×{(item.velocity_multiplier ?? 1).toFixed(3)}
+                          </td>
+                          <td className={`py-2 px-3 text-right tabular-nums ${(item.category_multiplier ?? 1) > 1 ? 'text-green-400' : 'text-gray-500'}`}>
+                            ×{(item.category_multiplier ?? 1).toFixed(3)}
+                          </td>
+                          <td className={`py-2 pl-3 text-right tabular-nums font-medium ${(item.effective_multiplier ?? 1) > 1 ? 'text-green-400' : 'text-gray-500'}`}>
+                            ×{(item.effective_multiplier ?? 1).toFixed(3)}
                           </td>
                         </tr>
                       </React.Fragment>

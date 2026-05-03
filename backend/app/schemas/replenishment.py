@@ -109,6 +109,50 @@ class SeasonalityCalendarResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# --- Velocity Multiplier Rule Schemas ---
+
+class VelocityMultiplierRuleCreate(BaseModel):
+    threshold: Decimal = Field(..., ge=0, description="Min avg daily sales to meet this tier")
+    multiplier: Decimal = Field(default=Decimal("1.000"), ge=0, le=10)
+    label: str = Field(..., max_length=100)
+
+
+class VelocityMultiplierRuleUpdate(BaseModel):
+    threshold: Optional[Decimal] = Field(None, ge=0)
+    multiplier: Optional[Decimal] = Field(None, ge=0, le=10)
+    label: Optional[str] = Field(None, max_length=100)
+
+
+class VelocityMultiplierRuleResponse(BaseModel):
+    id: int
+    threshold: float
+    multiplier: float
+    label: str
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- Category Multiplier Schemas ---
+
+class CategoryMultiplierUpdate(BaseModel):
+    category: str = Field(..., max_length=100)
+    multiplier: Decimal = Field(default=Decimal("1.000"), ge=0, le=10)
+
+
+class CategoryMultiplierBulkUpdate(BaseModel):
+    items: List[CategoryMultiplierUpdate]
+
+
+class CategoryMultiplierResponse(BaseModel):
+    category: str
+    multiplier: float
+    updated_at: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 # --- Shipment Plan Schemas ---
 
 class ShipmentPlanItem(BaseModel):
@@ -131,6 +175,9 @@ class ShipmentPlanItem(BaseModel):
     allocated_ship_qty: int
     priority_score: float
     days_of_stock: float
+    velocity_multiplier: float = 1.0
+    category_multiplier: float = 1.0
+    effective_multiplier: float = 1.0
 
     model_config = ConfigDict(from_attributes=True)
 

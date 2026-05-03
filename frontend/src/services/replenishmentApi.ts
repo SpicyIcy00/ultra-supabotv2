@@ -10,6 +10,8 @@ import type {
   WarehouseInventoryItem,
   PipelineItem,
   AlgorithmSettings,
+  VelocityMultiplierRule,
+  CategoryMultiplier,
 } from '../types/replenishment';
 
 const API_BASE = '/api/v1/replenishment';
@@ -169,5 +171,55 @@ export const updateAlgorithmSettings = async (
   settings: Partial<Omit<AlgorithmSettings, 'updated_at'>>
 ): Promise<AlgorithmSettings> => {
   const response = await axios.post<AlgorithmSettings>(`${API_BASE}/algorithm-settings`, settings);
+  return response.data;
+};
+
+// --- Velocity Multiplier Rules ---
+
+export const getVelocityRules = async (): Promise<VelocityMultiplierRule[]> => {
+  const response = await axios.get<VelocityMultiplierRule[]>(`${API_BASE}/velocity-multiplier-rules`);
+  return response.data;
+};
+
+export const createVelocityRule = async (rule: {
+  threshold: number;
+  multiplier: number;
+  label: string;
+}): Promise<{ id: number; label: string; status: string }> => {
+  const response = await axios.post(`${API_BASE}/velocity-multiplier-rules`, rule);
+  return response.data;
+};
+
+export const updateVelocityRule = async (
+  id: number,
+  rule: Partial<{ threshold: number; multiplier: number; label: string }>
+): Promise<{ id: number; label: string; status: string }> => {
+  const response = await axios.put(`${API_BASE}/velocity-multiplier-rules/${id}`, rule);
+  return response.data;
+};
+
+export const deleteVelocityRule = async (id: number): Promise<void> => {
+  await axios.delete(`${API_BASE}/velocity-multiplier-rules/${id}`);
+};
+
+// --- Category Multipliers ---
+
+export const getCategoryMultipliers = async (): Promise<CategoryMultiplier[]> => {
+  const response = await axios.get<CategoryMultiplier[]>(`${API_BASE}/category-multipliers`);
+  return response.data;
+};
+
+export const bulkUpdateCategoryMultipliers = async (
+  items: { category: string; multiplier: number }[]
+): Promise<{ updated: number; created: number }> => {
+  const response = await axios.post(`${API_BASE}/category-multipliers`, { items });
+  return response.data;
+};
+
+export const autoPopulateCategoryMultipliers = async (): Promise<{
+  status: string;
+  total_categories: number;
+}> => {
+  const response = await axios.post(`${API_BASE}/category-multipliers/auto-populate`);
   return response.data;
 };

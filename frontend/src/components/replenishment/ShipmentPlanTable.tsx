@@ -92,6 +92,7 @@ export const ShipmentPlanTable: React.FC = () => {
       'Season Adj Sales', 'Safety Stock', 'Min', 'Max', 'Final Max',
       'On Hand', 'On Order', 'Inv Position', 'Requested Qty',
       'Allocated Qty', 'Priority', 'Days of Stock',
+      'Velocity ×', 'Category ×', 'Effective ×',
     ];
 
     const rows = filteredAndSorted.map(i => [
@@ -112,6 +113,9 @@ export const ShipmentPlanTable: React.FC = () => {
       i.allocated_ship_qty,
       i.priority_score.toFixed(4),
       i.days_of_stock.toFixed(1),
+      (i.velocity_multiplier ?? 1).toFixed(3),
+      (i.category_multiplier ?? 1).toFixed(3),
+      (i.effective_multiplier ?? 1).toFixed(3),
     ]);
 
     const csvContent = [
@@ -214,6 +218,9 @@ export const ShipmentPlanTable: React.FC = () => {
                 <SortHeader col="allocated_ship_qty" label="Allocated" />
                 <SortHeader col="days_of_stock" label="Days Stock" />
                 <SortHeader col="priority_score" label="Priority" />
+                <SortHeader col="velocity_multiplier" label="Velocity ×" />
+                <SortHeader col="category_multiplier" label="Category ×" />
+                <SortHeader col="effective_multiplier" label="Effective ×" />
               </tr>
             </thead>
             <tbody className="divide-y divide-[#2e303d]">
@@ -253,6 +260,15 @@ export const ShipmentPlanTable: React.FC = () => {
                     </td>
                     <td className="px-3 py-2.5 text-sm text-right text-gray-400">
                       {item.priority_score.toFixed(2)}
+                    </td>
+                    <td className={`px-3 py-2.5 text-sm text-right tabular-nums ${(item.velocity_multiplier ?? 1) > 1 ? 'text-green-400' : 'text-gray-500'}`}>
+                      ×{(item.velocity_multiplier ?? 1).toFixed(3)}
+                    </td>
+                    <td className={`px-3 py-2.5 text-sm text-right tabular-nums ${(item.category_multiplier ?? 1) > 1 ? 'text-green-400' : 'text-gray-500'}`}>
+                      ×{(item.category_multiplier ?? 1).toFixed(3)}
+                    </td>
+                    <td className={`px-3 py-2.5 text-sm text-right tabular-nums font-medium ${(item.effective_multiplier ?? 1) > 1 ? 'text-green-400' : 'text-gray-500'}`}>
+                      ×{(item.effective_multiplier ?? 1).toFixed(3)}
                     </td>
                   </tr>
                 );
