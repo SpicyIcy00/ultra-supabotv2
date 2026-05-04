@@ -3,8 +3,7 @@ Replenishment service layer for inventory planning.
 Contains business logic for weekly replenishment calculations.
 """
 import math
-import statistics
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import List, Optional, Dict, Any, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text, select, func, delete
@@ -20,14 +19,9 @@ from app.models.replenishment import (
     CategoryMultiplier,
 )
 from app.models.store import Store
-from app.models.product import Product
-from app.models.inventory import Inventory
 
 
-# Hard-coded parameters (configurable later)
 REVIEW_PERIOD_DAYS = 7
-LEAD_TIME_DAYS = 2
-COVER_DAYS = REVIEW_PERIOD_DAYS + LEAD_TIME_DAYS  # 9
 WAREHOUSE_STORE_ID = "667bde393126e50006c8058c"  # AJI BARN
 
 
@@ -54,7 +48,6 @@ class ReplenishmentService:
         """Get snapshot data readiness information."""
         algo = await self.get_algorithm_settings()
         snapshot_required = algo["snapshot_required_days"]
-        snapshot_enabled = algo["snapshot_enabled"]
         snapshot_days = await self.get_snapshot_days_available()
         days_until_full = max(0, snapshot_required - snapshot_days)
         full_accuracy_date = date.today() + timedelta(days=days_until_full)
@@ -593,26 +586,13 @@ class ReplenishmentService:
 
             if total_requested > wh_available:
                 warehouse_allocation_count += 1
-                # Sort by priority descending
+                # Fill highest-priority stores first; zero out any that can't be served
                 requests.sort(key=lambda r: r["priority_score"], reverse=True)
                 remaining = wh_available
                 for req in requests:
                     allocated = min(req["plan"].requested_ship_qty, remaining)
                     req["plan"].allocated_ship_qty = allocated
-                    remaining -= allocated
-                    if remaining <= 0:
-                        break
-                # Ensure stores after depletion get 0
-                for i, req in enumerate(requests):
-                    if i > 0 and sum(
-                        r["plan"].allocated_ship_qty for r in requests[:i+1]
-                    ) > wh_available:
-                        req["plan"].allocated_ship_qty = max(
-                            0,
-                            wh_available - sum(
-                                r["plan"].allocated_ship_qty for r in requests[:i]
-                            ),
-                        )
+                    remaining = max(0, remaining - allocated)
 
         # Save all plans
         self.db.add_all(plan_items)
@@ -968,6 +948,8 @@ class ReplenishmentService:
                 tier.safety_days = data["safety_days"]
             if "target_cover_days" in data:
                 tier.target_cover_days = data["target_cover_days"]
+            if "max_cover_days" in data:
+                tier.max_cover_days = data["max_cover_days"]
             if "expiry_window_days" in data:
                 tier.expiry_window_days = data["expiry_window_days"]
         else:
