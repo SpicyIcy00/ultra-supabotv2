@@ -308,8 +308,9 @@ class ReplenishmentService:
         sales_start_date: Optional[date] = None,
     ) -> Dict[Tuple[str, str], float]:
         """Batch fetch avg daily sales for store-SKU pairs (snapshot mode).
-        Uses total_in_stock_sales / in_stock_days so slow days with stock are
-        included in the denominator, not just days where a sale occurred."""
+        Counts a day if: stock > 0 (normal) OR stock <= 0 but a sale still occurred
+        (e.g. sold from buffer/negative). Only excludes days with zero/negative stock
+        AND no sales — true stockout-with-no-activity days."""
         cutoff = sales_start_date if sales_start_date is not None else date.today() - timedelta(days=lookback_days)
         store_filter = "AND snap.store_id = :store_id" if store_id else ""
         query = text(f"""
@@ -326,10 +327,10 @@ class ReplenishmentService:
             LEFT JOIN new_transaction_items ti
                 ON ti.transaction_ref_id = t.ref_id
                 AND ti.product_id = snap.product_id
-            WHERE snap.quantity_on_hand > 0
-              AND snap.snapshot_date >= :cutoff
+            WHERE snap.snapshot_date >= :cutoff
               AND snap.snapshot_date < CURRENT_DATE
               {store_filter}
+              AND (snap.quantity_on_hand > 0 OR ti.quantity IS NOT NULL)
             GROUP BY snap.store_id, snap.product_id
         """)
         params: Dict[str, Any] = {"cutoff": cutoff}
