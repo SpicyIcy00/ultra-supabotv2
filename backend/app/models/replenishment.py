@@ -194,6 +194,9 @@ class ShipmentPlan(Base):
     priority_score: Mapped[float] = mapped_column(Numeric(12, 4), nullable=False, default=0)
     days_of_stock: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, default=0)
 
+    # Total units sold in the lookback window (pre-average, for audit)
+    total_sold_qty: Mapped[int] = mapped_column(Integer, nullable=False, server_default='0', default=0)
+
     # Multiplier audit trail
     velocity_multiplier: Mapped[float] = mapped_column(Numeric(5, 3), nullable=False, default=1.0)
     category_multiplier: Mapped[float] = mapped_column(Numeric(5, 3), nullable=False, default=1.0)

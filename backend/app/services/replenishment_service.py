@@ -243,13 +243,14 @@ class ReplenishmentService:
     async def _batch_get_daily_sales(
         self, lookback_days: int = 28, store_id: Optional[str] = None,
         sales_start_date: Optional[date] = None,
-    ) -> Dict[Tuple[str, str], float]:
+    ) -> Dict[Tuple[str, str], Tuple[float, int]]:
         """Unified batch velocity — one query, no mode switching.
 
         Active day per SKU = snapshot shows stock > 0  OR  a sale occurred.
         Zero/negative-stock days with no sales are excluded.
         Products with no snapshot history are still captured via transactions.
 
+        Returns Dict[(store_id, sku_id)] -> (velocity, total_sold_qty)
         velocity = total_units_sold / active_days
         """
         cutoff = sales_start_date if sales_start_date is not None else date.today() - timedelta(days=lookback_days)
@@ -296,7 +297,7 @@ class ReplenishmentService:
         rows = result.fetchall()
 
         return {
-            (row[0], row[1]): float(row[2]) / float(row[3])
+            (row[0], row[1]): (float(row[2]) / float(row[3]), int(row[2]))
             for row in rows
             if float(row[3]) > 0
         }
@@ -461,7 +462,8 @@ class ReplenishmentService:
 
             # Velocity = total_sales / active_days
             # active_days = days with stock > 0 OR days with a real sale
-            avg_daily_sales = sales_cache.get((store_id, sku_id), 0.0)
+            _sale_data = sales_cache.get((store_id, sku_id), (0.0, 0))
+            avg_daily_sales, total_sold_qty = _sale_data
 
             # Velocity multiplier: highest threshold the product meets
             velocity_mult = 1.0
@@ -549,6 +551,7 @@ class ReplenishmentService:
                 store_id=store_id,
                 sku_id=sku_id,
                 avg_daily_sales=round(avg_daily_sales, 4),
+                total_sold_qty=total_sold_qty,
                 season_adjusted_daily_sales=round(season_adj_sales, 4),
                 safety_stock=round(safety_stock, 2),
                 min_level=round(min_level, 2),
@@ -680,7 +683,8 @@ class ReplenishmentService:
                 p.sku AS product_sku,
                 COALESCE(sp.velocity_multiplier, 1.0)::float,
                 COALESCE(sp.category_multiplier, 1.0)::float,
-                COALESCE(sp.effective_multiplier, 1.0)::float
+                COALESCE(sp.effective_multiplier, 1.0)::float,
+                COALESCE(sp.total_sold_qty, 0)::int
             FROM shipment_plans sp
             JOIN stores s ON sp.store_id = s.id
             JOIN products p ON sp.sku_id = p.id
@@ -730,6 +734,7 @@ class ReplenishmentService:
                 "velocity_multiplier": float(row[22]),
                 "category_multiplier": float(row[23]),
                 "effective_multiplier": float(row[24]),
+                "total_sold_qty": int(row[25]),
             })
 
         calc_mode = rows[0][19] if rows else "none"  # calculation_mode column

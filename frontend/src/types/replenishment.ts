@@ -86,6 +86,7 @@ export interface ShipmentPlanItem {
   velocity_multiplier: number;
   category_multiplier: number;
   effective_multiplier: number;
+  total_sold_qty: number;
 }
 
 export interface ShipmentPlanSummary {
