@@ -279,14 +279,16 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
               className="bg-[#0e1117] border border-[#2e303d] text-gray-200 text-sm rounded-lg px-3 py-2.5 focus:border-blue-500 focus:outline-none"
             >
               <option value="">Select a store...</option>
-              {dashboardStores.map((s) => {
-                const tier = tiers.find((t) => t.store_id === s.id);
-                return (
-                  <option key={s.id} value={s.id}>
-                    {getStoreName(s.id)}{tier ? ` (Tier ${tier.tier})` : ''}
-                  </option>
-                );
-              })}
+              {dashboardStores
+                .filter((s) => tiers.some((t) => t.store_id === s.id))
+                .map((s) => {
+                  const tier = tiers.find((t) => t.store_id === s.id)!;
+                  return (
+                    <option key={s.id} value={s.id}>
+                      {getStoreName(s.id)} (Tier {tier.tier})
+                    </option>
+                  );
+                })}
             </select>
             {/* Stockout buffer toggle */}
             <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none">
