@@ -69,8 +69,15 @@ class QueryExecutor:
             # Validate query if requested
             if validate:
                 schema_summary = SchemaContext.get_schema_summary()
+                # Derive allowed tables from live schema, excluding internal system tables
+                _SYSTEM_TABLES = {
+                    'alembic_version', 'spatial_ref_sys',
+                    'algorithm_settings',        # internal config, not for BI queries
+                }
+                allowed_tables = [t for t in schema_summary.keys() if t not in _SYSTEM_TABLES]
                 is_valid, validated_query, error = validate_sql_query(
                     sql_query,
+                    allowed_tables=allowed_tables,
                     schema_summary=schema_summary
                 )
 

@@ -30,6 +30,7 @@ from app.services.chart_intelligence import ChartIntelligence
 from app.services.response_formatter import ResponseFormatter
 from app.services.insight_generator import InsightGenerator
 from app.services.conversation_memory import get_memory, add_exchange, get_context
+from app.services.schema_context import SchemaContext
 
 router = APIRouter(tags=["chatbot"])
 
@@ -525,6 +526,27 @@ async def get_suggestions() -> SuggestionResponse:
         suggestions=suggestions,
         category="common_queries"
     )
+
+
+@router.post("/schema/refresh")
+async def refresh_schema():
+    """
+    Refresh the schema cache from the live database.
+    Call this after running migrations or adding new tables so the AI
+    immediately sees them without a full service restart.
+    """
+    try:
+        SchemaContext.invalidate()
+        schema_summary = SchemaContext.get_schema_summary()
+        tables = list(schema_summary.keys())
+        return {
+            "status": "refreshed",
+            "tables": sorted(tables),
+            "table_count": len(tables),
+            "last_updated": SchemaContext.get_last_updated().isoformat(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Schema refresh failed: {e}")
 
 
 @router.get("/status")
