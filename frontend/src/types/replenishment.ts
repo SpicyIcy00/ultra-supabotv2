@@ -175,6 +175,7 @@ export interface DataReadiness {
   days_until_full_accuracy: number;
   full_accuracy_date: string;
   calculation_mode: string;
+  snapshot_quality: 'good' | 'building';
   stores_with_snapshots: string[];
   message: string;
 }

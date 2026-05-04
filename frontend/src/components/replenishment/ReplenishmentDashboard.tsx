@@ -218,32 +218,35 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
 
   return (
     <div className="space-y-6">
-      {/* Data Readiness Banner */}
-      {dataReadiness && dataReadiness.calculation_mode === 'fallback' && (
+      {/* Snapshot Data Quality Banner */}
+      {dataReadiness && dataReadiness.snapshot_quality === 'building' && (
         <div className="bg-yellow-900/30 border border-yellow-600/50 rounded-lg p-4">
           <div className="flex items-start gap-3">
             <svg className="w-5 h-5 text-yellow-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
             <div>
-              <p className="text-yellow-400 font-medium text-sm">Using Simplified Calculation</p>
+              <p className="text-yellow-400 font-medium text-sm">
+                Building snapshot history — {dataReadiness.snapshot_days_available}/28 days collected
+              </p>
               <p className="text-yellow-500/80 text-xs mt-1">
-                Snapshot history: {dataReadiness.snapshot_days_available}/28 days.
-                Full accuracy available on {dataReadiness.full_accuracy_date}.
-                Current calculations use transaction-based fallback (may under-forecast for stockout-prone items).
+                Velocity uses active days (stock &gt; 0 or sale occurred). Products with thin snapshot history
+                rely on transaction data only. Full snapshot coverage by {dataReadiness.full_accuracy_date}.
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {dataReadiness && dataReadiness.calculation_mode === 'snapshot' && (
+      {dataReadiness && dataReadiness.snapshot_quality === 'good' && (
         <div className="bg-green-900/30 border border-green-600/50 rounded-lg p-4">
           <div className="flex items-center gap-3">
             <svg className="w-5 h-5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p className="text-green-400 text-sm">Full accuracy mode active. Using 28+ days of inventory snapshot data.</p>
+            <p className="text-green-400 text-sm">
+              {dataReadiness.snapshot_days_available} days of snapshot data — velocity calculated from active days (stock &gt; 0 or sale occurred).
+            </p>
           </div>
         </div>
       )}
@@ -256,9 +259,13 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
             {latestPlan?.run_date && (
               <p className="text-sm text-gray-400 mt-1">
                 Last run: {latestPlan.run_date}
-                {latestPlan.calculation_mode && (
-                  <span className="ml-2 text-xs px-2 py-0.5 rounded bg-gray-700 text-gray-300">
-                    {latestPlan.calculation_mode} mode
+                {dataReadiness && (
+                  <span className={`ml-2 text-xs px-2 py-0.5 rounded font-medium ${
+                    dataReadiness.snapshot_quality === 'good'
+                      ? 'bg-green-900/40 text-green-400 border border-green-700/50'
+                      : 'bg-yellow-900/40 text-yellow-400 border border-yellow-700/50'
+                  }`}>
+                    {dataReadiness.snapshot_days_available} snapshot days
                   </span>
                 )}
               </p>
