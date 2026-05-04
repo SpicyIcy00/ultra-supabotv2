@@ -393,6 +393,7 @@ Please fix the issue and generate a corrected query.
 - "Out of stock", "no stock", "zero stock" = WHERE i.quantity_on_hand <= 0
 - "Low stock" = WHERE i.quantity_on_hand > 0 AND i.quantity_on_hand <= i.warning_stock
 - **TAGS**: The `products` table has a `tags` TEXT column. When user mentions products "with [X] tags", "tagged [X]", or "tag [X]", ALWAYS filter using `p.tags ILIKE '%X%'`. NEVER use `p.name LIKE` for tag filtering.
+- **inventory_snapshots** columns are EXACTLY: `store_id`, `product_id`, `snapshot_date` (DATE), `quantity_on_hand` (INT), `created_at`. There is NO `prev_quantity`, `previous_quantity`, `delta`, or any other column. To get previous-day values use `LAG(quantity_on_hand) OVER (PARTITION BY store_id, product_id ORDER BY snapshot_date)` inside a CTE, then reference the CTE alias — never reference the lag result through the base table alias.
 
 **⚠️ YEAR-OVER-YEAR / SEASONALITY QUERIES — MANDATORY FORMAT:**
 When the user asks for data "per month per year", "by month and year", "year over year", "each year by month", "monthly trend across years", or anything comparing months across multiple years, you MUST use EXACTLY these four column aliases — no exceptions:

@@ -249,34 +249,41 @@ class QueryValidator:
     def _validate_columns(sql_query: str, schema_summary: Dict[str, Any]) -> None:
         """
         Validate that column references exist in the schema.
-        Provides helpful suggestions for typos using fuzzy matching.
+        Skips validation for names that are defined as aliases within the
+        query itself (window function results, CTE columns, computed aliases).
         """
-        # Extract column references from query (table.column pattern)
+        # Collect all aliases defined in the query (anything after AS keyword)
+        # This covers: LAG(...) AS prev_quantity, SUM(...) AS total, col AS alias
+        alias_pattern = r'\bAS\s+(\w+)\b'
+        query_defined_names = {
+            m.lower() for m in re.findall(alias_pattern, sql_query, re.IGNORECASE)
+        }
+        # Also include CTE names (they appear as table references but aren't in schema)
+        query_defined_names |= QueryValidator._extract_cte_names(sql_query)
+
         column_pattern = r'(\w+)\.(\w+)'
         matches = re.findall(column_pattern, sql_query, re.IGNORECASE)
 
         for table_alias, column_name in matches:
-            # Try to resolve table alias to actual table name
-            # This is a simple heuristic - could be enhanced
+            # Skip if the column name is a derived alias defined elsewhere in the query
+            if column_name.lower() in query_defined_names:
+                continue
+
             actual_table = QueryValidator._resolve_table_alias(sql_query, table_alias)
 
             if actual_table and actual_table in schema_summary:
                 table_columns = [col['name'] for col in schema_summary[actual_table]['columns']]
 
-                # Check if column exists
                 if column_name.lower() not in [c.lower() for c in table_columns]:
-                    # Try fuzzy matching for suggestions
                     suggestions = get_close_matches(
                         column_name.lower(),
                         [c.lower() for c in table_columns],
                         n=3,
                         cutoff=0.6
                     )
-
                     error_msg = f"Column '{column_name}' not found in table '{actual_table}'"
                     if suggestions:
                         error_msg += f". Did you mean: {', '.join(suggestions)}?"
-
                     raise QueryValidationError(error_msg)
 
     @staticmethod

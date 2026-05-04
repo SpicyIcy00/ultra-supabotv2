@@ -102,7 +102,7 @@ async def generate_chat_stream(
             executor = QueryExecutor(db)
             execution_result = await executor.execute_query(
                 sql_result["sql"],
-                timeout=10,
+                timeout=30,
                 validate=True
             )
 
@@ -282,7 +282,7 @@ async def query_chatbot(
             executor = QueryExecutor(db)
             execution_result = await executor.execute_query(
                 sql_result["sql"],
-                timeout=10,
+                timeout=30,
                 validate=True
             )
 

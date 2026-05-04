@@ -26,7 +26,7 @@ class QueryExecutor:
     """
 
     # Default statement timeout in seconds
-    DEFAULT_TIMEOUT = 10
+    DEFAULT_TIMEOUT = 30
 
     def __init__(self, db_session: AsyncSession):
         """
