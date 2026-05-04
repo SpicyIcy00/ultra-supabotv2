@@ -102,56 +102,117 @@ class ResponseFormatter:
 
         return "generic"
 
+    # Revenue-related column names — if none exist the ranking template is wrong
+    _REVENUE_COLS = {'net_amount', 'revenue', 'total_revenue', 'amount', 'sales',
+                     'item_total', 'total_sales', 'gross_revenue'}
+
     def _format_ranking(
         self,
         question: str,
         results: List[Dict[str, Any]],
         chart_data: Dict[str, Any] | None
     ) -> str:
-        """Format ranking query results with deterministic template."""
+        """Format ranking results. Uses revenue template only when revenue
+        columns are actually present; otherwise uses column-aware generic layout."""
+        first_row = results[0] if results else {}
+        has_revenue = any(k.lower() in self._REVENUE_COLS for k in first_row)
+
+        if not has_revenue:
+            return self._format_data_table(question, results)
+
         context = self._extract_context(question)
-
-        sections = []
-
-        # Header - more natural description
-        sections.append(f"**Here are your {context}:**\n")
-
-        # Deterministic Summary with exact template
-        sections.append("### Summary")
+        sections = [f"**Here are your {context}:**\n", "### Summary"]
         summary_desc = self._generate_summary_description(question, results)
         sections.append(f"Your {summary_desc} are:")
 
-        # Cap at top 5 for summary display
-        top_n = min(5, len(results))
-        for idx in range(top_n):
-            row = results[idx]
-            # Use smart column mapping
+        for idx, row in enumerate(results[:5]):
             name, revenue, units = self._extract_ranking_columns(row)
-
-            # Format with exact template
             revenue_str = self._format_currency(revenue)
             units_str = self._format_units(units)
-
             sections.append(f"{idx + 1}. {name} with {revenue_str} revenue from {units_str}")
 
-        sections.append("")  # Blank line
+        sections.append("")
 
-        # Key Insights
         insights = self._generate_insights_ranking(results)
         if insights:
             sections.append("### Key Insights")
-            for insight in insights[:3]:  # Max 3 insights
+            for insight in insights[:3]:
                 sections.append(f"• {insight}")
             sections.append("")
 
-        # Notable Findings
         finding = self._generate_notable_finding_ranking(results)
         if finding:
             sections.append("### Notable Findings")
             sections.append(finding)
             sections.append("")
 
-        # Follow-up Questions
+        follow_ups = self._generate_follow_ups(question, "ranking", results)
+        if follow_ups:
+            sections.append("### Follow-up Questions")
+            for idx, fq in enumerate(follow_ups[:3], 1):
+                sections.append(f"{idx}. {fq}")
+
+        return "\n".join(sections)
+
+    def _format_data_table(
+        self,
+        question: str,
+        results: List[Dict[str, Any]],
+    ) -> str:
+        """Column-aware formatter for any query that isn't revenue/units based.
+        Reads actual column names from the results and formats them correctly."""
+        sections = []
+
+        # Header — use condensed question rather than keyword guessing
+        header = question.strip().rstrip('?.')
+        if len(header) > 80:
+            header = header[:77] + "..."
+        sections.append(f"**{header}**\n")
+
+        # Identify columns
+        first_row = results[0]
+        cols = list(first_row.keys())
+
+        # Find the label column (first string column)
+        label_col = next(
+            (c for c in cols if isinstance(first_row[c], str) and first_row[c].strip()),
+            None
+        )
+        # Remaining columns are data columns
+        data_cols = [c for c in cols if c != label_col]
+
+        # Build human-readable column labels
+        def col_label(c: str) -> str:
+            return c.replace('_', ' ').title()
+
+        sections.append(f"### Summary")
+        sections.append(f"Found **{len(results)}** result(s):\n")
+
+        for idx, row in enumerate(results[:20], 1):
+            label = str(row[label_col]) if label_col else f"Row {idx}"
+            data_parts = []
+            for c in data_cols:
+                val = self._format_value(row.get(c), c)
+                if val and val != "N/A":
+                    data_parts.append(f"{col_label(c)}: **{val}**")
+            line = f"{idx}. **{label}**"
+            if data_parts:
+                line += " — " + ", ".join(data_parts)
+            sections.append(line)
+
+        if len(results) > 20:
+            sections.append(f"\n*Showing 20 of {len(results)} results.*")
+
+        sections.append("")
+
+        # Numeric insights on data columns
+        insights = self._generate_insights_ranking(results)
+        if insights:
+            sections.append("### Key Insights")
+            for insight in insights[:3]:
+                sections.append(f"• {insight}")
+            sections.append("")
+
         follow_ups = self._generate_follow_ups(question, "ranking", results)
         if follow_ups:
             sections.append("### Follow-up Questions")
@@ -284,30 +345,8 @@ class ResponseFormatter:
         results: List[Dict[str, Any]],
         chart_data: Dict[str, Any] | None
     ) -> str:
-        """Format generic query results."""
-        context = self._extract_context(question)
-
-        sections = []
-        sections.append(f"**Here are your {context}:**\n")
-
-        sections.append("### Summary")
-        question_lower = question.lower()
-        if any(w in question_lower for w in ['available', 'in stock', 'have stock', 'with stock']):
-            sections.append(f"Found **{len(results)}** product(s) with stock available:")
-        elif any(w in question_lower for w in ['out of stock', 'no stock', 'zero stock']):
-            sections.append(f"Found **{len(results)}** product(s) out of stock:")
-        else:
-            sections.append(f"Found {len(results)} result(s):")
-
-        display_limit = 50
-        for idx, row in enumerate(results[:display_limit], 1):
-            item_text = self._format_list_item(row)
-            sections.append(f"{idx}. {item_text}")
-
-        if len(results) > display_limit:
-            sections.append(f"\n*Showing {display_limit} of {len(results)} results. Refine your query to see a more specific subset.*")
-
-        return "\n".join(sections)
+        """Format generic query results using column-aware layout."""
+        return self._format_data_table(question, results)
 
     def _format_empty_results(self, question: str) -> str:
         """Format response when no results found."""
