@@ -58,8 +58,6 @@ class ReplenishmentService:
         snapshot_days = await self.get_snapshot_days_available()
         days_until_full = max(0, snapshot_required - snapshot_days)
         full_accuracy_date = date.today() + timedelta(days=days_until_full)
-        calc_mode = "snapshot" if (snapshot_enabled and snapshot_days >= snapshot_required) else "fallback"
-
         # Get stores that have snapshot data
         query = (
             select(Store.name)
@@ -69,15 +67,18 @@ class ReplenishmentService:
         result = await self.db.execute(query)
         stores_with_snapshots = [row[0] for row in result.fetchall()]
 
+        snapshot_quality = "good" if snapshot_days >= snapshot_required else "building"
+
         return {
             "snapshot_days_available": snapshot_days,
             "days_until_full_accuracy": days_until_full,
             "full_accuracy_date": full_accuracy_date.isoformat(),
-            "calculation_mode": calc_mode,
+            "calculation_mode": "unified",
+            "snapshot_quality": snapshot_quality,
             "stores_with_snapshots": stores_with_snapshots,
             "message": (
                 f"Snapshot history: {snapshot_days}/{snapshot_required} days. "
-                f"{'Full accuracy mode active.' if calc_mode == 'snapshot' else 'Using transaction-based fallback.'}"
+                f"Unified velocity active — active days = stock > 0 or sale occurred."
             ),
         }
 
@@ -144,77 +145,59 @@ class ReplenishmentService:
     # Daily Sales Calculation
     # ----------------------------------------------------------------
 
-    async def _get_daily_sales_snapshot_mode(
+    async def _get_daily_sales(
         self, store_id: str, sku_id: str, lookback_days: int = 28
     ) -> List[float]:
-        """Get avg daily sales for snapshot mode as total_in_stock_sales / in_stock_days."""
+        """Unified daily sales velocity for a single SKU.
+
+        Active day = snapshot shows stock > 0  OR  a sale occurred that day.
+        Only zero/negative-stock days with no sales are excluded.
+        """
         cutoff = date.today() - timedelta(days=lookback_days)
         query = text("""
-            SELECT
-                COUNT(DISTINCT snap.snapshot_date)::float AS in_stock_days,
-                COALESCE(SUM(ti.quantity), 0)::float AS total_qty
-            FROM inventory_snapshots snap
-            LEFT JOIN new_transactions t
-                ON t.store_id = snap.store_id
-                AND DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') = snap.snapshot_date
-                AND t.is_cancelled = false
-            LEFT JOIN new_transaction_items ti
-                ON ti.transaction_ref_id = t.ref_id
-                AND ti.product_id = snap.product_id
-            WHERE snap.product_id = :sku_id
-              AND snap.store_id = :store_id
-              AND snap.quantity_on_hand > 0
-              AND snap.snapshot_date >= :cutoff
-              AND snap.snapshot_date < CURRENT_DATE
+            WITH active_days AS (
+                SELECT snap.snapshot_date AS active_date, 0::float AS qty
+                FROM inventory_snapshots snap
+                WHERE snap.store_id = :store_id
+                  AND snap.product_id = :sku_id
+                  AND snap.snapshot_date >= :cutoff
+                  AND snap.snapshot_date < CURRENT_DATE
+                  AND snap.quantity_on_hand > 0
+
+                UNION ALL
+
+                SELECT DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') AS active_date,
+                       ti.quantity::float AS qty
+                FROM new_transactions t
+                JOIN new_transaction_items ti ON ti.transaction_ref_id = t.ref_id
+                WHERE t.store_id = :store_id
+                  AND ti.product_id = :sku_id
+                  AND DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') >= :cutoff
+                  AND DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') < CURRENT_DATE
+                  AND t.is_cancelled = false
+            )
+            SELECT SUM(qty) AS total_qty, COUNT(DISTINCT active_date) AS active_days
+            FROM active_days
+            HAVING SUM(qty) > 0
         """)
         result = await self.db.execute(
-            query,
-            {"sku_id": sku_id, "store_id": store_id, "cutoff": cutoff},
+            query, {"store_id": store_id, "sku_id": sku_id, "cutoff": cutoff}
         )
         row = result.fetchone()
-        if not row or not row[0] or float(row[0]) == 0:
+        if not row or not row[1] or float(row[1]) == 0:
             return []
-        avg = float(row[1]) / float(row[0])
-        return [avg] if avg > 0 else []
-
-    async def _get_daily_sales_fallback_mode(
-        self, store_id: str, sku_id: str, lookback_days: int = 28
-    ) -> List[float]:
-        """Get daily sales for fallback mode as total/lookback_days (includes zero-sale days)."""
-        cutoff = date.today() - timedelta(days=lookback_days)
-        query = text("""
-            SELECT COALESCE(SUM(ti.quantity), 0)::float AS total_qty
-            FROM new_transactions t
-            JOIN new_transaction_items ti ON t.ref_id = ti.transaction_ref_id
-            WHERE ti.product_id = :sku_id
-              AND t.store_id = :store_id
-              AND t.transaction_time >= :cutoff
-              AND t.transaction_time < CURRENT_DATE
-              AND t.is_cancelled = false
-        """)
-        result = await self.db.execute(
-            query,
-            {"sku_id": sku_id, "store_id": store_id, "cutoff": cutoff},
-        )
-        total_qty = result.scalar() or 0.0
-        avg = float(total_qty) / lookback_days
+        avg = float(row[0]) / float(row[1])
         return [avg] if avg > 0 else []
 
     async def get_daily_sales(
         self,
         store_id: str,
         sku_id: str,
-        calculation_mode: str,
+        calculation_mode: str = "unified",
         lookback_days: int = 28,
     ) -> List[float]:
-        """Get valid daily sales based on calculation mode."""
-        if calculation_mode == "snapshot":
-            return await self._get_daily_sales_snapshot_mode(
-                store_id, sku_id, lookback_days
-            )
-        return await self._get_daily_sales_fallback_mode(
-            store_id, sku_id, lookback_days
-        )
+        """Get daily sales velocity. calculation_mode kept for API compatibility."""
+        return await self._get_daily_sales(store_id, sku_id, lookback_days)
 
     # ----------------------------------------------------------------
     # Seasonality
@@ -264,74 +247,54 @@ class ReplenishmentService:
     # Main Replenishment Calculation
     # ----------------------------------------------------------------
 
-    async def _batch_get_daily_sales_fallback(
+    async def _batch_get_daily_sales(
         self, lookback_days: int = 28, store_id: Optional[str] = None,
         sales_start_date: Optional[date] = None,
     ) -> Dict[Tuple[str, str], float]:
-        """Batch fetch avg daily sales for store-SKU pairs (fallback mode).
-        Uses total_qty / lookback_days so zero-sale days are included in the average."""
-        if sales_start_date is not None:
-            cutoff = sales_start_date
-            actual_days = max(1, (date.today() - sales_start_date).days)
-        else:
-            cutoff = date.today() - timedelta(days=lookback_days)
-            actual_days = lookback_days
+        """Unified batch velocity — one query, no mode switching.
 
-        store_filter = "AND t.store_id = :store_id" if store_id else ""
-        query = text(f"""
-            SELECT
-                t.store_id,
-                ti.product_id,
-                COALESCE(SUM(ti.quantity), 0)::float AS total_qty
-            FROM new_transactions t
-            JOIN new_transaction_items ti ON t.ref_id = ti.transaction_ref_id
-            WHERE t.transaction_time >= :cutoff
-              AND t.transaction_time < CURRENT_DATE
-              AND t.is_cancelled = false
-              {store_filter}
-            GROUP BY t.store_id, ti.product_id
-        """)
-        params: Dict[str, Any] = {"cutoff": cutoff}
-        if store_id:
-            params["store_id"] = store_id
-        result = await self.db.execute(query, params)
-        rows = result.fetchall()
+        Active day per SKU = snapshot shows stock > 0  OR  a sale occurred.
+        Zero/negative-stock days with no sales are excluded.
+        Products with no snapshot history are still captured via transactions.
 
-        return {
-            (row[0], row[1]): float(row[2]) / actual_days
-            for row in rows
-            if float(row[2]) > 0
-        }
-
-    async def _batch_get_daily_sales_snapshot(
-        self, lookback_days: int = 28, store_id: Optional[str] = None,
-        sales_start_date: Optional[date] = None,
-    ) -> Dict[Tuple[str, str], float]:
-        """Batch fetch avg daily sales for store-SKU pairs (snapshot mode).
-        Counts a day if: stock > 0 (normal) OR stock <= 0 but a sale still occurred
-        (e.g. sold from buffer/negative). Only excludes days with zero/negative stock
-        AND no sales — true stockout-with-no-activity days."""
+        velocity = total_units_sold / active_days
+        """
         cutoff = sales_start_date if sales_start_date is not None else date.today() - timedelta(days=lookback_days)
-        store_filter = "AND snap.store_id = :store_id" if store_id else ""
+        snap_filter = "AND snap.store_id = :store_id" if store_id else ""
+        txn_filter  = "AND t.store_id = :store_id"   if store_id else ""
+
         query = text(f"""
-            SELECT
-                snap.store_id,
-                snap.product_id,
-                COUNT(DISTINCT snap.snapshot_date)::float AS in_stock_days,
-                COALESCE(SUM(ti.quantity), 0)::float AS total_qty
-            FROM inventory_snapshots snap
-            LEFT JOIN new_transactions t
-                ON t.store_id = snap.store_id
-                AND DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') = snap.snapshot_date
-                AND t.is_cancelled = false
-            LEFT JOIN new_transaction_items ti
-                ON ti.transaction_ref_id = t.ref_id
-                AND ti.product_id = snap.product_id
-            WHERE snap.snapshot_date >= :cutoff
-              AND snap.snapshot_date < CURRENT_DATE
-              {store_filter}
-              AND (snap.quantity_on_hand > 0 OR ti.quantity IS NOT NULL)
-            GROUP BY snap.store_id, snap.product_id
+            WITH active_days AS (
+                SELECT snap.store_id,
+                       snap.product_id,
+                       snap.snapshot_date AS active_date,
+                       0::float           AS qty
+                FROM inventory_snapshots snap
+                WHERE snap.snapshot_date >= :cutoff
+                  AND snap.snapshot_date < CURRENT_DATE
+                  AND snap.quantity_on_hand > 0
+                  {snap_filter}
+
+                UNION ALL
+
+                SELECT t.store_id,
+                       ti.product_id,
+                       DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') AS active_date,
+                       ti.quantity::float AS qty
+                FROM new_transactions t
+                JOIN new_transaction_items ti ON ti.transaction_ref_id = t.ref_id
+                WHERE DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') >= :cutoff
+                  AND DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') < CURRENT_DATE
+                  AND t.is_cancelled = false
+                  {txn_filter}
+            )
+            SELECT store_id,
+                   product_id,
+                   SUM(qty)                    AS total_qty,
+                   COUNT(DISTINCT active_date) AS active_days
+            FROM active_days
+            GROUP BY store_id, product_id
+            HAVING SUM(qty) > 0
         """)
         params: Dict[str, Any] = {"cutoff": cutoff}
         if store_id:
@@ -340,9 +303,9 @@ class ReplenishmentService:
         rows = result.fetchall()
 
         return {
-            (row[0], row[1]): float(row[3]) / float(row[2])
+            (row[0], row[1]): float(row[2]) / float(row[3])
             for row in rows
-            if float(row[2]) > 0 and float(row[3]) > 0
+            if float(row[3]) > 0
         }
 
     async def run_replenishment_calculation(
@@ -363,17 +326,13 @@ class ReplenishmentService:
 
         # Load algorithm settings
         algo = await self.get_algorithm_settings()
-        snapshot_enabled = algo["snapshot_enabled"]
-        snapshot_required_days = algo["snapshot_required_days"]
         buffer_weekday = algo["stockout_buffer_weekday_pct"] / 100.0
         buffer_weekend = algo["stockout_buffer_weekend_pct"] / 100.0
         vel_weight = algo["priority_velocity_weight"]
         risk_weight = algo["priority_stockout_weight"]
         overstock_days = algo["overstock_threshold_days"]
 
-        # Determine calculation mode
-        snapshot_days = await self.get_snapshot_days_available()
-        calc_mode = "snapshot" if (snapshot_enabled and snapshot_days >= snapshot_required_days) else "fallback"
+        calc_mode = "unified"
 
         # Get seasonality multiplier for today
         seasonality_multiplier = await self.get_seasonality_multiplier(run_date)
@@ -477,15 +436,10 @@ class ReplenishmentService:
             row[0]: row[1] for row in cat_result.fetchall()
         }
 
-        # Batch fetch daily sales in one query
-        if calc_mode == "snapshot":
-            sales_cache = await self._batch_get_daily_sales_snapshot(
-                store_id=store_id, sales_start_date=sales_start_date
-            )
-        else:
-            sales_cache = await self._batch_get_daily_sales_fallback(
-                store_id=store_id, sales_start_date=sales_start_date
-            )
+        # Batch fetch daily sales — unified active-day query
+        sales_cache = await self._batch_get_daily_sales(
+            store_id=store_id, sales_start_date=sales_start_date
+        )
 
         # Delete previous plans for this run_date (and store if filtered)
         delete_q = delete(ShipmentPlan).where(ShipmentPlan.run_date == run_date)
@@ -512,9 +466,8 @@ class ReplenishmentService:
                 "expiry_window_days": 60,
             })
 
-            # Get avg daily sales from pre-loaded cache
-            # Fallback: total_qty / lookback_days (includes zero-sale days)
-            # Snapshot: median of in-stock sale days (stockout days excluded by snapshot join)
+            # Velocity = total_sales / active_days
+            # active_days = days with stock > 0 OR days with a real sale
             avg_daily_sales = sales_cache.get((store_id, sku_id), 0.0)
 
             # Velocity multiplier: highest threshold the product meets
