@@ -48,6 +48,12 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const [sheetsSuccess, setSheetsSuccess] = useState<string | null>(null);
   const [sheetsError, setSheetsError] = useState<string | null>(null);
 
+  // Dashboard table column visibility
+  type DashCol = 'avg_daily' | 'store_inv' | 'wh_inv' | 'min' | 'requested' | 'allocated' | 'days_stock' | 'vel' | 'cat' | 'eff';
+  const [hiddenDashCols, setHiddenDashCols] = useState<Set<DashCol>>(new Set<DashCol>(['vel', 'cat']));
+  const toggleDashCol = (col: DashCol) =>
+    setHiddenDashCols(prev => { const n = new Set(prev); n.has(col) ? n.delete(col) : n.add(col); return n; });
+
   useEffect(() => {
     loadInitialData();
     fetchStores();
@@ -481,90 +487,97 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
             <p className="text-xs text-red-400 mb-3">{sheetsError}</p>
           )}
           <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
-            <table className="w-full text-xs text-left">
-              <thead className="sticky top-0 z-10 bg-[#1c1e26]">
-                <tr className="border-b border-[#2e303d] text-gray-400">
-                  <th className="py-2 pr-3 font-medium whitespace-nowrap">Product</th>
-                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Avg Daily</th>
-                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Store Inv</th>
-                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Warehouse Inv</th>
-                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Min</th>
-                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Requested</th>
-                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Allocated</th>
-                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Days of Stock</th>
-                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Vel ×</th>
-                  <th className="py-2 px-3 font-medium whitespace-nowrap text-right">Cat ×</th>
-                  <th className="py-2 pl-3 font-medium whitespace-nowrap text-right">Eff ×</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(() => {
-                  const sorted = filteredAndSorted(latestPlan.items);
-                  let lastCategory = '';
-                  return sorted.map((item, idx) => {
-                    const cat = item.category ?? '-';
-                    const showCategoryHeader = cat !== lastCategory;
-                    lastCategory = cat;
-                    const isShort = item.allocated_ship_qty < item.requested_ship_qty;
-                    const isOverstock = item.days_of_stock > 120;
-                    const isNegative = item.on_hand < 0;
-                    const rowHighlight = isNegative
-                      ? 'bg-red-900/10'
-                      : isShort
-                      ? 'bg-yellow-900/10'
-                      : isOverstock
-                      ? 'bg-orange-900/10'
-                      : idx % 2 === 0
-                      ? 'bg-[#0e1117]'
-                      : '';
-                    return (
-                      <React.Fragment key={`${item.store_id}-${item.sku_id}`}>
-                        {showCategoryHeader && (
-                          <tr className="border-b border-[#2e303d]">
-                            <td colSpan={11} className="py-2 pt-4 text-xs font-semibold text-blue-400 uppercase tracking-wider">
-                              {cat}
-                            </td>
+            {/* Shared eye icons */}
+            {(() => {
+              const EyeOpen = () => (
+                <svg className="inline w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              );
+              const EyeShut = () => (
+                <svg className="inline w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                </svg>
+              );
+              const DashTh = ({ col, label, first }: { col: DashCol; label: string; first?: boolean }) => {
+                const hidden = hiddenDashCols.has(col);
+                return (
+                  <th className={`py-2 font-medium whitespace-nowrap text-right ${first ? 'px-3' : hidden ? 'px-0.5' : 'px-3'}`}>
+                    <span className="inline-flex items-center gap-1 justify-end">
+                      {hidden
+                        ? <span className="line-through text-gray-600 text-[10px]">{label}</span>
+                        : <span className="text-gray-400">{label}</span>
+                      }
+                      <button onClick={() => toggleDashCol(col)} className={hidden ? 'text-gray-600 hover:text-gray-400' : 'text-gray-500 hover:text-gray-300'}>
+                        {hidden ? <EyeShut /> : <EyeOpen />}
+                      </button>
+                    </span>
+                  </th>
+                );
+              };
+              const dc = (col: DashCol, content: React.ReactNode, className = '') =>
+                hiddenDashCols.has(col)
+                  ? <td className="p-0 w-0 max-w-0 overflow-hidden" />
+                  : <td className={`py-2 px-3 text-right tabular-nums ${className}`}>{content}</td>;
+
+              const sorted = filteredAndSorted(latestPlan.items);
+              let lastCategory = '';
+              const totalCols = 11; // fixed regardless of hidden state (colSpan for category rows)
+
+              return (
+                <table className="w-full text-xs text-left">
+                  <thead className="sticky top-0 z-10 bg-[#1c1e26]">
+                    <tr className="border-b border-[#2e303d]">
+                      <th className="py-2 pr-3 font-medium whitespace-nowrap text-gray-400">Product</th>
+                      <DashTh col="avg_daily"  label="Avg Daily" />
+                      <DashTh col="store_inv"  label="Store Inv" />
+                      <DashTh col="wh_inv"     label="WH Inv" />
+                      <DashTh col="min"        label="Min" />
+                      <DashTh col="requested"  label="Requested" />
+                      <DashTh col="allocated"  label="Allocated" />
+                      <DashTh col="days_stock" label="Days Stock" />
+                      <DashTh col="vel"        label="Vel ×" />
+                      <DashTh col="cat"        label="Cat ×" />
+                      <DashTh col="eff"        label="Eff ×" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sorted.map((item, idx) => {
+                      const cat = item.category ?? '-';
+                      const showCategoryHeader = cat !== lastCategory;
+                      lastCategory = cat;
+                      const isShort = item.allocated_ship_qty < item.requested_ship_qty;
+                      const isOverstock = item.days_of_stock > 120;
+                      const isNegative = item.on_hand < 0;
+                      const rowHighlight = isNegative ? 'bg-red-900/10' : isShort ? 'bg-yellow-900/10' : isOverstock ? 'bg-orange-900/10' : idx % 2 === 0 ? 'bg-[#0e1117]' : '';
+                      return (
+                        <React.Fragment key={`${item.store_id}-${item.sku_id}`}>
+                          {showCategoryHeader && (
+                            <tr className="border-b border-[#2e303d]">
+                              <td colSpan={totalCols} className="py-2 pt-4 text-xs font-semibold text-blue-400 uppercase tracking-wider">{cat}</td>
+                            </tr>
+                          )}
+                          <tr className={`border-b border-[#2e303d]/50 ${rowHighlight}`}>
+                            <td className="py-2 pr-3 text-white whitespace-nowrap max-w-[200px] truncate">{item.product_name ?? item.sku_id}</td>
+                            {dc('avg_daily',  item.avg_daily_sales.toFixed(1), 'text-gray-300')}
+                            {dc('store_inv',  item.on_hand, item.on_hand < 0 ? 'text-red-400' : 'text-gray-300')}
+                            {dc('wh_inv',     item.wh_on_hand ?? 0, 'text-gray-300')}
+                            {dc('min',        item.min_level.toFixed(0), 'text-gray-400')}
+                            {dc('requested',  item.requested_ship_qty, 'text-gray-300')}
+                            {dc('allocated',  item.allocated_ship_qty, isShort ? 'text-yellow-400 font-medium' : item.allocated_ship_qty > 0 ? 'text-green-400 font-medium' : 'text-gray-500')}
+                            {dc('days_stock', item.days_of_stock.toFixed(1), item.days_of_stock > 120 ? 'text-orange-400' : item.days_of_stock < 3 ? 'text-red-400' : 'text-gray-300')}
+                            {dc('vel',        `×${(item.velocity_multiplier ?? 1).toFixed(3)}`, (item.velocity_multiplier ?? 1) > 1 ? 'text-green-400' : 'text-gray-500')}
+                            {dc('cat',        `×${(item.category_multiplier ?? 1).toFixed(3)}`, (item.category_multiplier ?? 1) > 1 ? 'text-green-400' : 'text-gray-500')}
+                            {dc('eff',        `×${(item.effective_multiplier ?? 1).toFixed(3)}`, (item.effective_multiplier ?? 1) > 1 ? 'text-green-400 font-medium' : 'text-gray-500')}
                           </tr>
-                        )}
-                        <tr className={`border-b border-[#2e303d]/50 ${rowHighlight}`}>
-                          <td className="py-2 pr-3 text-white whitespace-nowrap max-w-[200px] truncate">
-                            {item.product_name ?? item.sku_id}
-                          </td>
-                          <td className="py-2 px-3 text-gray-300 text-right tabular-nums">{item.avg_daily_sales.toFixed(1)}</td>
-                          <td className={`py-2 px-3 text-right tabular-nums ${item.on_hand < 0 ? 'text-red-400' : 'text-gray-300'}`}>
-                            {item.on_hand}
-                          </td>
-                          <td className="py-2 px-3 text-gray-300 text-right tabular-nums">
-                            {item.wh_on_hand ?? 0}
-                          </td>
-                          <td className="py-2 px-3 text-gray-400 text-right tabular-nums">{item.min_level.toFixed(0)}</td>
-                          <td className="py-2 px-3 text-gray-300 text-right tabular-nums">{item.requested_ship_qty}</td>
-                          <td className={`py-2 px-3 text-right tabular-nums font-medium ${
-                            isShort ? 'text-yellow-400' : item.allocated_ship_qty > 0 ? 'text-green-400' : 'text-gray-500'
-                          }`}>
-                            {item.allocated_ship_qty}
-                          </td>
-                          <td className={`py-2 px-3 text-right tabular-nums ${
-                            item.days_of_stock > 120 ? 'text-orange-400' : item.days_of_stock < 3 ? 'text-red-400' : 'text-gray-300'
-                          }`}>
-                            {item.days_of_stock.toFixed(1)}
-                          </td>
-                          <td className={`py-2 px-3 text-right tabular-nums ${(item.velocity_multiplier ?? 1) > 1 ? 'text-green-400' : 'text-gray-500'}`}>
-                            ×{(item.velocity_multiplier ?? 1).toFixed(3)}
-                          </td>
-                          <td className={`py-2 px-3 text-right tabular-nums ${(item.category_multiplier ?? 1) > 1 ? 'text-green-400' : 'text-gray-500'}`}>
-                            ×{(item.category_multiplier ?? 1).toFixed(3)}
-                          </td>
-                          <td className={`py-2 pl-3 text-right tabular-nums font-medium ${(item.effective_multiplier ?? 1) > 1 ? 'text-green-400' : 'text-gray-500'}`}>
-                            ×{(item.effective_multiplier ?? 1).toFixed(3)}
-                          </td>
-                        </tr>
-                      </React.Fragment>
-                    );
-                  });
-                })()}
-              </tbody>
-            </table>
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              );
+            })()}
           </div>
         </div>
       )}
