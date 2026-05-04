@@ -196,6 +196,8 @@ class ShipmentPlan(Base):
 
     # Total units sold in the lookback window (pre-average, for audit)
     total_sold_qty: Mapped[int] = mapped_column(Integer, nullable=False, server_default='0', default=0)
+    # Days with zero/negative stock AND no sale (true dead days)
+    dead_days: Mapped[int] = mapped_column(Integer, nullable=False, server_default='0', default=0)
 
     # Multiplier audit trail
     velocity_multiplier: Mapped[float] = mapped_column(Numeric(5, 3), nullable=False, default=1.0)

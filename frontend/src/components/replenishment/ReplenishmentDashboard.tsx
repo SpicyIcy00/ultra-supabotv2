@@ -49,7 +49,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const [sheetsError, setSheetsError] = useState<string | null>(null);
 
   // Dashboard table column visibility
-  type DashCol = 'total_sold' | 'avg_daily' | 'store_inv' | 'wh_inv' | 'min' | 'requested' | 'allocated' | 'days_stock' | 'vel' | 'cat' | 'eff';
+  type DashCol = 'total_sold' | 'dead_days' | 'avg_daily' | 'store_inv' | 'wh_inv' | 'min' | 'requested' | 'allocated' | 'days_stock' | 'vel' | 'cat' | 'eff';
   const [hiddenDashCols, setHiddenDashCols] = useState<Set<DashCol>>(new Set<DashCol>(['vel', 'cat']));
   const toggleDashCol = (col: DashCol) =>
     setHiddenDashCols(prev => { const n = new Set(prev); n.has(col) ? n.delete(col) : n.add(col); return n; });
@@ -531,6 +531,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                     <tr className="border-b border-[#2e303d]">
                       <th className="py-2 pr-3 font-medium whitespace-nowrap text-gray-400">Product</th>
                       <DashTh col="total_sold" label="Total Sold" />
+                      <DashTh col="dead_days"  label="Dead Days" />
                       <DashTh col="avg_daily"  label="Avg Daily" />
                       <DashTh col="store_inv"  label="Store Inv" />
                       <DashTh col="wh_inv"     label="WH Inv" />
@@ -562,6 +563,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                           <tr className={`border-b border-[#2e303d]/50 ${rowHighlight}`}>
                             <td className="py-2 pr-3 text-white whitespace-nowrap max-w-[200px] truncate">{item.product_name ?? item.sku_id}</td>
                             {dc('total_sold', (item.total_sold_qty ?? 0).toLocaleString(), 'text-blue-300')}
+                            {dc('dead_days',  item.dead_days ?? 0, (item.dead_days ?? 0) > 7 ? 'text-red-400' : (item.dead_days ?? 0) > 0 ? 'text-yellow-400' : 'text-gray-500')}
                             {dc('avg_daily',  item.avg_daily_sales.toFixed(1), 'text-gray-300')}
                             {dc('store_inv',  item.on_hand, item.on_hand < 0 ? 'text-red-400' : 'text-gray-300')}
                             {dc('wh_inv',     item.wh_on_hand ?? 0, 'text-gray-300')}

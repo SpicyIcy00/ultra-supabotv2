@@ -302,6 +302,47 @@ class ReplenishmentService:
             if float(row[3]) > 0
         }
 
+    async def _batch_get_dead_days(
+        self, lookback_days: int = 28, store_id: Optional[str] = None,
+        sales_start_date: Optional[date] = None,
+    ) -> Dict[Tuple[str, str], int]:
+        """Count snapshot days per SKU where stock <= 0 AND no sale occurred.
+        These are true dead days — the product was out of stock and didn't sell."""
+        cutoff = sales_start_date if sales_start_date is not None else date.today() - timedelta(days=lookback_days)
+        snap_filter = "AND snap.store_id = :store_id" if store_id else ""
+        txn_filter  = "AND t.store_id = :store_id"   if store_id else ""
+
+        query = text(f"""
+            SELECT snap.store_id,
+                   snap.product_id,
+                   COUNT(DISTINCT snap.snapshot_date) AS dead_days
+            FROM inventory_snapshots snap
+            LEFT JOIN (
+                SELECT t.store_id,
+                       ti.product_id,
+                       DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') AS sale_date
+                FROM new_transactions t
+                JOIN new_transaction_items ti ON ti.transaction_ref_id = t.ref_id
+                WHERE t.is_cancelled = false
+                  AND DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') >= :cutoff
+                  AND DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') < CURRENT_DATE
+                  {txn_filter}
+            ) sales ON sales.store_id = snap.store_id
+                   AND sales.product_id = snap.product_id
+                   AND sales.sale_date = snap.snapshot_date
+            WHERE snap.snapshot_date >= :cutoff
+              AND snap.snapshot_date < CURRENT_DATE
+              AND snap.quantity_on_hand <= 0
+              AND sales.sale_date IS NULL
+              {snap_filter}
+            GROUP BY snap.store_id, snap.product_id
+        """)
+        params: Dict[str, Any] = {"cutoff": cutoff}
+        if store_id:
+            params["store_id"] = store_id
+        result = await self.db.execute(query, params)
+        return {(row[0], row[1]): int(row[2]) for row in result.fetchall()}
+
     async def run_replenishment_calculation(
         self,
         run_date: Optional[date] = None,
@@ -434,6 +475,9 @@ class ReplenishmentService:
         sales_cache = await self._batch_get_daily_sales(
             store_id=store_id, sales_start_date=sales_start_date
         )
+        dead_days_cache = await self._batch_get_dead_days(
+            store_id=store_id, sales_start_date=sales_start_date
+        )
 
         # Delete previous plans for this run_date (and store if filtered)
         delete_q = delete(ShipmentPlan).where(ShipmentPlan.run_date == run_date)
@@ -464,6 +508,7 @@ class ReplenishmentService:
             # active_days = days with stock > 0 OR days with a real sale
             _sale_data = sales_cache.get((store_id, sku_id), (0.0, 0))
             avg_daily_sales, total_sold_qty = _sale_data
+            dead_days = dead_days_cache.get((store_id, sku_id), 0)
 
             # Velocity multiplier: highest threshold the product meets
             velocity_mult = 1.0
@@ -552,6 +597,7 @@ class ReplenishmentService:
                 sku_id=sku_id,
                 avg_daily_sales=round(avg_daily_sales, 4),
                 total_sold_qty=total_sold_qty,
+                dead_days=dead_days,
                 season_adjusted_daily_sales=round(season_adj_sales, 4),
                 safety_stock=round(safety_stock, 2),
                 min_level=round(min_level, 2),
@@ -684,7 +730,8 @@ class ReplenishmentService:
                 COALESCE(sp.velocity_multiplier, 1.0)::float,
                 COALESCE(sp.category_multiplier, 1.0)::float,
                 COALESCE(sp.effective_multiplier, 1.0)::float,
-                COALESCE(sp.total_sold_qty, 0)::int
+                COALESCE(sp.total_sold_qty, 0)::int,
+                COALESCE(sp.dead_days, 0)::int
             FROM shipment_plans sp
             JOIN stores s ON sp.store_id = s.id
             JOIN products p ON sp.sku_id = p.id
@@ -735,6 +782,7 @@ class ReplenishmentService:
                 "category_multiplier": float(row[23]),
                 "effective_multiplier": float(row[24]),
                 "total_sold_qty": int(row[25]),
+                "dead_days": int(row[26]),
             })
 
         calc_mode = rows[0][19] if rows else "none"  # calculation_mode column

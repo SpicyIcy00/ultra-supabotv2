@@ -13,6 +13,7 @@ const COLUMNS: ColDef[] = [
   { key: 'store_name',           label: 'Store',        align: 'left' },
   { key: 'product_name',         label: 'Product',      align: 'left' },
   { key: 'total_sold_qty',       label: 'Total Sold'    },
+  { key: 'dead_days',            label: 'Dead Days'     },
   { key: 'avg_daily_sales',      label: 'Avg Sales/Day' },
   { key: 'on_hand',              label: 'On Hand'       },
   { key: 'final_max',            label: 'Final Max',    defaultHidden: true },
@@ -124,6 +125,8 @@ export const ShipmentPlanTable: React.FC = () => {
         return <td className="px-3 py-2.5 text-sm text-white"><div>{item.product_name || item.sku_id}</div>{item.category && <div className="text-xs text-gray-500">{item.category}</div>}</td>;
       case 'total_sold_qty':
         return <td className="px-3 py-2.5 text-sm text-right text-blue-300 tabular-nums">{(item.total_sold_qty ?? 0).toLocaleString()}</td>;
+      case 'dead_days':
+        return <td className={`px-3 py-2.5 text-sm text-right tabular-nums ${(item.dead_days ?? 0) > 7 ? 'text-red-400' : (item.dead_days ?? 0) > 0 ? 'text-yellow-400' : 'text-gray-500'}`}>{item.dead_days ?? 0}</td>;
       case 'avg_daily_sales':
         return <td className="px-3 py-2.5 text-sm text-right text-gray-300 tabular-nums">{item.avg_daily_sales.toFixed(2)}</td>;
       case 'on_hand':
