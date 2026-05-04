@@ -631,7 +631,7 @@ class ReplenishmentService:
         return {
             "run_date": run_date.isoformat(),
             "calculation_mode": calc_mode,
-            "snapshot_days_available": snapshot_days,
+            "snapshot_days_available": await self.get_snapshot_days_available(),
             "total_items": len(plan_items),
             "stores_processed": len(unique_stores),
             "warehouse_allocations": warehouse_allocation_count,
