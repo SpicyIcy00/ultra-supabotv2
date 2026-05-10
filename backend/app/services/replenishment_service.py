@@ -48,6 +48,7 @@ class ReplenishmentService:
         """Get snapshot data readiness information."""
         algo = await self.get_algorithm_settings()
         snapshot_required = algo["snapshot_required_days"]
+        snapshot_enabled = algo["snapshot_enabled"]
         snapshot_days = await self.get_snapshot_days_available()
         days_until_full = max(0, snapshot_required - snapshot_days)
         full_accuracy_date = date.today() + timedelta(days=days_until_full)
