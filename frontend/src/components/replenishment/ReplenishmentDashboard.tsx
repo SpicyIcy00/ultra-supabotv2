@@ -224,7 +224,20 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
 
   return (
     <div className="space-y-6">
-      {/* Snapshot Data Quality Banner */}
+      {/* Mode / Snapshot Quality Banner */}
+      {dataReadiness && dataReadiness.calculation_mode === 'fallback' && (
+        <div className="bg-gray-800/60 border border-gray-600/50 rounded-lg p-4">
+          <div className="flex items-center gap-3">
+            <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-gray-400 text-sm">
+              Fallback mode — velocity = total units sold ÷ 28 days. Snapshot disabled in Configuration.
+            </p>
+          </div>
+        </div>
+      )}
+
       {dataReadiness && dataReadiness.snapshot_quality === 'building' && (
         <div className="bg-yellow-900/30 border border-yellow-600/50 rounded-lg p-4">
           <div className="flex items-start gap-3">
@@ -236,8 +249,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                 Building snapshot history — {dataReadiness.snapshot_days_available}/28 days collected
               </p>
               <p className="text-yellow-500/80 text-xs mt-1">
-                Velocity uses active days (stock &gt; 0 or sale occurred). Products with thin snapshot history
-                rely on transaction data only. Full snapshot coverage by {dataReadiness.full_accuracy_date}.
+                Velocity uses active days (stock &gt; 0 or sale occurred). Full coverage by {dataReadiness.full_accuracy_date}.
               </p>
             </div>
           </div>
@@ -251,7 +263,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <p className="text-green-400 text-sm">
-              {dataReadiness.snapshot_days_available} days of snapshot data — velocity calculated from active days (stock &gt; 0 or sale occurred).
+              {dataReadiness.snapshot_days_available} days of snapshot data — velocity = active days (stock &gt; 0 or sale occurred).
             </p>
           </div>
         </div>

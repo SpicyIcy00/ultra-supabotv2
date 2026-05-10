@@ -61,17 +61,22 @@ class ReplenishmentService:
         stores_with_snapshots = [row[0] for row in result.fetchall()]
 
         snapshot_quality = "good" if snapshot_days >= snapshot_required else "building"
+        active_mode = "unified" if snapshot_enabled else "fallback"
 
         return {
             "snapshot_days_available": snapshot_days,
             "days_until_full_accuracy": days_until_full,
             "full_accuracy_date": full_accuracy_date.isoformat(),
-            "calculation_mode": "unified",
-            "snapshot_quality": snapshot_quality,
+            "calculation_mode": active_mode,
+            "snapshot_quality": snapshot_quality if snapshot_enabled else None,
             "stores_with_snapshots": stores_with_snapshots,
             "message": (
                 f"Snapshot history: {snapshot_days}/{snapshot_required} days. "
-                f"Unified velocity active — active days = stock > 0 or sale occurred."
+                + (
+                    "Unified velocity — active days = stock > 0 or sale occurred."
+                    if snapshot_enabled
+                    else "Fallback mode — velocity = total sold ÷ 28 days."
+                )
             ),
         }
 
@@ -343,6 +348,42 @@ class ReplenishmentService:
         result = await self.db.execute(query, params)
         return {(row[0], row[1]): int(row[2]) for row in result.fetchall()}
 
+    async def _batch_get_daily_sales_fallback(
+        self, lookback_days: int = 28, store_id: Optional[str] = None,
+        sales_start_date: Optional[date] = None,
+    ) -> Dict[Tuple[str, str], Tuple[float, int]]:
+        """Simple fallback: total_sold / lookback_days with no stock filtering.
+        Used when snapshot_enabled = False in algorithm settings."""
+        if sales_start_date is not None:
+            cutoff = sales_start_date
+            actual_days = max(1, (date.today() - sales_start_date).days)
+        else:
+            cutoff = date.today() - timedelta(days=lookback_days)
+            actual_days = lookback_days
+
+        txn_filter = "AND t.store_id = :store_id" if store_id else ""
+        query = text(f"""
+            SELECT t.store_id,
+                   ti.product_id,
+                   COALESCE(SUM(ti.quantity), 0)::float AS total_qty
+            FROM new_transactions t
+            JOIN new_transaction_items ti ON t.ref_id = ti.transaction_ref_id
+            WHERE t.transaction_time >= :cutoff
+              AND t.transaction_time < CURRENT_DATE
+              AND t.is_cancelled = false
+              {txn_filter}
+            GROUP BY t.store_id, ti.product_id
+        """)
+        params: Dict[str, Any] = {"cutoff": cutoff}
+        if store_id:
+            params["store_id"] = store_id
+        result = await self.db.execute(query, params)
+        return {
+            (row[0], row[1]): (float(row[2]) / actual_days, int(row[2]))
+            for row in result.fetchall()
+            if float(row[2]) > 0
+        }
+
     async def run_replenishment_calculation(
         self,
         run_date: Optional[date] = None,
@@ -361,13 +402,16 @@ class ReplenishmentService:
 
         # Load algorithm settings
         algo = await self.get_algorithm_settings()
+        snapshot_enabled = algo["snapshot_enabled"]
         buffer_weekday = algo["stockout_buffer_weekday_pct"] / 100.0
         buffer_weekend = algo["stockout_buffer_weekend_pct"] / 100.0
         vel_weight = algo["priority_velocity_weight"]
         risk_weight = algo["priority_stockout_weight"]
         overstock_days = algo["overstock_threshold_days"]
 
-        calc_mode = "unified"
+        # snapshot ON  → unified active-day velocity (stock>0 or sale)
+        # snapshot OFF → simple total_sold / 28 days, no stock filtering
+        calc_mode = "unified" if snapshot_enabled else "fallback"
 
         # Get seasonality multiplier for today
         seasonality_multiplier = await self.get_seasonality_multiplier(run_date)
@@ -471,13 +515,20 @@ class ReplenishmentService:
             row[0]: row[1] for row in cat_result.fetchall()
         }
 
-        # Batch fetch daily sales — unified active-day query
-        sales_cache = await self._batch_get_daily_sales(
-            store_id=store_id, sales_start_date=sales_start_date
-        )
-        dead_days_cache = await self._batch_get_dead_days(
-            store_id=store_id, sales_start_date=sales_start_date
-        )
+        # Batch fetch daily sales based on mode
+        if snapshot_enabled:
+            sales_cache = await self._batch_get_daily_sales(
+                store_id=store_id, sales_start_date=sales_start_date
+            )
+            dead_days_cache = await self._batch_get_dead_days(
+                store_id=store_id, sales_start_date=sales_start_date
+            )
+        else:
+            # Fallback: simple total / calendar days, no snapshot needed
+            sales_cache = await self._batch_get_daily_sales_fallback(
+                store_id=store_id, sales_start_date=sales_start_date
+            )
+            dead_days_cache = {}  # not tracked in fallback mode
 
         # Delete previous plans for this run_date (and store if filtered)
         delete_q = delete(ShipmentPlan).where(ShipmentPlan.run_date == run_date)
