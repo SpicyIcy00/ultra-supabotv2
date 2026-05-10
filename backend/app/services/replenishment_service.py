@@ -22,6 +22,7 @@ from app.models.store import Store
 
 
 REVIEW_PERIOD_DAYS = 7
+MIN_SNAPSHOT_DAYS = 7          # auto mode: use snapshot formula only if SKU has this many in-stock days
 WAREHOUSE_STORE_ID = "667bde393126e50006c8058c"  # AJI BARN
 
 
@@ -385,6 +386,96 @@ class ReplenishmentService:
             if float(row[2]) > 0
         }
 
+    async def _batch_get_daily_sales_auto(
+        self, lookback_days: int = 28, store_id: Optional[str] = None,
+        sales_start_date: Optional[date] = None,
+    ) -> Dict[Tuple[str, str], Tuple[float, int]]:
+        """Per-SKU adaptive velocity (Auto mode).
+
+        For each SKU:
+          - in_stock_days >= MIN_SNAPSHOT_DAYS → snapshot formula:
+              velocity = units_sold_on_in_stock_days / in_stock_days
+          - in_stock_days < MIN_SNAPSHOT_DAYS  → fallback formula:
+              velocity = total_units_sold / lookback_days
+        """
+        if sales_start_date is not None:
+            cutoff = sales_start_date
+            actual_days = max(1, (date.today() - sales_start_date).days)
+        else:
+            cutoff = date.today() - timedelta(days=lookback_days)
+            actual_days = lookback_days
+
+        snap_filter = "AND snap.store_id = :store_id" if store_id else ""
+        txn_filter  = "AND t.store_id = :store_id"   if store_id else ""
+
+        query = text(f"""
+            WITH in_stock_snap AS (
+                SELECT snap.store_id, snap.product_id, snap.snapshot_date
+                FROM inventory_snapshots snap
+                WHERE snap.snapshot_date >= :cutoff
+                  AND snap.snapshot_date < CURRENT_DATE
+                  AND snap.quantity_on_hand > 0
+                  {snap_filter}
+            ),
+            sales_on_in_stock AS (
+                SELECT s.store_id,
+                       s.product_id,
+                       COUNT(DISTINCT s.snapshot_date)         AS in_stock_days,
+                       COALESCE(SUM(ti.quantity), 0)::float    AS sold_in_stock
+                FROM in_stock_snap s
+                LEFT JOIN new_transactions t
+                    ON t.store_id = s.store_id
+                    AND DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') = s.snapshot_date
+                    AND t.is_cancelled = false
+                LEFT JOIN new_transaction_items ti
+                    ON ti.transaction_ref_id = t.ref_id
+                    AND ti.product_id = s.product_id
+                GROUP BY s.store_id, s.product_id
+            ),
+            sales_total AS (
+                SELECT t.store_id,
+                       ti.product_id,
+                       COALESCE(SUM(ti.quantity), 0)::float AS total_sold
+                FROM new_transactions t
+                JOIN new_transaction_items ti ON ti.transaction_ref_id = t.ref_id
+                WHERE DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') >= :cutoff
+                  AND DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') < CURRENT_DATE
+                  AND t.is_cancelled = false
+                  {txn_filter}
+                GROUP BY t.store_id, ti.product_id
+            )
+            SELECT COALESCE(si.store_id,   st.store_id)   AS store_id,
+                   COALESCE(si.product_id, st.product_id) AS product_id,
+                   COALESCE(si.in_stock_days, 0)          AS in_stock_days,
+                   COALESCE(si.sold_in_stock, 0)          AS sold_in_stock,
+                   COALESCE(st.total_sold, 0)             AS total_sold
+            FROM sales_on_in_stock si
+            FULL OUTER JOIN sales_total st
+                ON st.store_id = si.store_id AND st.product_id = si.product_id
+            WHERE COALESCE(st.total_sold, 0) > 0
+               OR COALESCE(si.sold_in_stock, 0) > 0
+        """)
+        params: Dict[str, Any] = {"cutoff": cutoff}
+        if store_id:
+            params["store_id"] = store_id
+
+        result = await self.db.execute(query, params)
+        out: Dict[Tuple[str, str], Tuple[float, int]] = {}
+        for row in result.fetchall():
+            sid, pid = row[0], row[1]
+            in_stock_days = int(row[2])
+            sold_in_stock = float(row[3])
+            total_sold    = float(row[4])
+
+            if in_stock_days >= MIN_SNAPSHOT_DAYS and in_stock_days > 0:
+                velocity = sold_in_stock / in_stock_days
+            else:
+                velocity = total_sold / actual_days
+
+            if velocity > 0:
+                out[(sid, pid)] = (velocity, int(total_sold))
+        return out
+
     async def run_replenishment_calculation(
         self,
         run_date: Optional[date] = None,
@@ -392,6 +483,7 @@ class ReplenishmentService:
         apply_stockout_buffer: bool = True,
         normalize_priority: bool = True,
         sales_start_date: Optional[date] = None,
+        mode: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Execute the replenishment calculation, optionally filtered to a single store.
 
@@ -410,9 +502,12 @@ class ReplenishmentService:
         risk_weight = algo["priority_stockout_weight"]
         overstock_days = algo["overstock_threshold_days"]
 
-        # snapshot ON  → unified active-day velocity (stock>0 or sale)
-        # snapshot OFF → simple total_sold / 28 days, no stock filtering
-        calc_mode = "unified" if snapshot_enabled else "fallback"
+        # mode parameter takes precedence; fall back to snapshot_enabled setting
+        # "snapshot" → unified active-day  |  "fallback" → total/28  |  "auto" → per-SKU adaptive
+        if mode in ("snapshot", "fallback", "auto"):
+            calc_mode = mode
+        else:
+            calc_mode = "snapshot" if snapshot_enabled else "fallback"
 
         # Get seasonality multiplier for today
         seasonality_multiplier = await self.get_seasonality_multiplier(run_date)
@@ -516,20 +611,26 @@ class ReplenishmentService:
             row[0]: row[1] for row in cat_result.fetchall()
         }
 
-        # Batch fetch daily sales based on mode
-        if snapshot_enabled:
+        # Fetch velocity based on resolved mode
+        if calc_mode == "snapshot":
             sales_cache = await self._batch_get_daily_sales(
                 store_id=store_id, sales_start_date=sales_start_date
             )
             dead_days_cache = await self._batch_get_dead_days(
                 store_id=store_id, sales_start_date=sales_start_date
             )
-        else:
-            # Fallback: simple total / calendar days, no snapshot needed
+        elif calc_mode == "auto":
+            sales_cache = await self._batch_get_daily_sales_auto(
+                store_id=store_id, sales_start_date=sales_start_date
+            )
+            dead_days_cache = await self._batch_get_dead_days(
+                store_id=store_id, sales_start_date=sales_start_date
+            )
+        else:  # fallback
             sales_cache = await self._batch_get_daily_sales_fallback(
                 store_id=store_id, sales_start_date=sales_start_date
             )
-            dead_days_cache = {}  # not tracked in fallback mode
+            dead_days_cache = {}
 
         # Delete previous plans for this run_date (and store if filtered)
         delete_q = delete(ShipmentPlan).where(ShipmentPlan.run_date == run_date)

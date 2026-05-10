@@ -23,12 +23,14 @@ export const runReplenishment = async (
   storeId?: string,
   applyStockoutBuffer: boolean = true,
   salesStartDate?: string,
+  mode?: 'snapshot' | 'fallback' | 'auto',
 ): Promise<ReplenishmentRunResponse> => {
   const params: Record<string, string> = {};
   if (runDate) params.run_date = runDate;
   if (storeId) params.store_id = storeId;
   params.apply_stockout_buffer = String(applyStockoutBuffer);
   if (salesStartDate) params.sales_start_date = salesStartDate;
+  if (mode) params.mode = mode;
   const response = await axios.post<ReplenishmentRunResponse>(`${API_BASE}/run`, null, { params });
   return response.data;
 };

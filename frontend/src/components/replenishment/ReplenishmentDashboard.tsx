@@ -38,6 +38,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const [tiers, setTiers] = useState<StoreTier[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
   const [hideZeroSales, setHideZeroSales] = useState(false);
+  const [calcMode, setCalcMode] = useState<'snapshot' | 'fallback' | 'auto'>('auto');
   const [applyStockoutBuffer, setApplyStockoutBuffer] = useState(false);
   const [customStartEnabled, setCustomStartEnabled] = useState(false);
   const [salesStartDate, setSalesStartDate] = useState<string>('');
@@ -120,6 +121,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
         selectedStoreId,
         applyStockoutBuffer,
         customStartEnabled && salesStartDate ? salesStartDate : undefined,
+        calcMode,
       );
       setRunResult(result);
       await loadPlanData();
@@ -376,6 +378,15 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                 )}
               </div>
             )}
+            <select
+              value={calcMode}
+              onChange={e => setCalcMode(e.target.value as 'snapshot' | 'fallback' | 'auto')}
+              className="bg-[#0e1117] border border-[#2e303d] text-gray-200 text-sm rounded-lg px-3 py-2.5 focus:border-blue-500 focus:outline-none"
+            >
+              <option value="auto">Auto</option>
+              <option value="snapshot">Snapshot</option>
+              <option value="fallback">Fallback</option>
+            </select>
             <button
               onClick={handleRun}
               disabled={isRunning || !selectedStoreId || (customStartEnabled && !salesStartDate)}
