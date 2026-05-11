@@ -848,7 +848,7 @@ const BarcodePage: React.FC = () => {
                     : `${filteredProducts.length} of ${products.length} product(s) shown · ${selected.size} selected`}
                 </span>
                 <span>{productBarcodeMap.size} already have barcodes</span>
-                <span>{allBarcodeRows.filter(r => r.source === 'conflict').length > 0 && `· ${allBarcodeRows.filter(r => r.source === 'conflict').length} conflict(s) — check Barcode Database tab`}</span>
+                <span>{allBarcodeRows.filter(r => r.source === 'conflict').length > 0 && `· ${allBarcodeRows.filter(r => r.source === 'conflict').length} with 2 barcodes`}</span>
               </div>
             </div>
           )}
@@ -1033,13 +1033,13 @@ const BarcodePage: React.FC = () => {
                             <span className="px-2 py-0.5 rounded text-xs bg-green-900/50 text-green-300 border border-green-700/40">Confirmed</span>
                           )}
                           {r.source === 'conflict' && (
-                            <span className="px-2 py-0.5 rounded text-xs bg-red-900/50 text-red-300 border border-red-700/40">Conflict</span>
+                            <span className="px-2 py-0.5 rounded text-xs bg-teal-900/50 text-teal-300 border border-teal-700/40">2nd Barcode</span>
                           )}
                         </div>
                       </div>
                       {r.source === 'conflict' && (
-                        <div className="px-4 pb-2 text-xs text-red-400 bg-red-900/10">
-                          Conflict: generated <span className="font-mono">{r.generated_barcode}</span> vs StoreHub <span className="font-mono">{r.storehub_barcode}</span> — delete the generated entry to resolve.
+                        <div className="px-4 pb-2 text-xs text-teal-400 bg-teal-900/10">
+                          Barcode 1 (StoreHub): <span className="font-mono">{r.storehub_barcode}</span> · Barcode 2 (Generated): <span className="font-mono">{r.generated_barcode}</span>
                         </div>
                       )}
                     </div>
@@ -1056,7 +1056,7 @@ const BarcodePage: React.FC = () => {
                 <span className="text-blue-600">{allBarcodeRows.filter(r => r.source === 'storehub').length} StoreHub only</span>
                 <span className="text-green-600">{allBarcodeRows.filter(r => r.source === 'confirmed').length} confirmed</span>
                 {allBarcodeRows.filter(r => r.source === 'conflict').length > 0 && (
-                  <span className="text-red-400">{allBarcodeRows.filter(r => r.source === 'conflict').length} conflict(s)</span>
+                  <span className="text-teal-400">{allBarcodeRows.filter(r => r.source === 'conflict').length} with 2 barcodes</span>
                 )}
                 {sheetsMsg && <span className={`${sheetsMsg.startsWith('Failed') ? 'text-red-400' : 'text-green-400'}`}>{sheetsMsg}</span>}
               </div>

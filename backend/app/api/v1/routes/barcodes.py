@@ -155,9 +155,10 @@ async def generate_barcodes(
     if missing:
         raise HTTPException(status_code=404, detail=f"Products not found: {list(missing)}")
 
-    # Skip products that already have a StoreHub-confirmed barcode.
-    skipped = [pid for pid in request.product_ids if products[pid].barcode]
-    to_generate = [pid for pid in request.product_ids if not products[pid].barcode]
+    # StoreHub supports 2 barcodes per product, so generate for all selected products
+    # even if they already have a StoreHub-confirmed barcode.
+    to_generate = list(request.product_ids)
+    skipped: List[str] = []
 
     async def _max_sequence() -> int:
         res = await db.execute(
