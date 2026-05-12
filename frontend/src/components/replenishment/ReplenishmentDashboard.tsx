@@ -38,7 +38,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const [tiers, setTiers] = useState<StoreTier[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
   const [hideZeroSales, setHideZeroSales] = useState(false);
-  const [calcMode, setCalcMode] = useState<'snapshot' | 'fallback' | 'auto'>('auto');
+  const [calcMode, setCalcMode] = useState<'snapshot' | 'fallback' | 'auto'>('snapshot');
   const [applyStockoutBuffer, setApplyStockoutBuffer] = useState(false);
   const [customStartEnabled, setCustomStartEnabled] = useState(false);
   const [salesStartDate, setSalesStartDate] = useState<string>('');
