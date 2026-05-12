@@ -316,24 +316,6 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
             )}
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Store Dropdown */}
-            <select
-              value={selectedStoreId}
-              onChange={(e) => setSelectedStoreId(e.target.value)}
-              className="bg-[#0e1117] border border-[#2e303d] text-gray-200 text-sm rounded-lg px-3 py-2.5 focus:border-blue-500 focus:outline-none"
-            >
-              <option value="">Select a store...</option>
-              {dashboardStores
-                .filter((s) => tiers.some((t) => t.store_id === s.id))
-                .map((s) => {
-                  const tier = tiers.find((t) => t.store_id === s.id)!;
-                  return (
-                    <option key={s.id} value={s.id}>
-                      {getStoreName(s.id)} (Tier {tier.tier})
-                    </option>
-                  );
-                })}
-            </select>
             {/* Stockout buffer toggle */}
             <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none">
               <input
@@ -402,6 +384,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                 )}
               </div>
             )}
+            {/* Snapshot mode — right of checkboxes, left of store */}
             <select
               value={calcMode}
               onChange={e => setCalcMode(e.target.value as 'snapshot' | 'fallback' | 'auto')}
@@ -410,6 +393,24 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
               <option value="auto">Auto</option>
               <option value="snapshot">Snapshot</option>
               <option value="fallback">Fallback</option>
+            </select>
+            {/* Store Dropdown — immediately left of Run button */}
+            <select
+              value={selectedStoreId}
+              onChange={(e) => setSelectedStoreId(e.target.value)}
+              className="bg-[#0e1117] border border-[#2e303d] text-gray-200 text-sm rounded-lg px-3 py-2.5 focus:border-blue-500 focus:outline-none"
+            >
+              <option value="">Select a store...</option>
+              {dashboardStores
+                .filter((s) => tiers.some((t) => t.store_id === s.id))
+                .map((s) => {
+                  const tier = tiers.find((t) => t.store_id === s.id)!;
+                  return (
+                    <option key={s.id} value={s.id}>
+                      {getStoreName(s.id)} (Tier {tier.tier})
+                    </option>
+                  );
+                })}
             </select>
             <button
               onClick={handleRun}
@@ -500,33 +501,6 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
             </h3>
             <div className="flex items-center gap-2 flex-wrap">
               <button
-                onClick={handleAIQuantities}
-                disabled={aiLoading}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-700 hover:to-purple-800 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs rounded-lg transition-all font-medium"
-                title="Let Claude analyze each item and calculate the optimal min qty and ship qty"
-              >
-                {aiLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white" />
-                    Calculating...
-                  </>
-                ) : (
-                  <>
-                    <span>✦</span>
-                    {aiQuantities.size > 0 ? 'Recalculate AI Qty' : 'AI Quantities'}
-                  </>
-                )}
-              </button>
-              {aiQuantities.size > 0 && (
-                <button
-                  onClick={() => setAiQuantities(new Map())}
-                  className="px-2 py-1.5 text-gray-500 hover:text-gray-300 text-xs transition-colors"
-                  title="Hide AI columns"
-                >
-                  ✕ Hide AI
-                </button>
-              )}
-              <button
                 onClick={handleDownloadCsv}
                 className="flex items-center gap-2 px-3 py-1.5 bg-[#0e1117] border border-[#2e303d] text-gray-300 text-xs rounded-lg hover:border-blue-500/50 hover:text-white transition-all"
               >
@@ -538,7 +512,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
               <button
                 onClick={handlePostToSheets}
                 disabled={postingToSheets}
-                className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-xs rounded-lg transition-all"
+                className="flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-xs rounded-lg transition-all"
               >
                 {postingToSheets ? (
                   <>
@@ -549,6 +523,24 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                   <>
                     <Upload className="w-3.5 h-3.5" />
                     Post to Sheets
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleAIQuantities}
+                disabled={aiLoading}
+                className="flex items-center gap-2 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-xs rounded-lg transition-all"
+                title="Let Claude analyze each item and calculate the optimal min qty and ship qty"
+              >
+                {aiLoading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Calculating...
+                  </>
+                ) : (
+                  <>
+                    <span className="text-xs">✦</span>
+                    {aiQuantities.size > 0 ? 'Recalculate AI Qty' : 'AI Quantities'}
                   </>
                 )}
               </button>
