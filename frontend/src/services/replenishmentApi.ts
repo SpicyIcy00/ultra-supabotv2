@@ -12,8 +12,6 @@ import type {
   AlgorithmSettings,
   VelocityMultiplierRule,
   CategoryMultiplier,
-  AIInsights,
-  AIQuantitiesResponse,
   AIReasoningResponse,
 } from '../types/replenishment';
 
@@ -69,16 +67,6 @@ export const getDataReadiness = async (): Promise<DataReadiness> => {
   return response.data;
 };
 
-export const getAIInsights = async (storeIds?: string[]): Promise<AIInsights> => {
-  const params: Record<string, string[]> = {};
-  if (storeIds?.length) params.store_ids = storeIds;
-  const response = await axios.post<AIInsights>(`${API_BASE}/ai-insights`, null, {
-    params,
-    paramsSerializer: { indexes: null },
-  });
-  return response.data;
-};
-
 export const getAIReasoning = async (storeId: string): Promise<AIReasoningResponse> => {
   const response = await axios.post<AIReasoningResponse>(
     `${API_BASE}/ai-reasoning`,
@@ -88,15 +76,6 @@ export const getAIReasoning = async (storeId: string): Promise<AIReasoningRespon
   return response.data;
 };
 
-export const getAIQuantities = async (storeIds?: string[]): Promise<AIQuantitiesResponse> => {
-  const params: Record<string, string[]> = {};
-  if (storeIds?.length) params.store_ids = storeIds;
-  const response = await axios.post<AIQuantitiesResponse>(`${API_BASE}/ai-quantities`, null, {
-    params,
-    paramsSerializer: { indexes: null },
-  });
-  return response.data;
-};
 
 // --- Warehouse Inventory ---
 

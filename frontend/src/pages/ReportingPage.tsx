@@ -3,7 +3,6 @@ import { ReplenishmentDashboard } from '../components/replenishment/Replenishmen
 import { ShipmentPlanTable } from '../components/replenishment/ShipmentPlanTable';
 import { WarehousePicklist } from '../components/replenishment/WarehousePicklist';
 import { ExceptionsPanel } from '../components/replenishment/ExceptionsPanel';
-import { AIInsightsPanel } from '../components/replenishment/AIInsightsPanel';
 import { StoreTierConfig } from '../components/replenishment/StoreTierConfig';
 import { SeasonalityCalendar } from '../components/replenishment/SeasonalityCalendar';
 import { WarehouseInventoryManager } from '../components/replenishment/WarehouseInventoryManager';
@@ -12,7 +11,7 @@ import { AlgorithmSettings } from '../components/replenishment/AlgorithmSettings
 import { VelocityMultiplierConfig } from '../components/replenishment/VelocityMultiplierConfig';
 import { CategoryMultiplierConfig } from '../components/replenishment/CategoryMultiplierConfig';
 
-type ReplenishmentSubTab = 'dashboard' | 'shipment-plan' | 'picklist' | 'exceptions' | 'ai-insights' | 'configuration';
+type ReplenishmentSubTab = 'dashboard' | 'shipment-plan' | 'picklist' | 'exceptions' | 'configuration';
 type ConfigSubTab = 'store-tiers' | 'seasonality' | 'warehouse' | 'pipeline' | 'algorithm' | 'velocity-multipliers' | 'category-multipliers';
 
 const ReportingPage: React.FC = () => {
@@ -24,7 +23,6 @@ const ReportingPage: React.FC = () => {
     if (replenishmentSubTab === 'shipment-plan') return <ShipmentPlanTable />;
     if (replenishmentSubTab === 'picklist') return <WarehousePicklist />;
     if (replenishmentSubTab === 'exceptions') return <ExceptionsPanel />;
-    if (replenishmentSubTab === 'ai-insights') return <AIInsightsPanel />;
     if (replenishmentSubTab === 'configuration') {
       return (
         <div className="space-y-4">
@@ -77,7 +75,6 @@ const ReportingPage: React.FC = () => {
             { key: 'shipment-plan' as ReplenishmentSubTab, label: 'Shipment Plan' },
             { key: 'picklist' as ReplenishmentSubTab, label: 'Picklist' },
             { key: 'exceptions' as ReplenishmentSubTab, label: 'Exceptions' },
-            { key: 'ai-insights' as ReplenishmentSubTab, label: '✦ AI Insights' },
             { key: 'configuration' as ReplenishmentSubTab, label: 'Configuration' },
           ]).map(tab => (
             <button key={tab.key} onClick={() => setReplenishmentSubTab(tab.key)}

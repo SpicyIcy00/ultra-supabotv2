@@ -8,7 +8,6 @@ import {
   getExceptions,
   getDataReadiness,
   getStoreTiers,
-  getAIQuantities,
   getAIReasoning,
 } from '../../services/replenishmentApi';
 import { postReplenishmentToSheets } from '../../services/reportApi';
@@ -18,7 +17,6 @@ import type {
   ExceptionsResponse,
   DataReadiness,
   StoreTier,
-  AIQuantityItem,
   AIReasoningItem,
 } from '../../types/replenishment';
 
@@ -51,10 +49,6 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const [postingToSheets, setPostingToSheets] = useState(false);
   const [sheetsSuccess, setSheetsSuccess] = useState<string | null>(null);
   const [sheetsError, setSheetsError] = useState<string | null>(null);
-
-  const [aiQuantities, setAiQuantities] = useState<Map<string, AIQuantityItem>>(new Map());
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
 
   // AI Reasoning Mode
   const [dashMode, setDashMode] = useState<'standard' | 'ai-reasoning'>('standard');
@@ -144,24 +138,6 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
       setError(err?.response?.data?.detail || 'Failed to run replenishment calculation');
     } finally {
       setIsRunning(false);
-    }
-  };
-
-  const handleAIQuantities = async () => {
-    setAiLoading(true);
-    setAiError(null);
-    try {
-      const storeFilter = selectedStoreId ? [selectedStoreId] : undefined;
-      const result = await getAIQuantities(storeFilter);
-      const map = new Map<string, AIQuantityItem>();
-      for (const item of result.items) {
-        map.set(`${item.store_id}-${item.sku_id}`, item);
-      }
-      setAiQuantities(map);
-    } catch (err: any) {
-      setAiError(err?.response?.data?.detail || 'AI quantity calculation failed');
-    } finally {
-      setAiLoading(false);
     }
   };
 
@@ -595,24 +571,6 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                 Download CSV
               </button>
               <button
-                onClick={handleAIQuantities}
-                disabled={aiLoading}
-                className="flex items-center gap-2 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-xs rounded-lg transition-all"
-                title="Let Claude analyze each item and calculate the optimal min qty and ship qty"
-              >
-                {aiLoading ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Calculating...
-                  </>
-                ) : (
-                  <>
-                    <span className="text-xs">✦</span>
-                    {aiQuantities.size > 0 ? 'Recalculate AI Qty' : 'AI Quantities'}
-                  </>
-                )}
-              </button>
-              <button
                 onClick={handlePostToSheets}
                 disabled={postingToSheets}
                 className="flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-xs rounded-lg transition-all"
@@ -636,9 +594,6 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
           )}
           {sheetsError && (
             <p className="text-xs text-red-400 mb-3">{sheetsError}</p>
-          )}
-          {aiError && (
-            <p className="text-xs text-red-400 mb-3">AI error: {aiError}</p>
           )}
           <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
             {/* Shared eye icons */}
@@ -677,9 +632,8 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
 
               const sorted = filteredAndSorted(latestPlan.items);
               let lastCategory = '';
-              const hasAI = aiQuantities.size > 0;
               const hasReasoning = dashMode === 'ai-reasoning' && aiReasoning.size > 0;
-              const totalCols = 11 + (hasAI ? 2 : 0) + (hasReasoning ? 4 : 0);
+              const totalCols = 11 + (hasReasoning ? 4 : 0);
 
               return (
                 <table className="w-full text-xs text-left">
@@ -698,8 +652,6 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                       <DashTh col="vel"        label="Vel ×" />
                       <DashTh col="cat"        label="Cat ×" />
                       <DashTh col="eff"        label="Eff ×" />
-                      {hasAI && <th className="py-2 px-3 font-medium whitespace-nowrap text-right text-violet-400">✦ AI Min</th>}
-                      {hasAI && <th className="py-2 px-3 font-medium whitespace-nowrap text-right text-violet-400">✦ AI Ship</th>}
                       {hasReasoning && <th className="py-2 px-3 font-medium whitespace-nowrap text-right text-violet-300 border-l border-violet-800/40">✦ AI Min</th>}
                       {hasReasoning && <th className="py-2 px-3 font-medium whitespace-nowrap text-right text-violet-300">✦ AI Ship</th>}
                       {hasReasoning && <th className="py-2 px-3 font-medium whitespace-nowrap text-right text-violet-300">Variance</th>}
@@ -744,31 +696,6 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                             {dc('vel',        `×${(item.velocity_multiplier ?? 1).toFixed(3)}`, (item.velocity_multiplier ?? 1) > 1 ? 'text-green-400' : 'text-gray-500')}
                             {dc('cat',        `×${(item.category_multiplier ?? 1).toFixed(3)}`, (item.category_multiplier ?? 1) > 1 ? 'text-green-400' : 'text-gray-500')}
                             {dc('eff',        `×${(item.effective_multiplier ?? 1).toFixed(3)}`, (item.effective_multiplier ?? 1) > 1 ? 'text-green-400 font-medium' : 'text-gray-500')}
-                            {hasAI && (() => {
-                              const ai = aiQuantities.get(`${item.store_id}-${item.sku_id}`);
-                              const minDiff = ai ? ai.ai_min_qty - Math.round(item.min_level) : 0;
-                              const shipDiff = ai ? ai.ai_ship_qty - item.allocated_ship_qty : 0;
-                              return (
-                                <>
-                                  <td className="py-2 px-3 text-right tabular-nums" title={ai?.ai_reasoning ?? ''}>
-                                    {ai ? (
-                                      <span className={`font-medium ${minDiff > 0 ? 'text-amber-400' : minDiff < 0 ? 'text-blue-400' : 'text-violet-300'}`}>
-                                        {ai.ai_min_qty}
-                                        {minDiff !== 0 && <span className="text-xs ml-1 opacity-70">{minDiff > 0 ? `+${minDiff}` : minDiff}</span>}
-                                      </span>
-                                    ) : <span className="text-gray-600">—</span>}
-                                  </td>
-                                  <td className="py-2 px-3 text-right tabular-nums" title={ai?.ai_reasoning ?? ''}>
-                                    {ai ? (
-                                      <span className={`font-medium ${shipDiff > 0 ? 'text-green-400' : shipDiff < 0 ? 'text-blue-400' : 'text-violet-300'}`}>
-                                        {ai.ai_ship_qty}
-                                        {shipDiff !== 0 && <span className="text-xs ml-1 opacity-70">{shipDiff > 0 ? `+${shipDiff}` : shipDiff}</span>}
-                                      </span>
-                                    ) : <span className="text-gray-600">—</span>}
-                                  </td>
-                                </>
-                              );
-                            })()}
                             {hasReasoning && (
                               <>
                                 <td className="py-2 px-3 text-right tabular-nums border-l border-violet-800/40">

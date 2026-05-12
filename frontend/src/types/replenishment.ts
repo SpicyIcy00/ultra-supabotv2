@@ -191,38 +191,6 @@ export interface AIReasoningResponse {
   items: AIReasoningItem[];
 }
 
-// --- AI Quantities ---
-export interface AIQuantityItem {
-  sku_id: string;
-  store_id: string;
-  ai_min_qty: number;
-  ai_ship_qty: number;
-  ai_reasoning: string;
-}
-
-export interface AIQuantitiesResponse {
-  run_date: string | null;
-  items: AIQuantityItem[];
-}
-
-// --- AI Insights ---
-export interface ExceptionAnalysis extends ExceptionItem {
-  ai_root_cause: string;
-  ai_recommended_action: string;
-}
-
-export interface DemandInsight {
-  title: string;
-  observation: string;
-  action: string;
-}
-
-export interface AIInsights {
-  run_date: string | null;
-  narrative: string;
-  exception_analyses: ExceptionAnalysis[];
-  demand_insights: DemandInsight[];
-}
 
 // --- Data Readiness ---
 export interface DataReadiness {
