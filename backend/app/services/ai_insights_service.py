@@ -308,8 +308,14 @@ Respond with ONLY the JSON array, no other text, no markdown fences.
         items: List[Dict],
         snapshot_map: Dict[str, List[tuple]],
     ) -> List[Dict]:
-        """Run AI Reasoning Mode: analyze each item from raw snapshot data only."""
-        CONCURRENT = 8
+        """Run AI Reasoning Mode: analyze each item from raw snapshot data only.
+        Items with no snapshot history are skipped (marked with no_data=True).
+        """
+        CONCURRENT = 15
+
+        # Only send items that actually have snapshot history to Claude
+        has_data = [it for it in items if snapshot_map.get(it["sku_id"])]
+        no_data_ids = {it["sku_id"] for it in items if not snapshot_map.get(it["sku_id"])}
 
         async def process(item: Dict) -> Dict:
             sku_id = item["sku_id"]
@@ -335,10 +341,25 @@ Respond with ONLY the JSON array, no other text, no markdown fences.
                 }
 
         results: List[Dict] = []
-        for i in range(0, len(items), CONCURRENT):
-            chunk = items[i:i + CONCURRENT]
+        for i in range(0, len(has_data), CONCURRENT):
+            chunk = has_data[i:i + CONCURRENT]
             chunk_results = await asyncio.gather(*[process(it) for it in chunk])
             results.extend(chunk_results)
+
+        # Append placeholder entries for items with no snapshot data
+        for item in items:
+            if item["sku_id"] in no_data_ids:
+                results.append({
+                    "sku_id": item["sku_id"],
+                    "store_id": item["store_id"],
+                    "true_velocity": None,
+                    "avg_restock_duration_days": None,
+                    "recommended_min_qty": 0,
+                    "recommended_ship_qty": 0,
+                    "reasoning": "No snapshot history available for this SKU.",
+                    "no_data": True,
+                })
+
         return results
 
     # ----------------------------------------------------------------

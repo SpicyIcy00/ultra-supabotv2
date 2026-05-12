@@ -181,6 +181,7 @@ export interface AIReasoningItem {
   recommended_ship_qty: number;
   reasoning: string;
   error?: boolean;
+  no_data?: boolean;
 }
 
 export interface AIReasoningResponse {
