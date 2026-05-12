@@ -243,9 +243,11 @@ Respond with ONLY the JSON array, no other text."""
 
         results = await asyncio.gather(*coros, return_exceptions=True)
 
-        # --- Narrative ---
+        # If the narrative call failed, raise so the caller gets a real error
         r0 = results[0]
-        narrative = r0 if not isinstance(r0, Exception) else "Unable to generate narrative at this time."
+        if isinstance(r0, Exception):
+            raise r0
+        narrative: str = r0
 
         # --- Exception analyses ---
         exception_analyses: List[Dict] = []

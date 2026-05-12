@@ -104,7 +104,15 @@ async def generate_ai_insights(
     except ValueError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI insights generation failed: {str(e)}")
+        # Surface the real error (auth failure, network, rate limit, etc.)
+        err_msg = str(e)
+        if hasattr(e, "response"):
+            try:
+                body = e.response.json()
+                err_msg = body.get("error", {}).get("message", err_msg)
+            except Exception:
+                pass
+        raise HTTPException(status_code=500, detail=f"Claude API error: {err_msg}")
 
     return insights
 
