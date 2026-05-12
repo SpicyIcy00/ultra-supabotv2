@@ -1,6 +1,6 @@
 // Date calculation utilities for dashboard periods
 
-export type PeriodType = '1D' | 'WTD' | '7D' | 'MTD' | '30D' | '3MTD' | '90D' | '6MTD' | 'YTD' | 'CUSTOM';
+export type PeriodType = 'TODAY' | 'YESTERDAY' | 'WTD' | '7D' | 'MTD' | '30D' | '3MTD' | '90D' | '6MTD' | 'YTD' | 'CUSTOM';
 
 export interface DateRange {
   start: Date;
@@ -42,29 +42,42 @@ function getToday(): Date {
 }
 
 /**
- * Calculate date ranges for 1D (Yesterday) period
+ * Calculate date ranges for TODAY period
+ * Compare today to same day last week
+ */
+export function calculateTodayPeriod(): PeriodDateRanges {
+  const today = getToday();
+  const todayEnd = new Date(today);
+  todayEnd.setHours(23, 59, 59, 999);
+
+  const lastWeekSameDay = new Date(today);
+  lastWeekSameDay.setDate(lastWeekSameDay.getDate() - 7);
+  const lastWeekSameDayEnd = new Date(lastWeekSameDay);
+  lastWeekSameDayEnd.setHours(23, 59, 59, 999);
+
+  return {
+    current: { start: today, end: todayEnd },
+    comparison: { start: lastWeekSameDay, end: lastWeekSameDayEnd },
+  };
+}
+
+/**
+ * Calculate date ranges for YESTERDAY period
  * Compare yesterday to same day last week
  */
-export function calculate1DPeriod(): PeriodDateRanges {
+export function calculateYesterdayPeriod(): PeriodDateRanges {
   const yesterday = getYesterday();
   const yesterdayEnd = new Date(yesterday);
   yesterdayEnd.setHours(23, 59, 59, 999);
 
-  // Same day last week
   const lastWeekSameDay = new Date(yesterday);
   lastWeekSameDay.setDate(lastWeekSameDay.getDate() - 7);
   const lastWeekSameDayEnd = new Date(lastWeekSameDay);
   lastWeekSameDayEnd.setHours(23, 59, 59, 999);
 
   return {
-    current: {
-      start: yesterday,
-      end: yesterdayEnd,
-    },
-    comparison: {
-      start: lastWeekSameDay,
-      end: lastWeekSameDayEnd,
-    },
+    current: { start: yesterday, end: yesterdayEnd },
+    comparison: { start: lastWeekSameDay, end: lastWeekSameDayEnd },
   };
 }
 
@@ -406,8 +419,10 @@ export function calculatePeriodDateRanges(
   customEnd?: Date
 ): PeriodDateRanges {
   switch (period) {
-    case '1D':
-      return calculate1DPeriod();
+    case 'TODAY':
+      return calculateTodayPeriod();
+    case 'YESTERDAY':
+      return calculateYesterdayPeriod();
     case 'WTD':
       return calculateWTDPeriod();
     case '7D':
@@ -430,7 +445,7 @@ export function calculatePeriodDateRanges(
       }
       return calculateCustomPeriod(customStart, customEnd);
     default:
-      return calculate1DPeriod();
+      return calculateTodayPeriod();
   }
 }
 
@@ -450,7 +465,7 @@ export function formatDateForAPI(date: Date): string {
  */
 export function getGranularityForPeriod(period: PeriodType): 'hour' | 'day' {
   // Only 1D shows hourly breakdown, all others show daily
-  return period === '1D' ? 'hour' : 'day';
+  return period === 'TODAY' || period === 'YESTERDAY' ? 'hour' : 'day';
 }
 
 /**
@@ -486,7 +501,9 @@ export function isNewMetric(previous: number): boolean {
  */
 export function getPeriodLabel(period: PeriodType): string {
   switch (period) {
-    case '1D':
+    case 'TODAY':
+      return 'Today';
+    case 'YESTERDAY':
       return 'Yesterday';
     case 'WTD':
       return 'Week to Date';
@@ -516,7 +533,9 @@ export function getPeriodLabel(period: PeriodType): string {
  */
 export function getComparisonLabel(period: PeriodType): string {
   switch (period) {
-    case '1D':
+    case 'TODAY':
+      return 'vs same day last week';
+    case 'YESTERDAY':
       return 'vs same day last week';
     case 'WTD':
       return 'vs same period last week';

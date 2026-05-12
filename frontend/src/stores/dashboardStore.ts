@@ -59,12 +59,12 @@ export const useDashboardStore = create<DashboardState>()(
   persist(
     (set, get) => ({
       // Initial state
-      selectedPeriod: '1D',
+      selectedPeriod: 'TODAY',
       customDateRange: undefined,
       stores: [],
       selectedStores: [],
       isAllStoresSelected: false, // Default to false to use specific defaults
-      dateRanges: calculatePeriodDateRanges('1D'),
+      dateRanges: calculatePeriodDateRanges('TODAY'),
 
       // Set period and recalculate date ranges
       setPeriod: (period: PeriodType) => {

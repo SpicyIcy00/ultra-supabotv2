@@ -1,4 +1,5 @@
 import React from 'react';
+import { format } from 'date-fns';
 import { PullToRefresh } from '../components/mobile/PullToRefresh';
 import { DatePeriodSelector } from '../components/filters/DatePeriodSelector';
 import { StoreSelector } from '../components/filters/StoreSelector';
@@ -16,6 +17,7 @@ import { formatCurrency, formatNumber, getGranularityForPeriod } from '../utils/
 
 export const Dashboard: React.FC = () => {
   const selectedPeriod = useDashboardStore((state) => state.selectedPeriod);
+  const dateRanges = useDashboardStore((state) => state.dateRanges);
   const {
     kpiData,
     salesByCategory,
@@ -33,6 +35,8 @@ export const Dashboard: React.FC = () => {
   } = useDashboardData();
 
   const granularity = getGranularityForPeriod(selectedPeriod);
+
+  const comparisonDateText = `${format(dateRanges.comparison.start, 'MMM d')} – ${format(dateRanges.comparison.end, 'MMM d, yyyy')}`;
 
   return (
     <PullToRefresh>
@@ -71,37 +75,38 @@ export const Dashboard: React.FC = () => {
         )}
 
         {/* ROW 2: KPI CARDS */}
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <span>{comparisonLabel}</span>
+          <span className="text-gray-600">·</span>
+          <span>{comparisonDateText}</span>
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           <KPICard
-title="Total Sales"
+            title="Total Sales"
             value={kpiData ? formatCurrency(kpiData.current.total_sales) : '₱0'}
             currentValue={kpiData?.current.total_sales || 0}
             previousValue={kpiData?.previous.total_sales || 0}
-            comparisonLabel={comparisonLabel}
             isLoading={isLoading}
           />
           <KPICard
-title="Total Profit"
+            title="Total Profit"
             value={kpiData ? formatCurrency(kpiData.current.total_profit) : '₱0'}
             currentValue={kpiData?.current.total_profit || 0}
             previousValue={kpiData?.previous.total_profit || 0}
-            comparisonLabel={comparisonLabel}
             isLoading={isLoading}
           />
           <KPICard
-title="Transactions"
+            title="Transactions"
             value={kpiData ? formatNumber(kpiData.current.transactions) : '0'}
             currentValue={kpiData?.current.transactions || 0}
             previousValue={kpiData?.previous.transactions || 0}
-            comparisonLabel={comparisonLabel}
             isLoading={isLoading}
           />
           <KPICard
-title="Avg Transaction Value"
+            title="Avg Transaction Value"
             value={kpiData ? formatCurrency(kpiData.current.avg_transaction_value) : '₱0'}
             currentValue={kpiData?.current.avg_transaction_value || 0}
             previousValue={kpiData?.previous.avg_transaction_value || 0}
-            comparisonLabel={comparisonLabel}
             isLoading={isLoading}
           />
         </div>
@@ -144,7 +149,7 @@ title="Avg Transaction Value"
             currentData={salesTrend?.current || []}
             previousData={salesTrend?.previous || []}
             periodLabel={periodLabel}
-            comparisonLabel={`Same Period Last ${selectedPeriod === '1D' ? 'Week' : selectedPeriod === 'WTD' ? 'Week' : 'Month'}`}
+            comparisonLabel={`Same Period Last ${selectedPeriod === 'TODAY' || selectedPeriod === 'YESTERDAY' || selectedPeriod === 'WTD' ? 'Week' : 'Month'}`}
             granularity={granularity}
             isLoading={isLoading}
           />

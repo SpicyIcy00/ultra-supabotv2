@@ -4,6 +4,7 @@ import { ProductCombosTable } from '../components/tables/ProductCombosTable';
 import { SalesAnomaliesList } from '../components/lists/SalesAnomaliesList';
 import { StoreComparisonV2 } from '../components/analytics/StoreComparisonV2';
 import { DatePeriodSelector } from '../components/filters/DatePeriodSelector';
+import { StoreSelector } from '../components/filters/StoreSelector';
 import {
   useDayOfWeekPatterns,
   useProductCombos,
@@ -72,6 +73,8 @@ export const AnalyticsPage: React.FC = () => {
         {/* Filters - same layout as Dashboard */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-4 bg-[#1c1e26] border border-[#2e303d] rounded-lg p-3 sm:p-4">
           <DatePeriodSelector />
+          <div className="w-px h-8 bg-[#2e303d] hidden sm:block" />
+          <StoreSelector />
         </div>
 
         {/* Tabs */}

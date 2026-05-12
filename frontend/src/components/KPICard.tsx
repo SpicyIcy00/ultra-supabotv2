@@ -6,7 +6,6 @@ interface KPICardProps {
   value: string;
   currentValue: number;
   previousValue: number;
-  comparisonLabel: string;
   isLoading?: boolean;
 }
 
@@ -15,7 +14,6 @@ export const KPICard: React.FC<KPICardProps> = ({
   value,
   currentValue,
   previousValue,
-  comparisonLabel,
   isLoading = false,
 }) => {
   const percentageChange = previousValue === 0
@@ -59,7 +57,6 @@ export const KPICard: React.FC<KPICardProps> = ({
               {formatPercentage(percentageChange)}
             </span>
           )}
-          <span className="text-xs text-gray-500">{comparisonLabel}</span>
         </div>
       </div>
     </div>

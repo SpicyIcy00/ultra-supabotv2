@@ -6,7 +6,8 @@ import { DateRangePicker } from './DateRangePicker';
 import { format } from 'date-fns';
 
 const PERIODS: { value: PeriodType; label: string }[] = [
-  { value: '1D', label: '1D' },
+  { value: 'TODAY', label: 'Today' },
+  { value: 'YESTERDAY', label: 'Yesterday' },
   { value: 'WTD', label: 'WTD' },
   { value: '7D', label: '7D' },
   { value: 'MTD', label: 'MTD' },
