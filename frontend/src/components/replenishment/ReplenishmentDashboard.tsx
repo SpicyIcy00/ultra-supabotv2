@@ -39,7 +39,6 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
 
   const [tiers, setTiers] = useState<StoreTier[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
-  const [hideZeroSales, setHideZeroSales] = useState(false);
   const [calcMode, setCalcMode] = useState<'snapshot' | 'fallback' | 'auto'>('snapshot');
   const [applyStockoutBuffer, setApplyStockoutBuffer] = useState(false);
   const [customStartEnabled, setCustomStartEnabled] = useState(false);
@@ -158,11 +157,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   };
 
   const filteredAndSorted = (items: ShipmentPlanResponse['items']) => {
-    let filtered = items;
-    if (hideZeroSales) {
-      filtered = filtered.filter((i) => i.avg_daily_sales > 0);
-    }
-    return [...filtered].sort((a, b) => {
+    return [...items].sort((a, b) => {
       const catA = (a.category ?? '').toLowerCase();
       const catB = (b.category ?? '').toLowerCase();
       if (catA !== catB) return catA.localeCompare(catB);
