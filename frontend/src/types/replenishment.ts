@@ -171,6 +171,25 @@ export interface AlgorithmSettings {
   updated_at?: string | null;
 }
 
+// --- AI Insights ---
+export interface ExceptionAnalysis extends ExceptionItem {
+  ai_root_cause: string;
+  ai_recommended_action: string;
+}
+
+export interface DemandInsight {
+  title: string;
+  observation: string;
+  action: string;
+}
+
+export interface AIInsights {
+  run_date: string | null;
+  narrative: string;
+  exception_analyses: ExceptionAnalysis[];
+  demand_insights: DemandInsight[];
+}
+
 // --- Data Readiness ---
 export interface DataReadiness {
   snapshot_days_available: number;

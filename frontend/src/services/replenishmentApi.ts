@@ -12,6 +12,7 @@ import type {
   AlgorithmSettings,
   VelocityMultiplierRule,
   CategoryMultiplier,
+  AIInsights,
 } from '../types/replenishment';
 
 const API_BASE = '/api/v1/replenishment';
@@ -63,6 +64,16 @@ export const getExceptions = async (runDate?: string): Promise<ExceptionsRespons
 
 export const getDataReadiness = async (): Promise<DataReadiness> => {
   const response = await axios.get<DataReadiness>(`${API_BASE}/data-readiness`);
+  return response.data;
+};
+
+export const getAIInsights = async (storeIds?: string[]): Promise<AIInsights> => {
+  const params: Record<string, string[]> = {};
+  if (storeIds?.length) params.store_ids = storeIds;
+  const response = await axios.post<AIInsights>(`${API_BASE}/ai-insights`, null, {
+    params,
+    paramsSerializer: { indexes: null },
+  });
   return response.data;
 };
 

@@ -3,7 +3,9 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
+from app.core.config import settings
 from app.services.replenishment_service import ReplenishmentService
+from app.services.ai_insights_service import AIInsightsService
 from app.schemas.replenishment import (
     StoreTierCreate,
     StoreTierUpdate,
@@ -79,6 +81,32 @@ async def get_data_readiness(
 ):
     """Get snapshot data availability and calculation mode status."""
     return await service.get_data_readiness()
+
+
+@router.post("/ai-insights")
+async def generate_ai_insights(
+    store_ids: Optional[List[str]] = Query(None),
+    service: ReplenishmentService = Depends(_get_service),
+):
+    """Generate AI-powered narrative, exception analysis, and demand insights for the latest run."""
+    if not settings.ANTHROPIC_API_KEY:
+        raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY is not configured on the server")
+
+    plan = await service.get_latest_shipment_plan(store_ids)
+    if not plan.get("run_date"):
+        raise HTTPException(status_code=404, detail="No replenishment plan found. Run a replenishment calculation first.")
+
+    exceptions = await service.get_exceptions()
+
+    try:
+        ai_service = AIInsightsService(settings.ANTHROPIC_API_KEY)
+        insights = await ai_service.generate_full_insights(plan, exceptions)
+    except ValueError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI insights generation failed: {str(e)}")
+
+    return insights
 
 
 # ----------------------------------------------------------------
