@@ -11,7 +11,7 @@ _ANTHROPIC_VERSION = "2023-06-01"
 
 
 class AIInsightsService:
-    MODEL = "claude-3-haiku-20240307"
+    MODEL = "claude-haiku-4-5-20251001"
 
     def __init__(self, api_key: str):
         if not api_key:
