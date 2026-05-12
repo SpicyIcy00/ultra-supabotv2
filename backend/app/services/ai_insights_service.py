@@ -44,16 +44,14 @@ class AIInsightsService:
     _REASONING_SYSTEM = (
         "You are a replenishment analyst for Aji Ichiban, a snack retail chain in the Philippines. "
         "You will be given 28 days of raw inventory and sales data for one product at one store, "
-        "plus four context fields: replenishment cadence, restock event types, warehouse stock, "
-        "and network average velocity. "
-        "Reason from the data only. Your ship quantity must cover at least the replenishment cadence "
-        "window plus a conservative buffer. Model velocity and restock cycle length from normal "
-        "restocks only — ignore emergency restocks. If your recommended quantity exceeds warehouse "
-        "stock, flag it and recommend the maximum available instead. "
-        "Output: (1) true daily velocity when in stock, (2) how long normal restocks lasted, "
-        "(3) recommended min stock level, (4) recommended ship quantity, "
-        "(5) one paragraph plain-English reasoning including a note if warehouse stock is a "
-        "constraint or if store velocity is unusually high vs network average."
+        "plus replenishment cadence, restock event types, and network average velocity. "
+        "Your only job is to determine the minimum stock level this store should hold at all times "
+        "to prevent stockouts. This is a store-side calculation only — do not factor in warehouse availability. "
+        "Reason from: true daily velocity when in stock, how long normal restocks lasted, and how many "
+        "dead days occurred. Your minimum stock level must cover at least the full replenishment cadence "
+        "window plus a conservative buffer for demand variance. "
+        "Output: (1) true daily velocity when in stock, (2) average normal restock cycle length in days, "
+        "(3) recommended minimum stock level, (4) one paragraph plain-English reasoning."
     )
 
     @staticmethod
@@ -87,13 +85,11 @@ class AIInsightsService:
         on_hand: int,
         snapshots: List[tuple],
         cadence_days: int,
-        wh_stock: int,
         network_avg_velocity: Optional[float],
     ) -> str:
         context = (
             f"CONTEXT:\n"
             f"- Replenishment cadence: {cadence_days} days between shipments\n"
-            f"- Warehouse stock (AJI BARN): {wh_stock} units available\n"
             f"- Network avg daily velocity (all stores, in-stock days): "
             f"{'N/A' if network_avg_velocity is None else f'{network_avg_velocity:.2f} units/day'}\n"
         )
@@ -144,21 +140,19 @@ class AIInsightsService:
         on_hand: int,
         snapshots: List[tuple],
         cadence_days: int,
-        wh_stock: int,
         network_avg_velocity: Optional[float],
     ) -> Dict[str, Any]:
         payload = self._build_snapshot_payload(
             name, store, category, on_hand, snapshots,
-            cadence_days, wh_stock, network_avg_velocity,
+            cadence_days, network_avg_velocity,
         )
         user_prompt = (
             f"{payload}\n\n"
             "Respond ONLY with valid JSON (no markdown fences):\n"
             '{"true_velocity": <float>, "avg_normal_restock_duration_days": <float or null>, '
-            '"recommended_min_qty": <integer>, "recommended_ship_qty": <integer>, '
-            '"warehouse_constrained": <true|false>, "reasoning": "<one paragraph>"}'
+            '"recommended_min_qty": <integer>, "reasoning": "<one paragraph>"}'
         )
-        raw = await self._call(user_prompt, max_tokens=600, system=self._REASONING_SYSTEM)
+        raw = await self._call(user_prompt, max_tokens=500, system=self._REASONING_SYSTEM)
         cleaned = raw.strip()
         if cleaned.startswith("```"):
             parts = cleaned.split("```")
@@ -171,8 +165,6 @@ class AIInsightsService:
             "true_velocity": result.get("true_velocity"),
             "avg_restock_duration_days": result.get("avg_normal_restock_duration_days"),
             "recommended_min_qty": max(0, int(round(result.get("recommended_min_qty", 0)))),
-            "recommended_ship_qty": max(0, int(round(result.get("recommended_ship_qty", 0)))),
-            "warehouse_constrained": bool(result.get("warehouse_constrained", False)),
             "reasoning": str(result.get("reasoning", ""))[:1000],
         }
 
@@ -201,7 +193,6 @@ class AIInsightsService:
                     on_hand=int(item.get("on_hand", 0)),
                     snapshots=snapshot_map.get(sku_id, []),
                     cadence_days=cadence_days,
-                    wh_stock=int(item.get("wh_on_hand", 0)),
                     network_avg_velocity=network_velocity_map.get(sku_id),
                 )
                 return {"sku_id": sku_id, "store_id": item["store_id"], **result}
@@ -212,8 +203,6 @@ class AIInsightsService:
                     "true_velocity": None,
                     "avg_restock_duration_days": None,
                     "recommended_min_qty": 0,
-                    "recommended_ship_qty": 0,
-                    "warehouse_constrained": False,
                     "reasoning": f"Analysis unavailable: {str(e)[:200]}",
                     "error": True,
                 }
@@ -232,8 +221,6 @@ class AIInsightsService:
                     "true_velocity": None,
                     "avg_restock_duration_days": None,
                     "recommended_min_qty": 0,
-                    "recommended_ship_qty": 0,
-                    "warehouse_constrained": False,
                     "reasoning": "No snapshot history available for this SKU.",
                     "no_data": True,
                 })

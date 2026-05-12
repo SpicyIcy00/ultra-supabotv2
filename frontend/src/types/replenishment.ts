@@ -178,8 +178,6 @@ export interface AIReasoningItem {
   true_velocity: number | null;
   avg_restock_duration_days: number | null;
   recommended_min_qty: number;
-  recommended_ship_qty: number;
-  warehouse_constrained: boolean;
   reasoning: string;
   error?: boolean;
   no_data?: boolean;

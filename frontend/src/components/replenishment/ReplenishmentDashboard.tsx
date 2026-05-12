@@ -633,7 +633,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
               const sorted = filteredAndSorted(latestPlan.items);
               let lastCategory = '';
               const hasReasoning = dashMode === 'ai-reasoning' && aiReasoning.size > 0;
-              const totalCols = 11 + (hasReasoning ? 4 : 0);
+              const totalCols = 11 + (hasReasoning ? 2 : 0);
 
               return (
                 <table className="w-full text-xs text-left">
@@ -653,8 +653,6 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                       <DashTh col="cat"        label="Cat ×" />
                       <DashTh col="eff"        label="Eff ×" />
                       {hasReasoning && <th className="py-2 px-3 font-medium whitespace-nowrap text-right text-violet-300 border-l border-violet-800/40">✦ AI Min</th>}
-                      {hasReasoning && <th className="py-2 px-3 font-medium whitespace-nowrap text-right text-violet-300">✦ AI Ship</th>}
-                      {hasReasoning && <th className="py-2 px-3 font-medium whitespace-nowrap text-right text-violet-300">Variance</th>}
                       {hasReasoning && <th className="py-2 px-3 font-medium whitespace-nowrap text-right text-violet-300"></th>}
                     </tr>
                   </thead>
@@ -668,13 +666,8 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                       const isNegative = item.on_hand < 0;
                       const rowKey = `${item.store_id}-${item.sku_id}`;
                       const reasoningItem = hasReasoning ? aiReasoning.get(rowKey) : undefined;
-                      const variancePct = reasoningItem && item.allocated_ship_qty > 0
-                        ? ((reasoningItem.recommended_ship_qty - item.allocated_ship_qty) / item.allocated_ship_qty) * 100
-                        : null;
-                      const highVariance = variancePct !== null && Math.abs(variancePct) > 30;
                       const isExpanded = expandedRows.has(rowKey);
-                      const baseHighlight = isNegative ? 'bg-red-900/10' : isShort ? 'bg-yellow-900/10' : isOverstock ? 'bg-orange-900/10' : idx % 2 === 0 ? 'bg-[#0e1117]' : '';
-                      const rowHighlight = highVariance ? 'bg-yellow-900/20' : baseHighlight;
+                      const rowHighlight = isNegative ? 'bg-red-900/10' : isShort ? 'bg-yellow-900/10' : isOverstock ? 'bg-orange-900/10' : idx % 2 === 0 ? 'bg-[#0e1117]' : '';
                       return (
                         <React.Fragment key={`${item.store_id}-${item.sku_id}`}>
                           {showCategoryHeader && (
@@ -700,30 +693,13 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                               <>
                                 <td className="py-2 px-3 text-right tabular-nums border-l border-violet-800/40">
                                   {reasoningItem ? (
-                                    <span className={`font-medium ${reasoningItem.error ? 'text-gray-500' : 'text-violet-300'}`}>
-                                      {reasoningItem.error ? '—' : reasoningItem.recommended_min_qty}
-                                    </span>
-                                  ) : <span className="text-gray-600">—</span>}
-                                </td>
-                                <td className="py-2 px-3 text-right tabular-nums">
-                                  {reasoningItem && !reasoningItem.error ? (
-                                    <span className="font-medium text-violet-300 inline-flex items-center gap-1">
-                                      {reasoningItem.recommended_ship_qty}
-                                      {reasoningItem.warehouse_constrained && (
-                                        <span className="text-orange-400" title="Warehouse stock is a constraint">⚠</span>
-                                      )}
-                                    </span>
-                                  ) : <span className="text-gray-600">—</span>}
-                                </td>
-                                <td className="py-2 px-3 text-right tabular-nums">
-                                  {variancePct !== null ? (
-                                    <span className={`font-medium ${highVariance ? 'text-yellow-400' : 'text-gray-400'}`}>
-                                      {variancePct > 0 ? '+' : ''}{variancePct.toFixed(0)}%
+                                    <span className={`font-medium ${reasoningItem.error || reasoningItem.no_data ? 'text-gray-500' : 'text-violet-300'}`}>
+                                      {reasoningItem.error || reasoningItem.no_data ? '—' : reasoningItem.recommended_min_qty}
                                     </span>
                                   ) : <span className="text-gray-600">—</span>}
                                 </td>
                                 <td className="py-2 px-3 text-right">
-                                  {reasoningItem && !reasoningItem.error && (
+                                  {reasoningItem && !reasoningItem.error && !reasoningItem.no_data && (
                                     <button
                                       onClick={() => toggleExpanded(rowKey)}
                                       className="text-violet-400 hover:text-violet-200 transition-colors text-xs"
