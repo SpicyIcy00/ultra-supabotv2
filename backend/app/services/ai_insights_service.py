@@ -217,6 +217,117 @@ Respond with ONLY the JSON array, no other text, no markdown fences.
 """
 
     # ----------------------------------------------------------------
+    # AI quantity calculation
+    # ----------------------------------------------------------------
+
+    async def _calculate_batch_quantities(
+        self, batch: List[Dict], cross_store_ctx: Dict[str, str]
+    ) -> List[Dict]:
+        lines = []
+        for i, item in enumerate(batch):
+            name = item.get("product_name") or item["sku_id"]
+            ctx = cross_store_ctx.get(name, "")
+            line = (
+                f"{i+1}. {name} @ {item.get('store_name', item['store_id'])}"
+                f" ({item.get('category', '?')})"
+                f"\n   velocity={item.get('avg_daily_sales', 0):.2f}/day"
+                f", dead_days={item.get('dead_days', 0)}"
+                f", on_hand={item.get('on_hand', 0)}"
+                f", formula_min={item.get('min_level', 0):.0f}"
+                f", formula_ship={item.get('allocated_ship_qty', 0)}"
+                f", days_stock={item.get('days_of_stock', 0):.1f}"
+            )
+            if ctx:
+                line += f"\n   cross-store: {ctx}"
+            lines.append(line)
+
+        prompt = f"""You are an expert inventory planner for a Philippine retail chain.
+
+Calculate the optimal min_qty (minimum stock reorder point) and ship_qty for each item.
+
+DEFINITIONS:
+- min_qty: minimum stock level to maintain before reordering. Baseline = formula_min already shown.
+- ship_qty: units to send NOW. Baseline = formula_ship already shown.
+
+ADJUSTMENT LOGIC (apply with judgment):
+1. Dead days correction: dead_days > 0 means the product was stocked out — true demand is higher than velocity shows. Increase min_qty proportionally: add ~velocity × (dead_days/28) × 1.5 to formula_min.
+2. Cross-store uncertainty: if the same SKU has >3× velocity spread across stores, add ~20% buffer to min_qty.
+3. Critical urgency: if days_stock < 3 and formula_ship = 0, something is wrong — set ship_qty to at least velocity × 7.
+4. Overstock: if days_stock > 90, ship_qty = 0.
+
+ITEMS:
+{chr(10).join(lines)}
+
+Return ONLY a JSON array in the exact same order as the input items:
+[{{"ai_min_qty": <integer>, "ai_ship_qty": <integer>, "ai_reasoning": "<one sentence max>"}}]"""
+
+        raw = await self._call(prompt, max_tokens=max(400, len(batch) * 80))
+        cleaned = raw.strip()
+        if cleaned.startswith("```"):
+            parts = cleaned.split("```")
+            cleaned = parts[1] if len(parts) > 1 else cleaned
+            if cleaned.startswith("json"):
+                cleaned = cleaned[4:]
+        cleaned = cleaned.strip()
+        parsed = json.loads(cleaned)
+
+        results = []
+        for i, item in enumerate(batch):
+            e = parsed[i] if i < len(parsed) else {}
+            results.append({
+                "sku_id": item["sku_id"],
+                "store_id": item["store_id"],
+                "ai_min_qty": max(0, int(round(e.get("ai_min_qty", item.get("min_level", 0))))),
+                "ai_ship_qty": max(0, int(round(e.get("ai_ship_qty", item.get("allocated_ship_qty", 0))))),
+                "ai_reasoning": str(e.get("ai_reasoning", ""))[:200],
+            })
+        return results
+
+    async def calculate_ai_quantities(self, items: List[Dict]) -> List[Dict]:
+        """Calculate AI-optimized min quantities and ship quantities for all plan items."""
+        if not items:
+            return []
+
+        # Build cross-store velocity context (same SKU across stores)
+        sku_vel_map: Dict[str, List[str]] = {}
+        for item in items:
+            name = item.get("product_name") or item["sku_id"]
+            entry = f"{item.get('store_name', item['store_id'])}={item.get('avg_daily_sales', 0):.2f}/day"
+            sku_vel_map.setdefault(name, []).append(entry)
+
+        cross_store_ctx: Dict[str, str] = {
+            name: ", ".join(stores[:5])
+            for name, stores in sku_vel_map.items()
+            if len(stores) > 1
+        }
+
+        BATCH_SIZE = 20
+        CONCURRENT = 5
+        batches = [items[i:i + BATCH_SIZE] for i in range(0, len(items), BATCH_SIZE)]
+
+        results: List[Dict] = []
+        for chunk_start in range(0, len(batches), CONCURRENT):
+            chunk = batches[chunk_start:chunk_start + CONCURRENT]
+            batch_results = await asyncio.gather(
+                *[self._calculate_batch_quantities(b, cross_store_ctx) for b in chunk],
+                return_exceptions=True,
+            )
+            for b, r in zip(chunk, batch_results):
+                if isinstance(r, Exception):
+                    for item in b:
+                        results.append({
+                            "sku_id": item["sku_id"],
+                            "store_id": item["store_id"],
+                            "ai_min_qty": round(item.get("min_level", 0)),
+                            "ai_ship_qty": item.get("allocated_ship_qty", 0),
+                            "ai_reasoning": f"AI error — using formula values.",
+                        })
+                else:
+                    results.extend(r)
+
+        return results
+
+    # ----------------------------------------------------------------
     # Main entry point
     # ----------------------------------------------------------------
 

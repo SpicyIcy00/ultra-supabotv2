@@ -117,6 +117,41 @@ async def generate_ai_insights(
     return insights
 
 
+@router.post("/ai-quantities")
+async def generate_ai_quantities(
+    store_ids: Optional[List[str]] = Query(None),
+    service: ReplenishmentService = Depends(_get_service),
+):
+    """Use Claude to calculate optimal min_qty and ship_qty for every item in the latest plan."""
+    if not settings.ANTHROPIC_API_KEY:
+        raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY is not configured on the server")
+
+    plan = await service.get_latest_shipment_plan(store_ids)
+    if not plan.get("run_date"):
+        raise HTTPException(status_code=404, detail="No replenishment plan found. Run a replenishment calculation first.")
+
+    items = plan.get("items", [])
+    if not items:
+        return {"run_date": plan.get("run_date"), "items": []}
+
+    try:
+        ai_service = AIInsightsService(settings.ANTHROPIC_API_KEY)
+        quantities = await ai_service.calculate_ai_quantities(items)
+    except ValueError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        err_msg = str(e)
+        if hasattr(e, "response"):
+            try:
+                body = e.response.json()
+                err_msg = body.get("error", {}).get("message", err_msg)
+            except Exception:
+                pass
+        raise HTTPException(status_code=500, detail=f"Claude API error: {err_msg}")
+
+    return {"run_date": plan.get("run_date"), "items": quantities}
+
+
 # ----------------------------------------------------------------
 # Warehouse Inventory
 # ----------------------------------------------------------------

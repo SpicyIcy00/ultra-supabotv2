@@ -13,6 +13,7 @@ import type {
   VelocityMultiplierRule,
   CategoryMultiplier,
   AIInsights,
+  AIQuantitiesResponse,
 } from '../types/replenishment';
 
 const API_BASE = '/api/v1/replenishment';
@@ -71,6 +72,16 @@ export const getAIInsights = async (storeIds?: string[]): Promise<AIInsights> =>
   const params: Record<string, string[]> = {};
   if (storeIds?.length) params.store_ids = storeIds;
   const response = await axios.post<AIInsights>(`${API_BASE}/ai-insights`, null, {
+    params,
+    paramsSerializer: { indexes: null },
+  });
+  return response.data;
+};
+
+export const getAIQuantities = async (storeIds?: string[]): Promise<AIQuantitiesResponse> => {
+  const params: Record<string, string[]> = {};
+  if (storeIds?.length) params.store_ids = storeIds;
+  const response = await axios.post<AIQuantitiesResponse>(`${API_BASE}/ai-quantities`, null, {
     params,
     paramsSerializer: { indexes: null },
   });
