@@ -327,16 +327,6 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
               Stockout buffer
               <span className="text-xs text-gray-500">(+20% Mon–Fri, +10% Sat–Sun)</span>
             </label>
-            {/* Hide zero daily sales */}
-            <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={hideZeroSales}
-                onChange={(e) => setHideZeroSales(e.target.checked)}
-                className="rounded border-[#2e303d] bg-[#0e1117] text-blue-500 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
-              />
-              Hide 0 daily sales
-            </label>
             {/* Custom sales window start date */}
             <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none">
               <input
