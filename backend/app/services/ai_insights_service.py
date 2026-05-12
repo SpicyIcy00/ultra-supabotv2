@@ -111,7 +111,8 @@ Write a concise 3-paragraph executive summary covering:
 2. Which specific products and stores need immediate attention this week
 3. Key actions the warehouse team should prioritize
 
-Be specific with product names, store names, and quantities. Keep it under 280 words."""
+Be specific with product names, store names, and quantities. Keep it under 280 words.
+IMPORTANT: Write plain prose only. No markdown, no bullet points, no bold, no headers."""
 
     # ----------------------------------------------------------------
     # Exception analysis
@@ -119,22 +120,22 @@ Be specific with product names, store names, and quantities. Keep it under 280 w
 
     def _build_exception_prompt(self, exceptions: List[Dict]) -> str:
         exc_text = "\n".join(
-            f"{i}. {e.get('product_name', e['sku_id'])} @ {e.get('store_name', e['store_id'])}: "
+            f"{i+1}. {e.get('product_name', e['sku_id'])} @ {e.get('store_name', e['store_id'])}: "
             f"type={e['exception_type']}, {e.get('detail', '')}, "
             f"days_of_stock={e.get('days_of_stock', 0):.1f}, "
             f"requested={e.get('requested_qty', 0)}, allocated={e.get('allocated_qty', 0)}"
             for i, e in enumerate(exceptions[:30])
         )
 
-        return f"""You are an inventory expert. For each flagged inventory exception, provide a brief root cause and a specific recommended action.
+        return f"""You are an inventory expert. For each flagged inventory exception below, provide a root cause and recommended action.
 
 EXCEPTIONS:
 {exc_text}
 
-Respond with a JSON array only. Each element:
-{{"index": <0-based int>, "root_cause": "<1 sentence>", "recommended_action": "<concrete action>"}}
+Respond with a JSON array only. Return exactly one object per exception, in the same order.
+Each object: {{"root_cause": "<1 sentence>", "recommended_action": "<concrete action>"}}
 
-Respond with ONLY the JSON array, no other text."""
+Respond with ONLY the JSON array, no other text, no markdown."""
 
     # ----------------------------------------------------------------
     # Demand / forecast insights
@@ -212,7 +213,7 @@ Provide 4-6 specific insights. For each:
 Respond with a JSON array only:
 [{{"title": "<short title>", "observation": "<what the data shows>", "action": "<specific recommendation>"}}]
 
-Respond with ONLY the JSON array, no other text."""
+Respond with ONLY the JSON array, no other text, no markdown fences.
 
     # ----------------------------------------------------------------
     # Main entry point
@@ -255,15 +256,18 @@ Respond with ONLY the JSON array, no other text."""
             raw = results[exc_index]
             if not isinstance(raw, Exception):
                 try:
-                    parsed = json.loads(raw)
-                    for entry in parsed:
-                        idx = int(entry.get("index", -1))
-                        if 0 <= idx < len(exc_items):
-                            exception_analyses.append({
-                                **exc_items[idx],
-                                "ai_root_cause": entry.get("root_cause", ""),
-                                "ai_recommended_action": entry.get("recommended_action", ""),
-                            })
+                    # Strip any accidental markdown fences before parsing
+                    cleaned = raw.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
+                    parsed = json.loads(cleaned)
+                    # Pair sequentially — one AI entry per exception, in order
+                    for i, entry in enumerate(parsed):
+                        if i >= len(exc_items):
+                            break
+                        exception_analyses.append({
+                            **exc_items[i],
+                            "ai_root_cause": entry.get("root_cause", ""),
+                            "ai_recommended_action": entry.get("recommended_action", ""),
+                        })
                 except (json.JSONDecodeError, TypeError, ValueError):
                     pass
 
@@ -273,7 +277,8 @@ Respond with ONLY the JSON array, no other text."""
             raw = results[demand_index]
             if not isinstance(raw, Exception):
                 try:
-                    demand_insights = json.loads(raw)
+                    cleaned = raw.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
+                    demand_insights = json.loads(cleaned)
                 except (json.JSONDecodeError, TypeError):
                     pass
 
