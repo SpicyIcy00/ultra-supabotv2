@@ -14,6 +14,7 @@ import type {
   CategoryMultiplier,
   AIInsights,
   AIQuantitiesResponse,
+  AIReasoningResponse,
 } from '../types/replenishment';
 
 const API_BASE = '/api/v1/replenishment';
@@ -75,6 +76,15 @@ export const getAIInsights = async (storeIds?: string[]): Promise<AIInsights> =>
     params,
     paramsSerializer: { indexes: null },
   });
+  return response.data;
+};
+
+export const getAIReasoning = async (storeId: string): Promise<AIReasoningResponse> => {
+  const response = await axios.post<AIReasoningResponse>(
+    `${API_BASE}/ai-reasoning`,
+    null,
+    { params: { store_id: storeId } }
+  );
   return response.data;
 };
 

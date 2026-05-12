@@ -476,6 +476,35 @@ class ReplenishmentService:
                 out[(sid, pid)] = (velocity, int(total_sold))
         return out
 
+    async def get_skus_snapshot_history(
+        self,
+        store_id: str,
+        sku_ids: List[str],
+        lookback_days: int = 28,
+    ) -> Dict[str, List[Tuple[str, int]]]:
+        """Fetch 28-day snapshot history for specific SKUs at a store.
+        Returns {sku_id: [(date_str, qty_on_hand), ...]} sorted by date ascending.
+        """
+        cutoff = date.today() - timedelta(days=lookback_days)
+        query = text("""
+            SELECT product_id, snapshot_date, COALESCE(quantity_on_hand, 0)
+            FROM inventory_snapshots
+            WHERE store_id = :store_id
+              AND snapshot_date >= :cutoff
+              AND snapshot_date < CURRENT_DATE
+            ORDER BY product_id, snapshot_date
+        """)
+        result = await self.db.execute(query, {"store_id": store_id, "cutoff": cutoff})
+        rows = result.fetchall()
+
+        sku_set = set(sku_ids)
+        grouped: Dict[str, List[Tuple[str, int]]] = {}
+        for row in rows:
+            pid, snap_date, qty = str(row[0]), row[1], int(row[2])
+            if pid in sku_set:
+                grouped.setdefault(pid, []).append((snap_date.isoformat(), qty))
+        return grouped
+
     async def run_replenishment_calculation(
         self,
         run_date: Optional[date] = None,

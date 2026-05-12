@@ -9,6 +9,7 @@ import {
   getDataReadiness,
   getStoreTiers,
   getAIQuantities,
+  getAIReasoning,
 } from '../../services/replenishmentApi';
 import { postReplenishmentToSheets } from '../../services/reportApi';
 import type {
@@ -18,6 +19,7 @@ import type {
   DataReadiness,
   StoreTier,
   AIQuantityItem,
+  AIReasoningItem,
 } from '../../types/replenishment';
 
 interface Props {
@@ -53,6 +55,13 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const [aiQuantities, setAiQuantities] = useState<Map<string, AIQuantityItem>>(new Map());
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+
+  // AI Reasoning Mode
+  const [dashMode, setDashMode] = useState<'standard' | 'ai-reasoning'>('standard');
+  const [aiReasoning, setAiReasoning] = useState<Map<string, AIReasoningItem>>(new Map());
+  const [aiReasoningLoading, setAiReasoningLoading] = useState(false);
+  const [aiReasoningError, setAiReasoningError] = useState<string | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   // Dashboard table column visibility
   type DashCol = 'total_sold' | 'dead_days' | 'avg_daily' | 'store_inv' | 'wh_inv' | 'min' | 'requested' | 'allocated' | 'days_stock' | 'vel' | 'cat' | 'eff';
@@ -154,6 +163,36 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
     } finally {
       setAiLoading(false);
     }
+  };
+
+  const handleAIReasoning = async () => {
+    if (!selectedStoreId) {
+      setAiReasoningError('Select a store first.');
+      return;
+    }
+    setAiReasoningLoading(true);
+    setAiReasoningError(null);
+    setExpandedRows(new Set());
+    try {
+      const result = await getAIReasoning(selectedStoreId);
+      const map = new Map<string, AIReasoningItem>();
+      for (const item of result.items) {
+        map.set(`${item.store_id}-${item.sku_id}`, item);
+      }
+      setAiReasoning(map);
+    } catch (err: any) {
+      setAiReasoningError(err?.response?.data?.detail || 'AI Reasoning analysis failed');
+    } finally {
+      setAiReasoningLoading(false);
+    }
+  };
+
+  const toggleExpanded = (key: string) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
   };
 
   const filteredAndSorted = (items: ShipmentPlanResponse['items']) => {
@@ -292,6 +331,35 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
 
       {/* Run Controls */}
       <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6">
+        {/* Mode toggle */}
+        <div className="flex items-center gap-2 mb-5">
+          <span className="text-xs text-gray-500 font-medium uppercase tracking-wider mr-1">Mode</span>
+          <button
+            onClick={() => setDashMode('standard')}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              dashMode === 'standard'
+                ? 'bg-blue-600 text-white'
+                : 'bg-[#0e1117] border border-[#2e303d] text-gray-400 hover:text-white'
+            }`}
+          >
+            Standard
+          </button>
+          <button
+            onClick={() => setDashMode('ai-reasoning')}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              dashMode === 'ai-reasoning'
+                ? 'bg-violet-600 text-white'
+                : 'bg-[#0e1117] border border-[#2e303d] text-gray-400 hover:text-white'
+            }`}
+          >
+            ✦ AI Reasoning
+          </button>
+          {dashMode === 'ai-reasoning' && (
+            <span className="text-xs text-violet-400 bg-violet-900/30 border border-violet-700/40 px-2 py-0.5 rounded">
+              Read-only · Claude reasons from raw snapshots only
+            </span>
+          )}
+        </div>
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h3 className="text-lg font-semibold text-white">Weekly Replenishment</h3>
@@ -411,6 +479,25 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                 'Run Replenishment'
               )}
             </button>
+            {dashMode === 'ai-reasoning' && (
+              <button
+                onClick={handleAIReasoning}
+                disabled={aiReasoningLoading || !selectedStoreId || !latestPlan?.run_date}
+                className="px-6 py-2.5 bg-gradient-to-r from-violet-600 to-purple-700 text-white font-medium rounded-lg hover:from-violet-700 hover:to-purple-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+              >
+                {aiReasoningLoading ? (
+                  <span className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    Analysing {aiReasoning.size > 0 ? `(${aiReasoning.size} done)` : '...'}
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <span>✦</span>
+                    {aiReasoning.size > 0 ? 'Re-run AI Analysis' : 'Run AI Analysis'}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
         </div>
 
@@ -429,6 +516,19 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                   {runResult.exceptions_count} exceptions flagged.
                 </span>
               )}
+            </p>
+          </div>
+        )}
+        {aiReasoningError && (
+          <div className="mt-4 bg-red-900/30 border border-red-600/50 rounded-lg p-3">
+            <p className="text-red-400 text-sm">AI Reasoning: {aiReasoningError}</p>
+          </div>
+        )}
+        {dashMode === 'ai-reasoning' && aiReasoning.size > 0 && !aiReasoningLoading && (
+          <div className="mt-4 bg-violet-900/20 border border-violet-600/30 rounded-lg p-3">
+            <p className="text-violet-300 text-sm">
+              ✦ AI Reasoning complete — {aiReasoning.size} items analysed from raw snapshot data.
+              This is a read-only comparison. No quantities have been applied.
             </p>
           </div>
         )}
@@ -578,7 +678,8 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
               const sorted = filteredAndSorted(latestPlan.items);
               let lastCategory = '';
               const hasAI = aiQuantities.size > 0;
-              const totalCols = 11 + (hasAI ? 2 : 0);
+              const hasReasoning = dashMode === 'ai-reasoning' && aiReasoning.size > 0;
+              const totalCols = 11 + (hasAI ? 2 : 0) + (hasReasoning ? 4 : 0);
 
               return (
                 <table className="w-full text-xs text-left">
@@ -599,6 +700,10 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                       <DashTh col="eff"        label="Eff ×" />
                       {hasAI && <th className="py-2 px-3 font-medium whitespace-nowrap text-right text-violet-400">✦ AI Min</th>}
                       {hasAI && <th className="py-2 px-3 font-medium whitespace-nowrap text-right text-violet-400">✦ AI Ship</th>}
+                      {hasReasoning && <th className="py-2 px-3 font-medium whitespace-nowrap text-right text-violet-300 border-l border-violet-800/40">✦ AI Min</th>}
+                      {hasReasoning && <th className="py-2 px-3 font-medium whitespace-nowrap text-right text-violet-300">✦ AI Ship</th>}
+                      {hasReasoning && <th className="py-2 px-3 font-medium whitespace-nowrap text-right text-violet-300">Variance</th>}
+                      {hasReasoning && <th className="py-2 px-3 font-medium whitespace-nowrap text-right text-violet-300"></th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -609,7 +714,15 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                       const isShort = item.allocated_ship_qty < item.requested_ship_qty;
                       const isOverstock = item.days_of_stock > 120;
                       const isNegative = item.on_hand < 0;
-                      const rowHighlight = isNegative ? 'bg-red-900/10' : isShort ? 'bg-yellow-900/10' : isOverstock ? 'bg-orange-900/10' : idx % 2 === 0 ? 'bg-[#0e1117]' : '';
+                      const rowKey = `${item.store_id}-${item.sku_id}`;
+                      const reasoningItem = hasReasoning ? aiReasoning.get(rowKey) : undefined;
+                      const variancePct = reasoningItem && item.allocated_ship_qty > 0
+                        ? ((reasoningItem.recommended_ship_qty - item.allocated_ship_qty) / item.allocated_ship_qty) * 100
+                        : null;
+                      const highVariance = variancePct !== null && Math.abs(variancePct) > 30;
+                      const isExpanded = expandedRows.has(rowKey);
+                      const baseHighlight = isNegative ? 'bg-red-900/10' : isShort ? 'bg-yellow-900/10' : isOverstock ? 'bg-orange-900/10' : idx % 2 === 0 ? 'bg-[#0e1117]' : '';
+                      const rowHighlight = highVariance ? 'bg-yellow-900/20' : baseHighlight;
                       return (
                         <React.Fragment key={`${item.store_id}-${item.sku_id}`}>
                           {showCategoryHeader && (
@@ -656,7 +769,65 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                                 </>
                               );
                             })()}
+                            {hasReasoning && (
+                              <>
+                                <td className="py-2 px-3 text-right tabular-nums border-l border-violet-800/40">
+                                  {reasoningItem ? (
+                                    <span className={`font-medium ${reasoningItem.error ? 'text-gray-500' : 'text-violet-300'}`}>
+                                      {reasoningItem.error ? '—' : reasoningItem.recommended_min_qty}
+                                    </span>
+                                  ) : <span className="text-gray-600">—</span>}
+                                </td>
+                                <td className="py-2 px-3 text-right tabular-nums">
+                                  {reasoningItem && !reasoningItem.error ? (
+                                    <span className="font-medium text-violet-300">
+                                      {reasoningItem.recommended_ship_qty}
+                                    </span>
+                                  ) : <span className="text-gray-600">—</span>}
+                                </td>
+                                <td className="py-2 px-3 text-right tabular-nums">
+                                  {variancePct !== null ? (
+                                    <span className={`font-medium ${highVariance ? 'text-yellow-400' : 'text-gray-400'}`}>
+                                      {variancePct > 0 ? '+' : ''}{variancePct.toFixed(0)}%
+                                    </span>
+                                  ) : <span className="text-gray-600">—</span>}
+                                </td>
+                                <td className="py-2 px-3 text-right">
+                                  {reasoningItem && !reasoningItem.error && (
+                                    <button
+                                      onClick={() => toggleExpanded(rowKey)}
+                                      className="text-violet-400 hover:text-violet-200 transition-colors text-xs"
+                                      title="Show Claude's reasoning"
+                                    >
+                                      {isExpanded ? '▼' : '▶'}
+                                    </button>
+                                  )}
+                                </td>
+                              </>
+                            )}
                           </tr>
+                          {hasReasoning && isExpanded && reasoningItem && (
+                            <tr className="bg-violet-950/30 border-b border-violet-800/30">
+                              <td colSpan={totalCols} className="px-4 py-3">
+                                <div className="flex gap-3 items-start">
+                                  <span className="text-violet-400 text-xs font-semibold shrink-0 mt-0.5">✦ Claude</span>
+                                  <div className="text-xs text-violet-200 leading-relaxed">
+                                    {reasoningItem.true_velocity != null && (
+                                      <span className="text-violet-400 mr-3">
+                                        Velocity: {reasoningItem.true_velocity.toFixed(1)}/day
+                                      </span>
+                                    )}
+                                    {reasoningItem.avg_restock_duration_days != null && (
+                                      <span className="text-violet-400 mr-3">
+                                        Avg restock lasts: {reasoningItem.avg_restock_duration_days.toFixed(1)} days
+                                      </span>
+                                    )}
+                                    <p className="mt-1 text-gray-300">{reasoningItem.reasoning}</p>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
                         </React.Fragment>
                       );
                     })}

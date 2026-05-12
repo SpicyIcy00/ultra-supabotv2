@@ -152,6 +152,37 @@ async def generate_ai_quantities(
     return {"run_date": plan.get("run_date"), "items": quantities}
 
 
+@router.post("/ai-reasoning")
+async def ai_reasoning_analysis(
+    store_id: str = Query(..., description="Store ID to analyse"),
+    service: ReplenishmentService = Depends(_get_service),
+):
+    """AI Reasoning Mode: analyse each SKU using raw 28-day snapshot history only. No formula output is passed to Claude."""
+    if not settings.ANTHROPIC_API_KEY:
+        raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY is not configured on the server")
+
+    plan = await service.get_latest_shipment_plan([store_id])
+    if not plan.get("run_date"):
+        raise HTTPException(status_code=404, detail="No replenishment plan found. Run a replenishment calculation first.")
+
+    items = plan.get("items", [])
+    if not items:
+        return {"run_date": plan.get("run_date"), "store_id": store_id, "items": []}
+
+    sku_ids = [item["sku_id"] for item in items]
+    snapshot_map = await service.get_skus_snapshot_history(store_id, sku_ids)
+
+    try:
+        ai_service = AIInsightsService(settings.ANTHROPIC_API_KEY)
+        results = await ai_service.analyze_store_with_reasoning(items, snapshot_map)
+    except ValueError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI Reasoning error: {str(e)}")
+
+    return {"run_date": plan.get("run_date"), "store_id": store_id, "items": results}
+
+
 # ----------------------------------------------------------------
 # Warehouse Inventory
 # ----------------------------------------------------------------

@@ -18,18 +18,20 @@ class AIInsightsService:
             raise ValueError("ANTHROPIC_API_KEY is not configured")
         self._api_key = api_key
 
-    async def _call(self, prompt: str, max_tokens: int = 800) -> str:
+    async def _call(self, prompt: str, max_tokens: int = 800, system: Optional[str] = None) -> str:
         headers = {
             "x-api-key": self._api_key,
             "anthropic-version": _ANTHROPIC_VERSION,
             "content-type": "application/json",
         }
-        payload = {
+        payload: Dict[str, Any] = {
             "model": self.MODEL,
             "max_tokens": max_tokens,
             "messages": [{"role": "user", "content": prompt}],
         }
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        if system:
+            payload["system"] = system
+        async with httpx.AsyncClient(timeout=90.0) as client:
             response = await client.post(_ANTHROPIC_API_URL, headers=headers, json=payload)
             response.raise_for_status()
             data = response.json()
@@ -215,6 +217,129 @@ Respond with a JSON array only:
 
 Respond with ONLY the JSON array, no other text, no markdown fences.
 """
+
+    # ----------------------------------------------------------------
+    # AI Reasoning Mode — raw snapshot analysis
+    # ----------------------------------------------------------------
+
+    _REASONING_SYSTEM = (
+        "You are a replenishment analyst for Aji Ichiban, a snack retail chain in the Philippines. "
+        "You will be given 28 days of raw inventory and sales data for one product at one store. "
+        "No formula output will be given. Reason from the data only. "
+        "Output: (1) true daily velocity when in stock, (2) how long recent restocks lasted, "
+        "(3) recommended min stock, (4) recommended ship quantity, "
+        "(5) one paragraph plain-English reasoning. "
+        "Be conservative — stockouts cost more than overstock."
+    )
+
+    def _build_snapshot_payload(
+        self,
+        name: str,
+        store: str,
+        category: str,
+        on_hand: int,
+        snapshots: List[tuple],
+    ) -> str:
+        if not snapshots:
+            return (
+                f"PRODUCT: {name}\nSTORE: {store}\nCATEGORY: {category}\n\n"
+                f"No snapshot history available for this period.\n"
+                f"CURRENT ON HAND: {on_hand}"
+            )
+
+        rows = []
+        prev_qty: Optional[int] = None
+        for snap_date, qty in snapshots:
+            if prev_qty is None:
+                rows.append(f"{snap_date} | {qty:5d} |        - | (start)")
+            elif qty > prev_qty:
+                rows.append(f"{snap_date} | {qty:5d} |        - | RESTOCK +{qty - prev_qty}")
+            elif qty == 0 and prev_qty == 0:
+                rows.append(f"{snap_date} | {qty:5d} |        0 | STOCKOUT (continued)")
+            elif qty == 0:
+                rows.append(f"{snap_date} | {qty:5d} | {prev_qty:7d} | STOCKOUT")
+            else:
+                rows.append(f"{snap_date} | {qty:5d} | {prev_qty - qty:7d} |")
+            prev_qty = qty
+
+        table = "DATE        | ON HAND | SOLD EST | NOTES\n" + "\n".join(rows)
+        return (
+            f"PRODUCT: {name}\nSTORE: {store}\nCATEGORY: {category}\n\n"
+            f"{table}\n\n"
+            f"CURRENT ON HAND: {on_hand}\n"
+            f"SNAPSHOT COVERAGE: {len(snapshots)} days"
+        )
+
+    async def _analyze_single_item(
+        self,
+        name: str,
+        store: str,
+        category: str,
+        on_hand: int,
+        snapshots: List[tuple],
+    ) -> Dict[str, Any]:
+        payload = self._build_snapshot_payload(name, store, category, on_hand, snapshots)
+        user_prompt = (
+            f"{payload}\n\n"
+            "Respond ONLY with valid JSON (no markdown fences):\n"
+            '{"true_velocity": <float>, "avg_restock_duration_days": <float or null>, '
+            '"recommended_min_qty": <integer>, "recommended_ship_qty": <integer>, '
+            '"reasoning": "<one paragraph>"}'
+        )
+        raw = await self._call(user_prompt, max_tokens=500, system=self._REASONING_SYSTEM)
+        cleaned = raw.strip()
+        if cleaned.startswith("```"):
+            parts = cleaned.split("```")
+            cleaned = parts[1] if len(parts) > 1 else cleaned
+            if cleaned.startswith("json"):
+                cleaned = cleaned[4:]
+        cleaned = cleaned.strip()
+        result = json.loads(cleaned)
+        return {
+            "true_velocity": result.get("true_velocity"),
+            "avg_restock_duration_days": result.get("avg_restock_duration_days"),
+            "recommended_min_qty": max(0, int(round(result.get("recommended_min_qty", 0)))),
+            "recommended_ship_qty": max(0, int(round(result.get("recommended_ship_qty", 0)))),
+            "reasoning": str(result.get("reasoning", ""))[:1000],
+        }
+
+    async def analyze_store_with_reasoning(
+        self,
+        items: List[Dict],
+        snapshot_map: Dict[str, List[tuple]],
+    ) -> List[Dict]:
+        """Run AI Reasoning Mode: analyze each item from raw snapshot data only."""
+        CONCURRENT = 8
+
+        async def process(item: Dict) -> Dict:
+            sku_id = item["sku_id"]
+            try:
+                result = await self._analyze_single_item(
+                    name=item.get("product_name") or sku_id,
+                    store=item.get("store_name") or item["store_id"],
+                    category=item.get("category") or "Unknown",
+                    on_hand=int(item.get("on_hand", 0)),
+                    snapshots=snapshot_map.get(sku_id, []),
+                )
+                return {"sku_id": sku_id, "store_id": item["store_id"], **result}
+            except Exception as e:
+                return {
+                    "sku_id": sku_id,
+                    "store_id": item["store_id"],
+                    "true_velocity": None,
+                    "avg_restock_duration_days": None,
+                    "recommended_min_qty": 0,
+                    "recommended_ship_qty": 0,
+                    "reasoning": f"Analysis unavailable: {str(e)[:200]}",
+                    "error": True,
+                }
+
+        results: List[Dict] = []
+        for i in range(0, len(items), CONCURRENT):
+            chunk = items[i:i + CONCURRENT]
+            chunk_results = await asyncio.gather(*[process(it) for it in chunk])
+            results.extend(chunk_results)
+        return results
 
     # ----------------------------------------------------------------
     # AI quantity calculation

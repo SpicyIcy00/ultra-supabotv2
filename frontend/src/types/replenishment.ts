@@ -171,6 +171,24 @@ export interface AlgorithmSettings {
   updated_at?: string | null;
 }
 
+// --- AI Reasoning Mode ---
+export interface AIReasoningItem {
+  sku_id: string;
+  store_id: string;
+  true_velocity: number | null;
+  avg_restock_duration_days: number | null;
+  recommended_min_qty: number;
+  recommended_ship_qty: number;
+  reasoning: string;
+  error?: boolean;
+}
+
+export interface AIReasoningResponse {
+  run_date: string | null;
+  store_id: string;
+  items: AIReasoningItem[];
+}
+
 // --- AI Quantities ---
 export interface AIQuantityItem {
   sku_id: string;
