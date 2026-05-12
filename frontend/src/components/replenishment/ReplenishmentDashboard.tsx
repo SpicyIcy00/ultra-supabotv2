@@ -500,23 +500,6 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                 Download CSV
               </button>
               <button
-                onClick={handlePostToSheets}
-                disabled={postingToSheets}
-                className="flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-xs rounded-lg transition-all"
-              >
-                {postingToSheets ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Posting...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-3.5 h-3.5" />
-                    Post to Sheets
-                  </>
-                )}
-              </button>
-              <button
                 onClick={handleAIQuantities}
                 disabled={aiLoading}
                 className="flex items-center gap-2 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-xs rounded-lg transition-all"
@@ -531,6 +514,23 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                   <>
                     <span className="text-xs">✦</span>
                     {aiQuantities.size > 0 ? 'Recalculate AI Qty' : 'AI Quantities'}
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handlePostToSheets}
+                disabled={postingToSheets}
+                className="flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-xs rounded-lg transition-all"
+              >
+                {postingToSheets ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Posting...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-3.5 h-3.5" />
+                    Post to Sheets
                   </>
                 )}
               </button>
