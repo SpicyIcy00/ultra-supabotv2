@@ -214,6 +214,7 @@ Respond with a JSON array only:
 [{{"title": "<short title>", "observation": "<what the data shows>", "action": "<specific recommendation>"}}]
 
 Respond with ONLY the JSON array, no other text, no markdown fences.
+"""
 
     # ----------------------------------------------------------------
     # Main entry point
