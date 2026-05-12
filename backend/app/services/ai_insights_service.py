@@ -224,13 +224,41 @@ Respond with ONLY the JSON array, no other text, no markdown fences.
 
     _REASONING_SYSTEM = (
         "You are a replenishment analyst for Aji Ichiban, a snack retail chain in the Philippines. "
-        "You will be given 28 days of raw inventory and sales data for one product at one store. "
-        "No formula output will be given. Reason from the data only. "
-        "Output: (1) true daily velocity when in stock, (2) how long recent restocks lasted, "
-        "(3) recommended min stock, (4) recommended ship quantity, "
-        "(5) one paragraph plain-English reasoning. "
-        "Be conservative — stockouts cost more than overstock."
+        "You will be given 28 days of raw inventory and sales data for one product at one store, "
+        "plus four context fields: replenishment cadence, restock event types, warehouse stock, "
+        "and network average velocity. "
+        "Reason from the data only. Your ship quantity must cover at least the replenishment cadence "
+        "window plus a conservative buffer. Model velocity and restock cycle length from normal "
+        "restocks only — ignore emergency restocks. If your recommended quantity exceeds warehouse "
+        "stock, flag it and recommend the maximum available instead. "
+        "Output: (1) true daily velocity when in stock, (2) how long normal restocks lasted, "
+        "(3) recommended min stock level, (4) recommended ship quantity, "
+        "(5) one paragraph plain-English reasoning including a note if warehouse stock is a "
+        "constraint or if store velocity is unusually high vs network average."
     )
+
+    @staticmethod
+    def _classify_restocks(snapshots: List[tuple]) -> Dict[str, str]:
+        """Return {date_str: 'normal'|'emergency'} for every restock event in the sequence."""
+        events: List[tuple] = []
+        prev_qty: Optional[int] = None
+        for snap_date, qty in snapshots:
+            if prev_qty is not None and qty > prev_qty:
+                events.append((snap_date, qty - prev_qty))
+            prev_qty = qty
+
+        classified: Dict[str, str] = {}
+        last_normal_qty: Optional[int] = None
+        for date_str, units in events:
+            if last_normal_qty is None:
+                classified[date_str] = "normal"
+                last_normal_qty = units
+            elif units < last_normal_qty * 0.5:
+                classified[date_str] = "emergency"
+            else:
+                classified[date_str] = "normal"
+                last_normal_qty = units
+        return classified
 
     def _build_snapshot_payload(
         self,
@@ -239,13 +267,27 @@ Respond with ONLY the JSON array, no other text, no markdown fences.
         category: str,
         on_hand: int,
         snapshots: List[tuple],
+        cadence_days: int,
+        wh_stock: int,
+        network_avg_velocity: Optional[float],
     ) -> str:
+        context = (
+            f"CONTEXT:\n"
+            f"- Replenishment cadence: {cadence_days} days between shipments\n"
+            f"- Warehouse stock (AJI BARN): {wh_stock} units available\n"
+            f"- Network avg daily velocity (all stores, in-stock days): "
+            f"{'N/A' if network_avg_velocity is None else f'{network_avg_velocity:.2f} units/day'}\n"
+        )
+
         if not snapshots:
             return (
                 f"PRODUCT: {name}\nSTORE: {store}\nCATEGORY: {category}\n\n"
+                f"{context}\n"
                 f"No snapshot history available for this period.\n"
                 f"CURRENT ON HAND: {on_hand}"
             )
+
+        restock_types = self._classify_restocks(snapshots)
 
         rows = []
         prev_qty: Optional[int] = None
@@ -253,7 +295,11 @@ Respond with ONLY the JSON array, no other text, no markdown fences.
             if prev_qty is None:
                 rows.append(f"{snap_date} | {qty:5d} |        - | (start)")
             elif qty > prev_qty:
-                rows.append(f"{snap_date} | {qty:5d} |        - | RESTOCK +{qty - prev_qty}")
+                rtype = restock_types.get(snap_date, "normal").upper()
+                label = f"RESTOCK +{qty - prev_qty} [{rtype}]"
+                if rtype == "EMERGENCY":
+                    label += " — below 50% of last normal restock, treat as noise"
+                rows.append(f"{snap_date} | {qty:5d} |        - | {label}")
             elif qty == 0 and prev_qty == 0:
                 rows.append(f"{snap_date} | {qty:5d} |        0 | STOCKOUT (continued)")
             elif qty == 0:
@@ -265,6 +311,7 @@ Respond with ONLY the JSON array, no other text, no markdown fences.
         table = "DATE        | ON HAND | SOLD EST | NOTES\n" + "\n".join(rows)
         return (
             f"PRODUCT: {name}\nSTORE: {store}\nCATEGORY: {category}\n\n"
+            f"{context}\n"
             f"{table}\n\n"
             f"CURRENT ON HAND: {on_hand}\n"
             f"SNAPSHOT COVERAGE: {len(snapshots)} days"
@@ -277,16 +324,22 @@ Respond with ONLY the JSON array, no other text, no markdown fences.
         category: str,
         on_hand: int,
         snapshots: List[tuple],
+        cadence_days: int,
+        wh_stock: int,
+        network_avg_velocity: Optional[float],
     ) -> Dict[str, Any]:
-        payload = self._build_snapshot_payload(name, store, category, on_hand, snapshots)
+        payload = self._build_snapshot_payload(
+            name, store, category, on_hand, snapshots,
+            cadence_days, wh_stock, network_avg_velocity,
+        )
         user_prompt = (
             f"{payload}\n\n"
             "Respond ONLY with valid JSON (no markdown fences):\n"
-            '{"true_velocity": <float>, "avg_restock_duration_days": <float or null>, '
+            '{"true_velocity": <float>, "avg_normal_restock_duration_days": <float or null>, '
             '"recommended_min_qty": <integer>, "recommended_ship_qty": <integer>, '
-            '"reasoning": "<one paragraph>"}'
+            '"warehouse_constrained": <true|false>, "reasoning": "<one paragraph>"}'
         )
-        raw = await self._call(user_prompt, max_tokens=500, system=self._REASONING_SYSTEM)
+        raw = await self._call(user_prompt, max_tokens=600, system=self._REASONING_SYSTEM)
         cleaned = raw.strip()
         if cleaned.startswith("```"):
             parts = cleaned.split("```")
@@ -297,9 +350,10 @@ Respond with ONLY the JSON array, no other text, no markdown fences.
         result = json.loads(cleaned)
         return {
             "true_velocity": result.get("true_velocity"),
-            "avg_restock_duration_days": result.get("avg_restock_duration_days"),
+            "avg_restock_duration_days": result.get("avg_normal_restock_duration_days"),
             "recommended_min_qty": max(0, int(round(result.get("recommended_min_qty", 0)))),
             "recommended_ship_qty": max(0, int(round(result.get("recommended_ship_qty", 0)))),
+            "warehouse_constrained": bool(result.get("warehouse_constrained", False)),
             "reasoning": str(result.get("reasoning", ""))[:1000],
         }
 
@@ -307,13 +361,14 @@ Respond with ONLY the JSON array, no other text, no markdown fences.
         self,
         items: List[Dict],
         snapshot_map: Dict[str, List[tuple]],
+        cadence_days: int,
+        network_velocity_map: Dict[str, float],
     ) -> List[Dict]:
         """Run AI Reasoning Mode: analyze each item from raw snapshot data only.
-        Items with no snapshot history are skipped (marked with no_data=True).
+        Items with no snapshot history are returned as no_data placeholders.
         """
         CONCURRENT = 15
 
-        # Only send items that actually have snapshot history to Claude
         has_data = [it for it in items if snapshot_map.get(it["sku_id"])]
         no_data_ids = {it["sku_id"] for it in items if not snapshot_map.get(it["sku_id"])}
 
@@ -326,6 +381,9 @@ Respond with ONLY the JSON array, no other text, no markdown fences.
                     category=item.get("category") or "Unknown",
                     on_hand=int(item.get("on_hand", 0)),
                     snapshots=snapshot_map.get(sku_id, []),
+                    cadence_days=cadence_days,
+                    wh_stock=int(item.get("wh_on_hand", 0)),
+                    network_avg_velocity=network_velocity_map.get(sku_id),
                 )
                 return {"sku_id": sku_id, "store_id": item["store_id"], **result}
             except Exception as e:
@@ -336,6 +394,7 @@ Respond with ONLY the JSON array, no other text, no markdown fences.
                     "avg_restock_duration_days": None,
                     "recommended_min_qty": 0,
                     "recommended_ship_qty": 0,
+                    "warehouse_constrained": False,
                     "reasoning": f"Analysis unavailable: {str(e)[:200]}",
                     "error": True,
                 }
@@ -346,7 +405,6 @@ Respond with ONLY the JSON array, no other text, no markdown fences.
             chunk_results = await asyncio.gather(*[process(it) for it in chunk])
             results.extend(chunk_results)
 
-        # Append placeholder entries for items with no snapshot data
         for item in items:
             if item["sku_id"] in no_data_ids:
                 results.append({
@@ -356,6 +414,7 @@ Respond with ONLY the JSON array, no other text, no markdown fences.
                     "avg_restock_duration_days": None,
                     "recommended_min_qty": 0,
                     "recommended_ship_qty": 0,
+                    "warehouse_constrained": False,
                     "reasoning": "No snapshot history available for this SKU.",
                     "no_data": True,
                 })

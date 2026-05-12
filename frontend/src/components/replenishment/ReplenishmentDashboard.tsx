@@ -780,8 +780,11 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                                 </td>
                                 <td className="py-2 px-3 text-right tabular-nums">
                                   {reasoningItem && !reasoningItem.error ? (
-                                    <span className="font-medium text-violet-300">
+                                    <span className="font-medium text-violet-300 inline-flex items-center gap-1">
                                       {reasoningItem.recommended_ship_qty}
+                                      {reasoningItem.warehouse_constrained && (
+                                        <span className="text-orange-400" title="Warehouse stock is a constraint">⚠</span>
+                                      )}
                                     </span>
                                   ) : <span className="text-gray-600">—</span>}
                                 </td>

@@ -157,7 +157,8 @@ async def ai_reasoning_analysis(
     store_id: str = Query(..., description="Store ID to analyse"),
     service: ReplenishmentService = Depends(_get_service),
 ):
-    """AI Reasoning Mode: analyse each SKU using raw 28-day snapshot history only. No formula output is passed to Claude."""
+    """AI Reasoning Mode: analyse each SKU using raw 28-day snapshot history plus cadence,
+    restock event types, warehouse stock, and network average velocity. No formula output passed to Claude."""
     if not settings.ANTHROPIC_API_KEY:
         raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY is not configured on the server")
 
@@ -169,12 +170,33 @@ async def ai_reasoning_analysis(
     if not items:
         return {"run_date": plan.get("run_date"), "store_id": store_id, "items": []}
 
+    # Replenishment cadence from store tier (target_cover_days = how many days each shipment covers)
+    tier = await service.get_store_tier_params(store_id)
+    cadence_days: int = int(tier.get("target_cover_days", 7))
+
+    # Network average velocity per SKU across all stores (from the latest all-store plan)
+    all_plan = await service.get_latest_shipment_plan()
+    network_vel_map: dict = {}
+    for all_item in all_plan.get("items", []):
+        v = all_item.get("avg_daily_sales", 0)
+        if v and v > 0:
+            sku = all_item["sku_id"]
+            if sku not in network_vel_map:
+                network_vel_map[sku] = []
+            network_vel_map[sku].append(v)
+    network_velocity_map = {
+        sku: sum(vs) / len(vs)
+        for sku, vs in network_vel_map.items()
+    }
+
     sku_ids = [item["sku_id"] for item in items]
     snapshot_map = await service.get_skus_snapshot_history(store_id, sku_ids)
 
     try:
         ai_service = AIInsightsService(settings.ANTHROPIC_API_KEY)
-        results = await ai_service.analyze_store_with_reasoning(items, snapshot_map)
+        results = await ai_service.analyze_store_with_reasoning(
+            items, snapshot_map, cadence_days, network_velocity_map
+        )
     except ValueError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
