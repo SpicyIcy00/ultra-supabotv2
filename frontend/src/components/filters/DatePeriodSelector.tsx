@@ -55,24 +55,33 @@ export const DatePeriodSelector: React.FC<DatePeriodSelectorProps> = ({
   const [tempStartDate, setTempStartDate] = useState<Date | null>(null);
   const [tempEndDate, setTempEndDate] = useState<Date | null>(null);
 
-  // Helper function to get formatted date range for a period
-  const getDateRangeText = (period: PeriodType): string => {
+  const getDateRanges = (period: PeriodType) => {
     try {
-      let dateRange;
       if (period === 'CUSTOM' && customDateRange) {
-        dateRange = calculatePeriodDateRanges(period, customDateRange.start, customDateRange.end);
+        return calculatePeriodDateRanges(period, customDateRange.start, customDateRange.end);
       } else if (period !== 'CUSTOM') {
-        dateRange = calculatePeriodDateRanges(period);
-      } else {
-        return '';
+        return calculatePeriodDateRanges(period);
       }
-
-      const startFormatted = format(dateRange.current.start, 'MMM d');
-      const endFormatted = format(dateRange.current.end, 'MMM d, yyyy');
-      return `${startFormatted} - ${endFormatted}`;
-    } catch (error) {
-      return '';
+      return null;
+    } catch {
+      return null;
     }
+  };
+
+  const getDateRangeText = (period: PeriodType): string => {
+    const ranges = getDateRanges(period);
+    if (!ranges) return '';
+    const startFormatted = format(ranges.current.start, 'MMM d');
+    const endFormatted = format(ranges.current.end, 'MMM d, yyyy');
+    return `${startFormatted} – ${endFormatted}`;
+  };
+
+  const getComparisonText = (period: PeriodType): string => {
+    const ranges = getDateRanges(period);
+    if (!ranges) return '';
+    const start = format(ranges.comparison.start, 'MMM d');
+    const end = format(ranges.comparison.end, 'MMM d, yyyy');
+    return `vs ${start} – ${end}`;
   };
 
   const handlePeriodClick = (period: PeriodType) => {
@@ -111,13 +120,15 @@ export const DatePeriodSelector: React.FC<DatePeriodSelectorProps> = ({
       <span className="text-sm font-medium text-gray-400 sm:mr-2">Period:</span>
       <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center relative">
         {PERIODS.map((period) => {
-          const dateRangeText = getDateRangeText(period.value);
+          const isActive = selectedPeriod === period.value;
+          const dateRangeText = isActive ? getDateRangeText(period.value) : '';
+          const comparisonText = isActive ? getComparisonText(period.value) : '';
           return (
             <button
               key={period.value}
               onClick={() => handlePeriodClick(period.value)}
               className={`px-3 py-2 sm:px-6 sm:py-3 rounded-lg font-semibold text-xs sm:text-sm border-b-2 transition-colors ${
-                selectedPeriod === period.value
+                isActive
                   ? 'border-blue-500 text-blue-400 bg-blue-500/10'
                   : 'border-transparent text-gray-400 hover:text-white'
               }`}
@@ -125,9 +136,14 @@ export const DatePeriodSelector: React.FC<DatePeriodSelectorProps> = ({
             >
               <div className="flex flex-col items-center gap-0.5">
                 <span>{period.label}</span>
-                {dateRangeText && selectedPeriod === period.value && (
+                {dateRangeText && (
                   <span className="text-xs opacity-80 font-normal whitespace-nowrap hidden sm:block">
                     {dateRangeText}
+                  </span>
+                )}
+                {comparisonText && (
+                  <span className="text-xs opacity-50 font-normal whitespace-nowrap hidden sm:block">
+                    {comparisonText}
                   </span>
                 )}
               </div>

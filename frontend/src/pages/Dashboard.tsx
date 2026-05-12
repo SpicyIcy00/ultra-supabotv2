@@ -1,5 +1,4 @@
 import React from 'react';
-import { format } from 'date-fns';
 import { PullToRefresh } from '../components/mobile/PullToRefresh';
 import { DatePeriodSelector } from '../components/filters/DatePeriodSelector';
 import { StoreSelector } from '../components/filters/StoreSelector';
@@ -17,7 +16,6 @@ import { formatCurrency, formatNumber, getGranularityForPeriod } from '../utils/
 
 export const Dashboard: React.FC = () => {
   const selectedPeriod = useDashboardStore((state) => state.selectedPeriod);
-  const dateRanges = useDashboardStore((state) => state.dateRanges);
   const {
     kpiData,
     salesByCategory,
@@ -31,12 +29,9 @@ export const Dashboard: React.FC = () => {
     error,
     refetchAll,
     periodLabel,
-    comparisonLabel,
   } = useDashboardData();
 
   const granularity = getGranularityForPeriod(selectedPeriod);
-
-  const comparisonDateText = `${format(dateRanges.comparison.start, 'MMM d')} – ${format(dateRanges.comparison.end, 'MMM d, yyyy')}`;
 
   return (
     <PullToRefresh>
@@ -75,11 +70,6 @@ export const Dashboard: React.FC = () => {
         )}
 
         {/* ROW 2: KPI CARDS */}
-        <div className="flex items-center gap-2 text-xs text-gray-500">
-          <span>{comparisonLabel}</span>
-          <span className="text-gray-600">·</span>
-          <span>{comparisonDateText}</span>
-        </div>
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           <KPICard
             title="Total Sales"
