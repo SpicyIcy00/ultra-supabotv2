@@ -10,7 +10,7 @@ import {
   getStoreTiers,
   getAIReasoning,
 } from '../../services/replenishmentApi';
-import { postReplenishmentToSheets } from '../../services/reportApi';
+import { postReplenishmentToSheets, postReplenishmentBackupToSheets } from '../../services/reportApi';
 import type {
   ReplenishmentRunResponse,
   ShipmentPlanResponse,
@@ -242,6 +242,8 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
       const result = await postReplenishmentToSheets(visibleItems, storeName);
       setSheetsSuccess(result.message);
       setTimeout(() => setSheetsSuccess(null), 5000);
+      // Fire backup with all fields — silent, non-blocking
+      postReplenishmentBackupToSheets(latestPlan.items, storeName).catch(() => {});
     } catch (err: any) {
       setSheetsError(err.message || 'Failed to post to Google Sheets');
       setTimeout(() => setSheetsError(null), 8000);

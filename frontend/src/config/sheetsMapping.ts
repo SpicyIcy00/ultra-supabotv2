@@ -60,6 +60,42 @@ export function transformReplenishmentForSheets(items: any[]) {
 }
 
 /**
+ * Transforms replenishment items to a full backup format with ALL fields.
+ * Column order mirrors the dashboard: Total Sold, Dead Days, Avg Daily,
+ * Store Inv, WH Inv, Min, Requested, Allocated, Days Stock, multipliers,
+ * plus extra fields only in the backup (SKU, season-adj, safety stock, etc.).
+ */
+export function transformReplenishmentForBackup(items: any[]) {
+  return items.map(item => ({
+    store_name:              item.store_name || item.store_id || '',
+    product_name:            item.product_name || '',
+    sku:                     item.product_sku || item.sku_id || '',
+    product_id:              item.sku_id || '',
+    category:                item.category || '',
+    total_sold_qty:          item.total_sold_qty ?? 0,
+    dead_days:               item.dead_days ?? 0,
+    avg_daily_sales:         item.avg_daily_sales ?? 0,
+    season_adj_daily_sales:  item.season_adjusted_daily_sales ?? 0,
+    safety_stock:            item.safety_stock ?? 0,
+    min_level:               item.min_level ?? 0,
+    max_level:               item.max_level ?? 0,
+    expiry_cap:              item.expiry_cap ?? 0,
+    final_max:               item.final_max ?? 0,
+    store_inv:               item.on_hand ?? 0,
+    on_order:                item.on_order ?? 0,
+    inv_position:            item.inventory_position ?? 0,
+    wh_on_hand:              item.wh_on_hand ?? 0,
+    ordered_qty:             item.requested_ship_qty ?? 0,
+    allocated_qty:           item.allocated_ship_qty ?? 0,
+    days_of_stock:           item.days_of_stock ?? 0,
+    priority_score:          item.priority_score ?? 0,
+    velocity_mult:           item.velocity_multiplier ?? 0,
+    category_mult:           item.category_multiplier ?? 0,
+    effective_mult:          item.effective_multiplier ?? 0,
+  }));
+}
+
+/**
  * Transforms report data to match Google Sheets format
  * @param reportData Array of report rows
  * @returns Formatted data ready for Google Sheets

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type { ProductSalesReportResponse, Store } from '../types/report';
-import { transformDataForSheets, transformReplenishmentForSheets } from '../config/sheetsMapping';
+import { transformDataForSheets, transformReplenishmentForSheets, transformReplenishmentForBackup } from '../config/sheetsMapping';
 
 // Use relative URL to leverage Vercel rewrite proxy (avoids CORS)
 const API_BASE_URL = '';  // Empty because we append /api/v1 below
@@ -266,6 +266,30 @@ export const postReportToSheets = async (
       throw new Error(`Failed to post to Google Sheets: ${error.message}`);
     }
   }
+};
+
+/**
+ * Post ALL replenishment fields to a backup Google Sheet (fire-and-forget).
+ * Uses GOOGLE_SHEETS_BACKUP_URL configured in Railway env.
+ */
+export const postReplenishmentBackupToSheets = async (
+  items: any[],
+  sheetName: string,
+): Promise<{ success: boolean; message: string; rowsWritten?: number }> => {
+  const transformedData = transformReplenishmentForBackup(items);
+  const response = await axios.post(`${API_V1_PREFIX}/sheets/post-to-sheets`, {
+    sheetName,
+    data: transformedData,
+    isBackup: true,
+  });
+  if (response.data.success) {
+    return {
+      success: true,
+      message: response.data.message || `Backup: ${transformedData.length} rows to "${sheetName}"`,
+      rowsWritten: response.data.rowsWritten || transformedData.length,
+    };
+  }
+  throw new Error(response.data.error || response.data.message || 'Backup sheet error');
 };
 
 export const postReplenishmentToSheets = async (

@@ -13,6 +13,7 @@ router = APIRouter(tags=["Google Sheets"])
 # Get Google Sheets URLs from environment
 GOOGLE_SHEETS_URL = os.getenv("GOOGLE_SHEETS_URL", "")
 GOOGLE_SHEETS_BARCODE_DB_URL = os.getenv("GOOGLE_SHEETS_BARCODE_DB_URL", "")
+GOOGLE_SHEETS_BACKUP_URL = os.getenv("GOOGLE_SHEETS_BACKUP_URL", "")
 
 
 class SheetRow(BaseModel):
@@ -28,6 +29,7 @@ class PostToSheetsRequest(BaseModel):
     sheetName: str
     data: List[Any]  # accepts both list-of-dicts and list-of-arrays
     sheetsUrl: Optional[str] = None  # Optional override URL
+    isBackup: Optional[bool] = False  # Route to GOOGLE_SHEETS_BACKUP_URL
 
 
 class PostToSheetsResponse(BaseModel):
@@ -52,10 +54,12 @@ async def post_to_google_sheets(request: PostToSheetsRequest):
     print(f"Environment GOOGLE_SHEETS_URL: {GOOGLE_SHEETS_URL}")
     
     # Route to the barcode DB URL when sheetName is "Barcode Database",
-    # otherwise fall back to the general GOOGLE_SHEETS_URL.
+    # to the backup URL when isBackup=True, otherwise fall back to GOOGLE_SHEETS_URL.
     BARCODE_SHEETS = {"New May Barcode Database", "Barcodes"}
     if request.sheetName in BARCODE_SHEETS and GOOGLE_SHEETS_BARCODE_DB_URL:
         sheets_url = GOOGLE_SHEETS_BARCODE_DB_URL
+    elif request.isBackup and GOOGLE_SHEETS_BACKUP_URL:
+        sheets_url = GOOGLE_SHEETS_BACKUP_URL
     else:
         sheets_url = GOOGLE_SHEETS_URL or request.sheetsUrl
 
