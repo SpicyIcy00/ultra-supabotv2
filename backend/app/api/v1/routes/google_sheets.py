@@ -10,10 +10,9 @@ import os
 
 router = APIRouter(tags=["Google Sheets"])
 
-# Get Google Sheets URLs from environment
+# Get Google Sheets URLs from environment (read at startup; backup URL re-read per request below)
 GOOGLE_SHEETS_URL = os.getenv("GOOGLE_SHEETS_URL", "")
 GOOGLE_SHEETS_BARCODE_DB_URL = os.getenv("GOOGLE_SHEETS_BARCODE_DB_URL", "")
-GOOGLE_SHEETS_BACKUP_URL = os.getenv("GOOGLE_SHEETS_BACKUP_URL", "")
 
 
 class SheetRow(BaseModel):
@@ -46,20 +45,25 @@ async def post_to_google_sheets(request: PostToSheetsRequest):
     Proxy endpoint to post data to Google Sheets.
     This avoids CORS issues by making the request server-side.
     """
+    # Re-read backup URL on every request so Railway env changes are picked up immediately
+    google_sheets_backup_url = os.getenv("GOOGLE_SHEETS_BACKUP_URL", "")
+
     # Log incoming request for debugging
     print(f"=== Google Sheets Proxy Request ===")
     print(f"Sheet Name: {request.sheetName}")
+    print(f"Is Backup: {request.isBackup}")
     print(f"Data rows: {len(request.data) if request.data else 0}")
-    print(f"Provided sheetsUrl from frontend: {request.sheetsUrl}")
     print(f"Environment GOOGLE_SHEETS_URL: {GOOGLE_SHEETS_URL}")
-    
+    print(f"Environment GOOGLE_SHEETS_BACKUP_URL: {'SET' if google_sheets_backup_url else 'NOT SET'}")
+
     # Route to the barcode DB URL when sheetName is "Barcode Database",
     # to the backup URL when isBackup=True, otherwise fall back to GOOGLE_SHEETS_URL.
     BARCODE_SHEETS = {"New May Barcode Database", "Barcodes"}
     if request.sheetName in BARCODE_SHEETS and GOOGLE_SHEETS_BARCODE_DB_URL:
         sheets_url = GOOGLE_SHEETS_BARCODE_DB_URL
-    elif request.isBackup and GOOGLE_SHEETS_BACKUP_URL:
-        sheets_url = GOOGLE_SHEETS_BACKUP_URL
+    elif request.isBackup and google_sheets_backup_url:
+        sheets_url = google_sheets_backup_url
+        print(f"==> Routing to BACKUP URL")
     else:
         sheets_url = GOOGLE_SHEETS_URL or request.sheetsUrl
 
