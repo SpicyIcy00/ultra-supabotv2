@@ -389,6 +389,16 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
               Stockout buffer
               <span className="text-xs text-gray-500">(+20% Mon–Fri, +10% Sat–Sun)</span>
             </label>
+            {/* Show products with sales but 0 ordered */}
+            <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showZeroRequested}
+                onChange={(e) => setShowZeroRequested(e.target.checked)}
+                className="rounded border-[#2e303d] bg-[#0e1117] text-blue-500 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+              />
+              Show sold (0 ordered)
+            </label>
             {/* Custom sales window start date */}
             <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none">
               <input
@@ -620,34 +630,23 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
               </button>
             </div>
           </div>
-          {/* Row 2: search + show-all checkbox */}
-          <div className="flex items-center gap-3 mb-4">
-            <div className="relative flex-1 max-w-xs">
-              <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search products..."
-                className="w-full pl-8 pr-3 py-1.5 bg-[#0e1117] border border-[#2e303d] text-gray-300 text-xs rounded-lg focus:outline-none focus:border-blue-500/50 placeholder-gray-600"
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400">
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              )}
-            </div>
-            <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none whitespace-nowrap">
-              <input
-                type="checkbox"
-                checked={showZeroRequested}
-                onChange={e => setShowZeroRequested(e.target.checked)}
-                className="rounded border-[#2e303d] bg-[#0e1117] text-blue-500 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
-              />
-              Show sold (0 ordered)
-            </label>
+          {/* Search bar */}
+          <div className="relative mb-4 max-w-xs">
+            <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search products..."
+              className="w-full pl-8 pr-3 py-1.5 bg-[#0e1117] border border-[#2e303d] text-gray-300 text-xs rounded-lg focus:outline-none focus:border-blue-500/50 placeholder-gray-600"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            )}
           </div>
           {sheetsSuccess && (
             <p className="text-xs text-green-400 mb-3">{sheetsSuccess}</p>

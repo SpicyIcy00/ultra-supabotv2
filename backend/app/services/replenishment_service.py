@@ -751,8 +751,10 @@ class ReplenishmentService:
                     else:                                    # Sat–Sun
                         requested_ship_qty = math.ceil(requested_ship_qty * (1 + buffer_weekend))
 
-            # Skip products that don't need replenishment
-            if requested_ship_qty == 0:
+            # Skip products with no sales activity at all — they carry no useful signal.
+            # Items with sales but 0 requested (well-stocked) are kept so the dashboard
+            # can show why they were given 0.
+            if requested_ship_qty == 0 and total_sold_qty == 0 and avg_daily_sales == 0:
                 continue
 
             # Days of stock
