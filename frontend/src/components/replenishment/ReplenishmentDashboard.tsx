@@ -41,8 +41,8 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
   const [calcMode, setCalcMode] = useState<'snapshot' | 'fallback' | 'auto'>('snapshot');
   const [applyStockoutBuffer, setApplyStockoutBuffer] = useState(false);
-  const [customStartEnabled, setCustomStartEnabled] = useState(false);
-  const [salesStartDate, setSalesStartDate] = useState<string>('');
+  const [asOfEnabled, setAsOfEnabled] = useState(false);
+  const [asOfDate, setAsOfDate] = useState<string>('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [pendingDate, setPendingDate] = useState<Date | null>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
@@ -117,8 +117,8 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
       setError('Please select a store before running.');
       return;
     }
-    if (customStartEnabled && !salesStartDate) {
-      setError('Please pick a start date for the custom sales window, or uncheck it.');
+    if (asOfEnabled && !asOfDate) {
+      setError('Please pick a date to run as of, or uncheck it.');
       return;
     }
     setIsRunning(true);
@@ -128,7 +128,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
         undefined,
         selectedStoreId,
         applyStockoutBuffer,
-        customStartEnabled && salesStartDate ? salesStartDate : undefined,
+        asOfEnabled && asOfDate ? asOfDate : undefined,
         calcMode,
       );
       setRunResult(result);
@@ -372,27 +372,27 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
             <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none">
               <input
                 type="checkbox"
-                checked={customStartEnabled}
+                checked={asOfEnabled}
                 onChange={(e) => {
-                  setCustomStartEnabled(e.target.checked);
-                  if (!e.target.checked) setSalesStartDate('');
+                  setAsOfEnabled(e.target.checked);
+                  if (!e.target.checked) setAsOfDate('');
                 }}
                 className="rounded border-[#2e303d] bg-[#0e1117] text-blue-500 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
               />
-              Custom sales window
+              Run as of date
             </label>
-            {customStartEnabled && (
+            {asOfEnabled && (
               <div className="relative flex items-center gap-2" ref={datePickerRef}>
                 <button
                   type="button"
                   onClick={() => setShowDatePicker((v) => !v)}
                   className="bg-[#0e1117] border border-[#2e303d] rounded-lg px-3 py-2 text-sm text-white hover:border-blue-500/50 transition-colors"
                 >
-                  {salesStartDate
-                    ? new Date(salesStartDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                    : 'Pick start date'}
+                  {asOfDate
+                    ? new Date(asOfDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    : 'Pick date'}
                 </button>
-                <span className="text-xs text-gray-500">→ today</span>
+                <span className="text-xs text-gray-500">sales: −28 days → this date</span>
                 {showDatePicker && (
                   <div className="absolute top-full left-0 mt-2 z-50">
                     <SingleDatePicker
@@ -401,12 +401,12 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                       onSelect={(d) => setPendingDate(d)}
                       onClear={() => {
                         setPendingDate(null);
-                        setSalesStartDate('');
+                        setAsOfDate('');
                       }}
                       onCancel={() => setShowDatePicker(false)}
                       onApply={() => {
                         if (pendingDate) {
-                          setSalesStartDate(pendingDate.toISOString().split('T')[0]);
+                          setAsOfDate(pendingDate.toISOString().split('T')[0]);
                         }
                         setShowDatePicker(false);
                       }}
@@ -445,7 +445,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
             </select>
             <button
               onClick={handleRun}
-              disabled={isRunning || !selectedStoreId || (customStartEnabled && !salesStartDate)}
+              disabled={isRunning || !selectedStoreId || (asOfEnabled && !asOfDate)}
               className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
             >
               {isRunning ? (

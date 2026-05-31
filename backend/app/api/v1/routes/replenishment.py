@@ -36,13 +36,13 @@ async def run_replenishment(
     store_id: Optional[str] = Query(None),
     apply_stockout_buffer: bool = Query(True),
     normalize_priority: bool = Query(True),
-    sales_start_date: Optional[date] = Query(None),
+    as_of_date: Optional[date] = Query(None, description="Replay calculation as of this date (inventory + sales window end)"),
     mode: Optional[str] = Query(None, description="snapshot | fallback | auto"),
     service: ReplenishmentService = Depends(_get_service),
 ):
     """Run the replenishment calculation, optionally filtered to a single store."""
     result = await service.run_replenishment_calculation(
-        run_date, store_id, apply_stockout_buffer, normalize_priority, sales_start_date, mode
+        run_date, store_id, apply_stockout_buffer, normalize_priority, as_of_date, mode
     )
     return result
 

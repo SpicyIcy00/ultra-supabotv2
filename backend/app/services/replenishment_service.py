@@ -249,7 +249,7 @@ class ReplenishmentService:
 
     async def _batch_get_daily_sales(
         self, lookback_days: int = 28, store_id: Optional[str] = None,
-        sales_start_date: Optional[date] = None,
+        as_of_date: Optional[date] = None,
     ) -> Dict[Tuple[str, str], Tuple[float, int]]:
         """Unified batch velocity — one query, no mode switching.
 
@@ -260,7 +260,8 @@ class ReplenishmentService:
         Returns Dict[(store_id, sku_id)] -> (velocity, total_sold_qty)
         velocity = total_units_sold / active_days
         """
-        cutoff = sales_start_date if sales_start_date is not None else date.today() - timedelta(days=lookback_days)
+        upper  = as_of_date if as_of_date is not None else date.today()
+        cutoff = upper - timedelta(days=lookback_days)
         snap_filter = "AND snap.store_id = :store_id" if store_id else ""
         txn_filter  = "AND t.store_id = :store_id"   if store_id else ""
 
@@ -272,7 +273,7 @@ class ReplenishmentService:
                        0::float           AS qty
                 FROM inventory_snapshots snap
                 WHERE snap.snapshot_date >= :cutoff
-                  AND snap.snapshot_date < CURRENT_DATE
+                  AND snap.snapshot_date < :upper
                   AND snap.quantity_on_hand > 0
                   {snap_filter}
 
@@ -285,7 +286,7 @@ class ReplenishmentService:
                 FROM new_transactions t
                 JOIN new_transaction_items ti ON ti.transaction_ref_id = t.ref_id
                 WHERE DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') >= :cutoff
-                  AND DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') < CURRENT_DATE
+                  AND DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') < :upper
                   AND t.is_cancelled = false
                   {txn_filter}
             )
@@ -297,7 +298,7 @@ class ReplenishmentService:
             GROUP BY store_id, product_id
             HAVING SUM(qty) > 0
         """)
-        params: Dict[str, Any] = {"cutoff": cutoff}
+        params: Dict[str, Any] = {"cutoff": cutoff, "upper": upper}
         if store_id:
             params["store_id"] = store_id
         result = await self.db.execute(query, params)
@@ -311,11 +312,12 @@ class ReplenishmentService:
 
     async def _batch_get_dead_days(
         self, lookback_days: int = 28, store_id: Optional[str] = None,
-        sales_start_date: Optional[date] = None,
+        as_of_date: Optional[date] = None,
     ) -> Dict[Tuple[str, str], int]:
         """Count snapshot days per SKU where stock <= 0 AND no sale occurred.
         These are true dead days — the product was out of stock and didn't sell."""
-        cutoff = sales_start_date if sales_start_date is not None else date.today() - timedelta(days=lookback_days)
+        upper  = as_of_date if as_of_date is not None else date.today()
+        cutoff = upper - timedelta(days=lookback_days)
         snap_filter = "AND snap.store_id = :store_id" if store_id else ""
         txn_filter  = "AND t.store_id = :store_id"   if store_id else ""
 
@@ -332,19 +334,19 @@ class ReplenishmentService:
                 JOIN new_transaction_items ti ON ti.transaction_ref_id = t.ref_id
                 WHERE t.is_cancelled = false
                   AND DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') >= :cutoff
-                  AND DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') < CURRENT_DATE
+                  AND DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') < :upper
                   {txn_filter}
             ) sales ON sales.store_id = snap.store_id
                    AND sales.product_id = snap.product_id
                    AND sales.sale_date = snap.snapshot_date
             WHERE snap.snapshot_date >= :cutoff
-              AND snap.snapshot_date < CURRENT_DATE
+              AND snap.snapshot_date < :upper
               AND snap.quantity_on_hand <= 0
               AND sales.sale_date IS NULL
               {snap_filter}
             GROUP BY snap.store_id, snap.product_id
         """)
-        params: Dict[str, Any] = {"cutoff": cutoff}
+        params: Dict[str, Any] = {"cutoff": cutoff, "upper": upper}
         if store_id:
             params["store_id"] = store_id
         result = await self.db.execute(query, params)
@@ -352,16 +354,13 @@ class ReplenishmentService:
 
     async def _batch_get_daily_sales_fallback(
         self, lookback_days: int = 28, store_id: Optional[str] = None,
-        sales_start_date: Optional[date] = None,
+        as_of_date: Optional[date] = None,
     ) -> Dict[Tuple[str, str], Tuple[float, int]]:
         """Simple fallback: total_sold / lookback_days with no stock filtering.
         Used when snapshot_enabled = False in algorithm settings."""
-        if sales_start_date is not None:
-            cutoff = sales_start_date
-            actual_days = max(1, (date.today() - sales_start_date).days)
-        else:
-            cutoff = date.today() - timedelta(days=lookback_days)
-            actual_days = lookback_days
+        upper      = as_of_date if as_of_date is not None else date.today()
+        cutoff     = upper - timedelta(days=lookback_days)
+        actual_days = lookback_days
 
         txn_filter = "AND t.store_id = :store_id" if store_id else ""
         query = text(f"""
@@ -371,12 +370,12 @@ class ReplenishmentService:
             FROM new_transactions t
             JOIN new_transaction_items ti ON t.ref_id = ti.transaction_ref_id
             WHERE t.transaction_time >= :cutoff
-              AND t.transaction_time < CURRENT_DATE
+              AND t.transaction_time < :upper
               AND t.is_cancelled = false
               {txn_filter}
             GROUP BY t.store_id, ti.product_id
         """)
-        params: Dict[str, Any] = {"cutoff": cutoff}
+        params: Dict[str, Any] = {"cutoff": cutoff, "upper": upper}
         if store_id:
             params["store_id"] = store_id
         result = await self.db.execute(query, params)
@@ -388,7 +387,7 @@ class ReplenishmentService:
 
     async def _batch_get_daily_sales_auto(
         self, lookback_days: int = 28, store_id: Optional[str] = None,
-        sales_start_date: Optional[date] = None,
+        as_of_date: Optional[date] = None,
     ) -> Dict[Tuple[str, str], Tuple[float, int]]:
         """Per-SKU adaptive velocity (Auto mode).
 
@@ -398,12 +397,9 @@ class ReplenishmentService:
           - in_stock_days < MIN_SNAPSHOT_DAYS  → fallback formula:
               velocity = total_units_sold / lookback_days
         """
-        if sales_start_date is not None:
-            cutoff = sales_start_date
-            actual_days = max(1, (date.today() - sales_start_date).days)
-        else:
-            cutoff = date.today() - timedelta(days=lookback_days)
-            actual_days = lookback_days
+        upper       = as_of_date if as_of_date is not None else date.today()
+        cutoff      = upper - timedelta(days=lookback_days)
+        actual_days = lookback_days
 
         snap_filter = "AND snap.store_id = :store_id" if store_id else ""
         txn_filter  = "AND t.store_id = :store_id"   if store_id else ""
@@ -413,7 +409,7 @@ class ReplenishmentService:
                 SELECT snap.store_id, snap.product_id, snap.snapshot_date
                 FROM inventory_snapshots snap
                 WHERE snap.snapshot_date >= :cutoff
-                  AND snap.snapshot_date < CURRENT_DATE
+                  AND snap.snapshot_date < :upper
                   AND snap.quantity_on_hand > 0
                   {snap_filter}
             ),
@@ -439,7 +435,7 @@ class ReplenishmentService:
                 FROM new_transactions t
                 JOIN new_transaction_items ti ON ti.transaction_ref_id = t.ref_id
                 WHERE DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') >= :cutoff
-                  AND DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') < CURRENT_DATE
+                  AND DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') < :upper
                   AND t.is_cancelled = false
                   {txn_filter}
                 GROUP BY t.store_id, ti.product_id
@@ -455,7 +451,7 @@ class ReplenishmentService:
             WHERE COALESCE(st.total_sold, 0) > 0
                OR COALESCE(si.sold_in_stock, 0) > 0
         """)
-        params: Dict[str, Any] = {"cutoff": cutoff}
+        params: Dict[str, Any] = {"cutoff": cutoff, "upper": upper}
         if store_id:
             params["store_id"] = store_id
 
@@ -511,13 +507,14 @@ class ReplenishmentService:
         store_id: Optional[str] = None,
         apply_stockout_buffer: bool = True,
         normalize_priority: bool = True,
-        sales_start_date: Optional[date] = None,
+        as_of_date: Optional[date] = None,
         mode: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Execute the replenishment calculation, optionally filtered to a single store.
 
-        sales_start_date: if provided, the sales lookback window starts from this date
-        instead of the default 28 days before today.
+        as_of_date: if provided, replays the calculation as it would have looked on that
+        date — inventory from that date's snapshot, sales from (as_of_date - 28 days)
+        to as_of_date.
         """
         if run_date is None:
             run_date = date.today()
@@ -558,9 +555,9 @@ class ReplenishmentService:
         }
 
         # Get store-SKU combinations with inventory (products that track stock).
-        # When a custom sales_start_date is given, pull on-hand from snapshots for
-        # that date so the calculation is fully grounded in that point in time.
-        if sales_start_date is not None:
+        # When as_of_date is given, pull on-hand from snapshots for that date
+        # so the calculation is fully grounded in that point in time.
+        if as_of_date is not None:
             store_filter = "AND snap.store_id = :store_id" if store_id else ""
             store_sku_query = text(f"""
                 SELECT DISTINCT snap.store_id, snap.product_id, snap.quantity_on_hand
@@ -573,7 +570,7 @@ class ReplenishmentService:
             """)
             params: Dict[str, Any] = {
                 "wh_store_id": WAREHOUSE_STORE_ID,
-                "snapshot_date": sales_start_date,
+                "snapshot_date": as_of_date,
             }
         else:
             store_filter = "AND i.store_id = :store_id" if store_id else ""
@@ -612,7 +609,7 @@ class ReplenishmentService:
         # Pre-load warehouse (AJI BARN) inventory.
         # Use snapshot for the selected date when a custom window is active.
         wh_cache: Dict[str, int] = {}
-        if sales_start_date is not None:
+        if as_of_date is not None:
             wh_query = text("""
                 SELECT product_id, quantity_on_hand
                 FROM inventory_snapshots
@@ -621,7 +618,7 @@ class ReplenishmentService:
             """)
             wh_result = await self.db.execute(wh_query, {
                 "wh_store_id": WAREHOUSE_STORE_ID,
-                "snapshot_date": sales_start_date,
+                "snapshot_date": as_of_date,
             })
         else:
             wh_query = text("""
@@ -643,21 +640,21 @@ class ReplenishmentService:
         # Fetch velocity based on resolved mode
         if calc_mode == "snapshot":
             sales_cache = await self._batch_get_daily_sales(
-                store_id=store_id, sales_start_date=sales_start_date
+                store_id=store_id, as_of_date=as_of_date
             )
             dead_days_cache = await self._batch_get_dead_days(
-                store_id=store_id, sales_start_date=sales_start_date
+                store_id=store_id, as_of_date=as_of_date
             )
         elif calc_mode == "auto":
             sales_cache = await self._batch_get_daily_sales_auto(
-                store_id=store_id, sales_start_date=sales_start_date
+                store_id=store_id, as_of_date=as_of_date
             )
             dead_days_cache = await self._batch_get_dead_days(
-                store_id=store_id, sales_start_date=sales_start_date
+                store_id=store_id, as_of_date=as_of_date
             )
         else:  # fallback
             sales_cache = await self._batch_get_daily_sales_fallback(
-                store_id=store_id, sales_start_date=sales_start_date
+                store_id=store_id, as_of_date=as_of_date
             )
             dead_days_cache = {}
 
