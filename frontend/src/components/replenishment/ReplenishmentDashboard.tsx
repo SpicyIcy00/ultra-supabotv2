@@ -49,6 +49,8 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const [postingToSheets, setPostingToSheets] = useState(false);
   const [sheetsSuccess, setSheetsSuccess] = useState<string | null>(null);
   const [sheetsError, setSheetsError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showZeroRequested, setShowZeroRequested] = useState(false);
 
   // AI Reasoning Mode
   const [dashMode, setDashMode] = useState<'standard' | 'ai-reasoning'>('standard');
@@ -172,7 +174,26 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   };
 
   const filteredAndSorted = (items: ShipmentPlanResponse['items']) => {
-    return [...items].sort((a, b) => {
+    let filtered = items;
+
+    // Default: only items that need shipping. Checkbox: also show items with sales but 0 ordered.
+    if (!showZeroRequested) {
+      filtered = filtered.filter(item => item.requested_ship_qty > 0);
+    } else {
+      filtered = filtered.filter(item =>
+        item.requested_ship_qty > 0 || (item.total_sold_qty ?? 0) > 0 || item.avg_daily_sales > 0
+      );
+    }
+
+    // Search filter — works on already-loaded items, no API call needed
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      filtered = filtered.filter(item =>
+        (item.product_name ?? '').toLowerCase().includes(q)
+      );
+    }
+
+    return [...filtered].sort((a, b) => {
       const catA = (a.category ?? '').toLowerCase();
       const catB = (b.category ?? '').toLowerCase();
       if (catA !== catB) return catA.localeCompare(catB);
@@ -558,9 +579,17 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
       {/* Shipment Plan Table */}
       {latestPlan && latestPlan.items.length > 0 && (
         <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
+          {/* Row 1: title + action buttons */}
+          <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-300">
-              Shipment Plan ({latestPlan.items.length} items)
+              Shipment Plan
+              <span className="ml-1.5 text-gray-500 font-normal">
+                ({filteredAndSorted(latestPlan.items).length}
+                {filteredAndSorted(latestPlan.items).length !== latestPlan.items.length && (
+                  <span className="text-gray-600"> of {latestPlan.items.length}</span>
+                )}
+                {' '}items)
+              </span>
             </h3>
             <div className="flex items-center gap-2 flex-wrap">
               <button
@@ -590,6 +619,35 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                 )}
               </button>
             </div>
+          </div>
+          {/* Row 2: search + show-all checkbox */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="relative flex-1 max-w-xs">
+              <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search products..."
+                className="w-full pl-8 pr-3 py-1.5 bg-[#0e1117] border border-[#2e303d] text-gray-300 text-xs rounded-lg focus:outline-none focus:border-blue-500/50 placeholder-gray-600"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400">
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              )}
+            </div>
+            <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none whitespace-nowrap">
+              <input
+                type="checkbox"
+                checked={showZeroRequested}
+                onChange={e => setShowZeroRequested(e.target.checked)}
+                className="rounded border-[#2e303d] bg-[#0e1117] text-blue-500 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+              />
+              Show sold (0 ordered)
+            </label>
           </div>
           {sheetsSuccess && (
             <p className="text-xs text-green-400 mb-3">{sheetsSuccess}</p>
