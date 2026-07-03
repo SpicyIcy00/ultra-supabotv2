@@ -74,7 +74,7 @@ class InsightGenerator:
         
         def _sync_call():
             message = self.client.messages.create(
-                model="claude-sonnet-4-20250514",  # Fast model for insights
+                model="claude-sonnet-4-5",  # Fast model for insights
                 max_tokens=500,
                 temperature=0.3,  # Slight creativity for insights
                 messages=[{

@@ -259,7 +259,7 @@ class SQLGenerator:
 
         def _sync_call():
             message = self.client.messages.create(
-                model="claude-sonnet-4-20250514",  # Using Sonnet 4.5
+                model="claude-sonnet-4-5",  # Using Sonnet 4.5
                 max_tokens=2048,
                 temperature=0,  # Deterministic for SQL generation
                 messages=[{
