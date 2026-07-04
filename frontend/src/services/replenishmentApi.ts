@@ -13,6 +13,7 @@ import type {
   VelocityMultiplierRule,
   CategoryMultiplier,
   AIReasoningResponse,
+  CompareResponse,
 } from '../types/replenishment';
 
 const API_BASE = '/api/v1/replenishment';
@@ -25,6 +26,7 @@ export const runReplenishment = async (
   applyStockoutBuffer: boolean = true,
   asOfDate?: string,
   mode?: 'snapshot' | 'fallback' | 'auto',
+  algorithm?: 'legacy' | 'percentile',
 ): Promise<ReplenishmentRunResponse> => {
   const params: Record<string, string> = {};
   if (runDate) params.run_date = runDate;
@@ -32,7 +34,14 @@ export const runReplenishment = async (
   params.apply_stockout_buffer = String(applyStockoutBuffer);
   if (asOfDate) params.as_of_date = asOfDate;
   if (mode) params.mode = mode;
+  if (algorithm) params.algorithm = algorithm;
   const response = await axios.post<ReplenishmentRunResponse>(`${API_BASE}/run`, null, { params });
+  return response.data;
+};
+
+export const getCompare = async (runDate?: string): Promise<CompareResponse> => {
+  const params = runDate ? { run_date: runDate } : {};
+  const response = await axios.get<CompareResponse>(`${API_BASE}/compare`, { params });
   return response.data;
 };
 

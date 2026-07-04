@@ -292,5 +292,85 @@ class AlgorithmSettingsResponse(BaseModel):
     updated_at: Optional[str] = None
 
 
+# --- Percentile Run Response ---
+
+class PercentileRunResponse(BaseModel):
+    run_date: date
+    algorithm: str
+    total_items: int
+    stores_processed: int
+    exceptions_count: int
+    summary: ShipmentPlanSummary
+
+
+# --- Percentile Shipment Item (extends base with percentile fields) ---
+
+class PercentileShipmentItem(BaseModel):
+    store_id: str
+    store_name: Optional[str] = None
+    sku_id: str
+    product_name: Optional[str] = None
+    category: Optional[str] = None
+    # Core demand metrics
+    avg_daily_sales: float
+    total_sold_qty: int
+    # Target (stored in min_level column)
+    target: float
+    on_hand: int
+    usable_on_hand: int
+    ship_qty: int
+    days_of_stock: float
+    priority_score: float
+    # Percentile metadata
+    abc_class: Optional[str] = None
+    service_quantile: Optional[float] = None
+    segment: Optional[str] = None
+    needs_count: Optional[bool] = None
+    silent_stockout: Optional[bool] = None
+    days_since_last_sale: Optional[int] = None
+    trusted_ledger: Optional[bool] = None
+    calculation_mode: str = "percentile"
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- Compare Response ---
+
+class CompareItem(BaseModel):
+    store_id: str
+    store_name: Optional[str] = None
+    sku_id: str
+    product_name: Optional[str] = None
+    product_sku: Optional[str] = None
+    category: Optional[str] = None
+    on_hand: Optional[int] = None
+    # Legacy outputs
+    legacy_ship_qty: Optional[int] = None
+    legacy_target: Optional[float] = None
+    legacy_days_of_stock: Optional[float] = None
+    # Percentile outputs
+    percentile_ship_qty: Optional[int] = None
+    percentile_target: Optional[float] = None
+    percentile_days_of_stock: Optional[float] = None
+    # Percentile metadata
+    abc_class: Optional[str] = None
+    service_quantile: Optional[float] = None
+    segment: Optional[str] = None
+    silent_stockout: Optional[bool] = None
+    needs_count: Optional[bool] = None
+    days_since_last_sale: Optional[int] = None
+    trusted_ledger: Optional[bool] = None
+    # Derived
+    diff: Optional[int] = None  # percentile_ship_qty - legacy_ship_qty
+
+
+class CompareResponse(BaseModel):
+    run_date: Optional[date] = None
+    legacy_run_date: Optional[date] = None
+    percentile_run_date: Optional[date] = None
+    items: List[CompareItem]
+    summary: dict
+
+
 # Rebuild forward refs
 ShipmentPlanResponse.model_rebuild()

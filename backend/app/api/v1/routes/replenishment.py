@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.config import settings
 from app.services.replenishment_service import ReplenishmentService
+from app.services.percentile_service import PercentileReplenishmentService
 from app.services.ai_insights_service import AIInsightsService
 from app.schemas.replenishment import (
     StoreTierCreate,
@@ -26,6 +27,10 @@ def _get_service(db: AsyncSession = Depends(get_db)) -> ReplenishmentService:
     return ReplenishmentService(db)
 
 
+def _get_percentile_service(db: AsyncSession = Depends(get_db)) -> PercentileReplenishmentService:
+    return PercentileReplenishmentService(db)
+
+
 # ----------------------------------------------------------------
 # Main Operations
 # ----------------------------------------------------------------
@@ -38,13 +43,28 @@ async def run_replenishment(
     normalize_priority: bool = Query(True),
     as_of_date: Optional[date] = Query(None, description="Replay calculation as of this date (inventory + sales window end)"),
     mode: Optional[str] = Query(None, description="snapshot | fallback | auto"),
+    algorithm: Optional[str] = Query(None, description="legacy (default) | percentile"),
     service: ReplenishmentService = Depends(_get_service),
+    percentile_service: PercentileReplenishmentService = Depends(_get_percentile_service),
 ):
-    """Run the replenishment calculation, optionally filtered to a single store."""
+    """Run the replenishment calculation. algorithm=percentile uses the 84-day rolling quantile model."""
+    if algorithm == "percentile":
+        effective_date = run_date or date.today()
+        result = await percentile_service.run(effective_date)
+        return result
     result = await service.run_replenishment_calculation(
         run_date, store_id, apply_stockout_buffer, normalize_priority, as_of_date, mode
     )
     return result
+
+
+@router.get("/compare")
+async def get_compare(
+    run_date: Optional[date] = Query(None, description="Compare plans for this date; defaults to most recent percentile run"),
+    percentile_service: PercentileReplenishmentService = Depends(_get_percentile_service),
+):
+    """Side-by-side comparison of legacy vs percentile plans for the same run_date."""
+    return await percentile_service.get_compare(run_date)
 
 
 @router.get("/latest")

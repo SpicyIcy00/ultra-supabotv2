@@ -658,8 +658,11 @@ class ReplenishmentService:
             )
             dead_days_cache = {}
 
-        # Delete previous plans for this run_date (and store if filtered)
-        delete_q = delete(ShipmentPlan).where(ShipmentPlan.run_date == run_date)
+        # Delete previous LEGACY plans for this run_date (and store if filtered)
+        delete_q = delete(ShipmentPlan).where(
+            ShipmentPlan.run_date == run_date,
+            ShipmentPlan.algorithm == "legacy",
+        )
         if store_id:
             delete_q = delete_q.where(ShipmentPlan.store_id == store_id)
         await self.db.execute(delete_q)
@@ -776,6 +779,7 @@ class ReplenishmentService:
                 run_date=run_date,
                 store_id=store_id,
                 sku_id=sku_id,
+                algorithm="legacy",
                 avg_daily_sales=round(avg_daily_sales, 4),
                 total_sold_qty=total_sold_qty,
                 dead_days=dead_days,

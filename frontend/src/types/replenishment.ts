@@ -171,6 +171,71 @@ export interface AlgorithmSettings {
   updated_at?: string | null;
 }
 
+// --- Percentile Algorithm ---
+
+export interface PercentileShipmentItem {
+  store_id: string;
+  store_name?: string;
+  sku_id: string;
+  product_name?: string;
+  category?: string;
+  avg_daily_sales: number;
+  total_sold_qty: number;
+  target: number;
+  on_hand: number;
+  usable_on_hand: number;
+  ship_qty: number;
+  days_of_stock: number;
+  priority_score: number;
+  abc_class?: string | null;
+  service_quantile?: number | null;
+  segment?: string | null;
+  needs_count?: boolean | null;
+  silent_stockout?: boolean | null;
+  days_since_last_sale?: number | null;
+  trusted_ledger?: boolean | null;
+  calculation_mode: string;
+}
+
+export interface CompareItem {
+  store_id: string;
+  store_name?: string;
+  sku_id: string;
+  product_name?: string;
+  product_sku?: string;
+  category?: string;
+  on_hand?: number | null;
+  legacy_ship_qty?: number | null;
+  legacy_target?: number | null;
+  legacy_days_of_stock?: number | null;
+  percentile_ship_qty?: number | null;
+  percentile_target?: number | null;
+  percentile_days_of_stock?: number | null;
+  abc_class?: string | null;
+  service_quantile?: number | null;
+  segment?: string | null;
+  silent_stockout?: boolean | null;
+  needs_count?: boolean | null;
+  days_since_last_sale?: number | null;
+  trusted_ledger?: boolean | null;
+  diff?: number | null;
+}
+
+export interface CompareResponse {
+  run_date?: string | null;
+  legacy_run_date?: string | null;
+  percentile_run_date?: string | null;
+  items: CompareItem[];
+  summary: {
+    total_items: number;
+    both_algorithms: number;
+    legacy_only: number;
+    percentile_only: number;
+    total_percentile_units: number;
+    total_legacy_units: number;
+  };
+}
+
 // --- AI Reasoning Mode ---
 export interface AIReasoningItem {
   sku_id: string;

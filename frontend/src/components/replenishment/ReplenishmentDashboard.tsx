@@ -9,6 +9,7 @@ import {
   getDataReadiness,
   getStoreTiers,
   getAIReasoning,
+  getCompare,
 } from '../../services/replenishmentApi';
 import { postReplenishmentToSheets, postReplenishmentBackupToSheets } from '../../services/reportApi';
 import type {
@@ -18,6 +19,7 @@ import type {
   DataReadiness,
   StoreTier,
   AIReasoningItem,
+  CompareResponse,
 } from '../../types/replenishment';
 
 interface Props {
@@ -52,8 +54,16 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showZeroRequested, setShowZeroRequested] = useState(false);
 
+  // Algorithm selector (affects Run button)
+  const [algorithmType, setAlgorithmType] = useState<'legacy' | 'percentile'>('legacy');
+
+  // Compare view
+  const [compareData, setCompareData] = useState<CompareResponse | null>(null);
+  const [compareLoading, setCompareLoading] = useState(false);
+  const [compareError, setCompareError] = useState<string | null>(null);
+
   // AI Reasoning Mode
-  const [dashMode, setDashMode] = useState<'standard' | 'ai-reasoning'>('standard');
+  const [dashMode, setDashMode] = useState<'standard' | 'ai-reasoning' | 'compare'>('standard');
   const [aiReasoning, setAiReasoning] = useState<Map<string, AIReasoningItem>>(new Map());
   const [aiReasoningLoading, setAiReasoningLoading] = useState(false);
   const [aiReasoningError, setAiReasoningError] = useState<string | null>(null);
@@ -115,11 +125,11 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   };
 
   const handleRun = async () => {
-    if (!selectedStoreId) {
+    if (algorithmType === 'legacy' && !selectedStoreId) {
       setError('Please select a store before running.');
       return;
     }
-    if (asOfEnabled && !asOfDate) {
+    if (algorithmType === 'legacy' && asOfEnabled && !asOfDate) {
       setError('Please pick a date to run as of, or uncheck it.');
       return;
     }
@@ -128,10 +138,11 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
     try {
       const result = await runReplenishment(
         undefined,
-        selectedStoreId,
+        algorithmType === 'legacy' ? selectedStoreId : undefined,
         applyStockoutBuffer,
         asOfEnabled && asOfDate ? asOfDate : undefined,
-        calcMode,
+        algorithmType === 'legacy' ? calcMode : undefined,
+        algorithmType,
       );
       setRunResult(result);
       await loadPlanData();
@@ -162,6 +173,20 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
       setAiReasoningError(err?.response?.data?.detail || 'AI Reasoning analysis failed');
     } finally {
       setAiReasoningLoading(false);
+    }
+  };
+
+  const handleCompare = async () => {
+    setCompareLoading(true);
+    setCompareError(null);
+    try {
+      const result = await getCompare();
+      setCompareData(result);
+      setDashMode('compare');
+    } catch (err: any) {
+      setCompareError(err?.response?.data?.detail || 'Failed to load comparison data');
+    } finally {
+      setCompareLoading(false);
     }
   };
 
@@ -331,8 +356,8 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
       {/* Run Controls */}
       <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6">
         {/* Mode toggle */}
-        <div className="flex items-center gap-2 mb-5">
-          <span className="text-xs text-gray-500 font-medium uppercase tracking-wider mr-1">Mode</span>
+        <div className="flex items-center gap-2 mb-5 flex-wrap">
+          <span className="text-xs text-gray-500 font-medium uppercase tracking-wider mr-1">View</span>
           <button
             onClick={() => setDashMode('standard')}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
@@ -353,10 +378,24 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
           >
             ✦ AI Reasoning
           </button>
+          <button
+            onClick={handleCompare}
+            disabled={compareLoading}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              dashMode === 'compare'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-[#0e1117] border border-[#2e303d] text-gray-400 hover:text-white'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            {compareLoading ? 'Loading…' : '⇆ Compare'}
+          </button>
           {dashMode === 'ai-reasoning' && (
             <span className="text-xs text-violet-400 bg-violet-900/30 border border-violet-700/40 px-2 py-0.5 rounded">
               Read-only · Claude reasons from raw snapshots only
             </span>
+          )}
+          {compareError && (
+            <span className="text-xs text-red-400">{compareError}</span>
           )}
         </div>
         <div className="flex items-center justify-between flex-wrap gap-4">
@@ -446,37 +485,55 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                 )}
               </div>
             )}
-            {/* Snapshot mode — right of checkboxes, left of store */}
+            {/* Algorithm selector */}
             <select
-              value={calcMode}
-              onChange={e => setCalcMode(e.target.value as 'snapshot' | 'fallback' | 'auto')}
+              value={algorithmType}
+              onChange={e => setAlgorithmType(e.target.value as 'legacy' | 'percentile')}
               className="bg-[#0e1117] border border-[#2e303d] text-gray-200 text-sm rounded-lg px-3 py-2.5 focus:border-blue-500 focus:outline-none"
             >
-              <option value="auto">Auto</option>
-              <option value="snapshot">Snapshot</option>
-              <option value="fallback">Fallback</option>
+              <option value="legacy">Legacy</option>
+              <option value="percentile">Percentile (v2)</option>
             </select>
-            {/* Store Dropdown — immediately left of Run button */}
-            <select
-              value={selectedStoreId}
-              onChange={(e) => setSelectedStoreId(e.target.value)}
-              className="bg-[#0e1117] border border-[#2e303d] text-gray-200 text-sm rounded-lg px-3 py-2.5 focus:border-blue-500 focus:outline-none"
-            >
-              <option value="">Select a store...</option>
-              {dashboardStores
-                .filter((s) => tiers.some((t) => t.store_id === s.id))
-                .map((s) => {
-                  const tier = tiers.find((t) => t.store_id === s.id)!;
-                  return (
-                    <option key={s.id} value={s.id}>
-                      {getStoreName(s.id)} (Tier {tier.tier})
-                    </option>
-                  );
-                })}
-            </select>
+            {/* Snapshot mode — right of checkboxes, left of store (hidden for percentile) */}
+            {algorithmType === 'legacy' && (
+              <select
+                value={calcMode}
+                onChange={e => setCalcMode(e.target.value as 'snapshot' | 'fallback' | 'auto')}
+                className="bg-[#0e1117] border border-[#2e303d] text-gray-200 text-sm rounded-lg px-3 py-2.5 focus:border-blue-500 focus:outline-none"
+              >
+                <option value="auto">Auto</option>
+                <option value="snapshot">Snapshot</option>
+                <option value="fallback">Fallback</option>
+              </select>
+            )}
+            {/* Store Dropdown — hidden for percentile (all 7 stores run together) */}
+            {algorithmType === 'legacy' && (
+              <select
+                value={selectedStoreId}
+                onChange={(e) => setSelectedStoreId(e.target.value)}
+                className="bg-[#0e1117] border border-[#2e303d] text-gray-200 text-sm rounded-lg px-3 py-2.5 focus:border-blue-500 focus:outline-none"
+              >
+                <option value="">Select a store...</option>
+                {dashboardStores
+                  .filter((s) => tiers.some((t) => t.store_id === s.id))
+                  .map((s) => {
+                    const tier = tiers.find((t) => t.store_id === s.id)!;
+                    return (
+                      <option key={s.id} value={s.id}>
+                        {getStoreName(s.id)} (Tier {tier.tier})
+                      </option>
+                    );
+                  })}
+              </select>
+            )}
+            {algorithmType === 'percentile' && (
+              <span className="text-xs text-emerald-400 bg-emerald-900/20 border border-emerald-700/40 px-2 py-1.5 rounded-lg">
+                All 7 retail stores
+              </span>
+            )}
             <button
               onClick={handleRun}
-              disabled={isRunning || !selectedStoreId || (asOfEnabled && !asOfDate)}
+              disabled={isRunning || (algorithmType === 'legacy' && (!selectedStoreId || (asOfEnabled && !asOfDate)))}
               className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
             >
               {isRunning ? (
@@ -829,6 +886,117 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Compare Table: legacy vs percentile side by side */}
+      {dashMode === 'compare' && compareData && compareData.items.length > 0 && (
+        <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-300">
+                Algorithm Comparison
+                <span className="ml-2 text-gray-500 font-normal">({compareData.items.length} items)</span>
+              </h3>
+              {compareData.run_date && (
+                <p className="text-xs text-gray-500 mt-0.5">Run date: {compareData.run_date}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-4 text-xs text-gray-400">
+              <span>Legacy total: <strong className="text-white">{compareData.summary.total_legacy_units.toLocaleString()}</strong></span>
+              <span>Percentile total: <strong className="text-emerald-400">{compareData.summary.total_percentile_units.toLocaleString()}</strong></span>
+            </div>
+          </div>
+          <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
+            <table className="w-full text-xs text-left">
+              <thead className="sticky top-0 z-10 bg-[#1c1e26]">
+                <tr className="border-b border-[#2e303d]">
+                  <th className="py-2 pr-3 font-medium text-gray-400 whitespace-nowrap">Product</th>
+                  <th className="py-2 px-3 font-medium text-gray-400 text-right whitespace-nowrap">On Hand</th>
+                  <th className="py-2 px-3 font-medium text-blue-400 text-right whitespace-nowrap">Legacy Ship</th>
+                  <th className="py-2 px-3 font-medium text-blue-400 text-right whitespace-nowrap">Legacy Target</th>
+                  <th className="py-2 px-3 font-medium text-emerald-400 text-right whitespace-nowrap">Pct Ship</th>
+                  <th className="py-2 px-3 font-medium text-emerald-400 text-right whitespace-nowrap">Pct Target</th>
+                  <th className="py-2 px-3 font-medium text-gray-400 text-right whitespace-nowrap">Diff</th>
+                  <th className="py-2 px-3 font-medium text-gray-400 text-right whitespace-nowrap">ABC</th>
+                  <th className="py-2 px-3 font-medium text-gray-400 text-right whitespace-nowrap">Segment</th>
+                  <th className="py-2 px-3 font-medium text-gray-400 text-right whitespace-nowrap">Flags</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  let lastCat = '';
+                  return compareData.items.map((item, idx) => {
+                    const cat = (item.category ?? '').toLowerCase();
+                    const isNewCat = cat !== lastCat;
+                    if (isNewCat) lastCat = cat;
+                    const diff = item.diff ?? null;
+                    return (
+                      <React.Fragment key={`${item.store_id}-${item.sku_id}`}>
+                        {isNewCat && (
+                          <tr>
+                            <td colSpan={10} className="pt-4 pb-1 px-0">
+                              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
+                                {item.category || 'Uncategorized'}
+                              </span>
+                            </td>
+                          </tr>
+                        )}
+                        <tr className={`border-b border-[#2e303d]/40 hover:bg-white/[0.02] ${idx % 2 === 0 ? '' : 'bg-white/[0.01]'}`}>
+                          <td className="py-2 pr-3 text-gray-200">
+                            <div>{item.product_name ?? item.sku_id}</div>
+                            {item.store_name && (
+                              <div className="text-[10px] text-gray-500">{item.store_name}</div>
+                            )}
+                          </td>
+                          <td className="py-2 px-3 text-right tabular-nums text-gray-400">{item.on_hand ?? '—'}</td>
+                          <td className="py-2 px-3 text-right tabular-nums text-blue-300">{item.legacy_ship_qty ?? '—'}</td>
+                          <td className="py-2 px-3 text-right tabular-nums text-gray-500">{item.legacy_target?.toFixed(0) ?? '—'}</td>
+                          <td className="py-2 px-3 text-right tabular-nums text-emerald-300 font-medium">{item.percentile_ship_qty ?? '—'}</td>
+                          <td className="py-2 px-3 text-right tabular-nums text-gray-500">{item.percentile_target?.toFixed(0) ?? '—'}</td>
+                          <td className={`py-2 px-3 text-right tabular-nums font-medium ${
+                            diff === null ? 'text-gray-600' :
+                            diff > 0 ? 'text-emerald-400' :
+                            diff < 0 ? 'text-red-400' : 'text-gray-500'
+                          }`}>
+                            {diff === null ? '—' : diff > 0 ? `+${diff}` : String(diff)}
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            {item.abc_class && (
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                item.abc_class === 'A' ? 'bg-amber-900/50 text-amber-300' :
+                                item.abc_class === 'B' ? 'bg-blue-900/50 text-blue-300' :
+                                'bg-gray-700 text-gray-400'
+                              }`}>{item.abc_class}</span>
+                            )}
+                          </td>
+                          <td className="py-2 px-3 text-right text-gray-500">{item.segment ?? '—'}</td>
+                          <td className="py-2 px-3 text-right">
+                            <div className="flex items-center gap-1 justify-end">
+                              {item.silent_stockout && (
+                                <span title="Silent stockout" className="text-orange-400 text-[10px] bg-orange-900/30 px-1 rounded">OOS</span>
+                              )}
+                              {item.needs_count && (
+                                <span title="Needs count" className="text-yellow-400 text-[10px] bg-yellow-900/30 px-1 rounded">CNT</span>
+                              )}
+                              {item.trusted_ledger === false && (
+                                <span title="Untrusted ledger" className="text-gray-500 text-[10px] bg-gray-800 px-1 rounded">?</span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      </React.Fragment>
+                    );
+                  });
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      {dashMode === 'compare' && compareData && compareData.items.length === 0 && (
+        <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-8 text-center">
+          <p className="text-gray-400 text-sm">No comparison data found. Run both algorithms first.</p>
         </div>
       )}
     </div>

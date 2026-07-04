@@ -2,7 +2,7 @@ from datetime import date, datetime
 from typing import Optional
 from sqlalchemy import (
     String, Integer, Numeric, Date, DateTime, Boolean,
-    ForeignKey, Index, func
+    ForeignKey, Index, UniqueConstraint, func
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
@@ -206,6 +206,16 @@ class ShipmentPlan(Base):
 
     # Metadata
     calculation_mode: Mapped[str] = mapped_column(String(20), nullable=False, default="fallback")
+    algorithm: Mapped[str] = mapped_column(String(20), nullable=False, server_default="legacy", default="legacy")
+
+    # Percentile-algorithm fields (NULL for legacy rows)
+    abc_class: Mapped[Optional[str]] = mapped_column(String(1), nullable=True)
+    service_quantile: Mapped[Optional[float]] = mapped_column(Numeric(5, 2), nullable=True)
+    segment: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    needs_count: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    silent_stockout: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    days_since_last_sale: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    trusted_ledger: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -238,6 +248,21 @@ class AlgorithmSettings(Base):
         DateTime(timezone=True),
         server_default=func.timezone('Asia/Manila', func.now()),
         onupdate=func.timezone('Asia/Manila', func.now())
+    )
+
+
+class ServiceOverride(Base):
+    """Per-(store, product) service-level quantile override driven by the feedback loop."""
+    __tablename__ = "service_overrides"
+
+    store_id: Mapped[str] = mapped_column(String(24), primary_key=True)
+    product_id: Mapped[str] = mapped_column(String(24), primary_key=True)
+    quantile_override: Mapped[float] = mapped_column(Numeric(4, 2), nullable=False)
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.timezone("Asia/Manila", func.now()),
+        onupdate=func.timezone("Asia/Manila", func.now()),
     )
 
 
