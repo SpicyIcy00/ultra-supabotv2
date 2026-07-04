@@ -64,7 +64,24 @@ async def get_compare(
     percentile_service: PercentileReplenishmentService = Depends(_get_percentile_service),
 ):
     """Side-by-side comparison of legacy vs percentile plans for the same run_date."""
-    return await percentile_service.get_compare(run_date)
+    try:
+        return await percentile_service.get_compare(run_date)
+    except Exception:
+        # Column may not exist yet (migration pending) or no percentile run done yet
+        return {
+            "run_date": None,
+            "legacy_run_date": None,
+            "percentile_run_date": None,
+            "items": [],
+            "summary": {
+                "total_items": 0,
+                "both_algorithms": 0,
+                "legacy_only": 0,
+                "percentile_only": 0,
+                "total_percentile_units": 0,
+                "total_legacy_units": 0,
+            },
+        }
 
 
 @router.get("/latest")
