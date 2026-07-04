@@ -9,12 +9,20 @@ import math
 from datetime import date, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
-import numpy as np
-import pandas as pd
 from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.replenishment import ServiceOverride, ShipmentPlan
+
+# Lazy imports — only needed when the percentile algorithm actually runs.
+# The app starts cleanly even if numpy/pandas are not yet installed in the
+# container image; a clear error is raised only when the endpoint is called.
+try:
+    import numpy as np
+    import pandas as pd
+    _PANDAS_AVAILABLE = True
+except ImportError:  # pragma: no cover
+    _PANDAS_AVAILABLE = False
 
 # ── Store scope ───────────────────────────────────────────────────────────────
 
@@ -87,6 +95,11 @@ class PercentileReplenishmentService:
 
     async def run(self, run_date: date) -> Dict[str, Any]:
         """Run the percentile algorithm for all 7 retail stores."""
+        if not _PANDAS_AVAILABLE:
+            raise RuntimeError(
+                "numpy and pandas are required for the percentile algorithm but are not installed. "
+                "The next container build will include them automatically."
+            )
         cutoff = run_date - timedelta(days=LOOKBACK_DAYS)
 
         # 1. Bulk data fetch ─────────────────────────────────────────────────
