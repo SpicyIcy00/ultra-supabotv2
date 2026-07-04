@@ -95,8 +95,8 @@ class PercentileReplenishmentService:
 
     # ── Public entry point ────────────────────────────────────────────────────
 
-    async def run(self, run_date: date) -> Dict[str, Any]:
-        """Run the percentile algorithm for all 7 retail stores."""
+    async def run(self, run_date: date, filter_store_id: Optional[str] = None) -> Dict[str, Any]:
+        """Run the percentile algorithm. Pass filter_store_id to compute for one store only."""
         if not _PANDAS_AVAILABLE:
             raise RuntimeError(
                 "numpy and pandas are required for the percentile algorithm but are not installed. "
@@ -165,6 +165,8 @@ class PercentileReplenishmentService:
 
         for (sid, pid), group in grouped_sales:
             if sid not in _STORE_ID_SET:
+                continue
+            if filter_store_id and sid != filter_store_id:
                 continue
             if pid in excluded_skus:
                 continue
@@ -321,12 +323,13 @@ class PercentileReplenishmentService:
         await self._apply_feedback_loop(plan_items, run_date)
 
         # 8. Persist results ──────────────────────────────────────────────────
-        await self.db.execute(
-            delete(ShipmentPlan).where(
-                ShipmentPlan.run_date == run_date,
-                ShipmentPlan.algorithm == "percentile",
-            )
-        )
+        delete_filters = [
+            ShipmentPlan.run_date == run_date,
+            ShipmentPlan.algorithm == "percentile",
+        ]
+        if filter_store_id:
+            delete_filters.append(ShipmentPlan.store_id == filter_store_id)
+        await self.db.execute(delete(ShipmentPlan).where(*delete_filters))
         self.db.add_all(plan_items)
         await self.db.flush()
 

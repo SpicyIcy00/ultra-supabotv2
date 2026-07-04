@@ -50,7 +50,12 @@ async def run_replenishment(
     """Run the replenishment calculation. algorithm=percentile uses the 84-day rolling quantile model."""
     if algorithm == "percentile":
         effective_date = run_date or date.today()
-        result = await percentile_service.run(effective_date)
+        try:
+            result = await percentile_service.run(effective_date, filter_store_id=store_id)
+        except RuntimeError as e:
+            raise HTTPException(status_code=503, detail=str(e))
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Percentile calculation error: {str(e)}")
         return result
     result = await service.run_replenishment_calculation(
         run_date, store_id, apply_stockout_buffer, normalize_priority, as_of_date, mode
