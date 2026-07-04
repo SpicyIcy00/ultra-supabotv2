@@ -3,7 +3,7 @@
 nixPkgs = ["python311", "postgresql", "gcc"]
 
 [phases.install]
-cmds = ["pip install -r backend/requirements.txt"]
+cmds = ["pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir numpy pandas && pip install --no-cache-dir -r backend/requirements.txt"]
 
 [start]
 cmd = "cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
