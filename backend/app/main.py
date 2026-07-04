@@ -69,7 +69,29 @@ async def startup_event():
             await conn.execute(text(
                 "CREATE INDEX IF NOT EXISTS ix_product_barcodes_barcode ON product_barcodes (barcode)"
             ))
-        print("Schema migration: max_cover_days + product_barcodes ensured")
+            # Percentile algorithm (v2): algorithm selector + output columns on
+            # shipment_plans, plus the service_overrides feedback table.
+            await conn.execute(text("""
+                ALTER TABLE shipment_plans
+                    ADD COLUMN IF NOT EXISTS algorithm            VARCHAR(20) NOT NULL DEFAULT 'legacy',
+                    ADD COLUMN IF NOT EXISTS abc_class            VARCHAR(1),
+                    ADD COLUMN IF NOT EXISTS service_quantile     NUMERIC(4, 2),
+                    ADD COLUMN IF NOT EXISTS segment              VARCHAR(10),
+                    ADD COLUMN IF NOT EXISTS needs_count          BOOLEAN,
+                    ADD COLUMN IF NOT EXISTS silent_stockout      BOOLEAN,
+                    ADD COLUMN IF NOT EXISTS days_since_last_sale INTEGER,
+                    ADD COLUMN IF NOT EXISTS trusted_ledger       BOOLEAN
+            """))
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS service_overrides (
+                    store_id          VARCHAR(24)   NOT NULL,
+                    product_id        VARCHAR(24)   NOT NULL,
+                    quantile_override NUMERIC(4, 2) NOT NULL,
+                    updated_at        TIMESTAMPTZ   NOT NULL DEFAULT timezone('Asia/Manila', now()),
+                    PRIMARY KEY (store_id, product_id)
+                )
+            """))
+        print("Schema migration: max_cover_days + product_barcodes + percentile columns ensured")
     except Exception as e:
         print(f"Schema migration warning: {e}")
 
