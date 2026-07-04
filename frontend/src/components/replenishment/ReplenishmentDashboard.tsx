@@ -114,7 +114,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
     try {
       const storeFilter = selectedStoreId ? [selectedStoreId] : undefined;
       const [plan, exc] = await Promise.all([
-        getLatestPlan(storeFilter),
+        getLatestPlan(storeFilter, undefined, algorithmType),
         getExceptions(),
       ]);
       setLatestPlan(plan);

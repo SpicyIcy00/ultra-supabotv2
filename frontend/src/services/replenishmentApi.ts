@@ -47,9 +47,10 @@ export const getCompare = async (runDate?: string): Promise<CompareResponse> => 
 
 export const getLatestPlan = async (
   storeIds?: string[],
-  skuIds?: string[]
+  skuIds?: string[],
+  algorithm: 'legacy' | 'percentile' = 'legacy',
 ): Promise<ShipmentPlanResponse> => {
-  const params: Record<string, string[]> = {};
+  const params: Record<string, string[] | string> = { algorithm };
   if (storeIds?.length) params.store_ids = storeIds;
   if (skuIds?.length) params.sku_ids = skuIds;
   const response = await axios.get<ShipmentPlanResponse>(`${API_BASE}/latest`, {

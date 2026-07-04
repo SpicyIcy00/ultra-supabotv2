@@ -93,10 +93,11 @@ async def get_compare(
 async def get_latest_shipment_plan(
     store_ids: Optional[List[str]] = Query(None),
     sku_ids: Optional[List[str]] = Query(None),
+    algorithm: str = Query("legacy", description="legacy (default) | percentile"),
     service: ReplenishmentService = Depends(_get_service),
 ):
-    """Get the most recent shipment plan with optional filters."""
-    return await service.get_latest_shipment_plan(store_ids, sku_ids)
+    """Get the most recent shipment plan with optional filters, scoped to an algorithm."""
+    return await service.get_latest_shipment_plan(store_ids, sku_ids, algorithm)
 
 
 @router.get("/picklist")

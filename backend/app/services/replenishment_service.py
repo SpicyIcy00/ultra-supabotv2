@@ -876,10 +876,16 @@ class ReplenishmentService:
         self,
         store_ids: Optional[List[str]] = None,
         sku_ids: Optional[List[str]] = None,
+        algorithm: str = "legacy",
     ) -> Dict[str, Any]:
-        """Get the most recent shipment plan with optional filters."""
-        # Get latest run date
-        latest_query = select(func.max(ShipmentPlan.run_date))
+        """Get the most recent shipment plan for the given algorithm.
+
+        Scoping by algorithm keeps a percentile run from hijacking the standard
+        (legacy) view, and vice-versa.
+        """
+        latest_query = select(func.max(ShipmentPlan.run_date)).where(
+            ShipmentPlan.algorithm == algorithm
+        )
         result = await self.db.execute(latest_query)
         latest_date = result.scalar_one_or_none()
 
@@ -934,10 +940,11 @@ class ReplenishmentService:
                 ON wh_inv.product_id = sp.sku_id
                 AND wh_inv.store_id = :wh_store_id
             WHERE sp.run_date = :run_date
+              AND sp.algorithm = :algorithm
             ORDER BY sp.priority_score DESC
         """)
 
-        result = await self.db.execute(query, {"run_date": latest_date, "wh_store_id": WAREHOUSE_STORE_ID})
+        result = await self.db.execute(query, {"run_date": latest_date, "wh_store_id": WAREHOUSE_STORE_ID, "algorithm": algorithm})
         rows = result.fetchall()
 
         items = []
@@ -1004,10 +1011,12 @@ class ReplenishmentService:
         self, run_date: Optional[date] = None
     ) -> Dict[str, Any]:
         """Get aggregated picklist grouped by SKU."""
-        # Get run date
+        # Get run date — legacy plans only
         if run_date is None:
             result = await self.db.execute(
-                select(func.max(ShipmentPlan.run_date))
+                select(func.max(ShipmentPlan.run_date)).where(
+                    ShipmentPlan.algorithm == "legacy"
+                )
             )
             run_date = result.scalar_one_or_none()
             if run_date is None:
@@ -1031,6 +1040,7 @@ class ReplenishmentService:
             JOIN products p ON sp.sku_id = p.id
             JOIN stores s ON sp.store_id = s.id
             WHERE sp.run_date = :run_date
+              AND sp.algorithm = 'legacy'
               AND sp.allocated_ship_qty > 0
             GROUP BY sp.sku_id, p.name, p.category
             ORDER BY total_allocated_qty DESC
@@ -1068,7 +1078,9 @@ class ReplenishmentService:
         """Get items needing review."""
         if run_date is None:
             result = await self.db.execute(
-                select(func.max(ShipmentPlan.run_date))
+                select(func.max(ShipmentPlan.run_date)).where(
+                    ShipmentPlan.algorithm == "legacy"
+                )
             )
             run_date = result.scalar_one_or_none()
             if run_date is None:
@@ -1093,6 +1105,7 @@ class ReplenishmentService:
             JOIN stores s ON sp.store_id = s.id
             JOIN products p ON sp.sku_id = p.id
             WHERE sp.run_date = :run_date
+              AND sp.algorithm = 'legacy'
               AND (
                   sp.on_hand < 0
                   OR sp.days_of_stock > :overstock_threshold
