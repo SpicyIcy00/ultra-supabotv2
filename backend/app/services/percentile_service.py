@@ -5,6 +5,8 @@ All 7 retail stores are processed in a single run using two bulk SQL queries
 (demand + snapshots). pandas handles outlier trimming, empty-shelf censoring,
 rolling-window targets, ABC classification, and silent-stockout detection.
 """
+from __future__ import annotations  # keeps pd.DataFrame annotations from blowing up when pd not installed
+
 import math
 from datetime import date, timedelta
 from typing import Any, Dict, List, Optional, Tuple
