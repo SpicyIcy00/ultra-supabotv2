@@ -170,6 +170,10 @@ class PercentileReplenishmentService:
                 continue
             if pid in excluded_skus:
                 continue
+            # Product may have been deleted from the catalog but still referenced
+            # in old transactions; skip it so the shipment_plans FK insert succeeds.
+            if pid not in product_meta:
+                continue
 
             meta = product_meta.get(pid, {})
             category = (meta.get("category") or "").lower()

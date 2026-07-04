@@ -138,7 +138,8 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
     try {
       const result = await runReplenishment(
         undefined,
-        algorithmType === 'legacy' ? selectedStoreId : undefined,
+        // legacy requires a store; percentile treats empty as "all 7 stores"
+        selectedStoreId || undefined,
         applyStockoutBuffer,
         asOfEnabled && asOfDate ? asOfDate : undefined,
         algorithmType === 'legacy' ? calcMode : undefined,
@@ -506,31 +507,27 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                 <option value="fallback">Fallback</option>
               </select>
             )}
-            {/* Store Dropdown — hidden for percentile (all 7 stores run together) */}
-            {algorithmType === 'legacy' && (
-              <select
-                value={selectedStoreId}
-                onChange={(e) => setSelectedStoreId(e.target.value)}
-                className="bg-[#0e1117] border border-[#2e303d] text-gray-200 text-sm rounded-lg px-3 py-2.5 focus:border-blue-500 focus:outline-none"
-              >
-                <option value="">Select a store...</option>
-                {dashboardStores
-                  .filter((s) => tiers.some((t) => t.store_id === s.id))
-                  .map((s) => {
-                    const tier = tiers.find((t) => t.store_id === s.id)!;
-                    return (
-                      <option key={s.id} value={s.id}>
-                        {getStoreName(s.id)} (Tier {tier.tier})
-                      </option>
-                    );
-                  })}
-              </select>
-            )}
-            {algorithmType === 'percentile' && (
-              <span className="text-xs text-emerald-400 bg-emerald-900/20 border border-emerald-700/40 px-2 py-1.5 rounded-lg">
-                All 7 retail stores
-              </span>
-            )}
+            {/* Store Dropdown — legacy requires a store; percentile allows
+                "All 7 retail stores" (empty) or a single store */}
+            <select
+              value={selectedStoreId}
+              onChange={(e) => setSelectedStoreId(e.target.value)}
+              className="bg-[#0e1117] border border-[#2e303d] text-gray-200 text-sm rounded-lg px-3 py-2.5 focus:border-blue-500 focus:outline-none"
+            >
+              <option value="">
+                {algorithmType === 'percentile' ? 'All 7 retail stores' : 'Select a store...'}
+              </option>
+              {dashboardStores
+                .filter((s) => tiers.some((t) => t.store_id === s.id))
+                .map((s) => {
+                  const tier = tiers.find((t) => t.store_id === s.id)!;
+                  return (
+                    <option key={s.id} value={s.id}>
+                      {getStoreName(s.id)} (Tier {tier.tier})
+                    </option>
+                  );
+                })}
+            </select>
             <button
               onClick={handleRun}
               disabled={isRunning || (algorithmType === 'legacy' && (!selectedStoreId || (asOfEnabled && !asOfDate)))}
