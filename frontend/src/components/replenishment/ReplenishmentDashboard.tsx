@@ -748,6 +748,75 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
               const hasReasoning = dashMode === 'ai-reasoning' && aiReasoning.size > 0;
               const totalCols = 11 + (hasReasoning ? 2 : 0);
 
+              // Percentile (v2) gets its own purpose-built table: Target instead of
+              // Min, ABC / Segment / Service-Q, and OOS/CNT flags — no legacy multipliers.
+              if (algorithmType === 'percentile') {
+                const pctSorted = filteredAndSorted(latestPlan.items);
+                let lastCat = '';
+                const abcColor = (a?: string | null) =>
+                  a === 'A' ? 'bg-amber-900/50 text-amber-300' :
+                  a === 'B' ? 'bg-blue-900/50 text-blue-300' :
+                  a === 'C' ? 'bg-gray-800 text-gray-400' : 'text-gray-600';
+                return (
+                  <table className="w-full text-xs text-left">
+                    <thead className="sticky top-0 z-10 bg-[#1c1e26]">
+                      <tr className="border-b border-[#2e303d]">
+                        <th className="py-2 pr-3 font-medium whitespace-nowrap text-gray-400">Product</th>
+                        <th className="py-2 px-3 font-medium text-right text-gray-400">Total Sold</th>
+                        <th className="py-2 px-3 font-medium text-right text-gray-400">Avg Daily</th>
+                        <th className="py-2 px-3 font-medium text-right text-gray-400">Store Inv</th>
+                        <th className="py-2 px-3 font-medium text-right text-gray-400">WH Inv</th>
+                        <th className="py-2 px-3 font-medium text-right text-gray-400" title="Percentile target inventory position">Target</th>
+                        <th className="py-2 px-3 font-medium text-right text-gray-400">Ship</th>
+                        <th className="py-2 px-3 font-medium text-right text-gray-400">Days Stock</th>
+                        <th className="py-2 px-3 font-medium text-center text-gray-400" title="ABC revenue class">ABC</th>
+                        <th className="py-2 px-3 font-medium text-left text-gray-400">Segment</th>
+                        <th className="py-2 px-3 font-medium text-right text-gray-400" title="Service quantile">Svc-Q</th>
+                        <th className="py-2 px-3 font-medium text-center text-gray-400">Flags</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pctSorted.map((item, idx) => {
+                        const cat = item.category ?? '-';
+                        const showCat = cat !== lastCat;
+                        lastCat = cat;
+                        const isNegative = item.on_hand < 0;
+                        const rowHighlight = isNegative ? 'bg-red-900/10' : item.silent_stockout ? 'bg-orange-900/10' : idx % 2 === 0 ? 'bg-[#0e1117]' : '';
+                        return (
+                          <React.Fragment key={`${item.store_id}-${item.sku_id}`}>
+                            {showCat && (
+                              <tr className="border-b border-[#2e303d]">
+                                <td colSpan={12} className="py-2 pt-4 text-xs font-semibold text-blue-400 uppercase tracking-wider">{cat}</td>
+                              </tr>
+                            )}
+                            <tr className={`border-b border-[#2e303d]/50 ${rowHighlight}`}>
+                              <td className="py-2 pr-3 text-white whitespace-nowrap max-w-[200px] truncate">{item.product_name ?? item.sku_id}</td>
+                              <td className="py-2 px-3 text-right tabular-nums text-blue-300">{(item.total_sold_qty ?? 0).toLocaleString()}</td>
+                              <td className="py-2 px-3 text-right tabular-nums text-gray-300">{item.avg_daily_sales.toFixed(1)}</td>
+                              <td className={`py-2 px-3 text-right tabular-nums ${isNegative ? 'text-red-400' : 'text-gray-300'}`}>{item.on_hand}</td>
+                              <td className="py-2 px-3 text-right tabular-nums text-gray-300">{item.wh_on_hand ?? 0}</td>
+                              <td className="py-2 px-3 text-right tabular-nums text-gray-400">{item.min_level.toFixed(0)}</td>
+                              <td className={`py-2 px-3 text-right tabular-nums font-medium ${item.requested_ship_qty > 0 ? 'text-green-400' : 'text-gray-500'}`}>{item.requested_ship_qty}</td>
+                              <td className={`py-2 px-3 text-right tabular-nums ${item.days_of_stock < 3 ? 'text-red-400' : item.days_of_stock > 120 ? 'text-orange-400' : 'text-gray-300'}`}>{item.days_of_stock.toFixed(1)}</td>
+                              <td className="py-2 px-3 text-center">
+                                {item.abc_class && <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${abcColor(item.abc_class)}`}>{item.abc_class}</span>}
+                              </td>
+                              <td className="py-2 px-3 text-left text-gray-400">{item.segment ?? '—'}</td>
+                              <td className="py-2 px-3 text-right tabular-nums text-gray-400">{item.service_quantile != null ? `${(item.service_quantile * 100).toFixed(0)}%` : '—'}</td>
+                              <td className="py-2 px-3 text-center whitespace-nowrap">
+                                {item.silent_stockout && <span className="px-1 py-0.5 rounded text-[10px] bg-orange-900/50 text-orange-300 mr-1" title="Silent stockout detected">OOS</span>}
+                                {item.needs_count && <span className="px-1 py-0.5 rounded text-[10px] bg-yellow-900/50 text-yellow-300" title="Needs stock count (untrusted on-hand)">CNT</span>}
+                                {!item.silent_stockout && !item.needs_count && <span className="text-gray-600">—</span>}
+                              </td>
+                            </tr>
+                          </React.Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                );
+              }
+
               return (
                 <table className="w-full text-xs text-left">
                   <thead className="sticky top-0 z-10 bg-[#1c1e26]">

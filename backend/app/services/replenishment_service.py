@@ -932,7 +932,14 @@ class ReplenishmentService:
                 COALESCE(sp.category_multiplier, 1.0)::float,
                 COALESCE(sp.effective_multiplier, 1.0)::float,
                 COALESCE(sp.total_sold_qty, 0)::int,
-                COALESCE(sp.dead_days, 0)::int
+                COALESCE(sp.dead_days, 0)::int,
+                sp.abc_class,
+                sp.service_quantile::float,
+                sp.segment,
+                sp.needs_count,
+                sp.silent_stockout,
+                sp.days_since_last_sale,
+                sp.trusted_ledger
             FROM shipment_plans sp
             JOIN stores s ON sp.store_id = s.id
             JOIN products p ON sp.sku_id = p.id
@@ -985,6 +992,14 @@ class ReplenishmentService:
                 "effective_multiplier": float(row[24]),
                 "total_sold_qty": int(row[25]),
                 "dead_days": int(row[26]),
+                # Percentile-specific (NULL for legacy rows)
+                "abc_class": row[27],
+                "service_quantile": row[28],
+                "segment": row[29],
+                "needs_count": row[30],
+                "silent_stockout": row[31],
+                "days_since_last_sale": row[32],
+                "trusted_ledger": row[33],
             })
 
         calc_mode = rows[0][19] if rows else "none"  # calculation_mode column

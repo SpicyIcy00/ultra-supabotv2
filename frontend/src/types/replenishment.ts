@@ -88,6 +88,14 @@ export interface ShipmentPlanItem {
   effective_multiplier: number;
   total_sold_qty: number;
   dead_days: number;
+  // Percentile-specific (present only when the plan was run with algorithm=percentile)
+  abc_class?: string | null;
+  service_quantile?: number | null;
+  segment?: string | null;
+  needs_count?: boolean | null;
+  silent_stockout?: boolean | null;
+  days_since_last_sale?: number | null;
+  trusted_ledger?: boolean | null;
 }
 
 export interface ShipmentPlanSummary {
