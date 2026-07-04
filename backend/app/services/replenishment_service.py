@@ -658,14 +658,24 @@ class ReplenishmentService:
             )
             dead_days_cache = {}
 
-        # Delete previous LEGACY plans for this run_date (and store if filtered)
-        delete_q = delete(ShipmentPlan).where(
-            ShipmentPlan.run_date == run_date,
-            ShipmentPlan.algorithm == "legacy",
+        # Delete previous LEGACY plans for this run_date (and store if filtered).
+        # Uses raw SQL so it stays safe whether or not the algorithm column exists yet.
+        _store_clause = "AND store_id = :store_id" if store_id else ""
+        await self.db.execute(
+            text(f"""
+                DELETE FROM shipment_plans
+                WHERE run_date = :run_date
+                {_store_clause}
+                AND (
+                    NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = 'shipment_plans' AND column_name = 'algorithm'
+                    )
+                    OR algorithm = 'legacy'
+                )
+            """),
+            {"run_date": run_date, "store_id": store_id} if store_id else {"run_date": run_date},
         )
-        if store_id:
-            delete_q = delete_q.where(ShipmentPlan.store_id == store_id)
-        await self.db.execute(delete_q)
 
         # Calculate for each store-SKU
         plan_items: List[ShipmentPlan] = []

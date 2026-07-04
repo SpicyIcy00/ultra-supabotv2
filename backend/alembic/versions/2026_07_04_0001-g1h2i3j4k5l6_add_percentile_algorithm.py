@@ -9,7 +9,6 @@ Create Date: 2026-07-04 00:01:00.000000
 """
 from typing import Sequence, Union
 from alembic import op
-import sqlalchemy as sa
 
 
 revision: str = "g1h2i3j4k5l6"
@@ -19,47 +18,44 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # ── shipment_plans: algorithm selector ───────────────────────────────────
-    op.add_column(
-        "shipment_plans",
-        sa.Column("algorithm", sa.String(20), server_default="legacy", nullable=False),
-    )
+    # Use raw SQL with IF NOT EXISTS so this migration is fully idempotent
+    # and safe to re-run if a previous attempt partially applied.
 
-    # ── shipment_plans: percentile-specific output fields ────────────────────
-    op.add_column("shipment_plans", sa.Column("abc_class", sa.String(1), nullable=True))
-    op.add_column("shipment_plans", sa.Column("service_quantile", sa.Numeric(4, 2), nullable=True))
-    op.add_column("shipment_plans", sa.Column("segment", sa.String(10), nullable=True))
-    op.add_column("shipment_plans", sa.Column("needs_count", sa.Boolean(), nullable=True))
-    op.add_column("shipment_plans", sa.Column("silent_stockout", sa.Boolean(), nullable=True))
-    op.add_column("shipment_plans", sa.Column("days_since_last_sale", sa.Integer(), nullable=True))
-    op.add_column("shipment_plans", sa.Column("trusted_ledger", sa.Boolean(), nullable=True))
+    # shipment_plans: algorithm selector + percentile output columns
+    op.execute("""
+        ALTER TABLE shipment_plans
+            ADD COLUMN IF NOT EXISTS algorithm        VARCHAR(20)    NOT NULL DEFAULT 'legacy',
+            ADD COLUMN IF NOT EXISTS abc_class        VARCHAR(1),
+            ADD COLUMN IF NOT EXISTS service_quantile NUMERIC(4, 2),
+            ADD COLUMN IF NOT EXISTS segment          VARCHAR(10),
+            ADD COLUMN IF NOT EXISTS needs_count      BOOLEAN,
+            ADD COLUMN IF NOT EXISTS silent_stockout  BOOLEAN,
+            ADD COLUMN IF NOT EXISTS days_since_last_sale INTEGER,
+            ADD COLUMN IF NOT EXISTS trusted_ledger   BOOLEAN
+    """)
 
-    # Update existing rows to explicitly tag as legacy
-    op.execute("UPDATE shipment_plans SET algorithm = 'legacy' WHERE algorithm = 'legacy'")
-
-    # ── service_overrides: per-(store, product) quantile bump table ──────────
-    op.create_table(
-        "service_overrides",
-        sa.Column("store_id", sa.String(24), nullable=False),
-        sa.Column("product_id", sa.String(24), nullable=False),
-        sa.Column("quantile_override", sa.Numeric(4, 2), nullable=False),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("timezone('Asia/Manila', now())"),
-            nullable=False,
-        ),
-        sa.PrimaryKeyConstraint("store_id", "product_id"),
-    )
+    # service_overrides: per-(store, product) quantile feedback table
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS service_overrides (
+            store_id         VARCHAR(24)  NOT NULL,
+            product_id       VARCHAR(24)  NOT NULL,
+            quantile_override NUMERIC(4, 2) NOT NULL,
+            updated_at       TIMESTAMPTZ  NOT NULL DEFAULT timezone('Asia/Manila', now()),
+            PRIMARY KEY (store_id, product_id)
+        )
+    """)
 
 
 def downgrade() -> None:
-    op.drop_table("service_overrides")
-    op.drop_column("shipment_plans", "trusted_ledger")
-    op.drop_column("shipment_plans", "days_since_last_sale")
-    op.drop_column("shipment_plans", "silent_stockout")
-    op.drop_column("shipment_plans", "needs_count")
-    op.drop_column("shipment_plans", "segment")
-    op.drop_column("shipment_plans", "service_quantile")
-    op.drop_column("shipment_plans", "abc_class")
-    op.drop_column("shipment_plans", "algorithm")
+    op.execute("DROP TABLE IF EXISTS service_overrides")
+    op.execute("""
+        ALTER TABLE shipment_plans
+            DROP COLUMN IF EXISTS trusted_ledger,
+            DROP COLUMN IF EXISTS days_since_last_sale,
+            DROP COLUMN IF EXISTS silent_stockout,
+            DROP COLUMN IF EXISTS needs_count,
+            DROP COLUMN IF EXISTS segment,
+            DROP COLUMN IF EXISTS service_quantile,
+            DROP COLUMN IF EXISTS abc_class,
+            DROP COLUMN IF EXISTS algorithm
+    """)
