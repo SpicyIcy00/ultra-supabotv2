@@ -452,7 +452,24 @@ class PercentileReplenishmentService:
     async def _fetch_latest_on_hand(
         self, run_date: date
     ) -> Dict[Tuple[str, str], int]:
-        """Most recent snapshot on-hand per (store, product) before run_date."""
+        """Current on-hand per (store, product).
+
+        For a live/current run we read the live `inventory` table — the same
+        real-time source legacy uses. Only for a historical replay (run_date in
+        the past) do we fall back to the most recent daily snapshot strictly
+        before run_date.
+        """
+        if run_date >= date.today():
+            result = await self.db.execute(
+                text("""
+                    SELECT store_id, product_id, quantity_on_hand
+                    FROM inventory
+                    WHERE store_id = ANY(:store_ids)
+                """),
+                {"store_ids": RETAIL_STORE_IDS},
+            )
+            return {(r[0], r[1]): int(r[2]) for r in result.fetchall()}
+
         result = await self.db.execute(
             text("""
                 SELECT DISTINCT ON (store_id, product_id)
