@@ -18,6 +18,7 @@ from app.schemas.replenishment import (
     VelocityMultiplierRuleCreate,
     VelocityMultiplierRuleUpdate,
     CategoryMultiplierBulkUpdate,
+    PercentileStoreConfigUpsert,
 )
 
 router = APIRouter()
@@ -256,6 +257,27 @@ async def delete_store_tier(
     if not deleted:
         raise HTTPException(status_code=404, detail="Store tier not found")
     return {"status": "deleted", "store_id": store_id}
+
+
+# ----------------------------------------------------------------
+# Percentile (v2) per-store config
+# ----------------------------------------------------------------
+
+@router.get("/percentile-store-config")
+async def get_percentile_store_config(
+    service: ReplenishmentService = Depends(_get_service),
+):
+    """Get per-store percentile (v2) tuning config (separate from legacy tiers)."""
+    return await service.get_percentile_store_config()
+
+
+@router.post("/percentile-store-config")
+async def upsert_percentile_store_config(
+    body: PercentileStoreConfigUpsert,
+    service: ReplenishmentService = Depends(_get_service),
+):
+    """Create or update one store's percentile (v2) config. Takes effect on next run."""
+    return await service.upsert_percentile_store_config(body.model_dump(exclude_unset=True))
 
 
 # ----------------------------------------------------------------

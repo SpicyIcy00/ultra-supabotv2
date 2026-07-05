@@ -372,5 +372,31 @@ class CompareResponse(BaseModel):
     summary: dict
 
 
+# --- Percentile (v2) per-store config ---
+
+class PercentileStoreConfigUpsert(BaseModel):
+    store_id: str = Field(..., max_length=24)
+    store_name: Optional[str] = Field(None, max_length=120)
+    review_days: Optional[int] = Field(None, ge=1, le=14)
+    lead_days: Optional[int] = Field(None, ge=0, le=7)
+    quantile_a: Optional[float] = Field(None, ge=0.80, le=0.99)
+    quantile_b: Optional[float] = Field(None, ge=0.80, le=0.99)
+    quantile_c: Optional[float] = Field(None, ge=0.80, le=0.99)
+    notes: Optional[str] = None
+
+
+class PercentileStoreConfigResponse(BaseModel):
+    store_id: str
+    store_name: Optional[str] = None
+    review_days: int
+    lead_days: int
+    protection_days: int
+    quantile_a: float
+    quantile_b: float
+    quantile_c: float
+    notes: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
 # Rebuild forward refs
 ShipmentPlanResponse.model_rebuild()

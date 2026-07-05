@@ -7,6 +7,7 @@ rolling-window targets, ABC classification, and silent-stockout detection.
 """
 from __future__ import annotations  # keeps pd.DataFrame annotations from blowing up when pd not installed
 
+import logging
 import math
 from datetime import date, timedelta
 from typing import Any, Dict, List, Optional, Tuple
@@ -15,6 +16,8 @@ from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.replenishment import ServiceOverride, ShipmentPlan
+
+logger = logging.getLogger(__name__)
 
 # Lazy imports — only needed when the percentile algorithm actually runs.
 # The app starts cleanly even if numpy/pandas are not yet installed in the
@@ -47,10 +50,19 @@ BULK_CATEGORIES = {"per gram", "aji mix"}
 LOOKBACK_DAYS = 84          # 12 equal weeks
 REVIEW_DAYS = 7
 LEAD_DAYS = 2
-PROTECTION_DAYS = REVIEW_DAYS + LEAD_DAYS  # 9
+PROTECTION_DAYS = REVIEW_DAYS + LEAD_DAYS  # 9 (default only; per-store config overrides)
 
 SERVICE_QUANTILES: Dict[str, float] = {"A": 0.97, "B": 0.90, "C": 0.85}
 MAX_COVER_DAYS: Dict[str, int] = {"A": 18, "default": 28}
+
+# Used when a store has no percentile_store_config row.
+FALLBACK_STORE_CONFIG: Dict[str, Any] = {
+    "review_days": 7, "lead_days": 2,
+    "quantile_a": 0.95, "quantile_b": 0.90, "quantile_c": 0.85,
+}
+# Learning-loop overrides are clamped to this band.
+OVERRIDE_MIN_Q = 0.80
+OVERRIDE_MAX_Q = 0.98
 BULK_ROUND_GRAMS = 500
 
 # Silent-stockout: ≥1 sale-day per week on average = ≥12 sale-days in 84 days
@@ -110,6 +122,8 @@ class PercentileReplenishmentService:
         product_meta = await self._fetch_products()
         overrides_map = await self._fetch_overrides()
         on_hand_map = await self._fetch_latest_on_hand(run_date)
+        store_cfg_map = await self._fetch_store_config()
+        warned_missing_cfg: set = set()
 
         # 2. Excluded SKU set ─────────────────────────────────────────────────
         excluded_skus = {
@@ -204,27 +218,52 @@ class PercentileReplenishmentService:
             sale_days = int((demand_series > 0).sum())
             mean_daily = float(demand_series.mean())
 
-            # ── 6e. ABC + segment + effective service quantile ───────────────
-            abc_class = abc_map.get(pid, "C")
-            base_q = SERVICE_QUANTILES.get(abc_class, 0.85)
+            # ── 6e. Per-store config: protection window + service quantile ───
+            cfg = store_cfg_map.get(sid)
+            if cfg is None:
+                if sid not in warned_missing_cfg:
+                    logger.warning(
+                        "percentile: no percentile_store_config row for store %s; "
+                        "falling back to review=7/lead=2/.95/.90/.85", sid
+                    )
+                    warned_missing_cfg.add(sid)
+                cfg = FALLBACK_STORE_CONFIG
+                cfg_is_fallback = True
+            else:
+                cfg_is_fallback = False
 
-            if is_bulk or sale_days >= 20:
-                segment = "BULK" if is_bulk else "FAST"
-                effective_q = base_q
+            p_days = int(cfg["review_days"]) + int(cfg["lead_days"])
+
+            abc_class = abc_map.get(pid, "C")
+            # Descriptive segment label only — it no longer drives the quantile.
+            if is_bulk:
+                segment = "BULK"
+            elif sale_days >= 20:
+                segment = "FAST"
             elif sale_days >= 8:
                 segment = "MED"
-                effective_q = 0.90
             else:
                 segment = "TAIL"
-                effective_q = 0.90
 
-            # Apply stored override from previous feedback cycle
+            # Service quantile: store config by ABC class, then learning-loop
+            # override (clamped) if one exists for this (store, product).
+            q_by_abc = {
+                "A": float(cfg["quantile_a"]),
+                "B": float(cfg["quantile_b"]),
+                "C": float(cfg["quantile_c"]),
+            }
+            effective_q = q_by_abc.get(abc_class, float(cfg["quantile_c"]))
+            quantile_source = "fallback" if cfg_is_fallback else "store_config"
+
             override_key = (sid, pid)
             if override_key in overrides_map:
-                effective_q = float(overrides_map[override_key])
+                effective_q = min(
+                    OVERRIDE_MAX_Q, max(OVERRIDE_MIN_Q, float(overrides_map[override_key]))
+                )
+                quantile_source = "override"
 
             # ── 6f. Rolling P-day sums → quantile target ─────────────────────
-            rolling_sums = demand_series.rolling(PROTECTION_DAYS).sum().dropna()
+            rolling_sums = demand_series.rolling(p_days).sum().dropna()
 
             if len(rolling_sums) == 0 or mean_daily == 0:
                 target = float(THIN_HISTORY_MIN_TARGET) if not is_bulk else 0.0
@@ -249,7 +288,7 @@ class PercentileReplenishmentService:
                     days_since_last_sale = days_since
                     # Recompute target from active period only
                     active = demand_series.loc[:last_sale_ts]
-                    active_rolls = active.rolling(PROTECTION_DAYS).sum().dropna()
+                    active_rolls = active.rolling(p_days).sum().dropna()
                     if len(active_rolls) > 0:
                         active_target = float(np.quantile(active_rolls.values, 0.90))
                         target = max(target, active_target)
@@ -320,6 +359,8 @@ class PercentileReplenishmentService:
                 silent_stockout=silent_stockout,
                 days_since_last_sale=days_since_last_sale,
                 trusted_ledger=trusted,
+                p_days_used=p_days,
+                quantile_source=quantile_source,
             )
             plan_items.append(plan)
 
@@ -445,6 +486,30 @@ class PercentileReplenishmentService:
                 text("SELECT store_id, product_id, quantile_override FROM service_overrides")
             )
             return {(r[0], r[1]): float(r[2]) for r in result.fetchall()}
+        except Exception:
+            await self.db.rollback()
+            return {}
+
+    async def _fetch_store_config(self) -> Dict[str, Dict[str, Any]]:
+        """Per-store percentile tuning, keyed by store_id. Empty if table missing."""
+        try:
+            result = await self.db.execute(
+                text("""
+                    SELECT store_id, review_days, lead_days,
+                           quantile_a, quantile_b, quantile_c
+                    FROM percentile_store_config
+                """)
+            )
+            return {
+                r[0]: {
+                    "review_days": int(r[1]),
+                    "lead_days": int(r[2]),
+                    "quantile_a": float(r[3]),
+                    "quantile_b": float(r[4]),
+                    "quantile_c": float(r[5]),
+                }
+                for r in result.fetchall()
+            }
         except Exception:
             await self.db.rollback()
             return {}

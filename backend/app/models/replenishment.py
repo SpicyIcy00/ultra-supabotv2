@@ -216,6 +216,9 @@ class ShipmentPlan(Base):
     silent_stockout: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
     days_since_last_sale: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     trusted_ledger: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    # Transparency: protection window length and where the service quantile came from
+    p_days_used: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    quantile_source: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -258,6 +261,30 @@ class ServiceOverride(Base):
     store_id: Mapped[str] = mapped_column(String(24), primary_key=True)
     product_id: Mapped[str] = mapped_column(String(24), primary_key=True)
     quantile_override: Mapped[float] = mapped_column(Numeric(4, 2), nullable=False)
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.timezone("Asia/Manila", func.now()),
+        onupdate=func.timezone("Asia/Manila", func.now()),
+    )
+
+
+class PercentileStoreConfig(Base):
+    """Per-store tuning for the percentile (v2) algorithm.
+
+    Deliberately separate from StoreTier (legacy). Editing this never affects
+    the legacy algorithm.
+    """
+    __tablename__ = "percentile_store_config"
+
+    store_id: Mapped[str] = mapped_column(String(24), primary_key=True)
+    store_name: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    review_days: Mapped[int] = mapped_column(Integer, nullable=False, default=7)
+    lead_days: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
+    quantile_a: Mapped[float] = mapped_column(Numeric(4, 2), nullable=False, default=0.95)
+    quantile_b: Mapped[float] = mapped_column(Numeric(4, 2), nullable=False, default=0.90)
+    quantile_c: Mapped[float] = mapped_column(Numeric(4, 2), nullable=False, default=0.85)
+    notes: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

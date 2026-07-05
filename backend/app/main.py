@@ -91,7 +91,41 @@ async def startup_event():
                     PRIMARY KEY (store_id, product_id)
                 )
             """))
-        print("Schema migration: max_cover_days + product_barcodes + percentile columns ensured")
+            # Transparency columns on shipment_plans (percentile output)
+            await conn.execute(text("""
+                ALTER TABLE shipment_plans
+                    ADD COLUMN IF NOT EXISTS p_days_used     INTEGER,
+                    ADD COLUMN IF NOT EXISTS quantile_source VARCHAR(16)
+            """))
+            # Per-store percentile (v2) tuning — separate from legacy store_tiers.
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS percentile_store_config (
+                    store_id    VARCHAR(24)   PRIMARY KEY,
+                    store_name  VARCHAR(120),
+                    review_days INTEGER       NOT NULL DEFAULT 7,
+                    lead_days   INTEGER       NOT NULL DEFAULT 2,
+                    quantile_a  NUMERIC(4, 2) NOT NULL DEFAULT 0.95,
+                    quantile_b  NUMERIC(4, 2) NOT NULL DEFAULT 0.90,
+                    quantile_c  NUMERIC(4, 2) NOT NULL DEFAULT 0.85,
+                    notes       TEXT,
+                    updated_at  TIMESTAMPTZ   NOT NULL DEFAULT timezone('Asia/Manila', now())
+                )
+            """))
+            # Seed the 7 retail stores (only inserts missing rows; never overwrites edits)
+            await conn.execute(text("""
+                INSERT INTO percentile_store_config
+                    (store_id, store_name, review_days, lead_days, quantile_a, quantile_b, quantile_c)
+                VALUES
+                    ('6639efd54694700008d7ccc6', 'Rockwell',   7, 2, 0.98, 0.92, 0.85),
+                    ('68c5bb269da1d500073690c2', 'Opus',       7, 2, 0.97, 0.92, 0.85),
+                    ('668023c94721460006092609', 'Fairview',   7, 2, 0.97, 0.90, 0.85),
+                    ('668a43f60fa9990007cfa158', 'Greenhills', 7, 2, 0.95, 0.90, 0.85),
+                    ('66cfff31aa7adf0007c9de41', 'North Edsa', 7, 2, 0.95, 0.90, 0.85),
+                    ('67612230a740d90007464e26', 'Magnolia',   7, 2, 0.95, 0.90, 0.85),
+                    ('69c73fcb277aa600076dfaaa', 'Shangri-La', 7, 2, 0.95, 0.90, 0.85)
+                ON CONFLICT (store_id) DO NOTHING
+            """))
+        print("Schema migration: max_cover_days + product_barcodes + percentile columns + store config ensured")
     except Exception as e:
         print(f"Schema migration warning: {e}")
 

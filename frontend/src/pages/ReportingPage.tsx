@@ -4,6 +4,7 @@ import { ShipmentPlanTable } from '../components/replenishment/ShipmentPlanTable
 import { WarehousePicklist } from '../components/replenishment/WarehousePicklist';
 import { ExceptionsPanel } from '../components/replenishment/ExceptionsPanel';
 import { StoreTierConfig } from '../components/replenishment/StoreTierConfig';
+import { PercentileStoreConfigTable } from '../components/replenishment/PercentileStoreConfigTable';
 import { SeasonalityCalendar } from '../components/replenishment/SeasonalityCalendar';
 import { WarehouseInventoryManager } from '../components/replenishment/WarehouseInventoryManager';
 import { PipelineManager } from '../components/replenishment/PipelineManager';
@@ -12,7 +13,7 @@ import { VelocityMultiplierConfig } from '../components/replenishment/VelocityMu
 import { CategoryMultiplierConfig } from '../components/replenishment/CategoryMultiplierConfig';
 
 type ReplenishmentSubTab = 'dashboard' | 'shipment-plan' | 'picklist' | 'exceptions' | 'configuration';
-type ConfigSubTab = 'store-tiers' | 'seasonality' | 'warehouse' | 'pipeline' | 'algorithm' | 'velocity-multipliers' | 'category-multipliers';
+type ConfigSubTab = 'store-tiers' | 'percentile-v2' | 'seasonality' | 'warehouse' | 'pipeline' | 'algorithm' | 'velocity-multipliers' | 'category-multipliers';
 
 const ReportingPage: React.FC = () => {
   const [replenishmentSubTab, setReplenishmentSubTab] = useState<ReplenishmentSubTab>('dashboard');
@@ -29,6 +30,7 @@ const ReportingPage: React.FC = () => {
           <div className="flex gap-1 border-b border-[#2e303d]">
             {([
               { key: 'store-tiers' as ConfigSubTab, label: 'Store Tiers' },
+              { key: 'percentile-v2' as ConfigSubTab, label: 'Percentile (v2)' },
               { key: 'seasonality' as ConfigSubTab, label: 'Seasonality' },
               { key: 'velocity-multipliers' as ConfigSubTab, label: 'Velocity Multipliers' },
               { key: 'category-multipliers' as ConfigSubTab, label: 'Category Multipliers' },
@@ -47,6 +49,7 @@ const ReportingPage: React.FC = () => {
             ))}
           </div>
           {configSubTab === 'store-tiers' && <StoreTierConfig />}
+          {configSubTab === 'percentile-v2' && <PercentileStoreConfigTable />}
           {configSubTab === 'seasonality' && <SeasonalityCalendar />}
           {configSubTab === 'velocity-multipliers' && <VelocityMultiplierConfig />}
           {configSubTab === 'category-multipliers' && <CategoryMultiplierConfig />}

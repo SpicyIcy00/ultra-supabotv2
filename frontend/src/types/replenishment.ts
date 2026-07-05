@@ -96,6 +96,9 @@ export interface ShipmentPlanItem {
   silent_stockout?: boolean | null;
   days_since_last_sale?: number | null;
   trusted_ledger?: boolean | null;
+  p_days_used?: number | null;
+  quantile_used?: number | null;
+  quantile_source?: 'store_config' | 'override' | 'fallback' | null;
 }
 
 export interface ShipmentPlanSummary {
@@ -176,6 +179,20 @@ export interface AlgorithmSettings {
   priority_stockout_weight: number;
   overstock_threshold_days: number;
   critical_stock_threshold_days: number;
+  updated_at?: string | null;
+}
+
+// --- Percentile (v2) per-store config ---
+export interface PercentileStoreConfig {
+  store_id: string;
+  store_name?: string | null;
+  review_days: number;
+  lead_days: number;
+  protection_days: number;
+  quantile_a: number;
+  quantile_b: number;
+  quantile_c: number;
+  notes?: string | null;
   updated_at?: string | null;
 }
 

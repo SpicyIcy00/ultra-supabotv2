@@ -14,6 +14,7 @@ import type {
   CategoryMultiplier,
   AIReasoningResponse,
   CompareResponse,
+  PercentileStoreConfig,
 } from '../types/replenishment';
 
 const API_BASE = '/api/v1/replenishment';
@@ -147,6 +148,20 @@ export const upsertStoreTier = async (tier: {
 
 export const deleteStoreTier = async (storeId: string): Promise<void> => {
   await axios.delete(`${API_BASE}/store-tiers/${storeId}`);
+};
+
+// --- Percentile (v2) per-store config ---
+
+export const getPercentileStoreConfig = async (): Promise<PercentileStoreConfig[]> => {
+  const response = await axios.get<PercentileStoreConfig[]>(`${API_BASE}/percentile-store-config`);
+  return response.data;
+};
+
+export const upsertPercentileStoreConfig = async (
+  cfg: Partial<PercentileStoreConfig> & { store_id: string }
+): Promise<{ store_id: string; status: string }> => {
+  const response = await axios.post(`${API_BASE}/percentile-store-config`, cfg);
+  return response.data;
 };
 
 // --- Seasonality ---

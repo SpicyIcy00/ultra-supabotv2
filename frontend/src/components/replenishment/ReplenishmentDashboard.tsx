@@ -771,7 +771,9 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                         <th className="py-2 px-3 font-medium text-right text-gray-400">Days Stock</th>
                         <th className="py-2 px-3 font-medium text-center text-gray-400" title="ABC revenue class">ABC</th>
                         <th className="py-2 px-3 font-medium text-left text-gray-400">Segment</th>
-                        <th className="py-2 px-3 font-medium text-right text-gray-400" title="Service quantile">Svc-Q</th>
+                        <th className="py-2 px-3 font-medium text-right text-gray-400" title="Protection window = review + lead days">P-days</th>
+                        <th className="py-2 px-3 font-medium text-right text-gray-400" title="Service quantile actually used">Svc-Q</th>
+                        <th className="py-2 px-3 font-medium text-center text-gray-400" title="Where the quantile came from">Q-src</th>
                         <th className="py-2 px-3 font-medium text-center text-gray-400">Flags</th>
                       </tr>
                     </thead>
@@ -786,7 +788,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                           <React.Fragment key={`${item.store_id}-${item.sku_id}`}>
                             {showCat && (
                               <tr className="border-b border-[#2e303d]">
-                                <td colSpan={12} className="py-2 pt-4 text-xs font-semibold text-blue-400 uppercase tracking-wider">{cat}</td>
+                                <td colSpan={14} className="py-2 pt-4 text-xs font-semibold text-blue-400 uppercase tracking-wider">{cat}</td>
                               </tr>
                             )}
                             <tr className={`border-b border-[#2e303d]/50 ${rowHighlight}`}>
@@ -802,7 +804,14 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                                 {item.abc_class && <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${abcColor(item.abc_class)}`}>{item.abc_class}</span>}
                               </td>
                               <td className="py-2 px-3 text-left text-gray-400">{item.segment ?? '—'}</td>
-                              <td className="py-2 px-3 text-right tabular-nums text-gray-400">{item.service_quantile != null ? `${(item.service_quantile * 100).toFixed(0)}%` : '—'}</td>
+                              <td className="py-2 px-3 text-right tabular-nums text-gray-400">{item.p_days_used ?? '—'}</td>
+                              <td className="py-2 px-3 text-right tabular-nums text-gray-300">{(() => { const q = item.quantile_used ?? item.service_quantile; return q != null ? `${(q * 100).toFixed(0)}%` : '—'; })()}</td>
+                              <td className="py-2 px-3 text-center">
+                                {item.quantile_source === 'override' && <span className="px-1 py-0.5 rounded text-[10px] bg-blue-900/50 text-blue-300" title="Learning-loop override">ovr</span>}
+                                {item.quantile_source === 'fallback' && <span className="px-1 py-0.5 rounded text-[10px] bg-orange-900/50 text-orange-300" title="No store config — fallback defaults">fb</span>}
+                                {item.quantile_source === 'store_config' && <span className="px-1 py-0.5 rounded text-[10px] bg-gray-800 text-gray-400" title="From this store's percentile config">cfg</span>}
+                                {!item.quantile_source && <span className="text-gray-600">—</span>}
+                              </td>
                               <td className="py-2 px-3 text-center whitespace-nowrap">
                                 {item.silent_stockout && <span className="px-1 py-0.5 rounded text-[10px] bg-orange-900/50 text-orange-300 mr-1" title="Silent stockout detected">OOS</span>}
                                 {item.needs_count && <span className="px-1 py-0.5 rounded text-[10px] bg-yellow-900/50 text-yellow-300" title="Needs stock count (untrusted on-hand)">CNT</span>}

@@ -17,6 +17,7 @@ from app.models.replenishment import (
     AlgorithmSettings,
     VelocityMultiplierRule,
     CategoryMultiplier,
+    PercentileStoreConfig,
 )
 from app.models.store import Store
 
@@ -939,7 +940,9 @@ class ReplenishmentService:
                 sp.needs_count,
                 sp.silent_stockout,
                 sp.days_since_last_sale,
-                sp.trusted_ledger
+                sp.trusted_ledger,
+                sp.p_days_used,
+                sp.quantile_source
             FROM shipment_plans sp
             JOIN stores s ON sp.store_id = s.id
             JOIN products p ON sp.sku_id = p.id
@@ -1000,6 +1003,9 @@ class ReplenishmentService:
                 "silent_stockout": row[31],
                 "days_since_last_sale": row[32],
                 "trusted_ledger": row[33],
+                "p_days_used": row[34],
+                "quantile_used": float(row[28]) if row[28] is not None else None,
+                "quantile_source": row[35],
             })
 
         calc_mode = rows[0][19] if rows else "none"  # calculation_mode column
@@ -1241,6 +1247,61 @@ class ReplenishmentService:
             delete(StoreTier).where(StoreTier.store_id == store_id)
         )
         return result.rowcount > 0
+
+    # ----------------------------------------------------------------
+    # Percentile (v2) per-store config — separate from legacy store tiers
+    # ----------------------------------------------------------------
+
+    async def get_percentile_store_config(self) -> List[Dict]:
+        """All percentile per-store config rows, with a computed protection-days field."""
+        query = text("""
+            SELECT
+                c.store_id,
+                COALESCE(c.store_name, s.name) AS store_name,
+                c.review_days, c.lead_days,
+                c.quantile_a::float, c.quantile_b::float, c.quantile_c::float,
+                c.notes, c.updated_at
+            FROM percentile_store_config c
+            LEFT JOIN stores s ON c.store_id = s.id
+            ORDER BY store_name
+        """)
+        result = await self.db.execute(query)
+        return [
+            {
+                "store_id": r[0],
+                "store_name": r[1],
+                "review_days": r[2],
+                "lead_days": r[3],
+                "protection_days": (r[2] or 0) + (r[3] or 0),
+                "quantile_a": r[4],
+                "quantile_b": r[5],
+                "quantile_c": r[6],
+                "notes": r[7],
+                "updated_at": r[8].isoformat() if r[8] else None,
+            }
+            for r in result.fetchall()
+        ]
+
+    async def upsert_percentile_store_config(self, data: Dict) -> Dict:
+        """Create or update one store's percentile config. Stamps updated_at."""
+        existing = await self.db.execute(
+            select(PercentileStoreConfig).where(
+                PercentileStoreConfig.store_id == data["store_id"]
+            )
+        )
+        cfg = existing.scalar_one_or_none()
+        fields = ("store_name", "review_days", "lead_days",
+                  "quantile_a", "quantile_b", "quantile_c", "notes")
+        if cfg:
+            for f in fields:
+                if f in data and data[f] is not None:
+                    setattr(cfg, f, data[f])
+            cfg.updated_at = func.timezone("Asia/Manila", func.now())
+        else:
+            cfg = PercentileStoreConfig(**{k: v for k, v in data.items() if k in ("store_id", *fields)})
+            self.db.add(cfg)
+        await self.db.flush()
+        return {"store_id": cfg.store_id, "status": "ok"}
 
     async def get_all_seasonality(self) -> List[Dict]:
         """Get all seasonality periods."""
