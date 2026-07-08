@@ -230,31 +230,65 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const handleDownloadCsv = () => {
     if (!latestPlan || !latestPlan.items.length) return;
 
-    const headers = [
-      'Store', 'Product',
-      'Category', 'Avg Daily Sales',
-      'Safety Stock', 'Min Level',
-      'Store Inv', 'Warehouse Inv', 'Requested Qty', 'Allocated Qty', 'Days of Stock',
-      'Velocity ×', 'Category ×', 'Effective ×',
-    ];
-
+    // Export exactly what the active view shows (columns + current filter/sort).
     const sorted = filteredAndSorted(latestPlan.items);
-    const rows = sorted.map((item) => [
-      item.store_name ? getStoreNameByDbName(item.store_name) : item.store_id,
-      item.product_name ?? item.sku_id,
-      item.category ?? '',
-      item.avg_daily_sales.toFixed(2),
-      item.safety_stock.toFixed(2),
-      item.min_level.toFixed(2),
-      item.on_hand,
-      item.wh_on_hand ?? 0,
-      item.requested_ship_qty,
-      item.allocated_ship_qty,
-      item.days_of_stock.toFixed(2),
-      (item.velocity_multiplier ?? 1).toFixed(3),
-      (item.category_multiplier ?? 1).toFixed(3),
-      (item.effective_multiplier ?? 1).toFixed(3),
-    ]);
+    let headers: string[];
+    let rows: (string | number)[][];
+
+    if (algorithmType === 'percentile') {
+      headers = [
+        'Store', 'Product', 'Category', 'Total Sold', 'Avg Daily',
+        'Store Inv', 'WH Inv', 'Target', 'Ship', 'Days Stock',
+        'ABC', 'Segment', 'P-days', 'Svc-Q', 'Q-src', 'Flags',
+      ];
+      rows = sorted.map((item) => {
+        const q = item.quantile_used ?? item.service_quantile;
+        const flags = [item.silent_stockout ? 'OOS' : '', item.needs_count ? 'CNT' : '']
+          .filter(Boolean).join(' ');
+        return [
+          item.store_name ? getStoreNameByDbName(item.store_name) : item.store_id,
+          item.product_name ?? item.sku_id,
+          item.category ?? '',
+          item.total_sold_qty ?? 0,
+          item.avg_daily_sales.toFixed(1),
+          item.on_hand,
+          item.wh_on_hand ?? 0,
+          item.min_level.toFixed(0),
+          item.requested_ship_qty,
+          item.days_of_stock.toFixed(1),
+          item.abc_class ?? '',
+          item.segment ?? '',
+          item.p_days_used ?? '',
+          q != null ? `${(q * 100).toFixed(0)}%` : '',
+          item.quantile_source ?? '',
+          flags,
+        ];
+      });
+    } else {
+      headers = [
+        'Store', 'Product',
+        'Category', 'Avg Daily Sales',
+        'Safety Stock', 'Min Level',
+        'Store Inv', 'Warehouse Inv', 'Requested Qty', 'Allocated Qty', 'Days of Stock',
+        'Velocity ×', 'Category ×', 'Effective ×',
+      ];
+      rows = sorted.map((item) => [
+        item.store_name ? getStoreNameByDbName(item.store_name) : item.store_id,
+        item.product_name ?? item.sku_id,
+        item.category ?? '',
+        item.avg_daily_sales.toFixed(2),
+        item.safety_stock.toFixed(2),
+        item.min_level.toFixed(2),
+        item.on_hand,
+        item.wh_on_hand ?? 0,
+        item.requested_ship_qty,
+        item.allocated_ship_qty,
+        item.days_of_stock.toFixed(2),
+        (item.velocity_multiplier ?? 1).toFixed(3),
+        (item.category_multiplier ?? 1).toFixed(3),
+        (item.effective_multiplier ?? 1).toFixed(3),
+      ]);
+    }
 
     const csvContent = [
       headers.join(','),
@@ -271,7 +305,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
     const link = document.createElement('a');
     link.href = url;
     const storeName = selectedStoreId ? getStoreName(selectedStoreId) : 'all';
-    link.download = `replenishment_${storeName}_${latestPlan.run_date ?? 'latest'}.csv`;
+    link.download = `replenishment_${algorithmType}_${storeName}_${latestPlan.run_date ?? 'latest'}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
