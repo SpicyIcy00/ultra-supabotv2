@@ -636,7 +636,7 @@ class ResponseFormatter:
             return "N/A"
 
         # Check if it's a currency column
-        is_currency = any(kw in column_name.lower() for kw in ['revenue', 'sales', 'price', 'cost', 'profit', 'total', 'amount'])
+        is_currency = any(kw in column_name.lower() for kw in ['revenue', 'sales', 'price', 'cost', 'profit', 'total', 'amount', 'basket'])
         
         # Check if it's a date/time column
         is_date = any(kw in column_name.lower() for kw in ['date', 'time', 'created', 'updated', 'day'])
@@ -658,12 +658,14 @@ class ResponseFormatter:
             if is_percent:
                 return f"{float_val:.1f}%"
             
-            # Currency - keep decimals for smaller amounts
+            # Currency - keep decimals only for non-whole small amounts
             if is_currency:
-                if float_val >= 1000000:
+                if abs(float_val) >= 1000000:
                     return f"{self.currency_symbol}{float_val/1000000:.2f}M"
-                elif float_val >= 1000:
+                elif abs(float_val) >= 1000:
                     return f"{self.currency_symbol}{float_val:,.0f}"
+                elif float_val == int(float_val):
+                    return f"{self.currency_symbol}{int(float_val):,}"
                 else:
                     return f"{self.currency_symbol}{float_val:,.{self.decimal_places}f}"
             

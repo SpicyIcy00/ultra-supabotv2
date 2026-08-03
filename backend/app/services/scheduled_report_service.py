@@ -23,7 +23,6 @@ from app.services.query_executor import QueryExecutor
 from app.services.response_formatter import ResponseFormatter
 from app.services.presentation_intelligence import PresentationIntelligence
 from app.services import telegram_sender
-from app.services import chart_image
 
 MANILA = ZoneInfo("Asia/Manila")
 
@@ -158,8 +157,8 @@ class ScheduledReportService:
         return output.getvalue().encode("utf-8-sig")  # BOM so Excel opens UTF-8 cleanly
 
     async def run_one(self, report: ScheduledReport, triggered_by: str = "schedule") -> Dict[str, Any]:
-        """Re-run the saved SQL and deliver to Telegram (chart image + clean
-        message + CSV). Records last_run_* on the report."""
+        """Re-run the saved SQL and deliver a single, complete Telegram message
+        (all important info in the text — no image, no CSV). Records last_run_*."""
         run_date = date.today().isoformat()
         chat_id = report.telegram_chat_id
         try:
@@ -179,29 +178,12 @@ class ScheduledReportService:
             presenter = PresentationIntelligence()
             spec = await presenter.analyze(report.question, rows)
 
-            # 1) Chart image (best-effort — text still delivers if this fails).
-            chart_cfg = presenter.build_chart(report.question, rows, spec)
-            png = await chart_image.render_chart_png(chart_cfg)
-            if png:
-                await telegram_sender.send_photo(chat_id, png, caption=f"{report.title} — {run_date}")
-
-            # 2) Clean, Telegram-native message (no raw markdown).
+            # One self-contained message: every important field, formatted.
             message = self._build_telegram_html(report.title, run_date, row_count, rows, spec)
             msg_result = await telegram_sender.send_message(chat_id, message, parse_mode="HTML")
             if not msg_result.get("success"):
                 await self._record(report, "failed", f"Telegram send failed: {msg_result.get('error')}")
                 return {"status": "failed", "error": msg_result.get("error")}
-
-            # 3) CSV attachment with the full detail.
-            if report.include_csv:
-                csv_bytes = self._build_csv(rows)
-                filename = f"{report.title.replace(' ', '_')[:40]}_{run_date}.csv"
-                doc = await telegram_sender.send_document(
-                    chat_id, filename, csv_bytes, caption=f"{report.title} — {run_date}",
-                )
-                if not doc.get("success"):
-                    await self._record(report, "partial", f"Message sent; CSV failed: {doc.get('error')}")
-                    return {"status": "partial", "row_count": row_count, "error": doc.get("error")}
 
             await self._record(report, "success", f"{triggered_by}: {row_count} rows delivered")
             return {"status": "success", "row_count": row_count}
@@ -225,7 +207,7 @@ class ScheduledReportService:
 
         head = f"📊 <b>{html.escape(title)}</b>\n{run_date} · {row_count} row{'s' if row_count != 1 else ''}"
 
-        # Single-row summary -> key/value lines.
+        # Single-row summary -> key/value lines (all fields).
         if row_count == 1:
             lines = [head, ""]
             for c in (value_cols or cols):
@@ -233,25 +215,55 @@ class ScheduledReportService:
                 lines.append(f"• <b>{html.escape(self._label(c))}</b>: {html.escape(str(val))}")
             return "\n".join(lines)
 
-        # Multi-row -> compact monospace table of label + up to 3 key metrics.
-        metric_cols = [c for c in value_cols if not _NON_METRIC.search(c)]
-        show_cols = metric_cols[:3] if metric_cols else value_cols[:3]
-        table = self._monospace_table(rows, label, show_cols, formatter)
+        # Multi-row. Narrow results -> aligned monospace table. Wide results ->
+        # one block per row so EVERY metric is included and stays readable.
+        if len(value_cols) <= 3:
+            table = self._monospace_table(rows, label, value_cols, formatter)
+            body = f"{head}\n\n<pre>{html.escape(table)}</pre>"
+        else:
+            body = f"{head}\n\n" + self._render_blocks(rows, label, value_cols, formatter)
 
-        parts = [head, "", f"<pre>{html.escape(table)}</pre>"]
-
-        # A couple of plain insights (stripped of markdown).
         insights = formatter._generate_insights_ranking(rows)
         if insights:
-            parts.append("")
-            parts.append("<b>Key insights</b>")
+            body += "\n\n<b>Key insights</b>"
             for ins in insights[:3]:
-                parts.append(f"• {html.escape(self._strip_md(ins))}")
+                body += f"\n• {html.escape(self._strip_md(ins))}"
+        return body
 
-        if len(show_cols) < len(value_cols):
-            parts.append("")
-            parts.append("<i>Full detail in the attached CSV.</i>")
-        return "\n".join(parts)
+    def _render_blocks(
+        self, rows: List[Dict[str, Any]], label: Optional[str],
+        value_cols: List[str], formatter: ResponseFormatter, max_rows: int = 25,
+    ) -> str:
+        """One block per row: bold name (+ any alert badge), then all metrics as
+        'Label: value' pairs, two per line. Includes every important field."""
+        alert_col = next((c for c in value_cols if 'alert' in c.lower() or 'flag' in c.lower()), None)
+        detail_cols = [c for c in value_cols if c != alert_col]
+
+        blocks: List[str] = []
+        for idx, row in enumerate(rows[:max_rows], 1):
+            name = html.escape(str(row.get(label, ""))) if label else str(idx)
+            header = f"<b>{idx}. {name}</b>"
+            if alert_col:
+                av = row.get(alert_col)
+                avs = str(av).strip() if av is not None else ""
+                if avs and avs.lower() not in ("n/a", "none", "-", "", "0", "false"):
+                    header += f"  {html.escape(avs)}"
+
+            pairs: List[str] = []
+            for c in detail_cols:
+                val = formatter._format_value(row.get(c), c)
+                if val is None or str(val) == "N/A":
+                    continue
+                pairs.append(f"{html.escape(self._short_label(c))}: {html.escape(str(val))}")
+
+            block_lines = [header]
+            for j in range(0, len(pairs), 2):
+                block_lines.append(" · ".join(pairs[j:j + 2]))
+            blocks.append("\n".join(block_lines))
+
+        if len(rows) > max_rows:
+            blocks.append(f"<i>… +{len(rows) - max_rows} more</i>")
+        return "\n\n".join(blocks)
 
     def _monospace_table(
         self, rows: List[Dict[str, Any]], label: Optional[str],

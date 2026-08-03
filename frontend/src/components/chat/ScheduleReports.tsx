@@ -145,7 +145,6 @@ export function ScheduleReportModal({ open, onClose, initial, onCreated }: Sched
   const [dayOfWeek, setDayOfWeek] = useState(0);
   const [time, setTime] = useState('08:00');
   const [chatId, setChatId] = useState('');
-  const [includeCsv, setIncludeCsv] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tokenConfigured, setTokenConfigured] = useState<boolean | null>(null);
@@ -177,7 +176,7 @@ export function ScheduleReportModal({ open, onClose, initial, onCreated }: Sched
         hour: parseInt(hourStr, 10) || 0,
         minute: parseInt(minuteStr, 10) || 0,
         telegram_chat_id: chatId.trim(),
-        include_csv: includeCsv,
+        include_csv: false,
       });
       onCreated?.();
       onClose();
@@ -257,11 +256,6 @@ export function ScheduleReportModal({ open, onClose, initial, onCreated }: Sched
           )}
 
           <TelegramChatField chatId={chatId} onChange={setChatId} />
-
-          <label className="flex items-center gap-2 text-sm text-gray-300">
-            <input type="checkbox" checked={includeCsv} onChange={(e) => setIncludeCsv(e.target.checked)} className="accent-blue-500" />
-            Attach CSV file
-          </label>
 
           {error && <p className="text-sm text-red-400">{error}</p>}
         </div>
