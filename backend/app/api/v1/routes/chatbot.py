@@ -28,6 +28,7 @@ from app.services.query_executor import QueryExecutor, QueryExecutionError
 from app.services.query_validator import QueryValidationError
 from app.services.chart_intelligence import ChartIntelligence
 from app.services.response_formatter import ResponseFormatter
+from app.services.presentation_intelligence import PresentationIntelligence
 from app.services.insight_generator import InsightGenerator
 from app.services.conversation_memory import get_memory, add_exchange, get_context
 from app.services.schema_context import SchemaContext
@@ -115,23 +116,18 @@ async def generate_chat_stream(
 
             await asyncio.sleep(0.1)
 
-            # Generate chart configuration
-            chart_intel = ChartIntelligence()
-            chart_config = chart_intel.select_chart(
-                user_question=question,
-                results=execution_result["results"]
-            )
+            # AI-driven presentation: one call decides the best text layout AND
+            # the best chart (correct measure/axes). Falls back to heuristics.
+            presenter = PresentationIntelligence()
+            presentation_spec = await presenter.analyze(question, execution_result["results"])
 
-            # Extract chart data from config (or use original results)
+            chart_config = presenter.build_chart(
+                question, execution_result["results"], presentation_spec
+            )
             chart_data = chart_config.get("data") if chart_config else None
 
-            # Format response text
-            formatter = ResponseFormatter()
-            formatted_text = formatter.format_response(
-                user_question=question,
-                results=execution_result["results"],
-                chart_data=chart_data,
-                query_type=sql_result.get("query_type")
+            formatted_text = presenter.render_text(
+                question, execution_result["results"], presentation_spec
             )
 
             # Step 4: Send final response
@@ -286,25 +282,19 @@ async def query_chatbot(
                 validate=True
             )
 
-            # Generate chart
-            chart_intel = ChartIntelligence()
-            chart_config = chart_intel.select_chart(
-                user_question=request.question,
-                results=execution_result["results"]
-            )
-
-            # Extract chart data from config (or use original results)
-            chart_data = chart_config.get("data") if chart_config else None
-            
             query_type = sql_result.get("query_type", "unknown")
 
-            # Format response
-            formatter = ResponseFormatter()
-            formatted_text = formatter.format_response(
-                user_question=request.question,
-                results=execution_result["results"],
-                chart_data=chart_data,
-                query_type=query_type
+            # AI-driven presentation (text layout + chart), heuristic fallback.
+            presenter = PresentationIntelligence()
+            presentation_spec = await presenter.analyze(request.question, execution_result["results"])
+
+            chart_config = presenter.build_chart(
+                request.question, execution_result["results"], presentation_spec
+            )
+            chart_data = chart_config.get("data") if chart_config else None
+
+            formatted_text = presenter.render_text(
+                request.question, execution_result["results"], presentation_spec
             )
             
             # Generate AI insights (non-blocking, with fallback)

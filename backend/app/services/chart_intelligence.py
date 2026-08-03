@@ -415,9 +415,11 @@ class ChartIntelligence:
         """Detect if a column is time, numeric, or categorical."""
         col_name_lower = col_name.lower()
 
-        # Check for time-related column names
-        time_keywords = ['date', 'time', 'hour', 'day', 'month', 'year', 'week', 'period']
-        if any(kw in col_name_lower for kw in time_keywords):
+        # Check for time-related column names — match whole tokens, not
+        # substrings, so "yesterday_sales" isn't flagged as time via "day".
+        time_keywords = {'date', 'time', 'hour', 'day', 'month', 'year', 'week', 'period', 'datetime', 'timestamp'}
+        tokens = set(re.split(r'[^a-z]+', col_name_lower))
+        if tokens & time_keywords:
             return "time"
 
         # Check value type
@@ -764,25 +766,40 @@ class ChartIntelligence:
 
         return None
 
-    def _select_y_axis(self, data_profile: Dict[str, Any], x_axis: str | None) -> str | None:
-        """Select the best column for Y-axis (numeric value)."""
-        numeric_cols = data_profile.get("numeric_columns", [])
+    # Columns that are position indexes / ids — never a meaningful bar height.
+    _NON_METRIC_Y = re.compile(r'^(rank|position|row_number|row_num|index|idx|.*_id|id)$', re.IGNORECASE)
 
+    def _select_y_axis(self, data_profile: Dict[str, Any], x_axis: str | None) -> str | None:
+        """Select the best column for Y-axis (a meaningful numeric measure).
+
+        Excludes rank/id/position columns (so the worst-ranked item never gets
+        the tallest bar) and de-prioritises percentage/change columns in favour
+        of magnitude measures (money, counts, quantities).
+        """
+        numeric_cols = [
+            c for c in data_profile.get("numeric_columns", [])
+            if c != x_axis and not self._NON_METRIC_Y.match(c)
+        ]
         if not numeric_cols:
             return None
 
-        # Prefer revenue/sales columns
-        for col in numeric_cols:
+        def is_pct(col: str) -> bool:
+            cl = col.lower()
+            return any(kw in cl for kw in ['pct', 'percent', 'percentage', 'ratio', 'change', 'margin'])
+
+        magnitude = [c for c in numeric_cols if not is_pct(c)]
+
+        # Prefer a money/volume measure among magnitude columns.
+        for col in magnitude:
             col_lower = col.lower()
-            if any(kw in col_lower for kw in ['revenue', 'sales', 'total', 'amount']):
+            if any(kw in col_lower for kw in
+                   ['revenue', 'sales', 'total', 'amount', 'count', 'qty', 'quantity', 'units', 'basket']):
                 return col
 
-        # Return first numeric column that's not the x-axis
-        for col in numeric_cols:
-            if col != x_axis:
-                return col
-
-        return numeric_cols[0] if numeric_cols else None
+        # Otherwise first magnitude column, else fall back to any numeric.
+        if magnitude:
+            return magnitude[0]
+        return numeric_cols[0]
 
     def _format_axis_value(self, value: Any, column_name: str) -> str:
         """Format axis value for display."""

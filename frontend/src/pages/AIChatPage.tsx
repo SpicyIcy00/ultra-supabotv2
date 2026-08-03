@@ -6,6 +6,7 @@
 import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
 import { Send, Loader2, Code, Table as TableIcon, BarChart3, Download, ChevronDown, ChevronUp, Plus, MessageSquare, Trash2, Pencil, Check, X, PanelLeftOpen, PanelLeftClose, CalendarClock } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { ChatMessage } from '../types/chatbot';
 import { streamChatQuery, getSuggestions } from '../services/chatbotApi';
 import type { ChartState } from '../types/enhancedChart';
@@ -572,7 +573,22 @@ function MessageBubble({ message, onChartCustomizationChange, onSchedule }: Mess
     li: ({ children, ...props }: any) => <li {...props}>{processChildren(children, renderText)}</li>,
     strong: ({ children, ...props }: any) => <strong {...props}>{processChildren(children, renderText)}</strong>,
     em: ({ children, ...props }: any) => <em {...props}>{processChildren(children, renderText)}</em>,
-    td: ({ children, ...props }: any) => <td {...props}>{processChildren(children, renderText)}</td>,
+    // GFM tables — styled to match the dark theme and scroll horizontally on overflow.
+    table: ({ children, ...props }: any) => (
+      <div className="overflow-x-auto my-3 not-prose">
+        <table {...props} className="min-w-full text-sm border-collapse">{children}</table>
+      </div>
+    ),
+    thead: ({ children, ...props }: any) => <thead {...props} className="bg-gray-900/70">{children}</thead>,
+    th: ({ children, ...props }: any) => (
+      <th {...props} className="px-3 py-2 text-left font-medium text-gray-300 border-b border-gray-700 whitespace-nowrap">
+        {processChildren(children, renderText)}
+      </th>
+    ),
+    tr: ({ children, ...props }: any) => <tr {...props} className="border-b border-gray-800">{children}</tr>,
+    td: ({ children, ...props }: any) => (
+      <td {...props} className="px-3 py-2 text-gray-200 whitespace-nowrap">{processChildren(children, renderText)}</td>
+    ),
   }), [renderText]);
 
   if (message.role === 'user') {
@@ -604,7 +620,7 @@ function MessageBubble({ message, onChartCustomizationChange, onSchedule }: Mess
           <div className="space-y-4">
             {/* Formatted Response */}
             <div className="prose prose-invert max-w-none">
-              <ReactMarkdown components={markdownComponents}>{message.content}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{message.content}</ReactMarkdown>
             </div>
 
             {/* Chart - Using Enhanced Chart Renderer with 15+ chart types */}

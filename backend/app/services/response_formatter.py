@@ -106,6 +106,17 @@ class ResponseFormatter:
     _REVENUE_COLS = {'net_amount', 'revenue', 'total_revenue', 'amount', 'sales',
                      'item_total', 'total_sales', 'gross_revenue'}
 
+    # Position/index columns that are never a meaningful insight metric.
+    _NON_METRIC_COLS = re.compile(r'^(rank|position|row_number|row_num|index|idx|.*_id|id)$', re.IGNORECASE)
+
+    def _metric_columns(self, row: Dict[str, Any]) -> List[str]:
+        """Numeric columns worth analysing — excludes rank/id/position indexes."""
+        return [
+            k for k, v in row.items()
+            if isinstance(v, (int, float, Decimal)) and not isinstance(v, bool)
+            and not self._NON_METRIC_COLS.match(k)
+        ]
+
     def _format_ranking(
         self,
         question: str,
@@ -746,9 +757,9 @@ class ResponseFormatter:
         if len(results) < 2:
             return insights
 
-        # Find numeric columns
+        # Find meaningful metric columns (exclude rank/id/position)
         first_row = results[0]
-        numeric_cols = [k for k, v in first_row.items() if isinstance(v, (int, float, Decimal))]
+        numeric_cols = self._metric_columns(first_row)
 
         if not numeric_cols:
             return insights
@@ -793,9 +804,9 @@ class ResponseFormatter:
         if len(results) < 2:
             return insights
 
-        # Find numeric columns
+        # Find meaningful metric columns (exclude rank/id/position)
         first_row = results[0]
-        numeric_cols = [k for k, v in first_row.items() if isinstance(v, (int, float, Decimal))]
+        numeric_cols = self._metric_columns(first_row)
 
         for col in numeric_cols[:2]:  # Max 2 metrics
             values = [float(r.get(col, 0)) for r in results[:2]]
