@@ -635,9 +635,15 @@ class ResponseFormatter:
         if isinstance(value, str) and not value.strip():
             return "N/A"
 
-        # Check if it's a currency column
-        is_currency = any(kw in column_name.lower() for kw in ['revenue', 'sales', 'price', 'cost', 'profit', 'total', 'amount', 'basket'])
-        
+        # Check if it's a currency column. Counts/quantities are never money
+        # even when named like "total_txns" — check those first to exclude them.
+        _col_l = column_name.lower()
+        is_count = any(kw in _col_l for kw in
+                       ['txn', 'transaction', 'count', 'qty', 'quantity', 'units', 'orders',
+                        'tickets', 'volume', 'number', 'stock', 'on_hand', 'items'])
+        is_currency = (not is_count) and any(kw in _col_l for kw in
+                       ['revenue', 'sales', 'price', 'cost', 'profit', 'amount', 'basket', 'peso', 'php', 'gmv'])
+
         # Check if it's a date/time column
         is_date = any(kw in column_name.lower() for kw in ['date', 'time', 'created', 'updated', 'day'])
         

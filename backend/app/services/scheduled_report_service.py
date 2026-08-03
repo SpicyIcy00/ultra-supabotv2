@@ -202,15 +202,23 @@ class ScheduledReportService:
     ) -> str:
         formatter = ResponseFormatter()
         cols = list(rows[0].keys())
-        label = (spec or {}).get("label_column") or self._first_text_col(rows)
+        # Label = the name/time column. Fall back to a time column, then the
+        # first column, so time series ("hour") and label-less results still
+        # anchor each row instead of showing a bare index.
+        label = ((spec or {}).get("label_column")
+                 or self._first_text_col(rows)
+                 or self._first_time_col(cols)
+                 or cols[0])
         value_cols = [c for c in ((spec or {}).get("value_columns") or cols) if c != label]
 
         head = f"📊 <b>{html.escape(title)}</b>\n{run_date} · {row_count} row{'s' if row_count != 1 else ''}"
 
-        # Single-row summary -> key/value lines (all fields).
+        # Single-row summary -> key/value lines for EVERY field (no label column
+        # is excluded — a one-row result has no "rows" to name).
         if row_count == 1:
+            display_cols = (spec or {}).get("value_columns") or cols
             lines = [head, ""]
-            for c in (value_cols or cols):
+            for c in display_cols:
                 val = formatter._format_value(rows[0].get(c), c)
                 lines.append(f"• <b>{html.escape(self._label(c))}</b>: {html.escape(str(val))}")
             return "\n".join(lines)
@@ -223,16 +231,63 @@ class ScheduledReportService:
         else:
             body = f"{head}\n\n" + self._render_blocks(rows, label, value_cols, formatter)
 
-        insights = formatter._generate_insights_ranking(rows)
-        if insights:
+        # Insights: a total+peak summary for time series (ranking-style insights
+        # like "top 3 account for X%" don't make sense across time), otherwise
+        # the ranking insights.
+        summary = (self._time_series_summary(rows, label, value_cols, formatter)
+                   if self._is_time_col(label)
+                   else [self._strip_md(i) for i in formatter._generate_insights_ranking(rows)])
+        if summary:
             body += "\n\n<b>Key insights</b>"
-            for ins in insights[:3]:
-                body += f"\n• {html.escape(self._strip_md(ins))}"
+            for ins in summary[:3]:
+                body += f"\n• {html.escape(ins)}"
         return body
+
+    # Time helpers ----------------------------------------------------
+
+    @staticmethod
+    def _is_time_col(col: Optional[str]) -> bool:
+        if not col:
+            return False
+        toks = set(re.split(r'[^a-z]+', col.lower()))
+        return bool(toks & {'date', 'time', 'hour', 'day', 'month', 'year', 'week', 'quarter', 'period'})
+
+    def _first_time_col(self, cols: List[str]) -> Optional[str]:
+        return next((c for c in cols if self._is_time_col(c)), None)
+
+    def _time_series_summary(
+        self, rows: List[Dict[str, Any]], label: str,
+        value_cols: List[str], formatter: ResponseFormatter,
+    ) -> List[str]:
+        """Total + peak period for the primary measure of a time series."""
+        metric = next(
+            (c for c in value_cols
+             if self._is_numeric(rows, c) and not _NON_METRIC.search(c)
+             and not any(k in c.lower() for k in ('pct', 'percent', 'change', 'ratio'))),
+            None,
+        )
+        if not metric:
+            return []
+        total = sum(float(r.get(metric) or 0) for r in rows)
+        peak = max(rows, key=lambda r: float(r.get(metric) or 0))
+        m_label = self._short_label(metric)
+        return [
+            f"Total {m_label}: {formatter._format_value(total, metric)}",
+            f"Peak: {peak.get(label)} ({formatter._format_value(peak.get(metric), metric)})",
+        ]
+
+    @staticmethod
+    def _is_numeric(rows: List[Dict[str, Any]], col: str) -> bool:
+        for r in rows:
+            v = r.get(col)
+            if v is None:
+                continue
+            return isinstance(v, (int, float, Decimal)) and not isinstance(v, bool)
+        return False
 
     def _render_blocks(
         self, rows: List[Dict[str, Any]], label: Optional[str],
-        value_cols: List[str], formatter: ResponseFormatter, max_rows: int = 25,
+        value_cols: List[str], formatter: ResponseFormatter, max_rows: int = 40,
     ) -> str:
         """One block per row: bold name (+ any alert badge), then all metrics as
         'Label: value' pairs, two per line. Includes every important field."""
@@ -267,7 +322,7 @@ class ScheduledReportService:
 
     def _monospace_table(
         self, rows: List[Dict[str, Any]], label: Optional[str],
-        show_cols: List[str], formatter: ResponseFormatter, max_rows: int = 15,
+        show_cols: List[str], formatter: ResponseFormatter, max_rows: int = 40,
     ) -> str:
         headers = ([self._label(label)] if label else ["#"]) + [self._short_label(c) for c in show_cols]
         table_rows: List[List[str]] = []
@@ -295,7 +350,7 @@ class ScheduledReportService:
         lines = [fmt_row(headers), "-" * (sum(widths) + 2 * (len(widths) - 1))]
         lines += [fmt_row(r) for r in table_rows]
         if len(rows) > max_rows:
-            lines.append(f"… +{len(rows) - max_rows} more (see CSV)")
+            lines.append(f"… +{len(rows) - max_rows} more")
         return "\n".join(lines)
 
     @staticmethod
