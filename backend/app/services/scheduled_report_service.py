@@ -325,22 +325,30 @@ class ScheduledReportService:
     def _label(col: Optional[str]) -> str:
         return (col or "").replace('_', ' ').title()
 
-    @staticmethod
-    def _short_label(col: str) -> str:
-        """Abbreviate common column names for narrow table headers."""
+    # Clear, human labels for common retail columns (no cryptic symbols).
+    _LABEL_MAP = {
+        'today_net_sales': 'Sales', 'yesterday_net_sales': 'Sales', 'net_sales': 'Sales',
+        'total_sales': 'Sales', 'yesterday_sales': 'Sales', 'sales': 'Sales', 'revenue': 'Revenue',
+        'today_txn_count': 'Txns', 'yesterday_txn_count': 'Txns', 'txn_count': 'Txns',
+        'transaction_count': 'Txns', 'today_avg_basket': 'Avg basket',
+        'yesterday_avg_basket': 'Avg basket', 'avg_basket': 'Avg basket',
+        'sales_change_pct': 'Sales change', 'txn_count_change_pct': 'Txn change',
+        'basket_change_pct': 'Basket change', 'basket_size_change_pct': 'Basket change',
+        'quantity': 'Qty', 'units': 'Units', 'profit': 'Profit', 'margin': 'Margin',
+    }
+
+    def _short_label(self, col: str) -> str:
+        """Readable label for a column — clear words, no cryptic symbols, and no
+        blind truncation. Works for any column, not just the curated ones."""
         c = col.lower()
-        table = {
-            'sales_change_pct': 'Δ%', 'txn_count_change_pct': 'Txn Δ%',
-            'basket_size_change_pct': 'Bskt Δ%', 'today_net_sales': 'Sales',
-            'yesterday_sales': 'Sales', 'today_txn_count': 'Txns',
-            'yesterday_txn_count': 'Txns', 'today_avg_basket': 'Basket',
-            'yesterday_avg_basket': 'Basket', 'revenue': 'Revenue',
-            'total_sales': 'Sales', 'quantity': 'Qty', 'units': 'Units',
-        }
-        if c in table:
-            return table[c]
-        short = col.replace('_', ' ').title()
-        return short if len(short) <= 8 else short[:8]
+        if c in self._LABEL_MAP:
+            return self._LABEL_MAP[c]
+        # Generic: drop the redundant '%'/'pct' noise (the value already shows %),
+        # keep 'change' as a word, title-case the rest. Never truncate mid-word.
+        tokens = [t for t in re.split(r'[^a-z0-9]+', c)
+                  if t and t not in ('pct', 'percent', 'percentage')]
+        label = ' '.join(tokens).title().replace(' Chg', ' Change')
+        return label or col
 
     @staticmethod
     def _strip_md(text: str) -> str:
