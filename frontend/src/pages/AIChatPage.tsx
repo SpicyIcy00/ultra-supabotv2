@@ -31,8 +31,20 @@ export default function AIChatPage() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // mobile/tablet drawer
+  const [collapsed, setCollapsed] = useState(() => {
+    // Remember the desktop sidebar collapsed preference.
+    return typeof localStorage !== 'undefined' && localStorage.getItem('ai-chat-sidebar-collapsed') === '1';
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try { localStorage.setItem('ai-chat-sidebar-collapsed', next ? '1' : '0'); } catch { /* ignore */ }
+      return next;
+    });
+  };
 
   // Ensure there is always an active conversation to write into.
   useEffect(() => {
@@ -168,7 +180,9 @@ export default function AIChatPage() {
         conversations={conversations}
         activeId={activeId}
         open={sidebarOpen}
+        collapsed={collapsed}
         onClose={() => setSidebarOpen(false)}
+        onToggleCollapsed={toggleCollapsed}
         onNewChat={handleNewChat}
         onSelect={handleSelectConversation}
         onDelete={deleteConversation}
@@ -179,6 +193,7 @@ export default function AIChatPage() {
       <div className="flex flex-col flex-1 min-w-0">
         {/* Header */}
         <div className="mb-3 sm:mb-6 flex items-start gap-3">
+          {/* Open conversations: drawer on mobile, expand collapsed column on desktop */}
           <button
             onClick={() => setSidebarOpen(true)}
             className="lg:hidden mt-1 p-2 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-colors"
@@ -186,6 +201,15 @@ export default function AIChatPage() {
           >
             <PanelLeftOpen className="w-5 h-5" />
           </button>
+          {collapsed && (
+            <button
+              onClick={toggleCollapsed}
+              className="hidden lg:block mt-1 p-2 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-colors"
+              title="Show conversations"
+            >
+              <PanelLeftOpen className="w-5 h-5" />
+            </button>
+          )}
           <div>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1 sm:mb-2">AI Chat Assistant</h1>
             <p className="text-sm sm:text-base text-gray-400">Ask questions about your business data in natural language</p>
@@ -267,7 +291,9 @@ interface ConversationSidebarProps {
   conversations: import('../stores/chatStore').Conversation[];
   activeId: string | null;
   open: boolean;
+  collapsed: boolean;
   onClose: () => void;
+  onToggleCollapsed: () => void;
   onNewChat: () => void;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
@@ -278,7 +304,9 @@ function ConversationSidebar({
   conversations,
   activeId,
   open,
+  collapsed,
   onClose,
+  onToggleCollapsed,
   onNewChat,
   onSelect,
   onDelete,
@@ -389,10 +417,22 @@ function ConversationSidebar({
 
   return (
     <>
-      {/* Desktop: persistent column */}
-      <aside className="hidden lg:flex flex-col w-64 flex-shrink-0 bg-gray-900/40 border border-gray-800 rounded-xl p-3">
-        {list}
-      </aside>
+      {/* Desktop: collapsible column */}
+      {!collapsed && (
+        <aside className="hidden lg:flex flex-col w-64 flex-shrink-0 bg-gray-900/40 border border-gray-800 rounded-xl p-3">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Conversations</span>
+            <button
+              onClick={onToggleCollapsed}
+              className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-colors"
+              title="Hide conversations"
+            >
+              <PanelLeftClose className="w-4 h-4" />
+            </button>
+          </div>
+          {list}
+        </aside>
+      )}
 
       {/* Mobile/tablet: slide-out drawer */}
       {open && (
