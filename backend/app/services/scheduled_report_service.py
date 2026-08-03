@@ -28,7 +28,11 @@ from app.services import chart_image
 MANILA = ZoneInfo("Asia/Manila")
 
 # Columns that are position indexes / ids — never shown as a headline metric.
-_NON_METRIC = re.compile(r'^(rank|position|row_number|row_num|index|idx|.*_id|id)$', re.IGNORECASE)
+# Token-aware + search so "store_rank"/"sales_rank"/"row_number" are caught.
+_NON_METRIC = re.compile(
+    r'(?:^|_)(rank|ranking|position|index|idx|id|rownum|seq|sequence|ordinal|row)(?:_|$)',
+    re.IGNORECASE,
+)
 
 # Editable fields accepted from the API (everything else is server-managed).
 _EDITABLE = {
@@ -230,7 +234,7 @@ class ScheduledReportService:
             return "\n".join(lines)
 
         # Multi-row -> compact monospace table of label + up to 3 key metrics.
-        metric_cols = [c for c in value_cols if not _NON_METRIC.match(c)]
+        metric_cols = [c for c in value_cols if not _NON_METRIC.search(c)]
         show_cols = metric_cols[:3] if metric_cols else value_cols[:3]
         table = self._monospace_table(rows, label, show_cols, formatter)
 

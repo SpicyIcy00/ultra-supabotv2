@@ -24,7 +24,12 @@ from app.services.chart_intelligence import ChartIntelligence
 from app.services.response_formatter import ResponseFormatter
 
 # Columns that are never a meaningful chart measure (position indexes, ids).
-_NON_METRIC = re.compile(r'^(rank|position|row_number|row_num|index|idx|.*_id|id)$', re.IGNORECASE)
+# Token-aware + search-based so "store_rank"/"sales_rank"/"row_number" are all
+# caught, not just an exact "rank".
+_NON_METRIC = re.compile(
+    r'(?:^|_)(rank|ranking|position|index|idx|id|rownum|seq|sequence|ordinal|row)(?:_|$)',
+    re.IGNORECASE,
+)
 
 _ALLOWED_CHART_TYPES = {
     "bar", "horizontal_bar", "line", "area", "pie", "stacked_bar",
@@ -68,7 +73,7 @@ class PresentationIntelligence:
         ChartIntelligence and let _coerce_spec pick the fitting text format."""
         cols = list(results[0].keys())
         chart_cfg = self._chart_intel.select_chart(question, results)
-        if chart_cfg and chart_cfg.get("y_axis") and not _NON_METRIC.match(chart_cfg["y_axis"]):
+        if chart_cfg and chart_cfg.get("y_axis") and not _NON_METRIC.search(chart_cfg["y_axis"]):
             chart = {
                 "type": chart_cfg.get("type", "bar"),
                 "x": chart_cfg.get("x_axis"),
@@ -80,7 +85,7 @@ class PresentationIntelligence:
             chart = {"type": "none"}
 
         label = self._guess_label_column(results)
-        metric_cols = [c for c in cols if c != label and not _NON_METRIC.match(c)]
+        metric_cols = [c for c in cols if c != label and not _NON_METRIC.search(c)]
         # One primary metric per row reads best as a ranked list; wider results as a table.
         default_fmt = "numbered_list" if len(metric_cols) <= 1 else "table"
 
@@ -151,7 +156,7 @@ class PresentationIntelligence:
         y = chart.get("y")
         cols = set(results[0].keys())
         # y must exist and be a real numeric measure (never rank/id).
-        if not x or not y or x not in cols or y not in cols or _NON_METRIC.match(y):
+        if not x or not y or x not in cols or y not in cols or _NON_METRIC.search(y):
             return self._chart_intel.select_chart(question, results)
         if not self._is_numeric_column(results, y):
             return self._chart_intel.select_chart(question, results)
@@ -262,7 +267,7 @@ Output JSON only."""
         fmt = spec["text_format"]
         label = spec.get("label_column")
         # Meaningful (non-index) value columns present in the data.
-        metric_cols = [c for c in spec["value_columns"] if not _NON_METRIC.match(c)]
+        metric_cols = [c for c in spec["value_columns"] if not _NON_METRIC.search(c)]
         value_cols = [c for c in spec["value_columns"] if c != label]
 
         if n <= 1:

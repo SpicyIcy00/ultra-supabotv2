@@ -107,14 +107,18 @@ class ResponseFormatter:
                      'item_total', 'total_sales', 'gross_revenue'}
 
     # Position/index columns that are never a meaningful insight metric.
-    _NON_METRIC_COLS = re.compile(r'^(rank|position|row_number|row_num|index|idx|.*_id|id)$', re.IGNORECASE)
+    # Token-aware + search so "store_rank"/"sales_rank"/"row_number" are caught.
+    _NON_METRIC_COLS = re.compile(
+        r'(?:^|_)(rank|ranking|position|index|idx|id|rownum|seq|sequence|ordinal|row)(?:_|$)',
+        re.IGNORECASE,
+    )
 
     def _metric_columns(self, row: Dict[str, Any]) -> List[str]:
         """Numeric columns worth analysing — excludes rank/id/position indexes."""
         return [
             k for k, v in row.items()
             if isinstance(v, (int, float, Decimal)) and not isinstance(v, bool)
-            and not self._NON_METRIC_COLS.match(k)
+            and not self._NON_METRIC_COLS.search(k)
         ]
 
     def _format_ranking(

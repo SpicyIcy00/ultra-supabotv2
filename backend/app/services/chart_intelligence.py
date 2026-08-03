@@ -767,7 +767,11 @@ class ChartIntelligence:
         return None
 
     # Columns that are position indexes / ids — never a meaningful bar height.
-    _NON_METRIC_Y = re.compile(r'^(rank|position|row_number|row_num|index|idx|.*_id|id)$', re.IGNORECASE)
+    # Token-aware + search so "store_rank"/"sales_rank"/"row_number" are caught.
+    _NON_METRIC_Y = re.compile(
+        r'(?:^|_)(rank|ranking|position|index|idx|id|rownum|seq|sequence|ordinal|row)(?:_|$)',
+        re.IGNORECASE,
+    )
 
     def _select_y_axis(self, data_profile: Dict[str, Any], x_axis: str | None) -> str | None:
         """Select the best column for Y-axis (a meaningful numeric measure).
@@ -778,7 +782,7 @@ class ChartIntelligence:
         """
         numeric_cols = [
             c for c in data_profile.get("numeric_columns", [])
-            if c != x_axis and not self._NON_METRIC_Y.match(c)
+            if c != x_axis and not self._NON_METRIC_Y.search(c)
         ]
         if not numeric_cols:
             return None
