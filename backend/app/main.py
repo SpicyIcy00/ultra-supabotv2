@@ -125,7 +125,43 @@ async def startup_event():
                     ('69c73fcb277aa600076dfaaa', 'Shangri-La', 7, 2, 0.95, 0.90, 0.85)
                 ON CONFLICT (store_id) DO NOTHING
             """))
-        print("Schema migration: max_cover_days + product_barcodes + percentile columns + store config ensured")
+            # Auto-report (scheduled weekly replenishment → Sheets) config tables
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS auto_report_settings (
+                    id                     INTEGER      PRIMARY KEY,
+                    enabled                BOOLEAN      NOT NULL DEFAULT FALSE,
+                    day_of_week            INTEGER      NOT NULL DEFAULT 0,
+                    hour                   INTEGER      NOT NULL DEFAULT 6,
+                    minute                 INTEGER      NOT NULL DEFAULT 0,
+                    algorithm              VARCHAR(20)  NOT NULL DEFAULT 'legacy',
+                    calc_mode              VARCHAR(20)  NOT NULL DEFAULT 'snapshot',
+                    apply_stockout_buffer  BOOLEAN      NOT NULL DEFAULT FALSE,
+                    show_zero_requested    BOOLEAN      NOT NULL DEFAULT FALSE,
+                    post_backup            BOOLEAN      NOT NULL DEFAULT TRUE,
+                    last_run_at            TIMESTAMPTZ,
+                    last_run_status        VARCHAR(20),
+                    last_run_detail        TEXT,
+                    updated_at             TIMESTAMPTZ  NOT NULL DEFAULT timezone('Asia/Manila', now())
+                )
+            """))
+            await conn.execute(text(
+                "INSERT INTO auto_report_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING"
+            ))
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS auto_report_store (
+                    store_id    VARCHAR(24)  PRIMARY KEY,
+                    enabled     BOOLEAN      NOT NULL DEFAULT TRUE,
+                    sheet_name  VARCHAR(120),
+                    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT timezone('Asia/Manila', now())
+                )
+            """))
+            # Seed one opt-in row per configured store tier (never overwrites edits)
+            await conn.execute(text("""
+                INSERT INTO auto_report_store (store_id, enabled)
+                SELECT store_id, TRUE FROM store_tiers
+                ON CONFLICT (store_id) DO NOTHING
+            """))
+        print("Schema migration: max_cover_days + product_barcodes + percentile columns + store config + auto_report ensured")
     except Exception as e:
         print(f"Schema migration warning: {e}")
 
@@ -137,6 +173,14 @@ async def startup_event():
     )
             
     print("SchemaContext initialized")
+
+    # Start the in-process weekly auto-report scheduler
+    try:
+        from app.services.scheduler import start_scheduler
+        start_scheduler()
+    except Exception as e:
+        print(f"Scheduler start warning: {e}")
+
     print("REGISTERED ROUTES START")
     for route in app.routes:
         if hasattr(route, "path"):
@@ -148,6 +192,11 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Clean up resources on application shutdown"""
+    try:
+        from app.services.scheduler import shutdown_scheduler
+        shutdown_scheduler()
+    except Exception as e:
+        print(f"Scheduler shutdown warning: {e}")
     SchemaContext.shutdown()
     print("SchemaContext shut down")
 

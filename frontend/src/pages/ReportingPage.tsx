@@ -11,9 +11,10 @@ import { PipelineManager } from '../components/replenishment/PipelineManager';
 import { AlgorithmSettings } from '../components/replenishment/AlgorithmSettings';
 import { VelocityMultiplierConfig } from '../components/replenishment/VelocityMultiplierConfig';
 import { CategoryMultiplierConfig } from '../components/replenishment/CategoryMultiplierConfig';
+import { AutoReportConfig } from '../components/replenishment/AutoReportConfig';
 
 type ReplenishmentSubTab = 'dashboard' | 'shipment-plan' | 'picklist' | 'exceptions' | 'configuration';
-type ConfigSubTab = 'store-tiers' | 'percentile-v2' | 'seasonality' | 'warehouse' | 'pipeline' | 'algorithm' | 'velocity-multipliers' | 'category-multipliers';
+type ConfigSubTab = 'store-tiers' | 'percentile-v2' | 'seasonality' | 'warehouse' | 'pipeline' | 'algorithm' | 'velocity-multipliers' | 'category-multipliers' | 'auto-report';
 
 const ReportingPage: React.FC = () => {
   const [replenishmentSubTab, setReplenishmentSubTab] = useState<ReplenishmentSubTab>('dashboard');
@@ -37,6 +38,7 @@ const ReportingPage: React.FC = () => {
               { key: 'warehouse' as ConfigSubTab, label: 'Warehouse Inventory' },
               { key: 'pipeline' as ConfigSubTab, label: 'Pipeline (On-Order)' },
               { key: 'algorithm' as ConfigSubTab, label: 'Algorithm Settings' },
+              { key: 'auto-report' as ConfigSubTab, label: 'Auto Report' },
             ]).map(tab => (
               <button key={tab.key} onClick={() => setConfigSubTab(tab.key)}
                 className={`px-5 py-2.5 text-sm font-medium rounded-lg border-b-2 transition-colors ${
@@ -56,6 +58,7 @@ const ReportingPage: React.FC = () => {
           {configSubTab === 'warehouse' && <WarehouseInventoryManager />}
           {configSubTab === 'pipeline' && <PipelineManager />}
           {configSubTab === 'algorithm' && <AlgorithmSettings />}
+          {configSubTab === 'auto-report' && <AutoReportConfig />}
         </div>
       );
     }

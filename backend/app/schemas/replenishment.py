@@ -398,5 +398,45 @@ class PercentileStoreConfigResponse(BaseModel):
     updated_at: Optional[str] = None
 
 
+# --- Auto Report (scheduled weekly replenishment → Sheets) ---
+
+class AutoReportSettingsUpdate(BaseModel):
+    enabled: Optional[bool] = None
+    day_of_week: Optional[int] = Field(None, ge=0, le=6, description="0=Mon … 6=Sun (Asia/Manila)")
+    hour: Optional[int] = Field(None, ge=0, le=23)
+    minute: Optional[int] = Field(None, ge=0, le=59)
+    algorithm: Optional[Literal["legacy", "percentile"]] = None
+    calc_mode: Optional[Literal["snapshot", "fallback", "auto"]] = None
+    apply_stockout_buffer: Optional[bool] = None
+    show_zero_requested: Optional[bool] = None
+    post_backup: Optional[bool] = None
+
+
+class AutoReportSettingsResponse(BaseModel):
+    enabled: bool
+    day_of_week: int
+    hour: int
+    minute: int
+    algorithm: str
+    calc_mode: str
+    apply_stockout_buffer: bool
+    show_zero_requested: bool
+    post_backup: bool
+    last_run_at: Optional[str] = None
+    last_run_status: Optional[str] = None
+    last_run_detail: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class AutoReportStoreItem(BaseModel):
+    store_id: str = Field(..., max_length=24)
+    enabled: Optional[bool] = None
+    sheet_name: Optional[str] = Field(None, max_length=120)
+
+
+class AutoReportStoreBulkUpdate(BaseModel):
+    items: List[AutoReportStoreItem]
+
+
 # Rebuild forward refs
 ShipmentPlanResponse.model_rebuild()

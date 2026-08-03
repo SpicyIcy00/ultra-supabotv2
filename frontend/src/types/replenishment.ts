@@ -290,3 +290,51 @@ export interface DataReadiness {
   stores_with_snapshots: string[];
   message: string;
 }
+
+
+// --- Auto Report (scheduled weekly replenishment → Sheets) ---
+export interface AutoReportSettings {
+  enabled: boolean;
+  day_of_week: number; // 0=Mon … 6=Sun (Asia/Manila)
+  hour: number;
+  minute: number;
+  algorithm: 'legacy' | 'percentile';
+  calc_mode: 'snapshot' | 'fallback' | 'auto';
+  apply_stockout_buffer: boolean;
+  show_zero_requested: boolean;
+  post_backup: boolean;
+  last_run_at?: string | null;
+  last_run_status?: string | null;
+  last_run_detail?: string | null;
+  updated_at?: string | null;
+}
+
+export interface AutoReportStore {
+  store_id: string;
+  store_name?: string | null;
+  enabled: boolean;
+  sheet_name?: string | null;
+}
+
+export interface AutoReportRunResult {
+  store_id: string;
+  store_name: string;
+  sheet_name: string;
+  success?: boolean;
+  rows?: number;
+  message?: string;
+  error?: string;
+  backup_success?: boolean;
+  backup_error?: string;
+}
+
+export interface AutoReportRunResponse {
+  triggered_by: string;
+  run_date: string;
+  status: 'success' | 'partial' | 'failed';
+  stores_total: number;
+  stores_ok: number;
+  stores_failed: number;
+  total_rows: number;
+  results: AutoReportRunResult[];
+}

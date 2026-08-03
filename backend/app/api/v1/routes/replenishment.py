@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.services.replenishment_service import ReplenishmentService
 from app.services.percentile_service import PercentileReplenishmentService
 from app.services.ai_insights_service import AIInsightsService
+from app.services.auto_report_service import AutoReportService
 from app.schemas.replenishment import (
     StoreTierCreate,
     StoreTierUpdate,
@@ -19,6 +20,8 @@ from app.schemas.replenishment import (
     VelocityMultiplierRuleUpdate,
     CategoryMultiplierBulkUpdate,
     PercentileStoreConfigUpsert,
+    AutoReportSettingsUpdate,
+    AutoReportStoreBulkUpdate,
 )
 
 router = APIRouter()
@@ -30,6 +33,10 @@ def _get_service(db: AsyncSession = Depends(get_db)) -> ReplenishmentService:
 
 def _get_percentile_service(db: AsyncSession = Depends(get_db)) -> PercentileReplenishmentService:
     return PercentileReplenishmentService(db)
+
+
+def _get_auto_report_service(db: AsyncSession = Depends(get_db)) -> AutoReportService:
+    return AutoReportService(db)
 
 
 # ----------------------------------------------------------------
@@ -427,3 +434,54 @@ async def auto_populate_category_multipliers(
 ):
     """Auto-populate all category × store combinations at 1.0."""
     return await service.auto_populate_category_multipliers()
+
+
+# ----------------------------------------------------------------
+# Auto Report (scheduled weekly replenishment → Sheets)
+# ----------------------------------------------------------------
+
+@router.get("/auto-report/settings")
+async def get_auto_report_settings(
+    service: AutoReportService = Depends(_get_auto_report_service),
+):
+    """Get the weekly auto-report schedule + parameters (singleton)."""
+    return await service.get_settings()
+
+
+@router.post("/auto-report/settings")
+async def update_auto_report_settings(
+    body: AutoReportSettingsUpdate,
+    service: AutoReportService = Depends(_get_auto_report_service),
+):
+    """Partially update the auto-report settings. Takes effect on the next tick."""
+    data = body.model_dump(exclude_unset=True)
+    try:
+        return await service.update_settings(data)
+    except ValueError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+
+@router.get("/auto-report/stores")
+async def get_auto_report_stores(
+    service: AutoReportService = Depends(_get_auto_report_service),
+):
+    """Get per-store opt-in + destination tab rows (auto-seeds missing rows)."""
+    return await service.get_store_configs()
+
+
+@router.post("/auto-report/stores")
+async def update_auto_report_stores(
+    body: AutoReportStoreBulkUpdate,
+    service: AutoReportService = Depends(_get_auto_report_service),
+):
+    """Bulk upsert per-store auto-report rows (include flag + sheet tab name)."""
+    items = [item.model_dump(exclude_unset=True) for item in body.items]
+    return await service.upsert_store_configs(items)
+
+
+@router.post("/auto-report/run")
+async def run_auto_report_now(
+    service: AutoReportService = Depends(_get_auto_report_service),
+):
+    """Manually trigger the full per-store run + Sheets post now ('Run now')."""
+    return await service.run_all(triggered_by="manual")

@@ -15,6 +15,9 @@ import type {
   AIReasoningResponse,
   CompareResponse,
   PercentileStoreConfig,
+  AutoReportSettings,
+  AutoReportStore,
+  AutoReportRunResponse,
 } from '../types/replenishment';
 
 const API_BASE = '/api/v1/replenishment';
@@ -259,5 +262,36 @@ export const autoPopulateCategoryMultipliers = async (): Promise<{
   total_categories: number;
 }> => {
   const response = await axios.post(`${API_BASE}/category-multipliers/auto-populate`);
+  return response.data;
+};
+
+// --- Auto Report (scheduled weekly replenishment → Sheets) ---
+
+export const getAutoReportSettings = async (): Promise<AutoReportSettings> => {
+  const response = await axios.get<AutoReportSettings>(`${API_BASE}/auto-report/settings`);
+  return response.data;
+};
+
+export const updateAutoReportSettings = async (
+  settings: Partial<Omit<AutoReportSettings, 'updated_at' | 'last_run_at' | 'last_run_status' | 'last_run_detail'>>
+): Promise<AutoReportSettings> => {
+  const response = await axios.post<AutoReportSettings>(`${API_BASE}/auto-report/settings`, settings);
+  return response.data;
+};
+
+export const getAutoReportStores = async (): Promise<AutoReportStore[]> => {
+  const response = await axios.get<AutoReportStore[]>(`${API_BASE}/auto-report/stores`);
+  return response.data;
+};
+
+export const updateAutoReportStores = async (
+  items: { store_id: string; enabled?: boolean; sheet_name?: string | null }[]
+): Promise<AutoReportStore[]> => {
+  const response = await axios.post<AutoReportStore[]>(`${API_BASE}/auto-report/stores`, { items });
+  return response.data;
+};
+
+export const runAutoReportNow = async (): Promise<AutoReportRunResponse> => {
+  const response = await axios.post<AutoReportRunResponse>(`${API_BASE}/auto-report/run`);
   return response.data;
 };

@@ -293,6 +293,61 @@ class PercentileStoreConfig(Base):
     )
 
 
+class AutoReportSettings(Base):
+    """Singleton (id=1) config for the scheduled weekly replenishment → Sheets job.
+
+    Mirrors the parameters a user sets manually in ReplenishmentDashboard before
+    running + posting a report: algorithm, calc mode, stockout buffer, show-zero
+    filter — plus the weekly schedule slot and last-run bookkeeping.
+    """
+    __tablename__ = "auto_report_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)  # Always row 1
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    # Weekly slot (Asia/Manila). day_of_week: 0=Mon … 6=Sun
+    day_of_week: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    hour: Mapped[int] = mapped_column(Integer, nullable=False, default=6)
+    minute: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    # Manual-generation parameters
+    algorithm: Mapped[str] = mapped_column(String(20), nullable=False, default="legacy")
+    calc_mode: Mapped[str] = mapped_column(String(20), nullable=False, default="snapshot")
+    apply_stockout_buffer: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    show_zero_requested: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    post_backup: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    # Last-run bookkeeping (drives idempotency + surfaces status in the UI)
+    last_run_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_run_status: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    last_run_detail: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.timezone('Asia/Manila', func.now()),
+        onupdate=func.timezone('Asia/Manila', func.now())
+    )
+
+
+class AutoReportStore(Base):
+    """Per-store opt-in + destination tab for the scheduled report.
+
+    sheet_name overrides the destination tab; NULL means "use the store display name",
+    matching the manual Post-to-Sheets behavior (tab == store name).
+    """
+    __tablename__ = "auto_report_store"
+
+    store_id: Mapped[str] = mapped_column(String(24), primary_key=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    sheet_name: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.timezone('Asia/Manila', func.now()),
+        onupdate=func.timezone('Asia/Manila', func.now())
+    )
+
+
 class InventorySnapshot(Base):
     """Maps to the existing inventory_snapshots table in Supabase (created via n8n).
     This model is read-only for the replenishment module."""

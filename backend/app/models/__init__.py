@@ -10,6 +10,8 @@ from app.models.replenishment import (
     SeasonalityCalendar,
     ShipmentPlan,
     InventorySnapshot,
+    AutoReportSettings,
+    AutoReportStore,
 )
 from app.models.store_filter import StoreFilter
 
@@ -25,5 +27,7 @@ __all__ = [
     "SeasonalityCalendar",
     "ShipmentPlan",
     "InventorySnapshot",
+    "AutoReportSettings",
+    "AutoReportStore",
     "StoreFilter",
 ]
