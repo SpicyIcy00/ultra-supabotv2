@@ -75,6 +75,10 @@ class Settings(BaseSettings):
     # API Keys
     ANTHROPIC_API_KEY: str = ""
 
+    # Telegram (for scheduled AI-chat report delivery)
+    # Create a bot via @BotFather and set the token here / in the environment.
+    TELEGRAM_BOT_TOKEN: str = ""
+
     # Logging
     LOG_LEVEL: str = "INFO"
 

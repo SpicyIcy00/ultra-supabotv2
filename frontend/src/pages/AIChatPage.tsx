@@ -4,11 +4,12 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
-import { Send, Loader2, Code, Table as TableIcon, BarChart3, Download, ChevronDown, ChevronUp, Plus, MessageSquare, Trash2, Pencil, Check, X, PanelLeftOpen, PanelLeftClose } from 'lucide-react';
+import { Send, Loader2, Code, Table as TableIcon, BarChart3, Download, ChevronDown, ChevronUp, Plus, MessageSquare, Trash2, Pencil, Check, X, PanelLeftOpen, PanelLeftClose, CalendarClock } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import type { ChatMessage } from '../types/chatbot';
 import { streamChatQuery, getSuggestions } from '../services/chatbotApi';
 import type { ChartState } from '../types/enhancedChart';
+import { ScheduleReportModal, ScheduledReportsManager } from '../components/chat/ScheduleReports';
 
 const EnhancedChartRenderer = React.lazy(() =>
   import('../components/chat/EnhancedChartRenderer').then(m => ({ default: m.EnhancedChartRenderer }))
@@ -36,7 +37,19 @@ export default function AIChatPage() {
     // Remember the desktop sidebar collapsed preference.
     return typeof localStorage !== 'undefined' && localStorage.getItem('ai-chat-sidebar-collapsed') === '1';
   });
+  const [scheduleTarget, setScheduleTarget] = useState<{ title: string; question: string; sql: string } | null>(null);
+  const [managerOpen, setManagerOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const handleScheduleMessage = useCallback((message: ChatMessage) => {
+    if (!message.sql) return;
+    const question = message.question || 'Scheduled report';
+    setScheduleTarget({
+      title: question.length > 60 ? `${question.slice(0, 60)}…` : question,
+      question,
+      sql: message.sql,
+    });
+  }, []);
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
@@ -108,6 +121,7 @@ export default function AIChatPage() {
         } else if (event.type === 'final') {
           patchMessage(convId, assistantMessage.id, {
             content: event.final_text,
+            question: event.question || question,
             sql: event.sql,
             data: event.data,
             row_count: event.row_count,
@@ -212,10 +226,18 @@ export default function AIChatPage() {
               <PanelLeftOpen className="w-5 h-5" />
             </button>
           )}
-          <div>
+          <div className="flex-1">
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1 sm:mb-2">AI Chat Assistant</h1>
             <p className="text-sm sm:text-base text-gray-400">Ask questions about your business data in natural language</p>
           </div>
+          <button
+            onClick={() => setManagerOpen(true)}
+            className="mt-1 flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white bg-gray-800/50 hover:bg-gray-800 border border-gray-700 rounded-lg transition-colors"
+            title="Manage scheduled reports"
+          >
+            <CalendarClock className="w-4 h-4" />
+            <span className="hidden sm:inline">Scheduled</span>
+          </button>
         </div>
 
         {/* Messages Container */}
@@ -250,6 +272,7 @@ export default function AIChatPage() {
               key={message.id}
               message={message}
               onChartCustomizationChange={handleChartCustomizationChange}
+              onSchedule={handleScheduleMessage}
             />
           ))}
 
@@ -285,6 +308,15 @@ export default function AIChatPage() {
           </button>
         </form>
       </div>
+
+      {/* Scheduling modals */}
+      <ScheduleReportModal
+        open={!!scheduleTarget}
+        onClose={() => setScheduleTarget(null)}
+        initial={scheduleTarget ?? { title: '', question: '', sql: '' }}
+        onCreated={() => setManagerOpen(true)}
+      />
+      <ScheduledReportsManager open={managerOpen} onClose={() => setManagerOpen(false)} />
     </div>
   );
 }
@@ -478,9 +510,10 @@ function processChildren(
 interface MessageBubbleProps {
   message: ChatMessage;
   onChartCustomizationChange: (messageId: string, customization: ChartState) => void;
+  onSchedule: (message: ChatMessage) => void;
 }
 
-function MessageBubble({ message, onChartCustomizationChange }: MessageBubbleProps) {
+function MessageBubble({ message, onChartCustomizationChange, onSchedule }: MessageBubbleProps) {
   const [showSQL, setShowSQL] = useState(false);
   const [showData, setShowData] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -695,6 +728,20 @@ function MessageBubble({ message, onChartCustomizationChange }: MessageBubblePro
                       )}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Schedule this report */}
+              {message.sql && (
+                <div className="pt-1">
+                  <button
+                    onClick={() => onSchedule(message)}
+                    className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                    title="Automate: re-run this report and send it to Telegram on a schedule"
+                  >
+                    <CalendarClock className="w-4 h-4" />
+                    Schedule &amp; send to Telegram
+                  </button>
                 </div>
               )}
 

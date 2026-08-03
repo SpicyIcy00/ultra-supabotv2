@@ -74,6 +74,7 @@ export interface ChatMessage {
   timestamp: Date;
 
   // For assistant messages
+  question?: string; // the natural-language question that produced this answer
   sql?: string;
   data?: Record<string, any>[];
   row_count?: number;

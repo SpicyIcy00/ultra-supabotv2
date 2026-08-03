@@ -14,12 +14,16 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.core.database import AsyncSessionLocal
 from app.services.auto_report_service import AutoReportService
+from app.services.scheduled_report_service import ScheduledReportService
 
 MANILA = ZoneInfo("Asia/Manila")
 TICK_MINUTES = 15
+# Scheduled AI-chat reports honour minute-level times, so tick more often.
+CHAT_REPORT_TICK_MINUTES = 5
 
 _scheduler: AsyncIOScheduler | None = None
 _run_lock = asyncio.Lock()
+_chat_report_lock = asyncio.Lock()
 
 
 def _slot_start_this_week(now: datetime, day_of_week: int, hour: int, minute: int) -> datetime:
@@ -71,6 +75,21 @@ async def tick() -> None:
                 print(f"[auto-report] tick error: {e}")
 
 
+async def chat_report_tick() -> None:
+    """Runs every CHAT_REPORT_TICK_MINUTES. Delivers any due scheduled chat reports."""
+    if _chat_report_lock.locked():
+        return
+    async with _chat_report_lock:
+        async with AsyncSessionLocal() as session:
+            try:
+                service = ScheduledReportService(session)
+                result = await service.run_due()
+                if result["ran"]:
+                    print(f"[chat-report] delivered {result['ran']}/{result['checked']} due report(s)")
+            except Exception as e:
+                print(f"[chat-report] tick error: {e}")
+
+
 def start_scheduler() -> None:
     global _scheduler
     if _scheduler is not None:
@@ -85,8 +104,18 @@ def start_scheduler() -> None:
         coalesce=True,
         next_run_time=datetime.now(MANILA) + timedelta(seconds=30),
     )
+    _scheduler.add_job(
+        chat_report_tick,
+        "interval",
+        minutes=CHAT_REPORT_TICK_MINUTES,
+        id="chat_report_tick",
+        max_instances=1,
+        coalesce=True,
+        next_run_time=datetime.now(MANILA) + timedelta(seconds=45),
+    )
     _scheduler.start()
-    print(f"Auto-report scheduler started (tick every {TICK_MINUTES} min)")
+    print(f"Schedulers started (auto-report every {TICK_MINUTES} min, "
+          f"chat-reports every {CHAT_REPORT_TICK_MINUTES} min)")
 
 
 def shutdown_scheduler() -> None:

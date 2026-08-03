@@ -14,6 +14,7 @@ from app.models.replenishment import (
     AutoReportStore,
 )
 from app.models.store_filter import StoreFilter
+from app.models.scheduled_report import ScheduledReport
 
 __all__ = [
     "Product",
@@ -30,4 +31,5 @@ __all__ = [
     "AutoReportSettings",
     "AutoReportStore",
     "StoreFilter",
+    "ScheduledReport",
 ]
