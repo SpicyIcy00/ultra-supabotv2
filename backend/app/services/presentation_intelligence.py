@@ -47,17 +47,51 @@ class PresentationIntelligence:
     # ------------------------------------------------------------------
 
     async def analyze(self, question: str, results: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-        """Ask Claude for a presentation spec. Returns None on any failure."""
-        if not results or not self._client:
+        """Return a presentation spec. Uses Claude when available, else a
+        heuristic spec — either way the result goes through the same shape-based
+        coercion so the format always fits the data."""
+        if not results:
             return None
+        if not self._client:
+            return self._heuristic_spec(question, results)
         try:
             prompt = self._build_prompt(question, results)
             raw = await asyncio.wait_for(self._call(prompt), timeout=25.0)
             spec = self._parse(raw, results)
-            return spec
+            return spec or self._heuristic_spec(question, results)
         except Exception as e:
-            print(f"[presentation] analyze failed, using heuristics: {e}")
-            return None
+            print(f"[presentation] AI analyze failed, using heuristic spec: {e}")
+            return self._heuristic_spec(question, results)
+
+    def _heuristic_spec(self, question: str, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Deterministic spec (no AI): derive chart from the hardened
+        ChartIntelligence and let _coerce_spec pick the fitting text format."""
+        cols = list(results[0].keys())
+        chart_cfg = self._chart_intel.select_chart(question, results)
+        if chart_cfg and chart_cfg.get("y_axis") and not _NON_METRIC.match(chart_cfg["y_axis"]):
+            chart = {
+                "type": chart_cfg.get("type", "bar"),
+                "x": chart_cfg.get("x_axis"),
+                "y": chart_cfg.get("y_axis"),
+                "sort": "desc",
+                "title": chart_cfg.get("title", ""),
+            }
+        else:
+            chart = {"type": "none"}
+
+        label = self._guess_label_column(results)
+        metric_cols = [c for c in cols if c != label and not _NON_METRIC.match(c)]
+        # One primary metric per row reads best as a ranked list; wider results as a table.
+        default_fmt = "numbered_list" if len(metric_cols) <= 1 else "table"
+
+        spec = {
+            "text_format": default_fmt,  # _coerce_spec finalises based on shape
+            "value_columns": cols,
+            "label_column": label,
+            "headline": "",
+            "chart": chart,
+        }
+        return self._coerce_spec(spec, results)
 
     def render_text(self, question: str, results: List[Dict[str, Any]], spec: Optional[Dict[str, Any]]) -> str:
         """Render the answer text. Uses the AI spec if present, else the heuristic formatter."""
@@ -170,11 +204,31 @@ Return this exact JSON shape:
   }}
 }}
 
-RULES:
-- text_format: use "table" when each row has 2+ comparable metrics (e.g. multi-store comparison) — this is usually best for wide results. Use "numbered_list" for a ranking with ONE primary metric. Use "key_value" for a single summary row. Use "prose" for a single scalar answer.
-- Chart: pick the single most decision-useful measure for y. If the user asked about sales, y should be a sales/amount column, not a percentage or rank. If nothing is meaningfully chartable (e.g. one row, or only text), set type to "none".
-- Prefer line/area for time series (a date/hour/month x-axis), bar/horizontal_bar/lollipop for category rankings, pie only for <=6 parts of a whole.
-- Only reference columns that exist. Output JSON only."""
+DECISION FRAMEWORK (apply in order):
+1. TEXT FORMAT — match the SHAPE of the data:
+   - 1 row, 1 meaningful value  -> "prose"  (e.g. "Total sales today is ₱1.2M")
+   - 1 row, several values       -> "key_value"  (a labelled summary of one entity/period)
+   - many rows, ONE primary metric per row (a ranking/top-N) -> "numbered_list"
+   - many rows, 2+ comparable metrics per row (compare entities side by side) -> "table"
+   - a time series (one metric across dates/hours/months) -> "numbered_list" is fine, but the CHART carries it
+   When unsure between numbered_list and table: use "table" if there are 3+ value columns, else "numbered_list".
+2. CHART — pick the single most decision-useful MEASURE for y (money > counts > quantities). Never use rank, position, row number, an id, or a percentage/change column as y when a magnitude measure exists.
+   - time series (x is a date/hour/day/month/week) -> "line" (or "area" for cumulative)
+   - category ranking/comparison (x is store/product/category) -> "bar" (or "horizontal_bar" when labels are long, "lollipop" for many)
+   - parts of a whole, <=6 slices -> "pie"
+   - 80/20 contribution -> "pareto"
+   - relationship between two measures -> "scatter"
+   - only ONE row, or nothing numeric, or the numbers aren't comparable -> "none"
+3. Only reference columns that exist. Prefer fewer, clearer columns over dumping every column.
+
+EXAMPLES:
+- "total sales today" -> {{"text_format":"prose","chart":{{"type":"none"}}}}
+- "sales by store today" -> {{"text_format":"table","chart":{{"type":"bar","x":"store_name","y":"total_sales"}}}}
+- "top 10 products this month" -> {{"text_format":"numbered_list","chart":{{"type":"bar","x":"product_name","y":"revenue"}}}}
+- "hourly sales trend today" -> {{"text_format":"numbered_list","chart":{{"type":"line","x":"hour","y":"total_sales"}}}}
+- "category share of sales" -> {{"text_format":"table","chart":{{"type":"pie","x":"category","y":"total_sales"}}}}
+
+Output JSON only."""
 
     def _parse(self, raw: str, results: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         text = raw.strip()
@@ -197,6 +251,35 @@ RULES:
 
         if spec.get("label_column") not in cols:
             spec["label_column"] = self._guess_label_column(results)
+
+        # Deterministic safety net: force the format to FIT the data shape, no
+        # matter what the model said. This is what makes it reliable across any
+        # future query, not just the ones we anticipated.
+        return self._coerce_spec(spec, results)
+
+    def _coerce_spec(self, spec: Dict[str, Any], results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        n = len(results)
+        fmt = spec["text_format"]
+        label = spec.get("label_column")
+        # Meaningful (non-index) value columns present in the data.
+        metric_cols = [c for c in spec["value_columns"] if not _NON_METRIC.match(c)]
+        value_cols = [c for c in spec["value_columns"] if c != label]
+
+        if n <= 1:
+            # A single row can never be a list/table of rows.
+            fmt = "prose" if len(value_cols) <= 1 else "key_value"
+        else:
+            # Multiple rows can never be a single-scalar/summary layout.
+            if fmt in ("prose", "key_value"):
+                fmt = "table" if len(value_cols) >= 3 else "numbered_list"
+            # A numbered list needs a name per row; without one a table reads better.
+            if fmt == "numbered_list" and not label:
+                fmt = "table"
+            # If the model over-collapsed a wide comparison into a list, widen it.
+            if fmt == "numbered_list" and len([c for c in value_cols if c in metric_cols]) >= 3:
+                fmt = "table"
+
+        spec["text_format"] = fmt
         return spec
 
     # ------------------------------------------------------------------
