@@ -161,7 +161,28 @@ async def startup_event():
                 SELECT store_id, TRUE FROM store_tiers
                 ON CONFLICT (store_id) DO NOTHING
             """))
-        print("Schema migration: max_cover_days + product_barcodes + percentile columns + store config + auto_report ensured")
+            # Scheduled AI-chat reports (re-run saved query -> deliver to Telegram)
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS scheduled_reports (
+                    id                VARCHAR(36)  PRIMARY KEY,
+                    title             VARCHAR(200) NOT NULL,
+                    question          TEXT         NOT NULL,
+                    sql               TEXT         NOT NULL,
+                    frequency         VARCHAR(10)  NOT NULL DEFAULT 'daily',
+                    day_of_week       INTEGER      NOT NULL DEFAULT 0,
+                    hour              INTEGER      NOT NULL DEFAULT 8,
+                    minute            INTEGER      NOT NULL DEFAULT 0,
+                    telegram_chat_id  VARCHAR(64)  NOT NULL,
+                    include_csv       BOOLEAN      NOT NULL DEFAULT TRUE,
+                    enabled           BOOLEAN      NOT NULL DEFAULT TRUE,
+                    last_run_at       TIMESTAMPTZ,
+                    last_run_status   VARCHAR(20),
+                    last_run_detail   VARCHAR(500),
+                    created_at        TIMESTAMPTZ  NOT NULL DEFAULT timezone('Asia/Manila', now()),
+                    updated_at        TIMESTAMPTZ  NOT NULL DEFAULT timezone('Asia/Manila', now())
+                )
+            """))
+        print("Schema migration: max_cover_days + product_barcodes + percentile columns + store config + auto_report + scheduled_reports ensured")
     except Exception as e:
         print(f"Schema migration warning: {e}")
 

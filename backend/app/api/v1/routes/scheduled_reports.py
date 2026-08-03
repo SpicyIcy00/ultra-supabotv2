@@ -87,12 +87,15 @@ async def telegram_test(request: TelegramTestRequest):
 # CRUD
 # ---------------------------------------------------------------------------
 
-@router.get("/")
+# Note: use "" (not "/") so the collection responds at the prefix with no
+# trailing slash. The Vercel proxy rewrite (/api/v1/:path*) doesn't match a
+# trailing slash and would fall through to the SPA (→ 405 on POST).
+@router.get("")
 async def list_reports(db: AsyncSession = Depends(get_db)):
     return await ScheduledReportService(db).list_reports()
 
 
-@router.post("/")
+@router.post("")
 async def create_report(payload: ScheduledReportCreate, db: AsyncSession = Depends(get_db)):
     return await ScheduledReportService(db).create_report(payload.model_dump())
 

@@ -56,11 +56,12 @@ async function handle<T>(resp: Response): Promise<T> {
 }
 
 export async function listScheduledReports(): Promise<ScheduledReport[]> {
-  return handle(await fetch(`${API_BASE_URL}/`));
+  // No trailing slash: Vercel's /api/v1/:path* rewrite doesn't match one.
+  return handle(await fetch(`${API_BASE_URL}`));
 }
 
 export async function createScheduledReport(data: ScheduledReportCreate): Promise<ScheduledReport> {
-  return handle(await fetch(`${API_BASE_URL}/`, {
+  return handle(await fetch(`${API_BASE_URL}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
