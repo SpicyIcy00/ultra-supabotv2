@@ -25,24 +25,52 @@ def _base_url() -> str:
     return f"{TELEGRAM_API}/bot{settings.TELEGRAM_BOT_TOKEN}"
 
 
-async def send_message(chat_id: str, text: str) -> Dict[str, Any]:
-    """Send a plain-text message. Long text is truncated to Telegram's limit."""
+async def send_message(chat_id: str, text: str, parse_mode: Optional[str] = None) -> Dict[str, Any]:
+    """Send a message. Long text is truncated to Telegram's limit.
+
+    parse_mode: None (plain), "HTML", or "MarkdownV2".
+    """
     if not is_configured():
         return {"success": False, "error": "TELEGRAM_BOT_TOKEN not configured"}
 
     if len(text) > MAX_MESSAGE_LEN:
         text = text[: MAX_MESSAGE_LEN - 20] + "\n…(truncated)"
 
+    payload: Dict[str, Any] = {"chat_id": chat_id, "text": text, "disable_web_page_preview": True}
+    if parse_mode:
+        payload["parse_mode"] = parse_mode
+
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(
-                f"{_base_url()}/sendMessage",
-                json={"chat_id": chat_id, "text": text, "disable_web_page_preview": True},
-            )
+            resp = await client.post(f"{_base_url()}/sendMessage", json=payload)
             data = resp.json()
             if not data.get("ok"):
                 return {"success": False, "error": data.get("description", "Telegram error")}
             return {"success": True, "message_id": data["result"]["message_id"]}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+async def send_photo(chat_id: str, image: bytes, caption: Optional[str] = None) -> Dict[str, Any]:
+    """Send a PNG image (e.g. the report chart) as a photo."""
+    if not is_configured():
+        return {"success": False, "error": "TELEGRAM_BOT_TOKEN not configured"}
+
+    data: Dict[str, Any] = {"chat_id": chat_id}
+    if caption:
+        data["caption"] = caption[:1024]
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(
+                f"{_base_url()}/sendPhoto",
+                data=data,
+                files={"photo": ("chart.png", image, "image/png")},
+            )
+            body = resp.json()
+            if not body.get("ok"):
+                return {"success": False, "error": body.get("description", "Telegram error")}
+            return {"success": True, "message_id": body["result"]["message_id"]}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
