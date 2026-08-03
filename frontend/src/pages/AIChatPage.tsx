@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
-import { Send, Loader2, Code, Table as TableIcon, BarChart3, Download, ChevronDown, ChevronUp } from 'lucide-react';
+import { Send, Loader2, Code, Table as TableIcon, BarChart3, Download, ChevronDown, ChevronUp, Plus, MessageSquare, Trash2, Pencil, Check, X, PanelLeftOpen, PanelLeftClose } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import type { ChatMessage } from '../types/chatbot';
 import { streamChatQuery, getSuggestions } from '../services/chatbotApi';
@@ -15,17 +15,32 @@ const EnhancedChartRenderer = React.lazy(() =>
 );
 import { CATEGORY_COLORS } from '../constants/colors';
 import { useDashboardStore } from '../stores/dashboardStore';
-
-// Generate a unique session ID for conversation memory
-const generateSessionId = () => `session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+import { useChatStore } from '../stores/chatStore';
 
 export default function AIChatPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const conversations = useChatStore((s) => s.conversations);
+  const activeId = useChatStore((s) => s.activeId);
+  const ensureActive = useChatStore((s) => s.ensureActive);
+  const setActive = useChatStore((s) => s.setActive);
+  const createConversation = useChatStore((s) => s.createConversation);
+  const deleteConversation = useChatStore((s) => s.deleteConversation);
+  const renameConversation = useChatStore((s) => s.renameConversation);
+  const appendMessages = useChatStore((s) => s.appendMessages);
+  const patchMessage = useChatStore((s) => s.patchMessage);
+
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [sessionId] = useState(() => generateSessionId()); // Persist session ID across conversation
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Ensure there is always an active conversation to write into.
+  useEffect(() => {
+    ensureActive();
+  }, [ensureActive]);
+
+  const activeConversation = conversations.find((c) => c.id === activeId);
+  const messages = activeConversation?.messages ?? [];
 
   // Load suggestions on mount
   useEffect(() => {
@@ -34,14 +49,19 @@ export default function AIChatPage() {
     }).catch(console.error);
   }, []);
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom when messages change or the active chat switches
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages.length, activeId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
+
+    // Write into a stable conversation id for the whole request.
+    const convId = ensureActive();
+    const conv = useChatStore.getState().conversations.find((c) => c.id === convId);
+    const sessionId = conv?.sessionId ?? convId;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -59,78 +79,52 @@ export default function AIChatPage() {
       status: 'Processing...',
     };
 
-    setMessages((prev) => [...prev, userMessage, assistantMessage]);
+    appendMessages(convId, [userMessage, assistantMessage]);
+    const question = input;
     setInput('');
     setIsLoading(true);
 
     try {
-      const stream = streamChatQuery({ question: input, session_id: sessionId });
+      const stream = streamChatQuery({ question, session_id: sessionId });
 
       for await (const event of stream) {
         if (event.type === 'status') {
-          // Update status
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === assistantMessage.id
-                ? { ...msg, status: event.message, sql: event.sql || msg.sql }
-                : msg
-            )
-          );
+          patchMessage(convId, assistantMessage.id, {
+            status: event.message,
+            ...(event.sql ? { sql: event.sql } : {}),
+          });
         } else if (event.type === 'final') {
-          // Final response
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === assistantMessage.id
-                ? {
-                  ...msg,
-                  content: event.final_text,
-                  sql: event.sql,
-                  data: event.data,
-                  row_count: event.row_count,
-                  execution_time_ms: event.execution_time_ms,
-                  chart: event.chart || null,
-                  chart_data: event.chart_data || null,
-                  query_type: event.query_type,
-                  assumptions: event.assumptions,
-                  isLoading: false,
-                  status: undefined,
-                }
-                : msg
-            )
-          );
+          patchMessage(convId, assistantMessage.id, {
+            content: event.final_text,
+            sql: event.sql,
+            data: event.data,
+            row_count: event.row_count,
+            execution_time_ms: event.execution_time_ms,
+            chart: event.chart || null,
+            chart_data: event.chart_data || null,
+            query_type: event.query_type,
+            assumptions: event.assumptions,
+            isLoading: false,
+            status: undefined,
+          });
         } else if (event.type === 'error') {
-          // Error occurred
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === assistantMessage.id
-                ? {
-                  ...msg,
-                  content: `Error: ${event.message}`,
-                  error: event.message,
-                  suggestion: event.suggestion,
-                  isLoading: false,
-                  status: undefined,
-                }
-                : msg
-            )
-          );
+          patchMessage(convId, assistantMessage.id, {
+            content: `Error: ${event.message}`,
+            error: event.message,
+            suggestion: event.suggestion,
+            isLoading: false,
+            status: undefined,
+          });
         }
       }
     } catch (error) {
       console.error('Stream error:', error);
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === assistantMessage.id
-            ? {
-              ...msg,
-              content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-              error: error instanceof Error ? error.message : 'Unknown error',
-              isLoading: false,
-              status: undefined,
-            }
-            : msg
-        )
-      );
+      patchMessage(convId, assistantMessage.id, {
+        content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        isLoading: false,
+        status: undefined,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -140,102 +134,286 @@ export default function AIChatPage() {
     setInput(suggestion);
   };
 
+  const handleNewChat = () => {
+    createConversation();
+    setInput('');
+    setSidebarOpen(false);
+  };
+
+  const handleSelectConversation = (id: string) => {
+    setActive(id);
+    setSidebarOpen(false);
+  };
+
   // Handle chart customization changes and persist them
   const handleChartCustomizationChange = useCallback((messageId: string, customization: ChartState) => {
-    setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === messageId
-          ? {
-              ...msg,
-              chartCustomization: {
-                chartType: customization.chartType,
-                colorTheme: customization.colorTheme,
-                showLegend: customization.showLegend,
-                showGrid: customization.showGrid,
-                customTitle: customization.title,
-                isAnimated: customization.isAnimated,
-              },
-            }
-          : msg
-      )
-    );
-  }, []);
+    const convId = useChatStore.getState().activeId;
+    if (!convId) return;
+    patchMessage(convId, messageId, {
+      chartCustomization: {
+        chartType: customization.chartType,
+        colorTheme: customization.colorTheme,
+        showLegend: customization.showLegend,
+        showGrid: customization.showGrid,
+        customTitle: customization.title,
+        isAnimated: customization.isAnimated,
+      },
+    });
+  }, [patchMessage]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] md:h-[calc(100vh-120px)]">
-      {/* Header */}
-      <div className="mb-3 sm:mb-6">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1 sm:mb-2">AI Chat Assistant</h1>
-        <p className="text-sm sm:text-base text-gray-400">Ask questions about your business data in natural language</p>
-      </div>
+    <div className="flex h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] gap-4">
+      {/* Conversation Sidebar (ChatGPT-style) */}
+      <ConversationSidebar
+        conversations={conversations}
+        activeId={activeId}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onNewChat={handleNewChat}
+        onSelect={handleSelectConversation}
+        onDelete={deleteConversation}
+        onRename={renameConversation}
+      />
 
-      {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto mb-4 space-y-4">
-        {messages.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-500 mb-6">
-              <BarChart3 className="w-16 h-16 mx-auto mb-4 opacity-50" />
-              <p className="text-lg">Start by asking a question about your business data</p>
-            </div>
+      {/* Main Chat Column */}
+      <div className="flex flex-col flex-1 min-w-0">
+        {/* Header */}
+        <div className="mb-3 sm:mb-6 flex items-start gap-3">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="lg:hidden mt-1 p-2 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-colors"
+            title="Conversations"
+          >
+            <PanelLeftOpen className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1 sm:mb-2">AI Chat Assistant</h1>
+            <p className="text-sm sm:text-base text-gray-400">Ask questions about your business data in natural language</p>
+          </div>
+        </div>
 
-            {/* Suggestions */}
-            <div className="max-w-2xl mx-auto">
-              <p className="text-sm text-gray-400 mb-3">Try these questions:</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {suggestions.slice(0, 6).map((suggestion, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    className="text-left px-4 py-3 bg-gray-800/50 hover:bg-gray-800 rounded-lg text-sm text-gray-300 transition-colors"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
+        {/* Messages Container */}
+        <div className="flex-1 overflow-y-auto mb-4 space-y-4">
+          {messages.length === 0 && (
+            <div className="text-center py-12">
+              <div className="text-gray-500 mb-6">
+                <BarChart3 className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <p className="text-lg">Start by asking a question about your business data</p>
+              </div>
+
+              {/* Suggestions */}
+              <div className="max-w-2xl mx-auto">
+                <p className="text-sm text-gray-400 mb-3">Try these questions:</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {suggestions.slice(0, 6).map((suggestion, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      className="text-left px-4 py-3 bg-gray-800/50 hover:bg-gray-800 rounded-lg text-sm text-gray-300 transition-colors"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        )}
-
-        {messages.map((message) => (
-          <MessageBubble
-            key={message.id}
-            message={message}
-            onChartCustomizationChange={handleChartCustomizationChange}
-          />
-        ))}
-
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input Form */}
-      <form onSubmit={handleSubmit} className="flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask a question about your business data..."
-          disabled={isLoading}
-          className="flex-1 px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-        />
-        <button
-          type="submit"
-          disabled={isLoading || !input.trim()}
-          className="px-4 py-3 sm:px-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-medium hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span className="hidden sm:inline">Processing</span>
-            </>
-          ) : (
-            <>
-              <Send className="w-5 h-5" />
-              <span className="hidden sm:inline">Send</span>
-            </>
           )}
-        </button>
-      </form>
+
+          {messages.map((message) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              onChartCustomizationChange={handleChartCustomizationChange}
+            />
+          ))}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input Form */}
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask a question about your business data..."
+            disabled={isLoading}
+            className="flex-1 px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !input.trim()}
+            className="px-4 py-3 sm:px-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-medium hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="hidden sm:inline">Processing</span>
+              </>
+            ) : (
+              <>
+                <Send className="w-5 h-5" />
+                <span className="hidden sm:inline">Send</span>
+              </>
+            )}
+          </button>
+        </form>
+      </div>
     </div>
+  );
+}
+
+interface ConversationSidebarProps {
+  conversations: import('../stores/chatStore').Conversation[];
+  activeId: string | null;
+  open: boolean;
+  onClose: () => void;
+  onNewChat: () => void;
+  onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
+  onRename: (id: string, title: string) => void;
+}
+
+function ConversationSidebar({
+  conversations,
+  activeId,
+  open,
+  onClose,
+  onNewChat,
+  onSelect,
+  onDelete,
+  onRename,
+}: ConversationSidebarProps) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draftTitle, setDraftTitle] = useState('');
+
+  const startEditing = (id: string, current: string) => {
+    setEditingId(id);
+    setDraftTitle(current);
+  };
+
+  const commitEditing = () => {
+    if (editingId) onRename(editingId, draftTitle);
+    setEditingId(null);
+  };
+
+  const list = (
+    <div className="flex flex-col h-full">
+      <button
+        onClick={onNewChat}
+        className="flex items-center justify-center gap-2 mb-3 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-medium hover:from-blue-600 hover:to-purple-700 transition-all"
+      >
+        <Plus className="w-4 h-4" />
+        New chat
+      </button>
+
+      <div className="flex-1 overflow-y-auto space-y-1 pr-1">
+        {conversations.length === 0 && (
+          <p className="text-xs text-gray-500 px-2 py-4 text-center">No conversations yet</p>
+        )}
+        {conversations.map((conv) => {
+          const isActive = conv.id === activeId;
+          const isEditing = editingId === conv.id;
+          return (
+            <div
+              key={conv.id}
+              className={`group flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-colors ${
+                isActive ? 'bg-blue-500/10 text-blue-300' : 'text-gray-300 hover:bg-gray-800/70'
+              }`}
+              onClick={() => !isEditing && onSelect(conv.id)}
+            >
+              <MessageSquare className="w-4 h-4 flex-shrink-0 opacity-70" />
+
+              {isEditing ? (
+                <input
+                  autoFocus
+                  value={draftTitle}
+                  onChange={(e) => setDraftTitle(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') commitEditing();
+                    if (e.key === 'Escape') setEditingId(null);
+                  }}
+                  className="flex-1 min-w-0 bg-gray-900 border border-gray-600 rounded px-1.5 py-0.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              ) : (
+                <span className="flex-1 min-w-0 truncate text-sm">{conv.title}</span>
+              )}
+
+              {isEditing ? (
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); commitEditing(); }}
+                    className="p-1 text-gray-400 hover:text-green-400"
+                    title="Save"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEditingId(null); }}
+                    className="p-1 text-gray-400 hover:text-red-400"
+                    title="Cancel"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); startEditing(conv.id, conv.title); }}
+                    className="p-1 text-gray-400 hover:text-white"
+                    title="Rename"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (conv.messages.length === 0 || window.confirm('Delete this conversation?')) {
+                        onDelete(conv.id);
+                      }
+                    }}
+                    className="p-1 text-gray-400 hover:text-red-400"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop: persistent column */}
+      <aside className="hidden lg:flex flex-col w-64 flex-shrink-0 bg-gray-900/40 border border-gray-800 rounded-xl p-3">
+        {list}
+      </aside>
+
+      {/* Mobile/tablet: slide-out drawer */}
+      {open && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+          <aside className="absolute top-0 left-0 h-full w-72 max-w-[85%] bg-gray-900 border-r border-gray-800 p-3 flex flex-col">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold text-white">Conversations</span>
+              <button
+                onClick={onClose}
+                className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg"
+                title="Close"
+              >
+                <PanelLeftClose className="w-5 h-5" />
+              </button>
+            </div>
+            {list}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }
 
