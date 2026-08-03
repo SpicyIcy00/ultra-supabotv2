@@ -79,23 +79,27 @@ export function EnhancedChartRenderer({
     const source = originalData && originalData.length > 0 ? originalData[0] : (rawData && rawData.length > 0 ? rawData[0] : null);
     if (!source) return { xAxis: 'name', yAxis: 'value' };
 
-    // Find best X-axis (name field)
-    const nameFields = ['product_name', 'name', 'store_name', 'category_name', 'category', 'label', 'title'];
-    let xAxis = 'name';
-    for (const field of nameFields) {
-      if (source[field] !== undefined) {
-        xAxis = field;
-        break;
+    // 1) Honor the backend's chosen axes when present — the backend already
+    //    picks the correct measure (e.g. sales, never rank). This is the
+    //    source of truth; the loops below are only fallbacks.
+    let xAxis = (config.x_axis && source[config.x_axis] !== undefined) ? config.x_axis : '';
+    let yAxis = (config.y_axis && source[config.y_axis] !== undefined) ? config.y_axis : '';
+
+    // 2) Fallback X-axis (name field)
+    if (!xAxis) {
+      const nameFields = ['product_name', 'name', 'store_name', 'category_name', 'category', 'label', 'title'];
+      xAxis = 'name';
+      for (const field of nameFields) {
+        if (source[field] !== undefined) { xAxis = field; break; }
       }
     }
 
-    // Find best Y-axis (value field)
-    const valueFields = ['total_revenue', 'revenue', 'value', 'total_sales', 'sales', 'total_quantity_sold', 'quantity', 'amount'];
-    let yAxis = 'value';
-    for (const field of valueFields) {
-      if (source[field] !== undefined) {
-        yAxis = field;
-        break;
+    // 3) Fallback Y-axis (value field)
+    if (!yAxis) {
+      const valueFields = ['total_revenue', 'revenue', 'value', 'total_sales', 'sales', 'total_quantity_sold', 'quantity', 'amount'];
+      yAxis = 'value';
+      for (const field of valueFields) {
+        if (source[field] !== undefined) { yAxis = field; break; }
       }
     }
 
@@ -173,10 +177,13 @@ export function EnhancedChartRenderer({
         return Number(val);
       }
     }
-    // Fall back to first numeric field
+    // Fall back to first meaningful numeric field — never a rank/id/position
+    // index or a percentage/change column (those must not become bar heights).
+    const nonMetric = /(^|_)(rank|ranking|position|index|idx|id|rownum|seq|sequence|ordinal|row)(_|$)/i;
+    const changeCol = /(pct|percent|percentage|ratio|change|growth|delta|margin)/i;
     for (const key of Object.keys(item)) {
       const val = item[key];
-      if (typeof val === 'number' && !key.toLowerCase().includes('id')) {
+      if (typeof val === 'number' && !nonMetric.test(key) && !changeCol.test(key)) {
         return val;
       }
     }
