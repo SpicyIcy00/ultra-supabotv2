@@ -182,6 +182,14 @@ async def startup_event():
                     updated_at        TIMESTAMPTZ  NOT NULL DEFAULT timezone('Asia/Manila', now())
                 )
             """))
+            # Flexible scheduling + multiple recipients (JSON columns).
+            await conn.execute(text("""
+                ALTER TABLE scheduled_reports
+                    ADD COLUMN IF NOT EXISTS times              TEXT,
+                    ADD COLUMN IF NOT EXISTS days_of_week       TEXT,
+                    ADD COLUMN IF NOT EXISTS days_of_month      TEXT,
+                    ADD COLUMN IF NOT EXISTS telegram_chat_ids  TEXT
+            """))
         print("Schema migration: max_cover_days + product_barcodes + percentile columns + store config + auto_report + scheduled_reports ensured")
     except Exception as e:
         print(f"Schema migration warning: {e}")

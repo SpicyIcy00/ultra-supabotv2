@@ -5,14 +5,16 @@ CRUD for scheduled reports plus the run logic: re-execute the saved SQL, format
 the answer, build a CSV, and deliver both to Telegram. Also owns the "is this
 report due?" calculation used by the scheduler tick.
 """
+import calendar
 import csv
 import html
 import io
+import json
 import re
 import uuid
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set, Tuple
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
@@ -34,10 +36,7 @@ _NON_METRIC = re.compile(
 )
 
 # Editable fields accepted from the API (everything else is server-managed).
-_EDITABLE = {
-    "title", "question", "sql", "frequency", "day_of_week",
-    "hour", "minute", "telegram_chat_id", "include_csv", "enabled",
-}
+_SIMPLE_FIELDS = {"title", "question", "sql", "frequency", "include_csv", "enabled"}
 
 
 class ScheduledReportService:
@@ -61,7 +60,7 @@ class ScheduledReportService:
         return result.scalar_one_or_none()
 
     async def create_report(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        payload = {k: v for k, v in data.items() if k in _EDITABLE}
+        payload = self._normalize_payload(data)
         report = ScheduledReport(id=str(uuid.uuid4()), **payload)
         self.db.add(report)
         await self.db.commit()
@@ -72,9 +71,8 @@ class ScheduledReportService:
         report = await self.get_report(report_id)
         if not report:
             return None
-        for key, value in data.items():
-            if key in _EDITABLE and value is not None:
-                setattr(report, key, value)
+        for key, value in self._normalize_payload(data, partial=True).items():
+            setattr(report, key, value)
         await self.db.commit()
         await self.db.refresh(report)
         return self._to_dict(report)
@@ -87,14 +85,136 @@ class ScheduledReportService:
         await self.db.commit()
         return True
 
+    # ---- payload normalization (API list-fields -> model columns) ----
+
     @staticmethod
-    def _to_dict(r: ScheduledReport) -> Dict[str, Any]:
+    def _fmt_time(t: Any) -> Optional[str]:
+        try:
+            h, m = str(t).split(":")
+            h, m = int(h), int(m)
+            if 0 <= h <= 23 and 0 <= m <= 59:
+                return f"{h:02d}:{m:02d}"
+        except Exception:
+            pass
+        return None
+
+    def _normalize_payload(self, data: Dict[str, Any], partial: bool = False) -> Dict[str, Any]:
+        out: Dict[str, Any] = {}
+        for k in _SIMPLE_FIELDS:
+            if k in data and data[k] is not None:
+                out[k] = data[k]
+
+        # times -> JSON list of "HH:MM"; keep legacy hour/minute in sync.
+        times = data.get("times")
+        if isinstance(times, list):
+            norm = [self._fmt_time(t) for t in times]
+            norm = [t for t in norm if t]
+            if norm:
+                out["times"] = json.dumps(norm)
+                h, m = norm[0].split(":")
+                out["hour"], out["minute"] = int(h), int(m)
+        elif not partial and ("hour" in data or "minute" in data):
+            h, m = int(data.get("hour", 8)), int(data.get("minute", 0))
+            out["hour"], out["minute"] = h, m
+            out["times"] = json.dumps([f"{h:02d}:{m:02d}"])
+
+        # days_of_week -> JSON list of ints (Mon=0..Sun=6); keep legacy in sync.
+        dow = data.get("days_of_week")
+        if isinstance(dow, list):
+            vals = sorted({int(x) for x in dow if 0 <= int(x) <= 6})
+            if vals:
+                out["days_of_week"] = json.dumps(vals)
+                out["day_of_week"] = vals[0]
+        elif not partial and data.get("day_of_week") is not None:
+            out["day_of_week"] = int(data["day_of_week"])
+            out["days_of_week"] = json.dumps([out["day_of_week"]])
+
+        # days_of_month -> JSON list of ints 1..31 (31 => last day of month).
+        dom = data.get("days_of_month")
+        if isinstance(dom, list):
+            vals = sorted({int(x) for x in dom if 1 <= int(x) <= 31})
+            if vals:
+                out["days_of_month"] = json.dumps(vals)
+
+        # telegram_chat_ids -> JSON list; keep legacy single chat in sync.
+        cids = data.get("telegram_chat_ids")
+        if isinstance(cids, list):
+            vals = [str(c).strip() for c in cids if str(c).strip()]
+            if vals:
+                out["telegram_chat_ids"] = json.dumps(vals)
+                out["telegram_chat_id"] = vals[0]
+        elif data.get("telegram_chat_id"):
+            cid = str(data["telegram_chat_id"]).strip()
+            out["telegram_chat_id"] = cid
+            out["telegram_chat_ids"] = json.dumps([cid])
+
+        return out
+
+    # ---- schedule accessors (new JSON columns, legacy fallback) ----
+
+    @staticmethod
+    def _json_list(raw: Optional[str]) -> Optional[list]:
+        if not raw:
+            return None
+        try:
+            v = json.loads(raw)
+            return v if isinstance(v, list) else None
+        except Exception:
+            return None
+
+    def _times(self, r: ScheduledReport) -> List[Tuple[int, int]]:
+        raw = self._json_list(r.times)
+        if raw:
+            out = []
+            for t in raw:
+                fmt = self._fmt_time(t)
+                if fmt:
+                    h, m = fmt.split(":")
+                    out.append((int(h), int(m)))
+            if out:
+                return sorted(set(out))
+        return [(r.hour or 0, r.minute or 0)]
+
+    def _dow(self, r: ScheduledReport) -> Set[int]:
+        raw = self._json_list(r.days_of_week)
+        if raw:
+            vals = {int(x) for x in raw if 0 <= int(x) <= 6}
+            if vals:
+                return vals
+        return {r.day_of_week or 0}
+
+    def _dom(self, r: ScheduledReport) -> Set[int]:
+        raw = self._json_list(r.days_of_month)
+        if raw:
+            vals = {int(x) for x in raw if 1 <= int(x) <= 31}
+            if vals:
+                return vals
+        return {1}
+
+    def _chat_ids(self, r: ScheduledReport) -> List[str]:
+        raw = self._json_list(r.telegram_chat_ids)
+        if raw:
+            vals = [str(c).strip() for c in raw if str(c).strip()]
+            if vals:
+                return list(dict.fromkeys(vals))  # dedupe, keep order
+        return [r.telegram_chat_id] if r.telegram_chat_id else []
+
+    def _times_str(self, r: ScheduledReport) -> List[str]:
+        return [f"{h:02d}:{m:02d}" for (h, m) in self._times(r)]
+
+    def _to_dict(self, r: ScheduledReport) -> Dict[str, Any]:
         return {
             "id": r.id,
             "title": r.title,
             "question": r.question,
             "sql": r.sql,
             "frequency": r.frequency,
+            # Flexible schedule
+            "times": self._times_str(r),
+            "days_of_week": sorted(self._dow(r)),
+            "days_of_month": sorted(self._dom(r)),
+            "telegram_chat_ids": self._chat_ids(r),
+            # Legacy (kept for compatibility)
             "day_of_week": r.day_of_week,
             "hour": r.hour,
             "minute": r.minute,
@@ -108,31 +228,42 @@ class ScheduledReportService:
         }
 
     # ----------------------------------------------------------------
-    # Due calculation
+    # Due calculation (daily / weekly / monthly, multiple times & days)
     # ----------------------------------------------------------------
 
-    @staticmethod
-    def _slot_start(now: datetime, report: ScheduledReport) -> datetime:
-        """Most recent scheduled slot (<= now) for this report, in Manila time."""
-        if report.frequency == "weekly":
-            days_since = (now.weekday() - report.day_of_week) % 7
-            slot = (now - timedelta(days=days_since)).replace(
-                hour=report.hour, minute=report.minute, second=0, microsecond=0
-            )
-            if slot > now:
-                slot -= timedelta(days=7)
-            return slot
-        # daily
-        slot = now.replace(hour=report.hour, minute=report.minute, second=0, microsecond=0)
-        if slot > now:
-            slot -= timedelta(days=1)
-        return slot
+    def _matches_day(self, r: ScheduledReport, d: date) -> bool:
+        freq = r.frequency or "daily"
+        if freq == "weekly":
+            return d.weekday() in self._dow(r)
+        if freq == "monthly":
+            last = calendar.monthrange(d.year, d.month)[1]
+            for dom in self._dom(r):
+                if d.day == dom or (dom >= last and d.day == last):  # 31 -> last day
+                    return True
+            return False
+        return True  # daily
+
+    def _most_recent_slot(self, r: ScheduledReport, now: datetime) -> Optional[datetime]:
+        """Latest scheduled datetime <= now across all configured days/times."""
+        times = self._times(r)
+        for back in range(0, 62):  # up to ~2 months of catch-up
+            d = (now - timedelta(days=back)).date()
+            if not self._matches_day(r, d):
+                continue
+            day_slots = [
+                datetime(d.year, d.month, d.day, h, m, tzinfo=MANILA)
+                for (h, m) in times
+            ]
+            past = [s for s in day_slots if s <= now]
+            if past:
+                return max(past)
+        return None
 
     def is_due(self, report: ScheduledReport, now: datetime) -> bool:
         if not report.enabled:
             return False
-        slot = self._slot_start(now, report)
-        if now < slot:
+        slot = self._most_recent_slot(report, now)
+        if slot is None:
             return False
         last = report.last_run_at
         if last is not None:
@@ -156,11 +287,26 @@ class ScheduledReportService:
             writer.writerow([row.get(h, "") for h in headers])
         return output.getvalue().encode("utf-8-sig")  # BOM so Excel opens UTF-8 cleanly
 
+    async def _send_all(self, chat_ids: List[str], message: str) -> Tuple[int, Optional[str]]:
+        """Send the same message to every recipient. Returns (ok_count, first_error)."""
+        ok = 0
+        first_error = None
+        for cid in chat_ids:
+            res = await telegram_sender.send_message(cid, message, parse_mode="HTML")
+            if res.get("success"):
+                ok += 1
+            elif first_error is None:
+                first_error = f"{cid}: {res.get('error')}"
+        return ok, first_error
+
     async def run_one(self, report: ScheduledReport, triggered_by: str = "schedule") -> Dict[str, Any]:
-        """Re-run the saved SQL and deliver a single, complete Telegram message
-        (all important info in the text — no image, no CSV). Records last_run_*."""
+        """Re-run the saved SQL and deliver one complete Telegram message to every
+        configured chat (all info in the text — no image, no CSV). Records last_run_*."""
         run_date = date.today().isoformat()
-        chat_id = report.telegram_chat_id
+        chat_ids = self._chat_ids(report)
+        if not chat_ids:
+            await self._record(report, "failed", f"{triggered_by}: no recipients")
+            return {"status": "failed", "error": "no recipients"}
         try:
             executor = QueryExecutor(self.db)
             execution = await executor.execute_query(report.sql, timeout=30, validate=True)
@@ -168,25 +314,25 @@ class ScheduledReportService:
             row_count = execution["row_count"]
 
             if not rows:
-                await telegram_sender.send_message(
-                    chat_id, f"📊 <b>{html.escape(report.title)}</b>\n{run_date} — no data today.",
-                    parse_mode="HTML",
-                )
-                await self._record(report, "success", f"{triggered_by}: 0 rows")
-                return {"status": "success", "row_count": 0}
+                message = f"📊 <b>{html.escape(report.title)}</b>\n{run_date} — no data today."
+            else:
+                presenter = PresentationIntelligence()
+                spec = await presenter.analyze(report.question, rows)
+                message = self._build_telegram_html(report.title, run_date, row_count, rows, spec)
 
-            presenter = PresentationIntelligence()
-            spec = await presenter.analyze(report.question, rows)
+            ok, err = await self._send_all(chat_ids, message)
+            total = len(chat_ids)
+            if ok == 0:
+                await self._record(report, "failed", f"Telegram send failed: {err}")
+                return {"status": "failed", "error": err}
+            if ok < total:
+                await self._record(report, "partial",
+                                   f"{triggered_by}: delivered to {ok}/{total} chats ({err})")
+                return {"status": "partial", "row_count": row_count, "delivered": ok, "total": total}
 
-            # One self-contained message: every important field, formatted.
-            message = self._build_telegram_html(report.title, run_date, row_count, rows, spec)
-            msg_result = await telegram_sender.send_message(chat_id, message, parse_mode="HTML")
-            if not msg_result.get("success"):
-                await self._record(report, "failed", f"Telegram send failed: {msg_result.get('error')}")
-                return {"status": "failed", "error": msg_result.get("error")}
-
-            await self._record(report, "success", f"{triggered_by}: {row_count} rows delivered")
-            return {"status": "success", "row_count": row_count}
+            await self._record(report, "success",
+                               f"{triggered_by}: {row_count} rows -> {ok} chat(s)")
+            return {"status": "success", "row_count": row_count, "delivered": ok}
 
         except Exception as e:
             await self._record(report, "failed", f"{triggered_by}: {str(e)[:400]}")

@@ -315,7 +315,7 @@ export default function AIChatPage() {
         open={!!scheduleTarget}
         onClose={() => setScheduleTarget(null)}
         initial={scheduleTarget ?? { title: '', question: '', sql: '' }}
-        onCreated={() => setManagerOpen(true)}
+        onSaved={() => setManagerOpen(true)}
       />
       <ScheduledReportsManager open={managerOpen} onClose={() => setManagerOpen(false)} />
     </div>

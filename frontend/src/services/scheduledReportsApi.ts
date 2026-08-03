@@ -6,13 +6,20 @@
 
 const API_BASE_URL = '/api/v1/scheduled-reports';
 
+export type Frequency = 'daily' | 'weekly' | 'monthly';
+
 export interface ScheduledReport {
   id: string;
   title: string;
   question: string;
   sql: string;
-  frequency: 'daily' | 'weekly';
-  day_of_week: number; // Mon=0 … Sun=6
+  frequency: Frequency;
+  times: string[];           // ["08:00","17:30"]
+  days_of_week: number[];    // Mon=0 … Sun=6 (weekly)
+  days_of_month: number[];   // 1..31, 31 => last day (monthly)
+  telegram_chat_ids: string[];
+  // legacy (still returned)
+  day_of_week: number;
   hour: number;
   minute: number;
   telegram_chat_id: string;
@@ -28,12 +35,12 @@ export interface ScheduledReportCreate {
   title: string;
   question: string;
   sql: string;
-  frequency: 'daily' | 'weekly';
-  day_of_week: number;
-  hour: number;
-  minute: number;
-  telegram_chat_id: string;
-  include_csv: boolean;
+  frequency: Frequency;
+  times: string[];
+  days_of_week: number[];
+  days_of_month: number[];
+  telegram_chat_ids: string[];
+  include_csv?: boolean;
   enabled?: boolean;
 }
 

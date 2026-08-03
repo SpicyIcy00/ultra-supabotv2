@@ -23,15 +23,27 @@ class ScheduledReport(Base):
     question: Mapped[str] = mapped_column(Text, nullable=False)
     sql: Mapped[str] = mapped_column(Text, nullable=False)
 
-    # When to run (Manila time). frequency: 'daily' | 'weekly'.
-    # day_of_week: Monday=0 … Sunday=6 (only used when frequency == 'weekly').
+    # When to run (Manila time). frequency: 'daily' | 'weekly' | 'monthly'.
     frequency: Mapped[str] = mapped_column(String(10), nullable=False, default="daily")
+
+    # Legacy single-slot fields (kept for backward compatibility / fallback).
     day_of_week: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     hour: Mapped[int] = mapped_column(Integer, nullable=False, default=8)
     minute: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    # Delivery
+    # Flexible schedule (JSON-encoded). When present these win over the legacy
+    # fields above.
+    #   times          -> ["08:00", "17:30"]      (one or more times per day)
+    #   days_of_week   -> [0, 3]                   (Mon=0 … Sun=6; used when weekly)
+    #   days_of_month  -> [1, 15, 31]              (used when monthly; 31 => last day)
+    times: Mapped[str | None] = mapped_column(Text, nullable=True)
+    days_of_week: Mapped[str | None] = mapped_column(Text, nullable=True)
+    days_of_month: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Delivery. telegram_chat_id keeps the first/primary chat for compat;
+    # telegram_chat_ids (JSON) holds the full list of recipients.
     telegram_chat_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    telegram_chat_ids: Mapped[str | None] = mapped_column(Text, nullable=True)
     include_csv: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

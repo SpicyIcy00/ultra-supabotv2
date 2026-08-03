@@ -26,12 +26,15 @@ class ScheduledReportCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     question: str = Field(..., min_length=1)
     sql: str = Field(..., min_length=1)
-    frequency: str = Field("daily", pattern="^(daily|weekly)$")
-    day_of_week: int = Field(0, ge=0, le=6)  # Mon=0 … Sun=6 (weekly only)
-    hour: int = Field(8, ge=0, le=23)
-    minute: int = Field(0, ge=0, le=59)
-    telegram_chat_id: str = Field(..., min_length=1, max_length=64)
-    include_csv: bool = True
+    frequency: str = Field("daily", pattern="^(daily|weekly|monthly)$")
+    # Flexible schedule (Manila time).
+    times: List[str] = Field(default_factory=lambda: ["08:00"])  # ["08:00","17:30"]
+    days_of_week: List[int] = Field(default_factory=list)        # Mon=0..Sun=6 (weekly)
+    days_of_month: List[int] = Field(default_factory=list)       # 1..31, 31 => last day (monthly)
+    # Delivery — one or more Telegram chats.
+    telegram_chat_ids: List[str] = Field(default_factory=list)
+    telegram_chat_id: Optional[str] = Field(None, max_length=64)  # legacy single (optional)
+    include_csv: bool = False
     enabled: bool = True
 
 
@@ -39,11 +42,12 @@ class ScheduledReportUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     question: Optional[str] = None
     sql: Optional[str] = None
-    frequency: Optional[str] = Field(None, pattern="^(daily|weekly)$")
-    day_of_week: Optional[int] = Field(None, ge=0, le=6)
-    hour: Optional[int] = Field(None, ge=0, le=23)
-    minute: Optional[int] = Field(None, ge=0, le=59)
-    telegram_chat_id: Optional[str] = Field(None, min_length=1, max_length=64)
+    frequency: Optional[str] = Field(None, pattern="^(daily|weekly|monthly)$")
+    times: Optional[List[str]] = None
+    days_of_week: Optional[List[int]] = None
+    days_of_month: Optional[List[int]] = None
+    telegram_chat_ids: Optional[List[str]] = None
+    telegram_chat_id: Optional[str] = Field(None, max_length=64)
     include_csv: Optional[bool] = None
     enabled: Optional[bool] = None
 
@@ -97,6 +101,8 @@ async def list_reports(db: AsyncSession = Depends(get_db)):
 
 @router.post("")
 async def create_report(payload: ScheduledReportCreate, db: AsyncSession = Depends(get_db)):
+    if not payload.telegram_chat_ids and not payload.telegram_chat_id:
+        raise HTTPException(status_code=400, detail="At least one Telegram chat is required")
     return await ScheduledReportService(db).create_report(payload.model_dump())
 
 
