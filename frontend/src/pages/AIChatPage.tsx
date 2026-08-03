@@ -174,7 +174,9 @@ export default function AIChatPage() {
   }, [patchMessage]);
 
   return (
-    <div className="flex h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] gap-4">
+    // On desktop, break out of the page padding so the sidebar sits flush
+    // against the app nav (left) and header (top) — no floating card / black bars.
+    <div className="flex h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] lg:h-[calc(100vh-96px)] gap-4 lg:gap-0 lg:-mt-6 lg:-ml-6">
       {/* Conversation Sidebar (ChatGPT-style) */}
       <ConversationSidebar
         conversations={conversations}
@@ -190,7 +192,7 @@ export default function AIChatPage() {
       />
 
       {/* Main Chat Column */}
-      <div className="flex flex-col flex-1 min-w-0">
+      <div className="flex flex-col flex-1 min-w-0 lg:pl-6 lg:pt-6">
         {/* Header */}
         <div className="mb-3 sm:mb-6 flex items-start gap-3">
           {/* Open conversations: drawer on mobile, expand collapsed column on desktop */}
@@ -417,9 +419,9 @@ function ConversationSidebar({
 
   return (
     <>
-      {/* Desktop: collapsible column */}
+      {/* Desktop: collapsible column, flush to the top/left edges */}
       {!collapsed && (
-        <aside className="hidden lg:flex flex-col w-64 flex-shrink-0 bg-gray-900/40 border border-gray-800 rounded-xl p-3">
+        <aside className="hidden lg:flex flex-col w-64 flex-shrink-0 bg-gray-900/40 border-r border-gray-800 p-3 pt-6">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Conversations</span>
             <button
