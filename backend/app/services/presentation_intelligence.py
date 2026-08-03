@@ -37,6 +37,20 @@ _ALLOWED_CHART_TYPES = {
 }
 _ALLOWED_TEXT_FORMATS = {"table", "numbered_list", "key_value", "prose"}
 
+# Percentage / change / growth columns — a derived rate, not a magnitude measure.
+_CHANGE_RE = re.compile(r'(pct|percent|percentage|ratio|change|growth|delta|margin)', re.IGNORECASE)
+_TIME_TOKENS = {'date', 'time', 'hour', 'day', 'month', 'year', 'week', 'datetime', 'timestamp', 'quarter'}
+
+# What a "sales"/"revenue"/etc. question maps to in column names. Checked in order.
+_MEASURE_KEYWORDS = [
+    (('revenue', 'sales', 'turnover', 'net sales', 'gross'), ('net_sales', 'revenue', 'sales', 'turnover', 'gross', 'amount', 'total')),
+    (('transaction', 'txn', 'order', 'ticket', 'receipt'), ('txn', 'transaction', 'order', 'ticket', 'receipt', 'count')),
+    (('quantity', 'units', 'qty', 'volume', 'sold', 'pieces'), ('qty', 'quantity', 'units', 'volume', 'sold', 'pieces')),
+    (('basket', 'avg basket', 'average basket', 'ticket size'), ('basket',)),
+    (('profit', 'margin', 'earnings', 'income'), ('profit', 'margin', 'earnings', 'income')),
+    (('stock', 'inventory', 'on hand', 'on-hand'), ('stock', 'inventory', 'on_hand', 'qty_on_hand')),
+]
+
 
 class PresentationIntelligence:
     def __init__(self):
@@ -69,20 +83,10 @@ class PresentationIntelligence:
             return self._heuristic_spec(question, results)
 
     def _heuristic_spec(self, question: str, results: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Deterministic spec (no AI): derive chart from the hardened
-        ChartIntelligence and let _coerce_spec pick the fitting text format."""
+        """Deterministic spec (no AI). The chart is only a hint — build_chart
+        picks the real measure/axes/type itself."""
         cols = list(results[0].keys())
-        chart_cfg = self._chart_intel.select_chart(question, results)
-        if chart_cfg and chart_cfg.get("y_axis") and not _NON_METRIC.search(chart_cfg["y_axis"]):
-            chart = {
-                "type": chart_cfg.get("type", "bar"),
-                "x": chart_cfg.get("x_axis"),
-                "y": chart_cfg.get("y_axis"),
-                "sort": "desc",
-                "title": chart_cfg.get("title", ""),
-            }
-        else:
-            chart = {"type": "none"}
+        chart = {"type": "bar"} if len(results) >= 2 else {"type": "none"}
 
         label = self._guess_label_column(results)
         metric_cols = [c for c in cols if c != label and not _NON_METRIC.search(c)]
@@ -138,29 +142,41 @@ class PresentationIntelligence:
 
     def build_chart(self, question: str, results: List[Dict[str, Any]], spec: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         """
-        Build a chart config from the AI spec. Returns None when the model
-        explicitly wants no chart, or falls back to the heuristic selector when
-        the spec is missing/unusable.
+        Build a chart. The AI's chart type/title are used as hints, but the
+        MEASURE (y) is chosen/validated here from the data + question so the bars
+        always reflect the thing asked about (sales -> sales), never a rank.
         """
-        if not spec:
-            return self._chart_intel.select_chart(question, results)
-
-        chart = spec.get("chart") or {}
-        ctype = chart.get("type")
-        if ctype == "none":
+        if not results or len(results) < 2:
             return None
-        if ctype not in _ALLOWED_CHART_TYPES:
-            return self._chart_intel.select_chart(question, results)
 
-        x = chart.get("x")
+        cols = list(results[0].keys())
+        chart = (spec or {}).get("chart") or {}
+        if chart.get("type") == "none":
+            return None
+
+        # x-axis: a category/time label — never a numeric measure.
+        x = chart.get("x") if chart.get("x") in cols else None
+        if not x or self._is_numeric_series(results, x):
+            x = self._pick_x_axis(results)
+        if not x:
+            return None
+
+        # y-axis: trust the AI only if its choice survives every guard; otherwise
+        # (and for any rank-shaped / change-% choice) compute the measure here.
         y = chart.get("y")
-        cols = set(results[0].keys())
-        # y must exist and be a real numeric measure (never rank/id).
-        if not x or not y or x not in cols or y not in cols or _NON_METRIC.search(y):
-            return self._chart_intel.select_chart(question, results)
-        if not self._is_numeric_column(results, y):
-            return self._chart_intel.select_chart(question, results)
+        y_ok = (
+            y in cols
+            and self._is_numeric_series(results, y)
+            and not _NON_METRIC.search(y)
+            and not self._looks_like_rank(results, y)
+            and not _CHANGE_RE.search(y)  # prefer magnitude over a %-change column
+        )
+        if not y_ok:
+            y = self._pick_y_measure(question, results, x)
+        if not y:
+            return None
 
+        ctype = self._pick_chart_type(chart.get("type"), results, x)
         return self._assemble_chart(ctype, x, y, chart, results)
 
     # ------------------------------------------------------------------
@@ -353,9 +369,12 @@ Output JSON only."""
 
     def _assemble_chart(self, ctype: str, x: str, y: str, chart: Dict[str, Any],
                         results: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-        ci = self._chart_intel
+        """Self-contained: build points, sort category charts by value desc
+        (time charts keep their order), format labels. No external validation."""
+        ci = self._chart_intel  # only for label/axis formatting helpers
         y_lower = y.lower()
-        is_currency = any(kw in y_lower for kw in ['revenue', 'sales', 'price', 'cost', 'profit', 'amount', 'basket'])
+        is_currency = any(kw in y_lower for kw in
+                          ['revenue', 'sales', 'price', 'cost', 'profit', 'amount', 'basket', 'total'])
 
         data = []
         for row in results:
@@ -369,9 +388,16 @@ Output JSON only."""
                 "value": value,
             })
 
-        config = {
+        # Category charts rank by the measure; time charts stay in their order.
+        if ctype in ("bar", "horizontal_bar", "lollipop", "pie", "pareto"):
+            data.sort(key=lambda d: d["value"], reverse=True)
+            data = data[:20]
+
+        title = chart.get("title") or f"{ci._format_label(y)} by {ci._format_label(x)}"
+
+        return {
             "type": ctype,
-            "title": chart.get("title") or ci._format_label(y),
+            "title": title,
             "data": data,
             "x_axis": x,
             "y_axis": y,
@@ -379,6 +405,7 @@ Output JSON only."""
             "y_label": ci._format_label(y),
             "is_currency": is_currency,
             "units_column": None,
+            "data_point_count": len(data),
             "formatting": {
                 "abbreviate_numbers": True,
                 "currency_symbol": "₱" if is_currency else None,
@@ -395,25 +422,116 @@ Output JSON only."""
             },
         }
 
-        # Respect an explicit no-sort request (e.g. preserve time/category order)
-        # by tagging config so validation doesn't reorder line/area anyway.
-        repaired = ci._validate_and_repair(config, results)
-        return repaired
-
     # ------------------------------------------------------------------
-    # Helpers
+    # Chart selection helpers (data-shape based, name-independent)
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _is_numeric_column(results: List[Dict[str, Any]], col: str) -> bool:
+    def _is_numeric_series(results: List[Dict[str, Any]], col: str) -> bool:
+        saw = False
         for row in results:
             v = row.get(col)
             if v is None:
                 continue
-            if isinstance(v, (int, float, Decimal)) and not isinstance(v, bool):
-                return True
+            if isinstance(v, bool) or not isinstance(v, (int, float, Decimal)):
+                return False
+            saw = True
+        return saw
+
+    # Backwards-compatible alias.
+    _is_numeric_column = _is_numeric_series
+
+    @staticmethod
+    def _looks_like_rank(results: List[Dict[str, Any]], col: str) -> bool:
+        """True if the column's values are a 1..N (or 0..N-1) position sequence —
+        a rank/row-number regardless of what it's named."""
+        vals = []
+        for row in results:
+            v = row.get(col)
+            if v is None:
+                continue
+            if isinstance(v, bool) or not isinstance(v, (int, float, Decimal)):
+                return False
+            fv = float(v)
+            if fv != int(fv):
+                return False  # non-integer -> not a position index
+            vals.append(int(fv))
+        if len(vals) < 3:
             return False
-        return False
+        s = sorted(vals)
+        return s[0] in (0, 1) and s == list(range(s[0], s[0] + len(s)))
+
+    @staticmethod
+    def _column_max_abs(results: List[Dict[str, Any]], col: str) -> float:
+        m = 0.0
+        for row in results:
+            v = row.get(col)
+            if isinstance(v, (int, float, Decimal)) and not isinstance(v, bool):
+                m = max(m, abs(float(v)))
+        return m
+
+    def _is_time_col(self, results: List[Dict[str, Any]], col: str) -> bool:
+        if set(re.split(r'[^a-z]+', col.lower())) & _TIME_TOKENS:
+            return True
+        v = results[0].get(col)
+        return isinstance(v, (datetime, date))
+
+    def _pick_x_axis(self, results: List[Dict[str, Any]]) -> Optional[str]:
+        cols = list(results[0].keys())
+        # Prefer a text label column.
+        for c in cols:
+            if not self._is_numeric_series(results, c) and not self._is_time_col(results, c):
+                if isinstance(results[0].get(c), str):
+                    return c
+        # Then a time column (for trends).
+        for c in cols:
+            if self._is_time_col(results, c):
+                return c
+        # Then any non-numeric column.
+        for c in cols:
+            if not self._is_numeric_series(results, c):
+                return c
+        return cols[0] if cols else None
+
+    def _pick_y_measure(self, question: str, results: List[Dict[str, Any]], x: str) -> Optional[str]:
+        """Pick the measure to plot: match the question's intent, else the
+        largest-magnitude real measure. Never a rank/id/%-change column."""
+        q = question.lower()
+        cands = [
+            c for c in results[0].keys()
+            if c != x
+            and self._is_numeric_series(results, c)
+            and not _NON_METRIC.search(c)
+            and not self._looks_like_rank(results, c)
+        ]
+        if not cands:
+            return None
+
+        magnitude = [c for c in cands if not _CHANGE_RE.search(c)]
+        pool = magnitude or cands
+
+        # 1) Match the metric the user asked about.
+        for q_terms, col_terms in _MEASURE_KEYWORDS:
+            if any(t in q for t in q_terms):
+                for c in pool:
+                    cl = c.lower()
+                    if any(t in cl for t in col_terms):
+                        return c
+
+        # 2) Otherwise the biggest-magnitude measure (sales dwarfs counts/%/rank).
+        return max(pool, key=lambda c: self._column_max_abs(results, c))
+
+    def _pick_chart_type(self, ai_type: Optional[str], results: List[Dict[str, Any]], x: str) -> str:
+        if self._is_time_col(results, x):
+            return "area" if ai_type == "area" else "line"
+        if ai_type in ("pie", "pareto", "lollipop", "horizontal_bar") and ai_type in _ALLOWED_CHART_TYPES:
+            return ai_type
+        # Long labels read better horizontally.
+        try:
+            longest = max(len(str(r.get(x, ""))) for r in results)
+        except ValueError:
+            longest = 0
+        return "horizontal_bar" if longest > 14 else "bar"
 
     def _col_kind(self, results: List[Dict[str, Any]], col: str) -> str:
         # Token-aware so "yesterday_sales" isn't mistaken for a time column.
