@@ -136,6 +136,27 @@ class ScheduledReportService:
             if vals:
                 out["days_of_month"] = json.dumps(vals)
 
+        # day_times -> {"0": ["08:00"], "5": ["10:00","16:00"]} per-weekday times.
+        dt = data.get("day_times")
+        if isinstance(dt, dict):
+            norm_dt: Dict[str, List[str]] = {}
+            for k, v in dt.items():
+                try:
+                    wd = int(k)
+                except (ValueError, TypeError):
+                    continue
+                if not (0 <= wd <= 6) or not isinstance(v, list):
+                    continue
+                ts = sorted({t for t in (self._fmt_time(x) for x in v) if t})
+                if ts:
+                    norm_dt[str(wd)] = ts
+            if norm_dt:
+                out["day_times"] = json.dumps(norm_dt)
+                # Keep legacy hour/minute in sync with the earliest configured time.
+                earliest = min(t for ts in norm_dt.values() for t in ts)
+                h, m = earliest.split(":")
+                out["hour"], out["minute"] = int(h), int(m)
+
         # telegram_chat_ids -> JSON list; keep legacy single chat in sync.
         cids = data.get("telegram_chat_ids")
         if isinstance(cids, list):
@@ -199,8 +220,46 @@ class ScheduledReportService:
                 return list(dict.fromkeys(vals))  # dedupe, keep order
         return [r.telegram_chat_id] if r.telegram_chat_id else []
 
+    def _day_times(self, r: ScheduledReport) -> Dict[int, List[Tuple[int, int]]]:
+        """Parsed per-weekday times: {weekday -> [(h, m), ...]}."""
+        raw = getattr(r, "day_times", None)
+        if not raw:
+            return {}
+        try:
+            obj = json.loads(raw)
+        except Exception:
+            return {}
+        out: Dict[int, List[Tuple[int, int]]] = {}
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                try:
+                    wd = int(k)
+                except (ValueError, TypeError):
+                    continue
+                if not isinstance(v, list):
+                    continue
+                slots = []
+                for t in v:
+                    fmt = self._fmt_time(t)
+                    if fmt:
+                        h, m = fmt.split(":")
+                        slots.append((int(h), int(m)))
+                if 0 <= wd <= 6 and slots:
+                    out[wd] = sorted(set(slots))
+        return out
+
+    def _times_for_day(self, r: ScheduledReport, d: date) -> List[Tuple[int, int]]:
+        """Times that apply on a specific date (per-weekday for 'custom')."""
+        if (r.frequency or "") == "custom":
+            return self._day_times(r).get(d.weekday(), [])
+        return self._times(r)
+
     def _times_str(self, r: ScheduledReport) -> List[str]:
         return [f"{h:02d}:{m:02d}" for (h, m) in self._times(r)]
+
+    def _day_times_str(self, r: ScheduledReport) -> Dict[str, List[str]]:
+        return {str(wd): [f"{h:02d}:{m:02d}" for (h, m) in ts]
+                for wd, ts in self._day_times(r).items()}
 
     def _to_dict(self, r: ScheduledReport) -> Dict[str, Any]:
         return {
@@ -213,6 +272,7 @@ class ScheduledReportService:
             "times": self._times_str(r),
             "days_of_week": sorted(self._dow(r)),
             "days_of_month": sorted(self._dom(r)),
+            "day_times": self._day_times_str(r),
             "telegram_chat_ids": self._chat_ids(r),
             # Legacy (kept for compatibility)
             "day_of_week": r.day_of_week,
@@ -233,6 +293,8 @@ class ScheduledReportService:
 
     def _matches_day(self, r: ScheduledReport, d: date) -> bool:
         freq = r.frequency or "daily"
+        if freq == "custom":
+            return bool(self._times_for_day(r, d))  # weekday has configured times
         if freq == "weekly":
             return d.weekday() in self._dow(r)
         if freq == "monthly":
@@ -245,14 +307,13 @@ class ScheduledReportService:
 
     def _most_recent_slot(self, r: ScheduledReport, now: datetime) -> Optional[datetime]:
         """Latest scheduled datetime <= now across all configured days/times."""
-        times = self._times(r)
         for back in range(0, 62):  # up to ~2 months of catch-up
             d = (now - timedelta(days=back)).date()
             if not self._matches_day(r, d):
                 continue
             day_slots = [
                 datetime(d.year, d.month, d.day, h, m, tzinfo=MANILA)
-                for (h, m) in times
+                for (h, m) in self._times_for_day(r, d)  # per-day times for 'custom'
             ]
             past = [s for s in day_slots if s <= now]
             if past:

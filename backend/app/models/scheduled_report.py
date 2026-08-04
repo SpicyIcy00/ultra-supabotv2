@@ -36,9 +36,13 @@ class ScheduledReport(Base):
     #   times          -> ["08:00", "17:30"]      (one or more times per day)
     #   days_of_week   -> [0, 3]                   (Mon=0 … Sun=6; used when weekly)
     #   days_of_month  -> [1, 15, 31]              (used when monthly; 31 => last day)
+    #   day_times      -> {"0": ["08:00"], "5": ["10:00","16:00"]}
+    #                     per-weekday times (used when frequency == 'custom' —
+    #                     "different times depending on the day")
     times: Mapped[str | None] = mapped_column(Text, nullable=True)
     days_of_week: Mapped[str | None] = mapped_column(Text, nullable=True)
     days_of_month: Mapped[str | None] = mapped_column(Text, nullable=True)
+    day_times: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Delivery. telegram_chat_id keeps the first/primary chat for compat;
     # telegram_chat_ids (JSON) holds the full list of recipients.

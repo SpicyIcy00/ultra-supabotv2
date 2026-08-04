@@ -188,6 +188,7 @@ async def startup_event():
                     ADD COLUMN IF NOT EXISTS times              TEXT,
                     ADD COLUMN IF NOT EXISTS days_of_week       TEXT,
                     ADD COLUMN IF NOT EXISTS days_of_month      TEXT,
+                    ADD COLUMN IF NOT EXISTS day_times          TEXT,
                     ADD COLUMN IF NOT EXISTS telegram_chat_ids  TEXT
             """))
         print("Schema migration: max_cover_days + product_barcodes + percentile columns + store config + auto_report + scheduled_reports ensured")

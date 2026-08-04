@@ -5,7 +5,7 @@ CRUD for scheduling a chat-generated report (question + SQL) to re-run on future
 days and deliver to Telegram, plus Telegram helper endpoints (status / chat-id
 discovery / test send / run-now).
 """
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -26,11 +26,12 @@ class ScheduledReportCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     question: str = Field(..., min_length=1)
     sql: str = Field(..., min_length=1)
-    frequency: str = Field("daily", pattern="^(daily|weekly|monthly)$")
+    frequency: str = Field("daily", pattern="^(daily|weekly|monthly|custom)$")
     # Flexible schedule (Manila time).
     times: List[str] = Field(default_factory=lambda: ["08:00"])  # ["08:00","17:30"]
     days_of_week: List[int] = Field(default_factory=list)        # Mon=0..Sun=6 (weekly)
     days_of_month: List[int] = Field(default_factory=list)       # 1..31, 31 => last day (monthly)
+    day_times: Dict[str, List[str]] = Field(default_factory=dict)  # per-weekday times (custom)
     # Delivery — one or more Telegram chats.
     telegram_chat_ids: List[str] = Field(default_factory=list)
     telegram_chat_id: Optional[str] = Field(None, max_length=64)  # legacy single (optional)
@@ -42,10 +43,11 @@ class ScheduledReportUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     question: Optional[str] = None
     sql: Optional[str] = None
-    frequency: Optional[str] = Field(None, pattern="^(daily|weekly|monthly)$")
+    frequency: Optional[str] = Field(None, pattern="^(daily|weekly|monthly|custom)$")
     times: Optional[List[str]] = None
     days_of_week: Optional[List[int]] = None
     days_of_month: Optional[List[int]] = None
+    day_times: Optional[Dict[str, List[str]]] = None
     telegram_chat_ids: Optional[List[str]] = None
     telegram_chat_id: Optional[str] = Field(None, max_length=64)
     include_csv: Optional[bool] = None
