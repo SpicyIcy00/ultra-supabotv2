@@ -28,6 +28,10 @@ from app.services import telegram_sender
 
 MANILA = ZoneInfo("Asia/Manila")
 
+# A quoted-or-bare YYYY-MM-DD date literal in SQL (also matches the date part of
+# a 'YYYY-MM-DD HH:MM:SS' timestamp literal — only the date portion is shifted).
+_DATE_LITERAL = re.compile(r'\b(\d{4})-(\d{2})-(\d{2})\b')
+
 # Columns that are position indexes / ids — never shown as a headline metric.
 # Token-aware + search so "store_rank"/"sales_rank"/"row_number" are caught.
 _NON_METRIC = re.compile(
@@ -360,17 +364,54 @@ class ScheduledReportService:
                 first_error = f"{cid}: {res.get('error')}"
         return ok, first_error
 
+    # ---- relative-date handling ------------------------------------
+
+    def _base_date(self, report: ScheduledReport) -> date:
+        """The 'today' the saved SQL's date literals were anchored to (the day the
+        report was created)."""
+        ca = getattr(report, "created_at", None)
+        if ca:
+            if ca.tzinfo is not None:
+                ca = ca.astimezone(MANILA)
+            return ca.date()
+        return datetime.now(MANILA).date()
+
+    @staticmethod
+    def _shift_sql_dates(sql: str, offset_days: int) -> str:
+        """Shift every YYYY-MM-DD literal in the SQL by offset_days, so a report
+        for 'today'/'last week' always targets the current run's dates."""
+        if offset_days == 0:
+            return sql
+
+        def repl(m: "re.Match") -> str:
+            try:
+                d = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+            except ValueError:
+                return m.group(0)
+            return (d + timedelta(days=offset_days)).isoformat()
+
+        return _DATE_LITERAL.sub(repl, sql)
+
+    def _sql_for_run(self, report: ScheduledReport, run_date: date) -> str:
+        """The SQL to execute for this run — date literals rolled forward from the
+        report's creation date to the run date."""
+        offset = (run_date - self._base_date(report)).days
+        return self._shift_sql_dates(report.sql, offset)
+
     async def run_one(self, report: ScheduledReport, triggered_by: str = "schedule") -> Dict[str, Any]:
-        """Re-run the saved SQL and deliver one complete Telegram message to every
-        configured chat (all info in the text — no image, no CSV). Records last_run_*."""
-        run_date = date.today().isoformat()
+        """Re-run the saved SQL (with date literals rolled forward to the run date)
+        and deliver one complete Telegram message to every configured chat. Records
+        last_run_*."""
+        today = datetime.now(MANILA).date()
+        run_date = today.isoformat()
         chat_ids = self._chat_ids(report)
         if not chat_ids:
             await self._record(report, "failed", f"{triggered_by}: no recipients")
             return {"status": "failed", "error": "no recipients"}
         try:
             executor = QueryExecutor(self.db)
-            execution = await executor.execute_query(report.sql, timeout=30, validate=True)
+            sql = self._sql_for_run(report, today)
+            execution = await executor.execute_query(sql, timeout=30, validate=True)
             rows = execution["results"]
             row_count = execution["row_count"]
 
