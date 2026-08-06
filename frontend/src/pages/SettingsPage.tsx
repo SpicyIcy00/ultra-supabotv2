@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { RefreshCw, Store, Plus, X, Save, Pencil, RotateCcw } from 'lucide-react';
+import { RefreshCw, Store, Plus, X, Save, Pencil, RotateCcw, Package } from 'lucide-react';
 import axios from 'axios';
 import { getStoreFilters, updateStoreFilters, getAvailableStores } from '../services/storeFiltersApi';
 import { updateStoreAppearance } from '../services/storesApi';
 import type { StoreFilterConfig } from '../types/storeFilters';
 import { useDashboardStore } from '../stores/dashboardStore';
+import { useVendingStore } from '../stores/vendingStore';
 
-type TabType = 'general' | 'stores';
+type TabType = 'general' | 'stores' | 'vending';
 
 export const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('general');
@@ -44,11 +45,23 @@ export const SettingsPage: React.FC = () => {
             <Store className="w-4 h-4" />
             Store Settings
           </button>
+          <button
+            onClick={() => setActiveTab('vending')}
+            className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+              activeTab === 'vending'
+                ? 'border-blue-500 text-blue-400 bg-blue-500/10'
+                : 'border-transparent text-gray-400 hover:text-white'
+            }`}
+          >
+            <Package className="w-4 h-4" />
+            Vending Settings
+          </button>
         </div>
 
         {/* Tab Content */}
         {activeTab === 'general' && <GeneralSettings />}
         {activeTab === 'stores' && <StoresSettings />}
+        {activeTab === 'vending' && <VendingSettings />}
       </div>
     </div>
   );
@@ -168,6 +181,128 @@ const StoresSettings: React.FC = () => {
         </div>
         <StoreDisplayNames />
       </section>
+    </div>
+  );
+};
+
+// Vending Settings Tab
+const VendingSettings: React.FC = () => {
+  return (
+    <div className="space-y-10">
+      {/* ── Dashboard Vending Defaults ── */}
+      <section>
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold text-white">Dashboard Vending Defaults</h2>
+          <p className="text-sm text-gray-400 mt-1">
+            Configure which vending machines are shown by default on the Vending tab
+          </p>
+        </div>
+        <VendingMachineDefaults />
+      </section>
+    </div>
+  );
+};
+
+// ── Dashboard Vending Defaults (mirrors DashboardStoreDefaults) ────────────
+const VendingMachineDefaults: React.FC = () => {
+  const { devices, selectedDevices, setDevices, fetchDevices, getDeviceName } = useVendingStore();
+  const [localSelected, setLocalSelected] = useState<string[]>([]);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    if (devices.length === 0) fetchDevices();
+  }, []);
+
+  useEffect(() => {
+    setLocalSelected(selectedDevices);
+  }, [selectedDevices]);
+
+  // Machines are keyed by device_code — names are not guaranteed unique, and
+  // one machine currently has no name at all in Weimi.
+  const selectedCodes = localSelected.filter(code =>
+    devices.some(d => d.device_code === code)
+  );
+  const availableCodes = devices
+    .filter(d => !localSelected.includes(d.device_code))
+    .map(d => d.device_code);
+
+  const handleAdd = (code: string) => {
+    setLocalSelected(prev => [...prev, code]);
+    setHasChanges(true);
+  };
+
+  const handleRemove = (code: string) => {
+    setLocalSelected(prev => prev.filter(c => c !== code));
+    setHasChanges(true);
+  };
+
+  const handleSave = () => {
+    if (localSelected.length === 0) return;
+    setDevices(localSelected);
+    setHasChanges(false);
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 3000);
+  };
+
+  if (devices.length === 0) {
+    return (
+      <div className="flex items-center gap-3 text-gray-400 py-6">
+        <RefreshCw className="w-5 h-5 animate-spin" />
+        <span>Loading vending machines...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-end">
+        <button
+          onClick={handleSave}
+          disabled={!hasChanges || localSelected.length === 0}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
+        >
+          <Save className="w-4 h-4" />
+          {success ? 'Saved!' : 'Save Changes'}
+        </button>
+      </div>
+
+      {success && (
+        <div className="p-4 bg-green-900/30 border border-green-600/50 rounded-lg text-green-300">
+          Dashboard vending defaults updated successfully!
+        </div>
+      )}
+
+      <div className="p-4 bg-blue-950/20 border border-blue-900/50 rounded-lg">
+        <div className="flex items-start gap-3">
+          <div className="text-blue-400 mt-0.5">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h4 className="text-sm font-medium text-blue-300 mb-1">How Vending Defaults Work</h4>
+            <p className="text-xs text-blue-200/70">
+              These machines are pre-selected on the dashboard's Vending tab — KPIs, per-machine sales,
+              hourly averages, products and categories all follow this selection. You can still change it
+              per session with the machine picker in the toolbar. Drop test machines here to keep them out
+              of your numbers.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <StoreFilterSection
+        title="Default Vending Machines"
+        description="Machines pre-selected every time the Vending tab loads"
+        stores={selectedCodes}
+        availableStores={availableCodes}
+        onAdd={handleAdd}
+        onRemove={handleRemove}
+        color="green"
+        itemLabel="machine"
+        getDisplayName={getDeviceName}
+      />
     </div>
   );
 };
@@ -618,6 +753,8 @@ interface StoreFilterSectionProps {
   onRemove: (store: string) => void;
   color: 'purple' | 'green' | 'blue';
   getDisplayName?: (name: string) => string;
+  /** Noun used in the copy — vending passes "machine". */
+  itemLabel?: string;
 }
 
 const StoreFilterSection: React.FC<StoreFilterSectionProps> = ({
@@ -629,6 +766,7 @@ const StoreFilterSection: React.FC<StoreFilterSectionProps> = ({
   onRemove,
   color,
   getDisplayName,
+  itemLabel = 'store',
 }) => {
   const label = (name: string) => getDisplayName ? getDisplayName(name) : name;
   const [selectedStore, setSelectedStore] = useState('');
@@ -660,7 +798,7 @@ const StoreFilterSection: React.FC<StoreFilterSectionProps> = ({
             onChange={(e) => setSelectedStore(e.target.value)}
             className="flex-1 bg-[#0e1117] border border-[#2e303d] rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
           >
-            <option value="">Select a store to add...</option>
+            <option value="">Select a {itemLabel} to add...</option>
             {availableStores.map((store) => (
               <option key={store} value={store}>{label(store)}</option>
             ))}
@@ -677,7 +815,7 @@ const StoreFilterSection: React.FC<StoreFilterSectionProps> = ({
 
         <div className="space-y-2">
           {stores.length === 0 ? (
-            <p className="text-gray-500 text-sm py-4 text-center">No stores added</p>
+            <p className="text-gray-500 text-sm py-4 text-center">No {itemLabel}s added</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {stores.map((store) => (
@@ -699,7 +837,7 @@ const StoreFilterSection: React.FC<StoreFilterSectionProps> = ({
         </div>
 
         <div className="text-xs text-gray-500 pt-2 border-t border-[#2e303d]">
-          {stores.length} store{stores.length !== 1 ? 's' : ''} selected
+          {stores.length} {itemLabel}{stores.length !== 1 ? 's' : ''} selected
         </div>
       </div>
     </div>
