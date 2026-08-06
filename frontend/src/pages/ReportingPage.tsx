@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
 import { ReplenishmentDashboard } from '../components/replenishment/ReplenishmentDashboard';
-import { ShipmentPlanTable } from '../components/replenishment/ShipmentPlanTable';
-import { WarehousePicklist } from '../components/replenishment/WarehousePicklist';
-import { ExceptionsPanel } from '../components/replenishment/ExceptionsPanel';
 import { StoreTierConfig } from '../components/replenishment/StoreTierConfig';
 import { PercentileStoreConfigTable } from '../components/replenishment/PercentileStoreConfigTable';
 import { SeasonalityCalendar } from '../components/replenishment/SeasonalityCalendar';
@@ -13,7 +10,7 @@ import { VelocityMultiplierConfig } from '../components/replenishment/VelocityMu
 import { CategoryMultiplierConfig } from '../components/replenishment/CategoryMultiplierConfig';
 import { AutoReportConfig } from '../components/replenishment/AutoReportConfig';
 
-type ReplenishmentSubTab = 'dashboard' | 'shipment-plan' | 'picklist' | 'exceptions' | 'configuration';
+type ReplenishmentSubTab = 'dashboard' | 'configuration';
 type ConfigSubTab = 'store-tiers' | 'percentile-v2' | 'seasonality' | 'warehouse' | 'pipeline' | 'algorithm' | 'velocity-multipliers' | 'category-multipliers' | 'auto-report';
 
 /**
@@ -26,9 +23,6 @@ const ReportingPage: React.FC = () => {
 
   const renderContent = () => {
     if (replenishmentSubTab === 'dashboard') return <ReplenishmentDashboard />;
-    if (replenishmentSubTab === 'shipment-plan') return <ShipmentPlanTable />;
-    if (replenishmentSubTab === 'picklist') return <WarehousePicklist />;
-    if (replenishmentSubTab === 'exceptions') return <ExceptionsPanel />;
     if (replenishmentSubTab === 'configuration') {
       return (
         <div className="space-y-4">
@@ -76,9 +70,6 @@ const ReportingPage: React.FC = () => {
         <div className="flex gap-1 mb-6 border-b border-[#2e303d]">
           {([
             { key: 'dashboard' as ReplenishmentSubTab, label: 'Dashboard' },
-            { key: 'shipment-plan' as ReplenishmentSubTab, label: 'Shipment Plan' },
-            { key: 'picklist' as ReplenishmentSubTab, label: 'Picklist' },
-            { key: 'exceptions' as ReplenishmentSubTab, label: 'Exceptions' },
             { key: 'configuration' as ReplenishmentSubTab, label: 'Configuration' },
           ]).map(tab => (
             <button key={tab.key} onClick={() => setReplenishmentSubTab(tab.key)}
