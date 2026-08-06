@@ -381,6 +381,7 @@ export const useSalesAnomalies = () => {
 // Hook to get all dashboard data
 export const useDashboardData = () => {
   const selectedPeriod = useDashboardStore((state) => state.selectedPeriod);
+  const customDateRange = useDashboardStore((state) => state.customDateRange);
 
   const kpiData = useKPIData();
   const salesByCategory = useSalesByCategory();
@@ -438,7 +439,11 @@ export const useDashboardData = () => {
 
     // Labels
     periodLabel: getPeriodLabel(selectedPeriod),
-    comparisonLabel: getComparisonLabel(selectedPeriod),
+    comparisonLabel: getComparisonLabel(
+      selectedPeriod,
+      customDateRange?.start,
+      customDateRange?.end
+    ),
   };
 };
 

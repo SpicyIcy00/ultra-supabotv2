@@ -2,6 +2,7 @@ import React from 'react';
 import { DayPicker } from 'react-day-picker';
 import type { DateRange } from 'react-day-picker';
 import { format } from 'date-fns';
+import { calculateCustomPeriod, getComparisonLabel } from '../../utils/dateCalculations';
 import 'react-day-picker/dist/style.css';
 import './DateRangePicker.css';
 
@@ -47,6 +48,18 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     onClear();
   };
 
+  // Preview of what this range will be measured against, so the weekday-aligned
+  // comparison is visible before the user commits to it.
+  const comparisonPreview = React.useMemo(() => {
+    if (!range?.from || !range?.to) return null;
+    const { comparison } = calculateCustomPeriod(range.from, range.to);
+    return {
+      label: getComparisonLabel('CUSTOM', range.from, range.to),
+      start: format(comparison.start, 'EEE MMM d'),
+      end: format(comparison.end, 'EEE MMM d, yyyy'),
+    };
+  }, [range?.from, range?.to]);
+
   const footer = (
     <div className="date-range-picker-footer">
       <div className="date-range-display">
@@ -70,6 +83,12 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
           <div className="date-hint">Click a date to start selecting a range</div>
         )}
       </div>
+      {comparisonPreview && (
+        <div className="comparison-note">
+          Compares against <strong>{comparisonPreview.start} – {comparisonPreview.end}</strong>
+          {' '}({comparisonPreview.label.replace(/^vs /, '')})
+        </div>
+      )}
       <div className="date-range-actions">
         <button onClick={handleClear} className="btn-secondary" disabled={!range?.from}>
           Clear

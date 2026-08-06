@@ -181,6 +181,7 @@ export const useVendingSalesByHour = () => {
 // Hook to get all vending dashboard data
 export const useVendingData = () => {
   const selectedPeriod = useDashboardStore((state) => state.selectedPeriod);
+  const customDateRange = useDashboardStore((state) => state.customDateRange);
 
   const kpiData = useVendingKPIs();
   const salesByMachine = useSalesByMachine();
@@ -223,6 +224,10 @@ export const useVendingData = () => {
 
     // Labels
     periodLabel: getPeriodLabel(selectedPeriod),
-    comparisonLabel: getComparisonLabel(selectedPeriod),
+    comparisonLabel: getComparisonLabel(
+      selectedPeriod,
+      customDateRange?.start,
+      customDateRange?.end
+    ),
   };
 };

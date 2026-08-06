@@ -375,9 +375,41 @@ export function calculateYTDPeriod(): PeriodDateRanges {
 }
 
 /**
+ * Ranges shorter than this get a weekday-aligned comparison period; longer ones
+ * keep the contiguous preceding block. See calculateCustomPeriod.
+ */
+const WEEKDAY_ALIGN_MAX_DAYS = 28;
+
+/**
+ * How many days back the comparison window sits for a custom range of the given
+ * length, and whether that shift is weekday-aligned.
+ *
+ * Short ranges are dominated by their weekday mix: Aug 4-6 is Tue-Thu, and the
+ * block immediately before it is Sat-Mon, so a plain "previous period" reports
+ * the weekend/weekday gap as if it were a trend. Shifting back a whole number of
+ * weeks - the smallest that still covers the range, so the windows never overlap -
+ * lines the weekdays up and leaves a gap of at most 6 days.
+ *
+ * Longer ranges already carry a near-balanced weekday mix (a 30-day window holds
+ * ~4.3 of each), and shifting them off the calendar would break the 15th/30th
+ * payday cycle, so those keep the contiguous preceding block.
+ */
+export function getCustomComparisonShift(daysInRange: number): {
+  shiftDays: number;
+  weekdayAligned: boolean;
+} {
+  if (daysInRange >= WEEKDAY_ALIGN_MAX_DAYS) {
+    return { shiftDays: daysInRange, weekdayAligned: false };
+  }
+  // Already a whole number of weeks, so the contiguous block is aligned as-is.
+  const shiftDays = Math.ceil(daysInRange / 7) * 7;
+  return { shiftDays, weekdayAligned: true };
+}
+
+/**
  * Calculate date ranges for CUSTOM period
  * User selects start and end dates
- * Automatically calculates comparison period
+ * Comparison period is weekday-aligned for short ranges
  */
 export function calculateCustomPeriod(customStart: Date, customEnd: Date): PeriodDateRanges {
   const currentStart = new Date(customStart);
@@ -389,14 +421,15 @@ export function calculateCustomPeriod(customStart: Date, customEnd: Date): Perio
   // Calculate number of days in range
   const daysDiff = Math.floor((currentEnd.getTime() - currentStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
-  // Subtract same number of days for comparison
-  const comparisonEnd = new Date(currentStart);
-  comparisonEnd.setDate(comparisonEnd.getDate() - 1);
-  comparisonEnd.setHours(23, 59, 59, 999);
+  const { shiftDays } = getCustomComparisonShift(daysDiff);
 
-  const comparisonStart = new Date(comparisonEnd);
-  comparisonStart.setDate(comparisonStart.getDate() - daysDiff + 1);
+  const comparisonStart = new Date(currentStart);
+  comparisonStart.setDate(comparisonStart.getDate() - shiftDays);
   comparisonStart.setHours(0, 0, 0, 0);
+
+  const comparisonEnd = new Date(comparisonStart);
+  comparisonEnd.setDate(comparisonEnd.getDate() + daysDiff - 1);
+  comparisonEnd.setHours(23, 59, 59, 999);
 
   return {
     current: {
@@ -530,8 +563,34 @@ export function getPeriodLabel(period: PeriodType): string {
 
 /**
  * Get comparison period label for display
+ *
+ * CUSTOM depends on the selected range length, so pass the dates to get an
+ * accurate label; without them it falls back to the generic wording.
  */
-export function getComparisonLabel(period: PeriodType): string {
+export function getComparisonLabel(
+  period: PeriodType,
+  customStart?: Date,
+  customEnd?: Date
+): string {
+  if (period === 'CUSTOM' && customStart && customEnd) {
+    const start = new Date(customStart);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(customEnd);
+    end.setHours(0, 0, 0, 0);
+
+    const daysDiff = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const { shiftDays, weekdayAligned } = getCustomComparisonShift(daysDiff);
+
+    if (!weekdayAligned) {
+      return `vs previous ${daysDiff} days`;
+    }
+    const weeks = shiftDays / 7;
+    const days = daysDiff === 1 ? 'day' : 'days';
+    return weeks === 1
+      ? `vs same ${days} last week`
+      : `vs same ${days} ${weeks} weeks earlier`;
+  }
+
   switch (period) {
     case 'TODAY':
       return 'vs same day last week';
