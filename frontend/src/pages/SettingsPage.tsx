@@ -15,19 +15,19 @@ export const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('general');
 
   return (
-    <div className="min-h-screen bg-[#0e1117] p-6">
-      <div className="max-w-[1200px] mx-auto space-y-6">
+    <div className="min-h-screen bg-[#0e1117]">
+      <div className="max-w-[1920px] mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-4 sm:mb-8">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1 sm:mb-2">Settings</h1>
           <p className="text-sm sm:text-base text-gray-400">Manage your dashboard preferences and data</p>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 border-b border-[#2e303d]">
+        <div className="flex gap-1 overflow-x-auto border-b border-[#2e303d]">
           <button
             onClick={() => setActiveTab('general')}
-            className={`px-5 py-2.5 text-sm font-medium rounded-lg border-b-2 transition-colors ${
+            className={`shrink-0 whitespace-nowrap px-5 py-2.5 text-sm font-medium rounded-lg border-b-2 transition-colors ${
               activeTab === 'general'
                 ? 'border-blue-500 text-blue-400 bg-blue-500/10'
                 : 'border-transparent text-gray-400 hover:text-white'
@@ -37,7 +37,7 @@ export const SettingsPage: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('stores')}
-            className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+            className={`shrink-0 whitespace-nowrap px-5 py-2.5 text-sm font-medium rounded-lg border-b-2 transition-colors flex items-center gap-2 ${
               activeTab === 'stores'
                 ? 'border-blue-500 text-blue-400 bg-blue-500/10'
                 : 'border-transparent text-gray-400 hover:text-white'
@@ -48,7 +48,7 @@ export const SettingsPage: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('vending')}
-            className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+            className={`shrink-0 whitespace-nowrap px-5 py-2.5 text-sm font-medium rounded-lg border-b-2 transition-colors flex items-center gap-2 ${
               activeTab === 'vending'
                 ? 'border-blue-500 text-blue-400 bg-blue-500/10'
                 : 'border-transparent text-gray-400 hover:text-white'
@@ -95,13 +95,13 @@ const GeneralSettings: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Data Management Section */}
-      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6">
+      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-3 sm:p-4">
         <h2 className="text-xl font-semibold text-white mb-4">Data Management</h2>
 
         <div className="space-y-4">
-          <div className="flex items-start justify-between p-4 bg-[#0e1117] rounded-lg border border-[#2e303d]">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 p-3 sm:p-4 bg-[#0e1117] rounded-lg border border-[#2e303d]">
             <div className="flex-1">
               <h3 className="text-lg font-medium text-white mb-1">Refresh All Data</h3>
               <p className="text-sm text-gray-400">
@@ -118,7 +118,7 @@ const GeneralSettings: React.FC = () => {
               </div>
             </div>
 
-            <div className="ml-6 flex flex-col items-end gap-2">
+            <div className="shrink-0 sm:ml-6 flex flex-col items-start sm:items-end gap-2">
               <button
                 onClick={handleRefreshData}
                 disabled={isRefreshing}
@@ -145,7 +145,7 @@ const GeneralSettings: React.FC = () => {
 // Combined Store Settings Tab
 const StoresSettings: React.FC = () => {
   return (
-    <div className="space-y-10">
+    <div className="space-y-6 sm:space-y-8">
       {/* ── Section 1: AI Chat Store Filters ── */}
       <section>
         <div className="mb-4">
@@ -189,7 +189,7 @@ const StoresSettings: React.FC = () => {
 // Vending Settings Tab
 const VendingSettings: React.FC = () => {
   return (
-    <div className="space-y-10">
+    <div className="space-y-6 sm:space-y-8">
       {/* ── Dashboard Vending Defaults ── */}
       <section>
         <div className="mb-4">
