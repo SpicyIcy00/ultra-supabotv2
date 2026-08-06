@@ -4,6 +4,7 @@ import { RefreshCw, Store, Plus, X, Save, Pencil, RotateCcw, Package } from 'luc
 import axios from 'axios';
 import { getStoreFilters, updateStoreFilters, getAvailableStores } from '../services/storeFiltersApi';
 import { updateStoreAppearance } from '../services/storesApi';
+import { updateDashboardDefaults } from '../services/dashboardDefaultsApi';
 import type { StoreFilterConfig } from '../types/storeFilters';
 import { useDashboardStore } from '../stores/dashboardStore';
 import { useVendingStore } from '../stores/vendingStore';
@@ -209,6 +210,8 @@ const VendingMachineDefaults: React.FC = () => {
   const [localSelected, setLocalSelected] = useState<string[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (devices.length === 0) fetchDevices();
@@ -237,12 +240,23 @@ const VendingMachineDefaults: React.FC = () => {
     setHasChanges(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (localSelected.length === 0) return;
-    setDevices(localSelected);
-    setHasChanges(false);
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
+    setSaving(true);
+    setError(null);
+    try {
+      // Save server-side first so the defaults reach every device, then apply
+      // them to this session.
+      await updateDashboardDefaults('vending', localSelected);
+      setDevices(localSelected);
+      setHasChanges(false);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || err.message || 'Failed to save vending defaults');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (devices.length === 0) {
@@ -259,17 +273,23 @@ const VendingMachineDefaults: React.FC = () => {
       <div className="flex items-center justify-end">
         <button
           onClick={handleSave}
-          disabled={!hasChanges || localSelected.length === 0}
+          disabled={!hasChanges || saving || localSelected.length === 0}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
         >
           <Save className="w-4 h-4" />
-          {success ? 'Saved!' : 'Save Changes'}
+          {saving ? 'Saving...' : success ? 'Saved!' : 'Save Changes'}
         </button>
       </div>
 
+      {error && (
+        <div className="p-4 bg-red-900/30 border border-red-600/50 rounded-lg text-red-300">
+          {error}
+        </div>
+      )}
+
       {success && (
         <div className="p-4 bg-green-900/30 border border-green-600/50 rounded-lg text-green-300">
-          Dashboard vending defaults updated successfully!
+          Dashboard vending defaults saved — they will apply on every device.
         </div>
       )}
 
@@ -457,6 +477,8 @@ const DashboardStoreDefaults: React.FC = () => {
   const [localSelected, setLocalSelected] = useState<string[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (stores.length === 0) fetchStores();
@@ -488,12 +510,23 @@ const DashboardStoreDefaults: React.FC = () => {
     setHasChanges(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (localSelected.length === 0) return;
-    setStores(localSelected);
-    setHasChanges(false);
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
+    setSaving(true);
+    setError(null);
+    try {
+      // Save server-side first so the defaults reach every device, then apply
+      // them to this session.
+      await updateDashboardDefaults('stores', localSelected);
+      setStores(localSelected);
+      setHasChanges(false);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || err.message || 'Failed to save store defaults');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (stores.length === 0) {
@@ -510,17 +543,23 @@ const DashboardStoreDefaults: React.FC = () => {
       <div className="flex items-center justify-end">
         <button
           onClick={handleSave}
-          disabled={!hasChanges || localSelected.length === 0}
+          disabled={!hasChanges || saving || localSelected.length === 0}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
         >
           <Save className="w-4 h-4" />
-          {success ? 'Saved!' : 'Save Changes'}
+          {saving ? 'Saving...' : success ? 'Saved!' : 'Save Changes'}
         </button>
       </div>
 
+      {error && (
+        <div className="p-4 bg-red-900/30 border border-red-600/50 rounded-lg text-red-300">
+          {error}
+        </div>
+      )}
+
       {success && (
         <div className="p-4 bg-green-900/30 border border-green-600/50 rounded-lg text-green-300">
-          Dashboard store defaults updated successfully!
+          Dashboard store defaults saved — they will apply on every device.
         </div>
       )}
 

@@ -14,6 +14,7 @@ from app.models.replenishment import (
     AutoReportStore,
 )
 from app.models.store_filter import StoreFilter
+from app.models.dashboard_default import DashboardDefault
 from app.models.scheduled_report import ScheduledReport
 from app.models.vending import (
     VendingDevice,
@@ -38,6 +39,7 @@ __all__ = [
     "AutoReportSettings",
     "AutoReportStore",
     "StoreFilter",
+    "DashboardDefault",
     "ScheduledReport",
     "VendingDevice",
     "VendingGoods",

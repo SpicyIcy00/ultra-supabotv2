@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getVendingMachineColor } from '../constants/colors';
+import { getDashboardDefaults } from '../services/dashboardDefaultsApi';
 
 export interface VendingDevice {
   device_code: string;      // raw Weimi code — used in all queries
@@ -21,6 +22,9 @@ interface VendingState {
 
   // Is all machines selected
   isAllDevicesSelected: boolean;
+
+  // Version of the server-side defaults this browser has already applied
+  appliedDefaultsAt?: string | null;
 
   // Actions
   fetchDevices: () => Promise<void>;
@@ -51,9 +55,38 @@ export const useVendingStore = create<VendingState>()(
           const devices: VendingDevice[] = await response.json();
           set({ devices });
 
-          // On first load (nothing selected yet) select every machine
           const currentState = get();
-          if (currentState.selectedDevices.length === 0 && currentState.isAllDevicesSelected) {
+          const hasSelection = currentState.selectedDevices.length > 0;
+
+          // Server-side defaults from Settings. Applied when this browser has
+          // no selection yet (a new device) or when the saved defaults changed
+          // since this browser last applied them.
+          let serverDefaults: string[] = [];
+          let serverVersion: string | null = null;
+          try {
+            const config = await getDashboardDefaults();
+            serverDefaults = config.vending.filter((code) =>
+              devices.some((d) => d.device_code === code)
+            );
+            serverVersion = config.updated_at;
+          } catch (error) {
+            console.warn('Could not load vending defaults, using local selection:', error);
+          }
+
+          const defaultsChanged =
+            !!serverVersion && serverVersion !== currentState.appliedDefaultsAt;
+
+          if (serverDefaults.length > 0 && (!hasSelection || defaultsChanged)) {
+            set({
+              selectedDevices: serverDefaults,
+              isAllDevicesSelected: serverDefaults.length === devices.length,
+              appliedDefaultsAt: serverVersion,
+            });
+            return;
+          }
+
+          // Nothing configured server-side: select every machine on first load
+          if (!hasSelection && currentState.isAllDevicesSelected) {
             set({ selectedDevices: devices.map((d) => d.device_code) });
           }
         } catch (error) {
@@ -113,6 +146,7 @@ export const useVendingStore = create<VendingState>()(
         devices: state.devices,
         selectedDevices: state.selectedDevices,
         isAllDevicesSelected: state.isAllDevicesSelected,
+        appliedDefaultsAt: state.appliedDefaultsAt,
       }),
     }
   )

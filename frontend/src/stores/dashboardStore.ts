@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { PeriodType, PeriodDateRanges } from '../utils/dateCalculations';
 import { calculatePeriodDateRanges } from '../utils/dateCalculations';
+import { getDashboardDefaults } from '../services/dashboardDefaultsApi';
 
 export interface StoredStore {
   id: string;
@@ -28,6 +29,11 @@ interface DashboardState {
 
   // Calculated date ranges
   dateRanges: PeriodDateRanges;
+
+  // Version of the server-side defaults this browser has already applied.
+  // Lets a Settings change propagate once to each device without overriding
+  // the selection a user makes during a session.
+  appliedDefaultsAt?: string | null;
 
   // Actions
   setPeriod: (period: PeriodType) => void;
@@ -96,18 +102,43 @@ export const useDashboardStore = create<DashboardState>()(
         try {
           // Use relative URL to leverage Vercel rewrite proxy (avoids CORS)
           const apiUrl = '/api/v1';
-          console.log('Fetching stores from:', `${apiUrl}/analytics/stores`);
           const response = await fetch(`${apiUrl}/analytics/stores`);
           if (!response.ok) throw new Error('Failed to fetch stores');
 
           const stores: StoredStore[] = await response.json();
           set({ stores });
 
-          // Logic for setting default selection on first load
           const currentState = get();
+          const hasSelection = currentState.selectedStores.length > 0;
 
-          // If no stores are currently selected and "all selected" is false, apply defaults
-          if (currentState.selectedStores.length === 0 && !currentState.isAllStoresSelected) {
+          // Server-side defaults from Settings. Applied when this browser has
+          // no selection yet (a new device) or when the saved defaults changed
+          // since this browser last applied them.
+          let serverDefaults: string[] = [];
+          let serverVersion: string | null = null;
+          try {
+            const config = await getDashboardDefaults();
+            serverDefaults = config.stores.filter(id => stores.some(s => s.id === id));
+            serverVersion = config.updated_at;
+          } catch (error) {
+            console.warn('Could not load dashboard defaults, using local selection:', error);
+          }
+
+          const defaultsChanged =
+            !!serverVersion && serverVersion !== currentState.appliedDefaultsAt;
+
+          if (serverDefaults.length > 0 && (!hasSelection || defaultsChanged)) {
+            set({
+              selectedStores: serverDefaults,
+              isAllStoresSelected: serverDefaults.length === stores.length,
+              appliedDefaultsAt: serverVersion,
+            });
+            return;
+          }
+
+          // Nothing configured server-side: fall back to the built-in defaults,
+          // but only for a browser that has no selection at all.
+          if (!hasSelection && !currentState.isAllStoresSelected) {
             const defaultStoreIds = stores
               .filter(store => DEFAULT_STORE_NAMES.includes(store.name))
               .map(store => store.id);
@@ -210,6 +241,7 @@ export const useDashboardStore = create<DashboardState>()(
         stores: state.stores,
         selectedStores: state.selectedStores,
         isAllStoresSelected: state.isAllStoresSelected,
+        appliedDefaultsAt: state.appliedDefaultsAt,
       }),
     }
   )

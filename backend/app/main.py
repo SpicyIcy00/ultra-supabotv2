@@ -182,6 +182,16 @@ async def startup_event():
                     updated_at        TIMESTAMPTZ  NOT NULL DEFAULT timezone('Asia/Manila', now())
                 )
             """))
+            # Dashboard defaults (which stores / vending machines are
+            # pre-selected) — server-side so they apply on every device.
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS dashboard_defaults (
+                    scope       VARCHAR(20)  NOT NULL,
+                    item_id     VARCHAR(64)  NOT NULL,
+                    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT timezone('Asia/Manila', now()),
+                    PRIMARY KEY (scope, item_id)
+                )
+            """))
             # Flexible scheduling + multiple recipients (JSON columns).
             await conn.execute(text("""
                 ALTER TABLE scheduled_reports
@@ -230,7 +240,7 @@ async def shutdown_event():
     SchemaContext.shutdown()
     print("SchemaContext shut down")
 
-from app.api.v1.routes import analytics, chatbot, stores, products, reports, report_presets, google_sheets, saved_queries, replenishment, store_filters, barcodes, scheduled_reports, vending
+from app.api.v1.routes import analytics, chatbot, stores, products, reports, report_presets, google_sheets, saved_queries, replenishment, store_filters, barcodes, scheduled_reports, vending, dashboard_defaults
 
 app.include_router(analytics.router, prefix=f"{settings.API_V1_PREFIX}/analytics")
 app.include_router(chatbot.router, prefix=f"{settings.API_V1_PREFIX}/chatbot")
@@ -245,6 +255,7 @@ app.include_router(replenishment.router, prefix=f"{settings.API_V1_PREFIX}/reple
 app.include_router(store_filters.router, prefix=f"{settings.API_V1_PREFIX}/store-filters", tags=["store-filters"])
 app.include_router(barcodes.router, prefix=f"{settings.API_V1_PREFIX}/barcodes", tags=["barcodes"])
 app.include_router(vending.router, prefix=f"{settings.API_V1_PREFIX}/vending", tags=["vending"])
+app.include_router(dashboard_defaults.router, prefix=f"{settings.API_V1_PREFIX}/dashboard-defaults", tags=["dashboard-defaults"])
 
 
 @app.get("/")
