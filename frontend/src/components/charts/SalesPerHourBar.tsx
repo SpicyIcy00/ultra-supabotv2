@@ -17,12 +17,15 @@ interface SalesPerHourBarProps {
   isLoading?: boolean;
   /** Heading + export filename. Vending passes "Avg Sales per Hour". */
   title?: string;
+  /** Stores open 8am-11pm; vending machines run 24/7. */
+  allHours?: boolean;
 }
 
 export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
   data,
   isLoading = false,
   title = 'Sales per Hour',
+  allHours = false,
 }) => {
   const dims = useChartDimensions();
 
@@ -49,9 +52,12 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
     );
   }
 
-  // Only show hours 8 AM (8) to 11 PM (23) - 16 hours total
-  const businessHours = Array.from({ length: 16 }, (_, i) => i + 8); // 8 to 23
-  const chartData = businessHours.map((hour) => {
+  // Stores: 8 AM to 11 PM. Vending: all 24 hours — machines never close, and
+  // clipping the overnight hours would hide half their volume.
+  const hours = allHours
+    ? Array.from({ length: 24 }, (_, i) => i)
+    : Array.from({ length: 16 }, (_, i) => i + 8);
+  const chartData = hours.map((hour) => {
     const existingData = Array.isArray(data) ? data.find((d) => d.hour === hour) : null;
     return {
       hour,

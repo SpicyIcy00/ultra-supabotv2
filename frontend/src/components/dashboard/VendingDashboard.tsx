@@ -104,6 +104,7 @@ export const VendingDashboard: React.FC = () => {
         <SalesPerHourBar
           data={hourlyData}
           title="Avg Sales per Hour"
+          allHours
           isLoading={isLoading}
         />
       </div>
