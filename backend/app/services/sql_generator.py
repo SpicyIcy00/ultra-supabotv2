@@ -322,7 +322,7 @@ class SQLGenerator:
         # vends, cross-domain joins) live at the end of the list, so the slice
         # must be wide enough to always include them.
         negative_examples = self.business_rules.get('negative_examples', [])
-        negative_text = self._format_negative_examples(negative_examples[:12])
+        negative_text = self._format_negative_examples(negative_examples[:16])
 
         # Get default filters
         default_filters = SchemaContext.get_default_filters()
@@ -475,6 +475,14 @@ machine name — and use the STORE tables for everything else.
 9. Current machine stock comes from `vending_aisles` (`curr_stock` / `max_stock`,
    `price` in cents) — it is live state only, with no history and no sales.
 10. Payment method lives in the orders JSON: `o.ext->>'payWay'` (e.g. 'gcashpay').
+11. **Product catalog = `vending_goods`; read `v_vending_goods_php`** (already in
+    pesos: `retail_price_php`, `currency` = 'PHP', plus `missing_category`).
+    Join it for category, barcode or list price:
+    `LEFT JOIN v_vending_goods_php g ON l.goods_id = g.goods_id`. Vending
+    CATEGORY questions are only answerable through this join — the sales lines
+    carry no category. `category_name` is NULL for products not yet tagged in
+    Weimi, so always `COALESCE(g.category_name, 'Uncategorized')` and LEFT JOIN,
+    never INNER, so untagged products are not silently dropped.
 
 **⚠️ YEAR-OVER-YEAR / SEASONALITY QUERIES — MANDATORY FORMAT:**
 When the user asks for data "per month per year", "by month and year", "year over year", "each year by month", "monthly trend across years", or anything comparing months across multiple years, you MUST use EXACTLY these four column aliases — no exceptions:

@@ -44,8 +44,8 @@ class QueryValidator:
         'products', 'stores', 'new_transactions', 'new_transaction_items',
         'v_new_transaction_items_resolved', 'inventory',
         # Weimi vending domain (money in cents; _php views are already pesos)
-        'vending_devices', 'vending_aisles', 'vending_orders',
-        'vending_order_lines', 'v_vending_orders_php',
+        'vending_devices', 'vending_goods', 'vending_aisles', 'vending_orders',
+        'vending_order_lines', 'v_vending_goods_php', 'v_vending_orders_php',
         'v_vending_order_lines_php', 'v_vending_missing_cost',
     }
 

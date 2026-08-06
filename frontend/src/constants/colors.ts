@@ -68,6 +68,14 @@ export const getVendingMachineColor = (index: number): string => {
   return VENDING_COLORS[index % VENDING_COLORS.length];
 };
 
+// Vending categories come from Weimi and don't match CATEGORY_COLORS, so they
+// take a palette slot by rank. 'Uncategorized' is always grey.
+export const getVendingCategoryColor = (category: string, index: number): string => {
+  if (category === 'Uncategorized') return THEME_COLORS.secondaryText;
+  if (index < 0) return THEME_COLORS.primaryAccent;
+  return VENDING_COLORS[index % VENDING_COLORS.length];
+};
+
 // All store names (for reference)
 export const ALL_STORES = [
   'Rockwell',

@@ -241,9 +241,11 @@ class VendingService:
                     l.goods_name,
                     COALESCE(SUM(l.real_price), 0) / 100.0 AS current_sales,
                     COALESCE(SUM(l.goods_amount), 0)::int  AS current_units,
-                    BOOL_OR(COALESCE(l.goods_purchase_cost, 0) = 0) AS missing_cost
+                    BOOL_OR(COALESCE(l.goods_purchase_cost, 0) = 0) AS missing_cost,
+                    MAX(COALESCE(g.category_name, 'Uncategorized')) AS category
                 FROM vending_order_lines l
                 INNER JOIN vending_orders o ON l.order_trade_no_in = o.trade_no_in
+                LEFT JOIN v_vending_goods_php g ON l.goods_id = g.goods_id
                 WHERE {VEND_OK}
                   AND {SALE_TS} >= :start_date
                   AND {SALE_TS} < :end_date
@@ -269,7 +271,8 @@ class VendingService:
                 COALESCE(p.previous_sales, 0)::float AS previous_sales,
                 COALESCE(c.current_units, 0)::int    AS current_units,
                 COALESCE(p.previous_units, 0)::int   AS previous_units,
-                COALESCE(c.missing_cost, false)      AS missing_cost
+                COALESCE(c.missing_cost, false)      AS missing_cost,
+                COALESCE(c.category, 'Uncategorized') AS category
             FROM current_period c
             FULL OUTER JOIN previous_period p ON c.goods_name = p.goods_name
             WHERE COALESCE(c.current_sales, 0) > 0 OR COALESCE(p.previous_sales, 0) > 0
@@ -295,6 +298,7 @@ class VendingService:
                 "current_units": int(row.current_units or 0),
                 "previous_units": int(row.previous_units or 0),
                 "missing_cost": bool(row.missing_cost),
+                "category": row.category,
             }
             for row in rows
         ]
@@ -361,6 +365,89 @@ class VendingService:
                 for row in previous_rows
             ]
         }
+
+    @cached(expire=300, prefix="vending")
+    async def get_top_categories(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        compare_start_date: datetime,
+        compare_end_date: datetime,
+        device_codes: List[str] = []
+    ) -> List[Dict[str, Any]]:
+        """
+        Vending categories ranked by revenue (pesos), with comparison period.
+
+        Category lives only in the product master, so this joins
+        v_vending_goods_php on goods_id. LEFT JOIN + COALESCE keeps products
+        that Weimi has not tagged yet — they roll up as 'Uncategorized' rather
+        than vanishing from the totals.
+        """
+        end_date_inclusive = end_date + timedelta(days=1)
+        compare_end_date_inclusive = compare_end_date + timedelta(days=1)
+        device_filter = self._device_filter(device_codes)
+
+        query = text(f"""
+            WITH current_period AS (
+                SELECT
+                    COALESCE(g.category_name, 'Uncategorized') AS category,
+                    COALESCE(SUM(l.real_price), 0) / 100.0 AS current_sales,
+                    COALESCE(SUM(l.goods_amount), 0)::int  AS current_units,
+                    COUNT(DISTINCT l.goods_id)::int        AS product_count
+                FROM vending_order_lines l
+                INNER JOIN vending_orders o ON l.order_trade_no_in = o.trade_no_in
+                LEFT JOIN v_vending_goods_php g ON l.goods_id = g.goods_id
+                WHERE {VEND_OK}
+                  AND {SALE_TS} >= :start_date
+                  AND {SALE_TS} < :end_date
+                  {device_filter}
+                GROUP BY COALESCE(g.category_name, 'Uncategorized')
+            ),
+            previous_period AS (
+                SELECT
+                    COALESCE(g.category_name, 'Uncategorized') AS category,
+                    COALESCE(SUM(l.real_price), 0) / 100.0 AS previous_sales
+                FROM vending_order_lines l
+                INNER JOIN vending_orders o ON l.order_trade_no_in = o.trade_no_in
+                LEFT JOIN v_vending_goods_php g ON l.goods_id = g.goods_id
+                WHERE {VEND_OK}
+                  AND {SALE_TS} >= :compare_start_date
+                  AND {SALE_TS} < :compare_end_date
+                  {device_filter}
+                GROUP BY COALESCE(g.category_name, 'Uncategorized')
+            )
+            SELECT
+                COALESCE(c.category, p.category)     AS category,
+                COALESCE(c.current_sales, 0)::float  AS current_sales,
+                COALESCE(p.previous_sales, 0)::float AS previous_sales,
+                COALESCE(c.current_units, 0)::int    AS current_units,
+                COALESCE(c.product_count, 0)::int    AS product_count
+            FROM current_period c
+            FULL OUTER JOIN previous_period p ON c.category = p.category
+            WHERE COALESCE(c.current_sales, 0) > 0 OR COALESCE(p.previous_sales, 0) > 0
+            ORDER BY current_sales DESC
+            LIMIT 50
+        """)
+
+        result = await self.db.execute(query, {
+            "start_date": start_date,
+            "end_date": end_date_inclusive,
+            "compare_start_date": compare_start_date,
+            "compare_end_date": compare_end_date_inclusive,
+            "device_codes": device_codes,
+        })
+        rows = result.fetchall()
+
+        return [
+            {
+                "category": row.category,
+                "current_sales": float(row.current_sales or 0),
+                "previous_sales": float(row.previous_sales or 0),
+                "current_units": int(row.current_units or 0),
+                "product_count": int(row.product_count or 0),
+            }
+            for row in rows
+        ]
 
     @cached(expire=300, prefix="vending")
     async def get_sales_by_hour(

@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Download } from 'lucide-react';
 import { formatCurrency, formatNumber, formatPercentage, calculatePercentageChange } from '../../utils/dateCalculations';
+import { getVendingCategoryColor } from '../../constants/colors';
 import { exportToCSV } from '../../utils/csvExport';
-import type { VendingProductData } from '../../hooks/useVendingData';
+import type { VendingCategoryData } from '../../hooks/useVendingData';
 
-interface VendingTopProductsTableProps {
-  data: VendingProductData[];
+interface VendingTopCategoriesTableProps {
+  data: VendingCategoryData[];
   isLoading?: boolean;
 }
 
-export const VendingTopProductsTable: React.FC<VendingTopProductsTableProps> = ({
+export const VendingTopCategoriesTable: React.FC<VendingTopCategoriesTableProps> = ({
   data,
   isLoading = false,
 }) => {
@@ -24,7 +25,7 @@ export const VendingTopProductsTable: React.FC<VendingTopProductsTableProps> = (
   if (isLoading) {
     return (
       <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6">
-        <h3 className="text-lg font-bold text-white mb-4">Top 10 Vending Products</h3>
+        <h3 className="text-lg font-bold text-white mb-4">Vending Categories by Sales</h3>
         <div className="flex items-center justify-center h-[300px]">
           <div className="animate-pulse text-gray-400">Loading...</div>
         </div>
@@ -36,7 +37,7 @@ export const VendingTopProductsTable: React.FC<VendingTopProductsTableProps> = (
   if (!data || !Array.isArray(data) || data.length === 0) {
     return (
       <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6">
-        <h3 className="text-lg font-bold text-white mb-4">Top 10 Vending Products</h3>
+        <h3 className="text-lg font-bold text-white mb-4">Vending Categories by Sales</h3>
         <div className="flex items-center justify-center h-[300px] text-gray-400">
           No data available
         </div>
@@ -44,34 +45,43 @@ export const VendingTopProductsTable: React.FC<VendingTopProductsTableProps> = (
     );
   }
 
-  // Sort by current sales descending and take top 10
+  // Sort by current sales descending
   const sortedData = [...data]
     .sort((a, b) => b.current_sales - a.current_sales)
-    .slice(0, 10)
     .map((item, index) => ({
       ...item,
       rank: index + 1,
       percentageChange: calculatePercentageChange(item.current_sales, item.previous_sales),
+      color: getVendingCategoryColor(item.category, index),
     }));
+
+  // Products Weimi hasn't tagged yet all land in one bucket — call it out
+  const untagged = sortedData.find((item) => item.category === 'Uncategorized');
 
   const handleExport = () => {
     const csvData = sortedData.map((item) => ({
       Rank: item.rank,
-      Product: item.product_name,
       Category: item.category,
       Units: item.current_units,
+      Products: item.product_count,
       'Current Sales': item.current_sales,
       'Previous Sales': item.previous_sales,
       'Change %': item.percentageChange,
-      'Cost Missing': item.missing_cost ? 'yes' : 'no',
     }));
-    exportToCSV(csvData, 'top-10-vending-products');
+    exportToCSV(csvData, 'vending-categories-by-sales');
   };
 
   return (
     <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-6">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-white">Top 10 Vending Products</h3>
+        <div>
+          <h3 className="text-lg font-bold text-white">Vending Categories by Sales</h3>
+          {untagged && (
+            <p className="text-xs text-amber-400/80 mt-0.5">
+              {formatNumber(untagged.product_count)} products not yet tagged in Weimi
+            </p>
+          )}
+        </div>
         <button
           onClick={handleExport}
           className="flex items-center gap-2 px-3 py-1.5 bg-[#2e303d] hover:bg-[#3a3c4a] text-white rounded-lg transition-colors text-sm"
@@ -89,18 +99,17 @@ export const VendingTopProductsTable: React.FC<VendingTopProductsTableProps> = (
             const bgColor = index % 2 === 0 ? 'bg-[#0e1117]' : 'bg-[#1c1e26]';
             return (
               <div
-                key={`${item.product_name}-${index}`}
+                key={item.category}
                 className={`${bgColor} rounded-lg p-3`}
               >
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-xs font-bold text-gray-400 shrink-0">#{item.rank}</span>
-                    <span className="text-sm font-medium text-white truncate">{item.product_name}</span>
-                    {item.missing_cost && (
-                      <span className="shrink-0 text-[10px] font-semibold text-amber-400" title="No purchase cost in Weimi — profit overstated">
-                        no cost
-                      </span>
-                    )}
+                    <div
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-sm font-medium text-white truncate">{item.category}</span>
                   </div>
                   <span
                     className={`text-xs font-bold shrink-0 ml-2 ${
@@ -124,7 +133,6 @@ export const VendingTopProductsTable: React.FC<VendingTopProductsTableProps> = (
             <thead>
               <tr className="border-b border-[#2e303d]">
                 <th className="text-left py-3 px-2 text-xs font-semibold text-gray-400 uppercase">Rank</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Product</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Category</th>
                 <th className="text-right py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Units</th>
                 <th className="text-right py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Current Sales</th>
@@ -139,25 +147,18 @@ export const VendingTopProductsTable: React.FC<VendingTopProductsTableProps> = (
 
                 return (
                   <tr
-                    key={`${item.product_name}-${index}`}
+                    key={item.category}
                     className={`${bgColor} hover:bg-[#2e303d] transition-colors`}
                   >
                     <td className="py-3 px-2 text-sm font-bold text-white">#{item.rank}</td>
                     <td className="py-3 px-4">
-                      <span className="text-sm font-medium text-white">{item.product_name}</span>
-                      {item.missing_cost && (
-                        <span
-                          className="ml-2 text-[10px] font-semibold text-amber-400 uppercase"
-                          title="No purchase cost entered in Weimi — profit is overstated for this product"
-                        >
-                          no cost
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`text-sm ${item.category === 'Uncategorized' ? 'text-gray-500 italic' : 'text-gray-300'}`}>
-                        {item.category}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="text-sm font-medium text-white">{item.category}</span>
+                      </div>
                     </td>
                     <td className="py-3 px-4 text-right text-sm text-gray-300">
                       {formatNumber(item.current_units)}

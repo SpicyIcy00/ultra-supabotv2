@@ -5,6 +5,7 @@ import { KPICard } from '../KPICard';
 import { SalesPerMachineBar } from '../charts/SalesPerMachineBar';
 import { SalesPerHourBar } from '../charts/SalesPerHourBar';
 import { VendingTopProductsTable } from '../tables/VendingTopProductsTable';
+import { VendingTopCategoriesTable } from '../tables/VendingTopCategoriesTable';
 import { useVendingData } from '../../hooks/useVendingData';
 import { formatCurrency, formatNumber, formatHourLabel } from '../../utils/dateCalculations';
 
@@ -19,6 +20,7 @@ export const VendingDashboard: React.FC = () => {
     kpiData,
     salesByMachine,
     topProducts,
+    topCategories,
     salesByHour,
     isLoading,
     error,
@@ -106,11 +108,17 @@ export const VendingDashboard: React.FC = () => {
         />
       </div>
 
-      {/* ROW 4: Top products */}
-      <VendingTopProductsTable
-        data={topProducts || []}
-        isLoading={isLoading}
-      />
+      {/* ROW 4: Top products, categories ranked */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <VendingTopProductsTable
+          data={topProducts || []}
+          isLoading={isLoading}
+        />
+        <VendingTopCategoriesTable
+          data={topCategories || []}
+          isLoading={isLoading}
+        />
+      </div>
     </div>
   );
 };

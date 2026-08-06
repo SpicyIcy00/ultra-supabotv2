@@ -31,9 +31,19 @@ above. Synced from the Weimi API by n8n.
 ```
 VendingDevice (1) ----< (many) VendingAisle          (live stock per slot)
 VendingDevice (1) ----< (many) VendingOrder (1) ----< (many) VendingOrderLine
+VendingGoods  (1) ----< (many) VendingOrderLine  }   both via goods_id
+VendingGoods  (1) ----< (many) VendingAisle      }
 ```
 
 **Tables:**
+- `vending_goods` — the vending PRODUCT MASTER (catalog), the vending
+  equivalent of `products`. PK `goods_id`. `goods_name`, `barcode`,
+  `goods_custom_code`, `retail_price` (CENTS), `measurement`, `category_id`,
+  `category_code`, `category_name`, `category_list` (jsonb), `img_url`,
+  `thumbnail_url`, `synced_at`.
+  `goods_id` is the join key to `vending_order_lines.goods_id` (sales) and
+  `vending_aisles.goods_id` (stock). `category_name` is NULL for products not
+  yet tagged in Weimi — COALESCE it to 'Uncategorized' when grouping.
 - `vending_devices` — the machines. PK `device_code`. `device_name` is the
   human label ("CMG HQ", "OPUS dispenser") — ALWAYS join to this for names,
   never show a bare device_code. Also `device_id`, `cabinet_total`,
@@ -56,6 +66,10 @@ VendingDevice (1) ----< (many) VendingOrder (1) ----< (many) VendingOrderLine
   (1 = vend succeeded, 3 = vend FAILED — item never dispensed), `shipment_time`.
 
 **Views (already divided by 100 and rounded to 2 decimals — pesos, not cents):**
+- `v_vending_goods_php` — **the product catalog to READ FROM.** Same fields as
+  `vending_goods` but `retail_price_php` (pesos), `currency` = 'PHP', plus a
+  `missing_category` boolean. Prefer this over the raw table for any catalog
+  lookup, price display or category grouping.
 - `v_vending_orders_php` — vending_orders with peso money columns.
 - `v_vending_order_lines_php` — vending_order_lines with peso money columns,
   plus `device_name`, `profit_php`, and a `missing_cost` flag.
@@ -83,6 +97,16 @@ VendingDevice (1) ----< (many) VendingOrder (1) ----< (many) VendingOrderLine
 7. Vending timestamps are timezone-aware — use `AT TIME ZONE 'Asia/Manila'`
    exactly as with store data. Use `shipment_time` for when an item was
    dispensed, `trade_start_time` for when the order began.
+8. **Product catalog = `vending_goods` (read `v_vending_goods_php`).** Join it
+   on `goods_id` to get a product's category, barcode or list price:
+   `JOIN v_vending_goods_php g ON l.goods_id = g.goods_id`. Category questions
+   ("best selling vending category") are only answerable through this join —
+   `vending_order_lines` carries no category of its own.
+9. **`category_name` is NULL for products not yet tagged in Weimi.** Always
+   `COALESCE(g.category_name, 'Uncategorized')` when grouping, so those rows
+   are visible rather than silently dropped. `missing_category` flags them.
+   `retail_price` in the raw catalog is CENTS (4900 = PHP 49.00); the view's
+   `retail_price_php` is already pesos.
 
 **Correct vending query patterns:**
 
@@ -115,6 +139,34 @@ WHERE l.shipment_status = 1
 GROUP BY l.goods_id, l.goods_name
 ORDER BY total_revenue DESC
 LIMIT 20;
+```
+
+Best selling vending CATEGORIES (needs the catalog join):
+```sql
+SELECT
+    COALESCE(g.category_name, 'Uncategorized') AS category,
+    SUM(l.goods_amount)       AS total_units,
+    SUM(l.real_price) / 100.0 AS total_revenue
+FROM vending_order_lines l
+LEFT JOIN v_vending_goods_php g ON l.goods_id = g.goods_id
+WHERE l.shipment_status = 1
+  AND l.shipment_time >= (CURRENT_DATE - INTERVAL '30 days') AT TIME ZONE 'Asia/Manila'
+GROUP BY COALESCE(g.category_name, 'Uncategorized')
+ORDER BY total_revenue DESC
+LIMIT 50;
+```
+
+Vending product catalog / price list (view is already in pesos):
+```sql
+SELECT
+    g.goods_name,
+    g.barcode,
+    COALESCE(g.category_name, 'Uncategorized') AS category,
+    g.retail_price_php,
+    g.missing_category
+FROM v_vending_goods_php g
+ORDER BY g.goods_name
+LIMIT 100;
 ```
 
 Failed vends per machine:

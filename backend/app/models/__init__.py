@@ -17,6 +17,7 @@ from app.models.store_filter import StoreFilter
 from app.models.scheduled_report import ScheduledReport
 from app.models.vending import (
     VendingDevice,
+    VendingGoods,
     VendingAisle,
     VendingOrder,
     VendingOrderLine,
@@ -39,6 +40,7 @@ __all__ = [
     "StoreFilter",
     "ScheduledReport",
     "VendingDevice",
+    "VendingGoods",
     "VendingAisle",
     "VendingOrder",
     "VendingOrderLine",

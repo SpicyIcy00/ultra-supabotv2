@@ -51,6 +51,15 @@ export interface VendingProductData {
   current_units: number;
   previous_units: number;
   missing_cost: boolean;
+  category: string;
+}
+
+export interface VendingCategoryData {
+  category: string;
+  current_sales: number;
+  previous_sales: number;
+  current_units: number;
+  product_count: number;
 }
 
 export interface VendingHourlyData {
@@ -127,6 +136,22 @@ export const useVendingTopProducts = () => {
   });
 };
 
+// Hook to get vending categories ranked by revenue
+export const useVendingTopCategories = () => {
+  const { dateRanges, selectedDevices, comparisonParams } = useVendingParams();
+
+  return useQuery({
+    queryKey: ['vending-top-categories', dateRanges, selectedDevices],
+    queryFn: async () => {
+      const response = await api.get<VendingCategoryData[]>('/vending/top-categories', {
+        params: comparisonParams,
+      });
+      return response.data;
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+};
+
 // Hook to get average sales per hour of day
 export const useVendingSalesByHour = () => {
   const { dateRanges, selectedDevices } = useVendingParams();
@@ -154,6 +179,7 @@ export const useVendingData = () => {
   const kpiData = useVendingKPIs();
   const salesByMachine = useSalesByMachine();
   const topProducts = useVendingTopProducts();
+  const topCategories = useVendingTopCategories();
   const salesByHour = useVendingSalesByHour();
 
   return {
@@ -161,6 +187,7 @@ export const useVendingData = () => {
     kpiData: kpiData.data,
     salesByMachine: salesByMachine.data,
     topProducts: topProducts.data,
+    topCategories: topCategories.data,
     salesByHour: salesByHour.data,
 
     // Loading states
@@ -168,6 +195,7 @@ export const useVendingData = () => {
       kpiData.isLoading ||
       salesByMachine.isLoading ||
       topProducts.isLoading ||
+      topCategories.isLoading ||
       salesByHour.isLoading,
 
     // Error states
@@ -175,6 +203,7 @@ export const useVendingData = () => {
       kpiData.error ||
       salesByMachine.error ||
       topProducts.error ||
+      topCategories.error ||
       salesByHour.error,
 
     // Refetch all
@@ -182,6 +211,7 @@ export const useVendingData = () => {
       kpiData.refetch();
       salesByMachine.refetch();
       topProducts.refetch();
+      topCategories.refetch();
       salesByHour.refetch();
     },
 

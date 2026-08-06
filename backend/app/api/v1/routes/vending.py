@@ -144,6 +144,31 @@ async def get_sales_trend(
 
 
 @router.get(
+    "/top-categories",
+    summary="Get vending categories ranked by revenue, with comparison"
+)
+async def get_top_categories(
+    start_date: datetime = Query(...),
+    end_date: datetime = Query(...),
+    compare_start_date: datetime = Query(...),
+    compare_end_date: datetime = Query(...),
+    device_codes: List[str] = Query(default=[]),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get vending categories ranked by revenue (category comes from the product master)."""
+    try:
+        service = VendingService(db)
+        return await service.get_top_categories(
+            start_date, end_date, compare_start_date, compare_end_date, device_codes
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching top vending categories: {str(e)}"
+        )
+
+
+@router.get(
     "/sales-by-hour",
     summary="Get average vending sales per hour of day",
     description="Sales per hour of day in Asia/Manila, averaged over the active days in the range"

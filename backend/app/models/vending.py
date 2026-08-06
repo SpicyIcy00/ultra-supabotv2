@@ -55,6 +55,47 @@ class VendingDevice(Base):
     )
 
 
+class VendingGoods(Base):
+    """
+    Vending product master (catalog) — the vending equivalent of `products`.
+
+    `goods_id` is the key that links a product to its sales
+    (vending_order_lines.goods_id) and its slots (vending_aisles.goods_id).
+    It has NOTHING to do with products.id — never join the two catalogs.
+
+    Read through `v_vending_goods_php` for display: it converts retail_price
+    from cents to pesos, labels the currency PHP, and adds `missing_category`.
+    """
+
+    __tablename__ = "vending_goods"
+
+    # Primary key - Weimi goods id
+    goods_id: Mapped[str] = mapped_column(String(64), primary_key=True, index=True)
+
+    # Product details
+    goods_name: Mapped[Optional[str]] = mapped_column(String(255), index=True)
+    barcode: Mapped[Optional[str]] = mapped_column(String(100), index=True)
+    goods_custom_code: Mapped[Optional[str]] = mapped_column(String(100), index=True)
+
+    # Selling price in CENTS (4900 = PHP 49.00) — use the view for pesos
+    retail_price: Mapped[Optional[int]] = mapped_column(Integer)
+
+    measurement: Mapped[Optional[str]] = mapped_column(String(50))
+
+    # Category — NULL for products not yet tagged in the Weimi backend
+    category_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    category_code: Mapped[Optional[str]] = mapped_column(String(64))
+    category_name: Mapped[Optional[str]] = mapped_column(String(255), index=True)
+    category_list: Mapped[Optional[dict]] = mapped_column(JSONB)
+
+    # Imagery
+    img_url: Mapped[Optional[str]] = mapped_column(String)
+    thumbnail_url: Mapped[Optional[str]] = mapped_column(String)
+
+    # Last time the n8n job refreshed this row
+    synced_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
 class VendingAisle(Base):
     """Live planogram / stock level for one aisle (slot) of a machine."""
 
