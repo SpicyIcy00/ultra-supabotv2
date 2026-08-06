@@ -4,7 +4,6 @@ import { useDashboardStore } from '../stores/dashboardStore';
 import { useVendingStore } from '../stores/vendingStore';
 import {
   formatDateForAPI,
-  getGranularityForPeriod,
   getPeriodLabel,
   getComparisonLabel,
 } from '../utils/dateCalculations';
@@ -54,37 +53,12 @@ export interface VendingProductData {
   missing_cost: boolean;
 }
 
-interface TrendDataPoint {
-  date: string;
-  sales: number;
-}
-
-interface TrendResponse {
-  current: TrendDataPoint[];
-  previous: TrendDataPoint[];
-}
-
-export interface VendingStockData {
-  device_code: string;
-  device_name: string;
-  aisle_code: string | null;
-  goods_name: string | null;
-  curr_stock: number;
-  max_stock: number;
-  price: number;
-  measurement: string | null;
-  status: number | null;
-  updated_at: string | null;
-}
-
-export interface FailedVendData {
-  device_code: string;
-  device_name: string;
-  goods_name: string | null;
-  aisle_code: string | null;
-  failed_count: number;
-  failed_value: number;
-  last_failure_at: string | null;
+export interface VendingHourlyData {
+  hour: number;
+  avg_sales: number;
+  total_sales: number;
+  avg_units: number;
+  active_days: number;
 }
 
 // Shared query params: dashboard period + selected machines
@@ -153,55 +127,20 @@ export const useVendingTopProducts = () => {
   });
 };
 
-// Hook to get the vending sales trend
-export const useVendingSalesTrend = () => {
-  const { dateRanges, selectedDevices, comparisonParams } = useVendingParams();
-  const selectedPeriod = useDashboardStore((state) => state.selectedPeriod);
-  const granularity = getGranularityForPeriod(selectedPeriod);
-
-  return useQuery({
-    queryKey: ['vending-sales-trend', dateRanges, selectedDevices, granularity],
-    queryFn: async () => {
-      const response = await api.get<TrendResponse>('/vending/sales-trend', {
-        params: { ...comparisonParams, granularity },
-      });
-      return response.data;
-    },
-    staleTime: 1000 * 60 * 5,
-  });
-};
-
-// Hook to get current stock levels per machine
-export const useVendingStockLevels = () => {
-  const selectedDevices = useVendingStore((state) => state.selectedDevices);
-
-  return useQuery({
-    queryKey: ['vending-stock-levels', selectedDevices],
-    queryFn: async () => {
-      const response = await api.get<VendingStockData[]>('/vending/stock-levels', {
-        params: { device_codes: selectedDevices },
-      });
-      return response.data;
-    },
-    staleTime: 1000 * 60 * 10, // 10 minutes (stock changes less frequently)
-  });
-};
-
-// Hook to get failed vends
-export const useFailedVends = () => {
+// Hook to get average sales per hour of day
+export const useVendingSalesByHour = () => {
   const { dateRanges, selectedDevices } = useVendingParams();
 
   return useQuery({
-    queryKey: ['vending-failed-vends', dateRanges, selectedDevices],
+    queryKey: ['vending-sales-by-hour', dateRanges, selectedDevices],
     queryFn: async () => {
       const params = {
         start_date: formatDateForAPI(dateRanges.current.start),
         end_date: formatDateForAPI(dateRanges.current.end),
         device_codes: selectedDevices,
-        limit: 25,
       };
 
-      const response = await api.get<FailedVendData[]>('/vending/failed-vends', { params });
+      const response = await api.get<VendingHourlyData[]>('/vending/sales-by-hour', { params });
       return response.data;
     },
     staleTime: 1000 * 60 * 5,
@@ -215,45 +154,35 @@ export const useVendingData = () => {
   const kpiData = useVendingKPIs();
   const salesByMachine = useSalesByMachine();
   const topProducts = useVendingTopProducts();
-  const salesTrend = useVendingSalesTrend();
-  const stockLevels = useVendingStockLevels();
-  const failedVends = useFailedVends();
+  const salesByHour = useVendingSalesByHour();
 
   return {
     // Data
     kpiData: kpiData.data,
     salesByMachine: salesByMachine.data,
     topProducts: topProducts.data,
-    salesTrend: salesTrend.data,
-    stockLevels: stockLevels.data,
-    failedVends: failedVends.data,
+    salesByHour: salesByHour.data,
 
     // Loading states
     isLoading:
       kpiData.isLoading ||
       salesByMachine.isLoading ||
       topProducts.isLoading ||
-      salesTrend.isLoading ||
-      stockLevels.isLoading ||
-      failedVends.isLoading,
+      salesByHour.isLoading,
 
     // Error states
     error:
       kpiData.error ||
       salesByMachine.error ||
       topProducts.error ||
-      salesTrend.error ||
-      stockLevels.error ||
-      failedVends.error,
+      salesByHour.error,
 
     // Refetch all
     refetchAll: () => {
       kpiData.refetch();
       salesByMachine.refetch();
       topProducts.refetch();
-      salesTrend.refetch();
-      stockLevels.refetch();
-      failedVends.refetch();
+      salesByHour.refetch();
     },
 
     // Labels

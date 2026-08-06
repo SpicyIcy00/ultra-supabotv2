@@ -15,18 +15,21 @@ interface HourlyData {
 interface SalesPerHourBarProps {
   data: HourlyData[];
   isLoading?: boolean;
+  /** Heading + export filename. Vending passes "Avg Sales per Hour". */
+  title?: string;
 }
 
 export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
   data,
   isLoading = false,
+  title = 'Sales per Hour',
 }) => {
   const dims = useChartDimensions();
 
   if (isLoading) {
     return (
       <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[320px] sm:h-[360px] lg:h-[400px]">
-        <h3 className="text-lg font-bold text-white mb-4">Sales per Hour</h3>
+        <h3 className="text-lg font-bold text-white mb-4">{title}</h3>
         <div className="flex items-center justify-center h-[280px]">
           <div className="animate-pulse text-gray-400">Loading...</div>
         </div>
@@ -38,7 +41,7 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
   if (!data || !Array.isArray(data) || data.length === 0) {
     return (
       <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[320px] sm:h-[360px] lg:h-[400px]">
-        <h3 className="text-lg font-bold text-white mb-4">Sales per Hour</h3>
+        <h3 className="text-lg font-bold text-white mb-4">{title}</h3>
         <div className="flex items-center justify-center h-[280px] text-gray-400">
           No data available
         </div>
@@ -61,6 +64,12 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
   const peakHour = chartData.reduce((max, item) =>
     item.total_sales > max.total_sales ? item : max
   , chartData[0]);
+
+  // Hourly averages land in the hundreds, where a "₱0k" axis is useless —
+  // only switch to thousands once the numbers are actually that big.
+  const useThousands = peakHour.total_sales >= 10000;
+  const formatAxis = (value: number) =>
+    useThousands ? `₱${(value / 1000).toFixed(0)}k` : `₱${Math.round(value)}`;
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -86,7 +95,7 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
   return (
     <div id="sales-per-hour-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 flex flex-col h-[320px] sm:h-[360px] lg:h-[400px]">
       <div className="flex items-center justify-between mb-4 shrink-0">
-        <h3 className="text-lg font-bold text-white">Sales per Hour</h3>
+        <h3 className="text-lg font-bold text-white">{title}</h3>
         <div className="flex items-center gap-3">
           <div className="text-xs text-gray-400">
             Peak: <span className="text-yellow-400 font-semibold">{peakHour.hour_label}</span>
@@ -120,7 +129,7 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
           <YAxis
             stroke={THEME_COLORS.primaryText}
             tick={{ fill: THEME_COLORS.primaryText, fontSize: dims.fontSize.axis }}
-            tickFormatter={(value) => `₱${(value / 1000).toFixed(0)}k`}
+            tickFormatter={formatAxis}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }} />
           <Bar

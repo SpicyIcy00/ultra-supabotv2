@@ -144,6 +144,28 @@ async def get_sales_trend(
 
 
 @router.get(
+    "/sales-by-hour",
+    summary="Get average vending sales per hour of day",
+    description="Sales per hour of day in Asia/Manila, averaged over the active days in the range"
+)
+async def get_sales_by_hour(
+    start_date: datetime = Query(...),
+    end_date: datetime = Query(...),
+    device_codes: List[str] = Query(default=[]),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get average vending sales per hour of day."""
+    try:
+        service = VendingService(db)
+        return await service.get_sales_by_hour(start_date, end_date, device_codes)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching vending sales by hour: {str(e)}"
+        )
+
+
+@router.get(
     "/stock-levels",
     summary="Get current stock per aisle per machine"
 )

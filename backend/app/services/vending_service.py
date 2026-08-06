@@ -363,6 +363,72 @@ class VendingService:
         }
 
     @cached(expire=300, prefix="vending")
+    async def get_sales_by_hour(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        device_codes: List[str] = []
+    ) -> List[Dict[str, Any]]:
+        """
+        Average sales per hour of day (pesos), Asia/Manila.
+
+        Averaged over the number of ACTIVE DAYS in the range (days with at
+        least one sale), not over the days that happened to sell in that hour —
+        otherwise a 6am sale on one day out of thirty would look like a
+        typical 6am. For a single-day range the average equals the total.
+        """
+        end_date_inclusive = end_date + timedelta(days=1)
+        device_filter = self._device_filter(device_codes)
+
+        query = text(f"""
+            WITH day_hour AS (
+                SELECT
+                    DATE({SALE_TS} AT TIME ZONE 'Asia/Manila') AS sale_date,
+                    EXTRACT(HOUR FROM {SALE_TS} AT TIME ZONE 'Asia/Manila')::int AS hour,
+                    SUM(l.real_price) / 100.0 AS sales,
+                    SUM(l.goods_amount) AS units
+                FROM vending_order_lines l
+                INNER JOIN vending_orders o ON l.order_trade_no_in = o.trade_no_in
+                WHERE {VEND_OK}
+                  AND {SALE_TS} >= :start_date
+                  AND {SALE_TS} < :end_date
+                  {device_filter}
+                GROUP BY 1, 2
+            ),
+            active_days AS (
+                SELECT COUNT(DISTINCT sale_date)::int AS days FROM day_hour
+            )
+            SELECT
+                dh.hour,
+                (SUM(dh.sales) / NULLIF(ad.days, 0))::float AS avg_sales,
+                SUM(dh.sales)::float AS total_sales,
+                (SUM(dh.units) / NULLIF(ad.days, 0))::float AS avg_units,
+                ad.days
+            FROM day_hour dh
+            CROSS JOIN active_days ad
+            GROUP BY dh.hour, ad.days
+            ORDER BY dh.hour
+        """)
+
+        result = await self.db.execute(query, {
+            "start_date": start_date,
+            "end_date": end_date_inclusive,
+            "device_codes": device_codes,
+        })
+        rows = result.fetchall()
+
+        return [
+            {
+                "hour": int(row.hour),
+                "avg_sales": float(row.avg_sales or 0),
+                "total_sales": float(row.total_sales or 0),
+                "avg_units": float(row.avg_units or 0),
+                "active_days": int(row.days or 0),
+            }
+            for row in rows
+        ]
+
+    @cached(expire=300, prefix="vending")
     async def get_stock_levels(
         self,
         device_codes: List[str] = []
