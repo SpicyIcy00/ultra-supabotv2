@@ -63,7 +63,7 @@ class VendingService:
                 aisle_total,
                 last_synced_at
             FROM vending_devices
-            ORDER BY COALESCE(device_name, device_code)
+            ORDER BY COALESCE(NULLIF(TRIM(device_name), ''), device_code)
         """)
 
         result = await self.db.execute(query)
@@ -156,7 +156,7 @@ class VendingService:
 
         query = text(f"""
             WITH filtered_devices AS (
-                SELECT d.device_code, COALESCE(d.device_name, d.device_code) AS device_name
+                SELECT d.device_code, COALESCE(NULLIF(TRIM(d.device_name), ''), d.device_code) AS device_name
                 FROM vending_devices d
                 {device_where}
             ),
@@ -377,7 +377,7 @@ class VendingService:
         query = text(f"""
             SELECT
                 a.device_code,
-                COALESCE(d.device_name, a.device_code) AS device_name,
+                COALESCE(NULLIF(TRIM(d.device_name), ''), a.device_code) AS device_name,
                 a.aisle_code,
                 a.goods_name,
                 COALESCE(a.curr_stock, 0)::int AS curr_stock,
@@ -426,7 +426,7 @@ class VendingService:
         query = text(f"""
             SELECT
                 l.device_code,
-                COALESCE(d.device_name, l.device_code) AS device_name,
+                COALESCE(NULLIF(TRIM(d.device_name), ''), l.device_code) AS device_name,
                 l.goods_name,
                 l.aisle_code,
                 COUNT(*)::int AS failed_count,
