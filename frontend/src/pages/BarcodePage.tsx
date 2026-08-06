@@ -1,5 +1,6 @@
 /**
- * Barcode Manager Page
+ * Barcode Generator — rendered as a tab of the Warehouse page.
+ * The page title/subtitle live in WarehousePage.
  *
  * 1. Browse products — filter by Name, SKU, and/or Category
  * 2. Checkbox-select products
@@ -543,15 +544,9 @@ const BarcodePage: React.FC = () => {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#0e1117] text-gray-100 p-4 md:p-6">
+    <div className="text-gray-100">
 
-      {/* Page header */}
-      <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1 sm:mb-2">Barcode Manager</h1>
-        <p className="text-sm sm:text-base text-gray-400">Generate EAN-13 barcodes and export directly to the StoreHub Products Import Template.</p>
-      </div>
-
-      {/* Tabs */}
+      {/* Sub-tabs */}
       <div className="flex gap-1 mb-6 border-b border-[#2e303d]">
         {(['generate', 'database'] as Tab[]).map((tab) => (
           <button

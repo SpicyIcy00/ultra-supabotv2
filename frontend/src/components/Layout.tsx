@@ -72,21 +72,16 @@ const navIcons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
     </svg>
   ),
-  reports: (
+  warehouse: (
     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M3 21V9l9-5 9 5v12M3 21h18M9 21v-6h6v6M8 12h8" />
     </svg>
   ),
   settings: (
     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
-  ),
-  barcode: (
-    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-        d="M3 9V5a2 2 0 012-2h2M3 15v4a2 2 0 002 2h2m10-18h2a2 2 0 012 2v4m0 6v4a2 2 0 01-2 2h-2M9 7v10M12 7v10M15 7v10" />
     </svg>
   ),
 };
@@ -96,8 +91,8 @@ const navItems = [
   { to: '/', icon: navIcons.dashboard, label: 'Dashboard', match: (p: string) => p === '/' || p === '/vending' },
   { to: '/analytics', icon: navIcons.analytics, label: 'Analytics', match: (p: string) => p === '/analytics' },
   { to: '/ai-chat', icon: navIcons.chat, label: 'AI Chat', match: (p: string) => p === '/ai-chat' },
-  { to: '/reports/product-sales', icon: navIcons.reports, label: 'Reports', match: (p: string) => p === '/reports/product-sales' },
-  { to: '/barcodes', icon: navIcons.barcode, label: 'Barcodes', match: (p: string) => p === '/barcodes' },
+  // Warehouse owns two tabs: Replenishment Reports and Barcode Generator
+  { to: '/warehouse', icon: navIcons.warehouse, label: 'Warehouse', match: (p: string) => p === '/warehouse' },
   { to: '/settings', icon: navIcons.settings, label: 'Settings', match: (p: string) => p === '/settings' },
 ];
 

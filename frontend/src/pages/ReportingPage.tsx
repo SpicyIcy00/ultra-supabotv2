@@ -16,6 +16,10 @@ import { AutoReportConfig } from '../components/replenishment/AutoReportConfig';
 type ReplenishmentSubTab = 'dashboard' | 'shipment-plan' | 'picklist' | 'exceptions' | 'configuration';
 type ConfigSubTab = 'store-tiers' | 'percentile-v2' | 'seasonality' | 'warehouse' | 'pipeline' | 'algorithm' | 'velocity-multipliers' | 'category-multipliers' | 'auto-report';
 
+/**
+ * Replenishment Reports — rendered as a tab of the Warehouse page.
+ * The page title/subtitle live in WarehousePage.
+ */
 const ReportingPage: React.FC = () => {
   const [replenishmentSubTab, setReplenishmentSubTab] = useState<ReplenishmentSubTab>('dashboard');
   const [configSubTab, setConfigSubTab] = useState<ConfigSubTab>('store-tiers');
@@ -68,12 +72,6 @@ const ReportingPage: React.FC = () => {
   return (
     <div className="h-full">
       <div className="w-full">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1 sm:mb-2">Reports</h1>
-          <p className="text-sm sm:text-base text-gray-400">Replenishment planning and inventory management</p>
-        </div>
-
         {/* Sub-tabs */}
         <div className="flex gap-1 mb-6 border-b border-[#2e303d]">
           {([
