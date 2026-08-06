@@ -14,6 +14,141 @@ import yaml
 from pathlib import Path
 
 
+# =============================================================================
+# VENDING DOMAIN (Weimi machines, brand "Hello Aji")
+#
+# Appended verbatim to the schema string handed to Claude. The raw tables are
+# synced from the Weimi API by n8n and carry two traps (cents, fake "CNY"
+# currency) that the AI must never get wrong, so they are spelled out here
+# rather than left to introspection.
+# =============================================================================
+VENDING_SCHEMA_NOTES = """
+## Vending Machine Data (Weimi / brand "Hello Aji")
+
+A SECOND, COMPLETELY SEPARATE data source from the StoreHub retail-store data
+above. Synced from the Weimi API by n8n.
+
+```
+VendingDevice (1) ----< (many) VendingAisle          (live stock per slot)
+VendingDevice (1) ----< (many) VendingOrder (1) ----< (many) VendingOrderLine
+```
+
+**Tables:**
+- `vending_devices` — the machines. PK `device_code`. `device_name` is the
+  human label ("CMG HQ", "OPUS dispenser") — ALWAYS join to this for names,
+  never show a bare device_code. Also `device_id`, `cabinet_total`,
+  `layer_total`, `aisle_total`, `last_synced_at`.
+- `vending_aisles` — live planogram / current stock per aisle. PK `aisle_id`,
+  FK `device_code`. `aisle_code`, `goods_id`, `goods_name`, `price` (CENTS),
+  `curr_stock`, `max_stock`, `measurement`, `status`, `updated_at`.
+  This is CURRENT stock only — it is not history and holds no sales.
+- `vending_orders` — order headers. PK `trade_no_in`, FK `device_code`.
+  `total_amount` (CENTS), `pay_amount` (CENTS), `pay_status`,
+  `trade_start_time` (when the customer started the purchase),
+  `pay_end_time`, `is_cart_order`, `ext` (JSON; `ext->>'payWay'` is the payment
+  method, e.g. 'gcashpay').
+- `vending_order_lines` — **THE VENDING SALES FACT TABLE.** One row = one item
+  sold. PK `line_trade_no_in`, FK `order_trade_no_in` → vending_orders,
+  FK `device_code`. `aisle_code`, `goods_id`, `goods_name`,
+  `goods_purchase_cost` (CENTS), `goods_retail_price` (CENTS),
+  `real_price` (CENTS — the amount actually charged, USE THIS FOR REVENUE),
+  `goods_amount` (units on the line), `shipment_status`
+  (1 = vend succeeded, 3 = vend FAILED — item never dispensed), `shipment_time`.
+
+**Views (already divided by 100 and rounded to 2 decimals — pesos, not cents):**
+- `v_vending_orders_php` — vending_orders with peso money columns.
+- `v_vending_order_lines_php` — vending_order_lines with peso money columns,
+  plus `device_name`, `profit_php`, and a `missing_cost` flag.
+- `v_vending_missing_cost` — the products whose `goods_purchase_cost` is 0.
+
+**CRITICAL VENDING RULES:**
+1. **CENTS.** Every money column in the RAW vending tables is an integer number
+   of cents: 2000 = PHP 20.00. Divide by 100 (`SUM(real_price) / 100.0`) or use
+   a `_php` view. NEVER present a raw cents number as pesos.
+   The `_php` views are ALREADY in pesos — never divide those again.
+2. **The `currency` column says "CNY" — that is a Weimi hardcoding bug.**
+   The real currency is PHP (₱). Always report vending money as pesos. The
+   `_php` views relabel it correctly. Never say "CNY"/"yuan" about this data.
+3. **Sales truth = `vending_order_lines`.** Compute per-product and per-machine
+   totals by aggregating that table. There are no stored per-product totals.
+4. **Successful sales only:** filter `shipment_status = 1` for revenue/units.
+   `shipment_status = 3` means the vend FAILED — count those as failed vends,
+   never as sales.
+5. **Profit is overstated where cost is missing:** `goods_purchase_cost = 0`
+   means the cost was never entered in the Weimi backend, not that the item is
+   free. Flag it (see `v_vending_missing_cost` / the `missing_cost` column).
+6. **NEVER join vending data to store data.** `vending_order_lines.goods_id`
+   has NOTHING to do with `products.id`, and machines are not rows in `stores`.
+   Do not UNION or merge the two domains; answer about one or the other.
+7. Vending timestamps are timezone-aware — use `AT TIME ZONE 'Asia/Manila'`
+   exactly as with store data. Use `shipment_time` for when an item was
+   dispensed, `trade_start_time` for when the order began.
+
+**Correct vending query patterns:**
+
+Revenue + units per machine (last 30 days):
+```sql
+SELECT
+    d.device_name,
+    SUM(l.real_price) / 100.0 AS total_revenue,
+    SUM(l.goods_amount)       AS total_units
+FROM vending_order_lines l
+INNER JOIN vending_devices d ON l.device_code = d.device_code
+WHERE l.shipment_status = 1
+  AND l.shipment_time >= (CURRENT_DATE - INTERVAL '30 days') AT TIME ZONE 'Asia/Manila'
+GROUP BY d.device_code, d.device_name
+ORDER BY total_revenue DESC
+LIMIT 100;
+```
+
+Top vending products with profit (cost may be missing):
+```sql
+SELECT
+    l.goods_name,
+    SUM(l.goods_amount)                                        AS total_units,
+    SUM(l.real_price) / 100.0                                  AS total_revenue,
+    SUM(l.real_price - l.goods_purchase_cost * l.goods_amount) / 100.0 AS total_profit,
+    BOOL_OR(COALESCE(l.goods_purchase_cost, 0) = 0)            AS missing_cost
+FROM vending_order_lines l
+WHERE l.shipment_status = 1
+  AND l.shipment_time >= DATE_TRUNC('month', CURRENT_DATE AT TIME ZONE 'Asia/Manila')
+GROUP BY l.goods_id, l.goods_name
+ORDER BY total_revenue DESC
+LIMIT 20;
+```
+
+Failed vends per machine:
+```sql
+SELECT
+    d.device_name,
+    l.goods_name,
+    COUNT(*) AS failed_vends
+FROM vending_order_lines l
+INNER JOIN vending_devices d ON l.device_code = d.device_code
+WHERE l.shipment_status = 3
+  AND l.shipment_time >= (CURRENT_DATE - INTERVAL '7 days') AT TIME ZONE 'Asia/Manila'
+GROUP BY d.device_code, d.device_name, l.goods_name
+ORDER BY failed_vends DESC
+LIMIT 50;
+```
+
+Current stock per machine (low slots first):
+```sql
+SELECT
+    d.device_name,
+    a.aisle_code,
+    a.goods_name,
+    a.curr_stock,
+    a.max_stock,
+    a.price / 100.0 AS price_php
+FROM vending_aisles a
+INNER JOIN vending_devices d ON a.device_code = d.device_code
+ORDER BY a.curr_stock ASC, d.device_name
+LIMIT 100;
+```
+"""
+
+
 class SchemaContext:
     """Singleton class for managing database schema context"""
 
@@ -188,6 +323,7 @@ class SchemaContext:
 
         # Get all tables
         tables = inspector.get_table_names()
+        views = self._get_view_names(inspector)
 
         for table_name in sorted(tables):
             schema_parts.append(f"\n### Table: `{table_name}`\n")
@@ -228,6 +364,21 @@ class SchemaContext:
                     unique = "UNIQUE " if idx.get('unique') else ""
                     schema_parts.append(f"- {unique}INDEX `{idx_name}` on ({idx_cols})\n")
 
+        # Views (peso-formatted / resolved helper views) — queryable like tables
+        if views:
+            schema_parts.append("\n## Available Views\n")
+            for view_name in sorted(views):
+                schema_parts.append(f"\n### View: `{view_name}`\n")
+                try:
+                    columns = inspector.get_columns(view_name)
+                except Exception:
+                    continue
+                schema_parts.append("**Columns:**\n")
+                for col in columns:
+                    col_name = col['name']
+                    col_type = str(col['type'])
+                    schema_parts.append(f"- `{col_name}` ({col_type})\n")
+
         # Add relationships summary
         schema_parts.append("\n## Table Relationships\n")
         schema_parts.append("""
@@ -243,7 +394,31 @@ Store (1) ----< (many) Inventory >---- (many) Product
 - Each Inventory entry links one Product to one Store (composite key)
 """)
 
+        # Vending domain (Weimi machines, brand "Hello Aji") — separate data source
+        schema_parts.append(VENDING_SCHEMA_NOTES)
+
         self._schema_cache = ''.join(schema_parts)
+
+    @staticmethod
+    def _get_view_names(inspector) -> List[str]:
+        """
+        Return view names (including materialized views when supported).
+
+        Views are NOT returned by get_table_names(), so without this the
+        peso-formatted vending views and v_new_transaction_items_resolved would
+        be invisible to the AI and rejected by the query validator.
+        """
+        names = []
+        try:
+            names.extend(inspector.get_view_names())
+        except Exception:
+            pass
+        try:
+            names.extend(inspector.get_materialized_view_names())
+        except Exception:
+            # Not available on older SQLAlchemy / dialects
+            pass
+        return sorted(set(names))
 
     def _build_summary_cache(self):
         """Build the schema summary dictionary"""
@@ -269,6 +444,28 @@ Store (1) ----< (many) Inventory >---- (many) Product
                     }
                     for fk in inspector.get_foreign_keys(table_name)
                 ]
+            }
+
+        # Views have columns but no PK/FK metadata — register them too so they
+        # pass the query validator's table whitelist and column checks.
+        for view_name in self._get_view_names(inspector):
+            if view_name in summary:
+                continue
+            try:
+                columns = inspector.get_columns(view_name)
+            except Exception:
+                continue
+            summary[view_name] = {
+                'columns': [
+                    {
+                        'name': col['name'],
+                        'type': str(col['type']),
+                        'nullable': col.get('nullable', True)
+                    }
+                    for col in columns
+                ],
+                'primary_key': [],
+                'foreign_keys': []
             }
 
         self._schema_summary_cache = summary

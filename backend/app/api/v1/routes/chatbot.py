@@ -509,7 +509,11 @@ async def get_suggestions() -> SuggestionResponse:
         "Show me low stock items across all stores",
         "What are the best selling categories this week?",
         "Compare sales between Rockwell and Greenhills stores",
-        "Show me transaction count by day for the last month"
+        "Show me transaction count by day for the last month",
+        "How much did each vending machine sell this month?",
+        "What are the top selling vending products?",
+        "Show me the failed vends this week",
+        "What is the current stock in the vending machines?"
     ]
 
     return SuggestionResponse(

@@ -26,6 +26,19 @@ export const CATEGORY_COLORS: Record<string, string> = {
   tradsnax: '#4ade80', // Green
 };
 
+// Vending machines (Weimi / Hello Aji) have no color column in the DB, so a
+// machine takes the palette slot matching its position in the fleet list.
+export const VENDING_COLORS: string[] = [
+  '#00d2ff', // cyan
+  '#f59e0b', // amber
+  '#a78bfa', // violet
+  '#34d399', // emerald
+  '#fb7185', // rose
+  '#38bdf8', // sky
+  '#facc15', // yellow
+  '#4ade80', // green
+];
+
 // Theme colors
 export const THEME_COLORS = {
   background: '#0e1117',
@@ -47,6 +60,12 @@ export const getStoreColor = (storeName: string): string => {
 // Helper function to get category color
 export const getCategoryColor = (categoryName: string): string => {
   return CATEGORY_COLORS[categoryName] || THEME_COLORS.secondaryText;
+};
+
+// Helper function to get a vending machine color by fleet position
+export const getVendingMachineColor = (index: number): string => {
+  if (index < 0) return THEME_COLORS.primaryAccent;
+  return VENDING_COLORS[index % VENDING_COLORS.length];
 };
 
 // All store names (for reference)

@@ -15,6 +15,12 @@ from app.models.replenishment import (
 )
 from app.models.store_filter import StoreFilter
 from app.models.scheduled_report import ScheduledReport
+from app.models.vending import (
+    VendingDevice,
+    VendingAisle,
+    VendingOrder,
+    VendingOrderLine,
+)
 
 __all__ = [
     "Product",
@@ -32,4 +38,8 @@ __all__ = [
     "AutoReportStore",
     "StoreFilter",
     "ScheduledReport",
+    "VendingDevice",
+    "VendingAisle",
+    "VendingOrder",
+    "VendingOrderLine",
 ]

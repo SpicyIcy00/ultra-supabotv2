@@ -81,6 +81,84 @@ schema_docs:
         - ideal_stock: "Optimal stock level"
       usage: "For inventory analysis. Use LEFT JOIN from products to include products with 0 inventory"
 
+    # -------------------------------------------------------------------------
+    # VENDING DOMAIN (Weimi machines, brand "Hello Aji") — synced by n8n.
+    # SEPARATE data source from the StoreHub tables above: no shared product IDs,
+    # machines are NOT rows in `stores`. NEVER join or UNION the two domains.
+    # ALL money columns in these RAW tables are INTEGER CENTS (2000 = PHP 20.00).
+    # The `currency` column says "CNY" — Weimi hardcoding bug, the real currency
+    # is PHP. Use the _php views for money already converted to pesos.
+    # -------------------------------------------------------------------------
+    vending_devices:
+      description: "Vending machines (Weimi). One row per physical machine."
+      primary_key: "device_code"
+      key_columns:
+        - device_code: "Stable machine identifier — join key for all vending tables"
+        - device_name: "Human label, e.g. 'CMG HQ', 'OPUS dispenser'. ALWAYS show this, never a bare device_code"
+        - device_id: "Weimi internal device id"
+        - cabinet_total: "Number of cabinets"
+        - layer_total: "Number of layers"
+        - aisle_total: "Number of aisles (slots)"
+        - last_synced_at: "When the n8n job last refreshed this row"
+      usage: "JOIN to vending_order_lines / vending_aisles via device_code to get machine names"
+
+    vending_aisles:
+      description: "Live planogram — current stock per aisle (slot) of a machine. Current state only, no history, no sales."
+      primary_key: "aisle_id"
+      key_columns:
+        - device_code: "FK to vending_devices.device_code"
+        - aisle_code: "Slot code within the machine"
+        - goods_id: "Vending product id (UNRELATED to products.id)"
+        - goods_name: "Product name in the slot"
+        - price: "Selling price in CENTS — divide by 100 for pesos"
+        - curr_stock: "Units currently in the slot"
+        - max_stock: "Slot capacity"
+        - measurement: "Unit of measure"
+        - status: "Aisle status code"
+        - updated_at: "Last planogram sync"
+      usage: "For 'what is in the machine right now' / restocking questions"
+
+    vending_orders:
+      description: "Vending order headers — one row per customer purchase at a machine"
+      primary_key: "trade_no_in"
+      key_columns:
+        - device_code: "FK to vending_devices.device_code"
+        - total_amount: "Order total in CENTS — divide by 100 for pesos"
+        - pay_amount: "Amount paid in CENTS — divide by 100 for pesos"
+        - pay_status: "Payment status code"
+        - trade_start_time: "TIMESTAMP WITH TIMEZONE - when the purchase started (Asia/Manila)"
+        - pay_end_time: "TIMESTAMP WITH TIMEZONE - when payment completed"
+        - is_cart_order: "BOOLEAN - multi-item cart purchase"
+        - ext: "JSON extras. Payment method = ext->>'payWay' (e.g. 'gcashpay')"
+      usage: "Order-level counts / payment method analysis. JOIN lines via trade_no_in"
+
+    vending_order_lines:
+      description: "THE VENDING SALES FACT TABLE. One row = one item sold, with its own cost, price and timestamp. Aggregate this for any product-level or machine-level total — such totals are never stored anywhere."
+      primary_key: "line_trade_no_in"
+      key_columns:
+        - order_trade_no_in: "FK to vending_orders.trade_no_in"
+        - device_code: "FK to vending_devices.device_code"
+        - aisle_code: "Slot the item came from"
+        - goods_id: "Vending product id (UNRELATED to products.id)"
+        - goods_name: "Product name"
+        - goods_purchase_cost: "Unit cost in CENTS. 0 = never entered in Weimi, NOT free — profit is overstated for those rows"
+        - goods_retail_price: "List price in CENTS"
+        - real_price: "Amount actually charged for the line, in CENTS — USE THIS FOR REVENUE"
+        - goods_amount: "Units sold on this line"
+        - shipment_status: "1 = vend succeeded, 3 = vend FAILED (never dispensed). ALWAYS filter = 1 for sales"
+        - shipment_time: "TIMESTAMP WITH TIMEZONE - when the item was dispensed"
+      indexes:
+        - "idx_vending_lines_device_time ON (device_code, shipment_time)"
+      usage: "All vending revenue/units/profit. JOIN vending_devices for machine names"
+
+  views:
+    v_vending_orders_php:
+      description: "vending_orders with money already converted to PESOS (2 decimals). Never divide these columns by 100 again."
+    v_vending_order_lines_php:
+      description: "vending_order_lines with money already in PESOS, plus device_name, profit_php and a missing_cost flag. Convenient for vending sales questions."
+    v_vending_missing_cost:
+      description: "Vending products whose goods_purchase_cost is 0 (cost never entered in Weimi) — the products whose profit is overstated."
+
 # =============================================================================
 # COLUMN SYNONYMS - Maps user terminology to actual column names
 # =============================================================================
@@ -138,6 +216,15 @@ column_synonyms:
     - product_category
     - type
     
+  # Vending machine synonyms (vending domain only)
+  machine:
+    - device_name          # vending_devices.device_name — always display this
+    - machine
+    - vendo
+    - vending machine
+    - dispenser
+    - device
+
   # Profit synonyms
   profit:
     - profit
@@ -860,6 +947,179 @@ training:
       type: comparison
       explanation: "Average daily sales for each store"
 
+    # ==========================================================================
+    # VENDING EXAMPLES (Weimi machines, brand "Hello Aji")
+    # Raw money columns are CENTS -> divide by 100. Successful vend = shipment_status 1.
+    # ==========================================================================
+
+    # Example 32: Revenue per vending machine
+    - question: "How much did each vending machine sell this month?"
+      variations:
+        - "vending sales by machine"
+        - "revenue per vending machine"
+        - "which vending machine sells the most"
+        - "sales per dispenser"
+      sql: |
+        SELECT
+            d.device_name AS machine_name,
+            SUM(l.real_price) / 100.0 AS total_revenue,
+            SUM(l.goods_amount) AS total_units,
+            COUNT(DISTINCT l.order_trade_no_in) AS order_count
+        FROM vending_order_lines l
+        INNER JOIN vending_devices d ON l.device_code = d.device_code
+        WHERE l.shipment_status = 1
+          AND l.shipment_time >= DATE_TRUNC('month', CURRENT_DATE AT TIME ZONE 'Asia/Manila')
+        GROUP BY d.device_code, d.device_name
+        ORDER BY total_revenue DESC
+        LIMIT 100;
+      type: comparison
+      explanation: "Vending revenue (pesos) and units per machine for the current month"
+
+    # Example 33: Top vending products
+    - question: "What are the top selling vending products?"
+      variations:
+        - "best sellers in the vending machines"
+        - "top products in vending"
+        - "what sells best in the machines"
+      sql: |
+        SELECT
+            l.goods_name AS product_name,
+            SUM(l.goods_amount) AS total_quantity_sold,
+            SUM(l.real_price) / 100.0 AS total_revenue
+        FROM vending_order_lines l
+        WHERE l.shipment_status = 1
+          AND l.shipment_time >= (CURRENT_DATE - INTERVAL '30 days') AT TIME ZONE 'Asia/Manila'
+        GROUP BY l.goods_id, l.goods_name
+        ORDER BY total_revenue DESC
+        LIMIT 20;
+      type: ranking
+      explanation: "Top vending products by revenue over the last 30 days"
+
+    # Example 34: Vending profit (cost may be missing)
+    - question: "What is the profit of the vending machines?"
+      variations:
+        - "vending machine profit"
+        - "how profitable are the vending machines"
+        - "vending margins"
+      sql: |
+        SELECT
+            d.device_name AS machine_name,
+            SUM(l.real_price) / 100.0 AS total_revenue,
+            SUM(COALESCE(l.goods_purchase_cost, 0) * COALESCE(l.goods_amount, 0)) / 100.0 AS total_cost,
+            SUM(l.real_price - COALESCE(l.goods_purchase_cost, 0) * COALESCE(l.goods_amount, 0)) / 100.0 AS total_profit,
+            SUM(l.goods_amount) FILTER (WHERE COALESCE(l.goods_purchase_cost, 0) = 0) AS units_missing_cost
+        FROM vending_order_lines l
+        INNER JOIN vending_devices d ON l.device_code = d.device_code
+        WHERE l.shipment_status = 1
+          AND l.shipment_time >= (CURRENT_DATE - INTERVAL '30 days') AT TIME ZONE 'Asia/Manila'
+        GROUP BY d.device_code, d.device_name
+        ORDER BY total_profit DESC
+        LIMIT 100;
+      type: comparison
+      explanation: "Vending profit per machine. units_missing_cost flags rows with no purchase cost in Weimi, where profit is overstated"
+
+    # Example 35: Failed vends
+    - question: "Show me the failed vends this week"
+      variations:
+        - "which vending items failed to dispense"
+        - "vending machine failures"
+        - "stuck items in the vending machines"
+      sql: |
+        SELECT
+            d.device_name AS machine_name,
+            l.aisle_code,
+            l.goods_name AS product_name,
+            COUNT(*) AS failed_vends,
+            SUM(l.real_price) / 100.0 AS value_at_risk,
+            MAX(l.shipment_time) AS last_failure
+        FROM vending_order_lines l
+        INNER JOIN vending_devices d ON l.device_code = d.device_code
+        WHERE l.shipment_status = 3
+          AND l.shipment_time >= DATE_TRUNC('week', CURRENT_DATE AT TIME ZONE 'Asia/Manila')
+        GROUP BY d.device_code, d.device_name, l.aisle_code, l.goods_name
+        ORDER BY failed_vends DESC
+        LIMIT 50;
+      type: ranking
+      explanation: "Items that were never dispensed (shipment_status = 3), grouped by machine and slot"
+
+    # Example 36: Current vending stock
+    - question: "What is the current stock in the vending machines?"
+      variations:
+        - "vending machine stock levels"
+        - "which vending slots are empty"
+        - "what needs restocking in the machines"
+      sql: |
+        SELECT
+            d.device_name AS machine_name,
+            a.aisle_code,
+            a.goods_name AS product_name,
+            a.curr_stock,
+            a.max_stock,
+            a.price / 100.0 AS price_php
+        FROM vending_aisles a
+        INNER JOIN vending_devices d ON a.device_code = d.device_code
+        ORDER BY a.curr_stock ASC, d.device_name, a.aisle_code
+        LIMIT 100;
+      type: listing
+      explanation: "Live planogram from vending_aisles, emptiest slots first"
+
+    # Example 37: Vending sales trend
+    - question: "Show me the vending sales trend for the last 30 days"
+      variations:
+        - "daily vending sales"
+        - "vending sales over time"
+        - "vending machine sales by day"
+      sql: |
+        SELECT
+            DATE(l.shipment_time AT TIME ZONE 'Asia/Manila') AS date,
+            SUM(l.real_price) / 100.0 AS total_revenue,
+            SUM(l.goods_amount) AS total_units
+        FROM vending_order_lines l
+        WHERE l.shipment_status = 1
+          AND l.shipment_time >= (CURRENT_DATE - INTERVAL '30 days') AT TIME ZONE 'Asia/Manila'
+        GROUP BY DATE(l.shipment_time AT TIME ZONE 'Asia/Manila')
+        ORDER BY date;
+      type: time_series
+      explanation: "Daily vending revenue in pesos"
+
+    # Example 38: Sales for one named machine
+    - question: "How much did CMG HQ sell yesterday?"
+      variations:
+        - "CMG HQ vending sales"
+        - "sales of the OPUS dispenser"
+      sql: |
+        SELECT
+            d.device_name AS machine_name,
+            SUM(l.real_price) / 100.0 AS total_revenue,
+            SUM(l.goods_amount) AS total_units,
+            COUNT(DISTINCT l.order_trade_no_in) AS order_count
+        FROM vending_order_lines l
+        INNER JOIN vending_devices d ON l.device_code = d.device_code
+        WHERE l.shipment_status = 1
+          AND d.device_name ILIKE '%CMG HQ%'
+          AND DATE(l.shipment_time AT TIME ZONE 'Asia/Manila') = CURRENT_DATE - INTERVAL '1 day'
+        GROUP BY d.device_code, d.device_name;
+      type: aggregate
+      explanation: "Yesterday's sales for one named machine"
+
+    # Example 39: Vending payment methods
+    - question: "What payment methods do vending customers use?"
+      variations:
+        - "how do people pay at the vending machines"
+        - "gcash vs other vending payments"
+      sql: |
+        SELECT
+            COALESCE(o.ext->>'payWay', 'unknown') AS pay_way,
+            COUNT(*) AS order_count,
+            SUM(o.pay_amount) / 100.0 AS total_paid
+        FROM vending_orders o
+        WHERE o.trade_start_time >= (CURRENT_DATE - INTERVAL '30 days') AT TIME ZONE 'Asia/Manila'
+        GROUP BY COALESCE(o.ext->>'payWay', 'unknown')
+        ORDER BY order_count DESC
+        LIMIT 20;
+      type: distribution
+      explanation: "Vending order counts and amounts by payment method from the ext JSON"
+
 # =============================================================================
 # NEGATIVE EXAMPLES - Common mistakes to AVOID
 # =============================================================================
@@ -923,6 +1183,54 @@ negative_examples:
     correct: |
       WHERE p.tags ILIKE '%Judy%'
     mistake: "Filtering by product name when user asks about tags - always use p.tags ILIKE '%tag%'"
+
+  # --- Vending domain (Weimi) ------------------------------------------------
+  - description: "VENDING: raw money columns are CENTS - always divide by 100"
+    wrong: |
+      SELECT SUM(l.real_price) AS total_revenue
+      FROM vending_order_lines l
+    correct: |
+      SELECT SUM(l.real_price) / 100.0 AS total_revenue
+      FROM vending_order_lines l
+      WHERE l.shipment_status = 1
+    mistake: "Reporting raw cents as pesos (2000 is PHP 20.00, not PHP 2,000). Divide by 100, or query the _php views which are already in pesos - and never divide those again"
+
+  - description: "VENDING: only shipment_status = 1 is a sale"
+    wrong: |
+      SELECT SUM(l.real_price) / 100.0
+      FROM vending_order_lines l
+      WHERE l.shipment_time >= CURRENT_DATE - INTERVAL '7 days'
+    correct: |
+      SELECT SUM(l.real_price) / 100.0
+      FROM vending_order_lines l
+      WHERE l.shipment_status = 1
+        AND l.shipment_time >= (CURRENT_DATE - INTERVAL '7 days') AT TIME ZONE 'Asia/Manila'
+    mistake: "Counting failed vends (shipment_status = 3, item never dispensed) as revenue"
+
+  - description: "VENDING: never join or union vending data with store data"
+    wrong: |
+      SELECT p.name, SUM(l.real_price)
+      FROM vending_order_lines l
+      JOIN products p ON l.goods_id = p.id
+    correct: |
+      SELECT l.goods_name, SUM(l.real_price) / 100.0 AS total_revenue
+      FROM vending_order_lines l
+      WHERE l.shipment_status = 1
+      GROUP BY l.goods_id, l.goods_name
+    mistake: "Vending goods_id has NOTHING to do with products.id, and machines are not rows in stores. The two domains are separate - answer about one or the other"
+
+  - description: "VENDING: show device_name, not device_code"
+    wrong: |
+      SELECT l.device_code, SUM(l.real_price) / 100.0
+      FROM vending_order_lines l
+      GROUP BY l.device_code
+    correct: |
+      SELECT d.device_name, SUM(l.real_price) / 100.0 AS total_revenue
+      FROM vending_order_lines l
+      INNER JOIN vending_devices d ON l.device_code = d.device_code
+      WHERE l.shipment_status = 1
+      GROUP BY d.device_code, d.device_name
+    mistake: "Returning raw device codes instead of joining vending_devices for the human machine name"
 
 # =============================================================================
 # QUERY TYPE DEFINITIONS

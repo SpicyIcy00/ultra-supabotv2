@@ -40,8 +40,13 @@ class QueryValidator:
 
     # Allowed tables (will be dynamically populated from schema)
     ALLOWED_TABLES = {
+        # StoreHub retail-store domain
         'products', 'stores', 'new_transactions', 'new_transaction_items',
-        'v_new_transaction_items_resolved', 'inventory'
+        'v_new_transaction_items_resolved', 'inventory',
+        # Weimi vending domain (money in cents; _php views are already pesos)
+        'vending_devices', 'vending_aisles', 'vending_orders',
+        'vending_order_lines', 'v_vending_orders_php',
+        'v_vending_order_lines_php', 'v_vending_missing_cost',
     }
 
     # Maximum rows to return (can be overridden per query)

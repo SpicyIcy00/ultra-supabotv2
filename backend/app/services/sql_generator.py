@@ -116,6 +116,31 @@ class SQLGenerator:
             print(f"Warning: Could not fetch store info: {e}")
             return {}
 
+    async def _get_vending_device_info(self) -> Dict[str, str]:
+        """
+        Fetch all vending machines from DB.
+
+        Returns:
+            {device_name: device_code} for every vending machine, so Claude can
+            resolve a machine mentioned by name ("CMG HQ") to its device_code.
+        """
+        try:
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(
+                    text(
+                        "SELECT device_code, device_name FROM vending_devices "
+                        "ORDER BY COALESCE(device_name, device_code)"
+                    )
+                )
+                return {
+                    (row.device_name or row.device_code): row.device_code
+                    for row in result.fetchall()
+                }
+        except Exception as e:
+            # Vending tables may not exist yet in some environments
+            print(f"Warning: Could not fetch vending device info: {e}")
+            return {}
+
     async def _get_store_filters(self) -> Dict[str, Any]:
         """
         Fetch store filters from database and resolve to store IDs.
@@ -213,14 +238,18 @@ class SQLGenerator:
             if session_id:
                 conversation_context = get_conversation_context(session_id)
 
-            # Get store filters and all store info from database
-            store_filters, all_store_info = await asyncio.gather(
+            # Get store filters, store info and vending machines from database
+            store_filters, all_store_info, vending_devices = await asyncio.gather(
                 self._get_store_filters(),
                 self._get_all_store_info(),
+                self._get_vending_device_info(),
             )
 
             # Build the prompt
-            prompt = self._build_prompt(processed_question, previous_error, conversation_context, store_filters, all_store_info)
+            prompt = self._build_prompt(
+                processed_question, previous_error, conversation_context,
+                store_filters, all_store_info, vending_devices
+            )
 
             # Call Claude API with timeout
             response = await asyncio.wait_for(
@@ -280,6 +309,7 @@ class SQLGenerator:
         conversation_context: str = "",
         store_filters: Optional[Dict[str, Any]] = None,
         all_store_info: Optional[Dict[str, Dict[str, str]]] = None,
+        vending_devices: Optional[Dict[str, str]] = None,
     ) -> str:
         """Build the prompt for Claude"""
 
@@ -288,9 +318,11 @@ class SQLGenerator:
         relevant_examples = self._select_relevant_examples(user_question, all_examples, max_examples=8)
         example_text = self._format_examples(relevant_examples)
 
-        # Get and format negative examples
+        # Get and format negative examples. The vending mistakes (cents, failed
+        # vends, cross-domain joins) live at the end of the list, so the slice
+        # must be wide enough to always include them.
         negative_examples = self.business_rules.get('negative_examples', [])
-        negative_text = self._format_negative_examples(negative_examples[:5])
+        negative_text = self._format_negative_examples(negative_examples[:12])
 
         # Get default filters
         default_filters = SchemaContext.get_default_filters()
@@ -335,6 +367,21 @@ class SQLGenerator:
 - EXCEPTION: If user explicitly asks for "all stores", omit the store_id filter entirely.
 """
 
+        # Build vending machine name → device_code mapping for Claude
+        vending_machine_rules = ""
+        if vending_devices:
+            machine_lines = "\n".join(
+                f"  - \"{name}\" → device_code='{code}'"
+                for name, code in vending_devices.items()
+            )
+            vending_machine_rules = f"""
+**VENDING MACHINE NAME → DEVICE_CODE MAPPING** (vending domain only):
+{machine_lines}
+- When the user names a machine, either filter `l.device_code = 'code'` or match
+  `d.device_name ILIKE '%name%'` after joining `vending_devices d`
+- ALWAYS output `device_name` in results, never a bare device_code
+"""
+
         # Build retry context if this is a retry
         retry_context = ""
         if previous_error:
@@ -359,6 +406,7 @@ Please fix the issue and generate a corrected query.
 - All timestamps are in {self.business_rules.get('date_defaults', {}).get('timezone', 'Asia/Manila')} timezone
 {store_mapping_rules}
 {store_filter_rules}
+{vending_machine_rules}
 
 **Required Filters:**
 {filter_rules}
@@ -394,6 +442,39 @@ Please fix the issue and generate a corrected query.
 - "Low stock" = WHERE i.quantity_on_hand > 0 AND i.quantity_on_hand <= i.warning_stock
 - **TAGS**: The `products` table has a `tags` TEXT column. When user mentions products "with [X] tags", "tagged [X]", or "tag [X]", ALWAYS filter using `p.tags ILIKE '%X%'`. NEVER use `p.name LIKE` for tag filtering.
 - **inventory_snapshots** columns are EXACTLY: `store_id`, `product_id`, `snapshot_date` (DATE), `quantity_on_hand` (INT), `created_at`. There is NO `prev_quantity`, `previous_quantity`, `delta`, or any other column. To get previous-day values use `LAG(quantity_on_hand) OVER (PARTITION BY store_id, product_id ORDER BY snapshot_date)` inside a CTE, then reference the CTE alias — never reference the lag result through the base table alias.
+
+**🥤 VENDING MACHINE QUESTIONS (Weimi, brand "Hello Aji") — MANDATORY RULES:**
+The vending tables (`vending_devices`, `vending_aisles`, `vending_orders`,
+`vending_order_lines`) are a SEPARATE data source from the StoreHub store tables.
+Use them whenever the question mentions vending, machines, vendo, dispensers or a
+machine name — and use the STORE tables for everything else.
+1. **CENTS → PESOS:** every money column in the raw vending tables
+   (`real_price`, `goods_retail_price`, `goods_purchase_cost`, `price`,
+   `total_amount`, `pay_amount`) is an INTEGER number of CENTS. 2000 = ₱20.00.
+   ALWAYS divide by 100 (`SUM(l.real_price) / 100.0`). The `v_vending_*_php`
+   views are ALREADY in pesos — never divide those a second time.
+2. **The `currency` column says "CNY" — that is a Weimi bug.** The real currency
+   is PHP (₱). Never label vending money as CNY/yuan, and never convert it.
+3. **`vending_order_lines` is THE vending sales fact table** (one row = one item
+   sold). Aggregate it for any product-level or machine-level total; such totals
+   are never stored anywhere else. Revenue = `SUM(real_price) / 100.0`,
+   units = `SUM(goods_amount)`, orders = `COUNT(DISTINCT order_trade_no_in)`.
+4. **Successful vends only:** add `l.shipment_status = 1` to every vending sales
+   query. `shipment_status = 3` means the vend FAILED (item never dispensed) —
+   report those separately as failed vends, never as sales.
+5. **Machine names:** JOIN `vending_devices d ON l.device_code = d.device_code`
+   and output `d.device_name` — never a bare device_code.
+6. **Profit:** `SUM(l.real_price - COALESCE(l.goods_purchase_cost, 0) * COALESCE(l.goods_amount, 0)) / 100.0`.
+   `goods_purchase_cost = 0` means the cost was never entered in Weimi (NOT that
+   the item is free), so profit is overstated there — surface that with a flag
+   like `SUM(l.goods_amount) FILTER (WHERE COALESCE(l.goods_purchase_cost, 0) = 0)`.
+7. **NEVER join, union or compare vending rows with store rows.** `goods_id` is
+   unrelated to `products.id`, and machines are not rows in `stores`.
+8. Time filters: `l.shipment_time` (dispensed) for line-level questions,
+   `o.trade_start_time` for order-level ones — both with `AT TIME ZONE 'Asia/Manila'`.
+9. Current machine stock comes from `vending_aisles` (`curr_stock` / `max_stock`,
+   `price` in cents) — it is live state only, with no history and no sales.
+10. Payment method lives in the orders JSON: `o.ext->>'payWay'` (e.g. 'gcashpay').
 
 **⚠️ YEAR-OVER-YEAR / SEASONALITY QUERIES — MANDATORY FORMAT:**
 When the user asks for data "per month per year", "by month and year", "year over year", "each year by month", "monthly trend across years", or anything comparing months across multiple years, you MUST use EXACTLY these four column aliases — no exceptions:
@@ -529,7 +610,11 @@ Type: {example.get('type', 'unknown')}
                 score += 5
 
             # Score 3: Entity type match (store, product, category, etc.)
-            entity_keywords = ['store', 'product', 'category', 'inventory', 'stock']
+            entity_keywords = [
+                'store', 'product', 'category', 'inventory', 'stock',
+                # Vending domain — keep vending questions on vending examples
+                'vending', 'machine', 'vendo', 'dispenser',
+            ]
             for entity in entity_keywords:
                 if entity in question_lower and entity in example_question:
                     score += 3

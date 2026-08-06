@@ -83,6 +83,12 @@ const navIcons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   ),
+  vending: (
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M6 3h12a1 1 0 011 1v16a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1zM8 6h4M8 10h4M8 14h4M16 17h1" />
+    </svg>
+  ),
   barcode: (
     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -94,6 +100,7 @@ const navIcons = {
 const navItems = [
   { to: '/', icon: navIcons.dashboard, label: 'Dashboard', match: (p: string) => p === '/' },
   { to: '/analytics', icon: navIcons.analytics, label: 'Analytics', match: (p: string) => p === '/analytics' },
+  { to: '/vending', icon: navIcons.vending, label: 'Vending', match: (p: string) => p === '/vending' },
   { to: '/ai-chat', icon: navIcons.chat, label: 'AI Chat', match: (p: string) => p === '/ai-chat' },
   { to: '/reports/product-sales', icon: navIcons.reports, label: 'Reports', match: (p: string) => p === '/reports/product-sales' },
   { to: '/barcodes', icon: navIcons.barcode, label: 'Barcodes', match: (p: string) => p === '/barcodes' },

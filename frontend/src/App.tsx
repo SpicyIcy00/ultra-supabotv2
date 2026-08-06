@@ -11,6 +11,7 @@ import { AuthGuard } from './components/AuthGuard';
 
 // Lazy-loaded pages (Dashboard stays eager as the landing page)
 const AnalyticsPage = React.lazy(() => import('./pages/AnalyticsPage'));
+const VendingPage = React.lazy(() => import('./pages/VendingPage'));
 const AIChatPage = React.lazy(() => import('./pages/AIChatPage'));
 const ReportingPage = React.lazy(() => import('./pages/ReportingPage'));
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
@@ -32,6 +33,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/analytics" element={<AnalyticsPage />} />
+                <Route path="/vending" element={<VendingPage />} />
                 <Route path="/ai-chat" element={<AIChatPage />} />
                 <Route path="/reports/product-sales" element={<ReportingPage />} />
                 <Route path="/settings" element={<SettingsPage />} />

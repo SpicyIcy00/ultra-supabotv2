@@ -230,7 +230,7 @@ async def shutdown_event():
     SchemaContext.shutdown()
     print("SchemaContext shut down")
 
-from app.api.v1.routes import analytics, chatbot, stores, products, reports, report_presets, google_sheets, saved_queries, replenishment, store_filters, barcodes, scheduled_reports
+from app.api.v1.routes import analytics, chatbot, stores, products, reports, report_presets, google_sheets, saved_queries, replenishment, store_filters, barcodes, scheduled_reports, vending
 
 app.include_router(analytics.router, prefix=f"{settings.API_V1_PREFIX}/analytics")
 app.include_router(chatbot.router, prefix=f"{settings.API_V1_PREFIX}/chatbot")
@@ -244,6 +244,7 @@ app.include_router(scheduled_reports.router, prefix=f"{settings.API_V1_PREFIX}/s
 app.include_router(replenishment.router, prefix=f"{settings.API_V1_PREFIX}/replenishment", tags=["replenishment"])
 app.include_router(store_filters.router, prefix=f"{settings.API_V1_PREFIX}/store-filters", tags=["store-filters"])
 app.include_router(barcodes.router, prefix=f"{settings.API_V1_PREFIX}/barcodes", tags=["barcodes"])
+app.include_router(vending.router, prefix=f"{settings.API_V1_PREFIX}/vending", tags=["vending"])
 
 
 @app.get("/")
