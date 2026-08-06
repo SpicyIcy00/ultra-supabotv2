@@ -38,6 +38,7 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
   const [dataReadiness, setDataReadiness] = useState<DataReadiness | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingLast, setLoadingLast] = useState(false);
 
   const [tiers, setTiers] = useState<StoreTier[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
@@ -90,18 +91,17 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showDatePicker]);
 
+  // Only the lightweight metadata the run controls need. The shipment plan and
+  // exceptions are deliberately NOT fetched here — pulling thousands of rows on
+  // mount made the tab slow to open. The user runs (or loads) a report instead.
   const loadInitialData = async () => {
     setLoading(true);
     try {
-      const [readiness, plan, exc, tiers] = await Promise.all([
+      const [readiness, tiers] = await Promise.all([
         getDataReadiness(),
-        getLatestPlan(),
-        getExceptions(),
         getStoreTiers(),
       ]);
       setDataReadiness(readiness);
-      setLatestPlan(plan);
-      setExceptions(exc);
       setTiers(tiers);
     } catch {
       // Data may not exist yet
@@ -110,7 +110,20 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
     }
   };
 
-  const loadPlanData = async () => {
+  const handleLoadLast = async () => {
+    setLoadingLast(true);
+    setError(null);
+    try {
+      const plan = await loadPlanData();
+      if (!plan || !plan.run_date || plan.items.length === 0) {
+        setError('No saved report found for this store/algorithm. Run a replenishment first.');
+      }
+    } finally {
+      setLoadingLast(false);
+    }
+  };
+
+  const loadPlanData = async (): Promise<ShipmentPlanResponse | null> => {
     try {
       const storeFilter = selectedStoreId ? [selectedStoreId] : undefined;
       const [plan, exc] = await Promise.all([
@@ -119,8 +132,9 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
       ]);
       setLatestPlan(plan);
       setExceptions(exc);
+      return plan;
     } catch {
-      // ignore
+      return null;
     }
   };
 
@@ -563,6 +577,21 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
                 })}
             </select>
             <button
+              onClick={handleLoadLast}
+              disabled={loadingLast || isRunning}
+              title="Show the last saved report without recalculating"
+              className="px-4 py-2.5 bg-[#0e1117] border border-[#2e303d] text-gray-300 text-sm font-medium rounded-lg hover:border-blue-500/50 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+            >
+              {loadingLast ? (
+                <span className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-300" />
+                  Loading...
+                </span>
+              ) : (
+                'Load last report'
+              )}
+            </button>
+            <button
               onClick={handleRun}
               disabled={isRunning || (algorithmType === 'legacy' && (!selectedStoreId || (asOfEnabled && !asOfDate)))}
               className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
@@ -630,6 +659,23 @@ export const ReplenishmentDashboard: React.FC<Props> = ({ onRunComplete }) => {
           </div>
         )}
       </div>
+
+      {/* Empty state — nothing is fetched until the user runs or loads a report */}
+      {!latestPlan && dashMode !== 'compare' && (
+        <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-12">
+          <div className="flex flex-col items-center text-center">
+            <svg className="w-10 h-10 text-gray-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-6h13M9 17H4V5a2 2 0 012-2h7l2 2h5a2 2 0 012 2v3M9 17l-2.5 4h13L22 17H9z" />
+            </svg>
+            <p className="text-gray-300 font-medium">No report loaded</p>
+            <p className="text-gray-500 text-sm mt-1 max-w-md">
+              Pick your options above and hit <span className="text-gray-300">Run Replenishment</span> to
+              generate a plan, or <span className="text-gray-300">Load last report</span> to pull up the
+              previous run without recalculating.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Summary Cards */}
       {latestPlan && latestPlan.run_date && (
