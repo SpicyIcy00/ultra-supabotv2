@@ -164,7 +164,8 @@ class VendingService:
                 SELECT
                     l.device_code,
                     COALESCE(SUM(l.real_price), 0) / 100.0 AS current_sales,
-                    COALESCE(SUM(l.goods_amount), 0)::int  AS current_units
+                    COALESCE(SUM(l.goods_amount), 0)::int  AS current_units,
+                    COUNT(DISTINCT DATE({SALE_TS} AT TIME ZONE 'Asia/Manila'))::int AS current_days
                 FROM vending_order_lines l
                 INNER JOIN vending_orders o ON l.order_trade_no_in = o.trade_no_in
                 WHERE {VEND_OK}
@@ -177,7 +178,8 @@ class VendingService:
                 SELECT
                     l.device_code,
                     COALESCE(SUM(l.real_price), 0) / 100.0 AS previous_sales,
-                    COALESCE(SUM(l.goods_amount), 0)::int  AS previous_units
+                    COALESCE(SUM(l.goods_amount), 0)::int  AS previous_units,
+                    COUNT(DISTINCT DATE({SALE_TS} AT TIME ZONE 'Asia/Manila'))::int AS previous_days
                 FROM vending_order_lines l
                 INNER JOIN vending_orders o ON l.order_trade_no_in = o.trade_no_in
                 WHERE {VEND_OK}
@@ -192,7 +194,9 @@ class VendingService:
                 COALESCE(c.current_sales, 0)::float  AS current_sales,
                 COALESCE(p.previous_sales, 0)::float AS previous_sales,
                 COALESCE(c.current_units, 0)::int    AS current_units,
-                COALESCE(p.previous_units, 0)::int   AS previous_units
+                COALESCE(p.previous_units, 0)::int   AS previous_units,
+                COALESCE(c.current_days, 0)::int     AS current_days,
+                COALESCE(p.previous_days, 0)::int    AS previous_days
             FROM filtered_devices fd
             LEFT JOIN current_period c  ON fd.device_code = c.device_code
             LEFT JOIN previous_period p ON fd.device_code = p.device_code
@@ -208,17 +212,33 @@ class VendingService:
         })
         rows = result.fetchall()
 
-        return [
-            {
+        # Per-day figures divide by ACTIVE days (days the machine actually sold),
+        # not by the length of the range — otherwise a machine installed halfway
+        # through the period looks half as good as it is.
+        results = []
+        for row in rows:
+            current_sales = float(row.current_sales or 0)
+            previous_sales = float(row.previous_sales or 0)
+            current_units = int(row.current_units or 0)
+            previous_units = int(row.previous_units or 0)
+            current_days = int(row.current_days or 0)
+            previous_days = int(row.previous_days or 0)
+
+            results.append({
                 "device_code": row.device_code,
                 "device_name": row.device_name,
-                "current_sales": float(row.current_sales or 0),
-                "previous_sales": float(row.previous_sales or 0),
-                "current_units": int(row.current_units or 0),
-                "previous_units": int(row.previous_units or 0),
-            }
-            for row in rows
-        ]
+                "current_sales": current_sales,
+                "previous_sales": previous_sales,
+                "current_units": current_units,
+                "previous_units": previous_units,
+                "current_days": current_days,
+                "previous_days": previous_days,
+                "current_avg_daily_sales": current_sales / current_days if current_days else 0.0,
+                "previous_avg_daily_sales": previous_sales / previous_days if previous_days else 0.0,
+                "current_avg_daily_units": current_units / current_days if current_days else 0.0,
+            })
+
+        return results
 
     @cached(expire=300, prefix="vending")
     async def get_top_products(

@@ -21,6 +21,12 @@ interface SalesPerHourBarProps {
   allHours?: boolean;
 }
 
+// Vending sits beside SalesPerMachineBar, so both cards must be the same height.
+const cardClass = (allHours: boolean) =>
+  `bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 flex flex-col ${
+    allHours ? 'h-[280px] sm:h-[350px] lg:h-[420px]' : 'h-[320px] sm:h-[360px] lg:h-[400px]'
+  }`;
+
 export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
   data,
   isLoading = false,
@@ -28,12 +34,13 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
   allHours = false,
 }) => {
   const dims = useChartDimensions();
+  const CARD_CLASS = cardClass(allHours);
 
   if (isLoading) {
     return (
-      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[320px] sm:h-[360px] lg:h-[400px]">
+      <div className={CARD_CLASS}>
         <h3 className="text-lg font-bold text-white mb-4">{title}</h3>
-        <div className="flex items-center justify-center h-[280px]">
+        <div className="flex-1 flex items-center justify-center">
           <div className="animate-pulse text-gray-400">Loading...</div>
         </div>
       </div>
@@ -43,9 +50,9 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
   // Validate data is an array
   if (!data || !Array.isArray(data) || data.length === 0) {
     return (
-      <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 h-[320px] sm:h-[360px] lg:h-[400px]">
+      <div className={CARD_CLASS}>
         <h3 className="text-lg font-bold text-white mb-4">{title}</h3>
-        <div className="flex items-center justify-center h-[280px] text-gray-400">
+        <div className="flex-1 flex items-center justify-center text-gray-400">
           No data available
         </div>
       </div>
@@ -62,6 +69,9 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
     return {
       hour,
       hour_label: formatHourLabel(hour),
+      // 24 bars can't carry "10:00 PM" labels — "10p" keeps the axis flat and
+      // frees the gutter the angled labels were eating.
+      short_label: `${hour % 12 === 0 ? 12 : hour % 12}${hour < 12 ? 'a' : 'p'}`,
       total_sales: existingData?.total_sales || 0,
     };
   });
@@ -99,7 +109,7 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
   };
 
   return (
-    <div id="sales-per-hour-chart" className="bg-[#1c1e26] border border-[#2e303d] rounded-lg p-4 sm:p-6 flex flex-col h-[320px] sm:h-[360px] lg:h-[400px]">
+    <div id="sales-per-hour-chart" className={CARD_CLASS}>
       <div className="flex items-center justify-between mb-4 shrink-0">
         <h3 className="text-lg font-bold text-white">{title}</h3>
         <div className="flex items-center gap-3">
@@ -120,17 +130,17 @@ export const SalesPerHourBar: React.FC<SalesPerHourBarProps> = ({
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={chartData}
-          margin={{ top: 5, right: dims.margin.right, left: dims.margin.left, bottom: dims.isMobile ? 50 : 70 }}
+          margin={{ top: 20, right: dims.margin.right, left: dims.margin.left, bottom: allHours ? 10 : (dims.isMobile ? 50 : 70) }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke={THEME_COLORS.gridLines} />
           <XAxis
-            dataKey="hour_label"
+            dataKey={allHours ? 'short_label' : 'hour_label'}
             stroke={THEME_COLORS.primaryText}
             tick={{ fill: THEME_COLORS.primaryText, fontSize: dims.fontSize.axis }}
-            angle={-45}
-            textAnchor="end"
-            height={dims.isMobile ? 50 : 70}
-            interval={dims.isMobile ? 2 : 1}
+            angle={allHours ? 0 : -45}
+            textAnchor={allHours ? 'middle' : 'end'}
+            height={allHours ? 30 : (dims.isMobile ? 50 : 70)}
+            interval={allHours ? (dims.isMobile ? 3 : 1) : (dims.isMobile ? 2 : 1)}
           />
           <YAxis
             stroke={THEME_COLORS.primaryText}

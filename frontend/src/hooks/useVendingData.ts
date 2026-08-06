@@ -42,6 +42,12 @@ export interface MachineSalesData {
   previous_sales: number;
   current_units: number;
   previous_units: number;
+  /** Days the machine actually sold something — the per-day divisor */
+  current_days: number;
+  previous_days: number;
+  current_avg_daily_sales: number;
+  previous_avg_daily_sales: number;
+  current_avg_daily_units: number;
 }
 
 export interface VendingProductData {
