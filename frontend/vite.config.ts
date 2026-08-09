@@ -23,6 +23,10 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Drop precaches from previous builds and never let the navigation
+        // fallback answer a request for a hashed asset with index.html.
+        cleanupOutdatedCaches: true,
+        navigateFallbackDenylist: [/^\/api\//, /^\/assets\//],
         runtimeCaching: [
           {
             urlPattern: /\/api\/v1\/.*/,
