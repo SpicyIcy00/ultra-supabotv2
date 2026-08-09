@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.services.replenishment_service import ReplenishmentService
 from app.services.percentile_service import PercentileReplenishmentService
 from app.services.ai_insights_service import AIInsightsService
+from app.services import auto_report_service
 from app.services.auto_report_service import AutoReportService
 from app.schemas.replenishment import (
     StoreTierCreate,
@@ -479,9 +480,17 @@ async def update_auto_report_stores(
     return await service.upsert_store_configs(items)
 
 
-@router.post("/auto-report/run")
-async def run_auto_report_now(
-    service: AutoReportService = Depends(_get_auto_report_service),
-):
-    """Manually trigger the full per-store run + Sheets post now ('Run now')."""
-    return await service.run_all(triggered_by="manual")
+@router.post("/auto-report/run", status_code=202)
+async def run_auto_report_now():
+    """Start the full per-store run + Sheets post in the background ('Run now').
+
+    Returns immediately: a real run takes minutes, far longer than the edge proxy
+    in front of this API keeps a response open. Poll /auto-report/run-status.
+    """
+    return auto_report_service.start_background_run(triggered_by="manual")
+
+
+@router.get("/auto-report/run-status")
+async def get_auto_report_run_status():
+    """Live progress of the in-flight run (or the last one this process ran)."""
+    return auto_report_service.get_run_state()

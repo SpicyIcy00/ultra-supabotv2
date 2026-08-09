@@ -17,7 +17,8 @@ import type {
   PercentileStoreConfig,
   AutoReportSettings,
   AutoReportStore,
-  AutoReportRunResponse,
+  AutoReportRunStart,
+  AutoReportRunState,
 } from '../types/replenishment';
 
 const API_BASE = '/api/v1/replenishment';
@@ -291,7 +292,13 @@ export const updateAutoReportStores = async (
   return response.data;
 };
 
-export const runAutoReportNow = async (): Promise<AutoReportRunResponse> => {
-  const response = await axios.post<AutoReportRunResponse>(`${API_BASE}/auto-report/run`);
+/** Starts the run in the background — poll getAutoReportRunStatus() for progress. */
+export const runAutoReportNow = async (): Promise<AutoReportRunStart> => {
+  const response = await axios.post<AutoReportRunStart>(`${API_BASE}/auto-report/run`);
+  return response.data;
+};
+
+export const getAutoReportRunStatus = async (): Promise<AutoReportRunState> => {
+  const response = await axios.get<AutoReportRunState>(`${API_BASE}/auto-report/run-status`);
   return response.data;
 };

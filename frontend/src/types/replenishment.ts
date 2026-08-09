@@ -338,3 +338,22 @@ export interface AutoReportRunResponse {
   total_rows: number;
   results: AutoReportRunResult[];
 }
+
+/** Reply from POST /auto-report/run — the run continues in the background. */
+export interface AutoReportRunStart {
+  started: boolean;
+  already_running: boolean;
+  state: AutoReportRunState;
+}
+
+/** Live progress from GET /auto-report/run-status. */
+export interface AutoReportRunState {
+  running: boolean;
+  triggered_by: string | null;
+  started_at: string | null;
+  stores_total: number;
+  stores_done: number;
+  current_store: string | null;
+  results: AutoReportRunResult[];
+  final: AutoReportRunResponse | null;
+}

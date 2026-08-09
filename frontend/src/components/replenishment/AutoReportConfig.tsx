@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import {
   getAutoReportSettings,
@@ -6,12 +6,16 @@ import {
   getAutoReportStores,
   updateAutoReportStores,
   runAutoReportNow,
+  getAutoReportRunStatus,
 } from '../../services/replenishmentApi';
 import type {
   AutoReportSettings,
   AutoReportStore,
-  AutoReportRunResponse,
+  AutoReportRunState,
 } from '../../types/replenishment';
+
+/** How often to ask the server how far the background run has got. */
+const POLL_MS = 4000;
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -38,12 +42,45 @@ export const AutoReportConfig: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [savingSettings, setSavingSettings] = useState(false);
   const [savingStores, setSavingStores] = useState(false);
-  const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [runResult, setRunResult] = useState<AutoReportRunResponse | null>(null);
+  const [runState, setRunState] = useState<AutoReportRunState | null>(null);
+  const pollTimer = useRef<number | null>(null);
 
-  useEffect(() => { load(); }, []);
+  const running = runState?.running ?? false;
+  const runResult = runState?.final ?? null;
+
+  useEffect(() => {
+    load();
+    // A run started elsewhere (another tab, or before a refresh) is still ours to show.
+    pollRunStatus();
+    return stopPolling;
+  }, []);
+
+  const stopPolling = () => {
+    if (pollTimer.current !== null) {
+      window.clearTimeout(pollTimer.current);
+      pollTimer.current = null;
+    }
+  };
+
+  /** Reads run progress once, and re-arms itself while the run is in flight. */
+  const pollRunStatus = async () => {
+    try {
+      const state = await getAutoReportRunStatus();
+      setRunState(state);
+      if (state.running) {
+        pollTimer.current = window.setTimeout(pollRunStatus, POLL_MS);
+      } else {
+        stopPolling();
+        // Finished (or nothing running) — refresh the persisted last-run summary.
+        try { setSettings(await getAutoReportSettings()); } catch { /* non-fatal */ }
+      }
+    } catch {
+      // A dropped poll shouldn't kill the loop — the run is server-side regardless.
+      pollTimer.current = window.setTimeout(pollRunStatus, POLL_MS);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -112,18 +149,19 @@ export const AutoReportConfig: React.FC = () => {
   };
 
   const runNow = async () => {
-    setRunning(true);
     setError(null);
-    setRunResult(null);
+    stopPolling();
     try {
-      const result = await runAutoReportNow();
-      setRunResult(result);
-      // Refresh settings so last-run status reflects this run
-      setSettings(await getAutoReportSettings());
+      const start = await runAutoReportNow();
+      setRunState(start.state);
+      if (start.already_running) {
+        setNotice('A run is already in progress.');
+        setTimeout(() => setNotice(null), 4000);
+      }
+      // The run outlives this request — follow it by polling.
+      pollTimer.current = window.setTimeout(pollRunStatus, POLL_MS);
     } catch (err: any) {
-      setError(err?.response?.data?.detail || 'Run failed.');
-    } finally {
-      setRunning(false);
+      setError(err?.response?.data?.detail || 'Could not start the run.');
     }
   };
 
@@ -175,7 +213,8 @@ export const AutoReportConfig: React.FC = () => {
             <span className={
               settings.last_run_status === 'success' ? 'text-green-400'
               : settings.last_run_status === 'partial' ? 'text-yellow-400'
-              : settings.last_run_status === 'failed' ? 'text-red-400' : 'text-gray-300'
+              : settings.last_run_status === 'failed' ? 'text-red-400'
+              : settings.last_run_status === 'running' ? 'text-blue-400' : 'text-gray-300'
             }>
               {settings.last_run_status ?? 'never'}
             </span>
@@ -194,19 +233,32 @@ export const AutoReportConfig: React.FC = () => {
         </div>
       )}
 
-      {/* Run-now result breakdown */}
-      {runResult && (
+      {/* Live progress / final breakdown of the background run */}
+      {runState && (running || runResult) && (
         <div className="bg-[#1c1e26] border border-[#2e303d] rounded-lg overflow-hidden">
           <div className="px-5 py-3 border-b border-[#2e303d]">
-            <h3 className="text-sm font-semibold text-white">
-              Run result — {runResult.status}
-              <span className="ml-2 text-xs text-gray-400 font-normal">
-                {runResult.stores_ok}/{runResult.stores_total} stores · {runResult.total_rows} rows
-              </span>
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              {running ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
+                  Running…
+                  <span className="text-xs text-gray-400 font-normal">
+                    {runState.stores_done}/{runState.stores_total} stores
+                    {runState.current_store && ` · ${runState.current_store}`}
+                  </span>
+                </>
+              ) : runResult && (
+                <>
+                  Run result — {runResult.status}
+                  <span className="text-xs text-gray-400 font-normal">
+                    {runResult.stores_ok}/{runResult.stores_total} stores · {runResult.total_rows} rows
+                  </span>
+                </>
+              )}
             </h3>
           </div>
           <div className="divide-y divide-[#2e303d]">
-            {runResult.results.map(r => (
+            {(runResult?.results ?? runState.results).map(r => (
               <div key={r.store_id} className="px-5 py-2.5 flex items-center justify-between text-xs">
                 <span className="text-gray-200">{r.store_name}
                   <span className="text-gray-500"> → {r.sheet_name}</span>
