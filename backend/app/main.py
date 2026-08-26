@@ -201,8 +201,20 @@ async def startup_event():
                     ADD COLUMN IF NOT EXISTS day_times          TEXT,
                     ADD COLUMN IF NOT EXISTS telegram_chat_ids  TEXT
             """))
-            # --- Warehouse Packing step 1: auth + role-based page access ---
-            # Mirrors backend/sql/001_auth_roles.sql so a fresh deploy self-heals.
+        print("Schema migration: max_cover_days + product_barcodes + percentile columns + store config + auto_report + scheduled_reports ensured")
+    except Exception as e:
+        print(f"Schema migration warning: {e}")
+
+    # --- Warehouse Packing step 1: auth + role-based page access ---
+    # Mirrors backend/sql/001_auth_roles.sql so a fresh deploy self-heals.
+    #
+    # Deliberately its own transaction: engine.begin() rolls back everything on
+    # any failure, so sharing a block with the migrations above would mean one
+    # unrelated broken statement silently leaves the app with no way to log in.
+    try:
+        from app.core.database import engine
+        from sqlalchemy import text
+        async with engine.begin() as conn:
             await conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS app_users (
                     id            UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -254,9 +266,16 @@ async def startup_event():
                 )
                 ON CONFLICT (username) DO NOTHING
             """))
-        print("Schema migration: max_cover_days + product_barcodes + percentile columns + store config + auto_report + scheduled_reports + app_users/role_page_access ensured")
+            # Report actual state, not just "ran without raising" — an empty
+            # app_users table is the difference between a working login and a
+            # locked-out deploy, and it is worth seeing in the Railway logs.
+            users = (await conn.execute(text("SELECT count(*) FROM app_users"))).scalar()
+            grants = (await conn.execute(
+                text("SELECT count(*) FROM role_page_access WHERE enabled")
+            )).scalar()
+        print(f"Auth migration: app_users ensured ({users} user(s), {grants} page grant(s))")
     except Exception as e:
-        print(f"Schema migration warning: {e}")
+        print(f"AUTH MIGRATION FAILED — login will not work: {e}")
 
     # Initialize schema context with database connection
     business_rules_path = Path(__file__).parent.parent / "business_rules.yaml"
