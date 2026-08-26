@@ -88,6 +88,12 @@ class ItemRecord(BaseModel):
     pack_weight_g_snapshot: Optional[float] = None
     total_kg: Optional[float] = None
     total_packs: Optional[float] = None
+    # The weight those complete packs actually come to. total_kg is the amount
+    # that was ENTERED, so for a weight target the two differ by the remainder
+    # FLOOR discarded: 10kg of a 90g product is 111 packs weighing 9.99kg, not
+    # the 10.00kg asked for. The print sheet shows this one so packs and weight
+    # never contradict each other.
+    packed_kg: Optional[float] = None
     actual_packed: Optional[float] = None
     remarks: Optional[str] = None
     # raw_qty - coalesce(actual_packed, raw_qty): zero until actuals are keyed in
@@ -98,6 +104,7 @@ class ListTotals(BaseModel):
     total_packs: float
     total_grams: float
     total_kg: float
+    total_packed_kg: float
     item_count: int
 
 
@@ -126,6 +133,10 @@ def _f(value) -> Optional[float]:
 def _to_item(item: PackingItem, product: Product) -> ItemRecord:
     packs = _f(item.total_packs)
     actual = _f(item.actual_packed)
+    snapshot = _f(item.pack_weight_g_snapshot)
+    packed_kg = (
+        None if packs is None or snapshot is None else packs * snapshot / 1000
+    )
     return ItemRecord(
         id=str(item.id),
         product_id=item.product_id,
@@ -133,9 +144,10 @@ def _to_item(item: PackingItem, product: Product) -> ItemRecord:
         nickname=product.nickname,
         unit=item.unit,
         quantity=_f(item.quantity),
-        pack_weight_g_snapshot=_f(item.pack_weight_g_snapshot),
+        pack_weight_g_snapshot=snapshot,
         total_kg=_f(item.total_kg),
         total_packs=packs,
+        packed_kg=packed_kg,
         actual_packed=actual,
         remarks=item.remarks,
         # Nothing has been packed yet until actual_packed is filled in, so the
@@ -150,6 +162,7 @@ def _totals(items: List[ItemRecord]) -> ListTotals:
         total_packs=sum(i.total_packs or 0 for i in items),
         total_grams=grams,
         total_kg=grams / 1000,
+        total_packed_kg=sum(i.packed_kg or 0 for i in items),
         item_count=len(items),
     )
 
@@ -205,7 +218,7 @@ def _normalise_unit(unit: str, quantity: float) -> tuple[str, float]:
         return "grams", quantity * 1000
     if unit not in ("packs", "grams"):
         raise HTTPException(
-            status_code=400, detail="unit must be one of 'packs', 'grams', 'kg'"
+            status_code=400, detail="unit must be one of 'packs', 'kg'"
         )
     return unit, quantity
 
@@ -330,6 +343,10 @@ async def list_history(
         # serialiser does is unnecessary here.
         packs = sum(_f(i.total_packs) or 0 for i in plist.items)
         kg = sum(_f(i.total_kg) or 0 for i in plist.items)
+        packed_kg = sum(
+            (_f(i.total_packs) or 0) * (_f(i.pack_weight_g_snapshot) or 0) / 1000
+            for i in plist.items
+        )
         summaries.append(
             ListSummary(
                 id=str(plist.id),
@@ -341,6 +358,7 @@ async def list_history(
                     total_packs=packs,
                     total_grams=kg * 1000,
                     total_kg=kg,
+                    total_packed_kg=packed_kg,
                     item_count=len(plist.items),
                 ),
             )

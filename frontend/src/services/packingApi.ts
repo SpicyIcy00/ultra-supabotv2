@@ -2,7 +2,8 @@ import axios from 'axios';
 
 const API_BASE = '/api/v1/packing';
 
-export type PackUnit = 'packs' | 'grams' | 'kg';
+/** What staff can enter. kg is converted to grams server-side before storing. */
+export type PackUnit = 'packs' | 'kg';
 export type PackingStatus = 'pending' | 'in_progress' | 'done';
 
 export interface ProductOption {
@@ -18,11 +19,15 @@ export interface ItemRecord {
   product_id: string;
   product_name: string;
   nickname: string | null;
+  /** Stored unit — 'kg' input is normalised to grams by the API. */
   unit: 'packs' | 'grams';
   quantity: number;
   pack_weight_g_snapshot: number | null;
+  /** The amount entered, in kg. */
   total_kg: number | null;
   total_packs: number | null;
+  /** What those complete packs actually weigh — packs x pack weight. */
+  packed_kg: number | null;
   actual_packed: number | null;
   remarks: string | null;
   discrepancy: number | null;
@@ -32,6 +37,7 @@ export interface ListTotals {
   total_packs: number;
   total_grams: number;
   total_kg: number;
+  total_packed_kg: number;
   item_count: number;
 }
 

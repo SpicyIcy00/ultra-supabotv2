@@ -1,9 +1,10 @@
 /**
  * Packing — replaces the packing Google Sheet.
  *
- * Build tab:   pick a category, start a list, add products one at a time by
- *              entering EITHER a pack count OR a target weight. The server
- *              derives the other figure and the running totals.
+ * Build tab:   search for any product and add it, entering EITHER a pack count
+ *              OR a target weight in kg. The list is created on the first
+ *              product, so there is no form to fill in before starting. The
+ *              server derives the other figure and the running totals.
  * History tab: past lists, reopened to key in actual_packed and remarks after
  *              the physical packing is done.
  */
@@ -15,7 +16,7 @@ import {
   addItem,
   createList,
   deleteItem,
-  getCategories,
+  deleteList,
   getHistory,
   getList,
   updateItem,
@@ -52,37 +53,14 @@ interface BuildTabProps {
 }
 
 function BuildTab({ list, setList }: BuildTabProps) {
-  const [categories, setCategories] = useState<string[]>([]);
-  const [category, setCategory] = useState('');
   const [product, setProduct] = useState<ProductOption | null>(null);
   const [unit, setUnit] = useState<PackUnit>('packs');
   const [quantity, setQuantity] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    getCategories()
-      .then((c) => {
-        setCategories(c);
-        setCategory((prev) => prev || c[0] || '');
-      })
-      .catch(() => setCategories([]));
-  }, []);
-
-  const start = async () => {
-    setBusy(true);
-    setError('');
-    try {
-      setList(await createList(category || undefined));
-    } catch (e: any) {
-      setError(errText(e, 'Could not start a list.'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const add = async () => {
-    if (!list || !product) return;
+    if (!product) return;
     const qty = Number(quantity);
     if (!(qty > 0)) {
       setError('Enter a quantity greater than zero.');
@@ -91,7 +69,10 @@ function BuildTab({ list, setList }: BuildTabProps) {
     setBusy(true);
     setError('');
     try {
-      setList(await addItem(list.id, { product_id: product.id, unit, quantity: qty }));
+      // The list is created lazily on the first product, so staff can just
+      // start searching instead of filling in a form before any real work.
+      const target = list ?? (await createList());
+      setList(await addItem(target.id, { product_id: product.id, unit, quantity: qty }));
       setProduct(null);
       setQuantity('');
     } catch (e: any) {
@@ -138,45 +119,10 @@ function BuildTab({ list, setList }: BuildTabProps) {
     }
   };
 
-  // --- No list open yet: choose a category and start one ---
-  if (!list) {
-    return (
-      <div className="max-w-md">
-        <label className="block text-sm text-gray-400 mb-2">Category</label>
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="w-full min-w-0 bg-gray-900/60 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 mb-4"
-        >
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-
-        {error && <div className="text-red-400 text-sm mb-3">{error}</div>}
-
-        <button
-          onClick={start}
-          disabled={busy || !category}
-          className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {busy ? 'Starting…' : 'Start packing list'}
-        </button>
-      </div>
-    );
-  }
-
-  // --- A list is open: add products to it ---
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div>
-          <span className="text-sm text-gray-400">Category</span>{' '}
-          <span className="text-sm text-white font-medium">{list.category ?? '—'}</span>
-        </div>
-        <div className="flex gap-2">
+      {list && (
+        <div className="flex flex-wrap items-center justify-end gap-2 mb-4">
           <a
             href={`/packing/${list.id}/print`}
             target="_blank"
@@ -193,7 +139,7 @@ function BuildTab({ list, setList }: BuildTabProps) {
             Save &amp; close
           </button>
         </div>
-      </div>
+      )}
 
       {/* Add a product */}
       <div className="bg-gray-900/40 border border-[#2e303d] rounded-lg p-4 mb-6">
@@ -201,7 +147,7 @@ function BuildTab({ list, setList }: BuildTabProps) {
           <ProductPicker selected={product} onSelect={setProduct} />
 
           <div className="flex rounded-lg overflow-hidden border border-gray-800">
-            {(['packs', 'grams', 'kg'] as PackUnit[]).map((u) => (
+            {(['packs', 'kg'] as PackUnit[]).map((u) => (
               <button
                 key={u}
                 onClick={() => setUnit(u)}
@@ -223,7 +169,7 @@ function BuildTab({ list, setList }: BuildTabProps) {
             onKeyDown={(e) => {
               if (e.key === 'Enter') add();
             }}
-            placeholder={unit === 'packs' ? 'How many packs' : `Target weight (${unit})`}
+            placeholder={unit === 'packs' ? 'How many packs' : 'Target weight (kg)'}
             className="w-full min-w-0 bg-gray-900/60 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
           />
 
@@ -245,14 +191,20 @@ function BuildTab({ list, setList }: BuildTabProps) {
         {error && <div className="text-red-400 text-sm mt-3">{error}</div>}
       </div>
 
-      <PackingListTable
-        items={list.items}
-        totals={list.totals}
-        mode="build"
-        busy={busy}
-        onChangeQuantity={changeQuantity}
-        onRemove={remove}
-      />
+      {list ? (
+        <PackingListTable
+          items={list.items}
+          totals={list.totals}
+          mode="build"
+          busy={busy}
+          onChangeQuantity={changeQuantity}
+          onRemove={remove}
+        />
+      ) : (
+        <div className="border border-[#2e303d] rounded-lg p-8 text-center text-sm text-gray-500">
+          Search for a product above to start a list.
+        </div>
+      )}
     </div>
   );
 }
@@ -310,6 +262,26 @@ function HistoryTab() {
       setNotice('Saved.');
     } catch (e: any) {
       setError(errText(e, 'Could not save that row.'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeList = async (summary: ListSummary) => {
+    const label = `${summary.totals.item_count} item(s) from ${new Date(
+      summary.created_at,
+    ).toLocaleDateString()}`;
+    if (!window.confirm(`Delete this packing list (${label})? This cannot be undone.`)) {
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      await deleteList(summary.id);
+      setNotice('List deleted.');
+      await load();
+    } catch (e: any) {
+      setError(errText(e, 'Could not delete that list.'));
     } finally {
       setBusy(false);
     }
@@ -428,13 +400,20 @@ function HistoryTab() {
                   {l.totals.total_kg.toFixed(2)} kg
                 </td>
                 <td className="px-4 py-3 text-gray-500">{l.created_by_name ?? '—'}</td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-right whitespace-nowrap">
                   <button
                     onClick={() => openList(l)}
                     disabled={busy}
-                    className="text-xs text-blue-400 hover:text-blue-300 disabled:opacity-30"
+                    className="text-xs text-blue-400 hover:text-blue-300 mr-4 disabled:opacity-30"
                   >
                     Open
+                  </button>
+                  <button
+                    onClick={() => removeList(l)}
+                    disabled={busy}
+                    className="text-xs text-gray-400 hover:text-red-400 disabled:opacity-30"
+                  >
+                    Delete
                   </button>
                 </td>
               </tr>

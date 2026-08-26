@@ -103,12 +103,7 @@ export function PackingListTable({
               <td />
               <td />
               <td className="text-right px-4 py-3">{num(totals.total_packs)}</td>
-              <td className="text-right px-4 py-3">
-                {num(totals.total_kg, 2)} kg
-                <div className="text-xs text-gray-500 font-normal">
-                  {num(totals.total_grams)} g
-                </div>
-              </td>
+              <td className="text-right px-4 py-3">{num(totals.total_packed_kg, 2)} kg</td>
               {mode === 'actuals' && (
                 <>
                   <td />
@@ -169,6 +164,8 @@ function Row({
         {num(item.pack_weight_g_snapshot)} g
       </td>
       <td className="text-right px-4 py-3 text-gray-400">
+        {/* Show what staff typed. 'grams' is the storage unit; the UI only ever
+            offers packs and kg, so render weights back in kg. */}
         {editing ? (
           <input
             type="number"
@@ -183,16 +180,25 @@ function Row({
           />
         ) : (
           <>
-            {num(item.quantity, item.unit === 'grams' ? 0 : 0)}{' '}
-            <span className="text-gray-600">{item.unit === 'packs' ? 'packs' : 'g'}</span>
+            {item.unit === 'packs' ? (
+              <>
+                {num(item.quantity)} <span className="text-gray-600">packs</span>
+              </>
+            ) : (
+              <>
+                {num(item.quantity / 1000, 2)} <span className="text-gray-600">kg</span>
+              </>
+            )}
           </>
         )}
       </td>
       <td className="text-right px-4 py-3 text-white font-medium">
         {num(item.total_packs)}
       </td>
+      {/* packed_kg, not total_kg: what the complete packs actually weigh, so
+          packs and weight never contradict each other. */}
       <td className="text-right px-4 py-3 text-gray-300">
-        {num(item.total_kg, 2)} kg
+        {num(item.packed_kg, 2)} kg
       </td>
 
       {mode === 'actuals' && (
