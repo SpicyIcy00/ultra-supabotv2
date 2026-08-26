@@ -17,6 +17,7 @@ from app.models.store_filter import StoreFilter
 from app.models.dashboard_default import DashboardDefault
 from app.models.app_user import AppUser
 from app.models.role_page_access import RolePageAccess
+from app.models.packing import PackingList, PackingItem
 from app.models.scheduled_report import ScheduledReport
 from app.models.vending import (
     VendingDevice,
@@ -44,6 +45,8 @@ __all__ = [
     "DashboardDefault",
     "AppUser",
     "RolePageAccess",
+    "PackingList",
+    "PackingItem",
     "ScheduledReport",
     "VendingDevice",
     "VendingGoods",

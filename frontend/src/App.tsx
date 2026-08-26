@@ -16,6 +16,7 @@ const AnalyticsPage = React.lazy(() => import('./pages/AnalyticsPage'));
 const AIChatPage = React.lazy(() => import('./pages/AIChatPage'));
 const WarehousePage = React.lazy(() => import('./pages/WarehousePage'));
 const PackingPage = React.lazy(() => import('./pages/PackingPage'));
+const PackingPrintPage = React.lazy(() => import('./pages/PackingPrintPage'));
 const AdminPageAccessPage = React.lazy(() => import('./pages/AdminPageAccessPage'));
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 
@@ -25,6 +26,32 @@ const PageSpinner = () => (
   </div>
 );
 
+/** Everything that renders inside the app chrome. */
+function ChromeRoutes() {
+  return (
+    <Layout>
+      <Routes>
+        {/* A user without 'dashboard' gets sent to their own first
+            allowed page instead of an empty dashboard shell. */}
+        <Route path="/" element={<LandingRedirect><Dashboard /></LandingRedirect>} />
+        <Route path="/analytics" element={<RequirePage pageKey="analytics"><AnalyticsPage /></RequirePage>} />
+        {/* Vending is a tab of the dashboard, not its own page */}
+        <Route path="/vending" element={<RequirePage pageKey="dashboard"><Dashboard /></RequirePage>} />
+        <Route path="/ai-chat" element={<RequirePage pageKey="ai_chat"><AIChatPage /></RequirePage>} />
+        {/* Warehouse owns two tabs: Replenishment Reports and Barcode Generator */}
+        <Route path="/warehouse" element={<RequirePage pageKey="warehouse"><WarehousePage /></RequirePage>} />
+        <Route path="/packing" element={<RequirePage pageKey="packing"><PackingPage /></RequirePage>} />
+        <Route path="/settings" element={<RequirePage pageKey="settings"><SettingsPage /></RequirePage>} />
+        <Route path="/admin/page-access" element={<RequirePage pageKey="admin"><AdminPageAccessPage /></RequirePage>} />
+        <Route path="/no-access" element={<NoAccessPage />} />
+        {/* Legacy paths — kept so old links/bookmarks still resolve */}
+        <Route path="/reports/product-sales" element={<Navigate to="/warehouse" replace />} />
+        <Route path="/barcodes" element={<Navigate to="/warehouse?tab=barcodes" replace />} />
+      </Routes>
+    </Layout>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -32,28 +59,17 @@ function App() {
         {/* The legacy shared-code AuthGuard is gone: passcode login replaces it,
             and stacking the two meant typing two codes to reach the app. */}
         <SessionGuard>
-          <Layout>
-              <Suspense fallback={<PageSpinner />}>
-                <Routes>
-                  {/* A user without 'dashboard' gets sent to their own first
-                      allowed page instead of an empty dashboard shell. */}
-                  <Route path="/" element={<LandingRedirect><Dashboard /></LandingRedirect>} />
-                  <Route path="/analytics" element={<RequirePage pageKey="analytics"><AnalyticsPage /></RequirePage>} />
-                  {/* Vending is a tab of the dashboard, not its own page */}
-                  <Route path="/vending" element={<RequirePage pageKey="dashboard"><Dashboard /></RequirePage>} />
-                  <Route path="/ai-chat" element={<RequirePage pageKey="ai_chat"><AIChatPage /></RequirePage>} />
-                  {/* Warehouse owns two tabs: Replenishment Reports and Barcode Generator */}
-                  <Route path="/warehouse" element={<RequirePage pageKey="warehouse"><WarehousePage /></RequirePage>} />
-                  <Route path="/packing" element={<RequirePage pageKey="packing"><PackingPage /></RequirePage>} />
-                  <Route path="/settings" element={<RequirePage pageKey="settings"><SettingsPage /></RequirePage>} />
-                  <Route path="/admin/page-access" element={<RequirePage pageKey="admin"><AdminPageAccessPage /></RequirePage>} />
-                  <Route path="/no-access" element={<NoAccessPage />} />
-                  {/* Legacy paths — kept so old links/bookmarks still resolve */}
-                  <Route path="/reports/product-sales" element={<Navigate to="/warehouse" replace />} />
-                  <Route path="/barcodes" element={<Navigate to="/warehouse?tab=barcodes" replace />} />
-                </Routes>
-              </Suspense>
-          </Layout>
+          <Suspense fallback={<PageSpinner />}>
+            <Routes>
+              {/* The print sheet sits outside Layout so there is no sidebar or
+                  header to hide — it renders as a bare page for the printer. */}
+              <Route
+                path="/packing/:listId/print"
+                element={<RequirePage pageKey="packing"><PackingPrintPage /></RequirePage>}
+              />
+              <Route path="*" element={<ChromeRoutes />} />
+            </Routes>
+          </Suspense>
         </SessionGuard>
       </BrowserRouter>
     </QueryClientProvider>

@@ -25,6 +25,12 @@ class Product(Base):
     # Tags
     tags: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
+    # Warehouse packing: weight of one pack, and the informal name staff use
+    # for this product ("Dikiam 140g" for "Aji Dikiam Sweet Taiwan"). Staff
+    # search by nickname; everything still ties back to this row's id and SKU.
+    pack_weight_g: Mapped[Optional[float]] = mapped_column(Numeric, nullable=True)
+    nickname: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
     # Inventory flags
     track_stock_level: Mapped[bool] = mapped_column(Boolean, default=True)
     is_parent_product: Mapped[bool] = mapped_column(Boolean, default=False)

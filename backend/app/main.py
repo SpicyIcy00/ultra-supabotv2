@@ -304,6 +304,76 @@ async def startup_event():
     except Exception as e:
         print(f"AUTH MIGRATION FAILED — login will not work: {e}")
 
+    # --- Warehouse Packing step 2: packing schema ---
+    # Mirrors backend/sql/003_packing_schema.sql. Own transaction for the same
+    # reason as the auth block above.
+    try:
+        from app.core.database import engine
+        from sqlalchemy import text
+        async with engine.begin() as conn:
+            await conn.execute(text(
+                "ALTER TABLE products ADD COLUMN IF NOT EXISTS pack_weight_g NUMERIC"
+            ))
+            await conn.execute(text(
+                "ALTER TABLE products ADD COLUMN IF NOT EXISTS nickname TEXT"
+            ))
+            await conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_products_nickname ON products (lower(nickname))"
+            ))
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS packing_lists (
+                    id         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+                    category   TEXT,
+                    created_by UUID         REFERENCES app_users(id),
+                    status     TEXT         NOT NULL DEFAULT 'pending'
+                                            CHECK (status IN ('pending', 'in_progress', 'done')),
+                    created_at TIMESTAMPTZ  NOT NULL DEFAULT timezone('Asia/Manila', now())
+                )
+            """))
+            await conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_packing_lists_created_at ON packing_lists (created_at DESC)"
+            ))
+            # total_kg / total_packs are generated so the arithmetic can never
+            # come from a client. FLOOR on total_packs: a partial pack is not a
+            # pack. NULLIF guards a zero/NULL snapshot from failing the insert.
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS packing_items (
+                    id                     UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+                    packing_list_id        UUID         NOT NULL REFERENCES packing_lists(id) ON DELETE CASCADE,
+                    product_id             VARCHAR(24)  NOT NULL REFERENCES products(id),
+                    unit                   TEXT         NOT NULL CHECK (unit IN ('packs', 'grams')),
+                    quantity               NUMERIC      NOT NULL,
+                    pack_weight_g_snapshot NUMERIC,
+                    total_kg NUMERIC GENERATED ALWAYS AS (
+                        CASE WHEN unit = 'packs'
+                             THEN quantity * pack_weight_g_snapshot / 1000
+                             ELSE quantity / 1000
+                        END
+                    ) STORED,
+                    total_packs NUMERIC GENERATED ALWAYS AS (
+                        CASE WHEN unit = 'packs'
+                             THEN quantity
+                             ELSE FLOOR(quantity / NULLIF(pack_weight_g_snapshot, 0))
+                        END
+                    ) STORED,
+                    actual_packed NUMERIC,
+                    remarks       TEXT,
+                    created_at    TIMESTAMPTZ NOT NULL DEFAULT timezone('Asia/Manila', now())
+                )
+            """))
+            await conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_packing_items_list ON packing_items (packing_list_id)"
+            ))
+            await conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_packing_items_product ON packing_items (product_id)"
+            ))
+            seeded = (await conn.execute(
+                text("SELECT count(*) FROM products WHERE pack_weight_g IS NOT NULL")
+            )).scalar()
+        print(f"Packing migration: schema ensured ({seeded} product(s) with a pack weight)")
+    except Exception as e:
+        print(f"PACKING MIGRATION FAILED: {e}")
+
     # Initialize schema context with database connection
     business_rules_path = Path(__file__).parent.parent / "business_rules.yaml"
     SchemaContext.initialize(
@@ -339,10 +409,11 @@ async def shutdown_event():
     SchemaContext.shutdown()
     print("SchemaContext shut down")
 
-from app.api.v1.routes import analytics, chatbot, stores, products, reports, report_presets, google_sheets, saved_queries, replenishment, store_filters, barcodes, scheduled_reports, vending, dashboard_defaults, auth, admin
+from app.api.v1.routes import analytics, chatbot, stores, products, reports, report_presets, google_sheets, saved_queries, replenishment, store_filters, barcodes, scheduled_reports, vending, dashboard_defaults, auth, admin, packing
 
 app.include_router(auth.router, prefix=f"{settings.API_V1_PREFIX}/auth", tags=["auth"])
 app.include_router(admin.router, prefix=f"{settings.API_V1_PREFIX}/admin", tags=["admin"])
+app.include_router(packing.router, prefix=f"{settings.API_V1_PREFIX}/packing", tags=["packing"])
 app.include_router(analytics.router, prefix=f"{settings.API_V1_PREFIX}/analytics")
 app.include_router(chatbot.router, prefix=f"{settings.API_V1_PREFIX}/chatbot")
 app.include_router(reports.router, prefix=f"{settings.API_V1_PREFIX}/reports", tags=["reports"])

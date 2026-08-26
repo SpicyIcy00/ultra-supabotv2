@@ -1,0 +1,97 @@
+import axios from 'axios';
+
+const API_BASE = '/api/v1/packing';
+
+export type PackUnit = 'packs' | 'grams' | 'kg';
+export type PackingStatus = 'pending' | 'in_progress' | 'done';
+
+export interface ProductOption {
+  id: string;
+  name: string;
+  nickname: string | null;
+  sku: string | null;
+  pack_weight_g: number | null;
+}
+
+export interface ItemRecord {
+  id: string;
+  product_id: string;
+  product_name: string;
+  nickname: string | null;
+  unit: 'packs' | 'grams';
+  quantity: number;
+  pack_weight_g_snapshot: number | null;
+  total_kg: number | null;
+  total_packs: number | null;
+  actual_packed: number | null;
+  remarks: string | null;
+  discrepancy: number | null;
+}
+
+export interface ListTotals {
+  total_packs: number;
+  total_grams: number;
+  total_kg: number;
+  item_count: number;
+}
+
+export interface ListSummary {
+  id: string;
+  category: string | null;
+  status: PackingStatus;
+  created_by_name: string | null;
+  created_at: string;
+  totals: ListTotals;
+}
+
+export interface ListDetail extends ListSummary {
+  items: ItemRecord[];
+}
+
+export const getCategories = async (): Promise<string[]> =>
+  (await axios.get<string[]>(`${API_BASE}/categories`)).data;
+
+export const searchProducts = async (search?: string): Promise<ProductOption[]> =>
+  (await axios.get<ProductOption[]>(`${API_BASE}/products`, {
+    params: search ? { search } : {},
+  })).data;
+
+export const createList = async (category?: string): Promise<ListDetail> =>
+  (await axios.post<ListDetail>(`${API_BASE}/lists`, { category })).data;
+
+export const getHistory = async (): Promise<ListSummary[]> =>
+  (await axios.get<ListSummary[]>(`${API_BASE}/lists`)).data;
+
+export const getList = async (listId: string): Promise<ListDetail> =>
+  (await axios.get<ListDetail>(`${API_BASE}/lists/${listId}`)).data;
+
+export const updateList = async (
+  listId: string,
+  payload: { category?: string; status?: PackingStatus },
+): Promise<ListDetail> =>
+  (await axios.patch<ListDetail>(`${API_BASE}/lists/${listId}`, payload)).data;
+
+export const deleteList = async (listId: string): Promise<void> => {
+  await axios.delete(`${API_BASE}/lists/${listId}`);
+};
+
+/** Returns the whole list back, with server-computed totals. */
+export const addItem = async (
+  listId: string,
+  payload: { product_id: string; unit: PackUnit; quantity: number },
+): Promise<ListDetail> =>
+  (await axios.post<ListDetail>(`${API_BASE}/lists/${listId}/items`, payload)).data;
+
+export const updateItem = async (
+  itemId: string,
+  payload: {
+    unit?: PackUnit;
+    quantity?: number;
+    actual_packed?: number;
+    remarks?: string;
+  },
+): Promise<ListDetail> =>
+  (await axios.patch<ListDetail>(`${API_BASE}/items/${itemId}`, payload)).data;
+
+export const deleteItem = async (itemId: string): Promise<ListDetail> =>
+  (await axios.delete<ListDetail>(`${API_BASE}/items/${itemId}`)).data;
