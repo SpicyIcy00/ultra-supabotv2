@@ -166,6 +166,11 @@ function UsersTab() {
   const [role, setRole] = useState('warehouse_staff');
   const [creating, setCreating] = useState(false);
 
+  // Inline passcode editing — which row is open, and its draft value.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draftPasscode, setDraftPasscode] = useState('');
+  const [savingPasscode, setSavingPasscode] = useState(false);
+
   const load = useCallback(async () => {
     try {
       setUsers(await listUsers());
@@ -217,17 +222,31 @@ function UsersTab() {
     }
   };
 
-  const resetPasscode = async (user: UserRecord) => {
-    const next = window.prompt(`New passcode for ${user.username} (min 8 characters):`);
-    if (!next) return;
+  const openPasscodeEditor = (user: UserRecord) => {
+    setEditingId(user.id);
+    setDraftPasscode('');
+    setError('');
+    setNotice('');
+  };
+
+  const cancelPasscodeEditor = () => {
+    setEditingId(null);
+    setDraftPasscode('');
+  };
+
+  const savePasscode = async (user: UserRecord) => {
+    setSavingPasscode(true);
     setError('');
     setNotice('');
     try {
-      await updateUser(user.id, { passcode: next });
+      await updateUser(user.id, { passcode: draftPasscode });
       setNotice(`Passcode updated for ${user.username}.`);
+      cancelPasscodeEditor();
       await load();
     } catch (e: any) {
       setError(errText(e, 'Could not set that passcode.'));
+    } finally {
+      setSavingPasscode(false);
     }
   };
 
@@ -244,13 +263,13 @@ function UsersTab() {
             onChange={(e) => setUsername(e.target.value)}
             placeholder="Username"
             autoCapitalize="none"
-            className="bg-gray-900/60 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            className="w-full min-w-0 bg-gray-900/60 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
           />
           <input
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder="Display name (optional)"
-            className="bg-gray-900/60 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            className="w-full min-w-0 bg-gray-900/60 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
           />
           <input
             type="text"
@@ -258,12 +277,12 @@ function UsersTab() {
             onChange={(e) => setPasscode(e.target.value)}
             placeholder="Passcode (min 8)"
             autoComplete="off"
-            className="bg-gray-900/60 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            className="w-full min-w-0 bg-gray-900/60 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
           />
           <select
             value={role}
             onChange={(e) => setRole(e.target.value)}
-            className="bg-gray-900/60 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+            className="w-full min-w-0 bg-gray-900/60 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
           >
             <option value="warehouse_staff">Warehouse Staff</option>
             <option value="admin">Admin</option>
@@ -323,20 +342,53 @@ function UsersTab() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <button
-                        onClick={() => resetPasscode(u)}
-                        className="text-xs text-blue-400 hover:text-blue-300 mr-4"
-                      >
-                        Set passcode
-                      </button>
-                      <button
-                        onClick={() => setActive(u, !u.active)}
-                        disabled={isSelf}
-                        title={isSelf ? 'You cannot deactivate your own account' : undefined}
-                        className="text-xs text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-                      >
-                        {u.active ? 'Deactivate' : 'Reactivate'}
-                      </button>
+                      {editingId === u.id ? (
+                        <div className="flex items-center justify-end gap-2">
+                          <input
+                            type="text"
+                            value={draftPasscode}
+                            onChange={(e) => setDraftPasscode(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && draftPasscode.length >= 8) savePasscode(u);
+                              if (e.key === 'Escape') cancelPasscodeEditor();
+                            }}
+                            placeholder="New passcode (min 8)"
+                            autoComplete="off"
+                            autoFocus
+                            className="w-48 bg-gray-900/60 border border-gray-800 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                          />
+                          <button
+                            onClick={() => savePasscode(u)}
+                            disabled={draftPasscode.length < 8 || savingPasscode}
+                            className="text-xs text-blue-400 hover:text-blue-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            {savingPasscode ? 'Saving…' : 'Save'}
+                          </button>
+                          <button
+                            onClick={cancelPasscodeEditor}
+                            className="text-xs text-gray-500 hover:text-white"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => openPasscodeEditor(u)}
+                            className="text-xs text-blue-400 hover:text-blue-300 mr-4"
+                          >
+                            Set passcode
+                          </button>
+                          <button
+                            onClick={() => setActive(u, !u.active)}
+                            disabled={isSelf}
+                            title={isSelf ? 'You cannot deactivate your own account' : undefined}
+                            className="text-xs text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            {u.active ? 'Deactivate' : 'Reactivate'}
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 );
@@ -359,14 +411,16 @@ const AdminPageAccessPage: React.FC = () => {
     setSearchParams(tab === 'access' ? {} : { tab }, { replace: true });
   };
 
+  // min-w-0 lets the tables and the add-user grid shrink inside the layout
+  // instead of forcing the whole page wider than the viewport.
   return (
-    <div className="h-full">
+    <div className="h-full min-w-0">
       <div className="mb-6">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1 sm:mb-2">Admin</h1>
         <p className="text-sm sm:text-base text-gray-400">
           {activeTab === 'access'
             ? 'Control which pages each role can see.'
-            : 'Create accounts, reset passwords and deactivate users.'}
+            : 'Create accounts, set passcodes and deactivate users.'}
         </p>
       </div>
 
