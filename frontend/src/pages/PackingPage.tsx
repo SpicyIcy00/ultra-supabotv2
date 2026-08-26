@@ -12,6 +12,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ProductPicker } from '../components/packing/ProductPicker';
 import { PackingListTable } from '../components/packing/PackingListTable';
+import { PrintableSheet, PRINT_STYLES } from '../components/packing/PrintableSheet';
 import {
   addItem,
   createList,
@@ -60,6 +61,7 @@ function BuildTab({ list, setList, onFinished }: BuildTabProps) {
   const [quantity, setQuantity] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [printing, setPrinting] = useState<ListDetail | null>(null);
 
   const add = async () => {
     if (!product) return;
@@ -108,6 +110,25 @@ function BuildTab({ list, setList, onFinished }: BuildTabProps) {
     }
   };
 
+  /**
+   * Render the sheet offscreen, print it, then tear it down. Printing in place
+   * avoids a second tab, a second page load and the popup blocker — the OS
+   * dialog just appears over the app.
+   */
+  const printInPlace = (target: ListDetail) =>
+    new Promise<void>((resolve) => {
+      setPrinting(target);
+      // Two frames: one for React to commit the sheet, one for layout to settle
+      // before the browser snapshots the page.
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          window.print();
+          setPrinting(null);
+          resolve();
+        }),
+      );
+    });
+
   /** Put the list away and hand the user over to History, where it now lives. */
   const close = async (target: ListDetail) => {
     setBusy(true);
@@ -128,9 +149,7 @@ function BuildTab({ list, setList, onFinished }: BuildTabProps) {
 
   const printAndSave = async () => {
     if (!list) return;
-    // window.open has to happen synchronously inside the click or the popup
-    // blocker eats it, so the tab is opened before the save is awaited.
-    window.open(`/packing/${list.id}/print`, '_blank', 'noopener');
+    await printInPlace(list);
     await close(list);
   };
 
@@ -222,6 +241,14 @@ function BuildTab({ list, setList, onFinished }: BuildTabProps) {
           Search for a product above to start a list.
         </div>
       )}
+
+      {/* Mounted only while printing, parked offscreen. */}
+      {printing && (
+        <>
+          <style>{PRINT_STYLES}</style>
+          <PrintableSheet list={printing} offscreen />
+        </>
+      )}
     </div>
   );
 }
@@ -237,6 +264,17 @@ function HistoryTab() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [printing, setPrinting] = useState<ListDetail | null>(null);
+
+  const printInPlace = (target: ListDetail) => {
+    setPrinting(target);
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        window.print();
+        setPrinting(null);
+      }),
+    );
+  };
 
   const load = useCallback(async () => {
     try {
@@ -339,14 +377,12 @@ function HistoryTab() {
             </div>
           </div>
           <div className="flex gap-2">
-            <a
-              href={`/packing/${open.id}/print`}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              onClick={() => printInPlace(open)}
               className="px-3 py-2 text-sm font-medium text-gray-300 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
             >
               Print
-            </a>
+            </button>
             <button
               onClick={markDone}
               disabled={busy || open.status === 'done'}
@@ -372,6 +408,14 @@ function HistoryTab() {
           busy={busy}
           onSaveActuals={saveActuals}
         />
+
+        {/* Mounted only while printing, parked offscreen. */}
+        {printing && (
+          <>
+            <style>{PRINT_STYLES}</style>
+            <PrintableSheet list={printing} offscreen />
+          </>
+        )}
       </div>
     );
   }
