@@ -161,16 +161,6 @@ export function PrintableSheet({ list, offscreen }: PrintableSheetProps) {
             </tr>
           ))}
         </tbody>
-        <tfoot>
-          <tr>
-            <td>Total ({list.totals.item_count} items)</td>
-            <td>&nbsp;</td>
-            <td className="num">{kg(list.totals.total_packed_kg)}</td>
-            <td className="num">{list.totals.total_packs}</td>
-            <td>&nbsp;</td>
-            <td>&nbsp;</td>
-          </tr>
-        </tfoot>
       </table>
     </div>
   );
