@@ -54,6 +54,30 @@ export interface ListDetail extends ListSummary {
   items: ItemRecord[];
 }
 
+/** Any product, whether or not it has a pack weight yet. */
+export interface CatalogProduct {
+  id: string;
+  name: string;
+  nickname: string | null;
+  sku: string | null;
+  category: string | null;
+  pack_weight_g: number | null;
+}
+
+export const searchCatalog = async (
+  search?: string,
+  missingOnly = false,
+): Promise<CatalogProduct[]> =>
+  (await axios.get<CatalogProduct[]>(`${API_BASE}/catalog`, {
+    params: { ...(search ? { search } : {}), missing_only: missingOnly },
+  })).data;
+
+export const updateProductPacking = async (
+  productId: string,
+  payload: { pack_weight_g?: number | null; nickname?: string | null },
+): Promise<CatalogProduct> =>
+  (await axios.patch<CatalogProduct>(`${API_BASE}/catalog/${productId}`, payload)).data;
+
 export const getCategories = async (): Promise<string[]> =>
   (await axios.get<string[]>(`${API_BASE}/categories`)).data;
 

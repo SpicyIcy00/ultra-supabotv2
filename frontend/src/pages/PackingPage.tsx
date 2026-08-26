@@ -13,6 +13,7 @@ import { useSearchParams } from 'react-router-dom';
 import { ProductPicker } from '../components/packing/ProductPicker';
 import { PackingListTable } from '../components/packing/PackingListTable';
 import { PrintableSheet, PRINT_STYLES } from '../components/packing/PrintableSheet';
+import { PackWeightsTab } from '../components/packing/PackWeightsTab';
 import {
   addItem,
   createList,
@@ -29,11 +30,12 @@ import {
   type ProductOption,
 } from '../services/packingApi';
 
-type PackingTab = 'build' | 'history';
+type PackingTab = 'build' | 'history' | 'weights';
 
 const TABS: { key: PackingTab; label: string }[] = [
   { key: 'build', label: 'Build List' },
   { key: 'history', label: 'History' },
+  { key: 'weights', label: 'Pack Weights' },
 ];
 
 const errText = (e: any, fallback: string) => e?.response?.data?.detail ?? fallback;
@@ -513,7 +515,9 @@ function HistoryTab({ closeSignal }: HistoryTabProps) {
 
 const PackingPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab: PackingTab = searchParams.get('tab') === 'history' ? 'history' : 'build';
+  const tabParam = searchParams.get('tab');
+  const activeTab: PackingTab =
+    tabParam === 'history' ? 'history' : tabParam === 'weights' ? 'weights' : 'build';
   const [list, setList] = useState<ListDetail | null>(null);
   const [historyCloseSignal, setHistoryCloseSignal] = useState(0);
 
@@ -532,7 +536,9 @@ const PackingPage: React.FC = () => {
         <p className="text-sm sm:text-base text-gray-400">
           {activeTab === 'build'
             ? 'Build a packing list, then print it for the floor.'
-            : 'Past lists — reopen one to record what was actually packed.'}
+            : activeTab === 'history'
+              ? 'Past lists — reopen one to record what was actually packed.'
+              : 'Set the per-pack weight and nickname for any product.'}
         </p>
       </div>
 
@@ -552,11 +558,11 @@ const PackingPage: React.FC = () => {
         ))}
       </div>
 
-      {activeTab === 'build' ? (
+      {activeTab === 'build' && (
         <BuildTab list={list} setList={setList} onFinished={() => selectTab('history')} />
-      ) : (
-        <HistoryTab closeSignal={historyCloseSignal} />
       )}
+      {activeTab === 'history' && <HistoryTab closeSignal={historyCloseSignal} />}
+      {activeTab === 'weights' && <PackWeightsTab />}
     </div>
   );
 };

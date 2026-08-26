@@ -53,6 +53,24 @@ class ProductOption(BaseModel):
     pack_weight_g: Optional[float] = None
 
 
+class CatalogProduct(BaseModel):
+    """Any product, whether or not it can be packed yet."""
+
+    id: str
+    name: str
+    nickname: Optional[str] = None
+    sku: Optional[str] = None
+    category: Optional[str] = None
+    pack_weight_g: Optional[float] = None
+
+
+class UpdateProductPackingRequest(BaseModel):
+    # Sent as null to clear a weight, which takes the product back out of the
+    # packing picker.
+    pack_weight_g: Optional[float] = Field(default=None, ge=0)
+    nickname: Optional[str] = None
+
+
 class CreateListRequest(BaseModel):
     category: Optional[str] = None
 
@@ -317,6 +335,100 @@ async def search_products(
         )
         for p in rows.scalars().all()
     ]
+
+
+@router.get("/catalog", response_model=List[CatalogProduct])
+async def search_catalog(
+    search: Optional[str] = Query(default=None),
+    missing_only: bool = Query(default=False),
+    limit: int = Query(default=100, ge=1, le=500),
+    db: AsyncSession = Depends(get_db),
+    _: AppUser = Depends(_packing_user),
+):
+    """
+    Every product, including those with no pack weight yet.
+
+    /products only returns packable items, so a product missing a weight is
+    invisible there with no way to fix it. This is the list you set weights
+    from; missing_only narrows it to the ones still to do.
+    """
+    query = select(Product)
+
+    if missing_only:
+        query = query.where(
+            or_(Product.pack_weight_g.is_(None), Product.pack_weight_g <= 0)
+        )
+
+    if search:
+        term = f"%{search.strip()}%"
+        query = query.where(
+            or_(
+                Product.nickname.ilike(term),
+                Product.name.ilike(term),
+                Product.sku.ilike(term),
+            )
+        )
+
+    query = query.order_by(Product.name).limit(limit)
+    rows = await db.execute(query)
+
+    return [
+        CatalogProduct(
+            id=p.id,
+            name=p.name,
+            nickname=p.nickname,
+            sku=p.sku,
+            category=p.category,
+            pack_weight_g=_f(p.pack_weight_g),
+        )
+        for p in rows.scalars().all()
+    ]
+
+
+@router.patch("/catalog/{product_id}", response_model=CatalogProduct)
+async def update_product_packing(
+    product_id: str,
+    payload: UpdateProductPackingRequest,
+    db: AsyncSession = Depends(get_db),
+    _: AppUser = Depends(_packing_user),
+):
+    """
+    Set a product's pack weight and nickname.
+
+    Only these two fields are touched — everything else on the product row is
+    catalogue data owned elsewhere. Existing packing_items keep the weight they
+    snapshotted, so changing this never rewrites past lists.
+    """
+    result = await db.execute(select(Product).where(Product.id == product_id))
+    product = result.scalar_one_or_none()
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    fields = payload.model_dump(exclude_unset=True)
+
+    if "pack_weight_g" in fields:
+        weight = fields["pack_weight_g"]
+        if weight is not None and weight <= 0:
+            raise HTTPException(
+                status_code=400, detail="Pack weight must be greater than zero"
+            )
+        product.pack_weight_g = weight
+
+    if "nickname" in fields:
+        nickname = (fields["nickname"] or "").strip()
+        product.nickname = nickname or None
+
+    await db.commit()
+    await db.refresh(product)
+
+    return CatalogProduct(
+        id=product.id,
+        name=product.name,
+        nickname=product.nickname,
+        sku=product.sku,
+        category=product.category,
+        pack_weight_g=_f(product.pack_weight_g),
+    )
 
 
 # ---------------------------------------------------------------------------
