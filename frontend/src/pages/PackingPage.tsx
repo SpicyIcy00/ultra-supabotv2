@@ -143,15 +143,16 @@ function BuildTab({ list, setList }: BuildTabProps) {
 
       {/* Add a product */}
       <div className="bg-gray-900/40 border border-[#2e303d] rounded-lg p-4 mb-6">
+        {/* Every control is h-11 so the row lines up on one baseline. */}
         <div className="grid grid-cols-1 lg:grid-cols-[2fr,auto,1fr,auto] gap-3 items-start">
           <ProductPicker selected={product} onSelect={setProduct} />
 
-          <div className="flex rounded-lg overflow-hidden border border-gray-800">
+          <div className="flex h-11 rounded-lg overflow-hidden border border-gray-800">
             {(['packs', 'kg'] as PackUnit[]).map((u) => (
               <button
                 key={u}
                 onClick={() => setUnit(u)}
-                className={`px-3 py-2 text-sm transition-colors ${
+                className={`px-4 text-sm transition-colors ${
                   unit === u
                     ? 'bg-blue-500/20 text-blue-400'
                     : 'bg-gray-900/60 text-gray-400 hover:text-white'
@@ -170,13 +171,13 @@ function BuildTab({ list, setList }: BuildTabProps) {
               if (e.key === 'Enter') add();
             }}
             placeholder={unit === 'packs' ? 'How many packs' : 'Target weight (kg)'}
-            className="w-full min-w-0 bg-gray-900/60 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            className="w-full min-w-0 h-11 bg-gray-900/60 border border-gray-800 rounded-lg px-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
           />
 
           <button
             onClick={add}
             disabled={busy || !product || !quantity}
-            className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="h-11 px-5 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Add
           </button>
