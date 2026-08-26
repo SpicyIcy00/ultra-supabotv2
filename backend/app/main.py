@@ -201,7 +201,60 @@ async def startup_event():
                     ADD COLUMN IF NOT EXISTS day_times          TEXT,
                     ADD COLUMN IF NOT EXISTS telegram_chat_ids  TEXT
             """))
-        print("Schema migration: max_cover_days + product_barcodes + percentile columns + store config + auto_report + scheduled_reports ensured")
+            # --- Warehouse Packing step 1: auth + role-based page access ---
+            # Mirrors backend/sql/001_auth_roles.sql so a fresh deploy self-heals.
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS app_users (
+                    id            UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+                    username      VARCHAR(64)  NOT NULL UNIQUE,
+                    password_hash VARCHAR(255) NOT NULL,
+                    role          VARCHAR(32)  NOT NULL DEFAULT 'warehouse_staff',
+                    display_name  VARCHAR(120),
+                    active        BOOLEAN      NOT NULL DEFAULT TRUE,
+                    created_at    TIMESTAMPTZ  NOT NULL DEFAULT timezone('Asia/Manila', now())
+                )
+            """))
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS role_page_access (
+                    role     VARCHAR(32)  NOT NULL,
+                    page_key VARCHAR(64)  NOT NULL,
+                    enabled  BOOLEAN      NOT NULL DEFAULT FALSE,
+                    PRIMARY KEY (role, page_key)
+                )
+            """))
+            # Seed the page matrix (never overwrites toggles you have changed)
+            await conn.execute(text("""
+                INSERT INTO role_page_access (role, page_key, enabled) VALUES
+                    ('admin',           'dashboard', TRUE),
+                    ('admin',           'analytics', TRUE),
+                    ('admin',           'ai_chat',   TRUE),
+                    ('admin',           'warehouse', TRUE),
+                    ('admin',           'settings',  TRUE),
+                    ('admin',           'packing',   TRUE),
+                    ('admin',           'admin',     TRUE),
+                    ('warehouse_staff', 'packing',   TRUE),
+                    ('warehouse_staff', 'dashboard', FALSE),
+                    ('warehouse_staff', 'analytics', FALSE),
+                    ('warehouse_staff', 'ai_chat',   FALSE),
+                    ('warehouse_staff', 'warehouse', FALSE),
+                    ('warehouse_staff', 'settings',  FALSE),
+                    ('warehouse_staff', 'admin',     FALSE)
+                ON CONFLICT (role, page_key) DO NOTHING
+            """))
+            # Bootstrap admin — username 'admin', password 'ChangeMe!2026'.
+            # CHANGE THIS PASSWORD after the first login; the hash is public.
+            await conn.execute(text("""
+                INSERT INTO app_users (username, password_hash, role, display_name, active)
+                VALUES (
+                    'admin',
+                    '$2b$12$pUaBn6sOnpQ4yTkBjCYpQOfdyvCRXgPEWjHb8SC0vWx2hqUEItxN2',
+                    'admin',
+                    'Administrator',
+                    TRUE
+                )
+                ON CONFLICT (username) DO NOTHING
+            """))
+        print("Schema migration: max_cover_days + product_barcodes + percentile columns + store config + auto_report + scheduled_reports + app_users/role_page_access ensured")
     except Exception as e:
         print(f"Schema migration warning: {e}")
 
@@ -240,8 +293,10 @@ async def shutdown_event():
     SchemaContext.shutdown()
     print("SchemaContext shut down")
 
-from app.api.v1.routes import analytics, chatbot, stores, products, reports, report_presets, google_sheets, saved_queries, replenishment, store_filters, barcodes, scheduled_reports, vending, dashboard_defaults
+from app.api.v1.routes import analytics, chatbot, stores, products, reports, report_presets, google_sheets, saved_queries, replenishment, store_filters, barcodes, scheduled_reports, vending, dashboard_defaults, auth, admin
 
+app.include_router(auth.router, prefix=f"{settings.API_V1_PREFIX}/auth", tags=["auth"])
+app.include_router(admin.router, prefix=f"{settings.API_V1_PREFIX}/admin", tags=["admin"])
 app.include_router(analytics.router, prefix=f"{settings.API_V1_PREFIX}/analytics")
 app.include_router(chatbot.router, prefix=f"{settings.API_V1_PREFIX}/chatbot")
 app.include_router(reports.router, prefix=f"{settings.API_V1_PREFIX}/reports", tags=["reports"])

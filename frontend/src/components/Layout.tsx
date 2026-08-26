@@ -6,6 +6,7 @@
  */
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuthStore } from '../stores/authStore';
 
 
 interface LayoutProps {
@@ -84,16 +85,33 @@ const navIcons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   ),
+  packing: (
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10m0-10l8-4M4 7v10l8 4" />
+    </svg>
+  ),
+  admin: (
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M12 3l7 4v5c0 4.418-2.99 8.166-7 9-4.01-.834-7-4.582-7-9V7l7-4z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
+    </svg>
+  ),
 };
 
+// `page` ties each item to its role_page_access page_key — the nav is filtered
+// by the user's allowed_pages, so staff never see links they cannot open.
 const navItems = [
   // Dashboard owns two tabs: Stores (/) and Vending (/vending)
-  { to: '/', icon: navIcons.dashboard, label: 'Dashboard', match: (p: string) => p === '/' || p === '/vending' },
-  { to: '/analytics', icon: navIcons.analytics, label: 'Analytics', match: (p: string) => p === '/analytics' },
-  { to: '/ai-chat', icon: navIcons.chat, label: 'AI Chat', match: (p: string) => p === '/ai-chat' },
+  { to: '/', page: 'dashboard', icon: navIcons.dashboard, label: 'Dashboard', match: (p: string) => p === '/' || p === '/vending' },
+  { to: '/analytics', page: 'analytics', icon: navIcons.analytics, label: 'Analytics', match: (p: string) => p === '/analytics' },
+  { to: '/ai-chat', page: 'ai_chat', icon: navIcons.chat, label: 'AI Chat', match: (p: string) => p === '/ai-chat' },
   // Warehouse owns two tabs: Replenishment Reports and Barcode Generator
-  { to: '/warehouse', icon: navIcons.warehouse, label: 'Warehouse', match: (p: string) => p === '/warehouse' },
-  { to: '/settings', icon: navIcons.settings, label: 'Settings', match: (p: string) => p === '/settings' },
+  { to: '/warehouse', page: 'warehouse', icon: navIcons.warehouse, label: 'Warehouse', match: (p: string) => p === '/warehouse' },
+  { to: '/packing', page: 'packing', icon: navIcons.packing, label: 'Packing', match: (p: string) => p === '/packing' },
+  { to: '/settings', page: 'settings', icon: navIcons.settings, label: 'Settings', match: (p: string) => p === '/settings' },
+  { to: '/admin/page-access', page: 'admin', icon: navIcons.admin, label: 'Admin', match: (p: string) => p.startsWith('/admin') },
 ];
 
 export function Layout({ children }: LayoutProps) {
@@ -101,6 +119,14 @@ export function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isPhone, setIsPhone] = useState(false);
+
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+
+  // Only the pages this user's role is allowed to see.
+  const visibleNavItems = navItems.filter(
+    (item) => user?.allowed_pages.includes(item.page) ?? false,
+  );
 
   // Detect screen size: phone (<768), tablet (768-1023), desktop (>=1024)
   useEffect(() => {
@@ -169,7 +195,7 @@ export function Layout({ children }: LayoutProps) {
 
             {/* Navigation */}
             <nav className="space-y-2">
-              {navItems.map((item) => (
+              {visibleNavItems.map((item) => (
                 <NavItem
                   key={item.to}
                   to={item.to}
@@ -182,10 +208,21 @@ export function Layout({ children }: LayoutProps) {
             </nav>
           </div>
 
-          {/* Footer */}
+          {/* Footer — signed-in user + sign out */}
           <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-800">
-            <div className="text-xs text-gray-500 text-center">
-              Analytics Dashboard v1.0
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="text-sm text-gray-300 truncate">
+                  {user?.display_name || user?.username}
+                </div>
+                <div className="text-xs text-gray-600 truncate">{user?.role}</div>
+              </div>
+              <button
+                onClick={logout}
+                className="text-xs text-gray-500 hover:text-white transition-colors shrink-0"
+              >
+                Sign out
+              </button>
             </div>
           </div>
         </aside>
@@ -211,6 +248,15 @@ export function Layout({ children }: LayoutProps) {
                 <span className="text-sm font-bold text-white">Supabot</span>
               )}
 
+              {/* Phone has no sidebar, so sign-out lives in the header there */}
+              {isPhone && (
+                <button
+                  onClick={logout}
+                  className="text-xs text-gray-500 hover:text-white transition-colors"
+                >
+                  Sign out
+                </button>
+              )}
             </div>
           </div>
         </header>
@@ -223,7 +269,7 @@ export function Layout({ children }: LayoutProps) {
       {isPhone && (
         <nav className="fixed bottom-0 left-0 right-0 z-30 bg-gray-900/95 backdrop-blur-sm border-t border-gray-800" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <div className="flex items-center justify-around h-16">
-            {navItems.map((item) => (
+            {visibleNavItems.map((item) => (
               <MobileNavItem
                 key={item.to}
                 to={item.to}

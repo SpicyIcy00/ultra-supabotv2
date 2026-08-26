@@ -8,11 +8,16 @@ import { queryClient } from './services/queryClient';
 import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { AuthGuard } from './components/AuthGuard';
+import { SessionGuard } from './components/SessionGuard';
+import { RequirePage, NoAccessPage } from './components/RequirePage';
+import { LandingRedirect } from './components/LandingRedirect';
 
 // Lazy-loaded pages (Dashboard stays eager as the landing page)
 const AnalyticsPage = React.lazy(() => import('./pages/AnalyticsPage'));
 const AIChatPage = React.lazy(() => import('./pages/AIChatPage'));
 const WarehousePage = React.lazy(() => import('./pages/WarehousePage'));
+const PackingPage = React.lazy(() => import('./pages/PackingPage'));
+const AdminPageAccessPage = React.lazy(() => import('./pages/AdminPageAccessPage'));
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 
 const PageSpinner = () => (
@@ -25,24 +30,33 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        {/* AuthGuard is the legacy shared access code. It stays in front of the
+            new login until username/password auth is proven in production. */}
         <AuthGuard>
-          <Layout>
-            <Suspense fallback={<PageSpinner />}>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/analytics" element={<AnalyticsPage />} />
-                {/* Vending is a tab of the dashboard, not its own page */}
-                <Route path="/vending" element={<Dashboard />} />
-                <Route path="/ai-chat" element={<AIChatPage />} />
-                {/* Warehouse owns two tabs: Replenishment Reports and Barcode Generator */}
-                <Route path="/warehouse" element={<WarehousePage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                {/* Legacy paths — kept so old links/bookmarks still resolve */}
-                <Route path="/reports/product-sales" element={<Navigate to="/warehouse" replace />} />
-                <Route path="/barcodes" element={<Navigate to="/warehouse?tab=barcodes" replace />} />
-              </Routes>
-            </Suspense>
-          </Layout>
+          <SessionGuard>
+            <Layout>
+              <Suspense fallback={<PageSpinner />}>
+                <Routes>
+                  {/* A user without 'dashboard' gets sent to their own first
+                      allowed page instead of an empty dashboard shell. */}
+                  <Route path="/" element={<LandingRedirect><Dashboard /></LandingRedirect>} />
+                  <Route path="/analytics" element={<RequirePage pageKey="analytics"><AnalyticsPage /></RequirePage>} />
+                  {/* Vending is a tab of the dashboard, not its own page */}
+                  <Route path="/vending" element={<RequirePage pageKey="dashboard"><Dashboard /></RequirePage>} />
+                  <Route path="/ai-chat" element={<RequirePage pageKey="ai_chat"><AIChatPage /></RequirePage>} />
+                  {/* Warehouse owns two tabs: Replenishment Reports and Barcode Generator */}
+                  <Route path="/warehouse" element={<RequirePage pageKey="warehouse"><WarehousePage /></RequirePage>} />
+                  <Route path="/packing" element={<RequirePage pageKey="packing"><PackingPage /></RequirePage>} />
+                  <Route path="/settings" element={<RequirePage pageKey="settings"><SettingsPage /></RequirePage>} />
+                  <Route path="/admin/page-access" element={<RequirePage pageKey="admin"><AdminPageAccessPage /></RequirePage>} />
+                  <Route path="/no-access" element={<NoAccessPage />} />
+                  {/* Legacy paths — kept so old links/bookmarks still resolve */}
+                  <Route path="/reports/product-sales" element={<Navigate to="/warehouse" replace />} />
+                  <Route path="/barcodes" element={<Navigate to="/warehouse?tab=barcodes" replace />} />
+                </Routes>
+              </Suspense>
+            </Layout>
+          </SessionGuard>
         </AuthGuard>
       </BrowserRouter>
     </QueryClientProvider>

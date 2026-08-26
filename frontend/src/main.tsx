@@ -2,6 +2,11 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { installAuthInterceptors } from './services/httpAuth'
+
+// Must run before any component fires a request, so every call carries the
+// bearer token and a 401 reliably drops the session.
+installAuthInterceptors()
 
 // A deploy replaces every hashed chunk, so a tab still running the previous
 // index.html can no longer fetch the lazy routes it was built against. Reload

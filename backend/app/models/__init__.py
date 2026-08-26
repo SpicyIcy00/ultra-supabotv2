@@ -15,6 +15,8 @@ from app.models.replenishment import (
 )
 from app.models.store_filter import StoreFilter
 from app.models.dashboard_default import DashboardDefault
+from app.models.app_user import AppUser
+from app.models.role_page_access import RolePageAccess
 from app.models.scheduled_report import ScheduledReport
 from app.models.vending import (
     VendingDevice,
@@ -40,6 +42,8 @@ __all__ = [
     "AutoReportStore",
     "StoreFilter",
     "DashboardDefault",
+    "AppUser",
+    "RolePageAccess",
     "ScheduledReport",
     "VendingDevice",
     "VendingGoods",

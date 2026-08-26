@@ -46,7 +46,9 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = "your-secret-key-here-change-in-production"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    # 12 hours — a warehouse shift. Staff should not be re-typing a password
+    # onto a shop-floor tablet halfway through packing.
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 720
 
     # CORS
     # CORS
