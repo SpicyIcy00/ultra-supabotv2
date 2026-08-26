@@ -412,7 +412,20 @@ class SchemaContext:
                 schema_parts.append("\n**Indexes:**\n")
                 for idx in indexes:
                     idx_name = idx['name']
-                    idx_cols = ', '.join(idx['column_names'])
+                    # An expression index (e.g. ON products (lower(nickname)))
+                    # reports None in place of a column name. Joining that raises
+                    # TypeError and takes down startup, so substitute the
+                    # expression text where the inspector provides it.
+                    expressions = idx.get('expressions') or []
+                    cols = []
+                    for position, column in enumerate(idx['column_names']):
+                        if column is not None:
+                            cols.append(column)
+                        elif position < len(expressions):
+                            cols.append(str(expressions[position]))
+                        else:
+                            cols.append('<expression>')
+                    idx_cols = ', '.join(cols)
                     unique = "UNIQUE " if idx.get('unique') else ""
                     schema_parts.append(f"- {unique}INDEX `{idx_name}` on ({idx_cols})\n")
 

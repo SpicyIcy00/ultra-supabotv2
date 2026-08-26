@@ -21,7 +21,14 @@
 ALTER TABLE products ADD COLUMN IF NOT EXISTS pack_weight_g NUMERIC;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS nickname      TEXT;
 
-CREATE INDEX IF NOT EXISTS ix_products_nickname ON products (lower(nickname));
+-- An earlier revision created an expression index here, ON products
+-- (lower(nickname)). SQLAlchemy's inspector reports column_names as [None] for
+-- expression indexes, which crashed SchemaContext's cache builder and took the
+-- whole app down on startup. Drop it if it is still around.
+--
+-- No replacement: product search is ILIKE '%term%', which no btree index can
+-- serve anyway, across roughly 115 packable products.
+DROP INDEX IF EXISTS ix_products_nickname;
 
 
 -- ---------------------------------------------------------------------------

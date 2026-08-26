@@ -317,9 +317,12 @@ async def startup_event():
             await conn.execute(text(
                 "ALTER TABLE products ADD COLUMN IF NOT EXISTS nickname TEXT"
             ))
-            await conn.execute(text(
-                "CREATE INDEX IF NOT EXISTS ix_products_nickname ON products (lower(nickname))"
-            ))
+            # This was an expression index on lower(nickname). SQLAlchemy's
+            # inspector reports column_names as [None] for expression indexes,
+            # which crashed SchemaContext's cache builder on startup. It also
+            # bought nothing: product search is ILIKE '%term%', which no btree
+            # index can serve, over ~115 rows.
+            await conn.execute(text("DROP INDEX IF EXISTS ix_products_nickname"))
             await conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS packing_lists (
                     id         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
