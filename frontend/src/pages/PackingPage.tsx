@@ -206,7 +206,7 @@ function BuildTab({ list, setList, onFinished }: BuildTabProps) {
               if (e.key === 'Enter') add();
             }}
             placeholder={unit === 'packs' ? 'How many packs' : 'Target weight (kg)'}
-            className="w-full min-w-0 h-11 bg-gray-900/60 border border-gray-800 rounded-lg px-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            className="no-spinner w-full min-w-0 h-11 bg-gray-900/60 border border-gray-800 rounded-lg px-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
           />
 
           <button
