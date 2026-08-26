@@ -8,7 +8,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  createUser,
   getPageAccess,
   listUsers,
   setPageAccess,
@@ -22,7 +21,7 @@ type AdminTab = 'access' | 'users';
 
 const TABS: { key: AdminTab; label: string }[] = [
   { key: 'access', label: 'Page Access' },
-  { key: 'users', label: 'Users' },
+  { key: 'users', label: 'Accounts' },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
@@ -160,12 +159,6 @@ function UsersTab() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  const [username, setUsername] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [passcode, setPasscode] = useState('');
-  const [role, setRole] = useState('warehouse_staff');
-  const [creating, setCreating] = useState(false);
-
   // Inline passcode editing — which row is open, and its draft value.
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftPasscode, setDraftPasscode] = useState('');
@@ -186,30 +179,6 @@ function UsersTab() {
     load();
   }, [load]);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreating(true);
-    setError('');
-    setNotice('');
-    try {
-      await createUser({
-        username,
-        passcode,
-        role,
-        display_name: displayName || undefined,
-      });
-      setNotice(`Created ${username.toLowerCase()}.`);
-      setUsername('');
-      setDisplayName('');
-      setPasscode('');
-      setRole('warehouse_staff');
-      await load();
-    } catch (e: any) {
-      setError(errText(e, 'Could not create that user.'));
-    } finally {
-      setCreating(false);
-    }
-  };
 
   const setActive = async (user: UserRecord, active: boolean) => {
     setError('');
@@ -252,51 +221,6 @@ function UsersTab() {
 
   return (
     <div>
-      <form
-        onSubmit={handleCreate}
-        className="bg-gray-900/40 border border-[#2e303d] rounded-lg p-4 mb-6"
-      >
-        <h3 className="text-sm font-semibold text-white mb-3">Add a user</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Username"
-            autoCapitalize="none"
-            className="w-full min-w-0 bg-gray-900/60 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-          />
-          <input
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="Display name (optional)"
-            className="w-full min-w-0 bg-gray-900/60 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-          />
-          <input
-            type="text"
-            value={passcode}
-            onChange={(e) => setPasscode(e.target.value)}
-            placeholder="Passcode (min 8)"
-            autoComplete="off"
-            className="w-full min-w-0 bg-gray-900/60 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-          />
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className="w-full min-w-0 bg-gray-900/60 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
-          >
-            <option value="warehouse_staff">Warehouse Staff</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
-        <button
-          type="submit"
-          disabled={!username || passcode.length < 8 || creating}
-          className="mt-3 px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {creating ? 'Creating…' : 'Create user'}
-        </button>
-      </form>
-
       {error && <div className="text-red-400 text-sm mb-3">{error}</div>}
       {notice && <div className="text-green-400 text-sm mb-3">{notice}</div>}
 
@@ -420,7 +344,7 @@ const AdminPageAccessPage: React.FC = () => {
         <p className="text-sm sm:text-base text-gray-400">
           {activeTab === 'access'
             ? 'Control which pages each role can see.'
-            : 'Create accounts, set passcodes and deactivate users.'}
+            : 'Change the passcode for each account.'}
         </p>
       </div>
 
