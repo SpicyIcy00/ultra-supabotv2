@@ -223,6 +223,33 @@ def _normalise_unit(unit: str, quantity: float) -> tuple[str, float]:
     return unit, quantity
 
 
+async def _reject_unreconciled(db: AsyncSession, list_id: uuid.UUID) -> None:
+    """Refuse to close a list while any row is missing actual_packed."""
+    result = await db.execute(
+        select(PackingItem, Product)
+        .join(Product, PackingItem.product_id == Product.id)
+        .where(
+            PackingItem.packing_list_id == list_id,
+            PackingItem.actual_packed.is_(None),
+        )
+    )
+    rows = result.all()
+    if not rows:
+        return
+
+    names = [(p.nickname or p.name) for _, p in rows]
+    shown = ", ".join(names[:3])
+    if len(names) > 3:
+        shown += f" and {len(names) - 3} more"
+    raise HTTPException(
+        status_code=400,
+        detail=(
+            f"{len(names)} product(s) still need an actual packed figure: {shown}. "
+            "Enter 0 for anything that was not packed."
+        ),
+    )
+
+
 async def _require_packable(db: AsyncSession, product_id: str) -> Product:
     result = await db.execute(select(Product).where(Product.id == product_id))
     product = result.scalar_one_or_none()
@@ -399,6 +426,15 @@ async def update_list(
             raise HTTPException(
                 status_code=400, detail=f"status must be one of {list(STATUSES)}"
             )
+
+        # 'done' means the physical packing is reconciled. Closing a list with
+        # rows still blank would leave the consumption report silently falling
+        # back to the ordered figure for those products, which is exactly the
+        # gap this module exists to close. Nothing packed is a real answer —
+        # enter 0 for it.
+        if payload.status == "done":
+            await _reject_unreconciled(db, list_id)
+
         plist.status = payload.status
 
     await db.commit()

@@ -357,6 +357,11 @@ function HistoryTab() {
   };
 
   if (open) {
+    // Rows whose actual_packed has not been saved yet. The row inputs hold
+    // unsaved drafts, so this counts what is actually stored, matching what the
+    // server will check.
+    const unreconciled = open.items.filter((i) => i.actual_packed === null).length;
+
     return (
       <div>
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -385,7 +390,12 @@ function HistoryTab() {
             </button>
             <button
               onClick={markDone}
-              disabled={busy || open.status === 'done'}
+              disabled={busy || open.status === 'done' || unreconciled > 0}
+              title={
+                unreconciled > 0
+                  ? `${unreconciled} row(s) still need an actual packed figure`
+                  : undefined
+              }
               className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Mark done
@@ -397,9 +407,17 @@ function HistoryTab() {
         {notice && <div className="text-green-400 text-sm mb-3">{notice}</div>}
 
         <p className="text-xs text-gray-500 mb-3">
-          Key in what was actually packed from the printed sheet. Difference is
-          calculated as packs minus actual.
+          Key in what was actually packed from the printed sheet, saving each
+          row. Difference is calculated as packs minus actual.
         </p>
+
+        {unreconciled > 0 && open.status !== 'done' && (
+          <div className="text-xs text-amber-400 mb-3">
+            {unreconciled} of {open.items.length} row(s) still need an actual packed
+            figure before this list can be marked done. Enter 0 for anything that
+            was not packed.
+          </div>
+        )}
 
         <PackingListTable
           items={open.items}
