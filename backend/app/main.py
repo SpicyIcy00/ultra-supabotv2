@@ -266,14 +266,41 @@ async def startup_event():
                 )
                 ON CONFLICT (username) DO NOTHING
             """))
+            # --- Step 1b: passcode-only login (no username) ---
+            await conn.execute(text(
+                "ALTER TABLE app_users ADD COLUMN IF NOT EXISTS passcode_hash VARCHAR(255)"
+            ))
+            # Seed a passcode for admin only if it has none, so a passcode
+            # changed from the admin screen is never reset by a redeploy.
+            await conn.execute(text("""
+                UPDATE app_users
+                SET passcode_hash = '$2b$12$9oTe/PBeAYgkXHNEWCsEyecFBrBk1qKTFf9CYJmubwBms2rgXW3Pu'
+                WHERE username = 'admin' AND passcode_hash IS NULL
+            """))
+            # The shared warehouse account. password_hash is unused under
+            # passcode login but is NOT NULL, so it gets an unmatchable marker.
+            await conn.execute(text("""
+                INSERT INTO app_users (username, password_hash, passcode_hash, role, display_name, active)
+                VALUES (
+                    'warehouse',
+                    'x',
+                    '$2b$12$bBY9rl0E0q7M94GxIFdjQ.Sl4anWcfmrlviSJgnCpyD9Z6ReBOn6i',
+                    'warehouse_staff',
+                    'Warehouse',
+                    TRUE
+                )
+                ON CONFLICT (username) DO NOTHING
+            """))
             # Report actual state, not just "ran without raising" — an empty
             # app_users table is the difference between a working login and a
             # locked-out deploy, and it is worth seeing in the Railway logs.
-            users = (await conn.execute(text("SELECT count(*) FROM app_users"))).scalar()
+            users = (await conn.execute(
+                text("SELECT count(*) FROM app_users WHERE active AND passcode_hash IS NOT NULL")
+            )).scalar()
             grants = (await conn.execute(
                 text("SELECT count(*) FROM role_page_access WHERE enabled")
             )).scalar()
-        print(f"Auth migration: app_users ensured ({users} user(s), {grants} page grant(s))")
+        print(f"Auth migration: app_users ensured ({users} account(s) able to sign in, {grants} page grant(s))")
     except Exception as e:
         print(f"AUTH MIGRATION FAILED — login will not work: {e}")
 

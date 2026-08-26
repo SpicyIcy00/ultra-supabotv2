@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.deps import require_admin
-from app.core.security import get_password_hash
+from app.core.security import get_password_hash, verify_password
 from app.models.app_user import AppUser
 from app.models.role_page_access import PAGE_KEYS, ROLES, RolePageAccess
 
@@ -31,6 +31,7 @@ class UserRecord(BaseModel):
     role: str
     display_name: Optional[str] = None
     active: bool
+    has_passcode: bool
     created_at: str
 
 
@@ -38,7 +39,7 @@ class CreateUserRequest(BaseModel):
     username: str = Field(min_length=3, max_length=64)
     # 72 bytes is bcrypt's hard limit — anything longer is silently truncated,
     # which would make the extra characters meaningless.
-    password: str = Field(min_length=8, max_length=72)
+    passcode: str = Field(min_length=8, max_length=72)
     role: str = "warehouse_staff"
     display_name: Optional[str] = None
 
@@ -47,7 +48,7 @@ class UpdateUserRequest(BaseModel):
     display_name: Optional[str] = None
     role: Optional[str] = None
     active: Optional[bool] = None
-    password: Optional[str] = Field(default=None, min_length=8, max_length=72)
+    passcode: Optional[str] = Field(default=None, min_length=8, max_length=72)
 
 
 class PageAccessRow(BaseModel):
@@ -72,6 +73,29 @@ class TogglePageAccessRequest(BaseModel):
 # Users
 # ---------------------------------------------------------------------------
 
+async def _reject_passcode_collision(
+    db: AsyncSession, passcode: str, exclude_id=None
+) -> None:
+    """
+    Refuse a passcode already in use by another account.
+
+    Login resolves a passcode to a user by verifying candidates in turn and
+    taking the first match, so two accounts sharing a passcode would silently
+    send everyone to whichever row happens to be older.
+    """
+    result = await db.execute(
+        select(AppUser).where(AppUser.passcode_hash.isnot(None))
+    )
+    for other in result.scalars().all():
+        if exclude_id is not None and other.id == exclude_id:
+            continue
+        if verify_password(passcode, other.passcode_hash):
+            raise HTTPException(
+                status_code=400,
+                detail=f"That passcode is already used by '{other.username}'",
+            )
+
+
 def _to_record(u: AppUser) -> UserRecord:
     return UserRecord(
         id=str(u.id),
@@ -79,6 +103,9 @@ def _to_record(u: AppUser) -> UserRecord:
         role=u.role,
         display_name=u.display_name,
         active=u.active,
+        # Never return the hash itself — the screen only needs to know whether
+        # this account can sign in at all.
+        has_passcode=bool(u.passcode_hash),
         created_at=u.created_at.isoformat() if u.created_at else "",
     )
 
@@ -111,9 +138,14 @@ async def create_user(
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="That username is already taken")
 
+    await _reject_passcode_collision(db, payload.passcode)
+
     user = AppUser(
         username=username,
-        password_hash=get_password_hash(payload.password),
+        # Unused under passcode login, but the column is NOT NULL. A literal
+        # marker no bcrypt verify can match keeps the password path dead.
+        password_hash="x",
+        passcode_hash=get_password_hash(payload.passcode),
         role=payload.role,
         display_name=payload.display_name,
         active=True,
@@ -161,14 +193,16 @@ async def update_user(
             status_code=400, detail="You cannot remove your own admin role"
         )
 
+    if payload.passcode is not None:
+        await _reject_passcode_collision(db, payload.passcode, exclude_id=user.id)
+        user.passcode_hash = get_password_hash(payload.passcode)
+
     if payload.display_name is not None:
         user.display_name = payload.display_name
     if payload.role is not None:
         user.role = payload.role
     if payload.active is not None:
         user.active = payload.active
-    if payload.password is not None:
-        user.password_hash = get_password_hash(payload.password)
 
     await db.commit()
     await db.refresh(user)

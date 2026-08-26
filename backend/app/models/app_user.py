@@ -19,6 +19,11 @@ class AppUser(Base):
     # Stored lowercased — logins are matched case-insensitively.
     username: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    # Login is passcode-only: staff type one code, no username. It resolves to
+    # this row, which supplies the role and the created_by for packing lists.
+    # Nullable — a user without a passcode simply cannot sign in.
+    passcode_hash: Mapped[Optional[str]] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(32), nullable=False, default="warehouse_staff")
     display_name: Mapped[Optional[str]] = mapped_column(String(120))
 

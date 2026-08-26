@@ -9,8 +9,9 @@ export interface LoginResponse {
   user: AuthUser;
 }
 
-export const login = async (username: string, password: string): Promise<LoginResponse> => {
-  const response = await axios.post<LoginResponse>(`${API_V1}/auth/login`, { username, password });
+/** Passcode-only — the code identifies the account, which supplies the role. */
+export const login = async (passcode: string): Promise<LoginResponse> => {
+  const response = await axios.post<LoginResponse>(`${API_V1}/auth/login`, { passcode });
   return response.data;
 };
 
@@ -20,13 +21,13 @@ export const fetchMe = async (): Promise<AuthUser> => {
   return response.data;
 };
 
-export const changePassword = async (
-  currentPassword: string,
-  newPassword: string,
+export const changePasscode = async (
+  currentPasscode: string,
+  newPasscode: string,
 ): Promise<void> => {
-  await axios.post(`${API_V1}/auth/change-password`, {
-    current_password: currentPassword,
-    new_password: newPassword,
+  await axios.post(`${API_V1}/auth/change-passcode`, {
+    current_passcode: currentPasscode,
+    new_passcode: newPasscode,
   });
 };
 
@@ -38,6 +39,8 @@ export interface UserRecord {
   role: string;
   display_name: string | null;
   active: boolean;
+  /** Whether this account has a passcode set — an account without one cannot sign in. */
+  has_passcode: boolean;
   created_at: string;
 }
 
@@ -48,7 +51,7 @@ export const listUsers = async (): Promise<UserRecord[]> => {
 
 export const createUser = async (payload: {
   username: string;
-  password: string;
+  passcode: string;
   role: string;
   display_name?: string;
 }): Promise<UserRecord> => {
@@ -58,7 +61,7 @@ export const createUser = async (payload: {
 
 export const updateUser = async (
   userId: string,
-  payload: { display_name?: string; role?: string; active?: boolean; password?: string },
+  payload: { display_name?: string; role?: string; active?: boolean; passcode?: string },
 ): Promise<UserRecord> => {
   const response = await axios.patch<UserRecord>(`${API_V1}/admin/users/${userId}`, payload);
   return response.data;

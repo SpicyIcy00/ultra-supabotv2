@@ -162,7 +162,7 @@ function UsersTab() {
 
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [password, setPassword] = useState('');
+  const [passcode, setPasscode] = useState('');
   const [role, setRole] = useState('warehouse_staff');
   const [creating, setCreating] = useState(false);
 
@@ -189,14 +189,14 @@ function UsersTab() {
     try {
       await createUser({
         username,
-        password,
+        passcode,
         role,
         display_name: displayName || undefined,
       });
       setNotice(`Created ${username.toLowerCase()}.`);
       setUsername('');
       setDisplayName('');
-      setPassword('');
+      setPasscode('');
       setRole('warehouse_staff');
       await load();
     } catch (e: any) {
@@ -217,16 +217,17 @@ function UsersTab() {
     }
   };
 
-  const resetPassword = async (user: UserRecord) => {
-    const next = window.prompt(`New password for ${user.username} (min 8 characters):`);
+  const resetPasscode = async (user: UserRecord) => {
+    const next = window.prompt(`New passcode for ${user.username} (min 8 characters):`);
     if (!next) return;
     setError('');
     setNotice('');
     try {
-      await updateUser(user.id, { password: next });
-      setNotice(`Password updated for ${user.username}.`);
+      await updateUser(user.id, { passcode: next });
+      setNotice(`Passcode updated for ${user.username}.`);
+      await load();
     } catch (e: any) {
-      setError(errText(e, 'Could not reset that password.'));
+      setError(errText(e, 'Could not set that passcode.'));
     }
   };
 
@@ -252,11 +253,11 @@ function UsersTab() {
             className="bg-gray-900/60 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
           />
           <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password (min 8)"
-            autoComplete="new-password"
+            type="text"
+            value={passcode}
+            onChange={(e) => setPasscode(e.target.value)}
+            placeholder="Passcode (min 8)"
+            autoComplete="off"
             className="bg-gray-900/60 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
           />
           <select
@@ -270,7 +271,7 @@ function UsersTab() {
         </div>
         <button
           type="submit"
-          disabled={!username || password.length < 8 || creating}
+          disabled={!username || passcode.length < 8 || creating}
           className="mt-3 px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {creating ? 'Creating…' : 'Create user'}
@@ -315,13 +316,18 @@ function UsersTab() {
                       >
                         {u.active ? 'Active' : 'Deactivated'}
                       </span>
+                      {/* Without a passcode there is no way to sign in as this
+                          account, which is easy to miss otherwise. */}
+                      {!u.has_passcode && (
+                        <span className="ml-2 text-xs text-amber-400">no passcode</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <button
-                        onClick={() => resetPassword(u)}
+                        onClick={() => resetPasscode(u)}
                         className="text-xs text-blue-400 hover:text-blue-300 mr-4"
                       >
-                        Reset password
+                        Set passcode
                       </button>
                       <button
                         onClick={() => setActive(u, !u.active)}

@@ -7,7 +7,6 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './services/queryClient';
 import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
-import { AuthGuard } from './components/AuthGuard';
 import { SessionGuard } from './components/SessionGuard';
 import { RequirePage, NoAccessPage } from './components/RequirePage';
 import { LandingRedirect } from './components/LandingRedirect';
@@ -30,11 +29,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        {/* AuthGuard is the legacy shared access code. It stays in front of the
-            new login until username/password auth is proven in production. */}
-        <AuthGuard>
-          <SessionGuard>
-            <Layout>
+        {/* The legacy shared-code AuthGuard is gone: passcode login replaces it,
+            and stacking the two meant typing two codes to reach the app. */}
+        <SessionGuard>
+          <Layout>
               <Suspense fallback={<PageSpinner />}>
                 <Routes>
                   {/* A user without 'dashboard' gets sent to their own first
@@ -55,9 +53,8 @@ function App() {
                   <Route path="/barcodes" element={<Navigate to="/warehouse?tab=barcodes" replace />} />
                 </Routes>
               </Suspense>
-            </Layout>
-          </SessionGuard>
-        </AuthGuard>
+          </Layout>
+        </SessionGuard>
       </BrowserRouter>
     </QueryClientProvider>
   );

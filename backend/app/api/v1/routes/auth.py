@@ -1,15 +1,15 @@
 """
 Authentication routes.
 
-- POST /auth/login   username + password -> JWT
-- GET  /auth/me      the caller's identity, role and allowed page_keys
-- POST /auth/change-password  change your own password
+- POST /auth/login            passcode -> JWT (no username)
+- GET  /auth/me               the caller's identity, role and allowed page_keys
+- POST /auth/change-passcode  change your own passcode
 """
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -25,8 +25,7 @@ router = APIRouter(tags=["auth"])
 # ---------------------------------------------------------------------------
 
 class LoginRequest(BaseModel):
-    username: str
-    password: str
+    passcode: str
 
 
 class CurrentUser(BaseModel):
@@ -43,9 +42,9 @@ class LoginResponse(BaseModel):
     user: CurrentUser
 
 
-class ChangePasswordRequest(BaseModel):
-    current_password: str
-    new_password: str = Field(min_length=8, max_length=72)
+class ChangePasscodeRequest(BaseModel):
+    current_passcode: str
+    new_passcode: str = Field(min_length=8, max_length=72)
 
 
 # ---------------------------------------------------------------------------
@@ -57,26 +56,30 @@ async def login(
     payload: LoginRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Exchange username + password for a JWT."""
-    username = payload.username.strip().lower()
+    """
+    Exchange a passcode for a JWT. No username — the passcode identifies the
+    account, which supplies the role.
 
-    result = await db.execute(
-        select(AppUser).where(func.lower(AppUser.username) == username)
+    Passcodes are bcrypt-hashed, so they cannot be looked up by value; every
+    candidate has to be verified in turn. Only active accounts that actually
+    have a passcode are considered, which in practice is one row per role.
+    """
+    candidates = await db.execute(
+        select(AppUser)
+        .where(AppUser.active.is_(True), AppUser.passcode_hash.isnot(None))
+        .order_by(AppUser.created_at)
     )
-    user = result.scalar_one_or_none()
 
-    # Same message for "no such user" and "wrong password" so the endpoint
-    # cannot be used to enumerate valid usernames.
-    invalid = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Incorrect username or password",
-    )
-    if user is None or not verify_password(payload.password, user.password_hash):
-        raise invalid
-    if not user.active:
+    user = None
+    for candidate in candidates.scalars().all():
+        if verify_password(payload.passcode, candidate.passcode_hash):
+            user = candidate
+            break
+
+    if user is None:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="This account has been deactivated",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect passcode",
         )
 
     token = create_access_token(subject=user.id, extra_claims={"role": user.role})
@@ -115,18 +118,20 @@ async def me(
     )
 
 
-@router.post("/change-password", status_code=204)
-async def change_password(
-    payload: ChangePasswordRequest,
+@router.post("/change-passcode", status_code=204)
+async def change_passcode(
+    payload: ChangePasscodeRequest,
     user: AppUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Change your own password. Requires the current one."""
-    if not verify_password(payload.current_password, user.password_hash):
+    """Change your own passcode. Requires the current one."""
+    if not user.passcode_hash or not verify_password(
+        payload.current_passcode, user.passcode_hash
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current password is incorrect",
+            detail="Current passcode is incorrect",
         )
 
-    user.password_hash = get_password_hash(payload.new_password)
+    user.passcode_hash = get_password_hash(payload.new_passcode)
     await db.commit()
