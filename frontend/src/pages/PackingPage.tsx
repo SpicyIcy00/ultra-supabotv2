@@ -50,9 +50,11 @@ const STATUS_STYLE: Record<string, string> = {
 interface BuildTabProps {
   list: ListDetail | null;
   setList: (l: ListDetail | null) => void;
+  /** Called once a list is put away, so the page can show it in History. */
+  onFinished: () => void;
 }
 
-function BuildTab({ list, setList }: BuildTabProps) {
+function BuildTab({ list, setList, onFinished }: BuildTabProps) {
   const [product, setProduct] = useState<ProductOption | null>(null);
   const [unit, setUnit] = useState<PackUnit>('packs');
   const [quantity, setQuantity] = useState('');
@@ -106,12 +108,13 @@ function BuildTab({ list, setList }: BuildTabProps) {
     }
   };
 
-  const finish = async () => {
-    if (!list) return;
+  /** Put the list away and hand the user over to History, where it now lives. */
+  const close = async (target: ListDetail) => {
     setBusy(true);
     try {
-      await updateList(list.id, { status: 'in_progress' });
+      await updateList(target.id, { status: 'in_progress' });
       setList(null);
+      onFinished();
     } catch (e: any) {
       setError(errText(e, 'Could not save that list.'));
     } finally {
@@ -119,24 +122,37 @@ function BuildTab({ list, setList }: BuildTabProps) {
     }
   };
 
+  const finish = async () => {
+    if (list) await close(list);
+  };
+
+  const printAndSave = async () => {
+    if (!list) return;
+    // window.open has to happen synchronously inside the click or the popup
+    // blocker eats it, so the tab is opened before the save is awaited.
+    window.open(`/packing/${list.id}/print`, '_blank', 'noopener');
+    await close(list);
+  };
+
   return (
     <div>
       {list && (
         <div className="flex flex-wrap items-center justify-end gap-2 mb-4">
-          <a
-            href={`/packing/${list.id}/print`}
-            target="_blank"
-            rel="noreferrer"
-            className="px-3 py-2 text-sm font-medium text-gray-300 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
-          >
-            Print
-          </a>
           <button
             onClick={finish}
             disabled={busy || list.items.length === 0}
+            className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Save without printing
+          </button>
+          {/* Printing is the end of building a list, so it saves too — nobody
+              should have to remember a second button after sending it. */}
+          <button
+            onClick={printAndSave}
+            disabled={busy || list.items.length === 0}
             className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Save &amp; close
+            Print &amp; save
           </button>
         </div>
       )}
@@ -466,7 +482,11 @@ const PackingPage: React.FC = () => {
         ))}
       </div>
 
-      {activeTab === 'build' ? <BuildTab list={list} setList={setList} /> : <HistoryTab />}
+      {activeTab === 'build' ? (
+        <BuildTab list={list} setList={setList} onFinished={() => selectTab('history')} />
+      ) : (
+        <HistoryTab />
+      )}
     </div>
   );
 };
