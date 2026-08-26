@@ -3,10 +3,11 @@
  *
  * In "build" mode staff edit quantities and remove rows. In "actuals" mode the
  * list has been printed and packed, so the editable fields are actual_packed
- * and remarks instead.
+ * and remarks — saved on blur rather than behind a per-row button, since a long
+ * list would otherwise be one click per product before it can be closed.
  *
- * Every figure shown here comes back from the server — total_packs and total_kg
- * are generated columns, never computed in the browser.
+ * Every figure shown here comes back from the server — total_packs and
+ * packed_kg are derived there, never computed in the browser.
  */
 import { useState } from 'react';
 import type { ItemRecord, ListTotals } from '../../services/packingApi';
@@ -22,10 +23,12 @@ interface PackingListTableProps {
 }
 
 const num = (v: number | null | undefined, dp = 0) =>
-  v === null || v === undefined ? '—' : Number(v).toLocaleString(undefined, {
-    minimumFractionDigits: dp,
-    maximumFractionDigits: dp,
-  });
+  v === null || v === undefined
+    ? '—'
+    : Number(v).toLocaleString(undefined, {
+        minimumFractionDigits: dp,
+        maximumFractionDigits: dp,
+      });
 
 export function PackingListTable({
   items,
@@ -48,74 +51,73 @@ export function PackingListTable({
   }
 
   return (
-    <div>
-      <div className="overflow-x-auto border border-[#2e303d] rounded-lg">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-900/60 text-gray-400">
-              <th className="text-left font-medium px-4 py-3">Product</th>
-              <th className="text-right font-medium px-4 py-3">Per pack</th>
-              <th className="text-right font-medium px-4 py-3">Entered</th>
-              <th className="text-right font-medium px-4 py-3">Packs</th>
-              <th className="text-right font-medium px-4 py-3">Weight</th>
-              {mode === 'actuals' && (
-                <>
-                  <th className="text-right font-medium px-4 py-3">Actual</th>
-                  <th className="text-right font-medium px-4 py-3">Diff</th>
-                  <th className="text-left font-medium px-4 py-3">Remarks</th>
-                </>
-              )}
-              <th className="text-right font-medium px-4 py-3">
-                {mode === 'build' ? 'Actions' : 'Save'}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <Row
-                key={item.id}
-                item={item}
-                mode={mode}
-                busy={busy}
-                editing={editingId === item.id}
-                draftQty={draftQty}
-                setDraftQty={setDraftQty}
-                onStartEdit={() => {
-                  setEditingId(item.id);
-                  setDraftQty(String(item.quantity));
-                }}
-                onCancelEdit={() => setEditingId(null)}
-                onCommitQty={() => {
-                  const next = Number(draftQty);
-                  if (next > 0) onChangeQuantity?.(item, next);
-                  setEditingId(null);
-                }}
-                onRemove={() => onRemove?.(item)}
-                onSaveActuals={onSaveActuals}
-              />
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="bg-gray-900/60 border-t border-[#2e303d] font-semibold text-white">
-              <td className="px-4 py-3">
-                Totals <span className="text-gray-500 font-normal">({totals.item_count} items)</span>
-              </td>
-              <td />
-              <td />
-              <td className="text-right px-4 py-3">{num(totals.total_packs)}</td>
-              <td className="text-right px-4 py-3">{num(totals.total_packed_kg, 2)} kg</td>
-              {mode === 'actuals' && (
-                <>
-                  <td />
-                  <td />
-                  <td />
-                </>
-              )}
-              <td />
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+    <div className="overflow-x-auto border border-[#2e303d] rounded-lg">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="bg-gray-900/60 text-gray-400">
+            <th className="text-left font-medium px-4 py-3">Product</th>
+            <th className="text-right font-medium px-4 py-3">Per pack</th>
+            <th className="text-right font-medium px-4 py-3">Entered</th>
+            <th className="text-right font-medium px-4 py-3">Packs</th>
+            <th className="text-right font-medium px-4 py-3">Weight</th>
+            {mode === 'actuals' && (
+              <>
+                <th className="text-right font-medium px-4 py-3">Actual</th>
+                <th className="text-right font-medium px-4 py-3">Diff</th>
+                <th className="text-left font-medium px-4 py-3">Remarks</th>
+              </>
+            )}
+            {mode === 'build' && (
+              <th className="text-right font-medium px-4 py-3">Actions</th>
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((item) => (
+            <Row
+              key={item.id}
+              item={item}
+              mode={mode}
+              busy={busy}
+              editing={editingId === item.id}
+              draftQty={draftQty}
+              setDraftQty={setDraftQty}
+              onStartEdit={() => {
+                setEditingId(item.id);
+                setDraftQty(String(item.quantity));
+              }}
+              onCancelEdit={() => setEditingId(null)}
+              onCommitQty={() => {
+                const next = Number(draftQty);
+                if (next > 0) onChangeQuantity?.(item, next);
+                setEditingId(null);
+              }}
+              onRemove={() => onRemove?.(item)}
+              onSaveActuals={onSaveActuals}
+            />
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="bg-gray-900/60 border-t border-[#2e303d] font-semibold text-white">
+            <td className="px-4 py-3">
+              Totals{' '}
+              <span className="text-gray-500 font-normal">({totals.item_count} items)</span>
+            </td>
+            <td />
+            <td />
+            <td className="text-right px-4 py-3">{num(totals.total_packs)}</td>
+            <td className="text-right px-4 py-3">{num(totals.total_packed_kg, 2)} kg</td>
+            {mode === 'actuals' && (
+              <>
+                <td />
+                <td />
+                <td />
+              </>
+            )}
+            {mode === 'build' && <td />}
+          </tr>
+        </tfoot>
+      </table>
     </div>
   );
 }
@@ -154,6 +156,19 @@ function Row({
 
   const diff = item.discrepancy ?? 0;
 
+  /**
+   * Persist on blur, and only when something actually changed — tabbing across
+   * a row that was already saved should not fire a write per field.
+   */
+  const commit = () => {
+    const nextActual = actual === '' ? null : Number(actual);
+    const unchanged =
+      nextActual === item.actual_packed && remarks === (item.remarks ?? '');
+    if (unchanged) return;
+    if (nextActual !== null && Number.isNaN(nextActual)) return;
+    onSaveActuals?.(item, nextActual, remarks);
+  };
+
   return (
     <tr className="border-t border-[#2e303d]">
       <td className="px-4 py-3">
@@ -176,19 +191,15 @@ function Row({
               if (e.key === 'Enter') onCommitQty();
               if (e.key === 'Escape') onCancelEdit();
             }}
-            className="w-24 bg-gray-900/60 border border-gray-800 rounded px-2 py-1 text-right text-white focus:outline-none focus:border-blue-500"
+            className="no-spinner w-24 bg-gray-900/60 border border-gray-800 rounded px-2 py-1 text-right text-white focus:outline-none focus:border-blue-500"
           />
+        ) : item.unit === 'packs' ? (
+          <>
+            {num(item.quantity)} <span className="text-gray-600">packs</span>
+          </>
         ) : (
           <>
-            {item.unit === 'packs' ? (
-              <>
-                {num(item.quantity)} <span className="text-gray-600">packs</span>
-              </>
-            ) : (
-              <>
-                {num(item.quantity / 1000, 2)} <span className="text-gray-600">kg</span>
-              </>
-            )}
+            {num(item.quantity / 1000, 2)} <span className="text-gray-600">kg</span>
           </>
         )}
       </td>
@@ -197,19 +208,24 @@ function Row({
       </td>
       {/* packed_kg, not total_kg: what the complete packs actually weigh, so
           packs and weight never contradict each other. */}
-      <td className="text-right px-4 py-3 text-gray-300">
-        {num(item.packed_kg, 2)} kg
-      </td>
+      <td className="text-right px-4 py-3 text-gray-300">{num(item.packed_kg, 2)} kg</td>
 
       {mode === 'actuals' && (
         <>
           <td className="text-right px-4 py-3">
+            {/* Deliberately not disabled while saving: blurring this field is
+                what triggers the save, and disabling the row mid-flight would
+                put focus on a dead Remarks box. */}
             <input
               type="number"
               value={actual}
               onChange={(e) => setActual(e.target.value)}
+              onBlur={commit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+              }}
               placeholder="—"
-              className="w-24 bg-gray-900/60 border border-gray-800 rounded px-2 py-1 text-right text-white placeholder-gray-600 focus:outline-none focus:border-blue-500"
+              className="no-spinner w-24 bg-gray-900/60 border border-gray-800 rounded px-2 py-1 text-right text-white placeholder-gray-600 focus:outline-none focus:border-blue-500"
             />
           </td>
           <td
@@ -223,6 +239,10 @@ function Row({
             <input
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
+              onBlur={commit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+              }}
               placeholder="—"
               className="w-40 bg-gray-900/60 border border-gray-800 rounded px-2 py-1 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500"
             />
@@ -230,9 +250,9 @@ function Row({
         </>
       )}
 
-      <td className="text-right px-4 py-3 whitespace-nowrap">
-        {mode === 'build' ? (
-          editing ? (
+      {mode === 'build' && (
+        <td className="text-right px-4 py-3 whitespace-nowrap">
+          {editing ? (
             <>
               <button
                 onClick={onCommitQty}
@@ -240,7 +260,10 @@ function Row({
               >
                 Save
               </button>
-              <button onClick={onCancelEdit} className="text-xs text-gray-500 hover:text-white">
+              <button
+                onClick={onCancelEdit}
+                className="text-xs text-gray-500 hover:text-white"
+              >
                 Cancel
               </button>
             </>
@@ -261,19 +284,9 @@ function Row({
                 Remove
               </button>
             </>
-          )
-        ) : (
-          <button
-            onClick={() =>
-              onSaveActuals?.(item, actual === '' ? null : Number(actual), remarks)
-            }
-            disabled={busy}
-            className="text-xs text-blue-400 hover:text-blue-300 disabled:opacity-30"
-          >
-            Save
-          </button>
-        )}
-      </td>
+          )}
+        </td>
+      )}
     </tr>
   );
 }

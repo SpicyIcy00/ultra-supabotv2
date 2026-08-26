@@ -15,6 +15,18 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Number fields where the spinner is noise: quantities are typed, not nudged,
+   and the arrows sit on top of a right-aligned value. */
+.no-spinner::-webkit-outer-spin-button,
+.no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.no-spinner[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 /* Custom scrollbars — matches dark UI */
 ::-webkit-scrollbar {
   width: 6px;

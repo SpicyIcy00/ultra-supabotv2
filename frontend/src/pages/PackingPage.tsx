@@ -257,7 +257,12 @@ function BuildTab({ list, setList, onFinished }: BuildTabProps) {
 // History tab
 // ---------------------------------------------------------------------------
 
-function HistoryTab() {
+interface HistoryTabProps {
+  /** Bumped when the History tab is clicked, to close whatever list is open. */
+  closeSignal: number;
+}
+
+function HistoryTab({ closeSignal }: HistoryTabProps) {
   const [lists, setLists] = useState<ListSummary[]>([]);
   const [open, setOpen] = useState<ListDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -290,6 +295,16 @@ function HistoryTab() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Clicking History while a list is open returns to the list of lists, so no
+  // separate back link is needed.
+  useEffect(() => {
+    if (closeSignal > 0) {
+      setOpen(null);
+      setNotice('');
+      load();
+    }
+  }, [closeSignal, load]);
 
   const openList = async (summary: ListSummary) => {
     setBusy(true);
@@ -365,21 +380,11 @@ function HistoryTab() {
     return (
       <div>
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <div>
-            <button
-              onClick={() => {
-                setOpen(null);
-                load();
-              }}
-              className="text-sm text-gray-400 hover:text-white"
-            >
-              ← Back to history
-            </button>
-            <div className="mt-1 text-sm text-gray-400">
-              {open.category ?? '—'} ·{' '}
-              <span className={STATUS_STYLE[open.status]}>{open.status}</span> ·{' '}
-              {new Date(open.created_at).toLocaleString()}
-            </div>
+          <div className="text-sm text-gray-400">
+            <span className={STATUS_STYLE[open.status]}>
+              {open.status.replace('_', ' ')}
+            </span>{' '}
+            · {new Date(open.created_at).toLocaleString()}
           </div>
           <div className="flex gap-2">
             <button
@@ -407,8 +412,8 @@ function HistoryTab() {
         {notice && <div className="text-green-400 text-sm mb-3">{notice}</div>}
 
         <p className="text-xs text-gray-500 mb-3">
-          Key in what was actually packed from the printed sheet, saving each
-          row. Difference is calculated as packs minus actual.
+          Key in what was actually packed from the printed sheet — each field
+          saves when you leave it. Difference is calculated as packs minus actual.
         </p>
 
         {unreconciled > 0 && open.status !== 'done' && (
@@ -510,9 +515,12 @@ const PackingPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab: PackingTab = searchParams.get('tab') === 'history' ? 'history' : 'build';
   const [list, setList] = useState<ListDetail | null>(null);
+  const [historyCloseSignal, setHistoryCloseSignal] = useState(0);
 
   const selectTab = (tab: PackingTab) => {
     setSearchParams(tab === 'build' ? {} : { tab }, { replace: true });
+    // Re-clicking History collapses an open list back to the listing.
+    if (tab === 'history') setHistoryCloseSignal((n) => n + 1);
   };
 
   return (
@@ -547,7 +555,7 @@ const PackingPage: React.FC = () => {
       {activeTab === 'build' ? (
         <BuildTab list={list} setList={setList} onFinished={() => selectTab('history')} />
       ) : (
-        <HistoryTab />
+        <HistoryTab closeSignal={historyCloseSignal} />
       )}
     </div>
   );
