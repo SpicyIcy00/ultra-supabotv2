@@ -362,8 +362,12 @@ function HistoryTab({ closeSignal }: HistoryTabProps) {
   const markDone = async () => {
     if (!open) return;
     setBusy(true);
+    setError('');
     try {
-      setOpen(await updateList(open.id, { status: 'done' }));
+      await updateList(open.id, { status: 'done' });
+      // Closing a list is the end of working on it, so drop back to the
+      // listing rather than leaving the finished list open.
+      setOpen(null);
       await load();
       setNotice('List closed.');
     } catch (e: any) {
@@ -458,6 +462,7 @@ function HistoryTab({ closeSignal }: HistoryTabProps) {
   return (
     <div>
       {error && <div className="text-red-400 text-sm mb-3">{error}</div>}
+      {notice && <div className="text-green-400 text-sm mb-3">{notice}</div>}
       <div className="overflow-x-auto border border-[#2e303d] rounded-lg">
         <table className="w-full text-sm">
           <thead>
