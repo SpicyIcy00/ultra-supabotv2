@@ -409,16 +409,22 @@ async def startup_event():
                 "CREATE INDEX IF NOT EXISTS ix_packing_lists_reference "
                 "ON packing_lists (reference)"
             ))
-            # timezone('Asia/Manila', now()) returns a timestamp WITHOUT a zone
-            # — the Manila wall clock. Storing that in a TIMESTAMPTZ column
-            # labels it with the session zone (UTC), so the instant recorded is
-            # 8 hours later than reality and clients shift it again on display.
-            # now() is already an instant and needs no adjustment.
+            # These columns hold the Manila wall-clock reading, matching every
+            # other table in this schema. A brief revision defaulted them to
+            # now() instead, which would have left packing the only tables
+            # storing true UTC instants — 8 hours apart from transactions and
+            # products on any join. Restated here so a database that took the
+            # now() default gets put back.
+            #
+            # Clients must render these WITHOUT converting zones; see
+            # formatDateTime in frontend/src/services/packingApi.ts.
             await conn.execute(text(
-                "ALTER TABLE packing_lists ALTER COLUMN created_at SET DEFAULT now()"
+                "ALTER TABLE packing_lists ALTER COLUMN created_at "
+                "SET DEFAULT timezone('Asia/Manila', now())"
             ))
             await conn.execute(text(
-                "ALTER TABLE packing_items ALTER COLUMN created_at SET DEFAULT now()"
+                "ALTER TABLE packing_items ALTER COLUMN created_at "
+                "SET DEFAULT timezone('Asia/Manila', now())"
             ))
             seeded = (await conn.execute(
                 text("SELECT count(*) FROM products WHERE pack_weight_g IS NOT NULL")

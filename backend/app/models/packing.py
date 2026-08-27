@@ -48,13 +48,12 @@ class PackingList(Base):
     )
     status: Mapped[str] = mapped_column(Text, nullable=False, default="pending")
 
-    # now(), not timezone('Asia/Manila', now()): the latter yields a naive
-    # Manila wall-clock reading that a TIMESTAMPTZ column then mislabels as UTC,
-    # putting every row 8 hours into the future. Store the instant; let clients
-    # render it in local time.
+    # Manila wall-clock, matching every other table in this schema. The value is
+    # tagged UTC by the column type but is not a UTC instant, so clients must
+    # render it without converting zones — see formatDateTime on the frontend.
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        server_default=func.now(),
+        server_default=func.timezone("Asia/Manila", func.now()),
     )
 
     items: Mapped[List["PackingItem"]] = relationship(
@@ -114,13 +113,12 @@ class PackingItem(Base):
     actual_packed: Mapped[Optional[float]] = mapped_column(Numeric)
     remarks: Mapped[Optional[str]] = mapped_column(Text)
 
-    # now(), not timezone('Asia/Manila', now()): the latter yields a naive
-    # Manila wall-clock reading that a TIMESTAMPTZ column then mislabels as UTC,
-    # putting every row 8 hours into the future. Store the instant; let clients
-    # render it in local time.
+    # Manila wall-clock, matching every other table in this schema. The value is
+    # tagged UTC by the column type but is not a UTC instant, so clients must
+    # render it without converting zones — see formatDateTime on the frontend.
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        server_default=func.now(),
+        server_default=func.timezone("Asia/Manila", func.now()),
     )
 
     packing_list: Mapped["PackingList"] = relationship(

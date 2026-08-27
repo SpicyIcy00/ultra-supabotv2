@@ -82,9 +82,14 @@ export const updateProductPacking = async (
 
 /**
  * "27 Aug 2026, 08:03" — readable, unambiguous about the month, and without
- * the seconds that toLocaleString() adds by default.
+ * the seconds toLocaleString() adds by default.
  *
- * The value is an instant, so the browser renders it in the viewer's own zone.
+ * timeZone: 'UTC' is load-bearing, not a default. These columns store the
+ * Manila wall-clock reading (via timezone('Asia/Manila', now()), the convention
+ * across this whole schema), which the timestamptz column then labels as UTC.
+ * The value is therefore already the time to show. Formatting it in the
+ * viewer's local zone would add the Manila offset a second time and display
+ * 08:00 as 4:00 PM.
  */
 export const formatDateTime = (iso: string): string =>
   new Date(iso).toLocaleString(undefined, {
@@ -93,6 +98,7 @@ export const formatDateTime = (iso: string): string =>
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'UTC',
   });
 
 export const getCategories = async (): Promise<string[]> =>
