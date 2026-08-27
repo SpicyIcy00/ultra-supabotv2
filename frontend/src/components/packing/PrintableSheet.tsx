@@ -12,6 +12,7 @@
  * at full width — so the output is independent of the surrounding layout and of
  * the paper size, fitting A4, Letter or anything else.
  */
+import { formatDateTime } from '../../services/packingApi';
 import type { ItemRecord, ListDetail } from '../../services/packingApi';
 
 const kg = (v: number | null | undefined) =>
@@ -120,7 +121,7 @@ export function PrintableSheet({ list, offscreen }: PrintableSheetProps) {
     <div className={`pk-print${offscreen ? ' offscreen' : ''}`} aria-hidden={offscreen}>
       <h1>Packing List {list.reference ?? ''}</h1>
       <div className="meta">
-        {new Date(list.created_at).toLocaleString()}
+        {formatDateTime(list.created_at)}
         {list.created_by_name ? ` · ${list.created_by_name}` : ''}
       </div>
 

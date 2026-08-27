@@ -19,6 +19,7 @@ import {
   createList,
   deleteItem,
   deleteList,
+  formatDateTime,
   getHistory,
   getList,
   updateItem,
@@ -416,7 +417,7 @@ function HistoryTab({ closeSignal }: HistoryTabProps) {
             <span className={STATUS_STYLE[open.status]}>
               {open.status.replace('_', ' ')}
             </span>{' '}
-            · {new Date(open.created_at).toLocaleString()}
+            · {formatDateTime(open.created_at)}
           </div>
           <div className="flex gap-2">
             <button
@@ -528,7 +529,7 @@ function HistoryTab({ closeSignal }: HistoryTabProps) {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-300 whitespace-nowrap">
-                      {new Date(l.created_at).toLocaleString()}
+                      {formatDateTime(l.created_at)}
                     </td>
                     <td className={`px-4 py-3 ${STATUS_STYLE[l.status]}`}>
                       {l.status.replace('_', ' ')}

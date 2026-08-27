@@ -48,9 +48,13 @@ class PackingList(Base):
     )
     status: Mapped[str] = mapped_column(Text, nullable=False, default="pending")
 
+    # now(), not timezone('Asia/Manila', now()): the latter yields a naive
+    # Manila wall-clock reading that a TIMESTAMPTZ column then mislabels as UTC,
+    # putting every row 8 hours into the future. Store the instant; let clients
+    # render it in local time.
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        server_default=func.timezone("Asia/Manila", func.now()),
+        server_default=func.now(),
     )
 
     items: Mapped[List["PackingItem"]] = relationship(
@@ -110,9 +114,13 @@ class PackingItem(Base):
     actual_packed: Mapped[Optional[float]] = mapped_column(Numeric)
     remarks: Mapped[Optional[str]] = mapped_column(Text)
 
+    # now(), not timezone('Asia/Manila', now()): the latter yields a naive
+    # Manila wall-clock reading that a TIMESTAMPTZ column then mislabels as UTC,
+    # putting every row 8 hours into the future. Store the instant; let clients
+    # render it in local time.
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        server_default=func.timezone("Asia/Manila", func.now()),
+        server_default=func.now(),
     )
 
     packing_list: Mapped["PackingList"] = relationship(

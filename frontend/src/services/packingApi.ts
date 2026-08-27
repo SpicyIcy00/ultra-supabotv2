@@ -80,6 +80,21 @@ export const updateProductPacking = async (
 ): Promise<CatalogProduct> =>
   (await axios.patch<CatalogProduct>(`${API_BASE}/catalog/${productId}`, payload)).data;
 
+/**
+ * "27 Aug 2026, 08:03" — readable, unambiguous about the month, and without
+ * the seconds that toLocaleString() adds by default.
+ *
+ * The value is an instant, so the browser renders it in the viewer's own zone.
+ */
+export const formatDateTime = (iso: string): string =>
+  new Date(iso).toLocaleString(undefined, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
 export const getCategories = async (): Promise<string[]> =>
   (await axios.get<string[]>(`${API_BASE}/categories`)).data;
 
