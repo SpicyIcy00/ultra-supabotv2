@@ -471,119 +471,93 @@ function HistoryTab({ closeSignal }: HistoryTabProps) {
         Open a list to record what was packed.
       </p>
 
-      <div className="overflow-x-auto border border-[#2e303d] rounded-lg">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-900/60 text-gray-400">
-              <th className="text-left font-medium px-4 py-3">List</th>
-              <th className="text-left font-medium px-4 py-3">Date &amp; time</th>
-              <th className="text-left font-medium px-4 py-3">Status</th>
-              <th className="text-right font-medium px-4 py-3">Items</th>
-              <th className="text-right font-medium px-4 py-3">Packs</th>
-              <th className="text-right font-medium px-4 py-3">Weight</th>
-              <th className="text-left font-medium px-4 py-3">By</th>
-              <th className="text-right font-medium px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {lists.map((l) => {
-              return (
-                <React.Fragment key={l.id}>
-                  <tr className="border-t-2 border-[#2e303d]">
-                    <td className="px-4 py-3">
-                      <span className="text-white font-medium font-mono">
-                        {l.reference ?? '—'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-300 whitespace-nowrap">
-                      {formatDateTime(l.created_at)}
-                    </td>
-                    <td className={`px-4 py-3 ${STATUS_STYLE[l.status]}`}>
-                      {l.status.replace('_', ' ')}
-                    </td>
-                    <td className="px-4 py-3 text-right text-gray-400">
-                      {l.totals.item_count}
-                    </td>
-                    <td className="px-4 py-3 text-right text-white">
-                      {l.totals.total_packs}
-                    </td>
-                    <td className="px-4 py-3 text-right text-gray-300">
-                      {l.totals.total_packed_kg.toFixed(2)} kg
-                    </td>
-                    <td className="px-4 py-3 text-gray-500">{l.created_by_name ?? '—'}</td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <button
-                        onClick={() => openList(l)}
-                        disabled={busy}
-                        className="text-xs text-blue-400 hover:text-blue-300 mr-4 disabled:opacity-30"
-                      >
-                        Open
-                      </button>
-                      <button
-                        onClick={() => removeList(l)}
-                        disabled={busy}
-                        className="text-xs text-gray-400 hover:text-red-400 disabled:opacity-30"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
+      <div className="space-y-4">
+        {lists.map((l) => (
+          <div key={l.id} className="border border-[#2e303d] rounded-lg overflow-hidden">
+            {/* Header: what the list is, and what you can do with it */}
+            <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3 bg-gray-900/60">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-white font-semibold font-mono">
+                    {l.reference ?? '—'}
+                  </span>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full bg-gray-800 ${
+                      STATUS_STYLE[l.status]
+                    }`}
+                  >
+                    {l.status.replace('_', ' ')}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {formatDateTime(l.created_at)}
+                  {l.created_by_name ? ` · ${l.created_by_name}` : ''}
+                </div>
+              </div>
 
-                  {/* Contents, inset and tinted so they read as belonging to
-                      the list above rather than as more list rows. */}
-                  <tr className="bg-[#0b0d13]">
-                    <td colSpan={8} className="px-0 pb-3">
-                        <div className="border-l-2 border-blue-500/40 ml-6 pl-4">
-                          {l.items.length === 0 ? (
-                            <div className="text-xs text-gray-600 py-2">
-                              Nothing on this list.
-                            </div>
-                          ) : (
-                            <table className="w-full text-xs">
-                              <thead>
-                                <tr className="text-gray-500">
-                                  <th className="text-left font-medium py-1">Product</th>
-                                  <th className="text-right font-medium py-1">Ordered</th>
-                                  <th className="text-right font-medium py-1">Packs</th>
-                                  <th className="text-right font-medium py-1">Weight</th>
-                                  <th className="text-right font-medium py-1">Actual</th>
-                                  <th className="text-left font-medium py-1 pl-4">Remarks</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {l.items.map((item) => (
-                                  <tr key={item.id} className="text-gray-400">
-                                    <td className="py-1 text-gray-200">
-                                      {item.nickname || item.product_name}
-                                    </td>
-                                    <td className="py-1 text-right">
-                                      {item.unit === 'packs'
-                                        ? `${item.quantity} packs`
-                                        : `${(item.quantity / 1000).toFixed(2)} kg`}
-                                    </td>
-                                    <td className="py-1 text-right text-gray-200">
-                                      {item.total_packs ?? '—'}
-                                    </td>
-                                    <td className="py-1 text-right">
-                                      {item.packed_kg?.toFixed(2) ?? '—'} kg
-                                    </td>
-                                    <td className="py-1 text-right">
-                                      {item.actual_packed ?? '—'}
-                                    </td>
-                                    <td className="py-1 pl-4">{item.remarks || '—'}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          )}
-                      </div>
-                    </td>
-                  </tr>
-                </React.Fragment>
-              );
-            })}
-          </tbody>
-        </table>
+              <div className="flex items-center gap-4 shrink-0">
+                <button
+                  onClick={() => openList(l)}
+                  disabled={busy}
+                  className="text-xs text-blue-400 hover:text-blue-300 disabled:opacity-30"
+                >
+                  Open
+                </button>
+                <button
+                  onClick={() => removeList(l)}
+                  disabled={busy}
+                  className="text-xs text-gray-400 hover:text-red-400 disabled:opacity-30"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+
+            {/* Contents */}
+            {l.items.length === 0 ? (
+              <div className="px-4 py-4 text-sm text-gray-600">Nothing on this list.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-gray-500 border-b border-[#2e303d]">
+                      <th className="text-left font-medium px-4 py-2">Product</th>
+                      <th className="text-right font-medium px-4 py-2">Ordered</th>
+                      <th className="text-right font-medium px-4 py-2">Packs</th>
+                      <th className="text-right font-medium px-4 py-2">Weight</th>
+                      <th className="text-right font-medium px-4 py-2">Actual</th>
+                      <th className="text-left font-medium px-4 py-2">Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {l.items.map((item) => (
+                      <tr key={item.id} className="border-b border-[#2e303d]/50 last:border-0">
+                        <td className="px-4 py-2 text-gray-200">
+                          {item.nickname || item.product_name}
+                        </td>
+                        <td className="px-4 py-2 text-right text-gray-400">
+                          {item.unit === 'packs'
+                            ? `${item.quantity} packs`
+                            : `${(item.quantity / 1000).toFixed(2)} kg`}
+                        </td>
+                        <td className="px-4 py-2 text-right text-white">
+                          {item.total_packs ?? '—'}
+                        </td>
+                        <td className="px-4 py-2 text-right text-gray-300">
+                          {item.packed_kg?.toFixed(2) ?? '—'} kg
+                        </td>
+                        <td className="px-4 py-2 text-right text-gray-400">
+                          {item.actual_packed ?? '—'}
+                        </td>
+                        <td className="px-4 py-2 text-gray-500">{item.remarks || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
