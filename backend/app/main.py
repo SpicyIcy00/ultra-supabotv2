@@ -370,6 +370,45 @@ async def startup_event():
             await conn.execute(text(
                 "CREATE INDEX IF NOT EXISTS ix_packing_items_product ON packing_items (product_id)"
             ))
+            # Human-readable list reference (PL0001…), derived from a sequence
+            # so concurrent creates cannot collide.
+            await conn.execute(text("CREATE SEQUENCE IF NOT EXISTS packing_lists_seq"))
+            await conn.execute(text(
+                "ALTER TABLE packing_lists ADD COLUMN IF NOT EXISTS seq BIGINT"
+            ))
+            await conn.execute(text(
+                "ALTER TABLE packing_lists ALTER COLUMN seq "
+                "SET DEFAULT nextval('packing_lists_seq')"
+            ))
+            # Backfill oldest-first so numbering follows creation order.
+            await conn.execute(text("""
+                WITH ordered AS (
+                    SELECT id, row_number() OVER (ORDER BY created_at) AS rn
+                    FROM packing_lists
+                    WHERE seq IS NULL
+                )
+                UPDATE packing_lists p
+                SET seq = o.rn
+                FROM ordered o
+                WHERE p.id = o.id
+            """))
+            # is_called = false: the next nextval() returns exactly this value,
+            # so numbering continues without a gap.
+            await conn.execute(text("""
+                SELECT setval(
+                    'packing_lists_seq',
+                    (SELECT COALESCE(MAX(seq), 0) + 1 FROM packing_lists),
+                    false
+                )
+            """))
+            await conn.execute(text("""
+                ALTER TABLE packing_lists ADD COLUMN IF NOT EXISTS reference TEXT
+                    GENERATED ALWAYS AS ('PL' || lpad(seq::text, 4, '0')) STORED
+            """))
+            await conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_packing_lists_reference "
+                "ON packing_lists (reference)"
+            ))
             seeded = (await conn.execute(
                 text("SELECT count(*) FROM products WHERE pack_weight_g IS NOT NULL")
             )).scalar()

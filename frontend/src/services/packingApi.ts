@@ -43,6 +43,8 @@ export interface ListTotals {
 
 export interface ListSummary {
   id: string;
+  /** Human-readable list number, e.g. PL0007. */
+  reference: string | null;
   category: string | null;
   status: PackingStatus;
   created_by_name: string | null;

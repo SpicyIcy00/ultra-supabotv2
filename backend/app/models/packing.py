@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import (
+    BigInteger,
     Computed,
     DateTime,
     ForeignKey,
@@ -10,6 +11,7 @@ from sqlalchemy import (
     String,
     Text,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -24,6 +26,16 @@ class PackingList(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+
+    # Human-readable reference. seq comes from a sequence so two lists created
+    # at the same moment cannot collide; reference is generated from it in
+    # Postgres so the two can never drift apart.
+    seq: Mapped[Optional[int]] = mapped_column(
+        BigInteger, server_default=text("nextval('packing_lists_seq')")
+    )
+    reference: Mapped[Optional[str]] = mapped_column(
+        Text, Computed("'PL' || lpad(seq::text, 4, '0')", persisted=True)
     )
 
     # Packing classification (Plums, Fruits, ...). Deliberately separate from

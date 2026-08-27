@@ -272,6 +272,29 @@ function HistoryTab({ closeSignal }: HistoryTabProps) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [printing, setPrinting] = useState<ListDetail | null>(null);
+  // Contents of expanded rows, fetched on first expand and kept.
+  const [expanded, setExpanded] = useState<Record<string, ListDetail>>({});
+  const [expandingId, setExpandingId] = useState<string | null>(null);
+
+  const toggleExpand = async (summary: ListSummary) => {
+    if (expanded[summary.id]) {
+      setExpanded((prev) => {
+        const next = { ...prev };
+        delete next[summary.id];
+        return next;
+      });
+      return;
+    }
+    setExpandingId(summary.id);
+    try {
+      const detail = await getList(summary.id);
+      setExpanded((prev) => ({ ...prev, [summary.id]: detail }));
+    } catch (e: any) {
+      setError(errText(e, 'Could not load that list.'));
+    } finally {
+      setExpandingId(null);
+    }
+  };
 
   const printInPlace = (target: ListDetail) => {
     setPrinting(target);
@@ -387,6 +410,9 @@ function HistoryTab({ closeSignal }: HistoryTabProps) {
       <div>
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="text-sm text-gray-400">
+            <span className="text-white font-medium font-mono mr-2">
+              {open.reference ?? ''}
+            </span>
             <span className={STATUS_STYLE[open.status]}>
               {open.status.replace('_', ' ')}
             </span>{' '}
@@ -463,12 +489,16 @@ function HistoryTab({ closeSignal }: HistoryTabProps) {
     <div>
       {error && <div className="text-red-400 text-sm mb-3">{error}</div>}
       {notice && <div className="text-green-400 text-sm mb-3">{notice}</div>}
+      <p className="text-xs text-gray-500 mb-3">
+        Click a list to see what is on it. Open it to record what was packed.
+      </p>
+
       <div className="overflow-x-auto border border-[#2e303d] rounded-lg">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-900/60 text-gray-400">
-              <th className="text-left font-medium px-4 py-3">Date</th>
-              <th className="text-left font-medium px-4 py-3">Category</th>
+              <th className="text-left font-medium px-4 py-3">List</th>
+              <th className="text-left font-medium px-4 py-3">Date &amp; time</th>
               <th className="text-left font-medium px-4 py-3">Status</th>
               <th className="text-right font-medium px-4 py-3">Items</th>
               <th className="text-right font-medium px-4 py-3">Packs</th>
@@ -478,37 +508,128 @@ function HistoryTab({ closeSignal }: HistoryTabProps) {
             </tr>
           </thead>
           <tbody>
-            {lists.map((l) => (
-              <tr key={l.id} className="border-t border-[#2e303d]">
-                <td className="px-4 py-3 text-gray-300">
-                  {new Date(l.created_at).toLocaleDateString()}
-                </td>
-                <td className="px-4 py-3 text-gray-300">{l.category ?? '—'}</td>
-                <td className={`px-4 py-3 ${STATUS_STYLE[l.status]}`}>{l.status}</td>
-                <td className="px-4 py-3 text-right text-gray-400">{l.totals.item_count}</td>
-                <td className="px-4 py-3 text-right text-white">{l.totals.total_packs}</td>
-                <td className="px-4 py-3 text-right text-gray-300">
-                  {l.totals.total_kg.toFixed(2)} kg
-                </td>
-                <td className="px-4 py-3 text-gray-500">{l.created_by_name ?? '—'}</td>
-                <td className="px-4 py-3 text-right whitespace-nowrap">
-                  <button
-                    onClick={() => openList(l)}
-                    disabled={busy}
-                    className="text-xs text-blue-400 hover:text-blue-300 mr-4 disabled:opacity-30"
+            {lists.map((l) => {
+              const detail = expanded[l.id];
+              const isOpen = Boolean(detail);
+              return (
+                <React.Fragment key={l.id}>
+                  <tr
+                    onClick={() => toggleExpand(l)}
+                    className={`border-t border-[#2e303d] cursor-pointer transition-colors ${
+                      isOpen ? 'bg-blue-500/5' : 'hover:bg-gray-900/40'
+                    }`}
                   >
-                    Open
-                  </button>
-                  <button
-                    onClick={() => removeList(l)}
-                    disabled={busy}
-                    className="text-xs text-gray-400 hover:text-red-400 disabled:opacity-30"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
+                    <td className="px-4 py-3">
+                      <span className="text-gray-500 mr-2 inline-block w-3">
+                        {isOpen ? '▾' : '▸'}
+                      </span>
+                      <span className="text-white font-medium font-mono">
+                        {l.reference ?? '—'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-300 whitespace-nowrap">
+                      {new Date(l.created_at).toLocaleString()}
+                    </td>
+                    <td className={`px-4 py-3 ${STATUS_STYLE[l.status]}`}>
+                      {l.status.replace('_', ' ')}
+                    </td>
+                    <td className="px-4 py-3 text-right text-gray-400">
+                      {l.totals.item_count}
+                    </td>
+                    <td className="px-4 py-3 text-right text-white">
+                      {l.totals.total_packs}
+                    </td>
+                    <td className="px-4 py-3 text-right text-gray-300">
+                      {l.totals.total_packed_kg.toFixed(2)} kg
+                    </td>
+                    <td className="px-4 py-3 text-gray-500">{l.created_by_name ?? '—'}</td>
+                    <td
+                      className="px-4 py-3 text-right whitespace-nowrap"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        onClick={() => openList(l)}
+                        disabled={busy}
+                        className="text-xs text-blue-400 hover:text-blue-300 mr-4 disabled:opacity-30"
+                      >
+                        Open
+                      </button>
+                      <button
+                        onClick={() => removeList(l)}
+                        disabled={busy}
+                        className="text-xs text-gray-400 hover:text-red-400 disabled:opacity-30"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+
+                  {expandingId === l.id && (
+                    <tr className="border-t border-[#2e303d] bg-[#0b0d13]">
+                      <td colSpan={8} className="px-4 py-3 text-xs text-gray-500">
+                        Loading…
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* Contents, inset and tinted so it reads as belonging to the
+                      list above rather than as more list rows. */}
+                  {detail && (
+                    <tr className="bg-[#0b0d13]">
+                      <td colSpan={8} className="px-0 pb-3">
+                        <div className="border-l-2 border-blue-500/40 ml-6 pl-4">
+                          <div className="text-xs text-gray-500 py-2">
+                            {l.reference} contents
+                          </div>
+                          {detail.items.length === 0 ? (
+                            <div className="text-xs text-gray-600 pb-2">
+                              Nothing on this list.
+                            </div>
+                          ) : (
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="text-gray-500">
+                                  <th className="text-left font-medium py-1">Product</th>
+                                  <th className="text-right font-medium py-1">Ordered</th>
+                                  <th className="text-right font-medium py-1">Packs</th>
+                                  <th className="text-right font-medium py-1">Weight</th>
+                                  <th className="text-right font-medium py-1">Actual</th>
+                                  <th className="text-left font-medium py-1 pl-4">Remarks</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {detail.items.map((item) => (
+                                  <tr key={item.id} className="text-gray-400">
+                                    <td className="py-1 text-gray-200">
+                                      {item.nickname || item.product_name}
+                                    </td>
+                                    <td className="py-1 text-right">
+                                      {item.unit === 'packs'
+                                        ? `${item.quantity} packs`
+                                        : `${(item.quantity / 1000).toFixed(2)} kg`}
+                                    </td>
+                                    <td className="py-1 text-right text-gray-200">
+                                      {item.total_packs ?? '—'}
+                                    </td>
+                                    <td className="py-1 text-right">
+                                      {item.packed_kg?.toFixed(2) ?? '—'} kg
+                                    </td>
+                                    <td className="py-1 text-right">
+                                      {item.actual_packed ?? '—'}
+                                    </td>
+                                    <td className="py-1 pl-4">{item.remarks || '—'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>

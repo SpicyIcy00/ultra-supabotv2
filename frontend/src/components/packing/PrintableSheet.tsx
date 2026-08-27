@@ -118,7 +118,7 @@ interface PrintableSheetProps {
 export function PrintableSheet({ list, offscreen }: PrintableSheetProps) {
   return (
     <div className={`pk-print${offscreen ? ' offscreen' : ''}`} aria-hidden={offscreen}>
-      <h1>Packing List</h1>
+      <h1>Packing List {list.reference ?? ''}</h1>
       <div className="meta">
         {new Date(list.created_at).toLocaleString()}
         {list.created_by_name ? ` · ${list.created_by_name}` : ''}

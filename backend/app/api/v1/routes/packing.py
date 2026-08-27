@@ -128,6 +128,8 @@ class ListTotals(BaseModel):
 
 class ListSummary(BaseModel):
     id: str
+    # Human-readable list number, e.g. PL0007.
+    reference: Optional[str] = None
     category: Optional[str] = None
     status: str
     created_by_name: Optional[str] = None
@@ -215,6 +217,7 @@ async def _load_detail(db: AsyncSession, list_id: uuid.UUID) -> ListDetail:
 
     return ListDetail(
         id=str(plist.id),
+        reference=plist.reference,
         category=plist.category,
         status=plist.status,
         created_by_name=creator,
@@ -464,7 +467,8 @@ async def list_history(
     query = select(PackingList).options(selectinload(PackingList.items))
     if status:
         query = query.where(PackingList.status == status)
-    query = query.order_by(PackingList.created_at.desc()).limit(limit)
+    # By seq, not created_at: the reference numbers then read in order.
+    query = query.order_by(PackingList.seq.desc()).limit(limit)
 
     rows = (await db.execute(query)).scalars().all()
 
@@ -489,6 +493,7 @@ async def list_history(
         summaries.append(
             ListSummary(
                 id=str(plist.id),
+                reference=plist.reference,
                 category=plist.category,
                 status=plist.status,
                 created_by_name=creators.get(plist.created_by),
