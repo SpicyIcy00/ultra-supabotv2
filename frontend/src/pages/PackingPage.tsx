@@ -266,36 +266,13 @@ interface HistoryTabProps {
 }
 
 function HistoryTab({ closeSignal }: HistoryTabProps) {
-  const [lists, setLists] = useState<ListSummary[]>([]);
+  const [lists, setLists] = useState<ListDetail[]>([]);
   const [open, setOpen] = useState<ListDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [printing, setPrinting] = useState<ListDetail | null>(null);
-  // Contents of expanded rows, fetched on first expand and kept.
-  const [expanded, setExpanded] = useState<Record<string, ListDetail>>({});
-  const [expandingId, setExpandingId] = useState<string | null>(null);
-
-  const toggleExpand = async (summary: ListSummary) => {
-    if (expanded[summary.id]) {
-      setExpanded((prev) => {
-        const next = { ...prev };
-        delete next[summary.id];
-        return next;
-      });
-      return;
-    }
-    setExpandingId(summary.id);
-    try {
-      const detail = await getList(summary.id);
-      setExpanded((prev) => ({ ...prev, [summary.id]: detail }));
-    } catch (e: any) {
-      setError(errText(e, 'Could not load that list.'));
-    } finally {
-      setExpandingId(null);
-    }
-  };
 
   const printInPlace = (target: ListDetail) => {
     setPrinting(target);
@@ -491,7 +468,7 @@ function HistoryTab({ closeSignal }: HistoryTabProps) {
       {error && <div className="text-red-400 text-sm mb-3">{error}</div>}
       {notice && <div className="text-green-400 text-sm mb-3">{notice}</div>}
       <p className="text-xs text-gray-500 mb-3">
-        Click a list to see what is on it. Open it to record what was packed.
+        Open a list to record what was packed.
       </p>
 
       <div className="overflow-x-auto border border-[#2e303d] rounded-lg">
@@ -510,20 +487,10 @@ function HistoryTab({ closeSignal }: HistoryTabProps) {
           </thead>
           <tbody>
             {lists.map((l) => {
-              const detail = expanded[l.id];
-              const isOpen = Boolean(detail);
               return (
                 <React.Fragment key={l.id}>
-                  <tr
-                    onClick={() => toggleExpand(l)}
-                    className={`border-t border-[#2e303d] cursor-pointer transition-colors ${
-                      isOpen ? 'bg-blue-500/5' : 'hover:bg-gray-900/40'
-                    }`}
-                  >
+                  <tr className="border-t-2 border-[#2e303d]">
                     <td className="px-4 py-3">
-                      <span className="text-gray-500 mr-2 inline-block w-3">
-                        {isOpen ? '▾' : '▸'}
-                      </span>
                       <span className="text-white font-medium font-mono">
                         {l.reference ?? '—'}
                       </span>
@@ -544,10 +511,7 @@ function HistoryTab({ closeSignal }: HistoryTabProps) {
                       {l.totals.total_packed_kg.toFixed(2)} kg
                     </td>
                     <td className="px-4 py-3 text-gray-500">{l.created_by_name ?? '—'}</td>
-                    <td
-                      className="px-4 py-3 text-right whitespace-nowrap"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
                       <button
                         onClick={() => openList(l)}
                         disabled={busy}
@@ -565,25 +529,13 @@ function HistoryTab({ closeSignal }: HistoryTabProps) {
                     </td>
                   </tr>
 
-                  {expandingId === l.id && (
-                    <tr className="border-t border-[#2e303d] bg-[#0b0d13]">
-                      <td colSpan={8} className="px-4 py-3 text-xs text-gray-500">
-                        Loading…
-                      </td>
-                    </tr>
-                  )}
-
-                  {/* Contents, inset and tinted so it reads as belonging to the
-                      list above rather than as more list rows. */}
-                  {detail && (
-                    <tr className="bg-[#0b0d13]">
-                      <td colSpan={8} className="px-0 pb-3">
+                  {/* Contents, inset and tinted so they read as belonging to
+                      the list above rather than as more list rows. */}
+                  <tr className="bg-[#0b0d13]">
+                    <td colSpan={8} className="px-0 pb-3">
                         <div className="border-l-2 border-blue-500/40 ml-6 pl-4">
-                          <div className="text-xs text-gray-500 py-2">
-                            {l.reference} contents
-                          </div>
-                          {detail.items.length === 0 ? (
-                            <div className="text-xs text-gray-600 pb-2">
+                          {l.items.length === 0 ? (
+                            <div className="text-xs text-gray-600 py-2">
                               Nothing on this list.
                             </div>
                           ) : (
@@ -599,7 +551,7 @@ function HistoryTab({ closeSignal }: HistoryTabProps) {
                                 </tr>
                               </thead>
                               <tbody>
-                                {detail.items.map((item) => (
+                                {l.items.map((item) => (
                                   <tr key={item.id} className="text-gray-400">
                                     <td className="py-1 text-gray-200">
                                       {item.nickname || item.product_name}
@@ -624,10 +576,9 @@ function HistoryTab({ closeSignal }: HistoryTabProps) {
                               </tbody>
                             </table>
                           )}
-                        </div>
-                      </td>
-                    </tr>
-                  )}
+                      </div>
+                    </td>
+                  </tr>
                 </React.Fragment>
               );
             })}

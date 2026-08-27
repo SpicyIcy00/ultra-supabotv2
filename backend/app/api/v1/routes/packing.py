@@ -456,14 +456,20 @@ async def create_list(
     return await _load_detail(db, plist.id)
 
 
-@router.get("/lists", response_model=List[ListSummary])
+@router.get("/lists", response_model=List[ListDetail])
 async def list_history(
     status: Optional[str] = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
     _: AppUser = Depends(_packing_user),
 ):
-    """Past packing lists, newest first, with their totals."""
+    """
+    Past packing lists, newest first, with their items and totals.
+
+    Items come back inline because history shows every list's contents — one
+    request beats one per list, and the product lookup is a single query across
+    all of them.
+    """
     query = select(PackingList).options(selectinload(PackingList.items))
     if status:
         query = query.where(PackingList.status == status)
@@ -480,34 +486,32 @@ async def list_history(
             u.id: (u.display_name or u.username) for u in urows.scalars().all()
         }
 
-    summaries = []
+    product_ids = {i.product_id for p in rows for i in p.items}
+    products = {}
+    if product_ids:
+        prows = await db.execute(select(Product).where(Product.id.in_(product_ids)))
+        products = {p.id: p for p in prows.scalars().all()}
+
+    details = []
     for plist in rows:
-        # Totals only need the generated columns, so the product join the item
-        # serialiser does is unnecessary here.
-        packs = sum(_f(i.total_packs) or 0 for i in plist.items)
-        kg = sum(_f(i.total_kg) or 0 for i in plist.items)
-        packed_kg = sum(
-            (_f(i.total_packs) or 0) * (_f(i.pack_weight_g_snapshot) or 0) / 1000
+        items = [
+            _to_item(i, products[i.product_id])
             for i in plist.items
-        )
-        summaries.append(
-            ListSummary(
+            if i.product_id in products
+        ]
+        details.append(
+            ListDetail(
                 id=str(plist.id),
                 reference=plist.reference,
                 category=plist.category,
                 status=plist.status,
                 created_by_name=creators.get(plist.created_by),
                 created_at=plist.created_at.isoformat() if plist.created_at else "",
-                totals=ListTotals(
-                    total_packs=packs,
-                    total_grams=kg * 1000,
-                    total_kg=kg,
-                    total_packed_kg=packed_kg,
-                    item_count=len(plist.items),
-                ),
+                totals=_totals(items),
+                items=items,
             )
         )
-    return summaries
+    return details
 
 
 @router.get("/lists/{list_id}", response_model=ListDetail)

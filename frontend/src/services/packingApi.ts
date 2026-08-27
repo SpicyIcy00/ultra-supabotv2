@@ -112,8 +112,9 @@ export const searchProducts = async (search?: string): Promise<ProductOption[]> 
 export const createList = async (category?: string): Promise<ListDetail> =>
   (await axios.post<ListDetail>(`${API_BASE}/lists`, { category })).data;
 
-export const getHistory = async (): Promise<ListSummary[]> =>
-  (await axios.get<ListSummary[]>(`${API_BASE}/lists`)).data;
+/** Includes each list's items, since history shows every list's contents. */
+export const getHistory = async (): Promise<ListDetail[]> =>
+  (await axios.get<ListDetail[]>(`${API_BASE}/lists`)).data;
 
 export const getList = async (listId: string): Promise<ListDetail> =>
   (await axios.get<ListDetail>(`${API_BASE}/lists/${listId}`)).data;
