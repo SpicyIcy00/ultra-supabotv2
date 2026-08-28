@@ -368,12 +368,19 @@ class ScheduledReportService:
 
     def _base_date(self, report: ScheduledReport) -> date:
         """The 'today' the saved SQL's date literals were anchored to (the day the
-        report was created)."""
+        report was created).
+
+        created_at defaults to timezone('Asia/Manila', now()) — the Manila
+        wall-clock reading stored in a TIMESTAMPTZ column, which is this schema's
+        convention for every table. The value is therefore ALREADY Manila time
+        wearing a UTC label; converting it with astimezone(MANILA) would add the
+        +8 offset a second time and push the date to tomorrow for any report
+        created at or after 16:00, making every run a day behind. Read the date
+        off the stored reading verbatim instead.
+        """
         ca = getattr(report, "created_at", None)
         if ca:
-            if ca.tzinfo is not None:
-                ca = ca.astimezone(MANILA)
-            return ca.date()
+            return ca.replace(tzinfo=None).date()
         return datetime.now(MANILA).date()
 
     @staticmethod
