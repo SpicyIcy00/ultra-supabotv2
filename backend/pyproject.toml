@@ -15,7 +15,7 @@ asyncpg = "^0.31.0"
 pydantic = "^2.5.0"
 pydantic-settings = "^2.1.0"
 redis = "^5.0.1"
-anthropic = "^0.18.1"
+anthropic = "^1.2.0"
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 python-multipart = "^0.0.7"

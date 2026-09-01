@@ -190,7 +190,10 @@ class PresentationIntelligence:
             msg = self._client.messages.create(
                 model="claude-sonnet-4-5",
                 max_tokens=700,
-                temperature=0,
+                # anthropic 1.x removed temperature from messages.create().
+                # This call must return STRICT JSON, so determinism matters and
+                # the setting moves to extra_body rather than being dropped.
+                extra_body={"temperature": 0},
                 messages=[{"role": "user", "content": prompt}],
             )
             return msg.content[0].text

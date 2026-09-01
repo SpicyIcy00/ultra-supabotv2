@@ -290,7 +290,12 @@ class SQLGenerator:
             message = self.client.messages.create(
                 model="claude-sonnet-4-5",  # Using Sonnet 4.5
                 max_tokens=2048,
-                temperature=0,  # Deterministic for SQL generation
+                # anthropic 1.x removed temperature/top_p/top_k from the
+                # messages.create() signature (passing one is a TypeError).
+                # Sonnet 4.5 still honours temperature at the API level, and
+                # SQL generation depends on determinism, so it moves to
+                # extra_body, which is merged into the request JSON as-is.
+                extra_body={"temperature": 0},  # Deterministic for SQL generation
                 messages=[{
                     "role": "user",
                     "content": prompt

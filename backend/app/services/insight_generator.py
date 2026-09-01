@@ -76,7 +76,11 @@ class InsightGenerator:
             message = self.client.messages.create(
                 model="claude-sonnet-4-5",  # Fast model for insights
                 max_tokens=500,
-                temperature=0.3,  # Slight creativity for insights
+                # anthropic 1.x removed temperature from messages.create().
+                # Sonnet 4.5 still honours it, and this call deliberately runs
+                # warmer than the deterministic ones, so it moves to extra_body
+                # rather than being dropped.
+                extra_body={"temperature": 0.3},  # Slight creativity for insights
                 messages=[{
                     "role": "user",
                     "content": prompt
