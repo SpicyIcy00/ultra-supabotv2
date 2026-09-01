@@ -74,7 +74,9 @@
       "Bash(start.bat)",
       "Bash(cmd /c start.bat)",
       "Bash(node_modules/.bin/tsc --noEmit)",
-      "Bash(node_modules/.bin/vite build:*)"
+      "Bash(node_modules/.bin/vite build:*)",
+      "Bash(python -)",
+      "Bash(python -c ' *)"
     ],
     "deny": [],
     "ask": []
