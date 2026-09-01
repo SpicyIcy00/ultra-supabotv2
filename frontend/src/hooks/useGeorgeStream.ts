@@ -19,7 +19,19 @@ import type {
   ToolMeta,
 } from '../types/george';
 
-const API_BASE = import.meta.env.VITE_API_URL ?? '';
+/**
+ * Relative, exactly like services/api.ts — the rest of the app hardcodes
+ * '/api/v1' so every call is same-origin and Vercel's rewrite in vercel.json
+ * forwards it to Railway.
+ *
+ * Do NOT reintroduce import.meta.env.VITE_API_URL here. On the production
+ * deployment that variable is set to the Railway origin, which makes the
+ * browser call Railway cross-origin, triggers a CORS preflight, and fails with
+ * "No 'Access-Control-Allow-Origin' header is present" because Railway does not
+ * allow the Vercel origin. Same-origin through the proxy avoids CORS entirely
+ * and works identically in dev and production.
+ */
+const API_BASE = '/api/v1';
 
 /** Thrown to stop fetchEventSource retrying — see FatalError in its docs. */
 class GeorgeStreamError extends Error {}
@@ -65,7 +77,7 @@ export function useGeorgeStream() {
       setState('listening');
 
       try {
-        await fetchEventSource(`${API_BASE}/api/v1/george/ask`, {
+        await fetchEventSource(`${API_BASE}/george/ask`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
