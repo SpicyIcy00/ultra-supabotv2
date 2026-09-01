@@ -1,0 +1,1218 @@
+# =============================================================================
+# metrics.yaml — the single source of truth for George's business definitions.
+#
+# Tools READ from this file. A definition may not be hardcoded in a tool; if a
+# rule is missing here, add it here rather than inlining it. See CLAUDE.md.
+#
+# Every entry carries:
+#   source:   where the rule came from (file/line, live data, or a decision)
+#   resolves: the prior contradiction this entry settles, if any
+#
+# SQL fragments below are vetted, parameterized building blocks — they are the
+# ONLY SQL George composes against these tables. Standard aliases:
+#   t  = new_transactions      ti = new_transaction_items
+#   p  = products              s  = stores               i = inventory
+# =============================================================================
+
+version: 1
+currency:
+  code: PHP
+  symbol: "₱"
+  decimal_places: 2
+  # source: backend/business_rules.yaml:1382-1386 (formatting block).
+  # Store-domain money columns (t.total, ti.item_total, p.cost) are already in
+  # pesos and are NEVER divided. That was the one currency fact never written
+  # down anywhere; it is written down now.
+  store_domain_scaling: none
+
+timezone:
+  name: "Asia/Manila"
+  # source: backend/business_rules.yaml:272 (date_defaults.timezone), repeated in
+  # backend/app/services/sql_generator.py:406 as a hardcoded fallback.
+  # The Philippines observes no DST, so converting a local wall-clock timestamp
+  # to timestamptz is never ambiguous and never skips an hour. Any rule below
+  # that round-trips through AT TIME ZONE is safe for that reason.
+  observes_dst: false
+
+
+# =============================================================================
+# SALES DAY BOUNDARY
+# =============================================================================
+sales_day:
+  description: >
+    A sales day is midnight-to-midnight Asia/Manila. There is no trading-day
+    offset — a transaction at 23:59 Manila belongs to that calendar day, and
+    one at 00:01 belongs to the next.
+  boundary: midnight_local
+  week_start: Monday          # source: business_rules.yaml:273; matches Postgres date_trunc('week')
+  fiscal_year_start: January  # source: business_rules.yaml:275
+
+  # ---------------------------------------------------------------------------
+  # WHY CURRENT_DATE IS BANNED
+  #
+  # CURRENT_DATE returns the date in the SERVER's TimeZone setting, not Manila's.
+  # The backend runs on Railway, where that setting is UTC. Manila is UTC+8, so
+  # for the eight hours from 16:00-23:59 UTC (00:00-07:59 the next day in Manila)
+  # CURRENT_DATE is a full day behind the real Manila date.
+  #
+  # Verified against the production database on 2026-09-01:
+  #   instant 2026-09-01 18:30+00  ->  CURRENT_DATE          = 2026-09-01  (WRONG)
+  #                                ->  Manila calendar date  = 2026-09-02  (RIGHT)
+  #
+  # The workaround used throughout the old chatbot —
+  #   CURRENT_DATE AT TIME ZONE 'Asia/Manila'
+  # — does NOT fix this and is not what it reads as. It casts a date to
+  # timestamp, then reinterprets that midnight as Manila local time, yielding a
+  # timestamptz. At the instant above it returns 2026-09-01 08:00:00+00, i.e.
+  # the START OF THE WRONG DAY. It is a timestamptz, not a date, so comparing it
+  # to a date silently coerces.
+  #
+  # The correct primitive is now() (which is timezone-aware) converted to Manila
+  # wall-clock time FIRST, and only then truncated:
+  #   now() AT TIME ZONE 'Asia/Manila'   -> timestamp, Manila wall clock
+  # Verified to yield manila_today = 2026-09-01 with the server TimeZone set to
+  # UTC, America/New_York and Asia/Manila alike, and to produce byte-identical
+  # absolute instants for the day bounds in all three.
+  #
+  # source: this is a decision, made after reproducing the fault above.
+  # resolves: business_rules.yaml:279 declared
+  #   today: "CURRENT_DATE AT TIME ZONE 'Asia/Manila'"
+  #   as the definition of "today", and examples 3, 12 and 18
+  #   (business_rules.yaml:388, 576, 685) compared
+  #   DATE(t.transaction_time AT TIME ZONE 'Asia/Manila') = CURRENT_DATE.
+  #   Both are wrong for 8 hours a day. Same family as commit fda9693,
+  #   "fix: scheduled reports were always a day behind".
+  # ---------------------------------------------------------------------------
+  expressions:
+    # The base primitive. Everything else derives from this.
+    manila_now:   "(now() AT TIME ZONE 'Asia/Manila')"          # timestamp, Manila wall clock
+    manila_today: "(now() AT TIME ZONE 'Asia/Manila')::date"    # date, the real Manila calendar date
+
+    # Half-open [start, end) bounds as timestamptz, for comparison against
+    # t.transaction_time (which is timestamptz). Truncate in Manila wall-clock
+    # space, then convert back to an absolute instant.
+    today_start:      "date_trunc('day',   (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
+    today_end:        "(date_trunc('day',  (now() AT TIME ZONE 'Asia/Manila')) + INTERVAL '1 day') AT TIME ZONE 'Asia/Manila'"
+    week_start:       "date_trunc('week',  (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
+    month_start:      "date_trunc('month', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
+    year_start:       "date_trunc('year',  (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
+
+    # Bounds for an explicit Manila calendar date :d (a DATE parameter).
+    #
+    # THE ::timestamp CAST IS LOad-BEARING. `date AT TIME ZONE 'Asia/Manila'`
+    # is NOT the same expression and is wrong by 8 hours. Postgres has two
+    # overloads:
+    #     timestamp   AT TIME ZONE tz -> timestamptz   (interpret AS Manila)
+    #     timestamptz AT TIME ZONE tz -> timestamp     (convert TO Manila)
+    # A bare `date` can implicitly cast to either, and Postgres picks the
+    # timestamptz overload — casting the date through the SESSION timezone and
+    # then converting, which yields a naive timestamp 8 hours late:
+    #     (DATE '2026-09-01') AT TIME ZONE 'Asia/Manila'
+    #        -> timestamp 2026-09-01 08:00   (WRONG: 8h past Manila midnight)
+    #     (DATE '2026-09-01')::timestamp AT TIME ZONE 'Asia/Manila'
+    #        -> timestamptz 2026-08-31 16:00+00   (CORRECT: Manila midnight)
+    # Verified with the server timezone set to both UTC and America/New_York.
+    #
+    # This is the SAME failure family as CURRENT_DATE AT TIME ZONE documented
+    # above, and an earlier version of this file reproduced it here. A window
+    # built the wrong way silently shifts every day boundary 8 hours forward,
+    # so "August" runs 1 Aug 16:00 to 1 Sep 16:00 Manila and a day bucket picks
+    # up the following afternoon's trade.
+    #
+    # The preset expressions above do NOT need this cast: date_trunc() returns
+    # `timestamp without time zone`, which selects the correct overload on its
+    # own. Only a bare date needs it.
+    date_start:       "(:d)::timestamp AT TIME ZONE 'Asia/Manila'"
+    date_end:         "((:d)::date + 1)::timestamp AT TIME ZONE 'Asia/Manila'"
+
+    # Grouping key: the Manila calendar date a transaction belongs to.
+    day_bucket:       "(t.transaction_time AT TIME ZONE 'Asia/Manila')::date"
+
+  # ---------------------------------------------------------------------------
+  # GROUPING BUCKETS. The Manila calendar day/week/month a transaction belongs
+  # to. Convert to Manila wall-clock FIRST, then truncate — the same ordering
+  # the primitive above depends on. Postgres date_trunc('week') is Monday-based,
+  # which matches week_start.
+  # ---------------------------------------------------------------------------
+  buckets:
+    day:   "date_trunc('day',   (t.transaction_time AT TIME ZONE 'Asia/Manila'))::date"
+    week:  "date_trunc('week',  (t.transaction_time AT TIME ZONE 'Asia/Manila'))::date"
+    month: "date_trunc('month', (t.transaction_time AT TIME ZONE 'Asia/Manila'))::date"
+
+  # ---------------------------------------------------------------------------
+  # NAMED DATE RANGES. Half-open [start, end) timestamptz, all derived from the
+  # Manila primitive. "What last_month means" is a business definition, so it
+  # lives here rather than in a tool.
+  #
+  # source: business_rules.yaml:278-286 (date_interpretation), re-expressed
+  #   without CURRENT_DATE.
+  #
+  # DECISION — the rolling windows exclude today. last_7_days is the seven
+  # COMPLETE days ending yesterday, not six days plus a partial today. A partial
+  # day silently drags every average and every period-over-period comparison
+  # downward, and the drag changes size depending on the hour the question is
+  # asked. Use `today` explicitly to include the day in progress.
+  # resolves: business_rules.yaml used `>= CURRENT_DATE - INTERVAL '7 days'`
+  #   with no upper bound, which included the partial current day, while
+  #   declaring at line 418 that ranges are inclusive. Neither was stated.
+  # ---------------------------------------------------------------------------
+  presets:
+    today:
+      start: "date_trunc('day', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
+      end:   "(date_trunc('day', (now() AT TIME ZONE 'Asia/Manila')) + INTERVAL '1 day') AT TIME ZONE 'Asia/Manila'"
+      includes_partial_day: true
+    yesterday:
+      start: "(date_trunc('day', (now() AT TIME ZONE 'Asia/Manila')) - INTERVAL '1 day') AT TIME ZONE 'Asia/Manila'"
+      end:   "date_trunc('day', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
+      includes_partial_day: false
+    this_week:
+      start: "date_trunc('week', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
+      end:   "(date_trunc('week', (now() AT TIME ZONE 'Asia/Manila')) + INTERVAL '1 week') AT TIME ZONE 'Asia/Manila'"
+      includes_partial_day: true
+    last_week:
+      start: "(date_trunc('week', (now() AT TIME ZONE 'Asia/Manila')) - INTERVAL '1 week') AT TIME ZONE 'Asia/Manila'"
+      end:   "date_trunc('week', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
+      includes_partial_day: false
+    this_month:
+      start: "date_trunc('month', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
+      end:   "(date_trunc('month', (now() AT TIME ZONE 'Asia/Manila')) + INTERVAL '1 month') AT TIME ZONE 'Asia/Manila'"
+      includes_partial_day: true
+    last_month:
+      start: "(date_trunc('month', (now() AT TIME ZONE 'Asia/Manila')) - INTERVAL '1 month') AT TIME ZONE 'Asia/Manila'"
+      end:   "date_trunc('month', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
+      includes_partial_day: false
+    last_7_days:
+      start: "(date_trunc('day', (now() AT TIME ZONE 'Asia/Manila')) - INTERVAL '7 days') AT TIME ZONE 'Asia/Manila'"
+      end:   "date_trunc('day', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
+      includes_partial_day: false
+    last_30_days:
+      start: "(date_trunc('day', (now() AT TIME ZONE 'Asia/Manila')) - INTERVAL '30 days') AT TIME ZONE 'Asia/Manila'"
+      end:   "date_trunc('day', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
+      includes_partial_day: false
+    this_year:
+      start: "date_trunc('year', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
+      end:   "(date_trunc('year', (now() AT TIME ZONE 'Asia/Manila')) + INTERVAL '1 year') AT TIME ZONE 'Asia/Manila'"
+      includes_partial_day: true
+
+  # All ranges are half-open: lower bound inclusive, upper bound exclusive.
+  # resolves: business_rules.yaml:418 instructed "Always use inclusive date
+  #   ranges", but most of its own examples used an open-ended `>=` with no
+  #   upper bound (so they silently included today's partial day) while
+  #   examples 1, 20, 29 and 30 used half-open bounds. Both were presented as
+  #   correct. Half-open is now the only permitted form.
+  range_convention: half_open   # transaction_time >= start AND transaction_time < end
+
+
+# =============================================================================
+# STORES — the 7 active retail stores, keyed on the ACTUAL stores.name value
+# =============================================================================
+# source: live production `stores` table + distinct store_id in new_transactions,
+#   read 2026-09-01. `stores.name` was renamed at some point to the "(N) ..."
+#   form and the friendly label moved to `stores.display_name`.
+#
+# resolves: THREE separate contradictions.
+#   1. backend/business_rules.yaml:7-13 listed 6 stores by friendly name
+#      ("Rockwell", "Greenhills", ...). Those strings no longer match any
+#      stores.name value, so every example doing `s.name = 'Rockwell'`
+#      (business_rules.yaml:592, 702, 751, 830, 897) matches ZERO rows.
+#   2. The live `store_filters` table omitted Greenhills from the sales scope
+#      while including it in inventory — dropping the second-busiest store
+#      (65,063 transactions) from sales reporting. Greenhills is included here.
+#   3. Shang (12,085 transactions since 2026-04-05) existed in the data but in
+#      no config file. It is included here.
+#
+# Match on `id`, never on a name. The names below are recorded so a rename is
+# detectable; `display_name` is what George shows the user.
+# NOTE: "(6) Aji Ichiban  OPUS" contains a DOUBLE SPACE. Preserved verbatim.
+stores:
+  active_retail:
+    - id: "6639efd54694700008d7ccc6"
+      name: "(1) Aji Ichiban Food Products"
+      display_name: "Rockwell"
+    - id: "668023c94721460006092609"
+      name: "(2) Aji Ichiban food products SM Fairview"
+      display_name: "Fairview"
+    - id: "668a43f60fa9990007cfa158"
+      name: "(3) Ajiichiban Food Products Greenhills"
+      display_name: "Greenhills"
+    - id: "66cfff31aa7adf0007c9de41"
+      name: "(4) Ajiichiban Food Products SM North Edsa"
+      display_name: "North Edsa"
+    - id: "67612230a740d90007464e26"
+      name: "(5) Ajiichiban food products Magnolia"
+      display_name: "Magnolia"
+    - id: "68c5bb269da1d500073690c2"
+      name: "(6) Aji Ichiban  OPUS"
+      display_name: "OPUS"
+    - id: "69c73fcb277aa600076dfaaa"
+      name: "Ajiichiban SHANG"
+      display_name: "Shang"
+
+  # The warehouse. NOT a retail store — excluded from every sales metric (see
+  # filters.aji_barn) but in scope for inventory, because stock genuinely sits
+  # here. Recorded with a display_name so tools can label its rows from this
+  # file instead of reading stores.name at query time.
+  # source: live stores table, 2026-09-01 (stores.display_name is NULL there).
+  warehouse:
+    - id: "667bde393126e50006c8058c"
+      name: "AJI BARN"
+      display_name: "AJI BARN"
+
+  # Two more storefronts exist in `stores` with ZERO transactions to date and are
+  # presumed to be the 8th and 9th candy stores. They are deliberately NOT in
+  # active_retail until they transact. Move them up when they do.
+  # source: live stores table, 2026-09-01.
+  pending_retail:
+    - id: "694785f3c9a90d0007fc9232"
+      name: "Ajiichiban ROBINSONS super market lucky Chinatown"
+    - id: "6982c9a9aa1210000783594d"
+      name: "AJI ROBINSONS supermarket robinsons galleria"
+
+  sql:
+    # The canonical sales scope. Tools bind this list; they never inline names.
+    # resolves: sql_generator.py:179 resolved names -> ids via stores.name and
+    #   silently produced an EMPTY id list, which rendered the literal SQL
+    #   `t.store_id IN ()` into the prompt — a syntax error. Keying on ids
+    #   removes the resolution step entirely.
+    active_retail_filter: "t.store_id IN :active_retail_store_ids"
+
+
+# =============================================================================
+# ROW-LEVEL FILTERS — what counts as a sale at all
+# =============================================================================
+filters:
+
+  # ---------------------------------------------------------------------------
+  cancelled:
+    rule: "Cancelled transactions are excluded from every metric, without exception."
+    sql: "t.is_cancelled = false"
+    # source: business_rules.yaml:260-266 (default_filters, always_apply: true),
+    #   restated at sql_generator.py:427 (safety rule 2) and as negative
+    #   example 1 (business_rules.yaml:1207).
+    # resolves: nothing — this is the one rule both files already stated
+    #   identically. Recorded here so tools read it from one place.
+    # Live count: 1,753 cancelled rows across the 9 transacting stores.
+    always_apply: true
+
+  # ---------------------------------------------------------------------------
+  returns:
+    rule: >
+      A row with transaction_type = 'Return' is NOT a sale and is excluded from
+      all sales metrics. Returns are reported separately, never netted silently.
+    sale_sql:   "t.transaction_type = 'Sale'"
+    return_sql: "t.transaction_type = 'Return'"
+    # source: live data, 2026-09-01. Distinct values of transaction_type are
+    #   exactly 'Sale' (365,370 rows) and 'Return' (54 rows, ₱35,407.40 total).
+    #
+    # resolves: TWO problems.
+    #   1. NO rule for returns existed anywhere. No training example, negative
+    #      example, default filter or prompt line referenced transaction_type.
+    #      Because Return rows carry POSITIVE totals (verified: zero rows in
+    #      new_transactions have total < 0), every sales figure the old chatbot
+    #      produced silently counted ₱35,407.40 of returns as revenue.
+    #   2. business_rules.yaml:52 documented the values as "SALE, REFUND".
+    #      The actual values are 'Sale' and 'Return' — different words AND
+    #      different case. A filter written from that doc matches zero rows and
+    #      looks like it worked.
+    always_apply: true
+
+    # OPEN QUESTION — do not resolve by guessing.
+    # Return rows store a positive `total`. Whether that figure is the refunded
+    # amount (so net-of-returns = sales - returns) or something else has not been
+    # confirmed with the business. Until it is, George reports returns as their
+    # own figure and must NOT publish a "net of returns" number.
+    net_of_returns_supported: false
+
+  # ---------------------------------------------------------------------------
+  aji_barn:
+    rule: >
+      AJI BARN is the warehouse, not a store. Its rows in new_transactions are
+      stock movements, not retail sales, and are excluded from every sales
+      metric. AJI BARN remains in scope for INVENTORY questions — stock
+      genuinely lives there.
+    excluded_store_ids:
+      - "667bde393126e50006c8058c"   # AJI BARN     — warehouse, 1,703 'Sale' + 2 'Return' rows
+      - "6639efd64694700008d7cd17"   # AJI PINA     — 92 rows, 2025-07-18 → 2025-08-08 only
+    inventory_scope_store_ids:
+      - "667bde393126e50006c8058c"   # AJI BARN is IN scope for inventory
+    # source: live data, 2026-09-01. AJI BARN carries 1,703 rows typed 'Sale'
+    #   spanning 2025-08-15 → 2026-09-01; AJI PINA carries 92 rows in a
+    #   three-week window in 2025.
+    #
+    # resolves: no concept of a transfer existed in either file. Warehouse
+    #   movements carry the SAME transaction_type ('Sale') as a customer
+    #   purchase, so nothing distinguished them. The only mechanism that would
+    #   have excluded them was the store_filters sales list — which was broken
+    #   (see stores.sql.active_retail_filter above), so BARN movements were
+    #   landing in company-wide totals.
+    #
+    # ASSUMPTION FLAGGED FOR THE BUSINESS: that a BARN row is an internal
+    # transfer rather than a wholesale sale. If some BARN rows are genuine
+    # third-party sales, this exclusion understates revenue and this entry must
+    # change. Excluding is the safer default — a transfer counted as revenue
+    # inflates every store-comparison and company total.
+    assumption_confirmed: false
+
+  # ---------------------------------------------------------------------------
+  # The full guard every sales metric applies. Tools compose from this, and the
+  # meta.filters_applied they return must name each clause included.
+  standard_sales_guard:
+    - "t.is_cancelled = false"
+    - "t.transaction_type = 'Sale'"
+    - "t.store_id IN :active_retail_store_ids"
+
+
+# =============================================================================
+# METRICS
+# =============================================================================
+#
+# THERE IS DELIBERATELY NO STORE-SIDE PROFIT METRIC. No cost is captured per
+# line, so the documented formula would value historical sales at today's cost.
+# Before adding one, read suppliers.store_profit_supported (false) and
+# suppliers.store_profit_reason. Vending profit IS computable and lives in
+# vending.metrics.profit, with a mandatory overstatement flag.
+# =============================================================================
+metrics:
+
+  # ---------------------------------------------------------------------------
+  net_sales:
+    description: >
+      Company or store level sales value. The transaction-level measure: the
+      final amount of each completed, non-cancelled, non-return transaction at
+      an active retail store.
+    grain: transaction
+    source_table: new_transactions
+    sql: "SUM(t.total)"
+    unit: PHP
+    filters:
+      - "t.is_cancelled = false"
+      - "t.transaction_type = 'Sale'"
+      - "t.store_id IN :active_retail_store_ids"
+    date_column: "t.transaction_time"
+    # A transaction total cannot be attributed to a line, so this metric may NOT
+    # be grouped by product or category. Splitting t.total across the products
+    # in a basket would invent a definition nobody agreed. Tools must REFUSE the
+    # combination rather than answer it — see metrics.product_revenue for the
+    # measure that is valid at that grain.
+    valid_group_by: [store, day, week, month]
+    # source: t.total is the measure used by every store-level example in
+    #   business_rules.yaml (examples 2, 7, 8, 11, 12, 13, 15, 18, 20, 21, 23,
+    #   25, 28, 31) and by the MANDATORY year-over-year template at
+    #   sql_generator.py:494.
+    #
+    # resolves: business_rules.yaml:309 DECLARED revenue as SUM(ti.item_total)
+    #   while essentially all of its own store-level SQL used SUM(t.total).
+    #   Nothing said which was authoritative or when to use which.
+    #   DECIDED: t.total is net_sales; ti.item_total is product_revenue, valid
+    #   only at line grain. See metrics.product_revenue for the measured
+    #   reconciliation — the two currently tie EXACTLY, because t.discount is
+    #   zero on every row. The ambiguity was therefore latent rather than
+    #   actively wrong, but it is still resolved here so that a future header
+    #   discount does not silently split the two numbers.
+    #   t.total = t.sub_total + t.tax (verified, August 2026).
+
+  # ---------------------------------------------------------------------------
+  product_revenue:
+    description: >
+      Revenue attributed to a specific product, category or tag. The line-level
+      measure — the only one that can be broken down below the transaction.
+    grain: transaction_item
+    source_table: new_transaction_items
+    sql: "SUM(ti.item_total)"
+    unit: PHP
+    join: "INNER JOIN new_transactions t ON ti.transaction_ref_id = t.ref_id"
+    filters:
+      - "t.is_cancelled = false"
+      - "t.transaction_type = 'Sale'"
+      - "t.store_id IN :active_retail_store_ids"
+    date_column: "t.transaction_time"
+    # Line grain, so every grouping is valid.
+    valid_group_by: [store, day, week, month, product, category]
+    # source: business_rules.yaml:309 (revenue_calculation) and :197
+    #   (column_synonyms.revenue marks item_total "the correct column for
+    #   revenue in transaction_items").
+    #
+    # resolves: the same net_sales/product_revenue split above, by naming both
+    #   measures and scoping each to the grain it is valid at. It also enforces
+    #   negative example 4 (business_rules.yaml:1228): new_transaction_items
+    #   carries no date and no is_cancelled, so it MUST be joined to
+    #   new_transactions before any filtering — the join is part of this
+    #   definition, not left to the caller.
+    #
+    # RECONCILIATION — MEASURED ACROSS HISTORY. The two measures agree on recent
+    # data and DISAGREE on 2024 data. Verified, 7 active stores, Manila windows:
+    #
+    #   window     net_sales       product_revenue   gap            discount
+    #   Jun 2024   2,483,286.24    2,501,609.05      -18,322.81     29,188.87
+    #   Jul 2024   4,256,511.81    4,209,769.48      +46,742.33      7,274.54
+    #   Jun 2026   8,467,689.89    8,467,689.89            0.00          0.00
+    #   Aug 2026   7,926,172.16    7,926,172.16            0.00          0.00
+    #
+    # CORRECTION TO AN EARLIER VERSION OF THIS FILE. It previously asserted
+    #   ties_to_net_sales: true, ties_only_while: "SUM(t.discount) = 0"
+    # on the strength of August 2026 alone. That is WRONG. The gap does not
+    # equal the discount, and in June 2024 the gap is NEGATIVE — product_revenue
+    # exceeds net_sales, which a header discount cannot cause. The true cause of
+    # the 2024 divergence is not yet established (most likely line items whose
+    # header is absent, or the reverse).
+    #
+    # SUM(t.discount) = 0 is therefore NECESSARY BUT NOT SUFFICIENT. A tool that
+    # asserted only the discount would pass while the two measures sat ₱46,742
+    # apart. Do not use it as the test.
+    #
+    # THE TEST is to compute both measures over the same window and filters and
+    # compare them directly. tools/sales.py does this and reports the outcome in
+    # meta.reconciliation. Note that 742 transactions across all history carry a
+    # nonzero discount, concentrated in 2024-06..2024-08 plus one row in 2026-04.
+    ties_to_net_sales: varies_by_window
+    reconciliation_method: "compute both measures over the same window and filters; compare directly"
+    discount_is_sufficient_test: false
+    # Retained as a DIAGNOSTIC reported alongside the real comparison, never as
+    # the test itself.
+    discount_diagnostic_sql: "SUM(t.discount)"
+    # Windows known to diverge, for regression testing.
+    known_divergent_windows:
+      - {start: "2024-06-01", end: "2024-07-01", gap: -18322.81}
+      - {start: "2024-07-01", end: "2024-08-01", gap: 46742.33}
+
+  # ---------------------------------------------------------------------------
+  returns_value:
+    description: >
+      Value of returned transactions, reported on its own. NEVER subtracted
+      from net_sales — see filters.returns.net_of_returns_supported.
+    grain: transaction
+    source_table: new_transactions
+    sql: "SUM(t.total)"
+    unit: PHP
+    filters:
+      - "t.is_cancelled = false"
+      - "t.transaction_type = 'Return'"
+      - "t.store_id IN :active_retail_store_ids"
+    date_column: "t.transaction_time"
+    # Transaction grain, same restriction as net_sales.
+    valid_group_by: [store, day, week, month]
+    # source: live data — 54 Return rows, ₱35,407.40, all with positive totals.
+    # resolves: makes returns visible as a figure instead of leaving them
+    #   silently folded into revenue, without asserting a netting convention
+    #   nobody has confirmed.
+
+  # ---------------------------------------------------------------------------
+  units_sold:
+    description: "Number of units sold. Line grain."
+    grain: transaction_item
+    source_table: new_transaction_items
+    sql: "SUM(ti.quantity)"
+    unit: units
+    join: "INNER JOIN new_transactions t ON ti.transaction_ref_id = t.ref_id"
+    filters:
+      - "t.is_cancelled = false"
+      - "t.transaction_type = 'Sale'"
+      - "t.store_id IN :active_retail_store_ids"
+    date_column: "t.transaction_time"
+    valid_group_by: [store, day, week, month, product, category]
+    # source: business_rules.yaml:312 (business_logic.units_sold) and :206-212
+    #   (column_synonyms.units names `quantity` as the actual column).
+    # ti.quantity is NUMERIC, not integer — weighted items sell in fractions
+    # (observed range 1.000 to 96,320.000 across 891,714 line items, no NULLs).
+    # Do not cast it to int.
+    integral: false
+
+  # ---------------------------------------------------------------------------
+  transaction_count:
+    description: >
+      Number of distinct transactions. Transaction grain. When grouped by
+      product or category the meaning CHANGES to "transactions containing this
+      product/category" — a different question, and baskets spanning several
+      groups are counted once in each.
+    grain: transaction
+    source_table: new_transactions
+    sql: "COUNT(DISTINCT t.ref_id)"
+    unit: transactions
+    filters:
+      - "t.is_cancelled = false"
+      - "t.transaction_type = 'Sale'"
+      - "t.store_id IN :active_retail_store_ids"
+    date_column: "t.transaction_time"
+    valid_group_by: [store, day, week, month, product, category]
+    # Grouping by product/category is permitted but redefines the metric, so a
+    # tool MUST attach a notice saying so. Silently answering a different
+    # question is the failure mode this entry exists to prevent.
+    redefined_when_grouped_by: [product, category]
+    redefinition_note: >
+      Counting transactions that CONTAIN this product, not transactions OF this
+      product. A basket holding three different products contributes 1 to each
+      of the three rows, so these counts do not sum to the overall
+      transaction_count.
+    # source: business_rules.yaml:313 (business_logic.transaction_count).
+    #   COUNT(DISTINCT t.ref_id), not COUNT(*): ref_id is the transaction PK and
+    #   a line-grain join multiplies header rows.
+
+
+# =============================================================================
+# INVENTORY STATE — one stockout definition
+# =============================================================================
+inventory:
+  source_table: inventory          # current state only; no history
+  history_table: inventory_snapshots
+  # inventory_snapshots columns are EXACTLY: store_id, product_id, snapshot_date,
+  # quantity_on_hand, created_at. There is no prev_quantity or delta column;
+  # prior-day values come from LAG(quantity_on_hand) OVER (PARTITION BY
+  # store_id, product_id ORDER BY snapshot_date) inside a CTE.
+  # source: sql_generator.py:444.
+
+  # ---------------------------------------------------------------------------
+  # ONE definition. The three states are mutually exclusive and evaluated in the
+  # order listed, so exactly one applies to any row.
+  #
+  # NEGATIVE ON-HAND IS DECIDED: quantity_on_hand < 0 counts as OUT OF STOCK.
+  # A negative balance is a data error, but the shelf is empty either way.
+  # Treating it as anything else hides a real outage behind a bookkeeping fault,
+  # which is the more expensive mistake.
+  #
+  # source: sql_generator.py:440-442 (the prompt's `<= 0` / `> 0` / low-stock
+  #   rules) — the prompt's boundary is adopted, the yaml example's is not.
+  #
+  # resolves: THREE contradictions in and around business_rules.yaml example 5.
+  #   1. sql_generator.py:441 defined out-of-stock as `quantity_on_hand <= 0`
+  #      while business_rules.yaml:436 used `quantity_on_hand = 0`. Negative
+  #      stock was a stockout under one rule and invisible under the other.
+  #      DECIDED: <= 0.
+  #   2. business_rules.yaml:433-437 ordered its CASE with the LOW STOCK branch
+  #      FIRST, so any row with quantity_on_hand = 0 and a non-null
+  #      warning_stock >= 0 was labelled 'LOW STOCK' and never reached the
+  #      'OUT OF STOCK' branch — that branch was unreachable, and every real
+  #      stockout was mislabelled. Ordering out_of_stock first fixes it.
+  #   3. business_rules.yaml:441 defaulted a missing warning_stock to 10 via
+  #      COALESCE; sql_generator.py:442 applied no default. Products with a null
+  #      threshold appeared in one result set and not the other. See below.
+  states:
+    - name: out_of_stock
+      sql: "i.quantity_on_hand <= 0"
+      order: 1
+    - name: low_stock
+      sql: "i.quantity_on_hand > 0 AND i.warning_stock IS NOT NULL AND i.quantity_on_hand <= i.warning_stock"
+      order: 2
+    - name: in_stock
+      sql: "i.quantity_on_hand > 0 AND (i.warning_stock IS NULL OR i.quantity_on_hand > i.warning_stock)"
+      order: 3
+
+  # DELIBERATELY NULL. A product with no warning_stock has no low-stock
+  # threshold and is therefore never "low stock" — it is in_stock, and the
+  # missing_threshold flag surfaces it so the gap is visible rather than papered
+  # over. The old COALESCE(warning_stock, 10) invented a business rule that
+  # nobody set; if the business wants a floor, it is changed HERE, once.
+  low_stock_threshold_default: null
+  missing_threshold_flag_sql: "i.warning_stock IS NULL"
+
+  # ---------------------------------------------------------------------------
+  # MEASURED STATE OF THIS TABLE — 2026-09-01, all 31,617 inventory rows:
+  #   warning_stock IS NULL on 31,617 rows (100%). Zero rows have a threshold.
+  #   ideal_stock  > 0 on 0 rows.
+  #   out_of_stock = 27,648 (87.4%), of which 2,413 are NEGATIVE on-hand.
+  #   low_stock    = 0        in_stock = 3,969
+  #   States verified mutually exclusive and total (27,648 + 0 + 3,969 = 31,617).
+  #
+  # CONSEQUENCE, STATED PLAINLY: low_stock currently matches ZERO rows and will
+  # keep doing so until warning_stock is populated. This is not a bug in the
+  # definition — it is the honest result of the thresholds never being set.
+  #
+  # It also explains business_rules.yaml:441's COALESCE(warning_stock, 10):
+  # that default was the ONLY reason the old low-stock report ever returned
+  # anything. Every "low stock" answer the old chatbot gave was driven by an
+  # invented constant of 10, not by a threshold anyone configured.
+  #
+  # A tool answering a low-stock question MUST say the thresholds are unset
+  # rather than return an empty list as though nothing were low. Do not restore
+  # a default to make the report non-empty — populate warning_stock, or agree a
+  # real floor with the business and set it here.
+  low_stock_operational: false
+  low_stock_blocked_reason: "inventory.warning_stock is NULL on 100% of rows"
+
+  # Inventory questions use their own store scope — the warehouse holds stock.
+  # source: the live store_filters table's inventory scope, plus filters.aji_barn.
+  #
+  # resolves: this was previously the prose string
+  #   "active_retail + filters.aji_barn.inventory_scope_store_ids"
+  # which no tool could read without parsing an ad-hoc expression — a violation
+  # of the rule this file exists to enforce (tools READ definitions, they do not
+  # interpret them). It is now a literal list. Keep it literal.
+  scope_store_ids:
+    - "6639efd54694700008d7ccc6"   # Rockwell
+    - "668023c94721460006092609"   # Fairview
+    - "668a43f60fa9990007cfa158"   # Greenhills
+    - "66cfff31aa7adf0007c9de41"   # North Edsa
+    - "67612230a740d90007464e26"   # Magnolia
+    - "68c5bb269da1d500073690c2"   # OPUS
+    - "69c73fcb277aa600076dfaaa"   # Shang
+    - "667bde393126e50006c8058c"   # AJI BARN — warehouse, inventory scope only
+
+  # NOT DEFINED YET. `inventory` is point-in-time state, so a stockout EVENT or
+  # DURATION ("how long was X out of stock") cannot be answered from it. That
+  # needs a definition built on inventory_snapshots. Do not improvise one in a
+  # tool — add it here first.
+  stockout_duration_supported: false
+
+
+# =============================================================================
+# PRODUCT CATALOG
+# =============================================================================
+products:
+  source_table: products
+  # 3,678 rows as of 2026-09-01. `embedding` is a pgvector column and is
+  # entirely NULL — never select it, and never SELECT *.
+
+  # ---------------------------------------------------------------------------
+  # CATEGORY NORMALIZATION. Blank and NULL both mean "not categorised" and must
+  # collapse to one visible bucket, never be dropped.
+  #
+  # source: business_rules.yaml:451 and :799 used COALESCE(p.category,
+  #   'Uncategorized'); the NULLIF is added because the column holds BOTH NULL
+  #   and empty string, and a bare COALESCE leaves '' as its own silent group.
+  #   83 of 3,678 products are uncategorised.
+  #
+  # resolves: this expression was HARDCODED in tools/sales.py
+  #   (_group_expressions), which is precisely what this file exists to prevent
+  #   — a definition living in a tool drifts from every other tool that needs
+  #   it. tools/sales.py and tools/products.py now both read it from here.
+  # ---------------------------------------------------------------------------
+  category_normalization:
+    sql: "COALESCE(NULLIF(p.category, ''), 'Uncategorized')"
+    uncategorized_label: "Uncategorized"
+
+  # ---------------------------------------------------------------------------
+  # SKU IS NOT UNIQUE. 3,678 products share 3,610 distinct case-insensitive
+  # SKUs — 68 collide. The colliding rows are UNRELATED products, not variants:
+  #
+  #   Tky105  hokka Gudetama biscuits              indi      PHP 133.04
+  #   tky105  Pikachu figure limited edition candy  seasonal  PHP 891.96
+  #   TKY105  Dars Dark chocolate 42g               choco     PHP  88.39
+  #
+  # source: live products table, 2026-09-01.
+  #
+  # POLICY — a SKU that resolves to more than one product MUST NOT be summed
+  # into a single figure. A tool either returns the matches separately (one row
+  # per product, so the caller can see all three) or REFUSES and names the
+  # collision. It must never silently aggregate them.
+  #
+  # resolves: tools/sales.py and tools/inventory.py both filtered with
+  #   `lower(p.sku) = lower(:sku)`. In sales.py, a SKU filter without a product
+  #   grouping summed all three of the above into one number that belongs to no
+  #   product. Callers disambiguate with the product_id filter.
+  # ---------------------------------------------------------------------------
+  sku:
+    unique: false
+    match: case_insensitive
+    ambiguity_policy: separate_or_refuse
+    disambiguate_with: product_id
+
+  # ---------------------------------------------------------------------------
+  # BARCODES COME FROM TWO PLACES AND products.barcode IS A LIST.
+  #
+  #   products.barcode holds a COMMA-SEPARATED list, not one value, e.g.
+  #     '4902888269042,4902888269035,4902888269653,4902888270819,...'
+  #   An `= ` match misses those rows; a LIKE '%code%' match wrongly hits a
+  #   barcode that merely CONTAINS the search string. Split and match an exact
+  #   element.
+  #
+  #   product_barcodes is a second, generated source (89 rows), 22 of which do
+  #   NOT appear anywhere in products.barcode. A barcode lookup that reads only
+  #   one of the two sources misses real products.
+  #
+  # source: live data, 2026-09-01. 409 products have no barcode at all; 20
+  #   barcode values are shared by more than one product.
+  # ---------------------------------------------------------------------------
+  barcode:
+    products_column_is_list: true
+    list_separator: ","
+    match_sql: "%(barcode)s = ANY(string_to_array(replace(p.barcode, ' ', ''), ','))"
+    secondary_table: product_barcodes
+    secondary_match_sql: "pb.barcode = %(barcode)s"
+    unique: false
+
+  # Free-text name search also covers `nickname` (115 products carry one).
+  # Substring only — never fuzzy. Fuzzy matching invents a relevance ranking,
+  # and with genuine near-duplicate names ("golden plum 1kg" appears 3 times) a
+  # fuzzy hit looks authoritative while being a guess.
+  name:
+    search_columns: [name, nickname]
+    match: case_insensitive_substring
+    fuzzy: false
+
+
+# =============================================================================
+# STOCK MOVEMENT (AJI BARN <-> stores)
+#
+# THERE IS NO MOVEMENT LEDGER IN THIS DATABASE. Nothing records a transfer as
+# an event. Everything below is what a survey on 2026-09-01 actually found, and
+# it is the reason tools/movement.py reports BALANCE CHANGES and refuses to
+# report transfers.
+# =============================================================================
+movement:
+  recorded_ledger_exists: false
+
+  # What was surveyed and what it held.
+  # source: live database, 2026-09-01, all 38 base tables enumerated.
+  sources_surveyed:
+    warehouse_inventory:    {rows: 0,      verdict: "empty; schema is a balance snapshot, not a ledger"}
+    packing_lists:          {rows: 2,      verdict: "both status=pending, created 2026-08-27/28; never used"}
+    packing_items:          {rows: 3,      verdict: "three lines total, actual_packed all NULL"}
+    store_pipeline:         {rows: 0,      verdict: "empty"}
+    candy_sku_by_store:     {rows: 0,      verdict: "empty"}
+    shipment_plans:         {rows: 122207, verdict: "planning only; allocated_ship_qty sums to -17,705,649"}
+    candy_inventory_counts: {rows: 1742,   verdict: "physical counts, 9 stores, 13 products, from 2026-06-14; AJI BARN NOT among them"}
+    candy_warehouse_dispatches_clean: {rows: 13735, verdict: "inferred view, not a ledger; see destination_attribution"}
+    inventory_snapshots:    {rows: 4881566, verdict: "daily BALANCES; movement only inferable by differencing"}
+
+  # ---------------------------------------------------------------------------
+  # THE ONLY USABLE SOURCE, AND WHAT IT IS NOT.
+  # inventory_snapshots holds a daily balance per (store, product). Differencing
+  # consecutive days yields a BALANCE CHANGE. That is not a movement: it says
+  # the number moved, never that goods moved, where they went, or why.
+  # ---------------------------------------------------------------------------
+  balance_delta:
+    source_table: inventory_snapshots
+    derived: true
+    is_recorded_movement: false
+    method: "difference consecutive daily balance snapshots per (store, product)"
+    # Snapshot coverage is NOT continuous. AJI BARN has 148 distinct snapshot
+    # days across a 162-day span (2026-03-23..2026-08-31) — 14 days missing.
+    # A delta spanning a gap silently merges several days of movement into one
+    # number, so tools MUST NOT difference across a gap; report the gap instead.
+    difference_across_gaps: false
+    barn_snapshot_days: 148
+    barn_snapshot_span_days: 162
+    barn_missing_days: 14
+
+  # ---------------------------------------------------------------------------
+  # DESTINATION ATTRIBUTION IS NOT SUPPORTED. "How much went from BARN to
+  # Rockwell" is unanswerable from this data and tools MUST refuse it.
+  #
+  # candy_warehouse_dispatches_clean is the only thing naming a destination. It
+  # is a VIEW that infers dispatches from transactions at BARN with total = 0,
+  # parsing the destination out of a free-text `notes` column with
+  # normalize_store_note(). Measured against actual balance movement for
+  # August 2026:
+  # ---------------------------------------------------------------------------
+  destination_attribution:
+    supported: false
+    measured_window: "2026-08-01..2026-09-01"
+    dispatch_view_grams: 1422047
+    barn_negative_delta_grams: -4338299
+    coverage_pct: 32.8                  # view explains a third of outflow
+    null_destination_rows: 3601
+    total_view_rows: 13735
+    null_destination_pct: 26.2
+    products_in_view: 450
+    products_with_barn_snapshots: 3518
+    products_dispatched_in_window: 196
+    products_with_no_barn_snapshot: 69   # 35.2% of those dispatched
+    products_reconciling_exactly: 24     # 12.2% — residual exactly 0
+    # Worked counterexamples: G4 shows 80,982 g dispatched while its balance
+    # ROSE 241,518 g; G2 shows 51,600 g dispatched while its balance rose
+    # 209,400 g. SH1 "Aji Mix" has ZERO rows in the view across all time despite
+    # 4,817,082 g of balance movement in 90 days.
+    refusal_message: >
+      Destination-scoped movement is not answerable from this data. The only
+      source naming a destination is candy_warehouse_dispatches_clean, a view
+      that infers dispatches from zero-total BARN transactions and parses the
+      destination from a free-text notes field. It accounts for 32.8% of BARN's
+      outflow, has no destination on 26.2% of its rows, covers 450 of 3,518
+      products, and reconciles exactly for only 24 of the 196 products it shows
+      as dispatched. There is no movement ledger to fall back on.
+
+  # Attached to every answer as a corroborating source so each result states how
+  # much of the observed balance change any recorded dispatch can explain.
+  corroborating_source:
+    table: candy_warehouse_dispatches_clean
+    quantity_column: weight_grams
+    time_column: transaction_time
+    authoritative: false
+
+  # BARN quantities are grams. 24,401,719 = 24.4 tonnes.
+  unit: grams
+
+
+# =============================================================================
+# VENDING (AJI CMG / Weimi machines, brand "Hello Aji")
+#
+# A SEPARATE DATA SOURCE from the StoreHub store tables. goods_id has nothing to
+# do with products.id and machines are not rows in `stores`. NEVER join, union
+# or compare the two domains.
+#
+# NOTE ON THE NAME: "AJI CMG" exists in BOTH domains — as a `stores` row
+# (667bde0cd749a000079f4650) carrying store-side inventory, and as this vending
+# business. tools/vending.py covers ONLY the Weimi side. The store row is out of
+# scope here and must not be conflated with it.
+# =============================================================================
+vending:
+  domain: weimi
+  currency: PHP
+  never_join_to_store_domain: true
+
+  # ---------------------------------------------------------------------------
+  # READ THE _php VIEWS, NOT THE RAW TABLES.
+  # Every money column in the raw vending tables is an INTEGER NUMBER OF CENTS
+  # (2000 = PHP 20.00). The _php views are already divided by 100 and must never
+  # be divided again. Verified 2026-09-01: raw real_price 2000 -> 20.00 php.
+  #
+  # Reading the views removes the cents trap at the source instead of relying on
+  # every query remembering to divide — the single most repeated warning in
+  # business_rules.yaml (schema notes, prompt rules AND negative examples).
+  #
+  # v_vending_order_lines_php also pre-joins device_name and category_name, so
+  # the tool needs no join for either.
+  # ---------------------------------------------------------------------------
+  source_view: v_vending_order_lines_php
+  orders_view: v_vending_orders_php
+  catalog_view: v_vending_goods_php
+  raw_money_is_cents: true
+  views_already_pesos: true
+
+  # ---------------------------------------------------------------------------
+  # THE currency COLUMN LIES. vending_orders.currency = 'CNY' on all 9,219 rows.
+  # That is a Weimi hardcoding bug; the real currency is PHP. The raw column is
+  # NEVER passed through to a caller. The _php views already relabel it 'PHP'.
+  # source: business_rules.yaml:89, confirmed against live data 2026-09-01.
+  # ---------------------------------------------------------------------------
+  currency_column_is_wrong: true
+  currency_column_says: CNY
+
+  # ---------------------------------------------------------------------------
+  # SHIPMENT STATUS — THE DOCUMENTED VALUE 3 DOES NOT EXIST.
+  #
+  # business_rules.yaml:167 and app/services/schema_context.py:66 both state
+  # "3 = vend FAILED". Measured distribution over all 11,907 lines, 2026-09-01:
+  #     status 1  -> 11,900 lines   (success)
+  #     status 2  ->      5 lines   (undocumented; shipment_time is NULL)
+  #     status 64 ->      2 lines   (undocumented)
+  #     status 3  ->      0 lines   <-- the documented failure code
+  #
+  # A "failed vends" report written to the documented spec returns an empty list
+  # FOREVER and reads as "no failures" — the same trap as the unset low-stock
+  # thresholds. So non-success is defined as `shipment_status <> 1` and the raw
+  # code is reported rather than given a meaning nobody can confirm.
+  #
+  # The five status-2 lines have NULL shipment_time, so ANY time-bounded query
+  # drops them whatever the status filter says.
+  # ---------------------------------------------------------------------------
+  success_status: 1
+  success_sql: "l.shipment_status = 1"
+  non_success_sql: "l.shipment_status <> 1"
+  documented_failure_status_exists: false
+  status_distribution: {1: 11900, 2: 5, 64: 2}
+  status_2_has_null_shipment_time: true
+
+  # ---------------------------------------------------------------------------
+  # PROFIT IS OVERSTATED ON 72.7% OF LINES.
+  # goods_purchase_cost = 0 on 8,659 of 11,907 lines. Zero means the cost was
+  # never entered in Weimi, NOT that the item is free — so profit_php equals
+  # revenue on those rows. At that prevalence the flag is MANDATORY: a tool must
+  # not return a profit figure without also returning how much of it is
+  # uncosted. source: live data 2026-09-01; business_rules.yaml:163.
+  # ---------------------------------------------------------------------------
+  profit_overstated_lines: 8659
+  profit_total_lines: 11907
+  profit_overstated_pct: 72.7
+  missing_cost_flag_column: missing_cost
+  profit_flag_mandatory: true
+
+  # ---------------------------------------------------------------------------
+  # CATEGORY COVERAGE IS POOR. Two independent gaps:
+  #   - 38 goods_ids appear in sales with NO row in vending_goods at all,
+  #     covering 3,533 of 11,907 lines (29.7% of volume).
+  #   - 98 of 151 catalog products (64.9%) have no category_name.
+  # Both surface as NULL category_name in the view, so they are indistinguishable
+  # there; the orphan count is measured separately against vending_goods.
+  # Group with COALESCE so neither is silently dropped, and report the coverage
+  # or a category chart speaks for a minority of sales.
+  # ---------------------------------------------------------------------------
+  category_normalization:
+    sql: "COALESCE(NULLIF(l.category_name, ''), 'Uncategorized')"
+    uncategorized_label: "Uncategorized"
+  orphan_goods_ids: 38
+  orphan_lines: 3533
+  orphan_lines_pct: 29.7
+  catalog_missing_category: 98
+  catalog_total: 151
+
+  # One machine (62162500) has no device_name. "Never show a bare device_code"
+  # still holds, so fall back to a labelled code rather than a blank.
+  machine_label_sql: "COALESCE(NULLIF(l.device_name, ''), 'Unnamed machine ' || l.device_code)"
+  devices_total: 10
+  devices_with_sales: 9
+  devices_unnamed: 1
+
+  metrics:
+    revenue:
+      sql: "SUM(l.real_price_php)"
+      unit: PHP
+      success_only: true
+      valid_group_by: [machine, day, week, month, product, category, payment_method]
+    units:
+      sql: "SUM(l.goods_amount)"
+      unit: units
+      success_only: true
+      valid_group_by: [machine, day, week, month, product, category, payment_method]
+    orders:
+      sql: "COUNT(DISTINCT l.order_trade_no_in)"
+      unit: orders
+      success_only: true
+      valid_group_by: [machine, day, week, month, product, category, payment_method]
+    profit:
+      sql: "SUM(l.profit_php)"
+      unit: PHP
+      success_only: true
+      requires_missing_cost_flag: true
+      valid_group_by: [machine, day, week, month, product, category, payment_method]
+    non_success_vends:
+      sql: "COUNT(*)"
+      unit: lines
+      success_only: false
+      non_success_only: true
+      valid_group_by: [machine, day, week, month, product, category]
+
+  buckets:
+    day:   "date_trunc('day',   (l.shipment_time AT TIME ZONE 'Asia/Manila'))::date"
+    week:  "date_trunc('week',  (l.shipment_time AT TIME ZONE 'Asia/Manila'))::date"
+    month: "date_trunc('month', (l.shipment_time AT TIME ZONE 'Asia/Manila'))::date"
+  time_column: "l.shipment_time"
+
+  # ---------------------------------------------------------------------------
+  # PAYMENT METHOD — `ext` IS TEXT, NOT JSON.
+  # business_rules.yaml:151 and schema_context.py:58 both describe
+  # vending_orders.ext as "JSON" and give `ext->>'payWay'`. The column's actual
+  # type is `text` in both the table and the _php view, so `->>` raises
+  # "operator does not exist: text ->> unknown". An explicit ::jsonb cast is
+  # required. NULLIF guards the empty string, which would fail the cast.
+  # Observed values, 9,219 orders: gcashpay 8,123 / NULL 1,084 / alipayaps 12.
+  # source: live data 2026-09-01.
+  # ---------------------------------------------------------------------------
+  payment_method_sql: "COALESCE(NULLIF(o.ext, '')::jsonb ->> 'payWay', 'unknown')"
+  payment_method_ext_is_text: true
+
+  # ---------------------------------------------------------------------------
+  # LIVE MACHINE STOCK — a different shape, hence its own function.
+  # vending_aisles is the current planogram: one row per slot, no history, no
+  # sales. It cannot be date-filtered at all.
+  #
+  # IT IS STALE. Both vending_aisles.updated_at and
+  # vending_devices.last_synced_at last moved 2026-08-05, while sales lines run
+  # to 2026-08-31 — sales are current, stock is roughly four weeks behind, with
+  # no history to fall back on. Any stock answer must carry its age.
+  # ---------------------------------------------------------------------------
+  stock:
+    source_table: vending_aisles
+    has_history: false
+    date_filterable: false
+    price_is_cents: true          # vending_aisles.price is NOT covered by a _php view
+    last_synced: "2026-08-05"
+    staleness_mandatory: true
+    slots_total: 540
+    slots_empty: 133
+
+
+# =============================================================================
+# SUPPLIERS, PURCHASE ORDERS, LEAD TIMES, COST HISTORY
+#
+# NONE OF THIS DATA EXISTS. There is no tools/suppliers.py, deliberately.
+#
+# This section records a survey so nobody re-derives it, and so a tool cannot
+# quietly reintroduce a metric the data cannot support. It is also the checklist
+# for what a real procurement integration would have to add.
+#
+# Method: all 38 base tables and 8 views searched by NAME for
+#   supplier|vendor|purchase|po|receipt|receiv|procure|inbound|delivery|lead|order
+# and then EVERY column in the database searched by concept for
+#   supplier|vendor|purchase|lead_time|on_order|receiv|procure|reorder|moq|
+#   incoming|cost
+# source: live database, 2026-09-01.
+# =============================================================================
+suppliers:
+  surveyed: "2026-09-01"
+  any_supplier_data: false
+
+  # ---------------------------------------------------------------------------
+  purchase_orders:
+    supported: false
+    reason: >
+      No suppliers, vendors, purchase_orders, po_lines, receipts or deliveries
+      table exists. The only name matches were the vending order tables, which
+      are CUSTOMER purchases from machines, not orders placed on a supplier.
+    # The schema anticipated purchase orders; nothing was ever written to it.
+    evidence:
+      shipment_plans_on_order: "122,207 rows, every one is 0 (min 0, max 0, sum 0) — never populated"
+      store_pipeline_on_order_units: "table has 0 rows"
+      warehouse_inventory: "0 rows — the only receiving-shaped table, empty"
+
+  # ---------------------------------------------------------------------------
+  lead_times:
+    supported: false
+    reason: >
+      One global integer exists and it is zero. It is not per-supplier, not
+      per-product and not per-store, so it cannot answer a lead-time question
+      even if it were populated. Lead time also cannot be MEASURED: nothing
+      records when an order was placed or when goods arrived, so there is no
+      observation to derive it from.
+    evidence:
+      algorithm_settings_lead_time_days: 0
+      algorithm_settings_rows: 1          # single config row, id=1
+      algorithm_settings_updated_at: "2026-05-11"
+      scope: "global; no per-supplier, per-product or per-store dimension"
+      observable_from_data: false
+    # Consequence: the replenishment algorithm assumes instant delivery.
+
+  # ---------------------------------------------------------------------------
+  last_cost:
+    supported: false
+    reason: >
+      products.cost is a single current scalar per product with NO history.
+      "Last cost" can therefore only mean "current cost", which
+      tools/products.py already returns as the `cost` field. A second accessor
+      would create a second definition of cost — the thing this file exists to
+      prevent. Ask get_product() instead.
+    current_cost_available_from: "tools/products.py get_product() -> rows[].cost"
+    evidence:
+      products_total: 3678
+      products_with_cost: 3306
+      products_cost_zero: 264
+      products_cost_null: 372
+      history_tables: "none — no audit/history/log/version table exists (only alembic_version)"
+      products_updated_at: "row-level, not cost-level; only 15 distinct dates across the whole catalog"
+      new_transaction_items_has_cost_column: false
+    # Checked and rejected as a cost history:
+    #   vending_order_lines.goods_purchase_cost looked like a cost captured at
+    #   each sale. It is not a series: 183 goods produce 184 distinct
+    #   (goods_id, cost) pairs, i.e. exactly ONE product has ever had its cost
+    #   change. It is a constant repeated per line, not a history.
+    vending_cost_is_a_history: false
+
+  # ---------------------------------------------------------------------------
+  # STORE-SIDE PROFIT IS NOT COMPUTABLE. This is the one consequence of the
+  # above that actively affects a metric, so it is recorded as a hard flag.
+  #
+  # business_rules.yaml:310 defines:
+  #     profit = SUM(ti.item_total - (p.cost * ti.quantity))
+  #
+  # new_transaction_items captures NO cost (columns: line_id,
+  # transaction_ref_id, product_id, quantity, unit_price, item_subtotal,
+  # item_total, discount, tax, tax_code, item_type, notes, selected_options,
+  # promotions, created_at, updated_at). So that formula multiplies TODAY'S
+  # products.cost by a HISTORICAL quantity — it values a 2024 sale at 2026's
+  # cost. Every historical margin figure it produces is wrong by whatever cost
+  # drift occurred in between, and there is no cost history to correct it with.
+  #
+  # It is also wrong at the edges: 264 products have cost = 0 and 372 have cost
+  # NULL, and both are silently treated as 100% margin.
+  #
+  # tools/sales.py deliberately has NO profit metric. Do not add one. If a
+  # margin question must be answered, it needs line-level cost capture first —
+  # see required_to_support below.
+  # ---------------------------------------------------------------------------
+  store_profit_supported: false
+  store_profit_reason: >
+    No cost is captured per line. The documented formula applies current
+    products.cost to historical quantities, valuing past sales at today's cost,
+    and treats the 264 zero-cost and 372 null-cost products as pure margin.
+    There is no cost history to correct it with. tools/sales.py has no profit
+    metric by design.
+  store_profit_do_not_reintroduce: true
+
+  # Vending profit IS computable — cost is captured on the line — but it is
+  # overstated on 72.7% of lines where the cost was never entered. See
+  # vending.profit_overstated_pct; that metric carries a mandatory flag.
+  vending_profit_supported: true
+  vending_profit_caveat: "overstated on 72.7% of lines; flag is mandatory"
+
+  # ---------------------------------------------------------------------------
+  # What a real procurement integration would have to provide before any of the
+  # three subjects above becomes answerable. Kept here so the gap is a
+  # specification rather than a rediscovery.
+  # ---------------------------------------------------------------------------
+  required_to_support:
+    - "a supplier/vendor master (id, name, terms)"
+    - "purchase orders with a placed timestamp, supplier, product, quantity and unit cost"
+    - "goods receipts with a received timestamp and quantity, linked to the PO line"
+    - "line-level cost captured on new_transaction_items at time of sale, or a dated product cost history"
+  # With PO placed-time and receipt-time, lead time becomes measurable rather
+  # than configured, and warehouse receipts stop being invisible — which is also
+  # the missing half of the movement problem (see movement.recorded_ledger_exists).
+
+
+# =============================================================================
+# NOTICE FINGERPRINTS
+#
+# Every tool can attach meta.notice when a result is not what it appears — an
+# empty list that means "not configured", a figure that is overstated, a SKU
+# that is three products. agent/loop.py refuses to finish an answer while an
+# unsurfaced notice is pending.
+#
+# Verifying "surfaced" needs a check. These fingerprints are that check, and
+# they live here rather than in the loop so they can be tuned without touching
+# code — the same reason every other definition is in this file.
+#
+# SEMANTICS: must_convey is a list of GROUPS. Every group must match (AND);
+# within a group any one alternative matching is enough (OR). Matching is
+# case-insensitive substring over the model's final answer.
+#
+# THIS IS A HEURISTIC AND IT CAN BE WRONG. It is a gate, not a guarantee: when
+# it fails twice the loop appends the notice verbatim under a "Caveats" heading
+# and records notice_forced in the log, so the reader always sees the caveat
+# even when the fingerprint misjudged the wording.
+# =============================================================================
+notices:
+  low_stock_not_operational:
+    must_convey:
+      - [threshold, thresholds, warning_stock]
+      - [not set, unset, never, "no ", not configured]
+  snapshot_coverage_gap:
+    must_convey:
+      - [snapshot, coverage, no data]
+      - [gap, not covered, outside, no snapshot, unavailable]
+  snapshot_gaps:
+    must_convey:
+      - [gap, missing]
+      - [day, days]
+  sku_not_found:
+    must_convey:
+      - [sku, product]
+      - [no, not exist, unknown, not found]
+  ambiguous_sku:
+    must_convey:
+      - [different products, three products, more than one product, several products, multiple products]
+  duplicate_skus_in_result:
+    must_convey:
+      - [sku]
+      - [duplicate, more than one, not unique, not a key]
+  metric_redefined:
+    must_convey:
+      - [contain, containing, different question, not transactions of]
+  reconciliation_failed:
+    must_convey:
+      - [disagree, differ, do not tie, does not tie, discrepanc, not comparable]
+  orphan_line_items:
+    must_convey:
+      - [line item, product]
+      - [not exist, missing, no matching, orphan, not in]
+  profit_overstated:
+    must_convey:
+      - [profit]
+      - [overstated, no cost, missing cost, never entered, uncosted]
+  low_category_coverage:
+    must_convey:
+      - [categor]
+      - [coverage, minority, incomplete, only, uncategorized]
+  stale_stock:
+    must_convey:
+      - [stale, days old, last sync, out of date, not current]
+  no_recorded_dispatch:
+    must_convey:
+      - [dispatch, record, movement]
+      - [no, none, not explain, unrecorded, does not exist]
+
+  # Notices whose kind is "multiple" carry an `items` list; the loop checks each
+  # item's own kind against the fingerprints above rather than the container.
+  container_kind: multiple
+
+  # How many corrective turns the loop spends asking the model to surface a
+  # notice before falling back to appending it verbatim.
+  max_corrective_turns: 1
