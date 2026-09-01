@@ -1,4 +1,4 @@
-.PHONY: help setup dev test clean install-backend install-frontend run-backend run-frontend docker-up docker-down migrate
+.PHONY: help setup dev test test-golden clean install-backend install-frontend run-backend run-frontend docker-up docker-down migrate
 
 help:
 	@echo "Available commands:"
@@ -33,11 +33,19 @@ dev:
 	@echo "Starting development servers..."
 	@make -j2 run-backend run-frontend
 
-test:
+test: test-golden
 	@echo "Running backend tests..."
 	cd backend && poetry run pytest
 	@echo "Running frontend tests..."
 	cd frontend && npm run test
+
+# George's golden tests: pytest straight against the tools, no agent involved.
+# Read-only. Needs GEORGE_DATABASE_URL pointing at George's own role
+# (tools/george_ro_role.sql); skips with a clear reason when it is unset, so
+# this is safe to leave wired into `make test` for developers without it.
+test-golden:
+	@echo "Running George golden tests..."
+	python -m pytest tests/golden.py -v
 
 test-backend:
 	cd backend && poetry run pytest -v

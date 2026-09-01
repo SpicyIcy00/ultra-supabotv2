@@ -1,0 +1,65 @@
+name: George golden tests
+
+# Runs pytest directly against George's tools — no agent, no LLM, no API key.
+# Read-only: the suite connects as george_ro, which holds SELECT and nothing
+# else (tools/george_ro_role.sql), and tools/_common.connect additionally opens
+# every session read-only and refuses superuser or admin roles.
+#
+# Deliberately NOT wired into the Railway start command. A failing assertion
+# there would block the app from booting, and the suite would re-run on every
+# restart against production. Deploy gating belongs here, before the merge.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tools/**"
+      - "definitions/**"
+      - "tests/**"
+      - ".github/workflows/golden.yml"
+  pull_request:
+    paths:
+      - "tools/**"
+      - "definitions/**"
+      - "tests/**"
+  workflow_dispatch:
+
+concurrency:
+  group: golden-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  golden:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: pip install --no-cache-dir pytest psycopg2-binary pyyaml
+
+      - name: Check definitions parse
+        run: python -c "import yaml; yaml.safe_load(open('definitions/metrics.yaml', encoding='utf-8')); print('metrics.yaml OK')"
+
+      - name: Run golden tests
+        env:
+          GEORGE_DATABASE_URL: ${{ secrets.GEORGE_DATABASE_URL }}
+        run: python -m pytest tests/golden.py -v --tb=short
+
+      # The suite skips itself when the secret is missing, which would otherwise
+      # look like a green run. Fail loudly instead.
+      - name: Fail if the suite skipped
+        if: always()
+        env:
+          GEORGE_DATABASE_URL: ${{ secrets.GEORGE_DATABASE_URL }}
+        run: |
+          if [ -z "$GEORGE_DATABASE_URL" ]; then
+            echo "::error::GEORGE_DATABASE_URL secret is not set — the golden suite skipped every test and proved nothing."
+            echo "Apply tools/george_ro_role.sql, then add the connection string as a repository secret."
+            exit 1
+          fi

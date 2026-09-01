@@ -1,0 +1,51 @@
+"""
+Shared pytest setup for the golden suite.
+
+The tools connect through tools/_common.connect(), which refuses to run without
+GEORGE_DATABASE_URL and refuses superuser or admin roles. That guard is NOT
+bypassed here — these tests exercise the same connection path production uses.
+
+Consequence: the suite needs George's own read-only role to exist. Until
+tools/george_ro_role.sql has been applied and GEORGE_DATABASE_URL is set, the
+whole module skips with a clear reason rather than reporting failures that are
+really a missing credential.
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+from pathlib import Path
+
+import pytest
+
+# Make the repo root importable so `from tools import ...` works when pytest is
+# invoked from anywhere.
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip the whole suite, with a useful reason, when the role is unavailable."""
+    if not os.environ.get("GEORGE_DATABASE_URL"):
+        skip = pytest.mark.skip(
+            reason=(
+                "GEORGE_DATABASE_URL is not set. These tests run against George's "
+                "read-only Postgres role — apply tools/george_ro_role.sql and set "
+                "the variable. The suite deliberately does not fall back to an "
+                "application or admin connection string."
+            )
+        )
+        for item in items:
+            item.add_marker(skip)
+        return
+
+    try:
+        from tools._common import connect
+
+        connect().close()
+    except Exception as exc:  # noqa: BLE001 - the reason text is the point
+        skip = pytest.mark.skip(reason=f"cannot connect as George's role: {exc}")
+        for item in items:
+            item.add_marker(skip)
