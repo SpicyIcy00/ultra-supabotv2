@@ -14,6 +14,9 @@ import { LandingRedirect } from './components/LandingRedirect';
 // Lazy-loaded pages (Dashboard stays eager as the landing page)
 const AnalyticsPage = React.lazy(() => import('./pages/AnalyticsPage'));
 const AIChatPage = React.lazy(() => import('./pages/AIChatPage'));
+// George is a parallel surface to AIChatPage, not a replacement — /ai-chat and
+// everything under components/chat keep working unchanged.
+const GeorgePage = React.lazy(() => import('./pages/GeorgePage'));
 const WarehousePage = React.lazy(() => import('./pages/WarehousePage'));
 const PackingPage = React.lazy(() => import('./pages/PackingPage'));
 const PackingPrintPage = React.lazy(() => import('./pages/PackingPrintPage'));
@@ -38,6 +41,7 @@ function ChromeRoutes() {
         {/* Vending is a tab of the dashboard, not its own page */}
         <Route path="/vending" element={<RequirePage pageKey="dashboard"><Dashboard /></RequirePage>} />
         <Route path="/ai-chat" element={<RequirePage pageKey="ai_chat"><AIChatPage /></RequirePage>} />
+        <Route path="/george" element={<RequirePage pageKey="george"><GeorgePage /></RequirePage>} />
         {/* Warehouse owns two tabs: Replenishment Reports and Barcode Generator */}
         <Route path="/warehouse" element={<RequirePage pageKey="warehouse"><WarehousePage /></RequirePage>} />
         <Route path="/packing" element={<RequirePage pageKey="packing"><PackingPage /></RequirePage>} />

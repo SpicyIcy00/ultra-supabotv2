@@ -14,6 +14,7 @@ export const PAGES: PageDef[] = [
   { key: 'dashboard', path: '/', label: 'Dashboard' },
   { key: 'analytics', path: '/analytics', label: 'Analytics' },
   { key: 'ai_chat', path: '/ai-chat', label: 'AI Chat' },
+  { key: 'george', path: '/george', label: 'George' },
   { key: 'warehouse', path: '/warehouse', label: 'Warehouse' },
   { key: 'packing', path: '/packing', label: 'Packing' },
   { key: 'settings', path: '/settings', label: 'Settings' },

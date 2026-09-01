@@ -57,3 +57,34 @@ body {
     touch-action: manipulation;
   }
 }
+/* ---------------------------------------------------------------------------
+   George — markdown inside the conversation column.
+   Scoped to .george-prose so it cannot touch the existing dark chat, which
+   renders its own markdown elsewhere.
+   --------------------------------------------------------------------------- */
+.george-prose > * + * { margin-top: 0.75rem; }
+.george-prose h1, .george-prose h2, .george-prose h3 {
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+  color: #12233F;
+  line-height: 1.25;
+}
+.george-prose h1 { font-size: 1.375rem; }
+.george-prose h2 { font-size: 1.125rem; margin-top: 1.25rem; }
+.george-prose h3 { font-size: 1rem; }
+.george-prose strong { color: #12233F; font-weight: 600; }
+.george-prose ul, .george-prose ol { padding-left: 1.15rem; }
+.george-prose ul { list-style: disc; }
+.george-prose ol { list-style: decimal; }
+.george-prose li + li { margin-top: 0.25rem; }
+.george-prose code {
+  background: #FBF7EF; border: 1px solid #E4DCCB; border-radius: 4px;
+  padding: 0.05rem 0.3rem; font-size: 0.85em;
+}
+/* Wide tables scroll inside the column instead of widening the page. */
+.george-prose table { display: block; overflow-x: auto; width: 100%; border-collapse: collapse; }
+.george-prose th, .george-prose td {
+  border-bottom: 1px solid #E4DCCB; padding: 0.4rem 0.6rem;
+  text-align: left; font-size: 0.875rem; white-space: nowrap;
+}
+.george-prose th { color: #4A5D78; font-weight: 500; }
+.george-prose td:not(:first-child) { font-variant-numeric: tabular-nums; }
