@@ -22,6 +22,7 @@ PAGE_KEYS: list[str] = [
     "dashboard",
     "analytics",
     "ai_chat",
+    "george",
     "warehouse",
     "settings",
     "packing",

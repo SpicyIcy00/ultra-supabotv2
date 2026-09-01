@@ -468,7 +468,7 @@ async def shutdown_event():
     SchemaContext.shutdown()
     print("SchemaContext shut down")
 
-from app.api.v1.routes import analytics, chatbot, stores, products, reports, report_presets, google_sheets, saved_queries, replenishment, store_filters, barcodes, scheduled_reports, vending, dashboard_defaults, auth, admin, packing
+from app.api.v1.routes import analytics, chatbot, stores, products, reports, report_presets, google_sheets, saved_queries, replenishment, store_filters, barcodes, scheduled_reports, vending, dashboard_defaults, auth, admin, packing, george
 
 app.include_router(auth.router, prefix=f"{settings.API_V1_PREFIX}/auth", tags=["auth"])
 app.include_router(admin.router, prefix=f"{settings.API_V1_PREFIX}/admin", tags=["admin"])
@@ -487,6 +487,9 @@ app.include_router(store_filters.router, prefix=f"{settings.API_V1_PREFIX}/store
 app.include_router(barcodes.router, prefix=f"{settings.API_V1_PREFIX}/barcodes", tags=["barcodes"])
 app.include_router(vending.router, prefix=f"{settings.API_V1_PREFIX}/vending", tags=["vending"])
 app.include_router(dashboard_defaults.router, prefix=f"{settings.API_V1_PREFIX}/dashboard-defaults", tags=["dashboard-defaults"])
+# George — vetted-tool agent. Separate from `chatbot`, which is the older
+# NL->SQL system; the two deliberately share no code path.
+app.include_router(george.router, prefix=f"{settings.API_V1_PREFIX}/george", tags=["george"])
 
 
 @app.get("/")
