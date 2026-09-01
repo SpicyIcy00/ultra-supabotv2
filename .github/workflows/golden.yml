@@ -41,7 +41,10 @@ jobs:
           python-version: "3.11"
 
       - name: Install test dependencies
-        run: pip install --no-cache-dir pytest psycopg2-binary pyyaml
+        # psycopg 3 — matching backend/requirements.txt and tools/_common.py.
+        # The [binary] extra ships the compiled driver so no libpq build is
+        # needed on the runner.
+        run: pip install --no-cache-dir pytest "psycopg[binary]" pyyaml
 
       - name: Check definitions parse
         run: python -c "import yaml; yaml.safe_load(open('definitions/metrics.yaml', encoding='utf-8')); print('metrics.yaml OK')"
