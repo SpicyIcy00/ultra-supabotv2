@@ -36,7 +36,7 @@ from typing import Any, AsyncIterator, Callable, Optional
 import anthropic
 
 from tools import dead_stock, inventory, movement, products, sales, vending
-from tools._common import load_defs, req
+from tools._common import load_defs as _load_defs, req
 
 # --------------------------------------------------------------------------
 # Transient-error retry
@@ -188,6 +188,21 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
 
     if "bool" in text:
         return {"type": "boolean"}
+
+    # Integers must be declared as integers. Without this branch top_n fell
+    # through to "string", the model dutifully sent "10", and validate_top_n
+    # rejected it as a str — so the parameter was unusable and George brute-
+    # forced instead (25 get_stock calls for one out-of-stock ranking). The
+    # tool-level tests missed it because they call the functions directly with
+    # real ints and never see the schema the model is given.
+    if "int" in text:
+        schema: dict = {"type": "integer"}
+        if pname == "top_n":
+            defs_ = _load_defs()
+            schema["minimum"] = req(defs_, "ranking.min_top_n")
+            schema["maximum"] = req(defs_, "ranking.max_top_n")
+        return schema
+
     if enum:
         return {"type": "string", "enum": enum}
     return {"type": "string"}
@@ -205,7 +220,7 @@ def build_tool_schemas(defs: Optional[dict] = None) -> list[dict]:
     inputs and raise on anything unknown, so validation is not lost — it just
     happens one layer in.
     """
-    defs = defs or load_defs()
+    defs = defs or _load_defs()
     enums = _enum_sources(defs)
     schemas = []
 
@@ -467,7 +482,7 @@ async def run(question: str, user_id: Optional[str] = None) -> AsyncIterator[str
     notice, warning, done, error. Tool results stream as SUMMARIES; raw rows
     never cross the wire.
     """
-    defs = load_defs()
+    defs = _load_defs()
     tools_schema = build_tool_schemas(defs)
     log = ConversationLog()
     asked_at = datetime.now(timezone.utc)

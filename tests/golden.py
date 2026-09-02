@@ -624,3 +624,42 @@ def test_snapshot_date_index_exists_and_is_fast():
         f"MIN/MAX(snapshot_date) took {elapsed:.2f}s - was 3.0s unindexed, 0.08s with "
         f"the index. A regression here means the index was dropped or is unused."
     )
+
+
+# ==========================================================================
+# The schema the MODEL sees — not the signature the tests call
+#
+# top_n shipped broken: the generator had no integer branch, so it declared
+# {"type": "string"}, the model sent "10", and validate_top_n rejected it as a
+# str. Every tool-level test passed because they call the functions directly
+# with real ints. A 40-question run caught it only because George said so out
+# loud: "top_n won't accept my value, so I'll omit it" — then made 25 calls.
+# ==========================================================================
+
+def test_schema_declares_integer_params_as_integers():
+    from agent.loop import build_tool_schemas
+    defs = load_defs()
+    schemas = {t["name"]: t for t in build_tool_schemas(defs)}
+    for name in ("get_sales", "get_stock", "get_dead_stock"):
+        p = schemas[name]["input_schema"]["properties"]["top_n"]
+        assert p["type"] == "integer", f"{name}.top_n is {p['type']}, not integer"
+        assert p["minimum"] == req(defs, "ranking.min_top_n")
+        assert p["maximum"] == req(defs, "ranking.max_top_n")
+
+
+def test_schema_types_are_accepted_by_the_tools():
+    """
+    Round-trip: a value conforming to the declared schema type must not be
+    rejected by the function. This is the gap that let top_n ship broken.
+    """
+    import json as _json
+    from agent.loop import build_tool_schemas
+    for tool in build_tool_schemas():
+        for pname, spec in tool["input_schema"]["properties"].items():
+            declared = spec.get("type") or "oneOf"
+            assert declared in {"string", "integer", "boolean", "object", "array", "oneOf"}, (
+                f"{tool['name']}.{pname} has unusable schema {_json.dumps(spec)[:80]}"
+            )
+    # The concrete case: an int within the declared bounds is accepted.
+    r = sales.get_sales("store", AUG_2026, metric="net_sales", top_n=3)
+    assert r["meta"]["row_count"] == 3
