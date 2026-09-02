@@ -36,7 +36,16 @@ from typing import Any, AsyncIterator, Callable, Optional
 
 import anthropic
 
-from tools import dead_stock, inventory, movement, products, sales, vending
+from tools import (
+    cost_history,
+    dead_stock,
+    inventory,
+    movement,
+    products,
+    purchasing,
+    sales,
+    vending,
+)
 from tools._common import load_defs as _load_defs, req
 
 # --------------------------------------------------------------------------
@@ -85,7 +94,7 @@ MAX_ROWS_TO_MODEL = 200
 # what would express it, not another slice of the same table.
 MAX_TOOL_CALLS = 12
 
-# The six callable surfaces George has.
+# The callable surfaces George has.
 TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
     "get_sales": sales.get_sales,
     "get_stock": inventory.get_stock,
@@ -94,6 +103,8 @@ TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
     "get_vending": vending.get_vending,
     "get_vending_stock": vending.get_vending_stock,
     "get_dead_stock": dead_stock.get_dead_stock,
+    "get_purchasing": purchasing.get_purchasing,
+    "get_cost_history": cost_history.get_cost_history,
 }
 
 
@@ -124,14 +135,37 @@ def _enum_sources(defs: dict) -> dict[tuple[str, str], list]:
     retail = [s["display_name"] for s in req(defs, "stores.active_retail")]
     warehouse = [s.get("display_name") or s["name"] for s in req(defs, "stores.warehouse")]
 
+    # Closed locations answer HISTORICAL questions and not current-state ones
+    # (metrics.yaml filters.closed_locations), so they belong in the movement and
+    # purchasing vocabularies and NOT in the stock one. AJI MACOPA has 1,006
+    # transfer documents behind it.
+    closed = [s.get("display_name") or s["name"] for s in req(defs, "stores.closed")]
+    pending = [s.get("display_name") or s["name"] for s in req(defs, "stores.pending_retail")]
+    historical_locations = retail + warehouse + closed + pending
+
+    purch_measures = sorted(req(defs, "purchasing.measures"))
+    purch_groups = sorted({
+        g for m in req(defs, "purchasing.measures").values()
+        for g in m.get("valid_group_by", [])
+    })
+    movement_bases = sorted(list(req(defs, "movement.bases")) + ["both"])
+
     return {
+        ("get_purchasing", "measure"): purch_measures,
+        ("get_purchasing", "group_by"): purch_groups,
+        ("get_purchasing", "date_range"): presets,
+        ("get_purchasing", "store"): historical_locations,
+        ("get_movement", "basis"): movement_bases,
+        ("get_movement", "to_store"): historical_locations,
         ("get_sales", "metric"): sales_metrics,
         ("get_sales", "group_by"): sales_groups,
         ("get_sales", "date_range"): presets,
         ("get_stock", "state"): states,
         ("get_stock", "group_by"): list(req(defs, "ranking.stock_grouping.valid_group_by")),
         ("get_stock", "store"): retail + warehouse,
-        ("get_movement", "store"): retail + warehouse,
+        # Wider than get_stock's: a closed warehouse has no current stock but a
+        # thousand recorded transfers.
+        ("get_movement", "store"): historical_locations,
         ("get_movement", "date_range"): presets,
         ("get_vending", "metric"): vend_metrics,
         ("get_vending", "group_by"): vend_groups,

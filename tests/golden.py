@@ -331,7 +331,7 @@ def test_documented_enum_values_exist_in_data():
                 + [s["id"] for s in req(defs, "stores.warehouse")]
                 + [s["id"] for s in req(defs, "stores.pending_retail")]
                 + list(req(defs, "inventory.scope_store_ids"))
-                + list(req(defs, "filters.aji_barn.excluded_store_ids"))
+                + list(req(defs, "filters.excluded_from_sales.excluded_store_ids"))
             )
             for sid in referenced:
                 if sid not in actual_stores:

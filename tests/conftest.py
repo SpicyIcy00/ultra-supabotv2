@@ -26,8 +26,29 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
+# Make backend/ importable too, so `from app.services...` works. The backend
+# runs with cwd=backend in production (see Procfile), so its own modules import
+# each other as `app.*`.
+BACKEND = ROOT / "backend"
+if str(BACKEND) not in sys.path:
+    sys.path.insert(0, str(BACKEND))
+
+
+def _needs_database(item) -> bool:
+    """
+    Whether a test needs George's read-only role.
+
+    The StoreHub tests are pure — the parser is bytes in, documents out, and the
+    importer tests check statement construction and the parser/model contract
+    without connecting. They must NOT be swept up in the database skip below.
+    Skipping a test that could have run is the same failure as running one that
+    cannot: either way the result does not mean what it says.
+    """
+    return "storehub" not in item.nodeid
+
+
 def pytest_collection_modifyitems(config, items):
-    """Skip the whole suite, with a useful reason, when the role is unavailable."""
+    """Skip the database-backed tests, with a useful reason, when the role is unavailable."""
     if not os.environ.get("GEORGE_DATABASE_URL"):
         skip = pytest.mark.skip(
             reason=(
@@ -38,7 +59,8 @@ def pytest_collection_modifyitems(config, items):
             )
         )
         for item in items:
-            item.add_marker(skip)
+            if _needs_database(item):
+                item.add_marker(skip)
         return
 
     try:
@@ -48,4 +70,5 @@ def pytest_collection_modifyitems(config, items):
     except Exception as exc:  # noqa: BLE001 - the reason text is the point
         skip = pytest.mark.skip(reason=f"cannot connect as George's role: {exc}")
         for item in items:
-            item.add_marker(skip)
+            if _needs_database(item):
+                item.add_marker(skip)

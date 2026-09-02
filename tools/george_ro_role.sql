@@ -45,7 +45,17 @@ GRANT SELECT ON
     inventory,
     inventory_snapshots,
     new_transactions,
-    new_transaction_items
+    new_transaction_items,
+    -- StoreHub imports (migration h2i3j4k5l6m7). George READS these; the import
+    -- endpoint writes them on the application's role, never on this one.
+    -- storehub_imports is included deliberately: a figure's provenance — which
+    -- file it came from, when, and what that import could not resolve — is part
+    -- of the answer, not administrative trivia.
+    purchase_orders,
+    purchase_order_lines,
+    stock_transfers,
+    stock_transfer_lines,
+    storehub_imports
 TO george_ro;
 
 -- 4. No default privileges on anything created later. Stated explicitly so the
@@ -86,6 +96,20 @@ CREATE POLICY george_ro_read ON vending_aisles        FOR SELECT TO george_ro US
 CREATE POLICY george_ro_read ON vending_order_lines   FOR SELECT TO george_ro USING (true);
 -- products and stores already have "Enable read access for all users"
 -- (PERMISSIVE, roles=public, SELECT, USING true), so they need nothing here.
+--
+-- The five StoreHub tables need NO policy: migration h2i3j4k5l6m7 creates them
+-- without RLS enabled, so the GRANT above is sufficient on its own. This is
+-- deliberate — enabling RLS and forgetting the policy is exactly the failure
+-- documented above, where every query succeeds and returns zero rows. If RLS is
+-- ever turned on for them (a Supabase dashboard toggle will do it), add five
+-- policies here at the same time, or George will silently report that there are
+-- no purchase orders.
+--
+-- Check before trusting an empty result from them:
+--   SELECT relname, relrowsecurity FROM pg_class
+--    WHERE relname IN ('purchase_orders','purchase_order_lines','stock_transfers',
+--                      'stock_transfer_lines','storehub_imports');
+--   -- expect relrowsecurity = f on all five
 
 -- Verify RLS is no longer filtering George to nothing — expect non-zero counts:
 --   SET ROLE george_ro;

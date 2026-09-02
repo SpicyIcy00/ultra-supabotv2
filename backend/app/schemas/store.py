@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
 
@@ -42,9 +42,17 @@ class StoreUpdate(BaseModel):
 
 # Schema for reading a store (response)
 class StoreRead(StoreBase):
-    id: str = Field(..., description="MongoDB ObjectID (24-character hex string)")
+    # Usually a StoreHub MongoDB ObjectID. AJI MACOPA, a closed warehouse that
+    # StoreHub never synced, carries a deliberately non-hex local id so it can
+    # never be confused with or collide with a real one.
+    id: str = Field(..., description="StoreHub ObjectID, or a local id for a store StoreHub never synced")
     created_at: datetime
     updated_at: datetime
+
+    # Lifecycle. Exposed so a store picker can leave closed locations out
+    # instead of every caller having to know which names are defunct.
+    is_active: bool = True
+    closed_at: Optional[date] = None
 
     model_config = ConfigDict(from_attributes=True)
 

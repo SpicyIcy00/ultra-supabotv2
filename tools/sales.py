@@ -236,13 +236,13 @@ def get_sales(
     # allowlist of active retail, and neither appears in it. Assert it anyway:
     # a future edit that added a warehouse id to active_retail would otherwise
     # fold ₱22.1M of zero-total BARN adjustments into revenue silently.
-    excluded = set(_req(defs, "filters.aji_barn.excluded_store_ids"))
-    leaked = excluded & set(store_ids)
+    excluded_ids = list(_req(defs, "filters.excluded_from_sales.excluded_store_ids"))
+    leaked = set(excluded_ids) & set(store_ids)
     if leaked:
         raise RuntimeError(
             f"Refusing to run: excluded store id(s) {sorted(leaked)} are present "
             f"in the active retail sales scope. See metrics.yaml "
-            f"filters.aji_barn.excluded_store_ids."
+            f"filters.excluded_from_sales.excluded_store_ids."
         )
 
     # ---- window ----------------------------------------------------------
@@ -297,7 +297,12 @@ def get_sales(
         f"t.store_id IN ({len(store_ids)}: "
         f"{', '.join(_label_store(catalog, s) for s in store_ids)})"
         f"   # metrics.yaml: stores.active_retail",
-        "excluded: AJI BARN, AJI PINA   # metrics.yaml: filters.aji_barn.excluded_store_ids",
+        # Built from the definitions, never written out here. The literal
+        # "excluded: AJI BARN, AJI PINA" used to sit in this line and would have
+        # become a false receipt the moment a third id was added to the yaml.
+        f"excluded: "
+        f"{', '.join(_req(defs, 'filters.excluded_from_sales.excluded_labels')[i] for i in excluded_ids)}"
+        f"   # metrics.yaml: filters.excluded_from_sales.excluded_store_ids",
     ]
     if window_meta["kind"] == "explicit":
         filters_applied.append(

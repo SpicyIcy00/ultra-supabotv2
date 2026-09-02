@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional, List
-from sqlalchemy import String, DateTime, func
+from sqlalchemy import Boolean, Date, String, DateTime, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
@@ -21,6 +21,18 @@ class Store(Base):
     state: Mapped[Optional[str]] = mapped_column(String(100))
     country: Mapped[Optional[str]] = mapped_column(String(100))
     postal_code: Mapped[Optional[str]] = mapped_column(String(20))
+
+    # Lifecycle. A store is open unless someone says otherwise.
+    #
+    # These describe the STORE. Which stores a given question covers is a
+    # different matter and stays in definitions/metrics.yaml — see
+    # stores.active_retail, stores.closed and filters.excluded_from_sales.
+    # Keeping scope out of this table is what stops two sources of truth for
+    # "is this store in scope" from disagreeing.
+    #
+    # AJI MACOPA (closed 2026-06-24) is the first row to use them.
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
+    closed_at: Mapped[Optional[date]] = mapped_column(Date)
 
     # Contact information
     phone: Mapped[Optional[str]] = mapped_column(String(50))

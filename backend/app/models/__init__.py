@@ -26,6 +26,13 @@ from app.models.vending import (
     VendingOrder,
     VendingOrderLine,
 )
+from app.models.storehub import (
+    StorehubImport,
+    PurchaseOrder,
+    PurchaseOrderLine,
+    StockTransfer,
+    StockTransferLine,
+)
 
 __all__ = [
     "Product",
@@ -53,4 +60,9 @@ __all__ = [
     "VendingAisle",
     "VendingOrder",
     "VendingOrderLine",
+    "StorehubImport",
+    "PurchaseOrder",
+    "PurchaseOrderLine",
+    "StockTransfer",
+    "StockTransferLine",
 ]

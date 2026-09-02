@@ -249,7 +249,7 @@ stores:
       display_name: "Shang"
 
   # The warehouse. NOT a retail store — excluded from every sales metric (see
-  # filters.aji_barn) but in scope for inventory, because stock genuinely sits
+  # filters.excluded_from_sales) but in scope for inventory, because stock genuinely sits
   # here. Recorded with a display_name so tools can label its rows from this
   # file instead of reading stores.name at query time.
   # source: live stores table, 2026-09-01 (stores.display_name is NULL there).
@@ -257,6 +257,59 @@ stores:
     - id: "667bde393126e50006c8058c"
       name: "AJI BARN"
       display_name: "AJI BARN"
+
+  # ---------------------------------------------------------------------------
+  # CLOSED LOCATIONS. Real places that no longer operate.
+  #
+  # They are NOT deleted and NOT merged into anything. Their history is real:
+  # AJI MACOPA alone accounts for 1,006 document references across the StoreHub
+  # exports. A closed location must resolve for a HISTORICAL question and must
+  # disappear from a CURRENT-STATE one, and those are different questions — which
+  # is exactly why this is its own group rather than an absence.
+  #
+  # Deliberately NOT in stores.warehouse: agent/loop.py builds the store enum
+  # offered to the model from the live scopes, and a closed warehouse must not be
+  # offered as somewhere to ask about today's stock.
+  # ---------------------------------------------------------------------------
+  closed:
+    - id: "local-aji-macopa-wh-0001"
+      name: "AJI MACOPA"
+      display_name: "AJI MACOPA (closed)"
+      kind: warehouse
+      closed_at: "2026-06-24"
+      # THE ID IS NOT A STOREHUB ObjectID AND THAT IS DELIBERATE. Every other
+      # stores.id is a 24-character hex ObjectID. MACOPA was never synced from
+      # StoreHub, so a plausible-looking hex id would risk a duplicate row if the
+      # real one ever arrives, with a thousand documents bound to the wrong one.
+      # An obviously-local id cannot collide and makes the reconciliation a
+      # search for one known string. See migration i3j4k5l6m7n8.
+      id_source: local
+      id_is_storehub_objectid: false
+      #
+      # closed_at IS DERIVED FROM THE DATA, not supplied. It is the last date on
+      # which goods actually MOVED to or from MACOPA:
+      #   ST2721, MACOPA -> Magnolia, PHP 4,040, status Completed, shipped and
+      #   received 2026-06-24 23:27.
+      # A later document exists and is deliberately not used:
+      #   ST2735, 2026-06-28, MACOPA -> OPUS, status Created, ZERO lines,
+      #   total 0.00 — raised and never shipped.
+      # That is the same document-versus-movement distinction as
+      # storehub.stock_transfers.moved_statuses, applied so the closing date
+      # means "when goods last moved" and not "when someone last opened a form".
+      closed_at_derivation: "last movement (moved_statuses) touching the location"
+      closed_at_source_document: "ST2721"
+      closed_at_rejected_candidate: "ST2735 (2026-06-28) — status Created, zero lines, never shipped"
+      #
+      # Activity while it operated, measured 2026-09-02 across all five exports:
+      #   1,006 document references — 666 as transfer source, 340 as target
+      #   76 of 227 purchase orders (33.5%) were destined here
+      # Note the per-file split: Purchase_Orders_09-02-2026.csv is 140 BARN / 3
+      # MACOPA while Purchase_Orders_09-02-2026 (1).csv is 73 MACOPA / 1 BARN.
+      # One export is a BARN book and the other a MACOPA book, so a destination
+      # figure must state the window it covers.
+      transfer_references: 1006
+      po_destination_count: 76
+      po_total_measured: 227
 
   # Two more storefronts exist in `stores` with ZERO transactions to date and are
   # presumed to be the 8th and 9th candy stores. They are deliberately NOT in
@@ -324,17 +377,70 @@ filters:
     net_of_returns_supported: false
 
   # ---------------------------------------------------------------------------
-  aji_barn:
+  # RENAMED from `aji_barn` on 2026-09-02. The key never held only AJI BARN —
+  # AJI PINA has been in it from the start — and it is about to describe two
+  # warehouses rather than one. A key whose name misdescribes its contents is
+  # how the wrong list gets used.
+  excluded_from_sales:
     rule: >
-      AJI BARN is the warehouse, not a store. Its rows in new_transactions are
-      stock movements, not retail sales, and are excluded from every sales
-      metric. AJI BARN remains in scope for INVENTORY questions — stock
-      genuinely lives there.
+      Locations that are not retail storefronts. Their rows in new_transactions
+      are stock movements or dead history, not retail sales, and are excluded
+      from every sales metric. Warehouses remain in scope for INVENTORY
+      questions — stock genuinely lives there.
     excluded_store_ids:
       - "667bde393126e50006c8058c"   # AJI BARN     — warehouse, 1,703 'Sale' + 2 'Return' rows
       - "6639efd64694700008d7cd17"   # AJI PINA     — 92 rows, 2025-07-18 → 2025-08-08 only
+      - "local-aji-macopa-wh-0001"   # AJI MACOPA   — closed warehouse, 2026-06-24
+
+    # Labels for the ids above, in the same order. Tools cite the exclusion in
+    # meta.filters_applied and must not carry their own copy of these names — an
+    # earlier version of tools/sales.py hardcoded the string
+    # "excluded: AJI BARN, AJI PINA", which would have gone stale and quietly
+    # lied the moment a third id was added here.
+    excluded_labels:
+      "667bde393126e50006c8058c": "AJI BARN"
+      "6639efd64694700008d7cd17": "AJI PINA"
+      "local-aji-macopa-wh-0001": "AJI MACOPA (closed)"
+
+    # -------------------------------------------------------------------------
+    # THERE ARE TWO WAREHOUSES. ONE IS CLOSED.
+    #
+    # AJI BARN is the main warehouse and is operating. AJI MACOPA was a second,
+    # smaller warehouse and CLOSED on 2026-06-24 (stores.closed carries the id,
+    # the date and how the date was derived).
+    #
+    # MACOPA is NOT a rename of BARN and NOT an alias for it. Transfers between
+    # the two are real inter-warehouse movement of real goods and must be counted
+    # as movement, not netted away as a bookkeeping artefact — 1,006 documents
+    # reference MACOPA, 666 of them with MACOPA as the source.
+    #
+    # Both are warehouses and both are excluded from retail sales on the same
+    # grounds: neither is a storefront. MACOPA is additionally excluded from
+    # current-state questions because it is shut — see filters.closed_locations,
+    # which is a DIFFERENT exclusion with a different scope. Being closed removes
+    # it from "now"; being a warehouse removes it from retail sales; its history
+    # stays fully answerable under both.
+    #
+    # CORRECTION, 2026-09-02. An earlier version of this block said MACOPA was
+    # "still in use" and "the destination of most purchase orders", and left it
+    # out of the id lists because it had no stores row. All three are now
+    # settled: it is closed, it has a row (a deliberately non-StoreHub id, see
+    # stores.closed), and the destination share is measured at 76 of 227 POs
+    # (33.5%) rather than most.
+    #
+    # source: the business, 2026-09-02, plus the five StoreHub exports.
+    # -------------------------------------------------------------------------
+    warehouse_store_ids:
+      - "667bde393126e50006c8058c"   # AJI BARN — the main warehouse, operating
+      - "local-aji-macopa-wh-0001"   # AJI MACOPA — warehouse, CLOSED 2026-06-24
+
     inventory_scope_store_ids:
       - "667bde393126e50006c8058c"   # AJI BARN is IN scope for inventory
+    # AJI MACOPA is deliberately absent from inventory scope: it is closed, so
+    # it holds no current stock and has no inventory rows. Including it would
+    # return an empty result that reads as "nothing in stock here" rather than
+    # "this place shut in June" — the same trap as the unset low-stock
+    # thresholds and the non-existent vending failure status.
     # source: live data, 2026-09-01. AJI BARN carries 1,703 rows typed 'Sale'
     #   spanning 2025-08-15 → 2026-09-01; AJI PINA carries 92 rows in a
     #   three-week window in 2025.
@@ -352,6 +458,50 @@ filters:
     # change. Excluding is the safer default — a transfer counted as revenue
     # inflates every store-comparison and company total.
     assumption_confirmed: false
+
+  # ---------------------------------------------------------------------------
+  # CLOSED LOCATIONS — EXCLUDED FROM CURRENT STATE, KEPT IN HISTORY.
+  #
+  # A closed location is excluded from any question about how things stand NOW,
+  # on the same footing as AJI BARN and AJI PINA in excluded_from_sales above:
+  # a named list, applied by construction, and cited in meta.filters_applied so
+  # the exclusion appears on the receipt rather than happening invisibly.
+  #
+  # THE DISTINCTION THIS ENCODES. "How much stock is at MACOPA" and "how much
+  # did MACOPA ship in May" are different questions, and a closed location
+  # answers only the second. The first must not come back empty as though the
+  # shelves were bare — it must say the place is shut.
+  #
+  # So the rule is asymmetric, and deliberately so:
+  #   CURRENT STATE  (inventory, dead stock, "right now")  -> EXCLUDED
+  #   HISTORY        (transfers, purchase orders, a past window) -> INCLUDED
+  #
+  # Excluding closed locations from history would silently delete real activity:
+  # MACOPA alone is 1,006 document references and 76 purchase orders. The point
+  # of creating its store row was to make that history resolve.
+  #
+  # source: the business, 2026-09-02 (MACOPA is closed). Ids and dates from
+  #   stores.closed, which is the single place they are written down.
+  # ---------------------------------------------------------------------------
+  closed_locations:
+    rule: >
+      A closed location is excluded from current-state questions and included in
+      historical ones. A current-state tool asked about one must say it is
+      closed and give its closing date, never return an empty result.
+    excluded_store_ids:
+      - "local-aji-macopa-wh-0001"   # AJI MACOPA — closed 2026-06-24
+    excluded_labels:
+      "local-aji-macopa-wh-0001": "AJI MACOPA (closed)"
+    applies_to_current_state: true
+    applies_to_history: false
+    # A tool must not answer "no stock" for a closed location. It says so.
+    empty_result_is_forbidden: true
+    notice_kind: location_closed
+    notice_template: >
+      {label} closed on {closed_at} and is excluded from current-state figures.
+      Its history is intact and remains answerable — it appears in
+      {transfer_references} transfer and purchase-order documents up to that
+      date.
 
   # ---------------------------------------------------------------------------
   # The full guard every sales metric applies. Tools compose from this, and the
@@ -629,10 +779,10 @@ inventory:
   low_stock_blocked_reason: "inventory.warning_stock is NULL on 100% of rows"
 
   # Inventory questions use their own store scope — the warehouse holds stock.
-  # source: the live store_filters table's inventory scope, plus filters.aji_barn.
+  # source: the live store_filters table's inventory scope, plus filters.excluded_from_sales.
   #
   # resolves: this was previously the prose string
-  #   "active_retail + filters.aji_barn.inventory_scope_store_ids"
+  #   "active_retail + filters.excluded_from_sales.inventory_scope_store_ids"
   # which no tool could read without parsing an ad-hoc expression — a violation
   # of the rule this file exists to enforce (tools READ definitions, they do not
   # interpret them). It is now a literal list. Keep it literal.
@@ -705,6 +855,41 @@ products:
     ambiguity_policy: separate_or_refuse
     disambiguate_with: product_id
 
+    # -------------------------------------------------------------------------
+    # TWO MATCHING RULES, ONE FOR EACH DIRECTION. They are not in conflict; they
+    # serve different callers.
+    #
+    #   match (case_insensitive)  — a HUMAN typing a SKU at George. A person who
+    #     types "tky105" should not get an empty result because the catalog
+    #     stores "TKY105". The ambiguity_policy above is what keeps this safe:
+    #     a case-insensitive hit on more than one product is separated or
+    #     refused, never summed.
+    #
+    #   import_match (case_sensitive) — a MACHINE joining an exported SKU string
+    #     to products.sku. There is no user to disambiguate for and no prompt to
+    #     return to; the join either lands on the right product row or silently
+    #     attributes a purchase cost to the wrong one.
+    #
+    # SKU CASE IS LOAD-BEARING IN THE CATALOG. TKY28 and Tky28 are different
+    # products, as are TKY107 and Tky107 — the same pattern metrics.yaml already
+    # records at products.sku (Tky105 / tky105 / TKY105 are three unrelated
+    # items in three categories at three prices). Case-folding an import join
+    # would merge unrelated products' cost histories into one series.
+    #
+    # source: verified against the live products table (user-confirmed, carried
+    #   into this file 2026-09-02).
+    # resolves: nothing yet — this is additive. tools/movement.py:206 and the
+    #   other user-facing lookups keep using `match`. Only the StoreHub importer
+    #   and get_cost_history use import_match.
+    #
+    # An import_match that hits MORE THAN ONE row is NOT resolved by picking
+    # one. The line imports with a null product_id and sku_match='ambiguous',
+    # exactly like a miss, and the count is reported on the import.
+    # -------------------------------------------------------------------------
+    import_match: case_sensitive
+    import_match_sql: "p.sku = %(sku)s"
+    import_ambiguity_policy: leave_unresolved_and_flag
+
   # ---------------------------------------------------------------------------
   # BARCODES COME FROM TWO PLACES AND products.barcode IS A LIST.
   #
@@ -748,7 +933,66 @@ products:
 # report transfers.
 # =============================================================================
 movement:
-  recorded_ledger_exists: false
+  # ---------------------------------------------------------------------------
+  # THIS CHANGED ON 2026-09-02. A RECORDED LEDGER NOW EXISTS.
+  #
+  # Everything below this block was written when nothing in the database recorded
+  # a transfer as an event. The StoreHub stock-transfer import changed that:
+  # 2,034 transfer documents and 40,141 lines, each naming a source, a
+  # destination, a product, a quantity, a cost and a status.
+  #
+  # The old survey is NOT deleted. It still describes the snapshot-differencing
+  # path exactly, that path still exists, and its limits still apply to it. What
+  # changed is that it is no longer the ONLY path.
+  #
+  # TWO BASES, AND THEY ARE NEVER BLENDED INTO ONE FIGURE:
+  #
+  #   transfer_records  RECORDED movement. A document says goods moved from A to
+  #                     B. Answers destination questions. Covers only the window
+  #                     that has been imported, and only what staff recorded.
+  #
+  #   balance_delta     INFERRED movement. Differenced daily snapshots. Says a
+  #                     number changed, never that goods moved or where. Covers
+  #                     every product with snapshots, recorded or not.
+  #
+  # A number that added a recorded transfer to an inferred balance change would
+  # be double-counting the same movement under two names, and would carry no
+  # single provenance. Tools return them as separate labelled blocks with no
+  # summed field spanning both. Rows carry their own `basis`.
+  # ---------------------------------------------------------------------------
+  recorded_ledger_exists: true
+  recorded_ledger_since: "2026-09-02 (StoreHub stock-transfer import)"
+  bases:
+    transfer_records:
+      source_table: stock_transfers
+      lines_table: stock_transfer_lines
+      derived: false
+      is_recorded_movement: true
+      names_destination: true
+      # Coverage is the imported window, not all of history. Every record-backed
+      # answer must state the window it can see.
+      coverage_is_imported_window: true
+      coverage_notice_mandatory: true
+    balance_delta:
+      derived: true
+      is_recorded_movement: false
+      names_destination: false
+  never_blend_bases: true
+  default_basis: both
+
+  # ---------------------------------------------------------------------------
+  # STATUS DECIDES WHETHER GOODS MOVED, on the record-backed basis.
+  # Reuses storehub.stock_transfers.moved_statuses rather than restating it.
+  # A quantity or value question defaults to moved documents only; a
+  # document-count question legitimately counts all statuses and says so.
+  # ---------------------------------------------------------------------------
+  moved_statuses_ref: storehub.stock_transfers.moved_statuses
+  unmoved_value_notice_mandatory: true
+
+  # Quantities mix units across products (grams vs packs) — see
+  # storehub.quantity_unit. A record-backed quantity is only meaningful within
+  # one product; value (PHP) is the additive measure across products.
+  record_quantity_additive_across_products: false
 
   # What was surveyed and what it held.
   # source: live database, 2026-09-01, all 38 base tables enumerated.
@@ -794,7 +1038,29 @@ movement:
   # August 2026:
   # ---------------------------------------------------------------------------
   destination_attribution:
-    supported: false
+    # -------------------------------------------------------------------------
+    # NOW SCOPED BY BASIS. It was a flat `false`; that answer was right for the
+    # only basis that existed then and is wrong as a blanket statement now.
+    #
+    #   transfer_records  SUPPORTED. Every transfer names Source Store and
+    #                     Target Store, both resolved to store ids through the
+    #                     alias map. "How much went from BARN to Rockwell" is a
+    #                     direct question against recorded documents.
+    #
+    #   balance_delta     STILL NOT SUPPORTED, for exactly the reasons measured
+    #                     below. Differencing snapshots cannot say where goods
+    #                     went, and the inference view that tries reconciles for
+    #                     24 of 196 products.
+    #
+    # The refusal message below still applies, but ONLY to the balance_delta
+    # basis. A tool must not refuse a destination question it can now answer from
+    # records, and must not answer one from snapshots that it cannot.
+    # -------------------------------------------------------------------------
+    supported_by_basis:
+      transfer_records: true
+      balance_delta: false
+    supported: false            # legacy key: refers to balance_delta only
+    supported_key_means: balance_delta
     measured_window: "2026-08-01..2026-09-01"
     dispatch_view_grams: 1422047
     barn_negative_delta_grams: -4338299
@@ -1012,101 +1278,832 @@ vending:
 
 
 # =============================================================================
+# STOREHUB CSV EXPORTS — purchase orders and stock transfers
+#
+# StoreHub exports these two documents as CSV. They are the FIRST recorded
+# procurement and movement data this database has ever held: until they were
+# imported, movement.recorded_ledger_exists was false and every supplier subject
+# below was unsupported.
+#
+# Everything in this section is read at runtime by
+# backend/app/services/storehub_import.py and by the tools built on the imported
+# tables. The importer holds NO definition of its own — not a status meaning,
+# not a location mapping, not a date format.
+#
+# BOTH EXPORTS ARE HEADER-PLUS-LINE. One summary row per document followed by N
+# line rows. See line_discriminator: the obvious tests do not work.
+#
+# source: the two exports dated 2026-09-02, plus the live stores table.
+# =============================================================================
+storehub:
+
+  # ---------------------------------------------------------------------------
+  # THE "(RM)" COLUMN HEADERS ARE WRONG. The values are PHP.
+  #
+  # Every money column in both exports is labelled "(RM)" — Malaysian ringgit.
+  # StoreHub is a Malaysian product and the export template was never localised.
+  # Confirmed by joining PO unit costs to products.cost on SKU: 19 of 20 matched
+  # to the centavo. Aji Ichiban trades in the Philippines and holds no ringgit.
+  #
+  # The importer therefore stores these values as PHP and NEVER converts. No
+  # column in the imported tables carries "rm" in its name — a column named for
+  # a currency it does not hold is how the mistake would be re-made.
+  #
+  # source: user-verified against products.cost, carried in 2026-09-02.
+  # ---------------------------------------------------------------------------
+  currency:
+    code: PHP
+    header_label_says: "RM"
+    header_label_is_wrong: true
+    convert: false
+    # The one PO cost that did NOT match to the centavo is unexplained. A
+    # candidate — NOT asserted, and not acted on anywhere — is that products.cost
+    # is Numeric(10, 2) (backend/app/models/product.py:23) while the export
+    # carries six decimals (PCON03 = 1.018028), so a 6dp source cost cannot
+    # round-trip through the catalog column. Recorded so the next person does
+    # not re-derive it; see numeric.unit_cost_decimal_places.
+    unmatched_cost_hypothesis: "products.cost is Numeric(10,2); export carries 6dp"
+    unmatched_cost_confirmed: false
+
+  # ---------------------------------------------------------------------------
+  # HEADER VS LINE. `No.` IS THE ONLY SAFE DISCRIMINATOR.
+  #
+  # The intuitive tests both fail on real rows:
+  #   "Total is populated"    -> header PO0709 and PO0708 both carry Total
+  #                              "0.00". Populated, and zero.
+  #   "SubTotal is populated" -> line 1 of PO0709 carries SubTotal "0.00".
+  #
+  # Testing either for non-emptiness misclassifies a zero-valued document as a
+  # line or a zero-valued line as a header, and a misclassified header row
+  # becomes a phantom line with no product.
+  #
+  # `No.` is blank on every header row and 1..N on every line row, and it has no
+  # zero-valued form. It is the discriminator.
+  # source: measured on the 2026-09-02 exports.
+  # ---------------------------------------------------------------------------
+  line_discriminator:
+    column: "No."
+    header_when: blank
+    line_when: integer
+    rejected_alternatives:
+      total_populated: "PO0709/PO0708 headers carry Total 0.00"
+      subtotal_populated: "PO0709 line 1 carries SubTotal 0.00"
+
+  # ---------------------------------------------------------------------------
+  # DATES. Manila wall-clock, no zone in the file.
+  #
+  # The exports carry local wall-clock times with no offset. Asia/Manila
+  # observes no DST (see timezone.observes_dst), so interpreting them as Manila
+  # is unambiguous and never skips or repeats an hour.
+  #
+  # "Estimated Date of Arrival" is DATE-ONLY. It is stored as a date, not as a
+  # midnight timestamp — a midnight timestamp implies a precision the file does
+  # not have and would make a same-day ETA look like it preceded its own PO.
+  # ---------------------------------------------------------------------------
+  datetime_format: "%m/%d/%Y %H:%M"
+  date_format: "%m/%d/%Y"
+  timezone: "Asia/Manila"
+  empty_is_null: true
+
+  # ---------------------------------------------------------------------------
+  # NUMERIC PRECISION.
+  #
+  # Unit costs carry SIX decimals in the file (PCON03 "Slurp & chew strawberry
+  # flavor" = 1.018028). Storing them at 2dp silently rounds the source. Line
+  # subtotals are stored to 4dp and header totals to 4dp.
+  #
+  # Quantities are NUMERIC, not integer. They are integral in the exports seen
+  # so far, but per-gram products move in quantities that are counts of grams
+  # (SH1 "Aji Mix" at 31,500) and the store domain already sells fractional
+  # quantities (metrics.units_sold.integral: false). An integer column would
+  # reject a fractional line rather than record it.
+  # ---------------------------------------------------------------------------
+  numeric:
+    unit_cost_decimal_places: 6
+    money_decimal_places: 4
+    quantity_decimal_places: 4
+    quantity_is_integral: false
+    # Values are unquoted-decimal in both exports. A comma reaching a numeric
+    # field can only be a thousands separator (the CSV is quoted, so a comma
+    # inside a field is never a delimiter), so it is stripped before parsing.
+    # Anything else still fails loudly rather than silently becoming a number.
+    strip_thousands_separator: true
+
+  # ---------------------------------------------------------------------------
+  # FIELD TYPES. Applied by column ROLE, not by column header, so both exports
+  # share one set of rules. Roles not listed here are text.
+  # ---------------------------------------------------------------------------
+  field_types:
+    datetime: [created_at_source, completion_date, cancelled_date, shipped_date, received_date]
+    date:     [estimated_arrival_date]
+    decimal:  [ordered_qty, received_qty, unit_cost, subtotal, header_total]
+    integer:  [line_no]
+
+  # ---------------------------------------------------------------------------
+  # UNITS ARE PER PRODUCT AND ARE NOT RECORDED IN THE FILE.
+  #
+  # movement.unit says `grams`, which is true of AJI BARN's inventory balances
+  # and NOT true of these documents. In one transfer (ST2999) SH1 "Aji Mix"
+  # moves 834 at PHP 0.80 — grams — while SH610 "Fuan Haw Flakes" moves 1 at
+  # PHP 70.00 — a pack. Both are "Ordered Qty" in the same column of the same
+  # document.
+  #
+  # CONSEQUENCE: a transfer quantity MUST NOT be labelled with a unit, and
+  # quantities MUST NOT be summed across products. Summing 834 grams of Aji Mix
+  # with 40 packs of Haw Flakes produces 874 of nothing. Tools group by product
+  # or report value (PHP), which IS additive.
+  # ---------------------------------------------------------------------------
+  quantity_unit:
+    recorded_in_export: false
+    varies_by_product: true
+    additive_across_products: false
+    additive_measure: "subtotal (PHP)"
+
+  # ---------------------------------------------------------------------------
+  # INTEGRITY CHECKS. One raises, one flags.
+  #
+  # header_total_equals_line_subtotals RAISES. Verified exactly on ST2997: the
+  # 32 line subtotals sum to 61,447.74, the header Total, INCLUDING the line
+  # where 30 x 1.018028 = 30.54084 was written as 30.54. The header total is
+  # built from ROUNDED line subtotals, so this holds to the centavo and a
+  # failure means the file is malformed or a line was lost in parsing.
+  #
+  # subtotal_equals_qty_times_cost only FLAGS, with a tolerance. It fails
+  # legitimately on that same rounding, so treating it as an error would reject
+  # a correct file. It catches a genuinely inconsistent line without pretending
+  # a rounded one is wrong.
+  #
+  # NEITHER CHECK REPAIRS ANYTHING. Both stored values are imported exactly as
+  # exported; a check that rewrote a value would make the import a source of
+  # numbers rather than a record of them.
+  # ---------------------------------------------------------------------------
+  integrity:
+    # -------------------------------------------------------------------------
+    # HEADER TOTAL vs SUM OF LINE SUBTOTALS.
+    #
+    # MEASURED 2026-09-02 over every export available:
+    #   stock transfers  2,034 documents / 40,141 lines -> ZERO mismatches
+    #   purchase orders    151 documents               -> 2 mismatches
+    #
+    # So it is an invariant of stock transfers and NOT of purchase orders. The
+    # two failures are both genuine source inconsistencies, not parse errors:
+    #
+    #   PO0604  header 90,000.00, lines sum 0.00. Every one of its 13 lines has
+    #           cost 0.00 — the costs were never entered — while the header
+    #           carries a real total. Same shape as the vending zero-cost trap:
+    #           0.00 means "not entered", not "free".
+    #   PO0285  header 114,912.00, lines sum 114,890.00. Off by exactly 22.00.
+    #
+    # AN EARLIER VERSION OF THIS ENTRY SAID on_failure: raise, FULL STOP. That
+    # was wrong, and wrong in the expensive direction: it rejected both PO
+    # exports outright, so two bad documents out of 151 meant no procurement
+    # data at all. A file-level refusal has to be reserved for a file that
+    # cannot be TRUSTED, not one that contains a document somebody fat-fingered.
+    #
+    # THE DISCRIMINATOR IS LINE-NUMBER CONTIGUITY. The original fear was that a
+    # mismatch means the parser lost a line. That is checkable: if the document's
+    # line numbers run 1..N with no gap, nothing was lost and the disagreement is
+    # in the source, so the document imports with header_total_reconciles = false
+    # and a notice. If a line number is MISSING, a line really is unaccounted for
+    # and the file is refused.
+    #
+    # Residual limitation, stated rather than hidden: a lost LAST line leaves
+    # 1..N-1 contiguous and would be flagged rather than raised. Nothing in the
+    # parser can drop a row silently (a real CSV reader either yields a row or
+    # fails, and header/line classification is on `No.`), so this is a gap in the
+    # guard, not a known failure.
+    # -------------------------------------------------------------------------
+    header_total_equals_line_subtotals:
+      tolerance: 0.01
+      on_failure_when_lines_contiguous: flag
+      on_failure_when_lines_missing: raise
+      flag_column: header_total_reconciles
+      verified_on: "ST2997 (32 lines, 61447.74)"
+      measured:
+        stock_transfers: {documents: 2034, lines: 40141, mismatches: 0}
+        purchase_orders: {documents: 151, mismatches: 2}
+      known_mismatches:
+        PO0604: "header 90000.00 vs lines 0.00 — all 13 line costs are 0.00, never entered"
+        PO0285: "header 114912.00 vs lines 114890.00 — out by 22.00"
+    subtotal_equals_qty_times_cost:
+      on_failure: flag
+      tolerance: 0.005
+      flag_column: subtotal_consistent
+      known_benign_cause: "line subtotals are rounded to 2dp from a 6dp unit cost"
+
+  # ---------------------------------------------------------------------------
+  # TEXT. Some product names are UTF-8 mis-decoded at export (mojibake), and
+  # Notes fields contain embedded newlines and commas.
+  #
+  # NAMES ARE NEVER REPAIRED. A cp1252/UTF-8 round-trip would usually restore
+  # the intended characters, but "usually" is a guess applied to a name that is
+  # then indistinguishable from one that was correct. The raw string is stored
+  # verbatim and the row is flagged, so a human can decide. The flag is a
+  # detector, not a fixer.
+  #
+  # Notes must be read with a real CSV parser. A line-splitting reader breaks a
+  # document in half at an embedded newline.
+  # ---------------------------------------------------------------------------
+  text:
+    repair_mojibake: false
+    mojibake_markers: ["Ã", "â€", "Â", "ï¿½", "�"]
+    flag_column: name_mojibake
+    decode: "utf-8"
+    decode_errors: "surrogateescape"
+    requires_real_csv_parser: true
+    embedded_newlines_in: ["Notes"]
+
+    # -------------------------------------------------------------------------
+    # MEASURED 2026-09-02, all five exports (227 POs + 2,034 transfers,
+    # 41,188 lines): NO mojibake is present. Every file decodes as clean UTF-8 —
+    # zero bytes needed surrogateescape — and product names contain exactly two
+    # non-ASCII characters, both intended:
+    #     U+00E9 é  (25 occurrences)
+    #     U+2019 '  (14 occurrences, right single quotation mark)
+    #
+    # The detector is KEPT even though it currently fires zero times. It costs
+    # one substring scan per line, a future export may differ, and an unfired
+    # detector is the cheapest thing in this file. What is recorded here is the
+    # measurement, so that "product names are mis-decoded at export" is not
+    # carried forward as a belief about data that does not show it.
+    # -------------------------------------------------------------------------
+    mojibake_found: 0
+    mojibake_measured: "2026-09-02, all five exports, 41,188 lines"
+    surrogateescape_bytes_found: 0
+
+  # ---------------------------------------------------------------------------
+  # NOTES ARE NOT PARSED INTO DATES. DECIDED 2026-09-02.
+  #
+  # 4 of the 6 POs in the sample carry a note of the form "Received August 26,
+  # 2026" — and three of those four are still status Open. The note is very
+  # often the only record of when goods actually arrived (see
+  # purchase_orders.statuses and lead_time below).
+  #
+  # It is still free text written by staff, and turning it into a date is an
+  # interpretation. The rule this file applies to store names — never fuzzy
+  # match — applies with more force to a date that would then be used to compute
+  # a lead time and reported as measured.
+  #
+  # The note is stored verbatim and surfaced as text. A row whose note LOOKS
+  # like a received date is flagged so the volume is visible, but no date is
+  # extracted. Flip this only on an explicit decision, and record the decision
+  # here.
+  # ---------------------------------------------------------------------------
+  notes:
+    parse_received_date: false
+    detect_received_date_shape: true
+    detection_regex: "(?i)\\breceived\\b"
+    flag_column: notes_mentions_received
+    decided: "2026-09-02"
+
+  # ---------------------------------------------------------------------------
+  # LOCATION ALIASES — THE CSV STRING IS THE KEY, AND stores.name IS NEVER READ.
+  #
+  # WHY AN EXPLICIT MAP RATHER THAN A NAME JOIN. The live stores table holds two
+  # rows whose names differ ONLY by a "(1) " prefix:
+  #
+  #   6639efd54694700008d7ccc6   "(1) Aji Ichiban Food Products"   Rockwell, 65k txns
+  #   668263b71c04d30007dbd150   "Aji Ichiban Food Products"       no trading history
+  #
+  # Any prefix-strip, LIKE, trim-and-compare or fuzzy match sends Rockwell's
+  # transfers (ST2994 at PHP 45,913; ST2995 at PHP 21,730) to a store that has
+  # never traded. An exact-string map is the only form that cannot do this.
+  #
+  # MATCHING IS EXACT AND LITERAL. No trimming, no case folding, no whitespace
+  # normalisation. "(6) Aji Ichiban  OPUS" contains a DOUBLE SPACE and is
+  # written here with it. A location string not present below is UNRESOLVED —
+  # it never falls back to a looser match.
+  #
+  # source: ids from the live stores table via stores.json (ids are stable; that
+  #   dump's NAMES predate the "(N) " rename and are not used here), plus
+  #   stores.active_retail above for Shang, which postdates the dump.
+  # resolves: the importer needs a location -> id mapping and the obvious one
+  #   (join on stores.name) is the failure documented above.
+  # ---------------------------------------------------------------------------
+  locations:
+    match: exact_string
+    strip_whitespace: false
+    case_fold: false
+    fuzzy: false
+    # HARD RULE: an unknown location NEVER creates a stores row and is NEVER
+    # guessed at. It imports with a null FK, the raw string retained, and a
+    # notice. A missing store is visible; a wrong one is not.
+    on_unresolved: keep_raw_null_fk_and_notice
+    create_store_row: false
+
+    alias:
+      "AJI BARN":                                    "667bde393126e50006c8058c"
+      "(1) Aji Ichiban Food Products":               "6639efd54694700008d7ccc6"
+      "(2) Aji Ichiban food products SM Fairview":   "668023c94721460006092609"
+      "(3) Ajiichiban Food Products Greenhills":     "668a43f60fa9990007cfa158"
+      "(4) Ajiichiban Food Products SM North Edsa":  "66cfff31aa7adf0007c9de41"
+      "(5) Ajiichiban food products Magnolia":       "67612230a740d90007464e26"
+      "(6) Aji Ichiban  OPUS":                       "68c5bb269da1d500073690c2"
+      "(7) Ajiichiban SHANG":                        "69c73fcb277aa600076dfaaa"
+      "Aji Packing":                                 "68a40bd8b79152000619e7d7"
+      "AJI Disposal":                                "6699c88bd38fa400074ba3da"
+      "AJI ONLINE":                                  "6680e5a3a8fc2d00071d07a9"
+      # The two storefronts in stores.pending_retail. They have zero
+      # transactions but they DO receive stock — 27 transfers across the
+      # exports — so they resolve here even though they are not yet in
+      # active_retail. Names matched exactly against stores.pending_retail.
+      "Ajiichiban ROBINSONS super market lucky Chinatown": "694785f3c9a90d0007fc9232"
+      "AJI ROBINSONS supermarket robinsons galleria":      "6982c9a9aa1210000783594d"
+      # AJI CMG as a LOCATION receiving stock — the `stores` row. Note the
+      # warning in the vending section: "AJI CMG" names two different things,
+      # this store row and the Weimi vending business. A transfer or PO landing
+      # here is stock arriving at the location, and must never be joined to the
+      # vending domain.
+      "AJI CMG":                                     "667bde0cd749a000079f4650"
+      "Hello AJI vending":                           "693646be0abea30007b77334"
+      # Read from the live stores table 2026-09-02. It is a real StoreHub
+      # ObjectID and a location distinct from the two above — all three names
+      # appear in the same export, so none is a rename of another.
+      "AJI VENDO":                                   "69b6fb6d185092000783c8a4"
+      # A CLOSED warehouse, and the one id here that is not a StoreHub
+      # ObjectID — see stores.closed and migration i3j4k5l6m7n8 for why it is
+      # deliberately not hex. Aliased so its 1,006 historical references resolve
+      # instead of importing as a null FK. If StoreHub's real id for MACOPA ever
+      # arrives, this line and the stores row change together.
+      "AJI MACOPA":                                  "local-aji-macopa-wh-0001"
+
+    # DELIBERATELY ABSENT FROM THE MAP. "Aji Ichiban Food Products" — the
+    # unprefixed twin, 668263b71c04d30007dbd150 — is NOT aliased. It has no
+    # trading history and nothing establishes what it is. If that exact string
+    # ever appears in an export it must surface as unresolved rather than be
+    # mapped to a store nobody can characterise.
+    deliberately_unmapped:
+      "Aji Ichiban Food Products": "668263b71c04d30007dbd150 — unprefixed twin of Rockwell; identity unestablished"
+
+    # ---------------------------------------------------------------------------
+    # PENDING — known locations with no id yet. These import UNRESOLVED, exactly
+    # like any unknown string. They are listed so the notice can say what the
+    # location is rather than only that it is unknown.
+    # ---------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
+    # PENDING is now EMPTY, and that is the finished state.
+    #
+    # Every location appearing in any export resolves to a store id. AJI MACOPA
+    # (closed, local id) and AJI VENDO (real ObjectID, read from the live table
+    # 2026-09-02) were the last two. The key is kept because the mechanism is
+    # still needed: a location StoreHub adds tomorrow lands here with an
+    # explanation rather than as a bare unknown string.
+    #
+    # Verified 2026-09-02 against all five exports: 0 unresolved locations.
+    # ---------------------------------------------------------------------------
+    pending: {}
+
+  # ---------------------------------------------------------------------------
+  # PURCHASE ORDERS
+  # ---------------------------------------------------------------------------
+  purchase_orders:
+    document_key_column: "P.O ID"
+    document_key_example: "PO0710"
+    source_table: purchase_orders
+    lines_table: purchase_order_lines
+    column_count: 22
+    columns:
+      - "P.O ID"
+      - "Created Date"
+      - "Estimated Date of Arrival"
+      - "Completion Date"
+      - "Supplier"
+      - "Target Store"
+      - "No."
+      - "Product Name"
+      - "SKU"
+      - "Serial No."
+      - "Category"
+      - "Ordered Quantity"
+      - "Received Quantity"
+      - "Cost (RM)"
+      - "SubTotal (RM)"
+      - "Total (RM)"
+      - "Status"
+      - "Notes"
+      - "Requested By"
+      - "Cancelled By"
+      - "Cancelled Date"
+      - "Completed By"
+
+    # -------------------------------------------------------------------------
+    # ROLE -> COLUMN HEADER. The parser addresses columns by ROLE and never by a
+    # literal header string, so a renamed export column is a one-line edit here
+    # rather than a code change (and an unrecognised header fails loudly against
+    # the `columns` list above rather than silently reading blanks).
+    #
+    # line_fields are read from LINE rows. Every other role is read from the
+    # document's HEADER row. Line rows repeat most header columns; reading them
+    # from the header keeps one value per document rather than N identical ones
+    # that could disagree.
+    # -------------------------------------------------------------------------
+    field_map:
+      external_id:             "P.O ID"
+      created_at_source:       "Created Date"
+      estimated_arrival_date:  "Estimated Date of Arrival"
+      completion_date:         "Completion Date"
+      supplier_name:           "Supplier"
+      target_location_raw:     "Target Store"
+      status:                  "Status"
+      notes:                   "Notes"
+      header_total:            "Total (RM)"
+      requested_by:            "Requested By"
+      cancelled_by:            "Cancelled By"
+      cancelled_date:          "Cancelled Date"
+      completed_by:            "Completed By"
+      line_no:                 "No."
+      product_name_raw:        "Product Name"
+      sku_raw:                 "SKU"
+      serial_no:               "Serial No."
+      category_raw:            "Category"
+      ordered_qty:             "Ordered Quantity"
+      received_qty:            "Received Quantity"
+      unit_cost:               "Cost (RM)"
+      subtotal:                "SubTotal (RM)"
+    line_fields:
+      [line_no, product_name_raw, sku_raw, serial_no, category_raw,
+       ordered_qty, received_qty, unit_cost, subtotal]
+
+    # SUPPLIER IS FREE TEXT AND THERE IS NO SUPPLIER MASTER. Observed values
+    # include "Dried Fruits DF001", "Supplies" and "Do rei me" — a product line,
+    # a category and a company. The raw string is stored and never deduplicated,
+    # normalised or fuzzy-grouped: merging "Supplies" with "Store supplies"
+    # would invent a supplier that placed neither order.
+    supplier_is_free_text: true
+    supplier_master_exists: false
+    deduplicate_suppliers: false
+
+    # -------------------------------------------------------------------------
+    # STATUS. "Open" DOES NOT MEAN "NOT RECEIVED".
+    #
+    # Measured on the sample: PO0706 (PHP 327,320), PO0708 and PO0709 are all
+    # status Open with notes reading "Received August 26, 2026" / "Received
+    # September 1, 2026". The goods arrived; nobody completed the PO.
+    #
+    # CONSEQUENCE: an "on order" or "outstanding" figure built on
+    # status = 'Open' is wrong by at least PHP 327,320 in a six-document sample.
+    # Tools must report Open as "not completed in StoreHub", never as
+    # "not yet received", and must surface the note count alongside it.
+    # -------------------------------------------------------------------------
+    statuses:
+      Completed: "marked complete in StoreHub"
+      Open:      "not marked complete in StoreHub. NOT a statement about receipt."
+      Cancelled: "cancelled"
+    cancelled_statuses: ["Cancelled"]
+    open_means_not_received: false
+    open_but_received_observed: true
+
+    # -------------------------------------------------------------------------
+    # RECEIVED QUANTITY IS SPARSE AND IS NEVER RECONCILED TO ORDERED.
+    #
+    # It is blank on Open POs and 0 on every line of Completed POs PO0707 and
+    # PO0705 — both of which carry notes saying the goods were received. It can
+    # also EXCEED ordered (12 ordered, 120 received, user-verified).
+    #
+    # Both numbers import exactly as exported. The importer never adjusts one to
+    # the other, never infers received from status, and never treats blank as
+    # zero — blank means "not recorded", zero means "recorded as zero", and
+    # collapsing them would erase the difference. Lines where the two differ are
+    # flagged so the divergence is countable.
+    # -------------------------------------------------------------------------
+    received_quantity:
+      reconcile_to_ordered: false
+      blank_is_zero: false
+      may_exceed_ordered: true
+      flag_column: received_differs_from_ordered
+
+    # -------------------------------------------------------------------------
+    # LEAD TIME. WHAT IS AND IS NOT MEASURABLE.
+    #
+    # Three intervals are computable from the columns; only one is honest, and
+    # it does not mean what "lead time" usually means.
+    #
+    #   created -> estimated_arrival   A PLANNED date, not an observation.
+    #   created -> completion_date     SYSTEM COMPLETION LATENCY. When someone
+    #                                  clicked Complete. PO0710 was created
+    #                                  16:34 and completed 16:36 — two minutes —
+    #                                  with the note "Fixing inventory. Late POS
+    #                                  for samploc", i.e. a backdated
+    #                                  administrative correction, not a delivery.
+    #                                  PO0707 shows 2d21h while its own note says
+    #                                  the goods arrived on the creation day.
+    #   created -> actual receipt      NOT COMPUTABLE. The receipt date exists
+    #                                  only in free-text Notes, which are not
+    #                                  parsed (see notes.parse_received_date).
+    #
+    # So DELIVERY lead time is not answerable and tools must refuse it. What is
+    # answerable is completion latency, and it must be labelled as such wherever
+    # it is reported. Reporting it as "supplier lead time" would put a number on
+    # a supplier's performance that actually measures a staff member's data
+    # entry.
+    # -------------------------------------------------------------------------
+    lead_time:
+      completion_latency:
+        supported: true
+        from: created_at
+        to: completion_date
+        unit: days
+        means: "time until the PO was marked complete in StoreHub"
+        does_not_mean: "time until goods arrived"
+        label_mandatory: true
+      delivery_lead_time:
+        supported: false
+        reason: >
+          The actual receipt date is recorded only in a free-text Notes field,
+          which is deliberately not parsed. Nothing else in the export observes
+          arrival: Completion Date is a system event and Estimated Date of
+          Arrival is a plan.
+
+  # ---------------------------------------------------------------------------
+  # STOCK TRANSFERS
+  # ---------------------------------------------------------------------------
+  stock_transfers:
+    document_key_column: "S.T ID"
+    document_key_example: "ST3001"
+    source_table: stock_transfers
+    lines_table: stock_transfer_lines
+    column_count: 20
+    columns:
+      - "S.T ID"
+      - "Created Date"
+      - "Shipped Date"
+      - "Received Date"
+      - "Source Store"
+      - "Target Store"
+      - "No."
+      - "Product Name"
+      - "SKU"
+      - "Serial No."
+      - "Category"
+      - "Ordered Qty"
+      - "Cost (RM)"
+      - "SubTotal (RM)"
+      - "Total (RM)"
+      - "Status"
+      - "Sent By"
+      - "Cancelled By"
+      - "Cancelled Date"
+      - "Received By"
+
+    # See purchase_orders.field_map for how this is used.
+    field_map:
+      external_id:           "S.T ID"
+      created_at_source:     "Created Date"
+      shipped_date:          "Shipped Date"
+      received_date:         "Received Date"
+      source_location_raw:   "Source Store"
+      target_location_raw:   "Target Store"
+      status:                "Status"
+      header_total:          "Total (RM)"
+      sent_by:               "Sent By"
+      cancelled_by:          "Cancelled By"
+      cancelled_date:        "Cancelled Date"
+      received_by:           "Received By"
+      line_no:               "No."
+      product_name_raw:      "Product Name"
+      sku_raw:               "SKU"
+      serial_no:             "Serial No."
+      category_raw:          "Category"
+      ordered_qty:           "Ordered Qty"
+      unit_cost:             "Cost (RM)"
+      subtotal:              "SubTotal (RM)"
+    line_fields:
+      [line_no, product_name_raw, sku_raw, serial_no, category_raw,
+       ordered_qty, unit_cost, subtotal]
+
+    # -------------------------------------------------------------------------
+    # STATUS DECIDES WHETHER GOODS MOVED. MOST OF THEM DID NOT.
+    #
+    # A transfer with status Created has no Shipped Date and no Received Date:
+    # it is a document, not a movement. In the sample window the MAJORITY of
+    # transfers are Created, including ST2989 at PHP 159,184.70 — the single
+    # largest document in the file, and nothing left the warehouse.
+    #
+    # CONSEQUENCE: summing transfer quantities without a status filter reports
+    # goods that are still sitting where they started. moved_statuses is the
+    # default scope for any quantity-grain or value-grain movement question, and
+    # a tool answering one MUST report how much value sits in the excluded
+    # statuses rather than silently dropping it.
+    #
+    # Document-grain questions ("how many transfers were raised") legitimately
+    # count all statuses — that is a different grain and says so.
+    # -------------------------------------------------------------------------
+    statuses:
+      Created:   "raised, not shipped. Goods have NOT moved."
+      Shipped:   "shipped, not yet received. Goods have left the source."
+      Completed: "shipped and received."
+      Cancelled: "cancelled."
+    cancelled_statuses: ["Cancelled"]
+    moved_statuses: ["Shipped", "Completed"]
+    received_statuses: ["Completed"]
+    default_scope_for_quantity_questions: moved_statuses
+    unmoved_value_notice_mandatory: true
+
+    # Both ends are named, so destination attribution IS answerable from these
+    # records — unlike the snapshot-differencing path, where it is not. See
+    # movement.destination_attribution, which is scoped by basis.
+    names_source_and_destination: true
+
+  # ---------------------------------------------------------------------------
+  # IDEMPOTENCY. A RE-IMPORT CONVERGES TO THE FILE; IT DOES NOT ACCUMULATE.
+  #
+  # Upsert each document on external_id, upsert its lines on (document, line_no),
+  # then delete lines of THOSE documents whose line_no is absent from this file.
+  # A document that shrinks from 40 lines to 38 ends up with 38.
+  #
+  # DOCUMENTS ABSENT FROM THE FILE ARE NEVER TOUCHED. These exports are
+  # date-windowed, so a document's absence means "outside this window", not
+  # "deleted". Deleting on absence would empty the table on the first narrow
+  # export.
+  #
+  # line_no, not SKU, is the line identity: a document may legitimately list the
+  # same SKU twice, and a SKU-keyed upsert would silently merge two real lines.
+  #
+  # The whole file imports in ONE transaction. A file that fails halfway leaves
+  # nothing behind.
+  # ---------------------------------------------------------------------------
+  idempotency:
+    document_key: external_id
+    line_key: [document_id, line_no]
+    delete_missing_lines: true
+    delete_scope: documents_present_in_this_file
+    delete_absent_documents: false
+    single_transaction: true
+
+  # ---------------------------------------------------------------------------
+  # IMPORT LEDGER. Every import records what it read and what it could not
+  # resolve, so a number's provenance reaches back to a file and an uploader.
+  # ---------------------------------------------------------------------------
+  imports:
+    source_table: storehub_imports
+    records:
+      - filename
+      - sha256
+      - byte_size
+      - uploaded_by
+      - kind
+      - parser_version
+      - document/line counts seen, inserted, updated
+      - lines deleted
+      - unresolved location count
+      - unmatched and ambiguous SKU counts
+      - notices
+    # A byte-identical re-import is ALLOWED and converges. It is recorded as its
+    # own row rather than rejected: "someone re-ran this import" is itself a
+    # fact worth holding, and a rejection would hide it.
+    reject_duplicate_hash: false
+
+
+# =============================================================================
 # SUPPLIERS, PURCHASE ORDERS, LEAD TIMES, COST HISTORY
 #
-# NONE OF THIS DATA EXISTS. There is no tools/suppliers.py, deliberately.
+# REWRITTEN 2026-09-02. All three subjects were `supported: false` because none
+# of the data existed. The StoreHub CSV import supplied it: 227 purchase orders
+# with 1,047 lines, each carrying a supplier, a target location, a product, a
+# quantity, a unit cost and three dates.
 #
-# This section records a survey so nobody re-derives it, and so a tool cannot
-# quietly reintroduce a metric the data cannot support. It is also the checklist
-# for what a real procurement integration would have to add.
+# THE ORIGINAL SURVEY IS PRESERVED BELOW under `survey_2026_09_01`, not deleted.
+# It records what the database held before the import and is the reason these
+# subjects were refused for so long; deleting it would make those refusals look
+# arbitrary in hindsight. Everything above it is the current state.
 #
-# Method: all 38 base tables and 8 views searched by NAME for
-#   supplier|vendor|purchase|po|receipt|receiv|procure|inbound|delivery|lead|order
-# and then EVERY column in the database searched by concept for
-#   supplier|vendor|purchase|lead_time|on_order|receiv|procure|reorder|moq|
-#   incoming|cost
-# source: live database, 2026-09-01.
+# WHAT DID NOT CHANGE. Two things are still unsupported and are NOT quietly
+# upgraded by the arrival of purchase orders:
+#   - DELIVERY lead time. Nothing records when goods actually arrived.
+#   - STORE-SIDE PROFIT. Still no cost captured per sales line.
+# Both are stated below with their reasons.
 # =============================================================================
 suppliers:
   surveyed: "2026-09-01"
-  any_supplier_data: false
+  resurveyed: "2026-09-02, after the StoreHub import"
+  any_supplier_data: true
 
   # ---------------------------------------------------------------------------
   purchase_orders:
-    supported: false
-    reason: >
-      No suppliers, vendors, purchase_orders, po_lines, receipts or deliveries
-      table exists. The only name matches were the vending order tables, which
-      are CUSTOMER purchases from machines, not orders placed on a supplier.
-    # The schema anticipated purchase orders; nothing was ever written to it.
-    evidence:
-      shipment_plans_on_order: "122,207 rows, every one is 0 (min 0, max 0, sum 0) — never populated"
-      store_pipeline_on_order_units: "table has 0 rows"
-      warehouse_inventory: "0 rows — the only receiving-shaped table, empty"
+    supported: true
+    since: "2026-09-02"
+    source_table: purchase_orders
+    lines_table: purchase_order_lines
+    tool: "tools/purchasing.py get_purchasing()"
+    definitions: purchasing
+    measured:
+      documents: 227
+      lines: 1047
+      exports: 2
+      window: "the two 2026-09-02 exports, which are disjoint"
+
+    # There is NO supplier master. `supplier` is a free-text string on the PO.
+    # Observed values include "Dried Fruits DF001", "Supplies" and "Do rei me" —
+    # a product line, a category and a company. Suppliers are grouped by that raw
+    # string and NEVER deduplicated or normalised: merging "Supplies" into
+    # "Store supplies" would invent a supplier that placed neither order.
+    supplier_master_exists: false
+    supplier_is_free_text: true
+
+    caveats:
+      - "12 of 227 POs have a header total disagreeing with their own lines; value is summed from lines (purchasing.value_basis)"
+      - "'Open' does not mean 'not received' - 8 Open POs carry notes saying the goods arrived"
+      - "received quantity is sparse, sometimes exceeds ordered, and is never reconciled to it"
 
   # ---------------------------------------------------------------------------
   lead_times:
-    supported: false
-    reason: >
-      One global integer exists and it is zero. It is not per-supplier, not
-      per-product and not per-store, so it cannot answer a lead-time question
-      even if it were populated. Lead time also cannot be MEASURED: nothing
-      records when an order was placed or when goods arrived, so there is no
-      observation to derive it from.
-    evidence:
-      algorithm_settings_lead_time_days: 0
-      algorithm_settings_rows: 1          # single config row, id=1
-      algorithm_settings_updated_at: "2026-05-11"
-      scope: "global; no per-supplier, per-product or per-store dimension"
-      observable_from_data: false
-    # Consequence: the replenishment algorithm assumes instant delivery.
+    # PARTIAL, and the distinction is the whole point.
+    supported: partial
+    completion_latency:
+      supported: true
+      measure: purchasing.measures.completion_lead_days
+      means: "days from PO creation to being marked complete in StoreHub"
+      does_not_mean: "days until goods arrived"
+      label_mandatory: true
+      # Why the label is mandatory rather than advisory: PO0710 was created
+      # 16:34 and completed 16:36 - two minutes - under a note reading "Fixing
+      # inventory. Late POS for samploc". Reported as "supplier lead time", that
+      # is a claim about a supplier which actually measures data entry.
+    delivery:
+      supported: false
+      reason: >
+        Nothing observes arrival. Completion Date is a system event, Estimated
+        Date of Arrival is a plan, and the real receipt date exists only as
+        prose inside a free-text Notes field which is deliberately not parsed
+        (storehub.notes.parse_received_date: false).
+      would_require: "a receipt timestamp captured against the PO line"
+    # The old global config value is still there and still meaningless.
+    algorithm_settings_lead_time_days: 0
+    algorithm_settings_note: "single global integer, still 0; not per-supplier, per-product or per-store"
 
   # ---------------------------------------------------------------------------
   last_cost:
-    supported: false
+    supported: true
+    since: "2026-09-02"
+    tool: "tools/cost_history.py get_cost_history(sku)"
+    definitions: cost_history
     reason: >
-      products.cost is a single current scalar per product with NO history.
-      "Last cost" can therefore only mean "current cost", which
-      tools/products.py already returns as the `cost` field. A second accessor
-      would create a second definition of cost — the thing this file exists to
-      prevent. Ask get_product() instead.
-    current_cost_available_from: "tools/products.py get_product() -> rows[].cost"
-    evidence:
-      products_total: 3678
-      products_with_cost: 3306
-      products_cost_zero: 264
-      products_cost_null: 372
-      history_tables: "none — no audit/history/log/version table exists (only alembic_version)"
-      products_updated_at: "row-level, not cost-level; only 15 distinct dates across the whole catalog"
-      new_transaction_items_has_cost_column: false
-    # Checked and rejected as a cost history:
-    #   vending_order_lines.goods_purchase_cost looked like a cost captured at
-    #   each sale. It is not a series: 183 goods produce 184 distinct
-    #   (goods_id, cost) pairs, i.e. exactly ONE product has ever had its cost
-    #   change. It is a constant repeated per line, not a history.
-    vending_cost_is_a_history: false
+      PO lines carry a dated unit cost per SKU, so cost genuinely has a history
+      now rather than only a current scalar. It is a SERIES, not a single number,
+      and it comes from three sources that mean different things - see
+      cost_history.bases. products.cost remains available from
+      tools/products.py get_product() as the current catalog value.
+    # The old objection - that a second accessor would create a second definition
+    # of cost - is answered by labelling the basis on every row rather than by
+    # refusing the question.
+    supersedes_reason: >
+      Previously false on the grounds that "last cost" could only mean "current
+      cost". That was true while products.cost was the only source. It no longer
+      is.
+    caveats:
+      - "zero cost means NOT ENTERED, not free; flagged and excluded from statistics"
+      - "transfer valuations are not purchase prices and are never blended with them"
+      - "products.updated_at dates the ROW, not the cost - 15 distinct dates across the catalog"
 
   # ---------------------------------------------------------------------------
-  # STORE-SIDE PROFIT IS NOT COMPUTABLE. This is the one consequence of the
-  # above that actively affects a metric, so it is recorded as a hard flag.
+  # THE ORIGINAL SURVEY, PRESERVED. What the database held on 2026-09-01, before
+  # the import. Kept so the earlier refusals stay legible and nobody re-runs the
+  # search.
   #
-  # business_rules.yaml:310 defines:
-  #     profit = SUM(ti.item_total - (p.cost * ti.quantity))
-  #
-  # new_transaction_items captures NO cost (columns: line_id,
-  # transaction_ref_id, product_id, quantity, unit_price, item_subtotal,
-  # item_total, discount, tax, tax_code, item_type, notes, selected_options,
-  # promotions, created_at, updated_at). So that formula multiplies TODAY'S
-  # products.cost by a HISTORICAL quantity — it values a 2024 sale at 2026's
-  # cost. Every historical margin figure it produces is wrong by whatever cost
-  # drift occurred in between, and there is no cost history to correct it with.
-  #
-  # It is also wrong at the edges: 264 products have cost = 0 and 372 have cost
-  # NULL, and both are silently treated as 100% margin.
-  #
-  # tools/sales.py deliberately has NO profit metric. Do not add one. If a
-  # margin question must be answered, it needs line-level cost capture first —
-  # see required_to_support below.
+  # Method: all 38 base tables and 8 views searched by NAME for
+  #   supplier|vendor|purchase|po|receipt|receiv|procure|inbound|delivery|lead|order
+  # and then EVERY column searched by concept for
+  #   supplier|vendor|purchase|lead_time|on_order|receiv|procure|reorder|moq|
+  #   incoming|cost
+  # ---------------------------------------------------------------------------
+  survey_2026_09_01:
+    any_supplier_data: false
+    purchase_orders:
+      supported: false
+      reason: >
+        No suppliers, vendors, purchase_orders, po_lines, receipts or deliveries
+        table exists. The only name matches were the vending order tables, which
+        are CUSTOMER purchases from machines, not orders placed on a supplier.
+      evidence:
+        shipment_plans_on_order: "122,207 rows, every one is 0 (min 0, max 0, sum 0) - never populated"
+        store_pipeline_on_order_units: "table has 0 rows"
+        warehouse_inventory: "0 rows - the only receiving-shaped table, empty"
+    lead_times:
+      supported: false
+      reason: >
+        One global integer existed and it was zero. Not per-supplier, not
+        per-product, not per-store. Lead time could not be MEASURED either:
+        nothing recorded when an order was placed or when goods arrived.
+      evidence:
+        algorithm_settings_lead_time_days: 0
+        algorithm_settings_rows: 1
+        algorithm_settings_updated_at: "2026-05-11"
+        observable_from_data: false
+    last_cost:
+      supported: false
+      reason: >
+        products.cost is a single current scalar per product with NO history, so
+        "last cost" could only mean "current cost".
+      evidence:
+        products_total: 3678
+        products_with_cost: 3306
+        products_cost_zero: 264
+        products_cost_null: 372
+        history_tables: "none - no audit/history/log/version table exists (only alembic_version)"
+        products_updated_at: "row-level, not cost-level; only 15 distinct dates across the whole catalog"
+        new_transaction_items_has_cost_column: false
+      vending_cost_is_a_history: false
+
   # ---------------------------------------------------------------------------
   store_profit_supported: false
   store_profit_reason: >
@@ -1136,6 +2133,189 @@ suppliers:
   # With PO placed-time and receipt-time, lead time becomes measurable rather
   # than configured, and warehouse receipts stop being invisible — which is also
   # the missing half of the movement problem (see movement.recorded_ledger_exists).
+
+
+# =============================================================================
+# PURCHASING — questions about purchase orders
+#
+# Built on the imported StoreHub PO export (see storehub.purchase_orders).
+# Everything here became answerable only when that import existed; before it,
+# suppliers.purchase_orders.supported was false.
+# =============================================================================
+purchasing:
+  source_table: purchase_orders
+  lines_table: purchase_order_lines
+  currency: PHP
+
+  # ---------------------------------------------------------------------------
+  # VALUE COMES FROM THE LINES, NEVER FROM THE HEADER TOTAL.
+  #
+  # 12 of 227 purchase orders carry a header total that disagrees with their own
+  # lines, sometimes enormously: PO0604 says 90,000.00 over 13 lines that sum to
+  # 0.00, PO0575 says 400,000.00 against 200,000.00 of lines. No stock transfer
+  # does this in 2,034 documents.
+  #
+  # The lines are the safer basis: they are itemised, they carry the quantity and
+  # unit cost that produced them, and they are what a product- or category-level
+  # answer must use anyway. Using the header for a total and the lines for a
+  # breakdown would make the two disagree inside one answer.
+  #
+  # Documents whose header disagrees are still IMPORTED and still COUNTED. The
+  # discrepancy is surfaced via purchase_orders.header_total_reconciles and a
+  # mandatory notice, never silently preferred away.
+  # ---------------------------------------------------------------------------
+  value_basis: lines
+  value_basis_column: "pol.subtotal"
+  header_total_is_authoritative: false
+  header_mismatch_notice_mandatory: true
+
+  measures:
+    po_count:
+      description: "Number of purchase orders. Document grain."
+      sql: "COUNT(DISTINCT po.id)"
+      unit: purchase_orders
+      grain: document
+      valid_group_by: [supplier, store, status, day, week, month]
+    ordered_value:
+      description: "Value ordered, summed from line subtotals. The default measure."
+      sql: "SUM(pol.subtotal)"
+      unit: PHP
+      grain: line
+      valid_group_by: [supplier, store, status, day, week, month, product, category]
+    ordered_qty:
+      description: "Quantity ordered. NOT additive across products — see additive_across_products."
+      sql: "SUM(pol.ordered_qty)"
+      unit: mixed
+      grain: line
+      additive_across_products: false
+      valid_group_by: [supplier, store, status, day, week, month, product, category]
+    received_qty:
+      description: "Quantity recorded as received. Sparse; never reconciled to ordered."
+      sql: "SUM(pol.received_qty)"
+      unit: mixed
+      grain: line
+      additive_across_products: false
+      coverage_flag_mandatory: true
+      valid_group_by: [supplier, store, status, day, week, month, product, category]
+    completion_lead_days:
+      description: >
+        Mean days from creation to the PO being marked complete in StoreHub.
+        SYSTEM COMPLETION LATENCY, NOT DELIVERY TIME. See
+        storehub.purchase_orders.lead_time — PO0710 was created and completed two
+        minutes apart as a backdated correction, and PO0707 shows 2d21h while its
+        own note says the goods arrived on the creation day.
+      sql: "AVG(EXTRACT(EPOCH FROM (po.completion_date - po.created_at_source)) / 86400.0)"
+      unit: days
+      grain: document
+      label_mandatory: "system completion latency, not delivery time"
+      requires: "po.completion_date IS NOT NULL"
+      valid_group_by: [supplier, store, day, week, month]
+
+  # Quantities mix units across products (grams for per-gram items, packs for
+  # others — see storehub.quantity_unit), so a quantity total is only meaningful
+  # within one product. Value is the additive measure.
+  quantity_additive_across_products: false
+
+  group_expressions:
+    supplier: "COALESCE(NULLIF(po.supplier_name, ''), 'Unknown supplier')"
+    store:    "po.target_store_id"
+    status:   "po.status"
+    product:  "pol.product_id"
+    category: "COALESCE(NULLIF(pol.category_raw, ''), 'Uncategorized')"
+    day:      "date_trunc('day',   (po.created_at_source AT TIME ZONE 'Asia/Manila'))::date"
+    week:     "date_trunc('week',  (po.created_at_source AT TIME ZONE 'Asia/Manila'))::date"
+    month:    "date_trunc('month', (po.created_at_source AT TIME ZONE 'Asia/Manila'))::date"
+
+  date_column: "po.created_at_source"
+
+  # ---------------------------------------------------------------------------
+  # STATUS. 'Open' IS NOT 'NOT RECEIVED'. Measured: 8 of the 151 POs in the main
+  # export are Open with notes saying the goods arrived. A tool reporting Open as
+  # outstanding value must attach the caveat.
+  # ---------------------------------------------------------------------------
+  cancelled_statuses: ["Cancelled"]
+  exclude_cancelled_by_default: true
+  open_is_not_outstanding: true
+  open_notice_mandatory: true
+
+  # Not answerable. The receipt date lives only in free-text notes, which are
+  # deliberately not parsed (storehub.notes.parse_received_date: false).
+  delivery_lead_time_supported: false
+  delivery_lead_time_refusal: >
+    Delivery lead time is not answerable from this data. Nothing records when
+    goods arrived: Completion Date is when the PO was marked complete in
+    StoreHub (PO0710's is two minutes after creation, on a backdated
+    correction), Estimated Date of Arrival is a plan, and the actual receipt
+    date appears only inside a free-text Notes field that is deliberately not
+    parsed. What IS available is completion latency — ask for
+    completion_lead_days, which measures the paperwork, not the supplier.
+
+
+# =============================================================================
+# COST HISTORY — its own grain, and three sources that must never be blended
+# =============================================================================
+cost_history:
+  description: >
+    Unit cost for one SKU over time. The grain is (sku, source document, date,
+    unit cost) — one row per document line, not one row per product.
+
+  # ---------------------------------------------------------------------------
+  # THREE BASES, THREE MEANINGS. They are returned as separate labelled series
+  # and are NEVER averaged, unioned into one trend, or compared as though they
+  # were the same number.
+  #
+  #   purchase_order      what a SUPPLIER charged, on a dated PO line.
+  #   transfer_valuation  what a stock transfer VALUED the goods at internally.
+  #                       This is not a purchase price and does not become one by
+  #                       sitting in the same column.
+  #   current_catalog     products.cost — a single current scalar with no
+  #                       history, dated only by products.updated_at, which is
+  #                       row-level and moves for unrelated edits.
+  #
+  # Averaging a supplier price with an internal valuation produces a number that
+  # is neither, and it would look like a cost trend.
+  # ---------------------------------------------------------------------------
+  bases:
+    purchase_order:
+      source_table: purchase_order_lines
+      means: "what a supplier charged"
+      date_column: "po.created_at_source"
+      authoritative_for_cost: true
+    transfer_valuation:
+      source_table: stock_transfer_lines
+      means: "internal valuation on a stock transfer, NOT a purchase price"
+      date_column: "st.created_at_source"
+      authoritative_for_cost: false
+    current_catalog:
+      source_table: products
+      means: "the single current cost scalar, no history"
+      date_column: "p.updated_at"
+      date_is_reliable: false
+      date_caveat: >
+        products.updated_at is row-level, not cost-level, and moves when any
+        column on the product changes. Only 15 distinct dates exist across the
+        whole catalog, so it dates the ROW, not the cost.
+      authoritative_for_cost: false
+
+  never_blend_bases: true
+  never_average_across_bases: true
+
+  # ---------------------------------------------------------------------------
+  # ZERO COST MEANS "NOT ENTERED", NOT "FREE". KF27 "aji hellboy plum" moves on
+  # transfer after transfer at 0.00, and PO0604 carries 13 lines all at 0.00
+  # under a 90,000.00 header. A cost series that silently includes zeros reports
+  # a collapsing price for an item whose price was simply never typed in.
+  # Zero-cost rows are returned, flagged, and excluded from any min/max/mean.
+  # ---------------------------------------------------------------------------
+  zero_cost_means: not_entered
+  zero_cost_excluded_from_statistics: true
+  zero_cost_flag: cost_not_entered
+
+  # SKU matching here is the IMPORT rule, not the human rule: case-sensitive,
+  # because TKY28 and Tky28 are different products and blending their cost
+  # histories would invent a price series for neither.
+  sku_match: case_sensitive
+  sku_match_ref: products.sku.import_match
 
 
 # =============================================================================
@@ -1208,6 +2388,13 @@ notices:
     must_convey:
       - [dispatch, record, movement]
       - [no, none, not explain, unrecorded, does not exist]
+
+  # A closed location asked about in the present tense. The answer must say the
+  # place is shut rather than report nothing and let it read as "no stock".
+  location_closed:
+    must_convey:
+      - [closed, shut, no longer, ceased]
+      - [location, warehouse, store, macopa]
 
   # Notices whose kind is "multiple" carry an `items` list; the loop checks each
   # item's own kind against the fingerprints above rather than the container.
@@ -1319,7 +2506,7 @@ dead_stock:
 
   # Default scope is retail. AJI BARN is excluded: its quantities are corrupt
   # (89% of rows non-positive, some at -24 million) so "held but not selling"
-  # is meaningless there. See movement.balance_delta and filters.aji_barn.
+  # is meaningless there. See movement.balance_delta and filters.excluded_from_sales.
   scope: stores.active_retail
   barn_excluded_reason: >
     AJI BARN quantities are accumulated dispatch counters, not stock. A dead

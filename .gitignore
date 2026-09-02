@@ -73,3 +73,11 @@ logs/
 # Alembic
 alembic/versions/*.py
 !alembic/versions/.gitkeep
+
+# StoreHub CSV exports. Real business data - supplier names, unit costs, staff
+# names - and ~10 MB per drop. Git history is permanent, so these stay out of it.
+# The importer reads them from disk; nothing in the repo depends on them being
+# committed. Fixtures for the parser tests are inline in tests/, not files.
+storehub exports/
+*.csv
+!tests/**/*.csv

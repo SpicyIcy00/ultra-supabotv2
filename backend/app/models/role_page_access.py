@@ -26,6 +26,10 @@ PAGE_KEYS: list[str] = [
     "warehouse",
     "settings",
     "packing",
+    # Uploading the StoreHub purchase-order and stock-transfer exports. Like
+    # every key here it starts disabled for every role, so it must be granted in
+    # the admin screen before the import endpoint will accept a file.
+    "storehub_imports",
     "admin",
 ]
 
