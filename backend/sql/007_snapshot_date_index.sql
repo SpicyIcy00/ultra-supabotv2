@@ -1,0 +1,46 @@
+-- =============================================================================
+-- 007 — index inventory_snapshots (snapshot_date)
+--
+-- ALREADY APPLIED to production on 2026-09-02. Recorded here so the schema is
+-- reproducible in another environment, not as pending work.
+--
+-- WHY
+-- inventory_snapshots carries 4.88M rows and two indexes, both of which LEAD
+-- with a different column:
+--     btree (store_id, product_id, snapshot_date)
+--     btree (product_id, store_id, snapshot_date)
+-- A predicate on snapshot_date alone can use neither, so every date-scoped read
+-- scanned the whole table. Measured against george_ro, which carries a 30s
+-- statement_timeout:
+--
+--     query                                  before    after
+--     MIN/MAX(snapshot_date)                  3.04s     0.08s
+--     EXISTS (snapshot_date = ...)            3.64s     0.03s
+--     COUNT (snapshot_date = ...)             3.82s     0.15s
+--     get_stock() coverage-gap path           6.60s     0.51s
+--
+-- At CI latency (~3x local) the 6.6s path was approaching the timeout, and the
+-- table grows daily.
+--
+-- NOT what fixed the "products never sold anywhere" timeout. That query reads
+-- new_transaction_items, new_transactions and products and never touches this
+-- table; it is answered by tools/dead_stock.py instead.
+--
+-- CONCURRENTLY because a plain CREATE INDEX takes a lock that blocks writes,
+-- and the n8n sync writes to this table daily. It cannot run inside a
+-- transaction block — run it on its own, not wrapped in BEGIN/COMMIT.
+-- Build took 10s.
+-- =============================================================================
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_snapshots_date
+    ON inventory_snapshots (snapshot_date);
+
+-- Verify — expect three indexes, one of them on (snapshot_date) alone:
+--   SELECT indexdef FROM pg_indexes WHERE tablename = 'inventory_snapshots';
+--
+-- And that it is actually used rather than merely present:
+--   EXPLAIN SELECT MIN(snapshot_date), MAX(snapshot_date) FROM inventory_snapshots;
+--
+-- tests/golden.py::test_snapshot_date_index_exists_and_is_fast asserts both the
+-- index exists and that MIN/MAX stays under 2s, so dropping it fails the suite
+-- rather than quietly slowing everything down.
