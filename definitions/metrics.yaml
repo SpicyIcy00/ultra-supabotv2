@@ -1263,6 +1263,30 @@ ranking:
       lowest:  "i.quantity_on_hand ASC"    # emptiest first — stockouts
       highest: "i.quantity_on_hand DESC"   # largest holdings first
 
+  # ---------------------------------------------------------------------------
+  # GROUPING FOR get_stock
+  #
+  # A 40-question coverage run showed "which store has the most out-of-stock
+  # items" costing 9 tool calls — one per store plus a probe — because get_stock
+  # could only return product rows. top_n ranks WITHIN a result; it cannot
+  # produce a per-store count. Grouping can.
+  #
+  # Grouped results are aggregate rows (product_count, total_quantity), not
+  # product rows. That is a different shape and meta.grain says which was
+  # returned, so a caller can never mistake a count of products for a quantity.
+  # ---------------------------------------------------------------------------
+  stock_grouping:
+    valid_group_by: [store, state, category]
+    expressions:
+      store:    "i.store_id"
+      category: "COALESCE(NULLIF(p.category, ''), 'Uncategorized')"
+      # state reuses inventory.states, evaluated in order — the same CASE the
+      # ungrouped path labels rows with, so the two can never disagree.
+      state:    "__state_case__"
+    measures:
+      product_count:  "COUNT(*)"
+      total_quantity: "SUM(i.quantity_on_hand)"
+    ordering: "product_count DESC"
 
 # =============================================================================
 # DEAD STOCK — held but not selling

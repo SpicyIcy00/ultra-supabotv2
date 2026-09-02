@@ -24,6 +24,7 @@ Neither can do the other's job. See agent/sql/george_log_role.sql.
 from __future__ import annotations
 
 import asyncio
+import collections
 import inspect
 import json
 import os
@@ -76,6 +77,14 @@ EFFORT = "high"
 # Rows handed to the model per tool result. meta aggregates are NEVER truncated.
 MAX_ROWS_TO_MODEL = 200
 
+# Convergence cap. Past this many tool calls in one question, the loop stops
+# asking for more and requires an answer. A 40-question run produced single
+# questions costing 25, 23 and 20 calls — all of them enumerating something one
+# grouped or ranked call would have returned. Beyond this point more calls have
+# not been buying more answer, so the useful output is what was attempted and
+# what would express it, not another slice of the same table.
+MAX_TOOL_CALLS = 12
+
 # The six callable surfaces George has.
 TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
     "get_sales": sales.get_sales,
@@ -120,6 +129,7 @@ def _enum_sources(defs: dict) -> dict[tuple[str, str], list]:
         ("get_sales", "group_by"): sales_groups,
         ("get_sales", "date_range"): presets,
         ("get_stock", "state"): states,
+        ("get_stock", "group_by"): list(req(defs, "ranking.stock_grouping.valid_group_by")),
         ("get_stock", "store"): retail + warehouse,
         ("get_movement", "store"): retail + warehouse,
         ("get_movement", "date_range"): presets,
@@ -269,6 +279,8 @@ RULES
 4. If `meta.truncated_for_model` is true you are seeing a sample of the rows. The aggregates in `meta` cover ALL rows — never infer a total by adding up the rows you can see.
 
 5. A tool that raises is not a failure to work around. It is the tool refusing to produce a misleading number. Read the message, and either follow the route it suggests or explain to the user why the question cannot be answered as asked.
+
+6. Prefer ONE ranked or grouped query to many. For "top N", "worst N", "biggest" or "most" questions, pass `top_n` and read `meta.full_row_count` for the size of the whole set — do not fetch everything and sort it yourself. For a figure per store, per category or per state, pass `group_by` — do not call the same tool once per store. Calling a tool repeatedly with only one argument changed means you are enumerating something a single call could group; stop and make that call instead. If no grouping or ranking expresses the question, say so rather than working around it with volume.
 
 6. Money is Philippine pesos (₱). Vending data is a separate domain from store data and the two must never be added together.
 
@@ -491,6 +503,8 @@ async def run(question: str, user_id: Optional[str] = None) -> AsyncIterator[str
     messages: list[dict] = [{"role": "user", "content": question}]
     pending: list[dict] = []
     seq = 0
+    called_tools: list[str] = []
+    conceded = False
     iterations = 0
     corrective_turns = 0
     max_corrective = req(defs, "notices.max_corrective_turns")
@@ -608,6 +622,41 @@ async def run(question: str, user_id: Optional[str] = None) -> AsyncIterator[str
                     })
                 break
 
+            # ---- convergence cap -----------------------------------------
+            if seq >= MAX_TOOL_CALLS and not conceded:
+                conceded = True
+                attempted = ", ".join(
+                    f"{name} x{n}" for name, n in
+                    sorted(collections.Counter(called_tools).items(),
+                           key=lambda kv: -kv[1])
+                )
+                log.gap("convergence_cap",
+                        f"{seq} calls without converging: {attempted}"[:2000])
+                yield _sse("warning", {
+                    "reason": "convergence_cap",
+                    "tool_calls": seq,
+                    "limit": MAX_TOOL_CALLS,
+                    "attempted": attempted,
+                })
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        f"STOP CALLING TOOLS. You have made {seq} calls on this "
+                        f"question ({attempted}) without reaching an answer, "
+                        f"which is past the limit of {MAX_TOOL_CALLS}.\n\n"
+                        "Do not call another tool. Answer now with three things:\n"
+                        "1. what you were attempting and why it needed so many "
+                        "calls;\n"
+                        "2. whatever partial finding the results you already have "
+                        "will actually support, clearly labelled as partial;\n"
+                        "3. the single grouped or ranked call — naming the tool "
+                        "and arguments — that would answer this properly, or a "
+                        "plain statement that no available tool expresses the "
+                        "question."
+                    ),
+                })
+                continue
+
             # ---- execute tools -------------------------------------------
             # Each tool_use gets a CONVERSATION-GLOBAL sequence number, assigned
             # before dispatch and reused by its tool_call frame, its tool_result
@@ -618,6 +667,7 @@ async def run(question: str, user_id: Optional[str] = None) -> AsyncIterator[str
             batch = []
             for b in tool_uses:
                 batch.append((seq, b))
+                called_tools.append(b.name)
                 yield _sse("tool_call", {"seq": seq, "tool": b.name, "arguments": b.input})
                 seq += 1
 

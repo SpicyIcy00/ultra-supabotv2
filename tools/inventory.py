@@ -84,6 +84,21 @@ _HISTORY_SOURCE = """(
         WHERE snapshot_date = %(as_of)s
     )"""
 
+# Grouped results are AGGREGATE rows (product_count, total_quantity), not
+# product rows. meta.grain says which shape came back, so a count of products
+# can never be mistaken for a quantity.
+_SELECT_GROUPED = """
+SELECT {select_terms},
+       COUNT(*)                    AS product_count,
+       SUM(i.quantity_on_hand)     AS total_quantity
+FROM {source} i
+LEFT JOIN products p ON p.id = i.product_id
+WHERE {predicates}
+GROUP BY {group_terms}
+ORDER BY product_count DESC
+LIMIT {limit}
+"""
+
 _SELECT = """
 SELECT i.store_id,
        i.product_id,
@@ -112,6 +127,7 @@ def get_stock(
     as_of: Optional[date | str] = None,
     top_n: Optional[int] = None,
     direction: str = "lowest",
+    group_by: Any = None,
 ) -> dict:
     """
     Stock levels by store, product and state.
@@ -127,6 +143,10 @@ def get_stock(
                Manila calendar date.
         top_n: return only N rows, ranked in SQL. meta.full_row_count reports
                the size of the whole set.
+        group_by: aggregate instead of listing products. str or list of:
+               store, state, category. Returns product_count and
+               total_quantity per group — one call where a per-store count
+               would otherwise need one call per store.
         direction: which end top_n takes. 'lowest' (default) is emptiest
                first — the right end for stockouts. 'highest' is largest
                holdings first. Stated explicitly so a caller never silently
@@ -149,6 +169,20 @@ def get_stock(
             f"(metrics.yaml: ranking.stock.directions)."
         )
     order_by = directions[direction]
+
+    if group_by is None:
+        group_by = []
+    elif isinstance(group_by, str):
+        group_by = [group_by]
+    group_by = list(group_by)
+    valid_groups = _req(defs, "ranking.stock_grouping.valid_group_by")
+    for g in group_by:
+        if g not in valid_groups:
+            raise ValueError(
+                f"get_stock cannot group by {g!r}. Valid: "
+                f"{', '.join(valid_groups)} "
+                f"(metrics.yaml: ranking.stock_grouping.valid_group_by)."
+            )
 
     valid_states = [s["name"] for s in _states(defs)]
     if state is not None and state not in valid_states:
@@ -309,6 +343,23 @@ def get_stock(
             # reads all 4.88M rows and hits statement_timeout.
             if coverage is not None and not coverage["covered"]:
                 rows = []
+            elif group_by:
+                # Aggregate shape. `state` reuses the same CASE the ungrouped
+                # path labels rows with, so a grouped count and a listed row can
+                # never disagree about which state a product is in.
+                exprs = dict(_req(defs, "ranking.stock_grouping.expressions"))
+                exprs["state"] = _state_case_sql(defs)
+                select_terms = ", ".join(f"{exprs[g]} AS {g}" for g in group_by)
+                group_terms = ", ".join(exprs[g] for g in group_by)
+                sql = _SELECT_GROUPED.format(
+                    select_terms=select_terms,
+                    source=_HISTORY_SOURCE if as_of else _CURRENT_SOURCE,
+                    predicates="\n  AND ".join(predicates),
+                    group_terms=group_terms,
+                    limit=top_n or _MAX_ROWS,
+                )
+                cur.execute(sql, params)
+                rows = [dict(r) for r in cur.fetchall()]
             else:
                 sql = _SELECT.format(
                     state_case=_state_case_sql(defs),
@@ -324,11 +375,18 @@ def get_stock(
             truncated = len(rows) == _MAX_ROWS
             full_row_count = len(rows)
             if truncated or (top_n is not None and len(rows) == top_n):
-                cur.execute(
-                    f"SELECT COUNT(*) AS n FROM {_HISTORY_SOURCE if as_of else _CURRENT_SOURCE} i "
-                    f"WHERE {' AND '.join(predicates)}",
-                    params,
+                inner = (
+                    f"SELECT 1 FROM {_HISTORY_SOURCE if as_of else _CURRENT_SOURCE} i "
+                    f"LEFT JOIN products p ON p.id = i.product_id "
+                    f"WHERE {' AND '.join(predicates)}"
                 )
+                if group_by:
+                    inner += " GROUP BY " + ", ".join(
+                        (_state_case_sql(defs) if g == "state"
+                         else _req(defs, "ranking.stock_grouping.expressions")[g])
+                        for g in group_by
+                    )
+                cur.execute(f"SELECT COUNT(*) AS n FROM ({inner}) x", params)
                 full_row_count = cur.fetchone()["n"]
 
             # How stale the data itself is, as distinct from when we read it.
@@ -344,7 +402,13 @@ def get_stock(
                 data_as_of = m.isoformat() if m else None
 
     for r in rows:
-        r["store"] = _label_store(catalog, r["store_id"])
+        if "store_id" in r:
+            r["store"] = _label_store(catalog, r["store_id"])
+        elif "store" in r:
+            # Grouped shape aliases i.store_id AS store; swap the raw id for the
+            # display name and keep the id so a caller can still join on it.
+            r["store_id"] = r["store"]
+            r["store"] = _label_store(catalog, r["store"])
 
     meta: dict[str, Any] = {
         "source_table": source_table,
@@ -356,8 +420,10 @@ def get_stock(
         "row_count": len(rows),
         "full_row_count": full_row_count,
         "full_row_count_note": " ".join(_req(defs, "ranking.full_row_count_note").split()),
-        "ordering": order_by,
-        "direction": direction,
+        "grain": "group" if group_by else "product",
+        "group_by": group_by,
+        "ordering": (_req(defs, "ranking.stock_grouping.ordering") if group_by else order_by),
+        "direction": None if group_by else direction,
         "top_n": top_n,
         "truncated": truncated,
         "row_limit": top_n or _MAX_ROWS,

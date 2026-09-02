@@ -663,3 +663,97 @@ def test_schema_types_are_accepted_by_the_tools():
     # The concrete case: an int within the declared bounds is accepted.
     r = sales.get_sales("store", AUG_2026, metric="net_sales", top_n=3)
     assert r["meta"]["row_count"] == 3
+
+
+# ==========================================================================
+# get_stock grouping — one call where N used to be needed
+#
+# A coverage run costed "which store has the most out-of-stock items" at 9
+# calls: one per store plus a probe. top_n ranks WITHIN a result and cannot
+# produce a per-store count; grouping can.
+# ==========================================================================
+
+def test_stock_group_by_store_answers_in_one_call():
+    r = inventory.get_stock(state="out_of_stock", group_by="store")
+    m = r["meta"]
+    assert m["grain"] == "group", "grouped results must declare their grain"
+    assert m["row_count"] == 8, "8 locations in the inventory scope"
+    assert m["ordering"] == req(load_defs(), "ranking.stock_grouping.ordering")
+    for row in r["rows"]:
+        assert "product_count" in row and "total_quantity" in row
+        assert "sku" not in row, "grouped rows are aggregates, not products"
+    counts = [x["product_count"] for x in r["rows"]]
+    assert counts == sorted(counts, reverse=True), "must rank by product_count"
+
+
+def test_stock_group_by_store_labels_stores():
+    """The grouped shape aliases i.store_id AS store; it must still be readable."""
+    r = inventory.get_stock(state="out_of_stock", group_by="store")
+    for row in r["rows"]:
+        assert not row["store"].startswith("6"), f"raw id leaked: {row['store']}"
+        assert row["store_id"], "the id must survive for joining"
+
+
+def test_stock_grouped_counts_match_ungrouped():
+    """A grouped count and a listed result must agree — same predicates."""
+    grouped = inventory.get_stock(state="out_of_stock", store="Rockwell",
+                                  group_by="store")
+    listed = inventory.get_stock(state="out_of_stock", store="Rockwell", top_n=1)
+    assert grouped["rows"][0]["product_count"] == listed["meta"]["full_row_count"]
+
+
+def test_stock_group_by_state_uses_the_same_case_as_row_labels():
+    """
+    Grouping by state reuses the CASE the ungrouped path labels rows with, so a
+    grouped count can never disagree with a listed row about a product's state.
+    """
+    r = inventory.get_stock(group_by="state")
+    states = {x["state"] for x in r["rows"]}
+    declared = {s["name"] for s in req(load_defs(), "inventory.states")}
+    assert states <= declared | {"unclassified"}
+    total = sum(x["product_count"] for x in r["rows"])
+    assert total == inventory.get_stock()["meta"]["full_row_count"]
+
+
+def test_stock_rejects_unknown_group_by():
+    with pytest.raises(ValueError, match="cannot group by"):
+        inventory.get_stock(group_by="colour")
+
+
+def test_stock_group_by_is_in_the_schema_with_its_enum():
+    """The model has to be able to see the valid groupings, not guess them."""
+    from agent.loop import build_tool_schemas
+    defs = load_defs()
+    gs = {t["name"]: t for t in build_tool_schemas(defs)}["get_stock"]
+    spec = gs["input_schema"]["properties"]["group_by"]
+    enum = spec["oneOf"][0]["enum"]
+    assert enum == req(defs, "ranking.stock_grouping.valid_group_by")
+
+
+# ==========================================================================
+# Convergence cap and the enumeration principle
+# ==========================================================================
+
+def test_convergence_cap_is_below_the_observed_worst_case():
+    """
+    The cap has to bite before the runaway cases seen in the coverage run:
+    25, 23 and 20 calls on single questions.
+    """
+    from agent.loop import MAX_TOOL_CALLS, MAX_ITERATIONS
+    assert MAX_TOOL_CALLS == 12
+    assert MAX_TOOL_CALLS < 20, "must trigger before the observed worst case"
+    assert MAX_ITERATIONS > 1
+
+
+def test_system_prompt_tells_the_model_to_group_rather_than_enumerate():
+    """
+    top_n and group_by both existed and went unused: 0 of 14 logged calls
+    passed top_n. The schema alone did not change behaviour, so the principle
+    is stated in the prompt.
+    """
+    from agent.loop import SYSTEM_PROMPT
+    lowered = SYSTEM_PROMPT.lower()
+    assert "top_n" in lowered and "group_by" in lowered
+    assert "full_row_count" in lowered
+    for phrase in ("prefer one ranked or grouped query", "once per store"):
+        assert phrase in lowered, f"missing guidance: {phrase!r}"
