@@ -44,7 +44,12 @@ jobs:
         # psycopg 3 — matching backend/requirements.txt and tools/_common.py.
         # The [binary] extra ships the compiled driver so no libpq build is
         # needed on the runner.
-        run: pip install --no-cache-dir pytest "psycopg[binary]" pyyaml
+        #
+        # anthropic is needed even though these tests make no API call: the
+        # retry-classification tests import agent.loop, which imports the SDK at
+        # module level. httpx2 arrives with it and is used to build the fake
+        # responses those tests classify.
+        run: pip install --no-cache-dir pytest "psycopg[binary]" pyyaml "anthropic>=1,<2"
 
       - name: Check definitions parse
         run: python -c "import yaml; yaml.safe_load(open('definitions/metrics.yaml', encoding='utf-8')); print('metrics.yaml OK')"
