@@ -59,18 +59,12 @@ jobs:
 
       - name: Assert the test environment matches the code
         # Cheap tripwire: if a tool grows an import that no requirements file
-        # provides, fail here with a clear message rather than 13 confusing
-        # collection errors further down.
-        run: |
-          python - <<'EOF'
-          import importlib, sys
-          missing = [m for m in ("anthropic", "psycopg", "yaml", "pytest")
-                     if not importlib.util.find_spec(m)]
-          if missing:
-              sys.exit(f"::error::missing from the installed environment: {missing}")
-          import anthropic, psycopg
-          print(f"anthropic {anthropic.__version__} | psycopg {psycopg.__version__}")
-          EOF
+        # provides, fail here with a clear message rather than a wall of
+        # collection errors further down. A plain import is the check — an
+        # ImportError names the missing module itself.
+        run: >
+          python -c "import anthropic, psycopg, yaml, pytest;
+          print(f'anthropic {anthropic.__version__} | psycopg {psycopg.__version__}')"
 
       - name: Check definitions parse
         run: python -c "import yaml; yaml.safe_load(open('definitions/metrics.yaml', encoding='utf-8')); print('metrics.yaml OK')"
