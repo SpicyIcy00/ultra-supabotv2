@@ -35,8 +35,34 @@ from typing import Any, AsyncIterator, Callable, Optional
 
 import anthropic
 
-from tools import inventory, movement, products, sales, vending
+from tools import dead_stock, inventory, movement, products, sales, vending
 from tools._common import load_defs, req
+
+# --------------------------------------------------------------------------
+# Transient-error retry
+#
+# The SDK already retries at the REQUEST level (max_retries=2 by default) and
+# 529 overloaded is in its retryable set. That was not enough: a coverage run
+# lost a question to `overloaded_error` anyway, because the failure landed
+# mid-stream where request-level retry cannot help. So the whole streaming turn
+# is retried here.
+#
+# Only transient faults. A 400 is never retried — a credit-balance failure
+# retried three times per question would have turned one wasted run into three.
+# Tool failures and refusals are not retried either: a refusal is a correct
+# answer, and repeating it would not change it.
+# --------------------------------------------------------------------------
+MAX_TURN_RETRIES = 3
+RETRY_BASE_DELAY = 1.0
+_TRANSIENT_STATUS = {408, 409, 429, 500, 502, 503, 504, 529}
+
+
+def _is_transient(exc: BaseException) -> bool:
+    if isinstance(exc, (anthropic.APIConnectionError, anthropic.APITimeoutError)):
+        return True
+    if isinstance(exc, anthropic.APIStatusError):
+        return getattr(exc, "status_code", None) in _TRANSIENT_STATUS
+    return False
 
 # --------------------------------------------------------------------------
 # Configuration
@@ -58,6 +84,7 @@ TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
     "get_movement": movement.get_movement,
     "get_vending": vending.get_vending,
     "get_vending_stock": vending.get_vending_stock,
+    "get_dead_stock": dead_stock.get_dead_stock,
 }
 
 
@@ -471,29 +498,54 @@ async def run(question: str, user_id: Optional[str] = None) -> AsyncIterator[str
             cached_tools = [dict(t) for t in tools_schema]
             cached_tools[-1]["cache_control"] = {"type": "ephemeral"}
 
-            text_parts: list[str] = []
-            async with client.messages.stream(
-                model=MODEL,
-                max_tokens=MAX_TOKENS,
-                system=[{
-                    "type": "text",
-                    "text": SYSTEM_PROMPT,
-                    "cache_control": {"type": "ephemeral"},
-                }],
-                tools=cached_tools,
-                thinking={"type": "adaptive", "display": "summarized"},
-                output_config={"effort": EFFORT},
-                messages=messages,
-            ) as stream:
-                async for event in stream:
-                    if event.type == "content_block_delta":
-                        d = event.delta
-                        if d.type == "text_delta":
-                            text_parts.append(d.text)
-                            yield _sse("text", {"delta": d.text})
-                        elif d.type == "thinking_delta":
-                            yield _sse("thinking", {"delta": d.thinking})
-                final = await stream.get_final_message()
+            # Retry the whole turn on a transient fault. A turn can only be
+            # retried while nothing has been streamed: once deltas have reached
+            # the client, replaying would duplicate them, so a mid-stream fault
+            # surfaces instead of retrying.
+            attempt = 0
+            while True:
+                text_parts: list[str] = []
+                streamed = False
+                try:
+                    async with client.messages.stream(
+                        model=MODEL,
+                        max_tokens=MAX_TOKENS,
+                        system=[{
+                            "type": "text",
+                            "text": SYSTEM_PROMPT,
+                            "cache_control": {"type": "ephemeral"},
+                        }],
+                        tools=cached_tools,
+                        thinking={"type": "adaptive", "display": "summarized"},
+                        output_config={"effort": EFFORT},
+                        messages=messages,
+                    ) as stream:
+                        async for event in stream:
+                            if event.type == "content_block_delta":
+                                d = event.delta
+                                if d.type == "text_delta":
+                                    text_parts.append(d.text)
+                                    streamed = True
+                                    yield _sse("text", {"delta": d.text})
+                                elif d.type == "thinking_delta":
+                                    streamed = True
+                                    yield _sse("thinking", {"delta": d.thinking})
+                        final = await stream.get_final_message()
+                    break
+                except Exception as exc:  # noqa: BLE001 - re-raised unless transient
+                    if not _is_transient(exc) or streamed or attempt >= MAX_TURN_RETRIES - 1:
+                        raise
+                    attempt += 1
+                    delay = RETRY_BASE_DELAY * (2 ** (attempt - 1))
+                    log.gap("api_retry", f"attempt {attempt}: {type(exc).__name__}: {exc}"[:2000])
+                    yield _sse("warning", {
+                        "reason": "transient_api_error",
+                        "attempt": attempt,
+                        "max_attempts": MAX_TURN_RETRIES,
+                        "retry_in_s": delay,
+                        "detail": f"{type(exc).__name__}: {exc}"[:300],
+                    })
+                    await asyncio.sleep(delay)
 
             usage["input"] += final.usage.input_tokens or 0
             usage["output"] += final.usage.output_tokens or 0
