@@ -1,0 +1,12 @@
+# Test-only dependencies for the golden suite.
+#
+# Everything the CODE needs lives in backend/requirements.txt and is installed
+# alongside this file, so CI cannot drift from what the tools actually import.
+# That drift has bitten twice: once when the tools were ported psycopg2 -> psycopg
+# and the workflow still installed psycopg2-binary, and again when the retry
+# tests began importing agent.loop (and therefore the anthropic SDK) which the
+# workflow did not install. Both passed locally and failed only in CI.
+#
+# Only add something here if it is genuinely test-only. A runtime import belongs
+# in backend/requirements.txt, where the application will get it too.
+pytest==8.4.1

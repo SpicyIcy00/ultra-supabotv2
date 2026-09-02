@@ -16,12 +16,18 @@ on:
       - "tools/**"
       - "definitions/**"
       - "tests/**"
+      # agent/ is in scope because the retry tests import agent.loop, and
+      # backend/requirements.txt because CI now installs from it.
+      - "agent/**"
+      - "backend/requirements.txt"
       - ".github/workflows/golden.yml"
   pull_request:
     paths:
       - "tools/**"
       - "definitions/**"
       - "tests/**"
+      - "agent/**"
+      - "backend/requirements.txt"
   workflow_dispatch:
 
 concurrency:
@@ -40,16 +46,31 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install test dependencies
-        # psycopg 3 — matching backend/requirements.txt and tools/_common.py.
-        # The [binary] extra ships the compiled driver so no libpq build is
-        # needed on the runner.
-        #
-        # anthropic is needed even though these tests make no API call: the
-        # retry-classification tests import agent.loop, which imports the SDK at
-        # module level. httpx2 arrives with it and is used to build the fake
-        # responses those tests classify.
-        run: pip install --no-cache-dir pytest "psycopg[binary]" pyyaml "anthropic>=1,<2"
+      - name: Install dependencies
+        # Install what the CODE declares, plus a test-only extra — never a
+        # hand-maintained list here. A separate list drifts silently and fails
+        # only in CI: it happened when the tools moved psycopg2 -> psycopg, and
+        # again when the retry tests started importing the anthropic SDK.
+        # Sourcing backend/requirements.txt makes that class of failure
+        # impossible, at the cost of a slower install.
+        run: |
+          pip install --no-cache-dir -r backend/requirements.txt
+          pip install --no-cache-dir -r tests/requirements.txt
+
+      - name: Assert the test environment matches the code
+        # Cheap tripwire: if a tool grows an import that no requirements file
+        # provides, fail here with a clear message rather than 13 confusing
+        # collection errors further down.
+        run: |
+          python - <<'EOF'
+          import importlib, sys
+          missing = [m for m in ("anthropic", "psycopg", "yaml", "pytest")
+                     if not importlib.util.find_spec(m)]
+          if missing:
+              sys.exit(f"::error::missing from the installed environment: {missing}")
+          import anthropic, psycopg
+          print(f"anthropic {anthropic.__version__} | psycopg {psycopg.__version__}")
+          EOF
 
       - name: Check definitions parse
         run: python -c "import yaml; yaml.safe_load(open('definitions/metrics.yaml', encoding='utf-8')); print('metrics.yaml OK')"
