@@ -25,6 +25,7 @@ from typing import Any, Optional
 
 from ._common import (
     DICT_ROW,
+    validate_top_n as _validate_top_n,
     DEFAULT_MAX_ROWS as _MAX_ROWS,
     DEFS_PATH as _DEFS_PATH,
     connect as _connect,
@@ -95,7 +96,7 @@ SELECT i.store_id,
 FROM {source} i
 LEFT JOIN products p ON p.id = i.product_id
 WHERE {predicates}
-ORDER BY i.quantity_on_hand ASC, i.store_id, p.name
+ORDER BY {order_by}, i.store_id, p.name
 LIMIT {limit}
 """
 
@@ -109,6 +110,8 @@ def get_stock(
     sku: Optional[str] = None,
     state: Optional[str] = None,
     as_of: Optional[date | str] = None,
+    top_n: Optional[int] = None,
+    direction: str = "lowest",
 ) -> dict:
     """
     Stock levels by store, product and state.
@@ -122,6 +125,12 @@ def get_stock(
                in_stock). None = all states, each row labelled.
         as_of: None = live `inventory`. A date = `inventory_snapshots` for that
                Manila calendar date.
+        top_n: return only N rows, ranked in SQL. meta.full_row_count reports
+               the size of the whole set.
+        direction: which end top_n takes. 'lowest' (default) is emptiest
+               first — the right end for stockouts. 'highest' is largest
+               holdings first. Stated explicitly so a caller never silently
+               gets the opposite question answered.
 
     Returns:
         {"rows": [...], "meta": {...}} — meta always carries source_table,
@@ -131,6 +140,15 @@ def get_stock(
     defs = _load_defs()
     catalog = _store_catalog(defs)
     store_ids = _resolve_store(defs, store)
+    top_n = _validate_top_n(defs, top_n)
+
+    directions = _req(defs, "ranking.stock.directions")
+    if direction not in directions:
+        raise ValueError(
+            f"Unknown direction {direction!r}. Valid: {', '.join(sorted(directions))} "
+            f"(metrics.yaml: ranking.stock.directions)."
+        )
+    order_by = directions[direction]
 
     valid_states = [s["name"] for s in _states(defs)]
     if state is not None and state not in valid_states:
@@ -296,21 +314,22 @@ def get_stock(
                     state_case=_state_case_sql(defs),
                     source=_HISTORY_SOURCE if as_of else _CURRENT_SOURCE,
                     predicates="\n  AND ".join(predicates),
-                    limit=_MAX_ROWS,
+                    order_by=order_by,
+                    limit=top_n or _MAX_ROWS,
                 )
                 cur.execute(sql, params)
                 rows = [dict(r) for r in cur.fetchall()]
 
-            # Only pay for the count when the cap was actually hit.
+            # Only pay for the count when the result was actually limited.
             truncated = len(rows) == _MAX_ROWS
-            total_matching: Optional[int] = None
-            if truncated:
+            full_row_count = len(rows)
+            if truncated or (top_n is not None and len(rows) == top_n):
                 cur.execute(
                     f"SELECT COUNT(*) AS n FROM {_HISTORY_SOURCE if as_of else _CURRENT_SOURCE} i "
                     f"WHERE {' AND '.join(predicates)}",
                     params,
                 )
-                total_matching = cur.fetchone()["n"]
+                full_row_count = cur.fetchone()["n"]
 
             # How stale the data itself is, as distinct from when we read it.
             data_as_of: Any = None
@@ -335,8 +354,13 @@ def get_stock(
         "definitions_version": _req(defs, "version"),
         "definitions_path": str(_DEFS_PATH),
         "row_count": len(rows),
+        "full_row_count": full_row_count,
+        "full_row_count_note": " ".join(_req(defs, "ranking.full_row_count_note").split()),
+        "ordering": order_by,
+        "direction": direction,
+        "top_n": top_n,
         "truncated": truncated,
-        "row_limit": _MAX_ROWS,
+        "row_limit": top_n or _MAX_ROWS,
         # The net_sales / product_revenue discount tie governs money measures
         # only. get_stock returns no money column, so asserting it here would be
         # theatre. Recorded explicitly so a reader can see it was considered
@@ -350,8 +374,6 @@ def get_stock(
             ),
         },
     }
-    if total_matching is not None:
-        meta["total_matching"] = total_matching
     if sku_resolution is not None:
         meta["sku_resolution"] = sku_resolution
     if sku_resolved is not None:

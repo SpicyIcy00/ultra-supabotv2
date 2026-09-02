@@ -177,6 +177,27 @@ def resolve_store(store: Optional[str], catalog: dict[str, dict]) -> list[str]:
     )
 
 
+def validate_top_n(defs: dict, top_n: Optional[int]) -> Optional[int]:
+    """
+    Bounds-check top_n against metrics.yaml. Returns None when unset.
+
+    Raises rather than clamping: a silently reduced top_n would return fewer
+    rows than asked for with nothing in meta to say so, which is the class of
+    quiet wrongness these tools exist to avoid.
+    """
+    if top_n is None:
+        return None
+    lo, hi = req(defs, "ranking.min_top_n"), req(defs, "ranking.max_top_n")
+    if not isinstance(top_n, int) or isinstance(top_n, bool):
+        raise ValueError(f"top_n must be an integer, got {type(top_n).__name__}.")
+    if not (lo <= top_n <= hi):
+        raise ValueError(
+            f"top_n must be between {lo} and {hi} (got {top_n}). {hi} is the "
+            f"tools' own row limit — metrics.yaml: ranking.max_top_n."
+        )
+    return top_n
+
+
 def label_store(catalog: dict[str, dict], store_id: str) -> str:
     entry = catalog.get(store_id, {})
     return entry.get("display_name") or entry.get("name") or store_id

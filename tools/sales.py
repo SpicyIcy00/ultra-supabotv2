@@ -25,6 +25,7 @@ from typing import Any, Optional, Sequence
 
 from ._common import (
     DICT_ROW,
+    validate_top_n as _validate_top_n,
     DEFAULT_MAX_ROWS as _MAX_ROWS,
     DEFS_PATH as _DEFS_PATH,
     connect as _connect,
@@ -152,6 +153,7 @@ def get_sales(
     date_range: Any,
     filters: Optional[dict] = None,
     metric: str = "net_sales",
+    top_n: Optional[int] = None,
 ) -> dict:
     """
     Sales figures grouped as requested.
@@ -166,6 +168,10 @@ def get_sales(
         filters:    optional dict, keys limited to store, sku, category, tag.
         metric:     net_sales, product_revenue, units_sold, transaction_count,
                     returns_value.
+        top_n:      return only the N largest by the metric, ranked in SQL.
+                    OVERRIDES chronological ordering for day/week/month, so
+                    top_n=5 with group_by='day' gives the five biggest days.
+                    meta.full_row_count reports the size of the whole set.
 
     Returns:
         {"rows": [...], "meta": {...}}. A non-empty meta["notice"] MUST be
@@ -180,6 +186,7 @@ def get_sales(
             f"Unknown metric {metric!r}. Valid: {', '.join(sorted(all_metrics))}."
         )
     mdef = all_metrics[metric]
+    top_n = _validate_top_n(defs, top_n)
 
     # ---- group_by --------------------------------------------------------
     if group_by is None:
@@ -413,25 +420,46 @@ def get_sales(
 
             # Time series read chronologically; everything else ranks by measure.
             time_cols = [a for a, _ in select_terms if a in ("day", "week", "month")]
-            if time_cols:
+            if top_n is not None and group_terms:
+                # "Top N" means the N largest by the metric. This deliberately
+                # OVERRIDES chronological ordering for time buckets, so
+                # top_n=5 with group_by='day' gives the five biggest days, not
+                # the first five. metrics.yaml: ranking.sales.ordering_with_top_n
+                order_sql = "\nORDER BY value DESC NULLS LAST"
+                ordering = _req(defs, "ranking.sales.ordering_with_top_n")
+            elif time_cols:
                 order_sql = f"\nORDER BY {', '.join(time_cols)} ASC"
+                ordering = _req(defs, "ranking.sales.ordering_default_time")
             elif group_terms:
                 order_sql = "\nORDER BY value DESC NULLS LAST"
+                ordering = _req(defs, "ranking.sales.ordering_default_other")
             else:
                 order_sql = ""
+                ordering = "single row"
 
             sql = (
                 f"SELECT {select_sql}\n"
                 f"FROM {from_sql}\n"
                 f"WHERE {where_sql}"
                 f"{group_sql}{order_sql}\n"
-                f"LIMIT {_MAX_ROWS}"
+                f"LIMIT {top_n or _MAX_ROWS}"
             )
 
             cur.execute(sql, params)
             rows = [dict(r) for r in cur.fetchall()]
 
             truncated = len(rows) == _MAX_ROWS
+            # full_row_count costs a query, so only pay for it when the result
+            # was actually limited. When it was not, what came back IS the set.
+            if truncated or (top_n is not None and len(rows) == top_n):
+                cur.execute(
+                    f"SELECT COUNT(*) AS n FROM (\n"
+                    f"SELECT 1 FROM {from_sql}\nWHERE {where_sql}{group_sql}\n) x",
+                    params,
+                )
+                full_row_count = cur.fetchone()["n"]
+            else:
+                full_row_count = len(rows)
 
             # ---- reconciliation ------------------------------------------
             # The real test: compute BOTH money measures over this same window
@@ -586,8 +614,12 @@ def get_sales(
         "definitions_version": _req(defs, "version"),
         "definitions_path": str(_DEFS_PATH),
         "row_count": len(rows),
+        "full_row_count": full_row_count,
+        "full_row_count_note": " ".join(_req(defs, "ranking.full_row_count_note").split()),
+        "ordering": ordering,
+        "top_n": top_n,
         "truncated": truncated,
-        "row_limit": _MAX_ROWS,
+        "row_limit": top_n or _MAX_ROWS,
         "reconciliation": recon,
         "gap_filled": False,
         "gap_filled_note": (
