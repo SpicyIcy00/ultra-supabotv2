@@ -48,7 +48,7 @@ from datetime import date
 
 import pytest
 
-from tools import inventory, movement, products, sales, vending
+from tools import dead_stock, inventory, movement, products, sales, vending
 from tools._common import connect, load_defs, req
 
 # --------------------------------------------------------------------------
@@ -106,8 +106,11 @@ GOLDEN = [
 
     # ---- inventory (4) ---------------------------------------------------
     # as_of reads inventory_snapshots, which is immutable history.
+    # meta.total_matching was replaced by meta.full_row_count when top_n landed:
+    # the count is now reported whenever the result is limited, not only when the
+    # hard cap is hit.
     ("inventory/barn-snapshot-products",
-     lambda: inventory.get_stock(store="AJI BARN", as_of=SNAPSHOT_DAY)["meta"]["total_matching"], 3493),
+     lambda: inventory.get_stock(store="AJI BARN", as_of=SNAPSHOT_DAY)["meta"]["full_row_count"], 3493),
     ("inventory/rockwell-snapshot-in-stock",
      lambda: inventory.get_stock(store="Rockwell", as_of=SNAPSHOT_DAY,
                                  state="in_stock")["meta"]["row_count"], 494),
@@ -436,4 +439,188 @@ def test_sync_does_not_backdate():
         f"they occurred. Closed months are no longer immutable, so the exact "
         f"golden values in this file need re-baselining before they can be "
         f"trusted."
+    )
+
+
+# ==========================================================================
+# top_n — ranking in SQL rather than shipping rows to the model
+#
+# 6 of 11 refusals in a 40-question coverage run were caused by the 200-row cap
+# between the tools and the model, not by missing data. These assert the fix
+# ranks server-side and reports the size of the set it did not send.
+# ==========================================================================
+
+def test_top_n_ranks_in_sql_and_reports_full_size():
+    r = sales.get_sales("product", AUG_2026, metric="units_sold", top_n=5)
+    assert r["meta"]["row_count"] == 5
+    assert r["meta"]["full_row_count"] > 5, "full_row_count must describe the whole set"
+    assert r["meta"]["top_n"] == 5
+    vals = [x["value"] for x in r["rows"]]
+    assert vals == sorted(vals, reverse=True), f"not ranked: {vals}"
+
+
+def test_top_n_overrides_chronological_ordering():
+    """top_n=3 by day means the three BIGGEST days, not the first three."""
+    r = sales.get_sales("day", AUG_2026, metric="net_sales", top_n=3)
+    assert r["meta"]["ordering"] == req(load_defs(), "ranking.sales.ordering_with_top_n")
+    vals = [x["value"] for x in r["rows"]]
+    assert vals == sorted(vals, reverse=True)
+    assert r["meta"]["full_row_count"] == 31, "August has 31 days"
+
+
+def test_full_row_count_equals_row_count_when_unlimited():
+    """No extra COUNT is paid for when the result was never limited."""
+    r = sales.get_sales("store", AUG_2026, metric="net_sales")
+    assert r["meta"]["full_row_count"] == r["meta"]["row_count"] == 7
+    assert r["meta"]["top_n"] is None
+
+
+@pytest.mark.parametrize("bad", [0, -1, 1001, 2.5, "5"])
+def test_top_n_rejects_out_of_range(bad):
+    with pytest.raises(ValueError):
+        sales.get_sales("store", AUG_2026, metric="net_sales", top_n=bad)
+
+
+def test_stock_direction_picks_opposite_ends():
+    """
+    get_stock's natural order is emptiest-first. Without an explicit direction a
+    caller asking for "the top 3" would silently get the three most negative.
+    """
+    lo = inventory.get_stock(store="Rockwell", top_n=3, direction="lowest")
+    hi = inventory.get_stock(store="Rockwell", top_n=3, direction="highest")
+    lo_q = [x["quantity_on_hand"] for x in lo["rows"]]
+    hi_q = [x["quantity_on_hand"] for x in hi["rows"]]
+    assert lo_q == sorted(lo_q), "lowest must ascend"
+    assert hi_q == sorted(hi_q, reverse=True), "highest must descend"
+    assert max(lo_q) < min(hi_q), "the two ends must not overlap"
+    assert lo["meta"]["full_row_count"] == hi["meta"]["full_row_count"]
+    assert lo["meta"]["direction"] == "lowest"
+    assert hi["meta"]["direction"] == "highest"
+
+
+def test_stock_rejects_unknown_direction():
+    with pytest.raises(ValueError, match="direction"):
+        inventory.get_stock(direction="sideways")
+
+
+# ==========================================================================
+# get_dead_stock — the anti-join the tool surface was missing
+# ==========================================================================
+
+def test_dead_stock_rows_are_genuinely_dead():
+    """
+    Verify the anti-join rather than trust it: every sampled product must hold
+    stock AND have no sales in the same window, checked through get_sales.
+    """
+    window = ("2026-08-01", "2026-09-01")
+    r = dead_stock.get_dead_stock(store="Fairview", window=window, top_n=5)
+    assert r["rows"], "Fairview should hold some non-selling stock in August"
+
+    for row in r["rows"]:
+        assert row["quantity_on_hand"] > 0, "dead stock must still be held"
+        check = sales.get_sales(
+            [], window,
+            filters={"product_id": row["product_id"], "store": "Fairview"},
+            metric="units_sold",
+        )
+        sold = check["rows"][0]["value"] if check["rows"] else None
+        assert not sold, f"{row['sku']} reported dead but sold {sold} units"
+
+
+def test_dead_stock_window_widening_shrinks_the_list():
+    """A longer window can only remove products — anything that sold is excluded."""
+    short = dead_stock.get_dead_stock(store="Fairview", window=("2026-08-01", "2026-09-01"))
+    long_ = dead_stock.get_dead_stock(store="Fairview", window=("2026-01-01", "2026-09-01"))
+    assert long_["meta"]["full_row_count"] <= short["meta"]["full_row_count"]
+
+
+def test_dead_stock_excludes_the_warehouse():
+    """AJI BARN quantities are dispatch counters, not stock — out of scope."""
+    with pytest.raises(ValueError):
+        dead_stock.get_dead_stock(store="AJI BARN")
+
+
+def test_dead_stock_reports_share_and_provenance():
+    r = dead_stock.get_dead_stock(window="last_30_days")
+    m = r["meta"]
+    assert m["products_held_in_scope"] > m["full_row_count"] > 0
+    assert m["notice"]["kind"] == "dead_stock_share"
+    assert "stock_side" in m["temporal_mismatch"]
+    assert m["reconciliation"]["applicable"] is False
+
+
+def test_dead_stock_answers_never_sold_anywhere():
+    """
+    The Q8 shape that used to time out at 32.2s via a full product GROUP BY.
+    The anti-join answers it in ~11s, inside the 30s statement_timeout.
+    """
+    import time
+    started = time.perf_counter()
+    r = dead_stock.get_dead_stock(window=("2024-01-01", "2026-09-03"))
+    elapsed = time.perf_counter() - started
+    assert r["meta"]["full_row_count"] > 0
+    assert elapsed < 25.0, (
+        f"all-time dead stock took {elapsed:.1f}s against a 30s statement_timeout"
+    )
+
+
+# ==========================================================================
+# Retry classification — which failures are transient
+#
+# Exercises the decision, not the loop mechanics: no API call, no spend.
+# ==========================================================================
+
+@pytest.mark.parametrize("status,expected", [
+    (400, False),   # includes credit-balance — retrying would triple a wasted run
+    (401, False), (403, False), (404, False),
+    (408, True), (409, True), (429, True),
+    (500, True), (502, True), (503, True), (504, True), (529, True),  # 529 = overloaded
+])
+def test_retry_classifies_api_status(status, expected):
+    import anthropic
+    import httpx2
+    from agent.loop import _is_transient
+    exc = anthropic.APIStatusError(
+        "x",
+        response=httpx2.Response(status, request=httpx2.Request("POST", "https://x")),
+        body=None,
+    )
+    assert _is_transient(exc) is expected
+
+
+def test_retry_never_retries_tool_failures_or_refusals():
+    """Tool refusals are correct answers. Repeating one cannot change it."""
+    from agent.loop import _is_transient
+    for exc in (
+        ValueError("SKU matches 3 different products"),
+        KeyError("metrics.yaml missing"),
+        RuntimeError("Refusing to run: superuser"),
+    ):
+        assert _is_transient(exc) is False
+
+
+# ==========================================================================
+# The snapshot_date index
+#
+# Both pre-existing indexes lead with store_id/product_id, so a date-only
+# predicate scanned all 4.88M rows (3.0-3.8s locally, ~3x that at CI latency).
+# This fails if the index is dropped, rather than leaving a mysteriously slow suite.
+# ==========================================================================
+
+def test_snapshot_date_index_exists_and_is_fast():
+    import time
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT count(*) FROM pg_indexes WHERE tablename = 'inventory_snapshots' "
+                "AND indexdef LIKE '%(snapshot_date)%'"
+            )
+            assert cur.fetchone()[0] >= 1, "idx_snapshots_date is missing"
+            started = time.perf_counter()
+            cur.execute("SELECT MIN(snapshot_date), MAX(snapshot_date) FROM inventory_snapshots")
+            cur.fetchone()
+            elapsed = time.perf_counter() - started
+    assert elapsed < 2.0, (
+        f"MIN/MAX(snapshot_date) took {elapsed:.2f}s - was 3.0s unindexed, 0.08s with "
+        f"the index. A regression here means the index was dropped or is unused."
     )
