@@ -1216,3 +1216,87 @@ notices:
   # How many corrective turns the loop spends asking the model to surface a
   # notice before falling back to appending it verbatim.
   max_corrective_turns: 1
+
+
+# =============================================================================
+# RANKING (top_n)
+#
+# Ranking happens in SQL, not by shipping rows to the model and letting it sort.
+#
+# WHY THIS EXISTS: a 40-question coverage run found 6 of 11 refusals were caused
+# by the 200-row cap between the tools and the model, not by missing data. On
+# "what's out of stock across all stores" George correctly said: "the list is
+# 24,180 lines long, and I only have visibility into a small, quantity-sorted
+# slice of it. I must not total or characterise the rest." 19 of 40 answers
+# mentioned truncation. top_n moves the ranking server-side so the model gets a
+# complete, correct answer to "the top N"; full_row_count tells it how big the
+# whole set was so it can describe what it did not see.
+# =============================================================================
+ranking:
+  max_top_n: 1000          # the tools' own LIMIT; top_n may not exceed it
+  min_top_n: 1
+
+  # full_row_count is the size of the FULL result set before top_n / LIMIT.
+  # It is only queried when the result was actually limited — when it was not,
+  # it equals the row count and costs nothing.
+  full_row_count_note: >
+    Size of the complete result set before top_n or the row cap. When it exceeds
+    row_count, the rows shown are the top slice by the ordering in
+    meta.ordering — never a sample, and never something to total.
+
+  sales:
+    # "Top N" means the N largest by the metric. When top_n is set this
+    # ORDERING OVERRIDES the chronological order normally used for day/week/
+    # month buckets, so "top 5 days" means the five biggest days, not the first
+    # five. meta.ordering always states which applied.
+    ordering_with_top_n: "value DESC"
+    ordering_default_time: "bucket ASC"
+    ordering_default_other: "value DESC"
+
+  stock:
+    # get_stock's natural order is emptiest-first, which suits out-of-stock
+    # questions but is wrong for "largest holdings". direction makes the caller
+    # say which end they want rather than inheriting a default that silently
+    # answers the opposite question.
+    direction_default: lowest
+    directions:
+      lowest:  "i.quantity_on_hand ASC"    # emptiest first — stockouts
+      highest: "i.quantity_on_hand DESC"   # largest holdings first
+
+
+# =============================================================================
+# DEAD STOCK — held but not selling
+#
+# The anti-join the tool surface was missing. The coverage run showed George
+# attempting this shape three times and being unable to complete it: "dead
+# products at Fairview", "in stock everywhere but selling nowhere", and
+# "products never sold anywhere" (which timed out at 32.2s because the only
+# route available was a full product GROUP BY over all history).
+# =============================================================================
+dead_stock:
+  description: >
+    Products a store is holding that recorded no sale in the window. Stock and
+    sales are read at different times — stock is live, sales are a window — and
+    that difference is reported rather than hidden.
+
+  # Deliberately NOT inventory.states.in_stock: that predicate also tests
+  # warning_stock, which is NULL on every row, so it would silently include
+  # nothing useful. Dead stock only asks whether the shelf holds units.
+  stock_predicate: "i.quantity_on_hand > 0"
+
+  # The window side reuses the standard sales guard, so "no sales" means the
+  # same thing here as everywhere else: not cancelled, type Sale, retail scope.
+  sales_guard_ref: filters.standard_sales_guard
+
+  # Scanning the window ONCE into a CTE and hash-anti-joining is what makes this
+  # affordable. A correlated NOT EXISTS per inventory row would re-scan 891,714
+  # line items 31,617 times.
+  strategy: cte_anti_join
+
+  # Default scope is retail. AJI BARN is excluded: its quantities are corrupt
+  # (89% of rows non-positive, some at -24 million) so "held but not selling"
+  # is meaningless there. See movement.balance_delta and filters.aji_barn.
+  scope: stores.active_retail
+  barn_excluded_reason: >
+    AJI BARN quantities are accumulated dispatch counters, not stock. A dead
+    stock list from them would be noise.
