@@ -1,7 +1,7 @@
 import sys
 import asyncio
 from pathlib import Path
-from fastapi import FastAPI
+from fastapi import FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import assert_secret_key_usable, settings
 from app.services.schema_context import SchemaContext
@@ -47,7 +47,16 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on application startup"""
-    
+
+    # FIRST: refuse to serve against a schema this code cannot use. On
+    # 2026-09-04 the chats deploy booted two migrations behind and served 500s
+    # until a person noticed; the day before, workflow saves had been failing
+    # the same way. A crash here fails the deploy where the deploy log is.
+    # SCHEMA_CHECK=warn keeps serving and reports on /health; see schema_check.
+    from app.core.database import engine as _engine
+    from app.core.schema_check import verify as _verify_schema
+    app.state.schema = (await _verify_schema(_engine)).as_dict()
+
     # Debug: Print database connection info (redacted)
     try:
         db_url = settings.DATABASE_URL
@@ -517,8 +526,20 @@ def root():
     return {"message": "BI Dashboard API", "version": settings.VERSION}
 
 @app.get("/health")
-def health_check():
-    return {"status": "healthy"}
+def health_check(response: Response):
+    """
+    Liveness plus schema state. 503 when the database is not at the migration
+    head this build ships — only reachable with SCHEMA_CHECK=warn, since the
+    default refuses to boot — so a platform health check fails instead of
+    routing traffic to a process that will 500.
+    """
+    schema = getattr(app.state, "schema", None) or {
+        "ok": False, "current": [], "expected": [], "problem": "startup has not run",
+    }
+    if not schema["ok"]:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return {"status": "schema_mismatch", "schema": schema}
+    return {"status": "healthy", "schema": schema}
 
 
 
