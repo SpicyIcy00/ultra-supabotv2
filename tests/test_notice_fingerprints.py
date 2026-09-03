@@ -33,6 +33,22 @@ import yaml                                          # noqa: E402
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 TOOLS = ROOT / "tools"
 
+# Notices are not only emitted by tools any more. A workflow run assembles its
+# own — definitions drift, a backtest that cannot reproduce a step, a step that
+# did not return — and those reach an ANSWER through run_workflow exactly as a
+# tool's do, so they need fingerprints for exactly the same reason.
+#
+# An explicit list of files rather than a directory sweep, because
+# backend/app/services also holds the StoreHub importer, which emits nine
+# notice-shaped dicts into an IMPORT REPORT. Those never pass through
+# _unsurfaced, and demanding fingerprints for them would be inventing a
+# requirement to make a test tidy.
+EXTRA_EMITTERS = [
+    ROOT / "backend" / "app" / "services" / "workflow_runner.py",
+    # The skipped-slot notice can only be raised where the slots are known.
+    ROOT / "backend" / "app" / "services" / "workflow_scheduler.py",
+]
+
 # The container kind, which carries `items` and is never fingerprinted itself —
 # the loop checks each item's own kind. metrics.yaml names it in notices.container_kind.
 CONTAINER = "multiple"
@@ -48,7 +64,7 @@ def emitted_kinds() -> dict[str, str]:
     reports those as missing fingerprints and sends you chasing three ghosts.
     """
     found: dict[str, str] = {}
-    for path in sorted(TOOLS.glob("*.py")):
+    for path in sorted(TOOLS.glob("*.py")) + EXTRA_EMITTERS:
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
             if not isinstance(node, ast.Dict):

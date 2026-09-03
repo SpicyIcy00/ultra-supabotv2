@@ -156,43 +156,76 @@ sales_day:
   #   with no upper bound, which included the partial current day, while
   #   declaring at line 418 that ranges are inclusive. Neither was stated.
   # ---------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # `relative` — THE SAME WINDOW, ANCHORED ON A DAY THAT IS NOT TODAY
+  #
+  # The SQL above is anchored on now(), which is what a preset means when the
+  # caller is asking today. A saved workflow BACKTEST asks what a rule would
+  # have said on a past morning, and "last_30_days" evaluated against now()
+  # would answer with the last thirty days from this afternoon instead.
+  #
+  # So each preset also states itself arithmetically, against an anchor date D
+  # (the Manila day the run is written on):
+  #     unit    day | week | month | year — what D is truncated to
+  #     offset  units to shift the truncated anchor
+  #     length  units the half-open window spans
+  # giving [trunc(D, unit) + offset, trunc(D, unit) + offset + length).
+  #
+  # This is a SECOND EXPRESSION OF ONE DEFINITION, which is exactly the thing
+  # this file exists to prevent — so it lives here, beside the SQL it must agree
+  # with, rather than in the backtest code where it would become a private copy.
+  # test_workflows_contract checks that every preset has one.
+  #
+  # Week truncation is Monday-based, matching week_start above and Postgres
+  # date_trunc('week'). Weeks and days are exact; months and years are calendar
+  # arithmetic, the same as INTERVAL '1 month'.
+  # ---------------------------------------------------------------------------
   presets:
     today:
       start: "date_trunc('day', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
       end:   "(date_trunc('day', (now() AT TIME ZONE 'Asia/Manila')) + INTERVAL '1 day') AT TIME ZONE 'Asia/Manila'"
       includes_partial_day: true
+      relative: {unit: day, offset: 0, length: 1}
     yesterday:
       start: "(date_trunc('day', (now() AT TIME ZONE 'Asia/Manila')) - INTERVAL '1 day') AT TIME ZONE 'Asia/Manila'"
       end:   "date_trunc('day', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
       includes_partial_day: false
+      relative: {unit: day, offset: -1, length: 1}
     this_week:
       start: "date_trunc('week', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
       end:   "(date_trunc('week', (now() AT TIME ZONE 'Asia/Manila')) + INTERVAL '1 week') AT TIME ZONE 'Asia/Manila'"
       includes_partial_day: true
+      relative: {unit: week, offset: 0, length: 1}
     last_week:
       start: "(date_trunc('week', (now() AT TIME ZONE 'Asia/Manila')) - INTERVAL '1 week') AT TIME ZONE 'Asia/Manila'"
       end:   "date_trunc('week', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
       includes_partial_day: false
+      relative: {unit: week, offset: -1, length: 1}
     this_month:
       start: "date_trunc('month', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
       end:   "(date_trunc('month', (now() AT TIME ZONE 'Asia/Manila')) + INTERVAL '1 month') AT TIME ZONE 'Asia/Manila'"
       includes_partial_day: true
+      relative: {unit: month, offset: 0, length: 1}
     last_month:
       start: "(date_trunc('month', (now() AT TIME ZONE 'Asia/Manila')) - INTERVAL '1 month') AT TIME ZONE 'Asia/Manila'"
       end:   "date_trunc('month', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
       includes_partial_day: false
+      relative: {unit: month, offset: -1, length: 1}
     last_7_days:
       start: "(date_trunc('day', (now() AT TIME ZONE 'Asia/Manila')) - INTERVAL '7 days') AT TIME ZONE 'Asia/Manila'"
       end:   "date_trunc('day', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
       includes_partial_day: false
+      relative: {unit: day, offset: -7, length: 7}
     last_30_days:
       start: "(date_trunc('day', (now() AT TIME ZONE 'Asia/Manila')) - INTERVAL '30 days') AT TIME ZONE 'Asia/Manila'"
       end:   "date_trunc('day', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
       includes_partial_day: false
+      relative: {unit: day, offset: -30, length: 30}
     this_year:
       start: "date_trunc('year', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
       end:   "(date_trunc('year', (now() AT TIME ZONE 'Asia/Manila')) + INTERVAL '1 year') AT TIME ZONE 'Asia/Manila'"
       includes_partial_day: true
+      relative: {unit: year, offset: 0, length: 1}
 
   # All ranges are half-open: lower bound inclusive, upper bound exclusive.
   # resolves: business_rules.yaml:418 instructed "Always use inclusive date
@@ -2640,6 +2673,41 @@ notices:
       - [transfer valuation, valuation, internal transfer]
       - [different, separate, do not compare, not comparable, not a price]
 
+  # ---- Saved workflows -----------------------------------------------------
+  # Emitted by backend/app/services/workflow_runner.py, which builds a run for
+  # all three callers — chat, the route and the scheduler — so there is one
+  # place these can be written and one place they can be forgotten.
+
+  # The definitions moved under a saved rule's feet. The workflow still runs
+  # against the LIVE metrics.yaml, as every tool does; what changed is that the
+  # reasoning recorded with the version was written against an older one.
+  definitions_drift:
+    must_convey:
+      - [definition, definitions, "metrics.yaml"]
+      - [changed, change, differ, drift, since, "no longer", updated, revised]
+
+  # A backtest containing a step that cannot see the past. The figure is real
+  # and is TODAY's; presenting it as the past is the failure.
+  backtest_not_reproducible:
+    must_convey:
+      - [backtest, back-test, past window, "would have"]
+      - [current, "today", "now", point-in-time, present, "not reproduc",
+         "cannot be reproduced", "as it stands"]
+
+  # A step that refused, rotted or failed. The other steps still ran, and the
+  # run must say which one did not rather than showing a shorter list.
+  workflow_step_failed:
+    must_convey:
+      - [step]
+      - [fail, refus, "could not", "did not run", unrunnable, error, "no longer"]
+
+  # Slots the scheduler passed over while the process was down. Reported on the
+  # run that did happen, because a missing run leaves no row to carry a notice.
+  schedule_slots_skipped:
+    must_convey:
+      - [skipped, missed, "did not run", "not run", passed over]
+      - [slot, run, scheduled, schedule]
+
   # Notices whose kind is "multiple" carry an `items` list; the loop checks each
   # item's own kind against the fingerprints above rather than the container.
   container_kind: multiple
@@ -2715,6 +2783,176 @@ pins:
 
     # One corrective turn: either call the tool or withdraw the claim.
     max_corrective_turns: 1
+
+
+# =============================================================================
+# SAVED WORKFLOWS
+#
+# A workflow is logic George and a user agreed on in conversation, saved as a
+# versioned rule: named steps over existing READ tools, parameters, and the
+# reasoning behind each choice. It runs on demand or on a schedule.
+#
+# WHAT LIVES HERE AND WHAT DOES NOT. Structural caps (how many steps a workflow
+# may hold, how many workflows exist) are operational and live in the service,
+# the way MAX_TOOL_CALLS_PER_PIN lives in pin_writer.py. What lives here is what
+# is definitional: which tools can answer about the past, which arguments carry
+# a window, who may promote a version, and the words that count as a claim.
+#
+# THE RULE MOST LIKELY TO BE BROKEN QUIETLY: a workflow parameter is SCOPE, never
+# a DEFINITION. "Which store", "which window", "how many rows" are parameters.
+# "What counts as low stock" is not — it is a business definition, it belongs in
+# this file, and a workflow asking to tune it is asking for the wrong thing.
+# =============================================================================
+workflows:
+  # ---- Ownership: org-level, deliberately not the pins model ---------------
+  # A pin is one person's tile. A workflow that fires every Monday at 06:00 and
+  # sends the result to a group chat is the company's rule, and giving it a
+  # single owner means it dies with that person's account. So the three verbs
+  # are separated: running is for anyone who can use George at all, editing is
+  # for whoever wrote it or an admin, and promoting a version past the backtest
+  # gate is for an admin only. Nobody can schedule their own unreviewed logic.
+  permissions:
+    # Checked against app_users.role. The route gate is require_page("george")
+    # first; these narrow it further.
+    run: any_george_user
+    edit: creator_or_admin
+    promote: admin_only
+    delete: creator_or_admin
+    # decision: 2026-09-03, with the saved-workflows design. resolves: the pins
+    # model (created_by owns everything), which does not survive an org rule.
+
+  # ---- The promotion gate -------------------------------------------------
+  # A version may not fire on a schedule until it has been run against a PAST
+  # window and the output looked at. Backtesting is the only way to see what a
+  # rule would have said before it starts saying it unattended.
+  promotion:
+    requires_backtest: true
+    # The backtest must be against a window that has closed, not today. A
+    # backtest of "today" reproduces nothing and proves nothing.
+    backtest_must_be_past: true
+    promoted_by: admin_only
+    # An edit produces a new version, which starts ungated. The schedule keeps
+    # running the OLD version until someone promotes the new one — a scheduled
+    # job that silently changes behaviour when somebody edits the logic is the
+    # same lie as a tile that stores a number instead of re-running.
+    edit_resets_gate: true
+
+    # UI rule 5 reserves one colour for "needs you". This is what it means.
+    # Nothing else may use that colour — a failed run is not an approval.
+    queue_name: "Approval queue"
+    queue_item: "a workflow version waiting to be promoted past the backtest gate"
+
+  # ---- What a backtest can and cannot reproduce ---------------------------
+  # A backtest is not time travel. It moves each step's time arguments to a past
+  # as_of; it cannot rewind a tool that only knows the present.
+  #
+  # Every tool in agent.loop.TOOL_FUNCTIONS must appear in exactly one of the
+  # four groups below, and test_workflows_contract asserts it. A tool added
+  # without being classified would silently be treated as fully reproducible,
+  # and a backtest would present today's figure as the past — the one failure
+  # this whole section exists to prevent.
+  backtest:
+    # Tools that take the as_of date DIRECTLY. get_stock switches from
+    # `inventory` to `inventory_snapshots` for that Manila date and reports a
+    # snapshot_coverage_gap notice when the day is not covered, so a backtest of
+    # stock is genuinely a backtest.
+    # source: tools/inventory.py:127,142 and tools/brief.py:173.
+    as_of_arguments:
+      get_stock: as_of
+      get_brief: as_of
+
+    # Arguments carrying a [start, end) window. A preset there is resolved
+    # against now(), so a backtest rewrites it to the explicit Manila dates the
+    # preset WOULD have covered on as_of — see sales_day.presets.*.relative.
+    # The receipts then show real dates instead of a preset name, which is the
+    # honest thing for a window that is not the caller's "today".
+    window_arguments:
+      get_sales: date_range
+      get_movement: date_range
+      get_vending: date_range
+      get_purchasing: date_range
+      get_dead_stock: window
+
+    # The window rebinds, but one side of the answer is still read live. Real
+    # and useful, and it must say so — reporting it as fully reproduced would
+    # attribute a present-day fact to a past morning.
+    partially_reproducible:
+      get_dead_stock: >
+        The sales window rebinds, but the stock side is read live: a backtest
+        shows which products are held TODAY and had no sale during the past
+        window, not which products were held then.
+      # source: tools/dead_stock.py:102-104, which already states that stock is
+      # live and sales are a window and that the two are read at different times.
+
+    # No time axis of any kind. In a backtest these return TODAY's figure,
+    # labelled as today's, with a notice. Never silently omitted and never
+    # presented as the past — a section quietly left out reads as "nothing
+    # happened there" (brief.empty_section_must_distinguish, same reasoning).
+    # source: tools/products.py:62, tools/vending.py:412, tools/cost_history.py:163
+    # — none takes a date argument.
+    point_in_time_tools:
+      - get_product
+      - get_vending_stock
+      - get_cost_history
+
+  # ---- The claim check, exactly as for pins --------------------------------
+  # Saving a workflow is a write, and the second thing George can say that
+  # changes something outside the conversation. Same failure mode, same remedy:
+  # if the answer says a workflow was saved and save_workflow never returned,
+  # the user goes looking for a rule that does not exist.
+  claim_check:
+    claims:
+      - saved it as a workflow
+      - saved as a workflow
+      - workflow is now
+      - workflow now exists
+      - is now saved
+      - now saved as
+    intents:
+      - i'll save
+      - i will save
+      - then save
+      - let me save
+      - going to save
+      - about to save
+      - will save it
+    negation_window: 60
+    negations:
+      - "not "
+      - "n't"
+      - cannot
+      - "no "
+      - nothing
+      - none
+      - never
+      - unable
+      - fail
+      - refus
+      - without
+      - "instead of"
+      - "rather than"
+      - "haven't"
+      - "won't"
+    max_corrective_turns: 1
+
+  # ---- Scheduling ----------------------------------------------------------
+  schedule:
+    kinds: [daily, weekly, monthly]
+    # Every slot is a Manila wall clock time. The Philippines observes no DST
+    # (timezone.observes_dst), so a slot never repeats and never disappears.
+    timezone: "Asia/Manila"
+
+    # If the process was down for three days, run the most recent due slot ONLY
+    # and report the ones that were missed. Three Monday briefs arriving on
+    # Thursday is three numbers wearing the wrong timestamp — precisely what
+    # every receipts rule in this file exists to prevent.
+    catch_up: latest_slot_only
+
+    # Delivery in v1 is Telegram, rendered on the backend. Rendering in the
+    # delivery layer is how "notices always surface" (UI rule 4) stops being a
+    # guarantee: the first person to tidy the layout deletes the caveats.
+    # Same argument as ops/n8n/README.md.
+    delivery: [telegram]
 
 
 # =============================================================================

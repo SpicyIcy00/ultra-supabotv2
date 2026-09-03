@@ -484,7 +484,7 @@ async def shutdown_event():
     SchemaContext.shutdown()
     print("SchemaContext shut down")
 
-from app.api.v1.routes import analytics, chatbot, stores, products, reports, report_presets, google_sheets, saved_queries, replenishment, store_filters, barcodes, scheduled_reports, vending, dashboard_defaults, auth, admin, packing, george, george_pins, storehub_imports, brief
+from app.api.v1.routes import analytics, chatbot, stores, products, reports, report_presets, google_sheets, saved_queries, replenishment, store_filters, barcodes, scheduled_reports, vending, dashboard_defaults, auth, admin, packing, george, george_pins, george_workflows, storehub_imports, brief
 
 app.include_router(auth.router, prefix=f"{settings.API_V1_PREFIX}/auth", tags=["auth"])
 app.include_router(admin.router, prefix=f"{settings.API_V1_PREFIX}/admin", tags=["admin"])
@@ -507,6 +507,7 @@ app.include_router(dashboard_defaults.router, prefix=f"{settings.API_V1_PREFIX}/
 # NL->SQL system; the two deliberately share no code path.
 app.include_router(george.router, prefix=f"{settings.API_V1_PREFIX}/george", tags=["george"])
 app.include_router(george_pins.router, prefix=f"{settings.API_V1_PREFIX}/george/pins", tags=["george-pins"])
+app.include_router(george_workflows.router, prefix=f"{settings.API_V1_PREFIX}/george/workflows", tags=["george-workflows"])
 app.include_router(brief.router, prefix=f"{settings.API_V1_PREFIX}/brief", tags=["brief"])
 app.include_router(storehub_imports.router, prefix=f"{settings.API_V1_PREFIX}/storehub-imports", tags=["storehub-imports"])
 

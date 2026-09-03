@@ -15,6 +15,10 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.core.database import AsyncSessionLocal
 from app.services.auto_report_service import AutoReportService
 from app.services.scheduled_report_service import ScheduledReportService
+from app.services.workflow_scheduler import (
+    TICK_MINUTES as WORKFLOW_TICK_MINUTES,
+    tick_safely as workflow_tick,
+)
 
 MANILA = ZoneInfo("Asia/Manila")
 TICK_MINUTES = 15
@@ -113,9 +117,24 @@ def start_scheduler() -> None:
         coalesce=True,
         next_run_time=datetime.now(MANILA) + timedelta(seconds=45),
     )
+    # George's saved workflows. A third job on the SAME scheduler rather than a
+    # third scheduler: one process, one event loop, one place to look when
+    # something did not fire. It guards overlap in the DATABASE rather than with
+    # a module-level lock like the two jobs above, because a claim in the row is
+    # the only guard that survives a second replica — see workflow_scheduler.
+    _scheduler.add_job(
+        workflow_tick,
+        "interval",
+        minutes=WORKFLOW_TICK_MINUTES,
+        id="workflow_tick",
+        max_instances=1,
+        coalesce=True,
+        next_run_time=datetime.now(MANILA) + timedelta(seconds=60),
+    )
     _scheduler.start()
     print(f"Schedulers started (auto-report every {TICK_MINUTES} min, "
-          f"chat-reports every {CHAT_REPORT_TICK_MINUTES} min)")
+          f"chat-reports every {CHAT_REPORT_TICK_MINUTES} min, "
+          f"workflows every {WORKFLOW_TICK_MINUTES} min)")
 
 
 def shutdown_scheduler() -> None:

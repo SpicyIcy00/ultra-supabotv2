@@ -108,15 +108,29 @@ def test_the_write_tool_appears_only_when_asked_for():
 
 def test_the_read_prefix_is_unchanged_by_the_write_tool():
     """
-    Tools render first in the cached prefix. The write tool sorts after every
-    read tool, so a session with a writer and one without share a byte-identical
-    prefix up to the last block — a reordering here would silently halve the
-    cache hit rate.
+    Tools render first in the cached prefix. Every INJECTED tool sorts after
+    every read tool, so sessions with different capabilities share a
+    byte-identical prefix up to the tail — a reordering here would silently
+    halve the cache hit rate.
+
+    Checked as a property rather than by naming the last tool: there are three
+    injected tools now (pin_answer, run_workflow, save_workflow) and there will
+    be more, and a test that names one is a test that fails on the next.
     """
     read = george_loop.build_tool_schemas()
     both = george_loop.build_tool_schemas(include_write=True)
     assert both[: len(read)] == read
-    assert both[-1]["name"] == "pin_answer"
+
+    injected = [s["name"] for s in both[len(read):]]
+    assert injected == sorted(injected)
+    assert set(injected) == set(george_loop.write_tools.WRITE_TOOL_FUNCTIONS) | set(
+        george_loop.composite_tools.COMPOSITE_TOOL_FUNCTIONS
+    )
+    last_read = read[-1]["name"]
+    assert all(name > last_read for name in injected), (
+        f"{[n for n in injected if n <= last_read]} sort before the last read "
+        f"tool ({last_read}), which would break the cached prefix"
+    )
 
 
 def test_a_pin_cannot_be_declared_to_hold_a_write():

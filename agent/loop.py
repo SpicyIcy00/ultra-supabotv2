@@ -52,7 +52,7 @@ from typing import Any, AsyncIterator, Callable, Optional
 
 import anthropic
 
-from agent import write_tools
+from agent import composite_tools, write_tools
 from agent.write_tools import WriteContext, call_key
 from tools import (
     brief,
@@ -271,6 +271,72 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
             "additionalProperties": False,
         }
 
+    if pname == "steps":
+        # A workflow's steps. `tool` is enumerated from the READ surface, for
+        # the same reason tool_calls is: the schema itself cannot express a
+        # workflow step that writes, or one that runs another workflow.
+        return {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "tool": {"type": "string", "enum": sorted(TOOL_FUNCTIONS)},
+                    "arguments": {"type": "object"},
+                    "why": {"type": "string"},
+                },
+                "required": ["name", "tool", "arguments"],
+            },
+        }
+
+    if pname == "parameters":
+        defs_ = _load_defs()
+        return {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "type": {"type": "string",
+                             "enum": ["string", "integer", "boolean", "date_range"]},
+                    "default": {},
+                    "description": {"type": "string"},
+                },
+                "required": ["name", "type", "default"],
+            },
+            # Stated in the schema and not only in the docstring, because it is
+            # the rule most easily broken by accident.
+            "description": (
+                "What varies between runs. Scope only — which store, which "
+                "window, how many rows. A business threshold is a definition and "
+                f"belongs in metrics.yaml (currently version "
+                f"{req(defs_, 'version')}), never in a parameter."
+            ),
+        }
+
+    if pname == "bindings":
+        return {"type": "object",
+                "description": "Parameter values, as {\"<parameter>\": value}."}
+
+    if pname == "schedule":
+        defs_ = _load_defs()
+        return {
+            "type": "object",
+            "properties": {
+                "kind": {"type": "string",
+                         "enum": list(req(defs_, "workflows.schedule.kinds"))},
+                "hour": {"type": "integer", "minimum": 0, "maximum": 23},
+                "minute": {"type": "integer", "minimum": 0, "maximum": 59},
+                "days_of_week": {"type": "array",
+                                 "items": {"type": "integer",
+                                           "minimum": 0, "maximum": 6}},
+                "day_of_month": {"type": "integer", "minimum": 1, "maximum": 31},
+                "telegram_chat_ids": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["kind", "hour"],
+            "additionalProperties": False,
+        }
+
     if "bool" in text:
         return {"type": "boolean"}
 
@@ -293,20 +359,47 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
     return {"type": "string"}
 
 
+def injected_surface(ctx: WriteContext) -> dict[str, Callable[..., Any]]:
+    """
+    The write and composite tools this session actually has the capability for.
+
+    Per TOOL, not per session: a caller that injected a pin writer but no
+    workflow writer is offered pin_answer and NOT save_workflow. Offering a tool
+    that would refuse every call teaches the model to try it and teaches the
+    user that George is broken.
+    """
+    surface: dict[str, Callable[..., Any]] = {}
+    for name, fn in write_tools.WRITE_TOOL_FUNCTIONS.items():
+        if getattr(ctx, write_tools.WRITE_TOOL_REQUIRES[name], None) is not None:
+            surface[name] = fn
+    for name, fn in composite_tools.COMPOSITE_TOOL_FUNCTIONS.items():
+        if getattr(ctx, composite_tools.COMPOSITE_TOOL_REQUIRES[name], None) is not None:
+            surface[name] = fn
+    return surface
+
+
 def build_tool_schemas(defs: Optional[dict] = None,
-                       include_write: bool = False) -> list[dict]:
+                       include_write: bool = False,
+                       extra: Optional[dict[str, Callable[..., Any]]] = None) -> list[dict]:
     """
     Generate Anthropic tool definitions from the real signatures in tools/.
 
     Deterministic order (sorted) because tools render first in the cached
-    prefix — a reordered tool list silently invalidates the whole cache. The
-    write tools sort AFTER every read tool ("pin_answer" > "get_..."), so a
-    session with a writer and one without share a byte-identical prefix up to
-    the last block; only the tail differs.
+    prefix — a reordered tool list silently invalidates the whole cache. Every
+    injected tool sorts AFTER every read tool ("pin_answer", "run_workflow" and
+    "save_workflow" all follow "get_..."), so sessions with different
+    capabilities still share a byte-identical prefix up to the tail.
 
-    include_write is False by default, and that default is doing real work:
-    pin_runner calls this to decide whether a STORED call is still valid, and a
-    pin must never be able to contain a write.
+    Both extension arguments default to nothing, and that default is doing real
+    work: pin_runner calls this to decide whether a STORED call is still valid,
+    and workflow_runner validates every step the same way. A pin must never be
+    able to contain a write, and a workflow step must never be able to contain
+    another workflow.
+
+    include_write merges the whole write registry regardless of capability, for
+    the /george/tools introspection endpoint — "what can George do" is a
+    question about the surface, not about one session. A real session passes
+    `extra` instead; see injected_surface.
 
     `strict` is deliberately NOT set: two parameters need `oneOf`, which the
     strict-mode schema subset does not accept. The tools validate their own
@@ -320,6 +413,9 @@ def build_tool_schemas(defs: Optional[dict] = None,
     surface: dict[str, Callable[..., Any]] = dict(TOOL_FUNCTIONS)
     if include_write:
         surface.update(write_tools.WRITE_TOOL_FUNCTIONS)
+        surface.update(composite_tools.COMPOSITE_TOOL_FUNCTIONS)
+    if extra:
+        surface.update(extra)
 
     for name in sorted(surface):
         fn = surface[name]
@@ -354,9 +450,39 @@ def build_tool_schemas(defs: Optional[dict] = None,
 
 # --------------------------------------------------------------------------
 # System prompt — must stay byte-stable or the cache breaks
+#
+# "Byte-stable" means stable BETWEEN REQUESTS, not literal in the source. The
+# scope sentence below is built once, at import, from metrics.yaml, so every
+# request in a deploy sends identical bytes and the cached prefix holds. What it
+# buys is that the store scope stops being a number typed into a prompt.
+#
+# It was 7 typed into a prompt, and CLAUDE.md said 9, and metrics.yaml said 7
+# active plus 2 that have never transacted. All three were describing the same
+# estate and none of them said so. metrics.yaml is now the only place any of
+# them comes from: stores.active_retail, stores.pending_retail,
+# stores.warehouse. Open a store, move it up in the yaml, and the sentence
+# George is given changes with it.
 # --------------------------------------------------------------------------
 
-SYSTEM_PROMPT = """You are George, a business analyst for Aji Ichiban — 7 active retail candy stores in the Philippines, the AJI BARN warehouse, and the AJI CMG vending machines.
+def _scope_sentence(defs: dict) -> str:
+    """Who George works for, counted from the definitions rather than typed."""
+    active = len(req(defs, "stores.active_retail"))
+    pending = len(req(defs, "stores.pending_retail"))
+    warehouses = [s.get("display_name") or s["name"] for s in req(defs, "stores.warehouse")]
+
+    pending_part = (
+        f" {pending} more storefronts exist but have never transacted, so they are "
+        f"not in any figure unless you say otherwise."
+        if pending else ""
+    )
+    return (
+        f"You are George, a business analyst for Aji Ichiban — {active} active "
+        f"retail candy stores in the Philippines, the {', '.join(warehouses)} "
+        f"warehouse, and the AJI CMG vending machines.{pending_part}"
+    )
+
+
+SYSTEM_PROMPT = _scope_sentence(_load_defs()) + """
 
 Your job is to be trustworthy about numbers, not clever about them.
 
@@ -377,6 +503,12 @@ RULES
 7. Money is Philippine pesos (₱). Vending data is a separate domain from store data and the two must never be added together.
 
 8. When `pin_answer` is available and the user asks you to pin something, pin it — do not ask them to confirm. A pin stores the tool calls behind an answer and re-runs them, so the tile stays current. You may only pin calls you have actually run in this conversation: if the user asks for a variant ("pin that but daily", "just Rockwell"), run the adjusted call FIRST, read its result, and pin that call — never pin a call you have not run. Afterwards, say plainly what you pinned and which page it went to, naming the page or saying it is ungrouped, and that it re-runs. If pinning is refused, tell the user why in their words. NEVER write that you pinned something unless `pin_answer` has actually returned in this conversation — describing a pin you did not make sends the user looking for a tile that does not exist.
+
+9. A pin re-runs; a SAVE is the rule it re-runs. When `save_workflow` is available and the user wants logic kept — "save this as PO Maker", "do this every Monday" — save it. The same provenance rule applies and is enforced: every step must be a call you have already run at the values its parameters default to, so run each step first, read the results, then save. Record in each step's `why` the reasoning you and the user actually settled on, including what you rejected and why; that sentence is the reason a workflow is worth more than a page of tiles. Steps do not pass data to each other — each gathers a fact independently — so if the user wants two results joined, say that the join would have to be a new tool and do not fake it with a step.
+
+10. Saving is not scheduling. A schedule saved with a workflow is created switched OFF: it fires nothing until the version has been backtested and an administrator has promoted it. Say that plainly when a user asks for a schedule — tell them it is saved, that it is in the approval queue, and that a backtest is the next step. Never say a workflow is running weekly when it is waiting for approval. As with pinning, NEVER write that you saved a workflow unless `save_workflow` has actually returned in this conversation.
+
+11. `run_workflow` runs a saved workflow and returns one row per step, each with its own receipts, because the steps read different sources at different moments. Pass `as_of` with a past Manila date to BACKTEST — what the rule would have produced that morning. Read every step's `reproducible` field before describing a backtest: a step marked anything other than "full" is reporting TODAY's position, and presenting it as the past is the same failure as reporting a number without its caveat.
 
 Answer in prose. Use a short table when comparing more than three rows. State the window and the scope you used."""
 
@@ -450,21 +582,21 @@ async def _call_tool(name: str, args: dict) -> tuple[dict, Optional[str], int]:
                 int((time.perf_counter() - started) * 1000))
 
 
-async def _call_write_tool(name: str, args: dict,
-                           ctx: WriteContext) -> tuple[dict, Optional[str], int]:
+async def _call_injected(registry: dict[str, Callable], name: str, args: dict,
+                         ctx: WriteContext) -> tuple[dict, Optional[str], int]:
     """
-    Run a write tool. Same (payload, error, duration) contract as _call_tool.
+    Run an injected tool — a write, or the workflow runner. Same
+    (payload, error, duration) contract as _call_tool.
 
-    Awaited rather than threaded, because the writer it calls is async all the
-    way down to the application's own database session — and never gathered with
-    the read calls, because a write in the same batch has to see what those
-    reads did (see the ordering in run()).
+    Awaited rather than threaded, because what it calls is async all the way
+    down to the application's own database session.
 
-    The same exception set is caught for the same reason: PinRefused is a
-    ValueError, so a pin the loop declines to create reaches the model as a real
-    answer with a route out, exactly like a tool refusing to mislead.
+    The same exception set is caught for the same reason: PinRefused and
+    WorkflowRefused are ValueErrors, so a write the loop declines to make
+    reaches the model as a real answer with a route out, exactly like a tool
+    refusing to mislead.
     """
-    fn = write_tools.WRITE_TOOL_FUNCTIONS[name]
+    fn = registry[name]
     started = time.perf_counter()
     try:
         result = await fn(**args, ctx=ctx)
@@ -472,6 +604,29 @@ async def _call_write_tool(name: str, args: dict,
     except (ValueError, KeyError, RuntimeError) as exc:
         return ({"rows": [], "meta": {"error": str(exc)}}, str(exc),
                 int((time.perf_counter() - started) * 1000))
+
+
+async def _call_write_tool(name: str, args: dict,
+                           ctx: WriteContext) -> tuple[dict, Optional[str], int]:
+    """
+    Run a write tool. Never gathered with the read calls, because a write in the
+    same batch has to see what those reads did (see the ordering in run()).
+    """
+    return await _call_injected(write_tools.WRITE_TOOL_FUNCTIONS, name, args, ctx)
+
+
+async def _call_composite_tool(name: str, args: dict,
+                               ctx: WriteContext) -> tuple[dict, Optional[str], int]:
+    """
+    Run a composite read — today, run_workflow.
+
+    Ordered between the reads and the writes in run(), which is what lets a
+    single turn run a workflow and then pin one of its steps: the steps have to
+    be in the executed set before the write is dispatched.
+    """
+    return await _call_injected(
+        composite_tools.COMPOSITE_TOOL_FUNCTIONS, name, args, ctx
+    )
 
 
 # --------------------------------------------------------------------------
@@ -512,19 +667,38 @@ def _pin_claim(answer: str, defs: dict) -> Optional[str]:
     """
     Whether an answer says a pin was made ("claimed") or will be ("promised").
 
-    Used only when NO pin was made. A pin is the one thing George can say that
-    changes something outside the conversation, so it is the one statement worth
-    checking against what actually happened. Both failures were observed live on
-    the same question a run apart: "then pinned it" with no tool call, and "I'll
-    run the weekly version first, then pin that exact call" followed by neither.
+    Used only when NO pin was made. A pin is one of the two things George can
+    say that change something outside the conversation, so it is worth checking
+    against what actually happened. Both failures were observed live on the same
+    question a run apart: "then pinned it" with no tool call, and "I'll run the
+    weekly version first, then pin that exact call" followed by neither.
+
+    Vocabulary from metrics.yaml (pins.claim_check).
+    """
+    return _claim(answer, req(defs, "pins.claim_check"))
+
+
+def _save_claim(answer: str, defs: dict) -> Optional[str]:
+    """
+    The same check for the other write: an answer saying a workflow was saved.
+
+    Its own vocabulary (workflows.claim_check) rather than a shared one, because
+    the words differ — "pinned to Replenishment" and "saved it as a workflow"
+    share no phrase — and because a claim check that matched both would report
+    the wrong write in its correction.
+    """
+    return _claim(answer, req(defs, "workflows.claim_check"))
+
+
+def _claim(answer: str, spec: dict) -> Optional[str]:
+    """
+    Whether an answer asserts a write happened ("claimed") or will ("promised").
 
     A phrase preceded by a negation inside the window is a DENIAL, not a
-    statement: "I could not pin that" and "I won't pin it" are George behaving
-    correctly and must not be corrected. Vocabulary from metrics.yaml
-    (pins.claim_check); claims are reported ahead of intents, since an answer
-    that does both has already asserted the stronger thing.
+    statement: "I could not pin that" and "I won't save it" are George behaving
+    correctly and must not be corrected. Claims are reported ahead of intents,
+    since an answer that does both has already asserted the stronger thing.
     """
-    spec = req(defs, "pins.claim_check")
     window = spec["negation_window"]
     low = answer.lower()
 
@@ -738,6 +912,8 @@ async def run(
     page_context: Optional[str] = None,
     pin_writer: Optional[write_tools.PinWriter] = None,
     history: Optional[list[dict]] = None,
+    workflow_writer: Optional[write_tools.WorkflowWriter] = None,
+    workflow_runner: Optional[write_tools.WorkflowRunner] = None,
 ) -> AsyncIterator[str]:
     """
     Answer one question, streaming SSE frames.
@@ -761,20 +937,30 @@ async def run(
             [{role: "user"|"george", text, tool_calls}]. Without it every
             question stands alone and "pin that" has no referent. The calls it
             carries seed the executed set — see _seed_history.
+        workflow_writer: if supplied, George can save agreed logic as a
+            versioned workflow. Injected exactly as pin_writer is, and gating
+            exactly one tool: without it save_workflow is not in the schema.
+        workflow_runner: if supplied, George can run a saved workflow, including
+            backtesting one against a past window. A READ, but injected all the
+            same — the workflows live in a schema george_ro cannot see.
     """
     defs = _load_defs()
-    tools_schema = build_tool_schemas(defs, include_write=pin_writer is not None)
     log = ConversationLog()
     asked_at = datetime.now(timezone.utc)
 
-    # What the write tools are allowed to act on: the injected writer, the
-    # question as asked, and (filled below, as calls run) the record of what has
-    # actually executed. The model contributes nothing to this object.
+    # What the injected tools are allowed to act on: the writers and the runner,
+    # the question as asked, and (filled below, as calls run) the record of what
+    # has actually executed. The model contributes nothing to this object.
     write_ctx = WriteContext(
         writer=pin_writer,
         question=question,
         conversation_id=log.conversation_id,
+        workflow_writer=workflow_writer,
+        workflow_runner=workflow_runner,
     )
+    # Per capability, not per session: a caller with a pin writer and no
+    # workflow writer gets pin_answer and not save_workflow.
+    tools_schema = build_tool_schemas(defs, extra=injected_surface(write_ctx))
 
     client = anthropic.AsyncAnthropic()
     opening = (
@@ -797,6 +983,9 @@ async def run(
     pins_made = 0
     pin_corrections = 0
     max_pin_corrections = req(defs, "pins.claim_check.max_corrective_turns")
+    saves_made = 0
+    save_corrections = 0
+    max_save_corrections = req(defs, "workflows.claim_check.max_corrective_turns")
     usage = {"input": 0, "output": 0, "cache_read": 0}
     answer = ""
     status = "ok"
@@ -915,6 +1104,44 @@ async def run(
                     })
                     continue
 
+                # The same check for the other write. Only when a workflow
+                # writer exists: without one George cannot save, and correcting
+                # him for saying so would be correcting the truth.
+                save = (
+                    None if saves_made or workflow_writer is None
+                    else _save_claim(answer, defs)
+                )
+                if save and save_corrections < max_save_corrections:
+                    save_corrections += 1
+                    log.gap(f"save_{save}_not_made", answer[:2000])
+                    yield _sse("warning", {"reason": f"save_{save}_not_made"})
+                    yield _reset_answer(f"save_{save}_not_made")
+                    answer = ""
+                    messages.append({
+                        "role": "user",
+                        "content": (
+                            "Your answer says a workflow WAS saved, but you never "
+                            "called save_workflow, so nothing was written and no "
+                            "rule exists. The user would go looking for something "
+                            "to run that is not there.\n\n"
+                            "If you meant to save it, call save_workflow now with "
+                            "the steps you actually ran. If you cannot — or did "
+                            "not mean to — rewrite the answer to say plainly that "
+                            "nothing was saved, and why."
+                            if save == "claimed" else
+                            "Your answer says you are going to save a workflow, "
+                            "but you never called save_workflow, so nothing was "
+                            "written and no rule exists. Saying you will save it "
+                            "does not save it.\n\n"
+                            "If you were waiting on the user for something — the "
+                            "name, which values should be parameters — say so "
+                            "plainly and ask. Otherwise call save_workflow now "
+                            "with the steps you actually ran, then confirm what "
+                            "was saved and that it is not yet scheduled."
+                        ),
+                    })
+                    continue
+
                 missing = _unsurfaced(pending, answer, defs)
 
                 if missing and corrective_turns < max_corrective:
@@ -1006,19 +1233,27 @@ async def run(
                 yield _sse("tool_call", {"seq": seq, "tool": b.name, "arguments": b.input})
                 seq += 1
 
-            # Reads run together; writes run after them, in order.
+            # Reads run together; composites next; writes last, in order.
             #
-            # A write may only pin calls that have RUN, so it has to see the
-            # results of anything read in the same batch — otherwise a model that
-            # re-ran a variant and pinned it in one turn would be refused for a
-            # call it just made. Reads are the complement of the write set rather
-            # than `name in TOOL_FUNCTIONS`, so a name in neither still reaches
+            # A write may only pin or save calls that have RUN, so it has to see
+            # the results of everything read in the same batch — otherwise a
+            # model that re-ran a variant and pinned it in one turn would be
+            # refused for a call it just made. A composite sits between the two
+            # for the same reason in the other direction: running a workflow
+            # makes its steps pinnable, so the steps must land in the executed
+            # set before any write in this batch is dispatched.
+            #
+            # Reads are the complement of the two injected sets rather than
+            # `name in TOOL_FUNCTIONS`, so a name in none of them still reaches
             # _call_tool and fails there: a tool_use with no tool_result would
             # break the next request outright.
             writes = [(g, b) for g, b in batch
                       if b.name in write_tools.WRITE_TOOL_FUNCTIONS]
+            composites = [(g, b) for g, b in batch
+                          if b.name in composite_tools.COMPOSITE_TOOL_FUNCTIONS]
             reads = [(g, b) for g, b in batch
-                     if b.name not in write_tools.WRITE_TOOL_FUNCTIONS]
+                     if b.name not in write_tools.WRITE_TOOL_FUNCTIONS
+                     and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS]
 
             done_calls = list(zip(reads, await asyncio.gather(*[
                 _call_tool(b.name, dict(b.input)) for _, b in reads
@@ -1032,6 +1267,21 @@ async def run(
                     write_ctx.executed[call_key(b.name, args)] = {
                         "tool": b.name, "arguments": args,
                     }
+
+            for gseq, b in composites:
+                outcome = await _call_composite_tool(b.name, dict(b.input), write_ctx)
+                done_calls.append(((gseq, b), outcome))
+                # A workflow's steps ran, streamed, and are as pinnable as any
+                # other call the user has watched return. Only the successful
+                # ones — meta.executed_calls carries exactly those.
+                result, err, _ms = outcome
+                if err is None:
+                    for call in (result.get("meta") or {}).get("executed_calls") or []:
+                        tool, args = call.get("tool"), call.get("arguments") or {}
+                        if tool in TOOL_FUNCTIONS:
+                            write_ctx.executed[call_key(tool, args)] = {
+                                "tool": tool, "arguments": args,
+                            }
 
             for gseq, b in writes:
                 done_calls.append(
@@ -1072,14 +1322,14 @@ async def run(
                     "duration_ms": ms,
                     "error": err,
                 })
-                # A pin that now exists, announced as its own frame.
+                # A write that now exists, announced as its own frame.
                 #
-                # The answer is also told to say what it pinned and where, but a
+                # The answer is also told to say what it wrote and where, but a
                 # write that happened is a fact, not a matter of wording: the
-                # frame lets the UI confirm it and refresh the page list without
+                # frame lets the UI confirm it and refresh its lists without
                 # depending on the model having phrased it. Same reasoning as
                 # `notice` and `receipts`.
-                if not err and b.name in write_tools.WRITE_TOOL_FUNCTIONS:
+                if not err and b.name == "pin_answer":
                     pins_made += 1
                     row = (capped.get("rows") or [{}])[0]
                     yield _sse("pinned", {
@@ -1088,6 +1338,22 @@ async def run(
                         "page": row.get("page"),
                         "pins_on_page": row.get("pins_on_page"),
                         "tool_calls": row.get("tool_calls") or [],
+                    })
+                if not err and b.name == "save_workflow":
+                    saves_made += 1
+                    row = (capped.get("rows") or [{}])[0]
+                    yield _sse("saved", {
+                        "workflow_id": row.get("workflow_id"),
+                        "name": row.get("name"),
+                        "version": row.get("version"),
+                        "steps": row.get("steps") or [],
+                        "parameters": row.get("parameters") or [],
+                        # A saved workflow is not a scheduled one. The frame
+                        # carries the distinction so the UI can show the queue
+                        # state without re-reading the answer's prose.
+                        "scheduled": row.get("scheduled"),
+                        "awaiting_promotion": row.get("awaiting_promotion", True),
+                        "queue": (capped.get("meta") or {}).get("queue"),
                     })
 
                 for n in found:

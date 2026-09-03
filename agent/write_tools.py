@@ -1,5 +1,5 @@
 """
-George's write surface. Today that is exactly one tool: pin_answer.
+George's write surface: pin_answer, and save_workflow.
 
 WHY THIS FILE IS NOT IN tools/
 tools/ is the READ surface: ten functions that connect as george_ro and return
@@ -34,6 +34,23 @@ conversation. That single rule is what makes "pin that but daily" safe — the
 adjusted call is not in the executed set until it has been run, so the loop
 forces the re-run to happen (and to stream to the user) before the pin can
 exist. It is enforced here, not asked for in the prompt.
+
+THE SECOND WRITE TOOL, AND WHAT IT KEPT
+save_workflow turns agreed logic into a versioned rule. It preserves all three
+properties above — a second WRITER, not a second role; the loop still never
+learns who the user is; agent/ still never imports backend/ — and it extends the
+provenance rule rather than carving an exception out of it:
+
+    A workflow step is saved AT THE BINDING IT WAS RUN AT. Every parameter has a
+    default, the step bound to its defaults must be in the executed set, and
+    other values of that parameter are then permitted because the tools validate
+    them against the same metrics.yaml vocabulary and the call SHAPE is one the
+    user has watched return.
+
+Computing that defaulted form needs the binder that also runs workflows, and
+that lives in the backend — so the injected WorkflowWriter is a small object
+with two methods rather than a bare callable. The RULE stays here, beside
+pin_answer's; only the substitution lives where it is implemented once.
 """
 
 from __future__ import annotations
@@ -80,13 +97,80 @@ class PinWriter(Protocol):
     async def __call__(self, spec: PinSpec) -> dict: ...
 
 
+class WorkflowRefused(ValueError):
+    """
+    The workflow cannot be saved as asked, and the message says why.
+
+    A ValueError for the same reason PinRefused is one: the loop's tool-error
+    handling turns it into a real answer with a route out, never a crash.
+    """
+
+
+@dataclass(frozen=True)
+class WorkflowSpec:
+    """What the loop asks the workflow writer to store."""
+
+    name: str
+    steps: list[dict[str, Any]]
+    parameters: list[dict[str, Any]]
+    intent: Optional[str]
+    change_note: Optional[str]
+    # An optional proposed slot. It NEVER fires on its own: a schedule created
+    # here is disabled until an administrator promotes the version past the
+    # backtest gate, so accepting "every Monday at 6" in conversation cannot
+    # become unattended execution of unreviewed logic.
+    schedule: Optional[dict[str, Any]]
+    # Filled by the loop, never by the model.
+    question: Optional[str]
+    conversation_id: Optional[str]
+
+
+class WorkflowWriter(Protocol):
+    """
+    Stores a workflow and reports back. Implemented in the web process.
+
+    Two methods rather than one callable, because saving needs a step's DEFAULTED
+    form — parameters substituted for their defaults — and the code that does
+    that substitution is the same code that runs workflows. Duplicating it here
+    would give the binding two implementations, and the one that drifted would
+    be the one deciding what George is allowed to save.
+
+    Both must raise WorkflowRefused — with a message a person could act on — for
+    every expected failure. Anything else is a fault.
+    """
+
+    def default_calls(self, steps: list[dict], parameters: list[dict]) -> list[dict]:
+        """The steps as concrete {tool, arguments} at their default bindings."""
+        ...
+
+    async def save(self, spec: WorkflowSpec) -> dict: ...
+
+
+class WorkflowRunner(Protocol):
+    """
+    Runs a saved workflow and returns its steps, notices and receipts.
+
+    A READ, injected the same way a writer is, because the workflow it has to
+    find lives in a schema george_ro cannot see. No writer here and no reader
+    there: the capability is always the injection.
+    """
+
+    async def __call__(self, name: str, bindings: Optional[dict],
+                       as_of: Optional[str]) -> dict: ...
+
+
 @dataclass
 class WriteContext:
     """
-    Everything a write tool needs that the model does not supply.
+    Everything an injected tool needs that the model does not supply.
 
     Passed keyword-only, which is also how the schema generator knows to keep it
     out of the model's view: build_tool_schemas skips keyword-only parameters.
+
+    Named for the write tools it was built for; it now also carries the workflow
+    RUNNER, which is a read. What the two have in common is the thing that
+    matters: each is a capability the loop cannot give itself, and each is absent
+    from the model's schema entirely when it has not been injected.
     """
 
     writer: Optional[PinWriter] = None
@@ -95,6 +179,8 @@ class WriteContext:
     # call_key -> {tool, arguments} for every call that RAN AND SUCCEEDED in this
     # conversation. The loop fills it; pin_answer refuses anything absent from it.
     executed: dict[str, dict] = field(default_factory=dict)
+    workflow_writer: Optional[WorkflowWriter] = None
+    workflow_runner: Optional[WorkflowRunner] = None
 
 
 def call_key(tool: str, arguments: Any) -> str:
@@ -240,8 +326,175 @@ async def pin_answer(
     }
 
 
-# The write surface, by name. agent/loop.py merges this into the schema ONLY
-# when a writer has been injected, and dispatches it separately from
-# TOOL_FUNCTIONS so that neither the pin runner nor a pin's own contents can
-# ever reach it.
-WRITE_TOOL_FUNCTIONS = {"pin_answer": pin_answer}
+def _normalize_steps(steps: Any) -> list[dict]:
+    """Structural check only. Whether a step RUNS is the writer's business."""
+    if not isinstance(steps, list) or not steps:
+        raise WorkflowRefused(
+            "steps must be a non-empty list of {name, tool, arguments, why}."
+        )
+
+    out = []
+    for step in steps:
+        if not isinstance(step, dict):
+            raise WorkflowRefused(
+                f"Each step must be an object with 'name', 'tool' and "
+                f"'arguments'; got {type(step).__name__}."
+            )
+        tool = step.get("tool")
+        if not isinstance(tool, str) or not tool:
+            raise WorkflowRefused("A step is missing its 'tool' name.")
+        name = step.get("name")
+        if not isinstance(name, str) or not name.strip():
+            raise WorkflowRefused(
+                f"The {tool} step needs a 'name'. Step names are how a person "
+                f"reads the run six months from now — write what the step "
+                f"establishes, not what the tool is called."
+            )
+        args = step.get("arguments") or {}
+        if not isinstance(args, dict):
+            raise WorkflowRefused(
+                f"{name}: 'arguments' must be an object, got {type(args).__name__}."
+            )
+        out.append({
+            "name": name.strip(),
+            "tool": tool,
+            "arguments": args,
+            "why": (step.get("why") or "").strip() or None,
+        })
+    return out
+
+
+async def save_workflow(
+    name: str,
+    steps: list[dict],
+    parameters: Optional[list[dict]] = None,
+    intent: Optional[str] = None,
+    change_note: Optional[str] = None,
+    schedule: Optional[dict] = None,
+    *,
+    ctx: WriteContext,
+) -> dict:
+    """
+    Save agreed logic as a versioned workflow: named steps over the tools you
+    have already run, the parameters that vary, and the reasoning behind each
+    choice. Saving a name that already exists appends a new VERSION rather than
+    replacing anything, so nothing is ever overwritten.
+
+    Args:
+        name: What the workflow is called, e.g. "PO Maker". This is how it is
+            run later ("run PO Maker"), so it must be unique — a name that
+            differs from an existing one only by capitalisation is refused.
+        steps: The steps, in the order a person should read them, as
+            [{"name": ..., "tool": ..., "arguments": {...}, "why": ...}].
+            You may ONLY save steps whose call you have already run,
+            successfully, in this conversation, at the values its parameters
+            default to. Steps do not pass data to each other — each one gathers
+            a fact independently. `why` is the reasoning you and the user
+            agreed on; write it for someone reading this in six months.
+        parameters: What varies between runs, as
+            [{"name": ..., "type": ..., "default": ..., "description": ...}].
+            Types: string, integer, boolean, date_range. Every parameter needs a
+            default. Reference one from a step with {"$param": "<name>"}.
+            A parameter is SCOPE — which store, which window, how many rows.
+            A business threshold is not a parameter; it belongs in metrics.yaml.
+        intent: Why this workflow exists, in the user's words.
+        change_note: When saving over an existing name, what changed and why.
+        schedule: An optional slot, as {"kind": "daily"|"weekly"|"monthly",
+            "hour": 6, "minute": 0, "days_of_week": [0], "day_of_month": null,
+            "telegram_chat_ids": [...]}. It is created switched OFF and fires
+            nothing until an administrator has backtested and promoted the
+            version. Say so when you use it.
+
+    Returns:
+        {rows, meta} like every other tool. rows holds one row describing the
+        workflow and the version that now exists; meta.source_table is
+        george.workflow_versions.
+    """
+    if ctx.workflow_writer is None:
+        raise WorkflowRefused(
+            "Saving a workflow is not available in this session — it requires a "
+            "signed-in user. Tell the user the logic cannot be saved from here."
+        )
+
+    if not isinstance(name, str) or not name.strip():
+        raise WorkflowRefused("A workflow needs a name — it is how it is run.")
+
+    normalized = _normalize_steps(steps)
+    params = parameters if isinstance(parameters, list) else []
+
+    # Provenance, extended rather than excepted: the DEFAULTED form of every
+    # step must be a call that ran and succeeded here. A workflow the user has
+    # not watched produce numbers is a rule nobody has ever checked.
+    calls = ctx.workflow_writer.default_calls(normalized, params)
+    missing = _unrun(calls, ctx.executed)
+    if missing:
+        listed = "; ".join(
+            f"{c['tool']}({json.dumps(c['arguments'], sort_keys=True, default=str)})"
+            for c in missing
+        )
+        ran = ", ".join(sorted({c["tool"] for c in ctx.executed.values()})) or "none"
+        raise WorkflowRefused(
+            f"You have not run {listed} in this conversation, so it cannot be "
+            f"saved as a step — a workflow must be built from calls whose results "
+            f"the user has actually seen. Run each step at its default values "
+            f"first, read the results, then save. Tools run so far: {ran}."
+        )
+
+    stored = await ctx.workflow_writer.save(
+        WorkflowSpec(
+            name=name.strip(),
+            steps=normalized,
+            parameters=params,
+            intent=(intent or None),
+            change_note=(change_note or None),
+            schedule=schedule if isinstance(schedule, dict) else None,
+            question=ctx.question,
+            conversation_id=ctx.conversation_id,
+        )
+    )
+
+    return {
+        "rows": [{
+            "workflow_id": stored["workflow_id"],
+            "name": stored["name"],
+            "version": stored["version"],
+            "steps": [s["name"] for s in normalized],
+            "parameters": [p.get("name") for p in params],
+            "scheduled": stored.get("schedule") or None,
+            "awaiting_promotion": stored.get("awaiting_promotion", True),
+        }],
+        # Architecture rule 2 has no exception for writes. What was written,
+        # which version it became, and when.
+        "meta": {
+            "source_table": "george.workflow_versions",
+            "filters_applied": [f"created_by = {stored['created_by']}"],
+            "snapshot_timestamp": stored.get("created_at")
+            or datetime.now(timezone.utc).isoformat(),
+            "row_count": 1,
+            "workflow": stored["name"],
+            "version": stored["version"],
+            "wrote": "workflow",
+            # A saved workflow is not a scheduled one. Surfaced in meta as well
+            # as in the answer, because the difference is the entire gate.
+            "queue": stored.get("queue_name"),
+        },
+    }
+
+
+# The write surface, by name. agent/loop.py merges these into the schema ONLY
+# when the matching writer has been injected, and dispatches them separately
+# from TOOL_FUNCTIONS so that neither the pin runner, a pin's own contents, nor
+# a workflow's steps can ever reach one.
+WRITE_TOOL_FUNCTIONS = {
+    "pin_answer": pin_answer,
+    "save_workflow": save_workflow,
+}
+
+# Which injected capability each write tool needs. The loop reads this to decide
+# what to put in the schema: a session with a pin writer and no workflow writer
+# is offered pin_answer and not save_workflow, rather than being offered a tool
+# that would refuse every call.
+WRITE_TOOL_REQUIRES = {
+    "pin_answer": "writer",
+    "save_workflow": "workflow_writer",
+}

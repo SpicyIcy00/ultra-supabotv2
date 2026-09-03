@@ -5,12 +5,24 @@
 **George** — a chat agent, built inside this repo, that answers business questions
 about **Aji Ichiban**:
 
-- **9 candy stores** in the Philippines
+- **candy stores** in the Philippines
 - **AJI BARN** — warehouse
 - **AJI CMG** — vending machines
 
 George answers questions about all three. Its job is to be trustworthy about
 numbers, not clever about SQL.
+
+**The store list lives in `definitions/metrics.yaml` and nowhere else.** Do not
+write a store count into this file, into a prompt, or into a tool. Read
+`stores.active_retail`, `stores.pending_retail`, `stores.warehouse` and
+`stores.closed`. `agent/loop.py` builds George's opening sentence from them at
+import, so opening a store is a change to the yaml and nothing else.
+
+*Reconciled 2026-09-03:* this file said 9 candy stores, the system prompt said 7,
+and metrics.yaml said 7 active retail plus 2 storefronts with zero transactions
+to date. All three were describing the same estate: **7 trading + 2 not yet
+trading = 9.** Neither of the other two numbers was wrong, and neither said what
+it was counting.
 
 ## Architecture rules (do not deviate)
 
@@ -50,13 +62,50 @@ rather than working around it.
    the web process injects a writer bound to the authenticated user, and it
    calls the same service function `POST /pins` calls, on the application role.
    No writer injected means the write tool is not in the model's schema at all.
-   The next write surface (saved workflows) follows the same pattern — a second
-   writer, not a second role. See [agent/write_tools.py](agent/write_tools.py).
+   *Extended 2026-09-03, saved workflows:* the second write surface followed
+   that pattern exactly — a second writer, not a second role. `save_workflow`
+   holds no credential; the web process injects a writer bound to the
+   authenticated user AND their role, and it calls the same service function
+   `POST /george/workflows` calls. Running a saved workflow is a READ, but it is
+   injected the same way, because the workflows live in a schema `george_ro`
+   cannot see. Capability is now per TOOL, not per session: a caller with a pin
+   writer and no workflow writer is offered `pin_answer` and not `save_workflow`.
+   A **scheduled** run holds no credential either — it makes no model call at
+   all, so there is no tool schema for a write tool to be in. See
+   [agent/write_tools.py](agent/write_tools.py) and
+   [backend/app/services/workflow_scheduler.py](backend/app/services/workflow_scheduler.py).
 
 5. **Keep the agent loop shallow.**
    No planner, no decomposition step, no sub-agents, no multi-stage
    "think then act" scaffolding. Model → tool call → answer. Depth goes into
    the tools, not the loop.
+
+   *Reading of this rule, agreed 2026-09-03:* `run_workflow` is not a planner.
+   The steps were fixed by a person when they saved them, no model is consulted
+   between them, and nothing decides what to do next — it is one tool call that
+   replays several vetted queries, which is what a pinned tile already does. It
+   lives in `agent/composite_tools.py`, in its own registry, so it can be
+   offered to the model while remaining impossible to store inside a pin or
+   inside another workflow's steps.
+
+6. **A workflow composes existing read tools. It does not join them.**
+   Steps do not pass data to each other: no expressions, no conditionals, no
+   loops, and no step consuming another step's rows. The moment two results are
+   combined, the combination is a **definition** — and definitions live in
+   `metrics.yaml` behind vetted SQL, not in a saved workflow. If a workflow
+   wants a fifth step that joins the other four, the answer is a new tool.
+
+   A workflow **parameter** is scope — which store, which window, how many rows.
+   A business threshold is not a parameter.
+
+7. **Nothing runs unattended until it has been backtested and promoted.**
+   A schedule pins a version id, never "whatever is current". An edit makes a
+   new version, which starts ungated; the schedule keeps running the promoted
+   one. Promotion is an administrator's act against a recorded backtest of a
+   window that has closed, enforced in
+   [workflow_writer.py](backend/app/services/workflow_writer.py) and again by a
+   CHECK constraint. George may accept "every Monday at 6" in conversation — the
+   schedule is created switched **off**.
 
 ## Repo context George lives in
 
@@ -87,11 +136,15 @@ its SQL-generation path. Reading it for schema knowledge is fine.
 
 - `/definitions/metrics.yaml` **does not exist yet.** It is the intended home
   for business definitions; create it when the first definition is needed.
+  *Resolved:* it exists and is the single source. See the note at the top of
+  this file about the store list.
 - `business_rules.yaml` lists **6 stores** (Rockwell, Greenhills, Magnolia,
-  North Edsa, Fairview, Opus) and has no AJI BARN or AJI CMG entities. George's
-  9-store + warehouse + vending scope is broader. Don't silently reconcile the
-  two — surface the mismatch and confirm the correct store list before encoding
-  it anywhere.
+  North Edsa, Fairview, Opus) and has no AJI BARN or AJI CMG entities.
+  *Resolved 2026-09-01 in metrics.yaml `stores`, which records why:* those six
+  names no longer match any `stores.name` value, Greenhills had been dropped
+  from the sales scope while kept in inventory, and Shang existed in the data
+  and in no config file. `business_rules.yaml` belongs to the old chatbot and is
+  not George's source for anything.
 
 ## Working style
 
@@ -114,6 +167,15 @@ conversation; do not introduce synonyms.
 A pin re-runs; a save is the rule it re-runs. "Bookmark", "widget", "card",
 "favourite" and "snapshot" are not other names for these — if one of them seems
 needed, the concept is probably wrong.
+
+What a save produces is a **workflow**: named steps, parameters, and the
+reasoning behind each choice, kept as immutable **versions**. A **run** is one
+execution of one version; a **backtest** is a run against a past window. Not
+"recipe", "job", "automation", "template" or "playbook".
+
+A pin is one person's tile. A workflow is the company's rule — it is **org-level**
+(anyone runs, the creator or an admin edits, an admin promotes), because a rule
+that fires every Monday into a group chat should not die with one account.
 
 ### Rules
 
@@ -146,6 +208,12 @@ These are hard constraints, like the architecture rules above.
 5. **One colour means "needs you".** Reserved for approvals. Nothing else may
    use it — not errors, not warnings, not emphasis. Its meaning is destroyed by
    a second use.
+
+   *Named 2026-09-03:* the approval queue's first and only occupant is a
+   **workflow version waiting to be promoted past the backtest gate**
+   (`GET /george/workflows/approvals`, metrics.yaml
+   `workflows.promotion.queue_name`). A failed run is not an approval and must
+   not borrow the colour. Neither is a stale tile, a rotted pin or a notice.
 
 6. **No number displays without a timestamp.** Every figure carries when it was
    read. A number with no time on it is a claim with no expiry.
