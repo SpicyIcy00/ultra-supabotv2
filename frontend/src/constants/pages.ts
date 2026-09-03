@@ -18,18 +18,21 @@ export const PAGES: PageDef[] = [
   { key: 'warehouse', path: '/warehouse', label: 'Warehouse' },
   { key: 'packing', path: '/packing', label: 'Packing' },
   { key: 'settings', path: '/settings', label: 'Settings' },
-  // NO ROUTE EXISTS FOR THIS YET. The import endpoint
-  // (POST /api/v1/storehub-imports/{kind}) is built and the page key is granted
-  // through the admin screen, but no React page renders at this path.
-  //
-  // It is placed LATE deliberately. landingPathFor returns the first page in
-  // this array the user is allowed, so a user who also has any real page lands
-  // there instead. Only someone granted storehub_imports and NOTHING ELSE would
-  // be sent to a route that does not resolve — which is not a grant that makes
-  // sense on its own. Move this up once the page exists.
-  { key: 'storehub_imports', path: '/storehub-imports', label: 'StoreHub Imports' },
   { key: 'admin', path: '/admin/page-access', label: 'Admin' },
 ];
+
+// DELIBERATELY ABSENT: 'storehub_imports'.
+//
+// This array maps a page_key to a ROUTE, and no React route renders at
+// /storehub-imports — only the API endpoint exists
+// (POST /api/v1/storehub-imports/{kind}). An entry here would give
+// landingPathFor and pathForPage a path that does not resolve.
+//
+// The page_key itself still exists in PAGE_KEYS (backend
+// app/models/role_page_access.py) and is granted in role_page_access, because
+// require_page("storehub_imports") reads that table directly and never consults
+// this file. The endpoint stays reachable; it is simply not somewhere a person
+// can click to. Add the entry when the page is built.
 
 export const pathForPage = (key: string): string =>
   PAGES.find((p) => p.key === key)?.path ?? '/';
