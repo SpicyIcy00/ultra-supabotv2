@@ -220,6 +220,17 @@ export function useGeorgeStream() {
                 });
                 break;
 
+              case 'answer_reset':
+                // George is about to write the answer again — because a caveat
+                // was missing, a pin was claimed but not made, or the tool
+                // budget ran out. Deltas accumulate into one turn, so without
+                // this the rewrite lands UNDER the draft it replaces and the
+                // whole answer reads twice.
+                patchLast((t) => {
+                  t.text = '';
+                });
+                break;
+
               case 'pinned':
                 patchLast((t) => {
                   t.pinned.push(data as unknown as PinnedFrame);

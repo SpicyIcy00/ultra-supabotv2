@@ -195,6 +195,8 @@ async def ask(
         notice       {kind, message}   — a caveat the answer must carry
         pinned       {pin_id, title, page, pins_on_page, tool_calls}
         text         answer deltas
+        answer_reset {reason} — discard the deltas so far; the answer is being
+                     rewritten. A client that ignores this shows the answer twice.
         warning      {reason}          — unsurfaced_notice | notice_forced | logging_failed
         error        {message}
         done         {conversation_id, iterations, tool_calls, status, usage}

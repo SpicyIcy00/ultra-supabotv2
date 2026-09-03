@@ -47,7 +47,8 @@ def _needs_database(item) -> bool:
     pure = ("test_storehub_parser", "test_storehub_import_contract",
             "test_storehub_tools_contract", "test_pins_contract",
             "test_pin_answer_contract", "test_config_contract",
-            "test_loop_correction_contract", "test_brief_render")
+            "test_loop_correction_contract", "test_notice_fingerprints",
+            "test_brief_render")
     return not any(name in item.nodeid for name in pure)
 
 

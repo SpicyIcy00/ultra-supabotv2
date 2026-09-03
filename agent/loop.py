@@ -495,8 +495,13 @@ def _unsurfaced(pending: list[dict], answer: str, defs: dict) -> list[dict]:
         if not isinstance(spec, dict) or "must_convey" not in spec:
             missing.append(n)
             continue
+        # isinstance, because YAML turns a bare `no`, `null` or `on` into a
+        # bool/None and .lower() on one of those took the entire answer down with
+        # an AttributeError (found 2026-09-03 in sku_not_found). Skipping a
+        # malformed alternative errs toward reporting the notice, which is the
+        # safe direction; test_notice_fingerprints is what keeps the yaml honest.
         if not all(
-            any(alt.lower() in low for alt in group)
+            any(isinstance(alt, str) and alt.lower() in low for alt in group)
             for group in spec["must_convey"]
         ):
             missing.append(n)
@@ -639,6 +644,25 @@ class ConversationLog:
 
 def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(_json_safe(data))}\n\n"
+
+
+# --------------------------------------------------------------------------
+# Rewrites replace; they do not accumulate
+#
+# Three paths ask the model to write the answer AGAIN — an unsurfaced notice, a
+# pin claimed but never made, and the convergence cap. Each says "rewrite the
+# full answer", and the model does. But `text` deltas had already streamed, and
+# the client appends deltas to one turn, so the rewrite landed UNDER the draft
+# it replaced: the morning brief arrived twice in a single answer, 2.5k
+# characters followed by 4.2k saying the same things.
+#
+# So a rewrite is announced. The client drops what it has for this turn and
+# starts again, and `answer` is reset here so the notice check and the
+# conversation log see the answer that was actually given rather than both.
+# --------------------------------------------------------------------------
+
+def _reset_answer(reason: str) -> str:
+    return _sse("answer_reset", {"reason": reason})
 
 
 # --------------------------------------------------------------------------
@@ -865,6 +889,8 @@ async def run(
                     pin_corrections += 1
                     log.gap(f"pin_{claim}_not_made", answer[:2000])
                     yield _sse("warning", {"reason": f"pin_{claim}_not_made"})
+                    yield _reset_answer(f"pin_{claim}_not_made")
+                    answer = ""
                     messages.append({
                         "role": "user",
                         "content": (
@@ -906,6 +932,8 @@ async def run(
                         ),
                     })
                     yield _sse("warning", {"reason": "unsurfaced_notice", "kinds": names})
+                    yield _reset_answer("unsurfaced_notice")
+                    answer = ""
                     continue
 
                 if missing:
@@ -941,6 +969,10 @@ async def run(
                     "limit": MAX_TOOL_CALLS,
                     "attempted": attempted,
                 })
+                # Whatever prose preceded the cap was a draft written mid-search;
+                # the answer that replaces it is the one to keep.
+                yield _reset_answer("convergence_cap")
+                answer = ""
                 messages.append({
                     "role": "user",
                     "content": (

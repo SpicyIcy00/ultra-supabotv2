@@ -2525,7 +2525,11 @@ notices:
   sku_not_found:
     must_convey:
       - [sku, product]
-      - [no, not exist, unknown, not found]
+      # "no" MUST stay quoted. Unquoted, YAML reads it as the boolean false, and
+      # _unsurfaced then calls .lower() on it and takes the whole answer down
+      # with an AttributeError — verified 2026-09-03, this exact line. Same for
+      # yes/on/off/null/~ anywhere in a fingerprint.
+      - ["no", not exist, unknown, not found]
   ambiguous_sku:
     must_convey:
       - [different products, three products, more than one product, several products, multiple products]
@@ -2557,7 +2561,7 @@ notices:
   no_recorded_dispatch:
     must_convey:
       - [dispatch, record, movement]
-      - [no, none, not explain, unrecorded, does not exist]
+      - ["no", none, not explain, unrecorded, does not exist]
 
   # A closed location asked about in the present tense. The answer must say the
   # place is shut rather than report nothing and let it read as "no stock".
@@ -2565,6 +2569,76 @@ notices:
     must_convey:
       - [closed, shut, no longer, ceased]
       - [location, warehouse, store, macopa]
+  # The other half of the same notice — movement.py picks between the two with
+  # `"location_closed" if closed else "no_snapshot_coverage"`, and only the
+  # closed case had ever been fingerprinted. A location merely outside the
+  # snapshot scope produced a caveat no answer could satisfy.
+  no_snapshot_coverage:
+    must_convey:
+      - [snapshot, balance history, inventory scope]
+      - [not in, "no ", outside, cannot, unavailable, does not exist]
+
+  # ---------------------------------------------------------------------------
+  # Added 2026-09-03. These twelve kinds were EMITTED BY TOOLS WITH NO FINGERPRINT
+  # HERE, and _unsurfaced treats an unknown kind as unsurfaced by design ("safer
+  # to over-report"). That default is right for a kind nobody has thought about,
+  # but it made these twelve UNSATISFIABLE: no wording could ever clear them, so
+  # every answer carrying one spent a corrective turn rewriting itself and then
+  # had the notice appended verbatim anyway — beneath prose that had just said
+  # the same thing.
+  #
+  # The morning brief showed it worst, emitting several at once: the answer was
+  # written twice and then caveated with what it already said. See the contract
+  # test that now fails if a tool adds a notice kind without a fingerprint.
+  # ---------------------------------------------------------------------------
+  stale_sources:
+    must_convey:
+      - [too old, stale, out of date, not fresh, frozen, days old]
+      - [source, sources, transfer, purchase order, vending, covers nothing]
+  empty_section:
+    must_convey:
+      - [nothing to report, nothing crossed, no items, none, quiet, empty,
+         nothing changed, nothing to flag]
+  cost_not_entered:
+    must_convey:
+      - [zero, never entered, not entered, blank]
+      - [cost, price]
+  dead_stock_share:
+    must_convey:
+      - [window, longer window, shorter window, no sale, not sold]
+  two_bases_not_summed:
+    must_convey:
+      - [transfer, document, snapshot]
+      - [not added, never added, not summed, double-count, separate, must not]
+  unmoved_transfer_value:
+    must_convey:
+      - [not moved, never moved, has not moved, raised, not yet shipped, unmoved]
+      - [excluded, exclude, separate, document, not a movement]
+  open_is_not_unreceived:
+    must_convey:
+      - ["open"]
+      - [not mean, does not mean, not outstanding, arrived, delivered,
+         never marked complete]
+  header_total_mismatch:
+    must_convey:
+      - [line, lines, itemised, itemized]
+      - [header, document total, disagree, mismatch, not used]
+  quantity_not_additive:
+    must_convey:
+      - [not additive, differ, gram, pack, unit]
+      - [quantity, quantities, total]
+  received_quantity_coverage:
+    must_convey:
+      - [blank, "null", no received, missing, sparse, not recorded]
+      - [received, coverage, only the lines]
+  completion_not_delivery:
+    must_convey:
+      - [completion, marked complete, system]
+      - [not delivery, not lead time, not the time the goods, not answerable]
+  bases_not_comparable:
+    must_convey:
+      - [transfer valuation, valuation, internal transfer]
+      - [different, separate, do not compare, not comparable, not a price]
 
   # Notices whose kind is "multiple" carry an `items` list; the loop checks each
   # item's own kind against the fingerprints above rather than the container.
