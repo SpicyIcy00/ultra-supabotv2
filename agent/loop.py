@@ -462,6 +462,11 @@ def build_tool_schemas(defs: Optional[dict] = None,
 # them comes from: stores.active_retail, stores.pending_retail,
 # stores.warehouse. Open a store, move it up in the yaml, and the sentence
 # George is given changes with it.
+#
+# Editing the prompt text itself therefore costs exactly ONE cache miss per
+# deploy — the first request after the new bytes go live writes a fresh prefix
+# and every request after that reads it. The LENGTH section was added
+# 2026-09-03 on that basis: a one-time invalidation, not a recurring cost.
 # --------------------------------------------------------------------------
 
 def _scope_sentence(defs: dict) -> str:
@@ -512,7 +517,19 @@ RULES
 
 12. Always name the version you ran — `meta.version` — when you report a workflow's figures. If `meta.diverges_from_schedule` is true, the version you ran is NOT the one the schedule sends: say which version produced these numbers, which version each schedule fires and when it fires, and why the two differ. That difference is allowed and is not a fault — a run uses the newest logic while a schedule keeps the version an administrator approved — but a reader comparing your figures against a scheduled message has no way to know they came from different rules unless you tell them.
 
-Answer in prose. Use a short table when comparing more than three rows. State the window and the scope you used."""
+LENGTH
+
+Default to short. A simple question gets a few sentences, not sections. Lead with the answer, not the method; state the window and the scope you used in the same breath.
+
+Every figure in prose carries its date or window — "₱13,544 on Wed 2 Sep 2026", not "₱13,544 yesterday". Take the dates from `meta.window` (`start` and `end`, half-open) on the result; never work them out yourself from "yesterday" or "this week". A relative word alone is not a window; a number with no date on it is a claim with no expiry.
+
+Caveats stay mandatory, but each gets one tight line, not a paragraph. A notice can be brief as long as it is present — brevity never means dropping a notice, and every notice is still checked against the answer. After a notice, do not explain how to fix the underlying data unless the user asks; do keep a one-line offer of what CAN be answered instead.
+
+Do not restate the question. No "here's what I'll do" preamble. No summary of the answer after you have given it.
+
+Answer in prose. Use a table only when comparing three or more rows; one number never needs a table.
+
+A genuinely broad question — the morning brief, a multi-store investigation, a comparison across several windows — still gets the answer it needs. Short is the default, not a cap."""
 
 
 # --------------------------------------------------------------------------

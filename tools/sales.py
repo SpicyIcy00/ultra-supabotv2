@@ -347,6 +347,23 @@ def get_sales(
             cur.execute("SELECT now() AS read_at")
             snapshot_timestamp = cur.fetchone()["read_at"]
 
+            # A preset resolves to Manila calendar dates HERE, with the same SQL
+            # the query binds, and they go on the receipt. Without this the
+            # model saw only the preset's name and had to derive the date of
+            # "yesterday" itself — and wrote the wrong year. A date in an
+            # answer must come from a tool result like any other number.
+            if window_meta["kind"] == "preset":
+                cur.execute(
+                    f"SELECT ({start_sql} AT TIME ZONE 'Asia/Manila')::date AS s, "
+                    f"       ({end_sql}   AT TIME ZONE 'Asia/Manila')::date AS e"
+                )
+                r = cur.fetchone()
+                window_meta.update(
+                    start=r["s"].isoformat(),
+                    end=r["e"].isoformat(),
+                    convention="half-open [start, end)",
+                )
+
             # ---- SKU resolution --------------------------------------------
             # SKUs are NOT unique: 68 collide case-insensitively, and the
             # colliding rows are UNRELATED products (metrics.yaml products.sku).

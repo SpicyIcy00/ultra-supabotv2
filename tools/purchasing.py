@@ -336,6 +336,21 @@ def get_purchasing(
             cur.execute("SELECT now() AS read_at")
             snapshot_timestamp = cur.fetchone()["read_at"]
 
+            # Presets resolve to Manila dates on the receipt — see tools/sales.py
+            # for why: a date the model has to derive is a date it can get wrong.
+            if window_meta["kind"] == "preset":
+                p = _req(defs, f"sales_day.presets.{preset}")
+                cur.execute(
+                    f"SELECT ({p['start']} AT TIME ZONE 'Asia/Manila')::date AS s, "
+                    f"       ({p['end']}   AT TIME ZONE 'Asia/Manila')::date AS e"
+                )
+                r = cur.fetchone()
+                window_meta.update(
+                    start=r["s"].isoformat(),
+                    end=r["e"].isoformat(),
+                    convention="half-open [start, end)",
+                )
+
             cur.execute(sql, params)
             raw = [dict(r) for r in cur.fetchall()]
 
