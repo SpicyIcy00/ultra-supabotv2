@@ -64,6 +64,23 @@ export interface ToolCall {
   };
 }
 
+/**
+ * A pin George created because the user asked him to, in conversation.
+ *
+ * The answer also says what was pinned and where, but a write that happened is
+ * a fact rather than a matter of wording — this frame is what the UI confirms
+ * from, so the confirmation cannot go missing because the model phrased it
+ * differently.
+ */
+export interface PinnedFrame {
+  pin_id: string;
+  title: string;
+  page: string | null;
+  /** Pins on that page, this one included. */
+  pins_on_page: number;
+  tool_calls: { tool: string; arguments: Record<string, unknown> }[];
+}
+
 export type GeorgeTurn =
   | { role: 'user'; text: string; at: string }
   | {
@@ -72,6 +89,8 @@ export type GeorgeTurn =
       thinking: string;
       toolCalls: ToolCall[];
       notices: GeorgeNotice[];
+      /** Pins created during this turn, in the order they were made. */
+      pinned: PinnedFrame[];
       /** meta of the last tool result — the receipts shown under the answer. */
       receipts?: ToolMeta;
       done?: DoneFrame;

@@ -42,6 +42,17 @@ rather than working around it.
    No writes, no DDL, no temp tables. If something appears to need a write,
    it belongs outside George.
 
+   *Reading of this rule, agreed 2026-09-03:* George can pin his own answer when
+   asked in conversation, and a pin is a write — but it is a write that happens
+   **outside** George, exactly as this rule requires. `george_ro` gains nothing;
+   `george_log` keeps INSERT-without-SELECT on `george.*` and nothing else. The
+   agent loop opens no connection for the write and holds no credential for it:
+   the web process injects a writer bound to the authenticated user, and it
+   calls the same service function `POST /pins` calls, on the application role.
+   No writer injected means the write tool is not in the model's schema at all.
+   The next write surface (saved workflows) follows the same pattern — a second
+   writer, not a second role. See [agent/write_tools.py](agent/write_tools.py).
+
 5. **Keep the agent loop shallow.**
    No planner, no decomposition step, no sub-agents, no multi-stage
    "think then act" scaffolding. Model → tool call → answer. Depth goes into

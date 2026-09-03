@@ -9,12 +9,14 @@
  */
 import { useCallback, useRef, useState } from 'react';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../stores/authStore';
 import type {
   DoneFrame,
   GeorgeNotice,
   GeorgeState,
   GeorgeTurn,
+  PinnedFrame,
   ToolCall,
   ToolMeta,
 } from '../types/george';
@@ -41,6 +43,7 @@ export function useGeorgeStream() {
   const [state, setState] = useState<GeorgeState>('idle');
   const abortRef = useRef<AbortController | null>(null);
   const token = useAuthStore((s) => s.token);
+  const qc = useQueryClient();
 
   /** Mutate the in-flight george turn (always the last one). */
   const patchLast = useCallback((fn: (t: Extract<GeorgeTurn, { role: 'george' }>) => void) => {
@@ -48,7 +51,12 @@ export function useGeorgeStream() {
       const next = [...prev];
       const last = next[next.length - 1];
       if (last?.role !== 'george') return prev;
-      const copy = { ...last, toolCalls: [...last.toolCalls], notices: [...last.notices] };
+      const copy = {
+        ...last,
+        toolCalls: [...last.toolCalls],
+        notices: [...last.notices],
+        pinned: [...last.pinned],
+      };
       fn(copy);
       next[next.length - 1] = copy;
       return next;
@@ -72,7 +80,15 @@ export function useGeorgeStream() {
       setTurns((prev) => [
         ...prev,
         { role: 'user', text: question, at: now },
-        { role: 'george', text: '', thinking: '', toolCalls: [], notices: [], at: now },
+        {
+          role: 'george',
+          text: '',
+          thinking: '',
+          toolCalls: [],
+          notices: [],
+          pinned: [],
+          at: now,
+        },
       ]);
       setState('listening');
 
@@ -83,7 +99,11 @@ export function useGeorgeStream() {
             'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
-          body: JSON.stringify({ question, user_id: pageContext ?? null }),
+          // page_context, not user_id: who is asking comes from the bearer
+          // token on the server. Sending the page in the user_id field (as this
+          // did) meant the conversation log recorded "replenishment" as the
+          // person who asked.
+          body: JSON.stringify({ question, page_context: pageContext ?? null }),
           signal: ctrl.signal,
           openWhenHidden: true,
 
@@ -154,6 +174,17 @@ export function useGeorgeStream() {
                 });
                 break;
 
+              case 'pinned':
+                patchLast((t) => {
+                  t.pinned.push(data as unknown as PinnedFrame);
+                });
+                // A pin made in conversation has to appear in the rails and on
+                // its page without a reload — the same invalidation the Pin
+                // button does on success.
+                qc.invalidateQueries({ queryKey: ['pin-pages'] });
+                qc.invalidateQueries({ queryKey: ['pins'] });
+                break;
+
               case 'receipts':
                 patchLast((t) => {
                   t.receipts = data as ToolMeta;
@@ -206,10 +237,10 @@ export function useGeorgeStream() {
         setState((s) => (s === 'error' ? s : 'idle'));
       }
     },
-    [patchLast, token],
+    [patchLast, qc, token],
   );
 
   return { turns, state, ask, cancel, busy: state !== 'idle' && state !== 'error' };
 }
 
-export type { GeorgeNotice, ToolCall, ToolMeta };
+export type { GeorgeNotice, PinnedFrame, ToolCall, ToolMeta };

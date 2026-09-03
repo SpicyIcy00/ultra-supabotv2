@@ -14,11 +14,27 @@ WHAT THIS FILE OWNS
     from any tool result is still unsurfaced.
   - SSE events for the frontend.
   - Conversation and gap logging through a SEPARATE insert-only role.
+  - The record of which calls actually RAN, which is what a write tool may pin.
 
 TWO DATABASE IDENTITIES, DELIBERATELY
   george_ro  (GEORGE_DATABASE_URL)     read-only, SELECT on business tables
   george_log (GEORGE_LOG_DATABASE_URL) INSERT-only, george.* schema, no SELECT
 Neither can do the other's job. See agent/sql/george_log_role.sql.
+
+AND A WRITE SURFACE THAT IS NOT A THIRD CONNECTION
+George can pin his own answer when asked (`pin_answer`). That is a write, and
+neither role above can perform it: george_ro is read-only, and george_log has
+INSERT without SELECT, so it could not read the pin count or the page list the
+write needs. Granting either of them more would hand one identity both the
+business data and a write.
+
+Instead the caller INJECTS a writer — see run(pin_writer=...). This file opens
+no connection for it, holds no credential for it, and never learns who the user
+is; the web process builds the writer around the authenticated user and the
+application role, and the write goes through the same service function POST
+/pins uses. No writer injected means no write tool in the schema at all, so the
+capability is carried by the injection rather than by a flag. Details and the
+rules the next write tool must preserve: agent/write_tools.py.
 """
 
 from __future__ import annotations
@@ -36,6 +52,8 @@ from typing import Any, AsyncIterator, Callable, Optional
 
 import anthropic
 
+from agent import write_tools
+from agent.write_tools import WriteContext, call_key
 from tools import (
     brief,
     cost_history,
@@ -95,7 +113,13 @@ MAX_ROWS_TO_MODEL = 200
 # what would express it, not another slice of the same table.
 MAX_TOOL_CALLS = 12
 
-# The callable surfaces George has.
+# The READ surface: the tools that produce figures.
+#
+# This dict is load-bearing beyond dispatch. pin_runner.validate_call treats it
+# as the set of calls a pin may CONTAIN, so a write tool must never be added
+# here — that would let a pin contain a pin, and let the pin runner write. The
+# write surface lives in agent/write_tools.py and is merged in only for schema
+# generation, only when a writer has been injected.
 TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
     "get_sales": sales.get_sales,
     "get_stock": inventory.get_stock,
@@ -219,6 +243,21 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
             },
         ]}
 
+    if pname == "tool_calls":
+        # The calls a pin will hold. `tool` is enumerated from the READ surface,
+        # so the schema itself cannot express a pin containing a write tool.
+        return {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "tool": {"type": "string", "enum": sorted(TOOL_FUNCTIONS)},
+                    "arguments": {"type": "object"},
+                },
+                "required": ["tool", "arguments"],
+            },
+        }
+
     if pname == "filters":
         return {
             "type": "object",
@@ -254,12 +293,20 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
     return {"type": "string"}
 
 
-def build_tool_schemas(defs: Optional[dict] = None) -> list[dict]:
+def build_tool_schemas(defs: Optional[dict] = None,
+                       include_write: bool = False) -> list[dict]:
     """
     Generate Anthropic tool definitions from the real signatures in tools/.
 
     Deterministic order (sorted) because tools render first in the cached
-    prefix — a reordered tool list silently invalidates the whole cache.
+    prefix — a reordered tool list silently invalidates the whole cache. The
+    write tools sort AFTER every read tool ("pin_answer" > "get_..."), so a
+    session with a writer and one without share a byte-identical prefix up to
+    the last block; only the tail differs.
+
+    include_write is False by default, and that default is doing real work:
+    pin_runner calls this to decide whether a STORED call is still valid, and a
+    pin must never be able to contain a write.
 
     `strict` is deliberately NOT set: two parameters need `oneOf`, which the
     strict-mode schema subset does not accept. The tools validate their own
@@ -270,13 +317,22 @@ def build_tool_schemas(defs: Optional[dict] = None) -> list[dict]:
     enums = _enum_sources(defs)
     schemas = []
 
-    for name in sorted(TOOL_FUNCTIONS):
-        fn = TOOL_FUNCTIONS[name]
+    surface: dict[str, Callable[..., Any]] = dict(TOOL_FUNCTIONS)
+    if include_write:
+        surface.update(write_tools.WRITE_TOOL_FUNCTIONS)
+
+    for name in sorted(surface):
+        fn = surface[name]
         summary, argdocs = _parse_docstring(fn)
         sig = inspect.signature(fn)
 
         props, required = {}, []
         for pname, param in sig.parameters.items():
+            # Keyword-only parameters belong to the loop, not to the model: they
+            # carry the injected writer and the record of what has actually run.
+            # No read tool has one.
+            if param.kind is inspect.Parameter.KEYWORD_ONLY:
+                continue
             schema = _param_schema(name, pname, param.annotation, enums)
             if pname in argdocs:
                 schema["description"] = argdocs[pname]
@@ -318,7 +374,9 @@ RULES
 
 6. Prefer ONE ranked or grouped query to many. For "top N", "worst N", "biggest" or "most" questions, pass `top_n` and read `meta.full_row_count` for the size of the whole set — do not fetch everything and sort it yourself. For a figure per store, per category or per state, pass `group_by` — do not call the same tool once per store. Calling a tool repeatedly with only one argument changed means you are enumerating something a single call could group; stop and make that call instead. If no grouping or ranking expresses the question, say so rather than working around it with volume.
 
-6. Money is Philippine pesos (₱). Vending data is a separate domain from store data and the two must never be added together.
+7. Money is Philippine pesos (₱). Vending data is a separate domain from store data and the two must never be added together.
+
+8. When `pin_answer` is available and the user asks you to pin something, pin it — do not ask them to confirm. A pin stores the tool calls behind an answer and re-runs them, so the tile stays current. You may only pin calls you have actually run in this conversation: if the user asks for a variant ("pin that but daily", "just Rockwell"), run the adjusted call FIRST, read its result, and pin that call — never pin a call you have not run. Afterwards, say plainly what you pinned and which page it went to, naming the page or saying it is ungrouped, and that it re-runs. If pinning is refused, tell the user why in their words.
 
 Answer in prose. Use a short table when comparing more than three rows. State the window and the scope you used."""
 
@@ -388,6 +446,30 @@ async def _call_tool(name: str, args: dict) -> tuple[dict, Optional[str], int]:
     except (ValueError, KeyError, RuntimeError) as exc:
         # A refusal is a real answer — the tool declining to mislead. It goes
         # back to the model as an error result, never swallowed.
+        return ({"rows": [], "meta": {"error": str(exc)}}, str(exc),
+                int((time.perf_counter() - started) * 1000))
+
+
+async def _call_write_tool(name: str, args: dict,
+                           ctx: WriteContext) -> tuple[dict, Optional[str], int]:
+    """
+    Run a write tool. Same (payload, error, duration) contract as _call_tool.
+
+    Awaited rather than threaded, because the writer it calls is async all the
+    way down to the application's own database session — and never gathered with
+    the read calls, because a write in the same batch has to see what those
+    reads did (see the ordering in run()).
+
+    The same exception set is caught for the same reason: PinRefused is a
+    ValueError, so a pin the loop declines to create reaches the model as a real
+    answer with a route out, exactly like a tool refusing to mislead.
+    """
+    fn = write_tools.WRITE_TOOL_FUNCTIONS[name]
+    started = time.perf_counter()
+    try:
+        result = await fn(**args, ctx=ctx)
+        return result, None, int((time.perf_counter() - started) * 1000)
+    except (ValueError, KeyError, RuntimeError) as exc:
         return ({"rows": [], "meta": {"error": str(exc)}}, str(exc),
                 int((time.perf_counter() - started) * 1000))
 
@@ -522,21 +604,51 @@ def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(_json_safe(data))}\n\n"
 
 
-async def run(question: str, user_id: Optional[str] = None) -> AsyncIterator[str]:
+async def run(
+    question: str,
+    user_id: Optional[str] = None,
+    page_context: Optional[str] = None,
+    pin_writer: Optional[write_tools.PinWriter] = None,
+) -> AsyncIterator[str]:
     """
     Answer one question, streaming SSE frames.
 
     Yields `event: <type>` frames — tool_call, tool_result, thinking, text,
-    notice, warning, done, error. Tool results stream as SUMMARIES; raw rows
-    never cross the wire.
+    notice, pinned, warning, done, error. Tool results stream as SUMMARIES; raw
+    rows never cross the wire.
+
+    Args:
+        question: what the user asked.
+        user_id: who asked, for the conversation log. The caller takes this from
+            a verified identity; nothing here or in the model can set it.
+        page_context: the page the user is on. George is available on every page
+            and receives that page as context (CLAUDE.md, UI rule 1), so it is
+            given to the model as context on the question — NOT in the system
+            prompt, which must stay byte-stable for the cache.
+        pin_writer: if supplied, George can pin his own answers. This is the ONLY
+            way a write reaches the loop; without it the write tool is not in the
+            schema at all. See agent/write_tools.py.
     """
     defs = _load_defs()
-    tools_schema = build_tool_schemas(defs)
+    tools_schema = build_tool_schemas(defs, include_write=pin_writer is not None)
     log = ConversationLog()
     asked_at = datetime.now(timezone.utc)
 
+    # What the write tools are allowed to act on: the injected writer, the
+    # question as asked, and (filled below, as calls run) the record of what has
+    # actually executed. The model contributes nothing to this object.
+    write_ctx = WriteContext(
+        writer=pin_writer,
+        question=question,
+        conversation_id=log.conversation_id,
+    )
+
     client = anthropic.AsyncAnthropic()
-    messages: list[dict] = [{"role": "user", "content": question}]
+    opening = (
+        f"[The user is on the {page_context} page.]\n\n{question}"
+        if page_context else question
+    )
+    messages: list[dict] = [{"role": "user", "content": opening}]
     pending: list[dict] = []
     seq = 0
     called_tools: list[str] = []
@@ -711,12 +823,40 @@ async def run(question: str, user_id: Optional[str] = None) -> AsyncIterator[str
                 yield _sse("tool_call", {"seq": seq, "tool": b.name, "arguments": b.input})
                 seq += 1
 
-            results = await asyncio.gather(*[
-                _call_tool(b.name, dict(b.input)) for _, b in batch
-            ])
+            # Reads run together; writes run after them, in order.
+            #
+            # A write may only pin calls that have RUN, so it has to see the
+            # results of anything read in the same batch — otherwise a model that
+            # re-ran a variant and pinned it in one turn would be refused for a
+            # call it just made. Reads are the complement of the write set rather
+            # than `name in TOOL_FUNCTIONS`, so a name in neither still reaches
+            # _call_tool and fails there: a tool_use with no tool_result would
+            # break the next request outright.
+            writes = [(g, b) for g, b in batch
+                      if b.name in write_tools.WRITE_TOOL_FUNCTIONS]
+            reads = [(g, b) for g, b in batch
+                     if b.name not in write_tools.WRITE_TOOL_FUNCTIONS]
+
+            done_calls = list(zip(reads, await asyncio.gather(*[
+                _call_tool(b.name, dict(b.input)) for _, b in reads
+            ])))
+
+            # The provenance record. A call that refused is deliberately absent:
+            # a pin of a call that has never once succeeded is a tile born broken.
+            for (_, b), (_, err, _ms) in done_calls:
+                if err is None:
+                    args = dict(b.input)
+                    write_ctx.executed[call_key(b.name, args)] = {
+                        "tool": b.name, "arguments": args,
+                    }
+
+            for gseq, b in writes:
+                done_calls.append(
+                    ((gseq, b), await _call_write_tool(b.name, dict(b.input), write_ctx))
+                )
 
             tool_results = []
-            for (gseq, b), (result, err, ms) in zip(batch, results):
+            for (gseq, b), (result, err, ms) in done_calls:
                 capped = _truncate(result)
                 meta = capped.get("meta") or {}
                 found = _notices_from(capped)
@@ -725,8 +865,12 @@ async def run(question: str, user_id: Optional[str] = None) -> AsyncIterator[str
                 # Keep the last meta that describes real data. A refusal's meta
                 # is {"error": ...} and carries no source_table, no filters and
                 # no snapshot_timestamp — rendering that as receipts would be
-                # worse than rendering none.
-                if not err and meta.get("source_table"):
+                # worse than rendering none. A write's meta is excluded too: it
+                # is real, but it describes the pin, and showing it as the
+                # answer's receipts would replace the figures' provenance with
+                # the pin's.
+                if (not err and meta.get("source_table")
+                        and b.name not in write_tools.WRITE_TOOL_FUNCTIONS):
                     last_meta = meta
 
                 log.tool_call(gseq, b.name, dict(b.input), capped, ms, err)
@@ -745,6 +889,23 @@ async def run(question: str, user_id: Optional[str] = None) -> AsyncIterator[str
                     "duration_ms": ms,
                     "error": err,
                 })
+                # A pin that now exists, announced as its own frame.
+                #
+                # The answer is also told to say what it pinned and where, but a
+                # write that happened is a fact, not a matter of wording: the
+                # frame lets the UI confirm it and refresh the page list without
+                # depending on the model having phrased it. Same reasoning as
+                # `notice` and `receipts`.
+                if not err and b.name in write_tools.WRITE_TOOL_FUNCTIONS:
+                    row = (capped.get("rows") or [{}])[0]
+                    yield _sse("pinned", {
+                        "pin_id": row.get("pin_id"),
+                        "title": row.get("title"),
+                        "page": row.get("page"),
+                        "pins_on_page": row.get("pins_on_page"),
+                        "tool_calls": row.get("tool_calls") or [],
+                    })
+
                 for n in found:
                     yield _sse("notice", {"kind": n.get("kind"), "message": n.get("message")})
 

@@ -11,6 +11,12 @@ SELECT and could never list a pin. This is the same split the StoreHub import
 uses: the app owns the metadata, george_ro still does George's reading. See the
 migration (j4k5l6m7n8o9).
 
+That holds for George pinning his own answer too. The `pin_answer` tool does not
+connect to anything — routes/george.py hands the agent loop a writer bound to
+the authenticated user, and it calls app.services.pin_writer.create_pin, the
+same function this route calls. There is ONE write path, and it is not George's
+to reach on his own.
+
 USER SCOPING IS ENFORCED IN EVERY QUERY. george.pins deliberately has RLS off —
 RLS with no policy is deny-all and returns zero rows with no error, which has
 already bitten this database twice. Every read and delete filters on
@@ -21,7 +27,7 @@ given pin id exists is not information a caller is entitled to.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -33,21 +39,17 @@ from app.core.database import get_db
 from app.core.deps import require_page
 from app.models.app_user import AppUser
 from app.models.george_pin import GeorgePin
-from app.services.pin_runner import (
-    PinValidationError,
-    find_similar_page,
-    normalize_page,
-    run_pin,
-    validate_calls,
+from app.services.pin_runner import PinValidationError, normalize_page, run_pin
+from app.services.pin_writer import (
+    PinQuotaError,
+    SimilarPageError,
+    create_pin as create_pin_row,
 )
 
 router = APIRouter(tags=["george-pins"])
 
 # Pins are George's, so they live behind George's page.
 _pin_user = require_page("george")
-
-MAX_TOOL_CALLS_PER_PIN = 8
-MAX_PINS_PER_USER = 500
 
 
 # ---------------------------------------------------------------------------
@@ -122,17 +124,6 @@ async def _owned(db: AsyncSession, pin_id: uuid.UUID, user: AppUser) -> GeorgePi
     return pin
 
 
-async def _pages_for(db: AsyncSession, username: str) -> list[str]:
-    rows = (
-        await db.execute(
-            select(GeorgePin.page)
-            .where(GeorgePin.created_by == username, GeorgePin.page.isnot(None))
-            .distinct()
-        )
-    ).scalars().all()
-    return [r for r in rows if r]
-
-
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -146,77 +137,50 @@ async def create_pin(
     """
     Pin an answer: store the tool calls behind it so the tile can re-run them.
 
+    Every rule a pin carries lives in app.services.pin_writer.create_pin, not
+    here — George pins his own answers through that same function when asked in
+    conversation, and two implementations would drift. This route's own job is
+    the HTTP shape: which refusal is a 422 and which is a 409.
+
     Every call is validated against the LIVE tool surface before it is stored.
     Storing a pin that cannot run means a tile that breaks later for no visible
     reason, so the failure happens here, while the user is still looking at the
     answer they tried to pin.
     """
-    if len(payload.tool_calls) > MAX_TOOL_CALLS_PER_PIN:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=(
-                f"A pin may hold at most {MAX_TOOL_CALLS_PER_PIN} tool calls; "
-                f"this answer used {len(payload.tool_calls)}. A tile that needs "
-                f"more than that is probably several tiles."
-            ),
-        )
-
-    count = (
-        await db.execute(
-            select(func.count())
-            .select_from(GeorgePin)
-            .where(GeorgePin.created_by == user.username)
-        )
-    ).scalar_one()
-    if count >= MAX_PINS_PER_USER:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"You already have {count} pins, the maximum. Delete some first.",
-        )
-
     try:
-        calls = validate_calls([c.model_dump() for c in payload.tool_calls])
+        created = await create_pin_row(
+            db,
+            username=user.username,
+            tool_calls=[c.model_dump() for c in payload.tool_calls],
+            title=payload.title,
+            question=payload.question,
+            conversation_id=payload.conversation_id,
+            page=payload.page,
+            allow_similar_page=payload.allow_similar_page,
+        )
     except PinValidationError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
+    except PinQuotaError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+    except SimilarPageError as exc:
+        # 409, not a silent merge and not a silent fork. Two pages differing
+        # only by case is almost always a typo, but deciding that FOR the user
+        # would be a guess — so the collision is reported and they choose. Same
+        # rule as the store alias map: exact match or ask.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "message": str(exc),
+                "existing_page": exc.existing_page,
+                "submitted_page": exc.submitted_page,
+            },
+        ) from exc
 
-    page = normalize_page(payload.page)
-    if page and not payload.allow_similar_page:
-        similar = find_similar_page(page, await _pages_for(db, user.username))
-        if similar:
-            # 409, not a silent merge and not a silent fork. Two pages differing
-            # only by case is almost always a typo, but deciding that FOR the
-            # user would be a guess — so the collision is reported and they
-            # choose. Same rule as the store alias map: exact match or ask.
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail={
-                    "message": (
-                        f"You already have a page called {similar!r}. You sent "
-                        f"{page!r}, which differs only by capitalisation. Reuse "
-                        f"the existing name, or resend with "
-                        f"allow_similar_page=true to keep both."
-                    ),
-                    "existing_page": similar,
-                    "submitted_page": page,
-                },
-            )
-
-    title = (payload.title or payload.question or calls[0]["tool"]).strip()[:200]
-    pin = GeorgePin(
-        id=uuid.uuid4(),
-        created_by=user.username,
-        created_at=datetime.now(timezone.utc),
-        title=title,
-        question=payload.question,
-        conversation_id=payload.conversation_id,
-        page=page,
-        tool_calls=calls,
-    )
-    db.add(pin)
-    await db.flush()
-    return PinOut.model_validate(pin)
+    return PinOut.model_validate(created.row)
 
 
 @router.get("", response_model=List[PinOut])

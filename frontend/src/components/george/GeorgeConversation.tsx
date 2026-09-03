@@ -11,8 +11,8 @@
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ChevronRight } from 'lucide-react';
-import type { GeorgeTurn } from '../../types/george';
+import { ChevronRight, Pin as PinIcon } from 'lucide-react';
+import type { GeorgeTurn, PinnedFrame } from '../../types/george';
 import { NoticeBanner } from './NoticeBanner';
 import { ReceiptsBlock } from './ReceiptsBlock';
 import { ToolCallRow } from './ToolCallRow';
@@ -63,6 +63,10 @@ export function GeorgeConversation({ turns }: { turns: GeorgeTurn[] }) {
               </p>
             )}
 
+            {turn.pinned.map((p) => (
+              <PinnedNote key={p.pin_id} pin={p} />
+            ))}
+
             <ReceiptsBlock meta={turn.receipts} />
 
             {turn.done && (
@@ -91,6 +95,36 @@ export function GeorgeConversation({ turns }: { turns: GeorgeTurn[] }) {
       )}
       <div ref={endRef} />
     </div>
+  );
+}
+
+/**
+ * A pin George made because he was asked to, in conversation.
+ *
+ * The answer says the same thing in prose; this says it from the `pinned`
+ * frame, so the confirmation is the write itself rather than the model's
+ * account of it — what was pinned, where it went, and that it re-runs.
+ *
+ * Deliberately quiet chrome. Nothing here may use the approvals colour: one
+ * colour means "needs you" (UI rule 5), and a pin needs nothing.
+ */
+function PinnedNote({ pin }: { pin: PinnedFrame }) {
+  const n = pin.tool_calls.length;
+  return (
+    <p className="flex items-start gap-1.5 rounded-lg border border-george-line bg-george-paper px-3 py-2 text-[12px] leading-relaxed text-george-slate">
+      <PinIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+      <span>
+        Pinned <span className="text-george-navy">“{pin.title}”</span>{' '}
+        {pin.page ? (
+          <>
+            to <span className="text-george-navy">{pin.page}</span>
+          </>
+        ) : (
+          'with no page'
+        )}
+        . The tile re-runs {n === 1 ? 'its call' : `its ${n} calls`} each time it loads.
+      </span>
+    </p>
   );
 }
 
