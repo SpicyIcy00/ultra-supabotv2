@@ -2,7 +2,29 @@
 
 Delivers George's brief to Telegram at 06:00 Manila.
 
-Import `morning-brief.json` into n8n (Workflows → Import from File).
+Two workflow files, same behaviour:
+
+| file | for |
+|---|---|
+| `morning-brief-starter.json` | **n8n Starter** — values inlined, secrets in Credentials |
+| `morning-brief.json` | Pro/self-hosted — reads instance Variables (`$env`) |
+
+Instance Variables are a Pro feature. On Starter, import the `-starter` file: the
+URL and chat id are inlined, and the two secrets live in Credentials, which
+Starter does have. Nothing sensitive is in the workflow JSON either way.
+
+Import via Workflows → ⋯ → Import from File.
+
+## Starter: the two credentials
+
+**Header Auth** — name it `George brief token`:
+- Name: `Authorization`
+- Value: `Bearer <BRIEF_TOKEN>`
+
+Select it in the "Build and send the brief" node (Authentication → Generic
+Credential Type → Header Auth).
+
+**Telegram API** — your bot token. Select it in the "Say that it failed" node.
 
 ## Environment
 
