@@ -37,6 +37,11 @@ CREATE SCHEMA IF NOT EXISTS george;
 
 CREATE TABLE george.conversations (
     id                 uuid PRIMARY KEY,
+    -- The chat this turn belongs to. A chat's first turn IS the thread (its own
+    -- id); later turns carry the id handed back in the `start` frame. Added
+    -- 2026-09-03 (alembic l6m7n8o9p0q1) — before that every request stood
+    -- alone and a six-turn chat was six unrelated rows.
+    thread_id          uuid,
     user_id            text,
     asked_at           timestamptz NOT NULL,
     question           text        NOT NULL,
@@ -46,9 +51,15 @@ CREATE TABLE george.conversations (
     input_tokens       integer,
     output_tokens      integer,
     cache_read_tokens  integer,
+    -- Full notice objects {kind, message, source} since 2026-09-03; rows
+    -- before that hold bare kinds. A reopened answer must carry its caveat
+    -- in words, not as a label (UI rule 4).
     notices            jsonb,
     notice_forced      boolean     NOT NULL DEFAULT false,
     status             text        NOT NULL,
+    -- The last tool meta behind the answer, so a reopened figure still has
+    -- its source, filters and snapshot timestamp (UI rule 6).
+    receipts           jsonb,
     logged_at          timestamptz NOT NULL DEFAULT now()
 );
 
@@ -91,6 +102,8 @@ CREATE TABLE george.gaps (
 CREATE INDEX ON george.tool_calls (conversation_id, seq);
 CREATE INDEX ON george.gaps (kind, at DESC);
 CREATE INDEX ON george.conversations (asked_at DESC);
+CREATE INDEX ix_george_conversations_user_thread ON george.conversations (user_id, thread_id, asked_at);
+CREATE INDEX ix_george_conversations_thread ON george.conversations (thread_id, asked_at);
 
 -- =============================================================================
 -- 2. Grants: INSERT and nothing else.

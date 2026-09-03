@@ -177,12 +177,17 @@ its SQL-generation path. Reading it for schema knowledge is fine.
 
 ### Vocabulary
 
-Three words, three distinct meanings. Use them consistently in code, copy and
+Four words, four distinct meanings. Use them consistently in code, copy and
 conversation; do not introduce synonyms.
 
 - **Pin** — an answer becomes a live tile that re-runs.
 - **Save** — logic becomes a versioned rule.
 - **Page** — a collection of pins.
+- **Chat** — a session: one thread of turns, one person's, reopened and
+  continued from `george.conversations`. A chat is not a page, and
+  **Ungrouped** holds pins with no page — never a conversation. *Added
+  2026-09-04:* until then the left rail listed pages only, so the only durable
+  thing a chat could become was a pin with no page.
 
 A pin re-runs; a save is the rule it re-runs. "Bookmark", "widget", "card",
 "favourite" and "snapshot" are not other names for these — if one of them seems

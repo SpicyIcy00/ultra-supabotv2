@@ -6,11 +6,20 @@
  * gives real event-name framing and, critically, lets us DISABLE auto-retry:
  * a retrying agent loop would silently re-ask the question and bill for it
  * again, so a dropped connection surfaces as an error instead.
+ *
+ * CHATS ARE SESSIONS. The hook holds the id of the chat the turns belong to
+ * (`threadId`): the server hands it back in the `start` frame of the first
+ * question and every later question sends it, so the turns land in one thread
+ * of george.conversations instead of one unrelated row per request. `open`
+ * loads a stored chat into the same `turns` state, so a reopened chat and a
+ * live one are rendered by one component and continued by one `ask`.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../stores/authStore';
+import type { ChatDetail } from '../types/chats';
+import { toGeorgeTurns } from '../types/chats';
 import type {
   AskHistoryTurn,
   DoneFrame,
@@ -51,7 +60,9 @@ class GeorgeStreamError extends Error {}
  *
  * Only calls that came back WITHOUT an error are included. A call that refused
  * produced no result the user ever saw, and pinning it would make a tile out of
- * something nobody read.
+ * something nobody read. The same filter applies to a reopened chat: its
+ * stored calls carry their error field for display, and are excluded here on
+ * the same grounds.
  */
 function toHistory(turns: GeorgeTurn[]): AskHistoryTurn[] {
   return turns.slice(-MAX_HISTORY_TURNS).map((t) =>
@@ -70,6 +81,7 @@ function toHistory(turns: GeorgeTurn[]): AskHistoryTurn[] {
 export function useGeorgeStream() {
   const [turns, setTurns] = useState<GeorgeTurn[]>([]);
   const [state, setState] = useState<GeorgeState>('idle');
+  const [threadId, setThreadId] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const token = useAuthStore((s) => s.token);
   const qc = useQueryClient();
@@ -82,6 +94,13 @@ export function useGeorgeStream() {
   useEffect(() => {
     turnsRef.current = turns;
   }, [turns]);
+
+  // The thread id likewise: read at submit time, set from the `start` frame.
+  const threadRef = useRef<string | null>(null);
+  const setThread = useCallback((id: string | null) => {
+    threadRef.current = id;
+    setThreadId(id);
+  }, []);
 
   /** Mutate the in-flight george turn (always the last one). */
   const patchLast = useCallback((fn: (t: Extract<GeorgeTurn, { role: 'george' }>) => void) => {
@@ -107,6 +126,28 @@ export function useGeorgeStream() {
     setState('idle');
   }, []);
 
+  /** Start a new chat: nothing on screen, no thread to continue. */
+  const reset = useCallback(() => {
+    cancel();
+    setTurns([]);
+    setThread(null);
+  }, [cancel, setThread]);
+
+  /**
+   * Load a stored chat. Its turns take the place of whatever was on screen,
+   * and the next `ask` continues it under its thread id.
+   */
+  const open = useCallback(
+    (chat: ChatDetail) => {
+      cancel();
+      const loaded = toGeorgeTurns(chat.turns);
+      turnsRef.current = loaded;
+      setTurns(loaded);
+      setThread(chat.thread_id);
+    },
+    [cancel, setThread],
+  );
+
   const ask = useCallback(
     async (question: string, pageContext?: string) => {
       if (!question.trim()) return;
@@ -117,6 +158,7 @@ export function useGeorgeStream() {
       // Captured BEFORE this turn is appended, so it is the conversation up to
       // but not including the question being asked.
       const history = toHistory(turnsRef.current);
+      const thread = threadRef.current;
 
       const now = new Date().toISOString();
       setTurns((prev) => [
@@ -149,6 +191,7 @@ export function useGeorgeStream() {
             question,
             page_context: pageContext ?? null,
             history,
+            thread_id: thread,
           }),
           signal: ctrl.signal,
           openWhenHidden: true,
@@ -168,6 +211,14 @@ export function useGeorgeStream() {
             }
 
             switch (ev.event) {
+              case 'start':
+                // The first turn of a new chat names the thread; later turns
+                // echo the one we sent. Either way this is the id to continue.
+                if (typeof data.thread_id === 'string' && data.thread_id) {
+                  setThread(data.thread_id);
+                }
+                break;
+
               case 'thinking':
                 setState('thinking');
                 patchLast((t) => {
@@ -270,6 +321,9 @@ export function useGeorgeStream() {
                   t.done = data as unknown as DoneFrame;
                 });
                 setState('idle');
+                // The turn is logged now, so the chat list can show it — a
+                // new chat appears, an old one moves to the top.
+                qc.invalidateQueries({ queryKey: ['chats'] });
                 break;
             }
           },
@@ -294,10 +348,19 @@ export function useGeorgeStream() {
         setState((s) => (s === 'error' ? s : 'idle'));
       }
     },
-    [patchLast, qc, token],
+    [patchLast, qc, setThread, token],
   );
 
-  return { turns, state, ask, cancel, busy: state !== 'idle' && state !== 'error' };
+  return {
+    turns,
+    state,
+    ask,
+    cancel,
+    busy: state !== 'idle' && state !== 'error',
+    threadId,
+    open,
+    reset,
+  };
 }
 
 export type { GeorgeNotice, PinnedFrame, ToolCall, ToolMeta };

@@ -6,11 +6,16 @@
  * The left rail is collapsed by default on desktop, so the resting state is
  * app-sidebar + centre + attention rail rather than four columns of chrome.
  *
+ * The centre shows either a CHAT (the current one, live or reopened) or a
+ * PAGE of pins. Those are different things — a chat is a session, a page is a
+ * collection of pins — and the left rail lists them in two sections.
+ *
  * This route is George's home, not the only place he lives — see the rule-1
  * reading in CLAUDE.md. The per-page affordance reuses these same components
  * and the same useGeorgeStream hook.
  */
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { PanelLeft } from 'lucide-react';
 import { useGeorgeStream } from '../hooks/useGeorgeStream';
 import { GeorgeConversation } from '../components/george/GeorgeConversation';
@@ -22,15 +27,18 @@ import {
   LeftRail,
   LeftRailStub,
   RightRail,
+  type Centre,
 } from '../components/george/Rails';
+import { getChat } from '../services/chatsApi';
+import { errorMessage } from '../services/pinsApi';
 
 export default function GeorgePage() {
-  const { turns, state, ask, cancel, busy } = useGeorgeStream();
+  const { turns, state, ask, cancel, busy, threadId, open, reset } = useGeorgeStream();
+  const qc = useQueryClient();
   const [leftOpen, setLeftOpen] = useState(false);   // collapsed by default
   const [rightOpen, setRightOpen] = useState(false);
-  // Which pinned page the centre column is showing. `undefined` means the
-  // conversation; a string or null means a page (null = the ungrouped pins).
-  const [openPage, setOpenPage] = useState<string | null | undefined>(undefined);
+  const [centre, setCentre] = useState<Centre>({ kind: 'chat' });
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   /** Tools still in flight, for the mark's subtitle. */
   const running = useMemo(() => {
@@ -38,6 +46,36 @@ export default function GeorgePage() {
     if (last?.role !== 'george') return [];
     return last.toolCalls.filter((c) => !c.result).map((c) => c.tool);
   }, [turns]);
+
+  const newChat = useCallback(() => {
+    reset();
+    setLoadError(null);
+    setCentre({ kind: 'chat' });
+    setLeftOpen(false);
+  }, [reset]);
+
+  /**
+   * Reopen a stored chat. Fetched fresh each time — a chat gains turns while
+   * it is open elsewhere, and a cached copy would reopen it short.
+   */
+  const openChat = useCallback(
+    async (threadId: string) => {
+      setLoadError(null);
+      try {
+        const chat = await qc.fetchQuery({
+          queryKey: ['chat', threadId],
+          queryFn: () => getChat(threadId),
+          staleTime: 0,
+        });
+        open(chat);
+        setCentre({ kind: 'chat' });
+        setLeftOpen(false);
+      } catch (err) {
+        setLoadError(errorMessage(err));
+      }
+    },
+    [open, qc],
+  );
 
   return (
     // Negative margins cancel Layout's <main> padding so George owns the full
@@ -47,10 +85,12 @@ export default function GeorgePage() {
         <LeftRail
           open={leftOpen}
           onClose={() => setLeftOpen(false)}
-          selected={openPage ?? null}
-          hasSelection={openPage !== undefined}
+          centre={centre}
+          activeThreadId={threadId}
+          onNewChat={newChat}
+          onOpenChat={openChat}
           onSelectPage={(page) => {
-            setOpenPage(page ?? undefined);
+            setCentre({ kind: 'page', page });
             setLeftOpen(false);
           }}
         />
@@ -64,7 +104,7 @@ export default function GeorgePage() {
           <button
             type="button"
             onClick={() => setLeftOpen(true)}
-            aria-label="Open pages"
+            aria-label="Open chats and pages"
             className="flex h-9 w-9 min-h-touch min-w-touch items-center justify-center rounded-lg text-george-slate lg:hidden"
           >
             <PanelLeft className="h-4 w-4" />
@@ -79,15 +119,20 @@ export default function GeorgePage() {
 
         <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 md:px-6">
           <div className="mx-auto max-w-3xl">
-            {openPage === undefined ? (
+            {loadError && (
+              <p className="mb-4 rounded-lg border border-george-line bg-george-paper px-3 py-2.5 text-[13px] text-george-navy">
+                Could not open that chat: {loadError}
+              </p>
+            )}
+            {centre.kind === 'chat' ? (
               <GeorgeConversation turns={turns} />
             ) : (
-              <PinnedPage page={openPage} onBack={() => setOpenPage(undefined)} />
+              <PinnedPage page={centre.page} onBack={() => setCentre({ kind: 'chat' })} />
             )}
           </div>
         </div>
 
-        {openPage === undefined && (
+        {centre.kind === 'chat' && (
           <GeorgeInput onAsk={ask} onCancel={cancel} busy={busy} />
         )}
       </main>

@@ -761,9 +761,14 @@ class ConversationLog:
         must not cost the user their answer.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, thread_id: Optional[str] = None) -> None:
         self.url = os.environ.get("GEORGE_LOG_DATABASE_URL")
         self.conversation_id = str(uuid.uuid4())
+        # The chat this turn belongs to. A new chat's first turn IS the thread
+        # — its own id — and every later turn carries the id the client was
+        # handed back in the `start` frame. Before this, each request was its
+        # own unrelated row and a chat could not be reopened.
+        self.thread_id = thread_id or self.conversation_id
         self.errors: list[str] = []
         self._conn = None
 
@@ -790,18 +795,23 @@ class ConversationLog:
             self._conn = None
 
     def conversation(self, **kw) -> None:
+        # notices are FULL objects ({kind, message, source}) and receipts is the
+        # last tool meta: both are what a reopened chat needs to show the
+        # caveat in words and the figure with its timestamp.
         self._exec(
             "INSERT INTO george.conversations "
-            "(id, user_id, asked_at, question, final_answer, model, iterations, "
-            " input_tokens, output_tokens, cache_read_tokens, notices, "
-            " notice_forced, status) "
-            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            "(id, thread_id, user_id, asked_at, question, final_answer, model, "
+            " iterations, input_tokens, output_tokens, cache_read_tokens, notices, "
+            " notice_forced, status, receipts) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
             (
-                self.conversation_id, kw.get("user_id"), kw["asked_at"],
-                kw["question"], kw.get("final_answer"), MODEL, kw["iterations"],
-                kw.get("input_tokens"), kw.get("output_tokens"),
-                kw.get("cache_read_tokens"), json.dumps(kw.get("notices") or []),
+                self.conversation_id, self.thread_id, kw.get("user_id"),
+                kw["asked_at"], kw["question"], kw.get("final_answer"), MODEL,
+                kw["iterations"], kw.get("input_tokens"), kw.get("output_tokens"),
+                kw.get("cache_read_tokens"),
+                json.dumps(_json_safe(kw.get("notices") or [])),
                 kw.get("notice_forced", False), kw["status"],
+                json.dumps(_json_safe(kw["receipts"])) if kw.get("receipts") else None,
             ),
         )
 
@@ -933,6 +943,7 @@ async def run(
     history: Optional[list[dict]] = None,
     workflow_writer: Optional[write_tools.WorkflowWriter] = None,
     workflow_runner: Optional[write_tools.WorkflowRunner] = None,
+    thread_id: Optional[str] = None,
 ) -> AsyncIterator[str]:
     """
     Answer one question, streaming SSE frames.
@@ -962,9 +973,14 @@ async def run(
         workflow_runner: if supplied, George can run a saved workflow, including
             backtesting one against a past window. A READ, but injected all the
             same — the workflows live in a schema george_ro cannot see.
+        thread_id: the chat this question continues. None starts a new chat,
+            whose id is this turn's conversation_id — handed back in the
+            `start` frame so the client can send it on the next turn. The
+            caller verifies ownership before passing one in; the loop cannot,
+            because its logging role cannot read.
     """
     defs = _load_defs()
-    log = ConversationLog()
+    log = ConversationLog(thread_id=thread_id)
     asked_at = datetime.now(timezone.utc)
 
     # What the injected tools are allowed to act on: the writers and the runner,
@@ -1015,6 +1031,7 @@ async def run(
     last_meta: Optional[dict] = None
 
     yield _sse("start", {"conversation_id": log.conversation_id,
+                         "thread_id": log.thread_id,
                          "logging_enabled": log.enabled})
 
     try:
@@ -1413,8 +1430,9 @@ async def run(
         final_answer=answer or None, iterations=iterations,
         input_tokens=usage["input"], output_tokens=usage["output"],
         cache_read_tokens=usage["cache_read"],
-        notices=[n.get("kind") for n in pending],
+        notices=pending,
         notice_forced=notice_forced, status=status,
+        receipts=last_meta,
     )
 
     if log.errors:
@@ -1446,6 +1464,7 @@ async def run(
 
     yield _sse("done", {
         "conversation_id": log.conversation_id,
+        "thread_id": log.thread_id,
         "iterations": iterations,
         "tool_calls": seq,
         "status": status,

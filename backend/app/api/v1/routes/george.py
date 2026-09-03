@@ -51,14 +51,17 @@ import uuid
 from pathlib import Path
 from typing import Any, AsyncIterator, List, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import AsyncSessionLocal
+from app.core.database import AsyncSessionLocal, get_db
 from app.core.deps import require_page
 from app.models.app_user import AppUser
+from app.services.chat_history import build_turns, title_of
 from app.services.pin_writer import (
     PinQuotaError,
     SimilarPageError,
@@ -133,6 +136,253 @@ class AskRequest(BaseModel):
     # The conversation so far. The loop is stateless per request, so without
     # this every question stands alone and "pin that" has nothing to refer to.
     history: List[HistoryTurn] = Field(default_factory=list, max_length=20)
+    # The chat this question continues. Omit to start a new one; the `start`
+    # frame hands back the id to send on the next turn. Checked against the
+    # caller before the stream opens — a chat is one person's, like a pin.
+    thread_id: Optional[uuid.UUID] = None
+
+
+# ---------------------------------------------------------------------------
+# Chats — sessions, listed and reopened
+#
+# A chat is the thread of turns in george.conversations that share a thread_id.
+# It is NOT a page: a page is a collection of pins, and "Ungrouped" holds pins
+# with no page and nothing else. These routes read the log through the
+# application role, because george_log is INSERT-only and george_ro is kept
+# out of the schema (agent/sql/george_log_role.sql).
+# ---------------------------------------------------------------------------
+
+class ChatSummary(BaseModel):
+    thread_id: uuid.UUID
+    title: str
+    first_asked_at: str
+    last_asked_at: str
+    turns: int
+
+
+class ChatToolResult(BaseModel):
+    row_count: Optional[int]
+    source_table: Optional[str]
+    truncated: bool
+    duration_ms: int
+    error: Optional[str]
+
+
+class ChatToolCall(BaseModel):
+    seq: int
+    tool: str
+    arguments: dict[str, Any]
+    result: ChatToolResult
+
+
+class ChatNotice(BaseModel):
+    kind: str
+    message: str
+    source: Optional[str] = None
+
+
+class ChatPinned(BaseModel):
+    pin_id: str
+    title: str
+    page: Optional[str]
+    pins_on_page: int
+    tool_calls: List[dict[str, Any]]
+
+
+class ChatDone(BaseModel):
+    conversation_id: str
+    thread_id: str
+    iterations: int
+    tool_calls: int
+    status: str
+    notice_forced: bool
+    usage: dict[str, int]
+    cache_hit: bool
+
+
+class ChatTurn(BaseModel):
+    """
+    One turn, in the shape useGeorgeStream builds from a live stream — so a
+    reopened chat renders through the same component as a live one.
+    """
+
+    role: Literal["user", "george"]
+    text: str
+    at: Optional[str]
+    # george-only; absent on a user turn.
+    thinking: Optional[str] = None
+    tool_calls: Optional[List[ChatToolCall]] = None
+    notices: Optional[List[ChatNotice]] = None
+    pinned: Optional[List[ChatPinned]] = None
+    receipts: Optional[dict[str, Any]] = None
+    done: Optional[ChatDone] = None
+    error: Optional[str] = None
+
+
+class ChatDetail(BaseModel):
+    thread_id: uuid.UUID
+    title: str
+    turns: List[ChatTurn]
+
+
+# thread_id is nullable in the table for rows that predate the column; every
+# such row was backfilled to its own id, and COALESCE keeps that true even if
+# the backfill is ever skipped.
+_THREAD = "COALESCE(c.thread_id, c.id)"
+
+
+async def _thread_belongs_to(username: str, thread_id: uuid.UUID) -> bool:
+    """One SELECT, before the stream opens: the loop itself cannot read."""
+    async with AsyncSessionLocal() as session:
+        row = (
+            await session.execute(
+                text(
+                    f"SELECT 1 FROM george.conversations c "
+                    f"WHERE {_THREAD} = :t AND c.user_id = :u LIMIT 1"
+                ),
+                {"t": thread_id, "u": username},
+            )
+        ).first()
+        return row is not None
+
+
+@router.get("/chats", response_model=List[ChatSummary])
+async def list_chats(
+    limit: int = Query(50, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_george_user),
+) -> List[ChatSummary]:
+    """
+    The caller's chats, most recently active first.
+
+    A chat is named by its first question and dated by its last turn. Both are
+    derived here rather than stored, so the log role stays INSERT-only.
+    """
+    rows = (
+        await db.execute(
+            text(
+                f"SELECT {_THREAD} AS thread_id, "
+                f"       MIN(c.asked_at) AS first_asked_at, "
+                f"       MAX(c.asked_at) AS last_asked_at, "
+                f"       COUNT(*) AS turns, "
+                f"       (array_agg(c.question ORDER BY c.asked_at))[1] AS first_question "
+                f"FROM george.conversations c "
+                f"WHERE c.user_id = :u "
+                f"GROUP BY 1 "
+                f"ORDER BY last_asked_at DESC "
+                f"LIMIT :limit"
+            ),
+            {"u": user.username, "limit": limit},
+        )
+    ).mappings().all()
+    return [
+        ChatSummary(
+            thread_id=r["thread_id"],
+            title=title_of(r["first_question"]),
+            first_asked_at=r["first_asked_at"].isoformat(),
+            last_asked_at=r["last_asked_at"].isoformat(),
+            turns=int(r["turns"]),
+        )
+        for r in rows
+    ]
+
+
+@router.get("/chats/{thread_id}", response_model=ChatDetail)
+async def get_chat(
+    thread_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_george_user),
+) -> ChatDetail:
+    """
+    One chat, as turns the conversation column renders directly.
+
+    Tool calls are joined by conversation id and ordered by seq; pins made in
+    the chat are joined the same way. A chat belonging to someone else is a
+    404, not a 403 — the same convention as pins.
+    """
+    rows = (
+        await db.execute(
+            text(
+                f"SELECT c.id, {_THREAD} AS thread_id, c.asked_at, c.logged_at, "
+                f"       c.question, c.final_answer, c.iterations, c.input_tokens, "
+                f"       c.output_tokens, c.cache_read_tokens, c.notices, "
+                f"       c.notice_forced, c.status, c.receipts "
+                f"FROM george.conversations c "
+                f"WHERE {_THREAD} = :t AND c.user_id = :u "
+                f"ORDER BY c.asked_at"
+            ),
+            {"t": thread_id, "u": user.username},
+        )
+    ).mappings().all()
+    if not rows:
+        raise HTTPException(status_code=404, detail="No chat with that id belongs to you.")
+
+    ids = [r["id"] for r in rows]
+
+    calls = (
+        await db.execute(
+            text(
+                "SELECT conversation_id, seq, tool, arguments, row_count, truncated, "
+                "       source_table, duration_ms, error "
+                "FROM george.tool_calls "
+                "WHERE conversation_id = ANY(:ids) "
+                "ORDER BY conversation_id, seq"
+            ),
+            {"ids": ids},
+        )
+    ).mappings().all()
+    calls_by: dict[str, list] = {}
+    for c in calls:
+        calls_by.setdefault(str(c["conversation_id"]), []).append(c)
+
+    pins = (
+        await db.execute(
+            text(
+                "SELECT id, title, page, conversation_id, tool_calls "
+                "FROM george.pins "
+                "WHERE created_by = :u AND conversation_id = ANY(:ids) "
+                "ORDER BY created_at"
+            ),
+            {"u": user.username, "ids": ids},
+        )
+    ).mappings().all()
+    pins_by: dict[str, list] = {}
+    for p in pins:
+        pins_by.setdefault(str(p["conversation_id"]), []).append(p)
+
+    pins_per_page: dict[Optional[str], int] = {}
+    if pins:
+        counts = (
+            await db.execute(
+                text(
+                    "SELECT page, COUNT(*) AS n FROM george.pins "
+                    "WHERE created_by = :u GROUP BY page"
+                ),
+                {"u": user.username},
+            )
+        ).mappings().all()
+        pins_per_page = {r["page"]: int(r["n"]) for r in counts}
+
+    # The reason a turn ended without an answer, where the loop recorded one.
+    gaps = (
+        await db.execute(
+            text(
+                "SELECT DISTINCT ON (conversation_id) conversation_id, detail "
+                "FROM george.gaps "
+                "WHERE conversation_id = ANY(:ids) AND kind IN ('api_error', 'unhandled') "
+                "ORDER BY conversation_id, at DESC"
+            ),
+            {"ids": ids},
+        )
+    ).mappings().all()
+    errors_by = {str(g["conversation_id"]): g["detail"] for g in gaps if g["detail"]}
+
+    turns = build_turns(rows, calls_by, pins_by, pins_per_page, errors_by)
+    return ChatDetail(
+        thread_id=rows[0]["thread_id"],
+        title=title_of(rows[0]["question"]),
+        turns=[ChatTurn.model_validate(t) for t in turns],
+    )
 
 
 def _pin_writer(username: str) -> PinWriter:
@@ -342,7 +592,8 @@ async def _safe_stream(question: str, user_id: Optional[str],
                        pin_writer: PinWriter,
                        history: list[dict],
                        workflow_writer,
-                       workflow_runner) -> AsyncIterator[str]:
+                       workflow_runner,
+                       thread_id: Optional[str] = None) -> AsyncIterator[str]:
     """
     Wrap the loop so a crash still closes the stream cleanly.
 
@@ -359,6 +610,7 @@ async def _safe_stream(question: str, user_id: Optional[str],
             history=history,
             workflow_writer=workflow_writer,
             workflow_runner=workflow_runner,
+            thread_id=thread_id,
         ):
             yield frame
     except Exception as exc:  # noqa: BLE001
@@ -404,6 +656,14 @@ async def ask(
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="question must not be empty")
 
+    # Continuing a chat: it has to be the caller's. Checked HERE, before any
+    # frame is sent, because once the stream has started a refusal can only
+    # arrive as an error frame — and because the loop's own role cannot read.
+    if request.thread_id is not None and not await _thread_belongs_to(
+        user.username, request.thread_id
+    ):
+        raise HTTPException(status_code=404, detail="No chat with that id belongs to you.")
+
     return StreamingResponse(
         _safe_stream(
             request.question,
@@ -413,6 +673,7 @@ async def ask(
             history=[t.model_dump() for t in request.history],
             workflow_writer=_WorkflowWriter(user.username, user.role),
             workflow_runner=_workflow_runner(user.username, user.role),
+            thread_id=str(request.thread_id) if request.thread_id else None,
         ),
         media_type="text/event-stream",
         headers={

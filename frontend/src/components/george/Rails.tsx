@@ -1,11 +1,23 @@
 /**
  * The two rails.
  *
- * The LEFT rail is now real: it lists the caller's pages from GET /pins/pages
- * and expands each to its pins. It names them; the tiles themselves open in the
- * centre column (see PinnedPage) because a notice banner and a receipts line do
- * not fit in 256px, and UI rule 4 says a tile that cannot show its caveat is
- * the wrong shape.
+ * The LEFT rail has two sections, and the split is the point:
+ *
+ *   Chats   sessions. Past conversations from george.conversations, by title
+ *           and date; click to reopen and continue. New chat starts an empty
+ *           one.
+ *   Pages   pinned tile collections, from GET /pins/pages. "Ungrouped" is the
+ *           page of pins that have no page — it never holds a conversation.
+ *
+ * Before this the rail was pages only. The conversation had no place in it,
+ * the way back to it was a row inside the pages list, and the only durable
+ * thing a chat could become was a pin with no page — which is how chats ended
+ * up in Ungrouped. Chats are sessions, not pages (CLAUDE.md vocabulary).
+ *
+ * The rail names things; they open in the centre column. Tiles live there
+ * (see PinnedPage) because a notice banner and a receipts line do not fit in
+ * 256px, and UI rule 4 says a tile that cannot show its caveat is the wrong
+ * shape.
  *
  * The RIGHT rail is still an honest placeholder: there is no approval queue
  * endpoint, so it carries its real shape and an empty state that says what is
@@ -17,8 +29,12 @@
  */
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Bell, ChevronRight, PanelLeft, X } from 'lucide-react';
+import { Bell, ChevronRight, PanelLeft, Plus, X } from 'lucide-react';
+import { listChats } from '../../services/chatsApi';
 import { listPinPages, listPins } from '../../services/pinsApi';
+
+/** What the centre column is showing. */
+export type Centre = { kind: 'chat' } | { kind: 'page'; page: string | null };
 
 interface RailProps {
   open: boolean;
@@ -26,9 +42,11 @@ interface RailProps {
 }
 
 interface LeftRailProps extends RailProps {
-  /** Which page the centre column is showing, if any. */
-  selected?: string | null;
-  hasSelection?: boolean;
+  centre: Centre;
+  /** The chat the centre column holds, if it has been given a thread yet. */
+  activeThreadId: string | null;
+  onNewChat: () => void;
+  onOpenChat: (threadId: string) => void;
   onSelectPage: (page: string | null) => void;
 }
 
@@ -37,19 +55,22 @@ interface LeftRailProps extends RailProps {
 export function LeftRail({
   open,
   onClose,
-  selected,
-  hasSelection,
+  centre,
+  activeThreadId,
+  onNewChat,
+  onOpenChat,
   onSelectPage,
 }: LeftRailProps) {
+  const chats = useQuery({ queryKey: ['chats'], queryFn: listChats });
   const pages = useQuery({ queryKey: ['pin-pages'], queryFn: listPinPages });
-  const total = (pages.data ?? []).reduce((n, p) => n + p.pins, 0);
+  const totalPins = (pages.data ?? []).reduce((n, p) => n + p.pins, 0);
 
   return (
     <>
       {open && (
         <button
           type="button"
-          aria-label="Close pages"
+          aria-label="Close chats and pages"
           onClick={onClose}
           className="fixed inset-0 z-30 bg-george-navy/20 lg:hidden"
         />
@@ -58,33 +79,71 @@ export function LeftRail({
         className={`fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-george-line bg-george-cream
           transition-transform lg:static lg:z-auto lg:translate-x-0
           ${open ? 'translate-x-0' : '-translate-x-full lg:hidden'}`}
-        aria-label="Saved pages"
+        aria-label="Chats and pages"
       >
+        {/* ---------------------------------------------------- chats ---- */}
         <div className="flex items-center justify-between px-3 py-3">
-          <h2 className="font-george-serif text-[15px] text-george-navy">Pages</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close pages"
-            className="flex h-8 w-8 min-h-touch min-w-touch items-center justify-center text-george-slate lg:hidden"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <h2 className="font-george-serif text-[15px] text-george-navy">Chats</h2>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={onNewChat}
+              aria-label="New chat"
+              className="flex h-8 items-center gap-1 rounded-lg px-2 text-[12px] text-george-slate hover:bg-george-line/40 min-h-touch"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden />
+              New
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close chats and pages"
+              className="flex h-8 w-8 min-h-touch min-w-touch items-center justify-center text-george-slate lg:hidden"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+          {chats.isPending && (
+            <p className="text-[13px] text-george-muted">Loading chats…</p>
+          )}
+          {chats.isError && (
+            <p className="text-[13px] leading-relaxed text-george-slate">
+              Could not load chats.
+            </p>
+          )}
+          {chats.data && chats.data.length === 0 && (
+            <p className="text-[13px] leading-relaxed text-george-slate">
+              No chats yet. Ask something to start one.
+            </p>
+          )}
+
+          <ul className="space-y-0.5">
+            {(chats.data ?? []).map((c) => (
+              <ChatRow
+                key={c.thread_id}
+                title={c.title}
+                at={c.last_asked_at}
+                active={centre.kind === 'chat' && activeThreadId === c.thread_id}
+                onOpen={() => onOpenChat(c.thread_id)}
+              />
+            ))}
+          </ul>
+
+          {/* ---------------------------------------------------- pages ---- */}
+          <h2 className="mt-5 mb-2 font-george-serif text-[15px] text-george-navy">Pages</h2>
+
           {pages.isPending && (
             <p className="text-[13px] text-george-muted">Loading pages…</p>
           )}
-
           {pages.isError && (
             <p className="text-[13px] leading-relaxed text-george-slate">
               Could not load pages.
             </p>
           )}
-
-          {/* The empty state that has been waiting for this endpoint. */}
-          {pages.data && total === 0 && (
+          {pages.data && totalPins === 0 && (
             <>
               <p className="text-[13px] leading-relaxed text-george-slate">
                 No saved pages yet.
@@ -95,23 +154,13 @@ export function LeftRail({
             </>
           )}
 
-          {hasSelection && (
-            <button
-              type="button"
-              onClick={() => onSelectPage(null)}
-              className="mb-1 w-full rounded-lg px-2 py-1.5 text-left text-[12px] text-george-slate hover:bg-george-line/40"
-            >
-              ← Back to conversation
-            </button>
-          )}
-
           <ul className="space-y-0.5">
             {(pages.data ?? []).map((p) => (
               <PageRow
                 key={p.page ?? '__ungrouped__'}
                 page={p.page}
                 count={p.pins}
-                active={hasSelection === true && selected === p.page}
+                active={centre.kind === 'page' && centre.page === p.page}
                 onOpen={() => onSelectPage(p.page)}
               />
             ))}
@@ -120,6 +169,49 @@ export function LeftRail({
       </aside>
     </>
   );
+}
+
+/** One chat: its title and the day it was last active. */
+function ChatRow({
+  title,
+  at,
+  active,
+  onOpen,
+}: {
+  title: string;
+  at: string;
+  active: boolean;
+  onOpen: () => void;
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-current={active ? 'true' : undefined}
+        className={`flex min-h-touch w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] text-george-navy hover:bg-george-line/40 ${
+          active ? 'bg-george-line/50' : ''
+        }`}
+        title={title}
+      >
+        <span className="truncate">{title}</span>
+        <span className="shrink-0 text-[11px] tabular-nums text-george-muted">{dayLabel(at)}</span>
+      </button>
+    </li>
+  );
+}
+
+/** "3 Sep", or "3 Sep 2025" once the year differs. Manila is the app's clock. */
+function dayLabel(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleDateString('en-PH', {
+    day: 'numeric',
+    month: 'short',
+    ...(sameYear ? {} : { year: 'numeric' }),
+    timeZone: 'Asia/Manila',
+  });
 }
 
 /**
@@ -198,7 +290,7 @@ export function LeftRailStub({ onOpen }: { onOpen: () => void }) {
     <button
       type="button"
       onClick={onOpen}
-      aria-label="Open pages"
+      aria-label="Open chats and pages"
       className="hidden lg:flex w-11 shrink-0 flex-col items-center border-r border-george-line bg-george-cream pt-3 text-george-slate"
     >
       <PanelLeft className="h-4 w-4" />

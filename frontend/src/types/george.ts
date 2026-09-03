@@ -114,6 +114,8 @@ export interface AskHistoryTurn {
 
 export interface DoneFrame {
   conversation_id: string;
+  /** The chat this turn belongs to. Send it back on the next question. */
+  thread_id?: string;
   iterations: number;
   tool_calls: number;
   status: string;
