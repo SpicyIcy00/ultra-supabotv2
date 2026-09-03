@@ -152,3 +152,42 @@ def test_every_result_carries_coverage_so_empty_is_not_mistaken_for_zero():
     assert cov["documents_imported"] > 0        # data exists...
     assert r["rows"] == [] or r["rows"][0]["value"] == 0   # ...just not in 2020
     assert "never loaded" in cov["note"]
+
+
+def test_no_recorded_dispatch_never_contradicts_the_records():
+    """
+    Regression. This notice predates the transfer import, when the inference
+    view was the only thing naming a dispatch. Ungated it produced an answer
+    that reported 56 recorded transfer documents moving 1,646,478 g AND a caveat
+    insisting "the record of it does not exist" — both in the same result.
+
+    A caveat that contradicts the figures beside it is worse than none: it
+    teaches the reader to stop believing the caveats.
+    """
+    r = get_movement(sku=AJI_MIX, date_range=["2026-06-03", "2026-09-01"], basis="both")
+    meta = r["meta"]
+    notice = meta.get("notice")
+    kinds = {i["kind"] for i in (notice.get("items", [notice]) if notice else [])}
+
+    recorded = meta.get("transfer_records", {}).get("moved_quantity", 0)
+    if recorded:
+        assert "no_recorded_dispatch" not in kinds, (
+            f"{recorded:,.0f} units are recorded as moved, so the answer must not "
+            f"also claim no record of the movement exists"
+        )
+
+
+def test_no_recorded_dispatch_still_fires_when_nothing_records_the_move():
+    """
+    The other half: gating it must not silence it. On the snapshot basis alone
+    there are no transfer records to consult, so a decline the view cannot
+    explain is still reported as unrecorded — which is the fact that made this
+    notice worth having.
+    """
+    r = get_movement(sku=AJI_MIX, date_range=["2026-06-03", "2026-09-01"],
+                     basis="balance_delta")
+    bd = r["meta"]["balance_delta"]
+    if bd["observed_decline"] and bd["reconciliation"]["recorded_dispatch_grams"] == 0:
+        notice = r["meta"].get("notice")
+        kinds = {i["kind"] for i in (notice.get("items", [notice]) if notice else [])}
+        assert "no_recorded_dispatch" in kinds

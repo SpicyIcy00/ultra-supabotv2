@@ -601,13 +601,26 @@ def get_movement(
             "source": "metrics.yaml: movement.balance_delta.difference_across_gaps",
         })
 
-    if decline and disp_grams == 0:
+    # ONLY when nothing records the movement — including the transfer documents.
+    #
+    # This notice predates the StoreHub import, when the inference view was the
+    # only thing that named a dispatch. Left ungated it produced a flat
+    # self-contradiction: an answer reporting 56 recorded transfer documents
+    # moving 1,646,478 g, alongside a caveat insisting "the record of it does not
+    # exist". Both cannot be true, and the caveat was the wrong one.
+    #
+    # The view explaining nothing is still worth knowing, and it still is —
+    # meta.balance_delta.reconciliation carries explained_pct and says outright
+    # that the view is a weaker source than the records. What is no longer said
+    # is that no record exists, when one does.
+    if decline and disp_grams == 0 and not moved_qty:
         notices.append({
             "kind": "no_recorded_dispatch",
             "message": (
                 f"The balance declined by {decline:,.0f} grams over this window "
-                f"and NO recorded dispatch explains any of it (0 rows in "
-                f"{_req(defs, 'movement.corroborating_source.table')}). The "
+                f"and NOTHING records it — no stock transfer document names this "
+                f"product moving, and there are 0 rows in "
+                f"{_req(defs, 'movement.corroborating_source.table')}. The "
                 f"movement is real; the record of it does not exist."
             ),
             "source": "movement.corroborating_source",
