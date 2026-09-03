@@ -7,11 +7,12 @@
  * a retrying agent loop would silently re-ask the question and bill for it
  * again, so a dropped connection surfaces as an error instead.
  */
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../stores/authStore';
 import type {
+  AskHistoryTurn,
   DoneFrame,
   GeorgeNotice,
   GeorgeState,
@@ -35,8 +36,36 @@ import type {
  */
 const API_BASE = '/api/v1';
 
+/** Matches MAX_HISTORY_TURNS in agent/loop.py; the server truncates too. */
+const MAX_HISTORY_TURNS = 20;
+
 /** Thrown to stop fetchEventSource retrying — see FatalError in its docs. */
 class GeorgeStreamError extends Error {}
+
+/**
+ * The conversation so far, in the shape /george/ask takes.
+ *
+ * George is stateless between requests: he sees only what is sent. So a
+ * follow-up ("pin that", "and for Rockwell?") needs the turns before it, and
+ * the calls behind each earlier answer — those are what a pin can hold.
+ *
+ * Only calls that came back WITHOUT an error are included. A call that refused
+ * produced no result the user ever saw, and pinning it would make a tile out of
+ * something nobody read.
+ */
+function toHistory(turns: GeorgeTurn[]): AskHistoryTurn[] {
+  return turns.slice(-MAX_HISTORY_TURNS).map((t) =>
+    t.role === 'user'
+      ? { role: 'user' as const, text: t.text, tool_calls: [] }
+      : {
+          role: 'george' as const,
+          text: t.text,
+          tool_calls: t.toolCalls
+            .filter((c) => c.result && !c.result.error)
+            .map((c) => ({ tool: c.tool, arguments: c.arguments })),
+        },
+  );
+}
 
 export function useGeorgeStream() {
   const [turns, setTurns] = useState<GeorgeTurn[]>([]);
@@ -44,6 +73,15 @@ export function useGeorgeStream() {
   const abortRef = useRef<AbortController | null>(null);
   const token = useAuthStore((s) => s.token);
   const qc = useQueryClient();
+
+  // `ask` must read the turns as they stand when the user submits, not as they
+  // stood when it was last created. A ref rather than a dependency: turns
+  // change on every streamed delta, and rebuilding the callback that often
+  // would churn every component holding it.
+  const turnsRef = useRef<GeorgeTurn[]>([]);
+  useEffect(() => {
+    turnsRef.current = turns;
+  }, [turns]);
 
   /** Mutate the in-flight george turn (always the last one). */
   const patchLast = useCallback((fn: (t: Extract<GeorgeTurn, { role: 'george' }>) => void) => {
@@ -76,6 +114,10 @@ export function useGeorgeStream() {
       const ctrl = new AbortController();
       abortRef.current = ctrl;
 
+      // Captured BEFORE this turn is appended, so it is the conversation up to
+      // but not including the question being asked.
+      const history = toHistory(turnsRef.current);
+
       const now = new Date().toISOString();
       setTurns((prev) => [
         ...prev,
@@ -103,7 +145,11 @@ export function useGeorgeStream() {
           // token on the server. Sending the page in the user_id field (as this
           // did) meant the conversation log recorded "replenishment" as the
           // person who asked.
-          body: JSON.stringify({ question, page_context: pageContext ?? null }),
+          body: JSON.stringify({
+            question,
+            page_context: pageContext ?? null,
+            history,
+          }),
           signal: ctrl.signal,
           openWhenHidden: true,
 

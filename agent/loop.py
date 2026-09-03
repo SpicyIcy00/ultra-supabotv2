@@ -376,7 +376,7 @@ RULES
 
 7. Money is Philippine pesos (₱). Vending data is a separate domain from store data and the two must never be added together.
 
-8. When `pin_answer` is available and the user asks you to pin something, pin it — do not ask them to confirm. A pin stores the tool calls behind an answer and re-runs them, so the tile stays current. You may only pin calls you have actually run in this conversation: if the user asks for a variant ("pin that but daily", "just Rockwell"), run the adjusted call FIRST, read its result, and pin that call — never pin a call you have not run. Afterwards, say plainly what you pinned and which page it went to, naming the page or saying it is ungrouped, and that it re-runs. If pinning is refused, tell the user why in their words.
+8. When `pin_answer` is available and the user asks you to pin something, pin it — do not ask them to confirm. A pin stores the tool calls behind an answer and re-runs them, so the tile stays current. You may only pin calls you have actually run in this conversation: if the user asks for a variant ("pin that but daily", "just Rockwell"), run the adjusted call FIRST, read its result, and pin that call — never pin a call you have not run. Afterwards, say plainly what you pinned and which page it went to, naming the page or saying it is ungrouped, and that it re-runs. If pinning is refused, tell the user why in their words. NEVER write that you pinned something unless `pin_answer` has actually returned in this conversation — describing a pin you did not make sends the user looking for a tile that does not exist.
 
 Answer in prose. Use a short table when comparing more than three rows. State the window and the scope you used."""
 
@@ -503,6 +503,43 @@ def _unsurfaced(pending: list[dict], answer: str, defs: dict) -> list[dict]:
     return missing
 
 
+def _pin_claim(answer: str, defs: dict) -> Optional[str]:
+    """
+    Whether an answer says a pin was made ("claimed") or will be ("promised").
+
+    Used only when NO pin was made. A pin is the one thing George can say that
+    changes something outside the conversation, so it is the one statement worth
+    checking against what actually happened. Both failures were observed live on
+    the same question a run apart: "then pinned it" with no tool call, and "I'll
+    run the weekly version first, then pin that exact call" followed by neither.
+
+    A phrase preceded by a negation inside the window is a DENIAL, not a
+    statement: "I could not pin that" and "I won't pin it" are George behaving
+    correctly and must not be corrected. Vocabulary from metrics.yaml
+    (pins.claim_check); claims are reported ahead of intents, since an answer
+    that does both has already asserted the stronger thing.
+    """
+    spec = req(defs, "pins.claim_check")
+    window = spec["negation_window"]
+    low = answer.lower()
+
+    def says(phrases) -> bool:
+        for phrase in phrases:
+            start = 0
+            while (at := low.find(phrase, start)) != -1:
+                before = low[max(0, at - window):at]
+                if not any(neg in before for neg in spec["negations"]):
+                    return True
+                start = at + len(phrase)
+        return False
+
+    if says(spec["claims"]):
+        return "claimed"
+    if says(spec["intents"]):
+        return "promised"
+    return None
+
+
 def _forced_caveats(missing: list[dict]) -> str:
     lines = ["", "", "**Caveats** *(added automatically — these qualify the figures above)*", ""]
     for n in missing:
@@ -604,11 +641,79 @@ def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(_json_safe(data))}\n\n"
 
 
+# --------------------------------------------------------------------------
+# Conversation history
+#
+# The loop is stateless: one request, one question. That was invisible until
+# chat-driven pinning arrived, because every question stood alone — but "pin
+# that" has no meaning without the turn before it, and the calls it wants to pin
+# ran in a REQUEST THAT HAS ALREADY FINISHED. So the client replays the prior
+# turns, which is what it has been holding on screen all along.
+#
+# The replay carries the tool calls behind each earlier answer, and those seed
+# the executed set. This does not weaken the provenance rule: its purpose is
+# that a pin may only hold a call whose RESULT THE USER HAS SEEN, and a call the
+# client is replaying is one it streamed to the screen. The trust boundary is
+# unchanged either way — this same client can already POST any tool calls it
+# likes to /pins, and both paths validate against the live tool surface before
+# anything is stored.
+#
+# Bounded, because a client that can grow the prompt can grow the bill.
+# --------------------------------------------------------------------------
+
+MAX_HISTORY_TURNS = 20
+MAX_HISTORY_TEXT = 20000
+
+
+def _seed_history(history: Optional[list], executed: dict) -> list[dict]:
+    """
+    Prior turns as messages, and their calls recorded as already run.
+
+    Mutates `executed`. Returns messages ready to precede the new question:
+    consecutive same-role turns merged, blank turns dropped, and any leading
+    assistant turn discarded — the API requires a user message first, and a
+    client that starts its replay mid-answer must not take the request down.
+    """
+    messages: list[dict] = []
+    for turn in (history or [])[-MAX_HISTORY_TURNS:]:
+        role = "assistant" if turn.get("role") == "george" else "user"
+        content = (turn.get("text") or "").strip()[:MAX_HISTORY_TEXT]
+
+        calls = turn.get("tool_calls") or []
+        if role == "assistant" and calls:
+            # Rendered in call_key's canonical form (sorted keys) so that a
+            # model copying an argument list out of this text produces a byte
+            # for byte match against what actually ran.
+            listed = ", ".join(
+                f"{c.get('tool')}({json.dumps(c.get('arguments') or {}, sort_keys=True, default=str)})"
+                for c in calls if c.get("tool")
+            )
+            content = (content + f"\n\n[Calls behind this answer: {listed}]").strip()
+            for c in calls:
+                if c.get("tool"):
+                    args = c.get("arguments") or {}
+                    executed[call_key(c["tool"], args)] = {
+                        "tool": c["tool"], "arguments": args,
+                    }
+
+        if not content:
+            continue
+        if messages and messages[-1]["role"] == role:
+            messages[-1]["content"] += "\n\n" + content
+        elif not messages and role == "assistant":
+            continue
+        else:
+            messages.append({"role": role, "content": content})
+
+    return messages
+
+
 async def run(
     question: str,
     user_id: Optional[str] = None,
     page_context: Optional[str] = None,
     pin_writer: Optional[write_tools.PinWriter] = None,
+    history: Optional[list[dict]] = None,
 ) -> AsyncIterator[str]:
     """
     Answer one question, streaming SSE frames.
@@ -628,6 +733,10 @@ async def run(
         pin_writer: if supplied, George can pin his own answers. This is the ONLY
             way a write reaches the loop; without it the write tool is not in the
             schema at all. See agent/write_tools.py.
+        history: the conversation so far, replayed by the client as
+            [{role: "user"|"george", text, tool_calls}]. Without it every
+            question stands alone and "pin that" has no referent. The calls it
+            carries seed the executed set — see _seed_history.
     """
     defs = _load_defs()
     tools_schema = build_tool_schemas(defs, include_write=pin_writer is not None)
@@ -648,7 +757,10 @@ async def run(
         f"[The user is on the {page_context} page.]\n\n{question}"
         if page_context else question
     )
-    messages: list[dict] = [{"role": "user", "content": opening}]
+    # Prior turns first, and the calls behind them recorded as already run —
+    # "pin that" refers to something that happened in an earlier request.
+    messages: list[dict] = _seed_history(history, write_ctx.executed)
+    messages.append({"role": "user", "content": opening})
     pending: list[dict] = []
     seq = 0
     called_tools: list[str] = []
@@ -656,6 +768,11 @@ async def run(
     iterations = 0
     corrective_turns = 0
     max_corrective = req(defs, "notices.max_corrective_turns")
+    # Writes actually made this run, and the budget for asking the model to
+    # reconcile a claimed pin with reality.
+    pins_made = 0
+    pin_corrections = 0
+    max_pin_corrections = req(defs, "pins.claim_check.max_corrective_turns")
     usage = {"input": 0, "output": 0, "cache_read": 0}
     answer = ""
     status = "ok"
@@ -738,6 +855,40 @@ async def run(
             # ---- no more tools: candidate answer -------------------------
             if not tool_uses:
                 answer = "".join(text_parts).strip()
+
+                # A pin claimed, or promised, but never made. Checked BEFORE the
+                # notice enforcement below, because the remedy may be another
+                # tool call, and because an answer that misreports a write is
+                # wrong in a way no caveat fixes.
+                claim = None if pins_made else _pin_claim(answer, defs)
+                if claim and pin_corrections < max_pin_corrections:
+                    pin_corrections += 1
+                    log.gap(f"pin_{claim}_not_made", answer[:2000])
+                    yield _sse("warning", {"reason": f"pin_{claim}_not_made"})
+                    messages.append({
+                        "role": "user",
+                        "content": (
+                            "Your answer says something WAS pinned, but you "
+                            "never called pin_answer, so nothing was written "
+                            "and no tile exists. The user would go looking for "
+                            "a pin that is not there.\n\n"
+                            "If you meant to pin it, call pin_answer now with "
+                            "the calls you actually ran. If you cannot — or did "
+                            "not mean to — rewrite the answer to say plainly "
+                            "that nothing was pinned, and why."
+                            if claim == "claimed" else
+                            "Your answer says you are going to pin something, "
+                            "but you never called pin_answer, so nothing was "
+                            "written and no tile exists. Saying you will pin it "
+                            "does not pin it.\n\n"
+                            "If you were waiting on the user for something — "
+                            "which page, which window — say so plainly and ask. "
+                            "Otherwise call pin_answer now with the calls you "
+                            "actually ran, then confirm what was pinned."
+                        ),
+                    })
+                    continue
+
                 missing = _unsurfaced(pending, answer, defs)
 
                 if missing and corrective_turns < max_corrective:
@@ -897,6 +1048,7 @@ async def run(
                 # depending on the model having phrased it. Same reasoning as
                 # `notice` and `receipts`.
                 if not err and b.name in write_tools.WRITE_TOOL_FUNCTIONS:
+                    pins_made += 1
                     row = (capped.get("rows") or [{}])[0]
                     yield _sse("pinned", {
                         "pin_id": row.get("pin_id"),

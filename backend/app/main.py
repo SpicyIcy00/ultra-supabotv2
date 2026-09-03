@@ -3,12 +3,28 @@ import asyncio
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.config import settings
+from app.core.config import assert_secret_key_usable, settings
 from app.services.schema_context import SchemaContext
 
 # Fix for Windows: Use WindowsSelectorEventLoopPolicy for async operations with psycopg
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+# ---------------------------------------------------------------------------
+# Refuse to boot on an untrustworthy signing key.
+#
+# HERE, at module level, and not inside startup_event: this runs before the app
+# object exists, so there is no chance of a route being served, and it cannot be
+# swallowed by one of the try/except blocks that startup uses to keep optional
+# services from blocking a deploy. A deployment missing SECRET_KEY should fail
+# loudly and stay down, not come up quietly signing tokens with a value that is
+# printed in this repository.
+# ---------------------------------------------------------------------------
+try:
+    assert_secret_key_usable()
+except Exception as exc:
+    print(f"FATAL: {exc}", file=sys.stderr, flush=True)
+    raise
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

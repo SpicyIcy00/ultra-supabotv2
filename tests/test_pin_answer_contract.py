@@ -31,6 +31,7 @@ from agent.write_tools import (                             # noqa: E402
     call_key,
     pin_answer,
 )
+from tools._common import load_defs as _load_defs, req                 # noqa: E402
 from app.services.pin_runner import PinValidationError, validate_call  # noqa: E402
 
 
@@ -220,6 +221,80 @@ def test_an_explicit_none_is_not_the_same_call_as_an_omitted_argument():
         _run(pin_answer([explicit], title="Movement", ctx=_ctx(omitted)))
 
 
+def test_history_makes_pin_that_work_as_a_follow_up():
+    """
+    The loop is stateless per request. "Pin that" arrives in a request where
+    nothing has run, so the calls behind the previous answer come from the
+    client's replayed history — and seeding them is what makes the follow-up
+    form work at all.
+    """
+    executed: dict = {}
+    messages = george_loop._seed_history([
+        {"role": "user", "text": "net sales by store last month", "tool_calls": []},
+        {"role": "george", "text": "OPUS led at ₱2.4M.", "tool_calls": [SALES]},
+    ], executed)
+
+    assert [m["role"] for m in messages] == ["user", "assistant"]
+    assert call_key(SALES["tool"], SALES["arguments"]) in executed
+
+    writer = FakeWriter()
+    ctx = WriteContext(writer=writer, question="pin that")
+    ctx.executed.update(executed)
+    _run(pin_answer([SALES], title="Net sales by store", ctx=ctx))
+    assert writer.spec.tool_calls == [SALES]
+
+
+def test_replayed_calls_are_rendered_in_the_form_that_matches():
+    """
+    The model pins by copying an argument list out of the replayed text. That
+    text is rendered with sorted keys — call_key's own form — so what it copies
+    matches what ran.
+    """
+    messages = george_loop._seed_history(
+        [{"role": "george", "text": "an answer", "tool_calls": [DAILY]}], {}
+    )
+    assert messages == [] or "get_sales(" in messages[-1]["content"]
+
+    seeded = george_loop._seed_history([
+        {"role": "user", "text": "q", "tool_calls": []},
+        {"role": "george", "text": "a", "tool_calls": [DAILY]},
+    ], {})
+    rendered = seeded[-1]["content"]
+    assert '"date_range": "last_month"' in rendered
+    assert rendered.index('"date_range"') < rendered.index('"group_by"')
+
+
+def test_history_never_produces_a_message_list_the_api_will_reject():
+    """
+    Blank turns dropped, consecutive same-role turns merged, and a replay that
+    starts mid-answer discarded down to a leading user message. A client that
+    sends something odd must not take the request down before it starts.
+    """
+    messages = george_loop._seed_history([
+        {"role": "george", "text": "orphaned answer", "tool_calls": []},
+        {"role": "user", "text": "  ", "tool_calls": []},
+        {"role": "user", "text": "first", "tool_calls": []},
+        {"role": "user", "text": "second", "tool_calls": []},
+        {"role": "george", "text": "answer", "tool_calls": []},
+    ], {})
+
+    assert [m["role"] for m in messages] == ["user", "assistant"]
+    assert messages[0]["content"] == "first\n\nsecond"
+    assert all(m["content"].strip() for m in messages)
+
+
+def test_history_is_bounded():
+    turns = [{"role": "user", "text": f"q{i}", "tool_calls": []} for i in range(200)]
+    messages = george_loop._seed_history(turns, {})
+    # All one role, so they merge — what matters is that only the tail was read.
+    assert "q0" not in messages[0]["content"]
+    assert f"q{199}" in messages[0]["content"]
+
+    long_turn = [{"role": "user", "text": "x" * 99999, "tool_calls": []}]
+    assert len(george_loop._seed_history(long_turn, {})[0]["content"]) \
+        <= george_loop.MAX_HISTORY_TEXT
+
+
 def test_a_multi_call_answer_needs_every_call_to_have_run():
     ctx = _ctx(SALES)
     with pytest.raises(PinRefused, match="have not run"):
@@ -238,6 +313,76 @@ def test_a_malformed_call_list_is_refused_before_the_writer_is_reached():
 def test_a_pin_needs_a_title():
     with pytest.raises(PinRefused, match="needs a title"):
         _run(pin_answer([SALES], title="   ", ctx=_ctx(SALES)))
+
+
+# ---------------------------------------------------------------------------
+# A pin claimed but never made
+#
+# Observed live 2026-09-03 on "pin that but weekly": George re-ran the weekly
+# query, wrote "Ran the weekly version first, then pinned it", and never called
+# the tool. Nothing was written and no tile existed — the answer was the only
+# evidence of the pin, and it was wrong.
+# ---------------------------------------------------------------------------
+
+DEFS = _load_defs()
+
+
+def test_a_claimed_pin_is_detected():
+    for answer in (
+        "Ran the weekly version first, then pinned it.",
+        'Pinned "Net sales by store" to the Replenishment page.',
+        "Done — the tile is now on Replenishment.",
+        "I've pinned that for you.",
+    ):
+        assert george_loop._pin_claim(answer, DEFS) == "claimed", answer
+
+
+def test_a_promised_pin_is_detected():
+    """
+    The live failure the second time: it said it would, then didn't. A promise
+    the user believes is as misleading as a false claim.
+    """
+    for answer in (
+        "I'll run the weekly version first, then pin that exact call.",
+        "Let me pin that for you.",
+        "I'll pin it to Replenishment.",
+    ):
+        assert george_loop._pin_claim(answer, DEFS) == "promised", answer
+
+
+def test_a_refusal_to_pin_is_neither():
+    """
+    George declining to pin is George behaving correctly. Correcting him for it
+    would train the behaviour out.
+    """
+    for answer in (
+        "I could not pin that, because the weekly call has not been run.",
+        "Nothing was pinned — pinning needs a signed-in user.",
+        "I haven't pinned it yet; tell me which page you want.",
+        "That can't be pinned without running it first.",
+        "I ran it but did not pin it, since you only asked for the figures.",
+        "I won't pin it until you say which page.",
+    ):
+        assert george_loop._pin_claim(answer, DEFS) is None, answer
+
+
+def test_a_claim_outranks_an_intent():
+    """An answer that does both has already asserted the stronger thing."""
+    assert george_loop._pin_claim(
+        "I'll pin that now. Pinned to Replenishment.", DEFS) == "claimed"
+
+
+def test_an_ordinary_answer_is_neither():
+    assert george_loop._pin_claim(
+        "Net sales last month were ₱8,069,394.16 across seven stores.", DEFS
+    ) is None
+
+
+def test_the_claim_vocabulary_comes_from_the_definitions():
+    """Not hardcoded in the loop — CLAUDE.md rule 3."""
+    spec = req(DEFS, "pins.claim_check")
+    assert spec["claims"] and spec["intents"] and spec["negations"]
+    assert spec["negation_window"] > 0
 
 
 # ---------------------------------------------------------------------------

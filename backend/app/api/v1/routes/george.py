@@ -37,7 +37,7 @@ import json
 import sys
 import uuid
 from pathlib import Path
-from typing import AsyncIterator, Optional
+from typing import Any, AsyncIterator, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -71,6 +71,22 @@ router = APIRouter(tags=["george"])
 _george_user = require_page("george")
 
 
+class HistoryCall(BaseModel):
+    tool: str = Field(..., min_length=1, max_length=64)
+    arguments: dict[str, Any] = Field(default_factory=dict)
+
+
+class HistoryTurn(BaseModel):
+    """One earlier turn, replayed by the client."""
+
+    role: Literal["user", "george"]
+    text: str = Field("", max_length=20000)
+    # The calls behind an earlier answer, which the client has already shown the
+    # user. Send only calls that SUCCEEDED — a call that refused has no result
+    # anyone saw, and must not become pinnable.
+    tool_calls: List[HistoryCall] = Field(default_factory=list, max_length=20)
+
+
 class AskRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
     # The page the user is asking from, e.g. "replenishment". George is present
@@ -81,6 +97,9 @@ class AskRequest(BaseModel):
     # asked. Who asked now comes from the token, below, and cannot be set by a
     # caller at all.
     page_context: Optional[str] = Field(None, max_length=100)
+    # The conversation so far. The loop is stateless per request, so without
+    # this every question stands alone and "pin that" has nothing to refer to.
+    history: List[HistoryTurn] = Field(default_factory=list, max_length=20)
 
 
 def _pin_writer(username: str) -> PinWriter:
@@ -136,7 +155,8 @@ def _pin_writer(username: str) -> PinWriter:
 
 async def _safe_stream(question: str, user_id: Optional[str],
                        page_context: Optional[str],
-                       pin_writer: PinWriter) -> AsyncIterator[str]:
+                       pin_writer: PinWriter,
+                       history: list[dict]) -> AsyncIterator[str]:
     """
     Wrap the loop so a crash still closes the stream cleanly.
 
@@ -150,6 +170,7 @@ async def _safe_stream(question: str, user_id: Optional[str],
             user_id=user_id,
             page_context=page_context,
             pin_writer=pin_writer,
+            history=history,
         ):
             yield frame
     except Exception as exc:  # noqa: BLE001
@@ -185,6 +206,10 @@ async def ask(
     Authenticated, behind George's own page — the same gate as /george/pins.
     That is what lets an answer be pinned from the conversation: the pin is
     written as the caller, and there is no anonymous route to a write.
+
+    The loop holds no conversation state between requests, so a follow-up like
+    "pin that" only has a referent if the client replays the turns before it in
+    `history`. Send it, or every question stands alone.
     """
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="question must not be empty")
@@ -195,6 +220,7 @@ async def ask(
             user_id=user.username,
             page_context=request.page_context,
             pin_writer=_pin_writer(user.username),
+            history=[t.model_dump() for t in request.history],
         ),
         media_type="text/event-stream",
         headers={

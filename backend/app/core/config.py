@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     REDIS_ENABLED: bool = False  # Set to True to enable Redis caching
 
     # Security
+    #
+    # The default below is a PLACEHOLDER and is rejected at boot — see
+    # assert_secret_key_usable at the bottom of this file. It stays as the
+    # default (rather than being made required) so that importing settings
+    # still works for tests, scripts and migrations, none of which sign a
+    # token; only the running server refuses it.
     SECRET_KEY: str = "your-secret-key-here-change-in-production"
     ALGORITHM: str = "HS256"
     # 12 hours — a warehouse shift. Staff should not be re-typing a password
@@ -91,3 +97,73 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+# ---------------------------------------------------------------------------
+# The signing key must never be the placeholder
+#
+# SECRET_KEY signs every access token. With the committed default, anyone who
+# can read this repository can mint a token for any user id — including an
+# admin — against any deployment that has not overridden it. That is not a
+# configuration preference; it is the whole of the authentication system.
+#
+# This is a FUNCTION called at boot (app/main.py, before the app object is
+# built) rather than a pydantic validator, deliberately. A validator would run
+# on every `import settings`, so the golden suite, alembic and every one-off
+# script would refuse to start over a key none of them signs anything with —
+# and the resulting failure would look like a broken test rather than a missing
+# secret. The server is the only process that needs to care, so the server is
+# the only one that checks.
+# ---------------------------------------------------------------------------
+
+PLACEHOLDER_SECRET_KEY = "your-secret-key-here-change-in-production"
+
+# HS256 keys shorter than the 256-bit hash they feed add nothing. 32 characters
+# is the floor, not a target; generate 64.
+MIN_SECRET_KEY_LENGTH = 32
+
+
+class InsecureSecretKeyError(RuntimeError):
+    """The app is configured with a signing key that cannot be trusted."""
+
+
+# Distinguishes "no argument, read the settings" from "I am handing you None".
+# Using None for both would mean assert_secret_key_usable(os.getenv("SECRET_KEY"))
+# quietly checked the settings when the variable was missing — passing on
+# exactly the case it exists to catch.
+_FROM_SETTINGS = object()
+
+
+def assert_secret_key_usable(secret_key: str | None = _FROM_SETTINGS) -> None:  # type: ignore[assignment]
+    """
+    Refuse to boot on a placeholder, empty or too-short SECRET_KEY.
+
+    Checks the configured key when called with no argument, and the given one
+    otherwise — including None, which is a failure, not a request for the
+    default. Raises InsecureSecretKeyError with instructions; called for its
+    exception, never for a return value.
+    """
+    key = settings.SECRET_KEY if secret_key is _FROM_SETTINGS else secret_key
+    how = (
+        "Generate one with:\n"
+        "    python -c \"import secrets; print(secrets.token_urlsafe(64))\"\n"
+        "and set SECRET_KEY in the environment (Railway variables, or "
+        "backend/.env locally). Rotating it signs out every existing session, "
+        "which is the intended effect if the old value ever leaked."
+    )
+
+    if key is None or not key.strip():
+        raise InsecureSecretKeyError(f"SECRET_KEY is empty. {how}")
+
+    if key == PLACEHOLDER_SECRET_KEY:
+        raise InsecureSecretKeyError(
+            "SECRET_KEY is still the placeholder committed in this repository, "
+            "so anyone who can read the source can mint an admin token for this "
+            f"deployment. Refusing to start. {how}"
+        )
+
+    if len(key) < MIN_SECRET_KEY_LENGTH:
+        raise InsecureSecretKeyError(
+            f"SECRET_KEY is {len(key)} characters; at least "
+            f"{MIN_SECRET_KEY_LENGTH} are required. {how}"
+        )

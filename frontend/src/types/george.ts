@@ -98,6 +98,20 @@ export type GeorgeTurn =
       at: string;
     };
 
+/**
+ * One earlier turn, replayed to the server on the next question.
+ *
+ * George holds no conversation state between requests, so this is what gives a
+ * follow-up its referent — "pin that" is meaningless without it. `tool_calls`
+ * carries only calls that SUCCEEDED: they are the ones whose results were shown
+ * on screen, and therefore the only ones that may become a pin.
+ */
+export interface AskHistoryTurn {
+  role: 'user' | 'george';
+  text: string;
+  tool_calls: { tool: string; arguments: Record<string, unknown> }[];
+}
+
 export interface DoneFrame {
   conversation_id: string;
   iterations: number;

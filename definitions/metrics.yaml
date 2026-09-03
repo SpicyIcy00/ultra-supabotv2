@@ -2574,6 +2574,74 @@ notices:
   # notice before falling back to appending it verbatim.
   max_corrective_turns: 1
 
+# =============================================================================
+# PINS — the vocabulary for one integrity check
+#
+# A pin is a WRITE, and the only claim George can make that changes something
+# outside the conversation. Observed live on 2026-09-03, answering "pin that but
+# weekly": George re-ran the weekly query, then wrote "Ran the weekly version
+# first, then pinned it. **Pinned:** ... → Replenishment page" — having never
+# called pin_answer. No tile existed. Nothing had been written. The answer was
+# the only evidence of a pin, and it was wrong.
+#
+# So the loop checks the claim against what actually happened (see
+# _claims_pin in agent/loop.py). These are the words that count as a claim, and
+# the words that mean it is being DENIED rather than asserted — "I couldn't pin
+# that" must not be mistaken for "pinned".
+#
+# Kept here rather than in the loop for the same reason notices.must_convey is:
+# the phrasing of an answer is not a constant of the code.
+# =============================================================================
+pins:
+  claim_check:
+    # A completion claim: the answer asserts a pin exists.
+    claims:
+      - pinned
+      - pin is now
+      - tile is now
+      - added to the page
+
+    # A stated INTENTION to pin. Observed live 2026-09-03, the same question one
+    # run later: "I'll run the weekly version first, then pin that exact call" —
+    # followed by the weekly table and no pin_answer call at all. A promise the
+    # user will believe is as misleading as a false claim, so it gets the same
+    # check, with a gentler correction: George may legitimately be waiting on
+    # them ("I'll pin it once you tell me which page"), and is asked to say so
+    # rather than to pin regardless.
+    intents:
+      - i'll pin
+      - i will pin
+      - then pin
+      - let me pin
+      - going to pin
+      - about to pin
+      - i'll add it to
+      - will pin it
+
+    # Within this many characters BEFORE a claim, any of these turns it into a
+    # denial. 60 covers "I could not pin that to the Replenishment page" without
+    # reaching back into an unrelated sentence.
+    negation_window: 60
+    negations:
+      - "not "
+      - "n't"
+      - cannot
+      - "no "
+      - nothing
+      - none
+      - never
+      - unable
+      - fail
+      - refus
+      - without
+      - "instead of"
+      - "rather than"
+      - "haven't"
+      - "won't"
+
+    # One corrective turn: either call the tool or withdraw the claim.
+    max_corrective_turns: 1
+
 
 # =============================================================================
 # RANKING (top_n)
