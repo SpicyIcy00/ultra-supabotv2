@@ -1,0 +1,102 @@
+{
+  "name": "George — morning brief (06:00 Manila)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "0 6 * * *" }
+          ]
+        }
+      },
+      "id": "schedule",
+      "name": "06:00 Manila",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "notes": "Timezone MUST be Asia/Manila — set it on the workflow (Settings > Timezone), not just here. n8n cron runs in the workflow's timezone; the instance default is UTC, which would fire this at 14:00 Manila."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GEORGE_API_BASE }}/api/v1/brief/send",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.BRIEF_TOKEN }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"chat_ids\": {{ $env.BRIEF_CHAT_IDS }} }",
+        "options": { "timeout": 120000, "response": { "response": { "neverError": false } } }
+      },
+      "id": "send",
+      "name": "Build and send the brief",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0],
+      "onError": "continueErrorOutput",
+      "notes": "The backend builds the brief AND renders it. n8n is deliberately a dumb pipe: 'notices always surface' is a product guarantee, and templating the message here would move that guarantee into a workflow anyone can edit."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "version": 2 },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "delivered",
+      "name": "Every message delivered?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 0],
+      "notes": "ok is false when ANY message to ANY chat failed. A brief split into three that lost the middle one reads as a complete brief with items missing."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"chat_id\": {{ $env.BRIEF_ALERT_CHAT_ID }}, \"text\": {{ JSON.stringify('The morning brief did not run: ' + ($json.error?.message || $json.message || JSON.stringify($json)).slice(0, 500)) }} }",
+        "options": { "timeout": 30000 }
+      },
+      "id": "alarm",
+      "name": "Say that it failed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 160],
+      "notes": "THE POINT OF THIS BRANCH: a job that fails silently is indistinguishable from a quiet morning. Nobody notices an absent brief; they notice a brief that says it broke."
+    }
+  ],
+  "connections": {
+    "06:00 Manila": {
+      "main": [[{ "node": "Build and send the brief", "type": "main", "index": 0 }]]
+    },
+    "Build and send the brief": {
+      "main": [
+        [{ "node": "Every message delivered?", "type": "main", "index": 0 }],
+        [{ "node": "Say that it failed", "type": "main", "index": 0 }]
+      ]
+    },
+    "Every message delivered?": {
+      "main": [
+        [],
+        [{ "node": "Say that it failed", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Asia/Manila",
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

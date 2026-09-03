@@ -45,7 +45,8 @@ def _needs_database(item) -> bool:
     cannot: either way the result does not mean what it says.
     """
     pure = ("test_storehub_parser", "test_storehub_import_contract",
-            "test_storehub_tools_contract", "test_pins_contract")
+            "test_storehub_tools_contract", "test_pins_contract",
+            "test_brief_render")
     return not any(name in item.nodeid for name in pure)
 
 

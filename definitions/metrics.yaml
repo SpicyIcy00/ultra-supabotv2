@@ -2319,6 +2319,172 @@ cost_history:
 
 
 # =============================================================================
+# THE MORNING BRIEF — what "changed since yesterday" is allowed to mean
+#
+# A brief is the shape most likely to lie by omission: it is short, it is read
+# in a hurry, and every source it touches has a different age. So the rules for
+# what counts as a change, what is worth mentioning, and which sources are too
+# stale to speak all live here rather than in the tool.
+# =============================================================================
+brief:
+
+  # ---------------------------------------------------------------------------
+  # SALES: COMPARE LIKE WITH LIKE, WHICH IS NOT YESTERDAY vs THE DAY BEFORE.
+  #
+  # MEASURED 2026-09-03 over 120 closed days, company-wide net sales:
+  #     vs previous DAY            median 21.3%   p75 62.2%   p90 77.0%
+  #     vs same WEEKDAY last week  median 12.5%   p75 20.0%   p90 34.3%
+  #
+  # And the weekday cycle is enormous:
+  #     Mon 170,492   Tue 183,048   Wed 200,510   Thu 217,803
+  #     Fri 258,812   Sat 430,765   Sun 504,300
+  #
+  # Sunday averages nearly THREE TIMES Monday. A brief built on the previous day
+  # would report a catastrophe every Monday (-66% by construction) and a triumph
+  # every Saturday, and that cycle would drown every real signal. Do not
+  # "simplify" this back to day-over-day.
+  # ---------------------------------------------------------------------------
+  sales_vs_same_weekday:
+    comparison: same_weekday_last_week
+    baseline_offset_days: 7
+    comparison_rejected: previous_day
+    comparison_rejected_reason: >
+      Day-over-day swings a median 21.3% against 12.5% for the same weekday a
+      week earlier, and Sunday averages 3x Monday, so the sign of a day-over-day
+      change is mostly a function of which day it is.
+
+    # BOTH conditions must hold. They nearly coincide when yesterday is normal;
+    # the absolute floor only bites when the BASELINE was unusually low, where a
+    # large percentage describes a small amount of money. Fairview moving from a
+    # PHP 5,000 baseline to PHP 7,000 is +40% and PHP 2,000 — under its floor,
+    # so it stays out of the brief. Without the floor the smallest store would
+    # dominate every morning.
+    pct_threshold: 20.0
+    absolute_floor_fraction: 0.20
+
+    # ---------------------------------------------------------------------
+    # WHAT THESE THRESHOLDS ACTUALLY PRODUCE. Measured 2026-09-03 by replaying
+    # 143 closed days across the 7 active stores:
+    #
+    #   pct >= 20%, floor 20% of median -> 3.3 stores/day, quiet mornings   0/143
+    #   pct >= 30%, floor 25% of median -> 2.2 stores/day, quiet mornings  13/143
+    #   pct >= 35%, floor 30% of median -> 1.7 stores/day, quiet mornings  24/143
+    #
+    # At the configured setting the brief NEVER has a quiet morning: it names
+    # roughly half the estate every single day. That is a real cost — a brief
+    # that always fires teaches people to stop reading it, and the day something
+    # genuinely breaks it will look like every other day.
+    #
+    # It is left at 20% because that is what was asked for, and because the
+    # per-store week-over-week median swing is 18.9%-26.2%, so 20% is close to
+    # ordinary noise BY CONSTRUCTION. Raising it is a judgement about how much
+    # silence is acceptable, not a technical fix. The numbers above are here so
+    # that judgement is made with evidence rather than by feel.
+    # ---------------------------------------------------------------------
+    signal_rate_measured: "2026-09-03, 143 closed days, 7 stores"
+    signal_rate_stores_per_day: 3.3
+    signal_rate_quiet_mornings: 0
+
+    # The floor is a FRACTION OF THAT STORE'S OWN MEDIAN DAY, computed at run
+    # time from a trailing window — never a frozen number per store. A hardcoded
+    # median decays silently as the business changes; a rule does not.
+    #
+    # Reference values measured 2026-09-03 (for regression, NOT inputs):
+    #   Rockwell 55,603  OPUS 42,233  Greenhills 34,601  Shang 28,832
+    #   Magnolia 27,050  North Edsa 22,431  Fairview 20,102
+    # ...which put the floor between roughly PHP 4,000 and PHP 11,100.
+    median_lookback_days: 90
+    median_is_computed_at_runtime: true
+
+  # ---------------------------------------------------------------------------
+  # STOCK: A TRANSITION, NEVER A LEVEL.
+  #
+  # 87.4% of inventory rows are already out of stock, so "how many are out" is
+  # not news and never will be. What changed is the crossing.
+  #
+  # Negative on-hand counts as out (inventory.states.out_of_stock is <= 0), so
+  # the transition is positive -> non-positive.
+  #
+  # The two dates compared are the two most recent SNAPSHOT DAYS, not literally
+  # yesterday and the day before: coverage has gaps (AJI BARN has 148 snapshot
+  # days across a 162-day span). The brief reports which two dates it actually
+  # used, and says so when they are not consecutive.
+  # ---------------------------------------------------------------------------
+  stock_crossed_out:
+    transition: positive_to_nonpositive
+    compare: two_most_recent_snapshot_days
+    gap_notice_mandatory: true
+    # low_stock is not available as a brief item and will not become one until
+    # warning_stock is populated: it matches zero rows on 100% of inventory.
+    low_stock_available: false
+
+  # ---------------------------------------------------------------------------
+  # DEAD STOCK: "CROSSED 30 DAYS WITH NO SALE" — an event, not an artefact.
+  #
+  # A product does not become dead because something happened; it becomes dead
+  # because time passed. Comparing yesterday's dead list to today's would report
+  # the window sliding. So the item is the CROSSING: still held, no sale in the
+  # window, and the last sale fell out of the window overnight.
+  #
+  # 53.3% of held products are already dead, so the standing list is not news
+  # either. Retail scope only — AJI BARN quantities are dispatch counters, not
+  # stock (dead_stock.barn_excluded_reason).
+  # ---------------------------------------------------------------------------
+  newly_dead:
+    window_days: 30
+    framing: crossed_30_days_without_a_sale
+    held_predicate_ref: dead_stock.stock_predicate
+    scope_ref: dead_stock.scope
+
+  # A brief nobody finishes reading is a brief that failed.
+  max_items_per_section: 8
+
+  # ---------------------------------------------------------------------------
+  # FRESHNESS. THE BRIEF NAMES EVERY SOURCE, INCLUDING THE ONES IT CANNOT USE.
+  #
+  # Measured 2026-09-03, and the spread is the whole problem: the sources a
+  # brief would naturally mix are between 0 and 64 days old.
+  #
+  #   transactions          0 d    current
+  #   inventory_snapshots   1 d    current
+  #   vending lines         1 d    current
+  #   vending_aisles       29 d    stale; cannot be date-filtered at all
+  #   stock_transfers      64 d    FROZEN — a static CSV import
+  #   purchase_orders      64 d    FROZEN — a static CSV import
+  #
+  # A brief that silently omits purchasing reads as "nothing happened in
+  # purchasing". Omission is the lie a brief tells most easily, so a stale or
+  # frozen source is reported AS AN ITEM, with its age and why it is silent.
+  # ---------------------------------------------------------------------------
+  freshness:
+    max_age_days:
+      transactions: 2
+      inventory_snapshots: 2
+      vending_lines: 2
+      vending_aisles: 7
+      stock_transfers: 2
+      purchase_orders: 2
+    stale_policy: state_explicitly
+    frozen_sources: [stock_transfers, purchase_orders]
+    frozen_reason: >
+      Loaded once from a StoreHub CSV export. They cannot change until someone
+      imports again, so "since yesterday" is not a question they can answer.
+
+  # ---------------------------------------------------------------------------
+  # EMPTY IS NOT QUIET. A section with nothing in it must say WHICH it is:
+  # nothing crossed the threshold, or the data never arrived. Those look
+  # identical on a phone at 6am and mean opposite things.
+  # ---------------------------------------------------------------------------
+  empty_section_must_distinguish: true
+
+  # At 06:00 Manila yesterday closed six hours ago. Sync lag is 0-1 days
+  # (tests/golden.py MAX_SYNC_LAG_DAYS = 2), so yesterday is normally complete
+  # but can still be settling. The brief reports the newest transaction it saw
+  # so the reader can judge for themselves.
+  report_newest_transaction: true
+
+
+# =============================================================================
 # NOTICE FINGERPRINTS
 #
 # Every tool can attach meta.notice when a result is not what it appears — an

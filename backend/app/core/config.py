@@ -81,6 +81,11 @@ class Settings(BaseSettings):
     # Create a bot via @BotFather and set the token here / in the environment.
     TELEGRAM_BOT_TOKEN: str = ""
 
+    # Shared secret for the morning-brief endpoint only, so a scheduler never
+    # has to hold a human passcode. Empty means the endpoint is CLOSED, not
+    # open — see routes/brief.py require_brief_token.
+    BRIEF_TOKEN: str = ""
+
     # Logging
     LOG_LEVEL: str = "INFO"
 

@@ -37,6 +37,7 @@ from typing import Any, AsyncIterator, Callable, Optional
 import anthropic
 
 from tools import (
+    brief,
     cost_history,
     dead_stock,
     inventory,
@@ -105,6 +106,7 @@ TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
     "get_dead_stock": dead_stock.get_dead_stock,
     "get_purchasing": purchasing.get_purchasing,
     "get_cost_history": cost_history.get_cost_history,
+    "get_brief": brief.get_brief,
 }
 
 
