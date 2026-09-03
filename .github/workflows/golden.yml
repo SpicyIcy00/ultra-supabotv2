@@ -20,6 +20,10 @@ on:
       # backend/requirements.txt because CI now installs from it.
       - "agent/**"
       - "backend/requirements.txt"
+      # backend/app/ is in scope because test_undefined_names.py scans it. A
+      # NameError in a route ships silently otherwise — that is exactly how
+      # POST /george/pins/{id}/run stayed broken.
+      - "backend/app/**"
       - ".github/workflows/golden.yml"
   pull_request:
     paths:
@@ -28,6 +32,7 @@ on:
       - "tests/**"
       - "agent/**"
       - "backend/requirements.txt"
+      - "backend/app/**"
   workflow_dispatch:
 
 concurrency:

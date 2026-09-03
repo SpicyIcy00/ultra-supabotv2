@@ -10,3 +10,8 @@
 # Only add something here if it is genuinely test-only. A runtime import belongs
 # in backend/requirements.txt, where the application will get it too.
 pytest==8.4.1
+
+# Used by test_undefined_names.py, which resolves every module's names against
+# its own bindings without importing anything. Test-only: nothing the
+# application runs imports pyflakes.
+pyflakes==3.4.0
