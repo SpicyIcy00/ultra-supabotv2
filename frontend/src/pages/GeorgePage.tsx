@@ -14,6 +14,7 @@ import { useMemo, useState } from 'react';
 import { PanelLeft } from 'lucide-react';
 import { useGeorgeStream } from '../hooks/useGeorgeStream';
 import { GeorgeConversation } from '../components/george/GeorgeConversation';
+import { PinnedPage } from '../components/george/PinnedPage';
 import { GeorgeInput } from '../components/george/GeorgeInput';
 import { ReactiveMark } from '../components/george/ReactiveMark';
 import {
@@ -27,6 +28,9 @@ export default function GeorgePage() {
   const { turns, state, ask, cancel, busy } = useGeorgeStream();
   const [leftOpen, setLeftOpen] = useState(false);   // collapsed by default
   const [rightOpen, setRightOpen] = useState(false);
+  // Which pinned page the centre column is showing. `undefined` means the
+  // conversation; a string or null means a page (null = the ungrouped pins).
+  const [openPage, setOpenPage] = useState<string | null | undefined>(undefined);
 
   /** Tools still in flight, for the mark's subtitle. */
   const running = useMemo(() => {
@@ -40,7 +44,16 @@ export default function GeorgePage() {
     // viewport width; the app chrome above it is untouched.
     <div className="-m-3 sm:-m-4 lg:-m-6 flex h-[calc(100dvh-3.5rem)] bg-george-cream font-sans text-george-navy">
       {leftOpen ? (
-        <LeftRail open={leftOpen} onClose={() => setLeftOpen(false)} />
+        <LeftRail
+          open={leftOpen}
+          onClose={() => setLeftOpen(false)}
+          selected={openPage ?? null}
+          hasSelection={openPage !== undefined}
+          onSelectPage={(page) => {
+            setOpenPage(page ?? undefined);
+            setLeftOpen(false);
+          }}
+        />
       ) : (
         <LeftRailStub onOpen={() => setLeftOpen(true)} />
       )}
@@ -66,11 +79,17 @@ export default function GeorgePage() {
 
         <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 md:px-6">
           <div className="mx-auto max-w-3xl">
-            <GeorgeConversation turns={turns} />
+            {openPage === undefined ? (
+              <GeorgeConversation turns={turns} />
+            ) : (
+              <PinnedPage page={openPage} onBack={() => setOpenPage(undefined)} />
+            )}
           </div>
         </div>
 
-        <GeorgeInput onAsk={ask} onCancel={cancel} busy={busy} />
+        {openPage === undefined && (
+          <GeorgeInput onAsk={ask} onCancel={cancel} busy={busy} />
+        )}
       </main>
 
       <RightRail open={rightOpen} onClose={() => setRightOpen(false)} />

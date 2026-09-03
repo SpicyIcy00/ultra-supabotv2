@@ -16,6 +16,7 @@ import type { GeorgeTurn } from '../../types/george';
 import { NoticeBanner } from './NoticeBanner';
 import { ReceiptsBlock } from './ReceiptsBlock';
 import { ToolCallRow } from './ToolCallRow';
+import { PinButton } from './PinButton';
 
 export function GeorgeConversation({ turns }: { turns: GeorgeTurn[] }) {
   const endRef = useRef<HTMLDivElement>(null);
@@ -65,11 +66,25 @@ export function GeorgeConversation({ turns }: { turns: GeorgeTurn[] }) {
             <ReceiptsBlock meta={turn.receipts} />
 
             {turn.done && (
-              <p className="text-[11px] text-george-muted">
-                {turn.done.tool_calls} tool {turn.done.tool_calls === 1 ? 'call' : 'calls'} ·{' '}
-                {turn.done.iterations} iterations
-                {turn.done.cache_hit && ' · cache hit'}
-              </p>
+              <div className="flex items-center gap-1">
+                <p className="flex-1 text-[11px] text-george-muted">
+                  {turn.done.tool_calls} tool {turn.done.tool_calls === 1 ? 'call' : 'calls'} ·{' '}
+                  {turn.done.iterations} iterations
+                  {turn.done.cache_hit && ' · cache hit'}
+                </p>
+                {/* The answer action row. Pin sits alone for now — there is no
+                    Save control anywhere in this app yet, and save means a
+                    versioned rule (CLAUDE.md), which the backend cannot do. The
+                    row is shaped to take one when it can. */}
+                <PinButton
+                  turn={turn}
+                  question={
+                    turns[i - 1]?.role === 'user'
+                      ? (turns[i - 1] as { text: string }).text
+                      : undefined
+                  }
+                />
+              </div>
             )}
           </div>
         ),
