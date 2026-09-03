@@ -159,6 +159,45 @@ async def _resolve_skus(
     return product_id, match_kind, counters
 
 
+# Postgres's wire protocol carries the bind-parameter count in an int16, so a
+# single statement can pass at most 32,767 of them. A multi-row INSERT spends
+# one per column per row, so the real cap is a ROW count that depends on how
+# wide the table is: 14,024 transfer lines x 14 columns is 196,336 parameters
+# and fails outright with "the number of query arguments cannot exceed 32767".
+#
+# This only shows up at real volume. The fixture-sized tests never approached it.
+_MAX_BIND_PARAMS = 32767
+_BIND_HEADROOM = 128        # leaves room for the WHERE/ON CONFLICT parameters
+
+
+def _chunk(rows: list[dict], columns: int) -> list[list[dict]]:
+    """Split rows so no single statement exceeds the bind-parameter limit."""
+    per_statement = max(1, (_MAX_BIND_PARAMS - _BIND_HEADROOM) // max(1, columns))
+    return [rows[i:i + per_statement] for i in range(0, len(rows), per_statement)]
+
+
+def _normalise(rows: list[dict]) -> list[dict]:
+    """
+    Give every row the same keys, filling absentees with None.
+
+    A multi-row `INSERT ... VALUES` compiles one statement for the whole batch,
+    so a key present on some rows and missing on others fails at compile time
+    with "explicitly rendered as a boundparameter in the VALUES clause". That is
+    a confusing error a long way from its cause.
+
+    It happened for real: documents with no line rows skipped the branch that
+    sets header_total_reconciles, and ~20 such documents exist in a single
+    export. The parser now always sets it, and this makes the whole class of
+    fault impossible rather than relying on every future field remembering.
+    """
+    if not rows:
+        return rows
+    keys: dict[str, None] = {}
+    for r in rows:
+        keys.update(dict.fromkeys(r))
+    return [{k: r.get(k) for k in keys} for r in rows]
+
+
 def _document_values(parsed, kind: str, import_id: int) -> dict:
     """Header roles as produced by the parser, plus provenance."""
     values = dict(parsed.header)
@@ -254,30 +293,30 @@ async def import_file(
     # which keeps its original value by simply not appearing in the SET clause.
     # RETURNING (xmax = 0) distinguishes an insert from an update, so the ledger
     # can report both without a second query.
-    doc_values = [_document_values(d, kind, import_id) for d in parsed.documents]
+    doc_values = _normalise([_document_values(d, kind, import_id) for d in parsed.documents])
     mutable = [c for c in doc_values[0] if c not in ("external_id", "first_seen_import_id")]
 
-    stmt = pg_insert(Document).values(doc_values)
-    stmt = stmt.on_conflict_do_update(
-        index_elements=[Document.external_id],
-        set_={c: stmt.excluded[c] for c in mutable},
-    ).returning(
-        Document.id,
-        Document.external_id,
-        # xmax is a Postgres system column and has no mapped attribute. On a row
-        # this statement INSERTED it is 0; on one it UPDATED it holds the
-        # updating transaction's id. It is the standard way to tell the two
-        # apart in an upsert without a second round trip.
-        literal_column("xmax = 0").label("was_inserted"),
-    )
-
     doc_id_by_external: dict[str, int] = {}
-    for row in (await db.execute(stmt)).all():
-        doc_id_by_external[row.external_id] = row.id
-        if row.was_inserted:
-            counters["documents_inserted"] += 1
-        else:
-            counters["documents_updated"] += 1
+    for batch in _chunk(doc_values, len(doc_values[0])):
+        stmt = pg_insert(Document).values(batch)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[Document.external_id],
+            set_={c: stmt.excluded[c] for c in mutable},
+        ).returning(
+            Document.id,
+            Document.external_id,
+            # xmax is a Postgres system column and has no mapped attribute. On a
+            # row this statement INSERTED it is 0; on one it UPDATED it holds the
+            # updating transaction's id. It is the standard way to tell the two
+            # apart in an upsert without a second round trip.
+            literal_column("xmax = 0").label("was_inserted"),
+        )
+        for row in (await db.execute(stmt)).all():
+            doc_id_by_external[row.external_id] = row.id
+            if row.was_inserted:
+                counters["documents_inserted"] += 1
+            else:
+                counters["documents_updated"] += 1
 
     # ---- upsert lines ------------------------------------------------------
     line_values: list[dict] = []
@@ -308,18 +347,20 @@ async def import_file(
             line_values.append(values)
 
     if line_values:
+        line_values = _normalise(line_values)
         line_mutable = [c for c in line_values[0] if c not in (line_fk, "line_no")]
-        lstmt = pg_insert(Line).values(line_values)
-        lstmt = lstmt.on_conflict_do_update(
-            index_elements=[getattr(Line, line_fk), Line.line_no],
-            set_={c: lstmt.excluded[c] for c in line_mutable},
-        ).returning(literal_column("xmax = 0").label("was_inserted"))
+        for batch in _chunk(line_values, len(line_values[0])):
+            lstmt = pg_insert(Line).values(batch)
+            lstmt = lstmt.on_conflict_do_update(
+                index_elements=[getattr(Line, line_fk), Line.line_no],
+                set_={c: lstmt.excluded[c] for c in line_mutable},
+            ).returning(literal_column("xmax = 0").label("was_inserted"))
 
-        for row in (await db.execute(lstmt)).all():
-            if row.was_inserted:
-                counters["lines_inserted"] += 1
-            else:
-                counters["lines_updated"] += 1
+            for row in (await db.execute(lstmt)).all():
+                if row.was_inserted:
+                    counters["lines_inserted"] += 1
+                else:
+                    counters["lines_updated"] += 1
 
     # ---- converge: drop lines this file no longer contains -----------------
     # Every line the file DOES contain was just written with this import_id, so

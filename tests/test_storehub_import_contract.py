@@ -206,3 +206,58 @@ def test_sku_import_match_is_case_sensitive_in_the_definitions():
     cannot silently disagree. TKY28 and Tky28 are different products.
     """
     assert load_defs()["products"]["sku"]["import_match"] == "case_sensitive"
+
+
+# ---------------------------------------------------------------------------
+# Regressions from the first live import. Both were invisible to fixture-sized
+# tests and only appeared against 771 documents / 14,024 lines.
+# ---------------------------------------------------------------------------
+
+def test_line_less_document_still_carries_header_total_reconciles():
+    """
+    Documents with no line rows used to skip the branch that sets this key, so
+    the header dicts were heterogeneous and the importer's multi-row INSERT
+    failed to compile. ~20 such documents exist in one real export.
+    """
+    data = _st(
+        '"ST9100","09/02/2026 16:20","","","AJI BARN","AJI ONLINE","","","","","","","","",'
+        '"0.00","Cancelled","","Tan Daniel","09/02/2026 17:00",""',
+        '"ST9101","09/02/2026 16:20","","","AJI BARN","AJI ONLINE","","","","","","","","",'
+        '"10.00","Created","","","",""',
+        '"ST9101","09/02/2026 16:20","","","AJI BARN","AJI ONLINE","1","A","SKU1","","indi",'
+        '"10","1.00","10.00","","Created","","","",""',
+    )
+    docs = parse(data, "stock_transfers").documents
+    assert len(docs) == 2
+    for d in docs:
+        assert "header_total_reconciles" in d.header, d.external_id
+    # The key set is identical across documents, which is what the importer
+    # needs for a single multi-row statement.
+    assert set(docs[0].header) == set(docs[1].header)
+
+
+def test_multirow_insert_stays_under_the_postgres_bind_limit():
+    """
+    Postgres carries the bind-parameter count in an int16: max 32,767 per
+    statement. 14,024 lines x 14 columns is 196,336 and fails outright with
+    "the number of query arguments cannot exceed 32767".
+    """
+    from app.services.storehub_import import _chunk, _MAX_BIND_PARAMS
+
+    for columns in (14, 16, 19, 23):
+        rows = [{"c": i} for i in range(14_024)]
+        batches = _chunk(rows, columns)
+        assert sum(len(b) for b in batches) == len(rows)          # nothing lost
+        assert [r for b in batches for r in b] == rows            # order preserved
+        for b in batches:
+            assert len(b) * columns <= _MAX_BIND_PARAMS, (columns, len(b))
+
+
+def test_normalise_gives_every_row_the_same_keys():
+    from app.services.storehub_import import _normalise
+
+    out = _normalise([{"a": 1}, {"a": 2, "b": 3}, {"c": 4}])
+    assert all(set(r) == {"a", "b", "c"} for r in out)
+    assert out[0]["b"] is None and out[2]["a"] is None
+    assert out[1]["b"] == 3          # present values survive
+    assert _normalise([]) == []

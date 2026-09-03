@@ -518,6 +518,15 @@ def parse(data: bytes, kind: str, defs: Optional[dict] = None) -> ParsedFile:
     tolerance = Decimal(str(header_check["tolerance"]))
 
     for doc in documents.values():
+        # Set FIRST, for every document including the line-less ones. This used
+        # to sit after the `continue` below, so a header with no lines carried no
+        # header_total_reconciles key at all — which made the header dicts
+        # heterogeneous and broke the importer's multi-row INSERT with
+        # "explicitly rendered as a boundparameter in the VALUES clause".
+        # ~20 documents in a single real export have no lines, so this was not
+        # an edge case.
+        doc.header["header_total_reconciles"] = None      # not checkable
+
         if not doc.lines:
             notices.append({
                 "kind": "document_without_lines",
@@ -533,8 +542,6 @@ def parse(data: bytes, kind: str, defs: Optional[dict] = None) -> ParsedFile:
 
         total = doc.header.get("header_total")
         subtotals = [ln.subtotal for ln in doc.lines if ln.subtotal is not None]
-        doc.header["header_total_reconciles"] = None      # not checkable by default
-
         if total is not None and subtotals:
             gap = abs(sum(subtotals) - total)
             reconciles = gap <= tolerance
