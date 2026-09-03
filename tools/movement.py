@@ -571,10 +571,17 @@ def get_movement(
     # because these are absolute positions, not flows. sum_of_observed_deltas
     # omits whatever happened inside a gap, so the two differ when gaps exist —
     # that difference is itself the measure of what the gaps hide.
-    observed = [r["balance_delta"] for r in rows if r["balance_delta"] is not None]
+    # Filter by basis. `rows` now carries BOTH kinds, and a transfer row has no
+    # balance_delta key at all — computing a snapshot headline over the merged
+    # list is exactly the blending this tool exists to prevent, and it raised
+    # KeyError the first time a records-only query ran.
+    delta_rows = [r for r in rows if r["basis"] == "balance_delta"]
+
+    observed = [r["balance_delta"] for r in delta_rows if r["balance_delta"] is not None]
     net_change = None
-    if rows:
-        net_change = float(rows[-1]["quantity_on_hand"]) - float(rows[0]["quantity_on_hand"])
+    if delta_rows:
+        net_change = (float(delta_rows[-1]["quantity_on_hand"])
+                      - float(delta_rows[0]["quantity_on_hand"]))
     sum_observed = sum(observed) if observed else 0.0
     decline = -sum(d for d in observed if d < 0) if observed else 0.0
     disp_grams = float(disp["grams"]) if disp else 0.0

@@ -44,7 +44,9 @@ def _needs_database(item) -> bool:
     Skipping a test that could have run is the same failure as running one that
     cannot: either way the result does not mean what it says.
     """
-    return "storehub" not in item.nodeid
+    pure = ("test_storehub_parser", "test_storehub_import_contract",
+            "test_storehub_tools_contract")
+    return not any(name in item.nodeid for name in pure)
 
 
 def pytest_collection_modifyitems(config, items):
