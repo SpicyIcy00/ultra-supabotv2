@@ -48,7 +48,16 @@ from datetime import date
 
 import pytest
 
-from tools import dead_stock, inventory, movement, products, sales, vending
+from tools import (
+    cost_history,
+    dead_stock,
+    inventory,
+    movement,
+    products,
+    purchasing,
+    sales,
+    vending,
+)
 from tools._common import connect, load_defs, req
 
 # --------------------------------------------------------------------------
@@ -135,21 +144,83 @@ GOLDEN = [
     ("products/product-barcodes-only-source",
      lambda: products.get_product(barcode="2000000000008")["rows"][0]["sku"], "bulk01WR"),
 
-    # ---- movement (4) ----------------------------------------------------
+    # ---- movement, INFERRED basis (4) ------------------------------------
+    # These four values were measured against snapshot differencing, so they are
+    # pinned to basis="balance_delta" and their figures are unchanged. The
+    # headline numbers moved from meta[...] into meta["balance_delta"][...] when
+    # the second basis arrived: a net_change at the top level would not say
+    # WHICH kind of movement it counted, and the whole point of the split is
+    # that recorded and inferred movement are never one unlabelled figure.
     ("movement/sh1-90d-net-change",
-     lambda: movement.get_movement(sku="SH1", date_range=("2026-06-03", "2026-09-01"))["meta"]["net_change"],
+     lambda: movement.get_movement(sku="SH1", date_range=("2026-06-03", "2026-09-01"),
+                                   basis="balance_delta")["meta"]["balance_delta"]["net_change"],
      -4817082.0),
     ("movement/sh1-90d-row-count",
-     lambda: movement.get_movement(sku="SH1", date_range=("2026-06-03", "2026-09-01"))["meta"]["row_count"], 90),
+     lambda: movement.get_movement(sku="SH1", date_range=("2026-06-03", "2026-09-01"),
+                                   basis="balance_delta")["meta"]["row_count"], 90),
     ("movement/sh1-90d-nothing-explained",
-     lambda: movement.get_movement(sku="SH1", date_range=("2026-06-03", "2026-09-01"))
-     ["meta"]["reconciliation"]["explained_pct"], 0.0),
+     lambda: movement.get_movement(sku="SH1", date_range=("2026-06-03", "2026-09-01"),
+                                   basis="balance_delta")
+     ["meta"]["balance_delta"]["reconciliation"]["explained_pct"], 0.0),
     # net_change is gap-immune (absolute balances); sum_of_observed_deltas is not.
     ("movement/gap-window-hides-665200g",
      lambda: round(
-         movement.get_movement(sku="SH1", date_range=("2026-03-23", "2026-04-20"))["meta"]["net_change"]
-         - movement.get_movement(sku="SH1", date_range=("2026-03-23", "2026-04-20"))["meta"]["sum_of_observed_deltas"],
+         movement.get_movement(sku="SH1", date_range=("2026-03-23", "2026-04-20"),
+                               basis="balance_delta")["meta"]["balance_delta"]["net_change"]
+         - movement.get_movement(sku="SH1", date_range=("2026-03-23", "2026-04-20"),
+                                 basis="balance_delta")["meta"]["balance_delta"]["sum_of_observed_deltas"],
          0), -665200.0),
+
+    # ---- movement, RECORDED basis (2) ------------------------------------
+    # Unanswerable before the StoreHub transfer import: destination attribution
+    # previously reconciled for 24 of 196 products, so "how much went from BARN
+    # to Rockwell" was refused outright. These are now a direct read of recorded
+    # documents, cross-checked against hand-written SQL on 2026-09-03.
+    ("movement/sh1-barn-to-rockwell-qty",
+     lambda: movement.get_movement(sku="SH1", store="AJI BARN", to_store="Rockwell",
+                                   basis="transfer_records",
+                                   date_range=("2025-01-01", "2026-09-03"))
+     ["meta"]["transfer_records"]["moved_quantity"], 3856260.0),
+    ("movement/sh1-barn-to-rockwell-value",
+     lambda: movement.get_movement(sku="SH1", store="AJI BARN", to_store="Rockwell",
+                                   basis="transfer_records",
+                                   date_range=("2025-01-01", "2026-09-03"))
+     ["meta"]["transfer_records"]["moved_value"], 3085008.0),
+
+    # ---- purchasing (3) --------------------------------------------------
+    # Nothing here was answerable before the StoreHub import; suppliers was
+    # definitions-only. Both PO exports are loaded and disjoint: 227 documents,
+    # 1,047 lines.
+    # Cancelled documents are excluded BY DEFAULT, so the default count is not
+    # the number of rows in the table. 206 completed + 12 open = 218; the 9
+    # cancelled are only counted when asked for. Both are asserted so the
+    # default can never quietly start including them.
+    ("purchasing/po-count",
+     lambda: _val(purchasing.get_purchasing(measure="po_count")), 218),
+    ("purchasing/po-count-including-cancelled",
+     lambda: _val(purchasing.get_purchasing(measure="po_count",
+                                            include_cancelled=True)), 227),
+    # 12 of those 227 disagree with their own line totals, so VALUE IS SUMMED
+    # FROM LINES. PO0604 carries a 90,000.00 header over 13 lines summing to
+    # 0.00; using headers would put that straight into the total.
+    ("purchasing/documents-with-header-mismatch",
+     lambda: sum(r.get("documents_with_header_mismatch", 0)
+                 for r in purchasing.get_purchasing(measure="ordered_value",
+                                                    group_by="supplier")["rows"]), 12),
+    # "Open" does not mean "not received" — these carry notes recording a
+    # delivery. Any outstanding-value figure built on status would be wrong.
+    ("purchasing/open-pos",
+     lambda: _val(purchasing.get_purchasing(measure="po_count", status="Open")), 12),
+
+    # ---- cost history (2) ------------------------------------------------
+    # A SKU whose cost was never entered. Zero means NOT ENTERED, not free, so
+    # it is excluded from every statistic rather than dragging the series down.
+    ("cost-history/kf27-all-costs-unentered",
+     lambda: cost_history.get_cost_history("KF27")["meta"]["bases"]
+     ["transfer_valuation"]["statistics"], None),
+    ("cost-history/sh1145-supplier-series-is-authoritative",
+     lambda: cost_history.get_cost_history("SH1145")["meta"]["bases"]
+     ["purchase_order"]["authoritative_for_cost"], True),
 
     # ---- vending sales (5) -----------------------------------------------
     ("vending/lifetime-revenue-php",
@@ -209,14 +280,54 @@ def test_low_stock_returns_notice_not_empty_list():
     assert req(load_defs(), "inventory.low_stock_operational") is False
 
 
-def test_refuse_destination_scoped_movement():
-    """No movement ledger exists; destination attribution is inference."""
+def test_refuse_destination_scoped_movement_on_the_inferred_basis():
+    """
+    The refusal is now SCOPED BY BASIS rather than blanket, and both halves
+    matter.
+
+    Differenced snapshots still cannot say where anything went, so asking them
+    is still refused with the measured coverage. Recorded transfers name both
+    ends, so refusing THEM would be refusing a question the data can now answer
+    — which is the opposite failure and just as bad.
+    """
     with pytest.raises(ValueError) as e:
-        movement.get_movement(sku="SH1", to_store="Rockwell")
+        movement.get_movement(sku="SH1", to_store="Rockwell", basis="balance_delta")
     msg = str(e.value)
     assert "not answerable" in msg
     # The refusal must carry the measured coverage, not just say no.
     assert "32.8%" in msg and "26.2%" in msg
+    # ...and point at the basis that CAN answer, rather than dead-ending.
+    assert "transfer_records" in msg
+
+    # The same question on records is answered, and says it is record-backed.
+    r = movement.get_movement(sku="SH1", store="AJI BARN", to_store="Rockwell",
+                              basis="transfer_records",
+                              date_range=("2025-01-01", "2026-09-03"))
+    assert r["meta"]["bases_returned"] == ["transfer_records"]
+    tr = r["meta"]["transfer_records"]
+    assert tr["provenance"]["is_recorded_movement"] is True
+    assert tr["provenance"]["destination_attribution_supported"] is True
+
+
+def test_movement_bases_are_never_summed():
+    """
+    Recorded and inferred movement describe the same goods from different
+    sources. A field totalling across them would double-count and carry no
+    single provenance, so none exists — every row says which basis produced it
+    and each basis keeps its own block.
+    """
+    r = movement.get_movement(sku="SH1", date_range=("2026-06-03", "2026-09-01"))
+    meta = r["meta"]
+    assert meta["never_blend_bases"] is True
+    assert set(meta["bases_returned"]) <= {"transfer_records", "balance_delta"}
+    for row in r["rows"]:
+        assert row["basis"] in ("transfer_records", "balance_delta")
+    # No top-level headline that would silently mean "both".
+    for leaked in ("net_change", "sum_of_observed_deltas", "moved_quantity"):
+        assert leaked not in meta, (
+            f"{leaked} is at the top of meta, where it does not say which kind "
+            f"of movement it counted"
+        )
 
 
 def test_uncovered_as_of_reports_coverage_gap():
@@ -384,21 +495,50 @@ def test_inventory_states_are_exclusive_and_total():
     )
 
 
-def test_suppliers_subjects_remain_unsupported():
+def test_suppliers_subjects_match_the_data_that_exists():
     """
-    suppliers is definitions-only. If a procurement integration lands, these
-    flags must be updated deliberately — this test is the tripwire.
+    THE TRIPWIRE FIRED, AND THIS IS THE DELIBERATE UPDATE.
+
+    This test used to assert all three subjects were unsupported, with the note
+    "if a procurement integration lands, these flags must be updated
+    deliberately". One landed: the StoreHub import brought 227 purchase orders
+    with 1,047 lines, each carrying a supplier, a product, a quantity, a unit
+    cost and three dates.
+
+    So the assertions flip for exactly the subjects the new data supports, and
+    NOT for the two it does not — which is the whole point of the tripwire.
     """
     defs = load_defs()
-    for subject in ("purchase_orders", "lead_times", "last_cost"):
-        assert req(defs, f"suppliers.{subject}.supported") is False
+
+    # Answerable now, because the documents exist.
+    assert req(defs, "suppliers.purchase_orders.supported") is True
+    assert req(defs, "suppliers.last_cost.supported") is True
+
+    # Lead time is PARTIAL and the distinction is the substance: the time until
+    # a PO was marked complete in StoreHub is measurable, the time until goods
+    # arrived is not. PO0710 was created and completed two minutes apart on a
+    # backdated correction; reporting that as supplier performance would be a
+    # claim about a supplier that actually measures data entry.
+    assert req(defs, "suppliers.lead_times.supported") == "partial"
+    assert req(defs, "suppliers.lead_times.completion_latency.supported") is True
+    assert req(defs, "suppliers.lead_times.completion_latency.label_mandatory") is True
+    assert req(defs, "suppliers.lead_times.delivery.supported") is False
+
+    # STILL FALSE, and must not be quietly upgraded by the arrival of purchase
+    # orders: nothing captures a cost per SALES line, so a margin figure would
+    # still value historical sales at today's cost.
     assert req(defs, "suppliers.store_profit_supported") is False
-    # And no profit metric may appear on the store side while that holds.
+    assert req(defs, "suppliers.store_profit_do_not_reintroduce") is True
     assert "profit" not in req(defs, "metrics"), (
         "a store-side profit metric was added while "
         "suppliers.store_profit_supported is false — no per-line cost exists, so "
         "it would value historical sales at today's cost."
     )
+
+    # The pre-import survey is kept, not deleted. It is the record of WHY these
+    # subjects were refused for so long; without it the old refusals look
+    # arbitrary in hindsight.
+    assert req(defs, "suppliers.survey_2026_09_01.any_supplier_data") is False
 
 
 # ==========================================================================
