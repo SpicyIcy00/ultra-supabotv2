@@ -19,3 +19,12 @@ export const getChat = async (threadId: string): Promise<ChatDetail> => {
   const { data } = await axios.get<ChatDetail>(`${API_BASE}/${threadId}`);
   return data;
 };
+
+/**
+ * Delete a chat. The server HIDES it rather than removing the rows — the
+ * conversation log behind it is also the gap log and pin provenance — but from
+ * here on it is gone: out of the list, not reopenable, not continuable.
+ */
+export const deleteChat = async (threadId: string): Promise<void> => {
+  await axios.delete(`${API_BASE}/${threadId}`);
+};

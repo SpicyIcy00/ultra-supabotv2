@@ -60,6 +60,10 @@ CREATE TABLE george.conversations (
     -- The last tool meta behind the answer, so a reopened figure still has
     -- its source, filters and snapshot timestamp (UI rule 6).
     receipts           jsonb,
+    -- A deleted chat is HIDDEN, never removed: set on every row of the thread
+    -- by the web process (alembic m7n8o9p0q1r2). The row stays for the gap log
+    -- and pin provenance.
+    hidden_at          timestamptz,
     logged_at          timestamptz NOT NULL DEFAULT now()
 );
 

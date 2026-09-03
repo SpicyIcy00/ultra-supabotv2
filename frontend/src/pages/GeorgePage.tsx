@@ -89,6 +89,10 @@ export default function GeorgePage() {
           activeThreadId={threadId}
           onNewChat={newChat}
           onOpenChat={openChat}
+          onChatDeleted={(id) => {
+            // The chat on screen is gone server-side; continuing it would 404.
+            if (id === threadId) newChat();
+          }}
           onSelectPage={(page) => {
             setCentre({ kind: 'page', page });
             setLeftOpen(false);

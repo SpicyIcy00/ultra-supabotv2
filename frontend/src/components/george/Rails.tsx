@@ -28,9 +28,9 @@
  * conversation, they cover it and dismiss.
  */
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Bell, ChevronRight, PanelLeft, Plus, X } from 'lucide-react';
-import { listChats } from '../../services/chatsApi';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Bell, ChevronRight, PanelLeft, Plus, Trash2, X } from 'lucide-react';
+import { deleteChat, listChats } from '../../services/chatsApi';
 import { listPinPages, listPins } from '../../services/pinsApi';
 
 /** What the centre column is showing. */
@@ -47,6 +47,8 @@ interface LeftRailProps extends RailProps {
   activeThreadId: string | null;
   onNewChat: () => void;
   onOpenChat: (threadId: string) => void;
+  /** Called after a chat is deleted, with its id, so the page can clear it if it is open. */
+  onChatDeleted: (threadId: string) => void;
   onSelectPage: (page: string | null) => void;
 }
 
@@ -59,11 +61,30 @@ export function LeftRail({
   activeThreadId,
   onNewChat,
   onOpenChat,
+  onChatDeleted,
   onSelectPage,
 }: LeftRailProps) {
+  const qc = useQueryClient();
   const chats = useQuery({ queryKey: ['chats'], queryFn: listChats });
   const pages = useQuery({ queryKey: ['pin-pages'], queryFn: listPinPages });
   const totalPins = (pages.data ?? []).reduce((n, p) => n + p.pins, 0);
+
+  const remove = useMutation({
+    mutationFn: deleteChat,
+    onSuccess: (_void, threadId) => {
+      qc.invalidateQueries({ queryKey: ['chats'] });
+      onChatDeleted(threadId);
+    },
+  });
+
+  const onDelete = (threadId: string, title: string) => {
+    // Deleting a chat hides a conversation, not data — the answers' figures
+    // were never stored, and any pin made from it lives on its page. A plain
+    // confirm is proportionate, the same as removing a pin.
+    if (window.confirm(`Delete “${title}”? It will disappear from this list and cannot be reopened.`)) {
+      remove.mutate(threadId);
+    }
+  };
 
   return (
     <>
@@ -119,6 +140,11 @@ export function LeftRail({
               No chats yet. Ask something to start one.
             </p>
           )}
+          {remove.isError && (
+            <p className="text-[12px] leading-relaxed text-george-slate">
+              Could not delete that chat.
+            </p>
+          )}
 
           <ul className="space-y-0.5">
             {(chats.data ?? []).map((c) => (
@@ -128,6 +154,7 @@ export function LeftRail({
                 at={c.last_asked_at}
                 active={centre.kind === 'chat' && activeThreadId === c.thread_id}
                 onOpen={() => onOpenChat(c.thread_id)}
+                onDelete={() => onDelete(c.thread_id, c.title)}
               />
             ))}
           </ul>
@@ -171,32 +198,47 @@ export function LeftRail({
   );
 }
 
-/** One chat: its title and the day it was last active. */
+/**
+ * One chat: its title, the day it was last active, and a delete control.
+ *
+ * The control is always rendered rather than shown on hover — there is no
+ * hover on a phone, and the phone layout is the real layout (UI rule 7).
+ */
 function ChatRow({
   title,
   at,
   active,
   onOpen,
+  onDelete,
 }: {
   title: string;
   at: string;
   active: boolean;
   onOpen: () => void;
+  onDelete: () => void;
 }) {
   return (
     <li>
-      <button
-        type="button"
-        onClick={onOpen}
-        aria-current={active ? 'true' : undefined}
-        className={`flex min-h-touch w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] text-george-navy hover:bg-george-line/40 ${
-          active ? 'bg-george-line/50' : ''
-        }`}
-        title={title}
-      >
-        <span className="truncate">{title}</span>
-        <span className="shrink-0 text-[11px] tabular-nums text-george-muted">{dayLabel(at)}</span>
-      </button>
+      <div className={`group flex items-center rounded-lg ${active ? 'bg-george-line/50' : ''}`}>
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-current={active ? 'true' : undefined}
+          className="flex min-h-touch min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] text-george-navy hover:bg-george-line/40"
+          title={title}
+        >
+          <span className="truncate">{title}</span>
+          <span className="shrink-0 text-[11px] tabular-nums text-george-muted">{dayLabel(at)}</span>
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label={`Delete chat “${title}”`}
+          className="flex h-8 w-7 shrink-0 items-center justify-center rounded-lg text-george-muted hover:text-george-navy"
+        >
+          <Trash2 className="h-3.5 w-3.5" aria-hidden />
+        </button>
+      </div>
     </li>
   );
 }

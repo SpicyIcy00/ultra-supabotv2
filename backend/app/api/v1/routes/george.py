@@ -51,7 +51,7 @@ import uuid
 from pathlib import Path
 from typing import Any, AsyncIterator, List, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import text
@@ -230,6 +230,11 @@ class ChatDetail(BaseModel):
 # the backfill is ever skipped.
 _THREAD = "COALESCE(c.thread_id, c.id)"
 
+# A deleted chat is hidden, not removed (see migration m7n8o9p0q1r2). Every
+# read below carries this, so a hidden chat is gone from the list, 404s on
+# reopen, and cannot be continued — while its rows stay in the log.
+_VISIBLE = "c.hidden_at IS NULL"
+
 
 async def _thread_belongs_to(username: str, thread_id: uuid.UUID) -> bool:
     """One SELECT, before the stream opens: the loop itself cannot read."""
@@ -238,7 +243,7 @@ async def _thread_belongs_to(username: str, thread_id: uuid.UUID) -> bool:
             await session.execute(
                 text(
                     f"SELECT 1 FROM george.conversations c "
-                    f"WHERE {_THREAD} = :t AND c.user_id = :u LIMIT 1"
+                    f"WHERE {_THREAD} = :t AND c.user_id = :u AND {_VISIBLE} LIMIT 1"
                 ),
                 {"t": thread_id, "u": username},
             )
@@ -267,7 +272,7 @@ async def list_chats(
                 f"       COUNT(*) AS turns, "
                 f"       (array_agg(c.question ORDER BY c.asked_at))[1] AS first_question "
                 f"FROM george.conversations c "
-                f"WHERE c.user_id = :u "
+                f"WHERE c.user_id = :u AND {_VISIBLE} "
                 f"GROUP BY 1 "
                 f"ORDER BY last_asked_at DESC "
                 f"LIMIT :limit"
@@ -308,7 +313,7 @@ async def get_chat(
                 f"       c.output_tokens, c.cache_read_tokens, c.notices, "
                 f"       c.notice_forced, c.status, c.receipts "
                 f"FROM george.conversations c "
-                f"WHERE {_THREAD} = :t AND c.user_id = :u "
+                f"WHERE {_THREAD} = :t AND c.user_id = :u AND {_VISIBLE} "
                 f"ORDER BY c.asked_at"
             ),
             {"t": thread_id, "u": user.username},
@@ -383,6 +388,35 @@ async def get_chat(
         title=title_of(rows[0]["question"]),
         turns=[ChatTurn.model_validate(t) for t in turns],
     )
+
+
+# response_class=Response is load-bearing, as in george_pins: FastAPI asserts
+# at import that a 204 route declares no body, and `-> None` counts as one.
+@router.delete("/chats/{thread_id}", status_code=status.HTTP_204_NO_CONTENT,
+               response_class=Response)
+async def delete_chat(
+    thread_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_george_user),
+) -> Response:
+    """
+    Delete one of the caller's chats — by HIDING it.
+
+    Every row of the thread gets hidden_at, so the chat leaves the list, 404s
+    on reopen and cannot be continued. The rows are not removed: this table is
+    also the conversation log, which the gap log and pin provenance depend on.
+    A chat belonging to someone else, or already hidden, is a 404.
+    """
+    result = await db.execute(
+        text(
+            f"UPDATE george.conversations c SET hidden_at = now() "
+            f"WHERE {_THREAD} = :t AND c.user_id = :u AND {_VISIBLE}"
+        ),
+        {"t": thread_id, "u": user.username},
+    )
+    if not result.rowcount:
+        raise HTTPException(status_code=404, detail="No chat with that id belongs to you.")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 def _pin_writer(username: str) -> PinWriter:
