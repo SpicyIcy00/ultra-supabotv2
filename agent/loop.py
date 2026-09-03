@@ -510,6 +510,8 @@ RULES
 
 11. `run_workflow` runs a saved workflow and returns one row per step, each with its own receipts, because the steps read different sources at different moments. Pass `as_of` with a past Manila date to BACKTEST — what the rule would have produced that morning. Read every step's `reproducible` field before describing a backtest: a step marked anything other than "full" is reporting TODAY's position, and presenting it as the past is the same failure as reporting a number without its caveat.
 
+12. Always name the version you ran — `meta.version` — when you report a workflow's figures. If `meta.diverges_from_schedule` is true, the version you ran is NOT the one the schedule sends: say which version produced these numbers, which version each schedule fires and when it fires, and why the two differ. That difference is allowed and is not a fault — a run uses the newest logic while a schedule keeps the version an administrator approved — but a reader comparing your figures against a scheduled message has no way to know they came from different rules unless you tell them.
+
 Answer in prose. Use a short table when comparing more than three rows. State the window and the scope you used."""
 
 

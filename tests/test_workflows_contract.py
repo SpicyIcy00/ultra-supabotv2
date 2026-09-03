@@ -60,6 +60,7 @@ from app.services.workflow_runner import (                            # noqa: E4
     bind_step,
     cap_for_storage,
     default_calls,
+    describe_slot,
     resolve_bindings,
     resolve_preset,
     run_version,
@@ -765,6 +766,185 @@ def test_a_backtest_says_which_steps_report_the_present(fake_sales):
                    if n["kind"] == "backtest_not_reproducible")
     assert "Cost history" in message
     assert "What's moving" not in message, "the rebound step reproduces fine"
+
+
+# ---------------------------------------------------------------------------
+# Divergence is allowed; silent divergence is not
+#
+# A manual run uses the NEWEST version so that editing a rule and trying it does
+# not need an approval first. A schedule fires the PROMOTED one so that editing
+# a rule does not change what goes out unattended. Both halves are deliberate,
+# and together they mean the same workflow can legitimately show one number in
+# chat and another on Monday. What must never happen is two people comparing
+# those numbers without knowing they came from different rules.
+# ---------------------------------------------------------------------------
+
+def _context(version=4, promoted=False, scheduled=(), name="PO Maker") -> dict:
+    return {"workflow": name, "version": version, "promoted": promoted,
+            "scheduled": list(scheduled)}
+
+
+def _slot(version=2, enabled=True, slot="Mondays at 06:00") -> dict:
+    return {"schedule_id": "s1", "version": version, "enabled": enabled,
+            "slot": slot}
+
+
+def _run_with(context, fake_sales, **kw):
+    fake_sales(_sales_ok)
+    params = validate_parameters([WINDOW_PARAM])
+    return asyncio.run(run_version(
+        steps=validate_steps([SALES_STEP], params), parameters=params,
+        version_context=context, **kw
+    ))
+
+
+def test_a_run_that_differs_from_the_schedule_says_so(fake_sales):
+    run = _run_with(_context(scheduled=[_slot()]), fake_sales)
+    assert run["diverges"] is True
+    notice = run["run_notices"][0]
+    assert notice["kind"] == "version_divergence"
+    assert "version 4" in notice["message"]
+    assert "version 2" in notice["message"]
+    assert "Mondays at 06:00" in notice["message"]
+
+
+def test_the_divergence_notice_says_which_of_the_two_reasons_it_is(fake_sales):
+    """
+    "These differ" sends the reader off to guess, and the two real causes have
+    different fixes: promote the newer version, or repoint the schedule at it.
+    """
+    unpromoted = _run_with(_context(promoted=False, scheduled=[_slot()]),
+                           fake_sales)
+    assert "has not been promoted" in unpromoted["run_notices"][0]["message"]
+
+    promoted = _run_with(_context(promoted=True, scheduled=[_slot()]), fake_sales)
+    message = promoted["run_notices"][0]["message"]
+    assert "has been promoted" in message
+    assert "still" in message and "pinned" in message
+
+
+def test_the_divergence_is_also_structured_not_only_prose(fake_sales):
+    """
+    The run record and any UI have to state which version ran and which the
+    schedule fires without parsing a sentence.
+    """
+    run = _run_with(_context(scheduled=[_slot()]), fake_sales)
+    notice = run["run_notices"][0]
+    assert notice["ran_version"] == 4
+    assert notice["scheduled_versions"] == [
+        {"version": 2, "slot": "Mondays at 06:00", "schedule_id": "s1"}
+    ]
+    assert run["version"] == 4
+    assert run["diverging_schedules"] == [_slot()]
+
+
+def test_agreeing_with_the_schedule_says_nothing(fake_sales):
+    """A caveat raised when there is nothing to caveat trains the reader to skim."""
+    run = _run_with(_context(version=2, promoted=True, scheduled=[_slot(version=2)]),
+                    fake_sales)
+    assert run["diverges"] is False
+    assert run["run_notices"] == []
+
+
+def test_a_disabled_schedule_is_not_a_divergence(fake_sales):
+    """It sends nothing, so there is no second answer for anyone to be confused by."""
+    run = _run_with(_context(scheduled=[_slot(enabled=False)]), fake_sales)
+    assert run["diverges"] is False
+    assert run["run_notices"] == []
+    # Still reported, so a caller can say what exists rather than only what fires.
+    assert run["schedules"] == [_slot(enabled=False)]
+
+
+def test_a_workflow_with_no_schedule_at_all_diverges_from_nothing(fake_sales):
+    run = _run_with(_context(scheduled=[]), fake_sales)
+    assert run["diverges"] is False and run["schedules"] == []
+
+
+def test_a_scheduled_run_does_not_disagree_with_itself(fake_sales):
+    """
+    Telling Monday's message that it differs from Monday's schedule is noise,
+    and noise in a scheduled message is how the real caveats get skimmed past.
+    """
+    run = _run_with(_context(version=2, promoted=True, scheduled=[_slot(version=2)]),
+                    fake_sales, mode="scheduled")
+    assert run["diverges"] is False
+
+
+def test_running_an_older_version_deliberately_also_reports_it(fake_sales):
+    """The check is symmetric: what matters is that the two are not the same."""
+    run = _run_with(_context(version=1, promoted=False, scheduled=[_slot(version=3)]),
+                    fake_sales)
+    assert run["diverges"] is True
+    assert "version 1" in run["run_notices"][0]["message"]
+    assert "version 3" in run["run_notices"][0]["message"]
+
+
+def test_divergence_is_reported_before_anything_else(fake_sales):
+    """
+    Which RULE produced the figures comes first. A reader holding the wrong
+    version in mind has misread everything below it, the other caveats included.
+    """
+    fake_sales(_sales_ok)
+    params = validate_parameters([WINDOW_PARAM])
+    run = asyncio.run(run_version(
+        steps=validate_steps([SALES_STEP], params), parameters=params,
+        version_context=_context(scheduled=[_slot()]),
+        saved_definitions_version=req(DEFS, "version") - 1,
+        as_of=ANCHOR, mode="backtest",
+    ))
+    assert [n["kind"] for n in run["run_notices"]][0] == "version_divergence"
+
+
+def test_the_divergence_notice_can_be_satisfied_by_honest_prose():
+    """
+    A fingerprint too strict to satisfy costs a corrective turn every time and
+    then appends the caveat under prose that already carried it — the failure
+    test_notice_fingerprints exists for. Checked in both directions.
+    """
+    conveys = (
+        "These figures come from version 4 of PO Maker. The Mondays at 06:00 "
+        "schedule still sends version 2, which is the last one promoted, so "
+        "Monday's message will not match this."
+    )
+    ignores = "Units sold last month came to 41,204 across the seven stores."
+    notice = {"kind": "version_divergence"}
+    assert george_loop._unsurfaced([notice], conveys, DEFS) == []
+    assert george_loop._unsurfaced([notice], ignores, DEFS) == [notice]
+
+
+def test_the_run_record_keeps_the_divergence(fake_sales):
+    """
+    The reply and the run row must BOTH say so. cap_for_storage trims rows; the
+    notices are what record_run stores, and they must survive whole.
+    """
+    run = _run_with(_context(scheduled=[_slot()]), fake_sales)
+    assert [n["kind"] for n in run["notices"]][0] == "version_divergence"
+    assert run["notices"][0]["scheduled_versions"][0]["version"] == 2
+
+
+# ---------------------------------------------------------------------------
+# Describing a slot
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("kwargs,expected", [
+    ({"kind": "daily", "hour": 6}, "every day at 06:00"),
+    ({"kind": "weekly", "hour": 6, "days_of_week": [0]}, "Mondays at 06:00"),
+    ({"kind": "weekly", "hour": 17, "minute": 30, "days_of_week": [0, 3]},
+     "Mondays and Thursdays at 17:30"),
+    # Listed in week order whatever order they were stored in.
+    ({"kind": "weekly", "hour": 6, "days_of_week": [4, 1, 0]},
+     "Mondays, Tuesdays and Fridays at 06:00"),
+    ({"kind": "monthly", "hour": 6, "day_of_month": 1}, "the 1st at 06:00"),
+    ({"kind": "monthly", "hour": 6, "day_of_month": 2}, "the 2nd at 06:00"),
+    ({"kind": "monthly", "hour": 6, "day_of_month": 3}, "the 3rd at 06:00"),
+    ({"kind": "monthly", "hour": 6, "day_of_month": 11}, "the 11th at 06:00"),
+    ({"kind": "monthly", "hour": 6, "day_of_month": 22}, "the 22nd at 06:00"),
+    # 31 means the last day, so naming "the 31st" would be wrong in February.
+    ({"kind": "monthly", "hour": 6, "day_of_month": 31},
+     "the last day of the month at 06:00"),
+])
+def test_a_slot_reads_as_a_person_would_say_it(kwargs, expected):
+    assert describe_slot(**kwargs) == expected
 
 
 def test_the_flat_notice_list_leads_with_the_run_level_ones(fake_sales):

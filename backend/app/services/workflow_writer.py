@@ -53,6 +53,7 @@ from app.models.george_workflow import (
 from app.services.workflow_runner import (
     WorkflowValidationError,
     cap_for_storage,
+    describe_slot,
     resolve_bindings,
     run_version,
     validate_parameters,
@@ -409,6 +410,49 @@ async def resolve_version(
     return version
 
 
+async def version_context(
+    db: AsyncSession,
+    workflow: GeorgeWorkflow,
+    version: GeorgeWorkflowVersion,
+) -> dict:
+    """
+    Which version is about to run, and which versions the schedules fire.
+
+    Read here rather than in the runner because it is a database fact and the
+    runner reads nothing. Every schedule is described, enabled or not, so a
+    caller can show the whole picture; the runner decides which of them
+    constitutes a DIVERGENCE worth a notice (only the enabled ones — a disabled
+    schedule sends nothing for anyone to be confused by).
+    """
+    rows = (
+        await db.execute(
+            select(GeorgeWorkflowSchedule, GeorgeWorkflowVersion.version)
+            .join(GeorgeWorkflowVersion,
+                  GeorgeWorkflowVersion.id == GeorgeWorkflowSchedule.version_id)
+            .where(GeorgeWorkflowSchedule.workflow_id == workflow.id)
+            .order_by(GeorgeWorkflowSchedule.created_at)
+        )
+    ).all()
+
+    return {
+        "workflow": workflow.name,
+        "version": version.version,
+        "promoted": version.promoted_at is not None,
+        "scheduled": [
+            {
+                "schedule_id": str(schedule.id),
+                "version": number,
+                "enabled": schedule.enabled,
+                "slot": describe_slot(
+                    schedule.kind, schedule.hour, schedule.minute,
+                    schedule.days_of_week, schedule.day_of_month,
+                ),
+            }
+            for schedule, number in rows
+        ],
+    }
+
+
 async def run_workflow_version(
     db: AsyncSession,
     *,
@@ -424,6 +468,12 @@ async def run_workflow_version(
 
     An `as_of` makes it a BACKTEST: the run is recorded as one, it is never
     delivered anywhere, and it is what an administrator later promotes against.
+
+    The version context goes in and comes back out: a run whose version differs
+    from one an enabled schedule pins carries a version_divergence notice, which
+    is stored on the run record and surfaced in the answer. Divergence is
+    allowed — a manual run uses the newest logic while a schedule fires the
+    promoted one — but it is never silent.
     """
     defs = _load_defs()
     check_permission(defs, "run", username=username, role=role, created_by=None)
@@ -438,6 +488,8 @@ async def run_workflow_version(
                 f"{as_of!r}."
             ) from exc
 
+    context = await version_context(db, workflow, version)
+
     started = datetime.now(timezone.utc)
     outcome = await run_version(
         steps=version.steps,
@@ -446,6 +498,7 @@ async def run_workflow_version(
         as_of=parsed,
         mode="backtest" if parsed else "manual",
         saved_definitions_version=version.definitions_version,
+        version_context=context,
     )
 
     run = await record_run(
@@ -654,6 +707,54 @@ async def create_schedule(
     if enabled:
         await set_enabled(db, username=username, role=role, workflow=workflow,
                           version=version, schedule=schedule, enabled=True)
+    return schedule
+
+
+async def repoint_schedule(
+    db: AsyncSession,
+    *,
+    username: str,
+    role: str,
+    workflow: GeorgeWorkflow,
+    schedule: GeorgeWorkflowSchedule,
+    version: GeorgeWorkflowVersion,
+) -> GeorgeWorkflowSchedule:
+    """
+    Point a schedule at a different version — the act that ENDS a divergence.
+
+    Deliberately separate from promoting. Promotion says "this version is fit to
+    run unattended"; repointing says "and it is what goes out on Monday". Fusing
+    them would mean approving a version silently changed every schedule that
+    mentions the workflow, which is the behaviour versions exist to prevent.
+
+    The target must already be promoted, so this cannot be a way around the
+    gate. The bindings are re-resolved against the new version's parameters: a
+    version that renamed or dropped a parameter would otherwise leave a schedule
+    firing at values it no longer declares.
+    """
+    defs = _load_defs()
+    check_permission(defs, "edit", username=username, role=role,
+                     created_by=workflow.created_by)
+
+    if version.workflow_id != workflow.id:
+        raise WorkflowNotFound(
+            f"That version does not belong to {workflow.name!r}."
+        )
+    if schedule.version_id == version.id:
+        return schedule
+
+    if version.promoted_at is None:
+        queue = _req(defs, "workflows.promotion.queue_name")
+        raise PromotionRefused(
+            f"Version {version.version} of {workflow.name!r} has not been "
+            f"promoted, so a schedule cannot be pointed at it. It is in the "
+            f"{queue} until an administrator approves it against a backtest."
+        )
+
+    schedule.bindings = resolve_bindings(version.parameters or [],
+                                         schedule.bindings or {})
+    schedule.version_id = version.id
+    await db.flush()
     return schedule
 
 

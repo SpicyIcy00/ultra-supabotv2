@@ -225,6 +225,60 @@ def _substitute(value: Any, bindings: dict, step_name: str) -> Any:
 
 
 # ---------------------------------------------------------------------------
+# Describing a slot in words
+#
+# Lives here, on plain fields rather than on the ORM row, because three modules
+# need the same phrase and two of them cannot import each other:
+# workflow_scheduler imports workflow_writer for record_run, so workflow_writer
+# cannot import the scheduler back.
+# ---------------------------------------------------------------------------
+
+_WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
+             "Saturday", "Sunday")
+
+
+def _ordinal(n: int) -> str:
+    if 10 <= n % 100 <= 20:
+        return f"{n}th"
+    return f"{n}{ {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th') }"
+
+
+def describe_slot(kind: str, hour: int, minute: int = 0,
+                  days_of_week: Optional[list] = None,
+                  day_of_month: Optional[int] = None) -> str:
+    """
+    "Mondays at 06:00", for a message a person reads at 6am on a phone.
+
+    Manila is not stated here; every caller is already inside a sentence that
+    says so, and repeating it in each fragment reads like a warning.
+    """
+    at = f"{int(hour):02d}:{int(minute):02d}"
+
+    if kind == "daily":
+        return f"every day at {at}"
+
+    if kind == "weekly":
+        # Pluralised individually — "Mondays and Thursdays", not "Monday and
+        # Thursdays", which is what putting the s only on the last one gives.
+        days = [f"{_WEEKDAYS[int(d)]}s" for d in sorted(days_of_week or [])
+                if 0 <= int(d) <= 6]
+        if not days:
+            return f"weekly at {at}"
+        if len(days) == 1:
+            return f"{days[0]} at {at}"
+        return f"{', '.join(days[:-1])} and {days[-1]} at {at}"
+
+    if kind == "monthly":
+        dom = int(day_of_month or 1)
+        # 31 means the last day, as scheduled_reports already uses, so saying
+        # "the 31st" would be wrong in February and misleading in April.
+        when = "the last day of the month" if dom == 31 else f"the {_ordinal(dom)}"
+        return f"{when} at {at}"
+
+    return f"{kind} at {at}"
+
+
+# ---------------------------------------------------------------------------
 # Windows, anchored on a day that is not today
 # ---------------------------------------------------------------------------
 
@@ -468,6 +522,7 @@ async def run_version(
     as_of: Optional[date] = None,
     mode: str = "manual",
     saved_definitions_version: Optional[int] = None,
+    version_context: Optional[dict] = None,
 ) -> dict:
     """
     Run one version's steps and roll up a status, notices and receipts.
@@ -476,7 +531,19 @@ async def run_version(
     the others, exactly as one rotted call must not blank a tile. Nothing here
     writes; recording the run is app.services.workflow_writer's job.
 
-    Returns {status, mode, as_of, bindings, steps, notices, definitions_version}.
+    Args:
+        version_context: which version this is and what the schedules pin, as
+            {"workflow": name, "version": n, "promoted": bool,
+             "scheduled": [{"version": n, "slot": "Mondays at 06:00",
+                            "schedule_id": ...}]}.
+            Supplied by the caller because it is a database fact and this module
+            reads nothing. Its only job is the version_divergence notice: a
+            manual run uses the newest version while a schedule fires the
+            promoted one, and the reader has to be told which of the two they
+            are looking at.
+
+    Returns {status, mode, as_of, bindings, steps, notices, run_notices,
+    definitions_version, version, scheduled_versions, diverges}.
     """
     # A run of no steps would come back "ok" with nothing in it, which reads
     # exactly like a rule that found nothing — the empty-versus-quiet confusion
@@ -511,18 +578,30 @@ async def run_version(
                  key=lambda s: _SEVERITY.get(s, 0), default="ok")
 
     live_version = _req(defs, "version")
+    diverging = _diverging_schedules(version_context, mode)
     run_notices = _run_notices(
         step_results, mode=mode, as_of=as_of,
         saved_definitions_version=saved_definitions_version,
         live_definitions_version=live_version,
+        version_context=version_context, diverging=diverging,
     )
 
+    context = version_context or {}
     return {
         "status": status,
         "mode": mode,
         "as_of": as_of.isoformat() if as_of else None,
         "bindings": bound,
         "steps": step_results,
+        # Stated structurally as well as in the notice, so a caller does not
+        # have to read prose to know which rule produced these figures.
+        # `schedules` is EVERY schedule, enabled or not, so a caller can say
+        # "nothing is scheduled" as confidently as it names a version;
+        # `diverging_schedules` is the subset the notice is about.
+        "version": context.get("version"),
+        "schedules": list(context.get("scheduled") or []),
+        "diverging_schedules": diverging,
+        "diverges": bool(diverging),
         # Kept apart, because they are surfaced in different places: a run-level
         # notice qualifies the WHOLE run and belongs above every figure, while a
         # step's own notice belongs beside the step it qualifies. `notices` is
@@ -538,18 +617,109 @@ async def run_version(
     }
 
 
+def _diverging_schedules(version_context: Optional[dict],
+                         mode: str) -> list[dict]:
+    """
+    Enabled schedules that fire a DIFFERENT version from the one being run.
+
+    A scheduled run is excluded by definition — it IS the schedule, and telling
+    Monday's message that it disagrees with itself would be noise. Disabled
+    schedules are excluded too: they fire nothing, so there is no second answer
+    for anyone to be confused by. What is left is the case that matters — a
+    person reading figures in chat while a different rule sends figures on
+    Monday.
+    """
+    if mode == "scheduled" or not version_context:
+        return []
+    running = version_context.get("version")
+    if running is None:
+        return []
+    return [
+        s for s in (version_context.get("scheduled") or [])
+        if s.get("enabled") and s.get("version") != running
+    ]
+
+
+def _divergence_notice(version_context: dict, diverging: list[dict]) -> dict:
+    """
+    Which version ran, which the schedules fire, and why the two differ.
+
+    DIVERGENCE IS ALLOWED AND SILENT DIVERGENCE IS NOT. A manual run uses the
+    newest version so that editing a rule and trying it does not require an
+    approval first; a schedule keeps the version it was promoted with so that
+    editing a rule does not change what goes out unattended. Both halves are
+    deliberate. What is not survivable is two people comparing a number from
+    chat against a number from Monday's message with no way to know they came
+    from different rules.
+
+    The reason is derived rather than generic, because "these differ" sends the
+    reader to guess and the two real causes have different fixes: promote the
+    newer version, or repoint the schedule at it.
+    """
+    running = version_context.get("version")
+    promoted = version_context.get("promoted")
+    name = version_context.get("workflow") or "This workflow"
+
+    fires = "; ".join(
+        f"the {s.get('slot', 'schedule')} schedule runs version {s.get('version')}"
+        for s in diverging
+    )
+
+    if not promoted:
+        why = (
+            f"version {running} has not been promoted, and a schedule keeps the "
+            f"version it was approved with until an administrator promotes a "
+            f"newer one against a backtest"
+        )
+    else:
+        why = (
+            f"version {running} has been promoted, but the schedule is still "
+            f"pinned to the version it was created with — repointing it is a "
+            f"separate act, so that promoting a version never silently changes "
+            f"what goes out unattended"
+        )
+
+    return {
+        "kind": "version_divergence",
+        "message": (
+            f"You are looking at version {running} of {name}, which is not what "
+            f"the schedule sends: {fires}. The figures here may differ from the "
+            f"ones that arrive on schedule, because {why}."
+        ),
+        "source": "metrics.yaml: workflows.promotion.divergence_must_be_stated",
+        # Structured alongside the prose so the run record and any UI can state
+        # it without parsing a sentence.
+        "ran_version": running,
+        "ran_version_promoted": promoted,
+        "scheduled_versions": [
+            {"version": s.get("version"), "slot": s.get("slot"),
+             "schedule_id": s.get("schedule_id")}
+            for s in diverging
+        ],
+    }
+
+
 def _run_notices(step_results: list[dict], *, mode: str, as_of: Optional[date],
                  saved_definitions_version: Optional[int],
-                 live_definitions_version: Optional[int]) -> list[dict]:
+                 live_definitions_version: Optional[int],
+                 version_context: Optional[dict] = None,
+                 diverging: Optional[list[dict]] = None) -> list[dict]:
     """
     The caveats that belong to the RUN rather than to any one step.
 
-    All three are fingerprinted in metrics.yaml (notices.*), because a notice
+    Every one is fingerprinted in metrics.yaml (notices.*), because a notice
     with no fingerprint can never be satisfied: the loop spends a corrective turn
     on it, fails the same check again, and appends it verbatim under prose that
     already said it.
+
+    Ordered by how fundamental the doubt is. Which RULE produced these figures
+    comes first — a reader who has the wrong version in mind has misread
+    everything below it, including the other caveats.
     """
     notices: list[dict] = []
+
+    if diverging:
+        notices.append(_divergence_notice(version_context or {}, diverging))
 
     if (saved_definitions_version is not None
             and live_definitions_version is not None

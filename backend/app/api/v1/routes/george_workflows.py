@@ -53,6 +53,7 @@ from app.services.workflow_writer import (
     create_schedule,
     pending_promotion,
     promote as promote_version,
+    repoint_schedule,
     resolve_version,
     run_workflow_version,
     save_workflow as save_workflow_row,
@@ -177,8 +178,18 @@ class ScheduleOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class EnabledIn(BaseModel):
-    enabled: bool
+class ScheduleUpdate(BaseModel):
+    """
+    Both changes a schedule can take, and both are optional.
+
+    `version` repoints it — the act that ends a divergence between what a manual
+    run uses and what the schedule sends. Separate from promoting on purpose:
+    approving a version must not silently change every schedule that mentions
+    the workflow.
+    """
+
+    enabled: Optional[bool] = None
+    version: Optional[int] = Field(None, ge=1)
 
 
 class RunOut(BaseModel):
@@ -502,19 +513,25 @@ async def list_schedules(
 
 
 @router.patch("/{workflow_id}/schedules/{schedule_id}", response_model=ScheduleOut)
-async def set_schedule_enabled(
+async def update_schedule(
     workflow_id: uuid.UUID,
     schedule_id: uuid.UUID,
-    payload: EnabledIn,
+    payload: ScheduleUpdate,
     db: AsyncSession = Depends(get_db),
     user: AppUser = Depends(_workflow_user),
 ) -> ScheduleOut:
     """
-    Turn a schedule on or off.
+    Turn a schedule on or off, or point it at a different version.
 
     Turning one ON is the moment unattended execution begins, so the pinned
     version must be promoted. Turning one OFF is always allowed to anyone who
     may edit — stopping something is never the dangerous direction.
+
+    Repointing is what ends a divergence: until it happens, a manual run uses
+    the newest version while this schedule keeps sending the one it was created
+    with. The target must be promoted, so repointing is not a way past the gate.
+    Version first, then enabled, so a single request can approve-and-arm without
+    briefly enabling the version it is replacing.
     """
     workflow = await _owned(db, workflow_id)
     schedule = (
@@ -529,22 +546,31 @@ async def set_schedule_enabled(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="Schedule not found.")
 
-    version = (
-        await db.execute(
-            select(GeorgeWorkflowVersion).where(
-                GeorgeWorkflowVersion.id == schedule.version_id
-            )
-        )
-    ).scalar_one()
-
     try:
-        updated = await set_enabled(
-            db, username=user.username, role=user.role, workflow=workflow,
-            version=version, schedule=schedule, enabled=payload.enabled,
-        )
-    except (PromotionRefused, NotAllowed) as exc:
+        if payload.version is not None:
+            schedule = await repoint_schedule(
+                db, username=user.username, role=user.role, workflow=workflow,
+                schedule=schedule,
+                version=await resolve_version(db, workflow, payload.version),
+            )
+
+        version = (
+            await db.execute(
+                select(GeorgeWorkflowVersion).where(
+                    GeorgeWorkflowVersion.id == schedule.version_id
+                )
+            )
+        ).scalar_one()
+
+        if payload.enabled is not None:
+            schedule = await set_enabled(
+                db, username=user.username, role=user.role, workflow=workflow,
+                version=version, schedule=schedule, enabled=payload.enabled,
+            )
+    except (PromotionRefused, NotAllowed, WorkflowNotFound,
+            WorkflowValidationError) as exc:
         raise _refusals(exc) from exc
-    return ScheduleOut.model_validate(updated)
+    return ScheduleOut.model_validate(schedule)
 
 
 @router.get("/{workflow_id}/runs", response_model=List[RunOut])

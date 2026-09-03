@@ -107,6 +107,26 @@ rather than working around it.
    CHECK constraint. George may accept "every Monday at 6" in conversation — the
    schedule is created switched **off**.
 
+8. **Divergence is allowed. Silent divergence is not.**
+   A manual run uses the newest version so that editing a rule and trying it
+   does not need an approval first; a schedule fires the promoted one so that
+   editing a rule does not change what goes out unattended. Both halves are
+   deliberate, and together they mean the same workflow can show one number in
+   chat and another on Monday.
+
+   So every run whose version differs from one an enabled schedule pins carries
+   a `version_divergence` notice naming **which version ran, which each schedule
+   fires and when, and why the two differ** — and the reason is derived, not
+   generic, because the two causes have different fixes: promote the newer
+   version, or repoint the schedule at it (`PATCH .../schedules/{id}` with a
+   `version`). The notice is stored on the run record as well as surfaced in the
+   answer, so a figure quoted from chat can always be traced to the rule that
+   produced it rather than to the one somebody assumed.
+
+   Promoting a version does **not** repoint any schedule. Fusing the two would
+   mean approving a version silently changed every schedule that mentions the
+   workflow — which is the behaviour versions exist to prevent.
+
 ## Repo context George lives in
 
 This repo is **Ultra Supabot v2**, an existing retail BI app (FastAPI +

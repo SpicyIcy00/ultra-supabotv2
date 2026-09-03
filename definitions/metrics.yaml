@@ -2678,6 +2678,21 @@ notices:
   # all three callers — chat, the route and the scheduler — so there is one
   # place these can be written and one place they can be forgotten.
 
+  # The run in front of you is not the one the schedule sends. Divergence is
+  # ALLOWED — a manual run uses the newest logic while a schedule keeps the
+  # version it was promoted with, which is the gate working. Silent divergence
+  # is not: two people comparing a chat answer against Monday's message would
+  # be looking at two different rules with no way to tell.
+  #
+  # The fingerprint demands all three facts the reader needs: which version,
+  # that a schedule is involved, and why the two are not the same.
+  version_divergence:
+    must_convey:
+      - [version]
+      - [schedule, scheduled]
+      - [promot, "approval queue", newer, older, differ, "not the same",
+         "pinned to"]
+
   # The definitions moved under a saved rule's feet. The workflow still runs
   # against the LIVE metrics.yaml, as every tool does; what changed is that the
   # reasoning recorded with the version was written against an older one.
@@ -2836,6 +2851,19 @@ workflows:
     # job that silently changes behaviour when somebody edits the logic is the
     # same lie as a tile that stores a number instead of re-running.
     edit_resets_gate: true
+
+    # The consequence, stated so it is a rule rather than an accident: a manual
+    # run uses the NEWEST version while a schedule fires the PROMOTED one, so
+    # the same workflow can legitimately show different figures in chat and on
+    # Monday morning.
+    #
+    # That divergence is allowed. Silent divergence is not. Any run whose
+    # version differs from one an enabled schedule pins carries a
+    # version_divergence notice naming both versions and the reason, and the
+    # notice is stored on the run record as well as surfaced in the answer —
+    # so a figure quoted from chat can always be traced to the rule that
+    # produced it rather than to the one somebody assumed.
+    divergence_must_be_stated: true
 
     # UI rule 5 reserves one colour for "needs you". This is what it means.
     # Nothing else may use that colour — a failed run is not an approval.

@@ -159,6 +159,16 @@ async def run_workflow(
         "run_id": run.get("run_id"),
         "mode": run.get("mode"),
         "status": run.get("status"),
+        # Which rule produced these figures, and which rule the schedule sends.
+        # A manual run uses the newest version while a schedule fires the
+        # promoted one, so the two can legitimately differ — and when they do,
+        # a version_divergence notice is already in `notice` below. This is the
+        # same fact structurally, so an answer can name both versions without
+        # rewording a sentence.
+        "schedules": run.get("schedules") or [],
+        "diverges_from_schedule": bool(run.get("diverges")),
+        "diverging_schedules": run.get("diverging_schedules") or [],
+        "awaiting_promotion": run.get("awaiting_promotion"),
         "definitions_version": run.get("definitions_version"),
         "steps_ok": sum(1 for s in steps if s.get("status") == "ok"),
         "steps_total": len(steps),
