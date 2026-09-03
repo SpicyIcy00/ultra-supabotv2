@@ -30,7 +30,14 @@ export interface ToolMeta {
   truncated_for_model?: boolean;
   rows_omitted?: number;
   reconciliation?: Reconciliation;
-  window?: { kind?: string; name?: string; start?: string; end?: string };
+  window?: {
+    kind?: string;
+    name?: string;
+    start?: string;
+    end?: string;
+    /** Preset windows say whether they include today's partial day. */
+    includes_partial_day?: boolean;
+  };
   metric?: string;
   metric_unit?: string;
   definitions_version?: number;

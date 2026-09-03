@@ -547,6 +547,10 @@ async def run(question: str, user_id: Optional[str] = None) -> AsyncIterator[str
     status = "ok"
     notice_forced = False
 
+    # meta of the last tool result that actually produced one — the receipts
+    # shown under the answer. See the `receipts` frame emitted before `done`.
+    last_meta: Optional[dict] = None
+
     yield _sse("start", {"conversation_id": log.conversation_id,
                          "logging_enabled": log.enabled})
 
@@ -716,6 +720,13 @@ async def run(question: str, user_id: Optional[str] = None) -> AsyncIterator[str
                 found = _notices_from(capped)
                 pending.extend(found)
 
+                # Keep the last meta that describes real data. A refusal's meta
+                # is {"error": ...} and carries no source_table, no filters and
+                # no snapshot_timestamp — rendering that as receipts would be
+                # worse than rendering none.
+                if not err and meta.get("source_table"):
+                    last_meta = meta
+
                 log.tool_call(gseq, b.name, dict(b.input), capped, ms, err)
 
                 if err:
@@ -777,6 +788,29 @@ async def run(question: str, user_id: Optional[str] = None) -> AsyncIterator[str
     if log.errors:
         # Surfaced, not raised — the answer already went out.
         yield _sse("warning", {"reason": "logging_failed", "detail": log.errors[0]})
+
+    # ---- receipts --------------------------------------------------------
+    # The full meta of the last tool result, so the answer can show where its
+    # numbers came from, which filters were applied and when the data was read.
+    #
+    # THIS FRAME WAS MISSING. useGeorgeStream has handled `receipts` and
+    # ReceiptsBlock has rendered snapshot_timestamp and filters_applied since
+    # they were written, but nothing ever emitted it, so turn.receipts was
+    # always undefined and the block never appeared. UI rules 3 and 6 ("every
+    # number is inspectable", "no number displays without a timestamp") were
+    # unmet in chat despite every tool already returning what they need.
+    #
+    # Emitted HERE rather than inside the answer branch so it fires on every
+    # exit path — normal finish, convergence cap, iteration cap, and the error
+    # handlers above. A run that answered from tools then failed late still
+    # shows where its figures came from.
+    #
+    # Known limit: when an answer spans several tools this is the LAST one's
+    # meta, which is what ToolMeta and ReceiptsBlock already assume. Per-call
+    # receipts in chat is a larger frontend change; the pin runner returns meta
+    # per call and does not depend on this.
+    if last_meta is not None:
+        yield _sse("receipts", last_meta)
 
     yield _sse("done", {
         "conversation_id": log.conversation_id,
