@@ -129,8 +129,9 @@ def test_purchasing_value_comes_from_lines_and_flags_disagreeing_headers():
     _skip_if_empty(r, "purchase orders")
 
     assert r["meta"]["value_basis"] == "lines"
-    # 12 of 227 POs disagree with their own lines; where any appear in a result
-    # the row says how many, so the figure is never silently clean.
+    # Some POs disagree with their own lines (12 of 227 at the first load, and
+    # the count grows with imports); where any appear in a result the row says
+    # how many, so the figure is never silently clean.
     flagged = sum(row.get("documents_with_header_mismatch", 0) for row in r["rows"])
     if flagged:
         notice = r["meta"]["notice"]

@@ -123,7 +123,8 @@ def test_cost_history_matches_sku_case_sensitively(defs):
 # ---------------------------------------------------------------------------
 
 def test_value_comes_from_lines_not_the_header_total(defs):
-    """12 of 227 POs disagree with their own lines; PO0604 by PHP 90,000."""
+    """Some POs disagree with their own lines (PO0604 by PHP 90,000); the live
+    count is computed by get_purchasing, never quoted."""
     assert req(defs, "purchasing.value_basis") == "lines"
     assert req(defs, "purchasing.header_total_is_authoritative") is False
     assert req(defs, "purchasing.header_mismatch_notice_mandatory") is True

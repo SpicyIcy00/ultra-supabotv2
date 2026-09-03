@@ -65,6 +65,9 @@ from tools._common import connect, load_defs, req
 # --------------------------------------------------------------------------
 AUG_2026 = ("2026-08-01", "2026-09-01")
 JUL_2026 = ("2026-07-01", "2026-08-01")
+# Purchase orders covered by the two 2026-09-02 StoreHub exports. Later exports
+# start at 2026-07-01, so this window is closed against them by construction.
+PO_CLOSED = ("2025-01-01", "2026-07-01")
 JUN_2026 = ("2026-06-01", "2026-07-01")
 JUN_2024 = ("2024-06-01", "2024-07-01")
 APR_2026 = ("2026-04-01", "2026-05-01")
@@ -187,30 +190,44 @@ GOLDEN = [
                                    date_range=("2025-01-01", "2026-09-03"))
      ["meta"]["transfer_records"]["moved_value"], 3085008.0),
 
-    # ---- purchasing (3) --------------------------------------------------
+    # ---- purchasing (4) --------------------------------------------------
     # Nothing here was answerable before the StoreHub import; suppliers was
-    # definitions-only. Both PO exports are loaded and disjoint: 227 documents,
-    # 1,047 lines.
+    # definitions-only.
+    #
+    # SCOPED TO A CLOSED WINDOW, like everything else in this file. These four
+    # were all-time counts (218 / 227 / 12 / 12) and broke the day the
+    # 2026-09-03 export added 57 documents. Purchase orders arrive by import,
+    # not by sync, so "all time" is open-ended in a way the module docstring
+    # forbids. The window below ends where the 2026-09-02 exports end; a
+    # re-import of that window converges on the same file, so it stays closed.
+    # PO0655 (created 2026-07-01) is just outside it, which is why the counts
+    # are one below the old all-time figures.
+    #
     # Cancelled documents are excluded BY DEFAULT, so the default count is not
-    # the number of rows in the table. 206 completed + 12 open = 218; the 9
+    # the number of rows in the window. 205 completed + 12 open = 217; the 9
     # cancelled are only counted when asked for. Both are asserted so the
     # default can never quietly start including them.
     ("purchasing/po-count",
-     lambda: _val(purchasing.get_purchasing(measure="po_count")), 218),
+     lambda: _val(purchasing.get_purchasing(measure="po_count",
+                                            date_range=PO_CLOSED)), 217),
     ("purchasing/po-count-including-cancelled",
      lambda: _val(purchasing.get_purchasing(measure="po_count",
-                                            include_cancelled=True)), 227),
-    # 12 of those 227 disagree with their own line totals, so VALUE IS SUMMED
+                                            include_cancelled=True,
+                                            date_range=PO_CLOSED)), 226),
+    # 12 of those 226 disagree with their own line totals, so VALUE IS SUMMED
     # FROM LINES. PO0604 carries a 90,000.00 header over 13 lines summing to
-    # 0.00; using headers would put that straight into the total.
+    # 0.00; using headers would put that straight into the total. (The live
+    # all-time count is get_purchasing meta.coverage.documents_with_header_mismatch.)
     ("purchasing/documents-with-header-mismatch",
      lambda: sum(r.get("documents_with_header_mismatch", 0)
                  for r in purchasing.get_purchasing(measure="ordered_value",
-                                                    group_by="supplier")["rows"]), 12),
+                                                    group_by="supplier",
+                                                    date_range=PO_CLOSED)["rows"]), 12),
     # "Open" does not mean "not received" — these carry notes recording a
     # delivery. Any outstanding-value figure built on status would be wrong.
     ("purchasing/open-pos",
-     lambda: _val(purchasing.get_purchasing(measure="po_count", status="Open")), 12),
+     lambda: _val(purchasing.get_purchasing(measure="po_count", status="Open",
+                                            date_range=PO_CLOSED)), 12),
 
     # ---- cost history (2) ------------------------------------------------
     # A SKU whose cost was never entered. Zero means NOT ENTERED, not free, so

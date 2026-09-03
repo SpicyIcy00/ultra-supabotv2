@@ -79,5 +79,6 @@ alembic/versions/*.py
 # The importer reads them from disk; nothing in the repo depends on them being
 # committed. Fixtures for the parser tests are inline in tests/, not files.
 storehub exports/
+new storehub exports/
 *.csv
 !tests/**/*.csv

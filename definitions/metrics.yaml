@@ -2020,10 +2020,13 @@ suppliers:
     tool: "tools/purchasing.py get_purchasing()"
     definitions: purchasing
     measured:
-      documents: 227
-      lines: 1047
-      exports: 2
-      window: "the two 2026-09-02 exports, which are disjoint"
+      documents: 284
+      lines: 1311
+      exports: 3
+      window: "the two disjoint 2026-09-02 exports (to 2026-07-01) plus the 2026-09-03 export (2026-07-01 to 2026-09-03)"
+      measured_on: "2026-09-03"
+      # A record of what was loaded, not a definition. Tools never read these
+      # counts; the live figures are in get_purchasing meta.coverage.
 
     # There is NO supplier master. `supplier` is a free-text string on the PO.
     # Observed values include "Dried Fruits DF001", "Supplies" and "Do rei me" —
@@ -2034,7 +2037,7 @@ suppliers:
     supplier_is_free_text: true
 
     caveats:
-      - "12 of 227 POs have a header total disagreeing with their own lines; value is summed from lines (purchasing.value_basis)"
+      - "some POs have a header total disagreeing with their own lines (13 of 284 at the 2026-09-03 import; the live count is get_purchasing meta.coverage.documents_with_header_mismatch); value is summed from lines (purchasing.value_basis)"
       - "'Open' does not mean 'not received' - 8 Open POs carry notes saying the goods arrived"
       - "received quantity is sparse, sometimes exceeds ordered, and is never reconciled to it"
 
@@ -2183,10 +2186,13 @@ purchasing:
   # ---------------------------------------------------------------------------
   # VALUE COMES FROM THE LINES, NEVER FROM THE HEADER TOTAL.
   #
-  # 12 of 227 purchase orders carry a header total that disagrees with their own
+  # Some purchase orders carry a header total that disagrees with their own
   # lines, sometimes enormously: PO0604 says 90,000.00 over 13 lines that sum to
   # 0.00, PO0575 says 400,000.00 against 200,000.00 of lines. No stock transfer
-  # does this in 2,034 documents.
+  # does this in 2,034 documents. The count grows with each import (12 of 227 at
+  # the 2026-09-02 load, 13 of 284 after 2026-09-03 — PO0656's third line has a
+  # cost that was never entered), so tools compute it from
+  # purchase_orders.header_total_reconciles on every call rather than quoting it.
   #
   # The lines are the safer basis: they are itemised, they carry the quantity and
   # unit cost that produced them, and they are what a product- or category-level

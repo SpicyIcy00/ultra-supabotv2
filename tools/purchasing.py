@@ -10,10 +10,12 @@ metrics.yaml suppliers.survey_2026_09_01 for what the database held instead.
 THREE THINGS THIS TOOL REFUSES TO GET WRONG, all measured, all enforced here
 rather than left to the caller:
 
-  1. VALUE COMES FROM THE LINES. 12 of 227 purchase orders carry a header total
-     that disagrees with their own lines — PO0604 says PHP 90,000.00 over 13
-     lines summing to 0.00. Totals are summed from line subtotals, and any
-     document in the result whose header disagrees raises a notice.
+  1. VALUE COMES FROM THE LINES. Some purchase orders carry a header total that
+     disagrees with their own lines — PO0604 says PHP 90,000.00 over 13 lines
+     summing to 0.00. Totals are summed from line subtotals, and any document
+     in the result whose header disagrees raises a notice. HOW MANY disagree is
+     counted from the table on every call and reported in meta.coverage; it
+     used to be a literal here ("12 of 227") and went stale at the next import.
 
   2. "OPEN" IS NOT "NOT RECEIVED". 8 Open POs carry notes saying the goods
      arrived; nobody completed the document. Any answer scoped to Open status
@@ -355,9 +357,15 @@ def get_purchasing(
             # Coverage of the imported window. Every record-backed answer states
             # what it can see, because "no POs in July" and "July was never
             # imported" are different answers.
+            # The header-mismatch count is read here too, from the flag the
+            # importer set, so the value-basis note below states the live
+            # figure rather than a number copied in on one day.
             cur.execute(
                 "SELECT MIN(created_at_source) AS first, MAX(created_at_source) AS last, "
-                "       COUNT(*) AS documents FROM purchase_orders"
+                "       COUNT(*) AS documents, "
+                "       COUNT(*) FILTER (WHERE header_total_reconciles IS FALSE) "
+                "           AS documents_with_header_mismatch "
+                "FROM purchase_orders"
             )
             coverage = cur.fetchone()
 
@@ -468,6 +476,7 @@ def get_purchasing(
         # imported".
         "coverage": {
             "documents_imported": coverage["documents"],
+            "documents_with_header_mismatch": coverage["documents_with_header_mismatch"],
             "first_created": coverage["first"].isoformat() if coverage["first"] else None,
             "last_created": coverage["last"].isoformat() if coverage["last"] else None,
             "note": (
@@ -478,9 +487,13 @@ def get_purchasing(
         },
 
         "value_basis": _req(defs, "purchasing.value_basis"),
+        # Computed, not quoted: the count is whatever the table says at the
+        # snapshot above, so a new import cannot leave this sentence behind.
         "value_basis_note": (
-            "Value is summed from line subtotals, never from the document header "
-            "total: 12 of 227 purchase orders disagree with their own lines."
+            f"Value is summed from line subtotals, never from the document header "
+            f"total: {coverage['documents_with_header_mismatch']} of "
+            f"{coverage['documents']} imported purchase orders disagree with "
+            f"their own lines as of {snapshot_timestamp.isoformat()}."
         ),
     }
     if notices:
