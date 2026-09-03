@@ -54,6 +54,7 @@ closed_at = 2026-06-24, DERIVED FROM THE DATA, not supplied:
   here so the closing date means "when goods last moved" rather than "when
   someone last opened a form".
 """
+from datetime import date
 from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
@@ -64,7 +65,8 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 MACOPA_ID = 'local-aji-macopa-wh-0001'
-MACOPA_CLOSED_AT = '2026-06-24'
+# A real date, not the string '2026-06-24'. See the bindparam note in upgrade().
+MACOPA_CLOSED_AT = date(2026, 6, 24)
 
 
 def upgrade() -> None:
@@ -89,6 +91,14 @@ def upgrade() -> None:
     # ON CONFLICT DO NOTHING so re-running is harmless, and so that if the real
     # StoreHub row is ever synced in under this id the migration does not fight
     # it.
+    #
+    # EVERY BIND IS EXPLICITLY TYPED. Passing bindparams(closed_at='2026-06-24')
+    # types the parameter as VARCHAR, and Postgres rejects it against a DATE
+    # column ("column closed_at is of type date but expression is of type
+    # character varying"). It is worth knowing that `alembic upgrade --sql` does
+    # NOT catch this: offline mode renders a literal that Postgres coerces
+    # happily, so the mismatch only appears against a real connection. Reviewing
+    # the generated SQL is not a substitute for running it.
     # ------------------------------------------------------------------
     op.execute(
         sa.text("""
@@ -96,10 +106,13 @@ def upgrade() -> None:
             VALUES (:id, :name, :display_name, false, :closed_at)
             ON CONFLICT (id) DO NOTHING
         """).bindparams(
-            id=MACOPA_ID,
-            name='AJI MACOPA',
-            display_name='AJI MACOPA (closed)',
-            closed_at=MACOPA_CLOSED_AT,
+            sa.bindparam('id', value=MACOPA_ID, type_=sa.String()),
+            sa.bindparam('name', value='AJI MACOPA', type_=sa.String()),
+            # Plain, with no "(closed)" suffix: is_active and closed_at already
+            # carry the closed state, and encoding it in the label too would put
+            # the same fact in two places that can then disagree.
+            sa.bindparam('display_name', value='AJI MACOPA', type_=sa.String()),
+            sa.bindparam('closed_at', value=MACOPA_CLOSED_AT, type_=sa.Date()),
         )
     )
 

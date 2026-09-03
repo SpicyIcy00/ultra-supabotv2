@@ -274,7 +274,7 @@ stores:
   closed:
     - id: "local-aji-macopa-wh-0001"
       name: "AJI MACOPA"
-      display_name: "AJI MACOPA (closed)"
+      display_name: "AJI MACOPA"
       kind: warehouse
       closed_at: "2026-06-24"
       # THE ID IS NOT A STOREHUB ObjectID AND THAT IS DELIBERATE. Every other
@@ -400,7 +400,7 @@ filters:
     excluded_labels:
       "667bde393126e50006c8058c": "AJI BARN"
       "6639efd64694700008d7cd17": "AJI PINA"
-      "local-aji-macopa-wh-0001": "AJI MACOPA (closed)"
+      "local-aji-macopa-wh-0001": "AJI MACOPA"
 
     # -------------------------------------------------------------------------
     # THERE ARE TWO WAREHOUSES. ONE IS CLOSED.
@@ -491,7 +491,7 @@ filters:
     excluded_store_ids:
       - "local-aji-macopa-wh-0001"   # AJI MACOPA — closed 2026-06-24
     excluded_labels:
-      "local-aji-macopa-wh-0001": "AJI MACOPA (closed)"
+      "local-aji-macopa-wh-0001": "AJI MACOPA"
     applies_to_current_state: true
     applies_to_history: false
     # A tool must not answer "no stock" for a closed location. It says so.
