@@ -157,13 +157,33 @@ def test_multi_part_messages_are_numbered():
 # Empty is not quiet
 # ---------------------------------------------------------------------------
 
-def test_an_empty_section_says_so_rather_than_vanishing():
-    out = render(_brief([], sections={"sales_vs_same_weekday":
-                                      {"items": 0, "stores_considered": 7}}))[0]
-    assert "Sales vs the same weekday" in out
-    assert "Nothing to report" in out
-    # ...and says how much was actually looked at, so silence is not ambiguous.
-    assert "7 stores compared" in out
+def test_a_quiet_morning_states_the_finding_not_an_absence():
+    """
+    A quiet morning is a RESULT — everything stayed inside its normal range —
+    and it is what makes a noisy morning mean something. "Nothing to report"
+    reads as absence and is indistinguishable from a section that broke.
+    """
+    out = render(_brief([], sections={
+        "sales_vs_same_weekday": {"items": 0, "stores_considered": 7},
+        "stock_crossed_out": {"items": 0, "compared": ["2026-09-01", "2026-09-02"]},
+        "newly_dead": {"items": 0, "window_days": 30},
+    }))[0]
+    assert "No store moved beyond its normal range" in out
+    assert "7 compared against the same weekday last week" in out
+    assert "Nothing went out of stock." in out
+    assert "Nothing crossed 30 days without a sale." in out
+
+
+def test_a_section_that_could_not_run_does_not_look_quiet():
+    """The failure mode this whole distinction exists to prevent."""
+    out = render(_brief([], sections={
+        "sales_vs_same_weekday": {"items": 0, "stores_considered": 0},
+        "stock_crossed_out": {"items": 0, "compared": [None, None]},
+    }))[0]
+    assert "Could not compare sales" in out
+    assert "Could not compare stock" in out
+    assert "missing data, not a quiet morning" in out
+    assert "No store moved beyond its normal range" not in out
 
 
 # ---------------------------------------------------------------------------

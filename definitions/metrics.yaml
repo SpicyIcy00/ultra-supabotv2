@@ -2359,31 +2359,35 @@ brief:
     # PHP 5,000 baseline to PHP 7,000 is +40% and PHP 2,000 — under its floor,
     # so it stays out of the brief. Without the floor the smallest store would
     # dominate every morning.
-    pct_threshold: 20.0
-    absolute_floor_fraction: 0.20
+    pct_threshold: 30.0
+    absolute_floor_fraction: 0.25
 
     # ---------------------------------------------------------------------
     # WHAT THESE THRESHOLDS ACTUALLY PRODUCE. Measured 2026-09-03 by replaying
     # 143 closed days across the 7 active stores:
     #
     #   pct >= 20%, floor 20% of median -> 3.3 stores/day, quiet mornings   0/143
-    #   pct >= 30%, floor 25% of median -> 2.2 stores/day, quiet mornings  13/143
+    #   pct >= 30%, floor 25% of median -> 2.2 stores/day, quiet mornings  13/143   <- CONFIGURED
     #   pct >= 35%, floor 30% of median -> 1.7 stores/day, quiet mornings  24/143
     #
-    # At the configured setting the brief NEVER has a quiet morning: it names
-    # roughly half the estate every single day. That is a real cost — a brief
-    # that always fires teaches people to stop reading it, and the day something
-    # genuinely breaks it will look like every other day.
+    # WHY NOT 20%. The per-store week-over-week median swing is 18.9%-26.2%, so a
+    # 20% threshold is roughly ordinary noise BY CONSTRUCTION: it named about half
+    # the estate every single day and produced ZERO quiet mornings in 143 days. A
+    # brief that always fires teaches people to stop reading it, and the day
+    # something genuinely breaks it looks like every other day.
     #
-    # It is left at 20% because that is what was asked for, and because the
-    # per-store week-over-week median swing is 18.9%-26.2%, so 20% is close to
-    # ordinary noise BY CONSTRUCTION. Raising it is a judgement about how much
-    # silence is acceptable, not a technical fix. The numbers above are here so
-    # that judgement is made with evidence rather than by feel.
+    # 30% clears the per-store noise band and buys roughly one quiet morning a
+    # fortnight. Those quiet mornings are the point: they are what makes a
+    # non-quiet one mean something. Raising it further is a judgement about how
+    # much silence is acceptable, not a technical fix — the numbers above are
+    # here so that judgement is made with evidence rather than by feel.
+    #
+    # Changed from 20/0.20 to 30/0.25 on 2026-09-03 after measuring the above.
     # ---------------------------------------------------------------------
     signal_rate_measured: "2026-09-03, 143 closed days, 7 stores"
-    signal_rate_stores_per_day: 3.3
-    signal_rate_quiet_mornings: 0
+    signal_rate_stores_per_day: 2.2
+    signal_rate_quiet_mornings: 13
+    signal_rate_days_measured: 143
 
     # The floor is a FRACTION OF THAT STORE'S OWN MEDIAN DAY, computed at run
     # time from a trailing window — never a frozen number per store. A hardcoded

@@ -129,6 +129,46 @@ def _pack(blocks: Iterable[list[str]], header: str) -> list[str]:
     return messages
 
 
+def _quiet_line(section: str, info: dict) -> str:
+    """
+    What a section says when it has nothing to say.
+
+    EMPTY IS NOT QUIET, and the two must never look alike. A quiet morning is a
+    result — it means everything stayed inside its normal range, which is worth
+    knowing and is the thing that makes a noisy morning mean something. A section
+    that could not run is a failure wearing the same clothes.
+
+    So each section states the positive finding in its own words rather than a
+    shared "nothing to report", which reads as absence either way.
+    """
+    if section == "sales_vs_same_weekday":
+        considered = info.get("stores_considered") or 0
+        if not considered:
+            return (
+                "Could not compare sales — no store had figures for both days. "
+                "That is missing data, not a quiet morning."
+            )
+        return (
+            f"No store moved beyond its normal range "
+            f"({considered} compared against the same weekday last week)."
+        )
+
+    if section == "stock_crossed_out":
+        compared = info.get("compared") or []
+        if not all(compared):
+            return (
+                "Could not compare stock — no snapshots were available. "
+                "That is missing data, not a quiet morning."
+            )
+        return "Nothing went out of stock."
+
+    if section == "newly_dead":
+        days = info.get("window_days", 30)
+        return f"Nothing crossed {days} days without a sale."
+
+    return "Nothing to report."
+
+
 def _section_blocks(section: str, rows: list[dict], notices: list[dict],
                     sections_meta: dict) -> list[list[str]]:
     """
@@ -143,15 +183,7 @@ def _section_blocks(section: str, rows: list[dict], notices: list[dict],
     head += [_render_notice(n) for n in notices]
 
     if not rows:
-        # Empty is not quiet — say which, using the notice the tool attached.
-        info = sections_meta.get(section, {})
-        head.append(
-            f"<i>Nothing to report"
-            + (f" ({info['stores_considered']} stores compared)"
-               if section == "sales_vs_same_weekday" and info.get("stores_considered")
-               else "")
-            + ".</i>"
-        )
+        head.append(f"<i>{_quiet_line(section, sections_meta.get(section, {}))}</i>")
         return [head]
 
     blocks: list[list[str]] = []
