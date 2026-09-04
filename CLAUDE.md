@@ -173,6 +173,40 @@ its SQL-generation path. Reading it for schema knowledge is fine.
 - When a question can't be answered by an existing tool, say so and propose the
   tool — don't reach around the rules to get an answer.
 
+### Never print a secret's value
+
+**Any shell probe that reads environment variables prints the variable NAME and
+whether it is set — never the value, and never a prefix of it.** This is a hard
+rule with no exception for "just checking", no exception for a value assumed to
+be short or harmless, and no exception for a redaction applied after the fact.
+
+    # correct
+    for k in ANTHROPIC_API_KEY DATABASE_URL; do
+      [ -n "${!k}" ] && echo "$k: set" || echo "$k: unset"
+    done
+
+    # WRONG — prints the value whenever the variable IS set
+    echo "$k: ${v:+set}${v:-MISSING}"
+
+The second line was written on 2026-09-04 to report set/unset and did exactly
+that for the unset case; `${v:-MISSING}` expands to the VALUE when the variable
+is set, so it printed the Anthropic API key and both George role passwords in
+full. Shell defaulting syntax reads as a guard and is not one.
+
+**Why this is a hard rule and not a preference:** a value printed into a
+terminal is in the transcript, the scrollback and any log that captured them,
+and it stays there after the check that produced it is forgotten. The blast
+radius is not the command, it is everything the credential opens — and the
+remedy is rotating production secrets, which is disruptive and falls to somebody
+else. `backend/.env` holds a superuser `DATABASE_URL`, both George role
+passwords, `BRIEF_TOKEN` and the model key.
+
+Applies to every mechanism, not just `echo`: no `env`, no `printenv`, no
+`set`, no `cat` of a `.env`, no interpolating a variable into a log line or an
+error message, and no "redacted" print that slices the first N characters. If
+you need to know a value is correct, assert a property of it — its length, or
+that a connection using it succeeds — and print the assertion, not the value.
+
 ## UI/UX
 
 ### Vocabulary
