@@ -20,47 +20,85 @@ from pathlib import Path
 import pytest
 
 
-@pytest.fixture(autouse=True, scope="session")
-def _never_write_to_the_real_log():
+# The real log URL, taken OUT of the environment at import — before any test
+# module is collected, and therefore before anything can read it. Kept here so
+# a test that genuinely wants it can opt in and get it back.
+#
+# Popping is the structural half: a test cannot connect to a database whose
+# address it cannot see. The assertion in the fixture below is the tripwire for
+# anything that puts it back.
+_REAL_LOG_URL = os.environ.pop("GEORGE_LOG_DATABASE_URL", None)
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "uses_real_log: this test genuinely needs GEORGE_LOG_DATABASE_URL. It "
+        "will WRITE to that database. Skipped when the variable is unset.",
+    )
+
+
+@pytest.fixture(autouse=True)
+def _george_log_isolation(request):
     """
-    The suite never writes to George's conversation log. Not ever.
+    No test touches a database it did not ask for.
 
-    WHAT WAS HAPPENING. agent.loop.run() builds its own ConversationLog, and
-    nothing patches it — test_chats_contract patches `_exec` only for its
-    direct tests of the log, and test_river_contract deletes this variable only
-    for its own. Every other test that drives the loop (the correction and
-    convergence contracts) ran with whatever GEORGE_LOG_DATABASE_URL happened
-    to be in the shell.
+    Unmarked tests — every test in this suite today — run with
+    GEORGE_LOG_DATABASE_URL absent, so ConversationLog.enabled is false and
+    `_exec` returns before it connects. A test that wants the real log marks
+    itself `uses_real_log` and gets the variable back for its duration, which
+    makes the write visible in the test's own source rather than in whatever
+    the shell happened to export.
 
-    With backend/.env exported — the configuration this repo's own notes
-    recommend for changes touching agent/ or tools/ — that variable points at
-    the PRODUCTION log. So a green test run was quietly inserting rows into
-    george.conversations and george.gaps. Found 2026-09-05: 57 conversation
-    rows and 84 gap rows whose question is a test fixture ("pin that", "how did
-    Rockwell do?") and whose user_id is NULL, which no real turn has.
-
-    The gap log is the record of what George could NOT do — the half that
-    usually goes unmeasured — so junk in it is not cosmetic; it is a metric
-    somebody reads.
-
-    WHY UNSET RATHER THAN PATCH. This is not swallowing the signal. A logging
-    failure SHOULD surface as a `logging_failed` warning, and it still does in
-    real use. These are contract tests with a stubbed model client: they have
-    no business opening a connection to any real database, and the writes were
-    incidental rather than intended. Unsetting the variable makes
-    ConversationLog.enabled false, so `_exec` returns before it connects.
-
-    A side effect worth naming: the suite's result no longer depends on
-    migration state. Before this, code that wrote a column or table not yet in
-    the database turned seven passing tests red — which reads as a regression
-    and is really a deploy-order fact.
+    The assertion is deliberate rather than another pop: something that puts
+    the variable back mid-run has undone the isolation, and failing loudly is
+    the only way that gets noticed.
     """
-    previous = os.environ.pop("GEORGE_LOG_DATABASE_URL", None)
-    try:
-        yield
-    finally:
-        if previous is not None:
-            os.environ["GEORGE_LOG_DATABASE_URL"] = previous
+    if request.node.get_closest_marker("uses_real_log"):
+        if _REAL_LOG_URL is None:
+            pytest.skip("GEORGE_LOG_DATABASE_URL is not set")
+        os.environ["GEORGE_LOG_DATABASE_URL"] = _REAL_LOG_URL
+        try:
+            yield
+        finally:
+            os.environ.pop("GEORGE_LOG_DATABASE_URL", None)
+        return
+
+    assert "GEORGE_LOG_DATABASE_URL" not in os.environ, (
+        "GEORGE_LOG_DATABASE_URL is set during a test that did not ask for it. "
+        "That variable points at the production conversation log; a test that "
+        "drives the loop will WRITE to it. Mark the test `uses_real_log` if "
+        "that is genuinely intended."
+    )
+    yield
+
+
+# WHAT THIS ISOLATION IS FOR, kept because the reason is not obvious from the
+# code. agent.loop.run() builds its own ConversationLog and nothing patched it:
+# test_chats_contract patched `_exec` only for its direct tests of the log, and
+# test_river_contract deleted the variable only for its own. Every other test
+# that drove the loop ran against whatever the shell exported.
+#
+# With backend/.env exported — the configuration this repo's notes recommend
+# for changes touching agent/ or tools/ — that is the PRODUCTION log. A green
+# run was quietly inserting rows. Found 2026-09-05: 57 conversation rows and 84
+# gap rows whose question is a test fixture ("pin that", "how did Rockwell
+# do?") and whose user_id is NULL, which no real turn has. They were deleted in
+# a separate, reviewed statement.
+#
+# The gap log is the record of what George could NOT do — the half that usually
+# goes unmeasured — so junk in it is not cosmetic; it is a metric somebody
+# reads.
+#
+# This is not swallowing a signal. A logging failure SHOULD surface as
+# `logging_failed`, and it still does in real use. These are contract tests
+# with a stubbed model client: they have no business opening a connection to
+# any real database, and the writes were incidental rather than intended.
+#
+# A second effect, worth naming because it looked like a regression: the
+# suite's result no longer depends on migration state. Code writing a column or
+# table not yet in the database was turning seven passing tests red, which
+# reads as a broken change and is really a deploy-order fact.
 
 # Make the repo root importable so `from tools import ...` works when pytest is
 # invoked from anywhere.

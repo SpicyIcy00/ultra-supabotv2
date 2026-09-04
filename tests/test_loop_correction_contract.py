@@ -81,10 +81,46 @@ async def _writer(spec):                     # never reached; its presence is
     raise AssertionError("the stub never calls a tool")   # what enables the tool
 
 
+class StubLog(george_loop.ConversationLog):
+    """
+    A ConversationLog that records its statements and never opens a connection.
+
+    THE MODEL IS STUBBED HERE; THE LOG HAS TO BE TOO. `run()` constructs its
+    own ConversationLog, so patching `_exec` on some other instance — which is
+    what test_chats_contract does for its direct tests — leaves the loop's own
+    log entirely unpatched. With GEORGE_LOG_DATABASE_URL exported, that log
+    connected to the PRODUCTION database and wrote a row for every scripted
+    turn. conftest now removes the variable, and this is the second half of the
+    same guarantee: even handed a real URL, nothing here reaches a network.
+
+    Subclassed rather than faked so the parts under test stay real — thread_id
+    defaulting, and post_ids() deriving the ids the river will use. Only the
+    connection is removed.
+    """
+
+    instances: list["StubLog"] = []
+
+    def __init__(self, thread_id=None):
+        super().__init__(thread_id=thread_id)
+        self.url = None            # `enabled` is False; nothing would connect
+        self.statements: list[tuple[str, tuple]] = []
+        StubLog.instances.append(self)
+
+    def _exec(self, sql, params):
+        self.statements.append((sql, params))
+
+
 def drive(monkeypatch, replies, question="pin that"):
-    """Run the loop against scripted replies. Returns (frames, requests)."""
+    """
+    Run the loop against scripted replies. Returns (frames, requests).
+
+    Both external dependencies are stubbed by default: the Anthropic client, and the
+    conversation log. A test that wants either for real has to say so.
+    """
     fake = FakeClient(replies)
     monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    StubLog.instances.clear()
+    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
 
     async def collect():
         return [f async for f in george_loop.run(question, pin_writer=_writer)]

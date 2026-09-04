@@ -38,7 +38,7 @@ export type PostVisibility = 'org' | 'private';
  */
 export interface Post {
   id: string;
-  /** The root post's id. A root post is its own thread. */
+  /** The exchange this post belongs to — the conversation's thread. */
   thread_id: string;
   /** The post being replied to. Null for a root. */
   parent_id: string | null;

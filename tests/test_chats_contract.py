@@ -95,10 +95,18 @@ def test_the_log_row_carries_thread_notices_and_receipts(monkeypatch):
 
     sql, params = captured[0]
     assert "thread_id" in sql and "receipts" in sql
-    assert params[1] == "thread-1"
+
+    # Bind by column NAME, not by a counted position: this assertion used to
+    # hardcode params[11] and params[14], and adding cache_creation_tokens in
+    # the middle of the column list broke it while the code was correct.
+    columns = [c.strip() for c in
+               sql.split("(", 1)[1].split(")", 1)[0].split(",")]
+    at = {name: params[i] for i, name in enumerate(columns)}
+
+    assert at["thread_id"] == "thread-1"
     # Full objects, not bare kinds: a reopened answer must show its caveat in words.
-    assert json.loads(params[11]) == [notice]
-    assert json.loads(params[14]) == receipts
+    assert json.loads(at["notices"]) == [notice]
+    assert json.loads(at["receipts"]) == receipts
 
 
 def test_a_new_log_defaults_its_thread_to_itself():

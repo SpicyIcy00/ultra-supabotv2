@@ -11,10 +11,11 @@ without SELECT, so it can never read a post back. Everything else is written by
 the APPLICATION role, which is also the only reader. george_ro is not involved
 at all and cannot see this schema. See the migration (n8o9p0q1r2s3).
 
-THREADS EMERGE. `thread_id` is the root post's id and a root post is its own
-thread — the same trick conversations.thread_id uses. Nothing ever creates an
-empty thread, because there is nothing to create: the first reply to a post
-makes one.
+THREADS EMERGE, AND THEY ARE NOT CREATED. `thread_id` groups posts into one
+exchange; for a post derived from a turn it is the CONVERSATION's thread_id, so
+a six-turn chat becomes twelve posts sharing one thread without anything having
+opened it. Nothing ever creates an empty thread, because there is nothing to
+create.
 
 VISIBILITY IS PER POST. George's own posts are 'org' because a brief that fires
 into a group chat at 06:00 is not private. A person's question and its answer
@@ -81,7 +82,8 @@ class GeorgePost(Base):
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
 
-    #: The root post's id. A root post is its own thread.
+    #: The exchange this post belongs to. For a post derived from a turn it
+    #: is the conversation's thread_id.
     thread_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     #: The post being replied to. None for a root.
     parent_id: Mapped[Optional[UUID]] = mapped_column(PgUUID(as_uuid=True))

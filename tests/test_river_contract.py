@@ -233,3 +233,224 @@ def test_the_cursor_reports_a_real_end() -> None:
     assert next_cursor([_row()], limit=40) is None
     full = [_row(created_at="2026-09-05T01:00:00+00:00")] * 2
     assert next_cursor(full, limit=2) == "2026-09-05T01:00:00+00:00"
+
+
+# ---------------------------------------------------------------------------
+# The live write path (C.2)
+#
+# george_log is INSERT-only, so nothing can be read back to check — the
+# statements themselves are inspected, the same technique
+# test_chats_contract.py uses on the conversation row.
+# ---------------------------------------------------------------------------
+
+import hashlib          # noqa: E402
+import json             # noqa: E402
+import uuid as _uuid    # noqa: E402
+from datetime import datetime, timezone  # noqa: E402
+
+pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
+pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
+
+from agent import loop as george_loop  # noqa: E402
+
+
+def _capture(monkeypatch, thread_id=None):
+    captured: list[tuple[str, tuple]] = []
+    log = george_loop.ConversationLog(thread_id=thread_id)
+    monkeypatch.setattr(log, "_exec", lambda sql, params: captured.append((sql, params)))
+    return log, captured
+
+
+def test_post_ids_match_the_backfills_rule() -> None:
+    """
+    The live write and the migration's backfill derive the SAME ids.
+
+    This is what makes the backfill safe to re-run after live writes have
+    started: it would compute ids that already exist and its NOT EXISTS guard
+    would skip them. If these two derivations ever diverge, re-running the
+    migration silently doubles the river.
+
+    Verified against the real Postgres on 2026-09-05 over 400 derivations —
+    `(md5(c.id::text || ':question'))::uuid` and this agree exactly.
+    """
+    log = george_loop.ConversationLog()
+    question_id, answer_id = log.post_ids()
+    for got, role in ((question_id, "question"), (answer_id, "answer")):
+        digest = hashlib.md5(f"{log.conversation_id}:{role}".encode()).hexdigest()
+        assert got == str(_uuid.UUID(digest))
+    assert question_id != answer_id
+
+
+def test_post_ids_are_stable_across_calls() -> None:
+    """The SSE frame and the INSERT must name the same post."""
+    log = george_loop.ConversationLog()
+    assert log.post_ids() == log.post_ids()
+
+
+def test_a_turn_writes_a_question_and_an_answer(monkeypatch) -> None:
+    log, captured = _capture(monkeypatch, thread_id="11111111-1111-1111-1111-111111111111")
+    receipts = {"source_table": "new_transactions"}
+    notice = {"kind": "k", "message": "m", "source": "s"}
+    log.posts(
+        user_id="ice", asked_at=datetime.now(timezone.utc),
+        question="How did Rockwell do yesterday?",
+        final_answer="Rockwell took P28,782 on Thu 4 Sep 2026.",
+        notices=[notice], receipts=receipts,
+    )
+
+    assert len(captured) == 2
+    q_sql, q_params = captured[0]
+    a_sql, a_params = captured[1]
+
+    assert "'question','user'" in q_sql.replace(" ", "")
+    assert "'answer','george'" in a_sql.replace(" ", "")
+    # The question carries the person; the answer carries none (ck_posts_actor).
+    assert q_params[2] == "ice"
+    # Both in the same thread, and the answer replies to the question.
+    assert q_params[1] == a_params[1] == "11111111-1111-1111-1111-111111111111"
+    assert a_params[2] == q_params[0]
+    # The answer carries its receipts and its caveat.
+    assert json.loads(a_params[4]) == receipts
+    assert json.loads(a_params[5]) == [notice]
+
+
+def test_both_posts_are_private(monkeypatch) -> None:
+    """
+    A person's question and its answer are theirs until they share it. The
+    default is expressed in the model layer so the loop, the scheduler and the
+    brief route cannot each decide differently.
+    """
+    log, captured = _capture(monkeypatch)
+    log.posts(user_id="ice", asked_at=datetime.now(timezone.utc),
+              question="q", final_answer="a", notices=[], receipts=None)
+    for sql, _ in captured:
+        assert "'private'" in sql
+    assert default_visibility("question") == "private"
+    assert default_visibility("answer") == "private"
+
+
+def test_a_turn_with_no_answer_writes_only_the_question(monkeypatch) -> None:
+    """
+    A crashed turn is a question nobody answered — true, and worth seeing. An
+    empty answer post would imply George said nothing, which is a different
+    claim. Matches what the backfill does and what chat_history already renders.
+    """
+    log, captured = _capture(monkeypatch)
+    log.posts(user_id="ice", asked_at=datetime.now(timezone.utc),
+              question="q", final_answer=None, notices=[], receipts=None)
+    assert len(captured) == 1
+    assert "'question'" in captured[0][0]
+
+
+def test_an_anonymous_turn_still_satisfies_the_actor_constraint(monkeypatch) -> None:
+    """
+    ck_posts_actor requires a user on a user post. A turn logged with no
+    user_id must not violate it — the row is written as 'unknown' rather than
+    rejected, exactly as the backfill does with COALESCE.
+    """
+    log, captured = _capture(monkeypatch)
+    log.posts(user_id=None, asked_at=datetime.now(timezone.utc),
+              question="q", final_answer=None, notices=[], receipts=None)
+    assert captured[0][1][2] == "unknown"
+
+
+def test_the_stream_names_the_posts_it_wrote(monkeypatch) -> None:
+    """
+    A `post` frame carries both ids, so a client rendering the river can
+    reconcile the turn it drew optimistically with the one that was stored
+    rather than refetching to discover it already had it.
+
+    `stored` is the honest part: with logging off, no post exists and the
+    client must not pretend one does (UI rule 8 — a claim about state comes
+    from a result, never a literal).
+    """
+    from tests.test_loop_correction_contract import drive, frames_of
+
+    monkeypatch.delenv("GEORGE_LOG_DATABASE_URL", raising=False)
+    frames, _ = drive(monkeypatch, ["Rockwell took P28,782 on Thu 4 Sep 2026."],
+                      question="How did Rockwell do yesterday?")
+
+    posts = frames_of(frames, "post")
+    assert len(posts) == 1
+    frame = posts[0]
+
+    # The ids are derived from the conversation id, so the frame and the row
+    # name the same post.
+    digest = hashlib.md5(f"{frame['conversation_id']}:question".encode()).hexdigest()
+    assert frame["question_post_id"] == str(_uuid.UUID(digest))
+    assert frame["answer_post_id"]
+    assert frame["visibility"] == "private"
+    # Logging is off in this test, so nothing was written and the frame says so.
+    assert frame["stored"] is False
+
+
+def test_no_answer_means_no_answer_post_in_the_frame(monkeypatch) -> None:
+    """The frame reports what exists, not what was planned."""
+    from tests.test_loop_correction_contract import drive, frames_of
+
+    monkeypatch.delenv("GEORGE_LOG_DATABASE_URL", raising=False)
+    frames, _ = drive(monkeypatch, [""], question="something that produced nothing")
+    posts = frames_of(frames, "post")
+    assert posts and posts[0]["answer_post_id"] is None
+
+
+# ---------------------------------------------------------------------------
+# Isolation, tested rather than assumed
+#
+# The suite wrote 57 conversation rows and 84 gap rows into the PRODUCTION log
+# before anyone noticed. These are the assertions that make that structural
+# instead of a habit.
+# ---------------------------------------------------------------------------
+
+def test_no_test_can_see_the_real_log_url() -> None:
+    """
+    conftest pops GEORGE_LOG_DATABASE_URL at import, before any module is
+    collected. A test cannot connect to a database whose address it cannot see.
+    """
+    import os
+
+    assert "GEORGE_LOG_DATABASE_URL" not in os.environ
+
+
+def test_the_loop_never_connects_even_when_handed_a_url(monkeypatch) -> None:
+    """
+    The second half of the guarantee, and the one that survives someone
+    exporting the variable again: drive() replaces ConversationLog itself, so
+    `run()` gets a log whose _exec records instead of connecting.
+
+    Asserted with a POISONED url, so a real connection attempt would fail
+    loudly rather than quietly succeeding against production.
+    """
+    from tests.test_loop_correction_contract import StubLog, drive
+
+    monkeypatch.setenv("GEORGE_LOG_DATABASE_URL",
+                       "postgresql://nobody:nobody@127.0.0.1:1/should_never_be_used")
+    frames, _ = drive(monkeypatch, ["Rockwell took P28,782 on Thu 4 Sep 2026."],
+                      question="How did Rockwell do yesterday?")
+
+    assert StubLog.instances, "the loop did not use the stubbed log"
+    log = StubLog.instances[0]
+    assert log.enabled is False
+    # It still RECORDED the statements it would have made — the conversation
+    # row and both posts — so nothing about the write path went untested.
+    tables = " ".join(sql for sql, _ in log.statements)
+    assert "george.conversations" in tables
+    assert tables.count("george.posts") == 2
+    # And no error, because nothing was attempted over a socket.
+    assert log.errors == []
+    assert not [f for f in frames if "logging_failed" in f]
+
+
+def test_the_stub_keeps_the_real_id_derivation(monkeypatch) -> None:
+    """
+    Subclassed, not faked: thread defaulting and post_ids stay real, because
+    those are the parts under test. Only the connection is removed.
+    """
+    from tests.test_loop_correction_contract import StubLog
+
+    log = StubLog()
+    assert log.thread_id == log.conversation_id
+    question_id, answer_id = log.post_ids()
+    digest = hashlib.md5(f"{log.conversation_id}:question".encode()).hexdigest()
+    assert question_id == str(_uuid.UUID(digest))
+    assert answer_id != question_id

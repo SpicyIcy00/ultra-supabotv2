@@ -165,6 +165,9 @@ def build_turns(
             "input": int(row.get("input_tokens") or 0),
             "output": int(row.get("output_tokens") or 0),
             "cache_read": int(row.get("cache_read_tokens") or 0),
+            # NULL on every turn logged before o9p0q1r2s3t4 — the write side was
+            # not recorded then and cannot be backfilled.
+            "cache_creation": int(row.get("cache_creation_tokens") or 0),
         }
         turns.append({
             "role": "george",
@@ -184,6 +187,10 @@ def build_turns(
                 "notice_forced": bool(row.get("notice_forced")),
                 "usage": usage,
                 "cache_hit": usage["cache_read"] > 0,
+                # A reopened turn reports the same distinction a live one does:
+                # zero tokens means no request was made, not a cache miss.
+                "cache_measured": (usage["input"] + usage["cache_read"]
+                                   + usage["cache_creation"]) > 0,
             },
             "error": errors_by_conversation.get(cid) if status != "ok" else None,
         })

@@ -879,17 +879,90 @@ class ConversationLog:
         self._exec(
             "INSERT INTO george.conversations "
             "(id, thread_id, user_id, asked_at, question, final_answer, model, "
-            " iterations, input_tokens, output_tokens, cache_read_tokens, notices, "
+            " iterations, input_tokens, output_tokens, cache_read_tokens, "
+            " cache_creation_tokens, notices, "
             " notice_forced, status, receipts) "
-            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
             (
                 self.conversation_id, self.thread_id, kw.get("user_id"),
                 kw["asked_at"], kw["question"], kw.get("final_answer"), MODEL,
                 kw["iterations"], kw.get("input_tokens"), kw.get("output_tokens"),
-                kw.get("cache_read_tokens"),
+                kw.get("cache_read_tokens"), kw.get("cache_creation_tokens"),
                 json.dumps(_json_safe(kw.get("notices") or [])),
                 kw.get("notice_forced", False), kw["status"],
                 json.dumps(_json_safe(kw["receipts"])) if kw.get("receipts") else None,
+            ),
+        )
+
+    def post_ids(self) -> tuple[str, str]:
+        """
+        The ids this turn's question and answer posts will have.
+
+        DERIVED FROM THE CONVERSATION ID, not random, and by exactly the rule
+        the backfill in migration n8o9p0q1r2s3 uses:
+        `(md5(c.id::text || ':question'))::uuid`. Two consequences, both
+        deliberate:
+
+          - Re-running the backfill after live writes have started cannot
+            duplicate the river. It would compute the same ids and the
+            `NOT EXISTS` guard would skip them.
+          - The ids are known BEFORE the insert, which this role requires:
+            INSERT ... RETURNING id needs SELECT, and george_log has none.
+        """
+        import hashlib
+
+        def derive(role: str) -> str:
+            digest = hashlib.md5(f"{self.conversation_id}:{role}".encode()).hexdigest()
+            return str(uuid.UUID(digest))
+
+        return derive("question"), derive("answer")
+
+    def posts(self, **kw) -> None:
+        """
+        The turn as two posts in the river: the question, and the answer
+        replying to it.
+
+        WRITTEN ALONGSIDE THE CONVERSATION ROW, never instead of it. That row
+        is the log — the gap log joins to it and pins point at it for
+        provenance — and this is the timeline a person reads. Two records of
+        the same turn, with different jobs and different lifetimes.
+
+        A turn that produced no answer writes only the question, exactly as
+        the backfill does and exactly as chat_history already renders it: a
+        crashed turn is a question nobody answered, which is true and worth
+        seeing, rather than an empty answer that implies George said nothing.
+
+        Both are PRIVATE. A person's question and its answer belong to them
+        until they share it (CLAUDE.md, "The river"), and the loop never
+        decides otherwise — the default is one function in the model layer so
+        this cannot drift from the scheduler's or the brief route's.
+        """
+        question_id, answer_id = self.post_ids()
+        asked_at = kw["asked_at"]
+
+        self._exec(
+            "INSERT INTO george.posts "
+            "(id, thread_id, parent_id, kind, author, author_user, visibility, "
+            " body, receipts, notices, conversation_id, created_at) "
+            "VALUES (%s,%s,NULL,'question','user',%s,'private',%s,NULL,NULL,%s,%s)",
+            (question_id, self.thread_id, kw.get("user_id") or "unknown",
+             kw["question"], self.conversation_id, asked_at),
+        )
+
+        answer = kw.get("final_answer")
+        if not answer:
+            return
+
+        self._exec(
+            "INSERT INTO george.posts "
+            "(id, thread_id, parent_id, kind, author, author_user, visibility, "
+            " body, receipts, notices, conversation_id, created_at) "
+            "VALUES (%s,%s,%s,'answer','george',NULL,'private',%s,%s,%s,%s,%s)",
+            (
+                answer_id, self.thread_id, question_id, answer,
+                json.dumps(_json_safe(kw["receipts"])) if kw.get("receipts") else None,
+                json.dumps(_json_safe(kw.get("notices") or [])),
+                self.conversation_id, datetime.now(timezone.utc),
             ),
         )
 
@@ -1120,7 +1193,11 @@ async def run(
     volunteer_corrections = 0
     max_volunteered = req(defs, "volunteering.max_per_answer")
     max_volunteer_corrections = req(defs, "volunteering.max_corrective_turns")
-    usage = {"input": 0, "output": 0, "cache_read": 0}
+    # cache_creation is the write side, and it was missing: without it a cache
+    # change can be argued about but not measured. A read is 0.1x base input
+    # and a write is 1.25x, so "reads went up" is not the same claim as "it got
+    # cheaper" — the only way to tell them apart is to record both.
+    usage = {"input": 0, "output": 0, "cache_read": 0, "cache_creation": 0}
     answer = ""
     status = "ok"
     notice_forced = False
@@ -1141,6 +1218,19 @@ async def run(
             # One breakpoint at the end of each stable region covers both. The
             # system prompt carries no timestamp — a clock in there would
             # invalidate the prefix on every single request.
+            #
+            # Measured 2026-09-05, 14 days of george.conversations: the prefix
+            # cache works — 139 of the 141 turns that actually reached the API
+            # read it back. It is the SIZE of what it covers that was wrong.
+            # tools + system is ~9.2k tokens; the average iteration presented
+            # ~17.1k tokens BEYOND it, and every one of those was uncached,
+            # because nothing marked the messages. Only 20.6% of presented
+            # input tokens were being served from cache.
+            #
+            # A turn averages 2.8 iterations and each one re-sends every tool
+            # result the ones before it produced, at full price. So the biggest
+            # and most-repeated part of the request was the part with no
+            # breakpoint on it.
             cached_tools = [dict(t) for t in tools_schema]
             cached_tools[-1]["cache_control"] = {"type": "ephemeral"}
 
@@ -1156,6 +1246,25 @@ async def run(
                     async with client.messages.stream(
                         model=MODEL,
                         max_tokens=MAX_TOKENS,
+                        # The growing tail: one automatic breakpoint that moves
+                        # forward as tool results accumulate, so iteration N
+                        # READS what iterations 1..N-1 sent instead of paying
+                        # full price for it again. The explicit markers below
+                        # stay — the static prefix keeps a guaranteed read
+                        # point of its own, which is what makes the first
+                        # iteration of a turn cheap.
+                        #
+                        # Both TTLs are the default 5m and both markers sit
+                        # before the last block, so this composes rather than
+                        # returning 400. Two explicit breakpoints plus this one
+                        # is 3 of the 4 allowed.
+                        #
+                        # Safe against the 20-position lookback: an iteration
+                        # appends exactly two positions (one assistant message,
+                        # and one user message holding ALL tool results — see
+                        # the note where tool_results is appended), so even a
+                        # MAX_ITERATIONS turn stays inside the window.
+                        cache_control={"type": "ephemeral"},
                         system=[{
                             "type": "text",
                             "text": SYSTEM_PROMPT,
@@ -1196,6 +1305,7 @@ async def run(
             usage["input"] += final.usage.input_tokens or 0
             usage["output"] += final.usage.output_tokens or 0
             usage["cache_read"] += getattr(final.usage, "cache_read_input_tokens", 0) or 0
+            usage["cache_creation"] += getattr(final.usage, "cache_creation_input_tokens", 0) or 0
 
             messages.append({"role": "assistant", "content": final.content})
             tool_uses = [b for b in final.content if b.type == "tool_use"]
@@ -1629,10 +1739,35 @@ async def run(
         final_answer=answer or None, iterations=iterations,
         input_tokens=usage["input"], output_tokens=usage["output"],
         cache_read_tokens=usage["cache_read"],
+        cache_creation_tokens=usage["cache_creation"],
         notices=pending,
         notice_forced=notice_forced, status=status,
         receipts=last_meta,
     )
+
+    # The same turn in the river. Alongside the log row, never instead of it:
+    # the log is what the gap log and pin provenance join to, and this is the
+    # timeline a person reads.
+    log.posts(
+        user_id=user_id, asked_at=asked_at, question=question,
+        final_answer=answer or None, notices=pending, receipts=last_meta,
+    )
+
+    # The ids of the two posts, so a client that is rendering the river can
+    # reconcile the turn it drew optimistically with the one that was stored —
+    # rather than waiting for a refetch to find out it already had it.
+    question_post, answer_post = log.post_ids()
+    yield _sse("post", {
+        "question_post_id": question_post,
+        "answer_post_id": answer_post if answer else None,
+        "thread_id": log.thread_id,
+        "conversation_id": log.conversation_id,
+        # Both private: a person's question is theirs until they share it.
+        "visibility": "private",
+        # False when logging is off or failed — the post is not in the river,
+        # and a client must not pretend it is.
+        "stored": log.enabled and not log.errors,
+    })
 
     if log.errors:
         # Surfaced, not raised — the answer already went out.
@@ -1670,4 +1805,16 @@ async def run(
         "notice_forced": notice_forced,
         "usage": usage,
         "cache_hit": usage["cache_read"] > 0,
+        # Whether cache_hit means anything for this turn. A turn that never
+        # reached the API — refused before the first call, or a transient fault
+        # on every retry — presents no tokens, so cache_read is 0 and cache_hit
+        # reads as a MISS for a request that was never made.
+        #
+        # That is not hypothetical: over the 14 days to 2026-09-05, 160 of 301
+        # logged turns had zero tokens, and counting them dragged the apparent
+        # hit rate to 46% while the true rate over turns that made a request
+        # was 98.6%. A miss and a no-op are different facts and the flag now
+        # says which one it is.
+        "cache_measured": (usage["input"] + usage["cache_read"]
+                           + usage["cache_creation"]) > 0,
     })

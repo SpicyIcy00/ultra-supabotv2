@@ -170,6 +170,26 @@ export interface AskHistoryTurn {
   tool_calls: { tool: string; arguments: Record<string, unknown> }[];
 }
 
+/**
+ * The turn's two posts in the river, named as they are written.
+ *
+ * Lets a client reconcile the turn it drew optimistically with the one that
+ * was stored, instead of refetching to discover it already had it.
+ *
+ * `stored` is false when logging is off or failed. Nothing was written then,
+ * and the client must not render a post that does not exist — the same rule
+ * UI rule 8 states for any claim about state.
+ */
+export interface PostFrame {
+  question_post_id: string;
+  /** Null when the turn produced no answer — a question nobody answered. */
+  answer_post_id: string | null;
+  thread_id: string;
+  conversation_id: string;
+  visibility: 'org' | 'private';
+  stored: boolean;
+}
+
 export interface DoneFrame {
   conversation_id: string;
   /** The chat this turn belongs to. Send it back on the next question. */
@@ -178,8 +198,21 @@ export interface DoneFrame {
   tool_calls: number;
   status: string;
   notice_forced: boolean;
-  usage: { input: number; output: number; cache_read: number };
+  usage: {
+    input: number;
+    output: number;
+    cache_read: number;
+    /** The write side. 0 on turns logged before the column existed. */
+    cache_creation?: number;
+  };
   cache_hit: boolean;
+  /**
+   * Whether `cache_hit` is a measurement. False when the turn never reached
+   * the API, where `cache_read` is 0 because no request was made rather than
+   * because the cache missed. Optional: turns stored before this field
+   * existed do not carry it.
+   */
+  cache_measured?: boolean;
 }
 
 /** Loop state, drives the reactive mark. */

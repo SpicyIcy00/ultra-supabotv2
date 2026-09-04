@@ -214,6 +214,10 @@ class ChatDone(BaseModel):
     notice_forced: bool
     usage: dict[str, int]
     cache_hit: bool
+    # Whether cache_hit is a measurement or an artefact — false for a turn that
+    # never reached the API, whose cache_read is 0 because no request was made.
+    # Defaulted so rows logged before cache_creation_tokens existed still load.
+    cache_measured: bool = False
 
 
 class ChatTurn(BaseModel):
@@ -540,7 +544,8 @@ async def get_chat(
             text(
                 f"SELECT c.id, {_THREAD} AS thread_id, c.asked_at, c.logged_at, "
                 f"       c.question, c.final_answer, c.iterations, c.input_tokens, "
-                f"       c.output_tokens, c.cache_read_tokens, c.notices, "
+                f"       c.output_tokens, c.cache_read_tokens, "
+                f"       c.cache_creation_tokens, c.notices, "
                 f"       c.notice_forced, c.status, c.receipts "
                 f"FROM george.conversations c "
                 f"WHERE {_THREAD} = :t AND c.user_id = :u AND {_VISIBLE} "
@@ -926,6 +931,11 @@ async def ask(
         tool_result  {seq, tool, row_count, source_table, truncated, duration_ms}
         notice       {kind, message}   — a caveat the answer must carry
         pinned       {pin_id, title, page, pins_on_page, tool_calls}
+        post         {question_post_id, answer_post_id, thread_id,
+                     conversation_id, visibility, stored} — the turn's two
+                     posts in the river. `stored` is false when logging is off
+                     or failed, and a client must not render a post that does
+                     not exist.
         text         answer deltas
         answer_reset {reason} — discard the deltas so far; the answer is being
                      rewritten. A client that ignores this shows the answer twice.

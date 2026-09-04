@@ -38,10 +38,12 @@ George's own posts are 'org'. A person's question and its answer are 'private'
 until shared. The read query is `visibility = 'org' OR author_user = :me`, so
 opening the default later is one line and does not need a migration.
 
-THREADS EMERGE. thread_id is the root post's id and a root post is its own
-thread, the same trick conversations.thread_id already uses. parent_id is the
-reply target. Nothing creates an empty thread because there is nothing to
-create.
+THREADS EMERGE, AND THEY ARE NOT CREATED. thread_id groups posts into one
+exchange; for a post derived from a turn it is the CONVERSATION's thread_id, so
+a six-turn chat becomes twelve posts sharing one thread without anything having
+opened it. parent_id is the reply target — an answer replies to its question,
+and a question has none. Nothing creates an empty thread because there is
+nothing to create.
 
 Revision ID: n8o9p0q1r2s3
 Revises: m7n8o9p0q1r2
@@ -72,7 +74,8 @@ def upgrade() -> None:
     op.execute(f"""
         CREATE TABLE IF NOT EXISTS george.posts (
             id              uuid PRIMARY KEY,
-            -- The root post's id. A root post is its own thread.
+            -- The exchange this post belongs to. For a post derived from a
+            -- turn it is the conversation's thread_id.
             thread_id       uuid        NOT NULL,
             -- The post being replied to; NULL for a root.
             parent_id       uuid,

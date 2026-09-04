@@ -51,6 +51,10 @@ CREATE TABLE george.conversations (
     input_tokens       integer,
     output_tokens      integer,
     cache_read_tokens  integer,
+    -- The cache WRITE, added 2026-09-05 (alembic o9p0q1r2s3t4). Without it the
+    -- log could show reads rising and still not say whether caching was paying
+    -- for itself: a read is 0.1x base input, a write 1.25x.
+    cache_creation_tokens integer,
     -- Full notice objects {kind, message, source} since 2026-09-03; rows
     -- before that hold bare kinds. A reopened answer must carry its caveat
     -- in words, not as a label (UI rule 4).
