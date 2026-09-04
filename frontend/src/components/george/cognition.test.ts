@@ -8,7 +8,14 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { GeorgeState } from '../../types/george';
-import { actLine, actName, cognitionTail, liveCognition } from './cognition';
+import {
+  actLine,
+  actName,
+  cognitionTail,
+  liveCognition,
+  narrateCall,
+  narrateResult,
+} from './cognition';
 
 /** agent/loop.py TOOL_FUNCTIONS — the read surface. */
 const READ_TOOLS = [
@@ -207,5 +214,80 @@ describe('liveCognition — presence, and where it stops', () => {
     // The slot is fixed height and held empty; an undefined here would render
     // as "undefined" under the mark.
     expect(liveCognition('thinking', '')).toBe('');
+  });
+});
+
+
+describe('narrateCall — what he is doing, in the first person', () => {
+  it('puts him in front of the act', () => {
+    expect(narrateCall(['get_purchasing'])).toBe("I'm checking purchasing…");
+  });
+
+  it('stays grammatical for every tool, because ACTS are participles', () => {
+    // The reason narration can be BUILT from actLine rather than duplicated:
+    // "I'm " in front of a present participle is always a sentence.
+    for (const tool of [...READ_TOOLS, ...INJECTED_TOOLS]) {
+      const line = narrateCall([tool]);
+      expect(line.startsWith("I'm ")).toBe(true);
+      expect(line.endsWith('…')).toBe(true);
+    }
+  });
+
+  it('carries actLine’s deduping and its two-name limit', () => {
+    expect(narrateCall(['get_sales', 'get_sales'])).toBe("I'm reading sales…");
+    expect(narrateCall(['get_sales', 'get_stock', 'get_movement'])).toBe(
+      "I'm reading sales and 2 other things…",
+    );
+  });
+
+  it('says nothing at all rather than a sentence with nothing in it', () => {
+    // The caller falls back to the state label; "I'm …" would be worse than
+    // either.
+    expect(narrateCall([])).toBe('');
+  });
+});
+
+describe('narrateResult — what he is seeing', () => {
+  it('names the subject and the size', () => {
+    expect(narrateResult({ tool: 'get_purchasing', rowCount: 14 })).toBe(
+      'Purchasing came back — 14 rows',
+    );
+  });
+
+  it('reads singular for one row', () => {
+    expect(narrateResult({ tool: 'get_sales', rowCount: 1 })).toBe(
+      'Sales came back — 1 row',
+    );
+  });
+
+  it('an empty result is EMPTY, never a zero', () => {
+    // A zero would be a figure. "came back empty" says the query matched
+    // nothing — the distinction PinTile draws for a tile with no rows.
+    const line = narrateResult({ tool: 'get_dead_stock', rowCount: 0 });
+    expect(line).toBe('Dead stock came back empty');
+    expect(line).not.toMatch(/0/);
+  });
+
+  it('says a tool refused rather than reporting a size it does not have', () => {
+    expect(narrateResult({ tool: 'get_stock', rowCount: null, error: 'refused' })).toBe(
+      'Stock refused that',
+    );
+  });
+
+  it('has a subject for every tool that has an act', () => {
+    // A tool must never narrate its call and then go silent on its result.
+    for (const tool of [...READ_TOOLS, ...INJECTED_TOOLS]) {
+      const line = narrateResult({ tool, rowCount: 3 });
+      expect(line).not.toContain(tool);
+      expect(line).toContain('came back');
+    }
+  });
+
+  it('falls back to the tool name for a tool nobody has named', () => {
+    // Same discipline as actName: plainly an identifier, rather than a
+    // catch-all that would describe it wrongly.
+    expect(narrateResult({ tool: 'get_whatever', rowCount: 2 })).toBe(
+      'get_whatever came back — 2 rows',
+    );
   });
 });

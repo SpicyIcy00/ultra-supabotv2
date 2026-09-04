@@ -85,6 +85,81 @@ export function actLine(tools: string[]): string {
   return `${acts[0]} and ${acts.length - 1} other things…`;
 }
 
+/* -------------------------------------------------------------- narration -- */
+
+/**
+ * Tool -> what its result is ABOUT, as a subject George can put a verb after.
+ *
+ * Capitalised, because these open a sentence: "Purchasing came back — 14 rows".
+ * Parallel to ACTS above and covering exactly the same tools, so a tool can
+ * never narrate its call and go silent on its result.
+ */
+const SUBJECTS: Record<string, string> = {
+  get_sales: 'Sales',
+  get_stock: 'Stock',
+  get_product: 'The product',
+  get_movement: 'Movement',
+  get_vending: 'Vending',
+  get_vending_stock: 'The machines',
+  get_dead_stock: 'Dead stock',
+  get_purchasing: 'Purchasing',
+  get_cost_history: 'Cost history',
+  get_brief: 'The brief',
+
+  pin_answer: 'The pin',
+  save_workflow: 'The rule',
+  run_workflow: 'The workflow',
+};
+
+/** One completed call, as much of it as narration needs. */
+export interface LastResult {
+  tool: string;
+  rowCount: number | null;
+  error?: string | null;
+}
+
+/**
+ * What George is doing, in the first person.
+ *
+ * Built from actLine, so the vocabulary has exactly one home and the spoken
+ * and printed forms cannot drift — the property this file was created to hold.
+ * ACTS are present participles precisely so "I'm " can be put in front of any
+ * of them and come out grammatical.
+ *
+ * Empty for an empty list rather than "I'm …", so a caller can fall back to the
+ * state's own label instead of rendering a sentence with nothing in it.
+ */
+export function narrateCall(tools: string[]): string {
+  const line = actLine(tools);
+  return line ? `I'm ${line}` : '';
+}
+
+/**
+ * What George is SEEING, in the first person — the thing the line used to go
+ * quiet for.
+ *
+ * Until now the label named the call and then fell back to a state word the
+ * moment the result landed, so the most interesting instant in a turn — data
+ * arriving — was the one instant that said nothing.
+ *
+ * DERIVED, THEREFORE TRUE. Every word comes from the tool_result frame: which
+ * tool, how many rows, whether it errored. Nothing here is the model's account
+ * of what happened, which is why this line may be read as fact while the
+ * cognition line below it may not.
+ *
+ * AN EMPTY RESULT IS NOT A ZERO, and it does not get to look like one. "came
+ * back empty" says the query found no rows; a zero would be a figure. The same
+ * distinction PinTile draws for a tile with no rows.
+ */
+export function narrateResult(result: LastResult): string {
+  const subject = SUBJECTS[result.tool] ?? result.tool;
+  if (result.error) return `${subject} refused that`;
+  const n = result.rowCount;
+  if (n === null || n === undefined) return `${subject} came back`;
+  if (n === 0) return `${subject} came back empty`;
+  return `${subject} came back — ${n.toLocaleString('en-PH')} ${n === 1 ? 'row' : 'rows'}`;
+}
+
 /**
  * The live thinking line: the last thing he has got as far as saying.
  *

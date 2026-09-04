@@ -18,7 +18,7 @@
  * IT IS NOT A TURN. It never enters `turns`, so it never reaches toHistory()
  * and never becomes part of an ask payload. George said this to the reader.
  */
-import type { Greeting as GreetingType } from '../../types/george';
+import type { FollowUp as FollowUpType, Greeting as GreetingType } from '../../types/george';
 import { NoticeBanner } from './NoticeBanner';
 import { ReceiptsBlock } from './ReceiptsBlock';
 
@@ -38,7 +38,53 @@ export function GreetingUnavailable() {
   );
 }
 
-export function Greeting({ greeting }: { greeting: GreetingType }) {
+/**
+ * The obvious next questions, as chips.
+ *
+ * These are what "ask and I'll run it" has been promising since the greeting
+ * shipped. A chip is a QUESTION: clicking it asks George in the ordinary way,
+ * so the answer arrives as a normal turn with its narration, its notices and
+ * its receipts. Nothing is pre-run, so a chip can never sit on screen showing
+ * a figure that has gone stale.
+ *
+ * Quiet chrome, and nothing here may use the approvals colour (UI rule 5) — a
+ * question George is offering to answer needs nobody.
+ */
+function FollowUps({
+  items,
+  onAsk,
+}: {
+  items: FollowUpType[];
+  onAsk: (question: string) => void;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {items.map((f) => (
+        <button
+          key={f.question}
+          type="button"
+          onClick={() => onAsk(f.question)}
+          // The label is the shortcut; the question is what will actually be
+          // asked, so it travels on the title rather than being hidden.
+          title={f.question}
+          className="min-h-touch rounded-full border border-george-line bg-george-paper px-3 py-1.5 text-[12px] text-george-slate hover:border-george-slate hover:text-george-navy"
+        >
+          {f.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function Greeting({
+  greeting,
+  onAsk,
+}: {
+  greeting: GreetingType;
+  /** Absent where there is nowhere to ask; the chips are then not offered. */
+  onAsk?: (question: string) => void;
+}) {
   // The item's own receipts where there is an item; the brief's otherwise.
   const receipts = greeting.item?.receipts ?? greeting.meta;
 
@@ -50,6 +96,10 @@ export function Greeting({ greeting }: { greeting: GreetingType }) {
       <p className="text-[15px] leading-relaxed text-george-navy">{greeting.headline}</p>
 
       <ReceiptsBlock meta={receipts} />
+
+      {/* Below the receipts: the chips are about what to do next, and the
+          receipts are about the sentence above them. */}
+      {onAsk && <FollowUps items={greeting.follow_ups ?? []} onAsk={onAsk} />}
     </div>
   );
 }

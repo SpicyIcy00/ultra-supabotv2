@@ -25,10 +25,17 @@
  * adds no orange at all.
  *
  * THE WORK IS SHOWN, NOT SUMMARISED. Two lines sit under the mark and they say
- * different things: the LABEL is what he is doing, named from the tool that is
- * actually running, and the COGNITION line beneath it is what he is thinking,
- * streaming as it arrives. The second is the model's own summarized reasoning
- * — worth watching, never evidence, and no figure is ever read out of it.
+ * different things, and the difference is a rule rather than a layout choice.
+ *
+ * The LABEL is GEORGE NARRATING — first person, derived from the tool that is
+ * actually running and from the result that actually landed ("I'm checking
+ * purchasing…", then "Purchasing came back — 14 rows"). Every word of it is true
+ * by construction, so it is held to receipts like anything else he says.
+ *
+ * The COGNITION line beneath it is the MODEL'S summarized reasoning, streaming
+ * as it arrives — worth watching, never evidence, and no figure is ever read
+ * out of it. It stays in its own dimmed italic register precisely so it cannot
+ * be mistaken for the line above.
  *
  * Both slots are FIXED HEIGHT, held whether or not there is anything in them.
  * A line that appears and disappears as thinking starts and stops would push
@@ -37,7 +44,7 @@
  */
 import type { GeorgeState } from '../../types/george';
 import { markClass, markDetail, markPath } from './markState';
-import { liveCognition } from './cognition';
+import { liveCognition, type LastResult } from './cognition';
 
 interface Props {
   state: GeorgeState;
@@ -54,6 +61,11 @@ interface Props {
    * the caller never has to know how the line is shaped.
    */
   thinking?: string;
+  /**
+   * The most recent completed call in this turn, so the label can say what
+   * came back rather than falling silent the moment it does.
+   */
+  lastResult?: LastResult | null;
   variant?: 'hero' | 'inline';
 }
 
@@ -92,11 +104,12 @@ export function ReactiveMark({
   running = [],
   toolResults = 0,
   thinking = '',
+  lastResult = null,
   variant = 'hero',
 }: Props) {
   // Both derivations live beside the state mapping and the act names, where
   // the suite can hold them to their rules without a DOM.
-  const detail = markDetail(state, running);
+  const detail = markDetail(state, running, lastResult);
   const cognition = liveCognition(state, thinking);
 
   if (variant === 'inline') {

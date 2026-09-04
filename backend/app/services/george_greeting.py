@@ -45,6 +45,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from tools.brief import most_notable  # noqa: E402
+from tools._common import load_defs as _load_defs, req as _req  # noqa: E402
 
 # What a section is called when George says he could not check it. Deliberately
 # a noun he would use out loud, not the section key and not the brief's own
@@ -165,6 +166,110 @@ def _sentence(row: dict, meta: dict) -> str:
     return f"{row.get('subject', 'Something')} is the most notable thing in this morning's brief."
 
 
+# --------------------------------------------------------------------------
+# The obvious next question
+#
+# George's opening line has said "ask and I'll run it" since the greeting
+# shipped, with nothing to click. These are that affordance: for each item in
+# the brief, the one question a person reads it and immediately asks.
+#
+# A CHIP IS A QUESTION, NOT AN ANSWER. Clicking one asks George in the ordinary
+# way, so the reply arrives through the ordinary path with its narration, its
+# notices and its receipts. Nothing is pre-run and nothing is cached, which
+# means a chip can never show a figure that has gone stale sitting on screen —
+# and it needs no table, no schedule, and no unattended execution (CLAUDE.md
+# rule 7 is not engaged at all).
+#
+# DERIVED, NOT GENERATED. Same discipline as _sentence above: the question is
+# built from the row's own fields, so a chip cannot ask about a store the brief
+# did not mention. No model call — this runs on every page load.
+#
+# The wording lives here rather than in metrics.yaml for the same reason
+# SECTION_NOUN does: it is copy, not a business definition. Nothing here decides
+# what is true; the brief already did that.
+# --------------------------------------------------------------------------
+
+# One chip per item, and only ever a handful. A row of chips is a shortcut; a
+# grid of them is a menu, and a menu is what the input box already is.
+MAX_FOLLOW_UPS = 3
+
+
+def _follow_up(row: dict, meta: dict) -> Optional[dict[str, str]]:
+    """The one obvious question about one brief row, or None."""
+    section = row.get("section")
+    subject = row.get("subject")
+    if not subject:
+        return None
+
+    if section == "sales_vs_same_weekday":
+        as_of = (meta or {}).get("as_of") or {}
+        day = _day(as_of.get("yesterday"))
+        way = "up" if row.get("direction") == "up" else "down"
+        return {
+            "label": "Why?",
+            "question": f"Why was {subject} {way} on {day}?",
+        }
+
+    if section == "stock_crossed_out":
+        store = row.get("store")
+        where = f" for {store}" if store else ""
+        return {
+            "label": "On order?",
+            # The question a stockout actually raises: is more coming.
+            "question": f"Is {subject} on order{where}?",
+        }
+
+    if section == "newly_dead":
+        store = row.get("store")
+        where = f" at {store}" if store else ""
+        return {
+            "label": "What happened?",
+            # Deliberately a question about the PAST, which tools can answer.
+            # "Should we discount it" is advice, and George has no tool for it.
+            "question": f"How did {subject} sell{where} before it stopped?",
+        }
+
+    return None
+
+
+def follow_ups(payload: dict, defs: Optional[dict] = None) -> list[dict[str, str]]:
+    """
+    The obvious next questions, most notable first.
+
+    Ordered by the SAME ranking that chooses the opening line
+    (brief.notability), so the first chip belongs to the item George just led
+    with. Deduplicated by question text: two stores losing the same SKU
+    produces two rows and one useful question.
+    """
+    defs = defs if defs is not None else _load_defs()
+    meta = payload.get("meta") or {}
+    rows = list(payload.get("rows") or [])
+
+    order = _req(defs, "brief.notability.section_order")
+    measures = _req(defs, "brief.notability.measure")
+    rank = {name: i for i, name in enumerate(order)}
+
+    def key(row: dict) -> tuple:
+        section = row.get("section")
+        try:
+            magnitude = abs(float(row.get(measures.get(section))))
+        except (TypeError, ValueError):
+            magnitude = 0.0
+        return (rank.get(section, len(order)), -magnitude, str(row.get("subject") or ""))
+
+    out: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for row in sorted(rows, key=key):
+        chip = _follow_up(row, meta)
+        if chip is None or chip["question"] in seen:
+            continue
+        seen.add(chip["question"])
+        out.append(chip)
+        if len(out) >= MAX_FOLLOW_UPS:
+            break
+    return out
+
+
 def build_greeting(payload: dict, defs: Optional[dict] = None) -> dict[str, Any]:
     """
     George's opening line, built from a brief.
@@ -205,6 +310,7 @@ def build_greeting(payload: dict, defs: Optional[dict] = None) -> dict[str, Any]
             "notices": _notices_of(meta),
             "meta": meta,
             "blind_sections": blind,
+            "follow_ups": follow_ups(payload, defs=defs),
         }
 
     if blind:
@@ -220,6 +326,9 @@ def build_greeting(payload: dict, defs: Optional[dict] = None) -> dict[str, Any]
             "notices": _notices_of(meta),
             "meta": meta,
             "blind_sections": blind,
+            # A morning nobody could look at still has rows from the sections
+            # that DID run, and those still deserve their question.
+            "follow_ups": follow_ups(payload, defs=defs),
         }
 
     return {
@@ -229,4 +338,7 @@ def build_greeting(payload: dict, defs: Optional[dict] = None) -> dict[str, Any]
         "notices": _notices_of(meta),
         "meta": meta,
         "blind_sections": [],
+        # Nothing crossed a threshold, so there is nothing to ask about. An
+        # invented chip here would be a suggestion, not a follow-up.
+        "follow_ups": [],
     }

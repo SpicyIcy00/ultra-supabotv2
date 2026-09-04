@@ -23,7 +23,11 @@ import pytest
 # imports psycopg at module scope.
 pytest.importorskip("psycopg", reason="george_greeting imports the brief tool, which imports psycopg")
 
-from app.services.george_greeting import build_greeting  # noqa: E402
+from app.services.george_greeting import (  # noqa: E402
+    MAX_FOLLOW_UPS,
+    build_greeting,
+    follow_ups,
+)
 from tools._common import load_defs  # noqa: E402
 from tools.brief import most_notable  # noqa: E402
 
@@ -340,3 +344,103 @@ def test_the_brief_meta_comes_through_whole():
     assert set(g["meta"]["sections"]) == {
         "sales_vs_same_weekday", "stock_crossed_out", "newly_dead",
     }
+
+
+# ---------------------------------------------------------------------------
+# The obvious next question
+#
+# A chip is a QUESTION, not a staged answer. These assert the two things that
+# could go wrong: a chip that asks about something the brief never mentioned,
+# and a chip offered on a morning with nothing to ask about.
+# ---------------------------------------------------------------------------
+
+def test_each_item_gets_its_own_question():
+    """One chip per item, and the question fits the section it came from."""
+    chips = follow_ups(brief([
+        sales_row("Rockwell", 48210, 36800),
+        stock_row("Hello Panda", was=14),
+        dead_row("Choco Boy", qty=40),
+    ]), defs=DEFS)
+    labels = [c["label"] for c in chips]
+    assert labels == ["Why?", "On order?", "What happened?"]
+
+
+def test_a_chip_only_ever_names_a_subject_the_brief_named():
+    """
+    Derived, not generated — the guarantee that makes this safe to run on every
+    page load with no model call.
+    """
+    chips = follow_ups(brief([stock_row("Hello Panda", was=14, store="Fairview")]),
+                       defs=DEFS)
+    assert chips[0]["question"] == "Is Hello Panda on order for Fairview?"
+
+
+def test_the_first_chip_belongs_to_the_item_george_led_with():
+    """
+    Ordered by the SAME ranking that chose the opening line. A chip list whose
+    first entry was about a different item than the sentence above it would read
+    as a non sequitur.
+    """
+    payload = brief([
+        dead_row("Choco Boy", qty=9999),
+        sales_row("Rockwell", 48210, 36800),
+    ])
+    lead = most_notable(payload, defs=DEFS)
+    chips = follow_ups(payload, defs=DEFS)
+    assert lead["subject"] == "Rockwell"
+    assert "Rockwell" in chips[0]["question"]
+
+
+def test_a_quiet_morning_offers_no_chips():
+    """
+    Nothing crossed a threshold, so there is nothing to ask ABOUT. A chip here
+    would be a suggestion George invented, which is the one thing this whole
+    derivation avoids.
+    """
+    g = build_greeting(brief([]), defs=DEFS)
+    assert g["kind"] == "quiet"
+    assert g["follow_ups"] == []
+
+
+def test_a_blind_morning_still_offers_chips_for_what_did_run():
+    """
+    A section that could not run silences its own chip, not the others'. The
+    rows that exist still deserve their question.
+    """
+    payload = brief(
+        [sales_row("Rockwell", 48210, 36800)],
+        sections={
+            "sales_vs_same_weekday": {"ran": True},
+            "stock_crossed_out": {"ran": False, "reason": "there were no stock snapshots"},
+        },
+    )
+    g = build_greeting(payload, defs=DEFS)
+    assert g["kind"] == "item"
+    assert [c["label"] for c in g["follow_ups"]] == ["Why?"]
+
+
+def test_chips_are_capped_and_deduplicated():
+    """
+    A row of chips is a shortcut; a grid of them is a menu, and the input box is
+    already the menu. Two stores losing the same SKU is one useful question.
+    """
+    same = [stock_row("Hello Panda", was=n, store="Rockwell") for n in (14, 9, 3)]
+    assert len(follow_ups(brief(same), defs=DEFS)) == 1
+
+    many = [sales_row(f"Store {i}", 1000 * (10 - i), 500) for i in range(6)]
+    assert len(follow_ups(brief(many), defs=DEFS)) == MAX_FOLLOW_UPS
+
+
+def test_a_chip_never_asks_for_advice_no_tool_can_give():
+    """
+    Every question has to be answerable from the read tools. "Should we
+    discount it" is advice; "how did it sell" is a query.
+    """
+    for chip in follow_ups(brief([
+        sales_row("Rockwell", 48210, 36800),
+        stock_row("Hello Panda", was=14),
+        dead_row("Choco Boy", qty=40),
+    ]), defs=DEFS):
+        low = chip["question"].lower()
+        assert not low.startswith("should ")
+        assert "should we" not in low

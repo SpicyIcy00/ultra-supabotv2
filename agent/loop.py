@@ -542,6 +542,25 @@ RULES
 
 13. You are talking to someone who has talked to you before, so say so when it is true. When a figure you are about to state has a counterpart earlier in this conversation, or in an `[Earlier conversations with this user]` block attached to the question, reference it in prose with ITS date and window — "₱211,400 on Wed 2 Sep 2026, up from the ₱179,412 you asked about on Thu 27 Aug". Two conditions, both hard. First, compare like with like or not at all: if the two used different windows, different filters or different metrics, say so instead of comparing them (rule 2), because "up from" across a week and a day is a false statement made out of two true ones. Second, an earlier figure is context and not evidence — mention one with its date, and do not restate it as a current number, put it in a table of current figures, or use it in a calculation. Rule 1 is unchanged: every number you state comes from a tool result in THIS conversation. If you want the comparison as a real figure, run the call for the earlier window and read it.
 
+14. Volunteer ONE thing. Having answered what was asked, add at most one further fact the person would want and did not ask for — drawn from a tool result already in this conversation, and carrying its own window like every other figure. One, not two: a second volunteered line is a briefing nobody asked for, and the LENGTH section below is not suspended because you found something interesting. If nothing in the results is worth volunteering, say nothing — a manufactured extra is worse than none. It must be a FACT: not advice, not a next step, not a question back.
+
+15. Disagree when you disagree, and be clear which kind of thing you are doing. "I can't" is a fact about the system — no tool answers this, or a tool is refusing to produce a misleading number. "I wouldn't" is your opinion about the question. Never dress one as the other: an opinion in the language of impossibility takes a decision away from the person whose decision it is, and an impossibility in the language of preference invites them to insist on something that cannot happen. When you push back, give the reason AND what you would do instead — an objection with no alternative is just an obstacle. Then, if they ask again, DO IT. You have said your piece; they have context you do not, and a second refusal of the same request is not judgement, it is obstruction.
+
+VOICE
+
+You are a person with a job, not an assistant. First person, warm and precise, occasionally dry. Never sycophantic, never corporate, never breathless, never apologetic — you did not do anything wrong by reporting a number somebody dislikes. No "Great question", no "I'd be happy to", no "Certainly", no "Absolutely", no "Let me help you with that" — an answer that opens with manners has spent its first line saying nothing.
+
+Six lines in the register to aim for:
+
+  "Rockwell took ₱48,210 on Wed 2 Sep 2026 — its best Wednesday in the window."
+  "Up 31% on the same Wednesday last week, which sounds better than it is: that Wednesday was a public holiday."
+  "Nothing moved beyond normal. I'd rather tell you that than go looking for something to say."
+  "I wouldn't compare those two — one is a week and one is a day, and the ratio would look like news."
+  "Low stock is not configured at AJI BARN, so this list is empty because nobody set a threshold, not because the shelves are full."
+  "I looked at purchasing while I was in there: 14 POs are open against that SKU, the oldest from 12 Aug 2026."
+
+WIT NEVER SOFTENS A CAVEAT. State a caveat flatly, in its own clause, in the plainest words you have. Be as dry as you like in the sentence before it or the sentence after it. A caveat delivered as an aside reads as an aside, and a reader who smiles at it has not registered it.
+
 LENGTH
 
 Default to short. A simple question gets a few sentences, not sections. Lead with the answer, not the method; state the window and the scope you used in the same breath.
@@ -732,6 +751,40 @@ def _save_claim(answer: str, defs: dict) -> Optional[str]:
     the wrong write in its correction.
     """
     return _claim(answer, req(defs, "workflows.claim_check"))
+
+
+def _volunteered(answer: str, defs: dict) -> list[str]:
+    """
+    The volunteered lines in an answer, by their opening markers.
+
+    WHAT THIS CAN AND CANNOT SEE. It counts lines that ANNOUNCE themselves as
+    volunteered — "Worth knowing:", "While I was in there" — and nothing else.
+    A second-order fact slipped in without a marker is invisible here, and a
+    marker used for something that is not volunteered is a false positive.
+
+    That is a deliberate limit, not an oversight. The alternative is deciding
+    from prose which sentences answered the question and which went beyond it,
+    which is a judgement the loop has no basis for. Counting the announced ones
+    catches the failure that actually happens — George warming to his theme and
+    appending three of them — and leaves the honest single line alone.
+
+    It does NOT verify that a volunteered figure came from a tool result.
+    Nothing in this system checks numerals in prose against rows; see
+    metrics.yaml `volunteering`, which says so in as many words.
+
+    Vocabulary from metrics.yaml (volunteering.markers).
+    """
+    low = answer.lower()
+    found = []
+    for marker in req(defs, "volunteering.markers"):
+        if not isinstance(marker, str):
+            continue
+        start = 0
+        needle = marker.lower()
+        while (at := low.find(needle, start)) != -1:
+            found.append(marker)
+            start = at + len(needle)
+    return found
 
 
 def _claim(answer: str, spec: dict) -> Optional[str]:
@@ -1063,6 +1116,10 @@ async def run(
     saves_made = 0
     save_corrections = 0
     max_save_corrections = req(defs, "workflows.claim_check.max_corrective_turns")
+    # The volunteering cap. Counted, not judged — see _volunteered.
+    volunteer_corrections = 0
+    max_volunteered = req(defs, "volunteering.max_per_answer")
+    max_volunteer_corrections = req(defs, "volunteering.max_corrective_turns")
     usage = {"input": 0, "output": 0, "cache_read": 0}
     answer = ""
     status = "ok"
@@ -1216,6 +1273,42 @@ async def run(
                             "plainly and ask. Otherwise call save_workflow now "
                             "with the steps you actually ran, then confirm what "
                             "was saved and that it is not yet scheduled."
+                        ),
+                    })
+                    continue
+
+                # More volunteered lines than the cap allows. Checked before
+                # the notices below because the remedy is a rewrite, and the
+                # rewritten answer has to face the notice gate afterwards
+                # rather than instead.
+                #
+                # Deliberately NOT checked when the answer is empty: a turn
+                # that produced no prose has volunteered nothing, and the
+                # write-claim branches above may have just cleared it.
+                extra = _volunteered(answer, defs) if answer else []
+                if (len(extra) > max_volunteered
+                        and volunteer_corrections < max_volunteer_corrections):
+                    volunteer_corrections += 1
+                    log.gap("volunteering_over_cap",
+                            f"{len(extra)} volunteered lines: {', '.join(extra)}"[:2000])
+                    yield _sse("warning", {
+                        "reason": "volunteering_over_cap",
+                        "found": len(extra),
+                        "limit": max_volunteered,
+                    })
+                    yield _reset_answer("volunteering_over_cap")
+                    answer = ""
+                    messages.append({
+                        "role": "user",
+                        "content": (
+                            f"You volunteered {len(extra)} extra facts "
+                            f"({', '.join(extra)}). The limit is "
+                            f"{max_volunteered}.\n\n"
+                            "Rewrite the answer keeping the single most useful "
+                            "one and dropping the rest. Keep every caveat and "
+                            "every figure's window exactly as they were — the "
+                            "cap is on what you added, never on what qualifies "
+                            "what you were asked."
                         ),
                     })
                     continue

@@ -94,17 +94,48 @@ describe('UI rule 5 — orange means needs-you, and the mark is the one exemptio
   });
 });
 
-describe('markDetail — what he is doing, in words', () => {
+describe('markDetail — George narrating, in the first person', () => {
   it('names the tool that is running rather than the state', () => {
-    // "checking purchasing…" is the thing that is happening; "Reading the data
-    // — get_purchasing" was the log line for it.
-    expect(markDetail('running', ['get_purchasing'])).toBe('checking purchasing…');
+    // "I'm checking purchasing…" is the thing that is happening; "Reading the
+    // data — get_purchasing" was the log line for it.
+    expect(markDetail('running', ['get_purchasing'])).toBe("I'm checking purchasing…");
+  });
+
+  it('speaks in the first person', () => {
+    for (const tools of [['get_sales'], ['get_sales', 'get_stock']]) {
+      expect(markDetail('running', tools).startsWith("I'm ")).toBe(true);
+    }
   });
 
   it('falls back to the state label the instant before a tool_call arrives', () => {
     // running with nothing in flight is the gap between the model deciding to
     // call and the frame landing. It must still say something true.
     expect(markDetail('running', [])).toBe(MARK_LABEL.running);
+  });
+
+  it('says what came back once a result lands and nothing is in flight', () => {
+    // The instant the line used to fall silent for.
+    expect(markDetail('running', [], { tool: 'get_purchasing', rowCount: 14 }))
+      .toBe('Purchasing came back — 14 rows');
+  });
+
+  it('prefers a call in flight over a result already in', () => {
+    // Both are true; the one still happening is the more useful.
+    expect(markDetail('running', ['get_stock'], { tool: 'get_sales', rowCount: 7 }))
+      .toBe("I'm counting stock…");
+  });
+
+  it('narrates a result while thinking, because the turn is not over', () => {
+    expect(markDetail('thinking', [], { tool: 'get_sales', rowCount: 7 }))
+      .toBe('Sales came back — 7 rows');
+  });
+
+  it('goes back to the state label once the answer begins', () => {
+    // By then the answer is the narration; a stale "came back" line would
+    // describe work that is finished.
+    for (const s of ['answering', 'idle', 'error'] as const) {
+      expect(markDetail(s, [], { tool: 'get_sales', rowCount: 7 })).toBe(MARK_LABEL[s]);
+    }
   });
 
   it('uses the state label wherever no tool is involved', () => {

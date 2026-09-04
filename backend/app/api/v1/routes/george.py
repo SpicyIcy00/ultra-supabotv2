@@ -274,6 +274,13 @@ async def _thread_belongs_to(username: str, thread_id: uuid.UUID) -> bool:
 # token are untouched and remain the scheduler's.
 # ---------------------------------------------------------------------------
 
+class FollowUp(BaseModel):
+    """One chip: a short label, and the question it actually asks."""
+
+    label: str
+    question: str
+
+
 class GreetingResponse(BaseModel):
     """
     George's opening line, and the receipts under it.
@@ -295,6 +302,11 @@ class GreetingResponse(BaseModel):
     # The brief's own meta — source, filters, snapshot_timestamp, sections.
     meta: dict[str, Any] = Field(default_factory=dict)
     blind_sections: List[str] = Field(default_factory=list)
+    # The obvious next question per brief item, most notable first. A chip is a
+    # QUESTION, not a staged answer: clicking one asks George in the ordinary
+    # way, so the reply carries its own notices and receipts and nothing is
+    # ever shown from a figure that went stale on screen.
+    follow_ups: List[FollowUp] = Field(default_factory=list)
 
 
 @router.get("/greeting", response_model=GreetingResponse)
@@ -326,6 +338,7 @@ async def greeting(
         notices=[ChatNotice.model_validate(n) for n in g["notices"]],
         meta=g["meta"],
         blind_sections=g["blind_sections"],
+        follow_ups=[FollowUp.model_validate(f) for f in g.get("follow_ups") or []],
     )
 
 

@@ -105,6 +105,12 @@ export interface PinnedFrame {
  * `could_not_look` means a section of the brief COULD NOT RUN — a morning
  * nobody was able to look at, which is the opposite of a quiet one.
  */
+/** One chip under the greeting: a short label, and the question it asks. */
+export interface FollowUp {
+  label: string;
+  question: string;
+}
+
 export interface Greeting {
   kind: 'item' | 'quiet' | 'could_not_look';
   /**
@@ -122,6 +128,15 @@ export interface Greeting {
   meta: ToolMeta;
   /** Sections that could not run at all. */
   blind_sections: string[];
+  /**
+   * The obvious next question per brief item, most notable first.
+   *
+   * A chip is a QUESTION, not a staged answer. Clicking one asks George
+   * normally, so the reply arrives with its own narration, notices and
+   * receipts — and nothing here can ever be a figure that went stale sitting
+   * on screen.
+   */
+  follow_ups: FollowUp[];
 }
 
 export type GeorgeTurn =

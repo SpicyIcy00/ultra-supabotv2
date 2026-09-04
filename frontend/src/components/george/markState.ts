@@ -38,7 +38,7 @@
  * gaps.
  */
 import type { GeorgeState } from '../../types/george';
-import { actLine } from './cognition';
+import { narrateCall, narrateResult, type LastResult } from './cognition';
 
 /** The mark at rest. */
 export const MARK_PATH = 'M 31.81 25.07 A 18.2 18.2 0 1 1 68 25.99 A 18.9 18.9 0 1 1 80.38 61.68 A 18 18 0 1 1 49.86 80.72 A 19.1 19.1 0 1 1 18.25 59.28 A 18.4 18.4 0 1 1 31.81 25.07 Z M 41.4 49.4 a 9.4 9.4 0 1 0 18.8 0 a 9.4 9.4 0 1 0 -18.8 0 Z M 51.72 38.41 L 53.91 28.09 A 3.3 3.3 0 1 0 47.46 28.12 L 49.77 38.42 A 1 1 0 0 0 51.72 38.41 Z M 58.44 41.43 L 65.84 35.33 A 3 3 0 1 0 61.26 31.65 L 56.91 40.21 A 1 1 0 0 0 58.44 41.43 Z M 61.58 47.07 L 72.48 46.13 A 3.4 3.4 0 1 0 70.5 39.78 L 61 45.2 A 1 1 0 0 0 61.58 47.07 Z M 60.7 54.29 L 69.16 59.78 A 3.1 3.1 0 1 0 71.35 54.12 L 61.41 52.46 A 1 1 0 0 0 60.7 54.29 Z M 56.43 58.87 L 60.62 68.84 A 3.5 3.5 0 1 0 66.15 64.85 L 58.01 57.73 A 1 1 0 0 0 56.43 58.87 Z M 49.44 60.35 L 47.16 69.46 A 3 3 0 1 0 53.03 69.67 L 51.39 60.42 A 1 1 0 0 0 49.44 60.35 Z M 43.56 57.73 L 35.57 64.93 A 3.3 3.3 0 1 0 40.8 68.72 L 45.15 58.88 A 1 1 0 0 0 43.56 57.73 Z M 39.94 51.41 L 28.88 52.26 A 3.2 3.2 0 1 0 30.57 58.31 L 40.46 53.3 A 1 1 0 0 0 39.94 51.41 Z M 40.73 44.9 L 32.26 39.81 A 3.1 3.1 0 1 0 30.28 45.54 L 40.09 46.75 A 1 1 0 0 0 40.73 44.9 Z M 45.61 39.68 L 42.06 29.99 A 3.4 3.4 0 1 0 36.51 33.62 L 43.98 40.75 A 1 1 0 0 0 45.61 39.68 Z';
@@ -78,18 +78,36 @@ export function markPath(state: GeorgeState): string {
 }
 
 /**
- * The line under the mark: what George is doing, in words.
+ * The line under the mark: George narrating, in the first person.
  *
- * Named from the TOOL wherever there is one, because that is the thing that is
- * actually true — a tool_call frame arrived, so that tool is running. The
- * state's own label is the fallback, for the states where no tool is involved
- * and for the moment between deciding to call one and the frame arriving.
+ * THREE THINGS IT CAN SAY, in falling order of how much it knows:
+ *
+ *   a call in flight    "I'm checking purchasing…"      from the tool
+ *   a result just in    "Purchasing came back — 14 rows" from the result
+ *   neither             "Thinking"                       from the state
+ *
+ * EVERY ONE OF THEM IS TRUE BY CONSTRUCTION. A tool_call frame arrived, so that
+ * tool is running; a tool_result frame arrived, so that is what came back. None
+ * of it is the model's account of anything, which is exactly what separates
+ * this line from the cognition line beneath it — that one is summarized
+ * reasoning and no figure may ever be read out of it. Keeping the two visually
+ * and editorially distinct is the point: this one is George speaking, and
+ * George speaking is held to receipts.
+ *
+ * The result line is shown while he is still working, and only then. Once the
+ * answer begins, the answer is the narration.
  *
  * Here rather than in the component so the suite can hold it to that, and
  * because this file already owns what each state says.
  */
-export function markDetail(state: GeorgeState, running: string[] = []): string {
-  return state === 'running' && running.length > 0
-    ? actLine(running)
-    : MARK_LABEL[state];
+export function markDetail(
+  state: GeorgeState,
+  running: string[] = [],
+  lastResult: LastResult | null = null,
+): string {
+  if (state === 'running' && running.length > 0) return narrateCall(running);
+  if ((state === 'running' || state === 'thinking') && lastResult) {
+    return narrateResult(lastResult);
+  }
+  return MARK_LABEL[state];
 }

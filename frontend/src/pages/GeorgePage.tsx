@@ -124,6 +124,27 @@ export default function GeorgePage() {
     return last.toolCalls.filter((c) => c.result).length;
   }, [turns]);
 
+  /**
+   * The most recent call that has come back, for the narration line.
+   *
+   * Highest seq rather than array position: parallel calls land out of order,
+   * and the newest RESULT is what George would be reacting to. Null once the
+   * answer starts — by then the answer is the narration, and a stale "came
+   * back" line under a finished turn would describe work that is over.
+   */
+  const lastResult = useMemo(() => {
+    const last = turns[turns.length - 1];
+    if (last?.role !== 'george') return null;
+    const done = last.toolCalls.filter((c) => c.result);
+    if (done.length === 0) return null;
+    const newest = done.reduce((a, b) => (b.seq > a.seq ? b : a));
+    return {
+      tool: newest.tool,
+      rowCount: newest.result?.row_count ?? null,
+      error: newest.result?.error ?? null,
+    };
+  }, [turns]);
+
   /** The reasoning arriving right now, for the line under the mark. */
   const thinking = useMemo(() => {
     const last = turns[turns.length - 1];
@@ -232,6 +253,7 @@ export default function GeorgePage() {
               running={running}
               toolResults={toolResults}
               thinking={thinking}
+              lastResult={lastResult}
             />
           </div>
 
@@ -265,6 +287,7 @@ export default function GeorgePage() {
                     running={running}
                     toolResults={toolResults}
                     thinking={thinking}
+                    lastResult={lastResult}
                   />
                 </div>
               </div>
@@ -276,7 +299,7 @@ export default function GeorgePage() {
             {centre.kind === 'chat' && spokeFirst && (
               <div className="mb-6">
                 {greeting.data ? (
-                  <Greeting greeting={greeting.data} />
+                  <Greeting greeting={greeting.data} onAsk={ask} />
                 ) : greeting.isError ? (
                   <GreetingUnavailable />
                 ) : null}
