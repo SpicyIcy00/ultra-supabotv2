@@ -148,7 +148,8 @@ def _needs_database(item) -> bool:
             "test_connection_gate_contract", "test_convergence_cap_contract",
             "test_chart_rows_contract", "test_greeting_contract",
             "test_recall_contract", "test_approvals_contract",
-            "test_voice_contract", "test_river_contract")
+            "test_voice_contract", "test_river_contract",
+            "test_river_writer_contract")
     return not any(name in item.nodeid for name in pure)
 
 

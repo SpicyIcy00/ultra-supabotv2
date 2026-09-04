@@ -44,6 +44,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.river_writer import post_approval
 from app.models.george_workflow import (
     GeorgeWorkflow,
     GeorgeWorkflowRun,
@@ -282,6 +283,22 @@ async def save_workflow(
     # it was promoted with — see the module docstring.
     workflow.current_version_id = version.id
     await db.flush()
+
+    # It has just entered the approval queue, so the river says so. Idempotent
+    # on the version id, and never fatal: a saved rule that failed to announce
+    # itself is still saved, and raising here would lose the save over a post.
+    #
+    # The post does NOT wear the approvals colour. The queue in the rail is
+    # where "needs you" lives; this is the record that it happened.
+    try:
+        await post_approval(
+            db, version_id=version.id, workflow_name=workflow.name,
+            version=version.version, created_by=version.created_by,
+            backtested=version.backtest_run_id is not None,
+        )
+    except Exception as exc:  # noqa: BLE001 - a post must not cost a save
+        print(f"[workflows] approval post failed for version {version.id}: "
+              f"{type(exc).__name__}: {exc}")
 
     return SavedVersion(workflow=workflow, version=version, created=created)
 

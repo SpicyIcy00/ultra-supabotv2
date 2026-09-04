@@ -58,6 +58,7 @@ from app.services.workflow_runner import (
     WorkflowValidationError,
     run_version,
 )
+from app.services.river_writer import post_workflow_run
 from app.services.workflow_writer import record_run
 
 MANILA = ZoneInfo("Asia/Manila")
@@ -261,11 +262,15 @@ async def run_due_schedule(db: AsyncSession, schedule: GeorgeWorkflowSchedule,
             "definitions_version": None,
             "ran_at": datetime.now(timezone.utc).isoformat(),
         }
-        await record_run(
+        run = await record_run(
             db, workflow=workflow, version=version, outcome=outcome,
             mode="scheduled", requested_by=schedule.created_by,
             schedule_id=schedule.id, started_at=started, delivery=delivery,
         )
+        # A failure is posted like a success. A job that fails silently is
+        # indistinguishable from a quiet morning — the same reason this branch
+        # delivers to Telegram rather than returning.
+        await _post_run(db, run, workflow, version, outcome, slot)
         schedule.last_run_at = datetime.now(timezone.utc)
         schedule.last_status = "failed"
         schedule.last_error = reason[:2000]
@@ -296,16 +301,41 @@ async def run_due_schedule(db: AsyncSession, schedule: GeorgeWorkflowSchedule,
     )
     delivery = await _deliver(schedule.telegram_chat_ids or [], messages)
 
-    await record_run(
+    run = await record_run(
         db, workflow=workflow, version=version, outcome=outcome,
         mode="scheduled", requested_by=schedule.created_by,
         schedule_id=schedule.id, started_at=started, delivery=delivery,
     )
+    await _post_run(db, run, workflow, version, outcome, slot)
     schedule.last_run_at = datetime.now(timezone.utc)
     schedule.last_status = outcome["status"]
     schedule.last_error = None if delivery["ok"] else "delivery failed"
     await db.flush()
     return outcome["status"]
+
+
+async def _post_run(db, run, workflow, version, outcome: dict,
+                    slot: datetime) -> None:
+    """
+    The run in the river, beside the Telegram message rather than instead of it.
+
+    SCHEDULED RUNS ONLY — this function is only reachable from the tick. A
+    manual run in conversation already becomes an `answer` post with the whole
+    exchange around it, and posting it again here would say the same thing
+    twice under a different heading.
+
+    Never raises. The run has already happened and its record is already
+    written; losing the river copy must not roll that back or stop the tick,
+    for the same reason _deliver's failure does not.
+    """
+    try:
+        await post_workflow_run(
+            db, run_id=run.id, workflow_name=workflow.name,
+            version=version.version, outcome=outcome, slot=slot,
+        )
+    except Exception as exc:  # noqa: BLE001 - a post must not cost a run
+        print(f"[workflows] river post failed for run {run.id}: "
+              f"{type(exc).__name__}: {exc}")
 
 
 async def _deliver(chat_ids: list[str], messages: list[str]) -> dict:

@@ -21,15 +21,28 @@ from __future__ import annotations
 
 import hmac
 import sys
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, List, Optional
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Header, HTTPException, Query, status
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import settings
+from app.core.database import AsyncSessionLocal
 from app.services import telegram_sender
 from app.services.brief_telegram import render
+from app.services.george_greeting import build_greeting
+from app.services.river_writer import post_brief
+
+MANILA = ZoneInfo("Asia/Manila")
+
+
+def _manila_today() -> date:
+    """The Manila day the brief is written ON — the river's key for it."""
+    return datetime.now(MANILA).date()
 
 # agent/ and tools/ live at the repo root, one level above backend/ — the same
 # path insertion routes/george.py does.
@@ -88,6 +101,9 @@ class SendResponse(BaseModel):
     messages: int
     results: List[SendResult]
     ok: bool
+    #: The river post's id, or None when this morning already had one — or
+    #: when the post failed, which never fails the send.
+    posted: Optional[str] = None
 
 
 def _build(as_of: Optional[str]) -> tuple[dict, List[str]]:
@@ -141,7 +157,7 @@ async def send_brief(
         )
 
     try:
-        _, messages = _build(as_of)
+        payload, messages = _build(as_of)
     except (ValueError, KeyError, RuntimeError) as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
@@ -161,8 +177,29 @@ async def send_brief(
                 break  # see the docstring: a partial brief is worse than none
         results.append(SendResult(chat_id=chat_id, sent=sent, failed=failed, errors=errors))
 
+    # The same brief in the river, once per Manila morning. Idempotent by a
+    # date-derived id, which matters because this endpoint has NO claim
+    # mechanism: an n8n retry after a timeout would otherwise post twice.
+    #
+    # After the Telegram send and never instead of it, and its failure is
+    # swallowed: a brief that reached the group chat has been delivered, and
+    # losing the river copy must not turn a successful send into a 500 that
+    # invites a retry — which would send it to Telegram twice.
+    posted = None
+    try:
+        async with AsyncSessionLocal() as session:
+            posted = await post_brief(
+                session,
+                greeting=build_greeting(payload),
+                as_of=date.fromisoformat(as_of) if as_of else _manila_today(),
+            )
+            await session.commit()
+    except (SQLAlchemyError, ValueError, KeyError) as exc:   # noqa: BLE001
+        print(f"[brief] river post failed: {type(exc).__name__}: {exc}")
+
     return SendResponse(
         messages=len(messages),
         results=results,
         ok=all(r.failed == 0 for r in results),
+        posted=str(posted) if posted else None,
     )

@@ -14,9 +14,9 @@
  *   UI rule 6   no figure displays without a timestamp. A post whose time is
  *               missing says so; it never renders a card with no time on it,
  *               because a number with no time is a claim with no expiry.
- *   UI rule 5   one colour means "needs you", and in the river exactly one
- *               kind may wear it: `approval`. Not a failed workflow run, not a
- *               notice, not a brief with bad news.
+ *   UI rule 5   one colour means "needs you", and NO post kind wears it. The
+ *               rail's approval queue is where that colour lives; a post is
+ *               the record that something happened, never the summons.
  *
  * The temptation this guards against is per-kind exceptions. A brief is long,
  * a pin confirmation is trivial, a system post has no data — and each is an
@@ -46,14 +46,21 @@ export const KIND_LABEL: Record<PostKind, string | null> = {
 };
 
 /**
- * The one kind that may wear the approvals colour.
+ * The post kinds that may wear the approvals colour: NONE.
  *
- * A list of one, written as a list, because the pressure is always to add a
- * second — a failed run feels urgent, a stale brief feels urgent. UI rule 5 is
- * that the colour's meaning is destroyed by a second use, not by a second
- * feeling.
+ * `approval` was here until 2026-09-05, and removing it is deliberate. The
+ * approval QUEUE in the rail is where "needs you" lives and where the reserved
+ * colour belongs. An approval POST is the historical record that a version
+ * entered the queue — the same fact, in the timeline, at the moment it
+ * happened. Wearing the colour in both places is one fact shouting twice, and
+ * a signal that fires from two directions stops locating anything.
+ *
+ * Kept as a list rather than deleted, because the pressure to add a kind is
+ * constant — a failed run feels urgent, a stale brief feels urgent — and UI
+ * rule 5 is that the colour dies from a second USE, not a second feeling. An
+ * empty list makes any addition a visible edit with a test to answer to.
  */
-export const ACCENT_KINDS: PostKind[] = ['approval'];
+export const ACCENT_KINDS: PostKind[] = [];
 
 /** When a post has no time, what the card says instead of nothing. */
 export const TIME_UNKNOWN = 'Time not recorded';

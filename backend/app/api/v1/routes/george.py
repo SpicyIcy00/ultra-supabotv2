@@ -321,20 +321,93 @@ class GreetingResponse(BaseModel):
     follow_ups: List[FollowUp] = Field(default_factory=list)
 
 
+async def _stored_brief(db: AsyncSession, as_of: Optional[str]) -> Optional["GreetingResponse"]:
+    """
+    This morning's brief post, as a greeting — or None to compute one.
+
+    Returns None for every reason: no post yet today, a post the shape of
+    something this endpoint cannot describe, or a lookup that failed. The
+    caller then computes, which is what it did before there were posts at all,
+    so a miss costs latency and never correctness.
+
+    The `shape` in the payload is the greeting's own kind, stored so the
+    could_not_look / quiet distinction survives the round trip. A post without
+    it predates this and is ignored rather than guessed at — reporting a
+    morning nobody could look at as a quiet one is the single thing this whole
+    path must not do.
+    """
+    from datetime import datetime as _dt
+    from zoneinfo import ZoneInfo as _Z
+
+    day = as_of or _dt.now(_Z("Asia/Manila")).date().isoformat()
+    try:
+        row = (
+            await db.execute(
+                text(
+                    "SELECT body, payload, receipts, notices FROM george.posts "
+                    "WHERE kind = 'brief' AND payload->>'as_of' = :d "
+                    "  AND hidden_at IS NULL LIMIT 1"
+                ),
+                {"d": day},
+            )
+        ).mappings().first()
+    except SQLAlchemyError:
+        return None
+    if not row:
+        return None
+
+    payload = dict(row["payload"] or {})
+    shape = payload.get("shape")
+    if shape not in ("item", "quiet", "could_not_look"):
+        return None
+
+    return GreetingResponse(
+        kind=shape,
+        headline=row["body"] or "",
+        # The row itself is not stored on the post; the receipts it carried are,
+        # which is what the display actually uses. `item` stays None and the
+        # client falls back to the post's receipts exactly as it does for a
+        # quiet morning.
+        item=None,
+        notices=[ChatNotice.model_validate(n) for n in (row["notices"] or [])],
+        meta=dict(row["receipts"] or {}),
+        blind_sections=list(payload.get("blind_sections") or []),
+        follow_ups=[FollowUp.model_validate(f) for f in (payload.get("follow_ups") or [])],
+    )
+
+
 @router.get("/greeting", response_model=GreetingResponse)
 async def greeting(
     as_of: Optional[str] = Query(
         None, description="Manila date the brief is written ON. Reproduces a past morning."
     ),
+    db: AsyncSession = Depends(get_db),
     user: AppUser = Depends(_george_user),
 ) -> GreetingResponse:
     """
     What George says before he is asked anything.
 
-    Threaded, because get_brief() is synchronous and runs several full scans —
-    running it on the event loop would stall every other request for its
-    duration, including an in-flight answer stream.
+    READS THIS MORNING'S BRIEF POST FIRST. The 06:00 send writes one (see
+    river_writer.post_brief), and it holds exactly what this endpoint returns —
+    the same standalone sentence, the same item receipts, the same notices —
+    because the post IS the greeting rather than a second rendering of it. One
+    indexed SELECT replaces several full scans on every page load.
+
+    FALLING BACK IS NOT A DEGRADED PATH, it is the ordinary one before 06:00
+    and whenever the send did not happen. It computes the brief exactly as
+    before, and if the TOOL then refuses, that is a 422 — the client shows its
+    own quiet failure line. What must never happen is a morning nobody could
+    look at being reported as a quiet one, and that distinction lives inside
+    build_greeting's three shapes either way.
+
+    Threaded on the fallback, because get_brief() is synchronous and running it
+    on the event loop would stall every other request for its duration,
+    including an in-flight answer stream.
     """
+    stored = await _stored_brief(db, as_of)
+    if stored is not None:
+        return stored
+
     try:
         payload = await asyncio.to_thread(brief_tool.get_brief, as_of=as_of)
     except (ValueError, KeyError, RuntimeError) as exc:

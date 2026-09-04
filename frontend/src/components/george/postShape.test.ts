@@ -104,9 +104,15 @@ describe('UI rule 6 — no post displays without a time', () => {
 });
 
 describe('UI rule 5 — one colour means "needs you"', () => {
-  it('is worn by approval and by nothing else', () => {
+  it('is worn by NO post kind at all', () => {
+    // The rail carries "needs you"; a post is the record that it happened.
+    // The same fact shouting in two places locates nothing.
     const wearing = KINDS.filter((kind) => postView(post({ kind })).accent);
-    expect(wearing).toEqual(['approval']);
+    expect(wearing).toEqual([]);
+  });
+
+  it('is not worn by an approval post either', () => {
+    expect(postView(post({ kind: 'approval' })).accent).toBe(false);
   });
 
   it('is not lent to a failed workflow run', () => {
@@ -126,8 +132,8 @@ describe('UI rule 5 — one colour means "needs you"', () => {
     expect(postView(post({ kind: 'notice', notices: [NOTICE] })).accent).toBe(false);
   });
 
-  it('declares its accent list as a list, so a second entry is a visible edit', () => {
-    expect(ACCENT_KINDS).toEqual(['approval']);
+  it('declares its accent list as a list, so any entry is a visible edit', () => {
+    expect(ACCENT_KINDS).toEqual([]);
   });
 });
 
