@@ -6,9 +6,12 @@
  * most notable thing in this morning's brief, or says plainly that nothing
  * moved, or that he could not look.
  *
- * IT IS AN ANSWER, SO IT CARRIES AN ANSWER'S RECEIPTS. Same NoticeBanner above
- * the sentence (UI rule 4), same ReceiptsBlock beneath it (rules 3 and 6),
- * through the same components a turn and a tile use. When there is an item, the
+ * IT IS AN ANSWER, SO IT CARRIES AN ANSWER'S RECEIPTS. Same ReceiptsBlock
+ * beneath it (rules 3 and 6) and the same notice component a turn and a tile
+ * use — in its COMPACT form, one line per caveat with the detail on tap, and
+ * BELOW the sentence rather than above it. Every caveat is still named on
+ * screen without a tap; only its explanation moves. See CompactNotice for why
+ * the greeting differs from a turn here. When there is an item, the
  * receipts are the ITEM'S own — a brief mixes sources of different ages, so
  * the brief-level timestamp would lend the freshest source's credibility to the
  * stalest source's facts (tools/brief.py). With no item, the brief's own meta
@@ -19,7 +22,7 @@
  * and never becomes part of an ask payload. George said this to the reader.
  */
 import type { FollowUp as FollowUpType, Greeting as GreetingType } from '../../types/george';
-import { NoticeBanner } from './NoticeBanner';
+import { CompactNotices } from './NoticeBanner';
 import { ReceiptsBlock } from './ReceiptsBlock';
 
 /**
@@ -90,10 +93,14 @@ export function Greeting({
 
   return (
     <div className="space-y-3">
-      {/* Above the sentence, always. */}
-      <NoticeBanner notices={greeting.notices} />
-
+      {/* THE SENTENCE LEADS. It is the whole point of the greeting, and it was
+          starting below the fold on a phone behind two full notice cards —
+          George opening by qualifying something the reader had not been told
+          yet. The caveats follow it, one line each, and each says which
+          caveat it is without being tapped (UI rule 4). */}
       <p className="text-[15px] leading-relaxed text-george-navy">{greeting.headline}</p>
+
+      <CompactNotices notices={greeting.notices} />
 
       <ReceiptsBlock meta={receipts} />
 

@@ -24,6 +24,7 @@ import pytest
 pytest.importorskip("psycopg", reason="george_greeting imports the brief tool, which imports psycopg")
 
 from app.services.george_greeting import (  # noqa: E402
+    MAX_CHIP_SUBJECT,
     MAX_FOLLOW_UPS,
     build_greeting,
     follow_ups,
@@ -361,8 +362,50 @@ def test_each_item_gets_its_own_question():
         stock_row("Hello Panda", was=14),
         dead_row("Choco Boy", qty=40),
     ]), defs=DEFS)
+    assert [c["label"].split()[0] for c in chips] == ["Why?", "On", "What"]
+
+
+def test_a_chip_names_its_subject():
+    """
+    A chip says what it is about. "On order?" alone tells you a question
+    exists; it does not tell you which product, and the sentence above names
+    only the most notable one.
+    """
+    chips = follow_ups(brief([
+        sales_row("Rockwell", 48210, 36800),
+        stock_row("Hello Panda", was=14),
+    ]), defs=DEFS)
     labels = [c["label"] for c in chips]
-    assert labels == ["Why?", "On order?", "What happened?"]
+    assert labels[0] == "Why? Rockwell"
+    assert labels[1].startswith("On order? ")
+    assert "Hello Panda" in labels[1] or "SKU" in labels[1]
+
+
+def test_two_chips_never_read_the_same():
+    """
+    A duplicate label offers a choice that is not a choice. Two different
+    products going out of stock must not both read "On order?".
+    """
+    chips = follow_ups(brief([
+        stock_row("Hello Panda", was=14, store="Rockwell"),
+        stock_row("Choco Boy", was=9, store="Fairview"),
+        stock_row("Milk Candy", was=4, store="Shang"),
+    ]), defs=DEFS)
+    labels = [c["label"] for c in chips]
+    assert len(labels) == len(set(labels)), labels
+    assert len(labels) > 1, "distinct products should produce distinct chips"
+
+
+def test_a_long_subject_is_cut_rather_than_wrapping():
+    """A chip is a shortcut. Past a couple of words it stops being one."""
+    long_name = "Extremely Long Confectionery Product Name That Will Not Fit"
+    chips = follow_ups(brief([stock_row(long_name, was=3)]), defs=DEFS)
+    assert len(chips) == 1
+    label = chips[0]["label"]
+    assert label.startswith("On order? ")
+    assert len(label) <= len("On order? ") + MAX_CHIP_SUBJECT + 1
+    # The QUESTION keeps the whole name — only the label is cut.
+    assert long_name in chips[0]["question"]
 
 
 def test_a_chip_only_ever_names_a_subject_the_brief_named():
@@ -416,7 +459,7 @@ def test_a_blind_morning_still_offers_chips_for_what_did_run():
     )
     g = build_greeting(payload, defs=DEFS)
     assert g["kind"] == "item"
-    assert [c["label"] for c in g["follow_ups"]] == ["Why?"]
+    assert [c["label"] for c in g["follow_ups"]] == ["Why? Rockwell"]
 
 
 def test_chips_are_capped_and_deduplicated():

@@ -328,9 +328,31 @@ These are hard constraints, like the architecture rules above.
    the same panel — no new route, no modal stack — and it works identically
    whether the figure came from chat or from a tile.
 
-4. **Notices always surface.** Identically in chat, on tiles, and in the
-   approval queue. A notice must never be swallowed by a card with room for
+4. **Notices always surface.** Identically in chat, on tiles, on posts and in
+   the approval queue. A notice must never be swallowed by a card with room for
    only a number: if a tile cannot show the caveat, the tile is the wrong shape.
+
+   *Amended 2026-09-05, the greeting:* the rule is that a caveat is **surfaced**,
+   which is not the same as **spelled out**. A notice may be reduced to one line
+   that NAMES it — "Thresholds not configured", visible without any interaction
+   — with its explanation on tap, in exactly one place: **George's opening
+   greeting**, and there the sentence comes first and the caveats follow it.
+
+   Everywhere a figure is being ANSWERED, the caveat stays whole and stays
+   ABOVE the number, because a caveat above a number is read on the way to it.
+
+   The greeting is the one case where that reasoning inverts. It is the first
+   thing on the page and nobody asked for it, so two full notice cards above it
+   meant George opened by qualifying something the reader had not yet been told,
+   and on a phone the sentence — the entire point of the greeting — started
+   below the fold. A caveat that pushes the claim it qualifies off the screen
+   has not surfaced anything.
+
+   What stays forbidden is what the rule was written against: a caveat behind a
+   disclosure that gives no hint it is there, and a card that shows a number
+   with the caveat dropped for want of room. Both forms live in
+   [NoticeBanner.tsx](frontend/src/components/george/NoticeBanner.tsx), which
+   remains the only place a notice is rendered.
 
 5. **One colour means "needs you".** Reserved for approvals. Nothing else may
    use it — not errors, not warnings, not emphasis. Its meaning is destroyed by

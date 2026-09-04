@@ -194,19 +194,41 @@ def _sentence(row: dict, meta: dict) -> str:
 MAX_FOLLOW_UPS = 3
 
 
+# How much of a subject a chip label can carry before it stops being a chip.
+MAX_CHIP_SUBJECT = 22
+
+
+def _chip_subject(row: dict) -> str:
+    """
+    What a chip names, so two chips are never the same word.
+
+    A SKU where there is one, because it is short and unambiguous and the
+    sentence above has already given the product its full name; the subject
+    otherwise, which for a sales row is the store. Without this, two products
+    going out of stock produced two chips both labelled "On order?" and a
+    person had to guess which was which — or worse, could not tell there were
+    two.
+    """
+    subject = str(row.get("sku") or row.get("subject") or "").strip()
+    if len(subject) > MAX_CHIP_SUBJECT:
+        subject = subject[:MAX_CHIP_SUBJECT].rstrip(" ,;:-") + "…"
+    return subject
+
+
 def _follow_up(row: dict, meta: dict) -> Optional[dict[str, str]]:
     """The one obvious question about one brief row, or None."""
     section = row.get("section")
     subject = row.get("subject")
     if not subject:
         return None
+    named = _chip_subject(row)
 
     if section == "sales_vs_same_weekday":
         as_of = (meta or {}).get("as_of") or {}
         day = _day(as_of.get("yesterday"))
         way = "up" if row.get("direction") == "up" else "down"
         return {
-            "label": "Why?",
+            "label": f"Why? {named}",
             "question": f"Why was {subject} {way} on {day}?",
         }
 
@@ -214,7 +236,7 @@ def _follow_up(row: dict, meta: dict) -> Optional[dict[str, str]]:
         store = row.get("store")
         where = f" for {store}" if store else ""
         return {
-            "label": "On order?",
+            "label": f"On order? {named}",
             # The question a stockout actually raises: is more coming.
             "question": f"Is {subject} on order{where}?",
         }
@@ -223,7 +245,7 @@ def _follow_up(row: dict, meta: dict) -> Optional[dict[str, str]]:
         store = row.get("store")
         where = f" at {store}" if store else ""
         return {
-            "label": "What happened?",
+            "label": f"What happened? {named}",
             # Deliberately a question about the PAST, which tools can answer.
             # "Should we discount it" is advice, and George has no tool for it.
             "question": f"How did {subject} sell{where} before it stopped?",
@@ -238,8 +260,12 @@ def follow_ups(payload: dict, defs: Optional[dict] = None) -> list[dict[str, str
 
     Ordered by the SAME ranking that chooses the opening line
     (brief.notability), so the first chip belongs to the item George just led
-    with. Deduplicated by question text: two stores losing the same SKU
-    produces two rows and one useful question.
+    with.
+
+    Deduplicated by question AND by label. Two stores losing the same SKU is
+    two rows and one useful question; two different SKUs going out of stock is
+    two questions that must not both read "On order?", because a row of
+    identical chips offers a choice that is not a choice.
     """
     defs = defs if defs is not None else _load_defs()
     meta = payload.get("meta") or {}
@@ -258,12 +284,18 @@ def follow_ups(payload: dict, defs: Optional[dict] = None) -> list[dict[str, str
         return (rank.get(section, len(order)), -magnitude, str(row.get("subject") or ""))
 
     out: list[dict[str, str]] = []
-    seen: set[str] = set()
+    seen_questions: set[str] = set()
+    seen_labels: set[str] = set()
     for row in sorted(rows, key=key):
         chip = _follow_up(row, meta)
-        if chip is None or chip["question"] in seen:
+        if chip is None:
             continue
-        seen.add(chip["question"])
+        # Two chips may never read the same. A duplicate label is worse than a
+        # missing chip: it offers a choice that is not a choice.
+        if chip["question"] in seen_questions or chip["label"] in seen_labels:
+            continue
+        seen_questions.add(chip["question"])
+        seen_labels.add(chip["label"])
         out.append(chip)
         if len(out) >= MAX_FOLLOW_UPS:
             break

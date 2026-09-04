@@ -1,11 +1,26 @@
 /**
  * A caveat that qualifies a number.
  *
- * UI rule 4: notices surface identically in chat, on tiles, and in the approval
- * queue — so this component is the ONLY place a notice is rendered, and all
- * three surfaces import it. It is deliberately not collapsible: a notice means
- * the result is not what it appears, and hiding it behind a disclosure is the
- * failure this rule exists to prevent.
+ * UI rule 4: notices surface identically in chat, on tiles, on posts and in the
+ * approval queue — so this file is the ONLY place a notice is rendered, and
+ * every surface imports from it.
+ *
+ * TWO FORMS, AND THE LINE BETWEEN THEM IS SURFACING vs SPELLING OUT.
+ *
+ *   NoticeBanner     the caveat whole, ABOVE the figure it qualifies, never
+ *                    collapsible. Everywhere a number is being ANSWERED.
+ *   CompactNotices   one line per caveat, naming it, with the explanation on
+ *                    tap. The greeting only.
+ *
+ * Neither hides a notice: in both, the reader is told which caveat applies
+ * without doing anything. What the compact form defers is the sentence, and
+ * only where the caveat arrives BEFORE the thing it qualifies rather than
+ * after — see CompactNotice for why the greeting is that case and a turn is
+ * not.
+ *
+ * What remains forbidden is what the rule was written against: a caveat behind
+ * a disclosure that gives no hint it is there, and a card that shows a number
+ * with the caveat dropped for want of room.
  *
  * NO ACCENT HERE, AND THAT IS THE POINT (UI rule 5, corrected 2026-09-05).
  * This component wore the approvals colour from its first commit, which
@@ -21,7 +36,8 @@
  * KIND of thing at a glance and differ only in whether they are asking for
  * anything.
  */
-import { AlertTriangle } from 'lucide-react';
+import { useState } from 'react';
+import { AlertTriangle, ChevronRight } from 'lucide-react';
 import type { GeorgeNotice } from '../../types/george';
 
 /** Human labels for the kinds emitted by the tools; unknown kinds pass through. */
@@ -43,6 +59,67 @@ const KIND_LABEL: Record<string, string> = {
   unsurfaced_notice: 'Caveat was missing',
   logging_failed: 'Logging failed',
 };
+
+/**
+ * One notice, one line, with the detail on tap.
+ *
+ * FOR THE GREETING ONLY, and the distinction that makes it allowable is
+ * between SURFACING a caveat and SPELLING IT OUT. The line is always visible
+ * and always says which caveat applies — "Thresholds not configured" is on
+ * screen whether or not anybody taps. What moves behind the tap is the
+ * sentence explaining it.
+ *
+ * The greeting needs this and a turn does not. A turn is an answer to a
+ * question somebody just asked, so a caveat above the number is read on the
+ * way to the number. The greeting is the first thing on the page, unasked for:
+ * two full notice cards above it meant George opened by qualifying something
+ * the reader had not yet been told, and the sentence — the whole point of the
+ * greeting — started below the fold on a phone.
+ *
+ * So the sentence leads and the caveats sit under it, one line each. Anywhere
+ * a figure is being ANSWERED, the full banner still goes above it.
+ */
+function CompactNotice({ notice }: { notice: GeorgeNotice }) {
+  const [open, setOpen] = useState(false);
+  const label = KIND_LABEL[notice.kind] ?? notice.kind.replace(/_/g, ' ');
+  return (
+    <div className="border-l-2 border-george-slate pl-2.5">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex min-h-touch w-full items-center gap-1.5 text-left text-[12px] text-george-navy"
+      >
+        <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-george-slate" aria-hidden />
+        <span className="flex-1 truncate">{label}</span>
+        <ChevronRight
+          className={`h-3 w-3 shrink-0 text-george-muted transition-transform ${open ? 'rotate-90' : ''}`}
+          aria-hidden
+        />
+      </button>
+      {open && (
+        <div className="pb-1.5">
+          <p className="text-[12px] leading-relaxed text-george-navy">{notice.message}</p>
+          {notice.source && (
+            <p className="mt-1 text-[11px] text-george-muted break-words">{notice.source}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Every notice as its own one-line row. See CompactNotice for why. */
+export function CompactNotices({ notices }: { notices: GeorgeNotice[] }) {
+  if (notices.length === 0) return null;
+  return (
+    <div className="space-y-1">
+      {notices.map((n, i) => (
+        <CompactNotice key={`${n.kind}-${i}`} notice={n} />
+      ))}
+    </div>
+  );
+}
 
 export function NoticeBanner({ notices }: { notices: GeorgeNotice[] }) {
   if (notices.length === 0) return null;
