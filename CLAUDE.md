@@ -275,6 +275,35 @@ These are hard constraints, like the architecture rules above.
    phone layout is the real layout, and the desktop one is the phone layout with
    room either side.
 
+8. **A claim about state renders from a loaded result, never a literal.**
+   "Nothing needs you", "0 pending", "all fresh", "no notices" — every one of
+   these is an assertion about the world, and the UI may only make it while
+   holding a result that says so. A hardcoded `count={0}`, a placeholder empty
+   state, a default that renders before the first fetch: each is the app
+   stating a fact it never checked.
+
+   *Named 2026-09-04, from the case that prompted the rule:* George's right
+   rail said "Nothing needs you. Approvals will appear here when the queue
+   exists." The queue existed — `GET /george/workflows/approvals` had been live
+   since 2026-09-03 — the frontend had never called it, and one version was
+   genuinely waiting on somebody in production. The screen was not out of date;
+   it had never asked.
+
+   So **not-yet-loaded is its own state and must look like one.** Three
+   outcomes, three renderings, and the first may never borrow the third's
+   words: *loading* ("Checking…"), *failed* (say the lookup failed), *loaded*
+   (the rows, or a genuine empty state). Collapsing loading or failed into
+   "nothing here" is the same failure as reporting a number without its
+   notice — a confident claim with nothing behind it, which is the one thing
+   this whole system exists to prevent.
+
+   This is architecture rule 2's guarantee arriving at the last step. A tool
+   returns `{rows, meta}` so a number can never be shown without its
+   provenance; this rule says the ABSENCE of rows cannot be shown without its
+   provenance either. And it binds rule 5: the approvals colour may only be
+   worn by a row that came back from the server, so a failed lookup and an
+   empty queue are both navy.
+
 ### These rules are already backed by the tool contract
 
 Rules 3, 4 and 6 are not aspirations the frontend has to invent — every tool

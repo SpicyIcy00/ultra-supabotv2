@@ -19,9 +19,11 @@
  * 256px, and UI rule 4 says a tile that cannot show its caveat is the wrong
  * shape.
  *
- * The RIGHT rail is still an honest placeholder: there is no approval queue
- * endpoint, so it carries its real shape and an empty state that says what is
- * missing rather than showing fake rows.
+ * The RIGHT rail is the approval queue, and it renders from a loaded result —
+ * never a literal (UI rule 8). It was a placeholder saying "Nothing needs you"
+ * long after GET /george/workflows/approvals went live, which is how the app
+ * came to assert something it had never checked. Loading, failure and an empty
+ * queue are now three different renderings; see approvalState.ts.
  *
  * Responsive contract (UI rule 7 — the centre column is the whole screen on a
  * phone): below lg both rails are OVERLAYS. They never take width from the
@@ -32,6 +34,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, ChevronRight, PanelLeft, Plus, Trash2, X } from 'lucide-react';
 import { deleteChat, listChats } from '../../services/chatsApi';
 import { listPinPages, listPins } from '../../services/pinsApi';
+import type { Approval } from '../../types/workflows';
+import { attentionAccent, attentionLabel, type ApprovalsView } from './approvalState';
 
 /** What the centre column is showing. */
 export type Centre = { kind: 'chat' } | { kind: 'page'; page: string | null };
@@ -349,7 +353,25 @@ export function LeftRailStub({ onOpen }: { onOpen: () => void }) {
 
 /* --------------------------------------------------------------- right ---- */
 
-export function RightRail({ open, onClose }: RailProps) {
+/**
+ * The approval queue.
+ *
+ * Every word here comes from a loaded result (UI rule 8). The rail used to say
+ * "Nothing needs you" as a literal beside a count hardcoded to 0, while the
+ * endpoint had been live for a day and one version was genuinely waiting — so
+ * loading and failure are their own renderings and neither may borrow the empty
+ * state's words. The decision is in approvalState.ts, where the suite holds it.
+ *
+ * ORANGE APPEARS ON ROWS AND NOWHERE ELSE. UI rule 5's one reserved colour
+ * belongs to a workflow version waiting to be promoted past the backtest gate.
+ * A queue that failed to load is not an approval; an empty one is not either.
+ * Both are navy, and `view.accent` is what decides.
+ *
+ * NO RECEIPTS BLOCK, DELIBERATELY. An approval row carries no figure from a
+ * tool, and the receipts rules govern numbers. Its times are its own —
+ * created_at, and backtested_at or the absence of one.
+ */
+export function RightRail({ open, onClose, view }: RailProps & { view: ApprovalsView }) {
   return (
     <>
       {open && (
@@ -361,7 +383,7 @@ export function RightRail({ open, onClose }: RailProps) {
         />
       )}
       <aside
-        className={`fixed inset-y-0 right-0 z-40 w-80 shrink-0 border-l border-george-line bg-george-cream
+        className={`fixed inset-y-0 right-0 z-40 flex w-80 shrink-0 flex-col border-l border-george-line bg-george-cream
           transition-transform lg:static lg:z-auto lg:translate-x-0
           ${open ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}`}
         aria-label="Needs you"
@@ -378,30 +400,92 @@ export function RightRail({ open, onClose }: RailProps) {
           </button>
         </div>
 
-        <div className="px-4">
-          {/* Empty state is navy, not orange. Orange means something actually
-              needs you (UI rule 5) — an empty queue must not wear it. */}
-          <p className="text-[13px] leading-relaxed text-george-slate">Nothing needs you.</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-george-muted">
-            Approvals will appear here when the queue exists.
-          </p>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+          {view.kind === 'rows' ? (
+            <>
+              <p className="mb-2 text-[12px] text-george-accent">{view.heading}</p>
+              <ul className="space-y-2">
+                {view.rows.map((a) => (
+                  <ApprovalRow key={a.version_id} approval={a} />
+                ))}
+              </ul>
+            </>
+          ) : (
+            <>
+              <p className="text-[13px] leading-relaxed text-george-slate">{view.heading}</p>
+              {view.detail && (
+                <p className="mt-1 text-[12px] leading-relaxed text-george-muted">
+                  {view.detail}
+                </p>
+              )}
+            </>
+          )}
         </div>
       </aside>
     </>
   );
 }
 
-/** Header button for the right rail. Wears orange only when count > 0. */
-export function AttentionButton({ count, onClick }: { count: number; onClick: () => void }) {
+/**
+ * One version waiting on a person.
+ *
+ * `blocked_on` is printed verbatim: the server distinguishes "never
+ * backtested" from "backtested and waiting for an administrator", and those
+ * have different fixes — promote it, or go and run a backtest. A client that
+ * summarised both as "waiting" would throw that away.
+ *
+ * The accent is one hairline down the left edge. It marks the row as the thing
+ * that needs you without turning the panel into an alarm.
+ */
+function ApprovalRow({ approval }: { approval: Approval }) {
+  return (
+    <li className="border-l-2 border-george-accent bg-george-paper py-2 pl-2.5 pr-2">
+      <p className="text-[13px] leading-snug text-george-navy">
+        {approval.name}{' '}
+        <span className="tabular-nums text-george-slate">v{approval.version}</span>
+      </p>
+      <p className="mt-1 text-[12px] leading-relaxed text-george-slate">
+        {approval.blocked_on}
+      </p>
+      {/* Its own times, not a snapshot timestamp — this row states no figure. */}
+      <p className="mt-1.5 text-[11px] text-george-muted">
+        Saved by {approval.created_by} · {dayLabel(approval.created_at)}
+        {approval.backtested_at
+          ? ` · backtested ${dayLabel(approval.backtested_at)}`
+          : ' · never backtested'}
+      </p>
+    </li>
+  );
+}
+
+/**
+ * Header button for the right rail.
+ *
+ * `count` is `number | null`, and null is not a synonym for 0 — it means we
+ * have not found out yet. The label says so and the badge stays away, so an
+ * unknown count can never read as "nothing needs you" (UI rule 8).
+ *
+ * Not `lg:hidden`. The rail is statically visible at that width, but the badge
+ * is the only thing on screen carrying a NUMBER, and suppressing it exactly
+ * where there is room for it was backwards.
+ */
+export function AttentionButton({
+  count,
+  onClick,
+}: {
+  count: number | null;
+  onClick: () => void;
+}) {
+  const accent = attentionAccent(count);
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label={count > 0 ? `${count} need you` : 'Nothing needs you'}
-      className="relative flex h-9 w-9 min-h-touch min-w-touch items-center justify-center rounded-lg text-george-slate lg:hidden"
+      aria-label={attentionLabel(count)}
+      className="relative flex h-9 w-9 min-h-touch min-w-touch items-center justify-center rounded-lg text-george-slate"
     >
-      <Bell className={`h-4 w-4 ${count > 0 ? 'text-george-accent' : ''}`} />
-      {count > 0 && (
+      <Bell className={`h-4 w-4 ${accent ? 'text-george-accent' : ''}`} />
+      {accent && (
         <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-george-accent" />
       )}
     </button>

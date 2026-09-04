@@ -30,9 +30,11 @@ import {
   RightRail,
   type Centre,
 } from '../components/george/Rails';
+import { approvalsView } from '../components/george/approvalState';
 import { getChat } from '../services/chatsApi';
 import { getGreeting } from '../services/greetingApi';
 import { errorMessage } from '../services/pinsApi';
+import { listApprovals } from '../services/workflowsApi';
 
 export default function GeorgePage() {
   const { turns, state, ask, cancel, busy, threadId, open, reset } = useGeorgeStream();
@@ -65,6 +67,48 @@ export default function GeorgePage() {
     refetchOnWindowFocus: false,
     retry: false,
   });
+
+  /**
+   * The approval queue.
+   *
+   * Unlike the greeting, this one SHOULD change while you look at it: a
+   * version promoted in another tab, or one saved in this conversation, has to
+   * stop or start needing you without a reload. So it refetches on focus and
+   * goes stale quickly — the opposite of the greeting's staleTime: Infinity,
+   * and for the opposite reason.
+   *
+   * Retried ONCE, and the count matters. A failed lookup here is not a real
+   * answer the way an unreachable brief is — "something may be waiting and I
+   * could not find out" is worth a second attempt. But the default three
+   * retries with backoff leave the rail saying "Checking…" for the better part
+   * of ten seconds, and a state that honest is still one nobody can act on.
+   * One retry, then say plainly that it failed.
+   */
+  const approvals = useQuery({
+    queryKey: ['workflow-approvals'],
+    queryFn: () => listApprovals(),
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    retry: 1,
+  });
+
+  /**
+   * What the rail says, and what the button announces. Derived in one place so
+   * the two can never disagree — and `count` is null while unknown, which is
+   * what keeps "nothing needs you" from being said before anyone has asked
+   * (UI rule 8).
+   */
+  const approvalsState = useMemo(
+    () =>
+      approvalsView(
+        approvals.isPending
+          ? { status: 'pending' }
+          : approvals.isError
+            ? { status: 'error' }
+            : { status: 'success', approvals: approvals.data ?? [] },
+      ),
+    [approvals.isPending, approvals.isError, approvals.data],
+  );
 
   /** Tools still in flight, for the mark's subtitle. */
   const running = useMemo(() => {
@@ -191,7 +235,7 @@ export default function GeorgePage() {
             />
           </div>
 
-          <AttentionButton count={0} onClick={() => setRightOpen(true)} />
+          <AttentionButton count={approvalsState.count} onClick={() => setRightOpen(true)} />
         </header>
 
         <div
@@ -256,7 +300,11 @@ export default function GeorgePage() {
         )}
       </main>
 
-      <RightRail open={rightOpen} onClose={() => setRightOpen(false)} />
+      <RightRail
+        open={rightOpen}
+        onClose={() => setRightOpen(false)}
+        view={approvalsState}
+      />
     </div>
   );
 }
