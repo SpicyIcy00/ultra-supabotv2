@@ -2,7 +2,7 @@
 
 ## What we're building
 
-**George** — a chat agent, built inside this repo, that answers business questions
+**George** — a colleague, built inside this repo, who answers business questions
 about **Aji Ichiban**:
 
 - **candy stores** in the Philippines
@@ -211,21 +211,58 @@ that a connection using it succeeds — and print the assertion, not the value.
 
 ### Vocabulary
 
-Four words, four distinct meanings. Use them consistently in code, copy and
+Six words, six distinct meanings. Use them consistently in code, copy and
 conversation; do not introduce synonyms.
 
 - **Pin** — an answer becomes a live tile that re-runs.
 - **Save** — logic becomes a versioned rule.
 - **Page** — a collection of pins.
-- **Chat** — a session: one thread of turns, one person's, reopened and
-  continued from `george.conversations`. A chat is not a page, and
-  **Ungrouped** holds pins with no page — never a conversation. *Added
-  2026-09-04:* until then the left rail listed pages only, so the only durable
-  thing a chat could become was a pin with no page.
+- **Post** — one utterance in the river, by George or by a person. Every George
+  post carries its receipts and its notices; UI rules 3, 4 and 6 apply to all
+  of them without exception.
+- **Thread** — a post and its replies. A thread is not started, it **emerges**:
+  the first reply to a post makes one. Nobody ever opens an empty one.
+- **Watch** — a saved condition George checks, which posts when it fires.
 
 A pin re-runs; a save is the rule it re-runs. "Bookmark", "widget", "card",
 "favourite" and "snapshot" are not other names for these — if one of them seems
 needed, the concept is probably wrong.
+
+*Amended 2026-09-05: **Chat is retired**, and Post and Thread replace it.* Chat
+was defined here on 2026-09-04 as "a session: one thread of turns, one person's,
+reopened and continued from `george.conversations`". The word carried three
+assumptions that the river discards deliberately, and each one was a thing
+George had to stop being:
+
+  - **A session has a beginning you create.** So the product had a "New chat"
+    button and a blank page behind it — George waiting to be summoned. A
+    colleague you are already in a thread with has no such door.
+  - **A session is one person's.** So everything George did was invisible to
+    everyone else, and a brief delivered at 06:00 lived in Telegram because
+    there was nowhere in the app it could belong to more than one reader.
+  - **A session ends.** So continuity had to be rebuilt from the outside —
+    `george_recall` exists precisely because a figure quoted last Tuesday was
+    in a container that had closed.
+
+None of those was wrong for a chatbot. All three are wrong for a colleague, and
+the vocabulary had to move before the schema did — the words in the tables and
+the words in this file agree from the first commit, not after a rename.
+
+What is NOT discarded: `george.conversations` keeps its shape and its
+INSERT-only role, because it is also the gap log and pin provenance. Posts are
+written alongside it. "Ungrouped" still holds pins with no page and still never
+holds a conversation.
+
+*Added 2026-09-05: **Watch** is the fifth and sixth word arriving together, and
+a fifth word is normally a sign the concept is wrong.* This one is not, because
+nothing above can express it. A pin re-runs when you look at it; a workflow runs
+when the clock says so; neither can say "tell me when this becomes true". A
+watch is a **condition plus a channel**: George evaluates it on a schedule and
+posts only when the answer changes. Silence is its normal state, and that is
+what separates it from a pin — a pin that finds nothing still renders, a watch
+that finds nothing says nothing at all. Not "alert", "trigger", "monitor" or
+"rule". Deferred until after C.4; written down now so it cannot be built under
+a different name in the meantime.
 
 What a save produces is a **workflow**: named steps, parameters, and the
 reasoning behind each choice, kept as immutable **versions**. A **run** is one
@@ -235,6 +272,37 @@ execution of one version; a **backtest** is a run against a past window. Not
 A pin is one person's tile. A workflow is the company's rule — it is **org-level**
 (anyone runs, the creator or an admin edits, an admin promotes), because a rule
 that fires every Monday into a group chat should not die with one account.
+
+### The river
+
+One append-only timeline of everything George does and says, and everything
+anyone says to him. There is no other surface: the morning brief, a workflow
+run, an approval waiting on somebody, a question and its answer are all
+**posts** in it. Telegram is a window onto the same river, not a parallel
+channel with its own content.
+
+**Visibility is per post, and the default is not the same for both authors.**
+Decided 2026-09-05, and the asymmetry is the whole design:
+
+- **`org`** — everything George initiates: briefs, notices, workflow runs,
+  approvals, watches. These are already company-level facts. A brief that fires
+  into a group chat at 06:00 is not private, and pretending otherwise inside
+  the app would make the app the least informed place to read it.
+- **`private`** — a question a person asks, and its answer. Visible to its
+  author, with an explicit action to share it into the river.
+
+**Why not org for everything, which is what a team room would be.** Because the
+choice is not reversible. Today every conversation is private — `user_id`
+scopes the list, ownership gates continuing one — and people have been asking
+questions under that assumption for 208 conversations. Making them all public
+retroactively publishes things nobody agreed to publish. Making a private
+default public later is a decision each person can make per post; making a
+public default private later cannot un-show what was shown.
+
+So the default is the conservative one, and it is a **default, not a
+ceiling**: sharing is one action, and if the room turns out to want everything
+in the open, flipping the default is a one-line change to a query that already
+reads `visibility = 'org' OR author = :me`.
 
 ### Rules
 
