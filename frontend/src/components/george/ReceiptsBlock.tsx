@@ -125,7 +125,9 @@ export function ReceiptsBlock({ meta }: { meta?: ToolMeta }) {
                   <span className="text-george-muted"> · gap 0.00</span>
                 </span>
               ) : (
-                <span className="text-george-accent">
+                // Navy, not accent: measures disagreeing is a fact about the
+                // figure, not something waiting on a person (UI rule 5).
+                <span className="font-medium text-george-navy">
                   measures disagree by {rec.gap?.toLocaleString()} ({rec.gap_pct}%)
                 </span>
               )}

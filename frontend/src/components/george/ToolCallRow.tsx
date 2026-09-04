@@ -33,7 +33,7 @@ export function ToolCallRow({ call }: { call: ToolCall }) {
         {!done ? (
           <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-george-slate" aria-hidden />
         ) : failed ? (
-          <TriangleAlert className="h-3.5 w-3.5 shrink-0 text-george-accent" aria-hidden />
+          <TriangleAlert className="h-3.5 w-3.5 shrink-0 text-george-slate" aria-hidden />
         ) : (
           <Database className="h-3.5 w-3.5 shrink-0 text-george-slate" aria-hidden />
         )}
@@ -75,7 +75,7 @@ export function ToolCallRow({ call }: { call: ToolCall }) {
               <dd className="text-george-navy tabular-nums">{call.result.duration_ms}ms</dd>
               {call.result.error && (
                 <>
-                  <dt className="text-george-accent">refused</dt>
+                  <dt className="text-george-slate">refused</dt>
                   <dd className="text-george-navy break-words">{call.result.error}</dd>
                 </>
               )}

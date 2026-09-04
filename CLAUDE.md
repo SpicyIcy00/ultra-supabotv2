@@ -342,6 +342,33 @@ These are hard constraints, like the architecture rules above.
    `workflows.promotion.queue_name`). A failed run is not an approval and must
    not borrow the colour. Neither is a stale tile, a rotted pin or a notice.
 
+   *Corrected 2026-09-05: **a notice is informational and never wears the
+   accent.*** The line above already said so, and the code had been doing the
+   opposite since before the rule was written. `NoticeBanner` — the single
+   component every surface renders a caveat through — used the accent for its
+   border, its icon and its heading, so **every notice in the app, in chat, on
+   tiles and on posts, was spending the one colour reserved for "needs you"**.
+   Two more did the same: a reconciliation disagreement in the receipts, and a
+   refused tool call.
+
+   None of that was a decision. It was the original mockup, made before this
+   rule existed, carried forward because each of the three genuinely feels
+   urgent — which is the pressure the rule describes. **The colour's meaning is
+   destroyed by a second USE, not by a second feeling.** A notice needs nobody:
+   it qualifies a number already on screen, and there is nothing to go and do.
+   A refusal is the tool declining to mislead, which is a real answer. Measures
+   disagreeing is a fact about a figure.
+
+   So a caveat gets its prominence from **position and structure, never hue**:
+   above the number it qualifies, never collapsible, with a rule down its left
+   edge — the same treatment the approval row gets, in slate rather than
+   accent, so the two read as the same kind of thing and differ only in whether
+   they ask for anything. Notices are navy on `george-paper`.
+
+   The boundary is held by a test rather than by review, because review is what
+   missed it for two days: `accentUse.test.ts` scans the source and fails on any
+   file naming the accent token that is not on a short, reasoned list.
+
    *Amended 2026-09-04, the brand mark:* **George's mark renders in the accent
    colour, and it is the only thing that may.** The rule protects a signal, and
    a signal is destroyed by a second USE — not by a second appearance. The mark

@@ -7,7 +7,19 @@
  * the result is not what it appears, and hiding it behind a disclosure is the
  * failure this rule exists to prevent.
  *
- * Orange here is the reserved "needs you" colour (UI rule 5).
+ * NO ACCENT HERE, AND THAT IS THE POINT (UI rule 5, corrected 2026-09-05).
+ * This component wore the approvals colour from its first commit, which
+ * predates the rule and was carried forward unexamined — so every notice in
+ * the app, on every surface, was spending the one colour reserved for "needs
+ * you". A notice needs nobody: it is informational, it qualifies a number that
+ * is already on screen, and there is nothing to go and do about it.
+ *
+ * The prominence a caveat needs comes from POSITION and STRUCTURE, not hue: it
+ * sits above the number it qualifies, it cannot be collapsed, and it carries a
+ * rule down its left edge. That is the same treatment the approval row uses,
+ * in slate rather than accent — deliberately, so the two read as the same
+ * KIND of thing at a glance and differ only in whether they are asking for
+ * anything.
  */
 import { AlertTriangle } from 'lucide-react';
 import type { GeorgeNotice } from '../../types/george';
@@ -41,14 +53,14 @@ export function NoticeBanner({ notices }: { notices: GeorgeNotice[] }) {
         <div
           key={`${n.kind}-${i}`}
           role="note"
-          className="flex gap-2.5 rounded-lg border border-george-accent/35 bg-george-accent-soft px-3 py-2.5"
+          className="flex gap-2.5 border-l-2 border-george-slate bg-george-paper px-3 py-2.5"
         >
           <AlertTriangle
-            className="h-4 w-4 shrink-0 mt-0.5 text-george-accent"
+            className="h-4 w-4 shrink-0 mt-0.5 text-george-slate"
             aria-hidden
           />
           <div className="min-w-0">
-            <p className="text-[13px] font-medium text-george-accent">
+            <p className="text-[13px] font-medium text-george-navy">
               {KIND_LABEL[n.kind] ?? n.kind.replace(/_/g, ' ')}
             </p>
             <p className="text-[13px] leading-relaxed text-george-navy break-words">
