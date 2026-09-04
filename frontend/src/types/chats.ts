@@ -14,8 +14,13 @@ import type { DoneFrame, GeorgeNotice, GeorgeTurn, PinnedFrame, ToolMeta } from 
 
 export interface ChatSummary {
   thread_id: string;
-  /** The first question, trimmed. A chat has no other name. */
+  /**
+   * The first question, cut at 40 characters on a word boundary. A chat has no
+   * other name: titles are derived, never stored and never renamed.
+   */
   title: string;
+  /** The same question whole — what the row shows on hover. */
+  question: string;
   first_asked_at: string;
   last_asked_at: string;
   turns: number;

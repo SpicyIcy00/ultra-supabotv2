@@ -24,20 +24,51 @@ from __future__ import annotations
 
 from typing import Any, Iterable, Mapping, Optional
 
-TITLE_MAX = 80
+# A chat title is NAVIGATION, not content. 40 characters is what a rail two
+# hundred pixels wide can show without the CSS ellipsis doing the cutting for
+# us — and a title cut by CSS loses its ellipsis to the clip, so a truncated
+# name stops announcing that it is truncated. The full question always travels
+# beside the title (question_of) and is what the row shows on hover, so nothing
+# is lost by cutting here; it is only moved.
+TITLE_MAX = 40
 
 # Every field a chat turn carries, so the route's Pydantic model and this
 # builder cannot disagree about which keys exist.
 LEGACY_NOTICE_SOURCE = "george.conversations (logged before 2026-09-03)"
 
 
+def question_of(first_question: Optional[str]) -> str:
+    """
+    The first question whole, on one line. What a title is truncated FROM.
+
+    Sent beside every title so the rail can show the full text on hover. It is
+    the same derivation as title_of minus the cut, deliberately: two different
+    normalisations would let the hover disagree with the label it explains.
+    """
+    return " ".join((first_question or "").split())
+
+
 def title_of(first_question: Optional[str]) -> str:
-    """The first question, trimmed to one line. A chat has no other name."""
-    text = " ".join((first_question or "").split())
+    """
+    The first question, trimmed to one line and cut at TITLE_MAX.
+
+    A chat has no other name: titles are DERIVED, never stored and never
+    renamed. A threads table with an editable title is deferred until somebody
+    actually asks to rename one — until then, storing a name would mean a
+    second source for something the log already answers.
+
+    The cut lands on a word boundary, so a title never breaks mid-word, and the
+    ellipsis is part of the returned string rather than a CSS effect — the row
+    that shows it also carries the full question on hover.
+    """
+    text = question_of(first_question)
     if not text:
         return "Untitled chat"
     if len(text) <= TITLE_MAX:
         return text
+    # rsplit on the space, so "How much did Rockwell sell la…" never becomes
+    # "…sell la". Falls back to a hard cut for a single word longer than the
+    # limit, which has no boundary to find.
     cut = text[:TITLE_MAX].rsplit(" ", 1)[0] or text[:TITLE_MAX]
     return cut.rstrip(" ,;:") + "…"
 

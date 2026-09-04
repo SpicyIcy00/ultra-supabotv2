@@ -61,7 +61,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import AsyncSessionLocal, get_db
 from app.core.deps import require_page
 from app.models.app_user import AppUser
-from app.services.chat_history import build_turns, title_of
+from app.services.chat_history import build_turns, question_of, title_of
 from app.services.pin_writer import (
     PinQuotaError,
     SimilarPageError,
@@ -155,6 +155,10 @@ class AskRequest(BaseModel):
 class ChatSummary(BaseModel):
     thread_id: uuid.UUID
     title: str
+    # The full first question, untruncated. `title` is a 40-character cut of
+    # this, and the rail shows this one on hover — a truncated label that
+    # cannot be expanded is a name nobody can read.
+    question: str
     first_asked_at: str
     last_asked_at: str
     turns: int
@@ -222,6 +226,9 @@ class ChatTurn(BaseModel):
 class ChatDetail(BaseModel):
     thread_id: uuid.UUID
     title: str
+    # As on ChatSummary: the untruncated first question, so a reopened chat's
+    # header can show on hover what its 40-character name was cut from.
+    question: str
     turns: List[ChatTurn]
 
 
@@ -284,6 +291,7 @@ async def list_chats(
         ChatSummary(
             thread_id=r["thread_id"],
             title=title_of(r["first_question"]),
+            question=question_of(r["first_question"]),
             first_asked_at=r["first_asked_at"].isoformat(),
             last_asked_at=r["last_asked_at"].isoformat(),
             turns=int(r["turns"]),
@@ -386,6 +394,7 @@ async def get_chat(
     return ChatDetail(
         thread_id=rows[0]["thread_id"],
         title=title_of(rows[0]["question"]),
+        question=question_of(rows[0]["question"]),
         turns=[ChatTurn.model_validate(t) for t in turns],
     )
 

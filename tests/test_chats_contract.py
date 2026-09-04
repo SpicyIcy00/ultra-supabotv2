@@ -30,8 +30,10 @@ pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 from agent import loop as george_loop                                 # noqa: E402
 from app.services.chat_history import (                               # noqa: E402
     LEGACY_NOTICE_SOURCE,
+    TITLE_MAX,
     build_turns,
     normalise_notices,
+    question_of,
     title_of,
 )
 from tests.test_loop_correction_contract import FakeClient, frames_of  # noqa: E402
@@ -114,8 +116,27 @@ def test_title_is_the_first_question_on_one_line():
     long = "Let's build a reorder workflow for AJI BARN. What's moving, what's dead, and " \
            "what should we order from Dried Fruits this week?"
     t = title_of(long)
-    assert t.endswith("…") and len(t) <= 82
+    # 40 characters plus the ellipsis, cut on a word boundary. A rail is
+    # navigation: the full question travels beside the title for the hover.
+    assert t.endswith("…") and len(t) <= TITLE_MAX + 1
     assert not t[:-1].endswith(" ")
+    assert t[:-1] in long, "the title must be a prefix of the question, not a paraphrase"
+
+
+def test_a_single_word_longer_than_the_limit_is_cut_hard():
+    # No boundary to find. Better a hard cut than a title that is only "…".
+    t = title_of("x" * 60)
+    assert t == "x" * TITLE_MAX + "…"
+
+
+def test_the_full_question_travels_beside_the_title():
+    # The hover shows what the label was cut FROM, so the two derivations have
+    # to agree about everything except the cut.
+    raw = "  How much did Rockwell   sell\nlast week compared with last year? "
+    whole = question_of(raw)
+    assert whole == "How much did Rockwell sell last week compared with last year?"
+    assert title_of(raw).rstrip("…").rstrip(" ,;:") in whole
+    assert question_of(None) == ""
 
 
 def test_legacy_notice_kinds_become_notices_that_say_so():

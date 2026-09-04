@@ -151,6 +151,7 @@ export function LeftRail({
               <ChatRow
                 key={c.thread_id}
                 title={c.title}
+                question={c.question}
                 at={c.last_asked_at}
                 active={centre.kind === 'chat' && activeThreadId === c.thread_id}
                 onOpen={() => onOpenChat(c.thread_id)}
@@ -206,12 +207,16 @@ export function LeftRail({
  */
 function ChatRow({
   title,
+  question,
   at,
   active,
   onOpen,
   onDelete,
 }: {
+  /** Already cut to 40 characters, ellipsis included, by chat_history.title_of. */
   title: string;
+  /** The full question, for the hover. Falls back to the title if absent. */
+  question?: string;
   at: string;
   active: boolean;
   onOpen: () => void;
@@ -225,7 +230,9 @@ function ChatRow({
           onClick={onOpen}
           aria-current={active ? 'true' : undefined}
           className="flex min-h-touch min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] text-george-navy hover:bg-george-line/40"
-          title={title}
+          // The WHOLE question, not the truncated label — a hover that repeats
+          // what is already on screen tells the reader nothing.
+          title={question || title}
         >
           <span className="truncate">{title}</span>
           <span className="shrink-0 text-[11px] tabular-nums text-george-muted">{dayLabel(at)}</span>
