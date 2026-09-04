@@ -540,6 +540,8 @@ RULES
 
 12. Always name the version you ran — `meta.version` — when you report a workflow's figures. If `meta.diverges_from_schedule` is true, the version you ran is NOT the one the schedule sends: say which version produced these numbers, which version each schedule fires and when it fires, and why the two differ. That difference is allowed and is not a fault — a run uses the newest logic while a schedule keeps the version an administrator approved — but a reader comparing your figures against a scheduled message has no way to know they came from different rules unless you tell them.
 
+13. You are talking to someone who has talked to you before, so say so when it is true. When a figure you are about to state has a counterpart earlier in this conversation, or in an `[Earlier conversations with this user]` block attached to the question, reference it in prose with ITS date and window — "₱211,400 on Wed 2 Sep 2026, up from the ₱179,412 you asked about on Thu 27 Aug". Two conditions, both hard. First, compare like with like or not at all: if the two used different windows, different filters or different metrics, say so instead of comparing them (rule 2), because "up from" across a week and a day is a false statement made out of two true ones. Second, an earlier figure is context and not evidence — mention one with its date, and do not restate it as a current number, put it in a table of current figures, or use it in a calculation. Rule 1 is unchanged: every number you state comes from a tool result in THIS conversation. If you want the comparison as a real figure, run the call for the earlier window and read it.
+
 LENGTH
 
 Default to short. A simple question gets a few sentences, not sections. Lead with the answer, not the method; state the window and the scope you used in the same breath.
@@ -967,6 +969,7 @@ async def run(
     workflow_writer: Optional[write_tools.WorkflowWriter] = None,
     workflow_runner: Optional[write_tools.WorkflowRunner] = None,
     thread_id: Optional[str] = None,
+    recall: Optional[str] = None,
 ) -> AsyncIterator[str]:
     """
     Answer one question, streaming SSE frames.
@@ -1001,6 +1004,14 @@ async def run(
             `start` frame so the client can send it on the next turn. The
             caller verifies ownership before passing one in; the loop cannot,
             because its logging role cannot read.
+        recall: what this person was told in EARLIER chats, built by the caller
+            from george.conversations — which neither of the loop's roles can
+            read: george_ro is kept out of the schema and george_log has INSERT
+            without SELECT. Given to the model as context on the QUESTION,
+            exactly as page_context is, and never in the system prompt, which
+            has to stay byte-stable for the cache. It is reference material and
+            prompt rule 13 says so: a figure in it may be mentioned with its
+            date and may never be restated as current or used in a calculation.
     """
     defs = _load_defs()
     log = ConversationLog(thread_id=thread_id)
@@ -1021,10 +1032,18 @@ async def run(
     tools_schema = build_tool_schemas(defs, extra=injected_surface(write_ctx))
 
     client = anthropic.AsyncAnthropic()
-    opening = (
-        f"[The user is on the {page_context} page.]\n\n{question}"
-        if page_context else question
-    )
+    # Context on the QUESTION, never in the system prompt. Both of these vary
+    # per request, and a page name or a list of past chats in the cached prefix
+    # would invalidate it on every single call.
+    preamble = [
+        part
+        for part in (
+            f"[The user is on the {page_context} page.]" if page_context else None,
+            recall,
+        )
+        if part
+    ]
+    opening = "\n\n".join([*preamble, question])
     # Prior turns first, and the calls behind them recorded as already run —
     # "pin that" refers to something that happened in an earlier request.
     messages: list[dict] = _seed_history(history, write_ctx.executed)

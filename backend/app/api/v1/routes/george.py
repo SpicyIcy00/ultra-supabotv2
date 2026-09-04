@@ -64,6 +64,7 @@ from app.core.deps import require_page
 from app.models.app_user import AppUser
 from app.services.chat_history import build_turns, question_of, title_of
 from app.services.george_greeting import build_greeting
+from app.services.george_recall import as_block, recent_figures
 from app.services.pin_writer import (
     PinQuotaError,
     SimilarPageError,
@@ -700,13 +701,39 @@ def _workflow_runner(username: str, role: str):
     return run
 
 
+async def _recall_for(username: str, history: list[dict],
+                      thread_id: Optional[str]) -> Optional[str]:
+    """
+    What this person was told in EARLIER chats, or None.
+
+    ONLY EARLY IN A CHAT. Once the conversation on screen has turns of its own,
+    the client is replaying them and the referent for "up from what you said" is
+    already in the prompt; sending this as well would pay for the same
+    continuity twice on every follow-up. Below that, in-chat history cannot
+    supply a referent at all — which is exactly when a past chat can.
+
+    Read through the APPLICATION role, here, because neither of the loop's
+    identities can see the george schema. Failure is never fatal: recall is a
+    nicety, and an answer must not be lost to a lookup that could not run.
+    """
+    if len([t for t in history if t.get("role") == "user"]) >= 2:
+        return None
+    try:
+        async with AsyncSessionLocal() as session:
+            lines = await recent_figures(session, username, exclude_thread=thread_id)
+        return as_block(lines)
+    except SQLAlchemyError:
+        return None
+
+
 async def _safe_stream(question: str, user_id: Optional[str],
                        page_context: Optional[str],
                        pin_writer: PinWriter,
                        history: list[dict],
                        workflow_writer,
                        workflow_runner,
-                       thread_id: Optional[str] = None) -> AsyncIterator[str]:
+                       thread_id: Optional[str] = None,
+                       recall: Optional[str] = None) -> AsyncIterator[str]:
     """
     Wrap the loop so a crash still closes the stream cleanly.
 
@@ -724,6 +751,7 @@ async def _safe_stream(question: str, user_id: Optional[str],
             workflow_writer=workflow_writer,
             workflow_runner=workflow_runner,
             thread_id=thread_id,
+            recall=recall,
         ):
             yield frame
     except Exception as exc:  # noqa: BLE001
@@ -777,16 +805,24 @@ async def ask(
     ):
         raise HTTPException(status_code=404, detail="No chat with that id belongs to you.")
 
+    history = [t.model_dump() for t in request.history]
+    thread = str(request.thread_id) if request.thread_id else None
+    # Awaited here rather than inside the stream: it is a read the caller's own
+    # role performs, and it has to be done before the 200 goes out, while a
+    # failure can still be handled as something other than an error frame.
+    recall = await _recall_for(user.username, history, thread)
+
     return StreamingResponse(
         _safe_stream(
             request.question,
             user_id=user.username,
             page_context=request.page_context,
             pin_writer=_pin_writer(user.username),
-            history=[t.model_dump() for t in request.history],
+            history=history,
             workflow_writer=_WorkflowWriter(user.username, user.role),
             workflow_runner=_workflow_runner(user.username, user.role),
-            thread_id=str(request.thread_id) if request.thread_id else None,
+            thread_id=thread,
+            recall=recall,
         ),
         media_type="text/event-stream",
         headers={
