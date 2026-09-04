@@ -61,6 +61,18 @@ export interface ToolCall {
     truncated: boolean;
     duration_ms: number;
     error: string | null;
+    /**
+     * The rows, so an answer can draw the same chart a tile draws.
+     *
+     * ALL OF THEM OR NONE: empty whenever `rows_complete` is false. The loop
+     * sends nothing rather than a prefix, because a chart drawn from part of a
+     * series is a different chart, not a smaller one. See MAX_ROWS_TO_CLIENT
+     * in agent/loop.py.
+     */
+    rows?: Record<string, unknown>[];
+    rows_complete?: boolean;
+    /** Full meta for the receipts line under a charted answer. */
+    meta?: ToolMeta | null;
   };
 }
 

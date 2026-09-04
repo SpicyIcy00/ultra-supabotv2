@@ -12,11 +12,13 @@ import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ChevronRight, Pin as PinIcon } from 'lucide-react';
-import type { GeorgeTurn, PinnedFrame } from '../../types/george';
+import type { GeorgeTurn, PinnedFrame, ToolCall } from '../../types/george';
+import { GeorgeChart } from './GeorgeChart';
 import { NoticeBanner } from './NoticeBanner';
 import { ReceiptsBlock } from './ReceiptsBlock';
 import { ToolCallRow } from './ToolCallRow';
 import { PinButton } from './PinButton';
+import { inferShape, resultFromToolCall } from './pinShape';
 
 export function GeorgeConversation({ turns }: { turns: GeorgeTurn[] }) {
   const endRef = useRef<HTMLDivElement>(null);
@@ -57,6 +59,12 @@ export function GeorgeConversation({ turns }: { turns: GeorgeTurn[] }) {
               </div>
             )}
 
+            {/* Figures the answer describes, drawn through the SAME component
+                a tile draws them with. Below the prose because the answer
+                leads with the number; above the pin note because a pin is
+                about the answer, not part of it. */}
+            <ChartedResults calls={turn.toolCalls} />
+
             {turn.error && (
               <p className="rounded-lg border border-george-line bg-george-paper px-3 py-2.5 text-[13px] text-george-navy">
                 {turn.error}
@@ -67,7 +75,11 @@ export function GeorgeConversation({ turns }: { turns: GeorgeTurn[] }) {
               <PinnedNote key={p.pin_id} pin={p} />
             ))}
 
-            <ReceiptsBlock meta={turn.receipts} />
+            {/* The turn-level receipts are the LAST tool's meta — a lossy
+                stand-in for per-call receipts. When charts are present they
+                carry their own, which is strictly better, so this would only
+                repeat one of them under a different heading. */}
+            {!hasCharts(turn.toolCalls) && <ReceiptsBlock meta={turn.receipts} />}
 
             {turn.done && (
               <div className="flex items-center gap-1">
@@ -94,6 +106,41 @@ export function GeorgeConversation({ turns }: { turns: GeorgeTurn[] }) {
         ),
       )}
       <div ref={endRef} />
+    </div>
+  );
+}
+
+function chartsIn(calls: ToolCall[]) {
+  return calls.flatMap((call) => {
+    const result = resultFromToolCall(call);
+    if (!result) return [];
+    const shape = inferShape(result);
+    return shape?.kind === 'chart' ? [{ call, result, shape }] : [];
+  });
+}
+
+function hasCharts(calls: ToolCall[]): boolean {
+  return chartsIn(calls).length > 0;
+}
+
+/**
+ * Every chartable result in a turn, each with its own receipts.
+ *
+ * Per call rather than per turn, because an answer that reads two sources
+ * read them at two moments — one timestamp over both would be a claim about
+ * data it does not describe (UI rule 6).
+ */
+function ChartedResults({ calls }: { calls: ToolCall[] }) {
+  const charts = chartsIn(calls);
+  if (charts.length === 0) return null;
+  return (
+    <div className="space-y-3">
+      {charts.map(({ call, result, shape }) => (
+        <div key={call.seq} className="rounded-xl border border-george-line bg-george-paper p-3">
+          <GeorgeChart shape={shape} meta={result.meta} />
+          <ReceiptsBlock meta={result.meta} />
+        </div>
+      ))}
     </div>
   );
 }

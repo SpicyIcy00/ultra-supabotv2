@@ -17,20 +17,10 @@
 import { useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Clock, RefreshCw, Trash2 } from 'lucide-react';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
 import type { Pin, PinCallResult, PinRun } from '../../types/pins';
 import { errorMessage, runPin } from '../../services/pinsApi';
 import { ago, fmt, inferShape, type Shape } from './pinShape';
+import { GeorgeChart } from './GeorgeChart';
 import { NoticeBanner } from './NoticeBanner';
 import { ReceiptsBlock } from './ReceiptsBlock';
 
@@ -48,32 +38,6 @@ function NumberBody({ shape }: { shape: Extract<Shape, { kind: 'number' }> }) {
           {[shape.label, shape.unit !== 'PHP' ? shape.unit : null].filter(Boolean).join(' · ')}
         </p>
       )}
-    </div>
-  );
-}
-
-function ChartBody({ shape }: { shape: Extract<Shape, { kind: 'chart' }> }) {
-  // Bars for a handful of buckets, a line once there are enough to read a trend.
-  const Chart = shape.rows.length > 12 ? LineChart : BarChart;
-  return (
-    <div className="h-40 w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <Chart data={shape.rows} margin={{ top: 4, right: 4, bottom: 0, left: -12 }}>
-          <CartesianGrid strokeDasharray="2 4" stroke="currentColor" className="text-george-line" />
-          <XAxis dataKey={shape.x} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-          <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={52}
-                 tickFormatter={(v) => fmt(v)} />
-          <Tooltip formatter={(v) => fmt(v)} labelStyle={{ fontSize: 12 }}
-                   contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-          {shape.rows.length > 12 ? (
-            <Line type="monotone" dataKey="value" dot={false} strokeWidth={2}
-                  stroke="currentColor" className="text-george-navy" />
-          ) : (
-            <Bar dataKey="value" radius={[3, 3, 0, 0]} fill="currentColor"
-                 className="text-george-navy" />
-          )}
-        </Chart>
-      </ResponsiveContainer>
     </div>
   );
 }
@@ -239,7 +203,7 @@ function OkBody({ result }: { result: PinCallResult }) {
       ) : shape.kind === 'number' ? (
         <NumberBody shape={shape} />
       ) : shape.kind === 'chart' ? (
-        <ChartBody shape={shape} />
+        <GeorgeChart shape={shape} meta={result.meta} />
       ) : (
         <TableBody shape={shape} fullCount={result.meta?.row_count} />
       )}

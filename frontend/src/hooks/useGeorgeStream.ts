@@ -249,6 +249,14 @@ export function useGeorgeStream() {
                       truncated: Boolean(data.truncated),
                       duration_ms: Number(data.duration_ms ?? 0),
                       error: (data.error ?? null) as string | null,
+                      // Only ever a whole result — the loop sends no rows at
+                      // all when it cannot send them all, and rows_complete
+                      // says which happened. Defaulted to false so a frame
+                      // from an older backend charts nothing rather than
+                      // charting a prefix.
+                      rows: (data.rows ?? []) as Record<string, unknown>[],
+                      rows_complete: Boolean(data.rows_complete),
+                      meta: (data.meta ?? null) as ToolMeta | null,
                     };
                   }
                 });
