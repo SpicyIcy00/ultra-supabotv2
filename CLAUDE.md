@@ -240,6 +240,34 @@ These are hard constraints, like the architecture rules above.
    `workflows.promotion.queue_name`). A failed run is not an approval and must
    not borrow the colour. Neither is a stale tile, a rotted pin or a notice.
 
+   *Amended 2026-09-04, the brand mark:* **George's mark renders in the accent
+   colour, and it is the only thing that may.** The rule protects a signal, and
+   a signal is destroyed by a second USE — not by a second appearance. The mark
+   is on every screen, in every state, whether or not anything needs doing;
+   something permanently present cannot be read as a summons, and within a day
+   it stops being read as anything but George. An approvals badge beside it
+   still means what it always meant, because the badge appears and disappears
+   while the mark never moves. What would have destroyed the signal is orange
+   arriving to say *something happened* — and that is exactly what stays
+   forbidden.
+
+   So the exemption is bounded, and the boundary is the point: **the mark's
+   error state must never add or intensify orange.** It dims to ~0.45 opacity
+   and one petal gaps from the silhouette — form, never hue. An error learning
+   to shout in the approvals colour is the failure this rule exists to prevent,
+   and the mark is the easiest place for it to creep back in, because there the
+   orange is already licensed. The six states are pinned by tests that assert
+   error changes the DRAWING and not the colour, so the boundary has to be
+   broken deliberately: see
+   [markState.ts](frontend/src/components/george/markState.ts) and
+   [markState.test.ts](frontend/src/components/george/markState.test.ts).
+
+   The mark itself is a plum blossom (ume) in the spirit of a carved seal, and
+   it is deliberately imperfect — uneven petals, stamens of differing length, a
+   hub slightly off centre. It is one path whose stamens are knocked out as
+   true negative space, so it is accent-on-cream in the app and cream-on-navy
+   as an avatar without a second copy existing to drift.
+
 6. **No number displays without a timestamp.** Every figure carries when it was
    read. A number with no time on it is a claim with no expiry.
 

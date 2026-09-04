@@ -1,32 +1,25 @@
 /**
- * George's mark. Reflects loop state so streaming is legible without reading
- * text: idle -> listening -> thinking -> running tools -> answering, and error.
+ * George's mark, reacting to the loop state so streaming is legible without
+ * reading text: idle -> listening -> thinking -> running tools -> answering,
+ * and error.
  *
- * The ring is the only moving part.
+ * The drawing and the state mapping live in markState.ts; this file only
+ * places them. See that file for why the stamens are knocked out rather than
+ * painted, and why the mark is deliberately uneven.
  *
- * NOTHING HERE IS ORANGE, INCLUDING ERROR. One colour means "needs you" (UI
- * rule 5), reserved for a workflow version waiting to be promoted, and its
- * meaning is destroyed by a second use — the rule names errors first among the
- * things that may not borrow it. This file used to say exactly that in its own
- * docstring and then render the error state in `george-accent`, which is the
- * failure mode the rule predicts: the exception looks principled until it is
- * the only orange most users ever see.
+ * MOTION IS A SWAY, NOT A SPIN. The mark is hand-perturbed, so it has no exact
+ * symmetry and no angle at which a rotation would loop without a visible jump.
+ * The states tilt and breathe it instead, on uneven keyframe stops so the
+ * movement reads as held rather than driven. All of it is CSS on one <g>; the
+ * path is never touched except in error.
  *
- * So error is distinguished from idle WITHOUT colour: idle is the filled navy
- * mark at rest, error is the same navy hollowed out — a broken ring drawn as a
- * dashed border, the letterform dropped to the slate weight. Distinct at a
- * glance, still navy, still not asking for anything.
+ * ORANGE HERE IS NOT "NEEDS YOU". The mark is the one exemption to UI rule 5,
+ * recorded in CLAUDE.md: it is static brand presence and asks for nothing. The
+ * error state honours the other half of that amendment — it dims and gaps, and
+ * adds no orange at all.
  */
 import type { GeorgeState } from '../../types/george';
-
-const LABEL: Record<GeorgeState, string> = {
-  idle: 'Ready',
-  listening: 'Listening',
-  thinking: 'Thinking',
-  running: 'Reading the data',
-  answering: 'Answering',
-  error: 'Something went wrong',
-};
+import { MARK_LABEL, markClass, markPath } from './markState';
 
 interface Props {
   state: GeorgeState;
@@ -36,50 +29,32 @@ interface Props {
 }
 
 export function ReactiveMark({ state, running = [], size = 'lg' }: Props) {
-  const active = state !== 'idle' && state !== 'error';
-  const failed = state === 'error';
   const dim = size === 'lg' ? 'h-11 w-11' : 'h-7 w-7';
 
   return (
     <div className="flex items-center gap-3">
-      <div className={`relative ${dim} shrink-0`}>
-        {active && (
-          <span
-            className="absolute inset-0 rounded-full border-2 border-george-navy/25 border-t-george-navy animate-spin"
-            style={{ animationDuration: state === 'thinking' ? '2.4s' : '1s' }}
-            aria-hidden
-          />
-        )}
-        {/* The broken ring: stationary, dashed, navy. What separates error
-            from idle is the outline and the hollow centre, never a hue. */}
-        {failed && (
-          <span
-            className="absolute inset-0 rounded-full border-2 border-dashed border-george-navy/40"
-            aria-hidden
-          />
-        )}
-        <div
-          className={`absolute inset-[3px] rounded-full flex items-center justify-center
-            ${failed ? 'bg-transparent' : 'bg-george-navy'}`}
-        >
-          <span
-            className={`font-george-serif leading-none ${size === 'lg' ? 'text-lg' : 'text-xs'}
-              ${failed ? 'text-george-slate' : 'text-george-cream'}`}
-          >
-            G
-          </span>
-        </div>
-      </div>
+      {/* currentColor, so the one drawing serves the orange-on-cream mark here
+          and the cream-on-navy avatar without a second copy of the path. */}
+      <svg
+        viewBox="0 0 100 100"
+        className={`${dim} shrink-0 text-george-accent`}
+        role="img"
+        aria-label="George"
+      >
+        <g className={markClass(state)}>
+          <path d={markPath(state)} fill="currentColor" fillRule="evenodd" />
+        </g>
+      </svg>
 
       <div className="min-w-0">
         <p className="font-george-serif text-george-navy leading-tight truncate">
-          {size === 'lg' ? 'George' : LABEL[state]}
+          {size === 'lg' ? 'George' : MARK_LABEL[state]}
         </p>
         {size === 'lg' && (
           <p className="text-xs text-george-slate truncate" aria-live="polite">
             {state === 'running' && running.length > 0
               ? `Reading the data — ${running.join(', ')}`
-              : LABEL[state]}
+              : MARK_LABEL[state]}
           </p>
         )}
       </div>

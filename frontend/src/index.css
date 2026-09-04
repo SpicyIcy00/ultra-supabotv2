@@ -88,3 +88,78 @@ body {
 }
 .george-prose th { color: #4A5D78; font-weight: 500; }
 .george-prose td:not(:first-child) { font-variant-numeric: tabular-nums; }
+
+/* ---------------------------------------------------------------------------
+   George's mark — state motion.
+
+   The mark is hand-perturbed and has no exact symmetry, so there is no angle
+   at which a rotation loops without a jump. Everything here is a SWAY instead:
+   a small tilt with a slight scale drift, on uneven keyframe stops (23/41/58/76
+   rather than quarters) so it reads as held in a hand rather than driven by a
+   motor. First and last frames match, so each loop closes on itself.
+
+   Transforms only — no layout, no paint of the path. transform-box: view-box
+   pins the origin to the drawing's design centre (50,50) rather than to its
+   bounding box, which the perturbation has nudged off centre.
+
+   At most 1.03 scale: the mark reaches radius ~44.6 of the 50 half-viewBox, so
+   it cannot clip.
+   --------------------------------------------------------------------------- */
+.george-mark {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+}
+
+@keyframes george-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.03); }
+}
+
+@keyframes george-sway {
+  0%   { transform: rotate(-3deg)   scale(1);      }
+  23%  { transform: rotate(1.4deg)  scale(1.012);  }
+  41%  { transform: rotate(2.9deg)  scale(1.006);  }
+  58%  { transform: rotate(-0.6deg) scale(1.018);  }
+  76%  { transform: rotate(-2.6deg) scale(1.004);  }
+  100% { transform: rotate(-3deg)   scale(1);      }
+}
+
+@keyframes george-sway-fast {
+  0%   { transform: rotate(-5deg)   scale(1);      }
+  23%  { transform: rotate(2.3deg)  scale(1.016);  }
+  41%  { transform: rotate(4.8deg)  scale(1.008);  }
+  58%  { transform: rotate(-1deg)   scale(1.024);  }
+  76%  { transform: rotate(-4.3deg) scale(1.005);  }
+  100% { transform: rotate(-5deg)   scale(1);      }
+}
+
+/* Comes to rest. One-shot: the sway is removed the moment the answer starts,
+   and this carries the mark the short distance back to square. */
+@keyframes george-settle {
+  from { transform: rotate(1.2deg) scale(1.012); }
+  to   { transform: none; }
+}
+
+.george-mark--idle      { animation: none; }
+.george-mark--listening { animation: george-breathe 3s ease-in-out infinite; }
+.george-mark--thinking  { animation: george-sway 6s ease-in-out infinite; }
+.george-mark--running   { animation: george-sway-fast 2s ease-in-out infinite; }
+.george-mark--answering { animation: george-settle 400ms cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+/* Error moves not at all. It dims, and the path itself gaps a petal — form,
+   never hue: no orange is added or intensified here (UI rule 5 amendment). */
+.george-mark--error     { animation: none; opacity: 0.45; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* Opacity only. The state is still carried by the aria-live label beside the
+     mark, so nothing is lost by standing still. */
+  .george-mark--listening,
+  .george-mark--thinking,
+  .george-mark--running {
+    animation: george-mark-fade 3s ease-in-out infinite;
+  }
+  .george-mark--answering { animation: none; }
+  @keyframes george-mark-fade {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.72; }
+  }
+}
