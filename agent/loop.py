@@ -105,6 +105,29 @@ EFFORT = "high"
 # Rows handed to the model per tool result. meta aggregates are NEVER truncated.
 MAX_ROWS_TO_MODEL = 200
 
+# Rows handed to the CLIENT per tool result, so an answer can draw the same
+# chart a pinned tile draws.
+#
+# Tool results have always streamed as summaries — "raw rows never cross the
+# wire" — and the reason still holds: a call can return 200 wide rows, and
+# streaming those would dwarf the answer and duplicate what the model already
+# read. But a chart cannot be drawn from a summary, and the alternative was a
+# SECOND detection path in the backend deciding what is chartable. Detection is
+# deterministic and lives in the frontend (pinShape.inferShape), which means the
+# frontend needs the rows.
+#
+# So rows cross the wire under one rule: ALL OF THEM, OR NONE. A result larger
+# than this cap sends `rows_complete: false` and no rows at all, and inferShape
+# refuses to chart an incomplete series. A chart drawn from the first 120 of 900
+# rows is not a smaller chart — it is a different and wrong one, asserting a
+# shape the data does not have, which is exactly what pinShape's own docstring
+# says is worse than a boring table.
+#
+# 120 because it clears the widest window a preset produces (a year of weeks, a
+# quarter of days) while staying far below the row counts that made summaries
+# the rule in the first place.
+MAX_ROWS_TO_CLIENT = 120
+
 # Convergence cap. Past this many tool calls in one question, the loop stops
 # asking for more and requires an answer. A 40-question run produced single
 # questions costing 25, 23 and 20 calls — all of them enumerating something one
@@ -1217,7 +1240,17 @@ async def run(
                 break
 
             # ---- convergence cap -----------------------------------------
-            if seq >= MAX_TOOL_CALLS and not conceded:
+            # The budget is spent by READS. A batch that is only writes and
+            # composites after the budget is gone is not more searching — it is
+            # the model pinning or saving what it has already run, which is the
+            # convergence the cap exists to force. On 2026-09-04 a deliberate
+            # 19-call fan-out (per-SKU movement, because no grouped call
+            # exists) was followed by one save_workflow, and the cap refused
+            # the save.
+            more_reads = [b for b in tool_uses
+                          if b.name not in write_tools.WRITE_TOOL_FUNCTIONS
+                          and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS]
+            if seq >= MAX_TOOL_CALLS and not conceded and more_reads:
                 conceded = True
                 attempted = ", ".join(
                     f"{name} x{n}" for name, n in
@@ -1236,22 +1269,57 @@ async def run(
                 # the answer that replaces it is the one to keep.
                 yield _reset_answer("convergence_cap")
                 answer = ""
+
+                # Every tool_use in the assistant turn just appended MUST be
+                # answered with a tool_result, or the next request is rejected
+                # outright ("tool_use ids were found without tool_result blocks")
+                # and the whole turn dies as an api_error — which is exactly
+                # what happened before this block answered them. The refused
+                # calls are answered as errors, in the same user message as
+                # the instruction, and shown to the client as refused calls.
+                refused = []
+                for b in tool_uses:
+                    reason = (
+                        f"Not run: {seq} tool calls have already been made on "
+                        f"this question, past the limit of {MAX_TOOL_CALLS}. "
+                        f"Answer from the results you already have."
+                    )
+                    called_tools.append(b.name)
+                    yield _sse("tool_call", {"seq": seq, "tool": b.name, "arguments": b.input})
+                    payload = {"rows": [], "meta": {"error": reason}}
+                    log.tool_call(seq, b.name, dict(b.input), payload, 0, reason)
+                    yield _sse("tool_result", {
+                        "seq": seq, "tool": b.name, "row_count": 0,
+                        "source_table": None, "truncated": False,
+                        "duration_ms": 0, "error": reason,
+                    })
+                    refused.append({
+                        "type": "tool_result",
+                        "tool_use_id": b.id,
+                        "content": json.dumps(payload),
+                        "is_error": True,
+                    })
+                    seq += 1
+
                 messages.append({
                     "role": "user",
-                    "content": (
-                        f"STOP CALLING TOOLS. You have made {seq} calls on this "
-                        f"question ({attempted}) without reaching an answer, "
-                        f"which is past the limit of {MAX_TOOL_CALLS}.\n\n"
-                        "Do not call another tool. Answer now with three things:\n"
-                        "1. what you were attempting and why it needed so many "
-                        "calls;\n"
-                        "2. whatever partial finding the results you already have "
-                        "will actually support, clearly labelled as partial;\n"
-                        "3. the single grouped or ranked call — naming the tool "
-                        "and arguments — that would answer this properly, or a "
-                        "plain statement that no available tool expresses the "
-                        "question."
-                    ),
+                    "content": refused + [{
+                        "type": "text",
+                        "text": (
+                            f"STOP CALLING TOOLS. You have made {seq} calls on this "
+                            f"question ({attempted}) without reaching an answer, "
+                            f"which is past the limit of {MAX_TOOL_CALLS}.\n\n"
+                            "Do not call another tool. Answer now with three things:\n"
+                            "1. what you were attempting and why it needed so many "
+                            "calls;\n"
+                            "2. whatever partial finding the results you already have "
+                            "will actually support, clearly labelled as partial;\n"
+                            "3. the single grouped or ranked call — naming the tool "
+                            "and arguments — that would answer this properly, or a "
+                            "plain statement that no available tool expresses the "
+                            "question."
+                        ),
+                    }],
                 })
                 continue
 
@@ -1349,6 +1417,19 @@ async def run(
                 elif not (capped.get("rows") or []):
                     log.gap("empty_result", json.dumps(_json_safe(b.input))[:2000], b.name)
 
+                # Rows for the client, so an answer can draw the chart a tile
+                # draws — all of them or none, never a prefix. See
+                # MAX_ROWS_TO_CLIENT. Reads only: a write's rows describe the
+                # pin it just made, and the `pinned` frame already carries that.
+                # `result`, not `capped`: the model's 200-row cap is a different
+                # budget from the client's, and taking the capped list here
+                # would send a silent prefix of anything between the two.
+                full_rows = [] if err else (result.get("rows") or [])
+                rows_complete = (
+                    not err
+                    and b.name not in write_tools.WRITE_TOOL_FUNCTIONS
+                    and len(full_rows) <= MAX_ROWS_TO_CLIENT
+                )
                 yield _sse("tool_result", {
                     "seq": gseq,
                     "tool": b.name,
@@ -1357,6 +1438,12 @@ async def run(
                     "truncated": bool(meta.get("truncated_for_model")),
                     "duration_ms": ms,
                     "error": err,
+                    # The full meta, not a summary of it: a chart in an answer
+                    # has to show the same receipts line a tile shows, and
+                    # ReceiptsBlock reads meta directly.
+                    "meta": meta if rows_complete else None,
+                    "rows": full_rows if rows_complete else [],
+                    "rows_complete": rows_complete,
                 })
                 # A write that now exists, announced as its own frame.
                 #
