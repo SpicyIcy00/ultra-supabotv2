@@ -66,12 +66,19 @@ export function actName(tool: string): string {
 /**
  * Everything in flight, as one line.
  *
- * Two names at most. Parallel dispatch can put five calls in the air at once,
- * and five acts is a log line rather than a sentence — past two, the count
- * says more than the names would.
+ * DEDUPED FIRST. The model dispatches the same tool more than once in one
+ * turn as a matter of course — a live turn asked get_purchasing for po_count
+ * and again for ordered_value, and both tool_call frames landed before either
+ * result — which without this reads "checking purchasing and checking
+ * purchasing…". The act is what is being done, not how many calls are doing
+ * it, and the tool rows below the mark already show every call.
+ *
+ * Two names at most after that. Parallel dispatch can put five calls in the
+ * air at once, and five acts is a log line rather than a sentence — past two,
+ * the count says more than the names would.
  */
 export function actLine(tools: string[]): string {
-  const acts = tools.map(actName);
+  const acts = [...new Set(tools.map(actName))];
   if (acts.length === 0) return '';
   if (acts.length === 1) return `${acts[0]}…`;
   if (acts.length === 2) return `${acts[0]} and ${acts[1]}…`;
@@ -98,7 +105,11 @@ export function actLine(tools: string[]): string {
 export function cognitionTail(text: string, max = 140): string {
   const flat = text
     .replace(/```[\s\S]*?(```|$)/g, ' ')   // fenced code, closed or still open
-    .replace(/[*_`#>]/g, '')
+    // NOT underscore. Emphasis by underscore is vanishing rare in the model's
+    // reasoning, while tool arguments in it are constant — stripping it turned
+    // a live "last_30_days" into "last30days", which is a metric name that
+    // does not exist and reads as though George had invented one.
+    .replace(/[*`#>]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
   if (!flat) return '';
@@ -106,7 +117,12 @@ export function cognitionTail(text: string, max = 140): string {
   // The last clause: everything after the final sentence end that is followed
   // by more text. A trailing terminator is not a boundary — it is the end of
   // the clause we want to show.
-  const boundary = /[.!?](?=\s+\S)/g;
+  //
+  // A capital letter counts as "more text" even with no space before it.
+  // Deltas are concatenated raw, and a live turn produced "...how it's
+  // changed.This window is..." across a delta boundary — without this the two
+  // sentences read as one clause and the superseded half never leaves the line.
+  const boundary = /[.!?](?=\s+\S|[A-Z])/g;
   let start = 0;
   for (let m = boundary.exec(flat); m !== null; m = boundary.exec(flat)) {
     start = m.index + 1;

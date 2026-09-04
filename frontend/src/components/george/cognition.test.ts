@@ -66,6 +66,19 @@ describe('actLine', () => {
     expect(actLine(['get_sales', 'get_stock'])).toBe('reading sales and counting stock…');
   });
 
+  it('says an act once however many calls are doing it', () => {
+    // Seen live: get_purchasing dispatched twice in one turn, for po_count and
+    // for ordered_value, both frames landing before either result. Without the
+    // dedupe this read "checking purchasing and checking purchasing…".
+    expect(actLine(['get_purchasing', 'get_purchasing'])).toBe('checking purchasing…');
+  });
+
+  it('counts DISTINCT acts, not calls, past two', () => {
+    expect(actLine(['get_sales', 'get_sales', 'get_stock', 'get_movement'])).toBe(
+      'reading sales and 2 other things…',
+    );
+  });
+
   it('counts beyond two rather than listing them', () => {
     // Parallel dispatch can put five calls in the air at once, and five acts
     // is a log line rather than a sentence.
@@ -100,6 +113,31 @@ describe('cognitionTail', () => {
   it('never doubles a terminator', () => {
     expect(cognitionTail('Reading sales,')).toBe('Reading sales…');
     expect(cognitionTail('Reading sales …')).toBe('Reading sales…');
+  });
+
+  it('breaks a sentence even when a delta boundary ate the space after it', () => {
+    // Seen live: deltas concatenate raw, giving "...how it's changed.This
+    // window is...". Without a capital-letter boundary the superseded sentence
+    // never leaves the line.
+    expect(cognitionTail("I should see how it's changed.This window is the same")).toBe(
+      'This window is the same…',
+    );
+  });
+
+  it('keeps underscores, because tool arguments are full of them', () => {
+    // Seen live: stripping underscore turned "last_30_days" into "last30days"
+    // — a metric name that does not exist, reading as though George had
+    // invented one. Emphasis by underscore is vanishingly rare here; arguments
+    // are not.
+    expect(cognitionTail('the last_30_days window resolves identically')).toBe(
+      'the last_30_days window resolves identically…',
+    );
+  });
+
+  it('does not treat a decimal point as the end of a sentence', () => {
+    expect(cognitionTail('It came to 179,412.50 across the estate')).toBe(
+      'It came to 179,412.50 across the estate…',
+    );
   });
 
   it('strips markdown rather than rendering it', () => {
