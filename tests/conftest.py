@@ -19,6 +19,49 @@ from pathlib import Path
 
 import pytest
 
+
+@pytest.fixture(autouse=True, scope="session")
+def _never_write_to_the_real_log():
+    """
+    The suite never writes to George's conversation log. Not ever.
+
+    WHAT WAS HAPPENING. agent.loop.run() builds its own ConversationLog, and
+    nothing patches it — test_chats_contract patches `_exec` only for its
+    direct tests of the log, and test_river_contract deletes this variable only
+    for its own. Every other test that drives the loop (the correction and
+    convergence contracts) ran with whatever GEORGE_LOG_DATABASE_URL happened
+    to be in the shell.
+
+    With backend/.env exported — the configuration this repo's own notes
+    recommend for changes touching agent/ or tools/ — that variable points at
+    the PRODUCTION log. So a green test run was quietly inserting rows into
+    george.conversations and george.gaps. Found 2026-09-05: 57 conversation
+    rows and 84 gap rows whose question is a test fixture ("pin that", "how did
+    Rockwell do?") and whose user_id is NULL, which no real turn has.
+
+    The gap log is the record of what George could NOT do — the half that
+    usually goes unmeasured — so junk in it is not cosmetic; it is a metric
+    somebody reads.
+
+    WHY UNSET RATHER THAN PATCH. This is not swallowing the signal. A logging
+    failure SHOULD surface as a `logging_failed` warning, and it still does in
+    real use. These are contract tests with a stubbed model client: they have
+    no business opening a connection to any real database, and the writes were
+    incidental rather than intended. Unsetting the variable makes
+    ConversationLog.enabled false, so `_exec` returns before it connects.
+
+    A side effect worth naming: the suite's result no longer depends on
+    migration state. Before this, code that wrote a column or table not yet in
+    the database turned seven passing tests red — which reads as a regression
+    and is really a deploy-order fact.
+    """
+    previous = os.environ.pop("GEORGE_LOG_DATABASE_URL", None)
+    try:
+        yield
+    finally:
+        if previous is not None:
+            os.environ["GEORGE_LOG_DATABASE_URL"] = previous
+
 # Make the repo root importable so `from tools import ...` works when pytest is
 # invoked from anywhere.
 ROOT = Path(__file__).resolve().parent.parent
