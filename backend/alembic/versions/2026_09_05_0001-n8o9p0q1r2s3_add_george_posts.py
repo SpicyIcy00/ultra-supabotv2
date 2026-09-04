@@ -96,7 +96,7 @@ def upgrade() -> None:
             -- meta: source_table, filters_applied, snapshot_timestamp. UI
             -- rules 3 and 6 are satisfied from here on every George post.
             receipts        jsonb,
-            -- [{kind, message, source}] — UI rule 4, surfaced above the body.
+            -- Notice objects, surfaced above the body — UI rule 4.
             notices         jsonb,
             -- Back-reference into the existing log, so a post can always be
             -- traced to the turn that produced it.
@@ -202,6 +202,11 @@ def upgrade() -> None:
     # stand, and a turn that never produced an answer produces no answer post,
     # exactly as chat_history already renders it.
     #
+    # chr(58) is ':' — written that way because SQLAlchemy parses a literal
+    # ':question' in the SQL as a BIND PARAMETER and refuses to run without a
+    # value for it. The bytes hashed are identical, so this still matches
+    # ConversationLog.post_ids() exactly.
+    #
     # Deterministic ids: md5 of the conversation id plus the role, cast to
     # uuid. Not uuid_generate_v5, which needs the uuid-ossp extension this
     # database does not have — md5() is core and the cast is exact (32 hex
@@ -212,7 +217,7 @@ def upgrade() -> None:
             body, payload, receipts, notices, conversation_id, created_at, hidden_at
         )
         SELECT
-            (md5(c.id::text || ':question'))::uuid,
+            (md5(c.id::text || chr(58) || 'question'))::uuid,
             COALESCE(c.thread_id, c.id),
             NULL,
             'question',
@@ -235,9 +240,9 @@ def upgrade() -> None:
             body, payload, receipts, notices, conversation_id, created_at, hidden_at
         )
         SELECT
-            (md5(c.id::text || ':answer'))::uuid,
+            (md5(c.id::text || chr(58) || 'answer'))::uuid,
             COALESCE(c.thread_id, c.id),
-            (md5(c.id::text || ':question'))::uuid,
+            (md5(c.id::text || chr(58) || 'question'))::uuid,
             'answer',
             'george',
             NULL,
