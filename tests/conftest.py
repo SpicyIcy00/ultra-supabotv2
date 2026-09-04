@@ -81,10 +81,23 @@ def _george_log_isolation(request):
 #
 # With backend/.env exported — the configuration this repo's notes recommend
 # for changes touching agent/ or tools/ — that is the PRODUCTION log. A green
-# run was quietly inserting rows. Found 2026-09-05: 57 conversation rows and 84
-# gap rows whose question is a test fixture ("pin that", "how did Rockwell
-# do?") and whose user_id is NULL, which no real turn has. They were deleted in
-# a separate, reviewed statement.
+# run was quietly inserting rows.
+#
+# DELETED 2026-09-05, one reviewed transaction, children before parents:
+#
+#     conversations  321 -> 185   (136 removed)
+#     tool_calls    1110 -> 808   (302 removed)
+#     gaps           417 -> 301   (116 removed)
+#     posts          582 -> 310   (272 removed, backfilled from the same rows)
+#
+# Scoped to `user_id IS NULL`, which is what a test turn looks like and what a
+# real one never is: 136 rows, 13 distinct questions, 55 of them exact fixture
+# strings ("pin that", "sales by day?", "net sales by store?").
+#
+# `user_id = 'coverage'` was NOT deleted, though it was proposed. It is 145
+# turns over 40 distinct real questions ("Which vending products never sell?")
+# with ZERO fixture strings — a deliberate evaluation sweep, not pollution.
+# Checking that before deleting is the only reason it still exists.
 #
 # The gap log is the record of what George could NOT do — the half that usually
 # goes unmeasured — so junk in it is not cosmetic; it is a metric somebody
