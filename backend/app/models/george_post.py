@@ -1,0 +1,130 @@
+"""
+SQLAlchemy model for george.posts — the river.
+
+One append-only timeline of everything George does and says, and everything
+anyone says to him. A post is one utterance; a thread is a post and its replies
+(CLAUDE.md vocabulary, amended 2026-09-05 when Chat was retired).
+
+TWO WRITERS, ONE TABLE, AND NEITHER IS GEORGE'S READ ROLE.
+`george_log` inserts question and answer posts as the loop logs them — INSERT
+without SELECT, so it can never read a post back. Everything else is written by
+the APPLICATION role, which is also the only reader. george_ro is not involved
+at all and cannot see this schema. See the migration (n8o9p0q1r2s3).
+
+THREADS EMERGE. `thread_id` is the root post's id and a root post is its own
+thread — the same trick conversations.thread_id uses. Nothing ever creates an
+empty thread, because there is nothing to create: the first reply to a post
+makes one.
+
+VISIBILITY IS PER POST. George's own posts are 'org' because a brief that fires
+into a group chat at 06:00 is not private. A person's question and its answer
+are 'private' until shared. The read filter is
+`visibility = 'org' OR author_user = :me`, so opening the default later is a
+change to one query and not a migration.
+"""
+
+from datetime import datetime
+from typing import Any, Optional
+from uuid import UUID
+
+from sqlalchemy import CheckConstraint, DateTime, Index, Text, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PgUUID
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.core.database import Base
+
+# The eight kinds, mirrored by KINDS in the migration and by the CHECK
+# constraint. A kind present in one place and not the others must fail loudly
+# rather than render as a blank card.
+#
+#   brief             the morning brief, as a post
+#   notice            "I noticed X", with the moves it offers
+#   answer            George answering something
+#   question          a person asking something
+#   approval          a version waiting to be promoted past the backtest gate
+#   workflow_run      a saved rule that fired
+#   pin_confirmation  a pin George made because he was asked to
+#   system            the app speaking about itself
+POST_KINDS = (
+    "brief", "notice", "answer", "question",
+    "approval", "workflow_run", "pin_confirmation", "system",
+)
+
+POST_AUTHORS = ("george", "user")
+POST_VISIBILITY = ("org", "private")
+
+# Which kinds George writes. Used to default visibility, and asserted by the
+# contract test: a kind George authors is org-level, because everything he
+# initiates is a company-level fact.
+GEORGE_KINDS = ("brief", "notice", "answer", "approval",
+                "workflow_run", "pin_confirmation", "system")
+
+
+class GeorgePost(Base):
+    __tablename__ = "posts"
+    __table_args__ = (
+        CheckConstraint(
+            "kind IN ('brief', 'notice', 'answer', 'question', 'approval', "
+            "'workflow_run', 'pin_confirmation', 'system')",
+            name="ck_posts_kind",
+        ),
+        CheckConstraint("author IN ('george', 'user')", name="ck_posts_author"),
+        CheckConstraint("visibility IN ('org', 'private')", name="ck_posts_visibility"),
+        CheckConstraint(
+            "(author = 'user' AND author_user IS NOT NULL) OR author = 'george'",
+            name="ck_posts_actor",
+        ),
+        Index("ix_posts_thread", "thread_id", "created_at"),
+        Index("ix_posts_conversation", "conversation_id"),
+        {"schema": "george"},
+    )
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
+
+    #: The root post's id. A root post is its own thread.
+    thread_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    #: The post being replied to. None for a root.
+    parent_id: Mapped[Optional[UUID]] = mapped_column(PgUUID(as_uuid=True))
+
+    kind: Mapped[str] = mapped_column(Text, nullable=False)
+
+    #: 'george' or 'user' — which side of the thread this is drawn on. Not a
+    #: user id: George has no account.
+    author: Mapped[str] = mapped_column(Text, nullable=False)
+    #: Who, when a person wrote it. Also the schedule's created_by for an
+    #: unattended run — an identity captured from a token, never from a model.
+    author_user: Mapped[Optional[str]] = mapped_column(Text)
+
+    visibility: Mapped[str] = mapped_column(Text, nullable=False, default="private")
+
+    #: The standalone prose. A voice layer speaks exactly this, so it must
+    #: never depend on `payload` to make sense.
+    body: Mapped[Optional[str]] = mapped_column(Text)
+    #: Kind-specific structure: rows, chips, buttons, ids.
+    payload: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB)
+    #: meta — source_table, filters_applied, snapshot_timestamp (UI rules 3, 6).
+    receipts: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB)
+    #: [{kind, message, source}] — surfaced above the body (UI rule 4).
+    notices: Mapped[Optional[list[dict[str, Any]]]] = mapped_column(JSONB)
+
+    #: Back-reference into george.conversations, so a post traces to its turn.
+    conversation_id: Mapped[Optional[UUID]] = mapped_column(PgUUID(as_uuid=True))
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    #: Hidden, never deleted — the same treatment a deleted chat gets, and for
+    #: the same reason: the log behind it is load-bearing elsewhere.
+    hidden_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+def default_visibility(kind: str) -> str:
+    """
+    What a post of this kind is visible to, absent an explicit choice.
+
+    George's own posts are org-level; a person's question is private until
+    shared. One function so the loop, the scheduler and the brief route cannot
+    each decide differently — the asymmetry is a product rule (CLAUDE.md, "The
+    river"), not a per-caller preference.
+    """
+    return "org" if kind in GEORGE_KINDS and kind != "answer" else "private"

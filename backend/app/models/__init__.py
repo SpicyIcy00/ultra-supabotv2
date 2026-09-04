@@ -27,6 +27,13 @@ from app.models.vending import (
     VendingOrderLine,
 )
 from app.models.george_pin import GeorgePin, PIN_STATUSES
+from app.models.george_post import (
+    GeorgePost,
+    POST_AUTHORS,
+    POST_KINDS,
+    POST_VISIBILITY,
+    default_visibility,
+)
 from app.models.storehub import (
     StorehubImport,
     PurchaseOrder,
@@ -63,6 +70,11 @@ __all__ = [
     "VendingOrderLine",
     "GeorgePin",
     "PIN_STATUSES",
+    "GeorgePost",
+    "POST_KINDS",
+    "POST_AUTHORS",
+    "POST_VISIBILITY",
+    "default_visibility",
     "StorehubImport",
     "PurchaseOrder",
     "PurchaseOrderLine",

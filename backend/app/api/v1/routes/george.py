@@ -49,6 +49,7 @@ import asyncio
 import json
 import sys
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Any, AsyncIterator, List, Literal, Optional
 
@@ -65,6 +66,13 @@ from app.models.app_user import AppUser
 from app.services.chat_history import build_turns, question_of, title_of
 from app.services.george_greeting import build_greeting
 from app.services.george_recall import as_block, recent_figures
+from app.services.river import (
+    DEFAULT_LIMIT as RIVER_LIMIT,
+    MAX_LIMIT as RIVER_MAX,
+    build_river,
+    next_cursor,
+    thread_of,
+)
 from app.services.pin_writer import (
     PinQuotaError,
     SimilarPageError,
@@ -340,6 +348,136 @@ async def greeting(
         blind_sections=g["blind_sections"],
         follow_ups=[FollowUp.model_validate(f) for f in g.get("follow_ups") or []],
     )
+
+
+# ---------------------------------------------------------------------------
+# The river
+#
+# One append-only timeline of everything George does and says, and everything
+# anyone says to him. Read-only here: C.1 renders the history that already
+# exists (backfilled from george.conversations by n8o9p0q1r2s3), and the live
+# write path arrives in C.2.
+#
+# VISIBILITY IS APPLIED IN SQL AND NOWHERE ELSE. `visibility = 'org' OR
+# author_user = :me` — George's own posts are company-level facts, a person's
+# question is theirs until they share it (CLAUDE.md, "The river"). A filter
+# written in Python is a filter somebody can forget to call.
+# ---------------------------------------------------------------------------
+
+# Posts a caller may see. The one place this is expressed.
+_POST_VISIBLE = "p.hidden_at IS NULL AND (p.visibility = 'org' OR p.author_user = :me)"
+
+_POST_COLUMNS = (
+    "p.id, p.thread_id, p.parent_id, p.kind, p.author, p.author_user, "
+    "p.visibility, p.body, p.payload, p.receipts, p.notices, "
+    "p.conversation_id, p.created_at"
+)
+
+
+class RiverPost(BaseModel):
+    """One post. Every George post carries its receipts and its notices."""
+
+    id: str
+    thread_id: str
+    parent_id: Optional[str] = None
+    kind: str
+    author: str
+    author_user: Optional[str] = None
+    visibility: str
+    #: True when the viewer wrote it — decides whether a share action is
+    #: offered, and nothing else. Visibility was applied in SQL.
+    mine: bool
+    body: str
+    payload: Optional[dict[str, Any]] = None
+    receipts: Optional[dict[str, Any]] = None
+    notices: List[ChatNotice] = Field(default_factory=list)
+    conversation_id: Optional[str] = None
+    created_at: Optional[str] = None
+
+
+class RiverPage(BaseModel):
+    """
+    A page of the river, oldest-first.
+
+    `before` is the cursor for the page ABOVE this one. None means the river
+    has been read to its beginning — a real end, which the UI states rather
+    than spinning on (UI rule 8).
+    """
+
+    posts: List[RiverPost]
+    before: Optional[str] = None
+
+
+@router.get("/river", response_model=RiverPage)
+async def read_river(
+    limit: int = Query(RIVER_LIMIT, ge=1, le=RIVER_MAX),
+    before: Optional[str] = Query(
+        None, description="Read the page above this ISO timestamp. Omit for the newest."
+    ),
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_george_user),
+) -> RiverPage:
+    """
+    The river, newest page first, rendered oldest-first within the page.
+
+    Read newest-first so paging backwards never counts from the beginning of
+    history; reversed for rendering so the page reads top-to-bottom like any
+    thread. Both facts live in app.services.river, not in a client.
+    """
+    params: dict[str, Any] = {"me": user.username, "limit": limit}
+    cursor = ""
+    if before:
+        try:
+            params["before"] = datetime.fromisoformat(before)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422, detail="before must be an ISO timestamp."
+            ) from exc
+        cursor = " AND p.created_at < :before"
+
+    rows = (
+        await db.execute(
+            text(
+                f"SELECT {_POST_COLUMNS} FROM george.posts p "
+                f"WHERE {_POST_VISIBLE}{cursor} "
+                f"ORDER BY p.created_at DESC LIMIT :limit"
+            ),
+            params,
+        )
+    ).mappings().all()
+
+    return RiverPage(
+        posts=[RiverPost.model_validate(p) for p in build_river(rows, user.username)],
+        before=next_cursor(rows, limit),
+    )
+
+
+@router.get("/river/threads/{thread_id}", response_model=List[RiverPost])
+async def read_thread(
+    thread_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_george_user),
+) -> List[RiverPost]:
+    """
+    One thread, oldest first.
+
+    Same visibility filter, so a thread cannot be a way around it: a private
+    post in someone else's thread is simply not returned, and an empty result
+    is a 404 rather than a blank thread that implies something was hidden.
+    """
+    rows = (
+        await db.execute(
+            text(
+                f"SELECT {_POST_COLUMNS} FROM george.posts p "
+                f"WHERE p.thread_id = :t AND {_POST_VISIBLE} "
+                f"ORDER BY p.created_at ASC"
+            ),
+            {"t": thread_id, "me": user.username},
+        )
+    ).mappings().all()
+    if not rows:
+        raise HTTPException(status_code=404, detail="No thread with that id.")
+    return [RiverPost.model_validate(p) for p in thread_of(rows, user.username)]
 
 
 @router.get("/chats", response_model=List[ChatSummary])

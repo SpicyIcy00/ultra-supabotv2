@@ -17,6 +17,10 @@ const AIChatPage = React.lazy(() => import('./pages/AIChatPage'));
 // George is a parallel surface to AIChatPage, not a replacement — /ai-chat and
 // everything under components/chat keep working unchanged.
 const GeorgePage = React.lazy(() => import('./pages/GeorgePage'));
+// A design surface: outside the app chrome and behind no RequirePage gate
+// (SessionGuard still applies, as it does to every route). Fixtures only, no
+// backend, and nothing links to it. See pages/RiverPreview.tsx.
+const RiverPreview = React.lazy(() => import('./pages/RiverPreview'));
 const WarehousePage = React.lazy(() => import('./pages/WarehousePage'));
 const PackingPage = React.lazy(() => import('./pages/PackingPage'));
 const PackingPrintPage = React.lazy(() => import('./pages/PackingPrintPage'));
@@ -71,6 +75,10 @@ function App() {
                 path="/packing/:listId/print"
                 element={<RequirePage pageKey="packing"><PackingPrintPage /></RequirePage>}
               />
+              {/* The river's layouts, from fixtures. Chrome-free for the same
+                  reason the print sheet is: it is the layout being looked at,
+                  not the app around it. */}
+              <Route path="/george/preview" element={<RiverPreview />} />
               <Route path="*" element={<ChromeRoutes />} />
             </Routes>
           </Suspense>
