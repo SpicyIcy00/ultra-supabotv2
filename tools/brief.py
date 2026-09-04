@@ -432,21 +432,34 @@ def get_brief(as_of: Optional[date | str] = None) -> dict:
         })
 
     # Empty is not quiet. Say WHICH, per section.
+    #
+    # `ran` and `reason` are recorded ON THE SECTION as well as said in the
+    # notice, because a consumer that has to tell "nothing crossed" from "the
+    # section could not run" would otherwise have to parse the notice's prose
+    # for the difference — and a consumer that gets that wrong reports a
+    # blind morning as a quiet one, which is the failure this whole block
+    # exists to prevent. See app/services/george_greeting.py.
     for name, s in sections.items():
+        blind = (
+            (name == "stock_crossed_out" and not new_day)
+            or (name == "sales_vs_same_weekday" and not sales_considered)
+        )
+        s["ran"] = not blind
         if s["items"] == 0:
             reason = (
-                "no stock snapshots were available to compare"
+                "there were no stock snapshots to compare"
                 if name == "stock_crossed_out" and not new_day
                 else "no store had both days of sales to compare"
                 if name == "sales_vs_same_weekday" and not sales_considered
                 else "nothing crossed the threshold"
             )
+            s["reason"] = reason
             notices.append({
                 "kind": "empty_section",
                 "message": (
                     f"{name}: nothing to report, because {reason}. That is not the "
                     f"same as the data being missing — this section ran."
-                    if reason == "nothing crossed the threshold" else
+                    if not blind else
                     f"{name}: nothing to report because {reason}. The section could "
                     f"not run, which is different from a quiet morning."
                 ),
@@ -499,3 +512,60 @@ def get_brief(as_of: Optional[date | str] = None) -> dict:
         }
 
     return {"rows": rows, "meta": meta}
+
+
+# --------------------------------------------------------------------------
+# Which one item speaks first
+#
+# The brief is a list and stays one. This ranks the SAME rows for the single
+# place that can show exactly one of them — George's opening line on a new
+# chat, which has a sentence and not a screen.
+#
+# Pure: no database, no clock, no I/O beyond reading the definitions. The
+# ordering itself is a business judgement and lives in metrics.yaml
+# (brief.notability), which records why sales leads and why the measure is
+# absolute money rather than percentage.
+# --------------------------------------------------------------------------
+
+def most_notable(payload: dict, defs: Optional[dict] = None) -> Optional[dict]:
+    """
+    The single most notable row of a brief, or None if it holds none.
+
+    Args:
+        payload: a brief as get_brief() returns it.
+        defs: the definitions, injected by tests; loaded from metrics.yaml
+              otherwise.
+
+    Returns:
+        The row itself — with its own `receipts` — never a copy or a summary,
+        so whatever displays it shows the same figures and the same provenance
+        the brief carries.
+    """
+    defs = defs if defs is not None else _load_defs()
+    order = _req(defs, "brief.notability.section_order")
+    measures = _req(defs, "brief.notability.measure")
+    rank = {name: i for i, name in enumerate(order)}
+
+    best: Optional[dict] = None
+    best_key: Optional[tuple] = None
+
+    for row in payload.get("rows") or []:
+        section = row.get("section")
+        if section not in rank:
+            continue
+        value = row.get(measures.get(section))
+        try:
+            magnitude = abs(float(value))
+        except (TypeError, ValueError):
+            # A row that cannot be measured is not silently ranked last on a
+            # magnitude of zero — it is not ranked at all.
+            continue
+        # Section precedence first, then size, then the subject NAME. The name
+        # breaks ties rather than row order, because row order follows the
+        # order store ids come back in and would let two items on the same
+        # figure swap places between two runs of the same morning.
+        key = (rank[section], -magnitude, str(row.get("subject") or ""))
+        if best_key is None or key < best_key:
+            best_key, best = key, row
+
+    return best

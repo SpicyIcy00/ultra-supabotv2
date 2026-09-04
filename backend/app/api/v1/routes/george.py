@@ -45,6 +45,7 @@ logic nobody approved.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import sys
 import uuid
@@ -62,6 +63,7 @@ from app.core.database import AsyncSessionLocal, get_db
 from app.core.deps import require_page
 from app.models.app_user import AppUser
 from app.services.chat_history import build_turns, question_of, title_of
+from app.services.george_greeting import build_greeting
 from app.services.pin_writer import (
     PinQuotaError,
     SimilarPageError,
@@ -89,6 +91,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from agent import loop as george_loop  # noqa: E402
+from tools import brief as brief_tool  # noqa: E402
 from tools._common import load_defs as _load_defs, req as _req  # noqa: E402
 from agent import write_tools  # noqa: E402
 from agent.write_tools import (  # noqa: E402
@@ -256,6 +259,73 @@ async def _thread_belongs_to(username: str, thread_id: uuid.UUID) -> bool:
             )
         ).first()
         return row is not None
+
+
+# ---------------------------------------------------------------------------
+# The opening line
+#
+# WHY THIS ROUTE EXISTS RATHER THAN A CALL TO /api/v1/brief. That endpoint is
+# gated by BRIEF_TOKEN — a shared secret scoped so that a leak costs the morning
+# brief and nothing else (routes/brief.py). Handing it to every browser that
+# loads George would destroy exactly that scoping. So the SOURCE is reused and
+# the DOOR is not: this calls the same tools.brief.get_brief(), behind the same
+# gate /george/chats and /george/pins already sit behind. /api/v1/brief and its
+# token are untouched and remain the scheduler's.
+# ---------------------------------------------------------------------------
+
+class GreetingResponse(BaseModel):
+    """
+    George's opening line, and the receipts under it.
+
+    `kind` is item | quiet | could_not_look, and the third is not a variant of
+    the second: it means a section of the brief COULD NOT RUN. See
+    app/services/george_greeting.py.
+    """
+
+    kind: Literal["item", "quiet", "could_not_look"]
+    # A complete, standalone sentence. Standalone deliberately: it is the one
+    # string a voice layer would speak, and it must never need the DOM around
+    # it to make sense.
+    headline: str
+    # The brief row itself, carrying its own `receipts`. None when nothing
+    # crossed a threshold.
+    item: Optional[dict[str, Any]] = None
+    notices: List[ChatNotice] = Field(default_factory=list)
+    # The brief's own meta — source, filters, snapshot_timestamp, sections.
+    meta: dict[str, Any] = Field(default_factory=dict)
+    blind_sections: List[str] = Field(default_factory=list)
+
+
+@router.get("/greeting", response_model=GreetingResponse)
+async def greeting(
+    as_of: Optional[str] = Query(
+        None, description="Manila date the brief is written ON. Reproduces a past morning."
+    ),
+    user: AppUser = Depends(_george_user),
+) -> GreetingResponse:
+    """
+    What George says before he is asked anything.
+
+    Threaded, because get_brief() is synchronous and runs several full scans —
+    running it on the event loop would stall every other request for its
+    duration, including an in-flight answer stream.
+    """
+    try:
+        payload = await asyncio.to_thread(brief_tool.get_brief, as_of=as_of)
+    except (ValueError, KeyError, RuntimeError) as exc:
+        # A refusal from the tool is a real answer, but the client needs a
+        # non-200 so it shows its own quiet failure line rather than a greeting.
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    g = build_greeting(payload)
+    return GreetingResponse(
+        kind=g["kind"],
+        headline=g["headline"],
+        item=g["item"],
+        notices=[ChatNotice.model_validate(n) for n in g["notices"]],
+        meta=g["meta"],
+        blind_sections=g["blind_sections"],
+    )
 
 
 @router.get("/chats", response_model=List[ChatSummary])

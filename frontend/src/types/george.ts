@@ -93,6 +93,37 @@ export interface PinnedFrame {
   tool_calls: { tool: string; arguments: Record<string, unknown> }[];
 }
 
+/**
+ * George's opening line on a new chat.
+ *
+ * Mirrors GreetingResponse in backend/app/api/v1/routes/george.py. It is NOT a
+ * turn and must never be pushed into `turns`: turns are replayed to the model
+ * as history (see toHistory in useGeorgeStream), and this is something George
+ * said to the reader, not to the model.
+ *
+ * `kind` has three values and the third is not a variant of the second.
+ * `could_not_look` means a section of the brief COULD NOT RUN — a morning
+ * nobody was able to look at, which is the opposite of a quiet one.
+ */
+export interface Greeting {
+  kind: 'item' | 'quiet' | 'could_not_look';
+  /**
+   * A complete, standalone sentence — the one string a voice layer would
+   * speak, so it never depends on the markup around it.
+   */
+  headline: string;
+  /**
+   * The brief row itself, carrying its own `receipts`. Null when nothing
+   * crossed a threshold.
+   */
+  item: (Record<string, unknown> & { section?: string; receipts?: ToolMeta }) | null;
+  notices: GeorgeNotice[];
+  /** The brief's own meta — source, filters, snapshot_timestamp, sections. */
+  meta: ToolMeta;
+  /** Sections that could not run at all. */
+  blind_sections: string[];
+}
+
 export type GeorgeTurn =
   | { role: 'user'; text: string; at: string }
   | {

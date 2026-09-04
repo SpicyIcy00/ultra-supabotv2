@@ -2526,6 +2526,47 @@ brief:
   # so the reader can judge for themselves.
   report_newest_transaction: true
 
+  # ---------------------------------------------------------------------------
+  # NOTABILITY — WHICH ONE ITEM SPEAKS FIRST.
+  #
+  # The brief is a LIST and stays one: nothing here drops an item or reorders
+  # the brief itself. This ranks the same rows for the one place that can show
+  # exactly one of them — George's opening line on a new chat, which has a
+  # sentence and not a screen. Everything below it is still the whole brief.
+  #
+  # WHY SALES LEADS. It is money, it is estate-wide, and it is the only section
+  # whose threshold was measured against a noise floor (see
+  # sales_vs_same_weekday.signal_rate_measured: 2.2 stores/day over 143 days).
+  # A stock crossing is one SKU at one store, and a newly-dead product is one
+  # SKU that stopped selling a month ago and only became reportable overnight.
+  # Both matter; neither outranks a store taking a third less money than it
+  # took the same weekday last week.
+  #
+  # WHY ABSOLUTE CHANGE AND NOT PERCENTAGE. Ranking on change_pct hands the
+  # opening line to the smallest store nearly every morning — Fairview's median
+  # day is PHP 20,102 against Rockwell's PHP 55,603, so the same peso swing is
+  # almost three times the percentage there. That is the exact failure
+  # absolute_floor_fraction exists to prevent, and ranking on percentage would
+  # reintroduce it one layer up. The floor already decided the item is worth
+  # reporting; notability only decides which of the survivors speaks.
+  #
+  # TIE-BREAK IS THE SUBJECT NAME, not row order. Row order depends on the
+  # order store ids come back in, so two items on the same figure would
+  # otherwise swap places between two runs of the same morning.
+  # ---------------------------------------------------------------------------
+  notability:
+    section_order:
+      - sales_vs_same_weekday
+      - stock_crossed_out
+      - newly_dead
+    # The field ranked WITHIN a section, largest first, absolute value.
+    measure:
+      sales_vs_same_weekday: change
+      stock_crossed_out: was
+      newly_dead: quantity_on_hand
+    tie_break: subject
+    ranks_the_opening_line_only: true
+
 
 # =============================================================================
 # NOTICE FINGERPRINTS

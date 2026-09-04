@@ -20,14 +20,24 @@ import { ToolCallRow } from './ToolCallRow';
 import { PinButton } from './PinButton';
 import { inferShape, resultFromToolCall } from './pinShape';
 
-export function GeorgeConversation({ turns }: { turns: GeorgeTurn[] }) {
+interface Props {
+  turns: GeorgeTurn[];
+  /**
+   * False once George has opened the chat himself. He is the first thing in
+   * the thread then, so the thread is not empty and the "Ask about the
+   * business" placeholder would be a second, contradictory opening.
+   */
+  showEmptyState?: boolean;
+}
+
+export function GeorgeConversation({ turns, showEmptyState = true }: Props) {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [turns]);
 
-  if (turns.length === 0) return <EmptyState />;
+  if (turns.length === 0) return showEmptyState ? <EmptyState /> : null;
 
   return (
     <div className="space-y-6">

@@ -15,10 +15,11 @@
  * and the same useGeorgeStream hook.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PanelLeft } from 'lucide-react';
 import { useGeorgeStream } from '../hooks/useGeorgeStream';
 import { GeorgeConversation } from '../components/george/GeorgeConversation';
+import { Greeting, GreetingUnavailable } from '../components/george/Greeting';
 import { PinnedPage } from '../components/george/PinnedPage';
 import { GeorgeInput } from '../components/george/GeorgeInput';
 import { ReactiveMark } from '../components/george/ReactiveMark';
@@ -30,6 +31,7 @@ import {
   type Centre,
 } from '../components/george/Rails';
 import { getChat } from '../services/chatsApi';
+import { getGreeting } from '../services/greetingApi';
 import { errorMessage } from '../services/pinsApi';
 
 export default function GeorgePage() {
@@ -39,6 +41,30 @@ export default function GeorgePage() {
   const [rightOpen, setRightOpen] = useState(false);
   const [centre, setCentre] = useState<Centre>({ kind: 'chat' });
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  /**
+   * Whether George opened the chat on screen.
+   *
+   * True for a chat that STARTED here, and it stays true once the user
+   * replies: his opening line is the top of the thread, and having it vanish
+   * as you answer it would be the page taking back what it just said. False
+   * for a reopened chat, which already has its own beginning.
+   */
+  const [spokeFirst, setSpokeFirst] = useState(true);
+
+  /**
+   * The brief, once per mount. Not refetched on focus: George says this at the
+   * top of a conversation, and a greeting that silently rewrote itself while
+   * the thread scrolled beneath it would be a different claim under the same
+   * receipts. `retry: false` because the failure line is a real answer.
+   */
+  const greeting = useQuery({
+    queryKey: ['george-greeting'],
+    queryFn: () => getGreeting(),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
 
   /** Tools still in flight, for the mark's subtitle. */
   const running = useMemo(() => {
@@ -77,6 +103,7 @@ export default function GeorgePage() {
     setLoadError(null);
     setCentre({ kind: 'chat' });
     setLeftOpen(false);
+    setSpokeFirst(true);
   }, [reset]);
 
   /**
@@ -95,6 +122,8 @@ export default function GeorgePage() {
         open(chat);
         setCentre({ kind: 'chat' });
         setLeftOpen(false);
+        // A reopened chat begins with the question that started it.
+        setSpokeFirst(false);
       } catch (err) {
         setLoadError(errorMessage(err));
       }
@@ -187,8 +216,24 @@ export default function GeorgePage() {
               </div>
             )}
 
+            {/* George speaks first. Directly under the mark, so the first
+                frame of the page is him and something he has to say — not a
+                mark above an empty box. */}
+            {centre.kind === 'chat' && spokeFirst && (
+              <div className="mb-6">
+                {greeting.data ? (
+                  <Greeting greeting={greeting.data} />
+                ) : greeting.isError ? (
+                  <GreetingUnavailable />
+                ) : null}
+              </div>
+            )}
+
             {centre.kind === 'chat' ? (
-              <GeorgeConversation turns={turns} />
+              <GeorgeConversation
+                turns={turns}
+                showEmptyState={!(spokeFirst && greeting.data)}
+              />
             ) : (
               <PinnedPage page={centre.page} onBack={() => setCentre({ kind: 'chat' })} />
             )}
