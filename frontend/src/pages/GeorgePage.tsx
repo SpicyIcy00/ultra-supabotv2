@@ -14,7 +14,7 @@
  * reading in CLAUDE.md. The per-page affordance reuses these same components
  * and the same useGeorgeStream hook.
  */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { PanelLeft } from 'lucide-react';
 import { useGeorgeStream } from '../hooks/useGeorgeStream';
@@ -46,6 +46,31 @@ export default function GeorgePage() {
     if (last?.role !== 'george') return [];
     return last.toolCalls.filter((c) => !c.result).map((c) => c.tool);
   }, [turns]);
+
+  /** Tool results landed this turn. Each one beats the mark. */
+  const toolResults = useMemo(() => {
+    const last = turns[turns.length - 1];
+    if (last?.role !== 'george') return 0;
+    return last.toolCalls.filter((c) => c.result).length;
+  }, [turns]);
+
+  /**
+   * The hero mark docks to the header once it has been scrolled past.
+   *
+   * A threshold on the scroll container, not a scroll-linked transform: the
+   * hero keeps a FIXED-HEIGHT slot whether it is shown or docked, so the
+   * crossfade moves no layout and the thread never jumps under the reader.
+   */
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [docked, setDocked] = useState(false);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => setDocked(el.scrollTop > 40);
+    onScroll();
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
 
   const newChat = useCallback(() => {
     reset();
@@ -114,20 +139,54 @@ export default function GeorgePage() {
             <PanelLeft className="h-4 w-4" />
           </button>
 
-          <div className="min-w-0 flex-1">
-            <ReactiveMark state={state} running={running} />
+          {/* The header is deliberately bare until the hero is scrolled past:
+              George's presence is the centred mark below, not chrome up here. */}
+          <div
+            className={`min-w-0 flex-1 transition-opacity duration-300 ${
+              docked || centre.kind === 'page' ? 'opacity-100' : 'opacity-0'
+            }`}
+            aria-hidden={!(docked || centre.kind === 'page')}
+          >
+            <ReactiveMark
+              variant="inline"
+              state={state}
+              running={running}
+              toolResults={toolResults}
+            />
           </div>
 
           <AttentionButton count={0} onClick={() => setRightOpen(true)} />
         </header>
 
-        <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 md:px-6">
+        <div
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 md:px-6"
+        >
           <div className="mx-auto max-w-3xl">
             {loadError && (
               <p className="mb-4 rounded-lg border border-george-line bg-george-paper px-3 py-2.5 text-[13px] text-george-navy">
                 Could not open that chat: {loadError}
               </p>
             )}
+            {/* Centre stage. The slot keeps its height when the mark docks,
+                so nothing below it moves. */}
+            {centre.kind === 'chat' && (
+              <div className="flex h-[124px] items-start justify-center md:h-[152px]">
+                <div
+                  className={`origin-top transition-all duration-300 ${
+                    docked ? 'pointer-events-none scale-75 opacity-0' : 'scale-100 opacity-100'
+                  }`}
+                >
+                  <ReactiveMark
+                    variant="hero"
+                    state={state}
+                    running={running}
+                    toolResults={toolResults}
+                  />
+                </div>
+              </div>
+            )}
+
             {centre.kind === 'chat' ? (
               <GeorgeConversation turns={turns} />
             ) : (

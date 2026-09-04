@@ -94,20 +94,35 @@ body {
 
    The mark is hand-perturbed and has no exact symmetry, so there is no angle
    at which a rotation loops without a jump. Everything here is a SWAY instead:
-   a small tilt with a slight scale drift, on uneven keyframe stops (23/41/58/76
-   rather than quarters) so it reads as held in a hand rather than driven by a
-   motor. First and last frames match, so each loop closes on itself.
+   a tilt with a scale drift, on uneven keyframe stops (19/37/52/71/88 rather
+   than quarters) so it reads as held in a hand rather than driven by a motor.
+   First and last frames match, so each loop closes on itself.
 
-   Transforms only — no layout, no paint of the path. transform-box: view-box
-   pins the origin to the drawing's design centre (50,50) rather than to its
-   bounding box, which the perturbation has nudged off centre.
+   AMPLITUDES ARE TUNED AT THE RENDERED SIZE, not at a comfortable one. The
+   mark sits at 56px on a phone and 80px on desktop, and motion that reads
+   plainly at 160px disappears at 80px — the first pass swayed +/-3 degrees and
+   could not be seen at all. Thinking is +/-7 and running +/-9, which is
+   legible at 56px without becoming a wobble.
 
-   At most 1.03 scale: the mark reaches radius ~44.6 of the 50 half-viewBox, so
-   it cannot clip.
+   Scale ceilings matter: the drawing reaches radius 44.6 of the 50 half-
+   viewBox, and the pulse multiplies with the sway (1.042 x 1.045 = 1.089,
+   giving 48.6) so nothing clips.
+
+   Transforms only — no layout, no repaint of the path. transform-box: view-box
+   pins the origin to the drawing's design centre rather than to its bounding
+   box, which the perturbation has nudged off centre.
    --------------------------------------------------------------------------- */
-.george-mark {
+.george-mark,
+.george-mark-pulse {
   transform-box: view-box;
   transform-origin: 50% 50%;
+}
+
+/* Idle is not still: it breathes just enough to look alive rather than
+   printed. 0.8% over five and a half seconds — felt more than seen. */
+@keyframes george-breathe-idle {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.008); }
 }
 
 @keyframes george-breathe {
@@ -115,49 +130,65 @@ body {
   50%      { transform: scale(1.03); }
 }
 
+/* Working, and visibly so. */
 @keyframes george-sway {
-  0%   { transform: rotate(-3deg)   scale(1);      }
-  23%  { transform: rotate(1.4deg)  scale(1.012);  }
-  41%  { transform: rotate(2.9deg)  scale(1.006);  }
-  58%  { transform: rotate(-0.6deg) scale(1.018);  }
-  76%  { transform: rotate(-2.6deg) scale(1.004);  }
-  100% { transform: rotate(-3deg)   scale(1);      }
+  0%   { transform: rotate(-7deg)   scale(1);      }
+  19%  { transform: rotate(-2.2deg) scale(1.022);  }
+  37%  { transform: rotate(4.1deg)  scale(1.010);  }
+  52%  { transform: rotate(7deg)    scale(1.028);  }
+  71%  { transform: rotate(1.6deg)  scale(1.035);  }
+  88%  { transform: rotate(-4.8deg) scale(1.012);  }
+  100% { transform: rotate(-7deg)   scale(1);      }
 }
 
+/* The same hand, hurrying. */
 @keyframes george-sway-fast {
-  0%   { transform: rotate(-5deg)   scale(1);      }
-  23%  { transform: rotate(2.3deg)  scale(1.016);  }
-  41%  { transform: rotate(4.8deg)  scale(1.008);  }
-  58%  { transform: rotate(-1deg)   scale(1.024);  }
-  76%  { transform: rotate(-4.3deg) scale(1.005);  }
-  100% { transform: rotate(-5deg)   scale(1);      }
+  0%   { transform: rotate(-9deg)   scale(1);      }
+  19%  { transform: rotate(-2.6deg) scale(1.026);  }
+  37%  { transform: rotate(5.4deg)  scale(1.012);  }
+  52%  { transform: rotate(9deg)    scale(1.034);  }
+  71%  { transform: rotate(2deg)    scale(1.042);  }
+  88%  { transform: rotate(-6.2deg) scale(1.014);  }
+  100% { transform: rotate(-9deg)   scale(1);      }
 }
 
-/* Comes to rest. One-shot: the sway is removed the moment the answer starts,
-   and this carries the mark the short distance back to square. */
+/* Comes to rest as the answer starts arriving. One-shot, from roughly where
+   the sway leaves off, so the mark settles rather than snapping square. */
 @keyframes george-settle {
-  from { transform: rotate(1.2deg) scale(1.012); }
+  from { transform: rotate(3deg) scale(1.02); }
   to   { transform: none; }
 }
 
-.george-mark--idle      { animation: none; }
+/* One tool result landed. A single beat on an OUTER group, so it composes with
+   the sway underneath instead of restarting it. */
+@keyframes george-pulse {
+  0%   { transform: scale(1); }
+  38%  { transform: scale(1.045); }
+  100% { transform: scale(1); }
+}
+
+.george-mark--idle      { animation: george-breathe-idle 5.5s ease-in-out infinite; }
 .george-mark--listening { animation: george-breathe 3s ease-in-out infinite; }
 .george-mark--thinking  { animation: george-sway 6s ease-in-out infinite; }
-.george-mark--running   { animation: george-sway-fast 2s ease-in-out infinite; }
+.george-mark--running   { animation: george-sway-fast 1.9s ease-in-out infinite; }
 .george-mark--answering { animation: george-settle 400ms cubic-bezier(0.2, 0.7, 0.3, 1) both; }
 /* Error moves not at all. It dims, and the path itself gaps a petal — form,
    never hue: no orange is added or intensified here (UI rule 5 amendment). */
 .george-mark--error     { animation: none; opacity: 0.45; }
 
+.george-mark-pulse      { animation: george-pulse 260ms cubic-bezier(0.3, 0.8, 0.4, 1); }
+
 @media (prefers-reduced-motion: reduce) {
-  /* Opacity only. The state is still carried by the aria-live label beside the
-     mark, so nothing is lost by standing still. */
+  /* Opacity only, and no beat on a tool result. The state is still carried by
+     the aria-live label under the mark, so nothing is lost by standing still. */
   .george-mark--listening,
   .george-mark--thinking,
   .george-mark--running {
     animation: george-mark-fade 3s ease-in-out infinite;
   }
-  .george-mark--answering { animation: none; }
+  .george-mark--idle,
+  .george-mark--answering,
+  .george-mark-pulse { animation: none; }
   @keyframes george-mark-fade {
     0%, 100% { opacity: 1; }
     50%      { opacity: 0.72; }
