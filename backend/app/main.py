@@ -536,10 +536,17 @@ def health_check(response: Response):
     schema = getattr(app.state, "schema", None) or {
         "ok": False, "current": [], "expected": [], "problem": "startup has not run",
     }
+    # How many george_ro connections this process holds right now, against the
+    # cap it enforces — the number to read when the pooler complains.
+    try:
+        from tools._common import connection_gate_status
+        george_pool = connection_gate_status()
+    except Exception as exc:  # noqa: BLE001 - health must not fail on a readout
+        george_pool = {"error": f"{type(exc).__name__}: {exc}"}
     if not schema["ok"]:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return {"status": "schema_mismatch", "schema": schema}
-    return {"status": "healthy", "schema": schema}
+        return {"status": "schema_mismatch", "schema": schema, "george_pool": george_pool}
+    return {"status": "healthy", "schema": schema, "george_pool": george_pool}
 
 
 
