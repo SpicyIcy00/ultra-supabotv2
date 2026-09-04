@@ -7,6 +7,12 @@
  * Notices sit ABOVE the answer, not after it and not inside the receipts
  * disclosure (UI rule 4). A caveat that qualifies a number has to be read
  * before the number, not found afterwards.
+ *
+ * THINKING IS SHOWN IN ONE PLACE AT A TIME. While a turn is in flight the
+ * reasoning streams live under the mark (ReactiveMark), so the collapsed
+ * disclosure here would be the same text twice on one screen — which reads as
+ * a bug. It appears once the turn is finished, because the whole reasoning has
+ * to stay reachable after the line under the mark has gone.
  */
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -23,6 +29,11 @@ import { inferShape, resultFromToolCall } from './pinShape';
 interface Props {
   turns: GeorgeTurn[];
   /**
+   * True while the last turn is still streaming. Its thinking is on screen
+   * under the mark, so it is not also offered here.
+   */
+  busy?: boolean;
+  /**
    * False once George has opened the chat himself. He is the first thing in
    * the thread then, so the thread is not empty and the "Ask about the
    * business" placeholder would be a second, contradictory opening.
@@ -30,7 +41,7 @@ interface Props {
   showEmptyState?: boolean;
 }
 
-export function GeorgeConversation({ turns, showEmptyState = true }: Props) {
+export function GeorgeConversation({ turns, busy = false, showEmptyState = true }: Props) {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -50,7 +61,9 @@ export function GeorgeConversation({ turns, showEmptyState = true }: Props) {
           </div>
         ) : (
           <div key={i} className="space-y-3">
-            {turn.thinking && <Thinking text={turn.thinking} />}
+            {turn.thinking && !(busy && i === turns.length - 1) && (
+              <Thinking text={turn.thinking} />
+            )}
 
             {turn.toolCalls.length > 0 && (
               <div className="space-y-1.5">

@@ -80,6 +80,12 @@ export default function GeorgePage() {
     return last.toolCalls.filter((c) => c.result).length;
   }, [turns]);
 
+  /** The reasoning arriving right now, for the line under the mark. */
+  const thinking = useMemo(() => {
+    const last = turns[turns.length - 1];
+    return last?.role === 'george' ? last.thinking : '';
+  }, [turns]);
+
   /**
    * The hero mark docks to the header once it has been scrolled past.
    *
@@ -181,6 +187,7 @@ export default function GeorgePage() {
               state={state}
               running={running}
               toolResults={toolResults}
+              thinking={thinking}
             />
           </div>
 
@@ -197,10 +204,12 @@ export default function GeorgePage() {
                 Could not open that chat: {loadError}
               </p>
             )}
-            {/* Centre stage. The slot keeps its height when the mark docks,
-                so nothing below it moves. */}
+            {/* Centre stage. The slot keeps its height when the mark docks, so
+                nothing below it moves — and it is tall enough for the two-line
+                cognition slot the mark reserves whether or not it is thinking,
+                so the thread does not move as a turn starts or ends either. */}
             {centre.kind === 'chat' && (
-              <div className="flex h-[124px] items-start justify-center md:h-[152px]">
+              <div className="flex h-[164px] items-start justify-center md:h-[192px]">
                 <div
                   className={`origin-top transition-all duration-300 ${
                     docked ? 'pointer-events-none scale-75 opacity-0' : 'scale-100 opacity-100'
@@ -211,6 +220,7 @@ export default function GeorgePage() {
                     state={state}
                     running={running}
                     toolResults={toolResults}
+                    thinking={thinking}
                   />
                 </div>
               </div>
@@ -232,6 +242,7 @@ export default function GeorgePage() {
             {centre.kind === 'chat' ? (
               <GeorgeConversation
                 turns={turns}
+                busy={busy}
                 showEmptyState={!(spokeFirst && greeting.data)}
               />
             ) : (
