@@ -36,8 +36,8 @@
  * the chrome around it on every turn.
  */
 import type { GeorgeState } from '../../types/george';
-import { MARK_LABEL, markClass, markPath } from './markState';
-import { actLine, cognitionTail } from './cognition';
+import { markClass, markDetail, markPath } from './markState';
+import { liveCognition } from './cognition';
 
 interface Props {
   state: GeorgeState;
@@ -94,18 +94,10 @@ export function ReactiveMark({
   thinking = '',
   variant = 'hero',
 }: Props) {
-  // Named from the tool that is running, not from the state alone: "checking
-  // purchasing" is what is happening, where "Reading the data — get_purchasing"
-  // was the log line for it.
-  const detail =
-    state === 'running' && running.length > 0 ? actLine(running) : MARK_LABEL[state];
-
-  // Shown while he is working, and dropped the moment the answer starts: once
-  // there are words in the thread, the reasoning behind them is no longer the
-  // most useful thing on screen, and the turn's own disclosure still holds all
-  // of it.
-  const cognition =
-    state === 'thinking' || state === 'running' ? cognitionTail(thinking) : '';
+  // Both derivations live beside the state mapping and the act names, where
+  // the suite can hold them to their rules without a DOM.
+  const detail = markDetail(state, running);
+  const cognition = liveCognition(state, thinking);
 
   if (variant === 'inline') {
     return (

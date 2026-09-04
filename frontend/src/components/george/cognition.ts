@@ -19,6 +19,7 @@
  * printed one have to be the same words; when they come from two places they
  * eventually stop matching. This is the one place.
  */
+import type { GeorgeState } from '../../types/george';
 
 /**
  * Tool -> the act, as George would say it out loud.
@@ -121,4 +122,21 @@ export function cognitionTail(text: string, max = 140): string {
   // An ellipsis is in the strip set too: the model writes them, and this
   // always appends one.
   return `${clause.replace(/[.,;:…\s]+$/, '')}…`;
+}
+
+
+/**
+ * The cognition line for a state — empty unless he is actually working.
+ *
+ * Shown while thinking and while tools run, and dropped the moment the answer
+ * begins. Once there are words in the thread the reasoning behind them is no
+ * longer the most useful thing on screen, and the turn's own disclosure still
+ * holds all of it.
+ *
+ * Never shown in `error`, which is the case that matters: the last thing the
+ * model was thinking before something broke is not an explanation of what
+ * broke, and leaving it under a dimmed mark invites it to be read as one.
+ */
+export function liveCognition(state: GeorgeState, thinking: string): string {
+  return state === 'thinking' || state === 'running' ? cognitionTail(thinking) : '';
 }

@@ -7,7 +7,8 @@
  * fails the suite instead of shipping "get_whatever" under the mark.
  */
 import { describe, expect, it } from 'vitest';
-import { actLine, actName, cognitionTail } from './cognition';
+import type { GeorgeState } from '../../types/george';
+import { actLine, actName, cognitionTail, liveCognition } from './cognition';
 
 /** agent/loop.py TOOL_FUNCTIONS — the read surface. */
 const READ_TOOLS = [
@@ -134,5 +135,39 @@ describe('cognitionTail', () => {
 
   it('leaves a clause that fits exactly alone', () => {
     expect(cognitionTail('short clause', 140)).toBe('short clause…');
+  });
+});
+
+describe('liveCognition — presence, and where it stops', () => {
+  const THOUGHT = 'The user wants last week, so the preset window';
+
+  it('shows the thought while he is thinking and while tools run', () => {
+    expect(liveCognition('thinking', THOUGHT)).toBe(`${THOUGHT}…`);
+    expect(liveCognition('running', THOUGHT)).toBe(`${THOUGHT}…`);
+  });
+
+  it('stops the moment the answer begins', () => {
+    // Once there are words in the thread the reasoning behind them is no
+    // longer the most useful thing on screen, and the turn's own disclosure
+    // still holds all of it.
+    expect(liveCognition('answering', THOUGHT)).toBe('');
+  });
+
+  it('shows nothing in error, so a half-formed thought is never read as a cause', () => {
+    // The last thing the model was thinking before something broke is not an
+    // explanation of what broke.
+    expect(liveCognition('error', THOUGHT)).toBe('');
+  });
+
+  it('shows nothing at rest', () => {
+    for (const s of ['idle', 'listening'] as GeorgeState[]) {
+      expect(liveCognition(s, THOUGHT)).toBe('');
+    }
+  });
+
+  it('is empty rather than absent when there is no thinking yet', () => {
+    // The slot is fixed height and held empty; an undefined here would render
+    // as "undefined" under the mark.
+    expect(liveCognition('thinking', '')).toBe('');
   });
 });

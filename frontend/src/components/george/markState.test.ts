@@ -15,7 +15,14 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { GeorgeState } from '../../types/george';
-import { MARK_LABEL, MARK_PATH, MARK_PATH_ERROR, markClass, markPath } from './markState';
+import {
+  MARK_LABEL,
+  MARK_PATH,
+  MARK_PATH_ERROR,
+  markClass,
+  markDetail,
+  markPath,
+} from './markState';
 
 const STATES: GeorgeState[] = [
   'idle',
@@ -84,5 +91,30 @@ describe('UI rule 5 — orange means needs-you, and the mark is the one exemptio
     // 0.45 and nothing else. Encoded here because it is a rule, not a taste.
     expect(markClass('error')).toBe('george-mark george-mark--error');
     expect(markPath('error')).not.toBe(MARK_PATH);
+  });
+});
+
+describe('markDetail — what he is doing, in words', () => {
+  it('names the tool that is running rather than the state', () => {
+    // "checking purchasing…" is the thing that is happening; "Reading the data
+    // — get_purchasing" was the log line for it.
+    expect(markDetail('running', ['get_purchasing'])).toBe('checking purchasing…');
+  });
+
+  it('falls back to the state label the instant before a tool_call arrives', () => {
+    // running with nothing in flight is the gap between the model deciding to
+    // call and the frame landing. It must still say something true.
+    expect(markDetail('running', [])).toBe(MARK_LABEL.running);
+  });
+
+  it('uses the state label wherever no tool is involved', () => {
+    for (const s of STATES.filter((x) => x !== 'running')) {
+      // Even if a stale tool list is passed: a tool is not running in these.
+      expect(markDetail(s, ['get_sales'])).toBe(MARK_LABEL[s]);
+    }
+  });
+
+  it('always says something', () => {
+    for (const s of STATES) expect(markDetail(s)).toBeTruthy();
   });
 });
