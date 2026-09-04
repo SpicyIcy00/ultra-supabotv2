@@ -22,7 +22,7 @@ export const RIVER_FIXTURE: Post[] = [
   {
     id: 'p1', thread_id: 'p1', parent_id: null,
     kind: 'brief', author: 'george', author_user: null,
-    visibility: 'org', mine: false,
+    visibility: 'org', owner_user: null, mine: false,
     body:
       'Greenhills took ₱62,410 on Thu 4 Sep 2026 — 34% above the same Thursday ' +
       'last week, when it took ₱46,570. Two other items in this morning’s brief ' +
@@ -44,7 +44,7 @@ export const RIVER_FIXTURE: Post[] = [
   {
     id: 'p2', thread_id: 'p2', parent_id: null,
     kind: 'notice', author: 'george', author_user: null,
-    visibility: 'org', mine: false,
+    visibility: 'org', owner_user: null, mine: false,
     body:
       'Hello Panda went out of stock at Fairview overnight — 14 on hand on ' +
       'Wed 3 Sep, none on Thu 4 Sep. Nothing is on order against it.',
@@ -69,7 +69,7 @@ export const RIVER_FIXTURE: Post[] = [
   {
     id: 'p3', thread_id: 'p3', parent_id: null,
     kind: 'question', author: 'user', author_user: 'ice',
-    visibility: 'private', mine: true,
+    visibility: 'private', owner_user: 'ice', mine: true,
     body: 'How did Rockwell do yesterday?',
     payload: null, receipts: null, notices: [],
     conversation_id: 'c-1', created_at: T('08:41:02'),
@@ -77,7 +77,7 @@ export const RIVER_FIXTURE: Post[] = [
   {
     id: 'p4', thread_id: 'p3', parent_id: 'p3',
     kind: 'answer', author: 'george', author_user: null,
-    visibility: 'private', mine: false,
+    visibility: 'private', owner_user: 'ice', mine: false,
     body:
       'Rockwell took **₱28,782** on Thu 4 Sep 2026, net of cancellations and ' +
       'returns.\n\nNo discounts on the day, so product revenue and net sales ' +
@@ -99,7 +99,7 @@ export const RIVER_FIXTURE: Post[] = [
   {
     id: 'p5', thread_id: 'p5', parent_id: null,
     kind: 'approval', author: 'george', author_user: null,
-    visibility: 'org', mine: false,
+    visibility: 'org', owner_user: null, mine: false,
     body:
       '**BARN Days of Cover v1** is waiting to be promoted. Never backtested — ' +
       'run it against a past window and look at what it would have produced.',
@@ -110,7 +110,7 @@ export const RIVER_FIXTURE: Post[] = [
   {
     id: 'p6', thread_id: 'p6', parent_id: null,
     kind: 'workflow_run', author: 'george', author_user: null,
-    visibility: 'org', mine: false,
+    visibility: 'org', owner_user: null, mine: false,
     body:
       '**Monday replenishment v3** ran at 06:00. Four steps, all reproducible ' +
       'in full.',
@@ -135,7 +135,7 @@ export const RIVER_FIXTURE: Post[] = [
   {
     id: 'p7', thread_id: 'p3', parent_id: 'p4',
     kind: 'pin_confirmation', author: 'george', author_user: null,
-    visibility: 'private', mine: false,
+    visibility: 'private', owner_user: 'ice', mine: false,
     body: 'Pinned “Rockwell net sales, yesterday” to **Replenishment**. It re-runs its call each time it loads.',
     payload: { pin_id: 'pin-1', page: 'Replenishment', tool_calls: 1 },
     receipts: null, notices: [],
@@ -144,7 +144,7 @@ export const RIVER_FIXTURE: Post[] = [
   {
     id: 'p8', thread_id: 'p8', parent_id: null,
     kind: 'system', author: 'george', author_user: null,
-    visibility: 'org', mine: false,
+    visibility: 'org', owner_user: null, mine: false,
     // The row that proves UI rule 6 has a rendering and not an omission.
     body: 'Definitions updated to version 2. Figures before and after this point may use different rules.',
     payload: null, receipts: null, notices: [],

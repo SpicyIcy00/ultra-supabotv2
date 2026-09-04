@@ -45,11 +45,19 @@ export interface Post {
   kind: PostKind;
   /** Which side of the thread this is drawn on. George has no account. */
   author: PostAuthor;
+  /** Who WROTE it. Null for George's posts — he has no account. */
   author_user: string | null;
+  /**
+   * WHOSE IT IS while private: who may see it and who may share it. For a
+   * question that is its author; for the answer it is the person who asked.
+   * Filtering on the author instead made every private answer invisible to
+   * everyone until 2026-09-05.
+   */
+  owner_user: string | null;
   visibility: PostVisibility;
   /**
-   * True when the viewer wrote it — decides whether a share action is offered,
-   * and nothing else. Visibility was already applied in SQL.
+   * True when the viewer OWNS it — decides whether a share action is offered,
+   * and nothing else. Visibility was already applied in SQL, on owner_user.
    */
   mine: boolean;
   /**

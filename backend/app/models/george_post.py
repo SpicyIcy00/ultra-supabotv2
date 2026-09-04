@@ -75,6 +75,10 @@ class GeorgePost(Base):
             "(author = 'user' AND author_user IS NOT NULL) OR author = 'george'",
             name="ck_posts_actor",
         ),
+        CheckConstraint(
+            "visibility = 'org' OR owner_user IS NOT NULL",
+            name="ck_posts_private_has_owner",
+        ),
         Index("ix_posts_thread", "thread_id", "created_at"),
         Index("ix_posts_conversation", "conversation_id"),
         {"schema": "george"},
@@ -93,9 +97,17 @@ class GeorgePost(Base):
     #: 'george' or 'user' — which side of the thread this is drawn on. Not a
     #: user id: George has no account.
     author: Mapped[str] = mapped_column(Text, nullable=False)
-    #: Who, when a person wrote it. Also the schedule's created_by for an
+    #: Who WROTE it, when a person did. Also the schedule's created_by for an
     #: unattended run — an identity captured from a token, never from a model.
+    #: NULL for George's own posts, because George has no account.
     author_user: Mapped[Optional[str]] = mapped_column(Text)
+    #: WHOSE IT IS while private: who may see it, and who may share it. For a
+    #: question that is its author; for the answer to that question it is the
+    #: person who asked, not George. Those two facts were one column until
+    #: 2026-09-05, and every answer post was invisible to everybody as a
+    #: result — see alembic p0q1r2s3t4u5. A CHECK now forbids a private post
+    #: without one.
+    owner_user: Mapped[Optional[str]] = mapped_column(Text)
 
     visibility: Mapped[str] = mapped_column(Text, nullable=False, default="private")
 

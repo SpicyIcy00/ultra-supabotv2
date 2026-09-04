@@ -35,6 +35,7 @@ function post(over: Partial<Post> = {}): Post {
     kind: 'answer',
     author: 'george',
     author_user: null,
+    owner_user: null,
     visibility: 'org',
     mine: false,
     body: 'Rockwell took ₱48,210 on Wed 2 Sep 2026.',

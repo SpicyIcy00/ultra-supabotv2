@@ -940,12 +940,13 @@ class ConversationLog:
         question_id, answer_id = self.post_ids()
         asked_at = kw["asked_at"]
 
+        owner = kw.get("user_id") or "unknown"
         self._exec(
             "INSERT INTO george.posts "
-            "(id, thread_id, parent_id, kind, author, author_user, visibility, "
-            " body, receipts, notices, conversation_id, created_at) "
-            "VALUES (%s,%s,NULL,'question','user',%s,'private',%s,NULL,NULL,%s,%s)",
-            (question_id, self.thread_id, kw.get("user_id") or "unknown",
+            "(id, thread_id, parent_id, kind, author, author_user, owner_user, "
+            " visibility, body, receipts, notices, conversation_id, created_at) "
+            "VALUES (%s,%s,NULL,'question','user',%s,%s,'private',%s,NULL,NULL,%s,%s)",
+            (question_id, self.thread_id, owner, owner,
              kw["question"], self.conversation_id, asked_at),
         )
 
@@ -953,13 +954,17 @@ class ConversationLog:
         if not answer:
             return
 
+        # author_user is NULL because GEORGE wrote it; owner_user is the person
+        # who asked, because it is theirs to see and theirs to share. Those two
+        # facts were one column until 2026-09-05, and every answer post was
+        # invisible to everybody as a result (alembic p0q1r2s3t4u5).
         self._exec(
             "INSERT INTO george.posts "
-            "(id, thread_id, parent_id, kind, author, author_user, visibility, "
-            " body, receipts, notices, conversation_id, created_at) "
-            "VALUES (%s,%s,%s,'answer','george',NULL,'private',%s,%s,%s,%s,%s)",
+            "(id, thread_id, parent_id, kind, author, author_user, owner_user, "
+            " visibility, body, receipts, notices, conversation_id, created_at) "
+            "VALUES (%s,%s,%s,'answer','george',NULL,%s,'private',%s,%s,%s,%s,%s)",
             (
-                answer_id, self.thread_id, question_id, answer,
+                answer_id, self.thread_id, question_id, owner, answer,
                 json.dumps(_json_safe(kw["receipts"])) if kw.get("receipts") else None,
                 json.dumps(_json_safe(kw.get("notices") or [])),
                 self.conversation_id, datetime.now(timezone.utc),

@@ -175,6 +175,7 @@ def _row(**kw):
         "author": "george",
         "author_user": None,
         "visibility": "org",
+        "owner_user": None,
         "body": "Rockwell took P28,782 on Thu 4 Sep 2026.",
         "payload": None,
         "receipts": {"source_table": "new_transactions"},
@@ -186,12 +187,43 @@ def _row(**kw):
     return row
 
 
-def test_mine_is_the_viewer_and_never_a_filter() -> None:
-    """`mine` decides whether a share action is offered, and nothing else."""
-    assert build_post(_row(author="user", author_user="ice", kind="question"), "ice")["mine"]
-    assert not build_post(_row(author="user", author_user="sam", kind="question"), "ice")["mine"]
-    # George's posts belong to nobody, so they are never "mine".
+def test_mine_is_OWNERSHIP_and_never_a_filter() -> None:
+    """
+    `mine` decides whether a share action is offered, and nothing else.
+
+    Ownership, not authorship: George writes the answer to your question and it
+    is still yours. Getting this backwards is what made every private answer
+    invisible to everybody (alembic p0q1r2s3t4u5).
+    """
+    assert build_post(_row(author="user", author_user="ice",
+                           owner_user="ice", kind="question"), "ice")["mine"]
+    assert not build_post(_row(author="user", author_user="sam",
+                               owner_user="sam", kind="question"), "ice")["mine"]
+    # George AUTHORED this answer; the person who asked OWNS it.
+    answer = build_post(_row(author="george", author_user=None,
+                             owner_user="ice", visibility="private"), "ice")
+    assert answer["mine"] is True
+    assert answer["author_user"] is None
+    assert answer["owner_user"] == "ice"
+    # An org post belongs to nobody in particular.
     assert not build_post(_row(), "ice")["mine"]
+
+
+def test_an_answer_is_reachable_by_the_person_who_asked() -> None:
+    """
+    The regression this whole migration exists for.
+
+    A private answer has author_user NULL, because George wrote it and George
+    has no account. Under the old filter — `visibility = 'org' OR
+    author_user = :me` — it matched neither branch and was visible to nobody:
+    125 of 125, measured on the real database.
+    """
+    row = _row(author="george", author_user=None, owner_user="ice",
+               visibility="private", kind="answer")
+    old_filter = row["visibility"] == "org" or row["author_user"] == "ice"
+    new_filter = row["visibility"] == "org" or row["owner_user"] == "ice"
+    assert old_filter is False, "the old filter is what the fix replaced"
+    assert new_filter is True
 
 
 def test_notices_are_normalised_and_never_dropped() -> None:
@@ -244,6 +276,7 @@ def test_the_cursor_reports_a_real_end() -> None:
 # ---------------------------------------------------------------------------
 
 import hashlib          # noqa: E402
+import re               # noqa: E402
 import json             # noqa: E402
 import uuid as _uuid    # noqa: E402
 from datetime import datetime, timezone  # noqa: E402
@@ -287,6 +320,31 @@ def test_post_ids_are_stable_across_calls() -> None:
     assert log.post_ids() == log.post_ids()
 
 
+def _by_column(sql: str, params: tuple) -> dict:
+    """
+    Params keyed by their column name, read out of the INSERT itself.
+
+    Hardcoding params[4] is how the sibling test in test_chats_contract broke
+    when a column was added mid-list. The column order is already stated in the
+    statement; read it from there and the next column added is free.
+    """
+    cols = re.search(r"\(([^)]*)\)\s*VALUES", sql, re.S).group(1)
+    names = [c.strip() for c in cols.split(",")]
+    values = re.search(r"VALUES\s*\(([^)]*)\)", sql, re.S).group(1)
+    slots = [v.strip() for v in values.split(",")]
+
+    out, i = {}, 0
+    for name, slot in zip(names, slots):
+        if slot == "%s":
+            out[name] = params[i]
+            i += 1
+        elif slot.upper() == "NULL":
+            out[name] = None
+        else:                      # a literal in the SQL, e.g. 'question'
+            out[name] = slot.strip("'")
+    return out
+
+
 def test_a_turn_writes_a_question_and_an_answer(monkeypatch) -> None:
     log, captured = _capture(monkeypatch, thread_id="11111111-1111-1111-1111-111111111111")
     receipts = {"source_table": "new_transactions"}
@@ -299,19 +357,30 @@ def test_a_turn_writes_a_question_and_an_answer(monkeypatch) -> None:
     )
 
     assert len(captured) == 2
-    q_sql, q_params = captured[0]
-    a_sql, a_params = captured[1]
+    q = _by_column(*captured[0])
+    a = _by_column(*captured[1])
 
-    assert "'question','user'" in q_sql.replace(" ", "")
-    assert "'answer','george'" in a_sql.replace(" ", "")
-    # The question carries the person; the answer carries none (ck_posts_actor).
-    assert q_params[2] == "ice"
-    # Both in the same thread, and the answer replies to the question.
-    assert q_params[1] == a_params[1] == "11111111-1111-1111-1111-111111111111"
-    assert a_params[2] == q_params[0]
+    assert q["kind"] == "question" and q["author"] == "user"
+    assert a["kind"] == "answer" and a["author"] == "george"
+
+    # AUTHOR is who wrote it: the person for the question, nobody for the
+    # answer, because George has no account.
+    assert q["author_user"] == "ice"
+    assert a["author_user"] is None
+
+    # OWNER is whose it is. BOTH belong to the person who asked — this is the
+    # whole of alembic p0q1r2s3t4u5, and getting it wrong made every private
+    # answer invisible to everybody.
+    assert q["owner_user"] == "ice"
+    assert a["owner_user"] == "ice"
+
+    # Same thread, and the answer replies to the question.
+    assert q["thread_id"] == a["thread_id"] == "11111111-1111-1111-1111-111111111111"
+    assert a["parent_id"] == q["id"]
+
     # The answer carries its receipts and its caveat.
-    assert json.loads(a_params[4]) == receipts
-    assert json.loads(a_params[5]) == [notice]
+    assert json.loads(a["receipts"]) == receipts
+    assert json.loads(a["notices"]) == [notice]
 
 
 def test_both_posts_are_private(monkeypatch) -> None:

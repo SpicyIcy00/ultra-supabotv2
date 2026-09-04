@@ -15,9 +15,18 @@ chat_history normalises a reopened turn's, legacy string kinds included.
 
 VISIBILITY IS APPLIED IN SQL, NOT HERE. A filter written in Python is a filter
 somebody can forget to call; the route's WHERE clause is
-`visibility = 'org' OR author_user = :me` and this module never sees a row it
+`visibility = 'org' OR owner_user = :me` and this module never sees a row it
 should not have. What it DOES do is tell the client which of the two reasons a
 post is visible for, so the UI can mark a private post as unshared.
+
+OWNER IS NOT AUTHOR, and the distinction is load-bearing. `author_user` is who
+WROTE a post and is NULL for George's, because George has no account.
+`owner_user` is WHOSE IT IS while private — who may see it and who may share
+it. For a question they are the same person; for the answer to that question
+they are not. Filtering on the author made every private answer match neither
+branch, so 125 of 125 were invisible to everyone until 2026-09-05 (alembic
+p0q1r2s3t4u5). A CHECK constraint now forbids a private post with no owner, so
+the bug cannot be written again.
 """
 
 from __future__ import annotations
@@ -47,10 +56,11 @@ def build_post(row: Mapping[str, Any], viewer: str) -> dict[str, Any]:
         row: a george.posts row.
         viewer: the authenticated username, for `mine` — which decides whether
             the UI offers a share action, and nothing else. It is never used to
-            filter: that has already happened in SQL.
+            filter: that has already happened in SQL, on owner_user.
     """
     author = row.get("author") or "george"
     author_user = row.get("author_user")
+    owner_user = row.get("owner_user")
     return {
         "id": str(row["id"]),
         "thread_id": str(row["thread_id"]),
@@ -59,9 +69,12 @@ def build_post(row: Mapping[str, Any], viewer: str) -> dict[str, Any]:
         "author": author,
         "author_user": author_user,
         "visibility": row.get("visibility") or "private",
-        # True when the viewer wrote it. The share action is theirs alone, and
-        # a post they cannot share must not offer them the button.
-        "mine": bool(author_user) and author_user == viewer,
+        "owner_user": owner_user,
+        # OWNERSHIP, not authorship. George writes the answer to your question;
+        # it is still yours to see and yours to share, and he has no account to
+        # own anything with. Filtering on the author instead made every private
+        # answer invisible to everyone (alembic p0q1r2s3t4u5).
+        "mine": bool(owner_user) and owner_user == viewer,
         "body": row.get("body") or "",
         "payload": dict(row["payload"]) if row.get("payload") else None,
         "receipts": dict(row["receipts"]) if row.get("receipts") else None,

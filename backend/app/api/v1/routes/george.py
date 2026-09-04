@@ -369,11 +369,14 @@ async def greeting(
 # ---------------------------------------------------------------------------
 
 # Posts a caller may see. The one place this is expressed.
-_POST_VISIBLE = "p.hidden_at IS NULL AND (p.visibility = 'org' OR p.author_user = :me)"
+# owner_user, NOT author_user. George writes the answers and has no account,
+# so filtering on the author made every private answer invisible to everyone —
+# 125 of 125, measured (alembic p0q1r2s3t4u5).
+_POST_VISIBLE = "p.hidden_at IS NULL AND (p.visibility = 'org' OR p.owner_user = :me)"
 
 _POST_COLUMNS = (
     "p.id, p.thread_id, p.parent_id, p.kind, p.author, p.author_user, "
-    "p.visibility, p.body, p.payload, p.receipts, p.notices, "
+    "p.visibility, p.owner_user, p.body, p.payload, p.receipts, p.notices, "
     "p.conversation_id, p.created_at"
 )
 
@@ -388,7 +391,10 @@ class RiverPost(BaseModel):
     author: str
     author_user: Optional[str] = None
     visibility: str
-    #: True when the viewer wrote it — decides whether a share action is
+    #: Whose post it is while private — who may see it and who may share it.
+    #: Distinct from author_user, which is only who WROTE it.
+    owner_user: Optional[str] = None
+    #: True when the viewer owns it — decides whether a share action is
     #: offered, and nothing else. Visibility was applied in SQL.
     mine: bool
     body: str
