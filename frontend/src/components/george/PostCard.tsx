@@ -22,11 +22,21 @@
  */
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import type { ToolMeta } from '../../types/george';
+import type { PinCallResult } from '../../types/pins';
 import type { Post } from '../../types/river';
+import { GeorgeChart } from './GeorgeChart';
 import { NoticeBanner } from './NoticeBanner';
 import { ReceiptsBlock } from './ReceiptsBlock';
 import { MARK_PATH } from './markState';
 import { postView } from './postShape';
+import { inferShape } from './pinShape';
+
+/** Whether this post draws its own charts, each with its own receipts. */
+function hasCharts(post: Post): boolean {
+  const raw = (post.payload as { charted?: unknown } | null)?.charted;
+  return Array.isArray(raw) && raw.length > 0;
+}
 
 /** George's mark as an avatar chip: cream on navy, one shared path. */
 export function MarkAvatar({ className = 'h-7 w-7' }: { className?: string }) {
@@ -112,15 +122,78 @@ function FollowUpChips({
   );
 }
 
+/**
+ * The figures a stored post describes, drawn through the SAME component a live
+ * turn and a tile draw them with.
+ *
+ * A SNAPSHOT, AND IT SAYS SO. The rows were stored when the answer was
+ * written, not re-fetched now — see ConversationLog.posts for why re-running
+ * would put a fresh chart beside prose that still states the old figure. What
+ * makes that honest is the receipts underneath: `snapshot_timestamp` is when
+ * the data was READ, not when this rendered, so the chart carries its own age
+ * (UI rule 6).
+ *
+ * Per result rather than per post, because an answer that read two sources
+ * read them at two moments, and one timestamp over both would describe data it
+ * does not cover.
+ *
+ * The loop only ever stored results it could send whole, so `rowsComplete` is
+ * true by construction here; passing it explicitly keeps inferShape's refusal
+ * to chart a prefix in the picture rather than relying on that invariant
+ * holding forever.
+ */
+function ChartedResults({ post }: { post: Post }) {
+  const raw = (post.payload as { charted?: unknown } | null)?.charted;
+  const results = Array.isArray(raw) ? raw : [];
+  const charts = results.flatMap((r) => {
+    const entry = r as { seq?: number; tool?: string; rows?: unknown; meta?: unknown };
+    const rows = Array.isArray(entry.rows) ? (entry.rows as Record<string, unknown>[]) : [];
+    if (rows.length === 0) return [];
+    // inferShape reads only `rows` and `meta`; the rest of PinCallResult is a
+    // tile's run state, which a stored post has no equivalent of. Filled with
+    // what is true rather than left undefined: the call succeeded, or the loop
+    // would not have stored its rows.
+    const result: PinCallResult = {
+      tool: entry.tool ?? '',
+      arguments: {},
+      status: 'ok',
+      duration_ms: 0,
+      rows,
+      meta: (entry.meta ?? {}) as ToolMeta,
+      notices: [],
+    };
+    const shape = inferShape(result, undefined, true);
+    return shape?.kind === 'chart' ? [{ seq: entry.seq ?? 0, result, shape }] : [];
+  });
+  if (charts.length === 0) return null;
+  return (
+    <div className="space-y-3">
+      {charts.map(({ seq, result, shape }) => (
+        <div key={seq} className="rounded-xl border border-george-line bg-george-paper p-3">
+          <GeorgeChart shape={shape} meta={result.meta} />
+          <ReceiptsBlock meta={result.meta} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function PostCard({
   post,
   grouped = false,
   onAsk,
+  onOpenThread,
+  onShare,
+  sharing = false,
 }: {
   post: Post;
   grouped?: boolean;
   /** Absent where there is nowhere to ask; chips are then not offered. */
   onAsk?: (question: string) => void;
+  /** Absent inside a thread, where there is nowhere further to go. */
+  onOpenThread?: (threadId: string) => void;
+  onShare?: (postId: string) => void;
+  sharing?: boolean;
 }) {
   const view = postView(post);
 
@@ -135,6 +208,25 @@ export function PostCard({
             <span className="text-[11px] text-george-muted">{post.author_user}</span>
           )}
           <PostTime post={post} />
+          {view.canShare && onShare && (
+            <button
+              type="button"
+              onClick={() => onShare(post.id)}
+              disabled={sharing}
+              className="text-[11px] text-george-slate hover:text-george-navy disabled:opacity-50"
+            >
+              {sharing ? 'Sharing…' : 'Share'}
+            </button>
+          )}
+          {onOpenThread && (
+            <button
+              type="button"
+              onClick={() => onOpenThread(post.thread_id)}
+              className="text-[11px] text-george-slate hover:text-george-navy"
+            >
+              Thread
+            </button>
+          )}
         </div>
       </div>
     );
@@ -168,13 +260,43 @@ export function PostCard({
           </div>
         )}
 
-        {view.showReceipts && <ReceiptsBlock meta={post.receipts ?? undefined} />}
+        {/* Below the prose because the answer leads with the number. Each
+            chart carries its OWN receipts, so the post-level block below would
+            only repeat one of them under a different heading. */}
+        <ChartedResults post={post} />
+
+        {!hasCharts(post) && view.showReceipts && (
+          <ReceiptsBlock meta={post.receipts ?? undefined} />
+        )}
 
         {/* Below the receipts: the chips are about what to do next, and the
             receipts are about the body above them. */}
         {onAsk && <FollowUpChips post={post} onAsk={onAsk} />}
 
-        <PostTime post={post} />
+        <div className="flex items-center gap-2">
+          <PostTime post={post} />
+          {/* Only on the viewer's own still-private post. postShape decides;
+              this places it. */}
+          {view.canShare && onShare && (
+            <button
+              type="button"
+              onClick={() => onShare(post.id)}
+              disabled={sharing}
+              className="text-[11px] text-george-slate hover:text-george-navy disabled:opacity-50"
+            >
+              {sharing ? 'Sharing…' : 'Share to the river'}
+            </button>
+          )}
+          {onOpenThread && (
+            <button
+              type="button"
+              onClick={() => onOpenThread(post.thread_id)}
+              className="text-[11px] text-george-slate hover:text-george-navy"
+            >
+              Thread
+            </button>
+          )}
+        </div>
       </div>
     </article>
   );

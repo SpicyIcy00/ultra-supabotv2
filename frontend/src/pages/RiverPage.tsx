@@ -21,6 +21,7 @@
  * chats-as-sessions, the left rail's chat list, and the empty state.
  */
 import { useCallback, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PanelRight } from 'lucide-react';
 import { useGeorgeStream } from '../hooks/useGeorgeStream';
@@ -32,7 +33,7 @@ import { SidePanel } from '../components/george/SidePanel';
 import { approvalsView } from '../components/george/approvalState';
 import type { StatusQuery } from '../components/george/statusState';
 import { listApprovals } from '../services/workflowsApi';
-import { readRiver } from '../services/riverApi';
+import { readRiver, sharePost } from '../services/riverApi';
 import { readStatus } from '../services/statusApi';
 
 export default function RiverPage() {
@@ -40,6 +41,8 @@ export default function RiverPage() {
   const qc = useQueryClient();
   const [panelOpen, setPanelOpen] = useState(false);
   const [before, setBefore] = useState<string | null>(null);
+  const [sharingId, setSharingId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   /**
    * The river. Refetched on focus because it is a shared timeline: George
@@ -130,6 +133,26 @@ export default function RiverPage() {
     [ask, qc],
   );
 
+  /**
+   * Share, then refetch.
+   *
+   * The server returns the thread it changed, but the river is a page of many
+   * threads — refetching is simpler than splicing that thread back in, and it
+   * cannot leave the two disagreeing about what is now public.
+   */
+  const onShare = useCallback(
+    async (postId: string) => {
+      setSharingId(postId);
+      try {
+        await sharePost(postId);
+        await qc.invalidateQueries({ queryKey: ['river'] });
+      } finally {
+        setSharingId(null);
+      }
+    },
+    [qc],
+  );
+
   return (
     // THE HEIGHT SUBTRACTS THE PHONE TAB BAR, and must. Layout reserves room
     // for it with `pb-20 md:pb-6` on <main>, but this page cancels <main>'s
@@ -159,6 +182,9 @@ export default function RiverPage() {
               onLoadOlder={() => setBefore(river.data?.before ?? null)}
               loadingOlder={river.isFetching}
               onAsk={onAsk}
+              onOpenThread={(id) => navigate(`/george/t/${id}`)}
+              onShare={onShare}
+              sharingId={sharingId}
             />
 
             {/* The live turn, rendered as a PENDING POST in the same column

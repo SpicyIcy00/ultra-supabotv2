@@ -35,6 +35,21 @@ export const readRiver = async (
   return data;
 };
 
+/**
+ * Share a private post into the river, and get the thread back as it now is.
+ *
+ * ONE WAY ONLY — private to org, never back. The type admits one value because
+ * the server does: you cannot un-show what was shown, so an unshare would
+ * promise something it cannot deliver. Acts on the whole thread, since a
+ * shared question whose answer stayed private is half a conversation.
+ */
+export const sharePost = async (postId: string): Promise<Post[]> => {
+  const { data } = await axios.patch<Post[]>(`${API_BASE}/posts/${postId}`, {
+    visibility: 'org',
+  });
+  return data;
+};
+
 /** One thread, oldest first. 404s rather than returning an empty thread. */
 export const readThread = async (threadId: string): Promise<Post[]> => {
   const { data } = await axios.get<Post[]>(`${API_BASE}/threads/${threadId}`);

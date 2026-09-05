@@ -54,11 +54,20 @@ POST_KINDS = (
 POST_AUTHORS = ("george", "user")
 POST_VISIBILITY = ("org", "private")
 
-# Which kinds George writes. Used to default visibility, and asserted by the
-# contract test: a kind George authors is org-level, because everything he
-# initiates is a company-level fact.
+# Which kinds George writes. He authors all of these; who they BELONG to is a
+# separate question, answered by default_visibility below.
 GEORGE_KINDS = ("brief", "notice", "answer", "approval",
                 "workflow_run", "pin_confirmation", "system")
+
+# George's kinds that are nonetheless somebody's private business.
+#
+#   answer            the reply to a private question, owned by the asker.
+#   pin_confirmation  "a pin is one person's tile" (CLAUDE.md). Corrected
+#                     2026-09-05, BEFORE the writer was wired: this defaulted
+#                     to 'org' with the rest of George's kinds, which would
+#                     have announced "Ice pinned Rockwell net sales" to the
+#                     whole company the first time anybody pinned anything.
+PRIVATE_GEORGE_KINDS = ("answer", "pin_confirmation")
 
 
 class GeorgePost(Base):
@@ -136,9 +145,15 @@ def default_visibility(kind: str) -> str:
     """
     What a post of this kind is visible to, absent an explicit choice.
 
-    George's own posts are org-level; a person's question is private until
-    shared. One function so the loop, the scheduler and the brief route cannot
-    each decide differently — the asymmetry is a product rule (CLAUDE.md, "The
-    river"), not a per-caller preference.
+    George's own posts are org-level BECAUSE OF WHAT THEY ARE, not because he
+    wrote them: a brief, a run, an approval are company-level facts. Two of the
+    kinds he authors are not — an answer belongs to whoever asked, and a pin
+    confirmation to whoever pinned, because a pin is one person's tile.
+
+    One function so the loop, the scheduler, the brief route and pin_writer
+    cannot each decide differently — the asymmetry is a product rule
+    (CLAUDE.md, "The river"), not a per-caller preference.
     """
-    return "org" if kind in GEORGE_KINDS and kind != "answer" else "private"
+    if kind in PRIVATE_GEORGE_KINDS:
+        return "private"
+    return "org" if kind in GEORGE_KINDS else "private"

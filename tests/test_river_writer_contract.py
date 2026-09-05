@@ -23,12 +23,17 @@ import pytest
 
 pytest.importorskip("sqlalchemy", reason="the writers build SQLAlchemy text()")
 
-from app.models.george_post import POST_KINDS, default_visibility  # noqa: E402
+from app.models.george_post import (  # noqa: E402
+    POST_KINDS,
+    PRIVATE_GEORGE_KINDS,
+    default_visibility,
+)
 from app.services import river_writer  # noqa: E402
 from app.services.river_writer import (  # noqa: E402
     post_approval,
     post_brief,
     post_id,
+    post_pin_confirmation,
     post_workflow_run,
 )
 
@@ -229,17 +234,80 @@ def test_georges_own_posts_are_org_level() -> None:
         assert s.params()["visibility"] == "org" == default_visibility(kind)
 
 
-def test_georges_posts_have_no_author_and_no_owner() -> None:
+def test_georges_posts_never_have_an_author() -> None:
+    """author_user is who WROTE it, and George has no account."""
+    s = FakeSession()
+    asyncio.run(post_brief(s, greeting=GREETING, as_of=date(2026, 9, 5)))
+    assert "'george', NULL," in s.calls[0][0]
+
+
+def test_an_org_post_belongs_to_nobody_in_particular() -> None:
     """
-    author_user is who WROTE it and George has no account; owner_user is whose
-    it is while private, and an org post is nobody's in particular. The CHECK
-    that forbids a private post without an owner is satisfied because these are
-    org.
+    owner_user is whose a post is WHILE PRIVATE. An org post has no owner, and
+    the CHECK that forbids a private post without one is satisfied because
+    these are org.
     """
     s = FakeSession()
     asyncio.run(post_brief(s, greeting=GREETING, as_of=date(2026, 9, 5)))
-    sql = s.calls[0][0]
-    assert "'george', NULL, NULL," in sql
+    assert s.params()["owner_user"] is None
+    assert s.params()["visibility"] == "org"
+
+
+# ---------------------------------------------------------------------------
+# A pin somebody made — the one kind George writes that is NOT org
+# ---------------------------------------------------------------------------
+
+def test_a_pin_confirmation_is_private_and_owned() -> None:
+    """
+    "A pin is one person's tile" (CLAUDE.md).
+
+    This defaulted to 'org' with the rest of George's kinds until the writer
+    was wired, which would have announced "Ice pinned Rockwell net sales" to
+    the whole company the first time anybody pinned anything.
+    """
+    assert default_visibility("pin_confirmation") == "private"
+    s = FakeSession()
+    asyncio.run(post_pin_confirmation(
+        s, pin_id=uuid.uuid4(), title="Rockwell net sales", page="Replenishment",
+        owner="ice", tool_calls=1))
+    assert s.params()["visibility"] == "private"
+    assert s.params()["owner_user"] == "ice"
+    # Still authored by George — he made the pin, it is theirs.
+    assert "'george', NULL," in s.calls[0][0]
+
+
+def test_a_pin_confirmation_states_no_figure() -> None:
+    """
+    It says a tile exists and that it re-runs. No receipts, because the
+    receipts rules govern numbers and this states none.
+    """
+    s = FakeSession()
+    asyncio.run(post_pin_confirmation(
+        s, pin_id=uuid.uuid4(), title="Rockwell net sales", page="Replenishment",
+        owner="ice", tool_calls=3))
+    assert s.params()["receipts"] is None
+    body = s.params()["body"]
+    assert "Replenishment" in body and "re-runs" in body and "3 calls" in body
+
+
+def test_a_pin_with_no_page_says_so_rather_than_inventing_one() -> None:
+    s = FakeSession()
+    asyncio.run(post_pin_confirmation(
+        s, pin_id=uuid.uuid4(), title="T", page=None, owner="ice", tool_calls=1))
+    assert "no page" in s.params()["body"]
+    assert "its call" in s.params()["body"]
+
+
+def test_a_pin_announces_itself_once() -> None:
+    pid = uuid.uuid4()
+    first = asyncio.run(post_pin_confirmation(
+        FakeSession(rowcount=1), pin_id=pid, title="T", page=None,
+        owner="ice", tool_calls=1))
+    again = asyncio.run(post_pin_confirmation(
+        FakeSession(rowcount=0), pin_id=pid, title="T", page=None,
+        owner="ice", tool_calls=1))
+    assert first == post_id("pin_confirmation", str(pid))
+    assert again is None
 
 
 # The kinds nothing writes yet, each with the reason. A kind leaves this list
@@ -251,14 +319,12 @@ UNWIRED = {
     "notice",
     # Written by the agent loop through ConversationLog, not from here.
     "question", "answer",
-    # Written by pin_writer when George pins in conversation.
-    "pin_confirmation",
     # The app speaking about itself. Nothing raises one yet.
     "system",
 }
 
 WIRED = {"brief": post_brief, "workflow_run": post_workflow_run,
-         "approval": post_approval}
+         "approval": post_approval, "pin_confirmation": post_pin_confirmation}
 
 
 def test_every_kind_is_either_wired_or_deliberately_not() -> None:
@@ -271,6 +337,16 @@ def test_every_kind_is_either_wired_or_deliberately_not() -> None:
     assert accounted == set(POST_KINDS), (
         f"unaccounted kinds: {set(POST_KINDS) ^ accounted}"
     )
+
+
+def test_the_private_george_kinds_are_the_two_that_belong_to_somebody() -> None:
+    """
+    George AUTHORS all of his kinds; only two BELONG to a person. Conflating
+    those is what made pin_confirmation default to org.
+    """
+    assert set(PRIVATE_GEORGE_KINDS) == {"answer", "pin_confirmation"}
+    for kind in PRIVATE_GEORGE_KINDS:
+        assert default_visibility(kind) == "private", kind
 
 
 def test_the_notice_kind_is_still_reserved() -> None:

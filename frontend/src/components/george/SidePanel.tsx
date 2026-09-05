@@ -17,8 +17,9 @@
  */
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, X } from 'lucide-react';
+import { ArrowLeft, ChevronRight, X } from 'lucide-react';
 import type { ApprovalsView } from './approvalState';
+import { PinnedPage } from './PinnedPage';
 import { listPinPages } from '../../services/pinsApi';
 
 export function SidePanel({
@@ -31,6 +32,14 @@ export function SidePanel({
   approvals: ApprovalsView;
 }) {
   const [tab, setTab] = useState<'needs' | 'pages'>('needs');
+  /**
+   * The page whose TILES are open, or undefined for the list of pages.
+   *
+   * `null` is a real value here — it is the "Ungrouped" page, the pins with no
+   * page — so the closed state has to be `undefined` rather than null. Using
+   * null for both would make Ungrouped unopenable.
+   */
+  const [openPage, setOpenPage] = useState<string | null | undefined>(undefined);
   const pages = useQuery({ queryKey: ['pin-pages'], queryFn: listPinPages, enabled: open });
 
   if (!open) return null;
@@ -107,6 +116,25 @@ export function SidePanel({
               </>
             )
           ) : (
+            openPage !== undefined ? (
+              /* THE DRAWER SHOWS FIGURES, NOT NAMES. PinTile re-runs its calls
+                 on mount, so these are current rather than remembered — and it
+                 carries its own NoticeBanner and ReceiptsBlock, which is what
+                 makes a tile allowed to show a number at all (UI rules 3, 4,
+                 6). At this width a long caveat is tall; that is the tile
+                 being the right shape, not the wrong one. */
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setOpenPage(undefined)}
+                  className="mb-2 flex min-h-touch items-center gap-1.5 text-[12px] text-george-slate hover:text-george-navy"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+                  All pages
+                </button>
+                <PinnedPage page={openPage} onBack={() => setOpenPage(undefined)} />
+              </div>
+            ) : (
             <>
               {pages.isPending && (
                 <p className="text-[13px] text-george-muted">Loading pages…</p>
@@ -124,17 +152,22 @@ export function SidePanel({
               <ul className="space-y-0.5">
                 {(pages.data ?? []).map((p) => (
                   <li key={p.page ?? '__ungrouped__'}>
-                    <div className="flex min-h-touch items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-[13px] text-george-navy">
+                    <button
+                      type="button"
+                      onClick={() => setOpenPage(p.page)}
+                      className="flex min-h-touch w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] text-george-navy hover:bg-george-line/40"
+                    >
                       <span className="truncate">{p.page ?? 'Ungrouped'}</span>
                       <span className="shrink-0 tabular-nums text-[11px] text-george-muted">
                         {p.pins}
                       </span>
                       <ChevronRight className="h-3.5 w-3.5 shrink-0 text-george-muted" aria-hidden />
-                    </div>
+                    </button>
                   </li>
                 ))}
               </ul>
             </>
+            )
           )}
         </div>
       </aside>

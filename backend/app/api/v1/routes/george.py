@@ -636,6 +636,66 @@ async def read_river(
     )
 
 
+class ShareRequest(BaseModel):
+    """Only one direction exists, so the body says which and nothing else."""
+
+    visibility: Literal["org"]
+
+
+@router.patch("/river/posts/{post_id}", response_model=List[RiverPost])
+async def share_post(
+    post_id: uuid.UUID,
+    body: ShareRequest,
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_george_user),
+) -> List[RiverPost]:
+    """
+    Share a private post into the river. Returns the whole thread as it now is.
+
+    ONE WAY ONLY. private -> org, never back. That is the same argument that
+    set the default (CLAUDE.md, "The river"): a private default can be opened
+    per post by the person who owns it, and a public one cannot un-show what
+    was shown. An unshare button would promise something it cannot deliver, so
+    the request type admits exactly one value.
+
+    IT ACTS ON THE THREAD, not the post. A shared question whose answer stayed
+    private is half a conversation, and the half missing is the one with the
+    figures in it. So this shares every post in the thread THE CALLER OWNS —
+    never anybody else's, even in a thread they started.
+
+    Ownership is enforced in the UPDATE, not checked first: a check and a write
+    are two statements, and the row can change between them.
+    """
+    owned = (
+        await db.execute(
+            text("SELECT thread_id FROM george.posts "
+                 " WHERE id = :id AND owner_user = :me AND hidden_at IS NULL"),
+            {"id": post_id, "me": user.username},
+        )
+    ).scalar_one_or_none()
+    if owned is None:
+        # Not found and not yours are the same answer: a post somebody else
+        # owns is not the caller's to learn about.
+        raise HTTPException(status_code=404, detail="No post of yours with that id.")
+
+    await db.execute(
+        text("UPDATE george.posts SET visibility = 'org' "
+             " WHERE thread_id = :t AND owner_user = :me "
+             "   AND visibility = 'private' AND hidden_at IS NULL"),
+        {"t": owned, "me": user.username},
+    )
+
+    rows = (
+        await db.execute(
+            text(f"SELECT {_POST_COLUMNS} FROM george.posts p "
+                 f"WHERE p.thread_id = :t AND {_POST_VISIBLE} "
+                 f"ORDER BY p.created_at ASC"),
+            {"t": owned, "me": user.username},
+        )
+    ).mappings().all()
+    return [RiverPost.model_validate(p) for p in thread_of(rows, user.username)]
+
+
 @router.get("/river/threads/{thread_id}", response_model=List[RiverPost])
 async def read_thread(
     thread_id: uuid.UUID,

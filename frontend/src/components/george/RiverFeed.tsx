@@ -32,6 +32,9 @@ interface Props {
   loadingOlder?: boolean;
   /** Asking from a post's follow-up chip. */
   onAsk?: (question: string) => void;
+  onOpenThread?: (threadId: string) => void;
+  onShare?: (postId: string) => void;
+  sharingId?: string | null;
 }
 
 export function RiverFeed({
@@ -42,6 +45,9 @@ export function RiverFeed({
   onLoadOlder,
   loadingOlder = false,
   onAsk,
+  onOpenThread,
+  onShare,
+  sharingId = null,
 }: Props) {
   if (loading && posts.length === 0) {
     return (
@@ -98,6 +104,9 @@ export function RiverFeed({
           post={post}
           grouped={groupsWith(posts[i - 1], post)}
           onAsk={onAsk}
+          onOpenThread={onOpenThread}
+          onShare={onShare}
+          sharing={sharingId === post.id}
         />
       ))}
 

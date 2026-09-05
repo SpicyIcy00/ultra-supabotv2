@@ -264,6 +264,47 @@ that finds nothing says nothing at all. Not "alert", "trigger", "monitor" or
 "rule". Deferred until after C.4; written down now so it cannot be built under
 a different name in the meantime.
 
+### Two visuals declined, and what would change the answer
+
+*Recorded 2026-09-05.* Both were proposed, both were surveyed against the data,
+and both were declined for the same kind of reason: the picture would assert
+something nobody recorded. A chart is harder to caveat than a sentence — the
+notice sits beside it while the shape does the talking — so a visual that needs
+data we do not have is not a smaller version of a good idea, it is a confident
+version of a wrong one.
+
+- **Stores as places / a map.** `stores.active_retail` carries `id`, `name` and
+  `display_name`, and nothing spatial. There are no coordinates anywhere in
+  this repo. Placing seven shops approximately would be a drawing asserting
+  positions nobody entered, and readers trust positions.
+  **What would change it:** real coordinates on the store records, from a
+  source that can be cited in `filters_applied` like any other field.
+
+- **Stock as fullness.** Fullness needs a denominator and there is none:
+  `warning_stock IS NULL on 31,617 rows (100%)` — the same fact the
+  `low_stock_not_operational` notice already reports. A bar drawn "70% full"
+  would invent the 100%, which is the notice's failure mode rendered as a
+  graphic.
+  **What would change it:** a per-product-per-location capacity or reorder
+  level that is actually populated, at which point the low-stock notice
+  becomes unnecessary too.
+
+**Movement as weighted arrows is NOT declined** — `movement.bases.transfer_records`
+sets `names_destination: true`, so from→to pairs are real data and the arrows
+would be backed by something.
+
+### What George may say about his own charts
+
+An annotation may **point** at rows and may **characterise** them in prose. It
+may never introduce a number.
+
+"This is the level shift, not a soft month" is a claim about rows the tool
+returned, and that is what makes it allowable — rule 1 is untouched, because no
+figure has been invented. An annotation carries indices into the returned rows
+and George's reading of them; the figures stay on the axis and in the receipts.
+Break that and a chart becomes the one place in this app where the model can
+write a number and have a picture vouch for it.
+
 What a save produces is a **workflow**: named steps, parameters, and the
 reasoning behind each choice, kept as immutable **versions**. A **run** is one
 execution of one version; a **backtest** is a run against a past window. Not

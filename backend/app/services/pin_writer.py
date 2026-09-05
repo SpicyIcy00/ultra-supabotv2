@@ -32,6 +32,7 @@ from typing import Any, Optional
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.river_writer import post_pin_confirmation
 from app.models.george_pin import GeorgePin
 from app.services.pin_runner import (
     PinValidationError,
@@ -172,6 +173,27 @@ async def create_pin(
     )
     db.add(pin)
     await db.flush()
+
+    # The pin in the river, so it has a durable record beside everything else
+    # George did. PRIVATE and owned by whoever pinned: a pin is one person's
+    # tile, and "Ice pinned Rockwell net sales" is somebody's workspace rather
+    # than a company-level fact (app/models/george_post.PRIVATE_GEORGE_KINDS).
+    #
+    # Here rather than in the route, because this is the path the route AND
+    # George's injected writer both take — two call sites would drift, which is
+    # the reason this module exists at all. Idempotent on the pin id.
+    #
+    # Never fatal: a pin that failed to announce itself is still a pin, and
+    # raising here would lose the write over a post.
+    try:
+        await post_pin_confirmation(
+            db, pin_id=pin.id, title=pin.title, page=normalized,
+            owner=username, tool_calls=len(calls),
+            conversation_id=conversation_id,
+        )
+    except Exception as exc:  # noqa: BLE001 - a post must not cost a pin
+        print(f"[pins] river post failed for pin {pin.id}: "
+              f"{type(exc).__name__}: {exc}")
 
     return CreatedPin(
         row=pin,

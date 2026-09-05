@@ -961,10 +961,26 @@ class ConversationLog:
         self._exec(
             "INSERT INTO george.posts "
             "(id, thread_id, parent_id, kind, author, author_user, owner_user, "
-            " visibility, body, receipts, notices, conversation_id, created_at) "
-            "VALUES (%s,%s,%s,'answer','george',NULL,%s,'private',%s,%s,%s,%s,%s)",
+            " visibility, body, payload, receipts, notices, conversation_id, "
+            " created_at) "
+            "VALUES (%s,%s,%s,'answer','george',NULL,%s,'private',%s,%s,%s,%s,%s,%s)",
             (
                 answer_id, self.thread_id, question_id, owner, answer,
+                # The chart, so it survives a reload.
+                #
+                # WHY THE ROWS AND NOT THE CALL. A pin re-runs, because a pin
+                # is only a number and only worth anything current. An answer
+                # post has fixed prose above the chart stating a figure;
+                # re-running would draw different bars beside a sentence that
+                # still says the old one — two figures for one claim on one
+                # screen. The prose fixes the moment, so the chart is of that
+                # moment: a SNAPSHOT, carried with the receipts that say when
+                # it was read (UI rule 6).
+                #
+                # All of them or none, as the tool_result frame does: the loop
+                # only collected results it could send whole.
+                (json.dumps({"charted": kw["charted"]})
+                 if kw.get("charted") else None),
                 json.dumps(_json_safe(kw["receipts"])) if kw.get("receipts") else None,
                 json.dumps(_json_safe(kw.get("notices") or [])),
                 self.conversation_id, datetime.now(timezone.utc),
@@ -1210,6 +1226,12 @@ async def run(
     # meta of the last tool result that actually produced one — the receipts
     # shown under the answer. See the `receipts` frame emitted before `done`.
     last_meta: Optional[dict] = None
+
+    # Whole results, kept so the ANSWER POST can carry its chart. A live turn
+    # draws from the tool_result frames; a stored post has no frames to draw
+    # from, and re-running the call instead would put a fresh chart beside
+    # prose that still states the old figure. See ConversationLog.posts.
+    charted: list[dict] = []
 
     yield _sse("start", {"conversation_id": log.conversation_id,
                          "thread_id": log.thread_id,
@@ -1672,6 +1694,15 @@ async def run(
                     "rows": full_rows if rows_complete else [],
                     "rows_complete": rows_complete,
                 })
+                # Kept for the ANSWER POST, so a chart survives a reload. Same
+                # all-or-none rule as the frame above: a result that could not
+                # be sent whole is not stored at all, because a chart drawn
+                # from a prefix is a different chart. See charted_results.
+                if rows_complete and full_rows:
+                    charted.append({
+                        "seq": gseq, "tool": b.name,
+                        "rows": _json_safe(full_rows), "meta": _json_safe(meta),
+                    })
                 # A write that now exists, announced as its own frame.
                 #
                 # The answer is also told to say what it wrote and where, but a
@@ -1756,6 +1787,7 @@ async def run(
     log.posts(
         user_id=user_id, asked_at=asked_at, question=question,
         final_answer=answer or None, notices=pending, receipts=last_meta,
+        charted=charted,
     )
 
     # The ids of the two posts, so a client that is rendering the river can

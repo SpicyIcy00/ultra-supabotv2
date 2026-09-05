@@ -32,6 +32,7 @@ from app.models.george_post import (
     POST_AUTHORS,
     POST_KINDS,
     POST_VISIBILITY,
+    PRIVATE_GEORGE_KINDS,
     default_visibility,
 )
 from app.models.storehub import (
@@ -74,6 +75,7 @@ __all__ = [
     "POST_KINDS",
     "POST_AUTHORS",
     "POST_VISIBILITY",
+    "PRIVATE_GEORGE_KINDS",
     "default_visibility",
     "StorehubImport",
     "PurchaseOrder",

@@ -23,7 +23,10 @@ the insert are two statements and the race lives between them.
 
 VISIBILITY IS NOT DECIDED HERE. It comes from default_visibility() in the
 model, which is the single place the asymmetry lives (CLAUDE.md, "The river").
-Everything in this module is one of George's own kinds, so all of it is org.
+Most of what this module writes is org-level, because a brief, a run and an
+approval are company-level facts — but NOT all of it: a pin confirmation is
+private and owned by whoever pinned, because "a pin is one person's tile".
+That distinction is the model's to make, not this file's.
 
 THE NOTICE KIND IS DELIBERATELY ABSENT. `notice` means George noticed something
 BETWEEN briefs, which is what a Watch is (CLAUDE.md vocabulary, added
@@ -52,9 +55,9 @@ INSERT INTO george.posts
     (id, thread_id, parent_id, kind, author, author_user, owner_user,
      visibility, body, payload, receipts, notices, conversation_id, created_at)
 VALUES
-    (:id, :thread_id, NULL, :kind, 'george', NULL, NULL,
+    (:id, :thread_id, NULL, :kind, 'george', NULL, :owner_user,
      :visibility, :body, CAST(:payload AS jsonb), CAST(:receipts AS jsonb),
-     CAST(:notices AS jsonb), NULL, :created_at)
+     CAST(:notices AS jsonb), :conversation_id, :created_at)
 ON CONFLICT (id) DO NOTHING
 """
 
@@ -77,10 +80,12 @@ async def _write(
     kind: str,
     key: str,
     body: str,
+    owner_user: Optional[str] = None,
     payload: Optional[dict[str, Any]] = None,
     receipts: Optional[dict[str, Any]] = None,
     notices: Optional[list[dict[str, Any]]] = None,
     created_at: Optional[datetime] = None,
+    conversation_id: Optional[uuid.UUID] = None,
 ) -> Optional[uuid.UUID]:
     """
     One post, or None if this event already has one.
@@ -100,6 +105,10 @@ async def _write(
             # carries this id forward, which is how a thread emerges.
             "thread_id": pid,
             "kind": kind,
+            # NULL for an org post — it belongs to nobody in particular — and
+            # the owner for a private one, which the CHECK requires.
+            "owner_user": owner_user,
+            "conversation_id": conversation_id,
             "visibility": default_visibility(kind),
             "body": body,
             "payload": json.dumps(payload) if payload is not None else None,
@@ -245,4 +254,46 @@ async def post_approval(
         # govern numbers. Its times are its own — see the C.1 decision.
         receipts=None,
         notices=[],
+    )
+
+
+# ---------------------------------------------------------------------------
+# A pin somebody made
+# ---------------------------------------------------------------------------
+
+async def post_pin_confirmation(
+    db: AsyncSession, *, pin_id: uuid.UUID, title: str, page: Optional[str],
+    owner: str, tool_calls: int, conversation_id: Optional[uuid.UUID] = None,
+) -> Optional[uuid.UUID]:
+    """
+    A pin George made because he was asked to, as a post.
+
+    PRIVATE, AND OWNED BY WHOEVER PINNED. "A pin is one person's tile"
+    (CLAUDE.md), so this is the one kind George authors that is nobody else's
+    business — announcing "Ice pinned Rockwell net sales" to the whole company
+    is not a company-level fact, it is somebody's workspace.
+
+    NO RECEIPTS, deliberately: a pin confirmation states no figure. It says a
+    tile now exists and that it re-runs, which is the one thing a reader needs
+    and the one thing the model's own prose has been caught getting wrong (see
+    pins.claim_check). The `pinned` SSE frame already confirms it live; this is
+    the durable record in the timeline.
+
+    Keyed on the pin, so a pin announces itself once.
+    """
+    where = f" to **{page}**" if page else " with no page"
+    runs = "its call" if tool_calls == 1 else f"its {tool_calls} calls"
+    return await _write(
+        db,
+        kind="pin_confirmation",
+        key=str(pin_id),
+        owner_user=owner,
+        body=f"Pinned “{title}”{where}. The tile re-runs {runs} each time it loads.",
+        payload={
+            "pin_id": str(pin_id), "title": title, "page": page,
+            "tool_calls": tool_calls,
+        },
+        receipts=None,
+        notices=[],
+        conversation_id=conversation_id,
     )

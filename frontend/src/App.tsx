@@ -17,6 +17,9 @@ const AIChatPage = React.lazy(() => import('./pages/AIChatPage'));
 // George is a parallel surface to AIChatPage, not a replacement — /ai-chat and
 // everything under components/chat keep working unchanged.
 const RiverPage = React.lazy(() => import('./pages/RiverPage'));
+// One thread on its own. A route rather than an overlay because a thread is a
+// thing you send somebody, and a modal has no URL.
+const ThreadPage = React.lazy(() => import('./pages/ThreadPage'));
 // A design surface: outside the app chrome and behind no RequirePage gate
 // (SessionGuard still applies, as it does to every route). Fixtures only, no
 // backend, and nothing links to it. See pages/RiverPreview.tsx.
@@ -46,6 +49,7 @@ function ChromeRoutes() {
         <Route path="/vending" element={<RequirePage pageKey="dashboard"><Dashboard /></RequirePage>} />
         <Route path="/ai-chat" element={<RequirePage pageKey="ai_chat"><AIChatPage /></RequirePage>} />
         <Route path="/george" element={<RequirePage pageKey="george"><RiverPage /></RequirePage>} />
+        <Route path="/george/t/:threadId" element={<RequirePage pageKey="george"><ThreadPage /></RequirePage>} />
         {/* Warehouse owns two tabs: Replenishment Reports and Barcode Generator */}
         <Route path="/warehouse" element={<RequirePage pageKey="warehouse"><WarehousePage /></RequirePage>} />
         <Route path="/packing" element={<RequirePage pageKey="packing"><PackingPage /></RequirePage>} />
