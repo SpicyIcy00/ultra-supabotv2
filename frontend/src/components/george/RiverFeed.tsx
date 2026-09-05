@@ -30,6 +30,8 @@ interface Props {
   hasOlder?: boolean;
   onLoadOlder?: () => void;
   loadingOlder?: boolean;
+  /** Asking from a post's follow-up chip. */
+  onAsk?: (question: string) => void;
 }
 
 export function RiverFeed({
@@ -39,6 +41,7 @@ export function RiverFeed({
   hasOlder = false,
   onLoadOlder,
   loadingOlder = false,
+  onAsk,
 }: Props) {
   if (loading && posts.length === 0) {
     return (
@@ -90,7 +93,12 @@ export function RiverFeed({
       )}
 
       {posts.map((post, i) => (
-        <PostCard key={post.id} post={post} grouped={groupsWith(posts[i - 1], post)} />
+        <PostCard
+          key={post.id}
+          post={post}
+          grouped={groupsWith(posts[i - 1], post)}
+          onAsk={onAsk}
+        />
       ))}
 
       {/* A failure that arrives after some posts are on screen must not replace

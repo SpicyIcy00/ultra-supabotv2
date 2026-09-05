@@ -70,7 +70,58 @@ function PostTime({ post }: { post: Post }) {
   );
 }
 
-export function PostCard({ post, grouped = false }: { post: Post; grouped?: boolean }) {
+/**
+ * The obvious next questions a post offers.
+ *
+ * A brief post carries these in its payload (river_writer.post_brief), derived
+ * from the brief's own rows. They are what "ask and I'll run it" has been
+ * promising: a chip is a QUESTION, and clicking one asks George in the
+ * ordinary way, so the reply arrives as its own posts with their own receipts.
+ *
+ * Nothing here may use the approvals colour — a question George is offering to
+ * answer needs nobody.
+ */
+function FollowUpChips({
+  post,
+  onAsk,
+}: {
+  post: Post;
+  onAsk: (question: string) => void;
+}) {
+  const raw = (post.payload as { follow_ups?: unknown } | null)?.follow_ups;
+  const chips = Array.isArray(raw)
+    ? (raw as { label?: unknown; question?: unknown }[]).filter(
+        (c) => typeof c?.label === 'string' && typeof c?.question === 'string',
+      )
+    : [];
+  if (chips.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {chips.map((c) => (
+        <button
+          key={String(c.question)}
+          type="button"
+          onClick={() => onAsk(String(c.question))}
+          title={String(c.question)}
+          className="min-h-touch rounded-full border border-george-line bg-george-paper px-3 py-1.5 text-[12px] text-george-slate hover:border-george-slate hover:text-george-navy"
+        >
+          {String(c.label)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function PostCard({
+  post,
+  grouped = false,
+  onAsk,
+}: {
+  post: Post;
+  grouped?: boolean;
+  /** Absent where there is nowhere to ask; chips are then not offered. */
+  onAsk?: (question: string) => void;
+}) {
   const view = postView(post);
 
   if (view.side === 'user') {
@@ -118,6 +169,10 @@ export function PostCard({ post, grouped = false }: { post: Post; grouped?: bool
         )}
 
         {view.showReceipts && <ReceiptsBlock meta={post.receipts ?? undefined} />}
+
+        {/* Below the receipts: the chips are about what to do next, and the
+            receipts are about the body above them. */}
+        {onAsk && <FollowUpChips post={post} onAsk={onAsk} />}
 
         <PostTime post={post} />
       </div>

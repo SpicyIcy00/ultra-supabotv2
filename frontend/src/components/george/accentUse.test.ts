@@ -37,13 +37,16 @@ const ALLOWED: Record<string, string> = {
   // presence, it asks for nothing, and its error state changes the DRAWING and
   // never the hue.
   'ReactiveMark.tsx': 'the mark — CLAUDE.md UI rule 5, amended 2026-09-04',
-  // The approval queue itself: the rule's one and only occupant.
-  'Rails.tsx': 'the approval queue — the reserved use',
-  // Gated by postShape.accent, which is a list of one and is tested as such.
-  'PostCard.tsx': 'approval posts, gated by postShape.ACCENT_KINDS',
-  // The needs-you count on the status band, shown only for a loaded, non-zero
+  // Gated by postShape.ACCENT_KINDS, which is now EMPTY — so this branch
+  // cannot currently fire. Kept rather than deleted so that adding a kind to
+  // that list is one edit and not two, and the list is where the decision is
+  // argued.
+  'PostCard.tsx': 'gated by postShape.ACCENT_KINDS, currently empty',
+  // The needs-you count above the river, shown only for a loaded, non-zero
   // count (UI rules 5 and 8).
-  'RiverPreview.tsx': 'the needs-you count on the status band',
+  'StatusBand.tsx': 'the needs-you count on the status band',
+  // The approval queue itself, in the drawer.
+  'SidePanel.tsx': 'the approval queue — the reserved use',
 };
 
 function sourceFiles(dir: string): string[] {
@@ -96,8 +99,14 @@ describe('UI rule 5 — one colour means "needs you"', () => {
   });
 
   it('keeps the exemption list short enough to read', () => {
-    // Not a style preference: a long list of exemptions IS a second use, and a
-    // fifth entry should require a conversation rather than a commit.
+    // Not a style preference: a long list of exemptions IS a second use, so
+    // this number going up should require an argument rather than a commit.
+    //
+    // Raised to 5 when the river arrived and returned to 4 the same day, when
+    // Rails.tsx — the old approval rail — was deleted with the old George
+    // page. It should go DOWN again when PostCard's branch is either used or
+    // removed. If somebody wants a fifth, the honest move is to ask whether
+    // the colour still means one thing.
     expect(Object.keys(ALLOWED).length).toBeLessThanOrEqual(4);
   });
 });

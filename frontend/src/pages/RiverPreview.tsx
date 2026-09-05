@@ -15,41 +15,10 @@
  * is the case UI rule 6 exists for and therefore the case a preview must show.
  */
 import { RiverFeed } from '../components/george/RiverFeed';
+import { StatusBand } from '../components/george/StatusBand';
+import type { StatusQuery } from '../components/george/statusState';
 import { MarkAvatar } from '../components/george/PostCard';
 import { RIVER_FIXTURE } from '../components/george/riverFixture';
-
-/**
- * The status band: store health, per-source freshness, and what needs you.
- *
- * Static here — C.4 wires it. It is in the preview because its HEIGHT is the
- * question: it sits above the river on a phone, and anything more than one
- * line pushes the newest post off the first screen.
- */
-function StatusBand({ needsYou }: { needsYou: number }) {
-  return (
-    <div className="flex items-center gap-3 border-b border-george-line px-3 py-2">
-      <div className="flex items-center gap-1" title="7 active retail stores">
-        {Array.from({ length: 7 }).map((_, i) => (
-          <span
-            key={i}
-            className="h-1.5 w-1.5 rounded-full bg-george-slate/50"
-            aria-hidden
-          />
-        ))}
-      </div>
-      <span className="text-[11px] text-george-muted">read 06:00</span>
-      <span className="flex-1" />
-      {/* The one place the accent is allowed on this band, and only when the
-          count came back non-zero (UI rules 5 and 8). */}
-      {needsYou > 0 && (
-        <span className="flex items-center gap-1 text-[11px] text-george-accent">
-          <span className="h-1.5 w-1.5 rounded-full bg-george-accent" aria-hidden />
-          {needsYou} needs you
-        </span>
-      )}
-    </div>
-  );
-}
 
 function Composer() {
   return (
@@ -61,6 +30,29 @@ function Composer() {
     </div>
   );
 }
+
+/**
+ * A loaded status result, so the preview shows the band's KNOWN state. The
+ * unknown states are covered by statusState.test.ts, which is where they can
+ * be asserted rather than eyeballed.
+ */
+const PREVIEW_STATUS: StatusQuery = {
+  status: 'success',
+  data: {
+    stores: [
+      { name: 'Rockwell', flagged: false }, { name: 'Greenhills', flagged: true },
+      { name: 'Magnolia', flagged: false }, { name: 'North Edsa', flagged: false },
+      { name: 'Fairview', flagged: true }, { name: 'Opus', flagged: false },
+      { name: 'Shang', flagged: false },
+    ],
+    stores_known: true,
+    sources: [
+      { table: 'new_transactions', read_at: '2026-09-05T06:00:11Z' },
+      { table: 'inventory_snapshots', read_at: '2026-09-04T22:00:09Z' },
+    ],
+    as_of: '2026-09-05',
+  },
+};
 
 function Frame({
   title,
@@ -81,7 +73,7 @@ function Frame({
         className="flex flex-col overflow-hidden rounded-xl border border-george-line bg-george-cream"
         style={{ width, height }}
       >
-        <StatusBand needsYou={1} />
+        <StatusBand query={PREVIEW_STATUS} needsYou={1} onOpenApprovals={() => {}} />
         <div className="flex-1 overflow-y-auto px-3 py-4">
           <div className="mx-auto max-w-2xl">
             <RiverFeed posts={RIVER_FIXTURE} hasOlder />

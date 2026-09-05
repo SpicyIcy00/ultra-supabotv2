@@ -43,9 +43,9 @@ export function GeorgeInput({ onAsk, onCancel, busy }: Props) {
               submit();
             }
           }}
-          placeholder="Ask about sales, stock, movement or vending…"
+          placeholder="Tell George…"
           className="max-h-40 flex-1 resize-none bg-transparent py-1.5 text-[16px] leading-relaxed text-george-navy placeholder:text-george-muted focus:outline-none"
-          aria-label="Ask George"
+          aria-label="Tell George"
         />
 
         <button

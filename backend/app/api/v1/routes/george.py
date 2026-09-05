@@ -491,6 +491,107 @@ class RiverPage(BaseModel):
     before: Optional[str] = None
 
 
+class StoreHealth(BaseModel):
+    """One store, and whether this morning's brief said anything about it."""
+
+    name: str
+    #: True when a brief item named this store today. NOT "unhealthy" — a
+    #: flagged store is one George had something to say about.
+    flagged: bool
+
+
+class SourceFreshness(BaseModel):
+    """A source table and when it was last actually read."""
+
+    table: str
+    read_at: str
+
+
+class StatusBand(BaseModel):
+    """
+    What the band above the river may claim.
+
+    EVERY FIELD IS EITHER A LOADED FACT OR EXPLICITLY UNKNOWN (UI rule 8).
+    `stores_known` is the important one: with no brief post for today there is
+    no basis for saying anything about any store, and the band must render an
+    unknown state rather than a row of calm dots. "All fine" and "we have not
+    looked" are different claims and only one of them is safe to make.
+    """
+
+    #: The active retail stores, from metrics.yaml — the single source for the
+    #: store list (CLAUDE.md). Present even when nothing is known about them.
+    stores: List[StoreHealth] = Field(default_factory=list)
+    #: False when no brief has been posted today, so `flagged` means nothing.
+    stores_known: bool = False
+    #: Newest read per source, from the receipts posts actually carry.
+    sources: List[SourceFreshness] = Field(default_factory=list)
+    #: The Manila day this describes.
+    as_of: str
+
+
+@router.get("/status", response_model=StatusBand)
+async def status_band(
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_george_user),
+) -> StatusBand:
+    """
+    The state of things, for the band above the river.
+
+    Built only from what is already stored: the store list from metrics.yaml,
+    and freshness from the receipts on posts. No new scan, no tool call — this
+    runs on every load of George's home and must cost a couple of indexed
+    reads, not a pass over the transaction table.
+
+    The needs-you count is deliberately NOT here. It comes from
+    GET /workflows/approvals, which is the queue's one source; a second count
+    computed elsewhere could disagree with the rail it sits above.
+    """
+    from datetime import datetime as _dt
+    from zoneinfo import ZoneInfo as _Z
+
+    day = _dt.now(_Z("Asia/Manila")).date().isoformat()
+    defs = _load_defs()
+    stores = [s["display_name"] for s in _req(defs, "stores.active_retail")]
+
+    flagged: set[str] = set()
+    stores_known = False
+    row = (
+        await db.execute(
+            text("SELECT body, payload FROM george.posts "
+                 "WHERE kind = 'brief' AND payload->>'as_of' = :d "
+                 "  AND hidden_at IS NULL LIMIT 1"),
+            {"d": day},
+        )
+    ).mappings().first()
+    if row:
+        # A store is flagged when the brief named it. The body is the greeting
+        # sentence, which always leads with the subject, so a name appearing in
+        # it is a name George had something to say about.
+        stores_known = True
+        body = row["body"] or ""
+        flagged = {name for name in stores if name and name in body}
+
+    sources = (
+        await db.execute(
+            text("SELECT receipts->>'source_table' AS t, "
+                 "       max(receipts->>'snapshot_timestamp') AS read_at "
+                 "  FROM george.posts "
+                 " WHERE receipts ? 'source_table' AND hidden_at IS NULL "
+                 " GROUP BY 1 ORDER BY 2 DESC NULLS LAST LIMIT 6"),
+        )
+    ).mappings().all()
+
+    return StatusBand(
+        stores=[StoreHealth(name=n, flagged=n in flagged) for n in stores],
+        stores_known=stores_known,
+        sources=[
+            SourceFreshness(table=r["t"], read_at=r["read_at"])
+            for r in sources if r["t"] and r["read_at"]
+        ],
+        as_of=day,
+    )
+
+
 @router.get("/river", response_model=RiverPage)
 async def read_river(
     limit: int = Query(RIVER_LIMIT, ge=1, le=RIVER_MAX),
