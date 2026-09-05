@@ -26,7 +26,6 @@ import { PanelRight } from 'lucide-react';
 import { useGeorgeStream } from '../hooks/useGeorgeStream';
 import { GeorgeConversation } from '../components/george/GeorgeConversation';
 import { GeorgeInput } from '../components/george/GeorgeInput';
-import { ReactiveMark } from '../components/george/ReactiveMark';
 import { RiverFeed } from '../components/george/RiverFeed';
 import { StatusBand } from '../components/george/StatusBand';
 import { SidePanel } from '../components/george/SidePanel';
@@ -152,21 +151,21 @@ export default function RiverPage() {
               onAsk={onAsk}
             />
 
-            {/* The live turn, above the composer and below the stored river:
-                it is happening now and is not yet a post anyone else can see. */}
+            {/* The live turn, rendered as a PENDING POST in the same column
+                and the same shape as a stored one — it is happening now and is
+                not yet something anyone else can see, but it is the same kind
+                of thing. Its avatar is the one animated mark on the page. */}
             {turns.length > 0 && (
-              <div className="mt-6 border-t border-george-line pt-5">
-                <div className="mb-3 flex justify-center">
-                  <ReactiveMark
-                    variant="inline"
-                    state={state}
-                    running={running}
-                    toolResults={0}
-                    thinking={thinking}
-                    lastResult={lastResult}
-                  />
-                </div>
-                <GeorgeConversation turns={turns} busy={busy} showEmptyState={false} />
+              <div className="mt-5 space-y-5">
+                <GeorgeConversation
+                  turns={turns}
+                  busy={busy}
+                  showEmptyState={false}
+                  state={state}
+                  running={running}
+                  lastResult={lastResult}
+                  thinking={thinking}
+                />
               </div>
             )}
           </div>
