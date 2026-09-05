@@ -57,19 +57,34 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 720
 
     # CORS
-    # CORS
-    # Default allowed origins
+    #
+    # WHAT THIS LIST IS AND IS NOT FOR. In normal operation it is not
+    # exercised at all: the frontend calls "/api/v1" SAME-ORIGIN and Vercel
+    # rewrites that to Railway server-side (frontend/vercel.json), so the
+    # browser never makes a cross-origin request and no preflight happens.
+    # This list matters only when something calls Railway directly — a local
+    # frontend against production, a script, a probe.
+    #
+    # Corrected 2026-09-05. Both production entries were dead: the app is
+    # served from thesupabot.vercel.app, while these named
+    # ultra-supabotv2.vercel.app (DEPLOYMENT_NOT_FOUND) and a
+    # ultra-supabotv2-8iqmvzzur-… preview URL (404). Nothing failed because of
+    # it, which is exactly why it went unnoticed for as long as it did — a
+    # same-origin proxy means a wrong CORS list is silent until the first time
+    # somebody needs it.
     CORS_ORIGINS: List[str] = [
-        "http://localhost:5173", 
-        "http://localhost:5174", 
-        "http://localhost:5175", 
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
         "http://localhost:3000",
-        "https://ultra-supabotv2.vercel.app",
-        "https://ultra-supabotv2-8iqmvzzur-spicyicy00s-projects.vercel.app"
+        "https://thesupabot.vercel.app",
     ]
 
-    # Regex for Vercel preview deployments (matches https://ultra-supabotv2-*.vercel.app)
-    CORS_ORIGIN_REGEX: str = r"https://ultra-supabotv2.*\.vercel\.app"
+    # Vercel preview deployments of the same project. The project is named
+    # thesupabot, so previews are thesupabot-<hash>-<scope>.vercel.app — the
+    # old pattern matched ultra-supabotv2-*, which no deployment has ever
+    # used since the project was renamed.
+    CORS_ORIGIN_REGEX: str = r"https://thesupabot[a-z0-9-]*\.vercel\.app"
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
