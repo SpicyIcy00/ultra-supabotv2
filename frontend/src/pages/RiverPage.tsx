@@ -131,7 +131,17 @@ export default function RiverPage() {
   );
 
   return (
-    <div className="-m-3 sm:-m-4 lg:-m-6 flex h-[calc(100dvh-3.5rem)] bg-george-cream font-sans text-george-navy">
+    // THE HEIGHT SUBTRACTS THE PHONE TAB BAR, and must. Layout reserves room
+    // for it with `pb-20 md:pb-6` on <main>, but this page cancels <main>'s
+    // padding with negative margins to go full-bleed and then forces its own
+    // height — so it ignored that reservation and ran 54px under the fixed
+    // nav, putting 33px of the textarea out of reach. Measured, not guessed.
+    //
+    // 4rem is the nav's h-16; env(safe-area-inset-bottom) is the home-bar gap
+    // the nav also pads by, which is 0 on a desktop browser and ~34px on a
+    // notched phone. The md: breakpoint matches Layout's own isPhone (<768),
+    // where the nav does not render at all.
+    <div className="-m-3 sm:-m-4 lg:-m-6 flex h-[calc(100dvh-3.5rem-4rem-env(safe-area-inset-bottom))] md:h-[calc(100dvh-3.5rem)] bg-george-cream font-sans text-george-navy">
       <main className="flex min-w-0 flex-1 flex-col">
         <StatusBand
           query={statusQuery}
