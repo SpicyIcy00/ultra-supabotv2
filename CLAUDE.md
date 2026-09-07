@@ -148,6 +148,61 @@ rather than working around it.
    mean approving a version silently changed every schedule that mentions the
    workflow — which is the behaviour versions exist to prevent.
 
+9. **Important business figures come from deterministic code and trusted
+   definitions. The model selects, investigates, explains and interprets; it
+   never computes one.**
+
+   *Locked 2026-09-07, with the metric model.* The path is one-way:
+
+       trusted definition (metrics.yaml)
+         → vetted calculation (a tool's SQL)
+         → comparison / baseline (the tool, over both windows)
+         → structured result metadata ({rows, meta})
+         → George's reasoning
+         → the Metric / Comparison surface
+
+   "ATP appears to be the main driver" is a reading of figures the tools
+   returned, and it is George's to make. Dividing net sales by transactions
+   in prose, or taking a percentage between two windows he queried
+   separately, is a calculation — and a calculation in prose has no receipt.
+   So `average_transaction_value` is a **metric** (`metrics.yaml`, `kind:
+   derived`, with a `formula` naming its dependencies beside the vetted SQL,
+   and a contract test proving the two agree), and `compare_to=
+   'previous_period'` puts `baseline`, `change`, `change_pct`, `direction`
+   and `baseline_status` on every row of `get_sales`, computed there.
+
+   **What enforces this, stated exactly.** The definitions (only the yaml
+   can define a formula; the model never submits one), the tools (the
+   figures exist, so there is something to ask for), prompt rule 16 (held
+   by a test), and the golden tests. Nothing checks numerals in prose
+   against rows — `metrics.yaml` volunteering has said so since 2026-09-03,
+   and it is still true. A model that ignores rule 16 is not caught
+   mechanically. Do not describe this rule as enforced beyond that.
+
+   **The metric model** (`metrics.yaml` `metric_model`): every metric in
+   every domain declares `kind` (base or derived), `domain` and
+   `display_name`. Execution stays domain-specific — retail, vending and
+   purchasing keep their own sections, aliases and group vocabularies —
+   while applicability is described the same way everywhere. Additive
+   entries carry `introduced` and do not bump `version` (`version_policy`);
+   a change to an existing metric's meaning does.
+
+   **One comparison in V1.** `previous_period`: the equal-length window
+   ending where the current one starts, or for a closed preset the period
+   before it by the preset's own calendar. Both windows run as the SAME
+   statement with the other window bound. A window still in progress is
+   refused by name. Year-over-year, to-date, per-bucket lag and custom
+   baselines are recorded as not supported, with reasons, so they arrive as
+   decisions and not as synonyms.
+
+   **FFR is a data-availability limitation, not a gap in George.** Verified
+   2026-09-07: the database holds no Fame or Air stores, no restaurant
+   tables, no drink, side or rice roles, no slushie or siomai products.
+   Nothing FFR-specific is defined, stubbed or exampled anywhere; the record
+   is `metrics.yaml` `data_availability.ffr`, which lists what an
+   authoritative FFR source must provide before attachment metrics or FFR
+   ATP can be defined. That is a separate data-source milestone.
+
 ## Repo context George lives in
 
 This repo is **Ultra Supabot v2**, an existing retail BI app (FastAPI +
@@ -730,14 +785,21 @@ say anything it likes in prose; it may not reach the renderer.
   divergence UI rule 3 exists to prevent. Metric and Table used to be private
   to PinTile and agreed with the answer's rendering only by coincidence.
 - **Comparison renders a delta the TOOL supplied, and never computes one.**
-  Every row must carry a numeric `value` and a numeric `change_pct`. Which
-  baseline a period-over-period figure is measured against is a **definition** —
-  `brief.sales_vs_same_weekday` rejected `previous_day` in favour of
-  `same_weekday_last_week` after measuring it — so a renderer choosing its own
-  would be writing a business rule into the presentation layer. Today only
-  `get_brief` supplies deltas; `get_sales` does not, and there is no ATP metric.
-  A comparison of two `get_sales` calls therefore stays two figures and George's
-  prose, until a tool returns the movement.
+  Which baseline a period-over-period figure is measured against is a
+  **definition** — `brief.sales_vs_same_weekday` rejected `previous_day` in
+  favour of `same_weekday_last_week` after measuring it — so a renderer
+  choosing its own would be writing a business rule into the presentation
+  layer.
+
+  *Amended 2026-09-07:* `get_sales` now supplies deltas through
+  `compare_to='previous_period'` (architecture rule 9), so a row is a
+  comparison when it carries a numeric `change_pct` **or** a
+  `baseline_status` saying the tool tried and could not. `change_pct` may
+  then be null and the renderer draws the tool's own words for it — no
+  baseline, the previous period was zero, no figure this period — with the
+  baseline figure beside it where there is one; `flat` is drawn as "no
+  change". Nothing is filled in from `value` and `baseline`. `get_brief`
+  still supplies its own deltas as before.
 - **Composition is adjacency and nothing else.** Two figures sit under one
   heading only when their calls agree on the window, on every filter applied,
   and on the store argument. Nothing is summed, ratioed, ranked or differenced
@@ -745,6 +807,14 @@ say anything it likes in prose; it may not reach the renderer.
   which is the same reason a workflow may not join its own steps
   (architecture rule 6). The heading comes from `meta.window` and the
   arguments the model passed — never parsed from prose.
+
+  *Amended 2026-09-07:* one compared total is groupable like a bare figure,
+  so net sales, transactions and ATP asked with the same `compare_to` sit
+  abreast under one heading, each with its delta. A comparison of several
+  subjects stays whole. A compared figure never groups with an uncompared
+  one: its baseline window is on `filters_applied`, so the scopes differ.
+  A single compared figure names its metric from `meta.metric_label`, never
+  from prose.
 - **A group shares one receipts line only when it provably shares one** — same
   table, same read, same filters. Otherwise each figure keeps its own, because
   one line over two sources names a source that produced half the screen.
