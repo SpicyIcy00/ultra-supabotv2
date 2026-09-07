@@ -29,12 +29,7 @@ import { Prose } from './Prose';
 import { ResultSurface } from './ResultSurface';
 import { MARK_PATH } from './markState';
 import { postView } from './postShape';
-import {
-  quietLabel,
-  resultBlocks,
-  sourcesFromCharted,
-  type ResultBlock,
-} from './resultShape';
+import { blocksFromCharted, quietLabel, type ResultBlock } from './resultShape';
 
 /** George's mark as an avatar chip: cream on navy, one shared path. */
 export function MarkAvatar({ className = 'h-7 w-7' }: { className?: string }) {
@@ -187,7 +182,7 @@ export function PostCard({
   const view = postView(post);
   // One selection path, shared with the live turn and the pinned tile.
   const blocks = useMemo(
-    () => resultBlocks(sourcesFromCharted((post.payload as { charted?: unknown } | null)?.charted)),
+    () => blocksFromCharted((post.payload as { charted?: unknown } | null)?.charted),
     [post.payload],
   );
 

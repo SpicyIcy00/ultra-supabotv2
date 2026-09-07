@@ -40,7 +40,14 @@ import { ReactiveMark } from '../components/george/ReactiveMark';
 import { groupsWith } from '../components/george/postShape';
 import { riverMerge } from '../components/george/riverMerge';
 import { threadHistory } from '../components/george/threadHistory';
-import { SHELL_COLUMN, SHELL_PAGE_HEIGHT } from '../components/shell/shellLayout';
+import { blocksFromCalls, blocksFromCharted } from '../components/george/resultShape';
+import { widestWidth, workspaceWidth } from '../components/george/workspaceWidth';
+import {
+  SHELL_COLUMN,
+  SHELL_COLUMN_TRANSITION,
+  SHELL_PAGE_HEIGHT,
+  shellColumn,
+} from '../components/shell/shellLayout';
 import { listChats } from '../services/chatsApi';
 
 interface RouteState {
@@ -163,6 +170,26 @@ function ThreadAsk({ threadId }: { threadId: string }) {
   );
   const lastPost = thread.posts[thread.posts.length - 1];
 
+  // How wide the column has to be, decided by what is IN it. A thread of prose
+  // keeps a readable measure; a table or a chart takes the room it needs. Once
+  // something in the thread has asked for the room the column keeps it, so it
+  // cannot narrow again under a reader who is scrolling — and the composer
+  // below shares the class, so the box never hangs under a table it no longer
+  // spans.
+  const width = useMemo(
+    () =>
+      widestWidth([
+        ...merged.posts.map((p) =>
+          workspaceWidth(blocksFromCharted((p.payload as { charted?: unknown } | null)?.charted)),
+        ),
+        ...merged.pending.map((t) =>
+          workspaceWidth(t.role === 'george' ? blocksFromCalls(t.toolCalls) : []),
+        ),
+      ]),
+    [merged],
+  );
+  const column = `${shellColumn(width)} ${SHELL_COLUMN_TRANSITION}`;
+
   const onAsk = useCallback(
     (question: string) => {
       void ask(question, { parentId: lastPost?.id ?? null, pageContext: state.pageContext ?? null });
@@ -173,7 +200,7 @@ function ThreadAsk({ threadId }: { threadId: string }) {
   return (
     <div className={`${SHELL_PAGE_HEIGHT} flex flex-col`}>
       <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-5 md:px-8">
-        <div className={`${SHELL_COLUMN} space-y-5`}>
+        <div className={`${column} space-y-5`}>
           {thread.loading && (
             <p className="py-10 text-center text-[13px] text-george-muted">Opening…</p>
           )}
@@ -214,6 +241,7 @@ function ThreadAsk({ threadId }: { threadId: string }) {
         busy={busy}
         placeholder="Reply in this thread…"
         draft={state.draft ?? null}
+        column={column}
       />
     </div>
   );

@@ -30,6 +30,16 @@ interface Props {
   autoFocus?: boolean;
   /** Bare: no top rule, no side padding — for the centre of an empty Ask. */
   bare?: boolean;
+  /**
+   * The column class the page is using.
+   *
+   * The composer sits at the bottom edge of the same column the answers scroll
+   * in, and the column widens for a table or a chart (workspaceWidth). Passing
+   * the class rather than hard-coding one keeps the box exactly as wide as the
+   * thing above it — a 3xl composer under a 5xl table hangs under something it
+   * no longer spans.
+   */
+  column?: string;
 }
 
 export function AskComposer({
@@ -41,6 +51,7 @@ export function AskComposer({
   draftKey = 0,
   autoFocus = false,
   bare = false,
+  column = 'mx-auto max-w-3xl',
 }: Props) {
   const { setComposer } = useGeorge();
   const [value, setValue] = useState('');
@@ -83,7 +94,9 @@ export function AskComposer({
           : 'border-t border-george-line bg-george-cream px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 md:px-8 md:pb-4'
       }
     >
-      <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-george-line bg-george-paper px-3 py-2">
+      <div
+        className={`${column} flex items-end gap-2 rounded-2xl border border-george-line bg-george-paper px-3 py-2`}
+      >
         <textarea
           ref={ref}
           value={value}

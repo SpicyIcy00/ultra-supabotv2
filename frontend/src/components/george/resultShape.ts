@@ -282,3 +282,20 @@ export function quietLabel(blocks: ResultBlock[]): string {
   }
   return n === 1 ? 'Figure' : `${n} figures`;
 }
+
+/* -------------------------------------------------------------- shorthands -- */
+
+/**
+ * The two ways a surface is reached, named once.
+ *
+ * Every caller goes through one of these rather than composing the adapter and
+ * the block builder itself — the turn, the stored post, and the page deciding
+ * how wide the column has to be all read the same result the same way.
+ */
+export function blocksFromCalls(calls: ToolCall[]): ResultBlock[] {
+  return resultBlocks(sourcesFromCalls(calls));
+}
+
+export function blocksFromCharted(charted: unknown): ResultBlock[] {
+  return resultBlocks(sourcesFromCharted(charted));
+}

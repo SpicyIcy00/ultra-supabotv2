@@ -31,7 +31,7 @@ import { NoticeBanner } from './NoticeBanner';
 import { ReceiptsBlock } from './ReceiptsBlock';
 import { ResultSurface } from './ResultSurface';
 import { ResultActions } from './ResultActions';
-import { resultBlocks, sourcesFromCalls } from './resultShape';
+import { blocksFromCalls } from './resultShape';
 import { emphasisOf } from './turnShape';
 
 type Answer = Extract<GeorgeTurn, { role: 'george' }>;
@@ -98,7 +98,7 @@ function AnswerTurn({
   quiet: boolean;
 }) {
   // One selection path, shared with the stored post and the pinned tile.
-  const blocks = useMemo(() => resultBlocks(sourcesFromCalls(turn.toolCalls)), [turn.toolCalls]);
+  const blocks = useMemo(() => blocksFromCalls(turn.toolCalls), [turn.toolCalls]);
 
   return (
     <article className="flex gap-2.5">
