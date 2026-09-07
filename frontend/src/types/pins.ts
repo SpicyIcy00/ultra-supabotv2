@@ -81,3 +81,19 @@ export interface SimilarPageConflict {
   existing_page: string;
   submitted_page: string;
 }
+
+/**
+ * A membership or title change. A field left out is left alone; `page: null`
+ * is ungrouped, which is how a pin leaves a page without being deleted.
+ */
+export interface UpdatePinRequest {
+  page?: string | null;
+  title?: string;
+  allow_similar_page?: boolean;
+}
+
+/** What a page rename did: the name it settled on and how many pins followed. */
+export interface PageRenameResult {
+  page: string;
+  pins_moved: number;
+}

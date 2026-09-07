@@ -19,9 +19,17 @@ to reach on his own.
 
 USER SCOPING IS ENFORCED IN EVERY QUERY. george.pins deliberately has RLS off —
 RLS with no policy is deny-all and returns zero rows with no error, which has
-already bitten this database twice. Every read and delete filters on
+already bitten this database twice. Every read, update and delete filters on
 created_by, and a pin belonging to someone else is a 404, not a 403: whether a
 given pin id exists is not information a caller is entitled to.
+
+MEMBERSHIP (added 2026-09-07). PATCH /{pin_id} moves a pin between pages or
+retitles it; PATCH /pages/{page} renames a page, which is every pin of the
+caller's on it in one statement, because a page is derived from its pins and
+has no row of its own. Both are UPDATEs on the label and nothing else: the
+calls, the question, the provenance and the run history are untouched, and
+nothing is re-run. ROUTE ORDER IS LOAD-BEARING: the /pages routes are declared
+before /{pin_id} so that "pages" is never read as a pin id.
 """
 
 from __future__ import annotations
@@ -41,9 +49,14 @@ from app.models.app_user import AppUser
 from app.models.george_pin import GeorgePin
 from app.services.pin_runner import PinValidationError, normalize_page, run_pin
 from app.services.pin_writer import (
+    UNSET,
+    PageNotFound,
+    PinNotFound,
     PinQuotaError,
     SimilarPageError,
     create_pin as create_pin_row,
+    rename_page as rename_page_rows,
+    update_pin as update_pin_row,
 )
 
 router = APIRouter(tags=["george-pins"])
@@ -70,6 +83,27 @@ class PinCreate(BaseModel):
     # Set true to accept a page name that differs from an existing one only by
     # case. Without it the request is refused rather than forking the page.
     allow_similar_page: bool = False
+
+
+class PinUpdate(BaseModel):
+    """
+    A membership or title change. A field left out is left alone; `page` sent
+    as null means ungrouped, which is how a pin leaves a page without being
+    deleted. Pydantic tells the two apart through model_fields_set.
+    """
+    page: Optional[str] = Field(None, max_length=100)
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    allow_similar_page: bool = False
+
+
+class PageRename(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    allow_similar_page: bool = False
+
+
+class PageRenameOut(BaseModel):
+    page: str
+    pins_moved: int
 
 
 class PinOut(BaseModel):
@@ -124,6 +158,24 @@ async def _owned(db: AsyncSession, pin_id: uuid.UUID, user: AppUser) -> GeorgePi
     return pin
 
 
+def _similar_page_conflict(exc: SimilarPageError) -> HTTPException:
+    """
+    409, not a silent merge and not a silent fork. Two pages differing only by
+    case is almost always a typo, but deciding that FOR the user would be a
+    guess — so the collision is reported and they choose. Same rule as the
+    store alias map: exact match or ask. One rendering for every route that
+    can hit it, so the client recognises it by shape wherever it comes from.
+    """
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail={
+            "message": str(exc),
+            "existing_page": exc.existing_page,
+            "submitted_page": exc.submitted_page,
+        },
+    )
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -167,18 +219,7 @@ async def create_pin(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
     except SimilarPageError as exc:
-        # 409, not a silent merge and not a silent fork. Two pages differing
-        # only by case is almost always a typo, but deciding that FOR the user
-        # would be a guess — so the collision is reported and they choose. Same
-        # rule as the store alias map: exact match or ask.
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={
-                "message": str(exc),
-                "existing_page": exc.existing_page,
-                "submitted_page": exc.submitted_page,
-            },
-        ) from exc
+        raise _similar_page_conflict(exc) from exc
 
     return PinOut.model_validate(created.row)
 
@@ -228,6 +269,76 @@ async def list_pages(
         )
     ).all()
     return [PageOut(page=p, pins=n) for p, n in rows]
+
+
+@router.patch("/pages/{page}", response_model=PageRenameOut)
+async def rename_page(
+    page: str,
+    payload: PageRename,
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_pin_user),
+) -> PageRenameOut:
+    """
+    Rename one of the caller's pages.
+
+    Every pin of theirs on that exact page, in one scoped UPDATE — a page is
+    its pins, so this is the whole operation. Another person's page of the
+    same name is untouched, and river posts that named the old page stay as
+    written. A rename to a case-variant of a DIFFERENT existing page is a 409
+    the caller resolves, as on create.
+    """
+    try:
+        renamed = await rename_page_rows(
+            db,
+            username=user.username,
+            old=page,
+            new=payload.name,
+            allow_similar_page=payload.allow_similar_page,
+        )
+    except PageNotFound as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except PinValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+    except SimilarPageError as exc:
+        raise _similar_page_conflict(exc) from exc
+    return PageRenameOut(page=renamed.page, pins_moved=renamed.pins_moved)
+
+
+@router.patch("/{pin_id}", response_model=PinOut)
+async def update_pin(
+    pin_id: uuid.UUID,
+    payload: PinUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_pin_user),
+) -> PinOut:
+    """
+    Move one of the caller's pins to a page, off a page, or retitle it.
+
+    `page` may be an existing page, a new name, or null for ungrouped. The
+    calls and the run history are not touched and the pin is not re-run:
+    membership is not a figure. Somebody else's pin is a 404.
+    """
+    sent = payload.model_fields_set
+    try:
+        moved = await update_pin_row(
+            db,
+            username=user.username,
+            pin_id=pin_id,
+            page=payload.page if "page" in sent else UNSET,
+            title=payload.title if "title" in sent else UNSET,
+            allow_similar_page=payload.allow_similar_page,
+        )
+    except PinNotFound as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except PinValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+    except SimilarPageError as exc:
+        raise _similar_page_conflict(exc) from exc
+    return PinOut.model_validate(moved.row)
 
 
 # response_class=Response is load-bearing: FastAPI asserts at import time that a

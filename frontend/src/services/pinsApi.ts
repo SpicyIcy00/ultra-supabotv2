@@ -11,10 +11,12 @@
 import axios from 'axios';
 import type {
   CreatePinRequest,
+  PageRenameResult,
   Pin,
   PinPage,
   PinRun,
   SimilarPageConflict,
+  UpdatePinRequest,
 } from '../types/pins';
 
 const API_BASE = '/api/v1/george/pins';
@@ -38,6 +40,29 @@ export const createPin = async (body: CreatePinRequest): Promise<Pin> => {
 
 export const deletePin = async (id: string): Promise<void> => {
   await axios.delete(`${API_BASE}/${id}`);
+};
+
+/**
+ * Move a pin to a page (existing or new), off a page (`page: null`), or
+ * retitle it. The calls and the run history are untouched and nothing is
+ * re-run: membership is not a figure.
+ */
+export const updatePin = async (id: string, body: UpdatePinRequest): Promise<Pin> => {
+  const { data } = await axios.patch<Pin>(`${API_BASE}/${id}`, body);
+  return data;
+};
+
+/** Rename one of the caller's pages: every pin of theirs on it, in one write. */
+export const renamePage = async (
+  page: string,
+  name: string,
+  allowSimilar = false,
+): Promise<PageRenameResult> => {
+  const { data } = await axios.patch<PageRenameResult>(
+    `${API_BASE}/pages/${encodeURIComponent(page)}`,
+    { name, allow_similar_page: allowSimilar },
+  );
+  return data;
 };
 
 /** Re-run a pin. Refusals and rotted pins come back as a 200 with a status. */
