@@ -24,8 +24,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Check, Pin as PinIcon } from 'lucide-react';
-import type { GeorgeTurn } from '../../types/george';
-import type { Pin, SimilarPageConflict } from '../../types/pins';
+import type { Pin, PinToolCall, SimilarPageConflict } from '../../types/pins';
 import {
   createPin,
   errorMessage,
@@ -39,7 +38,22 @@ import { PagePicker } from './PagePicker';
 /** The backend caps a pin at 8 calls; say so rather than failing on submit. */
 const MAX_CALLS = 8;
 
-export function PinButton({ turn, question }: { turn: GeorgeTurn; question?: string }) {
+export function PinButton({
+  calls,
+  question,
+  conversationId,
+}: {
+  /**
+   * The calls to store, exactly as they ran. From a live turn these are its
+   * tool_call frames; from a stored post they are the `calls` the loop
+   * persisted beside the snapshot (postShape.storedCalls). Either way the
+   * backend re-validates every one against the live tool surface before it
+   * stores anything.
+   */
+  calls: PinToolCall[];
+  question?: string;
+  conversationId?: string | null;
+}) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [choice, setChoice] = useState<PageChoice>({ kind: 'none' });
@@ -53,17 +67,12 @@ export function PinButton({ turn, question }: { turn: GeorgeTurn; question?: str
     enabled: open,
   });
 
-  const calls =
-    turn.role === 'george'
-      ? turn.toolCalls.map((c) => ({ tool: c.tool, arguments: c.arguments }))
-      : [];
-
   const create = useMutation({
     mutationFn: (allowSimilar: boolean) =>
       createPin({
         title: question?.slice(0, 200) || undefined,
         question,
-        conversation_id: turn.role === 'george' ? turn.done?.conversation_id : undefined,
+        conversation_id: conversationId ?? undefined,
         page: chosenPage(choice) ?? undefined,
         tool_calls: calls,
         allow_similar_page: allowSimilar,

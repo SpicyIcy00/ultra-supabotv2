@@ -19,6 +19,8 @@ import {
   TIME_UNKNOWN,
   groupsWith,
   postView,
+  questionFor,
+  storedCalls,
 } from './postShape';
 
 /** POST_KINDS in backend/app/models/george_post.py. */
@@ -221,5 +223,95 @@ describe('grouping is presentation only', () => {
     // make, and guessing would put two unrelated posts in one block.
     expect(groupsWith(post({ created_at: null }), post())).toBe(false);
     expect(groupsWith(post(), post({ created_at: null }))).toBe(false);
+  });
+});
+
+describe('the calls behind a stored answer', () => {
+  const ARGS = { metric: 'net_sales', group_by: 'store', date_range: 'last_7_days' };
+  const charted = [{ seq: 3, tool: 'get_sales', rows: [{ value: 1 }], meta: RECEIPTS }];
+  const answer = (payload: Record<string, unknown> | null) =>
+    post({ kind: 'answer', author: 'george', payload });
+
+  it('are the stored calls, exactly as they ran', () => {
+    const calls = storedCalls(
+      answer({ charted, calls: [{ seq: 3, tool: 'get_sales', arguments: ARGS }] }),
+    );
+    expect(calls).toEqual([{ tool: 'get_sales', arguments: ARGS }]);
+  });
+
+  it('keep every stored call, drawn or not, in order', () => {
+    const calls = storedCalls(
+      answer({
+        charted,
+        calls: [
+          { seq: 3, tool: 'get_sales', arguments: ARGS },
+          { seq: 4, tool: 'get_stock', arguments: { location: 'AJI BARN' } },
+        ],
+      }),
+    );
+    expect(calls?.map((c) => c.tool)).toEqual(['get_sales', 'get_stock']);
+  });
+
+  it('are null for a legacy post that stored the chart and not the calls', () => {
+    expect(storedCalls(answer({ charted }))).toBeNull();
+    expect(storedCalls(answer(null))).toBeNull();
+    expect(storedCalls(answer({ charted, calls: [] }))).toBeNull();
+  });
+
+  it('are null when any call is missing its arguments — nothing is inferred', () => {
+    expect(storedCalls(answer({ charted, calls: [{ seq: 3, tool: 'get_sales' }] }))).toBeNull();
+    expect(
+      storedCalls(answer({ charted, calls: [{ seq: 3, tool: 'get_sales', arguments: null }] })),
+    ).toBeNull();
+    expect(
+      storedCalls(answer({ charted, calls: [{ seq: 3, tool: 'get_sales', arguments: [1] }] })),
+    ).toBeNull();
+    expect(
+      storedCalls(answer({ charted, calls: [{ seq: 3, tool: '', arguments: ARGS }] })),
+    ).toBeNull();
+  });
+
+  it('are null when something drawn has no call behind it', () => {
+    expect(
+      storedCalls(answer({ charted, calls: [{ seq: 9, tool: 'get_sales', arguments: ARGS }] })),
+    ).toBeNull();
+  });
+
+  it('are null on anything that is not an answer', () => {
+    for (const kind of KINDS.filter((k) => k !== 'answer')) {
+      expect(
+        storedCalls(post({ kind, payload: { calls: [{ seq: 1, tool: 'get_sales', arguments: {} }] } })),
+      ).toBeNull();
+    }
+  });
+
+  it('never reads the calls out of the prose or the rows', () => {
+    // A rich post with everything BUT `calls`: still null.
+    expect(
+      storedCalls(
+        answer({
+          charted: [{ seq: 3, tool: 'get_sales', arguments: ARGS, rows: [{ value: 1 }], meta: RECEIPTS }],
+        }),
+      ),
+    ).toBeNull();
+  });
+});
+
+describe('the question an answer replied to', () => {
+  it('is the parent question post when it is in the list', () => {
+    const q = post({ id: 'q-1', kind: 'question', author: 'user', author_user: 'ice', body: 'How is Fame?' });
+    const a = post({ id: 'a-1', kind: 'answer', parent_id: 'q-1' });
+    expect(questionFor([q, a], a)).toBe('How is Fame?');
+  });
+
+  it('is nothing when the parent is not loaded, rather than a line of the answer', () => {
+    const a = post({ id: 'a-1', kind: 'answer', parent_id: 'q-1' });
+    expect(questionFor([a], a)).toBeUndefined();
+  });
+
+  it('is nothing when the parent is not a question', () => {
+    const brief = post({ id: 'b-1', kind: 'brief', body: 'This morning…' });
+    const a = post({ id: 'a-1', kind: 'answer', parent_id: 'b-1' });
+    expect(questionFor([brief, a], a)).toBeUndefined();
   });
 });

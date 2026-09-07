@@ -28,7 +28,8 @@ import { ReceiptsBlock } from './ReceiptsBlock';
 import { Prose } from './Prose';
 import { ResultSurface } from './ResultSurface';
 import { MARK_PATH } from './markState';
-import { postView } from './postShape';
+import { postView, storedCalls } from './postShape';
+import { ResultActions } from './ResultActions';
 import { blocksFromCharted, quietLabel, type ResultBlock } from './resultShape';
 
 /** George's mark as an avatar chip: cream on navy, one shared path. */
@@ -162,6 +163,7 @@ export function PostCard({
   onOpenThread,
   onShare,
   sharing = false,
+  question,
   quiet = false,
 }: {
   post: Post;
@@ -172,6 +174,11 @@ export function PostCard({
   onOpenThread?: (threadId: string) => void;
   onShare?: (postId: string) => void;
   sharing?: boolean;
+  /**
+   * The question this answer replied to, when the caller has it. A pin's
+   * title defaults to it. Never derived from the answer's own prose.
+   */
+  question?: string;
   /**
    * An earlier post in a thread whose newest answer should lead: slate
    * prose, charts behind a line that names them. Notices and receipts are
@@ -185,6 +192,10 @@ export function PostCard({
     () => blocksFromCharted((post.payload as { charted?: unknown } | null)?.charted),
     [post.payload],
   );
+  // The calls behind this answer as they ran, or null — and null means no
+  // Pin, not a Pin that guesses. A post from before the calls were stored
+  // still draws its snapshot; it simply cannot be re-run from here.
+  const calls = useMemo(() => storedCalls(post), [post]);
 
   if (view.side === 'user') {
     return (
@@ -260,6 +271,11 @@ export function PostCard({
         {/* Below the receipts: the chips are about what to do next, and the
             receipts are about the body above them. */}
         {onAsk && <FollowUpChips post={post} onAsk={onAsk} />}
+
+        {/* The same row a live turn ends with, fed by the stored calls. */}
+        {calls && (
+          <ResultActions calls={calls} question={question} conversationId={post.conversation_id} />
+        )}
 
         <div className="flex items-center gap-2">
           <PostTime post={post} />

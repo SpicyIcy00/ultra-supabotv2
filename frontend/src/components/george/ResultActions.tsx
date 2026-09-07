@@ -24,19 +24,28 @@
  * approvals colour (UI rule 5): pinning is something you chose to do, not
  * something waiting on you.
  */
-import type { GeorgeTurn } from '../../types/george';
+import type { PinToolCall } from '../../types/pins';
 import { PinButton } from './PinButton';
 
+/**
+ * ONE ROW FOR A LIVE TURN AND FOR A STORED POST. The turn hands over the
+ * calls from its frames; the post hands over the calls the loop persisted
+ * beside its snapshot (postShape.storedCalls), and a post that has none —
+ * every post written before 2026-09-07 — hands over nothing and gets no row.
+ * Nothing here builds a call from anything else.
+ */
 export function ResultActions({
-  turn,
+  calls,
   question,
+  conversationId,
 }: {
-  turn: GeorgeTurn;
+  calls: PinToolCall[];
   question?: string;
+  conversationId?: string | null;
 }) {
   return (
     <div className="flex items-center justify-end gap-1">
-      <PinButton turn={turn} question={question} />
+      <PinButton calls={calls} question={question} conversationId={conversationId} />
     </div>
   );
 }

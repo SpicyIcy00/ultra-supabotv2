@@ -26,6 +26,7 @@
  * it.
  */
 import type { Post, PostKind } from '../../types/river';
+import type { PinToolCall } from '../../types/pins';
 
 /**
  * The eyebrow above a card: what KIND of thing this is, in a person's words.
@@ -140,4 +141,71 @@ export function groupsWith(previous: Post | undefined, post: Post): boolean {
   if (!previous.created_at || !post.created_at) return false;
   const gap = Date.parse(post.created_at) - Date.parse(previous.created_at);
   return Number.isFinite(gap) && gap >= 0 && gap < GROUP_WINDOW_MS;
+}
+
+/* ------------------------------------------------------------ pinnable -- */
+
+/**
+ * The calls behind a stored answer, exactly as they ran — or null.
+ *
+ * WHAT MAKES A STORED POST PINNABLE. Since 2026-09-07 the loop stores, beside
+ * the charted snapshot, `calls`: every read call that ran without error, with
+ * the arguments the tool actually accepted (agent/loop.py, calls_made). A pin
+ * made from a post replays THOSE, through the same create_pin validation the
+ * live button goes through.
+ *
+ * NULL IS THE ONLY OTHER ANSWER. A post written before that date carries
+ * `charted` and no `calls`; a post whose payload was hand-edited may carry a
+ * call with no arguments, or arguments that are not an object; a post may
+ * chart a result whose call is not in the list. Every one of those is "not
+ * pinnable", never "pinnable with a guess": an argument list rebuilt from the
+ * rows, the meta or the prose would be an INVENTED call, and a pin holding an
+ * invented call is a tile that lies from the moment it is made. Nothing here
+ * fills a gap in.
+ */
+export function storedCalls(post: Post): PinToolCall[] | null {
+  if (post.kind !== 'answer') return null;
+  const payload = post.payload as { calls?: unknown; charted?: unknown } | null;
+  const raw = payload?.calls;
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+
+  const seqs = new Set<number>();
+  const calls: PinToolCall[] = [];
+  for (const entry of raw) {
+    const e = entry as { seq?: unknown; tool?: unknown; arguments?: unknown } | null;
+    if (!e || typeof e.tool !== 'string' || !e.tool) return null;
+    if (!isPlainObject(e.arguments)) return null;
+    if (typeof e.seq === 'number') seqs.add(e.seq);
+    calls.push({ tool: e.tool, arguments: e.arguments });
+  }
+
+  // Everything the post DRAWS must be among the calls it would replay. A
+  // figure on screen with no call behind it is exactly the gap a person
+  // would fill in by assuming.
+  const charted = payload?.charted;
+  if (Array.isArray(charted)) {
+    for (const entry of charted) {
+      const seq = (entry as { seq?: unknown } | null)?.seq;
+      if (typeof seq !== 'number' || !seqs.has(seq)) return null;
+    }
+  }
+  return calls;
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/**
+ * The question a stored answer replied to, if it is in the same list.
+ *
+ * The answer post's parent is the question post; the title of a pin defaults
+ * to the question. When the parent is not loaded — an answer at the top of a
+ * river page — there is no question to quote, and the pin falls back to the
+ * tool's name rather than to a line of the answer pretending to be one.
+ */
+export function questionFor(posts: Post[], post: Post): string | undefined {
+  if (!post.parent_id) return undefined;
+  const parent = posts.find((p) => p.id === post.parent_id);
+  return parent?.kind === 'question' && parent.body ? parent.body : undefined;
 }

@@ -37,7 +37,7 @@ import { AnswerTurns } from '../components/george/AnswerTurn';
 import { AskComposer } from '../components/george/AskComposer';
 import { PostCard } from '../components/george/PostCard';
 import { ReactiveMark } from '../components/george/ReactiveMark';
-import { groupsWith } from '../components/george/postShape';
+import { groupsWith, questionFor } from '../components/george/postShape';
 import { riverMerge } from '../components/george/riverMerge';
 import { threadHistory } from '../components/george/threadHistory';
 import { blocksFromCalls, blocksFromCharted } from '../components/george/resultShape';
@@ -221,6 +221,7 @@ function ThreadAsk({ threadId }: { threadId: string }) {
               onAsk={onAsk}
               onShare={share.share}
               sharing={share.sharingId === post.id}
+              question={questionFor(merged.posts, post)}
               quiet={i < merged.posts.length - 1 || merged.pending.length > 0}
             />
           ))}

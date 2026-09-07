@@ -140,7 +140,13 @@ function AnswerTurn({
             because one line over several calls describes none of them. */}
         {blocks.length === 0 && <ReceiptsBlock meta={turn.receipts} />}
 
-        {turn.done && <ResultActions turn={turn} question={question} />}
+        {turn.done && (
+          <ResultActions
+            calls={turn.toolCalls.map((c) => ({ tool: c.tool, arguments: c.arguments }))}
+            question={question}
+            conversationId={turn.done.conversation_id}
+          />
+        )}
       </div>
     </article>
   );

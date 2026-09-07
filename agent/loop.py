@@ -827,6 +827,25 @@ def _forced_caveats(missing: list[dict]) -> str:
 # Logging — separate identity, insert-only
 # --------------------------------------------------------------------------
 
+def _answer_payload(charted: Optional[list], calls: Optional[list]) -> Optional[str]:
+    """
+    The answer post's payload: the charted snapshot and the calls behind it.
+
+    NONE when there is nothing to carry, exactly as before `calls` existed,
+    so a post with no figures and no reads stores no payload rather than an
+    empty one. A post written before 2026-09-07 has `charted` and no `calls`;
+    the client treats the absence as "not pinnable" and never fills it in
+    (postShape.storedCalls) — an argument list rebuilt from rows or prose
+    would be an invented call, which is the one thing a pin must never hold.
+    """
+    payload: dict = {}
+    if charted:
+        payload["charted"] = charted
+    if calls:
+        payload["calls"] = calls
+    return json.dumps(payload) if payload else None
+
+
 class ConversationLog:
     """
     Writes to george.* through the insert-only role.
@@ -983,8 +1002,11 @@ class ConversationLog:
                 #
                 # All of them or none, as the tool_result frame does: the loop
                 # only collected results it could send whole.
-                (json.dumps({"charted": kw["charted"]})
-                 if kw.get("charted") else None),
+                #
+                # `calls` beside it (2026-09-07): the read calls that ran, so
+                # the post can be PINNED after a reload. The chart is a
+                # snapshot; the pin re-runs. Both are true of one answer.
+                _answer_payload(kw.get("charted"), kw.get("calls")),
                 json.dumps(_json_safe(kw["receipts"])) if kw.get("receipts") else None,
                 json.dumps(_json_safe(kw.get("notices") or [])),
                 self.conversation_id, datetime.now(timezone.utc),
@@ -1260,6 +1282,16 @@ async def run(
     # from, and re-running the call instead would put a fresh chart beside
     # prose that still states the old figure. See ConversationLog.posts.
     charted: list[dict] = []
+
+    # The read calls that ran and returned, kept so the ANSWER POST can be
+    # pinned after a reload. A live turn pins from its tool_call frames; a
+    # stored post had nothing to pin from, so persistence ended at the
+    # reload. This is the exact input each call ran with — dict(b.input), the
+    # same object log.tool_call records — and never a reconstruction: a call
+    # that refused produced no result and is not here, a write describes the
+    # pin it made rather than a figure, and a workflow's steps are its own to
+    # replay. See ConversationLog.posts and _answer_payload.
+    calls_made: list[dict] = []
 
     yield _sse("start", {"conversation_id": log.conversation_id,
                          "thread_id": log.thread_id,
@@ -1729,7 +1761,19 @@ async def run(
                 if rows_complete and full_rows:
                     charted.append({
                         "seq": gseq, "tool": b.name,
+                        "arguments": _json_safe(dict(b.input)),
                         "rows": _json_safe(full_rows), "meta": _json_safe(meta),
+                    })
+                # The call itself, for a pin made from the stored post. Read
+                # tools only, and only ones that ran without error: the
+                # arguments are the ones the tool accepted and answered.
+                if (not err
+                        and b.name in TOOL_FUNCTIONS
+                        and b.name not in write_tools.WRITE_TOOL_FUNCTIONS
+                        and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS):
+                    calls_made.append({
+                        "seq": gseq, "tool": b.name,
+                        "arguments": _json_safe(dict(b.input)),
                     })
                 # A write that now exists, announced as its own frame.
                 #
@@ -1815,7 +1859,7 @@ async def run(
     log.posts(
         user_id=user_id, asked_at=asked_at, question=question,
         final_answer=answer or None, notices=pending, receipts=last_meta,
-        charted=charted, parent_id=parent_id,
+        charted=charted, calls=calls_made, parent_id=parent_id,
     )
 
     # The ids of the two posts, so a client that is rendering the river can

@@ -10,8 +10,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { GeorgeTurn, ToolCall } from '../../types/george';
-import type { CreatePinRequest, Pin, PinPage } from '../../types/pins';
+import type { CreatePinRequest, Pin, PinPage, PinToolCall } from '../../types/pins';
 
 const listPinPages = vi.fn<() => Promise<PinPage[]>>();
 const createPin = vi.fn<(body: CreatePinRequest) => Promise<Pin>>();
@@ -31,19 +30,7 @@ afterEach(() => {
   createPin.mockReset();
 });
 
-const CALL: ToolCall = { seq: 1, tool: 'get_sales', arguments: { metric: 'net_sales' } };
-
-const turn = (toolCalls: ToolCall[] = [CALL]): GeorgeTurn => ({
-  role: 'george',
-  text: 'Fame took ₱118,420 this week.',
-  thinking: '',
-  toolCalls,
-  notices: [],
-  pinned: [],
-  saved: [],
-  at: '2026-09-07T09:00:00+08:00',
-  done: { conversation_id: 'conv-1', iterations: 1, tool_calls: 1, status: 'ok' } as never,
-});
+const CALLS: PinToolCall[] = [{ tool: 'get_sales', arguments: { metric: 'net_sales' } }];
 
 const stored = (page: string | null): Pin => ({
   id: 'pin-1',
@@ -68,7 +55,7 @@ function mount() {
   return render(
     <MemoryRouter>
       <QueryClientProvider client={qc}>
-        <PinButton turn={turn()} question="How is Fame doing?" />
+        <PinButton calls={CALLS} question="How is Fame doing?" conversationId="conv-1" />
       </QueryClientProvider>
     </MemoryRouter>,
   );
@@ -97,7 +84,7 @@ describe('choosing a page', () => {
     render(
       <MemoryRouter>
         <QueryClientProvider client={qc}>
-          <PinButton turn={turn()} question="q" />
+          <PinButton calls={CALLS} question="q" conversationId="conv-1" />
         </QueryClientProvider>
       </MemoryRouter>,
     );

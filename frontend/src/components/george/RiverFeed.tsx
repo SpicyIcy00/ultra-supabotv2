@@ -18,7 +18,7 @@
  */
 import type { Post } from '../../types/river';
 import { PostCard } from './PostCard';
-import { groupsWith } from './postShape';
+import { groupsWith, questionFor } from './postShape';
 
 interface Props {
   posts: Post[];
@@ -107,6 +107,7 @@ export function RiverFeed({
           onOpenThread={onOpenThread}
           onShare={onShare}
           sharing={sharingId === post.id}
+          question={questionFor(posts, post)}
         />
       ))}
 

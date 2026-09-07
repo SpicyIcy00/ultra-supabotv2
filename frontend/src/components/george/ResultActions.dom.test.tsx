@@ -13,32 +13,21 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { GeorgeTurn, ToolCall } from '../../types/george';
+import type { PinToolCall } from '../../types/pins';
 import { ResultActions } from './ResultActions';
 
 afterEach(cleanup);
 
-const turn = (toolCalls: ToolCall[]): GeorgeTurn => ({
-  role: 'george',
-  text: 'Rockwell is down 12% on the week.',
-  thinking: '',
-  toolCalls,
-  notices: [],
-  pinned: [],
-  saved: [],
-  at: '2026-09-07T09:00:00+08:00',
-});
-
-function actions(calls: ToolCall[]) {
+function actions(calls: PinToolCall[]) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <ResultActions turn={turn(calls)} question="How did Rockwell do this week?" />
+      <ResultActions calls={calls} question="How did Rockwell do this week?" conversationId="c-1" />
     </QueryClientProvider>,
   );
 }
 
-const CALL = { seq: 1, tool: 'get_sales', arguments: { group_by: ['store'] } };
+const CALL = { tool: 'get_sales', arguments: { group_by: ['store'] } };
 
 describe('the action row', () => {
   it('offers Pin for a result with calls behind it', () => {
