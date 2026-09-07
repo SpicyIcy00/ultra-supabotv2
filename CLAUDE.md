@@ -362,6 +362,11 @@ These are hard constraints, like the architecture rules above.
    George, not two. The route exists today; the per-page affordance does not yet
    — that is outstanding work, not a settled exception.
 
+   *Amended 2026-09-07:* the home is now the shell (`/today`, `/ask`, …; see
+   "The shell" below), and the legacy chrome's George link carries the page it
+   was clicked from as `page_context`. That is a step toward the affordance,
+   not the affordance: a question still starts in Ask, not in place.
+
 2. **One save gesture.** Same icon, same placement, same confirmation,
    everywhere. A user who learns to save once has learned to save everywhere.
 
@@ -495,6 +500,76 @@ These are hard constraints, like the architecture rules above.
    provenance either. And it binds rule 5: the approvals colour may only be
    worn by a row that came back from the server, so a failed lookup and an
    empty queue are both navy.
+
+### The shell
+
+*Added 2026-09-07, George Shell V1.* George is the primary environment, and
+the existing application sits behind it as **Operations**. Recorded here
+because each line is a decision that cannot be read back from the code.
+
+- **Five words, one key.** Today, Ask, Inbox, Pages, Workflows all sit behind
+  the `george` page key. Operations lists every legacy page the caller may
+  see, at its existing path, in its existing chrome. Warehouse, Packing,
+  Barcodes, reporting and StoreHub are business applications that may stay
+  permanently; the boundary is where migration happens, not a queue for
+  retirement. [shellNav.ts](frontend/src/components/shell/shellNav.ts) is
+  the list and the test.
+- **`/` is a redirect and nothing else.** A person with George lands on
+  `/ask`; everyone else lands where they always did. Ask rather than Today
+  is deliberate: Ask is the strongest real George experience, and Today
+  will not be manufactured as an executive page before George can say what
+  deserves attention. The dashboard has `/dashboard`; `/george` and
+  `/george/t/:id` forward to `/today` and `/ask/:id`.
+- **One George above both chromes.** The stream hook is mounted once, in
+  [GeorgeStreamProvider.tsx](frontend/src/components/george/GeorgeStreamProvider.tsx),
+  inside SessionGuard, so an answer keeps arriving while the person moves
+  from Ask to Inbox. This is persistent ownership of one live HTTP response
+  in the browser. The backend has no background job; logout tears the
+  provider down with the session; nothing survives a reload and nothing
+  pretends to.
+- **The mark draws real states only.**
+  [presence.ts](frontend/src/components/george/presence.ts) decides: the
+  stream's state while a turn runs; `listening` from a focused composer or
+  an unsent draft while George is at rest. "Waiting for the user" has no
+  frame behind it and is not drawn. "Waiting for approval" is a fact about
+  the queue: the count beside Inbox, never the mark. No caption under the
+  mark on an empty Ask — its behaviour says it is ready.
+- **A persisted exchange renders exactly once, by post id.**
+  [riverMerge.ts](frontend/src/components/george/riverMerge.ts) drops a
+  live turn when one of the ids from its `post` frame is among the fetched
+  posts, and for no other reason — never the question text, the answer
+  text or a timestamp. A turn with no frame, a stopped turn, and a frame
+  saying `stored: false` are all kept, because each is the only rendering
+  there is.
+- **A stopped turn never looks finished.** Cancelling marks the turn
+  `cancelled`; it has no `done` and no `post`, and the note says the answer
+  may still appear in the thread, because whether the server finished and
+  stored it is unknown from the client.
+- **Threads George opens are starting points.** A thread can be continued
+  by the person whose conversation it is, or by anyone when its ROOT post
+  is George's and org-visible — exactly two ways in, in
+  [thread_access.py](backend/app/services/thread_access.py), contract-tested.
+  A reply is private and owned by the replier; nothing is published by
+  replying. The loop keeps a history that opens with George behind
+  `THREAD_OPENER` instead of dropping it, so the post being replied to is
+  the one thing George can see. The caller's own chat supplies the calls
+  behind its answers; a George post or another person's shared exchange
+  travels as text with no tool calls, because a call rebuilt from charted
+  rows would be invented ([threadHistory.ts](frontend/src/components/george/threadHistory.ts)).
+- **Inbox decides; Workflows describes.** Inbox holds the approval queue and
+  Promote — the one accent-coloured action in the app, administrators only,
+  enforced server-side. Workflows reads each rule as a living thing: where
+  it is in its life, when and which version it runs, its last run with that
+  run's notices whole, and the one thing that would move it on. No builder.
+- **Disclosure is by position, never by hiding.** Notices, then the answer,
+  then the figures with their receipts; the activity is open while a turn
+  runs and one line once it is over. The newest answer leads and earlier
+  turns go quieter — slate prose, charts behind a line that names them —
+  and a notice or a receipts line is never quieter
+  ([turnShape.ts](frontend/src/components/george/turnShape.ts)).
+- **The accent exemption list is still four:** the mark, the status band's
+  count, the shell's Inbox count, and the Inbox page. PostCard's dead branch
+  and the drawer gave up their places; the scan now covers `components/shell`.
 
 ### These rules are already backed by the tool contract
 
