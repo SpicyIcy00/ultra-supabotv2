@@ -10,6 +10,7 @@ import { Dashboard } from './pages/Dashboard';
 import { SessionGuard } from './components/SessionGuard';
 import { RequirePage, NoAccessPage } from './components/RequirePage';
 import { LandingRedirect } from './components/LandingRedirect';
+import { GeorgeStreamProvider } from './components/george/GeorgeStreamProvider';
 
 // Lazy-loaded pages (Dashboard stays eager as the landing page)
 const AnalyticsPage = React.lazy(() => import('./pages/AnalyticsPage'));
@@ -71,6 +72,10 @@ function App() {
         {/* The legacy shared-code AuthGuard is gone: passcode login replaces it,
             and stacking the two meant typing two codes to reach the app. */}
         <SessionGuard>
+          {/* One George above every route, so an answer keeps arriving while
+              the person moves around the app. Inside SessionGuard, which keys
+              its subtree on the session, so logout tears the stream down. */}
+          <GeorgeStreamProvider>
           <Suspense fallback={<PageSpinner />}>
             <Routes>
               {/* The print sheet sits outside Layout so there is no sidebar or
@@ -86,6 +91,7 @@ function App() {
               <Route path="*" element={<ChromeRoutes />} />
             </Routes>
           </Suspense>
+          </GeorgeStreamProvider>
         </SessionGuard>
       </BrowserRouter>
     </QueryClientProvider>

@@ -24,7 +24,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PanelRight } from 'lucide-react';
-import { useGeorgeStream } from '../hooks/useGeorgeStream';
+import { useGeorge } from '../hooks/useGeorge';
 import { useRiver } from '../hooks/useRiver';
 import { GeorgeConversation } from '../components/george/GeorgeConversation';
 import { GeorgeInput } from '../components/george/GeorgeInput';
@@ -39,7 +39,7 @@ import { sharePost } from '../services/riverApi';
 import { readStatus } from '../services/statusApi';
 
 export default function RiverPage() {
-  const { turns, state, ask, cancel, busy } = useGeorgeStream();
+  const { turns, state, ask, cancel, busy, live } = useGeorge();
   const qc = useQueryClient();
   const [panelOpen, setPanelOpen] = useState(false);
   const [sharingId, setSharingId] = useState<string | null>(null);
@@ -90,31 +90,6 @@ export default function RiverPage() {
       ),
     [approvals.isPending, approvals.isError, approvals.data],
   );
-
-  /** Tools in flight and the newest result, for the mark's narration line. */
-  const running = useMemo(() => {
-    const last = turns[turns.length - 1];
-    if (last?.role !== 'george') return [];
-    return last.toolCalls.filter((c) => !c.result).map((c) => c.tool);
-  }, [turns]);
-
-  const lastResult = useMemo(() => {
-    const last = turns[turns.length - 1];
-    if (last?.role !== 'george') return null;
-    const done = last.toolCalls.filter((c) => c.result);
-    if (done.length === 0) return null;
-    const newest = done.reduce((a, b) => (b.seq > a.seq ? b : a));
-    return {
-      tool: newest.tool,
-      rowCount: newest.result?.row_count ?? null,
-      error: newest.result?.error ?? null,
-    };
-  }, [turns]);
-
-  const thinking = useMemo(() => {
-    const last = turns[turns.length - 1];
-    return last?.role === 'george' ? last.thinking : '';
-  }, [turns]);
 
   /**
    * Ask. The hook refetches the river on `done`; the live turn stays drawn
@@ -187,9 +162,9 @@ export default function RiverPage() {
                   busy={busy}
                   showEmptyState={false}
                   state={state}
-                  running={running}
-                  lastResult={lastResult}
-                  thinking={thinking}
+                  running={live.running}
+                  lastResult={live.lastResult}
+                  thinking={live.thinking}
                 />
               </div>
             )}
