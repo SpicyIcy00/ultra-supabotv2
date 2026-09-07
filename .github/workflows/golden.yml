@@ -1,7 +1,8 @@
-name: George golden tests
+name: George foundation checks
 
-# Runs pytest directly against George's tools — no agent, no LLM, no API key.
-# Read-only: the suite connects as george_ro, which holds SELECT and nothing
+# Contracts run without database credentials; frontend tests and build run in
+# their own job. Golden tests run directly against the tools, with no model call.
+# Read-only: the golden suite connects as george_ro, which holds SELECT and nothing
 # else (tools/george_ro_role.sql), and tools/_common.connect additionally opens
 # every session read-only and refuses superuser or admin roles.
 #
@@ -24,6 +25,7 @@ on:
       # NameError in a route ships silently otherwise — that is exactly how
       # POST /george/pins/{id}/run stayed broken.
       - "backend/app/**"
+      - "frontend/**"
       - ".github/workflows/golden.yml"
   pull_request:
     paths:
@@ -33,6 +35,8 @@ on:
       - "agent/**"
       - "backend/requirements.txt"
       - "backend/app/**"
+      - "frontend/**"
+      - ".github/workflows/golden.yml"
   workflow_dispatch:
 
 concurrency:
@@ -40,6 +44,57 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install backend and test dependencies
+        run: |
+          pip install -r backend/requirements.txt -r tests/requirements.txt
+      - name: Run backend contracts without production credentials
+        env:
+          GEORGE_DATABASE_URL: ""
+          GEORGE_LOG_DATABASE_URL: ""
+        run: >-
+          python -m pytest tests -q --tb=short
+          --ignore=tests/test_brief_live.py
+          --ignore=tests/test_pins_live.py
+          --ignore=tests/test_storehub_tools_live.py
+          --junitxml=contracts-results.xml
+      - name: Require contract tests to run without skips
+        if: always()
+        run: |
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          root = ET.parse("contracts-results.xml").getroot()
+          cases = list(root.iter("testcase"))
+          assert cases, "No contract tests ran"
+          assert not list(root.iter("skipped")), "Contract tests unexpectedly skipped"
+          PY
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Run George and foundation frontend tests
+        run: npm test
+      - name: Typecheck and build the complete application
+        run: npm run build
+
   golden:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -77,7 +132,7 @@ jobs:
       - name: Run golden tests
         env:
           GEORGE_DATABASE_URL: ${{ secrets.GEORGE_DATABASE_URL }}
-        run: python -m pytest tests/golden.py -v --tb=short
+        run: python -m pytest tests/golden.py -v --tb=short --junitxml=golden-results.xml
 
       # The suite skips itself when the secret is missing, which would otherwise
       # look like a green run. Fail loudly instead.
@@ -91,3 +146,14 @@ jobs:
             echo "Apply tools/george_ro_role.sql, then add the connection string as a repository secret."
             exit 1
           fi
+
+      - name: Require golden tests to execute
+        if: always()
+        run: |
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          root = ET.parse("golden-results.xml").getroot()
+          cases = list(root.iter("testcase"))
+          assert cases, "No golden tests ran"
+          assert not list(root.iter("skipped")), "Golden tests skipped; check the read-only database connection"
+          PY
