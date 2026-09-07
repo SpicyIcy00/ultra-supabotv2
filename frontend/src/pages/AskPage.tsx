@@ -7,11 +7,14 @@
  * cards, no suggestions grid, no summary of the business. The whitespace is
  * the design.
  *
- * THE STARTING POINTS ARE PROMPTS, NOT MODES. Each drops a question into the
- * box for the person to edit and send; nothing is sent for them and no state
- * is kept about which one they touched. Each is something George can do
- * today — read figures, compare, save a rule — and one that could not be
- * done truthfully would be left off rather than shown.
+ * NOTHING TO CHOOSE FIRST. There were three words under the box — Data,
+ * Analyze, Automate — and they were the wrong shape for George twice over.
+ * They read as modes, so they asked a person to classify their question
+ * before asking it, which is work George should be doing; and they were
+ * ambiguous even as prompts, because "reading sales by store" is data and
+ * analysis and could end in a saved rule. George infers what kind of work a
+ * question is from the question. So the box is the whole interface, and what
+ * a person typed last time is the only other thing on the page.
  *
  * /ask/:threadId IS THE THREAD. The stored posts are drawn as posts, the
  * turn in flight as a pending post beneath them, and the box continues the
@@ -24,7 +27,7 @@
  * Asking from the empty state names the thread in the `start` frame, and
  * the URL follows it, so the exchange has an address from its first frame.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useGeorge } from '../hooks/useGeorge';
@@ -40,13 +43,6 @@ import { threadHistory } from '../components/george/threadHistory';
 import { SHELL_COLUMN, SHELL_PAGE_HEIGHT } from '../components/shell/shellLayout';
 import { listChats } from '../services/chatsApi';
 
-/** Prompts. Each is a thing George can do today, as a question to edit. */
-const STARTERS: { label: string; draft: string }[] = [
-  { label: 'Data', draft: 'Net sales by store for the last 7 days' },
-  { label: 'Analyze', draft: 'Why was yesterday different from the same weekday last week?' },
-  { label: 'Automate', draft: 'Save a workflow that checks low stock at the warehouse every Monday at 6' },
-];
-
 interface RouteState {
   draft?: string;
   pageContext?: string;
@@ -56,9 +52,6 @@ function EmptyAsk() {
   const { presence, live, ask, reset, cancel, busy } = useGeorge();
   const location = useLocation();
   const state = (location.state ?? {}) as RouteState;
-  // A draft is a value AND a count, so picking the same starter twice after
-  // clearing the box lands it twice.
-  const [draft, setDraft] = useState<{ text: string; n: number }>({ text: state.draft ?? '', n: 0 });
 
   const recent = useQuery({ queryKey: ['chats'], queryFn: listChats, staleTime: 30_000 });
 
@@ -93,24 +86,17 @@ function EmptyAsk() {
               onAsk={onAsk}
               onCancel={cancel}
               busy={busy}
-              draft={draft.text || null}
-              draftKey={draft.n}
+              /* A draft can arrive from elsewhere — Workflows offering to run
+                 a rule — and it lands in the box unsent, for the person to
+                 read and send. */
+              draft={state.draft ?? null}
             />
-          </div>
-
-          <div className="mt-6 flex items-center gap-8">
-            {STARTERS.map((s) => (
-              <StarterButton
-                key={s.label}
-                label={s.label}
-                onPick={() => setDraft((d) => ({ text: s.draft, n: d.n + 1 }))}
-              />
-            ))}
           </div>
         </div>
 
-        {/* Low on the page, low in the hierarchy. Three states (UI rule 8);
-            the loading and failed ones are one quiet line each. */}
+        {/* Low on the page, low in the hierarchy — what you asked before is
+            worth reaching for and worth nothing at the top. Three states
+            (UI rule 8); loading and failed are one quiet line each. */}
         <div className="pb-24 md:pb-10">
           {recent.isPending && (
             <p className="text-[12px] text-george-muted">Checking recent asks…</p>
@@ -139,18 +125,6 @@ function EmptyAsk() {
         </div>
       </div>
     </div>
-  );
-}
-
-function StarterButton({ label, onPick }: { label: string; onPick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onPick}
-      className="min-h-touch text-[13px] text-george-slate hover:text-george-navy"
-    >
-      {label}
-    </button>
   );
 }
 

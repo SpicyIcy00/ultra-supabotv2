@@ -80,7 +80,10 @@ function Word({
       to={item.path}
       onClick={onClick}
       aria-current={here ? 'page' : undefined}
-      className={`flex min-h-touch items-baseline gap-3 text-[15px] leading-none transition-colors ${
+      /* No alignment here on purpose: the rail wants baselines, the phone bar
+         wants centres, and inheriting the rail's put "More" a few pixels
+         below the tabs beside it. Each use says which it needs. */
+      className={`flex min-h-touch leading-none transition-colors ${
         here ? 'text-george-navy' : 'text-george-slate hover:text-george-navy'
       } ${className}`}
     >
@@ -145,31 +148,38 @@ export function GeorgeShell() {
 
         <nav className="mt-10 flex flex-col gap-1" aria-label="George">
           {primary.slice(0, 3).map((i) => (
-            <Word key={i.path} item={i} pathname={pathname} count={count} />
+            <Word key={i.path} item={i} pathname={pathname} count={count}
+                  className="items-baseline gap-3 text-[15px]" />
           ))}
           <span className="h-4" aria-hidden />
           {primary.slice(3).map((i) => (
-            <Word key={i.path} item={i} pathname={pathname} />
+            <Word key={i.path} item={i} pathname={pathname}
+                  className="items-baseline gap-3 text-[15px]" />
           ))}
         </nav>
 
         {operations.length > 0 && (
           <nav className="mt-10" aria-label="Operations">
+            {/* Secondary, and it reads as secondary: a size down from
+                George's own five and muted until you are in it. The existing
+                application is not going anywhere — it is just not what this
+                environment is about. */}
             <button
               type="button"
               onClick={() => setOpsOpen((o) => !o)}
               aria-expanded={opsOpen || inOperations}
-              className={`flex min-h-touch items-baseline gap-2 text-[15px] leading-none ${
-                inOperations ? 'text-george-navy' : 'text-george-slate hover:text-george-navy'
+              className={`flex min-h-touch items-baseline gap-2 text-[13px] leading-none ${
+                inOperations ? 'text-george-slate' : 'text-george-muted hover:text-george-slate'
               }`}
             >
               Operations
-              <span className="text-[13px]" aria-hidden>{opsOpen || inOperations ? '↓' : '→'}</span>
+              <span aria-hidden>{opsOpen || inOperations ? '↓' : '→'}</span>
             </button>
             {(opsOpen || inOperations) && (
-              <div className="mt-1 flex flex-col gap-0.5 pl-3">
+              <div className="mt-2 flex flex-col gap-0.5 border-l border-george-line pl-3">
                 {operations.map((i) => (
-                  <Word key={i.path} item={i} pathname={pathname} className="text-[14px]" />
+                  <Word key={i.path} item={i} pathname={pathname}
+                        className="items-baseline text-[13px]" />
                 ))}
               </div>
             )}
@@ -196,7 +206,8 @@ export function GeorgeShell() {
         {/* Tablet: the words in the header. Phone: the bottom bar instead. */}
         <nav className="hidden flex-1 items-baseline gap-6 md:flex" aria-label="George">
           {primary.map((i) => (
-            <Word key={i.path} item={i} pathname={pathname} count={count} />
+            <Word key={i.path} item={i} pathname={pathname} count={count}
+                  className="items-baseline gap-2 text-[15px]" />
           ))}
           {operations.length > 0 && (
             <div className="relative ml-auto">
@@ -204,8 +215,8 @@ export function GeorgeShell() {
                 type="button"
                 onClick={() => setOpsOpen((o) => !o)}
                 aria-expanded={opsOpen}
-                className={`min-h-touch text-[15px] ${
-                  inOperations ? 'text-george-navy' : 'text-george-slate'
+                className={`min-h-touch text-[13px] ${
+                  inOperations ? 'text-george-slate' : 'text-george-muted'
                 }`}
               >
                 Operations →
@@ -213,7 +224,8 @@ export function GeorgeShell() {
               {opsOpen && (
                 <div className="absolute right-0 top-full z-30 flex min-w-40 flex-col gap-0.5 rounded-lg border border-george-line bg-george-paper px-4 py-2">
                   {operations.map((i) => (
-                    <Word key={i.path} item={i} pathname={pathname} onClick={() => setOpsOpen(false)} />
+                    <Word key={i.path} item={i} pathname={pathname} onClick={() => setOpsOpen(false)}
+                          className="items-baseline text-[14px]" />
                   ))}
                   <button
                     type="button"
@@ -242,13 +254,13 @@ export function GeorgeShell() {
       >
         {tabs.map((i) => (
           <Word key={i.path} item={i} pathname={pathname} count={count}
-                className="flex-1 items-center justify-center text-[14px]" />
+                className="flex-1 items-center justify-center gap-1.5 text-[14px]" />
         ))}
         {(more.length > 0 || operations.length > 0) && (
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
-            className="flex min-h-touch flex-1 items-center justify-center text-[14px] text-george-slate"
+            className="flex flex-1 items-center justify-center text-[14px] text-george-slate"
           >
             More
           </button>
@@ -271,7 +283,8 @@ export function GeorgeShell() {
           >
             <div className="flex flex-col gap-1">
               {more.map((i) => (
-                <Word key={i.path} item={i} pathname={pathname} onClick={() => setMoreOpen(false)} />
+                <Word key={i.path} item={i} pathname={pathname} onClick={() => setMoreOpen(false)}
+                      className="items-baseline gap-3 text-[15px]" />
               ))}
             </div>
             {operations.length > 0 && (
@@ -281,7 +294,8 @@ export function GeorgeShell() {
                 </p>
                 <div className="flex flex-col gap-0.5">
                   {operations.map((i) => (
-                    <Word key={i.path} item={i} pathname={pathname} onClick={() => setMoreOpen(false)} className="text-[14px]" />
+                    <Word key={i.path} item={i} pathname={pathname} onClick={() => setMoreOpen(false)}
+                          className="items-baseline text-[14px]" />
                   ))}
                 </div>
               </>
