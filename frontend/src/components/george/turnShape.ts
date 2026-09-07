@@ -6,10 +6,18 @@
  *   Level 1  the notices, the answer, the figures it describes, and the one
  *            line of receipts under each — always visible, in that order.
  *   Level 2  the follow-ups the answer offers, and the prose itself.
- *   Level 3  the activity: tool rows, the full reasoning, the counts. Shown
- *            in full WHILE the turn runs, because real execution is worth
- *            watching; collapsed to one line once it is over, because the
- *            answer is then the point and the machinery is not.
+ *   Level 3  the activity: tool rows, the full reasoning, the counts. Behind
+ *            ONE LINE THAT SAYS WHAT GEORGE DID, in both phases.
+ *
+ * WHY THE ROWS NO LONGER STAND OPEN WHILE A TURN RUNS. They did, deliberately,
+ * because watching real execution is worth something. But a person waiting for
+ * an answer was being shown `get_sales {"group_by":["store"]}` — tool names and
+ * JSON arguments — as the most prominent thing on the screen, and that is
+ * implementation detail dressed as progress. What they actually need to know is
+ * that George is working and roughly on what, and workLine says exactly that in
+ * words while it happens. The rows are one tap away and nothing was removed:
+ * simple surface, then explanation, then technical evidence — not technical
+ * evidence first.
  *
  * WHAT NEVER MOVES BEHIND A DISCLOSURE. A notice (UI rule 4), the receipts
  * line (rules 3 and 6), the stopped note, and a pin or save confirmation.
@@ -23,6 +31,7 @@
  * number somebody did not check.
  */
 import type { GeorgeTurn } from '../../types/george';
+import { actLine, deedLine } from './cognition';
 
 type AnswerTurn = Extract<GeorgeTurn, { role: 'george' }>;
 
@@ -42,18 +51,51 @@ export function isOver(turn: AnswerTurn): boolean {
 }
 
 /**
- * Whether the activity is shown in full.
+ * Whether THIS turn is the one still streaming.
  *
- * In full while the turn runs; behind one line once it is over. `live` is
- * whether THIS turn is the one streaming — a finished turn is over whatever
- * the stream is doing for another.
+ * A finished turn is over whatever the stream is doing for another, so a
+ * thread's earlier answers never narrate in the present tense while the newest
+ * one runs.
  */
-export function showsActivity(turn: AnswerTurn, live: boolean): boolean {
+export function isRunning(turn: AnswerTurn, live: boolean): boolean {
   return live && !isOver(turn);
 }
 
 /**
- * The one line that stands for the activity once it is collapsed.
+ * The one line the activity waits behind: what George did, in words.
+ *
+ * DERIVED FROM THE TOOLS, THEREFORE TRUE. Which tools were called and how many
+ * rows came back are facts from the frames — never the model's account of its
+ * own work, which is what the reasoning inside the disclosure is and is
+ * labelled as. Nothing here is a business figure: a row count is a fact about
+ * the query, and it is never presented as a measurement of anything.
+ *
+ * PRESENT WHILE IT HAPPENS, PAST ONCE IT IS OVER, and stopped work says
+ * stopped rather than reporting a finished-sounding sentence for work that did
+ * not finish.
+ */
+export function workLine(turn: AnswerTurn, live: boolean): string {
+  const tools = turn.toolCalls.map((c) => c.tool);
+  if (isRunning(turn, live)) {
+    const running = turn.toolCalls.filter((c) => !c.result).map((c) => c.tool);
+    const line = actLine(running.length > 0 ? running : tools);
+    return line ? line[0].toUpperCase() + line.slice(1) : 'Working…';
+  }
+
+  const deeds = deedLine(tools);
+  const rows = turn.toolCalls.reduce(
+    (n, c) => n + (c.result && !c.result.error ? (c.result.row_count ?? 0) : 0),
+    0,
+  );
+  const counted = rows > 0 ? ` — ${rows.toLocaleString('en-PH')} ${rows === 1 ? 'row' : 'rows'}` : '';
+
+  if (turn.cancelled) return deeds ? `Stopped after: ${deeds.toLowerCase()}` : 'Stopped';
+  if (!deeds) return turn.thinking.trim() ? 'Thought about it' : 'Answered without reading anything';
+  return `${deeds}${counted}`;
+}
+
+/**
+ * The counts, for the panel behind the line.
  *
  * Counts only, and only counts that are known: calls from the frames that
  * arrived, iterations from `done`. A stopped turn says so rather than

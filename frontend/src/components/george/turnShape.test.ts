@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { DoneFrame, GeorgeTurn } from '../../types/george';
-import { activitySummary, emphasisOf, hasActivity, isOver, showsActivity } from './turnShape';
+import {
+  activitySummary,
+  emphasisOf,
+  hasActivity,
+  isOver,
+  isRunning,
+  workLine,
+} from './turnShape';
 
 type AnswerTurn = Extract<GeorgeTurn, { role: 'george' }>;
 
@@ -33,12 +40,12 @@ describe('emphasis', () => {
 });
 
 describe('activity', () => {
-  it('is shown in full only while THIS turn is running', () => {
-    expect(showsActivity(george({ toolCalls: [call(1)] }), true)).toBe(true);
-    expect(showsActivity(george({ toolCalls: [call(1)] }), false)).toBe(false);
-    expect(showsActivity(george({ toolCalls: [call(1)], done }), true)).toBe(false);
-    expect(showsActivity(george({ cancelled: true }), true)).toBe(false);
-    expect(showsActivity(george({ error: 'x' }), true)).toBe(false);
+  it('is running only while THIS turn is the one streaming', () => {
+    expect(isRunning(george({ toolCalls: [call(1)] }), true)).toBe(true);
+    expect(isRunning(george({ toolCalls: [call(1)] }), false)).toBe(false);
+    expect(isRunning(george({ toolCalls: [call(1)], done }), true)).toBe(false);
+    expect(isRunning(george({ cancelled: true }), true)).toBe(false);
+    expect(isRunning(george({ error: 'x' }), true)).toBe(false);
   });
 
   it('is over when done, stopped or failed', () => {
@@ -66,5 +73,67 @@ describe('activity', () => {
     expect(hasActivity(george({ toolCalls: [call(1)] }))).toBe(true);
     expect(hasActivity(george({ thinking: 'x' }))).toBe(true);
     expect(hasActivity(george({ done }))).toBe(true);
+  });
+});
+
+describe('workLine — what George did, in words', () => {
+  const result = (rows: number) => ({
+    row_count: rows, source_table: 't', truncated: false, duration_ms: 1, error: null,
+  });
+
+  it('is the present tense while the turn runs', () => {
+    const turn = george({ toolCalls: [call(1)] });
+    expect(workLine(turn, true)).toBe('Reading sales…');
+  });
+
+  it('names what is still in flight rather than what already came back', () => {
+    const turn = george({
+      toolCalls: [
+        { ...call(1), result: result(7) },
+        { seq: 2, tool: 'get_stock', arguments: {} },
+      ],
+    });
+    expect(workLine(turn, true)).toBe('Counting stock…');
+  });
+
+  it('is the past tense with a row count once the turn is over', () => {
+    const turn = george({
+      toolCalls: [{ ...call(1), result: result(7) }],
+      done,
+    });
+    expect(workLine(turn, false)).toBe('Read sales — 7 rows');
+  });
+
+  it('adds the counts of every call that came back, and no others', () => {
+    const turn = george({
+      toolCalls: [
+        { ...call(1), result: result(7) },
+        { seq: 2, tool: 'get_stock', arguments: {},
+          result: { ...result(999), error: 'refused' } },
+      ],
+      done,
+    });
+    // The refused call contributed no rows and must contribute no count.
+    expect(workLine(turn, false)).toBe('Read sales and counted stock — 7 rows');
+  });
+
+  it('says stopped rather than a finished-sounding sentence', () => {
+    const turn = george({ toolCalls: [call(1)], cancelled: true });
+    expect(workLine(turn, false)).toBe('Stopped after: read sales');
+  });
+
+  it('says so when an answer read nothing at all', () => {
+    expect(workLine(george({ done }), false)).toBe('Answered without reading anything');
+    expect(workLine(george({ thinking: 'hm', done }), false)).toBe('Thought about it');
+  });
+
+  it('names an unknown tool plainly rather than describing it wrongly', () => {
+    const turn = george({ toolCalls: [{ seq: 1, tool: 'get_something_new', arguments: {} }], done });
+    expect(workLine(turn, false)).toBe('Get_something_new');
+  });
+
+  it('never prints a business figure — a row count is a fact about the query', () => {
+    const turn = george({ toolCalls: [{ ...call(1), result: result(3) }], done });
+    expect(workLine(turn, false)).not.toMatch(/₱/);
   });
 });

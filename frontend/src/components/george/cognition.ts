@@ -111,6 +111,54 @@ const SUBJECTS: Record<string, string> = {
   run_workflow: 'The workflow',
 };
 
+/**
+ * Tool -> the act in the PAST, for a turn that is over.
+ *
+ * A third map in the same file, and it belongs here for the reason the first
+ * two do: one home, so a spoken summary and a printed one cannot drift. It is
+ * a map rather than a transformation of ACTS because the verbs are irregular —
+ * reading/read, counting/counted, looking up/looked up — and a rule that
+ * produced "readed" once would produce it forever.
+ *
+ * Lower case, because these are joined into a sentence and only the first is
+ * capitalised.
+ */
+const DEEDS: Record<string, string> = {
+  get_sales: 'read sales',
+  get_stock: 'counted stock',
+  get_product: 'looked up the product',
+  get_movement: 'traced movement',
+  get_vending: 'read vending',
+  get_vending_stock: 'checked the machines',
+  get_dead_stock: 'looked for dead stock',
+  get_purchasing: 'checked purchasing',
+  get_cost_history: 'read cost history',
+  get_brief: 'read the morning brief',
+
+  pin_answer: 'pinned this',
+  save_workflow: 'saved the rule',
+  run_workflow: 'ran the workflow',
+};
+
+/**
+ * What George DID, as one line — the same shape actLine has, in the past.
+ *
+ * Deduped and capped at two names for the same reasons: the act is what was
+ * done rather than how many calls did it, and five acts is a log line rather
+ * than a sentence.
+ */
+export function deedLine(tools: string[]): string {
+  const deeds = [...new Set(tools.map((t) => DEEDS[t] ?? t))];
+  if (deeds.length === 0) return '';
+  const joined =
+    deeds.length === 1
+      ? deeds[0]
+      : deeds.length === 2
+        ? `${deeds[0]} and ${deeds[1]}`
+        : `${deeds[0]} and ${deeds.length - 1} other things`;
+  return joined[0].toUpperCase() + joined.slice(1);
+}
+
 /** One completed call, as much of it as narration needs. */
 export interface LastResult {
   tool: string;
