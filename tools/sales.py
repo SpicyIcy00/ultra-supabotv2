@@ -186,6 +186,7 @@ def get_sales(
             f"Unknown metric {metric!r}. Valid: {', '.join(sorted(all_metrics))}."
         )
     mdef = all_metrics[metric]
+    metric_kind = _req(mdef, "kind")
     top_n = _validate_top_n(defs, top_n)
 
     # ---- group_by --------------------------------------------------------
@@ -566,6 +567,21 @@ def get_sales(
                         "source": "tools/sales.py reconciliation",
                     })
 
+            # ---- derived-metric diagnostics ------------------------------
+            # A ratio is only as honest as its denominator, so a derived
+            # metric reports what its definition says to report about it
+            # (metrics.yaml metrics.<id>.diagnostics) — for ATP, how many of
+            # the transactions in the window were zero-total baskets. A
+            # diagnostic is inspectable context, not a caveat: it goes in
+            # meta, never in a notice.
+            diagnostics: dict[str, Any] = {}
+            for dname, dref in (mdef.get("diagnostics") or {}).items():
+                cur.execute(
+                    f"SELECT {_req(defs, dref)} AS n\nFROM {from_sql}\nWHERE {where_sql}",
+                    params,
+                )
+                diagnostics[dname] = cur.fetchone()["n"]
+
             # ---- data quality, when grouping by product or category -------
             data_quality: Optional[dict] = None
             if _PRODUCT_GROUPINGS & set(group_by):
@@ -623,12 +639,40 @@ def get_sales(
             if isinstance(r.get(k), date):
                 r[k] = r[k].isoformat()
 
+    # A derived ratio over a window with no qualifying transactions is NULL,
+    # and the answer has to say "undefined", not "zero" — the legacy analytics
+    # code returned 0 here, and that is exactly the number this notice exists
+    # to keep out of an answer. Grouped rows never trigger it (an empty bucket
+    # is absent, not NULL); the grand total does.
+    if metric_kind == "derived" and any(r.get("value") is None for r in rows):
+        # The kind is a literal so tests/test_notice_fingerprints can see it;
+        # the yaml names the same kind on the metric, and the contract test
+        # holds the two together.
+        assert _req(mdef, "undefined_notice_kind") == "ratio_undefined"
+        notices.append({
+            "kind": "ratio_undefined",
+            "message": (
+                f"{_req(mdef, 'display_name')} is undefined for this window: "
+                f"there were no qualifying transactions, so the denominator "
+                f"({_req(mdef, 'formula.denominator')}) is zero. The value is "
+                f"reported as null, not as zero — nothing was sold, and nothing "
+                f"was averaged."
+            ),
+            "source": f"definitions/metrics.yaml: metrics.{metric}.undefined_when",
+        })
+
     meta: dict[str, Any] = {
         "source_table": source_table,
         "metric": metric,
         "metric_sql": metric_sql,
         "metric_unit": _req(mdef, "unit"),
         "metric_grain": grain,
+        # The metric model (metrics.yaml metric_model): what this figure IS,
+        # said in the receipt rather than left to the model to infer from a
+        # key name. A derived metric also names what it is made of.
+        "metric_kind": metric_kind,
+        "metric_label": _req(mdef, "display_name"),
+        "metric_domain": _req(mdef, "domain"),
         "group_by": group_by,
         "window": window_meta,
         "filters_applied": filters_applied,
@@ -649,6 +693,9 @@ def get_sales(
             "synthesised for an empty day — that would fabricate data."
         ),
     }
+    if metric_kind == "derived":
+        meta["metric_formula"] = dict(_req(mdef, "formula"))
+        meta.update(diagnostics)
     if data_quality is not None:
         meta["data_quality"] = data_quality
     if sku_resolution is not None:

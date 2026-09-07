@@ -15,6 +15,35 @@
 # =============================================================================
 
 version: 1
+
+# -----------------------------------------------------------------------------
+# VERSION POLICY — decided 2026-09-07, with the metric model below.
+#
+# `version` is stamped on every tool result (meta.definitions_version) and a
+# saved workflow records the version it was written against; a run whose live
+# version differs carries a definitions_drift notice until somebody re-saves
+# the workflow, which resets its promotion gate. So a bump is not free: it
+# tells every reader of every saved rule that the ground moved under it.
+#
+# It BUMPS when the MEANING of something already trusted changes: the SQL, the
+# guards, the grain, the grouping semantics or the business definition of an
+# existing metric, filter, window or comparison.
+#
+# It does NOT bump for additive entries — a new metric, a new comparison, new
+# descriptive fields on an existing entry — because nothing a saved rule
+# already computes means anything different afterwards. Such entries carry
+# `introduced` (a date) so their own arrival is still recorded.
+# -----------------------------------------------------------------------------
+version_policy:
+  bump_when:
+    - "the SQL, guards, grain or grouping semantics of an existing metric change"
+    - "the definition of an existing filter, window preset or comparison changes"
+    - "a business definition already relied on by a tool changes meaning"
+  do_not_bump_when:
+    - "a metric, comparison or metric set is ADDED"
+    - "descriptive fields (kind, domain, display_name, introduced, notes) are added"
+  additive_entries_carry: introduced
+
 currency:
   code: PHP
   symbol: "₱"
@@ -181,11 +210,17 @@ sales_day:
   # arithmetic, the same as INTERVAL '1 month'.
   # ---------------------------------------------------------------------------
   presets:
+    # `closed_alternative` — the closed preset a tool names when it refuses a
+    # period-over-period comparison on a window still in progress
+    # (comparisons.previous_period.partial_window_policy). Null where no
+    # closed preset covers the same unit; the tool then suggests an explicit
+    # window instead.
     today:
       start: "date_trunc('day', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
       end:   "(date_trunc('day', (now() AT TIME ZONE 'Asia/Manila')) + INTERVAL '1 day') AT TIME ZONE 'Asia/Manila'"
       includes_partial_day: true
       relative: {unit: day, offset: 0, length: 1}
+      closed_alternative: yesterday
     yesterday:
       start: "(date_trunc('day', (now() AT TIME ZONE 'Asia/Manila')) - INTERVAL '1 day') AT TIME ZONE 'Asia/Manila'"
       end:   "date_trunc('day', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
@@ -196,6 +231,7 @@ sales_day:
       end:   "(date_trunc('week', (now() AT TIME ZONE 'Asia/Manila')) + INTERVAL '1 week') AT TIME ZONE 'Asia/Manila'"
       includes_partial_day: true
       relative: {unit: week, offset: 0, length: 1}
+      closed_alternative: last_week
     last_week:
       start: "(date_trunc('week', (now() AT TIME ZONE 'Asia/Manila')) - INTERVAL '1 week') AT TIME ZONE 'Asia/Manila'"
       end:   "date_trunc('week', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
@@ -206,6 +242,7 @@ sales_day:
       end:   "(date_trunc('month', (now() AT TIME ZONE 'Asia/Manila')) + INTERVAL '1 month') AT TIME ZONE 'Asia/Manila'"
       includes_partial_day: true
       relative: {unit: month, offset: 0, length: 1}
+      closed_alternative: last_month
     last_month:
       start: "(date_trunc('month', (now() AT TIME ZONE 'Asia/Manila')) - INTERVAL '1 month') AT TIME ZONE 'Asia/Manila'"
       end:   "date_trunc('month', (now() AT TIME ZONE 'Asia/Manila')) AT TIME ZONE 'Asia/Manila'"
@@ -226,6 +263,7 @@ sales_day:
       end:   "(date_trunc('year', (now() AT TIME ZONE 'Asia/Manila')) + INTERVAL '1 year') AT TIME ZONE 'Asia/Manila'"
       includes_partial_day: true
       relative: {unit: year, offset: 0, length: 1}
+      closed_alternative: null
 
   # All ranges are half-open: lower bound inclusive, upper bound exclusive.
   # resolves: business_rules.yaml:418 instructed "Always use inclusive date
@@ -546,6 +584,63 @@ filters:
 
 
 # =============================================================================
+# THE METRIC MODEL — what every trusted figure declares about itself
+#
+# Added 2026-09-07. Until then a metric was a SQL fragment with a unit, and
+# what it WAS — base or derived, which business it measured, what it depended
+# on — lived in prose comments a tool could not read and a test could not
+# hold. The fields below are declared on every metric in every domain so that
+# George, the tools and the tests can inspect a figure's identity without
+# reading a comment. Additive by construction: see version_policy.
+#
+# EXECUTION STAYS DOMAIN-SPECIFIC. `metrics` (retail sales), `vending.metrics`
+# and `purchasing.measures` keep their own sections, their own SQL aliases and
+# their own group vocabularies, because the tables genuinely differ. This
+# model describes applicability the same way everywhere; it does not force one
+# execution schema on three businesses.
+#
+# THE SQL IS THE EXECUTABLE SOURCE OF TRUTH. A derived metric declares its
+# `formula` — named dependencies and an operation — beside a vetted `sql`.
+# Nothing composes the SQL from the formula at run time, and nothing accepts a
+# formula from the model. The two are held together by a contract test
+# (tests/test_metric_model_contract.py) that proves the SQL is literally the
+# dependencies' SQL in the declared structure, that the dependencies exist in
+# the same domain, that their grains agree, and that the derived metric's
+# valid_group_by is no broader than their intersection. A formula and a SQL
+# that drift apart fail that test rather than answer differently.
+# =============================================================================
+metric_model:
+  # Required on every entry of every metric registry named in `registries`.
+  required_fields: [kind, domain, display_name, sql, unit]
+  kinds:
+    base:    "one aggregate over one table — nothing computed from another metric"
+    derived: "a deterministic combination of named base metrics; declares `formula`"
+  # Where the registries live, and which domain each belongs to. A domain is
+  # a business with its own tables; a metric applies to exactly one.
+  registries:
+    metrics:             {domain: retail_sales, tool: get_sales}
+    vending.metrics:     {domain: vending,      tool: get_vending}
+    purchasing.measures: {domain: purchasing,   tool: get_purchasing}
+  derived:
+    required_fields: [formula]
+    operations:
+      # numerator / denominator, guarded against a zero denominator in SQL and
+      # reported as NULL — never as zero — when the denominator is zero.
+      ratio:
+        sql_template: "ROUND({numerator} / NULLIF({denominator}, 0), {decimal_places})"
+        undefined_value: null
+        undefined_notice_kind: ratio_undefined
+    formula_source: definitions_only     # the model never submits a formula
+  # Vending revenue per order is the vending-domain analogue of ATP and is NOT
+  # defined here: its denominator is orders (COUNT(DISTINCT order_trade_no_in),
+  # 1,481 against 1,909 lines in August 2026), its table is a different
+  # business, and nobody has asked for it. Recorded so it is added as a
+  # scoped vending metric when wanted, not by pointing ATP at the wrong table.
+  candidates_not_defined:
+    vending.revenue_per_order: "vending revenue / vending orders; a separate scoped metric, not ATP"
+
+
+# =============================================================================
 # METRICS
 # =============================================================================
 #
@@ -559,6 +654,9 @@ metrics:
 
   # ---------------------------------------------------------------------------
   net_sales:
+    kind: base
+    domain: retail_sales
+    display_name: "Net sales"
     description: >
       Company or store level sales value. The transaction-level measure: the
       final amount of each completed, non-cancelled, non-return transaction at
@@ -596,6 +694,9 @@ metrics:
 
   # ---------------------------------------------------------------------------
   product_revenue:
+    kind: base
+    domain: retail_sales
+    display_name: "Product revenue"
     description: >
       Revenue attributed to a specific product, category or tag. The line-level
       measure — the only one that can be broken down below the transaction.
@@ -660,6 +761,9 @@ metrics:
 
   # ---------------------------------------------------------------------------
   returns_value:
+    kind: base
+    domain: retail_sales
+    display_name: "Returns value"
     description: >
       Value of returned transactions, reported on its own. NEVER subtracted
       from net_sales — see filters.returns.net_of_returns_supported.
@@ -681,6 +785,9 @@ metrics:
 
   # ---------------------------------------------------------------------------
   units_sold:
+    kind: base
+    domain: retail_sales
+    display_name: "Units sold"
     description: "Number of units sold. Line grain."
     grain: transaction_item
     source_table: new_transaction_items
@@ -702,6 +809,9 @@ metrics:
 
   # ---------------------------------------------------------------------------
   transaction_count:
+    kind: base
+    domain: retail_sales
+    display_name: "Transactions"
     description: >
       Number of distinct transactions. Transaction grain. When grouped by
       product or category the meaning CHANGES to "transactions containing this
@@ -729,6 +839,233 @@ metrics:
     # source: business_rules.yaml:313 (business_logic.transaction_count).
     #   COUNT(DISTINCT t.ref_id), not COUNT(*): ref_id is the transaction PK and
     #   a line-grain join multiplies header rows.
+    #
+    # MEASURED 2026-09-07: on the header table, rows and distinct ref_ids are
+    # the same number (18,268 of each in August 2026), so this count is a
+    # count of transactions and not of lines.
+    #
+    # ZERO-TOTAL SALES ARE TRANSACTIONS. 1,194 Sale rows across history carry
+    # total = 0 (0.16%–1.05% of a month's transactions in 2026). Every line in
+    # them is ₱0 with no discount and a zero sub_total — free seasonal items,
+    # "Store supplies" and a few beverages rung through the till — not
+    # discounted baskets. They satisfy this definition and are counted. That
+    # decision is made HERE, once, and average_transaction_value inherits it:
+    # excluding them would be a change to what a transaction is, not to ATP.
+    zero_total_transactions_counted: true
+    zero_total_diagnostic_sql: "COUNT(DISTINCT t.ref_id) FILTER (WHERE t.total = 0)"
+
+  # ---------------------------------------------------------------------------
+  # AVERAGE TRANSACTION VALUE — the first DERIVED metric. Added 2026-09-07.
+  #
+  # net_sales / transaction_count, over EXACTLY the guards both components
+  # use: not cancelled, type Sale, active retail, half-open Manila window. It
+  # is the trusted answer to "is the problem transactions or basket size?" —
+  # a question George could previously only answer by dividing two figures in
+  # prose, which is the one calculation this file exists to keep out of prose.
+  #
+  # WHAT WAS INSPECTED BEFORE WRITING THIS DOWN (live, 2026-09-07):
+  #   - transaction_count is distinct transactions (see above), so the
+  #     denominator is baskets, not lines.
+  #   - Returns are outside both terms already (filters.returns), and no
+  #     Return row links to the sale it reverses (sale_invoice_number is empty
+  #     on all 52), so ATP is average SALE value and says so.
+  #   - Zero-total Sale transactions stay in the denominator — decided on
+  #     transaction_count, inherited here. Their count in the window is
+  #     reported in meta.zero_total_transactions on every ATP result so the
+  #     figure is inspectable, and NOT as a notice: a diagnostic is not a
+  #     caveat.
+  #   - The only channel value in 2026 retail data is OFFLINE_PAYMENTS, so
+  #     there is no delivery channel to include or exclude.
+  #   - Empty buckets are absent rows (gap_filled: false) so a grouped ATP
+  #     never divides by zero. A whole window with no transactions returns
+  #     NULL with a ratio_undefined notice — never zero. The legacy analytics
+  #     code returned 0 there; that behaviour is rejected, not inherited.
+  #   - Vending is a different business with a different denominator
+  #     (orders, not transactions) and is NOT covered — see
+  #     metric_model.candidates_not_defined.
+  #   - FFR (restaurant) ATP cannot be assessed: see data_availability.ffr.
+  #
+  # Transaction grain, like both components, so product and category grouping
+  # is refused exactly as net_sales refuses it — "ATP of baskets containing X"
+  # would be a different definition nobody agreed.
+  #
+  # The SQL below is the executable definition. `formula` names what it is
+  # made of; tests/test_metric_model_contract.py proves the two agree.
+  # ---------------------------------------------------------------------------
+  average_transaction_value:
+    kind: derived
+    domain: retail_sales
+    display_name: "Average transaction value"
+    introduced: "2026-09-07"
+    description: >
+      Average value of a sale transaction: net_sales divided by
+      transaction_count over the same window, stores and guards. Transaction
+      grain. Undefined (NULL, with a notice) when there are no qualifying
+      transactions; never zero.
+    grain: transaction
+    source_table: new_transactions
+    formula:
+      operation: ratio
+      numerator: net_sales
+      denominator: transaction_count
+      decimal_places_ref: currency.decimal_places
+    sql: "ROUND(SUM(t.total) / NULLIF(COUNT(DISTINCT t.ref_id), 0), 2)"
+    unit: PHP
+    unit_per: transaction
+    filters:
+      - "t.is_cancelled = false"
+      - "t.transaction_type = 'Sale'"
+      - "t.store_id IN :active_retail_store_ids"
+    date_column: "t.transaction_time"
+    valid_group_by: [store, day, week, month]
+    # Not one of the two money measures the net_sales/product_revenue
+    # reconciliation governs; a ratio has nothing to reconcile against.
+    reconcilable: false
+    undefined_when: "COUNT(DISTINCT t.ref_id) = 0"
+    undefined_notice_kind: ratio_undefined
+    diagnostics:
+      zero_total_transactions: metrics.transaction_count.zero_total_diagnostic_sql
+
+
+# =============================================================================
+# METRIC SETS — guidance, not execution. Added 2026-09-07.
+#
+# Names the group of metrics a question like "how did Rockwell do last week?"
+# is asking for, so George reads it here rather than guessing, and so the
+# frontend can show the three figures under one heading when their calls
+# agree on scope. NOTHING EXECUTES A SET: get_sales runs one metric per call,
+# the loop runs the calls together, and the composition on screen is
+# adjacency (resultShape.ts). A set that ran as one query would be a second
+# calculation path, which is what this block must never become.
+# =============================================================================
+metric_sets:
+  sales_headline:
+    domain: retail_sales
+    metrics: [net_sales, transaction_count, average_transaction_value]
+    purpose: >
+      What "how did <store> do <window>?" asks. Run each with the same
+      date_range, filters and compare_to so the three figures share one scope.
+    executes_nothing: true
+
+
+# =============================================================================
+# COMPARISONS — "vs what?", as a definition. Added 2026-09-07.
+#
+# A period-over-period figure has a baseline, and WHICH baseline is a business
+# definition: brief.sales_vs_same_weekday rejected `previous_day` in favour of
+# `same_weekday_last_week` after measuring both. Until this section existed the
+# only comparison George could make outside the brief was arithmetic in prose,
+# with no receipt for the baseline. Now a tool computes it, both windows go on
+# the receipt, and the model reads change_pct rather than deriving it.
+#
+# ONE COMPARISON IN V1, deliberately. previous_period is the primitive every
+# other period comparison is a variant of; the variants are listed below as
+# NOT supported, with the reason, so they are added as decisions and not as
+# synonyms. "previous week" and "previous month" are not separate kinds: they
+# are previous_period applied to a week or a month window.
+# =============================================================================
+comparisons:
+  previous_period:
+    display_name: "vs previous period"
+    introduced: "2026-09-07"
+    applies_to: [get_sales]
+
+    # THE TWO WINDOWS ARE THE SAME SHAPE. Same metric, same grouping, same
+    # store filter, same guards; only the window moves. A comparison that
+    # changed anything else would be comparing unlike populations, and the
+    # tool refuses rather than does that (same_population_required).
+    same_population_required: true
+
+    # Explicit [start, end): the baseline is the equal-length half-open window
+    # ending where the current one starts. 2026-08-24..2026-08-31 compares to
+    # 2026-08-17..2026-08-24.
+    explicit_window: shift_back_by_window_length
+    # A closed preset: BOTH windows resolve through the preset's `relative`
+    # block against the Manila date read in the same transaction, and the
+    # baseline shifts back by the preset's own length in its own unit — so
+    # last_month compares to the calendar month before it, whatever the day
+    # counts, and last_7_days to the seven days before those.
+    preset_window: shift_back_by_relative_length
+
+    # A window still in progress (sales_day.presets.*.includes_partial_day)
+    # is REFUSED: a partial week against a whole week is a drop by
+    # construction, and the drag changes size with the hour the question is
+    # asked. The refusal names the preset's closed_alternative. "Same elapsed
+    # portion of last week" is a different comparison mode and is not built.
+    partial_window_policy: refuse
+
+    # Row fields the tool computes. change_pct is measured against the
+    # ABSOLUTE baseline so its sign always agrees with change; a negative
+    # baseline (none exists in retail sales today — no row has total < 0)
+    # neither crashes nor becomes zero.
+    row_fields: [value, baseline, change, change_pct, direction, unit, baseline_status]
+    change_decimal_places: 2
+    change_pct_decimal_places: 1
+    change_pct_formula: "change / abs(baseline) * 100"
+    directions: [up, down, flat]
+    # Every row says what could and could not be compared. Precedence when
+    # several apply: no_current, then no_baseline, then zero_baseline.
+    baseline_statuses:
+      ok:            "both periods have a figure and the baseline is nonzero"
+      no_baseline:   "the baseline window returned no figure (NULL) — nothing to compare against"
+      zero_baseline: "the baseline is exactly zero, so a percentage is undefined"
+      no_current:    "the current window returned no figure; the baseline is reported alone"
+    change_pct_null_when: [no_baseline, zero_baseline, no_current]
+    change_null_when: [no_baseline, no_current]
+    # A count of nothing is 0; a sum of nothing is NULL. So transaction_count
+    # over an empty baseline is zero_baseline and net_sales over the same
+    # window is no_baseline. Both are true and both are reported as such;
+    # nothing coerces one into the other.
+    empty_window_note: "SUM over no rows is NULL (no_baseline); COUNT over no rows is 0 (zero_baseline)"
+    # Any row not `ok` raises this notice naming the subjects and why.
+    incomplete_notice_kind: comparison_incomplete
+    # Grouping allowed beside a comparison in V1: none, or by store. Rows are
+    # matched on the store id. A time bucket beside a comparison would mean
+    # each bucket against its own predecessor — a lag series, which is the
+    # per_bucket_lag mode below and is not built.
+    valid_group_by: [store]
+
+  not_supported:
+    same_period_last_year:
+      supported: false
+      reason: >
+        The estate is not the same shape a year apart — 5 stores traded in
+        August 2025 against 7 in August 2026 — so a company-wide year-over-year
+        figure compares different populations unless a same-store rule exists.
+        Define that rule first, then add the comparison.
+    to_date_same_elapsed:
+      supported: false
+      reason: "week-to-date against the same elapsed portion of last week is a separate comparison mode"
+    per_bucket_lag:
+      supported: false
+      reason: "each bucket against its predecessor is a lag series; the chart of the series already shows it"
+    custom_baseline:
+      supported: false
+      reason: "an arbitrary baseline window is a definition supplied by the caller, which this file forbids"
+
+
+# =============================================================================
+# DATA AVAILABILITY — what George cannot measure because the data is not here
+# =============================================================================
+data_availability:
+  # Recorded 2026-09-07 after probing the production database as george_ro.
+  # The FFR (restaurant) business — its stores, transactions, line items,
+  # drink/side/rice roles and the rules about free and paid beverages — does
+  # not exist in this database in any form: no store rows, no tables, no
+  # products, no categories. "FFR Overview" appears only as a placeholder page
+  # name in test fixtures. Nothing FFR-specific is defined, stubbed or
+  # exampled anywhere in George until an authoritative FFR source arrives.
+  ffr:
+    available: false
+    verified: "2026-09-07"
+    blocked_metrics: [ffr_atp, drink_attachment, side_attachment, rice_mix]
+    requires:
+      - "FFR stores, listed here with ids the way stores.active_retail lists candy stores"
+      - "FFR transactions and line items in tables George's role can read"
+      - "product/category ROLES (drink, side, rice, main) as data, not prose"
+      - "the business-rule mappings (free vs paid beverages, water, siomai, side exclusions) as entries in this file, sourced from the business"
+      - "a decided attachment denominator (transactions containing X vs all transactions)"
+    milestone: "separate future data-source milestone; not this branch"
 
 
 # =============================================================================
@@ -1241,29 +1578,47 @@ vending:
   devices_with_sales: 9
   devices_unnamed: 1
 
+  # kind / domain / display_name: the metric model (metric_model above),
+  # declared here so vending figures carry the same identity as retail ones.
+  # No derived vending metric exists; see metric_model.candidates_not_defined.
   metrics:
     revenue:
+      kind: base
+      domain: vending
+      display_name: "Vending revenue"
       sql: "SUM(l.real_price_php)"
       unit: PHP
       success_only: true
       valid_group_by: [machine, day, week, month, product, category, payment_method]
     units:
+      kind: base
+      domain: vending
+      display_name: "Vending units"
       sql: "SUM(l.goods_amount)"
       unit: units
       success_only: true
       valid_group_by: [machine, day, week, month, product, category, payment_method]
     orders:
+      kind: base
+      domain: vending
+      display_name: "Vending orders"
       sql: "COUNT(DISTINCT l.order_trade_no_in)"
       unit: orders
       success_only: true
       valid_group_by: [machine, day, week, month, product, category, payment_method]
     profit:
+      kind: base
+      domain: vending
+      display_name: "Vending profit"
       sql: "SUM(l.profit_php)"
       unit: PHP
       success_only: true
       requires_missing_cost_flag: true
       valid_group_by: [machine, day, week, month, product, category, payment_method]
     non_success_vends:
+      kind: base
+      domain: vending
+      display_name: "Non-success vends"
       sql: "COUNT(*)"
       unit: lines
       success_only: false
@@ -2208,20 +2563,32 @@ purchasing:
   header_total_is_authoritative: false
   header_mismatch_notice_mandatory: true
 
+  # kind / domain / display_name: the metric model (metric_model above).
+  # completion_lead_days is a mean of one column, not a combination of other
+  # measures, so it is `base` under that model's definition of derived.
   measures:
     po_count:
+      kind: base
+      domain: purchasing
+      display_name: "Purchase orders"
       description: "Number of purchase orders. Document grain."
       sql: "COUNT(DISTINCT po.id)"
       unit: purchase_orders
       grain: document
       valid_group_by: [supplier, store, status, day, week, month]
     ordered_value:
+      kind: base
+      domain: purchasing
+      display_name: "Ordered value"
       description: "Value ordered, summed from line subtotals. The default measure."
       sql: "SUM(pol.subtotal)"
       unit: PHP
       grain: line
       valid_group_by: [supplier, store, status, day, week, month, product, category]
     ordered_qty:
+      kind: base
+      domain: purchasing
+      display_name: "Ordered quantity"
       description: "Quantity ordered. NOT additive across products — see additive_across_products."
       sql: "SUM(pol.ordered_qty)"
       unit: mixed
@@ -2229,6 +2596,9 @@ purchasing:
       additive_across_products: false
       valid_group_by: [supplier, store, status, day, week, month, product, category]
     received_qty:
+      kind: base
+      domain: purchasing
+      display_name: "Received quantity"
       description: "Quantity recorded as received. Sparse; never reconciled to ordered."
       sql: "SUM(pol.received_qty)"
       unit: mixed
@@ -2237,6 +2607,9 @@ purchasing:
       coverage_flag_mandatory: true
       valid_group_by: [supplier, store, status, day, week, month, product, category]
     completion_lead_days:
+      kind: base
+      domain: purchasing
+      display_name: "Completion latency (days)"
       description: >
         Mean days from creation to the PO being marked complete in StoreHub.
         SYSTEM COMPLETION LATENCY, NOT DELIVERY TIME. See
@@ -2720,6 +3093,14 @@ notices:
       - [transfer valuation, valuation, internal transfer]
       - [different, separate, do not compare, not comparable, not a price]
 
+  # ---- The metric model and comparisons (tools/sales.py) --------------------
+  # A derived ratio whose denominator was zero. The value is NULL and the
+  # answer must say the figure is undefined because nothing qualified — not
+  # that it was zero, and not that sales were zero.
+  ratio_undefined:
+    must_convey:
+      - [undefined, cannot be computed, not defined, no figure, "n/a", not available]
+      - [transaction, transactions, sale, sales, denominator, nothing qualified, no qualifying]
   # ---- Saved workflows -----------------------------------------------------
   # Emitted by backend/app/services/workflow_runner.py, which builds a run for
   # all three callers — chat, the route and the scheduler — so there is one

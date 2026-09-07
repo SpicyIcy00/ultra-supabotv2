@@ -155,6 +155,12 @@ def test_no_fingerprint_outlives_its_notice():
 # ---------------------------------------------------------------------------
 
 PAIRS = {
+    "ratio_undefined": (
+        "Average transaction value is undefined for that window: there were no "
+        "qualifying transactions at Shang before 5 Apr 2026, so there is nothing "
+        "to average.",
+        "Average transaction value at Shang was ₱0 that week.",
+    ),
     "stale_sources": (
         "Three sources are too old to say what changed since yesterday: "
         "stock_transfers and purchase_orders are 64 days old and frozen.",
