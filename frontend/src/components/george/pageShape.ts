@@ -105,3 +105,37 @@ export function pagesOf(pins: Pin[]): PageView[] {
 export function freshness(lastOk: string | null, ago: (iso: string) => string): string {
   return lastOk ? `last read ${ago(lastOk)}` : 'never read';
 }
+
+/* ------------------------------------------------------------- the URL -- */
+
+/** The `?p=` value that means the ungrouped pins. A real page, a real value. */
+export const UNGROUPED_PARAM = '~';
+
+/** Where a page lives, so a pin can link to the page it landed on. */
+export function pagePath(page: string | null): string {
+  return `/pages?p=${encodeURIComponent(page ?? UNGROUPED_PARAM)}`;
+}
+
+/* -------------------------------------------------------- page context -- */
+
+/**
+ * What Ask is told when a question starts from a page.
+ *
+ * THE PAGE'S IDENTITY AND NOTHING MORE. The loop renders this as "[The user
+ * is on the … page.]", and that sentence must stay true: George is told
+ * WHERE the person is, not WHAT is on the page. He cannot read a page's
+ * pins — they live in a schema his read role cannot see — so a context that
+ * named their figures, or implied he had looked, would be the app claiming
+ * knowledge George does not have. Page-aware George is a later capability,
+ * through an injected reader, and it is not manufactured here with words.
+ *
+ * Capped at the length the backend accepts (george.py: page_context
+ * max_length=100), cut rather than rejected, because a long page name is
+ * still a page name.
+ */
+export const PAGE_CONTEXT_MAX = 100;
+
+export function pageContextFor(page: string | null): string {
+  const name = page ?? UNGROUPED_NAME;
+  return `Pages / ${name}`.slice(0, PAGE_CONTEXT_MAX);
+}

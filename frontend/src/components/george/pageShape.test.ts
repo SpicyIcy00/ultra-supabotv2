@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { Pin } from '../../types/pins';
-import { CONTENTS_SHOWN, freshness, pagesOf, UNGROUPED_NAME } from './pageShape';
+import {
+  CONTENTS_SHOWN,
+  freshness,
+  PAGE_CONTEXT_MAX,
+  pageContextFor,
+  pagePath,
+  pagesOf,
+  UNGROUPED_NAME,
+  UNGROUPED_PARAM,
+} from './pageShape';
 
 function pin(over: Partial<Pin> & { id: string; title: string }): Pin {
   return {
@@ -78,5 +87,35 @@ describe('order', () => {
       pin({ id: '2', title: 'new', page: 'New', created_at: '2026-09-06T00:00:00Z' }),
     ]);
     expect(views.map((v) => v.name)).toEqual(['New', 'Old']);
+  });
+});
+
+describe('the page context handed to Ask', () => {
+  it('carries the page’s identity', () => {
+    expect(pageContextFor('AJI BARN Reorder')).toBe('Pages / AJI BARN Reorder');
+    expect(pageContextFor(null)).toBe(`Pages / ${UNGROUPED_NAME}`);
+  });
+
+  it('claims nothing about the page’s contents having been read', () => {
+    // The loop renders this as "[The user is on the … page.]". George cannot
+    // read a page's pins, so the context must not say or imply that he has:
+    // no figures, no titles, no word for what is on the page.
+    const ctx = pageContextFor('AJI BARN Reorder');
+    for (const claim of ['pin', 'result', 'figure', 'loaded', 'read', 'contains', 'shows']) {
+      expect(ctx.toLowerCase()).not.toContain(claim);
+    }
+  });
+
+  it('fits what the backend accepts, cut rather than refused', () => {
+    const long = 'x'.repeat(PAGE_CONTEXT_MAX * 2);
+    expect(pageContextFor(long)).toHaveLength(PAGE_CONTEXT_MAX);
+    expect(pageContextFor(long).startsWith('Pages / ')).toBe(true);
+  });
+});
+
+describe('where a page lives', () => {
+  it('links a named page by its name and the ungrouped pins by their marker', () => {
+    expect(pagePath('FFR Overview')).toBe('/pages?p=FFR%20Overview');
+    expect(pagePath(null)).toBe(`/pages?p=${UNGROUPED_PARAM}`);
   });
 });

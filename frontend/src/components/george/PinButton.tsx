@@ -5,22 +5,36 @@
  * the tile re-runs them, so it stays current instead of freezing a sentence
  * written against last month's numbers.
  *
+ * THE PAGE IS CHOSEN HERE, and this is where a page is made. A page is derived
+ * from its pins, so "New page" is not a create step — it is a name on this
+ * pin, and the page exists the moment the pin does. The picker is the same one
+ * the Move control uses (PagePicker), so a person who has put a pin somewhere
+ * once knows how to put every pin anywhere.
+ *
+ * THE CONFIRMATION SAYS WHERE IT WENT, and links there. "Pinned" alone left a
+ * person to go and find their tile; "Pinned to Fame · Open" is the write
+ * reported as a fact with the way to it beside it.
+ *
  * There is deliberately no Save button beside this one. CLAUDE.md keeps pin and
  * save as different words ("a pin re-runs; a save is the rule it re-runs"), and
- * there is no rule versioning server-side yet. A disabled Save control would be
- * a promise the backend cannot keep, so the row is simply built to take one.
+ * a workflow is still saved by asking George in the thread, through the
+ * injected writer and the promotion gate.
  */
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { Check, Pin as PinIcon } from 'lucide-react';
 import type { GeorgeTurn } from '../../types/george';
-import type { SimilarPageConflict } from '../../types/pins';
+import type { Pin, SimilarPageConflict } from '../../types/pins';
 import {
   createPin,
   errorMessage,
   listPinPages,
   similarPageConflict,
 } from '../../services/pinsApi';
+import { chosenPage, isChoiceReady, type PageChoice } from './pageChoice';
+import { pagePath } from './pageShape';
+import { PagePicker } from './PagePicker';
 
 /** The backend caps a pin at 8 calls; say so rather than failing on submit. */
 const MAX_CALLS = 8;
@@ -28,10 +42,10 @@ const MAX_CALLS = 8;
 export function PinButton({ turn, question }: { turn: GeorgeTurn; question?: string }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [page, setPage] = useState('');
+  const [choice, setChoice] = useState<PageChoice>({ kind: 'none' });
   const [conflict, setConflict] = useState<SimilarPageConflict | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pinned, setPinned] = useState(false);
+  const [pinned, setPinned] = useState<Pin | null>(null);
 
   const pages = useQuery({
     queryKey: ['pin-pages'],
@@ -50,12 +64,12 @@ export function PinButton({ turn, question }: { turn: GeorgeTurn; question?: str
         title: question?.slice(0, 200) || undefined,
         question,
         conversation_id: turn.role === 'george' ? turn.done?.conversation_id : undefined,
-        page: page.trim() || undefined,
+        page: chosenPage(choice) ?? undefined,
         tool_calls: calls,
         allow_similar_page: allowSimilar,
       }),
-    onSuccess: () => {
-      setPinned(true);
+    onSuccess: (pin) => {
+      setPinned(pin);
       setOpen(false);
       setConflict(null);
       setError(null);
@@ -86,12 +100,32 @@ export function PinButton({ turn, question }: { turn: GeorgeTurn; question?: str
     return (
       <span className="inline-flex items-center gap-1.5 text-[12px] text-george-slate">
         <Check className="h-3.5 w-3.5" aria-hidden />
-        Pinned
+        <span>
+          Pinned{' '}
+          {pinned.page ? (
+            <>
+              to <span className="text-george-navy">{pinned.page}</span>
+            </>
+          ) : (
+            'with no page'
+          )}
+        </span>
+        <span className="text-george-muted" aria-hidden>·</span>
+        <Link to={pagePath(pinned.page)} className="text-george-navy hover:underline">
+          Open
+        </Link>
       </span>
     );
   }
 
   const tooMany = calls.length > MAX_CALLS;
+  const existing = (pages.data ?? []).flatMap((p) => (p.page ? [p.page] : []));
+
+  const close = () => {
+    setOpen(false);
+    setConflict(null);
+    setError(null);
+  };
 
   return (
     <div className="relative inline-block">
@@ -123,22 +157,13 @@ export function PinButton({ turn, question }: { turn: GeorgeTurn; question?: str
             </p>
           ) : (
             <>
-              <label className="mt-2.5 block text-[12px] text-george-slate" htmlFor="pin-page">
-                Page <span className="text-george-muted">(optional)</span>
-              </label>
-              <input
-                id="pin-page"
-                list="pin-page-options"
-                value={page}
-                onChange={(e) => { setPage(e.target.value); setConflict(null); }}
-                placeholder="Replenishment"
-                className="mt-1 w-full rounded-lg border border-george-line bg-george-paper px-2.5 py-1.5 text-[13px] text-george-navy outline-none focus:border-george-slate"
+              <PagePicker
+                pages={existing}
+                loading={pages.isPending}
+                failed={pages.isError}
+                value={choice}
+                onChange={(c) => { setChoice(c); setConflict(null); }}
               />
-              <datalist id="pin-page-options">
-                {(pages.data ?? [])
-                  .filter((p) => p.page)
-                  .map((p) => <option key={p.page} value={p.page as string} />)}
-              </datalist>
 
               {conflict && (
                 <div className="mt-2 rounded-lg border border-george-line bg-george-paper p-2">
@@ -146,7 +171,10 @@ export function PinButton({ turn, question }: { turn: GeorgeTurn; question?: str
                   <div className="mt-2 flex gap-2">
                     <button
                       type="button"
-                      onClick={() => { setPage(conflict.existing_page); setConflict(null); }}
+                      onClick={() => {
+                        setChoice({ kind: 'existing', page: conflict.existing_page });
+                        setConflict(null);
+                      }}
                       className="rounded-md border border-george-line px-2 py-1 text-[12px] text-george-navy"
                     >
                       Use “{conflict.existing_page}”
@@ -169,7 +197,7 @@ export function PinButton({ turn, question }: { turn: GeorgeTurn; question?: str
               <div className="mt-3 flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => { setOpen(false); setConflict(null); setError(null); }}
+                  onClick={close}
                   className="rounded-lg px-2.5 py-1.5 text-[12px] text-george-slate min-h-touch"
                 >
                   Cancel
@@ -177,7 +205,7 @@ export function PinButton({ turn, question }: { turn: GeorgeTurn; question?: str
                 <button
                   type="button"
                   onClick={() => create.mutate(false)}
-                  disabled={create.isPending}
+                  disabled={create.isPending || !isChoiceReady(choice)}
                   className="rounded-lg bg-george-navy px-3 py-1.5 text-[12px] text-george-cream disabled:opacity-60 min-h-touch"
                 >
                   {create.isPending ? 'Pinning…' : 'Pin'}

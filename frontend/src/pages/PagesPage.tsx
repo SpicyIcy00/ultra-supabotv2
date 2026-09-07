@@ -15,18 +15,24 @@
  * The open page is in the URL, so a page is a thing you can send somebody.
  * "Ungrouped" is a real page — the pins with no page — and gets a real
  * parameter value rather than an absent one.
+ *
+ * THERE IS NO "NEW PAGE" BUTTON HERE, and that is the model rather than an
+ * omission. A page is derived from its pins, so it comes into being when the
+ * first useful result is pinned to its name — in the Pin dialog, or by moving
+ * a pin. An empty page would be a page that says nothing, and the list says so
+ * in words when there are none.
  */
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { PinnedPage } from '../components/george/PinnedPage';
-import { freshness, pagesOf } from '../components/george/pageShape';
+import { freshness, pagesOf, UNGROUPED_PARAM } from '../components/george/pageShape';
 import { ago } from '../components/george/pinShape';
 import { PageHeader } from '../components/shell/PageHeader';
 import { SHELL_COLUMN } from '../components/shell/shellLayout';
 import { listPins } from '../services/pinsApi';
 
-const UNGROUPED = '~';
+const UNGROUPED = UNGROUPED_PARAM;
 
 export default function PagesPage() {
   const [params, setParams] = useSearchParams();
@@ -62,7 +68,8 @@ export default function PagesPage() {
       )}
       {pins.isSuccess && pages.length === 0 && (
         <p className="max-w-xl text-[15px] leading-relaxed text-george-slate">
-          No pages yet. Pin an answer in Ask and it becomes the first thing on one.
+          No pages yet. Pin an answer in Ask and name a page for it — that is how a page
+          begins.
         </p>
       )}
 
