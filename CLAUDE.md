@@ -74,6 +74,18 @@ rather than working around it.
    all, so there is no tool schema for a write tool to be in. See
    [agent/write_tools.py](agent/write_tools.py) and
    [backend/app/services/workflow_scheduler.py](backend/app/services/workflow_scheduler.py).
+   *Extended 2026-09-07, page reads:* the fourth capability is a READ, injected
+   the same way and for the same reason — a person's pins live in the schema
+   `george_ro` cannot see — and it keeps one more property on purpose. The
+   reader in [page_reader.py](backend/app/services/page_reader.py) is closed
+   over the authenticated user **and the exact page they asked from**
+   (`page_scope` on the request), so the tool it gates, `view_page`, has no
+   argument for either: "read Alice's Purchasing page" has nowhere to put the
+   name. Definitions are read on the application role exactly as
+   `GET /george/pins` reads them; figures come back through
+   `pin_runner.run_pin` as `george_ro`, exactly as a tile's do. No page scope
+   in the request means no reader and no tool. Nothing is written — not even
+   the pins' own run bookkeeping, which stays the tile's.
 
 5. **Keep the agent loop shallow.**
    No planner, no decomposition step, no sub-agents, no multi-stage
@@ -87,6 +99,15 @@ rather than working around it.
    lives in `agent/composite_tools.py`, in its own registry, so it can be
    offered to the model while remaining impossible to store inside a pin or
    inside another workflow's steps.
+
+   *Extended 2026-09-07:* `view_page` is the second composite and the same
+   reading applies. It replays the pins a person already saved, decides
+   nothing between them, and lives in the same registry so a pin can never
+   contain a read of the page it sits on. It is named to sort after every
+   other tool because tools render first in the cached prefix: a session
+   without a page keeps a tools list that is an exact prefix of one with a
+   page. Reading a page adds nothing to the executed set — a pin is a call the
+   user watched George run, and looking at a tile is not that.
 
 6. **A workflow composes existing read tools. It does not join them.**
    Steps do not pass data to each other: no expressions, no conditionals, no
@@ -270,6 +291,52 @@ page's pins — they live in a schema `george_ro` cannot see — so the context
 names where the person is, not what is on the page. Page-aware George is a
 later capability through an injected reader, and it is not manufactured with
 words in the meantime.
+
+*Amended 2026-09-07, Page Context V1: **the reader arrived, and the words did
+not change.*** The composer still sends the name as context, and beside it now
+sends the page's IDENTITY as `page_scope` — `{name}`, with null for the
+ungrouped pins, never the word "Ungrouped" and never parsed back out of
+"Pages / …". The scope is what the web process binds a reader to, and George
+is told he is on a page he can read and has not read; `view_page` is his to
+call when the question needs it, and simply opening Ask from a page reads
+nothing. Five decisions, recorded because the code cannot say why:
+
+  - **Hybrid replay, model-initiated.** A default read takes the newest 5 pins
+    (`DEFAULT_PINS`); an explicit read names at most 8 by id, deduplicated,
+    returned in the page's order whatever order they were asked in. Replays
+    run two at a time and once 60 seconds have passed no further pin is
+    STARTED — a pin not read was never run, and is named with its reason. Rows
+    are capped at 15 per result, 200 per read and 60 KB serialized, dropped
+    from the last pins first and never a pin's record or its receipts.
+  - **A page read is evidence, not a figure.** Its rows carry no stored
+    arguments (the receipts already say what each result was filtered to);
+    the arguments travel once, in `meta.evidence`. The loop never charts it,
+    never stores it as a call, never makes it the answer's receipts. What the
+    answer keeps is the compact evidence — page, time, each pin's status, what
+    was not read and why — on the post, so a reopened thread shows what George
+    considered and recovers its scope from it.
+  - **Every state survives.** Available, empty, refused, failed, unrunnable,
+    not read for the deadline, not inspected for the bound: distinct in the
+    structure, and two notices carry the read's own caveats —
+    `page_context_partial` and `page_context_truncated`, the only two entries
+    added to `metrics.yaml`, because the loop cannot enforce a notice without
+    its fingerprint.
+  - **"What's changed here?" has no stored baseline.** A pin re-runs rather
+    than remembering, so George reports what the page shows now, uses a
+    comparison only where a tool supplied one, and says plainly that a pin
+    keeps no history. Change is never inferred from when a pin was made. An
+    origin snapshot beside the current figures is a later question, alongside
+    the comparison layer.
+  - **Scope belongs to the thread.** The first page-aware question binds a
+    thread to its page; follow-ups keep it wherever the person has navigated;
+    a scope offered mid-thread is ignored; a fresh Ask has none; opening
+    another thread gives it its own or none. It lives on the stream the shell
+    owns, not in route state, which was lost on the first navigation and was
+    why page context used to survive exactly one turn
+    ([pageScope.ts](frontend/src/components/george/pageScope.ts)).
+
+**No page write through George.** Move, rename, add, remove, reorder and
+create stay the page's own controls. This is read and reason only.
 
 *Amended 2026-09-05: **Chat is retired**, and Post and Thread replace it.* Chat
 was defined here on 2026-09-04 as "a session: one thread of turns, one person's,
@@ -624,6 +691,18 @@ because each line is a decision that cannot be read back from the code.
 - **The accent exemption list is still four:** the mark, the status band's
   count, the shell's Inbox count, and the Inbox page. PostCard's dead branch
   and the drawer gave up their places; the scan now covers `components/shell`.
+- **A thread names its page, and an answer names what it read of it** (added
+  2026-09-07). One line above the composer — "Page context · AJI BARN
+  Reorder", linking back — and nothing of the page duplicated in Ask. Under an
+  answer that read the page, one line always visible, "Read 5 of 7 saved
+  analyses · 2 not inspected", drawn from the `page_context` frame and never
+  from the prose, with the pins, their states and their read times behind the
+  same disclosure the receipts use
+  ([PageContextBlock.tsx](frontend/src/components/george/PageContextBlock.tsx)).
+  The same block on a stored post, from what George recorded. Nothing in it
+  wears the accent; nothing in it is a figure. A live turn offers Pin only for
+  the calls the loop marked `pinnable` on the frame — read, never decided
+  from a name.
 
 ### The result vocabulary
 
