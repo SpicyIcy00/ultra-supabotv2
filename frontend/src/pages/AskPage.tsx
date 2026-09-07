@@ -26,6 +26,13 @@
  *
  * Asking from the empty state names the thread in the `start` frame, and
  * the URL follows it, so the exchange has an address from its first frame.
+ *
+ * A THREAD'S PAGE IS THE THREAD'S. A question asked from a page binds its
+ * thread to that page (the stream holds the scope, not route state); one
+ * line above the box says so and links back. Reopening the thread recovers
+ * the scope from what George recorded on its answers (pageScope.threadScope),
+ * so a follow-up after a reload is still about the same page — and a fresh
+ * Ask, or another thread, has its own scope or none.
  */
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -35,6 +42,8 @@ import { useShare } from '../hooks/useShare';
 import { useThread } from '../hooks/useThread';
 import { AnswerTurns } from '../components/george/AnswerTurn';
 import { AskComposer } from '../components/george/AskComposer';
+import { PageScopeLine } from '../components/george/PageScopeLine';
+import { threadScope } from '../components/george/pageScope';
 import { PostCard } from '../components/george/PostCard';
 import { ReactiveMark } from '../components/george/ReactiveMark';
 import { groupsWith, questionFor } from '../components/george/postShape';
@@ -49,14 +58,18 @@ import {
   shellColumn,
 } from '../components/shell/shellLayout';
 import { listChats } from '../services/chatsApi';
+import type { PageScope } from '../types/george';
 
 interface RouteState {
   draft?: string;
+  /** Where the person came from, as context — the legacy chrome sends this. */
   pageContext?: string;
+  /** A George page to bind the new thread to. Only a page sends this. */
+  pageScope?: PageScope;
 }
 
 function EmptyAsk() {
-  const { presence, live, ask, reset, cancel, busy } = useGeorge();
+  const { presence, live, ask, reset, cancel, busy, pageScope } = useGeorge();
   const location = useLocation();
   const state = (location.state ?? {}) as RouteState;
 
@@ -65,9 +78,12 @@ function EmptyAsk() {
   const onAsk = useCallback(
     (question: string) => {
       reset();
-      void ask(question, { pageContext: state.pageContext ?? null });
+      void ask(question, {
+        pageContext: state.pageContext ?? null,
+        pageScope: state.pageScope ?? null,
+      });
     },
-    [ask, reset, state.pageContext],
+    [ask, reset, state.pageContext, state.pageScope],
   );
 
   return (
@@ -88,6 +104,9 @@ function EmptyAsk() {
           </h1>
 
           <div className="mt-10 w-full max-w-xl">
+            {/* A question just sent from a page passes through here on its
+                way to its thread; the scope it bound is named meanwhile. */}
+            <PageScopeLine scope={pageScope ?? state.pageScope ?? null} className="mb-2" />
             <AskComposer
               bare
               onAsk={onAsk}
@@ -137,7 +156,7 @@ function EmptyAsk() {
 
 function ThreadAsk({ threadId }: { threadId: string }) {
   const george = useGeorge();
-  const { turns, threadId: openThread, open, ask, cancel, busy } = george;
+  const { turns, threadId: openThread, open, ask, cancel, busy, pageScope } = george;
   const thread = useThread(threadId);
   const share = useShare();
   const location = useLocation();
@@ -158,12 +177,19 @@ function ThreadAsk({ threadId }: { threadId: string }) {
     }
     if (busy || loadedFor.current === threadId) return;
     loadedFor.current = threadId;
-    open(threadHistory(thread.posts, thread.chat, threadId), threadId);
+    // The thread's own scope, recovered from its stored answers — or none.
+    open(threadHistory(thread.posts, thread.chat, threadId), threadId, threadScope(thread.posts));
   }, [thread.ready, thread.posts, thread.chat, threadId, openThread, open, busy]);
 
   // The stream's turns belong to THIS thread only when it is the open one.
   const here = openThread === threadId;
   const elsewhere = busy && !here;
+  // The scope shown is this thread's: the stream's while it is the open
+  // thread, otherwise what its stored answers say.
+  const scope = useMemo(
+    () => (here ? pageScope : threadScope(thread.posts)),
+    [here, pageScope, thread.posts],
+  );
   const merged = useMemo(
     () => riverMerge(thread.posts, here ? turns : []),
     [thread.posts, turns, here],
@@ -236,6 +262,11 @@ function ThreadAsk({ threadId }: { threadId: string }) {
         </div>
       </div>
 
+      {scope && (
+        <div className="px-4 md:px-8">
+          <PageScopeLine scope={scope} className={`${column} mb-1.5`} />
+        </div>
+      )}
       <AskComposer
         onAsk={onAsk}
         onCancel={cancel}

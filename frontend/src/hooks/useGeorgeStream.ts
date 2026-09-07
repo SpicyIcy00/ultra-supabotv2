@@ -30,11 +30,21 @@
  * so a stopped answer looked like a finished one. The turn is now marked
  * `cancelled`; whether the server went on to finish and store it is unknown
  * from here, and the UI says exactly that.
+ *
+ * A THREAD HAS ONE PAGE SCOPE, DECIDED WHEN IT STARTS. A question asked from
+ * a page binds the new thread to that page; every follow-up sends the same
+ * scope whether or not the person is still standing on the page, and a
+ * scope offered mid-thread is ignored. `reset` clears it; `open` sets it to
+ * the reopened thread's own (recovered from what George recorded on its
+ * answers) or to nothing. It lives here, on the one stream the shell owns,
+ * and not in route state — which is lost on the first navigation and was
+ * why the page context used to survive exactly one turn (pageScope.ts).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { useQueryClient } from '@tanstack/react-query';
 import { authenticatedFetch } from '../services/httpAuth';
+import { scopeForAsk } from '../components/george/pageScope';
 import type {
   AskHistoryTurn,
   DoneFrame,
@@ -42,6 +52,7 @@ import type {
   GeorgeState,
   GeorgeTurn,
   PageContextFrame,
+  PageScope,
   PinnedFrame,
   PostFrame,
   SavedFrame,
@@ -100,8 +111,18 @@ export function toHistory(turns: GeorgeTurn[]): AskHistoryTurn[] {
 
 /** What `ask` accepts beside the question. */
 export interface AskOptions {
-  /** The page the person is asking from — George receives it as context. */
+  /**
+   * Where the person is asking from, as a display string George reads out
+   * ("Pages / AJI BARN Reorder", or a legacy page key like "warehouse").
+   * Context only; never an identity.
+   */
   pageContext?: string | null;
+  /**
+   * The George page in scope, as an identity. Binds a NEW thread to that
+   * page so the server injects a reader for it; ignored inside a thread,
+   * whose scope was fixed when it started.
+   */
+  pageScope?: PageScope | null;
   /**
    * The post this question replies to, inside the current thread. Only
    * meaningful when a thread is open; the server validates it is in the thread.
@@ -116,6 +137,7 @@ export function useGeorgeStream() {
   const [turns, setTurns] = useState<GeorgeTurn[]>([]);
   const [state, setState] = useState<GeorgeState>('idle');
   const [threadId, setThreadId] = useState<string | null>(null);
+  const [pageScope, setPageScope] = useState<PageScope | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const qc = useQueryClient();
 
@@ -145,6 +167,13 @@ export function useGeorgeStream() {
   const setThread = useCallback((id: string | null) => {
     threadRef.current = id;
     setThreadId(id);
+  }, []);
+
+  // The thread's page scope, read at submit time like the thread id.
+  const scopeRef = useRef<PageScope | null>(null);
+  const setScope = useCallback((scope: PageScope | null) => {
+    scopeRef.current = scope;
+    setPageScope(scope);
   }, []);
 
   /** Mutate the in-flight george turn (always the last one). */
@@ -186,12 +215,13 @@ export function useGeorgeStream() {
     setState('idle');
   }, [patchLast]);
 
-  /** Nothing on screen, no thread to continue. */
+  /** Nothing on screen, no thread to continue, no page in scope. */
   const reset = useCallback(() => {
     cancel();
     setTurns([]);
     setThread(null);
-  }, [cancel, setThread]);
+    setScope(null);
+  }, [cancel, setThread, setScope]);
 
   /**
    * Load stored turns. They take the place of whatever was on screen, and the
@@ -202,13 +232,16 @@ export function useGeorgeStream() {
    * care which, and must not, so that one `ask` continues both.
    */
   const open = useCallback(
-    (loaded: GeorgeTurn[], thread: string | null) => {
+    (loaded: GeorgeTurn[], thread: string | null, scope: PageScope | null = null) => {
       cancel();
       turnsRef.current = loaded;
       setTurns(loaded);
       setThread(thread);
+      // The reopened thread's own scope, or none. Never the previous
+      // thread's: opening B after A must not carry A's page into B.
+      setScope(scope);
     },
-    [cancel, setThread],
+    [cancel, setThread, setScope],
   );
 
   const ask = useCallback(
@@ -224,6 +257,10 @@ export function useGeorgeStream() {
       // but not including the question being asked.
       const history = toHistory(turnsRef.current);
       const thread = threadRef.current;
+      // The thread's scope if one is open; otherwise what was asked for,
+      // which the thread about to start is bound to.
+      const scope = scopeForAsk(thread, scopeRef.current, options.pageScope);
+      if (!thread) setScope(scope);
 
       const now = new Date().toISOString();
       setTurns((prev) => [
@@ -256,6 +293,7 @@ export function useGeorgeStream() {
           body: JSON.stringify({
             question,
             page_context: options.pageContext ?? null,
+            page_scope: scope,
             history,
             thread_id: thread,
             parent_id: thread ? (options.parentId ?? null) : null,
@@ -476,7 +514,7 @@ export function useGeorgeStream() {
         setState((s) => (s === 'error' || s === 'complete' ? s : 'idle'));
       }
     },
-    [cancel, patchLast, qc, setThread],
+    [cancel, patchLast, qc, setThread, setScope],
   );
 
   return {
@@ -484,6 +522,8 @@ export function useGeorgeStream() {
     state,
     ask,
     cancel,
+    /** The page the open thread is scoped to, or null. */
+    pageScope,
     // `complete` is NOT busy: the answer is finished and the composer must
     // take the next question immediately, whatever the mark is still doing.
     busy: state !== 'idle' && state !== 'error' && state !== 'complete',

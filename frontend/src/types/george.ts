@@ -167,6 +167,18 @@ export interface SavedFrame {
 }
 
 /**
+ * A George page as an IDENTITY: its name, or null for the ungrouped pins.
+ *
+ * Mirrors PageScope in backend/app/api/v1/routes/george.py. This is what
+ * binds the server's page reader to one page of the caller's, and it is
+ * distinct from the display string `page_context` on purpose — an identity
+ * is never parsed back out of "Pages / <name>" (pageScope.ts).
+ */
+export interface PageScope {
+  name: string | null;
+}
+
+/**
  * What George considered of the page the person asked from, as the loop
  * reports it after a `view_page` call — the `page_context` frame, and the
  * same object an answer post keeps in its payload (agent/loop.py, evidence).

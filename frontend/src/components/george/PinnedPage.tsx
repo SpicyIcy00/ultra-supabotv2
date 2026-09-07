@@ -19,10 +19,11 @@
  * "Move → No page" is how a pin leaves without being deleted. Remove still
  * deletes, as it always did; there is no second removal verb.
  *
- * THE COMPOSER AT THE FOOT hands a question to Ask with the page's NAME as
- * context — its identity, not its contents. George cannot read a page's pins
- * from a name (pageShape.pageContextFor), and the placeholder says "about",
- * not "using", so it promises nothing the loop cannot keep.
+ * THE COMPOSER AT THE FOOT hands a question to Ask with the page's identity
+ * as its SCOPE and its name as context. The scope is what lets George read
+ * the page — the server binds a reader to it — and the contents still travel
+ * nowhere from here: George reads them himself, through the reader, if the
+ * question needs them (pageScope.ts).
  *
  * One column at every width. The centre column is already the reading measure
  * on a desktop, and a second column of figures would halve it for no gain —
@@ -47,6 +48,7 @@ import {
 import { PageHeader } from '../shell/PageHeader';
 import { AskComposer } from './AskComposer';
 import { choiceFor, chosenPage, movesPin, type PageChoice } from './pageChoice';
+import { pageScopeFor } from './pageScope';
 import { pageContextFor, pagePath, UNGROUPED_NAME } from './pageShape';
 import { PagePicker } from './PagePicker';
 import { PinTile } from './PinTile';
@@ -366,8 +368,9 @@ function MoveControl({ pin, onMoved }: { pin: Pin; onMoved: () => void }) {
  * Ask, where the answer is already arriving. Making them send twice would be
  * a handoff that lost the gesture.
  *
- * WHAT GEORGE IS TOLD is the page's name and nothing else. See
- * pageShape.pageContextFor for why that is the whole of it.
+ * WHAT GEORGE IS TOLD is the page's name, as context, and its identity, as
+ * the scope the new thread is bound to. Nothing on the page travels with
+ * the question; the reader the scope binds is how George reads it.
  */
 function PageComposer({ page }: { page: string | null }) {
   const { ask, reset, cancel, busy } = useGeorge();
@@ -375,7 +378,7 @@ function PageComposer({ page }: { page: string | null }) {
 
   const onAsk = (question: string) => {
     reset();
-    void ask(question, { pageContext: pageContextFor(page) });
+    void ask(question, { pageContext: pageContextFor(page), pageScope: pageScopeFor(page) });
     navigate('/ask');
   };
 

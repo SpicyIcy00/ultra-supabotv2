@@ -34,7 +34,7 @@ vi.mock('../../services/pinsApi', () => ({
 }));
 
 const george = {
-  ask: vi.fn<(q: string, o?: { pageContext?: string | null }) => Promise<void>>(),
+  ask: vi.fn<(q: string, o?: { pageContext?: string | null; pageScope?: { name: string | null } | null }) => Promise<void>>(),
   reset: vi.fn(),
   cancel: vi.fn(),
   busy: false,
@@ -235,7 +235,25 @@ describe('asking George from the page', () => {
     expect(options?.pageContext).toBe('Pages / FFR Overview');
     // The context names the page. It carries none of what is on it.
     expect(options?.pageContext).not.toMatch(/Sales|Drink Mix|118|pin|result/);
+    // The scope is the page's identity, which is what lets George read it —
+    // and it, too, carries nothing of what is on the page.
+    expect(options?.pageScope).toEqual({ name: 'FFR Overview' });
+    expect(JSON.stringify(options)).not.toMatch(/Sales|Drink Mix|118|result/);
 
     expect(await screen.findByText('Ask, with the question on its way')).toBeTruthy();
+  });
+
+  it('sends the ungrouped page as the null scope, never as a name', async () => {
+    george.ask.mockResolvedValue(undefined);
+    mount(null, [pin('p9', 'Loose', null)]);
+    await screen.findByRole('heading', { level: 3, name: 'Loose' });
+
+    const box = screen.getByLabelText('Ask George about this page…');
+    fireEvent.change(box, { target: { value: 'What is here?' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+    const [, options] = george.ask.mock.calls[0];
+    expect(options?.pageScope).toEqual({ name: null });
+    expect(options?.pageContext).toBe('Pages / Ungrouped');
   });
 });
