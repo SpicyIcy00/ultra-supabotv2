@@ -73,6 +73,11 @@ JUN_2024 = ("2024-06-01", "2024-07-01")
 APR_2026 = ("2026-04-01", "2026-05-01")
 VENDING_ALL = ("2025-06-01", "2026-09-01")
 SNAPSHOT_DAY = "2026-08-31"
+# Two closed weeks, for previous_period: 24-31 Aug against 17-24 Aug.
+WEEK_AUG_24 = ("2026-08-24", "2026-08-31")
+# Shang first traded on 2026-04-05, so the week of 30 Mar has a current
+# figure and the week before it has none — the no-baseline edge, closed.
+SHANG_FIRST_WEEK = ("2026-03-30", "2026-04-06")
 
 SH1 = "663c7869391c7c00079595a8"  # "Aji Mix", the traced AJI BARN product
 
@@ -115,6 +120,59 @@ GOLDEN = [
      lambda: round(sum(x["value"] for x in sales.get_sales(
          "day", ("2026-08-24", "2026-08-31"),
          filters={"store": "Rockwell"}, metric="net_sales")["rows"]), 2), 179058.50),
+
+    # ---- average transaction value (3) ------------------------------------
+    # The first DERIVED metric: net_sales / transaction_count under identical
+    # guards, computed in SQL (metrics.yaml metrics.average_transaction_value).
+    # 8,069,394.16 / 18,268 = 441.72, cross-checked by hand on 2026-09-07.
+    # Zero-total baskets stay in the denominator — decided on
+    # transaction_count, inherited here — and their count is a diagnostic.
+    ("atp/aug-company",
+     lambda: _val(sales.get_sales([], AUG_2026, metric="average_transaction_value")), 441.72),
+    ("atp/aug-rockwell",
+     lambda: _val(sales.get_sales([], AUG_2026, filters={"store": "Rockwell"},
+                                  metric="average_transaction_value")), 583.05),
+    ("atp/aug-zero-total-baskets-diagnostic",
+     lambda: sales.get_sales([], AUG_2026, metric="average_transaction_value")
+     ["meta"]["zero_total_transactions"], 110),
+
+    # ---- previous_period (6) ----------------------------------------------
+    # Two closed weeks, 24-31 Aug against 17-24 Aug 2026. Company-wide
+    # 1,489,194.80 vs 1,769,190.10 and 3,417 vs 4,105 transactions, read by
+    # hand from a weekly GROUP BY on 2026-09-07; the ATP baseline is
+    # 1,769,190.10 / 4,105 = 430.98. Every delta below is the tool's, not a
+    # number the model computed.
+    ("compare/week-net-sales",
+     lambda: (lambda r: (r["value"], r["baseline"], r["change"], r["change_pct"],
+                         r["direction"], r["baseline_status"]))(
+         sales.get_sales([], WEEK_AUG_24, metric="net_sales",
+                         compare_to="previous_period")["rows"][0]),
+     (1489194.80, 1769190.10, -279995.30, -15.8, "down", "ok")),
+    ("compare/week-transaction-count",
+     lambda: (lambda r: (r["value"], r["baseline"], r["change"], r["change_pct"]))(
+         sales.get_sales([], WEEK_AUG_24, metric="transaction_count",
+                         compare_to="previous_period")["rows"][0]),
+     (3417, 4105, -688, -16.8)),
+    ("compare/week-atp",
+     lambda: (lambda r: (r["value"], r["baseline"], r["change"], r["change_pct"]))(
+         sales.get_sales([], WEEK_AUG_24, metric="average_transaction_value",
+                         compare_to="previous_period")["rows"][0]),
+     (435.82, 430.98, 4.84, 1.1)),
+    ("compare/week-rockwell-net-sales-pct",
+     lambda: sales.get_sales([], WEEK_AUG_24, filters={"store": "Rockwell"},
+                             metric="net_sales", compare_to="previous_period")
+     ["rows"][0]["change_pct"], -16.9),
+    ("compare/week-baseline-window-on-receipt",
+     lambda: (lambda m: (m["comparison"]["baseline"]["start"],
+                         m["comparison"]["baseline"]["end"],
+                         m["window"]["start"]))(
+         sales.get_sales([], WEEK_AUG_24, metric="net_sales",
+                         compare_to="previous_period")["meta"]),
+     ("2026-08-17", "2026-08-24", "2026-08-24")),
+    ("compare/week-per-store-all-ok",
+     lambda: sales.get_sales("store", WEEK_AUG_24, metric="net_sales",
+                             compare_to="previous_period")
+     ["meta"]["comparison"]["baseline_statuses"], {"ok": 7}),
 
     # ---- inventory (4) ---------------------------------------------------
     # as_of reads inventory_snapshots, which is immutable history.
@@ -914,3 +972,91 @@ def test_system_prompt_tells_the_model_to_group_rather_than_enumerate():
     assert "full_row_count" in lowered
     for phrase in ("prefer one ranked or grouped query", "once per store"):
         assert phrase in lowered, f"missing guidance: {phrase!r}"
+
+
+# ==========================================================================
+# COMPARISON EDGES — the rows that cannot be compared say so
+# ==========================================================================
+
+def _notices(result: dict) -> list[dict]:
+    n = result["meta"].get("notice")
+    if not n:
+        return []
+    return list(n["items"]) if n.get("kind") == "multiple" else [n]
+
+
+def test_no_baseline_is_reported_not_invented():
+    """
+    Shang opened on 2026-04-05. The week before it opened has no sales rows,
+    so SUM is NULL: the current figure stands alone, change_pct is null, and
+    a notice says which subject and why. Nothing is coerced to zero.
+    """
+    r = sales.get_sales([], SHANG_FIRST_WEEK, filters={"store": "Shang"},
+                        metric="net_sales", compare_to="previous_period")
+    row = r["rows"][0]
+    assert row["value"] == pytest.approx(41242.0, abs=0.01)
+    assert row["baseline"] is None
+    assert row["change"] is None and row["change_pct"] is None and row["direction"] is None
+    assert row["baseline_status"] == "no_baseline"
+    assert "comparison_incomplete" in {n["kind"] for n in _notices(r)}
+    assert r["meta"]["comparison"]["baseline_statuses"] == {"no_baseline": 1}
+
+
+def test_zero_baseline_keeps_the_count_and_nulls_the_percentage():
+    """COUNT over the same empty week is 0, not NULL — a different status."""
+    r = sales.get_sales([], SHANG_FIRST_WEEK, filters={"store": "Shang"},
+                        metric="transaction_count", compare_to="previous_period")
+    row = r["rows"][0]
+    assert row["value"] == 93 and row["baseline"] == 0
+    assert row["change"] == 93 and row["change_pct"] is None
+    assert row["baseline_status"] == "zero_baseline"
+    assert "comparison_incomplete" in {n["kind"] for n in _notices(r)}
+
+
+def test_an_undefined_ratio_is_null_with_a_notice():
+    """ATP over a week with no transactions: NULL, and it says so. Never zero."""
+    r = sales.get_sales([], ("2026-03-23", "2026-03-30"), filters={"store": "Shang"},
+                        metric="average_transaction_value")
+    assert r["rows"] == [{"value": None}]
+    assert r["meta"]["notice"]["kind"] == "ratio_undefined"
+    assert r["meta"]["zero_total_transactions"] == 0
+
+
+def test_a_store_per_row_comparison_reports_the_one_with_no_baseline():
+    """Six stores compare; Shang cannot. The six are not presented as seven."""
+    r = sales.get_sales("store", SHANG_FIRST_WEEK, metric="net_sales",
+                        compare_to="previous_period")
+    by_store = {x["store"]: x["baseline_status"] for x in r["rows"]}
+    assert by_store["Shang"] == "no_baseline"
+    assert sum(1 for st in by_store.values() if st == "ok") == 6
+    note = next(n for n in _notices(r) if n["kind"] == "comparison_incomplete")
+    assert "Shang" in note["message"]
+
+
+def test_a_preset_comparison_anchors_both_windows_on_the_same_day():
+    """
+    last_week moves with the calendar, so its figures are not golden; its
+    SHAPE is. The baseline ends exactly where the current window starts and
+    both came from the same Manila date.
+    """
+    r = sales.get_sales([], "last_week", metric="net_sales", compare_to="previous_period")
+    m = r["meta"]
+    assert m["window"]["kind"] == "preset" and m["window"]["name"] == "last_week"
+    assert m["comparison"]["baseline"]["end"] == m["window"]["start"]
+    assert m["comparison"]["method"] == "shift_back_by_relative_length"
+    assert m["window"]["resolved_against"]
+    assert any("baseline:" in f for f in m["filters_applied"])
+
+
+def test_a_window_in_progress_refuses_a_comparison_by_name():
+    with pytest.raises(ValueError, match="still in progress") as e:
+        sales.get_sales([], "this_week", metric="net_sales", compare_to="previous_period")
+    assert "'last_week'" in str(e.value)
+
+
+def test_a_comparison_never_changes_the_current_figure():
+    """The current value with compare_to is the value without it, exactly."""
+    plain = _val(sales.get_sales([], WEEK_AUG_24, metric="net_sales"))
+    compared = sales.get_sales([], WEEK_AUG_24, metric="net_sales",
+                               compare_to="previous_period")["rows"][0]["value"]
+    assert plain == compared
