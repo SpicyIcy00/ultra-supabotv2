@@ -116,17 +116,12 @@ def previous_period_explicit(start: date, end: date) -> tuple[date, date]:
     return start - length, start
 
 
-def previous_period_preset(defs: dict, preset: str, anchor: date) -> tuple[tuple[date, date], tuple[date, date]]:
+def check_preset_comparable(defs: dict, preset: str) -> None:
     """
-    A closed preset's own window on `anchor`, and the window one preset-length
-    before it — both through the preset's `relative` block, so last_month
-    compares to the calendar month before it whatever the day counts, and
-    last_7_days to the seven days before those.
-
-    Returns ((current_start, current_end), (baseline_start, baseline_end)).
-    Refuses a preset that includes the day in progress: a partial week against
-    a whole week is a drop by construction
-    (comparisons.previous_period.partial_window_policy).
+    Refuse, by name, a preset that cannot anchor a period-over-period
+    comparison: unknown, or still in progress. Separate from the resolution
+    so a tool can refuse BEFORE it opens a connection, and before it knows
+    today's date.
     """
     presets = _req(defs, "sales_day.presets")
     if preset not in presets:
@@ -148,6 +143,21 @@ def previous_period_preset(defs: dict, preset: str, anchor: date) -> tuple[tuple
             f"{route}. (metrics.yaml: comparisons.previous_period."
             f"partial_window_policy)"
         )
+
+
+def previous_period_preset(defs: dict, preset: str, anchor: date) -> tuple[tuple[date, date], tuple[date, date]]:
+    """
+    A closed preset's own window on `anchor`, and the window one preset-length
+    before it — both through the preset's `relative` block, so last_month
+    compares to the calendar month before it whatever the day counts, and
+    last_7_days to the seven days before those.
+
+    Returns ((current_start, current_end), (baseline_start, baseline_end)).
+    Refuses a preset that includes the day in progress: a partial week against
+    a whole week is a drop by construction
+    (comparisons.previous_period.partial_window_policy).
+    """
+    check_preset_comparable(defs, preset)
     spec = _relative(defs, preset)
     unit, length = spec["unit"], int(spec["length"])
     cur_start = shift(truncate_to(anchor, unit), unit, int(spec["offset"]))

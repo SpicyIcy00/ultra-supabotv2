@@ -150,3 +150,130 @@ def test_every_partial_preset_declares_a_closed_alternative_key():
     for name, p in req(DEFS, "sales_day.presets").items():
         if p.get("includes_partial_day"):
             assert "closed_alternative" in p, name
+
+
+# ---------------------------------------------------------------------------
+# Rows: every status, every arithmetic rule, no database
+# ---------------------------------------------------------------------------
+
+pytest.importorskip("psycopg", reason="tools.sales imports psycopg")
+
+from tools.sales import _compare_row, _compare_rows       # noqa: E402
+
+CDEF = req(DEFS, "comparisons.previous_period")
+LABELS = ["store_id", "store"]
+
+
+def row(value, store="Rockwell"):
+    return {"store_id": f"id-{store}", "store": store, "value": value}
+
+
+def test_an_ordinary_comparison_carries_every_declared_field():
+    r = _compare_row(row(179058.50), row(215567.00), LABELS, "PHP", CDEF)
+    assert set(req(DEFS, "comparisons.previous_period.row_fields")) <= set(r)
+    assert r["baseline_status"] == "ok"
+    assert r["change"] == -36508.50
+    assert r["change_pct"] == -16.9
+    assert r["direction"] == "down"
+    assert r["unit"] == "PHP"
+    assert r["store"] == "Rockwell"
+
+
+def test_change_pct_is_rounded_as_the_definition_says():
+    places = req(DEFS, "comparisons.previous_period.change_pct_decimal_places")
+    r = _compare_row(row(100.0), row(30.0), LABELS, "PHP", CDEF)
+    assert r["change_pct"] == round(70 / 30 * 100, places)
+
+
+def test_a_count_stays_an_integer():
+    r = _compare_row(row(3417), row(4105), LABELS, "transactions", CDEF)
+    assert r["change"] == -688 and isinstance(r["change"], int)
+    assert r["change_pct"] == -16.8
+
+
+def test_no_baseline_nulls_the_change_and_the_percentage():
+    r = _compare_row(row(41242.0), None, LABELS, "PHP", CDEF)
+    assert r["baseline_status"] == "no_baseline"
+    assert r["baseline"] is None and r["change"] is None and r["change_pct"] is None
+    assert r["direction"] is None
+    assert r["value"] == 41242.0, "the current figure is still reported"
+
+
+def test_a_null_baseline_row_is_no_baseline_too():
+    """SUM over no rows is NULL: the row exists and says nothing."""
+    r = _compare_row(row(41242.0), row(None), LABELS, "PHP", CDEF)
+    assert r["baseline_status"] == "no_baseline"
+
+
+def test_a_zero_baseline_keeps_the_change_and_nulls_the_percentage():
+    """COUNT over no rows is 0: a percentage of nothing is undefined."""
+    r = _compare_row(row(93), row(0), LABELS, "transactions", CDEF)
+    assert r["baseline_status"] == "zero_baseline"
+    assert r["change"] == 93 and r["change_pct"] is None
+    assert r["direction"] == "up"
+
+
+def test_no_current_reports_the_baseline_alone():
+    r = _compare_row(None, row(3527, "Rockwell"), LABELS, "transactions", CDEF)
+    assert r["baseline_status"] == "no_current"
+    assert r["value"] is None and r["baseline"] == 3527
+    assert r["change"] is None and r["change_pct"] is None and r["direction"] is None
+    assert r["store"] == "Rockwell", "labels come from the baseline row when the current is absent"
+
+
+def test_no_current_wins_over_no_baseline():
+    r = _compare_row(row(None), row(None), LABELS, "PHP", CDEF)
+    assert r["baseline_status"] == "no_current"
+
+
+def test_flat_is_explicit_not_up():
+    r = _compare_row(row(100.0), row(100.0), LABELS, "PHP", CDEF)
+    assert r["change"] == 0 and r["change_pct"] == 0 and r["direction"] == "flat"
+
+
+def test_a_negative_baseline_neither_crashes_nor_becomes_zero():
+    """change / abs(baseline): the sign follows the change, always."""
+    r = _compare_row(row(-50.0), row(-100.0), LABELS, "PHP", CDEF)
+    assert r["baseline_status"] == "ok"
+    assert r["change"] == 50.0 and r["change_pct"] == 50.0 and r["direction"] == "up"
+    r = _compare_row(row(-150.0), row(-100.0), LABELS, "PHP", CDEF)
+    assert r["change"] == -50.0 and r["change_pct"] == -50.0 and r["direction"] == "down"
+
+
+def test_the_statuses_are_exactly_the_ones_the_definition_names():
+    seen = {
+        _compare_row(row(1.0), row(2.0), LABELS, "PHP", CDEF)["baseline_status"],
+        _compare_row(row(1.0), None, LABELS, "PHP", CDEF)["baseline_status"],
+        _compare_row(row(1.0), row(0), LABELS, "PHP", CDEF)["baseline_status"],
+        _compare_row(None, row(1.0), LABELS, "PHP", CDEF)["baseline_status"],
+    }
+    assert seen == set(req(DEFS, "comparisons.previous_period.baseline_statuses"))
+
+
+def test_rows_match_on_the_group_key_and_keep_the_current_order():
+    current = [row(425131.65, "OPUS"), row(179058.5, "Rockwell")]
+    baseline = [row(215567.0, "Rockwell"), row(522471.37, "OPUS")]
+    out = _compare_rows(current, baseline, ["store_id"], LABELS, "PHP", CDEF)
+    assert [r["store"] for r in out] == ["OPUS", "Rockwell"]
+    assert out[1]["baseline"] == 215567.0
+
+
+def test_a_subject_only_in_the_baseline_is_reported_not_dropped():
+    out = _compare_rows([row(1.0, "OPUS")], [row(2.0, "OPUS"), row(3.0, "Shang")],
+                        ["store_id"], LABELS, "PHP", CDEF)
+    assert [(r["store"], r["baseline_status"]) for r in out] == [("OPUS", "ok"), ("Shang", "no_current")]
+
+
+def test_a_ranked_result_compares_only_the_ranked_subjects():
+    """
+    top_n cut the others from the CURRENT period; they traded. Reporting them
+    as no_current would be a false statement, so they are not reported at all.
+    """
+    out = _compare_rows([row(1.0, "OPUS")], [row(2.0, "OPUS"), row(3.0, "Shang")],
+                        ["store_id"], LABELS, "PHP", CDEF, ranked=True)
+    assert [r["store"] for r in out] == ["OPUS"]
+
+
+def test_a_grand_total_is_one_row_with_no_subject():
+    out = _compare_rows([{"value": 10.0}], [{"value": 8.0}], [], [], "PHP", CDEF)
+    assert len(out) == 1 and out[0]["change_pct"] == 25.0 and "store" not in out[0]

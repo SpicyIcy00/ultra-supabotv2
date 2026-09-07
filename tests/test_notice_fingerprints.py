@@ -161,6 +161,11 @@ PAIRS = {
         "to average.",
         "Average transaction value at Shang was ₱0 that week.",
     ),
+    "comparison_incomplete": (
+        "Shang has no baseline: it was not trading in the week before, so its "
+        "figure stands alone and has no change against the previous period.",
+        "Shang took ₱185,298 in the week of 24 Aug 2026, down 16.7%.",
+    ),
     "stale_sources": (
         "Three sources are too old to say what changed since yesterday: "
         "stock_transfers and purchase_orders are 64 days old and frozen.",

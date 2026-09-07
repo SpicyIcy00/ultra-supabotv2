@@ -3101,6 +3101,18 @@ notices:
     must_convey:
       - [undefined, cannot be computed, not defined, no figure, "n/a", not available]
       - [transaction, transactions, sale, sales, denominator, nothing qualified, no qualifying]
+  # A period-over-period comparison where some row could not be compared:
+  # no baseline, a zero baseline, or no current figure. The answer must say
+  # which subject and why rather than quote the rows that did compare as
+  # though the comparison were whole.
+  comparison_incomplete:
+    must_convey:
+      - [baseline, previous period, prior period, earlier period, period before,
+         last period, "week before", "month before", "days before", compared, comparison]
+      - ["no ", none, zero, nothing, undefined, missing, absent, not comparable,
+         cannot compare, could not compare, "no figure", did not trade, "not trading",
+         "no sales", "no transactions", "wasn't trading", "was not trading", "not open", "not yet open"]
+
   # ---- Saved workflows -----------------------------------------------------
   # Emitted by backend/app/services/workflow_runner.py, which builds a run for
   # all three callers — chat, the route and the scheduler — so there is one
