@@ -1,17 +1,25 @@
 /**
- * A page of pins, rendered in the centre column.
+ * A page of pins, read as a document.
  *
- * Tiles live here rather than inside the 256px left rail because UI rule 4 is
- * explicit: "if a tile cannot show the caveat, the tile is the wrong shape." A
- * notice banner and a receipts line do not fit in a rail, and a tile that
- * dropped them to fit would be discarding the very data the tool went out of
- * its way to return.
+ * NOT A GRID OF CARDS. Five bordered boxes two-up is the shape of an admin
+ * dashboard: every figure the same size, none of them leading, and the chrome
+ * competing with the numbers. This is one column of sections separated by
+ * hairlines, the first set larger — the page's own order, which is the order
+ * somebody pinned things in, rather than this component ranking them.
  *
- * The rail names the pages; this is where they open.
+ * The tiles still do exactly what they did: each re-runs its own vetted calls
+ * on mount and carries its own notices and receipts, which is what makes a
+ * tile allowed to show a number at all (UI rules 3, 4, 6).
+ *
+ * One column at every width. The centre column is already the reading measure
+ * on a desktop, and a second column of figures would halve it for no gain —
+ * "if a tile cannot show the caveat, the tile is the wrong shape" (UI rule 4),
+ * and a caveat needs the width.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import { deletePin, listPins } from '../../services/pinsApi';
+import { PageHeader } from '../shell/PageHeader';
 import { PinTile } from './PinTile';
 
 export function PinnedPage({
@@ -47,40 +55,36 @@ export function PinnedPage({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] text-george-slate hover:bg-george-line/40 min-h-touch"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-          All pages
-        </button>
-      </div>
+    <div>
+      <button
+        type="button"
+        onClick={onBack}
+        className="mb-6 flex min-h-touch items-center gap-1.5 text-[13px] text-george-slate hover:text-george-navy"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+        All pages
+      </button>
 
-      <div>
-        <h2 className="font-george-serif text-2xl text-george-navy">
-          {page ?? 'Ungrouped'}
-        </h2>
-        <p className="mt-1 text-[13px] text-george-slate">
-          Every tile re-runs its tools when this page loads, so these are current
-          figures rather than saved ones.
+      <PageHeader
+        title={page ?? 'Ungrouped'}
+        meta="Every question on this page was asked again when it opened, so these are current figures rather than saved ones."
+      />
+
+      {pins.isPending && <p className="text-[13px] text-george-muted">Reading…</p>}
+      {pins.isError && (
+        <p className="text-[13px] leading-relaxed text-george-slate">
+          Could not load this page.
         </p>
-      </div>
-
-      {pins.isPending && <p className="text-[13px] text-george-muted">Loading pins…</p>}
-
+      )}
       {pins.data?.length === 0 && (
-        <p className="text-[13px] text-george-slate">
+        <p className="max-w-xl text-[15px] leading-relaxed text-george-slate">
           This page has no pins. Pin an answer from a conversation to add one.
         </p>
       )}
 
-      {/* One column on a phone — the centre column IS the screen (UI rule 7). */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        {(pins.data ?? []).map((pin) => (
-          <PinTile key={pin.id} pin={pin} onDelete={onDelete} />
+      <div className="space-y-7">
+        {(pins.data ?? []).map((pin, i) => (
+          <PinTile key={pin.id} pin={pin} onDelete={onDelete} lead={i === 0} />
         ))}
       </div>
     </div>
