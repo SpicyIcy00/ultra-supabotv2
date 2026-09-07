@@ -9,12 +9,14 @@ import csv
 import io
 from datetime import datetime
 from typing import List, Optional, Dict, Any
+from app.core.deps import require_page
+from fastapi import Depends
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 import json
 
-router = APIRouter(tags=["saved-queries"])
+router = APIRouter(tags=["saved-queries"], dependencies=[Depends(require_page("ai_chat"))])
 
 
 # In-memory storage (in production, use database)

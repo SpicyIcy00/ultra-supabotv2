@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.deps import require_page
 from app.core.database import get_db
 from app.models.dashboard_default import DashboardDefault
 
@@ -67,7 +68,7 @@ async def get_dashboard_defaults(db: AsyncSession = Depends(get_db)):
         return DashboardDefaultsConfig()
 
 
-@router.put("", response_model=DashboardDefaultsConfig)
+@router.put("", response_model=DashboardDefaultsConfig, dependencies=[Depends(require_page("settings"))])
 async def update_dashboard_defaults(
     update: DashboardDefaultsUpdate,
     db: AsyncSession = Depends(get_db),

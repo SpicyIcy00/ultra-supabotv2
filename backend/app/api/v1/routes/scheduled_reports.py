@@ -11,11 +11,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.deps import require_page
 from app.core.database import get_db
 from app.services.scheduled_report_service import ScheduledReportService
 from app.services import telegram_sender
 
-router = APIRouter(tags=["scheduled-reports"])
+router = APIRouter(tags=["scheduled-reports"], dependencies=[Depends(require_page("ai_chat"))])
 
 
 # ---------------------------------------------------------------------------

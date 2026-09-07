@@ -13,6 +13,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import AsyncGenerator, Optional, List
 
+from app.core.deps import require_page
 from app.core.database import get_db
 from app.schemas.chatbot import (
     ChatRequest,
@@ -33,7 +34,7 @@ from app.services.insight_generator import InsightGenerator
 from app.services.conversation_memory import get_memory, add_exchange, get_context
 from app.services.schema_context import SchemaContext
 
-router = APIRouter(tags=["chatbot"])
+router = APIRouter(tags=["chatbot"], dependencies=[Depends(require_page("ai_chat"))])
 
 
 async def generate_chat_stream(

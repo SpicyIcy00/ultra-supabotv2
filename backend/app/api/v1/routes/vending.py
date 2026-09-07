@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 from typing import List
 
+from app.core.deps import require_page
 from app.core.database import get_db
 from app.services.vending_service import VendingService
 
@@ -32,7 +33,8 @@ async def get_devices(db: AsyncSession = Depends(get_db)):
 @router.get(
     "/dashboard-kpis",
     summary="Get vending KPI metrics with comparison",
-    description="Revenue, profit, units and orders for the current and comparison period (pesos)"
+    description="Revenue, profit, units and orders for the current and comparison period (pesos)",
+    dependencies=[Depends(require_page("dashboard"))],
 )
 async def get_dashboard_kpis(
     start_date: datetime = Query(...),
@@ -66,7 +68,8 @@ async def get_dashboard_kpis(
 
 @router.get(
     "/sales-by-machine",
-    summary="Get revenue and units per vending machine with comparison"
+    summary="Get revenue and units per vending machine with comparison",
+    dependencies=[Depends(require_page("dashboard"))],
 )
 async def get_sales_by_machine(
     start_date: datetime = Query(...),
@@ -91,7 +94,8 @@ async def get_sales_by_machine(
 
 @router.get(
     "/top-products",
-    summary="Get top vending products with comparison"
+    summary="Get top vending products with comparison",
+    dependencies=[Depends(require_page("dashboard"))],
 )
 async def get_top_products(
     start_date: datetime = Query(...),
@@ -118,7 +122,8 @@ async def get_top_products(
 
 @router.get(
     "/sales-trend",
-    summary="Get vending sales trend with comparison"
+    summary="Get vending sales trend with comparison",
+    dependencies=[Depends(require_page("dashboard"))],
 )
 async def get_sales_trend(
     start_date: datetime = Query(...),
@@ -145,7 +150,8 @@ async def get_sales_trend(
 
 @router.get(
     "/top-categories",
-    summary="Get vending categories ranked by revenue, with comparison"
+    summary="Get vending categories ranked by revenue, with comparison",
+    dependencies=[Depends(require_page("dashboard"))],
 )
 async def get_top_categories(
     start_date: datetime = Query(...),
@@ -171,7 +177,8 @@ async def get_top_categories(
 @router.get(
     "/sales-by-hour",
     summary="Get average vending sales per hour of day",
-    description="Sales per hour of day in Asia/Manila, averaged over the active days in the range"
+    description="Sales per hour of day in Asia/Manila, averaged over the active days in the range",
+    dependencies=[Depends(require_page("dashboard"))],
 )
 async def get_sales_by_hour(
     start_date: datetime = Query(...),
@@ -192,7 +199,8 @@ async def get_sales_by_hour(
 
 @router.get(
     "/stock-levels",
-    summary="Get current stock per aisle per machine"
+    summary="Get current stock per aisle per machine",
+    dependencies=[Depends(require_page("dashboard"))],
 )
 async def get_stock_levels(
     device_codes: List[str] = Query(default=[]),
@@ -211,7 +219,8 @@ async def get_stock_levels(
 
 @router.get(
     "/failed-vends",
-    summary="Get failed vends (shipment_status = 3)"
+    summary="Get failed vends (shipment_status = 3)",
+    dependencies=[Depends(require_page("dashboard"))],
 )
 async def get_failed_vends(
     start_date: datetime = Query(...),

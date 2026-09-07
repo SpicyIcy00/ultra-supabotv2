@@ -18,11 +18,12 @@ import os
 import csv
 import io
 
+from app.core.deps import require_page
 from app.core.database import get_db
 from app.models.product import Product
 from app.models.product_barcode import ProductBarcode
 
-router = APIRouter(tags=["barcodes"])
+router = APIRouter(tags=["barcodes"], dependencies=[Depends(require_page("warehouse"))])
 
 STOREHUB_API_BASE = "https://api.storehubhq.com"
 STOREHUB_USERNAME = os.getenv("STOREHUB_USERNAME", "")
