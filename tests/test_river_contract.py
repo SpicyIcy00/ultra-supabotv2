@@ -420,7 +420,16 @@ def test_an_anonymous_turn_still_satisfies_the_actor_constraint(monkeypatch) -> 
     log, captured = _capture(monkeypatch)
     log.posts(user_id=None, asked_at=datetime.now(timezone.utc),
               question="q", final_answer=None, notices=[], receipts=None)
-    assert captured[0][1][2] == "unknown"
+    # Bound by column NAME, not position: parent_id joined the parameters on
+    # 2026-09-07 and a counted index broke while the code was correct.
+    sql, params = captured[0]
+    columns = [c.strip() for c in sql.split("(", 1)[1].split(")", 1)[0].split(",")]
+    values = sql.split("VALUES", 1)[1].split("(", 1)[1].split(")", 1)[0].split(",")
+    bound = iter(params)
+    at = {name: (next(bound) if v.strip() == "%s" else v.strip())
+          for name, v in zip(columns, values)}
+    assert at["author_user"] == "unknown"
+    assert at["owner_user"] == "unknown"
 
 
 def test_the_stream_names_the_posts_it_wrote(monkeypatch) -> None:

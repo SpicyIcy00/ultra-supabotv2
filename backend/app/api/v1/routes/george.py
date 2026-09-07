@@ -79,6 +79,7 @@ from app.services.pin_writer import (
     create_pin,
 )
 from app.services.pin_runner import PinValidationError
+from app.services.thread_access import parent_in_thread, thread_continuable
 from app.services.workflow_runner import (
     WorkflowValidationError,
     default_calls as workflow_default_calls,
@@ -148,10 +149,15 @@ class AskRequest(BaseModel):
     # The conversation so far. The loop is stateless per request, so without
     # this every question stands alone and "pin that" has nothing to refer to.
     history: List[HistoryTurn] = Field(default_factory=list, max_length=20)
-    # The chat this question continues. Omit to start a new one; the `start`
+    # The thread this question continues. Omit to start a new one; the `start`
     # frame hands back the id to send on the next turn. Checked against the
-    # caller before the stream opens — a chat is one person's, like a pin.
+    # caller before the stream opens: the caller's own conversation, or a
+    # thread George opened at org level — see app.services.thread_access.
     thread_id: Optional[uuid.UUID] = None
+    # The post this question replies to, inside thread_id. Optional: a thread
+    # groups posts whether or not each names its parent. Must be in the thread
+    # and visible to the caller; meaningless without thread_id.
+    parent_id: Optional[uuid.UUID] = None
 
 
 # ---------------------------------------------------------------------------
@@ -259,19 +265,22 @@ _THREAD = "COALESCE(c.thread_id, c.id)"
 _VISIBLE = "c.hidden_at IS NULL"
 
 
-async def _thread_belongs_to(username: str, thread_id: uuid.UUID) -> bool:
-    """One SELECT, before the stream opens: the loop itself cannot read."""
+async def _thread_continuable(username: str, thread_id: uuid.UUID) -> bool:
+    """
+    Before the stream opens, because the loop itself cannot read.
+
+    The rule lives in app.services.thread_access and is deliberately narrow:
+    the caller's own conversation, or a thread whose ROOT post George wrote at
+    org level. Nothing else opens a thread to continuation.
+    """
     async with AsyncSessionLocal() as session:
-        row = (
-            await session.execute(
-                text(
-                    f"SELECT 1 FROM george.conversations c "
-                    f"WHERE {_THREAD} = :t AND c.user_id = :u AND {_VISIBLE} LIMIT 1"
-                ),
-                {"t": thread_id, "u": username},
-            )
-        ).first()
-        return row is not None
+        return await thread_continuable(session, username, thread_id)
+
+
+async def _parent_in_thread(username: str, thread_id: uuid.UUID,
+                            parent_id: uuid.UUID) -> bool:
+    async with AsyncSessionLocal() as session:
+        return await parent_in_thread(session, username, thread_id, parent_id)
 
 
 # ---------------------------------------------------------------------------
@@ -1129,7 +1138,8 @@ async def _safe_stream(question: str, user_id: Optional[str],
                        workflow_writer,
                        workflow_runner,
                        thread_id: Optional[str] = None,
-                       recall: Optional[str] = None) -> AsyncIterator[str]:
+                       recall: Optional[str] = None,
+                       parent_id: Optional[str] = None) -> AsyncIterator[str]:
     """
     Wrap the loop so a crash still closes the stream cleanly.
 
@@ -1148,6 +1158,7 @@ async def _safe_stream(question: str, user_id: Optional[str],
             workflow_runner=workflow_runner,
             thread_id=thread_id,
             recall=recall,
+            parent_id=parent_id,
         ):
             yield frame
     except Exception as exc:  # noqa: BLE001
@@ -1198,16 +1209,26 @@ async def ask(
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="question must not be empty")
 
-    # Continuing a chat: it has to be the caller's. Checked HERE, before any
+    # Continuing a thread: the caller's own conversation, or one George opened
+    # at org level (app.services.thread_access). Checked HERE, before any
     # frame is sent, because once the stream has started a refusal can only
     # arrive as an error frame — and because the loop's own role cannot read.
-    if request.thread_id is not None and not await _thread_belongs_to(
+    # Not found and not continuable are the same answer, as for pins.
+    if request.thread_id is not None and not await _thread_continuable(
         user.username, request.thread_id
     ):
-        raise HTTPException(status_code=404, detail="No chat with that id belongs to you.")
+        raise HTTPException(status_code=404, detail="No thread with that id you can continue.")
+
+    # A reply names a post in the thread it is replying to, and nowhere else.
+    if request.parent_id is not None:
+        if request.thread_id is None:
+            raise HTTPException(status_code=400, detail="parent_id needs a thread_id.")
+        if not await _parent_in_thread(user.username, request.thread_id, request.parent_id):
+            raise HTTPException(status_code=404, detail="No post with that id in this thread.")
 
     history = [t.model_dump() for t in request.history]
     thread = str(request.thread_id) if request.thread_id else None
+    parent = str(request.parent_id) if request.parent_id else None
     # Awaited here rather than inside the stream: it is a read the caller's own
     # role performs, and it has to be done before the 200 goes out, while a
     # failure can still be handled as something other than an error frame.
@@ -1224,6 +1245,7 @@ async def ask(
             workflow_runner=_workflow_runner(user.username, user.role),
             thread_id=thread,
             recall=recall,
+            parent_id=parent,
         ),
         media_type="text/event-stream",
         headers={

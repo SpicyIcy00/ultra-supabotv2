@@ -941,12 +941,16 @@ class ConversationLog:
         asked_at = kw["asked_at"]
 
         owner = kw.get("user_id") or "unknown"
+        # parent_id is the post this question replies to — a brief, a run, an
+        # earlier answer — or NULL for a question that opens its own thread.
+        # The route validated it is in the thread; the loop cannot, and does
+        # not need to: it is stored as given, and the thread_id is what groups.
         self._exec(
             "INSERT INTO george.posts "
             "(id, thread_id, parent_id, kind, author, author_user, owner_user, "
             " visibility, body, receipts, notices, conversation_id, created_at) "
-            "VALUES (%s,%s,NULL,'question','user',%s,%s,'private',%s,NULL,NULL,%s,%s)",
-            (question_id, self.thread_id, owner, owner,
+            "VALUES (%s,%s,%s,'question','user',%s,%s,'private',%s,NULL,NULL,%s,%s)",
+            (question_id, self.thread_id, kw.get("parent_id"), owner, owner,
              kw["question"], self.conversation_id, asked_at),
         )
 
@@ -1063,15 +1067,33 @@ def _reset_answer(reason: str) -> str:
 MAX_HISTORY_TURNS = 20
 MAX_HISTORY_TEXT = 20000
 
+# What precedes a history that opens with George.
+#
+# THREADS GEORGE STARTS ARE REAL STARTING POINTS. The morning brief, a workflow
+# run, an approval: each is a post George wrote with nobody having asked, and
+# a person replying to it sends it back as the first turn of the history — a
+# George turn, before any user turn. The API requires the first message to be
+# the user's, and until 2026-09-07 a leading assistant turn was simply dropped,
+# so the one thing the reply was ABOUT was the one thing George could not see.
+#
+# So a leading George turn is kept, and this line is put in front of it as the
+# user's. It is a statement of fact about the thread, not a question and not
+# a paraphrase of anything: the brief follows it verbatim, as George's own
+# words, and the person's actual question comes after. Nothing here invents
+# content, and the constant is exported so the suite can hold the client and
+# the loop to the same words.
+THREAD_OPENER = "[This thread opened with the post below, written by George.]"
+
 
 def _seed_history(history: Optional[list], executed: dict) -> list[dict]:
     """
     Prior turns as messages, and their calls recorded as already run.
 
     Mutates `executed`. Returns messages ready to precede the new question:
-    consecutive same-role turns merged, blank turns dropped, and any leading
-    assistant turn discarded — the API requires a user message first, and a
-    client that starts its replay mid-answer must not take the request down.
+    consecutive same-role turns merged, blank turns dropped, and a leading
+    George turn kept behind THREAD_OPENER — the API requires a user message
+    first, and the post a person is replying to must not be the one thing
+    George cannot see.
     """
     messages: list[dict] = []
     for turn in (history or [])[-MAX_HISTORY_TURNS:]:
@@ -1100,7 +1122,9 @@ def _seed_history(history: Optional[list], executed: dict) -> list[dict]:
         if messages and messages[-1]["role"] == role:
             messages[-1]["content"] += "\n\n" + content
         elif not messages and role == "assistant":
-            continue
+            # A thread George opened. Kept, behind a user line that says so.
+            messages.append({"role": "user", "content": THREAD_OPENER})
+            messages.append({"role": role, "content": content})
         else:
             messages.append({"role": role, "content": content})
 
@@ -1117,6 +1141,7 @@ async def run(
     workflow_runner: Optional[write_tools.WorkflowRunner] = None,
     thread_id: Optional[str] = None,
     recall: Optional[str] = None,
+    parent_id: Optional[str] = None,
 ) -> AsyncIterator[str]:
     """
     Answer one question, streaming SSE frames.
@@ -1159,6 +1184,9 @@ async def run(
             has to stay byte-stable for the cache. It is reference material and
             prompt rule 13 says so: a figure in it may be mentioned with its
             date and may never be restated as current or used in a calculation.
+        parent_id: the post this question replies to, inside thread_id, or
+            None. Written onto the question post as given; the caller verified
+            it is in the thread and visible, because the loop cannot read.
     """
     defs = _load_defs()
     log = ConversationLog(thread_id=thread_id)
@@ -1787,7 +1815,7 @@ async def run(
     log.posts(
         user_id=user_id, asked_at=asked_at, question=question,
         final_answer=answer or None, notices=pending, receipts=last_meta,
-        charted=charted,
+        charted=charted, parent_id=parent_id,
     )
 
     # The ids of the two posts, so a client that is rendering the river can

@@ -281,19 +281,27 @@ def test_replayed_calls_are_rendered_in_the_form_that_matches():
 def test_history_never_produces_a_message_list_the_api_will_reject():
     """
     Blank turns dropped, consecutive same-role turns merged, and a replay that
-    starts mid-answer discarded down to a leading user message. A client that
-    sends something odd must not take the request down before it starts.
+    starts with George kept behind THREAD_OPENER so the list still opens with
+    a user message. A client that sends something odd must not take the
+    request down before it starts.
+
+    Until 2026-09-07 a leading George turn was discarded. It is now the post a
+    person is replying to — a brief, a run — and dropping it made the one
+    thing the reply was about the one thing George could not see. See
+    test_thread_continue_contract.
     """
     messages = george_loop._seed_history([
-        {"role": "george", "text": "orphaned answer", "tool_calls": []},
+        {"role": "george", "text": "opening post", "tool_calls": []},
         {"role": "user", "text": "  ", "tool_calls": []},
         {"role": "user", "text": "first", "tool_calls": []},
         {"role": "user", "text": "second", "tool_calls": []},
         {"role": "george", "text": "answer", "tool_calls": []},
     ], {})
 
-    assert [m["role"] for m in messages] == ["user", "assistant"]
-    assert messages[0]["content"] == "first\n\nsecond"
+    assert [m["role"] for m in messages] == ["user", "assistant", "user", "assistant"]
+    assert messages[0]["content"] == george_loop.THREAD_OPENER
+    assert messages[1]["content"] == "opening post"
+    assert messages[2]["content"] == "first\n\nsecond"
     assert all(m["content"].strip() for m in messages)
 
 
