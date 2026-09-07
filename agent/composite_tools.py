@@ -1,5 +1,5 @@
 """
-George's composite read surface. Today that is exactly one tool: run_workflow.
+George's composite read surface: run_workflow, and view_page.
 
 WHY THIS IS A THIRD REGISTRY AND NOT JUST ANOTHER ENTRY IN tools/
 agent.loop.TOOL_FUNCTIONS is load-bearing twice over. It is the dispatch table,
@@ -29,6 +29,7 @@ from backend/. No runner injected, no run_workflow in the schema at all.
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -191,9 +192,412 @@ async def run_workflow(
     return {"rows": rows, "meta": meta}
 
 
+# ---------------------------------------------------------------------------
+# view_page — the page the user is on, read through the injected reader
+# ---------------------------------------------------------------------------
+#
+# THE SECOND COMPOSITE (added 2026-09-07, Page Context V1), and it belongs in
+# this registry for the same reason run_workflow does: it replays several
+# vetted calls as one tool call, it decides nothing between them, and it must
+# never be something a pin can CONTAIN — a pin that read the page it sits on
+# would be a tile made of tiles. Living here and not in TOOL_FUNCTIONS makes
+# that impossible by construction.
+#
+# NO NAME IN IT. The reader is bound in the web process to the signed-in user
+# and the exact page they asked from. This tool has no page argument and no
+# user argument; "read Alice's Purchasing page" has nowhere to put the name.
+#
+# COMPACT FOR THE MODEL. A row is a pin and its current results with their own
+# receipts. The stored ARGUMENTS behind each pin are not repeated on the row —
+# the receipts already say what each result was filtered to — and travel once,
+# in meta.evidence, which is also what the UI draws the "what George
+# considered" line from and what the answer post keeps.
+
+# NAMED TO SORT LAST. Tools render first in the cached prefix and every
+# injected tool must sort after every read tool (build_tool_schemas); this one
+# also sorts after save_workflow, so the tools list of a session WITHOUT a page
+# is an exact prefix of one with a page and the cache is shared up to the tail.
+# "get_page_context" would have sorted into the middle of the read tools.
+PAGE_CONTEXT_TOOL = "view_page"
+
+# Rows per RESULT handed to the model, and per READ in total. A page is a
+# summary instrument like a workflow: five pins at the loop's 200-row cap would
+# spend the whole budget on the first, so each result gets a little and the
+# read as a whole is capped at what one tool result may carry. Anyone who wants
+# a result whole asks its tool directly.
+MAX_ROWS_PER_PAGE_RESULT = 15
+MAX_ROWS_PER_PAGE_READ = 200
+
+# The serialized rows may not exceed this. Past it, rows are dropped from the
+# LAST pins first — their definitions and receipts stay — and the read says so.
+MAX_PAGE_CONTEXT_BYTES = 60_000
+
+# Pins beyond the bound are listed so the model knows they exist and can ask
+# for them by id. Listed, not read, and the list itself is capped.
+MAX_REMAINDER_LISTED = 20
+
+# The keys of a result's meta that make up its receipts. Everything a figure
+# needs to be inspectable (UI rules 3 and 6), nothing that is merely large.
+_RECEIPT_KEYS = (
+    "source_table", "filters_applied", "snapshot_timestamp", "window", "metric",
+    "metric_unit", "row_count", "full_row_count", "data_as_of",
+    "definitions_version", "truncated_for_model", "rows_omitted",
+)
+
+# The reasons a selected pin has no figures, as the reader names them. Kept in
+# step with backend/app/services/page_reader.py by test_page_context_contract.
+NOT_READ_DEADLINE = "deadline"
+NOT_READ_FIGURES_OFF = "figures_not_requested"
+
+
+class PageContextUnavailable(RuntimeError):
+    """
+    The page could not be read at all — no reader was injected. A
+    RuntimeError so the loop reports it to the model as a failed call.
+    """
+
+
+def _receipts(meta: dict) -> dict:
+    return {k: meta[k] for k in _RECEIPT_KEYS if k in meta}
+
+
+def _result_row(result: dict, budget: list[int]) -> dict:
+    """
+    One replayed call as the model sees it: status, capped rows, receipts,
+    notices. `budget` is a one-element list holding the rows still allowed in
+    this read; it is decremented in place so pins later in the page share
+    what is left rather than each taking a fresh allowance.
+    """
+    rows = result.get("rows") or []
+    meta = result.get("meta") or {}
+    allowed = max(0, min(MAX_ROWS_PER_PAGE_RESULT, budget[0]))
+    shown = rows[:allowed]
+    budget[0] -= len(shown)
+
+    row: dict[str, Any] = {
+        "tool": result.get("tool"),
+        "status": result.get("status"),
+        "row_count": meta.get("row_count", len(rows)),
+        "rows": shown,
+        "receipts": _receipts(meta),
+        "notices": list(result.get("notices") or []),
+    }
+    if result.get("status") == "ok" and not rows:
+        # An empty result is a real answer — the query ran and found nothing —
+        # and it must never be mistaken for a result that was not read.
+        row["empty"] = True
+    if result.get("status") != "ok":
+        row["error"] = result.get("error")
+    if len(shown) < len(rows):
+        row["rows_shown"] = len(shown)
+        row["rows_omitted"] = len(rows) - len(shown)
+        row["truncation_note"] = (
+            f"{len(shown)} of {len(rows)} rows shown for this result. row_count "
+            f"and the figures in its receipts cover ALL of them — do not total "
+            f"what you can see. Call {result.get('tool')} directly for the full "
+            f"result."
+        )
+    return row
+
+
+def _pin_row(pin: dict, budget: list[int]) -> dict:
+    """A pin as the model sees it. No stored arguments here — see the header."""
+    row: dict[str, Any] = {
+        "pin_id": pin.get("pin_id"),
+        "title": pin.get("title"),
+        "question": pin.get("question"),
+        "pinned_at": pin.get("pinned_at"),
+        "read": pin.get("read"),
+        # When a tile last read this pin, from the pin's own bookkeeping. A
+        # read from here does not update it — this branch writes nothing.
+        "last_tile_read": {
+            "last_run_at": pin.get("last_run_at"),
+            "last_ok_at": pin.get("last_ok_at"),
+            "last_status": pin.get("last_status"),
+        },
+        "results": [_result_row(r, budget) for r in (pin.get("results") or [])],
+    }
+    if pin.get("read") == "not_read":
+        row["not_read_reason"] = pin.get("not_read_reason")
+    return row
+
+
+def _drop_rows_for_size(rows: list[dict]) -> int:
+    """
+    Strip result rows from the last pins first until the rows serialize under
+    MAX_PAGE_CONTEXT_BYTES. Returns how many rows were dropped. Definitions,
+    statuses and receipts are never touched: what goes is figures the model
+    can fetch directly, never the record that they exist.
+    """
+    dropped = 0
+    while len(json.dumps(rows, default=str)) > MAX_PAGE_CONTEXT_BYTES:
+        victim = None
+        for pin in reversed(rows):
+            for result in reversed(pin.get("results") or []):
+                if result.get("rows"):
+                    victim = result
+                    break
+            if victim:
+                break
+        if victim is None:
+            break
+        gone = len(victim["rows"])
+        dropped += gone
+        victim["rows"] = []
+        victim["rows_shown"] = 0
+        victim["rows_omitted"] = victim.get("rows_omitted", 0) + gone
+        victim["truncation_note"] = (
+            f"Rows dropped to keep the page read within its size limit. "
+            f"row_count and the receipts still cover all of them. Call "
+            f"{victim.get('tool')} directly for the full result."
+        )
+    return dropped
+
+
+def _snapshot_of(pin: dict) -> Optional[str]:
+    """The latest snapshot_timestamp among a pin's successful results, if any."""
+    stamps = [
+        (r.get("meta") or {}).get("snapshot_timestamp")
+        for r in (pin.get("results") or [])
+        if r.get("status") == "ok" and (r.get("meta") or {}).get("snapshot_timestamp")
+    ]
+    return max(stamps) if stamps else None
+
+
+def _evidence(read: dict, rows: list[dict], *, partial: bool, truncated: bool,
+              notice_kinds: list[str], rows_dropped: int) -> dict:
+    """
+    What George considered, compactly: the page, the read, each pin's status
+    and the calls behind it, what was not read and why. This is the ONE place
+    the stored arguments appear, and it is what the UI draws and the answer
+    post keeps.
+    """
+    pins = read.get("pins") or []
+    return {
+        "page": read.get("page"),
+        "read_at": read.get("read_at"),
+        "figures": bool(read.get("figures")),
+        "pins_total": read.get("pins_total"),
+        "pins_inspected": len(pins),
+        "pins_reproduced": sum(1 for p in pins if p.get("read") == "ok"),
+        "pins": [
+            {
+                "pin_id": p.get("pin_id"),
+                "title": p.get("title"),
+                "status": p.get("read"),
+                "reason": p.get("not_read_reason"),
+                "calls": [
+                    {"tool": c.get("tool"), "arguments": c.get("arguments") or {}}
+                    for c in (p.get("calls") or [])
+                ],
+                "snapshot_timestamp": _snapshot_of(p),
+                "notice_kinds": sorted({
+                    n.get("kind") for n in (p.get("notices") or []) if n.get("kind")
+                }),
+            }
+            for p in pins
+        ],
+        "not_inspected": [
+            {"pin_id": p.get("pin_id"), "title": p.get("title")}
+            for p in (read.get("remainder") or [])
+        ],
+        "unavailable": list(read.get("unavailable") or []),
+        "partial": partial,
+        "truncated": truncated,
+        "rows_dropped": rows_dropped,
+        "notice_kinds": notice_kinds,
+    }
+
+
+def _describe(pin: dict) -> str:
+    """One pin's failure, in words a person can act on."""
+    status = pin.get("read")
+    if status == "not_read":
+        reason = pin.get("not_read_reason")
+        why = ("the page read's time limit passed before it was started"
+               if reason == NOT_READ_DEADLINE else f"not read ({reason})")
+        return f"{pin.get('title')!r} ({why})"
+    errors = [r.get("error") for r in (pin.get("results") or []) if r.get("error")]
+    detail = errors[0] if errors else status
+    return f"{pin.get('title')!r} ({status}: {detail})"
+
+
+async def view_page(
+    figures: bool = True,
+    pins: Optional[list[str]] = None,
+    *,
+    ctx: WriteContext,
+) -> dict:
+    """
+    Read the page the user is on: the analyses pinned to it and, by default,
+    their current figures — every pin's calls replayed now, each result with
+    its own receipts and notices. It is always the page the user asked from;
+    there is no way to name another. A pin re-runs rather than remembering, so
+    this is what the page shows NOW, not what it showed before.
+
+    Args:
+        figures: True replays each pin's calls and returns current figures.
+            False returns only what is pinned — titles, the questions that
+            made them, when each was pinned and last read by its tile — which
+            says what the page is for without touching the warehouse.
+        pins: Pin ids to read instead of the newest few, at most 8. Use the
+            ids in `meta.remainder` from an earlier read to reach the rest of
+            a large page, or to re-read a subset. An id not on this page is
+            reported as unavailable.
+
+    Returns:
+        {"rows": [...], "meta": {...}}. One row per pin read, in the page's own
+        order, carrying its results and their receipts. meta says how many pins
+        the page holds, which were read, which were not and why, and lists the
+        rest by id and title so they can be asked for.
+    """
+    if ctx.page_reader is None:
+        raise PageContextUnavailable(
+            "The page is not readable in this session — reading one requires "
+            "asking from a page while signed in. Tell the user that."
+        )
+    if pins is not None and not isinstance(pins, list):
+        raise ValueError(
+            f"pins must be a list of pin ids, got {type(pins).__name__}."
+        )
+
+    read = await ctx.page_reader(pins=pins, figures=bool(figures))
+
+    budget = [MAX_ROWS_PER_PAGE_READ]
+    rows = [_pin_row(p, budget) for p in (read.get("pins") or [])]
+    rows_dropped = _drop_rows_for_size(rows)
+
+    selected = read.get("pins") or []
+    remainder = read.get("remainder") or []
+    unavailable = list(read.get("unavailable") or [])
+
+    # Partial: something asked for did not come back. A pin the model chose
+    # not to replay (figures=False) is not partial — nothing was asked for.
+    failed = [
+        p for p in selected
+        if p.get("read") != "ok"
+        and not (p.get("read") == "not_read"
+                 and p.get("not_read_reason") == NOT_READ_FIGURES_OFF)
+    ]
+    partial = bool(failed or unavailable)
+
+    rows_omitted = sum(
+        r.get("rows_omitted", 0) for pin in rows for r in pin.get("results") or []
+    )
+    truncated = bool(remainder or rows_omitted or rows_dropped)
+
+    counts = {"ok": 0, "refused": 0, "failed": 0, "unrunnable": 0, "not_read": 0}
+    for p in selected:
+        if p.get("read") == "not_read":
+            counts["not_read"] += len(p.get("calls") or [])
+            continue
+        for r in p.get("results") or []:
+            counts[r.get("status", "failed")] = counts.get(r.get("status", "failed"), 0) + 1
+
+    # Every notice a replayed result carried, each naming the pin it came
+    # from, plus the two this read can raise itself.
+    notices: list[dict] = []
+    for p in selected:
+        for n in p.get("notices") or []:
+            notices.append({**n, "pin": p.get("title")})
+    if partial:
+        parts = [f"{len(failed)} of {len(selected)} inspected pins on this page "
+                 f"could not be reproduced now: "
+                 + "; ".join(_describe(p) for p in failed)
+                 if failed else ""]
+        if unavailable:
+            parts.append(
+                f"{len(unavailable)} requested pin id(s) are not on this page: "
+                + ", ".join(unavailable)
+            )
+        notices.append({
+            "kind": "page_context_partial",
+            "message": (". ".join(x for x in parts if x)
+                        + ". Say which of the page's figures are missing rather "
+                          "than treating the page as whole."),
+            "source": "view_page",
+        })
+    if truncated:
+        parts = []
+        if remainder:
+            listed = ", ".join(repr(p.get("title")) for p in remainder[:MAX_REMAINDER_LISTED])
+            more = len(remainder) - min(len(remainder), MAX_REMAINDER_LISTED)
+            parts.append(
+                f"This page has {read.get('pins_total')} pins; {len(selected)} "
+                f"were read ({'the newest' if read.get('requested') is None else 'the ones asked for'}). "
+                f"Not inspected: {listed}" + (f" and {more} more" if more else "")
+                + " — ids are in meta.remainder; read them by id if the question needs them"
+            )
+        if rows_omitted or rows_dropped:
+            parts.append(
+                f"Rows are capped at {MAX_ROWS_PER_PAGE_RESULT} per result and "
+                f"{MAX_ROWS_PER_PAGE_READ} for the whole read; each result's "
+                f"receipts cover all of its rows, so do not total what you can see"
+            )
+        notices.append({
+            "kind": "page_context_truncated",
+            "message": ". ".join(parts) + ". Say so.",
+            "source": "view_page",
+        })
+
+    notice_kinds = sorted({n.get("kind") for n in notices if n.get("kind")})
+    evidence = _evidence(read, rows, partial=partial, truncated=truncated,
+                         notice_kinds=notice_kinds, rows_dropped=rows_dropped)
+
+    name = read.get("page")
+    meta: dict[str, Any] = {
+        "source_table": "george.pins — each result carries its own receipts",
+        "filters_applied": [
+            f"created_by = {read.get('owner')}   # the signed-in user; not an argument",
+            ("page IS NULL   # the ungrouped pins" if name is None
+             else f"page = {name!r}   # exact name, the page the user asked from"),
+        ],
+        "snapshot_timestamp": read.get("read_at")
+        or datetime.now(timezone.utc).isoformat(),
+        "row_count": len(rows),
+        "page": name,
+        "figures": bool(read.get("figures")),
+        "pins_total": read.get("pins_total"),
+        "pins_inspected": len(selected),
+        "pins_reproduced": sum(1 for p in selected if p.get("read") == "ok"),
+        "pins_limit": read.get("pins_limit"),
+        "pins_not_read": [
+            {"pin_id": p.get("pin_id"), "title": p.get("title"),
+             "reason": p.get("not_read_reason")}
+            for p in selected if p.get("read") == "not_read"
+        ],
+        "unavailable_pin_ids": unavailable,
+        "remainder": [
+            {"pin_id": p.get("pin_id"), "title": p.get("title"),
+             "tools": [c.get("tool") for c in (p.get("calls") or [])]}
+            for p in remainder[:MAX_REMAINDER_LISTED]
+        ],
+        "remainder_omitted": max(0, len(remainder) - MAX_REMAINDER_LISTED),
+        "calls": counts,
+        "rows_omitted": rows_omitted + rows_dropped,
+        "truncated": truncated,
+        "partial": partial,
+        "evidence": evidence,
+    }
+    if notices:
+        meta["notice"] = notices[0] if len(notices) == 1 else {
+            "kind": "multiple",
+            "message": " | ".join(n.get("message", "") for n in notices),
+            "items": notices,
+        }
+
+    return {"rows": rows, "meta": meta}
+
+
 # The composite surface, by name. Merged into the model's schema only when its
 # capability has been injected, and NEVER into agent.loop.TOOL_FUNCTIONS — see
 # the module docstring for why that separation is the whole point.
-COMPOSITE_TOOL_FUNCTIONS = {"run_workflow": run_workflow}
+COMPOSITE_TOOL_FUNCTIONS = {
+    "run_workflow": run_workflow,
+    PAGE_CONTEXT_TOOL: view_page,
+}
 
-COMPOSITE_TOOL_REQUIRES = {"run_workflow": "workflow_runner"}
+COMPOSITE_TOOL_REQUIRES = {
+    "run_workflow": "workflow_runner",
+    PAGE_CONTEXT_TOOL: "page_reader",
+}

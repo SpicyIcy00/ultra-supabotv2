@@ -1203,7 +1203,8 @@ async def _safe_stream(question: str, user_id: Optional[str],
                        thread_id: Optional[str] = None,
                        recall: Optional[str] = None,
                        parent_id: Optional[str] = None,
-                       page_reader: Optional[PageReader] = None) -> AsyncIterator[str]:
+                       page_reader: Optional[PageReader] = None,
+                       page_scope: Optional[dict] = None) -> AsyncIterator[str]:
     """
     Wrap the loop so a crash still closes the stream cleanly.
 
@@ -1224,6 +1225,7 @@ async def _safe_stream(question: str, user_id: Optional[str],
             recall=recall,
             parent_id=parent_id,
             page_reader=page_reader,
+            page_scope=page_scope,
         ):
             yield frame
     except Exception as exc:  # noqa: BLE001
@@ -1320,6 +1322,9 @@ async def ask(
             recall=recall,
             parent_id=parent,
             page_reader=page_reader,
+            page_scope=(
+                {"name": request.page_scope.name} if request.page_scope else None
+            ),
         ),
         media_type="text/event-stream",
         headers={

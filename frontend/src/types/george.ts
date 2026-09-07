@@ -73,6 +73,14 @@ export interface ToolCall {
     rows_complete?: boolean;
     /** Full meta for the receipts line under a charted answer. */
     meta?: ToolMeta | null;
+    /**
+     * Whether this call may become a pin: a read tool that ran without
+     * error, as the LOOP says. A workflow run and a page read are calls
+     * George made and neither is a tile. Absent on frames from an older
+     * backend, which the client reads as pinnable — the server refuses
+     * anything that is not.
+     */
+    pinnable?: boolean;
   };
 }
 
@@ -158,6 +166,52 @@ export interface SavedFrame {
   queue: string | null;
 }
 
+/**
+ * What George considered of the page the person asked from, as the loop
+ * reports it after a `view_page` call — the `page_context` frame, and the
+ * same object an answer post keeps in its payload (agent/loop.py, evidence).
+ *
+ * EVIDENCE, NOT A FIGURE. Nothing here is a number from the warehouse: it is
+ * which page, when it was read, which pins were inspected with what status,
+ * and what was not read and why. The figures themselves went to the model
+ * and are in the tool-call log; the UI draws this to say what was considered.
+ * `partial` means something asked for did not come back; `truncated` means
+ * something on the page was not read at all.
+ */
+export interface PageContextPin {
+  pin_id: string;
+  title: string;
+  /** ok | refused | failed | unrunnable | not_read */
+  status: string;
+  /** Why a not_read pin was not read: deadline, or figures_not_requested. */
+  reason: string | null;
+  calls: { tool: string; arguments: Record<string, unknown> }[];
+  /** The latest snapshot among the pin's successful results, or null. */
+  snapshot_timestamp: string | null;
+  notice_kinds: string[];
+}
+
+export interface PageContextFrame {
+  /** The page's name; null is the ungrouped pins. */
+  page: string | null;
+  read_at: string;
+  figures: boolean;
+  pins_total: number;
+  pins_inspected: number;
+  pins_reproduced: number;
+  pins: PageContextPin[];
+  /** Pins on the page that were not read at all — beyond the bound. */
+  not_inspected: { pin_id: string; title: string }[];
+  /** Requested ids that are not on this page. */
+  unavailable: string[];
+  partial: boolean;
+  truncated: boolean;
+  rows_dropped: number;
+  notice_kinds: string[];
+  /** How many reads this record merges, when a turn read the page twice. */
+  reads?: number;
+}
+
 export type GeorgeTurn =
   | { role: 'user'; text: string; at: string }
   | {
@@ -172,6 +226,11 @@ export type GeorgeTurn =
       saved: SavedFrame[];
       /** meta of the last tool result — the receipts shown under the answer. */
       receipts?: ToolMeta;
+      /**
+       * What George considered of the page the question was asked from, from
+       * the `page_context` frame. Absent when he did not read the page.
+       */
+      pageContext?: PageContextFrame;
       /**
        * The turn's posts in the river, from the `post` frame. Absent until the
        * frame arrives; absent for good on a turn that was stopped before it.

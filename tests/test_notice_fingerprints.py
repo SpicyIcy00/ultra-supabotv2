@@ -47,6 +47,9 @@ EXTRA_EMITTERS = [
     ROOT / "backend" / "app" / "services" / "workflow_runner.py",
     # The skipped-slot notice can only be raised where the slots are known.
     ROOT / "backend" / "app" / "services" / "workflow_scheduler.py",
+    # A page read raises its own two: something asked for did not come back,
+    # and something on the page was not read at all.
+    ROOT / "agent" / "composite_tools.py",
 ]
 
 # The container kind, which carries `items` and is never fingerprinted itself —
@@ -216,6 +219,18 @@ PAIRS = {
         "AJI PINA is not in the inventory snapshot scope, so no balance history "
         "exists for it; its recorded transfers are what this answer is based on.",
         "Movement into AJI PINA totalled 900 units across 12 documents.",
+    ),
+    "page_context_partial": (
+        "Three of the five pins on this page reproduced; the low-stock pin could "
+        "not be reproduced because thresholds are not set at AJI BARN.",
+        "Everything on the page looks healthy: stock at AJI BARN is 4,120 units as "
+        "of Mon 7 Sep 2026.",
+    ),
+    "page_context_truncated": (
+        "This page has 12 pins and I read the newest 5; the other 7 are not "
+        "inspected here.",
+        "The page shows sales of ₱48,210 on Wed 2 Sep 2026 and stock of 4,120 "
+        "units.",
     ),
 }
 

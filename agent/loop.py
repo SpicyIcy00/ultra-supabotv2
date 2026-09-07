@@ -360,6 +360,9 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
             "additionalProperties": False,
         }
 
+    if "list[str]" in text:
+        return {"type": "array", "items": {"type": "string"}}
+
     if "bool" in text:
         return {"type": "boolean"}
 
@@ -827,9 +830,11 @@ def _forced_caveats(missing: list[dict]) -> str:
 # Logging — separate identity, insert-only
 # --------------------------------------------------------------------------
 
-def _answer_payload(charted: Optional[list], calls: Optional[list]) -> Optional[str]:
+def _answer_payload(charted: Optional[list], calls: Optional[list],
+                    page_context: Optional[dict] = None) -> Optional[str]:
     """
-    The answer post's payload: the charted snapshot and the calls behind it.
+    The answer post's payload: the charted snapshot, the calls behind it, and
+    the page George read to produce it.
 
     NONE when there is nothing to carry, exactly as before `calls` existed,
     so a post with no figures and no reads stores no payload rather than an
@@ -837,13 +842,60 @@ def _answer_payload(charted: Optional[list], calls: Optional[list]) -> Optional[
     the client treats the absence as "not pinnable" and never fills it in
     (postShape.storedCalls) — an argument list rebuilt from rows or prose
     would be an invented call, which is the one thing a pin must never hold.
+
+    `page_context` is the compact evidence of a page read — which page, when,
+    which pins with what status, what was not read and why — and NOT the
+    replayed results, which are already in george.tool_calls. It is what lets
+    a reopened thread show what George considered, and what lets the thread's
+    page scope be restored after a reload (pageScope.ts).
     """
     payload: dict = {}
     if charted:
         payload["charted"] = charted
     if calls:
         payload["calls"] = calls
+    if page_context:
+        payload["page_context"] = page_context
     return json.dumps(payload) if payload else None
+
+
+def merge_page_evidence(previous: Optional[dict], latest: dict) -> dict:
+    """
+    Two page reads in one turn, as one record of what was considered.
+
+    A turn may read the newest five and then the rest by id; the answer post
+    has to say ALL of them were considered, not just the last batch. Pins are
+    unioned by id with the later status winning, the totals and the time are
+    the latest read's, and a pin the later read did not inspect is no longer
+    "not inspected" if an earlier one did. Both reads stay whole in
+    george.tool_calls; this is the summary, not the audit trail.
+    """
+    if not previous:
+        return dict(latest)
+    pins: dict[str, dict] = {}
+    for p in (previous.get("pins") or []) + (latest.get("pins") or []):
+        if p.get("pin_id"):
+            pins[p["pin_id"]] = p
+    inspected = set(pins)
+    merged = dict(latest)
+    merged["pins"] = list(pins.values())
+    merged["pins_inspected"] = len(pins)
+    merged["pins_reproduced"] = sum(1 for p in pins.values() if p.get("status") == "ok")
+    merged["not_inspected"] = [
+        p for p in (latest.get("not_inspected") or []) if p.get("pin_id") not in inspected
+    ]
+    merged["unavailable"] = sorted(
+        set(previous.get("unavailable") or []) | set(latest.get("unavailable") or [])
+    )
+    merged["partial"] = bool(previous.get("partial") or latest.get("partial"))
+    merged["truncated"] = bool(merged["not_inspected"]) or bool(
+        previous.get("rows_dropped") or latest.get("rows_dropped")
+    )
+    merged["notice_kinds"] = sorted(
+        set(previous.get("notice_kinds") or []) | set(latest.get("notice_kinds") or [])
+    )
+    merged["reads"] = int(previous.get("reads") or 1) + 1
+    return merged
 
 
 class ConversationLog:
@@ -1006,7 +1058,8 @@ class ConversationLog:
                 # `calls` beside it (2026-09-07): the read calls that ran, so
                 # the post can be PINNED after a reload. The chart is a
                 # snapshot; the pin re-runs. Both are true of one answer.
-                _answer_payload(kw.get("charted"), kw.get("calls")),
+                _answer_payload(kw.get("charted"), kw.get("calls"),
+                                kw.get("page_context")),
                 json.dumps(_json_safe(kw["receipts"])) if kw.get("receipts") else None,
                 json.dumps(_json_safe(kw.get("notices") or [])),
                 self.conversation_id, datetime.now(timezone.utc),
@@ -1107,6 +1160,32 @@ MAX_HISTORY_TEXT = 20000
 THREAD_OPENER = "[This thread opened with the post below, written by George.]"
 
 
+def _page_sentence(page_context: Optional[str], page_scope: Optional[dict],
+                   readable: bool) -> Optional[str]:
+    """
+    What George is told about where the user is.
+
+    A George page in scope, with a reader to read it, is stated as a page he
+    CAN read and HAS NOT read — the tool is his to call when the question
+    needs it, and a question that does not ("what's ₱ to the dollar") should
+    not cost a replay. Anything else is the legacy sentence: the name of the
+    page, and nothing about its contents, because he cannot see them.
+    """
+    if page_scope is not None and readable:
+        name = page_scope.get("name")
+        where = (f"their page {name!r}" if name
+                 else "their ungrouped pins (a page with no name)")
+        return (
+            f"[The user is on {where} — a collection of analyses they pinned. "
+            f"You have not read it yet. If the question is about what is on "
+            f"it, call view_page; it reads the page they are on and "
+            f"nothing else.]"
+        )
+    if page_context:
+        return f"[The user is on the {page_context} page.]"
+    return None
+
+
 def _seed_history(history: Optional[list], executed: dict) -> list[dict]:
     """
     Prior turns as messages, and their calls recorded as already run.
@@ -1165,6 +1244,7 @@ async def run(
     recall: Optional[str] = None,
     parent_id: Optional[str] = None,
     page_reader: Optional[write_tools.PageReader] = None,
+    page_scope: Optional[dict] = None,
 ) -> AsyncIterator[str]:
     """
     Answer one question, streaming SSE frames.
@@ -1216,6 +1296,11 @@ async def run(
             cannot see, and bound in the web process to the authenticated
             user AND the exact page: the tool it gates has no argument for
             either. Without it that tool is not in the schema.
+        page_scope: the identity of that page, as {"name": str | None} — None
+            is the ungrouped pins. Read out to the model as context on the
+            question in place of the page_context sentence, so George is told
+            he is on a page he can read and has not read yet. Never parsed
+            out of page_context: the two travel separately on purpose.
     """
     defs = _load_defs()
     log = ConversationLog(thread_id=thread_id)
@@ -1243,7 +1328,7 @@ async def run(
     preamble = [
         part
         for part in (
-            f"[The user is on the {page_context} page.]" if page_context else None,
+            _page_sentence(page_context, page_scope, page_reader is not None),
             recall,
         )
         if part
@@ -1300,6 +1385,12 @@ async def run(
     # pin it made rather than a figure, and a workflow's steps are its own to
     # replay. See ConversationLog.posts and _answer_payload.
     calls_made: list[dict] = []
+
+    # What George read of the page, for the ANSWER POST and the UI: compact
+    # evidence — which page, when, which pins with what status — never the
+    # replayed results, which are the tool_calls log's. Merged across reads
+    # in one turn; see merge_page_evidence.
+    page_evidence: Optional[dict] = None
 
     yield _sse("start", {"conversation_id": log.conversation_id,
                          "thread_id": log.thread_id,
@@ -1703,6 +1794,18 @@ async def run(
                             write_ctx.executed[call_key(tool, args)] = {
                                 "tool": tool, "arguments": args,
                             }
+                # A page read announces what it considered as its own frame,
+                # the way a write announces what it wrote: the UI draws the
+                # "read 5 of 7" line from this, never from the model's prose.
+                # Deliberately NOT added to the executed set — reading a page
+                # makes nothing on it pinnable; a pin is a call the user has
+                # watched George run in this conversation.
+                if (err is None and b.name == composite_tools.PAGE_CONTEXT_TOOL
+                        and (result.get("meta") or {}).get("evidence")):
+                    page_evidence = merge_page_evidence(
+                        page_evidence, result["meta"]["evidence"]
+                    )
+                    yield _sse("page_context", page_evidence)
 
             for gseq, b in writes:
                 done_calls.append(
@@ -1723,8 +1826,12 @@ async def run(
                 # is real, but it describes the pin, and showing it as the
                 # answer's receipts would replace the figures' provenance with
                 # the pin's.
+                # A page read's meta is excluded too: it describes george.pins
+                # and the read, while every figure it carried has receipts of
+                # its own inside it. The page_context frame is its provenance.
                 if (not err and meta.get("source_table")
-                        and b.name not in write_tools.WRITE_TOOL_FUNCTIONS):
+                        and b.name not in write_tools.WRITE_TOOL_FUNCTIONS
+                        and b.name != composite_tools.PAGE_CONTEXT_TOOL):
                     last_meta = meta
 
                 log.tool_call(gseq, b.name, dict(b.input), capped, ms, err)
@@ -1741,10 +1848,14 @@ async def run(
                 # `result`, not `capped`: the model's 200-row cap is a different
                 # budget from the client's, and taking the capped list here
                 # would send a silent prefix of anything between the two.
+                # A page read's rows are pins, not figures: they are never
+                # sent to be drawn and never charted. Its evidence went out
+                # as the page_context frame above.
                 full_rows = [] if err else (result.get("rows") or [])
                 rows_complete = (
                     not err
                     and b.name not in write_tools.WRITE_TOOL_FUNCTIONS
+                    and b.name != composite_tools.PAGE_CONTEXT_TOOL
                     and len(full_rows) <= MAX_ROWS_TO_CLIENT
                 )
                 yield _sse("tool_result", {
@@ -1761,6 +1872,11 @@ async def run(
                     "meta": meta if rows_complete else None,
                     "rows": full_rows if rows_complete else [],
                     "rows_complete": rows_complete,
+                    # Whether this call may become a pin: a READ tool that
+                    # ran without error. Said by the loop so the client never
+                    # decides from a name — a workflow run and a page read are
+                    # calls George made, and neither is a tile.
+                    "pinnable": bool(not err and b.name in TOOL_FUNCTIONS),
                 })
                 # Kept for the ANSWER POST, so a chart survives a reload. Same
                 # all-or-none rule as the frame above: a result that could not
@@ -1868,6 +1984,7 @@ async def run(
         user_id=user_id, asked_at=asked_at, question=question,
         final_answer=answer or None, notices=pending, receipts=last_meta,
         charted=charted, calls=calls_made, parent_id=parent_id,
+        page_context=page_evidence,
     )
 
     # The ids of the two posts, so a client that is rendering the river can

@@ -2750,6 +2750,23 @@ notices:
 
   # A backtest containing a step that cannot see the past. The figure is real
   # and is TODAY's; presenting it as the past is the failure.
+  # ---- Page reads (view_page, agent/composite_tools.py) -------------
+  # A page read replays several pins as one tool call. These two are the read's
+  # own caveats: something asked for did not come back, and something on the
+  # page was not read at all. Both must reach the answer in words; the
+  # fingerprints are the minimum that lets the loop tell that they did.
+  page_context_partial:
+    must_convey:
+      - [could not, couldn't, not reproduce, not be reproduced, not read, unavailable,
+         not available, failed, refused, declined, did not come back, didn't come back,
+         could not run, couldn't run, no longer run, missing, not on this page]
+      - [pin, pins, analysis, analyses, tile, tiles, saved, page, figure, figures]
+  page_context_truncated:
+    must_convey:
+      - [pin, pins, analysis, analyses, tile, tiles, saved]
+      - [first, newest, "of the", not inspected, not read, remaining, the rest, the other,
+         others, only, beyond, did not read, didn't read, haven't read, have not read,
+         left out, capped, more on, "of them"]
   backtest_not_reproducible:
     must_convey:
       - [backtest, back-test, past window, "would have"]

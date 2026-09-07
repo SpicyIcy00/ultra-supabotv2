@@ -41,6 +41,7 @@ import type {
   GeorgeNotice,
   GeorgeState,
   GeorgeTurn,
+  PageContextFrame,
   PinnedFrame,
   PostFrame,
   SavedFrame,
@@ -323,6 +324,7 @@ export function useGeorgeStream() {
                       rows: (data.rows ?? []) as Record<string, unknown>[],
                       rows_complete: Boolean(data.rows_complete),
                       meta: (data.meta ?? null) as ToolMeta | null,
+                      pinnable: data.pinnable === undefined ? undefined : Boolean(data.pinnable),
                     };
                   }
                 });
@@ -405,6 +407,15 @@ export function useGeorgeStream() {
               case 'receipts':
                 patchLast((t) => {
                   t.receipts = data as ToolMeta;
+                });
+                break;
+
+              case 'page_context':
+                // What George considered of the page: evidence from the read
+                // itself, never from the model's prose. A second read in the
+                // same turn arrives already merged with the first.
+                patchLast((t) => {
+                  t.pageContext = data as unknown as PageContextFrame;
                 });
                 break;
 
