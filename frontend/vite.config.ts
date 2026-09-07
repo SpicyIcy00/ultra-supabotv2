@@ -34,6 +34,7 @@ export default defineConfig({
           {
             urlPattern: /\/api\/v1\/.*/,
             handler: 'NetworkOnly',
+            options: { fetchOptions: { cache: 'no-store' } },
           },
         ],
       },

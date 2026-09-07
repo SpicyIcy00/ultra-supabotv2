@@ -20,6 +20,7 @@ it('removes the old shared API cache when the new worker activates', async () =>
 it('API routes have no service-worker cache fallback', () => {
   const config = readFileSync('vite.config.ts', 'utf8');
   expect(config).toContain("handler: 'NetworkOnly'");
+  expect(config).toContain("fetchOptions: { cache: 'no-store' }");
   expect(config).not.toMatch(/handler: '(NetworkFirst|CacheFirst|StaleWhileRevalidate)'/);
   expect(config).toContain("importScripts: ['/clear-api-cache.js']");
   expect(config).toContain('clientsClaim: true');
