@@ -85,6 +85,22 @@ export function ReceiptsBlock({ meta }: { meta?: ToolMeta }) {
             </Row>
           )}
 
+          {meta.comparison?.baseline && (
+            <Row label="Baseline">
+              {meta.comparison.baseline.start} → {meta.comparison.baseline.end}
+              <span className="text-george-muted">
+                {' '}· {meta.comparison.display_name ?? meta.comparison.kind}
+                {meta.comparison.baseline_statuses &&
+                  Object.entries(meta.comparison.baseline_statuses).some(([k]) => k !== 'ok') &&
+                  ' · ' +
+                    Object.entries(meta.comparison.baseline_statuses)
+                      .filter(([k]) => k !== 'ok')
+                      .map(([k, n]) => `${n} ${k.replace(/_/g, ' ')}`)
+                      .join(', ')}
+              </span>
+            </Row>
+          )}
+
           {meta.filters_applied?.length ? (
             <div>
               <p className="mb-1 text-[11px] uppercase tracking-wide text-george-muted">

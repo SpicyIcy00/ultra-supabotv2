@@ -40,6 +40,23 @@ export interface ToolMeta {
   };
   metric?: string;
   metric_unit?: string;
+  /** The metric model (metrics.yaml metric_model): base or derived, and its name. */
+  metric_kind?: string;
+  metric_label?: string;
+  /**
+   * get_sales compare_to: both periods and how the baseline was chosen. The
+   * deltas themselves are on the rows; this is what they were measured
+   * against, for the receipts.
+   */
+  comparison?: {
+    kind?: string;
+    display_name?: string;
+    method?: string;
+    current?: { start?: string; end?: string };
+    baseline?: { kind?: string; name?: string; start?: string; end?: string };
+    baseline_statuses?: Record<string, number>;
+    ranked_by_current?: boolean;
+  };
   definitions_version?: number;
 }
 

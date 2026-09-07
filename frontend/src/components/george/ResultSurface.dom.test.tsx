@@ -11,7 +11,7 @@
  * THE PROPERTY UNDER TEST THROUGHOUT: no number appears that did not come off
  * a row, and no figure appears without its provenance and its time.
  */
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { ToolMeta } from '../../types/george';
 import { ResultSurface } from './ResultSurface';
@@ -215,5 +215,61 @@ describe('the surface draws no caveat of its own', () => {
     // qualifies.
     const { container } = surface(stored([{ measure: 'net_sales', value: 1, unit: 'PHP' }]));
     expect(container.querySelector('[role="note"]')).toBeNull();
+  });
+});
+
+describe('Comparison, when the tool could not compare', () => {
+  const compared = (over: Record<string, unknown>) =>
+    stored(
+      [{ store: 'Shang', value: 41242, baseline: 215567, change: -174325, change_pct: -80.9,
+         direction: 'down', unit: 'PHP', baseline_status: 'ok', ...over }],
+      { ...META, comparison: { kind: 'previous_period', display_name: 'vs previous period',
+                               baseline: { start: '2026-03-23', end: '2026-03-30' } } },
+    );
+
+  it('says "no baseline" in words rather than drawing a zero', () => {
+    surface(compared({ baseline: null, change: null, change_pct: null, direction: null,
+                       baseline_status: 'no_baseline' }));
+    expect(screen.getByText('₱41,242')).toBeTruthy();
+    expect(screen.getByText(/no baseline/)).toBeTruthy();
+    expect(screen.queryByText(/0%/)).toBeNull();
+    expect(screen.queryByText(/↓/)).toBeNull();
+  });
+
+  it('keeps the baseline figure when only the percentage is undefined', () => {
+    surface(compared({ value: 93, baseline: 0, change: 93, change_pct: null, direction: 'up',
+                       unit: 'transactions', baseline_status: 'zero_baseline' }));
+    expect(screen.getByText(/previous period was zero/)).toBeTruthy();
+    expect(screen.queryByText(/%/)).toBeNull();
+  });
+
+  it('draws no figure this period as a dash with the previous period beside it', () => {
+    surface(compared({ value: null, change: null, change_pct: null, direction: null,
+                       baseline_status: 'no_current' }));
+    expect(screen.getByText('—')).toBeTruthy();
+    expect(screen.getByText(/no figure this period/)).toBeTruthy();
+    expect(screen.getByText(/₱215,567/)).toBeTruthy();
+  });
+
+  it('renders flat as "no change", not as up 0%', () => {
+    surface(compared({ value: 215567, change: 0, change_pct: 0, direction: 'flat' }));
+    expect(screen.getByText(/no change/)).toBeTruthy();
+    expect(screen.queryByText(/↑/)).toBeNull();
+  });
+
+  it('puts the baseline window on the receipts', () => {
+    const { container } = surface(compared({}));
+    fireEvent.click(container.querySelector('button') as HTMLElement);
+    expect(screen.getByText(/2026-03-23 → 2026-03-30/)).toBeTruthy();
+  });
+
+  it('names its metric from meta when its rows have no subject', () => {
+    surface(stored(
+      [{ value: 179058.5, baseline: 215567, change: -36508.5, change_pct: -16.9,
+         direction: 'down', unit: 'PHP', baseline_status: 'ok' }],
+      { ...META, metric_label: 'Net sales' },
+    ));
+    expect(screen.getByText('Net sales')).toBeTruthy();
+    expect(screen.getByText('16.9%')).toBeTruthy();
   });
 });

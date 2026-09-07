@@ -51,18 +51,32 @@ export type Mark = 'line' | 'bar';
  */
 export interface ComparisonRow {
   subject: string;
-  value: number;
+  /** Null when the tool said no_current: the subject had no figure this period. */
+  value: number | null;
   baseline?: number;
   change?: number;
-  changePct: number;
-  direction: 'up' | 'down';
+  /**
+   * Null when the tool could not compute one — no baseline, a zero baseline,
+   * or no current figure — and `baselineStatus` says which. Never computed
+   * here from value and baseline; a null delta is drawn as the words for it.
+   */
+  changePct: number | null;
+  /** `flat` is the tool's word for a change of exactly zero. Null with a null delta. */
+  direction: 'up' | 'down' | 'flat' | null;
+  /** get_sales compare_to: ok | no_baseline | zero_baseline | no_current. */
+  baselineStatus?: string;
   unit?: string;
   row: Record<string, unknown>;
 }
 
 export type Shape =
   | { kind: 'number'; value: number; unit?: string; label?: string }
-  | { kind: 'comparison'; rows: ComparisonRow[] }
+  | {
+      kind: 'comparison';
+      rows: ComparisonRow[];
+      /** The metric's name from meta, for a figure whose rows have no subject. */
+      label?: string;
+    }
   | { kind: 'chart'; x: string; mark: Mark; rows: Record<string, unknown>[] }
   | { kind: 'table'; columns: string[]; rows: Record<string, unknown>[] };
 
@@ -102,20 +116,30 @@ function isHomogeneousSeries(rows: Record<string, unknown>[]): boolean {
 function comparisonRows(rows: Record<string, unknown>[]): ComparisonRow[] | null {
   const out: ComparisonRow[] = [];
   for (const r of rows) {
-    if (typeof r.value !== 'number' || typeof r.change_pct !== 'number') return null;
+    // A row is compared when the tool computed a delta, OR when it declared
+    // in `baseline_status` that it tried and could not (get_sales
+    // compare_to). A row with neither is a plain figure, and one such row
+    // makes the whole result something other than a comparison.
+    const declared = typeof r.baseline_status === 'string';
+    const pct = typeof r.change_pct === 'number' ? r.change_pct : null;
+    if (pct === null && !declared) return null;
+    const value = typeof r.value === 'number' ? r.value : r.value === null && declared ? null : undefined;
+    if (value === undefined) return null;
     const subject = SUBJECT_KEYS.map((k) => r[k]).find((v) => typeof v === 'string' && v);
     out.push({
       subject: (subject as string) ?? '',
-      value: r.value,
+      value,
       baseline: typeof r.baseline === 'number' ? r.baseline : undefined,
       change: typeof r.change === 'number' ? r.change : undefined,
-      changePct: r.change_pct,
+      changePct: pct,
       // The tool's own word for it where there is one. Otherwise the SIGN of
       // the delta it supplied, which is a reading of the number rather than a
-      // second calculation of it.
-      direction: r.direction === 'up' || r.direction === 'down'
-        ? r.direction
-        : r.change_pct >= 0 ? 'up' : 'down',
+      // second calculation of it — and nothing at all when there is no delta.
+      direction:
+        r.direction === 'up' || r.direction === 'down' || r.direction === 'flat'
+          ? r.direction
+          : pct === null ? null : pct >= 0 ? 'up' : 'down',
+      baselineStatus: declared ? (r.baseline_status as string) : undefined,
       unit: typeof r.unit === 'string' ? r.unit : undefined,
       row: r,
     });
@@ -176,7 +200,14 @@ export function inferShape(
   // without the baseline would throw away the part the tool went to the
   // trouble of computing.
   const comparison = comparisonRows(rows);
-  if (comparison) return { kind: 'comparison', rows: comparison };
+  if (comparison) {
+    // The metric's name from meta, so three compared totals abreast — net
+    // sales, transactions, ATP — can each say which they are. From meta,
+    // never from prose; absent on results from an older backend.
+    const label =
+      typeof result.meta?.metric_label === 'string' ? result.meta.metric_label : undefined;
+    return { kind: 'comparison', rows: comparison, label };
+  }
 
   // One row, one figure — the commonest pin, and the one worth making large.
   if (rows.length === 1 && hasValue) {

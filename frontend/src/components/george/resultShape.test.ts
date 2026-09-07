@@ -360,3 +360,69 @@ describe('sourcesFromPinRun', () => {
     expect(s.meta.source_table).toBe('new_transactions');
   });
 });
+
+describe('compared figures compose', () => {
+  const window = { kind: 'explicit', start: '2026-08-24', end: '2026-08-31' };
+  const filters = [
+    't.is_cancelled = false   # metrics.yaml: filters.cancelled',
+    'baseline: transaction_time >= 2026-08-17 AND < 2026-08-24   # metrics.yaml: comparisons.previous_period',
+  ];
+  const comparedMeta = (metric_label: string, metric_unit: string) => ({
+    source_table: 'new_transactions',
+    snapshot_timestamp: '2026-09-07T09:00:00+08:00',
+    window,
+    filters_applied: filters,
+    metric_label,
+    metric_unit,
+    comparison: { kind: 'previous_period', baseline: { start: '2026-08-17', end: '2026-08-24' } },
+  });
+  const total = (value: number, baseline: number, change_pct: number, unit: string) => [
+    { value, baseline, change: value - baseline, change_pct, direction: 'down', unit,
+      baseline_status: 'ok' },
+  ];
+  const args = { filters: { store: 'Rockwell' }, compare_to: 'previous_period' };
+
+  it('three compared totals of one scope read across under one heading', () => {
+    const blocks = resultBlocks(
+      sourcesFromCalls([
+        call(1, total(179058.5, 215567, -16.9, 'PHP'), { args, meta: comparedMeta('Net sales', 'PHP') }),
+        call(2, total(328, 366, -10.4, 'transactions'), { args, meta: comparedMeta('Transactions', 'transactions') }),
+        call(3, total(545.91, 588.98, -7.3, 'PHP'), { args, meta: comparedMeta('Average transaction value', 'PHP') }),
+      ]),
+    );
+    expect(blocks).toHaveLength(1);
+    if (blocks[0].kind !== 'group') throw new Error('expected a group');
+    expect(blocks[0].members).toHaveLength(3);
+    expect(blocks[0].members.every((m) => m.shape.kind === 'comparison')).toBe(true);
+    expect(blocks[0].heading).toBe('Rockwell · 2026-08-24 → 2026-08-31');
+  });
+
+  it('a compared figure never groups with an uncompared one', () => {
+    // The baseline window is on filters_applied, so the scopes differ and a
+    // heading over both would be true of only one.
+    const blocks = resultBlocks(
+      sourcesFromCalls([
+        call(1, total(179058.5, 215567, -16.9, 'PHP'), { args, meta: comparedMeta('Net sales', 'PHP') }),
+        call(2, [{ measure: 'transaction_count', value: 328, unit: 'transactions' }], {
+          args: { filters: { store: 'Rockwell' } },
+          meta: { ...comparedMeta('Transactions', 'transactions'), filters_applied: [filters[0]], comparison: undefined },
+        }),
+      ]),
+    );
+    expect(blocks.map((b) => b.kind)).toEqual(['single', 'single']);
+  });
+
+  it('a comparison of several subjects stays whole', () => {
+    const rows = ['Rockwell', 'OPUS', 'Shang'].map((store) => ({
+      store, value: 1, baseline: 2, change: -1, change_pct: -50, direction: 'down', unit: 'PHP',
+      baseline_status: 'ok',
+    }));
+    const blocks = resultBlocks(
+      sourcesFromCalls([
+        call(1, rows, { meta: comparedMeta('Net sales', 'PHP') }),
+        call(2, total(1, 2, -50, 'PHP'), { meta: comparedMeta('Net sales', 'PHP') }),
+      ]),
+    );
+    expect(blocks.map((b) => b.kind)).toEqual(['single', 'single']);
+  });
+});

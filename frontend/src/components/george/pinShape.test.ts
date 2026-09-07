@@ -427,3 +427,83 @@ describe('replayState', () => {
     expect(missingLabel('failed')).toBe('could not be refreshed');
   });
 });
+
+/* --------------------------------------------- comparisons that could not be -- */
+
+/** A get_sales compare_to row, exactly as tools/sales.py _compare_row builds it. */
+const compared = (over: Record<string, unknown>) => ({
+  store_id: 'id-Shang',
+  store: 'Shang',
+  value: 41242.0,
+  baseline: 215567.0,
+  change: -174325.0,
+  change_pct: -80.9,
+  direction: 'down',
+  unit: 'PHP',
+  baseline_status: 'ok',
+  ...over,
+});
+
+describe('a comparison the tool declared but could not compute', () => {
+  it('is still a comparison when change_pct is null and baseline_status says why', () => {
+    const shape = inferShape(
+      result([compared({ baseline: null, change: null, change_pct: null, direction: null,
+                         baseline_status: 'no_baseline' })]),
+    );
+    if (shape?.kind !== 'comparison') throw new Error('expected a comparison');
+    expect(shape.rows[0].changePct).toBeNull();
+    expect(shape.rows[0].direction).toBeNull();
+    expect(shape.rows[0].baselineStatus).toBe('no_baseline');
+    expect(shape.rows[0].value).toBe(41242.0);
+  });
+
+  it('never fills a null delta in from value and baseline', () => {
+    const shape = inferShape(
+      result([compared({ baseline: 0, change: 93, change_pct: null, direction: 'up',
+                         baseline_status: 'zero_baseline' })]),
+    );
+    if (shape?.kind !== 'comparison') throw new Error('expected a comparison');
+    expect(shape.rows[0].changePct).toBeNull();
+    expect(shape.rows[0].baseline).toBe(0);
+  });
+
+  it('keeps a subject with no current figure, as null and not as zero', () => {
+    const shape = inferShape(
+      result([compared({ value: null, change: null, change_pct: null, direction: null,
+                         baseline_status: 'no_current' })]),
+    );
+    if (shape?.kind !== 'comparison') throw new Error('expected a comparison');
+    expect(shape.rows[0].value).toBeNull();
+    expect(shape.rows[0].baselineStatus).toBe('no_current');
+  });
+
+  it('reads flat as the tool said it, not as up', () => {
+    const shape = inferShape(
+      result([compared({ change: 0, change_pct: 0, direction: 'flat' })]),
+    );
+    if (shape?.kind !== 'comparison') throw new Error('expected a comparison');
+    expect(shape.rows[0].direction).toBe('flat');
+  });
+
+  it('a row with a null value and no declaration is not a comparison', () => {
+    // Nothing said "I tried"; a null value with no status is just a missing figure.
+    const shape = inferShape(result([{ store: 'Shang', value: null, change_pct: null }]));
+    expect(shape?.kind).toBe('table');
+  });
+
+  it('names the metric from meta, never from prose', () => {
+    const shape = inferShape(
+      result([compared({ store: undefined, store_id: undefined })],
+             { metric_label: 'Net sales', metric: 'net_sales' }),
+    );
+    if (shape?.kind !== 'comparison') throw new Error('expected a comparison');
+    expect(shape.label).toBe('Net sales');
+    expect(shape.rows[0].subject).toBe('');
+  });
+
+  it('has no label on a result from an older backend', () => {
+    const shape = inferShape(result([compared({})]));
+    if (shape?.kind !== 'comparison') throw new Error('expected a comparison');
+    expect(shape.label).toBeUndefined();
+  });
+});

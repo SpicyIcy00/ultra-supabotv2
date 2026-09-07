@@ -260,7 +260,16 @@ export function resultBlocks(sources: ResultSource[]): ResultBlock[] {
   };
 
   for (const item of shaped) {
-    const groupable = item.shape.kind === 'number';
+    // A bare figure, or ONE compared figure — a total with its delta, which
+    // is a figure that also says how it moved. A comparison of several
+    // subjects stays whole: it is already a list read down. Whether two
+    // compared figures share a scope is still scopeKey's decision, and a
+    // compared result carries its baseline window in filters_applied, so a
+    // compared figure never sits beside an uncompared one under a heading
+    // that would be true of only one of them.
+    const groupable =
+      item.shape.kind === 'number' ||
+      (item.shape.kind === 'comparison' && item.shape.rows.length === 1);
     if (!groupable) {
       flush();
       blocks.push({ kind: 'single', result: item });

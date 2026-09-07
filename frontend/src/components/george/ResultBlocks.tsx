@@ -102,19 +102,58 @@ export function MetricGroup({
  * The percentage is `change_pct` off the row, printed. It is not recomputed
  * from value and baseline, because the tool's rounding is the tool's to own.
  */
+/**
+ * What a delta the tool could NOT compute is drawn as. Words, in the tool's
+ * own vocabulary (get_sales compare_to baseline_status), never a zero and
+ * never a dash that could be read as "none". The baseline figure is still
+ * shown where there is one, because it is a real number off the row.
+ */
+function missingDelta(row: ComparisonRow): string {
+  switch (row.baselineStatus) {
+    case 'no_baseline':
+      return 'no baseline · nothing to compare against in the previous period';
+    case 'zero_baseline':
+      return 'no percentage · the previous period was zero';
+    case 'no_current':
+      return 'no figure this period';
+    default:
+      return 'no comparison';
+  }
+}
+
 export function Delta({ row }: { row: ComparisonRow }) {
+  const baseline =
+    row.baseline !== undefined ? (
+      <>
+        {unitPrefix(row.unit)}
+        {fmt(row.baseline)}
+      </>
+    ) : null;
+
+  if (row.changePct === null) {
+    return (
+      <p className="mt-2 text-[13px] tabular-nums text-george-slate">
+        {missingDelta(row)}
+        {baseline && row.baselineStatus !== 'zero_baseline' && <> · previous period {baseline}</>}
+      </p>
+    );
+  }
+
+  if (row.direction === 'flat') {
+    return (
+      <p className="mt-2 text-[13px] tabular-nums text-george-slate">
+        <span className="text-george-navy">no change</span>
+        {baseline && <> from {baseline}</>}
+      </p>
+    );
+  }
+
   const arrow = row.direction === 'up' ? '↑' : '↓';
   return (
     <p className="mt-2 text-[13px] tabular-nums text-george-slate">
       <span aria-hidden>{arrow}</span>{' '}
       <span className="text-george-navy">{Math.abs(row.changePct).toLocaleString('en-PH')}%</span>
-      {row.baseline !== undefined && (
-        <>
-          {' from '}
-          {unitPrefix(row.unit)}
-          {fmt(row.baseline)}
-        </>
-      )}
+      {baseline && <> from {baseline}</>}
     </p>
   );
 }
@@ -124,7 +163,9 @@ export function Delta({ row }: { row: ComparisonRow }) {
  *
  * One subject per row: the figure, then how it moved. Read down, because these
  * are usually stores and a reader scans a list of names — the group above reads
- * across because those are different measures of one thing.
+ * across because those are different measures of one thing. A single compared
+ * total is one figure with its delta, and it names its metric the way a plain
+ * figure does, so three of them abreast can each say which they are.
  */
 export function Comparison({
   shape,
@@ -133,26 +174,38 @@ export function Comparison({
   shape: Extract<Shape, { kind: 'comparison' }>;
   size?: MetricSize;
 }) {
+  const single = shape.rows.length === 1;
   return (
     <div className="space-y-5">
-      {shape.rows.map((row, i) => (
-        <div key={`${row.subject}-${i}`}>
-          {row.subject && (
-            <p className="mb-1.5 text-[11px] uppercase tracking-wider text-george-muted">
-              {row.subject}
+      {!single && shape.label && (
+        <p className="text-[11px] uppercase tracking-wider text-george-muted">{shape.label}</p>
+      )}
+      {shape.rows.map((row, i) => {
+        const caption = single ? metricCaption(shape.label, row.unit) : undefined;
+        return (
+          <div key={`${row.subject}-${i}`}>
+            {row.subject && (
+              <p className="mb-1.5 text-[11px] uppercase tracking-wider text-george-muted">
+                {row.subject}
+              </p>
+            )}
+            <p
+              className={`font-george-serif leading-none tabular-nums text-george-navy ${
+                FIGURE[single ? size : 'grouped']
+              }`}
+            >
+              {row.value === null ? '—' : (
+                <>
+                  {unitPrefix(row.unit)}
+                  {fmt(row.value)}
+                </>
+              )}
             </p>
-          )}
-          <p
-            className={`font-george-serif leading-none tabular-nums text-george-navy ${
-              FIGURE[shape.rows.length > 1 ? 'grouped' : size]
-            }`}
-          >
-            {unitPrefix(row.unit)}
-            {fmt(row.value)}
-          </p>
-          <Delta row={row} />
-        </div>
-      ))}
+            <Delta row={row} />
+            {caption && <p className="mt-1 text-[13px] text-george-slate">{caption}</p>}
+          </div>
+        );
+      })}
     </div>
   );
 }

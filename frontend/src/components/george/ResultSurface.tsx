@@ -42,7 +42,9 @@ function Body({ result, lead, large }: { result: ShapedResult; lead: boolean; la
     case 'number':
       return <Metric shape={shape} size={lead ? (large ? 'lead' : 'default') : 'grouped'} />;
     case 'comparison':
-      return <Comparison shape={shape} size={lead && large ? 'lead' : 'default'} />;
+      return (
+        <Comparison shape={shape} size={lead ? (large ? 'lead' : 'default') : 'grouped'} />
+      );
     case 'chart':
       return (
         <GeorgeChart shape={shape} meta={source.meta} height={lead ? (large ? 220 : 200) : 160} />
