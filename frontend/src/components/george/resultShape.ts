@@ -30,6 +30,7 @@
  * cannot diverge (UI rule 3).
  */
 import type { ToolCall, ToolMeta } from '../../types/george';
+import type { PinCallResult } from '../../types/pins';
 import { inferShape, resultFromToolCall, type Shape } from './pinShape';
 
 /** One tool result, as much of it as the surface needs. */
@@ -111,6 +112,28 @@ export function sourcesFromCharted(charted: unknown): ResultSource[] {
         meta: (e.meta ?? {}) as ToolMeta,
       },
     ];
+  });
+}
+
+/**
+ * The same, from a pin run.
+ *
+ * THE THIRD WAY ONTO THE SURFACE. A tile used to draw its first result alone,
+ * through inferShape directly, so a pin of three figures showed one. Now a
+ * run is adapted here like a turn and a stored post are, and a page reaches
+ * the same composition — the same grouping, the same receipts rule — that
+ * the answer it was pinned from went through.
+ *
+ * Only ok results with rows are sources; what the others are is the tile's
+ * business (pinShape.replayState), and it says so rather than drawing over
+ * the gap. `seq` is the call's position in the pin, which is the order it
+ * was stored and the only order this layer is entitled to. The arguments
+ * come along because a group's heading reads the store scope from them.
+ */
+export function sourcesFromPinRun(results: PinCallResult[]): ResultSource[] {
+  return results.flatMap((r, i) => {
+    if (r.status !== 'ok' || !Array.isArray(r.rows) || r.rows.length === 0) return [];
+    return [{ seq: i, tool: r.tool, arguments: r.arguments, rows: r.rows, meta: r.meta ?? {} }];
   });
 }
 
@@ -298,4 +321,8 @@ export function blocksFromCalls(calls: ToolCall[]): ResultBlock[] {
 
 export function blocksFromCharted(charted: unknown): ResultBlock[] {
   return resultBlocks(sourcesFromCharted(charted));
+}
+
+export function blocksFromPinRun(results: PinCallResult[]): ResultBlock[] {
+  return resultBlocks(sourcesFromPinRun(results));
 }

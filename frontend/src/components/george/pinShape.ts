@@ -11,7 +11,7 @@
  * prevent. Nothing about the shape comes from the model's prose.
  */
 import type { ToolCall } from '../../types/george';
-import type { PinCallResult } from '../../types/pins';
+import type { PinCallResult, PinStatus } from '../../types/pins';
 
 /** Row keys that mean "this axis is time", in the order the tools emit them. */
 export const TIME_KEYS = ['day', 'week', 'month', 'bucket', 'date', 'snapshot_date'];
@@ -285,6 +285,55 @@ export function unitPrefix(unit?: string): string {
 /** The caption under a figure: its label, and its unit when the unit is a word. */
 export function metricCaption(label?: string, unit?: string): string {
   return [label, unit && unit !== 'PHP' ? unit : null].filter(Boolean).join(' · ');
+}
+
+/**
+ * What a pin run reproduced, and what it did not.
+ *
+ * A pin holds several calls, and they fail independently (pin_runner.run_pin).
+ * The tile used to draw the FIRST result only, so a pin of three figures
+ * showed one — the same answer reading one way in chat and another on a page,
+ * which is the divergence UI rule 3 forbids. This splits a run into the
+ * results that can be drawn and the ones that cannot, so the tile can draw
+ * every figure that came back AND say which did not.
+ *
+ * NOTHING IS HIDDEN. A call that was refused, rotted or failed is kept, with
+ * the runner's own words, because a tile that quietly draws two of three
+ * figures is a tile claiming the pin reproduced whole. An ok call that
+ * returned no rows is kept too, as an empty result rather than a zero.
+ * Order is call order throughout — the order the pin stores.
+ */
+export interface ReplayState {
+  /** Results that came back with rows, in call order. */
+  drawn: PinCallResult[];
+  /** Ok results with no rows: empty, not zero, and not a failure. */
+  empty: PinCallResult[];
+  /** Everything that did not reproduce, with the runner's reason. */
+  missing: PinCallResult[];
+}
+
+export function replayState(results: PinCallResult[]): ReplayState {
+  const state: ReplayState = { drawn: [], empty: [], missing: [] };
+  for (const r of results) {
+    if (r.status !== 'ok') state.missing.push(r);
+    else if ((r.rows ?? []).length === 0) state.empty.push(r);
+    else state.drawn.push(r);
+  }
+  return state;
+}
+
+/** The runner's word for a call that did not reproduce, as a reader's. */
+export function missingLabel(status: PinStatus): string {
+  switch (status) {
+    case 'refused':
+      return 'declined';
+    case 'unrunnable':
+      return 'can no longer run';
+    case 'failed':
+      return 'could not be refreshed';
+    default:
+      return status;
+  }
 }
 
 /** Relative age. Renderers never show a figure, or the lack of one, without a time. */

@@ -17,6 +17,8 @@ import {
   MIN_CHART_ROWS,
   chatTitle,
   inferShape,
+  missingLabel,
+  replayState,
   resultFromToolCall,
   tableColumns,
 } from './pinShape';
@@ -365,5 +367,63 @@ describe('comparison', () => {
     );
     if (shape?.kind !== 'comparison') throw new Error('expected a comparison');
     expect(shape.rows[0].subject).toBe('Rockwell');
+  });
+});
+
+/* ------------------------------------------------------------------ replay -- */
+
+const okResult = (tool: string, rows: Record<string, unknown>[]): PinCallResult => ({
+  ...result(rows),
+  tool,
+});
+const notOk = (tool: string, status: PinCallResult['status'], error: string): PinCallResult => ({
+  ...result([]),
+  tool,
+  status,
+  error,
+});
+
+describe('replayState', () => {
+  it('draws every successful call, in call order', () => {
+    const state = replayState([
+      okResult('get_sales', [{ measure: 'net_sales', value: 118420 }]),
+      okResult('get_sales', [{ measure: 'transactions', value: 241 }]),
+      okResult('get_sales', [{ measure: 'drinks', value: 86 }]),
+    ]);
+    expect(state.drawn.map((r) => r.rows[0].measure)).toEqual([
+      'net_sales',
+      'transactions',
+      'drinks',
+    ]);
+    expect(state.missing).toEqual([]);
+    expect(state.empty).toEqual([]);
+  });
+
+  it('keeps what did not reproduce beside what did, rather than dropping it', () => {
+    const state = replayState([
+      okResult('get_sales', [{ value: 1 }]),
+      notOk('get_stock', 'refused', 'That SKU is three products.'),
+      notOk('get_movement', 'unrunnable', 'get_movement is no longer one of the tools.'),
+    ]);
+    expect(state.drawn).toHaveLength(1);
+    expect(state.missing.map((r) => [r.tool, r.status])).toEqual([
+      ['get_stock', 'refused'],
+      ['get_movement', 'unrunnable'],
+    ]);
+    // The runner's own words survive: a refusal is an answer, not a fault.
+    expect(state.missing[0].error).toBe('That SKU is three products.');
+  });
+
+  it('keeps an ok call with no rows as empty, which is neither drawn nor missing', () => {
+    const state = replayState([okResult('get_sales', [])]);
+    expect(state.drawn).toEqual([]);
+    expect(state.missing).toEqual([]);
+    expect(state.empty).toHaveLength(1);
+  });
+
+  it('names each state as a reader would, never as a fault', () => {
+    expect(missingLabel('refused')).toBe('declined');
+    expect(missingLabel('unrunnable')).toBe('can no longer run');
+    expect(missingLabel('failed')).toBe('could not be refreshed');
   });
 });

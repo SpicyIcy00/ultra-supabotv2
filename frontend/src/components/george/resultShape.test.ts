@@ -8,6 +8,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { ToolCall, ToolMeta } from '../../types/george';
+import type { PinCallResult } from '../../types/pins';
 import {
   blockResults,
   groupHeading,
@@ -17,6 +18,7 @@ import {
   sharedMeta,
   sourcesFromCalls,
   sourcesFromCharted,
+  sourcesFromPinRun,
   storeArgument,
   windowLabel,
   MAX_GROUP_MEMBERS,
@@ -313,5 +315,48 @@ describe('quietLabel', () => {
   it('says figures for a mixed surface', () => {
     const blocks = resultBlocks(sourcesFromCalls([call(1, series), call(2, metricRow(5))]));
     expect(quietLabel(blocks)).toBe('2 figures');
+  });
+});
+
+/* ----------------------------------------------------------- from a pin run -- */
+
+const ran = (over: Partial<PinCallResult>): PinCallResult => ({
+  tool: 'get_sales',
+  arguments: {},
+  status: 'ok',
+  duration_ms: 5,
+  rows: [{ value: 1 }],
+  meta: { source_table: 'new_transactions' },
+  notices: [],
+  ...over,
+});
+
+describe('sourcesFromPinRun', () => {
+  it('keeps every ok result with rows, in the order the pin stores them', () => {
+    const sources = sourcesFromPinRun([
+      ran({ rows: [{ measure: 'net_sales', value: 118420 }] }),
+      ran({ rows: [{ measure: 'transactions', value: 241 }] }),
+      ran({ rows: [{ measure: 'drinks', value: 86 }] }),
+    ]);
+    expect(sources.map((s) => s.seq)).toEqual([0, 1, 2]);
+    expect(sources.map((s) => s.rows[0].measure)).toEqual(['net_sales', 'transactions', 'drinks']);
+  });
+
+  it('drops a refused, rotted, failed or empty result rather than drawing over it', () => {
+    const sources = sourcesFromPinRun([
+      ran({ status: 'refused', rows: [] }),
+      ran({ status: 'unrunnable', rows: [] }),
+      ran({ status: 'failed', rows: [] }),
+      ran({ rows: [] }),
+      ran({ rows: [{ value: 7 }] }),
+    ]);
+    expect(sources).toHaveLength(1);
+    expect(sources[0].seq).toBe(4);
+  });
+
+  it('carries the stored arguments, so a group heading can read the store scope', () => {
+    const [s] = sourcesFromPinRun([ran({ arguments: { filters: { store: 'Rockwell' } } })]);
+    expect(s.arguments).toEqual({ filters: { store: 'Rockwell' } });
+    expect(s.meta.source_table).toBe('new_transactions');
   });
 });

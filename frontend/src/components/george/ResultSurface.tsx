@@ -29,22 +29,37 @@ import { ReceiptsBlock } from './ReceiptsBlock';
 import { Comparison, Metric, MetricGroup, ResultTable } from './ResultBlocks';
 import type { ResultBlock, ShapedResult } from './resultShape';
 
-/** One shaped result, drawn by the primitive its shape names. */
-function Body({ result, lead }: { result: ShapedResult; lead: boolean }) {
+/**
+ * One shaped result, drawn by the primitive its shape names.
+ *
+ * `lead` is a block standing alone; `large` is the surface being the first
+ * section of a page, which sets a lone figure and a lone chart bigger. A
+ * grouped figure is never large: its members are peers read across.
+ */
+function Body({ result, lead, large }: { result: ShapedResult; lead: boolean; large: boolean }) {
   const { shape, source } = result;
   switch (shape.kind) {
     case 'number':
-      return <Metric shape={shape} size={lead ? 'default' : 'grouped'} />;
+      return <Metric shape={shape} size={lead ? (large ? 'lead' : 'default') : 'grouped'} />;
     case 'comparison':
-      return <Comparison shape={shape} />;
+      return <Comparison shape={shape} size={lead && large ? 'lead' : 'default'} />;
     case 'chart':
-      return <GeorgeChart shape={shape} meta={source.meta} height={lead ? 200 : 160} />;
+      return (
+        <GeorgeChart shape={shape} meta={source.meta} height={lead ? (large ? 220 : 200) : 160} />
+      );
     case 'table':
       return <ResultTable shape={shape} fullCount={source.meta.row_count} />;
   }
 }
 
-export function ResultSurface({ blocks }: { blocks: ResultBlock[] }) {
+export function ResultSurface({
+  blocks,
+  large = false,
+}: {
+  blocks: ResultBlock[];
+  /** The first section of a page: a lone figure or chart is set larger. */
+  large?: boolean;
+}) {
   if (blocks.length === 0) return null;
 
   return (
@@ -56,7 +71,7 @@ export function ResultSurface({ blocks }: { blocks: ResultBlock[] }) {
         >
           {block.kind === 'single' ? (
             <>
-              <Body result={block.result} lead />
+              <Body result={block.result} lead large={large} />
               <ReceiptsBlock meta={block.result.source.meta} />
             </>
           ) : (
@@ -64,7 +79,7 @@ export function ResultSurface({ blocks }: { blocks: ResultBlock[] }) {
               <MetricGroup heading={block.heading}>
                 {block.members.map((m) => (
                   <div key={m.source.seq}>
-                    <Body result={m} lead={false} />
+                    <Body result={m} lead={false} large={false} />
                     {/* Each figure keeps its own receipts unless the whole
                         group provably shares one. */}
                     {!block.sharedMeta && <ReceiptsBlock meta={m.source.meta} />}
