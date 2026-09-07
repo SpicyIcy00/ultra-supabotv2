@@ -21,14 +21,13 @@
  * says so in words rather than rendering an empty slot.
  */
 import { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import type { ToolMeta } from '../../types/george';
 import type { PinCallResult } from '../../types/pins';
 import type { Post } from '../../types/river';
 import { ChevronRight } from 'lucide-react';
 import { GeorgeChart } from './GeorgeChart';
 import { NoticeBanner } from './NoticeBanner';
+import { Prose } from './Prose';
 import { ReceiptsBlock } from './ReceiptsBlock';
 import { MARK_PATH } from './markState';
 import { postView } from './postShape';
@@ -279,15 +278,7 @@ export function PostCard({
         {/* Above the body, always, on every kind. */}
         {view.showNotices && <NoticeBanner notices={post.notices} />}
 
-        {post.body && (
-          <div
-            className={`george-prose text-[15px] leading-relaxed ${
-              quiet ? 'text-george-slate' : 'text-george-navy'
-            }`}
-          >
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.body}</ReactMarkdown>
-          </div>
-        )}
+        {post.body && <Prose text={post.body} lede={view.kind === 'answer'} quiet={quiet} />}
 
         {/* Below the prose because the answer leads with the number. Each
             chart carries its OWN receipts, so the post-level block below would

@@ -80,14 +80,80 @@ body {
   background: #FBF7EF; border: 1px solid #E4DCCB; border-radius: 4px;
   padding: 0.05rem 0.3rem; font-size: 0.85em;
 }
-/* Wide tables scroll inside the column instead of widening the page. */
-.george-prose table { display: block; overflow-x: auto; width: 100%; border-collapse: collapse; }
+/* THE LEDE. George leads with the conclusion, so the opening paragraph is
+   the finding and the rest is the working. A size says so. */
+.george-prose--lede > p:first-child {
+  font-size: 1.0625rem;
+  line-height: 1.65;
+}
+
+/* ---------------------------------------------------------------------------
+   Tables that survive a phone.
+
+   These were `display: block; overflow-x: auto` with `white-space: nowrap` on
+   every cell, which on a 390px screen ran a four-column result off the right
+   edge — and the column that went was the figures. Two changes, and the
+   column count decides which applies (see proseTable.ts):
+
+     up to four   the table stays a table and WRAPS. A product name folds to
+                  a second line; ₱1,745,853 contains no space and therefore
+                  cannot break, so no figure is ever split. Four columns fit
+                  390px this way.
+     five or more the table STACKS: each row a block, each cell labelled with
+                  its column, read downward. Nothing dropped, nothing cut.
+
+   The wrapper scrolls only as a last resort, for a table that is neither.
+   --------------------------------------------------------------------------- */
+.george-table-wrap { overflow-x: auto; }
+.george-prose table { width: 100%; border-collapse: collapse; }
 .george-prose th, .george-prose td {
   border-bottom: 1px solid #E4DCCB; padding: 0.4rem 0.6rem;
-  text-align: left; font-size: 0.875rem; white-space: nowrap;
+  text-align: left; font-size: 0.875rem;
+  /* Deliberately NOT nowrap: wrapping is what makes the table fit. */
+  overflow-wrap: break-word;
 }
-.george-prose th { color: #4A5D78; font-weight: 500; }
+.george-prose th {
+  color: #4A5D78; font-weight: 500;
+  font-size: 0.6875rem; letter-spacing: 0.04em; text-transform: uppercase;
+}
 .george-prose td:not(:first-child) { font-variant-numeric: tabular-nums; }
+.george-prose td:first-child { color: #12233F; }
+
+@media (max-width: 639px) {
+  .george-prose table.george-table--stack,
+  .george-prose table.george-table--stack tbody,
+  .george-prose table.george-table--stack tr,
+  .george-prose table.george-table--stack td { display: block; width: 100%; }
+  /* The header row's job has moved to the labels on each cell. */
+  .george-prose table.george-table--stack thead { display: none; }
+  .george-prose table.george-table--stack tr {
+    border-bottom: 1px solid #E4DCCB;
+    padding: 0.5rem 0;
+  }
+  .george-prose table.george-table--stack td {
+    border: 0;
+    padding: 0.15rem 0;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .george-prose table.george-table--stack td::before {
+    color: #8496AC;
+    font-size: 0.6875rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    flex: 0 0 auto;
+  }
+  .george-prose table.george-table--stack td:nth-child(1)::before { content: var(--col-1, ""); }
+  .george-prose table.george-table--stack td:nth-child(2)::before { content: var(--col-2, ""); }
+  .george-prose table.george-table--stack td:nth-child(3)::before { content: var(--col-3, ""); }
+  .george-prose table.george-table--stack td:nth-child(4)::before { content: var(--col-4, ""); }
+  .george-prose table.george-table--stack td:nth-child(5)::before { content: var(--col-5, ""); }
+  .george-prose table.george-table--stack td:nth-child(6)::before { content: var(--col-6, ""); }
+  .george-prose table.george-table--stack td:nth-child(7)::before { content: var(--col-7, ""); }
+  .george-prose table.george-table--stack td:nth-child(8)::before { content: var(--col-8, ""); }
+}
 
 /* ---------------------------------------------------------------------------
    George's mark — state motion.

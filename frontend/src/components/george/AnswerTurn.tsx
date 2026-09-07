@@ -20,14 +20,13 @@
  * number, not found afterwards.
  */
 import { useEffect, useRef } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { Pin as PinIcon, Save as SaveIcon } from 'lucide-react';
 import type { GeorgeTurn, PinnedFrame, SavedFrame, ToolCall } from '../../types/george';
 import { useGeorge } from '../../hooks/useGeorge';
 import { liveCognition } from './cognition';
 import { markDetail, MARK_PATH } from './markState';
 import { ActivityDisclosure } from './ActivityDisclosure';
+import { Prose } from './Prose';
 import { GeorgeChart } from './GeorgeChart';
 import { NoticeBanner } from './NoticeBanner';
 import { ReceiptsBlock } from './ReceiptsBlock';
@@ -112,15 +111,8 @@ function AnswerTurn({
         {/* Above the answer, always — and never quieter. */}
         <NoticeBanner notices={turn.notices} />
 
-        {turn.text && (
-          <div
-            className={`george-prose text-[15px] leading-relaxed ${
-              quiet ? 'text-george-slate' : 'text-george-navy'
-            }`}
-          >
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{turn.text}</ReactMarkdown>
-          </div>
-        )}
+        {/* The finding, then the working. See Prose. */}
+        {turn.text && <Prose text={turn.text} lede quiet={quiet} />}
 
         <ChartedResults calls={turn.toolCalls} />
 
