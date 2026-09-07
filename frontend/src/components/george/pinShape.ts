@@ -277,6 +277,16 @@ export function fmt(v: unknown): string {
   return String(v);
 }
 
+/** The currency mark for a unit, or nothing. Units come from meta, never from here. */
+export function unitPrefix(unit?: string): string {
+  return unit === 'PHP' ? '₱' : '';
+}
+
+/** The caption under a figure: its label, and its unit when the unit is a word. */
+export function metricCaption(label?: string, unit?: string): string {
+  return [label, unit && unit !== 'PHP' ? unit : null].filter(Boolean).join(' · ');
+}
+
 /** Relative age. Renderers never show a figure, or the lack of one, without a time. */
 export function ago(iso?: string | null): string {
   if (!iso) return 'never';

@@ -20,7 +20,7 @@
  * No cards, no tinted panels, no icons beside figures, and no orange — one
  * colour means "needs you" (UI rule 5) and a figure never does.
  */
-import { fmt, type ComparisonRow, type Shape } from './pinShape';
+import { fmt, metricCaption, unitPrefix, type ComparisonRow, type Shape } from './pinShape';
 
 /** How much room a figure gets. The surface decides; the figure obeys. */
 export type MetricSize = 'lead' | 'default' | 'grouped';
@@ -32,16 +32,6 @@ const FIGURE: Record<MetricSize, string> = {
   // fit three abreast on a narrow desktop column without wrapping mid-number.
   grouped: 'text-[28px] md:text-[32px]',
 };
-
-/** The currency mark for a unit, or nothing. Units come from meta, never here. */
-export function unitPrefix(unit?: string): string {
-  return unit === 'PHP' ? '₱' : '';
-}
-
-/** The caption under a figure: its label, and its unit when the unit is a word. */
-export function metricCaption(label?: string, unit?: string): string {
-  return [label, unit && unit !== 'PHP' ? unit : null].filter(Boolean).join(' · ');
-}
 
 /* ------------------------------------------------------------------ metric -- */
 

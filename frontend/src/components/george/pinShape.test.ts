@@ -278,3 +278,92 @@ describe('chatTitle', () => {
     expect(chatTitle(null)).toBe('Untitled chat');
   });
 });
+
+/* -------------------------------------------------------------- comparison -- */
+
+/** A get_brief sales row, exactly as tools/brief.py builds it. */
+const briefSales = (subject: string, value: number, baseline: number, pct: number) => ({
+  section: 'sales_vs_same_weekday',
+  subject,
+  store_id: `id-${subject}`,
+  value,
+  baseline,
+  change: value - baseline,
+  change_pct: pct,
+  direction: pct >= 0 ? 'up' : 'down',
+  unit: 'PHP',
+});
+
+describe('comparison', () => {
+  it('is chosen when every row carries a delta the tool computed', () => {
+    const shape = inferShape(result([briefSales('Rockwell', 100, 120, -16.7)]));
+    expect(shape?.kind).toBe('comparison');
+  });
+
+  it('beats the single-figure shape, so the baseline is not thrown away', () => {
+    // One row with a value would otherwise be a bare number, and the whole
+    // point of the row is the movement.
+    const shape = inferShape(result([briefSales('Rockwell', 100, 120, -16.7)]));
+    if (shape?.kind !== 'comparison') throw new Error('expected a comparison');
+    expect(shape.rows[0].baseline).toBe(120);
+    expect(shape.rows[0].changePct).toBe(-16.7);
+  });
+
+  it('beats the chart, so a series of deltas is not drawn as bare bars', () => {
+    const shape = inferShape(
+      result([
+        briefSales('Rockwell', 100, 120, -16.7),
+        briefSales('Shang', 90, 80, 12.5),
+        briefSales('Fairview', 70, 75, -6.7),
+      ]),
+    );
+    expect(shape?.kind).toBe('comparison');
+  });
+
+  it('reads the direction the tool declared rather than deciding one', () => {
+    const row = { ...briefSales('Rockwell', 100, 120, -16.7), direction: 'up' };
+    const shape = inferShape(result([row]));
+    if (shape?.kind !== 'comparison') throw new Error('expected a comparison');
+    expect(shape.rows[0].direction).toBe('up');
+  });
+
+  it('falls back to the sign of the delta it was given, never to a computation', () => {
+    const noDirection: Record<string, unknown> = { ...briefSales('Rockwell', 100, 120, -16.7) };
+    delete noDirection.direction;
+    const shape = inferShape(result([noDirection]));
+    if (shape?.kind !== 'comparison') throw new Error('expected a comparison');
+    expect(shape.rows[0].direction).toBe('down');
+  });
+
+  it('refuses a comparison when one row lacks a delta', () => {
+    // A mixed brief is a list of DIFFERENT FACTS, not one comparison — the
+    // same heterogeneity the chart rules were written for. It stays a table.
+    const shape = inferShape(
+      result([
+        briefSales('Rockwell', 100, 120, -16.7),
+        { section: 'newly_dead', subject: 'SKU-1', quantity_on_hand: 40 },
+      ]),
+    );
+    expect(shape?.kind).toBe('table');
+  });
+
+  it('never computes a delta from rows that did not carry one', () => {
+    // Two weeks of sales is not a comparison: which baseline is a DEFINITION,
+    // and metrics.yaml settled that deliberately for the brief.
+    const shape = inferShape(
+      result([
+        { week: '2026-08-31', value: 120 },
+        { week: '2026-09-07', value: 100 },
+      ]),
+    );
+    expect(shape?.kind).toBe('table');
+  });
+
+  it('takes the subject from the first label key the tool used', () => {
+    const shape = inferShape(
+      result([{ store: 'Rockwell', value: 100, change_pct: -16.7, unit: 'PHP' }]),
+    );
+    if (shape?.kind !== 'comparison') throw new Error('expected a comparison');
+    expect(shape.rows[0].subject).toBe('Rockwell');
+  });
+});

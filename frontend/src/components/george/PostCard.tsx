@@ -20,24 +20,21 @@
  * with no time on it is a claim with no expiry (UI rule 6), so the missing case
  * says so in words rather than rendering an empty slot.
  */
-import { useState } from 'react';
-import type { ToolMeta } from '../../types/george';
-import type { PinCallResult } from '../../types/pins';
+import { useMemo, useState } from 'react';
 import type { Post } from '../../types/river';
 import { ChevronRight } from 'lucide-react';
-import { GeorgeChart } from './GeorgeChart';
 import { NoticeBanner } from './NoticeBanner';
-import { Prose } from './Prose';
 import { ReceiptsBlock } from './ReceiptsBlock';
+import { Prose } from './Prose';
+import { ResultSurface } from './ResultSurface';
 import { MARK_PATH } from './markState';
 import { postView } from './postShape';
-import { inferShape } from './pinShape';
-
-/** Whether this post draws its own charts, each with its own receipts. */
-function hasCharts(post: Post): boolean {
-  const raw = (post.payload as { charted?: unknown } | null)?.charted;
-  return Array.isArray(raw) && raw.length > 0;
-}
+import {
+  quietLabel,
+  resultBlocks,
+  sourcesFromCharted,
+  type ResultBlock,
+} from './resultShape';
 
 /** George's mark as an avatar chip: cream on navy, one shared path. */
 export function MarkAvatar({ className = 'h-7 w-7' }: { className?: string }) {
@@ -124,53 +121,29 @@ function FollowUpChips({
 }
 
 /**
- * The figures a stored post describes, drawn through the SAME component a live
- * turn and a tile draw them with.
+ * The figures a stored post describes, drawn through the SAME surface a live
+ * turn draws them with.
  *
  * A SNAPSHOT, AND IT SAYS SO. The rows were stored when the answer was
  * written, not re-fetched now — see ConversationLog.posts for why re-running
  * would put a fresh chart beside prose that still states the old figure. What
  * makes that honest is the receipts underneath: `snapshot_timestamp` is when
- * the data was READ, not when this rendered, so the chart carries its own age
- * (UI rule 6).
+ * the data was READ, not when this rendered, so every figure carries its own
+ * age (UI rule 6).
  *
- * Per result rather than per post, because an answer that read two sources
- * read them at two moments, and one timestamp over both would describe data it
- * does not cover.
- *
- * The loop only ever stored results it could send whole, so `rowsComplete` is
- * true by construction here; passing it explicitly keeps inferShape's refusal
- * to chart a prefix in the picture rather than relying on that invariant
- * holding forever.
+ * ONE SELECTION PATH. Until now this filtered the stored results down to
+ * charts and dropped everything else, while a live turn drew the same payload
+ * through inferShape. So an answer whose figures were a table and two metrics
+ * showed them while it streamed and lost them on reload — the same answer
+ * reading two ways, which is the divergence UI rule 3 exists to prevent. Both
+ * now go through resultShape.
  */
-function ChartedResults({ post, quiet = false }: { post: Post; quiet?: boolean }) {
+function ChartedResults({ blocks, quiet = false }: { blocks: ResultBlock[]; quiet?: boolean }) {
   const [shown, setShown] = useState(false);
-  const raw = (post.payload as { charted?: unknown } | null)?.charted;
-  const results = Array.isArray(raw) ? raw : [];
-  const charts = results.flatMap((r) => {
-    const entry = r as { seq?: number; tool?: string; rows?: unknown; meta?: unknown };
-    const rows = Array.isArray(entry.rows) ? (entry.rows as Record<string, unknown>[]) : [];
-    if (rows.length === 0) return [];
-    // inferShape reads only `rows` and `meta`; the rest of PinCallResult is a
-    // tile's run state, which a stored post has no equivalent of. Filled with
-    // what is true rather than left undefined: the call succeeded, or the loop
-    // would not have stored its rows.
-    const result: PinCallResult = {
-      tool: entry.tool ?? '',
-      arguments: {},
-      status: 'ok',
-      duration_ms: 0,
-      rows,
-      meta: (entry.meta ?? {}) as ToolMeta,
-      notices: [],
-    };
-    const shape = inferShape(result, undefined, true);
-    return shape?.kind === 'chart' ? [{ seq: entry.seq ?? 0, result, shape }] : [];
-  });
-  if (charts.length === 0) return null;
-  // An earlier post's charts wait behind one line that names them. The
-  // receipts under each chart come with it, so a figure is never on screen
-  // without its time; the notices above the body were never here to hide.
+  if (blocks.length === 0) return null;
+  // An earlier post's figures wait behind one line that NAMES them. The
+  // receipts under each come with them, so a figure is never on screen without
+  // its time; the notices above the body were never here to hide.
   if (quiet && !shown) {
     return (
       <button
@@ -180,20 +153,11 @@ function ChartedResults({ post, quiet = false }: { post: Post; quiet?: boolean }
         className="flex min-h-touch items-center gap-1.5 text-[12px] text-george-muted"
       >
         <ChevronRight className="h-3 w-3" aria-hidden />
-        {charts.length === 1 ? 'Chart' : `${charts.length} charts`}
+        {quietLabel(blocks)}
       </button>
     );
   }
-  return (
-    <div className="space-y-3">
-      {charts.map(({ seq, result, shape }) => (
-        <div key={seq} className="rounded-xl border border-george-line bg-george-paper p-3">
-          <GeorgeChart shape={shape} meta={result.meta} />
-          <ReceiptsBlock meta={result.meta} />
-        </div>
-      ))}
-    </div>
-  );
+  return <ResultSurface blocks={blocks} />;
 }
 
 export function PostCard({
@@ -221,6 +185,11 @@ export function PostCard({
   quiet?: boolean;
 }) {
   const view = postView(post);
+  // One selection path, shared with the live turn and the pinned tile.
+  const blocks = useMemo(
+    () => resultBlocks(sourcesFromCharted((post.payload as { charted?: unknown } | null)?.charted)),
+    [post.payload],
+  );
 
   if (view.side === 'user') {
     return (
@@ -283,9 +252,13 @@ export function PostCard({
         {/* Below the prose because the answer leads with the number. Each
             chart carries its OWN receipts, so the post-level block below would
             only repeat one of them under a different heading. */}
-        <ChartedResults post={post} quiet={quiet} />
+        <ChartedResults blocks={blocks} quiet={quiet} />
 
-        {!hasCharts(post) && view.showReceipts && (
+        {/* The post-level receipts are the fallback only. When the surface
+            drew anything, every block already carries the meta of the call
+            behind it, and this line would repeat one of them under a heading
+            that covers all of them. */}
+        {blocks.length === 0 && view.showReceipts && (
           <ReceiptsBlock meta={post.receipts ?? undefined} />
         )}
 

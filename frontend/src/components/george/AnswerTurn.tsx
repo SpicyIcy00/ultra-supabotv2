@@ -19,19 +19,19 @@
  * (UI rule 4). A caveat that qualifies a number has to be read before the
  * number, not found afterwards.
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Pin as PinIcon, Save as SaveIcon } from 'lucide-react';
-import type { GeorgeTurn, PinnedFrame, SavedFrame, ToolCall } from '../../types/george';
+import type { GeorgeTurn, PinnedFrame, SavedFrame } from '../../types/george';
 import { useGeorge } from '../../hooks/useGeorge';
 import { liveCognition } from './cognition';
 import { markDetail, MARK_PATH } from './markState';
 import { ActivityDisclosure } from './ActivityDisclosure';
 import { Prose } from './Prose';
-import { GeorgeChart } from './GeorgeChart';
 import { NoticeBanner } from './NoticeBanner';
 import { ReceiptsBlock } from './ReceiptsBlock';
-import { PinButton } from './PinButton';
-import { inferShape, resultFromToolCall } from './pinShape';
+import { ResultSurface } from './ResultSurface';
+import { ResultActions } from './ResultActions';
+import { resultBlocks, sourcesFromCalls } from './resultShape';
 import { emphasisOf } from './turnShape';
 
 type Answer = Extract<GeorgeTurn, { role: 'george' }>;
@@ -97,6 +97,9 @@ function AnswerTurn({
   narration: { detail: string; cognition: string } | null;
   quiet: boolean;
 }) {
+  // One selection path, shared with the stored post and the pinned tile.
+  const blocks = useMemo(() => resultBlocks(sourcesFromCalls(turn.toolCalls)), [turn.toolCalls]);
+
   return (
     <article className="flex gap-2.5">
       <div className="w-7 shrink-0">
@@ -114,7 +117,7 @@ function AnswerTurn({
         {/* The finding, then the working. See Prose. */}
         {turn.text && <Prose text={turn.text} lede quiet={quiet} />}
 
-        <ChartedResults calls={turn.toolCalls} />
+        <ResultSurface blocks={blocks} />
 
         {turn.error && (
           <p className="rounded-lg border border-george-line bg-george-paper px-3 py-2.5 text-[13px] text-george-navy">
@@ -131,15 +134,13 @@ function AnswerTurn({
           <SavedNote key={`${s.workflow_id}-${s.version}`} saved={s} />
         ))}
 
-        {/* The turn-level receipts are the LAST tool's meta. When charts are
-            present each carries its own, which is strictly better. */}
-        {!hasCharts(turn.toolCalls) && <ReceiptsBlock meta={turn.receipts} />}
+        {/* The turn-level receipts are the LAST tool's meta, and they are the
+            fallback only. When the surface drew anything, every block already
+            carries the meta of the call behind it — which is strictly better,
+            because one line over several calls describes none of them. */}
+        {blocks.length === 0 && <ReceiptsBlock meta={turn.receipts} />}
 
-        {turn.done && (
-          <div className="flex items-center justify-end">
-            <PinButton turn={turn} question={question} />
-          </div>
-        )}
+        {turn.done && <ResultActions turn={turn} question={question} />}
       </div>
     </article>
   );
@@ -179,41 +180,6 @@ function Narration({ detail, cognition }: { detail: string; cognition: string })
       >
         {cognition}
       </p>
-    </div>
-  );
-}
-
-function chartsIn(calls: ToolCall[]) {
-  return calls.flatMap((call) => {
-    const result = resultFromToolCall(call);
-    if (!result) return [];
-    const shape = inferShape(result);
-    return shape?.kind === 'chart' ? [{ call, result, shape }] : [];
-  });
-}
-
-function hasCharts(calls: ToolCall[]): boolean {
-  return chartsIn(calls).length > 0;
-}
-
-/**
- * Every chartable result in a turn, each with its own receipts.
- *
- * Per call rather than per turn, because an answer that reads two sources
- * read them at two moments — one timestamp over both would be a claim about
- * data it does not describe (UI rule 6).
- */
-function ChartedResults({ calls }: { calls: ToolCall[] }) {
-  const charts = chartsIn(calls);
-  if (charts.length === 0) return null;
-  return (
-    <div className="space-y-3">
-      {charts.map(({ call, result, shape }) => (
-        <div key={call.seq} className="rounded-xl border border-george-line bg-george-paper p-3">
-          <GeorgeChart shape={shape} meta={result.meta} />
-          <ReceiptsBlock meta={result.meta} />
-        </div>
-      ))}
     </div>
   );
 }
