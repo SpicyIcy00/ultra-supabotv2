@@ -73,6 +73,11 @@ from app.services.river import (
     next_cursor,
     thread_of,
 )
+from app.services.page_reader import (
+    PageNotFound as PageReadNotFound,
+    PageReadRefused as PageReadServiceRefused,
+    read_page,
+)
 from app.services.pin_writer import (
     PinQuotaError,
     SimilarPageError,
@@ -105,6 +110,8 @@ from tools import brief as brief_tool  # noqa: E402
 from tools._common import load_defs as _load_defs, req as _req  # noqa: E402
 from agent import write_tools  # noqa: E402
 from agent.write_tools import (  # noqa: E402
+    PageReader,
+    PageReadRefused,
     PinRefused,
     PinSpec,
     PinWriter,
@@ -136,6 +143,20 @@ class HistoryTurn(BaseModel):
     tool_calls: List[HistoryCall] = Field(default_factory=list, max_length=20)
 
 
+class PageScope(BaseModel):
+    """
+    The George page the question is asked from, as an IDENTITY.
+
+    `name` is the exact page name; null is the ungrouped pins, which are a
+    real scope with no name. This is what binds the injected page reader, and
+    it is distinct from `page_context` below on purpose: that field is a
+    display string ("Pages / AJI BARN Reorder") the loop reads out to the
+    model, and an identity is never parsed back out of a display string.
+    """
+
+    name: Optional[str] = Field(None, max_length=100)
+
+
 class AskRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
     # The page the user is asking from, e.g. "replenishment". George is present
@@ -146,6 +167,12 @@ class AskRequest(BaseModel):
     # asked. Who asked now comes from the token, below, and cannot be set by a
     # caller at all.
     page_context: Optional[str] = Field(None, max_length=100)
+    # The George page in scope, when the question was asked from one. Present
+    # means a page reader bound to the caller and this exact page is injected
+    # and George can read the page's pins; absent means he cannot, and the
+    # tool is not in his schema. Legacy callers (the Operations chrome) send
+    # page_context alone and are unaffected.
+    page_scope: Optional[PageScope] = None
     # The conversation so far. The loop is stateless per request, so without
     # this every question stands alone and "pin that" has nothing to refer to.
     history: List[HistoryTurn] = Field(default_factory=list, max_length=20)
@@ -1106,6 +1133,42 @@ def _workflow_runner(username: str, role: str):
     return run
 
 
+def _page_reader(username: str, page: Optional[str]) -> PageReader:
+    """
+    George's route to READING the page the caller is on.
+
+    A read, injected exactly like the workflow runner: the pins live in the
+    george schema, which george_ro cannot see. Both the username and the page
+    are captured HERE — the username from the verified token, the page from
+    the request's page_scope — so the tool that calls this has no argument
+    for either. Nothing the model emits can point it at another person's
+    page, or at a page the person is not on.
+
+    Its own session, like the runner's, and it commits nothing: this branch
+    is read-only, and a read from George does not even touch the pins' run
+    bookkeeping — that stays the tile's.
+    """
+
+    async def read(pins: Optional[list[str]], figures: bool) -> dict:
+        async with AsyncSessionLocal() as session:
+            try:
+                return await read_page(
+                    session, username=username, page=page, pins=pins, figures=figures,
+                )
+            except (PageReadNotFound, PageReadServiceRefused) as exc:
+                # Expected refusals, in the words a person can act on. They
+                # reach the model as a tool refusal — a real answer with a
+                # route out — rather than as a failure of the whole turn.
+                raise PageReadRefused(str(exc)) from exc
+            except SQLAlchemyError as exc:
+                raise RuntimeError(
+                    f"The page could not be read: {type(exc).__name__}. Tell the "
+                    f"user the page was not inspected."
+                ) from exc
+
+    return read
+
+
 async def _recall_for(username: str, history: list[dict],
                       thread_id: Optional[str]) -> Optional[str]:
     """
@@ -1139,7 +1202,8 @@ async def _safe_stream(question: str, user_id: Optional[str],
                        workflow_runner,
                        thread_id: Optional[str] = None,
                        recall: Optional[str] = None,
-                       parent_id: Optional[str] = None) -> AsyncIterator[str]:
+                       parent_id: Optional[str] = None,
+                       page_reader: Optional[PageReader] = None) -> AsyncIterator[str]:
     """
     Wrap the loop so a crash still closes the stream cleanly.
 
@@ -1159,6 +1223,7 @@ async def _safe_stream(question: str, user_id: Optional[str],
             thread_id=thread_id,
             recall=recall,
             parent_id=parent_id,
+            page_reader=page_reader,
         ):
             yield frame
     except Exception as exc:  # noqa: BLE001
@@ -1229,6 +1294,14 @@ async def ask(
     history = [t.model_dump() for t in request.history]
     thread = str(request.thread_id) if request.thread_id else None
     parent = str(request.parent_id) if request.parent_id else None
+
+    # The page reader, bound to the caller and the exact page they are on.
+    # Only when a page is in scope: without one there is nothing to read, and
+    # the tool stays out of the schema. Nothing is read here — the page is
+    # looked up only if George decides the question needs it.
+    page_reader: Optional[PageReader] = None
+    if request.page_scope is not None:
+        page_reader = _page_reader(user.username, request.page_scope.name)
     # Awaited here rather than inside the stream: it is a read the caller's own
     # role performs, and it has to be done before the 200 goes out, while a
     # failure can still be handled as something other than an error frame.
@@ -1246,6 +1319,7 @@ async def ask(
             thread_id=thread,
             recall=recall,
             parent_id=parent,
+            page_reader=page_reader,
         ),
         media_type="text/event-stream",
         headers={

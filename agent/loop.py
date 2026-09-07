@@ -1164,6 +1164,7 @@ async def run(
     thread_id: Optional[str] = None,
     recall: Optional[str] = None,
     parent_id: Optional[str] = None,
+    page_reader: Optional[write_tools.PageReader] = None,
 ) -> AsyncIterator[str]:
     """
     Answer one question, streaming SSE frames.
@@ -1209,6 +1210,12 @@ async def run(
         parent_id: the post this question replies to, inside thread_id, or
             None. Written onto the question post as given; the caller verified
             it is in the thread and visible, because the loop cannot read.
+        page_reader: if supplied, George can read the page the user is on —
+            its pins and, on request, their current figures. A READ, injected
+            like workflow_runner because the pins live in a schema george_ro
+            cannot see, and bound in the web process to the authenticated
+            user AND the exact page: the tool it gates has no argument for
+            either. Without it that tool is not in the schema.
     """
     defs = _load_defs()
     log = ConversationLog(thread_id=thread_id)
@@ -1223,6 +1230,7 @@ async def run(
         conversation_id=log.conversation_id,
         workflow_writer=workflow_writer,
         workflow_runner=workflow_runner,
+        page_reader=page_reader,
     )
     # Per capability, not per session: a caller with a pin writer and no
     # workflow writer gets pin_answer and not save_workflow.

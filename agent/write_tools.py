@@ -51,6 +51,16 @@ Computing that defaulted form needs the binder that also runs workflows, and
 that lives in the backend — so the injected WorkflowWriter is a small object
 with two methods rather than a bare callable. The RULE stays here, beside
 pin_answer's; only the substitution lives where it is implemented once.
+
+THE FOURTH CAPABILITY IS A READ WITH NO NAME IN IT (added 2026-09-07, Page
+Context V1). A PageReader reads ONE page of the caller's own pins — the page
+they were on when they asked — and replays its pins through the same runner a
+tile uses. It is injected exactly as the workflow runner is, for the same reason
+(the pins live in a schema george_ro cannot see), and it keeps one more property
+on purpose: the reader is closed over the authenticated user AND the exact page
+scope in the web process, so the tool that calls it has no username argument
+and no page-name argument. "Read Alice's Purchasing page" has nowhere to put
+the name. No reader injected means the tool is not in the schema at all.
 """
 
 from __future__ import annotations
@@ -159,6 +169,30 @@ class WorkflowRunner(Protocol):
                        as_of: Optional[str]) -> dict: ...
 
 
+class PageReadRefused(ValueError):
+    """
+    The page cannot be read as asked, and the message says why: the caller has
+    no page of that name, or asked for more pins than one read may hold.
+
+    A ValueError for the same reason PinRefused is one: the loop's tool-error
+    handling turns it into a real answer with a route out, never a crash.
+    """
+
+
+class PageReader(Protocol):
+    """
+    Reads the page the caller is on and replays its pins. Implemented in the
+    web process, bound to the authenticated user and the exact page scope.
+
+    `pins` is an optional list of pin ids to read instead of the default
+    newest few; `figures` false returns the pins' definitions without
+    replaying anything. Must raise PageReadRefused — with a message a person
+    could act on — for every expected failure. Anything else is a fault.
+    """
+
+    async def __call__(self, pins: Optional[list[str]], figures: bool) -> dict: ...
+
+
 @dataclass
 class WriteContext:
     """
@@ -181,6 +215,9 @@ class WriteContext:
     executed: dict[str, dict] = field(default_factory=dict)
     workflow_writer: Optional[WorkflowWriter] = None
     workflow_runner: Optional[WorkflowRunner] = None
+    # The page the caller is on, readable through the application role. Bound
+    # to the user and the page in the web process; the model names neither.
+    page_reader: Optional[PageReader] = None
 
 
 def call_key(tool: str, arguments: Any) -> str:
