@@ -14,6 +14,12 @@
  * failed lookup and an empty queue are both navy, and the three unknowns
  * each say so in their own words (UI rule 8).
  *
+ * HIERARCHY IS THE NAME, THEN THE BLOCK, THEN THE PROVENANCE. The version's
+ * name is set as a heading because it is the thing being decided about; what
+ * is blocking it is prose, because it is a sentence the server wrote and the
+ * reader has to act on; who saved it and when is metadata and reads as such.
+ * Three levels, no card around them.
+ *
  * Promotion is an administrator's act, and the server enforces that in
  * workflow_writer and again by a CHECK constraint. The button is shown only
  * to administrators so the page does not offer a decision the person cannot
@@ -25,6 +31,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { approvalsView } from '../components/george/approvalState';
+import { PageHeader } from '../components/shell/PageHeader';
 import { SHELL_COLUMN } from '../components/shell/shellLayout';
 import { errorMessage } from '../services/pinsApi';
 import { listApprovals, promoteVersion } from '../services/workflowsApi';
@@ -54,29 +61,40 @@ function ApprovalRow({ approval, admin }: { approval: Approval; admin: boolean }
   });
 
   return (
-    <li className="border-l-2 border-george-accent py-3 pl-4">
-      <p className="text-[15px] leading-snug text-george-navy">
+    <li className="border-l-2 border-george-accent py-1 pl-5">
+      <h2 className="font-george-serif text-[20px] leading-snug text-george-navy">
         {approval.name}{' '}
-        <span className="tabular-nums text-george-slate">v{approval.version}</span>
+        <span className="text-[15px] tabular-nums text-george-slate">v{approval.version}</span>
+      </h2>
+
+      {/* The server's words, verbatim: it distinguishes reasons that have
+          different fixes, and a client that paraphrased would lose that. */}
+      <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-george-navy">
+        {approval.blocked_on}
       </p>
-      {/* The server's words, verbatim. */}
-      <p className="mt-1 text-[13px] leading-relaxed text-george-slate">{approval.blocked_on}</p>
-      <p className="mt-1.5 text-[11px] text-george-muted">
-        saved by {approval.created_by} · {manila(approval.created_at)}
-        {' · '}backtested {manila(approval.backtested_at)}
-      </p>
+
+      <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-1 text-[12px] text-george-muted">
+        <div className="flex gap-1.5">
+          <dt>saved</dt>
+          <dd className="text-george-slate">{manila(approval.created_at)} · {approval.created_by}</dd>
+        </div>
+        <div className="flex gap-1.5">
+          <dt>backtested</dt>
+          <dd className="text-george-slate">{manila(approval.backtested_at)}</dd>
+        </div>
+      </dl>
 
       {refused && (
-        <p className="mt-2 text-[13px] leading-relaxed text-george-navy">{refused}</p>
+        <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-george-navy">{refused}</p>
       )}
 
-      <div className="mt-2.5 flex items-center gap-4">
+      <div className="mt-4 flex items-center gap-5">
         {admin && approval.backtested_at && (
           <button
             type="button"
             onClick={() => promote.mutate()}
             disabled={promote.isPending}
-            className="min-h-touch rounded-lg bg-george-accent px-3.5 text-[13px] text-george-cream disabled:opacity-60"
+            className="min-h-touch rounded-lg bg-george-accent px-4 text-[13px] text-george-cream disabled:opacity-60"
           >
             {promote.isPending ? 'Promoting…' : 'Promote'}
           </button>
@@ -113,22 +131,30 @@ export default function InboxPage() {
   );
 
   return (
-    <div className={`${SHELL_COLUMN} px-4 pb-24 pt-8 md:px-8 md:pt-12`}>
-      <h1 className="font-george-serif text-2xl text-george-navy">Inbox</h1>
+    <div className={`${SHELL_COLUMN} px-4 pb-24 pt-10 md:px-8 md:pt-14`}>
+      <PageHeader
+        title="Inbox"
+        meta="Decisions waiting on a person. A version that has been backtested can be promoted here; everything else about a workflow lives in Workflows."
+      />
 
+      {/* Loading, failed and empty are three renderings, and the first two
+          may never borrow the third's words (UI rule 8). approvalsView
+          decides which; this places it. */}
       <p
-        className={`mt-6 text-[14px] leading-relaxed ${
+        className={`text-[15px] leading-relaxed ${
           view.accent ? 'text-george-accent' : 'text-george-slate'
         }`}
       >
         {view.heading}
       </p>
       {view.detail && (
-        <p className="mt-1 text-[13px] leading-relaxed text-george-muted">{view.detail}</p>
+        <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-george-muted">
+          {view.detail}
+        </p>
       )}
 
       {view.kind === 'rows' && (
-        <ul className="mt-6 space-y-4">
+        <ul className="mt-8 space-y-10">
           {view.rows.map((a) => (
             <ApprovalRow key={a.version_id} approval={a} admin={admin} />
           ))}
