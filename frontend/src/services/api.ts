@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { createAuthenticatedClient } from './httpAuth';
 import type {
   Product,
   Store,
@@ -15,7 +15,7 @@ const API_BASE_URL = '/api/v1';
 
 console.log('API Base URL (using proxy):', API_BASE_URL);
 
-export const api = axios.create({
+export const api = createAuthenticatedClient({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',

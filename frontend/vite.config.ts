@@ -23,6 +23,9 @@ export default defineConfig({
         ],
       },
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
+        importScripts: ['/clear-api-cache.js'],
         // Drop precaches from previous builds and never let the navigation
         // fallback answer a request for a hashed asset with index.html.
         cleanupOutdatedCaches: true,
@@ -30,11 +33,8 @@ export default defineConfig({
         runtimeCaching: [
           {
             urlPattern: /\/api\/v1\/.*/,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              expiration: { maxEntries: 50, maxAgeSeconds: 3600 },
-            },
+            handler: 'NetworkOnly',
+            options: { fetchOptions: { cache: 'no-store' } },
           },
         ],
       },

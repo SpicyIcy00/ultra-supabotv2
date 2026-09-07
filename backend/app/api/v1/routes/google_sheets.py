@@ -2,6 +2,8 @@
 Google Sheets proxy endpoint to avoid CORS issues.
 Routes requests through the backend server-to-server.
 """
+from app.core.deps import require_page
+from fastapi import Depends
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
@@ -9,7 +11,7 @@ import os
 
 from app.services.sheets_poster import post_to_sheets as post_to_sheets_helper
 
-router = APIRouter(tags=["Google Sheets"])
+router = APIRouter(tags=["Google Sheets"], dependencies=[Depends(require_page("warehouse"))])
 
 # Get Google Sheets URLs from environment (read at startup; backup URL re-read per request below)
 GOOGLE_SHEETS_URL = os.getenv("GOOGLE_SHEETS_URL", "")

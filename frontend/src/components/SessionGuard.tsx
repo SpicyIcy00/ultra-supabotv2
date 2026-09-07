@@ -9,7 +9,7 @@
  * This is presentation only — every protected endpoint re-checks the caller
  * server-side in app/core/deps.py.
  */
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { fetchMe } from '../services/authApi';
 import { useAuthStore } from '../stores/authStore';
 import { LoginPage } from '../pages/LoginPage';
@@ -20,15 +20,15 @@ interface SessionGuardProps {
 
 export function SessionGuard({ children }: SessionGuardProps) {
   const token = useAuthStore((s) => s.token);
+  const sessionRevision = useAuthStore((s) => s.sessionRevision);
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const logout = useAuthStore((s) => s.logout);
 
-  const [checking, setChecking] = useState(Boolean(token));
+  const [checkedRevision, setCheckedRevision] = useState<number | null>(null);
 
   useEffect(() => {
     if (!token) {
-      setChecking(false);
       return;
     }
 
@@ -36,13 +36,13 @@ export function SessionGuard({ children }: SessionGuardProps) {
     (async () => {
       try {
         const me = await fetchMe();
-        if (!cancelled) setUser(me);
+        if (!cancelled && useAuthStore.getState().sessionRevision === sessionRevision) setUser(me);
       } catch {
         // The 401 interceptor already clears the session; this covers 403
         // (deactivated account) and anything else that makes the token unusable.
-        if (!cancelled) logout();
+        if (!cancelled && useAuthStore.getState().sessionRevision === sessionRevision) logout();
       } finally {
-        if (!cancelled) setChecking(false);
+        if (!cancelled) setCheckedRevision(sessionRevision);
       }
     })();
 
@@ -50,9 +50,9 @@ export function SessionGuard({ children }: SessionGuardProps) {
       cancelled = true;
     };
     // Runs once per token — re-validating on every render would loop.
-  }, [token, setUser, logout]);
+  }, [token, sessionRevision, setUser, logout]);
 
-  if (checking) {
+  if (token && checkedRevision !== sessionRevision) {
     return (
       <div className="min-h-screen bg-[#0e1117] flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00d2ff]" />
@@ -64,5 +64,5 @@ export function SessionGuard({ children }: SessionGuardProps) {
     return <LoginPage />;
   }
 
-  return <>{children}</>;
+  return <Fragment key={sessionRevision}>{children}</Fragment>;
 }

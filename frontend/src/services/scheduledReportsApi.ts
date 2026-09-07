@@ -1,3 +1,4 @@
+import { authenticatedFetch } from './httpAuth';
 /**
  * Scheduled Reports API Service
  * Schedule a chat-generated report (question + SQL) to re-run on future days
@@ -66,11 +67,11 @@ async function handle<T>(resp: Response): Promise<T> {
 
 export async function listScheduledReports(): Promise<ScheduledReport[]> {
   // No trailing slash: Vercel's /api/v1/:path* rewrite doesn't match one.
-  return handle(await fetch(`${API_BASE_URL}`));
+  return handle(await authenticatedFetch(`${API_BASE_URL}`));
 }
 
 export async function createScheduledReport(data: ScheduledReportCreate): Promise<ScheduledReport> {
-  return handle(await fetch(`${API_BASE_URL}`, {
+  return handle(await authenticatedFetch(`${API_BASE_URL}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -78,7 +79,7 @@ export async function createScheduledReport(data: ScheduledReportCreate): Promis
 }
 
 export async function updateScheduledReport(id: string, data: Partial<ScheduledReportCreate>): Promise<ScheduledReport> {
-  return handle(await fetch(`${API_BASE_URL}/${id}`, {
+  return handle(await authenticatedFetch(`${API_BASE_URL}/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -86,23 +87,23 @@ export async function updateScheduledReport(id: string, data: Partial<ScheduledR
 }
 
 export async function deleteScheduledReport(id: string): Promise<void> {
-  await handle(await fetch(`${API_BASE_URL}/${id}`, { method: 'DELETE' }));
+  await handle(await authenticatedFetch(`${API_BASE_URL}/${id}`, { method: 'DELETE' }));
 }
 
 export async function runScheduledReportNow(id: string): Promise<{ status: string; error?: string }> {
-  return handle(await fetch(`${API_BASE_URL}/${id}/run-now`, { method: 'POST' }));
+  return handle(await authenticatedFetch(`${API_BASE_URL}/${id}/run-now`, { method: 'POST' }));
 }
 
 export async function getTelegramStatus(): Promise<{ configured: boolean }> {
-  return handle(await fetch(`${API_BASE_URL}/telegram/status`));
+  return handle(await authenticatedFetch(`${API_BASE_URL}/telegram/status`));
 }
 
 export async function discoverTelegramChats(): Promise<{ chats: TelegramChat[] }> {
-  return handle(await fetch(`${API_BASE_URL}/telegram/discover-chats`));
+  return handle(await authenticatedFetch(`${API_BASE_URL}/telegram/discover-chats`));
 }
 
 export async function testTelegram(chatId: string): Promise<{ success: boolean }> {
-  return handle(await fetch(`${API_BASE_URL}/telegram/test`, {
+  return handle(await authenticatedFetch(`${API_BASE_URL}/telegram/test`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ telegram_chat_id: chatId }),

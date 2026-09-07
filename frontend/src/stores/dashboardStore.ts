@@ -1,3 +1,4 @@
+import { authenticatedFetch } from '../services/httpAuth';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { PeriodType, PeriodDateRanges } from '../utils/dateCalculations';
@@ -102,7 +103,7 @@ export const useDashboardStore = create<DashboardState>()(
         try {
           // Use relative URL to leverage Vercel rewrite proxy (avoids CORS)
           const apiUrl = '/api/v1';
-          const response = await fetch(`${apiUrl}/analytics/stores`);
+          const response = await authenticatedFetch(`${apiUrl}/analytics/stores`);
           if (!response.ok) throw new Error('Failed to fetch stores');
 
           const stores: StoredStore[] = await response.json();

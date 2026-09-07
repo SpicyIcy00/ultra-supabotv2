@@ -4,10 +4,11 @@ from sqlalchemy import text
 from typing import List
 from datetime import datetime
 import traceback
+from app.core.deps import require_page
 from app.core.database import get_db
 from app.schemas.report import ProductSalesReportResponse, ReportMeta, ReportRow, ComparisonStoreData
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_page("warehouse"))])
 
 
 @router.get("/product-sales", response_model=ProductSalesReportResponse)

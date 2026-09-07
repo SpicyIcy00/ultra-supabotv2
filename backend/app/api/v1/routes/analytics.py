@@ -8,6 +8,7 @@ from sqlalchemy import text
 from datetime import datetime, timedelta
 from typing import Optional, List
 from pydantic import BaseModel
+from app.core.deps import require_page
 from app.core.database import get_db
 from app.services.analytics_service import AnalyticsService
 from app.core.cache import invalidate_cache
@@ -41,7 +42,7 @@ async def get_stores(db: AsyncSession = Depends(get_db)):
     ]
 
 
-@router.patch("/stores/{store_id}", summary="Update store display name and color")
+@router.patch("/stores/{store_id}", summary="Update store display name and color", dependencies=[Depends(require_page("settings"))])
 async def update_store_appearance(
     store_id: str,
     body: StoreAppearanceUpdate,
@@ -393,7 +394,8 @@ async def get_product_performance(
 @router.get(
     "/dashboard-kpis",
     summary="Get dashboard KPI metrics with comparison",
-    description="Returns KPI metrics for current period and comparison period"
+    description="Returns KPI metrics for current period and comparison period",
+    dependencies=[Depends(require_page("dashboard"))],
 )
 async def get_dashboard_kpis(
     start_date: datetime = Query(...),
@@ -430,7 +432,8 @@ async def get_dashboard_kpis(
 
 @router.get(
     "/sales-by-category",
-    summary="Get sales aggregated by category"
+    summary="Get sales aggregated by category",
+    dependencies=[Depends(require_page("dashboard"))],
 )
 async def get_sales_by_category(
     start_date: datetime = Query(...),
@@ -452,7 +455,8 @@ async def get_sales_by_category(
 
 @router.get(
     "/inventory-by-category",
-    summary="Get inventory value aggregated by category"
+    summary="Get inventory value aggregated by category",
+    dependencies=[Depends(require_page("dashboard"))],
 )
 async def get_inventory_by_category(
     store_ids: List[str] = Query(default=[]),
@@ -472,7 +476,8 @@ async def get_inventory_by_category(
 
 @router.get(
     "/sales-by-store",
-    summary="Get sales by store with comparison"
+    summary="Get sales by store with comparison",
+    dependencies=[Depends(require_page("dashboard"))],
 )
 async def get_sales_by_store(
     start_date: datetime = Query(...),
@@ -498,7 +503,8 @@ async def get_sales_by_store(
 
 @router.get(
     "/top-products",
-    summary="Get top products with comparison"
+    summary="Get top products with comparison",
+    dependencies=[Depends(require_page("dashboard"))],
 )
 async def get_top_products(
     start_date: datetime = Query(...),
@@ -525,7 +531,8 @@ async def get_top_products(
 
 @router.get(
     "/sales-trend",
-    summary="Get sales trend with comparison"
+    summary="Get sales trend with comparison",
+    dependencies=[Depends(require_page("dashboard"))],
 )
 async def get_sales_trend(
     start_date: datetime = Query(...),
@@ -553,7 +560,8 @@ async def get_sales_trend(
 
 @router.get(
     "/top-categories",
-    summary="Get top categories with comparison"
+    summary="Get top categories with comparison",
+    dependencies=[Depends(require_page("dashboard"))],
 )
 async def get_top_categories(
     start_date: datetime = Query(...),
@@ -607,7 +615,8 @@ async def get_store_comparison(
 
 @router.get(
     "/day-of-week-patterns",
-    summary="Get day of week patterns"
+    summary="Get day of week patterns",
+    dependencies=[Depends(require_page("analytics"))],
 )
 async def get_day_of_week_patterns(
     start_date: Optional[str] = None,
@@ -645,7 +654,8 @@ async def get_day_of_week_patterns(
 
 @router.get(
     "/product-combos",
-    summary="Get product combinations"
+    summary="Get product combinations",
+    dependencies=[Depends(require_page("analytics"))],
 )
 async def get_product_combos(
     start_date: datetime = Query(...),
@@ -673,7 +683,8 @@ async def get_product_combos(
 
 @router.get(
     "/sales-anomalies",
-    summary="Get sales anomalies and alerts"
+    summary="Get sales anomalies and alerts",
+    dependencies=[Depends(require_page("analytics"))],
 )
 async def get_sales_anomalies(
     db: AsyncSession = Depends(get_db),
@@ -746,7 +757,8 @@ async def get_store_top_products(
 
 @router.get(
     "/store-comparison-v2",
-    summary="Get comprehensive store comparison with period comparison"
+    summary="Get comprehensive store comparison with period comparison",
+    dependencies=[Depends(require_page("analytics"))],
 )
 async def get_store_comparison_v2(
     start_date: datetime = Query(...),
@@ -775,7 +787,8 @@ async def get_store_comparison_v2(
 
 @router.get(
     "/store-drilldown-v2",
-    summary="Get detailed drill-down analysis for a specific store"
+    summary="Get detailed drill-down analysis for a specific store",
+    dependencies=[Depends(require_page("analytics"))],
 )
 async def get_store_drilldown_v2(
     store_id: str = Query(...),
@@ -809,7 +822,8 @@ async def get_store_drilldown_v2(
 
 @router.get(
     "/category-performance-matrix",
-    summary="Get category performance matrix across all stores"
+    summary="Get category performance matrix across all stores",
+    dependencies=[Depends(require_page("analytics"))],
 )
 async def get_category_performance_matrix(
     start_date: datetime = Query(...),
@@ -834,7 +848,8 @@ async def get_category_performance_matrix(
 
 @router.get(
     "/store-weekly-trends",
-    summary="Get weekly sales trends for stores"
+    summary="Get weekly sales trends for stores",
+    dependencies=[Depends(require_page("analytics"))],
 )
 async def get_store_weekly_trends(
     start_date: datetime = Query(...),
@@ -859,7 +874,8 @@ async def get_store_weekly_trends(
 
 @router.get(
     "/top-movers",
-    summary="Get top movers - products and categories"
+    summary="Get top movers - products and categories",
+    dependencies=[Depends(require_page("analytics"))],
 )
 async def get_top_movers(
     start_date: datetime = Query(...),
@@ -889,7 +905,8 @@ async def get_top_movers(
 @router.post(
     "/invalidate-cache",
     summary="Clear all analytics cache",
-    description="Invalidates all Redis cache for analytics endpoints. Use this to force fresh data."
+    description="Invalidates all Redis cache for analytics endpoints. Use this to force fresh data.",
+    dependencies=[Depends(require_page("settings"))],
 )
 async def invalidate_analytics_cache():
     """

@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.deps import require_page
 from app.core.database import get_db
 from app.models.store_filter import StoreFilter
 from app.models.store import Store
@@ -30,7 +31,7 @@ def _get_default_config() -> StoreFilterConfig:
     )
 
 
-@router.get("", response_model=StoreFilterConfig)
+@router.get("", response_model=StoreFilterConfig, dependencies=[Depends(require_page("settings"))])
 async def get_store_filters(db: AsyncSession = Depends(get_db)):
     """
     Get current store filter configuration grouped by type.
@@ -60,7 +61,7 @@ async def get_store_filters(db: AsyncSession = Depends(get_db)):
         return _get_default_config()
 
 
-@router.put("", response_model=StoreFilterConfig)
+@router.put("", response_model=StoreFilterConfig, dependencies=[Depends(require_page("settings"))])
 async def update_store_filters(
     config: StoreFilterUpdate,
     db: AsyncSession = Depends(get_db)
@@ -104,7 +105,7 @@ async def update_store_filters(
         )
 
 
-@router.get("/available-stores", response_model=AvailableStoresResponse)
+@router.get("/available-stores", response_model=AvailableStoresResponse, dependencies=[Depends(require_page("settings"))])
 async def get_available_stores(db: AsyncSession = Depends(get_db)):
     """
     Get all stores available in the system for selection.
@@ -117,7 +118,7 @@ async def get_available_stores(db: AsyncSession = Depends(get_db)):
     return AvailableStoresResponse(stores=store_names)
 
 
-@router.post("/initialize")
+@router.post("/initialize", dependencies=[Depends(require_page("settings"))])
 async def initialize_default_filters(db: AsyncSession = Depends(get_db)):
     """
     Initialize with default store filters if none exist.

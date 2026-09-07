@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import { createAuthenticatedClient } from '../services/httpAuth';
 import { useDashboardStore } from '../stores/dashboardStore';
 import {
   formatDateForAPI,
@@ -13,7 +13,7 @@ const API_BASE_URL = '/api/v1';
 
 console.log('Dashboard API Base URL:', API_BASE_URL);
 
-const api = axios.create({
+const api = createAuthenticatedClient({
   baseURL: API_BASE_URL,
   timeout: 30000,
   paramsSerializer: {
