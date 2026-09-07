@@ -1,30 +1,17 @@
 /**
- * Guards "/" specifically.
+ * "/" is a redirect and nothing else.
  *
- * Warehouse staff have no 'dashboard' access, so opening the app root has to
- * forward them to their own first allowed page. RequirePage cannot do this on
- * "/" without bouncing between the two routes when landingPathFor also returns
- * "/", so this variant renders children when allowed and redirects otherwise.
+ * A person with George lands in George; everyone else lands on their first
+ * allowed page, exactly as before (constants/pages.ts decides the order).
+ * "/" is no page's own path any more, so landingPathFor can never return it
+ * and this cannot loop.
  */
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { landingPathFor } from '../constants/pages';
 
-interface LandingRedirectProps {
-  children: React.ReactNode;
-}
-
-export function LandingRedirect({ children }: LandingRedirectProps) {
+export function LandingRedirect() {
   const user = useAuthStore((s) => s.user);
-
   if (!user) return null;
-
-  if (user.allowed_pages.includes('dashboard')) {
-    return <>{children}</>;
-  }
-
-  // "/" is the dashboard's path, and the check above already established the
-  // user cannot see it — so landingPathFor returns another page or
-  // "/no-access", never "/". This cannot loop.
   return <Navigate to={landingPathFor(user.allowed_pages)} replace />;
 }

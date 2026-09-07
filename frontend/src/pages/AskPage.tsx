@@ -1,0 +1,277 @@
+/**
+ * /ask — the workspace. Empty until asked; then the answer.
+ *
+ * THE EMPTY STATE IS ALMOST NOTHING. The mark, "Ask anything.", the box, and
+ * three starting points. No caption under the mark — its behaviour says it
+ * is ready, and a word saying so would be a caption on a photograph. No
+ * cards, no suggestions grid, no summary of the business. The whitespace is
+ * the design.
+ *
+ * THE STARTING POINTS ARE PROMPTS, NOT MODES. Each drops a question into the
+ * box for the person to edit and send; nothing is sent for them and no state
+ * is kept about which one they touched. Each is something George can do
+ * today — read figures, compare, save a rule — and one that could not be
+ * done truthfully would be left off rather than shown.
+ *
+ * /ask/:threadId IS THE THREAD. The stored posts are drawn as posts, the
+ * turn in flight as a pending post beneath them, and the box continues the
+ * same thread. Opening a thread loads its history into the one stream so
+ * "pin that" can resolve against the calls behind an earlier answer — from
+ * the caller's own chat only; a George post travels as text (threadHistory).
+ * The newest answer leads and earlier turns go quieter; nothing is hidden
+ * and nothing is summarised (turnShape).
+ *
+ * Asking from the empty state names the thread in the `start` frame, and
+ * the URL follows it, so the exchange has an address from its first frame.
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { useGeorge } from '../hooks/useGeorge';
+import { useShare } from '../hooks/useShare';
+import { useThread } from '../hooks/useThread';
+import { AnswerTurns } from '../components/george/AnswerTurn';
+import { AskComposer } from '../components/george/AskComposer';
+import { PostCard } from '../components/george/PostCard';
+import { ReactiveMark } from '../components/george/ReactiveMark';
+import { groupsWith } from '../components/george/postShape';
+import { riverMerge } from '../components/george/riverMerge';
+import { threadHistory } from '../components/george/threadHistory';
+import { SHELL_COLUMN, SHELL_PAGE_HEIGHT } from '../components/shell/shellLayout';
+import { listChats } from '../services/chatsApi';
+
+/** Prompts. Each is a thing George can do today, as a question to edit. */
+const STARTERS: { label: string; draft: string }[] = [
+  { label: 'Data', draft: 'Net sales by store for the last 7 days' },
+  { label: 'Analyze', draft: 'Why was yesterday different from the same weekday last week?' },
+  { label: 'Automate', draft: 'Save a workflow that checks low stock at the warehouse every Monday at 6' },
+];
+
+interface RouteState {
+  draft?: string;
+  pageContext?: string;
+}
+
+function EmptyAsk() {
+  const { presence, live, ask, reset, cancel, busy } = useGeorge();
+  const location = useLocation();
+  const state = (location.state ?? {}) as RouteState;
+  // A draft is a value AND a count, so picking the same starter twice after
+  // clearing the box lands it twice.
+  const [draft, setDraft] = useState<{ text: string; n: number }>({ text: state.draft ?? '', n: 0 });
+
+  const recent = useQuery({ queryKey: ['chats'], queryFn: listChats, staleTime: 30_000 });
+
+  const onAsk = useCallback(
+    (question: string) => {
+      reset();
+      void ask(question, { pageContext: state.pageContext ?? null });
+    },
+    [ask, reset, state.pageContext],
+  );
+
+  return (
+    <div className={`${SHELL_PAGE_HEIGHT} flex flex-col overflow-y-auto px-4 md:px-8`}>
+      <div className={`${SHELL_COLUMN} flex flex-1 flex-col`}>
+        <div className="flex flex-1 flex-col items-center justify-center pb-10 pt-16">
+          <ReactiveMark
+            variant="mark"
+            state={presence}
+            running={live.running}
+            lastResult={live.lastResult}
+            toolResults={live.toolResults}
+            className="h-16 w-16 md:h-20 md:w-20"
+          />
+
+          <h1 className="mt-10 font-george-serif text-[26px] leading-none text-george-navy md:text-[30px]">
+            Ask anything.
+          </h1>
+
+          <div className="mt-10 w-full max-w-xl">
+            <AskComposer
+              bare
+              autoFocus
+              onAsk={onAsk}
+              onCancel={cancel}
+              busy={busy}
+              draft={draft.text || null}
+              draftKey={draft.n}
+            />
+          </div>
+
+          <div className="mt-6 flex items-center gap-8">
+            {STARTERS.map((s) => (
+              <StarterButton
+                key={s.label}
+                label={s.label}
+                onPick={() => setDraft((d) => ({ text: s.draft, n: d.n + 1 }))}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Low on the page, low in the hierarchy. Three states (UI rule 8);
+            the loading and failed ones are one quiet line each. */}
+        <div className="pb-24 md:pb-10">
+          {recent.isPending && (
+            <p className="text-[12px] text-george-muted">Checking recent asks…</p>
+          )}
+          {recent.isError && (
+            <p className="text-[12px] text-george-muted">Couldn’t read your recent asks.</p>
+          )}
+          {recent.data && recent.data.length > 0 && (
+            <>
+              <p className="text-[11px] uppercase tracking-wider text-george-muted">Recent</p>
+              <ul className="mt-2 space-y-1">
+                {recent.data.slice(0, 5).map((c) => (
+                  <li key={c.thread_id}>
+                    <Link
+                      to={`/ask/${c.thread_id}`}
+                      title={c.question}
+                      className="block min-h-touch truncate py-2 text-[13px] text-george-slate hover:text-george-navy"
+                    >
+                      {c.title}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StarterButton({ label, onPick }: { label: string; onPick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onPick}
+      className="min-h-touch text-[13px] text-george-slate hover:text-george-navy"
+    >
+      {label}
+    </button>
+  );
+}
+
+function ThreadAsk({ threadId }: { threadId: string }) {
+  const george = useGeorge();
+  const { turns, threadId: openThread, open, ask, cancel, busy } = george;
+  const thread = useThread(threadId);
+  const share = useShare();
+  const location = useLocation();
+  const state = (location.state ?? {}) as RouteState;
+
+  // Load the thread into the one stream, once — unless it is already the
+  // thread the stream is on, in which case the live turns ARE the newest
+  // truth and must not be replaced by a stored copy of themselves; and never
+  // while George is still answering in ANOTHER thread, because opening this
+  // one would tear that answer down. He finishes there first; then this
+  // thread opens (the effect re-runs when `busy` clears).
+  const loadedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!thread.ready) return;
+    if (openThread === threadId) {
+      loadedFor.current = threadId;
+      return;
+    }
+    if (busy || loadedFor.current === threadId) return;
+    loadedFor.current = threadId;
+    open(threadHistory(thread.posts, thread.chat, threadId), threadId);
+  }, [thread.ready, thread.posts, thread.chat, threadId, openThread, open, busy]);
+
+  // The stream's turns belong to THIS thread only when it is the open one.
+  const here = openThread === threadId;
+  const elsewhere = busy && !here;
+  const merged = useMemo(
+    () => riverMerge(thread.posts, here ? turns : []),
+    [thread.posts, turns, here],
+  );
+  const lastPost = thread.posts[thread.posts.length - 1];
+
+  const onAsk = useCallback(
+    (question: string) => {
+      void ask(question, { parentId: lastPost?.id ?? null, pageContext: state.pageContext ?? null });
+    },
+    [ask, lastPost?.id, state.pageContext],
+  );
+
+  return (
+    <div className={`${SHELL_PAGE_HEIGHT} flex flex-col`}>
+      <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-5 md:px-8">
+        <div className={`${SHELL_COLUMN} space-y-5`}>
+          {thread.loading && (
+            <p className="py-10 text-center text-[13px] text-george-muted">Opening…</p>
+          )}
+          {thread.unavailable && (
+            <div className="py-10 text-center">
+              <p className="text-[14px] text-george-navy">That thread isn’t available.</p>
+              <p className="mx-auto mt-1 max-w-sm text-[12px] leading-relaxed text-george-slate">
+                It may have been deleted, or it may be somebody else’s.
+              </p>
+            </div>
+          )}
+
+          {merged.posts.map((post, i) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              grouped={groupsWith(merged.posts[i - 1], post)}
+              onAsk={onAsk}
+              onShare={share.share}
+              sharing={share.sharingId === post.id}
+              quiet={i < merged.posts.length - 1 || merged.pending.length > 0}
+            />
+          ))}
+
+          {merged.pending.length > 0 && <AnswerTurns turns={merged.pending} focusLatest />}
+
+          {elsewhere && (
+            <p className="text-[12px] leading-relaxed text-george-muted">
+              George is still answering in another thread. This one opens when he is done.
+            </p>
+          )}
+        </div>
+      </div>
+
+      <AskComposer
+        onAsk={onAsk}
+        onCancel={cancel}
+        busy={busy}
+        placeholder="Reply in this thread…"
+        draft={state.draft ?? null}
+      />
+    </div>
+  );
+}
+
+/**
+ * Follows the stream: a question asked from empty gets its thread's URL.
+ *
+ * Only a thread that STARTED here. Arriving at /ask while an earlier thread
+ * is still in the stream must not bounce straight back into it — /ask is
+ * where a new question is asked.
+ */
+function FollowThread() {
+  const { threadId } = useGeorge();
+  const navigate = useNavigate();
+  const arrivedWith = useRef(threadId);
+  useEffect(() => {
+    if (threadId && threadId !== arrivedWith.current) {
+      navigate(`/ask/${threadId}`, { replace: true });
+    }
+  }, [threadId, navigate]);
+  return null;
+}
+
+export default function AskPage() {
+  const { threadId } = useParams();
+  if (threadId) return <ThreadAsk threadId={threadId} />;
+  return (
+    <>
+      <FollowThread />
+      <EmptyAsk />
+    </>
+  );
+}

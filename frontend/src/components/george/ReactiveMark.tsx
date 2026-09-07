@@ -7,11 +7,14 @@
  * them. See that file for why the stamens are knocked out rather than painted,
  * and why the mark is deliberately uneven.
  *
- * TWO PRESENTATIONS, ONE MARK. `hero` is George's presence in the room: large,
- * centred, at the top of the conversation with his name and what he is doing
- * beneath it. `inline` is the same mark small, for the header once the hero has
- * been scrolled past. Only the hero carries aria-live — both are mounted during
- * the dock crossfade, and two live regions would announce every state twice.
+ * THREE PRESENTATIONS, ONE MARK. `mark` is the drawing alone — George's
+ * presence in the shell's rail and at the centre of an empty Ask, where its
+ * behaviour says what it is doing and a caption would only repeat it. `hero`
+ * adds his name and what he is doing beneath it, for a surface that wants
+ * the words. `inline` is the same small, for a header. Only the hero carries
+ * aria-live; the others carry the state in their accessible name instead, so
+ * a screen reader hears "George — reading the data" and is not read every
+ * delta twice.
  *
  * MOTION IS A SWAY, NOT A SPIN. The mark is hand-perturbed, so it has no exact
  * symmetry and no angle at which a rotation would loop without a visible jump.
@@ -24,8 +27,9 @@
  * error state honours the other half of that amendment — it dims and gaps, and
  * adds no orange at all.
  *
- * THE WORK IS SHOWN, NOT SUMMARISED. Two lines sit under the mark and they say
- * different things, and the difference is a rule rather than a layout choice.
+ * THE WORK IS SHOWN, NOT SUMMARISED. Two lines sit under the hero mark and they
+ * say different things, and the difference is a rule rather than a layout
+ * choice.
  *
  * The LABEL is GEORGE NARRATING — first person, derived from the tool that is
  * actually running and from the result that actually landed ("I'm checking
@@ -66,17 +70,21 @@ interface Props {
    * came back rather than falling silent the moment it does.
    */
   lastResult?: LastResult | null;
-  variant?: 'hero' | 'inline';
+  variant?: 'hero' | 'inline' | 'mark';
+  /** Size, for the `mark` variant only. */
+  className?: string;
 }
 
 function Blossom({
   state,
   toolResults = 0,
   className,
+  label = 'George',
 }: {
   state: GeorgeState;
   toolResults?: number;
   className: string;
+  label?: string;
 }) {
   return (
     // currentColor, so the one drawing serves the accent-on-cream mark here and
@@ -85,7 +93,7 @@ function Blossom({
       viewBox="0 0 100 100"
       className={`${className} text-george-accent`}
       role="img"
-      aria-label="George"
+      aria-label={label}
     >
       {/* Keyed on the count so each landing restarts the beat. It sits OUTSIDE
           the sway group, so the pulse composes with the sway rather than
@@ -106,11 +114,25 @@ export function ReactiveMark({
   thinking = '',
   lastResult = null,
   variant = 'hero',
+  className = 'h-8 w-8',
 }: Props) {
   // Both derivations live beside the state mapping and the act names, where
   // the suite can hold them to their rules without a DOM.
   const detail = markDetail(state, running, lastResult);
   const cognition = liveCognition(state, thinking);
+
+  if (variant === 'mark') {
+    // The drawing alone. The state travels in the accessible name, so nothing
+    // is lost by leaving the words off the screen.
+    return (
+      <Blossom
+        state={state}
+        toolResults={toolResults}
+        className={`${className} shrink-0`}
+        label={state === 'idle' ? 'George' : `George — ${detail}`}
+      />
+    );
+  }
 
   if (variant === 'inline') {
     return (

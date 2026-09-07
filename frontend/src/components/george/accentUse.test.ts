@@ -22,6 +22,7 @@ import { describe, expect, it } from 'vitest';
 
 const GEORGE_DIR = join(__dirname);
 const PAGES_DIR = join(__dirname, '..', '..', 'pages');
+const SHELL_DIR = join(__dirname, '..', 'shell');
 
 /** The accent token, in every form Tailwind lets it be written. */
 const ACCENT = /george-accent/;
@@ -37,16 +38,15 @@ const ALLOWED: Record<string, string> = {
   // presence, it asks for nothing, and its error state changes the DRAWING and
   // never the hue.
   'ReactiveMark.tsx': 'the mark — CLAUDE.md UI rule 5, amended 2026-09-04',
-  // Gated by postShape.ACCENT_KINDS, which is now EMPTY — so this branch
-  // cannot currently fire. Kept rather than deleted so that adding a kind to
-  // that list is one edit and not two, and the list is where the decision is
-  // argued.
-  'PostCard.tsx': 'gated by postShape.ACCENT_KINDS, currently empty',
   // The needs-you count above the river, shown only for a loaded, non-zero
   // count (UI rules 5 and 8).
   'StatusBand.tsx': 'the needs-you count on the status band',
-  // The approval queue itself, in the drawer.
-  'SidePanel.tsx': 'the approval queue — the reserved use',
+  // The same count beside "Inbox" in the shell's navigation — the badge
+  // beside the mark that the 2026-09-04 amendment describes.
+  'GeorgeShell.tsx': 'the needs-you count beside Inbox',
+  // The approval queue itself, and Promote: the one accent-coloured ACTION
+  // in the app, because this is what the colour is for.
+  'InboxPage.tsx': 'the approval queue and its one decision — the reserved use',
 };
 
 function sourceFiles(dir: string): string[] {
@@ -62,6 +62,7 @@ describe('UI rule 5 — one colour means "needs you"', () => {
     for (const [dir, files] of [
       [GEORGE_DIR, sourceFiles(GEORGE_DIR)],
       [PAGES_DIR, sourceFiles(PAGES_DIR)],
+      [SHELL_DIR, sourceFiles(SHELL_DIR)],
     ] as [string, string[]][]) {
       for (const name of files) {
         const source = readFileSync(join(dir, name), 'utf8');
@@ -104,9 +105,10 @@ describe('UI rule 5 — one colour means "needs you"', () => {
     //
     // Raised to 5 when the river arrived and returned to 4 the same day, when
     // Rails.tsx — the old approval rail — was deleted with the old George
-    // page. It should go DOWN again when PostCard's branch is either used or
-    // removed. If somebody wants a fifth, the honest move is to ask whether
-    // the colour still means one thing.
+    // page. Held at 4 on 2026-09-07 when the shell arrived: PostCard's dead
+    // branch and the drawer left, the shell's Inbox count and the Inbox page
+    // took their places. If somebody wants a fifth, the honest move is to
+    // ask whether the colour still means one thing.
     expect(Object.keys(ALLOWED).length).toBeLessThanOrEqual(4);
   });
 });

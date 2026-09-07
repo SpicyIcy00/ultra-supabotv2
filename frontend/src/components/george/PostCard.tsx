@@ -20,11 +20,13 @@
  * with no time on it is a claim with no expiry (UI rule 6), so the missing case
  * says so in words rather than rendering an empty slot.
  */
+import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { ToolMeta } from '../../types/george';
 import type { PinCallResult } from '../../types/pins';
 import type { Post } from '../../types/river';
+import { ChevronRight } from 'lucide-react';
 import { GeorgeChart } from './GeorgeChart';
 import { NoticeBanner } from './NoticeBanner';
 import { ReceiptsBlock } from './ReceiptsBlock';
@@ -142,7 +144,8 @@ function FollowUpChips({
  * to chart a prefix in the picture rather than relying on that invariant
  * holding forever.
  */
-function ChartedResults({ post }: { post: Post }) {
+function ChartedResults({ post, quiet = false }: { post: Post; quiet?: boolean }) {
+  const [shown, setShown] = useState(false);
   const raw = (post.payload as { charted?: unknown } | null)?.charted;
   const results = Array.isArray(raw) ? raw : [];
   const charts = results.flatMap((r) => {
@@ -166,6 +169,22 @@ function ChartedResults({ post }: { post: Post }) {
     return shape?.kind === 'chart' ? [{ seq: entry.seq ?? 0, result, shape }] : [];
   });
   if (charts.length === 0) return null;
+  // An earlier post's charts wait behind one line that names them. The
+  // receipts under each chart come with it, so a figure is never on screen
+  // without its time; the notices above the body were never here to hide.
+  if (quiet && !shown) {
+    return (
+      <button
+        type="button"
+        onClick={() => setShown(true)}
+        aria-expanded={false}
+        className="flex min-h-touch items-center gap-1.5 text-[12px] text-george-muted"
+      >
+        <ChevronRight className="h-3 w-3" aria-hidden />
+        {charts.length === 1 ? 'Chart' : `${charts.length} charts`}
+      </button>
+    );
+  }
   return (
     <div className="space-y-3">
       {charts.map(({ seq, result, shape }) => (
@@ -185,6 +204,7 @@ export function PostCard({
   onOpenThread,
   onShare,
   sharing = false,
+  quiet = false,
 }: {
   post: Post;
   grouped?: boolean;
@@ -194,6 +214,12 @@ export function PostCard({
   onOpenThread?: (threadId: string) => void;
   onShare?: (postId: string) => void;
   sharing?: boolean;
+  /**
+   * An earlier post in a thread whose newest answer should lead: slate
+   * prose, charts behind a line that names them. Notices and receipts are
+   * untouched — quieter is never a licence to drop a caveat (turnShape.ts).
+   */
+  quiet?: boolean;
 }) {
   const view = postView(post);
 
@@ -240,13 +266,12 @@ export function PostCard({
 
       <div className="min-w-0 flex-1 space-y-2">
         {view.label && (
-          <p
-            className={`text-[11px] uppercase tracking-wide ${
-              // The ONLY place a post may wear the approvals colour, and
-              // postShape decides it — never this component.
-              view.accent ? 'text-george-accent' : 'text-george-muted'
-            }`}
-          >
+          // Muted, always. postShape.ACCENT_KINDS is empty and the branch
+          // that read it was removed on 2026-09-07 so the shell's needs-you
+          // count could take its place on the accent exemption list. If a
+          // kind ever earns the colour, this is where it comes back — with
+          // the argument made in postShape first.
+          <p className="text-[11px] uppercase tracking-wide text-george-muted">
             {view.label}
           </p>
         )}
@@ -255,7 +280,11 @@ export function PostCard({
         {view.showNotices && <NoticeBanner notices={post.notices} />}
 
         {post.body && (
-          <div className="george-prose text-[15px] leading-relaxed text-george-navy">
+          <div
+            className={`george-prose text-[15px] leading-relaxed ${
+              quiet ? 'text-george-slate' : 'text-george-navy'
+            }`}
+          >
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.body}</ReactMarkdown>
           </div>
         )}
@@ -263,7 +292,7 @@ export function PostCard({
         {/* Below the prose because the answer leads with the number. Each
             chart carries its OWN receipts, so the post-level block below would
             only repeat one of them under a different heading. */}
-        <ChartedResults post={post} />
+        <ChartedResults post={post} quiet={quiet} />
 
         {!hasCharts(post) && view.showReceipts && (
           <ReceiptsBlock meta={post.receipts ?? undefined} />

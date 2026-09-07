@@ -3,6 +3,12 @@
  *
  * page_key values must stay in sync with PAGE_KEYS in
  * backend/app/models/role_page_access.py.
+ *
+ * ORDER IS THE LANDING. `landingPathFor` takes the first allowed page, so
+ * George comes first: a person with George lands in George, and everyone
+ * else lands where they always did. "/" is nobody's path any more — it is
+ * only ever a redirect (LandingRedirect), so the dashboard has a real URL of
+ * its own and a bookmark to "/" still resolves.
  */
 export interface PageDef {
   key: string;
@@ -11,10 +17,10 @@ export interface PageDef {
 }
 
 export const PAGES: PageDef[] = [
-  { key: 'dashboard', path: '/', label: 'Dashboard' },
+  { key: 'george', path: '/ask', label: 'George' },
+  { key: 'dashboard', path: '/dashboard', label: 'Dashboard' },
   { key: 'analytics', path: '/analytics', label: 'Analytics' },
   { key: 'ai_chat', path: '/ai-chat', label: 'AI Chat' },
-  { key: 'george', path: '/george', label: 'George' },
   { key: 'warehouse', path: '/warehouse', label: 'Warehouse' },
   { key: 'packing', path: '/packing', label: 'Packing' },
   { key: 'settings', path: '/settings', label: 'Settings' },
@@ -35,7 +41,7 @@ export const PAGES: PageDef[] = [
 // can click to. Add the entry when the page is built.
 
 export const pathForPage = (key: string): string =>
-  PAGES.find((p) => p.key === key)?.path ?? '/';
+  PAGES.find((p) => p.key === key)?.path ?? '/no-access';
 
 /**
  * Where to send a user who has landed somewhere they cannot see.

@@ -1,5 +1,5 @@
 /**
- * Workflows API — for now, the approval queue.
+ * Workflows API — the approval queue, and the reads the Workflows page needs.
  *
  * Bare axios, matching pinsApi, chatsApi and greetingApi: the auth interceptors
  * are installed on both the shared instance and global axios (see httpAuth.ts).
@@ -10,7 +10,12 @@
  * this needs no credential the app is not already carrying.
  */
 import axios from 'axios';
-import type { Approval } from '../types/workflows';
+import type {
+  Approval,
+  Workflow,
+  WorkflowRun,
+  WorkflowSchedule,
+} from '../types/workflows';
 
 const API_BASE = '/api/v1/george/workflows';
 
@@ -23,5 +28,36 @@ const API_BASE = '/api/v1/george/workflows';
  */
 export const listApprovals = async (): Promise<Approval[]> => {
   const { data } = await axios.get<Approval[]>(`${API_BASE}/approvals`);
+  return data;
+};
+
+/**
+ * Promote one version past the backtest gate — the approval queue's action.
+ *
+ * Administrators only, and only after a backtest of a window that has closed;
+ * the server enforces both (workflow_writer) and a CHECK constraint enforces
+ * them again. A refusal arrives as a 4xx whose detail says which, and the
+ * caller renders it verbatim.
+ */
+export const promoteVersion = async (workflowId: string, version: number): Promise<void> => {
+  await axios.post(`${API_BASE}/${workflowId}/promote`, null, { params: { version } });
+};
+
+/** Every workflow, newest first. Org-level: not scoped to the caller. */
+export const listWorkflows = async (): Promise<Workflow[]> => {
+  const { data } = await axios.get<Workflow[]>(API_BASE);
+  return data;
+};
+
+export const listSchedules = async (workflowId: string): Promise<WorkflowSchedule[]> => {
+  const { data } = await axios.get<WorkflowSchedule[]>(`${API_BASE}/${workflowId}/schedules`);
+  return data;
+};
+
+/** Run history, newest first, without step results. */
+export const listRuns = async (workflowId: string, limit = 3): Promise<WorkflowRun[]> => {
+  const { data } = await axios.get<WorkflowRun[]>(`${API_BASE}/${workflowId}/runs`, {
+    params: { limit },
+  });
   return data;
 };

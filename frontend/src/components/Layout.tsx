@@ -19,13 +19,16 @@ interface NavItemProps {
   label: string;
   isActive: boolean;
   onClick?: () => void;
+  /** Router state to carry — the George link passes the page it left. */
+  state?: Record<string, unknown>;
 }
 
 // Sidebar nav item (tablet/desktop)
-function NavItem({ to, icon, label, isActive, onClick }: NavItemProps) {
+function NavItem({ to, icon, label, isActive, onClick, state }: NavItemProps) {
   return (
     <Link
       to={to}
+      state={state}
       onClick={onClick}
       className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
         isActive
@@ -40,10 +43,11 @@ function NavItem({ to, icon, label, isActive, onClick }: NavItemProps) {
 }
 
 // Bottom tab nav item (mobile only)
-function MobileNavItem({ to, icon, label, isActive }: NavItemProps) {
+function MobileNavItem({ to, icon, label, isActive, state }: NavItemProps) {
   return (
     <Link
       to={to}
+      state={state}
       className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-1 py-1 rounded-lg transition-colors ${
         isActive
           ? 'text-blue-400'
@@ -109,10 +113,13 @@ const navIcons = {
 // by the user's allowed_pages, so staff never see links they cannot open.
 const navItems = [
   // Dashboard owns two tabs: Stores (/) and Vending (/vending)
-  { to: '/', page: 'dashboard', icon: navIcons.dashboard, label: 'Dashboard', match: (p: string) => p === '/' || p === '/vending' },
+  { to: '/dashboard', page: 'dashboard', icon: navIcons.dashboard, label: 'Dashboard', match: (p: string) => p === '/dashboard' || p === '/vending' },
   { to: '/analytics', page: 'analytics', icon: navIcons.analytics, label: 'Analytics', match: (p: string) => p === '/analytics' },
   { to: '/ai-chat', page: 'ai_chat', icon: navIcons.chat, label: 'AI Chat', match: (p: string) => p === '/ai-chat' },
-  { to: '/george', page: 'george', icon: navIcons.george, label: 'George', match: (p: string) => p === '/george' },
+  // George's own shell. This link leaves the legacy chrome; the shell's
+  // Operations group is the way back. It carries the page it was clicked
+  // from, so a question asked next arrives with that page as context.
+  { to: '/ask', page: 'george', icon: navIcons.george, label: 'George', match: (p: string) => p.startsWith('/ask') },
   // Warehouse owns two tabs: Replenishment Reports and Barcode Generator
   { to: '/warehouse', page: 'warehouse', icon: navIcons.warehouse, label: 'Warehouse', match: (p: string) => p === '/warehouse' },
   { to: '/packing', page: 'packing', icon: navIcons.packing, label: 'Packing', match: (p: string) => p === '/packing' },
@@ -133,6 +140,14 @@ export function Layout({ children }: LayoutProps) {
   const visibleNavItems = navItems.filter(
     (item) => user?.allowed_pages.includes(item.page) ?? false,
   );
+
+  // The page the person is on, by its access key — what George is told when
+  // they leave here to ask him something (CLAUDE.md UI rule 1, in part).
+  const currentPage = navItems.find((item) => item.match(location.pathname))?.page;
+  const stateFor = (item: { page: string }) =>
+    item.page === 'george' && currentPage && currentPage !== 'george'
+      ? { pageContext: currentPage }
+      : undefined;
 
   // Detect screen size: phone (<768), tablet (768-1023), desktop (>=1024)
   useEffect(() => {
@@ -205,6 +220,7 @@ export function Layout({ children }: LayoutProps) {
                 <NavItem
                   key={item.to}
                   to={item.to}
+                  state={stateFor(item)}
                   icon={item.icon}
                   label={item.label}
                   isActive={item.match(location.pathname)}
@@ -279,6 +295,7 @@ export function Layout({ children }: LayoutProps) {
               <MobileNavItem
                 key={item.to}
                 to={item.to}
+                state={stateFor(item)}
                 icon={item.icon}
                 label={item.label}
                 isActive={item.match(location.pathname)}

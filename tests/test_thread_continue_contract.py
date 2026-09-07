@@ -213,6 +213,14 @@ def test_the_client_never_sends_tool_calls_for_a_george_post():
     if not _HISTORY.exists():
         pytest.skip("threadHistory.ts not written yet")
     source = _HISTORY.read_text(encoding="utf-8")
-    assert re.search(r"tool_calls:\s*\[\]", source), (
-        "threadHistory.ts must send an empty tool_calls list for a George post"
+    # The turn shape's field is toolCalls; toHistory maps it to tool_calls on
+    # the wire. A George post's turn is built with the empty list, literally.
+    assert re.search(r"toolCalls:\s*\[\]", source), (
+        "threadHistory.ts must build a George post's turn with no tool calls"
+    )
+    # The charted rows live in `payload`; a history builder that never reads
+    # the payload cannot reconstruct a call from them.
+    assert "payload" not in source, (
+        "threadHistory.ts must not read a post's payload — the charted rows "
+        "carry no arguments, and calls rebuilt from them would be invented"
     )

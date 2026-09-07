@@ -55,7 +55,7 @@ export function PinnedPage({
           className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] text-george-slate hover:bg-george-line/40 min-h-touch"
         >
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-          Conversation
+          All pages
         </button>
       </div>
 
