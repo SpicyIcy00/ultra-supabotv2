@@ -49,9 +49,17 @@ const ALLOWED: Record<string, string> = {
   'InboxPage.tsx': 'the approval queue and its one decision — the reserved use',
 };
 
+/**
+ * Every source file in a directory — components and modules, never tests.
+ *
+ * A test that asserts a component does NOT use the accent has to name the
+ * token to do it, and a scan that counted those would report the guard
+ * against the rule as a breach of it. `.test.ts` was already excluded; the
+ * DOM suites are `.test.tsx`, which the old pattern let through.
+ */
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true })
-    .filter((e) => e.isFile() && /\.tsx?$/.test(e.name) && !e.name.endsWith('.test.ts'))
+    .filter((e) => e.isFile() && /\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name))
     .map((e) => e.name);
 }
 
