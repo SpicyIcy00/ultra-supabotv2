@@ -29,7 +29,7 @@ export function GeorgeStreamProvider({ children }: { children: ReactNode }) {
   const [composer, setComposer] = useState<ComposerActivity>('idle');
 
   const live = useMemo(() => liveActivity(stream.turns), [stream.turns]);
-  const presence = presenceState({ state: stream.state, composer });
+  const presence = presenceState({ state: stream.state, composer, figures: live.figures });
 
   const value = useMemo<GeorgeContext>(
     () => ({ ...stream, presence, live, composer, setComposer }),

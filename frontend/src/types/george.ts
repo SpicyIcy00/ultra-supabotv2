@@ -248,5 +248,21 @@ export interface DoneFrame {
   cache_measured?: boolean;
 }
 
-/** Loop state, drives the reactive mark. */
-export type GeorgeState = 'idle' | 'listening' | 'thinking' | 'running' | 'answering' | 'error';
+/**
+ * Loop state, drives the reactive mark.
+ *
+ * Every one of these is backed by a signal that exists — a frame the loop
+ * emitted, a request the browser sent, or something the person is doing in the
+ * composer. `building` is `answering` over results that have already landed;
+ * `complete` is the `done` frame, held briefly before the mark settles. See
+ * presence.ts for the states this app deliberately refuses to draw.
+ */
+export type GeorgeState =
+  | 'idle'
+  | 'listening'
+  | 'thinking'
+  | 'running'
+  | 'answering'
+  | 'building'
+  | 'complete'
+  | 'error';

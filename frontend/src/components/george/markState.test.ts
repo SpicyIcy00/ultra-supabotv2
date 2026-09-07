@@ -13,6 +13,8 @@
  * in one place and not the other the mark silently stops animating, which is
  * exactly the kind of failure nobody notices.
  */
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { GeorgeState } from '../../types/george';
 import {
@@ -30,6 +32,8 @@ const STATES: GeorgeState[] = [
   'thinking',
   'running',
   'answering',
+  'building',
+  'complete',
   'error',
 ];
 
@@ -147,5 +151,42 @@ describe('markDetail — George narrating, in the first person', () => {
 
   it('always says something', () => {
     for (const s of STATES) expect(markDetail(s)).toBeTruthy();
+  });
+});
+
+/**
+ * The state classes are a contract with index.css, and the contract is only
+ * real if something checks both ends. A state added here with no rule there
+ * renders as a motionless mark that looks identical to idle — which is the
+ * app claiming to be at rest while a turn runs.
+ */
+describe('index.css holds up its end', () => {
+  const css = readFileSync(join(__dirname, '..', '..', 'index.css'), 'utf8');
+
+  it('defines a rule for every state the mark can be in', () => {
+    for (const s of STATES) {
+      expect(css, `no .george-mark--${s} rule in index.css`).toContain(`.george-mark--${s}`);
+    }
+  });
+
+  it('respects reduced motion for every state that would otherwise loop', () => {
+    const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
+    for (const s of STATES.filter((x) => x !== 'idle' && x !== 'error')) {
+      expect(reduced, `.george-mark--${s} is not answered under reduced motion`).toContain(
+        `.george-mark--${s}`,
+      );
+    }
+  });
+
+  it('adds no colour in any state — the amendment allows form, never hue', () => {
+    // Every state rule is animation and opacity. A `color:` or a `fill:`
+    // arriving here is orange learning to shout, which is the failure UI
+    // rule 5's mark exemption is bounded against.
+    const rules = css.match(/\.george-mark--\w+\s*\{[^}]*\}/g) ?? [];
+    expect(rules.length).toBeGreaterThanOrEqual(STATES.length);
+    for (const rule of rules) {
+      expect(rule).not.toMatch(/(^|[^-])color\s*:/);
+      expect(rule).not.toMatch(/fill\s*:/);
+    }
   });
 });

@@ -13,6 +13,8 @@
  *
  *   "waiting for the user"    the loop never pauses for input; there is no
  *                             frame for it, so there is no state for it.
+ *   "waiting for the user"    (again, under its other name) an approval
+ *                             pausing a run. Nothing pauses: see below.
  *   "waiting for approval"    a fact about the QUEUE, not about George's
  *                             execution. It is the badge beside the mark
  *                             (approvalState), and it never touches the mark
@@ -35,11 +37,28 @@ export interface PresenceInput {
   /** The stream's own state, from useGeorgeStream. */
   state: GeorgeState;
   composer: ComposerActivity;
+  /**
+   * Complete tool results already landed in the newest turn.
+   *
+   * This is what makes `building` a real state rather than a flattering one:
+   * George is writing an answer AND there are rows on the way to the screen
+   * that the surface will draw. Zero here means the answer is prose over
+   * nothing, and the state stays `answering` — because that is all that is
+   * happening.
+   */
+  figures?: number;
 }
 
+/** States a person typing may interrupt. A turn in flight is a louder fact. */
+const AT_REST = new Set<GeorgeState>(['idle', 'error', 'complete']);
+
 /** The mark's state. Same union the CSS classes are keyed on — no new hue. */
-export function presenceState({ state, composer }: PresenceInput): GeorgeState {
-  if (composer !== 'idle' && (state === 'idle' || state === 'error')) return 'listening';
+export function presenceState({ state, composer, figures = 0 }: PresenceInput): GeorgeState {
+  if (composer !== 'idle' && AT_REST.has(state)) return 'listening';
+  // The answer is being assembled over results that exist. Not a longer
+  // `answering`: the figures are what the reader is waiting for, and they are
+  // the part that arrives last.
+  if (state === 'answering' && figures > 0) return 'building';
   return state;
 }
 
@@ -52,6 +71,14 @@ export interface LiveActivity {
   thinking: string;
   /** How many results have landed in the newest turn — one beat each. */
   toolResults: number;
+  /**
+   * Of those, how many came back WHOLE and so will be drawn.
+   *
+   * A refused call and a result the loop could not send entire both land as
+   * `toolResults` and neither reaches the surface, so counting them would
+   * claim a result was being built out of nothing.
+   */
+  figures: number;
 }
 
 /**
@@ -61,7 +88,9 @@ export interface LiveActivity {
  * done the answer is the narration, and a stopped turn narrates nothing.
  */
 export function liveActivity(turns: GeorgeTurn[]): LiveActivity {
-  const none: LiveActivity = { running: [], lastResult: null, thinking: '', toolResults: 0 };
+  const none: LiveActivity = {
+    running: [], lastResult: null, thinking: '', toolResults: 0, figures: 0,
+  };
   const last = turns[turns.length - 1];
   if (last?.role !== 'george' || last.done || last.cancelled) return none;
 
@@ -78,5 +107,8 @@ export function liveActivity(turns: GeorgeTurn[]): LiveActivity {
       : null,
     thinking: last.thinking,
     toolResults: done.length,
+    figures: done.filter(
+      (c) => !c.result?.error && c.result?.rows_complete && (c.result?.rows?.length ?? 0) > 0,
+    ).length,
   };
 }

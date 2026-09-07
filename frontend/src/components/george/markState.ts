@@ -61,6 +61,10 @@ export const MARK_LABEL: Record<GeorgeState, string> = {
   thinking: 'Thinking',
   running: 'Reading the data',
   answering: 'Answering',
+  // Not "Building" on its own, which says nothing about what: the state is
+  // reached only when whole results have landed, so the label may name them.
+  building: 'Putting the figures together',
+  complete: 'Done',
   error: 'Something went wrong',
 };
 

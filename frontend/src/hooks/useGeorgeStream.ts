@@ -108,6 +108,9 @@ export interface AskOptions {
   parentId?: string | null;
 }
 
+/** How long the mark holds `complete` before settling back to `idle`. */
+export const COMPLETE_SETTLE_MS = 1400;
+
 export function useGeorgeStream() {
   const [turns, setTurns] = useState<GeorgeTurn[]>([]);
   const [state, setState] = useState<GeorgeState>('idle');
@@ -116,6 +119,16 @@ export function useGeorgeStream() {
   const qc = useQueryClient();
 
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  // `complete` settles to `idle` on its own. Long enough to be seen, short
+  // enough that the mark is not still congratulating itself when the next
+  // question is typed — and a new turn clears it early, because the effect
+  // re-runs the moment the state changes.
+  useEffect(() => {
+    if (state !== 'complete') return;
+    const t = setTimeout(() => setState((s) => (s === 'complete' ? 'idle' : s)), COMPLETE_SETTLE_MS);
+    return () => clearTimeout(t);
+  }, [state]);
 
   // `ask` must read the turns as they stand when the user submits, not as they
   // stood when it was last created. A ref rather than a dependency: turns
@@ -416,7 +429,10 @@ export function useGeorgeStream() {
                 patchLast((t) => {
                   t.done = data as unknown as DoneFrame;
                 });
-                setState('idle');
+                // Not straight to idle: a turn that finishes and leaves no
+                // trace looks like one that never ran. `complete` is the
+                // `done` frame and nothing else, and it settles on its own.
+                setState('complete');
                 // The turn is stored now. The river and this thread have two
                 // new posts, and the recent-asks list has a new entry.
                 qc.invalidateQueries({ queryKey: ['river'] });
@@ -444,7 +460,9 @@ export function useGeorgeStream() {
         }
       } finally {
         if (abortRef.current === ctrl) abortRef.current = null;
-        setState((s) => (s === 'error' ? s : 'idle'));
+        // `complete` survives the same way `error` does: both are things that
+        // HAPPENED, and the response body ending is not news about either.
+        setState((s) => (s === 'error' || s === 'complete' ? s : 'idle'));
       }
     },
     [cancel, patchLast, qc, setThread],
@@ -455,7 +473,9 @@ export function useGeorgeStream() {
     state,
     ask,
     cancel,
-    busy: state !== 'idle' && state !== 'error',
+    // `complete` is NOT busy: the answer is finished and the composer must
+    // take the next question immediately, whatever the mark is still doing.
+    busy: state !== 'idle' && state !== 'error' && state !== 'complete',
     threadId,
     open,
     reset,

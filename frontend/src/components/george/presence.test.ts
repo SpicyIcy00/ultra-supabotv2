@@ -7,7 +7,9 @@ import { attentionAccent } from './approvalState';
 import { MARK_LABEL, markClass, markPath, MARK_PATH } from './markState';
 import { liveActivity, presenceState } from './presence';
 
-const STATES: GeorgeState[] = ['idle', 'listening', 'thinking', 'running', 'answering', 'error'];
+const STATES: GeorgeState[] = [
+  'idle', 'listening', 'thinking', 'running', 'answering', 'building', 'complete', 'error',
+];
 
 describe('presenceState', () => {
   it('is the stream state whenever a turn is in flight', () => {
@@ -40,6 +42,28 @@ describe('presenceState', () => {
     }
   });
 
+  it('builds only when whole results have already landed', () => {
+    // The signal is rows on their way to the screen, not a flattering word for
+    // a longer `answering`.
+    expect(presenceState({ state: 'answering', composer: 'idle', figures: 0 })).toBe('answering');
+    expect(presenceState({ state: 'answering', composer: 'idle', figures: 2 })).toBe('building');
+  });
+
+  it('never builds out of a state that is not answering', () => {
+    for (const state of ['thinking', 'running', 'complete', 'idle'] as GeorgeState[]) {
+      expect(presenceState({ state, composer: 'idle', figures: 3 })).not.toBe('building');
+    }
+  });
+
+  it('keeps building while the person types — a turn in flight is the louder fact', () => {
+    expect(presenceState({ state: 'answering', composer: 'drafting', figures: 2 })).toBe('building');
+  });
+
+  it('lets a person interrupt the settle after a finished turn', () => {
+    expect(presenceState({ state: 'complete', composer: 'idle' })).toBe('complete');
+    expect(presenceState({ state: 'complete', composer: 'drafting' })).toBe('listening');
+  });
+
   it('has no input from the approval queue at all', () => {
     // The queue is a badge beside the mark. A count of any size changes
     // nothing here, and the mark's drawing changes only for an error.
@@ -61,7 +85,9 @@ function george(extra: Partial<Extract<GeorgeTurn, { role: 'george' }>> = {}): G
 
 describe('liveActivity', () => {
   it('is empty when there is no turn, or the newest is the person’s', () => {
-    expect(liveActivity([])).toEqual({ running: [], lastResult: null, thinking: '', toolResults: 0 });
+    expect(liveActivity([])).toEqual({
+      running: [], lastResult: null, thinking: '', toolResults: 0, figures: 0,
+    });
     expect(liveActivity([{ role: 'user', text: 'x', at: '' }]).running).toEqual([]);
   });
 
@@ -85,5 +111,36 @@ describe('liveActivity', () => {
     const calls = [{ seq: 1, tool: 'get_sales', arguments: {} }];
     expect(liveActivity([george({ toolCalls: calls, done: { conversation_id: 'c', iterations: 1, tool_calls: 1, status: 'ok', notice_forced: false, usage: { input: 0, output: 0, cache_read: 0 }, cache_hit: false } })]).running).toEqual([]);
     expect(liveActivity([george({ toolCalls: calls, cancelled: true })]).running).toEqual([]);
+  });
+});
+
+describe('liveActivity.figures', () => {
+  const call = (seq: number, over: Record<string, unknown>) => ({
+    seq,
+    tool: 'get_sales',
+    arguments: {},
+    result: {
+      row_count: 1, source_table: 't', truncated: false, duration_ms: 3, error: null,
+      rows: [{ value: 1 }], rows_complete: true, ...over,
+    },
+  });
+
+  it('counts only results that will actually be drawn', () => {
+    const turn = george({
+      toolCalls: [
+        call(1, {}),                                   // whole, drawn
+        call(2, { error: 'refused' }),                 // refused, never drawn
+        call(3, { rows: [], rows_complete: true }),    // empty, not a zero
+        call(4, { rows_complete: false, rows: [] }),   // could not be sent whole
+      ] as never,
+    });
+    const live = liveActivity([turn]);
+    expect(live.toolResults).toBe(4);
+    expect(live.figures).toBe(1);
+  });
+
+  it('is zero for a turn whose calls all failed, so nothing claims to be building', () => {
+    const turn = george({ toolCalls: [call(1, { error: 'refused' })] as never });
+    expect(liveActivity([turn]).figures).toBe(0);
   });
 });

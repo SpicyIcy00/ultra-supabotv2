@@ -261,6 +261,21 @@ body {
   animation: george-settle 400ms cubic-bezier(0.2, 0.7, 0.3, 1) both,
              george-breathe-answering 4.5s 400ms ease-in-out infinite;
 }
+/* Building: the answer is being assembled over results that have landed. A
+   half-beat quicker than answering and no larger — the difference has to be
+   felt rather than watched, or the mark starts performing. */
+.george-mark--building {
+  animation: george-breathe-answering 3s ease-in-out infinite;
+}
+
+/* Complete: one settle, once, and then nothing. It does not loop, because a
+   finished turn is not an activity — the mark holds still and the state
+   returns to idle on its own (COMPLETE_SETTLE_MS). No flash, no colour
+   change, no tick: an answer arriving is its own confirmation. */
+.george-mark--complete {
+  animation: george-settle 500ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
 /* Error moves not at all. It dims, and the path itself gaps a petal — form,
    never hue: no orange is added or intensified here (UI rule 5 amendment). */
 .george-mark--error     { animation: none; opacity: 0.45; }
@@ -278,6 +293,11 @@ body {
   .george-mark--idle,
   .george-mark--answering,
   .george-mark-pulse { animation: none; }
+  /* Building keeps the fade for the same reason answering does — it is a
+     state a reader sits with. Complete is a one-shot settle, which is
+     motion for its own sake here, so it simply does not happen. */
+  .george-mark--building { animation: george-mark-fade 3.5s ease-in-out infinite; }
+  .george-mark--complete { animation: none; }
   /* Answering keeps the fade rather than nothing at all: it is the state a
      reader sits with longest, and stillness there is indistinguishable from
      a stalled turn. */
