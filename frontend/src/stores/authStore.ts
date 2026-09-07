@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { queryClient } from '../services/queryClient';
 
 export interface AuthUser {
   id: string;
@@ -10,6 +11,7 @@ export interface AuthUser {
 }
 
 interface AuthState {
+  sessionRevision: number;
   token: string | null;
   user: AuthUser | null;
 
@@ -27,14 +29,22 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       token: null,
       user: null,
+      sessionRevision: 0,
 
-      setSession: (token, user) => set({ token, user }),
+      setSession: (token, user) => {
+        // clear() cancels existing queries and removes mutations as well as data.
+        queryClient.clear();
+        set({ token, user, sessionRevision: get().sessionRevision + 1 });
+      },
 
       // Refreshed from /auth/me on load so a revoked page disappears without
       // the user having to log out and back in.
       setUser: (user) => set({ user }),
 
-      logout: () => set({ token: null, user: null }),
+      logout: () => {
+        queryClient.clear();
+        set({ token: null, user: null, sessionRevision: get().sessionRevision + 1 });
+      },
 
       isLoggedIn: () => Boolean(get().token && get().user),
 
@@ -42,6 +52,6 @@ export const useAuthStore = create<AuthState>()(
 
       isAdmin: () => get().user?.role === 'admin',
     }),
-    { name: 'supabot_auth' },
+    { name: 'supabot_auth', partialize: ({ token, user }) => ({ token, user }) },
   ),
 );

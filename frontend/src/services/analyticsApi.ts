@@ -2,7 +2,7 @@
  * Analytics API Client
  * Typed axios client for analytics endpoints
  */
-import axios, { type AxiosError } from 'axios';
+import { createAuthenticatedClient } from './httpAuth';
 import type {
   SalesByHourResponse,
   SalesByHourParams,
@@ -16,7 +16,7 @@ import type {
 } from '../types/analytics';
 
 // Use relative URL to leverage Vercel rewrite proxy (avoids CORS)
-const api = axios.create({
+const api = createAuthenticatedClient({
   baseURL: '/api/v1',
   timeout: 30000,
   headers: {
@@ -26,50 +26,6 @@ const api = axios.create({
     indexes: null, // This makes axios serialize arrays as `param=value1&param=value2` instead of `param[]=value1`
   },
 });
-
-// Request interceptor for auth tokens
-api.interceptors.request.use(
-  (config) => {
-    // Add JWT token if available
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Response interceptor for error handling
-api.interceptors.response.use(
-  (response) => response,
-  async (error: AxiosError) => {
-    const originalRequest = error.config;
-
-    // Handle 401 Unauthorized
-    if (error.response?.status === 401 && originalRequest) {
-      // Clear token and redirect to login
-      localStorage.removeItem('auth_token');
-      window.location.href = '/login';
-      return Promise.reject(error);
-    }
-
-    // Retry logic for network errors
-    if (
-      !error.response &&
-      originalRequest &&
-      !(originalRequest as any)._retry
-    ) {
-      (originalRequest as any)._retry = true;
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      return api(originalRequest);
-    }
-
-    return Promise.reject(error);
-  }
-);
 
 /**
  * Analytics API Service

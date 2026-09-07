@@ -1,3 +1,4 @@
+import { authenticatedFetch } from './httpAuth';
 /**
  * Chatbot API Service
  * Handles communication with the chatbot backend
@@ -12,7 +13,7 @@ const API_BASE_URL = '/api/v1/chatbot';
  * Stream query with Server-Sent Events
  */
 export async function* streamChatQuery(request: ChatRequest): AsyncGenerator<ChatEvent> {
-  const response = await fetch(`${API_BASE_URL}/query/stream`, {
+  const response = await authenticatedFetch(`${API_BASE_URL}/query/stream`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -68,7 +69,7 @@ export async function* streamChatQuery(request: ChatRequest): AsyncGenerator<Cha
  * Query chatbot without streaming (simple request-response)
  */
 export async function queryChatbot(request: ChatRequest): Promise<any> {
-  const response = await fetch(`${API_BASE_URL}/query`, {
+  const response = await authenticatedFetch(`${API_BASE_URL}/query`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -88,7 +89,7 @@ export async function queryChatbot(request: ChatRequest): Promise<any> {
  * Submit feedback on a query result
  */
 export async function submitFeedback(feedback: FeedbackRequest): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/feedback`, {
+  const response = await authenticatedFetch(`${API_BASE_URL}/feedback`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -105,7 +106,7 @@ export async function submitFeedback(feedback: FeedbackRequest): Promise<void> {
  * Get suggested questions
  */
 export async function getSuggestions(): Promise<SuggestionResponse> {
-  const response = await fetch(`${API_BASE_URL}/suggestions`);
+  const response = await authenticatedFetch(`${API_BASE_URL}/suggestions`);
 
   if (!response.ok) {
     throw new Error('Failed to fetch suggestions');
@@ -118,7 +119,7 @@ export async function getSuggestions(): Promise<SuggestionResponse> {
  * Get circuit breaker status
  */
 export async function getStatus(): Promise<any> {
-  const response = await fetch(`${API_BASE_URL}/status`);
+  const response = await authenticatedFetch(`${API_BASE_URL}/status`);
 
   if (!response.ok) {
     throw new Error('Failed to fetch status');

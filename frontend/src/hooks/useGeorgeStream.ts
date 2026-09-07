@@ -17,7 +17,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAuthStore } from '../stores/authStore';
+import { authenticatedFetch } from '../services/httpAuth';
 import type { ChatDetail } from '../types/chats';
 import { toGeorgeTurns } from '../types/chats';
 import type {
@@ -83,8 +83,9 @@ export function useGeorgeStream() {
   const [state, setState] = useState<GeorgeState>('idle');
   const [threadId, setThreadId] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const token = useAuthStore((s) => s.token);
   const qc = useQueryClient();
+
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   // `ask` must read the turns as they stand when the user submits, not as they
   // stood when it was last created. A ref rather than a dependency: turns
@@ -178,10 +179,10 @@ export function useGeorgeStream() {
 
       try {
         await fetchEventSource(`${API_BASE}/george/ask`, {
+          fetch: authenticatedFetch,
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           // page_context, not user_id: who is asking comes from the bearer
           // token on the server. Sending the page in the user_id field (as this
@@ -356,7 +357,7 @@ export function useGeorgeStream() {
         setState((s) => (s === 'error' ? s : 'idle'));
       }
     },
-    [patchLast, qc, setThread, token],
+    [patchLast, qc, setThread],
   );
 
   return {

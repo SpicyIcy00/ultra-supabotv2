@@ -1,3 +1,4 @@
+import { authenticatedFetch } from '../services/httpAuth';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getVendingMachineColor } from '../constants/colors';
@@ -49,7 +50,7 @@ export const useVendingStore = create<VendingState>()(
         try {
           // Use relative URL to leverage Vercel rewrite proxy (avoids CORS)
           const apiUrl = '/api/v1';
-          const response = await fetch(`${apiUrl}/vending/devices`);
+          const response = await authenticatedFetch(`${apiUrl}/vending/devices`);
           if (!response.ok) throw new Error('Failed to fetch vending devices');
 
           const devices: VendingDevice[] = await response.json();

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import { createAuthenticatedClient } from '../services/httpAuth';
 import { useDashboardStore } from '../stores/dashboardStore';
 import { useVendingStore } from '../stores/vendingStore';
 import {
@@ -11,7 +11,7 @@ import {
 // Use relative URL to leverage Vercel rewrite proxy (avoids CORS)
 const API_BASE_URL = '/api/v1';
 
-const api = axios.create({
+const api = createAuthenticatedClient({
   baseURL: API_BASE_URL,
   timeout: 30000,
   paramsSerializer: {
