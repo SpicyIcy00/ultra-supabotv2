@@ -25,37 +25,34 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PanelRight } from 'lucide-react';
 import { useGeorgeStream } from '../hooks/useGeorgeStream';
+import { useRiver } from '../hooks/useRiver';
 import { GeorgeConversation } from '../components/george/GeorgeConversation';
 import { GeorgeInput } from '../components/george/GeorgeInput';
 import { RiverFeed } from '../components/george/RiverFeed';
 import { StatusBand } from '../components/george/StatusBand';
 import { SidePanel } from '../components/george/SidePanel';
 import { approvalsView } from '../components/george/approvalState';
+import { riverMerge } from '../components/george/riverMerge';
 import type { StatusQuery } from '../components/george/statusState';
 import { listApprovals } from '../services/workflowsApi';
-import { readRiver, sharePost } from '../services/riverApi';
+import { sharePost } from '../services/riverApi';
 import { readStatus } from '../services/statusApi';
 
 export default function RiverPage() {
   const { turns, state, ask, cancel, busy } = useGeorgeStream();
   const qc = useQueryClient();
   const [panelOpen, setPanelOpen] = useState(false);
-  const [before, setBefore] = useState<string | null>(null);
   const [sharingId, setSharingId] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  /** One continuous timeline, growing upward. See hooks/useRiver.ts. */
+  const river = useRiver();
+
   /**
-   * The river. Refetched on focus because it is a shared timeline: George
-   * posts into it while nobody is looking, and other people post into it too.
-   * That is the opposite of the greeting's staleTime: Infinity, and for the
-   * opposite reason.
+   * The stored posts, and the live turns the river does not hold yet. By post
+   * id and nothing else — see riverMerge.ts for the invariant.
    */
-  const river = useQuery({
-    queryKey: ['river', before],
-    queryFn: () => readRiver(before),
-    staleTime: 20_000,
-    refetchOnWindowFocus: true,
-  });
+  const merged = useMemo(() => riverMerge(river.posts, turns), [river.posts, turns]);
 
   const status = useQuery({
     queryKey: ['george-status'],
@@ -120,18 +117,10 @@ export default function RiverPage() {
   }, [turns]);
 
   /**
-   * Ask, then refresh the river — the turn wrote two posts, and the timeline
-   * is where they live. The optimistic copy on screen is the live turn; the
-   * refetch reconciles it with what was stored.
+   * Ask. The hook refetches the river on `done`; the live turn stays drawn
+   * until the refetch returns the stored copy's ids, then drops (riverMerge).
    */
-  const onAsk = useCallback(
-    async (question: string) => {
-      await ask(question);
-      qc.invalidateQueries({ queryKey: ['river'] });
-      qc.invalidateQueries({ queryKey: ['george-status'] });
-    },
-    [ask, qc],
-  );
+  const onAsk = useCallback((question: string) => void ask(question), [ask]);
 
   /**
    * Share, then refetch.
@@ -175,12 +164,12 @@ export default function RiverPage() {
         <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 md:px-6">
           <div className="mx-auto max-w-3xl">
             <RiverFeed
-              posts={river.data?.posts ?? []}
-              loading={river.isPending}
-              error={river.isError ? 'The timeline could not be read.' : null}
-              hasOlder={Boolean(river.data?.before)}
-              onLoadOlder={() => setBefore(river.data?.before ?? null)}
-              loadingOlder={river.isFetching}
+              posts={merged.posts}
+              loading={river.loading}
+              error={river.error ? 'The timeline could not be read.' : null}
+              hasOlder={river.hasOlder}
+              onLoadOlder={river.loadOlder}
+              loadingOlder={river.loadingOlder}
               onAsk={onAsk}
               onOpenThread={(id) => navigate(`/george/t/${id}`)}
               onShare={onShare}
@@ -191,10 +180,10 @@ export default function RiverPage() {
                 and the same shape as a stored one — it is happening now and is
                 not yet something anyone else can see, but it is the same kind
                 of thing. Its avatar is the one animated mark on the page. */}
-            {turns.length > 0 && (
+            {merged.pending.length > 0 && (
               <div className="mt-5 space-y-5">
                 <GeorgeConversation
-                  turns={turns}
+                  turns={merged.pending}
                   busy={busy}
                   showEmptyState={false}
                   state={state}
