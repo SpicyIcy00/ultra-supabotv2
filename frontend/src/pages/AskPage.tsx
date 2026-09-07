@@ -90,7 +90,6 @@ function EmptyAsk() {
           <div className="mt-10 w-full max-w-xl">
             <AskComposer
               bare
-              autoFocus
               onAsk={onAsk}
               onCancel={cancel}
               busy={busy}
