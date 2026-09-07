@@ -115,7 +115,10 @@ const navItems = [
   // Dashboard owns two tabs: Stores (/) and Vending (/vending)
   { to: '/dashboard', page: 'dashboard', icon: navIcons.dashboard, label: 'Dashboard', match: (p: string) => p === '/dashboard' || p === '/vending' },
   { to: '/analytics', page: 'analytics', icon: navIcons.analytics, label: 'Analytics', match: (p: string) => p === '/analytics' },
-  { to: '/ai-chat', page: 'ai_chat', icon: navIcons.chat, label: 'AI Chat', match: (p: string) => p === '/ai-chat' },
+  // Kept, reachable, and named as what it is. George is the AI interface now;
+  // this is the older one, and it is not removed because people may still be
+  // using it and its route is somebody's bookmark.
+  { to: '/ai-chat', page: 'ai_chat', icon: navIcons.chat, label: 'AI Chat (legacy)', match: (p: string) => p === '/ai-chat' },
   // George's own shell. This link leaves the legacy chrome; the shell's
   // Operations group is the way back. It carries the page it was clicked
   // from, so a question asked next arrives with that page as context.

@@ -20,10 +20,20 @@ describe('the two groups', () => {
 
   it('keeps every operational page reachable, filtered by access', () => {
     expect(OPERATIONS.map((i) => i.page)).toEqual(
-      ['dashboard', 'analytics', 'ai_chat', 'warehouse', 'packing', 'settings', 'admin'],
+      ['dashboard', 'analytics', 'warehouse', 'packing', 'settings', 'admin'],
     );
     expect(operationsFor(['packing']).map((i) => i.label)).toEqual(['Packing']);
     expect(operationsFor([])).toEqual([]);
+  });
+
+  it('does not offer the legacy chatbot inside George', () => {
+    // The old NL->SQL chatbot generates freehand SQL from a schema prompt —
+    // the pattern George's architecture rules forbid — and two answering
+    // machines a word apart, one of which cannot show a receipt, is a trap.
+    // The ROUTE is untouched: it is reachable from the legacy chrome, its
+    // page key still grants it, and nothing in George reads it.
+    expect(OPERATIONS.some((i) => i.path === '/ai-chat')).toBe(false);
+    expect(operationsFor(['ai_chat'])).toEqual([]);
   });
 
   it('shows nobody a link they cannot open', () => {

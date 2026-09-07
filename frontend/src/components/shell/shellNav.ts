@@ -39,12 +39,25 @@ export const PRIMARY: NavItem[] = [
   { label: 'Workflows', path: '/workflows', page: 'george', matches: under('/workflows') },
 ];
 
-/** The existing application, kept whole. Same keys the legacy sidebar uses. */
+/**
+ * The existing application, kept whole. Same keys the legacy sidebar uses.
+ *
+ * AI CHAT IS NOT HERE, AND ITS ROUTE STILL IS. The legacy NL->SQL chatbot
+ * generates freehand SQL from a schema prompt — the exact pattern George's
+ * architecture rules forbid — and offering it inside George's own environment
+ * would put two answering machines a word apart, one of which cannot show a
+ * receipt. Nothing in George reads it: no store, no service and no component
+ * outside AIChatPage itself touches it.
+ *
+ * So it is removed from THIS list only. /ai-chat still resolves, the page
+ * still works, the `ai_chat` page key still grants it, and the legacy chrome
+ * still links to it under its own name. Anyone who relies on it keeps it;
+ * George simply does not offer it as one of his own.
+ */
 export const OPERATIONS: NavItem[] = [
   { label: 'Dashboard', path: '/dashboard', page: 'dashboard',
     matches: (p) => p === '/dashboard' || p === '/vending' },
   { label: 'Analytics', path: '/analytics', page: 'analytics', matches: under('/analytics') },
-  { label: 'AI Chat', path: '/ai-chat', page: 'ai_chat', matches: under('/ai-chat') },
   { label: 'Warehouse', path: '/warehouse', page: 'warehouse', matches: under('/warehouse') },
   { label: 'Packing', path: '/packing', page: 'packing', matches: under('/packing') },
   { label: 'Settings', path: '/settings', page: 'settings', matches: under('/settings') },
