@@ -228,6 +228,49 @@ A pin re-runs; a save is the rule it re-runs. "Bookmark", "widget", "card",
 "favourite" and "snapshot" are not other names for these — if one of them seems
 needed, the concept is probably wrong.
 
+*Amended 2026-09-07, Persistence V1: **a page is still derived from its pins,
+and that is a decision, not a gap.*** There is no `george.pages` table. A page
+is the `page` column on `george.pins`, grouped; it comes into being when the
+first useful result is pinned to its name, and it cannot be empty, because a
+page that says nothing is not a workspace. What was added is **membership as a
+write**: a pin can be moved between pages, off a page (`page = null`, which is
+how a pin leaves a page WITHOUT being deleted — Remove still deletes, and there
+is no second removal verb), or retitled, and a page can be renamed, which is
+every pin of the caller's on that exact name changing its label in one
+statement. Both live in [pin_writer.py](backend/app/services/pin_writer.py)
+beside `create_pin`, so a writer injected into the loop later ("put this on
+Purchasing", "create a page for Fame") calls what the button calls today, and
+the page-name rule — trim, collapse, keep case, refuse a case-only collision
+with another page — is one function applied on every route. A move re-runs
+nothing: membership is not a figure. River posts that named the old page stay
+as written. Reorder is deferred; it needs a position column and this branch
+adds no migration.
+
+Three things would force a pages table, and none has arrived: a page-level
+description or purpose that is not derivable from its pins' titles; a page
+shared or owned at org level (pins are per person, so pages are); or an empty
+page. Until one does, a table would be a second source of truth for a fact the
+pins already carry.
+
+*Two more facts from the same milestone, recorded because the code cannot say
+why.* **A pinned tile draws every result its run brought back**, through
+`resultShape` like an answer does, and names what did not reproduce above
+them; until this date it drew the first result only, so a pin of three figures
+showed one. And **a stored answer keeps the calls behind it**: the loop writes
+`calls` beside the charted snapshot — every read call that ran without error,
+with the arguments the tool accepted, and nothing reconstructed — so a post can
+be pinned after a reload. A post without complete calls (every post before this
+date) offers no Pin, and the client never fills one in from rows or prose: an
+invented call is the one thing a pin must never hold
+([postShape.ts](frontend/src/components/george/postShape.ts), `storedCalls`).
+
+**"Ask George about this page…"** at the foot of a page hands the question to
+Ask with the page's NAME as context and nothing else. George cannot read a
+page's pins — they live in a schema `george_ro` cannot see — so the context
+names where the person is, not what is on the page. Page-aware George is a
+later capability through an injected reader, and it is not manufactured with
+words in the meantime.
+
 *Amended 2026-09-05: **Chat is retired**, and Post and Thread replace it.* Chat
 was defined here on 2026-09-04 as "a session: one thread of turns, one person's,
 reopened and continued from `george.conversations`". The word carried three
