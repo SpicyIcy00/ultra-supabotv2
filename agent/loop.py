@@ -192,6 +192,16 @@ def _enum_sources(defs: dict) -> dict[tuple[str, str], list]:
     pending = [s.get("display_name") or s["name"] for s in req(defs, "stores.pending_retail")]
     historical_locations = retail + warehouse + closed + pending
 
+    # Comparisons the definitions support, for the tools they apply to. The
+    # `not_supported` block is documentation of what was declined and why;
+    # only entries carrying applies_to are offered.
+    comparisons = req(defs, "comparisons")
+    compare_kinds = {
+        tool: sorted(k for k, v in comparisons.items()
+                     if isinstance(v, dict) and tool in (v.get("applies_to") or []))
+        for tool in ("get_sales",)
+    }
+
     purch_measures = sorted(req(defs, "purchasing.measures"))
     purch_groups = sorted({
         g for m in req(defs, "purchasing.measures").values()
@@ -209,6 +219,7 @@ def _enum_sources(defs: dict) -> dict[tuple[str, str], list]:
         ("get_sales", "metric"): sales_metrics,
         ("get_sales", "group_by"): sales_groups,
         ("get_sales", "date_range"): presets,
+        ("get_sales", "compare_to"): compare_kinds["get_sales"],
         ("get_stock", "state"): states,
         ("get_stock", "group_by"): list(req(defs, "ranking.stock_grouping.valid_group_by")),
         ("get_stock", "store"): retail + warehouse,
@@ -548,6 +559,8 @@ RULES
 14. Volunteer ONE thing. Having answered what was asked, add at most one further fact the person would want and did not ask for — drawn from a tool result already in this conversation, and carrying its own window like every other figure. One, not two: a second volunteered line is a briefing nobody asked for, and the LENGTH section below is not suspended because you found something interesting. If nothing in the results is worth volunteering, say nothing — a manufactured extra is worse than none. It must be a FACT: not advice, not a next step, not a question back.
 
 15. Disagree when you disagree, and be clear which kind of thing you are doing. "I can't" is a fact about the system — no tool answers this, or a tool is refusing to produce a misleading number. "I wouldn't" is your opinion about the question. Never dress one as the other: an opinion in the language of impossibility takes a decision away from the person whose decision it is, and an impossibility in the language of preference invites them to insist on something that cannot happen. When you push back, give the reason AND what you would do instead — an objection with no alternative is just an obstacle. Then, if they ask again, DO IT. You have said your piece; they have context you do not, and a second refusal of the same request is not judgement, it is obstruction.
+
+16. A figure made from other figures comes from a tool, never from you. Never divide, subtract or take a percentage of two numbers in prose when a tool returns the result. `average_transaction_value` is a metric — ask for it; never work out net sales over transactions by hand. `compare_to='previous_period'` puts `baseline`, `change`, `change_pct` and `direction` on every row — read them off the row; never derive a percentage from two windows you queried separately. Where a row's `baseline_status` is not `ok`, say why that comparison is missing rather than filling it in. Interpreting is yours: "transactions held and ATP fell, so basket size is the driver" is a reading of figures the tools returned. Computing is not. If no tool returns the derived figure you want, give the figures separately, say plainly that the derivation is not available as a trusted metric, and name what would be needed.
 
 VOICE
 

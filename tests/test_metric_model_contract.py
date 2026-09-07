@@ -262,3 +262,67 @@ def test_the_sales_schema_offers_the_derived_metric():
 
     schema = next(s for s in george_loop.build_tool_schemas() if s["name"] == "get_sales")
     assert "average_transaction_value" in schema["input_schema"]["properties"]["metric"]["enum"]
+
+
+# ---------------------------------------------------------------------------
+# Comparisons reach the model as a closed vocabulary, and the prompt says
+# what the model may and may not compute
+# ---------------------------------------------------------------------------
+
+def _george_loop():
+    pytest.importorskip("psycopg")
+    pytest.importorskip("anthropic")
+    from agent import loop as george_loop
+    return george_loop
+
+
+def test_the_sales_schema_offers_exactly_the_supported_comparisons():
+    schema = next(s for s in _george_loop().build_tool_schemas() if s["name"] == "get_sales")
+    prop = schema["input_schema"]["properties"]["compare_to"]
+    assert prop["enum"] == ["previous_period"]
+    assert "compare_to" not in schema["input_schema"]["required"]
+    # What was declined is documentation, never a choice offered.
+    for declined in req(DEFS, "comparisons.not_supported"):
+        assert declined not in prop["enum"]
+
+
+def test_no_other_tool_offers_a_comparison_yet():
+    for s in _george_loop().build_tool_schemas():
+        if s["name"] != "get_sales":
+            assert "compare_to" not in s["input_schema"]["properties"], s["name"]
+
+
+def test_a_pin_may_hold_a_comparison():
+    """compare_to is an ordinary argument, so a compared figure can be a tile."""
+    pytest.importorskip("sqlalchemy")
+    from app.services.pin_runner import validate_call
+    name, args = validate_call({"tool": "get_sales", "arguments": {
+        "group_by": "store", "date_range": "last_week", "metric": "net_sales",
+        "compare_to": "previous_period",
+    }})
+    assert args["compare_to"] == "previous_period"
+
+
+def test_a_pin_cannot_hold_a_comparison_the_definitions_do_not_support():
+    pytest.importorskip("sqlalchemy")
+    from app.services.pin_runner import PinValidationError, validate_call
+    with pytest.raises(PinValidationError, match="no longer a valid value"):
+        validate_call({"tool": "get_sales", "arguments": {
+            "group_by": [], "date_range": "last_week", "metric": "net_sales",
+            "compare_to": "same_period_last_year",
+        }})
+
+
+def test_the_prompt_forbids_computing_what_a_tool_returns():
+    """
+    Rule 16. This is a PROMPT rule held by a test, and that is the extent of
+    the enforcement: nothing checks numerals in prose against rows
+    (metrics.yaml volunteering says so). The rule is in the words George is
+    given, the tools return the figures, and the tests keep both true.
+    """
+    prompt = _george_loop().SYSTEM_PROMPT
+    assert "16." in prompt
+    assert "average_transaction_value" in prompt
+    assert "compare_to='previous_period'" in prompt
+    assert "baseline_status" in prompt
+    assert "never from you" in prompt.lower() or "never derive" in prompt.lower()
