@@ -27,8 +27,8 @@
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ChevronRight, Pin as PinIcon } from 'lucide-react';
-import type { GeorgeState, GeorgeTurn, PinnedFrame, ToolCall } from '../../types/george';
+import { ChevronRight, Pin as PinIcon, Save as SaveIcon } from 'lucide-react';
+import type { GeorgeState, GeorgeTurn, PinnedFrame, SavedFrame, ToolCall } from '../../types/george';
 import { liveCognition, type LastResult } from './cognition';
 import { markClass, markDetail, markPath } from './markState';
 import { GeorgeChart } from './GeorgeChart';
@@ -139,8 +139,14 @@ export function GeorgeConversation({
               </p>
             )}
 
+            {turn.cancelled && <StoppedNote turn={turn} />}
+
             {turn.pinned.map((p) => (
               <PinnedNote key={p.pin_id} pin={p} />
+            ))}
+
+            {turn.saved.map((s) => (
+              <SavedNote key={`${s.workflow_id}-${s.version}`} saved={s} />
             ))}
 
             {/* The turn-level receipts are the LAST tool's meta — a lossy
@@ -240,6 +246,54 @@ function PinnedNote({ pin }: { pin: PinnedFrame }) {
         )}
         . The tile re-runs {n === 1 ? 'its call' : `its ${n} calls`} each time it loads.
       </span>
+    </p>
+  );
+}
+
+/**
+ * A workflow George saved because he was asked to, in conversation.
+ *
+ * Confirmed from the `saved` frame, not from the answer's wording — the same
+ * reason PinnedNote reads the `pinned` frame. What it says is the one thing
+ * the prose has been caught getting wrong: a saved version is NOT a scheduled
+ * one. It waits in the approval queue, which is where "needs you" lives, so
+ * nothing here wears the approvals colour (UI rule 5).
+ */
+function SavedNote({ saved }: { saved: SavedFrame }) {
+  const n = saved.steps.length;
+  return (
+    <p className="flex items-start gap-1.5 rounded-lg border border-george-line bg-george-paper px-3 py-2 text-[12px] leading-relaxed text-george-slate">
+      <SaveIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+      <span>
+        Saved <span className="text-george-navy">“{saved.name}”</span> as version{' '}
+        <span className="tabular-nums text-george-navy">{saved.version}</span>
+        {n > 0 && ` with ${n === 1 ? 'one step' : `${n} steps`}`}.{' '}
+        {saved.awaiting_promotion
+          ? 'It runs when asked; it will not run unattended until an administrator promotes it.'
+          : 'It is promoted.'}
+      </span>
+    </p>
+  );
+}
+
+/**
+ * The person stopped this turn.
+ *
+ * WHAT IS KNOWN, AND ONLY THAT. The request was aborted before `done`, so the
+ * text above is where George got to and not what he concluded. Whether the
+ * server carried on and stored the turn is not known here — no `post` frame
+ * arrived — so the note says the answer MAY appear in the thread, and never
+ * that it was or was not saved.
+ *
+ * Quiet chrome, navy on paper: stopping needs nobody (UI rule 5).
+ */
+function StoppedNote({ turn }: { turn: Extract<GeorgeTurn, { role: 'george' }> }) {
+  const said = turn.text.trim().length > 0 || turn.toolCalls.length > 0;
+  return (
+    <p className="rounded-lg border border-george-line bg-george-paper px-3 py-2 text-[12px] leading-relaxed text-george-slate">
+      <span className="text-george-navy">Stopped</span>
+      {said ? ' before George finished — this is where he got to, not an answer.' : '.'}{' '}
+      If he completed it anyway, the answer will appear in the thread.
     </p>
   );
 }

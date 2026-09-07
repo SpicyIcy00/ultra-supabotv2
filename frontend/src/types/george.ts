@@ -139,6 +139,25 @@ export interface Greeting {
   follow_ups: FollowUp[];
 }
 
+/**
+ * A workflow George saved because he was asked to, in conversation.
+ *
+ * Same reasoning as PinnedFrame: a write that happened is a fact, and the UI
+ * confirms it from the frame rather than from the model's wording. A saved
+ * workflow is NOT a scheduled one — `awaiting_promotion` says it sits in the
+ * approval queue, which is where "needs you" lives.
+ */
+export interface SavedFrame {
+  workflow_id: string;
+  name: string;
+  version: number;
+  steps: { name?: string; tool?: string }[];
+  parameters: { name?: string }[];
+  scheduled: boolean | null;
+  awaiting_promotion: boolean;
+  queue: string | null;
+}
+
 export type GeorgeTurn =
   | { role: 'user'; text: string; at: string }
   | {
@@ -149,10 +168,24 @@ export type GeorgeTurn =
       notices: GeorgeNotice[];
       /** Pins created during this turn, in the order they were made. */
       pinned: PinnedFrame[];
+      /** Workflows saved during this turn, in the order they were made. */
+      saved: SavedFrame[];
       /** meta of the last tool result — the receipts shown under the answer. */
       receipts?: ToolMeta;
+      /**
+       * The turn's posts in the river, from the `post` frame. Absent until the
+       * frame arrives; absent for good on a turn that was stopped before it.
+       * The ONLY key a live turn may be reconciled with a stored post by.
+       */
+      post?: PostFrame;
       done?: DoneFrame;
       error?: string;
+      /**
+       * True when the person stopped the turn. A stopped turn has no `done`
+       * and no `post`, and must never be drawn as a finished answer: what is on
+       * screen is where George got to, not what he concluded.
+       */
+      cancelled?: boolean;
       at: string;
     };
 

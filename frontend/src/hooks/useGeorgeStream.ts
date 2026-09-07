@@ -7,19 +7,34 @@
  * a retrying agent loop would silently re-ask the question and bill for it
  * again, so a dropped connection surfaces as an error instead.
  *
- * CHATS ARE SESSIONS. The hook holds the id of the chat the turns belong to
- * (`threadId`): the server hands it back in the `start` frame of the first
- * question and every later question sends it, so the turns land in one thread
- * of george.conversations instead of one unrelated row per request. `open`
- * loads a stored chat into the same `turns` state, so a reopened chat and a
- * live one are rendered by one component and continued by one `ask`.
+ * THREADS, NOT SESSIONS. The hook holds the id of the thread the turns belong
+ * to: the server hands it back in the `start` frame of the first question and
+ * every later question sends it, so the turns land in one thread rather than
+ * one unrelated row per request. `open` loads stored turns into the same
+ * `turns` state, so a reopened thread and a live one are rendered by one
+ * component and continued by one `ask`.
+ *
+ * ONE OWNER, ABOVE THE ROUTES. This hook is mounted once, in
+ * GeorgeStreamProvider, so an answer keeps arriving while the person moves
+ * from Ask to Inbox and back. That is persistent ownership of a live HTTP
+ * response and nothing more: the backend has no background job, and if the
+ * provider unmounts (logout) the request is aborted like any other.
+ *
+ * TWO FRAMES THE CLIENT USED TO DROP. `post` names the two posts the turn
+ * wrote — the only key a live turn may ever be reconciled with the river by.
+ * `saved` confirms a workflow write from the write itself rather than from
+ * the model's prose, exactly as `pinned` does for a pin.
+ *
+ * STOPPING IS A STATE, NOT A SILENCE. Cancelling used to abort the request and
+ * leave the half-written turn on screen with nothing to say it was cut off,
+ * so a stopped answer looked like a finished one. The turn is now marked
+ * `cancelled`; whether the server went on to finish and store it is unknown
+ * from here, and the UI says exactly that.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { useQueryClient } from '@tanstack/react-query';
 import { authenticatedFetch } from '../services/httpAuth';
-import type { ChatDetail } from '../types/chats';
-import { toGeorgeTurns } from '../types/chats';
 import type {
   AskHistoryTurn,
   DoneFrame,
@@ -27,6 +42,8 @@ import type {
   GeorgeState,
   GeorgeTurn,
   PinnedFrame,
+  PostFrame,
+  SavedFrame,
   ToolCall,
   ToolMeta,
 } from '../types/george';
@@ -51,6 +68,8 @@ const MAX_HISTORY_TURNS = 20;
 /** Thrown to stop fetchEventSource retrying — see FatalError in its docs. */
 class GeorgeStreamError extends Error {}
 
+type GeorgeAnswerTurn = Extract<GeorgeTurn, { role: 'george' }>;
+
 /**
  * The conversation so far, in the shape /george/ask takes.
  *
@@ -60,11 +79,11 @@ class GeorgeStreamError extends Error {}
  *
  * Only calls that came back WITHOUT an error are included. A call that refused
  * produced no result the user ever saw, and pinning it would make a tile out of
- * something nobody read. The same filter applies to a reopened chat: its
+ * something nobody read. The same filter applies to a reopened thread: its
  * stored calls carry their error field for display, and are excluded here on
  * the same grounds.
  */
-function toHistory(turns: GeorgeTurn[]): AskHistoryTurn[] {
+export function toHistory(turns: GeorgeTurn[]): AskHistoryTurn[] {
   return turns.slice(-MAX_HISTORY_TURNS).map((t) =>
     t.role === 'user'
       ? { role: 'user' as const, text: t.text, tool_calls: [] }
@@ -76,6 +95,17 @@ function toHistory(turns: GeorgeTurn[]): AskHistoryTurn[] {
             .map((c) => ({ tool: c.tool, arguments: c.arguments })),
         },
   );
+}
+
+/** What `ask` accepts beside the question. */
+export interface AskOptions {
+  /** The page the person is asking from — George receives it as context. */
+  pageContext?: string | null;
+  /**
+   * The post this question replies to, inside the current thread. Only
+   * meaningful when a thread is open; the server validates it is in the thread.
+   */
+  parentId?: string | null;
 }
 
 export function useGeorgeStream() {
@@ -104,16 +134,17 @@ export function useGeorgeStream() {
   }, []);
 
   /** Mutate the in-flight george turn (always the last one). */
-  const patchLast = useCallback((fn: (t: Extract<GeorgeTurn, { role: 'george' }>) => void) => {
+  const patchLast = useCallback((fn: (t: GeorgeAnswerTurn) => void) => {
     setTurns((prev) => {
       const next = [...prev];
       const last = next[next.length - 1];
       if (last?.role !== 'george') return prev;
-      const copy = {
+      const copy: GeorgeAnswerTurn = {
         ...last,
         toolCalls: [...last.toolCalls],
         notices: [...last.notices],
         pinned: [...last.pinned],
+        saved: [...last.saved],
       };
       fn(copy);
       next[next.length - 1] = copy;
@@ -121,13 +152,27 @@ export function useGeorgeStream() {
     });
   }, []);
 
+  /**
+   * Stop the turn in flight.
+   *
+   * The turn stays on screen — what George had said so far is still what he
+   * said — but it is marked cancelled so it can never be drawn as a finished
+   * answer. Nothing is claimed about storage: no `post` frame arrived, so
+   * whether the server finished and stored the turn anyway is unknown here.
+   */
   const cancel = useCallback(() => {
+    const inFlight = abortRef.current !== null;
     abortRef.current?.abort();
     abortRef.current = null;
+    if (inFlight) {
+      patchLast((t) => {
+        if (!t.done) t.cancelled = true;
+      });
+    }
     setState('idle');
-  }, []);
+  }, [patchLast]);
 
-  /** Start a new chat: nothing on screen, no thread to continue. */
+  /** Nothing on screen, no thread to continue. */
   const reset = useCallback(() => {
     cancel();
     setTurns([]);
@@ -135,24 +180,29 @@ export function useGeorgeStream() {
   }, [cancel, setThread]);
 
   /**
-   * Load a stored chat. Its turns take the place of whatever was on screen,
-   * and the next `ask` continues it under its thread id.
+   * Load stored turns. They take the place of whatever was on screen, and the
+   * next `ask` continues them under the thread id given.
+   *
+   * Takes turns already in the rendered shape: a reopened chat's come through
+   * toGeorgeTurns, an org thread's through threadHistory — the hook does not
+   * care which, and must not, so that one `ask` continues both.
    */
   const open = useCallback(
-    (chat: ChatDetail) => {
+    (loaded: GeorgeTurn[], thread: string | null) => {
       cancel();
-      const loaded = toGeorgeTurns(chat.turns);
       turnsRef.current = loaded;
       setTurns(loaded);
-      setThread(chat.thread_id);
+      setThread(thread);
     },
     [cancel, setThread],
   );
 
   const ask = useCallback(
-    async (question: string, pageContext?: string) => {
+    async (question: string, options: AskOptions = {}) => {
       if (!question.trim()) return;
-      abortRef.current?.abort();
+      // A second question while one is running stops the first, and the first
+      // is marked as stopped rather than left looking finished.
+      cancel();
       const ctrl = new AbortController();
       abortRef.current = ctrl;
 
@@ -172,6 +222,7 @@ export function useGeorgeStream() {
           toolCalls: [],
           notices: [],
           pinned: [],
+          saved: [],
           at: now,
         },
       ]);
@@ -190,9 +241,10 @@ export function useGeorgeStream() {
           // person who asked.
           body: JSON.stringify({
             question,
-            page_context: pageContext ?? null,
+            page_context: options.pageContext ?? null,
             history,
             thread_id: thread,
+            parent_id: thread ? (options.parentId ?? null) : null,
           }),
           signal: ctrl.signal,
           openWhenHidden: true,
@@ -213,8 +265,8 @@ export function useGeorgeStream() {
 
             switch (ev.event) {
               case 'start':
-                // The first turn of a new chat names the thread; later turns
-                // echo the one we sent. Either way this is the id to continue.
+                // The first turn of a new thread names it; later turns echo
+                // the one we sent. Either way this is the id to continue.
                 if (typeof data.thread_id === 'string' && data.thread_id) {
                   setThread(data.thread_id);
                 }
@@ -295,11 +347,46 @@ export function useGeorgeStream() {
                 patchLast((t) => {
                   t.pinned.push(data as unknown as PinnedFrame);
                 });
-                // A pin made in conversation has to appear in the rails and on
-                // its page without a reload — the same invalidation the Pin
-                // button does on success.
+                // A pin made in conversation has to appear on its page without
+                // a reload — the same invalidation the Pin button does.
                 qc.invalidateQueries({ queryKey: ['pin-pages'] });
                 qc.invalidateQueries({ queryKey: ['pins'] });
+                break;
+
+              case 'saved':
+                patchLast((t) => {
+                  t.saved.push({
+                    workflow_id: String(data.workflow_id ?? ''),
+                    name: String(data.name ?? ''),
+                    version: Number(data.version ?? 0),
+                    steps: (data.steps ?? []) as SavedFrame['steps'],
+                    parameters: (data.parameters ?? []) as SavedFrame['parameters'],
+                    scheduled: (data.scheduled ?? null) as boolean | null,
+                    awaiting_promotion: data.awaiting_promotion !== false,
+                    queue: (data.queue ?? null) as string | null,
+                  });
+                });
+                // A saved version enters the approval queue; the count beside
+                // the mark and the Workflows page both have to learn that.
+                qc.invalidateQueries({ queryKey: ['workflow-approvals'] });
+                qc.invalidateQueries({ queryKey: ['workflows'] });
+                break;
+
+              case 'post':
+                // The ids of this turn's posts. Kept on the turn so the river
+                // can drop the live copy the moment the stored one is fetched
+                // — by id, never by matching text.
+                patchLast((t) => {
+                  t.post = {
+                    question_post_id: String(data.question_post_id ?? ''),
+                    answer_post_id:
+                      typeof data.answer_post_id === 'string' ? data.answer_post_id : null,
+                    thread_id: String(data.thread_id ?? ''),
+                    conversation_id: String(data.conversation_id ?? ''),
+                    visibility: data.visibility === 'org' ? 'org' : 'private',
+                    stored: Boolean(data.stored),
+                  } satisfies PostFrame;
+                });
                 break;
 
               case 'receipts':
@@ -330,9 +417,12 @@ export function useGeorgeStream() {
                   t.done = data as unknown as DoneFrame;
                 });
                 setState('idle');
-                // The turn is logged now, so the chat list can show it — a
-                // new chat appears, an old one moves to the top.
+                // The turn is stored now. The river and this thread have two
+                // new posts, and the recent-asks list has a new entry.
+                qc.invalidateQueries({ queryKey: ['river'] });
+                qc.invalidateQueries({ queryKey: ['thread'] });
                 qc.invalidateQueries({ queryKey: ['chats'] });
+                qc.invalidateQueries({ queryKey: ['george-status'] });
                 break;
             }
           },
@@ -353,11 +443,11 @@ export function useGeorgeStream() {
           setState('error');
         }
       } finally {
-        abortRef.current = null;
+        if (abortRef.current === ctrl) abortRef.current = null;
         setState((s) => (s === 'error' ? s : 'idle'));
       }
     },
-    [patchLast, qc, setThread],
+    [cancel, patchLast, qc, setThread],
   );
 
   return {
@@ -372,4 +462,4 @@ export function useGeorgeStream() {
   };
 }
 
-export type { GeorgeNotice, PinnedFrame, ToolCall, ToolMeta };
+export type { GeorgeNotice, PinnedFrame, SavedFrame, ToolCall, ToolMeta };

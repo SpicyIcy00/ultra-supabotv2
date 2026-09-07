@@ -82,6 +82,8 @@ export function toGeorgeTurns(turns: ChatTurn[]): GeorgeTurn[] {
       })),
       notices: t.notices ?? [],
       pinned: t.pinned ?? [],
+      // The chats API predates save_workflow; a stored turn carries no saves.
+      saved: [],
       receipts: t.receipts ?? undefined,
       done: t.done ?? undefined,
       error: t.error ?? undefined,
