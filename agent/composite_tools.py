@@ -242,6 +242,13 @@ _RECEIPT_KEYS = (
     "source_table", "filters_applied", "snapshot_timestamp", "window", "metric",
     "metric_unit", "row_count", "full_row_count", "data_as_of",
     "definitions_version", "truncated_for_model", "rows_omitted",
+    # The metric model and a comparison (2026-09-07): what the figure IS —
+    # base or derived, and its name — and, when the pin compares, both
+    # periods, the method and the per-row status counts. Without these a
+    # page read would hand George change_pct rows with no baseline window
+    # to cite. Nothing more: the formula, the SQL and the diagnostics are
+    # the direct call's to show.
+    "metric_kind", "metric_label", "comparison",
 )
 
 # The reasons a selected pin has no figures, as the reader names them. Kept in

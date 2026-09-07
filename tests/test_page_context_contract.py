@@ -599,3 +599,60 @@ def test_merging_evidence_unions_pins_and_keeps_the_later_status():
     assert m["notice_kinds"] == ["page_context_partial", "page_context_truncated"]
     assert m["reads"] == 2 and m["pins_inspected"] == 3 and m["pins_reproduced"] == 3
     assert george_loop.merge_page_evidence(None, b) == b
+
+
+# ---------------------------------------------------------------------------
+# 6. A compared pin keeps enough of its receipts to be understood
+# ---------------------------------------------------------------------------
+
+COMPARISON = {
+    "kind": "previous_period", "display_name": "vs previous period",
+    "method": "shift_back_by_window_length",
+    "current": {"start": "2026-08-24", "end": "2026-08-31"},
+    "baseline": {"kind": "explicit", "start": "2026-08-17", "end": "2026-08-24"},
+    "baseline_statuses": {"ok": 6, "no_baseline": 1},
+    "source": "definitions/metrics.yaml: comparisons.previous_period",
+}
+
+
+def test_a_page_read_keeps_the_comparison_and_the_metric_identity():
+    """
+    A pinned comparison replayed through a page read must hand George the
+    current period, the baseline period, which metric it is and in what
+    unit, and the per-row status counts — or he is reading change_pct
+    rows with no baseline window to cite. Exactly those; the SQL, the
+    formula and the diagnostics stay with the direct call.
+    """
+    rows = [{"store": "Rockwell", "value": 179058.5, "baseline": 215567.0,
+             "change": -36508.5, "change_pct": -16.9, "direction": "down",
+             "unit": "PHP", "baseline_status": "ok"}]
+    result = _result(
+        rows=rows, metric="net_sales", metric_kind="base", metric_label="Net sales",
+        metric_unit="PHP", metric_sql="SUM(t.total)", comparison=COMPARISON,
+        window={"kind": "explicit", "start": "2026-08-24", "end": "2026-08-31"},
+        zero_total_transactions=27,
+        metric_formula={"operation": "ratio"},
+    )
+    out = _run(view_page(ctx=_ctx(FakeReader(_read([_pin(1, results=[result])])))))
+    receipts = out["rows"][0]["results"][0]["receipts"]
+
+    assert receipts["window"]["start"] == "2026-08-24"
+    assert receipts["comparison"]["baseline"]["start"] == "2026-08-17"
+    assert receipts["comparison"]["baseline_statuses"] == {"ok": 6, "no_baseline": 1}
+    assert receipts["metric"] == "net_sales"
+    assert receipts["metric_kind"] == "base" and receipts["metric_label"] == "Net sales"
+    assert receipts["metric_unit"] == "PHP"
+    # The rows themselves travel whole, deltas included.
+    assert out["rows"][0]["results"][0]["rows"][0]["change_pct"] == -16.9
+
+    for extra in ("metric_sql", "metric_formula", "zero_total_transactions"):
+        assert extra not in receipts, f"{extra} is the direct call's to show, not the page read's"
+
+
+def test_an_uncompared_pin_carries_no_comparison_key():
+    result = _result(rows=[{"value": 1.0}], metric="net_sales",
+                     metric_kind="base", metric_label="Net sales")
+    out = _run(view_page(ctx=_ctx(FakeReader(_read([_pin(1, results=[result])])))))
+    receipts = out["rows"][0]["results"][0]["receipts"]
+    assert "comparison" not in receipts
+    assert receipts["metric_kind"] == "base"
