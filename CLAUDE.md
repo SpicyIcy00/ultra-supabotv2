@@ -562,14 +562,83 @@ because each line is a decision that cannot be read back from the code.
   it is in its life, when and which version it runs, its last run with that
   run's notices whole, and the one thing that would move it on. No builder.
 - **Disclosure is by position, never by hiding.** Notices, then the answer,
-  then the figures with their receipts; the activity is open while a turn
-  runs and one line once it is over. The newest answer leads and earlier
+  then the figures with their receipts. The newest answer leads and earlier
   turns go quieter — slate prose, charts behind a line that names them —
   and a notice or a receipts line is never quieter
   ([turnShape.ts](frontend/src/components/george/turnShape.ts)).
+
+  *Amended 2026-09-07, the activity:* it used to stand OPEN while a turn ran,
+  because watching real execution is worth something. What that put on screen
+  as the most prominent thing a waiting person saw was
+  `get_sales {"group_by":["store"]}` — implementation detail dressed as
+  progress. It now waits behind one line that says what George did in words,
+  in both phases: "Reading sales and counting stock…", then "Read sales and
+  counted stock — 412 rows". Every word of it is derived from the frames, so
+  it may be read as fact, unlike the model's reasoning inside the disclosure.
+  Nothing was removed and nothing moved that the rule protects: a notice, a
+  receipts line, a stopped note and a pin or save confirmation are still drawn
+  by the turn itself, above and below, and cannot be collapsed.
 - **The accent exemption list is still four:** the mark, the status band's
   count, the shell's Inbox count, and the Inbox page. PostCard's dead branch
   and the drawer gave up their places; the scan now covers `components/shell`.
+
+### The result vocabulary
+
+*Added 2026-09-07.* George decides WHAT matters; this app decides how what he
+returns may be drawn. The path is one-way and has no branch in it:
+
+    tool result ({rows, meta})
+      -> inferShape          which primitive, from the rows alone
+      -> resultShape         how several results compose, from meta + arguments
+      -> a fixed set of React components
+
+There is no step where the model supplies markup, a component name, a colour,
+a width or a figure. It may narrow a chart choice through a hint and it may
+say anything it likes in prose; it may not reach the renderer.
+
+- **Five primitives, and they are a closed set:** Metric, MetricGroup,
+  Comparison, Chart, Table — plus the caveat, the receipts and the one action,
+  which already existed. Insight is George's prose and is not a component: the
+  lede paragraph is the finding, and CLAUDE.md's rule on annotations already
+  governs it — characterise rows, never introduce a number.
+  ([ResultBlocks.tsx](frontend/src/components/george/ResultBlocks.tsx))
+- **Selection is one function for every surface.** `inferShape` decides the
+  shape of a figure in an answer, on a stored post and on a pinned tile, so a
+  number cannot look like one thing in chat and another on a page — the
+  divergence UI rule 3 exists to prevent. Metric and Table used to be private
+  to PinTile and agreed with the answer's rendering only by coincidence.
+- **Comparison renders a delta the TOOL supplied, and never computes one.**
+  Every row must carry a numeric `value` and a numeric `change_pct`. Which
+  baseline a period-over-period figure is measured against is a **definition** —
+  `brief.sales_vs_same_weekday` rejected `previous_day` in favour of
+  `same_weekday_last_week` after measuring it — so a renderer choosing its own
+  would be writing a business rule into the presentation layer. Today only
+  `get_brief` supplies deltas; `get_sales` does not, and there is no ATP metric.
+  A comparison of two `get_sales` calls therefore stays two figures and George's
+  prose, until a tool returns the movement.
+- **Composition is adjacency and nothing else.** Two figures sit under one
+  heading only when their calls agree on the window, on every filter applied,
+  and on the store argument. Nothing is summed, ratioed, ranked or differenced
+  across results: a fourth number derived from three others is a definition,
+  which is the same reason a workflow may not join its own steps
+  (architecture rule 6). The heading comes from `meta.window` and the
+  arguments the model passed — never parsed from prose.
+- **A group shares one receipts line only when it provably shares one** — same
+  table, same read, same filters. Otherwise each figure keeps its own, because
+  one line over two sources names a source that produced half the screen.
+- **The column is sized by the result, not by the question.** A chart and a
+  table take the room; prose, a figure and a comparison keep a readable
+  measure. No question text reaches the decision, there is no per-question
+  rule, and below `md` nothing changes at all
+  ([workspaceWidth.ts](frontend/src/components/george/workspaceWidth.ts)).
+- **The mark gained `building` and `complete`, and still refuses `waiting`.**
+  `building` is `answering` over results that have already landed WHOLE —
+  a refused call and one the loop could not send entire are not counted, or
+  the mark would claim to be assembling something out of nothing. `complete`
+  is the `done` frame, held briefly and settling on its own; it is not busy,
+  so the composer takes the next question immediately. "Waiting for the user"
+  has no frame behind it, and an approval waiting is a fact about the QUEUE
+  that stays the count beside Inbox (UI rule 5).
 
 ### These rules are already backed by the tool contract
 
