@@ -32,7 +32,7 @@ const READ_TOOLS = [
 ];
 
 /** agent/write_tools.py and agent/composite_tools.py — injected per capability. */
-const INJECTED_TOOLS = ['pin_answer', 'save_workflow', 'run_workflow'];
+const INJECTED_TOOLS = ['pin_answer', 'save_workflow', 'run_workflow', 'view_page'];
 
 describe('actName', () => {
   it.each([...READ_TOOLS, ...INJECTED_TOOLS])('names %s in words', (tool) => {
@@ -289,5 +289,10 @@ describe('narrateResult — what he is seeing', () => {
     expect(narrateResult({ tool: 'get_whatever', rowCount: 2 })).toBe(
       'get_whatever came back — 2 rows',
     );
+  });
+
+  it('counts a page read in pins, because its rows are pins and not data', () => {
+    expect(narrateResult({ tool: 'view_page', rowCount: 5 })).toBe('The page came back — 5 pins');
+    expect(narrateResult({ tool: 'view_page', rowCount: 1 })).toBe('The page came back — 1 pin');
   });
 });

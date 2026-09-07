@@ -30,8 +30,10 @@
  * stay where they were. Nothing is summarised, because a summary is a
  * number somebody did not check.
  */
-import type { GeorgeTurn } from '../../types/george';
+import type { GeorgeTurn, ToolCall } from '../../types/george';
+import type { PinToolCall } from '../../types/pins';
 import { actLine, deedLine } from './cognition';
+import { PAGE_READ_TOOL } from './pageContextShape';
 
 type AnswerTurn = Extract<GeorgeTurn, { role: 'george' }>;
 
@@ -83,8 +85,10 @@ export function workLine(turn: AnswerTurn, live: boolean): string {
   }
 
   const deeds = deedLine(tools);
+  // A page read's rows are pins, not data; they are not counted as rows.
   const rows = turn.toolCalls.reduce(
-    (n, c) => n + (c.result && !c.result.error ? (c.result.row_count ?? 0) : 0),
+    (n, c) =>
+      n + (c.result && !c.result.error && c.tool !== PAGE_READ_TOOL ? (c.result.row_count ?? 0) : 0),
     0,
   );
   const counted = rows > 0 ? ` — ${rows.toLocaleString('en-PH')} ${rows === 1 ? 'row' : 'rows'}` : '';
@@ -117,4 +121,19 @@ export function activitySummary(turn: AnswerTurn): string {
 /** Whether there is any activity to disclose at all. */
 export function hasActivity(turn: AnswerTurn): boolean {
   return turn.toolCalls.length > 0 || turn.thinking.trim().length > 0 || Boolean(turn.done);
+}
+
+/**
+ * The calls of a live turn a pin may hold: the ones the LOOP marked pinnable.
+ *
+ * The loop says so on the tool_result frame — a read tool that ran without
+ * error — and this reads it rather than deciding from a name. A workflow run
+ * and a page read are calls George made, and neither is a tile; a frame from
+ * an older backend carries no flag and is kept, because the server refuses
+ * anything that is not a read.
+ */
+export function pinnableCalls(calls: ToolCall[]): PinToolCall[] {
+  return calls
+    .filter((c) => c.result?.pinnable !== false)
+    .map((c) => ({ tool: c.tool, arguments: c.arguments }));
 }

@@ -45,10 +45,12 @@ const ACTS: Record<string, string> = {
   get_cost_history: 'reading cost history',
   get_brief: 'reading the morning brief',
 
-  // Injected — present only when the web process passed a writer or a runner.
+  // Injected — present only when the web process passed a writer, a runner
+  // or a page reader.
   pin_answer: 'pinning this',
   save_workflow: 'saving the rule',
   run_workflow: 'running the workflow',
+  view_page: 'reading the page',
 };
 
 /**
@@ -109,6 +111,17 @@ const SUBJECTS: Record<string, string> = {
   pin_answer: 'The pin',
   save_workflow: 'The rule',
   run_workflow: 'The workflow',
+  view_page: 'The page',
+};
+
+/**
+ * Tool -> what its rows are, where they are not rows of a figure.
+ *
+ * A page read's rows are the pins it inspected, and "The page came back —
+ * 5 rows" would count them as if they were data. Everything else counts rows.
+ */
+const UNITS: Record<string, [string, string]> = {
+  view_page: ['pin', 'pins'],
 };
 
 /**
@@ -138,6 +151,7 @@ const DEEDS: Record<string, string> = {
   pin_answer: 'pinned this',
   save_workflow: 'saved the rule',
   run_workflow: 'ran the workflow',
+  view_page: 'read the page',
 };
 
 /**
@@ -205,7 +219,8 @@ export function narrateResult(result: LastResult): string {
   const n = result.rowCount;
   if (n === null || n === undefined) return `${subject} came back`;
   if (n === 0) return `${subject} came back empty`;
-  return `${subject} came back — ${n.toLocaleString('en-PH')} ${n === 1 ? 'row' : 'rows'}`;
+  const [one, many] = UNITS[result.tool] ?? ['row', 'rows'];
+  return `${subject} came back — ${n.toLocaleString('en-PH')} ${n === 1 ? one : many}`;
 }
 
 /**

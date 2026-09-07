@@ -13,7 +13,12 @@
  * ORDER WITHIN A TURN matches the loop's own priority and turnShape's levels:
  *
  *   narration -> ACTIVITY (open while running) -> NOTICES -> answer ->
- *   figures -> stopped/error -> confirmations -> receipts -> actions
+ *   figures -> stopped/error -> confirmations -> page context -> receipts
+ *   -> actions
+ *
+ * PAGE CONTEXT is evidence, like the receipts: what George considered of the
+ * page he was asked from, one line always visible, the pins behind it. It is
+ * drawn from the `page_context` frame and never from the prose.
  *
  * Notices sit ABOVE the answer, not after it and not inside a disclosure
  * (UI rule 4). A caveat that qualifies a number has to be read before the
@@ -28,11 +33,12 @@ import { markDetail, MARK_PATH } from './markState';
 import { ActivityDisclosure } from './ActivityDisclosure';
 import { Prose } from './Prose';
 import { NoticeBanner } from './NoticeBanner';
+import { PageContextBlock } from './PageContextBlock';
 import { ReceiptsBlock } from './ReceiptsBlock';
 import { ResultSurface } from './ResultSurface';
 import { ResultActions } from './ResultActions';
 import { blocksFromCalls } from './resultShape';
-import { emphasisOf } from './turnShape';
+import { emphasisOf, pinnableCalls } from './turnShape';
 
 type Answer = Extract<GeorgeTurn, { role: 'george' }>;
 
@@ -134,15 +140,20 @@ function AnswerTurn({
           <SavedNote key={`${s.workflow_id}-${s.version}`} saved={s} />
         ))}
 
+        {/* What George considered of the page, when he read one. */}
+        <PageContextBlock context={turn.pageContext} />
+
         {/* The turn-level receipts are the LAST tool's meta, and they are the
             fallback only. When the surface drew anything, every block already
             carries the meta of the call behind it — which is strictly better,
             because one line over several calls describes none of them. */}
         {blocks.length === 0 && <ReceiptsBlock meta={turn.receipts} />}
 
+        {/* Only the calls the loop marked pinnable: a page read or a workflow
+            run is a call George made, and neither is a tile. */}
         {turn.done && (
           <ResultActions
-            calls={turn.toolCalls.map((c) => ({ tool: c.tool, arguments: c.arguments }))}
+            calls={pinnableCalls(turn.toolCalls)}
             question={question}
             conversationId={turn.done.conversation_id}
           />

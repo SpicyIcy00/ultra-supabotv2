@@ -6,6 +6,7 @@ import {
   hasActivity,
   isOver,
   isRunning,
+  pinnableCalls,
   workLine,
 } from './turnShape';
 
@@ -135,5 +136,46 @@ describe('workLine — what George did, in words', () => {
   it('never prints a business figure — a row count is a fact about the query', () => {
     const turn = george({ toolCalls: [{ ...call(1), result: result(3) }], done });
     expect(workLine(turn, false)).not.toMatch(/₱/);
+  });
+});
+
+describe('what a live turn may pin', () => {
+  const call = (seq: number, tool: string, pinnable?: boolean) => ({
+    seq, tool, arguments: { a: seq },
+    result: { row_count: 1, source_table: 't', truncated: false, duration_ms: 1, error: null, pinnable },
+  });
+
+  it('keeps the calls the loop marked pinnable and drops the rest', () => {
+    const calls = [call(1, 'get_sales', true), call(2, 'view_page', false), call(3, 'run_workflow', false)];
+    expect(pinnableCalls(calls)).toEqual([{ tool: 'get_sales', arguments: { a: 1 } }]);
+  });
+
+  it('keeps a call from an older backend that carries no flag', () => {
+    expect(pinnableCalls([call(1, 'get_stock')])).toEqual([{ tool: 'get_stock', arguments: { a: 1 } }]);
+  });
+
+  it('decides from the flag, never from the name', () => {
+    // A read tool the loop refused is not pinnable; a name alone says nothing.
+    expect(pinnableCalls([call(1, 'get_sales', false)])).toEqual([]);
+  });
+});
+
+describe('a page read in the work line', () => {
+  it('is named as a deed but its pins are not counted as rows', () => {
+    const turn = {
+      role: 'george' as const, text: 'x', thinking: '', notices: [], pinned: [], saved: [],
+      at: '2026-09-07T09:00:00+08:00',
+      done: { conversation_id: 'c', iterations: 1, tool_calls: 2, status: 'ok',
+        notice_forced: false, usage: { input: 0, output: 0, cache_read: 0 }, cache_hit: false },
+      toolCalls: [
+        { seq: 1, tool: 'view_page', arguments: {},
+          result: { row_count: 5, source_table: 'george.pins', truncated: false,
+            duration_ms: 1, error: null, pinnable: false } },
+        { seq: 2, tool: 'get_sales', arguments: {},
+          result: { row_count: 7, source_table: 'new_transactions', truncated: false,
+            duration_ms: 1, error: null, pinnable: true } },
+      ],
+    };
+    expect(workLine(turn, false)).toBe('Read the page and read sales — 7 rows');
   });
 });

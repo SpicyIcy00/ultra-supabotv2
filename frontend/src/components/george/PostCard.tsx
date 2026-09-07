@@ -24,6 +24,8 @@ import { useMemo, useState } from 'react';
 import type { Post } from '../../types/river';
 import { ChevronRight } from 'lucide-react';
 import { NoticeBanner } from './NoticeBanner';
+import { PageContextBlock } from './PageContextBlock';
+import { storedPageContext } from './pageScope';
 import { ReceiptsBlock } from './ReceiptsBlock';
 import { Prose } from './Prose';
 import { ResultSurface } from './ResultSurface';
@@ -196,6 +198,8 @@ export function PostCard({
   // Pin, not a Pin that guesses. A post from before the calls were stored
   // still draws its snapshot; it simply cannot be re-run from here.
   const calls = useMemo(() => storedCalls(post), [post]);
+  // What George considered of the page, as he recorded it when he answered.
+  const pageContext = useMemo(() => storedPageContext(post), [post]);
 
   if (view.side === 'user') {
     return (
@@ -259,6 +263,9 @@ export function PostCard({
             chart carries its OWN receipts, so the post-level block below would
             only repeat one of them under a different heading. */}
         <ChartedResults blocks={blocks} quiet={quiet} />
+
+        {/* Evidence, never quieter: which page was read and what came back. */}
+        <PageContextBlock context={pageContext} />
 
         {/* The post-level receipts are the fallback only. When the surface
             drew anything, every block already carries the meta of the call

@@ -143,3 +143,35 @@ describe('a post whose calls are incomplete', () => {
     expect(screen.queryByRole('button', { name: /^Pin$/ })).toBeNull();
   });
 });
+
+describe('a stored answer that read a page', () => {
+  const PAGE_CONTEXT = {
+    page: 'AJI BARN Reorder', read_at: '2026-09-07T09:00:00+08:00', figures: true,
+    pins_total: 6, pins_inspected: 5, pins_reproduced: 5,
+    pins: [{ pin_id: 'p1', title: 'Dead at retail', status: 'ok', reason: null,
+      calls: [{ tool: 'get_dead_stock', arguments: {} }],
+      snapshot_timestamp: '2026-09-07T08:55:00+08:00', notice_kinds: [] }],
+    not_inspected: [{ pin_id: 'p6', title: 'Cost history' }], unavailable: [],
+    partial: false, truncated: true, rows_dropped: 0, notice_kinds: ['page_context_truncated'],
+  };
+
+  it('says what George considered, from what he recorded', () => {
+    mount(answer({ charted: CHARTED, calls: [{ seq: 3, tool: 'get_sales', arguments: ARGS }],
+      page_context: PAGE_CONTEXT }));
+    expect(screen.getByText('Read 5 of 6 saved analyses · 1 not inspected')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Read 5 of 6/ }));
+    expect(screen.getByText('Dead at retail')).toBeTruthy();
+    expect(screen.getByText('Cost history')).toBeTruthy();
+  });
+
+  it('still offers Pin for the figures it charted, and never for the page read', () => {
+    mount(answer({ charted: CHARTED, calls: [{ seq: 3, tool: 'get_sales', arguments: ARGS }],
+      page_context: PAGE_CONTEXT }));
+    expect(screen.getByRole('button', { name: /^Pin$/ })).toBeTruthy();
+  });
+
+  it('shows no page context on an answer that read no page', () => {
+    mount(answer({ charted: CHARTED, calls: [{ seq: 3, tool: 'get_sales', arguments: ARGS }] }));
+    expect(screen.queryByText(/saved analys/)).toBeNull();
+  });
+});
