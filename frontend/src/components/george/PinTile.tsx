@@ -31,99 +31,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Clock } from 'lucide-react';
 import type { Pin, PinCallResult, PinRun } from '../../types/pins';
 import { errorMessage, runPin } from '../../services/pinsApi';
-import { ago, fmt, inferShape, type Shape } from './pinShape';
+import { ago, inferShape } from './pinShape';
+import { Comparison, Metric, ResultTable } from './ResultBlocks';
 import { GeorgeChart } from './GeorgeChart';
 import { NoticeBanner } from './NoticeBanner';
 import { ReceiptsBlock } from './ReceiptsBlock';
-
-/* ------------------------------------------------------------------ bodies -- */
-
-function NumberBody({
-  shape,
-  lead,
-}: {
-  shape: Extract<Shape, { kind: 'number' }>;
-  lead: boolean;
-}) {
-  return (
-    <div>
-      <p
-        className={`font-george-serif leading-none tabular-nums text-george-navy ${
-          lead ? 'text-[54px]' : 'text-[38px]'
-        }`}
-      >
-        {shape.unit === 'PHP' ? '₱' : ''}
-        {fmt(shape.value)}
-      </p>
-      {(shape.label || shape.unit) && (
-        <p className="mt-2 text-[13px] text-george-slate">
-          {[shape.label, shape.unit !== 'PHP' ? shape.unit : null].filter(Boolean).join(' · ')}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/**
- * A small table.
- *
- * Stacks on a phone rather than scrolling: each row becomes a block and each
- * cell is labelled with its column, so nothing is truncated and no figure
- * ends up off the right edge. Same treatment a markdown table gets in an
- * answer — see proseTable.ts for why the two differ only in who supplies the
- * labels.
- */
-function TableBody({
-  shape,
-  fullCount,
-}: {
-  shape: Extract<Shape, { kind: 'table' }>;
-  fullCount?: number;
-}) {
-  const shown = shape.rows.length;
-  const label = (c: string) => c.replace(/_/g, ' ');
-  return (
-    <div>
-      <table className="w-full text-[13px]">
-        <thead className="hidden sm:table-header-group">
-          <tr className="border-b border-george-line text-left text-[11px] uppercase tracking-wide text-george-muted">
-            {shape.columns.map((c) => (
-              <th key={c} className="py-1.5 pr-3 font-medium">{label(c)}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {shape.rows.map((r, i) => (
-            <tr
-              key={i}
-              className="block border-b border-george-line/60 py-2 last:border-0 sm:table-row sm:py-0"
-            >
-              {shape.columns.map((c, j) => (
-                <td
-                  key={c}
-                  className="flex items-baseline justify-between gap-3 py-0.5 tabular-nums text-george-navy sm:table-cell sm:py-1.5 sm:pr-3"
-                >
-                  {/* The column name travels with the cell on a phone, where
-                      the header row is gone. */}
-                  <span className="text-[11px] uppercase tracking-wide text-george-muted sm:hidden">
-                    {label(c)}
-                  </span>
-                  <span className={j === 0 ? 'font-medium sm:font-normal' : ''}>{fmt(r[c])}</span>
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {fullCount !== undefined && fullCount > shown && (
-        // Never let a partial list read as a total.
-        <p className="mt-2 text-[11px] text-george-muted">
-          {shown} of {fullCount.toLocaleString('en-PH')} rows
-        </p>
-      )}
-    </div>
-  );
-}
 
 /* -------------------------------------------------------------------- tile -- */
 
@@ -256,11 +168,13 @@ function OkBody({ result, lead }: { result: PinCallResult; lead: boolean }) {
           No rows matched. That is an empty result, not a zero.
         </p>
       ) : shape.kind === 'number' ? (
-        <NumberBody shape={shape} lead={lead} />
+        <Metric shape={shape} size={lead ? 'lead' : 'default'} />
+      ) : shape.kind === 'comparison' ? (
+        <Comparison shape={shape} size={lead ? 'lead' : 'default'} />
       ) : shape.kind === 'chart' ? (
         <GeorgeChart shape={shape} meta={result.meta} height={lead ? 220 : 160} />
       ) : (
-        <TableBody shape={shape} fullCount={result.meta?.row_count} />
+        <ResultTable shape={shape} fullCount={result.meta?.row_count} />
       )}
       {/* The receipts line — where it came from, which filters, when it was read. */}
       <ReceiptsBlock meta={result.meta} />

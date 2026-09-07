@@ -39,8 +39,30 @@ export type RenderHint = 'none' | 'line' | 'bar' | undefined;
 
 export type Mark = 'line' | 'bar';
 
+/**
+ * One row of a comparison, exactly as the tool supplied it.
+ *
+ * `change` and `changePct` are READ OFF THE ROW. Nothing here is computed:
+ * a period-over-period delta needs a baseline, and which baseline is a
+ * DEFINITION — metrics.yaml settled that deliberately for the brief, rejecting
+ * `previous_day` in favour of `same_weekday_last_week` after measuring how
+ * badly the first one fires. A renderer picking its own baseline would be
+ * inventing a business rule in the presentation layer.
+ */
+export interface ComparisonRow {
+  subject: string;
+  value: number;
+  baseline?: number;
+  change?: number;
+  changePct: number;
+  direction: 'up' | 'down';
+  unit?: string;
+  row: Record<string, unknown>;
+}
+
 export type Shape =
   | { kind: 'number'; value: number; unit?: string; label?: string }
+  | { kind: 'comparison'; rows: ComparisonRow[] }
   | { kind: 'chart'; x: string; mark: Mark; rows: Record<string, unknown>[] }
   | { kind: 'table'; columns: string[]; rows: Record<string, unknown>[] };
 
@@ -60,6 +82,49 @@ function isHomogeneousSeries(rows: Record<string, unknown>[]): boolean {
     (r) => typeof r.value === 'number' && Object.keys(r).sort().join('|') === shape,
   );
 }
+
+/**
+ * A comparison the TOOL declared, or nothing.
+ *
+ * Every row must carry a numeric `value` AND a numeric `change_pct`. That is
+ * the tool saying "this figure moved by this much against a baseline I chose";
+ * the renderer's whole job is to show what it was handed. If one row lacks the
+ * delta the result is not a comparison — it is a list of different facts, and
+ * get_brief returns exactly that when several of its sections fire at once.
+ * Those fall through to a table, unchanged from before this existed.
+ *
+ * WHY IT IS HERE AND NOT IN THE COMPOSITION LAYER. One selection function
+ * serves the answer, the stored post and the pinned tile (see inferShape), so
+ * a comparison that only chat knew about would be a figure that looked like
+ * one thing in a thread and another on a page — the divergence the receipts
+ * contract exists to prevent.
+ */
+function comparisonRows(rows: Record<string, unknown>[]): ComparisonRow[] | null {
+  const out: ComparisonRow[] = [];
+  for (const r of rows) {
+    if (typeof r.value !== 'number' || typeof r.change_pct !== 'number') return null;
+    const subject = SUBJECT_KEYS.map((k) => r[k]).find((v) => typeof v === 'string' && v);
+    out.push({
+      subject: (subject as string) ?? '',
+      value: r.value,
+      baseline: typeof r.baseline === 'number' ? r.baseline : undefined,
+      change: typeof r.change === 'number' ? r.change : undefined,
+      changePct: r.change_pct,
+      // The tool's own word for it where there is one. Otherwise the SIGN of
+      // the delta it supplied, which is a reading of the number rather than a
+      // second calculation of it.
+      direction: r.direction === 'up' || r.direction === 'down'
+        ? r.direction
+        : r.change_pct >= 0 ? 'up' : 'down',
+      unit: typeof r.unit === 'string' ? r.unit : undefined,
+      row: r,
+    });
+  }
+  return out.length > 0 ? out : null;
+}
+
+/** Where a comparison row's label comes from, in the order tools emit it. */
+const SUBJECT_KEYS = ['subject', 'store', 'product', 'category', 'name', 'label'];
 
 /**
  * The categorical key rows are compared BY — store, product, category.
@@ -104,6 +169,14 @@ export function inferShape(
   const keys = Object.keys(rows[0]);
   const timeKey = TIME_KEYS.find((k) => keys.includes(k));
   const hasValue = keys.includes('value') && typeof rows[0].value === 'number';
+
+  // FIRST, because a declared delta is the most specific thing a result can
+  // be. A single row carrying one is a comparison and not a bare figure, and a
+  // series carrying one is a comparison and not a bar chart — drawing either
+  // without the baseline would throw away the part the tool went to the
+  // trouble of computing.
+  const comparison = comparisonRows(rows);
+  if (comparison) return { kind: 'comparison', rows: comparison };
 
   // One row, one figure — the commonest pin, and the one worth making large.
   if (rows.length === 1 && hasValue) {
