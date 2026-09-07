@@ -33,7 +33,6 @@ default to "reproducible" and present today's figure as the past.
 from __future__ import annotations
 
 import asyncio
-import calendar
 import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -46,6 +45,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from tools._common import load_defs as _load_defs, req as _req  # noqa: E402
+from tools.windows import resolve_preset as _resolve_preset  # noqa: E402
 
 from app.services.pin_runner import (  # noqa: E402
     _SEVERITY,
@@ -282,63 +282,20 @@ def describe_slot(kind: str, hour: int, minute: int = 0,
 # Windows, anchored on a day that is not today
 # ---------------------------------------------------------------------------
 
-def _truncate(anchor: date, unit: str) -> date:
-    if unit == "day":
-        return anchor
-    if unit == "week":
-        # Monday-based, matching metrics.yaml sales_day.week_start and Postgres
-        # date_trunc('week').
-        return anchor - timedelta(days=anchor.weekday())
-    if unit == "month":
-        return anchor.replace(day=1)
-    if unit == "year":
-        return anchor.replace(month=1, day=1)
-    raise WorkflowValidationError(f"Unknown window unit {unit!r} in metrics.yaml.")
-
-
-def _shift(anchor: date, unit: str, amount: int) -> date:
-    if unit == "day":
-        return anchor + timedelta(days=amount)
-    if unit == "week":
-        return anchor + timedelta(weeks=amount)
-    if unit == "year":
-        return anchor.replace(year=anchor.year + amount)
-    if unit == "month":
-        total = anchor.month - 1 + amount
-        year = anchor.year + total // 12
-        month = total % 12 + 1
-        # Calendar arithmetic, like INTERVAL '1 month': the day is clamped to
-        # the target month's length. Only ever reached from a truncated month
-        # start (day 1) today, but the clamp keeps it correct if that changes.
-        return date(year, month, min(anchor.day, calendar.monthrange(year, month)[1]))
-    raise WorkflowValidationError(f"Unknown window unit {unit!r} in metrics.yaml.")
-
-
 def resolve_preset(defs: dict, preset: str, anchor: date) -> list[str]:
     """
     The explicit half-open [start, end) a preset would have covered on `anchor`.
 
-    Read from metrics.yaml (sales_day.presets.<name>.relative), never computed
-    from a rule written here — the SQL form of the same window lives beside it
-    in that file, and a private second copy is precisely what CLAUDE.md rule 3
-    forbids.
+    The arithmetic lives in tools/windows.py since 2026-09-07, because
+    get_sales needs the same resolution to shift a preset back one period
+    (comparisons.previous_period) and tools/ cannot import the backend. This
+    is the runner's door onto it: the same function, raising the runner's own
+    error so a caller here sees a workflow refusal and not a bare ValueError.
     """
-    presets = _req(defs, "sales_day.presets")
-    if preset not in presets:
-        raise WorkflowValidationError(
-            f"Unknown window {preset!r}. Valid presets: {', '.join(sorted(presets))}."
-        )
-    spec = presets[preset].get("relative")
-    if not isinstance(spec, dict):
-        raise WorkflowValidationError(
-            f"metrics.yaml preset {preset!r} has no `relative` block, so it "
-            f"cannot be anchored on a past day. Add one beside its SQL."
-        )
-
-    unit = spec["unit"]
-    start = _shift(_truncate(anchor, unit), unit, int(spec["offset"]))
-    end = _shift(start, unit, int(spec["length"]))
-    return [start.isoformat(), end.isoformat()]
+    try:
+        return _resolve_preset(defs, preset, anchor)
+    except ValueError as exc:
+        raise WorkflowValidationError(str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------
