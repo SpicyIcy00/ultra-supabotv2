@@ -316,6 +316,9 @@ class Turn:
     done: dict = field(default_factory=dict)
     page_context: Optional[dict] = None
     narration: str = ""
+    # page_changed frames, in order: a page George created or changed, from
+    # the committed result (Page Workshop V1).
+    page_changes: list[dict] = field(default_factory=list)
 
     @property
     def read_calls(self) -> list[dict]:
@@ -324,6 +327,11 @@ class Turn:
     @property
     def ok_calls(self) -> list[dict]:
         return [c for c in self.read_calls if not c.get("error")]
+
+    @property
+    def page_writes(self) -> list[dict]:
+        """The create_page / edit_page calls this turn made, with their outcome."""
+        return [c for c in self.calls if c.get("tool") in ("create_page", "edit_page")]
 
     def history_turns(self) -> list[dict]:
         """This turn as the two history entries the client would replay."""

@@ -49,8 +49,16 @@ def _parse(frames: list[str]) -> list[tuple[str, dict]]:
 
 def run_turn(monkeypatch, question: str, *, history: Optional[list[dict]] = None,
              inject: Optional[Inject] = None, page_reader=None,
-             page_scope: Optional[dict] = None) -> Turn:
-    """One live turn, as a Turn."""
+             page_scope: Optional[dict] = None, page_writer=None,
+             page_references: Optional[list[dict]] = None) -> Turn:
+    """
+    One live turn, as a Turn.
+
+    `page_writer` is the Page Workshop seam: a fake that records what George
+    asked to be written and answers as the committed write would. Nothing
+    reaches george.pages from here — the eval is about what George CHOOSES
+    to write, and the service is proven separately.
+    """
     captured: list[dict] = []
     real = george_loop._call_tool
 
@@ -61,16 +69,21 @@ def run_turn(monkeypatch, question: str, *, history: Optional[list[dict]] = None
         captured.append({"tool": name, "arguments": args, "result": result, "error": err})
         return result, err, ms
 
-    monkeypatch.setattr(george_loop, "_call_tool", wrapped)
     StubLog.instances.clear()
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
 
     async def collect():
         return [f async for f in george_loop.run(
             question, history=history, page_reader=page_reader, page_scope=page_scope,
+            page_writer=page_writer,
+            page_references=page_references,
         )]
 
-    frames = _parse(asyncio.run(collect()))
+    # Restore the dispatcher after each turn: a second turn must not append
+    # its results into the first turn's captured evidence.
+    with monkeypatch.context() as turn_patch:
+        turn_patch.setattr(george_loop, "_call_tool", wrapped)
+        turn_patch.setattr(george_loop, "ConversationLog", StubLog)
+        frames = _parse(asyncio.run(collect()))
 
     turn = Turn(question=question, answer="", results=captured)
     text: list[str] = []
@@ -95,6 +108,8 @@ def run_turn(monkeypatch, question: str, *, history: Optional[list[dict]] = None
             turn.done = data
         elif event == "page_context":
             turn.page_context = data
+        elif event == "page_changed":
+            turn.page_changes.append(data)
         elif event == "error":
             turn.warnings.append({"reason": "error", **data})
     turn.answer = "".join(text).strip()
