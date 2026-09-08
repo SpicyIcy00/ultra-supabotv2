@@ -12,6 +12,10 @@ only. Obtain the final documentation-inclusive SHA with `git rev-parse HEAD`.
 | Full pure backend (`ops/verify_integration.py pure`) | 832 | 0 | 0 | 0 | 0 |
 | Explicit contracts (`ops/verify_integration.py contracts`) | 746 | 0 | 0 | 0 | 0 |
 | Full frontend Vitest, 38 files | 530 | 0 | 0 | 0 | 0 |
+| Local Page/Pin live suite, baseline target | 15 | 0 | 0 | 0 | 0 |
+| Local Page/Pin live suite, upgraded target | 15 | 0 | 0 | 0 | 0 |
+| Local Page/Pin live suite, downgrade target before downgrade | 15 | 0 | 0 | 0 | 0 |
+| Canonical app-db runner, baseline target | 3 | 0 | 0 | 0 | 0 |
 
 Contract tests are a subset of the pure suite, not 746 additional distinct tests.
 Pure coverage includes 22 deployment, 99 legacy Operations authorization,
@@ -30,21 +34,44 @@ Ignored raw reports: `verification/pure.xml`, `verification/contracts.xml`,
 Pydantic and Alembic deprecations, Browserslist age and DOM/router warnings remain.
 No dependency cleanup or UI redesign was included.
 
+## Local PostgreSQL rehearsal
+
+PostgreSQL 17.11 was extracted under the ignored `verification/postgres`
+directory and initialized with a `127.0.0.1:55432` listener and a single
+loopback SCRAM HBA rule. Three databases were built from synthetic fixtures:
+integration, persistent upgrade rehearsal, and disposable downgrade rehearsal.
+No dotenv file or inherited database/model/delivery credential is read.
+
+The online Page migration completed on both rehearsal databases. The dedicated
+downgrade target then completed `q1r2s3t4u5v6 -> p0q1r2s3t4u5`. Independent
+verification passed on all three final states: exact Pin and conversation UUIDs,
+tool calls, owner-separated same-title Pages, Ungrouped Pins, dense position,
+restored legacy grouping, application ownership, `george_ro` read-only/no-George
+access, and `george_log` INSERT-only/no-read access.
+
+The full read/golden suite was also attempted to define the synthetic boundary:
+66 passed, 82 failed, and 3 skipped. Those failures are expected and are not
+product regressions: the suite asserts recorded Aji values and requires legacy
+barcode/dispatch/vending objects and complete inventory, StoreHub and vending
+coverage which this Page/Pin fixture intentionally does not invent.
+
+See [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md) for setup and repeatable commands. Ignored JUnit reports
+are under `verification/`.
+
 ## Not executed — not passes or pytest skips
 
 | Work | Status |
 |---|---|
-| Actual staging DB revision | BLOCKED — REQUIRES STAGING DATABASE |
-| Read-only live/golden suite | BLOCKED — REQUIRES STAGING DATABASE |
-| Page/Pin application-role live tests | BLOCKED — REQUIRES STAGING DATABASE |
-| Migration upgrade/preservation/downgrade rehearsal | BLOCKED — REQUIRES STAGING DATABASE |
-| Real login, UUID Page create/edit/rename/reorder/reload, replay and receipts smoke | BLOCKED — REQUIRES STAGING DATABASE |
+| Hosted staging DB revision | BLOCKED — REQUIRES HOSTED STAGING DATABASE |
+| Read-only golden values and full-schema tools | BLOCKED — REQUIRES REPRESENTATIVE AJI DATA/SCHEMA |
+| Browser login/reload and deployed API/SSE smoke | BLOCKED — REQUIRES HOSTED STAGING |
 | Vercel-to-backend SSE/auth/proxy smoke | BLOCKED — REQUIRES PROVIDER CONFIGURATION |
 | Page Workshop and Investigation model evals | NOT AUTHORIZED; not collected by executed suites |
 
-No database connection, migration or real application write was performed.
-The nine Page model scenarios and the Investigation mixed-driver xfail are
-unchanged. No production data was used as a substitute. No export was taken.
+Local database connections, migrations, rolled-back application writes and role
+checks were performed only against generated localhost targets. The nine Page
+model scenarios and the Investigation mixed-driver xfail are unchanged. No
+production data was used as a substitute. No export was taken.
 
 ## Isolation evidence
 
@@ -56,10 +83,10 @@ unchanged. No production data was used as a substitute. No export was taken.
 | Pins/Pages remain available | Tool schema and HTTP gate tests; existing Page contracts/DOM tests | Real DB smoke pending |
 | No legacy boot writes when disabled | Real startup with bootstrap tripwire; launcher migration gate | Actual service flags pending |
 | Startup logs avoid credential values | URL log removed; enabled-bootstrap exception sentinel test | No deployed startup logs yet |
-| DATABASE_URL/log target separate from production | No configured staging target exists | BLOCKED — REQUIRES STAGING DATABASE |
-| Business read target known | No staging target selected | BLOCKED — REQUIRES STAGING DATABASE |
+| DATABASE_URL/log target separate from production | Local targets are generated and asserted loopback-only | Hosted target still blocked |
+| Business read target known | Synthetic `george_ro` target and privilege checks pass | Representative hosted data still blocked |
 | StoreHub/n8n/Telegram/Sheets unavailable | Operational non-read HTTP gate; required credential omissions documented | Provider omissions/DB jobs not yet verified |
-| Migration touched only staging | No migration executed | Rehearsal blocked |
+| Migration touched only staging | Two local synthetic upgrades and one dedicated downgrade completed | Hosted rehearsal pending |
 
 Mocked HTTP, schema and component checks are not claimed as a real deployed
 manual smoke test. Source routing cannot prove that a hostname is not an alias

@@ -139,12 +139,16 @@ No values below are credentials. Configure secrets in provider secret storage.
 
 ## Database to provision (no provider work performed)
 
-Recommend a **separate Supabase project** for ongoing staging and disposable
-copies for migration rehearsal. This makes project identity, credentials and
-automation separation explicit. A manually provisioned isolated Supabase branch
-is also viable, but this repository has Alembic plus legacy SQL/boot DDL, not a
-complete `supabase/migrations` history. Do not enable automatic branch schema
-deployment and assume it reproduces the app. Supabase branches have separate
+The approved zero-cost first step is the native local PostgreSQL environment in
+[LOCAL_POSTGRES.md](LOCAL_POSTGRES.md): three localhost-only databases, fresh local roles and
+synthetic fixtures for Page/Pin integration plus disposable upgrade/downgrade
+rehearsals. It does not require or modify provider infrastructure.
+
+If ongoing shared staging is later required, use an included Supabase branch or
+a separate hosted PostgreSQL instance whose identity and isolation are verified.
+This repository has Alembic plus legacy SQL/boot DDL, not a complete
+`supabase/migrations` history. Do not enable automatic branch schema deployment
+and assume it reproduces the app. Supabase branches have separate
 instances/credentials and can start without production data; exact data-copy
 options depend on how the branch is created.
 References: https://supabase.com/docs/guides/deployment/branching and
