@@ -182,23 +182,24 @@ def test_the_stream_exposes_the_thread_id_only_once_its_posts_exist():
     )
 
 
-def test_the_router_follows_the_stored_thread_and_never_the_start_frame():
+def test_the_root_never_navigates_to_a_thread_address_on_ask():
+    # 2026-09-08: the client followed the post frame to /ask/:id so the work
+    # had an address. 2026-09-09: the work's home IS the root — the river of
+    # persisted work is read there — so nothing navigates on a question and
+    # /ask/:id is only a focus somebody arrives at (test_river_home_contract).
     page = _source(_ASK_PAGE)
-    follow = page.split("function FollowThread()", 1)[1].split("\n}", 1)[0]
-    assert "storedThreadId" in follow
-    assert re.search(r"\bthreadId\b", follow) is None, (
-        "FollowThread must not read threadId — that is the start frame's id, "
-        "and it names a thread whose posts do not exist yet"
-    )
+    assert "FollowThread" not in page
+    assert "navigate(`/ask/" not in page
+    assert "useRiver('work')" in page
 
 
 def test_the_work_is_rendered_where_it_was_asked():
-    # The other half of the same fix: if the empty Ask did not draw the live
-    # turns, delaying navigation would leave the reader staring at nothing for
-    # the whole turn.
+    # The root draws the river and the live turn in one list, so asking from
+    # the root shows the answer in place — and every earlier piece of work
+    # above it, from persistence.
     page = _source(_ASK_PAGE)
-    empty = page.split("function EmptyAsk()", 1)[1].split("function ThreadAsk", 1)[0]
-    assert "AnswerTurns" in empty, "asking from /ask must render the work in place"
+    assert "<RiverEntries" in page
+    assert "riverMerge(posts, here ? turns : [])" in page
 
 
 # ---------------------------------------------------------------------------
