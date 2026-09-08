@@ -655,11 +655,28 @@ async def status_band(
     )
 
 
+# The two streams of the one river, by post kind (2026-09-09).
+#
+# ASK is where a person goes to George: the questions they asked and the
+# answers he gave. TODAY is where George comes to them: the brief, a notice,
+# a run, an approval — every post he initiated. One table, one visibility
+# clause, one cursor; the split is a WHERE on `kind`, so nothing a caller may
+# not see in one stream becomes visible in the other. No stream named means
+# the whole river, exactly as before.
+RIVER_STREAMS: dict[str, str] = {
+    "work": " AND p.kind IN ('question', 'answer')",
+    "attention": " AND p.kind NOT IN ('question', 'answer')",
+}
+
+
 @router.get("/river", response_model=RiverPage)
 async def read_river(
     limit: int = Query(RIVER_LIMIT, ge=1, le=RIVER_MAX),
     before: Optional[str] = Query(
         None, description="Read the page above this ISO timestamp. Omit for the newest."
+    ),
+    stream: Optional[str] = Query(
+        None, description="'work' for questions and answers, 'attention' for what George initiated. Omit for all."
     ),
     db: AsyncSession = Depends(get_db),
     user: AppUser = Depends(_george_user),
@@ -673,6 +690,10 @@ async def read_river(
     """
     params: dict[str, Any] = {"me": user.username, "limit": limit}
     cursor = ""
+    if stream is not None:
+        if stream not in RIVER_STREAMS:
+            raise HTTPException(status_code=422, detail="stream must be 'work' or 'attention'.")
+        cursor += RIVER_STREAMS[stream]
     if before:
         try:
             params["before"] = datetime.fromisoformat(before)

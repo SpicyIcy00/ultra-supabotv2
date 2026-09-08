@@ -22,7 +22,7 @@
  */
 import { useMemo } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { readRiver } from '../services/riverApi';
+import { readRiver, type RiverStream } from '../services/riverApi';
 import type { Post, RiverPage } from '../types/river';
 
 export const RIVER_KEY = ['river'] as const;
@@ -41,10 +41,15 @@ export function flattenPages(pages: RiverPage[]): Post[] {
   return out;
 }
 
-export function useRiver() {
+/**
+ * @param stream which of the river's two streams to read. Keyed into the
+ *   query so Ask's work and Today's attention are two caches of one server
+ *   read, invalidated together under RIVER_KEY when a turn stores.
+ */
+export function useRiver(stream?: RiverStream) {
   const query = useInfiniteQuery({
-    queryKey: RIVER_KEY,
-    queryFn: ({ pageParam }) => readRiver(pageParam),
+    queryKey: [...RIVER_KEY, stream ?? 'all'],
+    queryFn: ({ pageParam }) => readRiver(pageParam, undefined, stream),
     initialPageParam: null as string | null,
     // "Next" is OLDER: the cursor names the page above this one.
     getNextPageParam: (last) => last.before ?? undefined,

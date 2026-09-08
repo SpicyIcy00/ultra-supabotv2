@@ -22,14 +22,27 @@ const API_BASE = '/api/v1/george/river';
  *   page. A null `before` in the response means the beginning of the river has
  *   been reached — an end, not a failure to load.
  */
+/**
+ * The two streams of the one river (routes/george.py RIVER_STREAMS).
+ *
+ * `work` is what a person asked and what George answered — the home of
+ * user-directed work, which is Ask. `attention` is what George initiated —
+ * the brief, a notice, a run, an approval — which is Today. Same table, same
+ * visibility clause, same cursor; the split is by kind on the server, so no
+ * client filtering and no second source of truth.
+ */
+export type RiverStream = 'work' | 'attention';
+
 export const readRiver = async (
   before?: string | null,
   limit?: number,
+  stream?: RiverStream,
 ): Promise<RiverPage> => {
   const { data } = await axios.get<RiverPage>(API_BASE, {
     params: {
       ...(before ? { before } : {}),
       ...(limit ? { limit } : {}),
+      ...(stream ? { stream } : {}),
     },
   });
   return data;

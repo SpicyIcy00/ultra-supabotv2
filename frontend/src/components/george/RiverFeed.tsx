@@ -16,7 +16,7 @@
  * so paging backwards never counts from the beginning of history, and reverses
  * for rendering — see app/services/river.py. Nothing here re-sorts.
  */
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import type { Post } from '../../types/river';
 import type { GeorgeTurn } from '../../types/george';
 import { RiverEntries } from './RiverEntry';
@@ -48,6 +48,10 @@ interface Props {
   onOpenThread?: (threadId: string) => void;
   onShare?: (postId: string) => void;
   sharingId?: string | null;
+  /** What a genuinely empty stream says. The feed does not know which stream it is. */
+  empty?: ReactNode;
+  /** Whether "The beginning of the river" is worth saying at the top. */
+  showBeginning?: boolean;
 }
 
 export function RiverFeed({
@@ -63,6 +67,8 @@ export function RiverFeed({
   onOpenThread,
   onShare,
   sharingId = null,
+  empty,
+  showBeginning = true,
 }: Props) {
   // Memoized separately: see workUnit.storedItems. The live half changes on
   // every delta and the stored half must not be rebuilt with it.
@@ -105,18 +111,21 @@ export function RiverFeed({
             </button>
           </div>
         ) : (
-          // A real end, stated. Not a spinner that never resolves.
-          <p className="text-center text-[11px] text-george-muted">
-            The beginning of the river
-          </p>
+          showBeginning && (
+            // A real end, stated. Not a spinner that never resolves.
+            <p className="text-center text-[11px] text-george-muted">
+              The beginning of the river
+            </p>
+          )
         )
       )}
 
       {posts.length === 0 && pending.length === 0 && (
-        <p className="py-10 text-center text-[13px] leading-relaxed text-george-slate">
-          Nothing here yet. George posts the morning brief, anything he notices,
-          and every answer he gives.
-        </p>
+        empty ?? (
+          <p className="py-10 text-center text-[13px] leading-relaxed text-george-slate">
+            Nothing here yet.
+          </p>
+        )
       )}
 
       <RiverEntries
