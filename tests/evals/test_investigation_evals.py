@@ -90,6 +90,10 @@ def _common(name: str, turn: Turn, *, expect_compare: bool = True, max_calls: in
     findings["enumeration"] = checks.enumeration(turn.read_calls)
     findings["attribution_claims"] = checks.attribution_claims(turn.answer)
     findings["ungrounded_numerals"] = [f.text for f in checks.ungrounded_numerals(turn.answer, results)]
+    # Prompt rule 17: the reader does not know the tools exist. Every scenario
+    # here asks a BUSINESS question, so rule 17's exception — somebody asking
+    # how a figure was produced — cannot be claimed for any of them.
+    findings["internal_vocabulary"] = checks.internal_vocabulary(turn.answer)
     report.add(name, turn, findings, None, passed=False)
 
     assert turn.done.get("status") == "ok", (turn.warnings, turn.answer[:300])
@@ -106,6 +110,10 @@ def _common(name: str, turn: Turn, *, expect_compare: bool = True, max_calls: in
     assert not findings["enumeration"], f"the same call fanned out over subjects: {findings['enumeration']}"
     assert not findings["attribution_claims"], f"attribution math in prose: {findings['attribution_claims']}"
     assert not findings["ungrounded_numerals"], f"figures no tool returned: {findings['ungrounded_numerals']}"
+    assert not findings["internal_vocabulary"], (
+        f"internal vocabulary in a business answer (prompt rule 17): "
+        f"{findings['internal_vocabulary']}"
+    )
     return findings
 
 

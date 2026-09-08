@@ -302,6 +302,64 @@ def limitation_statement(answer: str) -> Optional[str]:
 
 
 # ---------------------------------------------------------------------------
+# Internal vocabulary in a business-facing answer (prompt rule 17)
+# ---------------------------------------------------------------------------
+#
+# AN EVAL, NEVER A PRODUCTION GATE. Nothing in the loop inspects the answer for
+# these, exactly as nothing checks its numerals against the rows — rule 9 states
+# what is and is not enforced and this adds no claim beyond it. What this does
+# is measure whether rule 17 is actually working against the real model, which
+# is the only way to find out.
+#
+# The list is the vocabulary the rules above rule 17 TEACH, which is precisely
+# the vocabulary that leaks: tool names, their arguments, the fields of a
+# result, and the files the definitions live in.
+
+_TOOL_NAMES = (
+    "get_sales", "get_stock", "get_product", "get_movement", "get_vending",
+    "get_vending_stock", "get_dead_stock", "get_purchasing", "get_cost_history",
+    "get_brief", "pin_answer", "save_workflow", "run_workflow", "view_page",
+    "create_page", "edit_page",
+)
+
+_ARGUMENT_NAMES = (
+    "group_by", "rank_by", "top_n", "compare_to", "date_range", "as_of",
+    "filters=", "metric=", "figures=", "page_id=",
+)
+
+_RESULT_FIELDS = (
+    "change_pct", "baseline_status", "full_row_count", "row_count",
+    "truncated_for_model", "snapshot_timestamp", "filters_applied",
+    "source_table", "rows_complete", "meta.",
+)
+
+_DEFINITION_PATHS = (
+    "metrics.yaml", "definitions/", "business_rules.yaml",
+    "warning_stock", "is_cancelled",
+)
+
+_INTERNAL_VOCABULARY = _TOOL_NAMES + _ARGUMENT_NAMES + _RESULT_FIELDS + _DEFINITION_PATHS
+
+
+def internal_vocabulary(answer: str) -> list[str]:
+    """
+    Every internal name the answer used, in the order they appear.
+
+    Case-insensitive and substring-based on purpose: `get_sales`,
+    ``get_sales`` and "GET_SALES" are the same leak, and a model that
+    writes "the get_sales tool" has named it however it was punctuated.
+
+    THIS DOES NOT KNOW WHETHER THE PERSON ASKED. Rule 17's exception — somebody
+    asking how a figure was produced, or what a metric means — is legitimate,
+    and an answer to that question SHOULD name things. The caller decides:
+    every eval that uses this asks a business question, where there is no
+    exception to claim.
+    """
+    low = answer.lower()
+    return [word for word in _INTERNAL_VOCABULARY if word.lower() in low]
+
+
+# ---------------------------------------------------------------------------
 # One turn, summarised
 # ---------------------------------------------------------------------------
 

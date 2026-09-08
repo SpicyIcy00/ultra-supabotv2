@@ -836,9 +836,12 @@ def get_sales(
                         "kind": "ambiguous_sku",
                         "message": (
                             f"SKU {filters['sku']!r} matches {len(matches)} "
-                            f"different products. They appear as separate rows "
-                            f"because group_by includes 'product'; their values "
-                            f"must not be added together."
+                            f"different products. They appear as separate rows, "
+                            f"one per product."
+                        ),
+                        "guidance": (
+                            "They are separate because group_by includes "
+                            "'product'; their values must not be added together."
                         ),
                         "source": "definitions/metrics.yaml: products.sku",
                     })
@@ -1053,8 +1056,11 @@ def get_sales(
                         incomplete, described,
                         int(_req(cdef, "incomplete_notice_max_named")),
                     )
-                    + ". Say which, and why, rather than reporting the comparison "
-                    "as whole; change_pct is null on those rows and must not be "
+                    + "."
+                ),
+                "guidance": (
+                    "Say which, and why, rather than reporting the comparison as "
+                    "whole; change_pct is null on those rows and must not be "
                     "filled in."
                 ),
                 "source": f"definitions/metrics.yaml: comparisons.{compare_to}.baseline_statuses",

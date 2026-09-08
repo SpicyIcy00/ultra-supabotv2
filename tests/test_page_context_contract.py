@@ -372,9 +372,15 @@ def test_truncated_says_what_was_not_inspected_and_how_to_get_it():
     out = _run(view_page(ctx=_ctx(FakeReader(_read(pins, remainder=remainder)))))
     notice = out["meta"]["notice"]
     assert notice["kind"] == "page_context_truncated"
+    # WHAT was not inspected is the reader's caveat and stays in `message`.
     assert "This page has 8 pins; 5 were read (the newest)" in notice["message"]
     assert "'Pin 6', 'Pin 7', 'Pin 8'" in notice["message"]
-    assert "meta.remainder" in notice["message"]
+    # HOW to fetch them is an instruction to the model and moved to `guidance`
+    # on 2026-09-08 (metrics.yaml notices.contract): `message` is rendered above
+    # the figure, and a reader was being shown directions addressed to somebody
+    # else, naming a field they have never heard of.
+    assert "meta.remainder" not in notice["message"]
+    assert "meta.remainder" in notice["guidance"]
     assert [r["pin_id"] for r in out["meta"]["remainder"]] == [p["pin_id"] for p in remainder]
 
 

@@ -232,8 +232,10 @@ def get_product(
                 + "; ".join(
                     f"{r['name']} ({r['category']}, PHP {r['unit_price']})" for r in rows
                 )
-                + ". They are returned as separate rows and must never be "
-                "summed. Disambiguate downstream with the product_id filter."
+                + ". They are returned as separate rows, not one product."
+            ),
+            "guidance": (
+                "Never sum them; disambiguate with the product_id filter."
             ),
             "source": "definitions/metrics.yaml: products.sku",
         })
@@ -270,8 +272,9 @@ def get_product(
                 f"{len(dup_groups)} SKU value(s) in this result map to more than "
                 f"one product: "
                 + ", ".join(f"{k!r} x{len(v)}" for k, v in list(dup_groups.items())[:5])
-                + ". Do not treat SKU as a key."
+                + "."
             ),
+            "guidance": "Do not treat SKU as a key.",
             "source": "definitions/metrics.yaml: products.sku",
         })
 

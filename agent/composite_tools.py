@@ -529,9 +529,9 @@ async def view_page(
             )
         notices.append({
             "kind": "page_context_partial",
-            "message": (". ".join(x for x in parts if x)
-                        + ". Say which of the page's figures are missing rather "
-                          "than treating the page as whole."),
+            "message": ". ".join(x for x in parts if x) + ".",
+            "guidance": ("Say which of the page's figures are missing rather "
+                         "than treating the page as whole."),
             "source": "view_page",
         })
     if truncated:
@@ -543,17 +543,21 @@ async def view_page(
                 f"This page has {read.get('pins_total')} pins; {len(selected)} "
                 f"were read ({'the newest' if read.get('requested') is None else 'the ones asked for'}). "
                 f"Not inspected: {listed}" + (f" and {more} more" if more else "")
-                + " — ids are in meta.remainder; read them by id if the question needs them"
             )
         if rows_omitted or rows_dropped:
             parts.append(
                 f"Rows are capped at {MAX_ROWS_PER_PAGE_RESULT} per result and "
                 f"{MAX_ROWS_PER_PAGE_READ} for the whole read; each result's "
-                f"receipts cover all of its rows, so do not total what you can see"
+                f"receipts cover all of its rows"
             )
         notices.append({
             "kind": "page_context_truncated",
-            "message": ". ".join(parts) + ". Say so.",
+            "message": ". ".join(parts) + ".",
+            "guidance": (
+                "Say so. Ids for what was not inspected are in meta.remainder; "
+                "read them by id if the question needs them. Do not total the "
+                "rows you can see."
+            ),
             "source": "view_page",
         })
 

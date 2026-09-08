@@ -92,7 +92,16 @@ describe('MetricGroup', () => {
 
   it('carries ONE receipts line when both were read the same way', () => {
     surface(group);
-    expect(screen.getAllByText(/new_transactions/)).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /read/ })).toHaveLength(1);
+  });
+
+  it('does not repeat the scope the heading already states', () => {
+    // The heading is built from the window and the store argument; a receipts
+    // line under it saying "This week" again is the duplication Stage 2 exists
+    // to remove. The read TIME is not duplicated and always stays (UI rule 6).
+    surface(group);
+    expect(screen.getAllByText('This week')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /read/ })).toBeTruthy();
   });
 
   it('gives each figure its own receipts when they were not', () => {
@@ -183,9 +192,23 @@ describe('Chart', () => {
 
   it('keeps its receipts beside it', () => {
     surface(stored(series));
-    expect(screen.getByText(/new_transactions/)).toBeTruthy();
+    expect(openReceipts()).toMatch(/new_transactions/);
   });
 });
+
+/**
+ * Open the receipts and return what they say.
+ *
+ * Levels 3 and 4 of the disclosure (metrics.yaml notices.contract records the
+ * same four for caveats): the method, then the raw receipt. Nothing here is
+ * hidden — the button names itself and the always-visible line above it
+ * carries the scope and the read time.
+ */
+function openReceipts(): string {
+  const button = screen.getAllByRole('button', { name: /read/ })[0];
+  fireEvent.click(button);
+  return (button.closest('div')?.parentElement ?? document.body).textContent ?? '';
+}
 
 describe('provenance survives every primitive', () => {
   const cases: [string, Record<string, unknown>[]][] = [
@@ -199,12 +222,21 @@ describe('provenance survives every primitive', () => {
     ]],
   ];
 
-  it.each(cases)('shows the source and the time under %s', (_name, rows) => {
+  it.each(cases)('shows the scope and the time under %s', (_name, rows) => {
     surface(stored(rows));
-    // UI rule 3: the receipts are in the same panel, one click away.
-    // UI rule 6: no number displays without when it was read.
-    expect(screen.getByText(/new_transactions/)).toBeTruthy();
-    expect(screen.getByText(/read/)).toBeTruthy();
+    // UI rule 6: no number displays without when it was read. Always visible,
+    // never behind anything, on every primitive.
+    expect(screen.getByText(/read /)).toBeTruthy();
+    // Level 2: what was measured, in the language of the question. The table
+    // name used to lead this line; it is provenance and is now one tap down.
+    expect(screen.getByText(/This week/)).toBeTruthy();
+  });
+
+  it.each(cases)('shows the source one tap away under %s', (_name, rows) => {
+    surface(stored(rows));
+    // UI rule 3: every number is inspectable, in the SAME panel, one click
+    // away. Level 4 — the table, the filters and their citations.
+    expect(openReceipts()).toMatch(/new_transactions/);
   });
 });
 

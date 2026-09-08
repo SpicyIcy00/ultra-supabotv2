@@ -31,6 +31,45 @@ function manila(iso?: string): string {
   }).format(new Date(iso));
 }
 
+/**
+ * What a figure covers, in the language of the question that asked for it.
+ *
+ * LEVEL 2 OF THE FOUR (metrics.yaml notices.contract records the same split for
+ * caveats): the business caveat, then the scope, then the method, then the raw
+ * receipt. This is the scope — the window and what it was narrowed to — and it
+ * is built from `meta.window` and `meta.metric_label`, which are structured
+ * values the tool supplied. Nothing here is parsed out of prose, and nothing is
+ * invented: a result with no window gets no window in the line rather than a
+ * guessed one.
+ *
+ * A preset prints its NAME with the underscores opened out, because the name is
+ * what metrics.yaml defines and what the filters cite. Same rule as
+ * resultShape.windowLabel, which does this for a group's heading.
+ */
+export function scopeLine(meta: ToolMeta): string {
+  const parts: string[] = [];
+  if (meta.metric_label) parts.push(meta.metric_label);
+
+  const w = meta.window;
+  if (w) {
+    if (w.kind === 'preset' && w.name) {
+      const words = w.name.replace(/_/g, ' ').trim();
+      if (words) parts.push(words[0].toUpperCase() + words.slice(1));
+    } else if (w.start && w.end) {
+      parts.push(`${w.start} → ${w.end}`);
+    }
+  }
+
+  // A comparison is part of the scope, not a detail of it: a figure measured
+  // against another period covers two windows, and saying so is the difference
+  // between "up 12%" meaning something and meaning nothing.
+  if (meta.comparison?.baseline) {
+    parts.push(`vs ${meta.comparison.display_name ?? 'the previous period'}`);
+  }
+
+  return parts.length ? parts.join(' · ') : 'Scope not recorded';
+}
+
 /** filters_applied entries are "<sql>   # metrics.yaml: <key>" */
 function splitFilter(line: string): { sql: string; cite?: string } {
   const i = line.indexOf('#');
@@ -39,7 +78,20 @@ function splitFilter(line: string): { sql: string; cite?: string } {
     : { sql: line.slice(0, i).trim(), cite: line.slice(i + 1).trim() };
 }
 
-export function ReceiptsBlock({ meta }: { meta?: ToolMeta }) {
+export function ReceiptsBlock({
+  meta,
+  scopeInHeading = false,
+}: {
+  meta?: ToolMeta;
+  /**
+   * True when the block above already states the scope — a group's heading is
+   * built from the same window and store argument (resultShape.groupHeading).
+   * Saying "This week" twice, once as a heading and once under it, is the
+   * duplication this stage exists to remove; the read time is not duplicated
+   * and always stays.
+   */
+  scopeInHeading?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   if (!meta) return null;
 
@@ -54,11 +106,21 @@ export function ReceiptsBlock({ meta }: { meta?: ToolMeta }) {
         aria-expanded={open}
       >
         <Clock className="h-3.5 w-3.5 shrink-0 text-george-muted" aria-hidden />
+        {/* LEVEL 2: what was measured, in words. This line used to lead with
+            `new_transaction_items` — a table name, on the always-visible line
+            under every figure in the app, for a reader who asked how a store
+            did. The window and the scope are the same fact in the language of
+            the question; the table is provenance and is one tap down with the
+            filters that cite it. Nothing was removed. */}
         <span className="text-[12px] text-george-slate flex-1 min-w-0 truncate">
-          <span className="text-george-navy">{meta.source_table ?? 'source unknown'}</span>
-          {' · read '}
+          {!scopeInHeading && (
+            <>
+              <span className="text-george-navy">{scopeLine(meta)}</span>
+              {' · '}
+            </>
+          )}
+          {'read '}
           {ago(meta.snapshot_timestamp)}
-          {meta.filters_applied?.length ? ` · ${meta.filters_applied.length} filters` : ''}
         </span>
         <span className="hidden xs:inline text-[11px] text-george-muted shrink-0">receipts</span>
         <ChevronRight

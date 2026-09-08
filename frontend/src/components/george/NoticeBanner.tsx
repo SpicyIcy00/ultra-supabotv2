@@ -121,6 +121,42 @@ export function CompactNotices({ notices }: { notices: GeorgeNotice[] }) {
   );
 }
 
+/**
+ * The citation under a caveat: which definition, or which tool, says this.
+ *
+ * PROVENANCE, NOT CAVEAT — which is why it moved behind a tap on 2026-09-08
+ * and why that does not touch UI rule 4. What the rule protects is the CAVEAT
+ * being read on the way to the number, and the caveat is the sentence above,
+ * still whole and still uncollapsible. This is
+ * "definitions/metrics.yaml: comparisons.previous_period.baseline_statuses",
+ * which was rendered as a third always-visible line on every notice in the
+ * app: a file path shown to somebody who asked how a store did. It is real,
+ * it is auditable, and it belongs at the level the receipts live at
+ * (metrics.yaml notices.contract).
+ */
+function NoticeSource({ source }: { source: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-1">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex min-h-touch items-center gap-1 text-[11px] text-george-muted hover:text-george-slate"
+      >
+        <ChevronRight
+          className={`h-3 w-3 shrink-0 transition-transform ${open ? 'rotate-90' : ''}`}
+          aria-hidden
+        />
+        Where this comes from
+      </button>
+      {open && (
+        <p className="break-words pb-1 text-[11px] leading-relaxed text-george-muted">{source}</p>
+      )}
+    </div>
+  );
+}
+
 export function NoticeBanner({ notices }: { notices: GeorgeNotice[] }) {
   if (notices.length === 0) return null;
 
@@ -140,12 +176,14 @@ export function NoticeBanner({ notices }: { notices: GeorgeNotice[] }) {
             <p className="text-[13px] font-medium text-george-navy">
               {KIND_LABEL[n.kind] ?? n.kind.replace(/_/g, ' ')}
             </p>
+            {/* The caveat itself. Whole, above the figure, never collapsible.
+                Written for the reader — the instructions the model needs about
+                what to do with it live in the notice's `guidance`, which is
+                never sent here (metrics.yaml notices.contract). */}
             <p className="text-[13px] leading-relaxed text-george-navy break-words">
               {n.message}
             </p>
-            {n.source && (
-              <p className="mt-1 text-[11px] text-george-muted break-words">{n.source}</p>
-            )}
+            {n.source && <NoticeSource source={n.source} />}
           </div>
         </div>
       ))}

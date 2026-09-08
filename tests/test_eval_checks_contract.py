@@ -15,6 +15,7 @@ from tests.evals.checks import (
     limitation_statement,
     named_driver,
     stronger_from_rows,
+    internal_vocabulary,
     ungrounded_numerals,
 )
 
@@ -166,3 +167,49 @@ def test_george_s_own_phrasings_from_the_first_live_run_are_read_correctly():
         "customers chose down or the shelf chose for them."
     )
     assert limitation_statement("The bev row makes me want the stock snapshots before anyone concludes it was demand.")
+
+
+# ---------------------------------------------------------------------------
+# Internal vocabulary (prompt rule 17) — an eval check, never a production gate
+# ---------------------------------------------------------------------------
+
+
+def test_a_business_answer_names_nothing_internal():
+    answer = (
+        "Rockwell took ₱48,210 last week, down 12.1% on the week before. "
+        "Basket value fell much more than transactions did, so that is where "
+        "the fall sits. Two categories had nothing to compare against, because "
+        "they did not trade in the earlier week."
+    )
+    assert internal_vocabulary(answer) == []
+
+
+def test_a_tool_name_is_caught():
+    assert "get_sales" in internal_vocabulary("I ran get_sales for last week.")
+
+
+def test_an_argument_name_is_caught_however_it_is_written():
+    # Backticked, quoted, capitalised — the same leak either way.
+    assert "rank_by" in internal_vocabulary("I used `rank_by='biggest_drop'` here.")
+    assert "group_by" in internal_vocabulary('Grouped with GROUP_BY = "store".')
+
+
+def test_a_result_field_is_caught():
+    assert "change_pct" in internal_vocabulary("change_pct is null on two rows.")
+    assert "baseline_status" in internal_vocabulary("Their baseline_status was no_baseline.")
+
+
+def test_a_definitions_path_is_caught():
+    assert "metrics.yaml" in internal_vocabulary("The threshold lives in metrics.yaml.")
+    assert "definitions/" in internal_vocabulary("See definitions/metrics.yaml for the rule.")
+
+
+def test_ordinary_business_words_are_not_mistaken_for_internals():
+    # "compare", "ranked", "top" and "filter" are how a person talks about this
+    # work, and rule 17 asks for exactly those words. Only the identifiers are
+    # forbidden.
+    answer = (
+        "I compared the two weeks, ranked the products by the size of the fall, "
+        "and filtered to Rockwell. The top three account for most of it."
+    )
+    assert internal_vocabulary(answer) == []

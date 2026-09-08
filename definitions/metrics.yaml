@@ -3146,6 +3146,48 @@ brief:
 # even when the fingerprint misjudged the wording.
 # =============================================================================
 notices:
+  # ---------------------------------------------------------------------------
+  # THE NOTICE CONTRACT. Added 2026-09-08, UI System V2 Stage 2.
+  #
+  # A notice has TWO audiences and used to be written for one of them. The
+  # reader needs the caveat; the model needs the caveat AND an instruction about
+  # what to do with it — "Say which, and why, rather than reporting the
+  # comparison as whole; change_pct is null on those rows and must not be filled
+  # in." That sentence was inside `message`, and `message` is what NoticeBanner
+  # renders above the figure. So a person asking how a store did was shown a
+  # paragraph of instructions addressed to somebody else, naming a column they
+  # have never heard of.
+  #
+  # THE FIELDS, AND WHO EACH IS FOR.
+  #
+  #   message   the caveat, in business language, for the READER. Complete on
+  #             its own: it must still say what is wrong and what it means for
+  #             the figure, because this is the only part that is surfaced
+  #             (UI rule 4) and nothing may weaken that.
+  #   guidance  OPTIONAL, and for the MODEL only. What to do about the caveat —
+  #             what to say, what not to compute, what not to add up. It reaches
+  #             the model inside the tool result like every other field and is
+  #             NEVER sent in the `notice` frame or rendered anywhere.
+  #   source    the citation, for AUDIT. A metrics.yaml key or a tool name. It
+  #             is provenance rather than caveat, so it sits at the disclosure
+  #             level with the receipts and not on the always-visible line.
+  #
+  # WHAT DID NOT CHANGE. `must_convey` is checked against the ANSWER, never
+  # against the message, so moving text between these fields cannot weaken the
+  # fingerprint enforcement in agent/loop.py `_unsurfaced` — and does not. Every
+  # kind below keeps exactly the fingerprint it had.
+  #
+  # Held by tests/test_prose_contract.py, which fails if a notice `message`
+  # acquires model-directed vocabulary again.
+  # ---------------------------------------------------------------------------
+  contract:
+    message_audience: reader
+    guidance_audience: model
+    guidance_optional: true
+    guidance_never_rendered: true
+    source_is_provenance_not_caveat: true
+    must_convey_checks_the_answer_not_the_message: true
+
   low_stock_not_operational:
     must_convey:
       - [threshold, thresholds, warning_stock]

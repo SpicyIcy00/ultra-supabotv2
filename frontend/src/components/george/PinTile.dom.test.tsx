@@ -12,7 +12,7 @@
  * (UI rules 3, 4 and 6).
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Pin, PinCallResult, PinRun } from '../../types/pins';
 import type { ToolMeta } from '../../types/george';
@@ -137,8 +137,9 @@ describe('a pin of several successful calls', () => {
   it('carries receipts for what it drew', async () => {
     tile(runOf([ok('net_sales', 118420), ok('transactions', 241, 'count')]));
     await screen.findByText('₱118,420');
-    expect(screen.getAllByText(/new_transactions/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/read /).length).toBeGreaterThanOrEqual(1);
+    fireEvent.click(screen.getAllByRole('button', { name: /read/ })[0]);
+    expect(document.body.textContent).toMatch(/new_transactions/);
   });
 
   it('says nothing about a partial replay when nothing was partial', async () => {

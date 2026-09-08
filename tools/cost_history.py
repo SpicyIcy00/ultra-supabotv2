@@ -304,9 +304,9 @@ def get_cost_history(sku: str, top_n: Optional[int] = None) -> dict:
                 "internal transfer valuations. They are different measures and are "
                 "reported as separate series: a transfer valuation is what the "
                 "business valued goods at when moving them between its own "
-                "locations, not a price anyone paid. Do not compare or average "
-                "across the two."
+                "locations, not a price anyone paid."
             ),
+            "guidance": "Do not compare or average across the two.",
             "source": "metrics.yaml: cost_history.never_blend_bases",
         })
 

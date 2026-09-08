@@ -116,7 +116,11 @@ describe('a legacy post, from before the calls were stored', () => {
   it('still draws its figures with their receipts', () => {
     mount(answer({ charted: [{ seq: 3, tool: 'get_sales', rows: CHARTED[0].rows, meta: META }] }));
     expect(screen.getByText('₱118,420')).toBeTruthy();
-    expect(screen.getByText(/new_transactions/)).toBeTruthy();
+    // The read time is always visible (UI rule 6); the source table is one tap
+    // down with the filters that cite it (UI rule 3), since 2026-09-08.
+    expect(screen.getByText(/read /)).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('button', { name: /read/ })[0]);
+    expect(document.body.textContent).toMatch(/new_transactions/);
   });
 
   it('offers no Pin — a call rebuilt from the rows would be invented', () => {

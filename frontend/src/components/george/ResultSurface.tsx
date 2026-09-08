@@ -84,11 +84,17 @@ export function ResultSurface({
                     <Body result={m} lead={false} large={false} />
                     {/* Each figure keeps its own receipts unless the whole
                         group provably shares one. */}
-                    {!block.sharedMeta && <ReceiptsBlock meta={m.source.meta} />}
+                    {!block.sharedMeta && (
+                      <ReceiptsBlock meta={m.source.meta} scopeInHeading={Boolean(block.heading)} />
+                    )}
                   </div>
                 ))}
               </MetricGroup>
-              {block.sharedMeta && <ReceiptsBlock meta={block.sharedMeta} />}
+              {/* The heading above already names the window and the store
+                  scope, from the same arguments this line would repeat. */}
+              {block.sharedMeta && (
+                <ReceiptsBlock meta={block.sharedMeta} scopeInHeading={Boolean(block.heading)} />
+              )}
             </>
           )}
         </div>

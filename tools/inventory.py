@@ -218,7 +218,9 @@ def get_stock(
             "message": (
                 "Low-stock thresholds are not set, so no product can qualify as "
                 f"low stock ({reason}). This is NOT an empty result meaning "
-                "nothing is low — the thresholds have never been configured. "
+                "nothing is low — the thresholds have never been configured."
+            ),
+            "guidance": (
                 "Populate inventory.warning_stock, or agree a floor with the "
                 "business and set it in definitions/metrics.yaml "
                 "(inventory.low_stock_threshold_default)."
@@ -272,9 +274,12 @@ def get_stock(
                                 f"{m['name']} ({m['category']}, PHP {m['unit_price']})"
                                 for m in matches
                             )
-                            + ". The rows below are per product per store and must "
-                            "not be added together as one item — each row's "
-                            "product_id says which product it belongs to."
+                            + ". The rows below are per product per store, not "
+                            "one item."
+                        ),
+                        "guidance": (
+                            "Do not add the rows together; each row's product_id "
+                            "says which product it belongs to."
                         ),
                         "source": "definitions/metrics.yaml: products.sku",
                     }

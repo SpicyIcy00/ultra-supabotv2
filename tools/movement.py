@@ -646,10 +646,11 @@ def get_movement(
             "message": (
                 "This answer carries two kinds of number: recorded transfer "
                 "documents and balance changes inferred from daily snapshots. "
-                "They are not added together and must not be — they describe the "
-                "same goods from different sources, so a combined figure would "
-                "double-count. Compare them if you like; that is a "
-                "reconciliation, not a total."
+                "They are not added together — they describe the same goods "
+                "from different sources, so a combined figure would double-count."
+            ),
+            "guidance": (
+                "Never sum them. Comparing them is a reconciliation, not a total."
             ),
             "source": "metrics.yaml: movement.never_blend_bases",
         })
