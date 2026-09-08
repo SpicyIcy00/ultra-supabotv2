@@ -1,53 +1,70 @@
 /**
- * /today — the river. Everything George did and said, and everything anyone
- * said to him, as one timeline that is already running when you arrive.
+ * /today — where George comes to you.
  *
- * NO SESSIONS, NO "NEW CHAT", NO BLANK PAGE. There is nothing to start, so
- * there is no button to start it and no empty state pretending to be one —
- * the nearest thing is a database with no posts at all, which says so
- * plainly (RiverFeed).
+ * TODAY: GEORGE → USER. What he initiated: the morning brief, a notice, a
+ * workflow run, an approval — the attention stream of the river
+ * (routes/george.py RIVER_STREAMS). Not the questions you asked him; those are
+ * your work, and their home is Ask.
  *
- * NOT A MANUFACTURED EXECUTIVE PAGE. Today is the timeline because the
- * timeline is what George actually has: the brief, the runs, the approvals,
- * the answers. When his proactive intelligence can say what deserves
- * attention, this page will change; until then it shows the record and
- * nothing it invented.
+ * WHAT THIS PAGE IS NOT (2026-09-09). Until now it rendered the whole river,
+ * questions and answers included, with a general composer at the bottom — a
+ * second Ask, and the one that held the persisted history, which made Ask
+ * feel like a temporary chat and this like the real home. That was backwards.
+ * Today renders only what George put here, and nothing it invented.
  *
- * THREE INDEPENDENT UNKNOWNS, THREE RENDERINGS (UI rule 8). The river, the
+ * NOT A MANUFACTURED EXECUTIVE PAGE. When George's proactive intelligence can
+ * say what deserves attention, this page will change; until then it shows
+ * the record and, when the record is empty, says so plainly. No fabricated
+ * alert, finding, recommendation or score — every one of those would be a
+ * claim about the world the app never checked (UI rule 8).
+ *
+ * TALKING TO GEORGE FROM HERE. A brief's follow-up chip asks George in the
+ * ordinary way and takes you to Ask, where the work lands and persists — work
+ * you start belongs to Ask wherever you started it. There is no general
+ * composer here: one canonical river of user-directed work, not two.
+ *
+ * THREE INDEPENDENT UNKNOWNS, THREE RENDERINGS (UI rule 8). The stream, the
  * status band and the needs-you count each load separately and each says so
- * while it does not know. None of them may borrow another's calm default.
- *
- * ASKING FROM HERE OPENS THE WORKSPACE. The composer starts a new thread and
- * goes to Ask, where the answer takes the screen; the same turn is also the
- * river's newest entry, drawn here as a pending post until the stored copy
- * arrives (riverMerge). One George, one turn, two places to watch it.
+ * while it does not know.
  */
 import { useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useGeorge } from '../hooks/useGeorge';
 import { useRiver } from '../hooks/useRiver';
-import { AskComposer } from '../components/george/AskComposer';
 import { RiverFeed } from '../components/george/RiverFeed';
 import { StatusBand } from '../components/george/StatusBand';
 import { approvalsView } from '../components/george/approvalState';
-import { liveCognition } from '../components/george/cognition';
-import { markDetail } from '../components/george/markState';
-import { riverMerge } from '../components/george/riverMerge';
-import { ROOT_HINT } from '../components/george/composerHint';
 import type { StatusQuery } from '../components/george/statusState';
 import { SHELL_COLUMN, SHELL_PAGE_HEIGHT } from '../components/shell/shellLayout';
 import { useShare } from '../hooks/useShare';
 import { listApprovals } from '../services/workflowsApi';
 import { readStatus } from '../services/statusApi';
 
-export default function TodayPage() {
-  const { turns, ask, reset, cancel, busy, presence, live } = useGeorge();
-  const navigate = useNavigate();
-  const river = useRiver();
-  const share = useShare();
+/** The truthful early state: nothing George initiated is on record yet. */
+function NothingToSurface() {
+  return (
+    <div className="py-16 text-center">
+      <p className="font-george-serif text-[22px] leading-snug text-george-navy">Good morning.</p>
+      <p className="mx-auto mt-3 max-w-sm text-[13px] leading-relaxed text-george-slate">
+        George will surface things that need your attention here — the morning brief, anything he
+        notices, a run that fired, an approval waiting.
+      </p>
+      <Link
+        to="/ask"
+        className="mt-6 inline-block min-h-touch rounded-full border border-george-line bg-george-paper px-4 py-2 text-[13px] text-george-navy hover:border-george-slate"
+      >
+        Ask George
+      </Link>
+    </div>
+  );
+}
 
-  const merged = useMemo(() => riverMerge(river.posts, turns), [river.posts, turns]);
+export default function TodayPage() {
+  const { ask, reset } = useGeorge();
+  const navigate = useNavigate();
+  const river = useRiver('attention');
+  const share = useShare();
 
   const status = useQuery({
     queryKey: ['george-status'],
@@ -82,18 +99,10 @@ export default function TodayPage() {
         : { status: 'success', approvals: approvals.data ?? [] },
   ).count;
 
-  const narration = useMemo(
-    () =>
-      busy
-        ? {
-            detail: markDetail(presence, live.running, live.lastResult),
-            cognition: liveCognition(presence, live.thinking),
-          }
-        : null,
-    [busy, presence, live.running, live.lastResult, live.thinking],
-  );
-
-  /** A new thread, and the workspace to watch it in. */
+  /**
+   * A follow-up George offered on a brief. The work it starts is YOURS and
+   * lands in Ask: a new thread, watched there, persisted there.
+   */
   const onAsk = useCallback(
     (question: string) => {
       reset();
@@ -105,16 +114,12 @@ export default function TodayPage() {
 
   return (
     <div className={`${SHELL_PAGE_HEIGHT} flex flex-col`}>
-      <StatusBand
-        query={statusQuery}
-        needsYou={needsYou}
-        onOpenApprovals={() => navigate('/inbox')}
-      />
+      <StatusBand query={statusQuery} needsYou={needsYou} onOpenApprovals={() => navigate('/inbox')} />
 
       <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-5 md:px-8">
         <div className={SHELL_COLUMN}>
           <RiverFeed
-            posts={merged.posts}
+            posts={river.posts}
             loading={river.loading}
             error={river.error ? 'The timeline could not be read.' : null}
             hasOlder={river.hasOlder}
@@ -124,15 +129,17 @@ export default function TodayPage() {
             onOpenThread={(id) => navigate(`/ask/${id}`)}
             onShare={share.share}
             sharingId={share.sharingId}
-            /* The live turn goes INTO the feed's own list rather than under
-               it, so the stored copy replacing it keeps the same DOM. */
-            pending={merged.pending}
-            narration={narration}
+            empty={<NothingToSurface />}
+            showBeginning={false}
           />
+          {river.posts.length > 0 && (
+            <p className="mt-8 text-center text-[12px] text-george-muted">
+              Your own work is in{' '}
+              <Link to="/ask" className="text-george-slate underline hover:text-george-navy">Ask</Link>.
+            </p>
+          )}
         </div>
       </div>
-
-      <AskComposer onAsk={onAsk} onCancel={cancel} busy={busy} placeholder={ROOT_HINT} />
     </div>
   );
 }
