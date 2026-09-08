@@ -20,7 +20,7 @@ const done: DoneFrame = {
 function george(extra: Partial<AnswerTurn> = {}): AnswerTurn {
   return {
     role: 'george', text: 'Up 4%.', thinking: '', toolCalls: [], notices: [],
-    pinned: [], saved: [], at: '', ...extra,
+    pinned: [], saved: [], pageChanges: [], at: '', ...extra,
   };
 }
 const user: GeorgeTurn = { role: 'user', text: 'sales?', at: '' };
@@ -168,7 +168,7 @@ describe('a page read in the work line', () => {
   it('is named as a deed but its pins are not counted as rows', () => {
     const turn = {
       role: 'george' as const, text: 'x', thinking: '', notices: [], pinned: [], saved: [],
-      at: '2026-09-07T09:00:00+08:00',
+      pageChanges: [], at: '2026-09-07T09:00:00+08:00',
       done: { conversation_id: 'c', iterations: 1, tool_calls: 2, status: 'ok',
         notice_forced: false, usage: { input: 0, output: 0, cache_read: 0 }, cache_hit: false },
       toolCalls: [

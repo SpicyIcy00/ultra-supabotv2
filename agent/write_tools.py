@@ -1,5 +1,5 @@
 """
-George's write surface: pin_answer, and save_workflow.
+George's write surface: pin_answer, save_workflow, create_page and edit_page.
 
 WHY THIS FILE IS NOT IN tools/
 tools/ is the READ surface: ten functions that connect as george_ro and return
@@ -61,6 +61,23 @@ on purpose: the reader is closed over the authenticated user AND the exact page
 scope in the web process, so the tool that calls it has no username argument
 and no page-name argument. "Read Alice's Purchasing page" has nowhere to put
 the name. No reader injected means the tool is not in the schema at all.
+
+THE FIFTH AND SIXTH ARE WRITES TO A PAGE (added 2026-09-08, Page Workshop V1).
+create_page and edit_page reach a PageWriter the web process closes over the
+authenticated owner and — for "this page" — the page the question was asked
+from, by its ID. The model names a page by page_id and a pin by pin_id; a
+title is accepted as a convenience the SERVICE resolves deterministically or
+refuses (two candidates is a refusal that lists both), never a guess and never
+the write identity. Neither tool takes a username or an owner, and a page id
+that is not the caller's is the same answer as one that does not exist.
+
+The provenance rule extends unchanged: an analysis a page is built from is a
+list of calls that RAN, successfully, in this conversation — the same
+`executed` set pin_answer checks — or the id of a pin the caller already owns.
+Nothing is re-run to be saved, and the tool_calls schema's enum is the READ
+surface, so a page can never hold view_page, a write or a composite. Every
+build and every edit is one transaction on the backend: a failed fourth
+analysis leaves no page behind, and the tool returns only after the commit.
 """
 
 from __future__ import annotations
@@ -193,6 +210,58 @@ class PageReader(Protocol):
     async def __call__(self, pins: Optional[list[str]], figures: bool) -> dict: ...
 
 
+class PageRefused(ValueError):
+    """
+    The page cannot be created or edited as asked, and the message says why:
+    a bound, a title collision, a target that is ambiguous or not the
+    caller's, an analysis that never ran. A ValueError for the same reason
+    PinRefused is one: the loop turns it into a real answer with a route out.
+    """
+
+
+@dataclass(frozen=True)
+class PageBuildSpec:
+    """What the loop asks the page writer to create. Assembled here, written there."""
+
+    title: str
+    purpose: Optional[str]
+    # Each either {"title", "tool_calls"} (already checked against the
+    # executed set) or {"pin_id"} (an existing pin; the service checks it is
+    # the caller's).
+    analyses: list[dict[str, Any]]
+    # Filled by the loop, never by the model.
+    question: Optional[str]
+    conversation_id: Optional[str]
+
+
+@dataclass(frozen=True)
+class PageEditSpec:
+    """What the loop asks the page writer to change."""
+
+    # None means the page the question was asked from; the writer knows which
+    # that is because it was closed over it. A string is a page id, which the
+    # service checks is the caller's.
+    page_id: Optional[str]
+    operations: list[dict[str, Any]]
+    question: Optional[str]
+    conversation_id: Optional[str]
+
+
+class PageWriter(Protocol):
+    """
+    Builds and edits the caller's pages. Implemented in the web process,
+    closed over the authenticated owner and the page in scope (if any).
+
+    Both methods must raise PageRefused — with a message a person could act
+    on — for every expected failure, and return only after the write has
+    COMMITTED. Anything else is a fault.
+    """
+
+    async def create(self, spec: PageBuildSpec) -> dict: ...
+
+    async def edit(self, spec: PageEditSpec) -> dict: ...
+
+
 @dataclass
 class WriteContext:
     """
@@ -218,6 +287,9 @@ class WriteContext:
     # The page the caller is on, readable through the application role. Bound
     # to the user and the page in the web process; the model names neither.
     page_reader: Optional[PageReader] = None
+    # The caller's pages, writable through the application role. Bound to the
+    # owner (and to the page in scope, for "this page") in the web process.
+    page_writer: Optional[PageWriter] = None
 
 
 def call_key(tool: str, arguments: Any) -> str:
@@ -522,10 +594,266 @@ async def save_workflow(
 # when the matching writer has been injected, and dispatches them separately
 # from TOOL_FUNCTIONS so that neither the pin runner, a pin's own contents, nor
 # a workflow's steps can ever reach one.
+# ---------------------------------------------------------------------------
+# Pages
+# ---------------------------------------------------------------------------
+
+def _page_bounds() -> dict:
+    """The bounds the prompt states and these tools enforce, from the definitions."""
+    from tools._common import load_defs, req   # local: agent/ imports tools/ lazily here
+
+    defs = load_defs()
+    return {
+        "max_analyses": int(req(defs, "pages.workshop.max_analyses_per_build")),
+        "max_operations": int(req(defs, "pages.workshop.max_operations_per_edit")),
+        "max_adds": int(req(defs, "pages.workshop.max_adds_per_edit")),
+    }
+
+
+# The closed set of things edit_page can do. Mirrored by the service
+# (app/services/page_operations.EDIT_OPERATIONS) and held equal by a test.
+PAGE_EDIT_OPERATIONS = (
+    "rename", "set_purpose", "add", "add_existing", "remove", "move_to_page", "place",
+)
+
+
+def _refuse_unrun(calls: list[dict], ctx: WriteContext, what: str) -> None:
+    missing = _unrun(calls, ctx.executed)
+    if missing:
+        listed = "; ".join(
+            f"{c['tool']}({json.dumps(c['arguments'], sort_keys=True, default=str)})"
+            for c in missing
+        )
+        ran = ", ".join(sorted({c["tool"] for c in ctx.executed.values()})) or "none"
+        raise PageRefused(
+            f"{what} uses {listed}, which you have not run in this conversation, "
+            f"so it cannot be saved — an analysis on a page must be a call whose "
+            f"result the user has actually seen. Run it now, read the result, then "
+            f"save it. Tools run so far: {ran}."
+        )
+
+
+def _normalize_analyses(analyses: Any, ctx: WriteContext, max_analyses: int) -> list[dict]:
+    if analyses is None:
+        return []
+    if not isinstance(analyses, list):
+        raise PageRefused("analyses must be a list.")
+    if len(analyses) > max_analyses:
+        raise PageRefused(
+            f"A page is built from at most {max_analyses} analyses at once; "
+            f"{len(analyses)} were given. Create it with the most useful few and add "
+            f"the rest when the user asks."
+        )
+    out = []
+    for i, entry in enumerate(analyses):
+        if not isinstance(entry, dict):
+            raise PageRefused(f"analyses[{i}] must be an object.")
+        if entry.get("pin_id") is not None:
+            if entry.get("tool_calls"):
+                raise PageRefused(f"analyses[{i}]: give pin_id OR tool_calls, not both.")
+            out.append({"pin_id": str(entry["pin_id"])})
+            continue
+        if entry.get("tool_calls") is None:
+            raise PageRefused(
+                f"analyses[{i}] must carry tool_calls (calls you ran) or pin_id "
+                f"(an existing analysis of the user's)."
+            )
+        try:
+            calls = _normalize_calls(entry["tool_calls"])
+        except PinRefused as exc:
+            raise PageRefused(f"analyses[{i}]: {exc}") from exc
+        title = entry.get("title")
+        if not isinstance(title, str) or not title.strip():
+            raise PageRefused(f"analyses[{i}] needs a title.")
+        _refuse_unrun(calls, ctx, f"analyses[{i}] ({title.strip()!r})")
+        out.append({"title": title.strip(), "tool_calls": calls})
+    return out
+
+
+def _page_result(stored: dict, wrote: str) -> dict:
+    page = stored.get("page") or {}
+    return {
+        "rows": [{
+            "page_id": page.get("page_id"),
+            "title": page.get("title"),
+            "purpose": page.get("purpose"),
+            "updated_at": page.get("updated_at"),
+            "analysis_count": page.get("analysis_count"),
+            "analyses": [
+                {"pin_id": a.get("pin_id"), "title": a.get("title"),
+                 "position": a.get("position"), "tools": a.get("tools")}
+                for a in (page.get("analyses") or [])
+            ],
+            "operations": stored.get("operations") or [],
+        }],
+        # Architecture rule 2 has no exception for writes. What was written,
+        # scoped to whom, and when.
+        "meta": {
+            "source_table": "george.pages",
+            "filters_applied": [f"owner = {stored.get('owner')}"],
+            "snapshot_timestamp": page.get("updated_at")
+            or datetime.now(timezone.utc).isoformat(),
+            "row_count": 1,
+            "page_id": page.get("page_id"),
+            "wrote": wrote,
+        },
+    }
+
+
+async def create_page(
+    title: str,
+    analyses: Optional[list[dict]] = None,
+    purpose: Optional[str] = None,
+    *,
+    ctx: WriteContext,
+) -> dict:
+    """
+    Create a page: a named, ordered workspace of saved analyses the user can
+    open, and that you can read later with view_page. A page may start empty.
+    Each analysis you add is stored as its CALLS, never its numbers, so it
+    re-runs every time the page opens. The page is created with all of its
+    analyses in one transaction, or not at all.
+
+    Args:
+        title: The page's name, e.g. "Rockwell Weekly". At most 100 characters;
+            a name the user already uses is refused.
+        analyses: At most 6, in the order the page should read, each ONE of:
+            {"title": ..., "tool_calls": [{"tool": ..., "arguments": {...}}]}
+            — a new analysis from calls you have already run, successfully,
+            in this conversation (a call you have not run is refused; run it,
+            read it, then save it); or {"pin_id": ...} — an analysis the user
+            already has, which moves onto the new page. Prefer three or four
+            that answer the page's purpose; the user can add more. Never one
+            per store or per product.
+        purpose: One line the user would recognise as what the page is for,
+            e.g. "Monitor Rockwell sales performance." Optional.
+
+    Returns:
+        {rows, meta} like every other tool. rows holds one row describing the
+        page that now exists — its page_id, title, and each analysis with its
+        pin_id and position; meta.source_table is george.pages.
+    """
+    if ctx.page_writer is None:
+        raise PageRefused(
+            "Pages cannot be created in this session — it requires a signed-in "
+            "user. Tell the user that."
+        )
+    if not isinstance(title, str) or not title.strip():
+        raise PageRefused("A page needs a title.")
+    bounds = _page_bounds()
+    normalized = _normalize_analyses(analyses, ctx, bounds["max_analyses"])
+    if purpose is not None and not isinstance(purpose, str):
+        raise PageRefused("purpose must be text.")
+
+    stored = await ctx.page_writer.create(PageBuildSpec(
+        title=title.strip(), purpose=(purpose or None), analyses=normalized,
+        question=ctx.question, conversation_id=ctx.conversation_id,
+    ))
+    return _page_result(stored, "page")
+
+
+async def edit_page(
+    operations: list[dict],
+    page_id: Optional[str] = None,
+    *,
+    ctx: WriteContext,
+) -> dict:
+    """
+    Change one of the user's pages: rename it, set its purpose, add analyses,
+    take one off, move one to another page, or reorder. All the operations in
+    one call are applied together, in order, or none of them are. Nothing is
+    re-run; a page's analyses keep their calls.
+
+    Args:
+        operations: At most 10, each {"op": ..., ...} with op one of:
+            rename {title};  set_purpose {purpose} (null clears it);
+            add {title, tool_calls} — a new analysis from calls you have run
+            in this conversation, at the bottom (at most 6 adds per call);
+            add_existing {pin_id | title, place?} — an analysis the user
+            already has, from Ungrouped or another page;
+            remove {pin_id | title} — off this page and KEPT in Ungrouped;
+            nothing is deleted;
+            move_to_page {pin_id | title, page_id | page_title | page_id: null}
+            — to another of the user's pages, or to Ungrouped;
+            place {pin_id | title, place} where place is exactly one of
+            {"before": pin_id}, {"after": pin_id}, {"at": "top"},
+            {"at": "bottom"}.
+            Name an analysis by pin_id (from view_page or an earlier result);
+            a title is accepted when exactly one analysis has it, and a title
+            two analyses share is refused with both ids — never guess between
+            them.
+        page_id: Which page. Omit it for the page the user is asking from; give
+            a page_id (from view_page, create_page or an earlier result) for
+            another of their pages. A title is not a page_id.
+
+    Returns:
+        {rows, meta} like every other tool. rows holds one row describing the
+        page as it now stands and the operations applied; meta.source_table is
+        george.pages.
+    """
+    if ctx.page_writer is None:
+        raise PageRefused(
+            "Pages cannot be edited in this session — it requires a signed-in "
+            "user. Tell the user that."
+        )
+    if not isinstance(operations, list) or not operations:
+        raise PageRefused("operations must be a non-empty list of {op, ...}.")
+    bounds = _page_bounds()
+    if len(operations) > bounds["max_operations"]:
+        raise PageRefused(
+            f"One edit may carry at most {bounds['max_operations']} operations; "
+            f"{len(operations)} were given. Do the most important ones first."
+        )
+    if page_id is not None and (not isinstance(page_id, str) or not page_id.strip()):
+        raise PageRefused("page_id must be a page id, or omitted for the page in scope.")
+
+    adds = 0
+    cleaned: list[dict] = []
+    for i, op in enumerate(operations):
+        if not isinstance(op, dict) or not isinstance(op.get("op"), str):
+            raise PageRefused(f"operations[{i}] must be an object with an 'op'.")
+        kind = op["op"]
+        if kind not in PAGE_EDIT_OPERATIONS:
+            raise PageRefused(
+                f"operations[{i}]: unknown op {kind!r}. One of: "
+                f"{', '.join(PAGE_EDIT_OPERATIONS)}."
+            )
+        entry = dict(op)
+        if kind in ("add", "add_existing"):
+            adds += 1
+            if adds > bounds["max_adds"]:
+                raise PageRefused(
+                    f"One edit may add at most {bounds['max_adds']} analyses."
+                )
+        if kind == "add":
+            try:
+                calls = _normalize_calls(op.get("tool_calls"))
+            except PinRefused as exc:
+                raise PageRefused(f"operations[{i}]: {exc}") from exc
+            title = op.get("title")
+            if not isinstance(title, str) or not title.strip():
+                raise PageRefused(f"operations[{i}] (add) needs a title.")
+            _refuse_unrun(calls, ctx, f"operations[{i}] ({title.strip()!r})")
+            entry["tool_calls"] = calls
+            entry["title"] = title.strip()
+        cleaned.append(entry)
+
+    stored = await ctx.page_writer.edit(PageEditSpec(
+        page_id=page_id.strip() if page_id else None, operations=cleaned,
+        question=ctx.question, conversation_id=ctx.conversation_id,
+    ))
+    return _page_result(stored, "page_edit")
+
+
 WRITE_TOOL_FUNCTIONS = {
     "pin_answer": pin_answer,
     "save_workflow": save_workflow,
+    "create_page": create_page,
+    "edit_page": edit_page,
 }
+
+# The two page tools, by name, for the loop's frame and claim check.
+PAGE_WRITE_TOOLS = ("create_page", "edit_page")
 
 # Which injected capability each write tool needs. The loop reads this to decide
 # what to put in the schema: a session with a pin writer and no workflow writer
@@ -534,4 +862,6 @@ WRITE_TOOL_FUNCTIONS = {
 WRITE_TOOL_REQUIRES = {
     "pin_answer": "writer",
     "save_workflow": "workflow_writer",
+    "create_page": "page_writer",
+    "edit_page": "page_writer",
 }

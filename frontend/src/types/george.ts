@@ -191,6 +191,28 @@ export interface SavedFrame {
 }
 
 /**
+ * A page George created or changed this turn, from the `page_changed` frame.
+ *
+ * Same reasoning as PinnedFrame: a write that happened is a fact, and the UI
+ * confirms it from the frame — the COMMITTED result the tool returned — never
+ * from the model's wording. `operations` are the structured records the
+ * service produced (op, titles, where things went); the confirmation line is
+ * built from them (pageChangeShape.ts), so "removed" can never be drawn as
+ * "deleted" because the model said so.
+ */
+export interface PageChangedFrame {
+  page_id: string;
+  title: string;
+  purpose: string | null;
+  updated_at: string | null;
+  analysis_count: number;
+  analyses: { pin_id: string; title: string; position: number; tools: string[] }[];
+  operations: Record<string, unknown>[];
+  /** True for create_page; false for edit_page. */
+  created: boolean;
+}
+
+/**
  * A George page as an IDENTITY: its name, or null for the ungrouped pins.
  *
  * Mirrors PageScope in backend/app/api/v1/routes/george.py. This is what
@@ -270,6 +292,8 @@ export type GeorgeTurn =
       pinned: PinnedFrame[];
       /** Workflows saved during this turn, in the order they were made. */
       saved: SavedFrame[];
+      /** Pages created or changed during this turn, in order, from the frame. */
+      pageChanges: PageChangedFrame[];
       /** meta of the last tool result — the receipts shown under the answer. */
       receipts?: ToolMeta;
       /**

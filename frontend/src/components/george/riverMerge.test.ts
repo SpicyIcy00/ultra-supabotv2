@@ -42,6 +42,7 @@ function answer(text: string, extra: Partial<AnswerTurn> = {}): AnswerTurn {
     notices: [],
     pinned: [],
     saved: [],
+    pageChanges: [],
     at: '2026-09-07T09:00:01+08:00',
     ...extra,
   };

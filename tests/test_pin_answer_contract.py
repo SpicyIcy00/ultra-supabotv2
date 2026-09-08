@@ -113,24 +113,29 @@ def test_the_read_prefix_is_unchanged_by_the_write_tool():
     byte-identical prefix up to the tail — a reordering here would silently
     halve the cache hit rate.
 
-    Checked as a property rather than by naming the last tool: there are three
-    injected tools now (pin_answer, run_workflow, save_workflow) and there will
-    be more, and a test that names one is a test that fails on the next.
+    Checked as a property rather than by naming the last tool: there are six
+    injected tools now and there will be more, and a test that names one is a
+    test that fails on the next.
+
+    Since 2026-09-08 the builder puts READ tools first and injected tools
+    after, each group sorted, so the property holds by construction and no
+    longer depends on an injected name happening to sort after "get_..." —
+    create_page and edit_page do not, and were not renamed to fit.
     """
     read = george_loop.build_tool_schemas()
     both = george_loop.build_tool_schemas(include_write=True)
     assert both[: len(read)] == read
 
+    read_names = [s["name"] for s in read]
+    assert read_names == sorted(read_names)
+    assert set(read_names) == set(george_loop.TOOL_FUNCTIONS)
     injected = [s["name"] for s in both[len(read):]]
     assert injected == sorted(injected)
     assert set(injected) == set(george_loop.write_tools.WRITE_TOOL_FUNCTIONS) | set(
         george_loop.composite_tools.COMPOSITE_TOOL_FUNCTIONS
     )
-    last_read = read[-1]["name"]
-    assert all(name > last_read for name in injected), (
-        f"{[n for n in injected if n <= last_read]} sort before the last read "
-        f"tool ({last_read}), which would break the cached prefix"
-    )
+    # And no read tool has slipped after an injected one, whatever the names.
+    assert not set(read_names) & set(injected)
 
 
 def test_a_pin_cannot_be_declared_to_hold_a_write():

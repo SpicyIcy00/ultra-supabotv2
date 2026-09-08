@@ -53,6 +53,7 @@ import type {
   GeorgeTurn,
   PageContextFrame,
   PageScope,
+  PageChangedFrame,
   PinnedFrame,
   PostFrame,
   SavedFrame,
@@ -188,6 +189,7 @@ export function useGeorgeStream() {
         notices: [...last.notices],
         pinned: [...last.pinned],
         saved: [...last.saved],
+        pageChanges: [...last.pageChanges],
       };
       fn(copy);
       next[next.length - 1] = copy;
@@ -274,6 +276,7 @@ export function useGeorgeStream() {
           notices: [],
           pinned: [],
           saved: [],
+          pageChanges: [],
           at: now,
         },
       ]);
@@ -436,6 +439,19 @@ export function useGeorgeStream() {
                 // the mark and the Workflows page both have to learn that.
                 qc.invalidateQueries({ queryKey: ['workflow-approvals'] });
                 qc.invalidateQueries({ queryKey: ['workflows'] });
+                break;
+
+              case 'page_changed':
+                // A page George created or changed, from the committed
+                // result. Confirmed from here, never from prose; the page
+                // lists and the pins on it are re-read, because the write is
+                // real the moment this frame exists.
+                patchLast((t) => {
+                  t.pageChanges.push(data as unknown as PageChangedFrame);
+                });
+                qc.invalidateQueries({ queryKey: ['pages'] });
+                qc.invalidateQueries({ queryKey: ['pin-pages'] });
+                qc.invalidateQueries({ queryKey: ['pins'] });
                 break;
 
               case 'post':

@@ -61,6 +61,7 @@ function georgeTurnFromPost(post: Post, thread: string): Answer {
     notices: post.notices ?? [],
     pinned: [],
     saved: [],
+    pageChanges: [],
     receipts: post.receipts ?? undefined,
     post: frameFor(thread, null, post),
     at: post.created_at ?? new Date(0).toISOString(),

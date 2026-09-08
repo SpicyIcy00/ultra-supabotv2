@@ -3441,6 +3441,115 @@ pins:
 
 
 # =============================================================================
+# PAGES — Page Workshop V1 (2026-09-08)
+#
+# A page is a person's ordered collection of pins, with a title and a one-line
+# purpose. George can build one and change one in conversation through two
+# injected write tools, create_page and edit_page (agent/write_tools.py), which
+# call the same service a person's buttons call (app/services/page_writer.py).
+#
+# WHAT LIVES HERE AND WHAT DOES NOT. The bounds on one conversational act are
+# here because the prompt states them and the tool refuses past them, and a
+# number the model is told must be the number the tool holds. The service's
+# own caps (pages per owner, pins per page) are operational constants in
+# app/services/page_writer.py, the way MAX_TOOL_CALLS_PER_PIN is, and a
+# contract test holds the two sets equal. Nothing here is a business
+# definition, and a page's PURPOSE is descriptive text a person wrote — it is
+# read back to George labelled as theirs and never as an instruction.
+# =============================================================================
+pages:
+  workshop:
+    # How many analyses one create_page may carry. The prompt prefers fewer;
+    # the user adds more in conversation.
+    max_analyses_per_build: 6
+    preferred_analyses_per_build: "three or four"
+    # How many operations one edit_page may carry, and how many of them may
+    # add an analysis.
+    max_operations_per_edit: 10
+    max_adds_per_edit: 6
+    # What George's `remove` means. Recorded so it cannot be re-decided in a
+    # prompt: a removed analysis leaves the page and is KEPT in Ungrouped.
+    remove_means: kept_in_ungrouped
+    # The words for the confirmation. Structured operations produce them in
+    # the UI; the prompt asks George for the same distinction.
+    remove_wording: "Removed {analysis} from {page} · kept in Ungrouped"
+
+  # ---- The claim check, exactly as for pins and workflows ---------------------
+  # A page write is the third kind of thing George can say that changes
+  # something outside the conversation. Same failure, same remedy: if the
+  # answer says a page was created, renamed, added to, moved, removed from or
+  # reordered and no page tool returned this turn, the user goes looking for
+  # a workspace that does not exist.
+  #
+  # THE PHRASES ARE PAGE-SPECIFIC ON PURPOSE. "moved" and "removed" alone would
+  # match ordinary prose — INVESTIGATING asks George to say "both drivers
+  # moved" — so a claim here names the page act: moved IT, removed it FROM,
+  # renamed THE PAGE. A looser list would correct him for describing a sales
+  # figure.
+  claim_check:
+    claims:
+      - created the page
+      - created a page
+      - created a new page
+      - the page is now called
+      - page now has
+      - renamed the page
+      - renamed it to
+      - renamed to
+      - moved it to
+      - moved it above
+      - moved it below
+      - moved it up
+      - moved it down
+      - moved it to the top
+      - moved it to the bottom
+      - moved the analysis
+      - removed it from
+      - removed from the page
+      - taken it off the page
+      - took it off the page
+      - reordered the page
+      - reordered the analyses
+      - added it to the page
+      - added them to the page
+      - now on the page
+      - set the purpose
+      - purpose is now
+    intents:
+      - i'll create the page
+      - i will create the page
+      - let me create the page
+      - i'll build the page
+      - let me build the page
+      - i'll rename
+      - let me rename
+      - i'll move it
+      - let me move it
+      - i'll remove it
+      - let me remove it
+      - i'll add it to the page
+      - i'll reorder
+    negation_window: 60
+    negations:
+      - "not "
+      - "n't"
+      - cannot
+      - "no "
+      - nothing
+      - none
+      - never
+      - unable
+      - fail
+      - refus
+      - without
+      - "instead of"
+      - "rather than"
+      - "haven't"
+      - "won't"
+    max_corrective_turns: 1
+
+
+# =============================================================================
 # SAVED WORKFLOWS
 #
 # A workflow is logic George and a user agreed on in conversation, saved as a

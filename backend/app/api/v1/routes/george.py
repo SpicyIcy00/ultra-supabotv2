@@ -73,8 +73,16 @@ from app.services.river import (
     next_cursor,
     thread_of,
 )
-from app.services import page_writer
-from app.services.page_writer import PageNotFound as PageWriterPageNotFound
+from app.services import page_operations, page_writer
+from app.services.page_writer import (
+    AmbiguousTarget,
+    NotAPage,
+    PageNotFound as PageWriterPageNotFound,
+    PageQuotaError,
+    PageValidationError,
+    PinNotFound as PageWriterPinNotFound,
+    george_actor,
+)
 from app.services.page_reader import (
     PageNotFound as PageReadNotFound,
     PageReadRefused as PageReadServiceRefused,
@@ -119,6 +127,10 @@ from agent.write_tools import (  # noqa: E402
     PinWriter,
     WorkflowRefused,
     WorkflowSpec,
+    PageBuildSpec,
+    PageEditSpec,
+    PageRefused,
+    PageWriter,
 )
 
 # The prefix is supplied by main.py, matching every other router in this app.
@@ -1184,6 +1196,97 @@ def _page_reader(username: str, page_id: Optional[uuid.UUID]) -> PageReader:
     return read
 
 
+class _PageWriter:
+    """
+    George's route to CREATING and EDITING the caller's pages, bound to one
+    authenticated owner and to the page in scope, if any.
+
+    The same shape as the workflow writer: an object with two methods, because
+    both ends of it need the same closure. The username is captured HERE, from
+    the verified token; the page in scope is captured HERE, from the resolved
+    page_scope; nothing the model emits can change whose pages these are or
+    which page "this page" is. Every operation runs through
+    app.services.page_operations — the same functions a route would call — as
+    the actor `george`, with the conversation recorded on each audit row.
+
+    Its own session, committed BEFORE returning, because it runs inside a
+    long-lived SSE stream and the page must survive the stream dying later.
+    A refusal (a bound, a collision, an ambiguous or foreign target, an
+    analysis that never ran) reaches the model as PageRefused — a real answer
+    with a route out; a database fault reaches it as a failed tool that says
+    nothing was changed.
+    """
+
+    _REFUSALS = (
+        PageValidationError, PageQuotaError, SimilarPageError, PageWriterPageNotFound,
+        PageWriterPinNotFound, AmbiguousTarget, NotAPage, PinValidationError, PinQuotaError,
+    )
+
+    def __init__(self, username: str, page_id: Optional[uuid.UUID]) -> None:
+        self._username = username
+        self._page_id = page_id
+
+    async def create(self, spec: PageBuildSpec) -> dict:
+        async with AsyncSessionLocal() as session:
+            try:
+                built = await page_operations.build_page(
+                    session, owner=self._username, title=spec.title,
+                    purpose=spec.purpose, analyses=spec.analyses,
+                    question=spec.question,
+                    conversation_id=(
+                        uuid.UUID(spec.conversation_id) if spec.conversation_id else None
+                    ),
+                    actor=george_actor(spec.conversation_id),
+                )
+                await session.commit()
+            except self._REFUSALS as exc:
+                await session.rollback()
+                raise PageRefused(str(exc)) from exc
+            except SQLAlchemyError as exc:
+                await session.rollback()
+                raise RuntimeError(
+                    f"The page could not be created: {type(exc).__name__}. Nothing "
+                    f"was written; tell the user the page was not created."
+                ) from exc
+            return {"owner": self._username, "page": built.page,
+                    "operations": built.operations}
+
+    async def edit(self, spec: PageEditSpec) -> dict:
+        target: Optional[uuid.UUID]
+        if spec.page_id is None:
+            target = self._page_id
+        else:
+            try:
+                target = uuid.UUID(spec.page_id)
+            except ValueError as exc:
+                raise PageRefused(
+                    f"{spec.page_id!r} is not a page id. Use the page_id from "
+                    f"view_page or an earlier result, or omit it for this page."
+                ) from exc
+        async with AsyncSessionLocal() as session:
+            try:
+                edited = await page_operations.apply_edit(
+                    session, owner=self._username, page_id=target,
+                    operations=spec.operations, question=spec.question,
+                    conversation_id=(
+                        uuid.UUID(spec.conversation_id) if spec.conversation_id else None
+                    ),
+                    actor=george_actor(spec.conversation_id),
+                )
+                await session.commit()
+            except self._REFUSALS as exc:
+                await session.rollback()
+                raise PageRefused(str(exc)) from exc
+            except SQLAlchemyError as exc:
+                await session.rollback()
+                raise RuntimeError(
+                    f"The page could not be changed: {type(exc).__name__}. Nothing "
+                    f"was written; tell the user the page is as it was."
+                ) from exc
+            return {"owner": self._username, "page": edited.page,
+                    "operations": edited.operations}
+
+
 async def _resolve_scope(username: str, scope: PageScope) -> Optional[dict]:
     """
     The scope as the loop takes it: {"page_id": str | None, "name": title | None}.
@@ -1245,7 +1348,8 @@ async def _safe_stream(question: str, user_id: Optional[str],
                        recall: Optional[str] = None,
                        parent_id: Optional[str] = None,
                        page_reader: Optional[PageReader] = None,
-                       page_scope: Optional[dict] = None) -> AsyncIterator[str]:
+                       page_scope: Optional[dict] = None,
+                       page_writer: Optional[PageWriter] = None) -> AsyncIterator[str]:
     """
     Wrap the loop so a crash still closes the stream cleanly.
 
@@ -1267,6 +1371,7 @@ async def _safe_stream(question: str, user_id: Optional[str],
             parent_id=parent_id,
             page_reader=page_reader,
             page_scope=page_scope,
+            page_writer=page_writer,
         ):
             yield frame
     except Exception as exc:  # noqa: BLE001
@@ -1368,6 +1473,13 @@ async def ask(
             parent_id=parent,
             page_reader=page_reader,
             page_scope=page_scope,
+            # Always: every signed-in caller may build and edit their own
+            # pages. "This page" is the resolved scope, or nothing.
+            page_writer=_PageWriter(
+                user.username,
+                uuid.UUID(page_scope["page_id"])
+                if page_scope and page_scope.get("page_id") else None,
+            ),
         ),
         media_type="text/event-stream",
         headers={

@@ -79,7 +79,7 @@ describe('presenceState', () => {
 function george(extra: Partial<Extract<GeorgeTurn, { role: 'george' }>> = {}): GeorgeTurn {
   return {
     role: 'george', text: '', thinking: '', toolCalls: [], notices: [],
-    pinned: [], saved: [], at: '2026-09-07T09:00:00+08:00', ...extra,
+    pinned: [], saved: [], pageChanges: [], at: '2026-09-07T09:00:00+08:00', ...extra,
   };
 }
 
