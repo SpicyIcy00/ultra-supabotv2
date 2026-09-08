@@ -277,3 +277,115 @@ def test_a_ranked_result_compares_only_the_ranked_subjects():
 def test_a_grand_total_is_one_row_with_no_subject():
     out = _compare_rows([{"value": 10.0}], [{"value": 8.0}], [], [], "PHP", CDEF)
     assert len(out) == 1 and out[0]["change_pct"] == 25.0 and "store" not in out[0]
+
+
+# ---------------------------------------------------------------------------
+# Ranking a compared result by CHANGE (Investigation V1, 2026-09-08)
+#
+# The ranking happens in the tool after both windows are matched, and the
+# nulls are where a ranking lies: a subject that did not trade has no change
+# and must never sit at the top of "biggest drop" because None sorted first.
+# ---------------------------------------------------------------------------
+
+from tools.sales import _describe_incomplete, _rank_compared, _subject_label   # noqa: E402
+
+RANK_MAX_NAMED = int(req(CDEF, "rank_by.not_ranked_max_named"))
+
+
+def prow(name, value, baseline, sku=None):
+    return _compare_row(
+        {"product_id": f"id-{name}", "sku": sku or name, "product": name, "value": value}
+        if value is not None else None,
+        {"product_id": f"id-{name}", "sku": sku or name, "product": name, "value": baseline}
+        if baseline is not None else None,
+        ["product_id", "sku", "product"], "PHP", CDEF,
+    )
+
+
+MIXED = [
+    prow("steady", 100.0, 100.0),          # ok, flat
+    prow("fell", 50.0, 250.0),             # ok, -200
+    prow("fell-less", 900.0, 1000.0),      # ok, -100 from a bigger base
+    prow("rose", 400.0, 100.0),            # ok, +300
+    prow("vanished", None, 5000.0),        # no_current — the biggest baseline of all
+    prow("new", 800.0, None),              # no_baseline — the biggest value of all
+    prow("from-zero", 120.0, 0),           # zero_baseline — a real gain of 120
+]
+
+
+def test_biggest_drop_ranks_measured_changes_only_most_negative_first():
+    rows, not_ranked = _rank_compared(MIXED, "biggest_drop", None, RANK_MAX_NAMED)
+    assert [r["product"] for r in rows] == ["fell", "fell-less", "steady", "from-zero", "rose"]
+    assert all(r["change"] is not None for r in rows)
+    assert not_ranked["ranked_subjects"] == 5
+
+
+def test_biggest_gain_ranks_measured_changes_only_most_positive_first():
+    rows, _ = _rank_compared(MIXED, "biggest_gain", None, RANK_MAX_NAMED)
+    assert [r["product"] for r in rows] == ["rose", "from-zero", "steady", "fell-less", "fell"]
+
+
+def test_a_vanished_subject_never_tops_biggest_drop_and_a_new_one_never_tops_biggest_gain():
+    """The largest baseline and the largest value in the set both have a null change."""
+    drops, nr = _rank_compared(MIXED, "biggest_drop", 1, RANK_MAX_NAMED)
+    assert drops[0]["product"] == "fell"
+    gains, _ = _rank_compared(MIXED, "biggest_gain", 1, RANK_MAX_NAMED)
+    assert gains[0]["product"] == "rose"
+    assert nr["counts"] == {"no_current": 1, "no_baseline": 1}
+    assert nr["no_current"][0] == {"subject": "vanished (vanished)", "baseline": 5000.0, "unit": "PHP"}
+    assert nr["no_baseline"][0] == {"subject": "new (new)", "value": 800.0, "unit": "PHP"}
+
+
+def test_zero_baseline_participates_because_its_change_is_numeric():
+    rows, _ = _rank_compared([prow("from-zero", 120.0, 0), prow("fell", 50.0, 250.0)],
+                             "biggest_gain", None, RANK_MAX_NAMED)
+    assert rows[0]["product"] == "from-zero" and rows[0]["change"] == 120.0
+    assert rows[0]["change_pct"] is None, "still undefined; ranked by change, not by change_pct"
+
+
+def test_ranking_is_by_absolute_change_never_by_change_pct():
+    """PHP 40 -> 400 is +900% and irrelevant; PHP 10,000 -> 12,000 is +20% and the real gain."""
+    rows, _ = _rank_compared([prow("tiny", 400.0, 40.0), prow("real", 12000.0, 10000.0)],
+                             "biggest_gain", 1, RANK_MAX_NAMED)
+    assert rows[0]["product"] == "real"
+
+
+def test_ties_break_by_the_bigger_baseline_for_drops_and_bigger_value_for_gains():
+    tied = [prow("small-base", 0.0, 100.0), prow("big-base", 900.0, 1000.0)]
+    drops, _ = _rank_compared(tied, "biggest_drop", None, RANK_MAX_NAMED)
+    assert [r["product"] for r in drops] == ["big-base", "small-base"]
+    tied = [prow("small", 200.0, 100.0), prow("big", 1100.0, 1000.0)]
+    gains, _ = _rank_compared(tied, "biggest_gain", None, RANK_MAX_NAMED)
+    assert [r["product"] for r in gains] == ["big", "small"]
+
+
+def test_top_n_cuts_after_ranking_and_the_not_ranked_list_is_capped_and_ordered():
+    many = [prow(f"gone-{i}", None, float(i)) for i in range(RANK_MAX_NAMED + 5)]
+    rows, nr = _rank_compared(many + [prow("fell", 1.0, 2.0)], "biggest_drop", 1, RANK_MAX_NAMED)
+    assert [r["product"] for r in rows] == ["fell"]
+    assert nr["counts"] == {"no_current": RANK_MAX_NAMED + 5}
+    assert len(nr["no_current"]) == RANK_MAX_NAMED
+    baselines = [x["baseline"] for x in nr["no_current"]]
+    assert baselines == sorted(baselines, reverse=True), "largest baseline first"
+
+
+def test_an_unknown_change_ranking_is_refused():
+    with pytest.raises(ValueError, match="Unknown change ranking"):
+        _rank_compared(MIXED, "change_pct", None, RANK_MAX_NAMED)
+
+
+def test_the_incomplete_notice_names_a_few_per_status_and_counts_the_rest():
+    described = req(CDEF, "baseline_statuses")
+    gone = [prow(f"gone-{i}", None, 1.0, sku=f"g{i}") for i in range(7)]
+    new = [prow("fresh", 1.0, None, sku="f1")]
+    text = _describe_incomplete(gone + new, described, 5)
+    assert "7 no_current" in text and "and 2 more" in text
+    assert "1 no_baseline" in text and "fresh (f1)" in text
+    assert text.count("gone-") == 5, "five named, two counted"
+
+
+def test_subject_labels_cover_every_grouping():
+    assert _subject_label({"store": "Rockwell"}) == "Rockwell"
+    assert _subject_label({"category": "tradsnax"}) == "tradsnax"
+    assert _subject_label({"product": "Aji Mix", "sku": "SH1"}) == "Aji Mix (SH1)"
+    assert _subject_label({}) == "the total"

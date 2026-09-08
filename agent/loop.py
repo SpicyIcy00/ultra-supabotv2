@@ -201,6 +201,13 @@ def _enum_sources(defs: dict) -> dict[tuple[str, str], list]:
                      if isinstance(v, dict) and tool in (v.get("applies_to") or []))
         for tool in ("get_sales",)
     }
+    # How a compared result may be ranked: the modes every supported comparison
+    # declares (comparisons.<kind>.rank_by.modes). One vocabulary across
+    # kinds, so a mode is added by definition and not by tool.
+    rank_modes = sorted({
+        m for k in compare_kinds["get_sales"]
+        for m in ((comparisons[k].get("rank_by") or {}).get("modes") or {})
+    })
 
     purch_measures = sorted(req(defs, "purchasing.measures"))
     purch_groups = sorted({
@@ -220,6 +227,7 @@ def _enum_sources(defs: dict) -> dict[tuple[str, str], list]:
         ("get_sales", "group_by"): sales_groups,
         ("get_sales", "date_range"): presets,
         ("get_sales", "compare_to"): compare_kinds["get_sales"],
+        ("get_sales", "rank_by"): rank_modes,
         ("get_stock", "state"): states,
         ("get_stock", "group_by"): list(req(defs, "ranking.stock_grouping.valid_group_by")),
         ("get_stock", "store"): retail + warehouse,

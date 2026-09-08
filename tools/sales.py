@@ -329,6 +329,93 @@ def _compare_rows(current: list[dict], baseline: list[dict], key_fields: Sequenc
     return out
 
 
+def _subject_label(r: dict) -> str:
+    """What a compared row is about, for a notice or a not_ranked list."""
+    if r.get("product"):
+        return f"{r['product']} ({r.get('sku') or r.get('product_id')})"
+    return r.get("store") or r.get("category") or "the total"
+
+
+def _describe_incomplete(incomplete: list[dict], described: dict, max_named: int) -> str:
+    """
+    The rows that could not be compared, by status, naming at most `max_named`
+    per status and counting the rest — a product comparison can have dozens
+    of new or vanished products, and a notice that lists every one buries the
+    figures it qualifies (comparisons.<kind>.incomplete_notice_max_named).
+    """
+    by_status: dict[str, list[dict]] = {}
+    for r in incomplete:
+        by_status.setdefault(r["baseline_status"], []).append(r)
+    parts = []
+    for status, group in by_status.items():
+        names = ", ".join(_subject_label(r) for r in group[:max_named])
+        more = len(group) - max_named
+        parts.append(
+            f"{len(group)} {status} ({described.get(status, '')}): {names}"
+            + (f" and {more} more" if more > 0 else "")
+        )
+    return "; ".join(parts)
+
+
+def _rank_compared(compared: list[dict], mode: str, top_n: Optional[int],
+                   max_named: int) -> tuple[list[dict], dict]:
+    """
+    Rank matched comparison rows by CHANGE, deterministically, after both
+    windows have been matched per subject. Pure. Returns (rows, not_ranked).
+
+    THE NULLS ARE THE POINT. A row whose change is null — no_current (traded
+    in the baseline, not now) or no_baseline (new this window) — has nothing
+    to rank by, and a null sorting first or last by accident would put a
+    product that simply did not trade at the top of "biggest drop". So only
+    rows with a numeric change are ranked (ok, and zero_baseline, whose change
+    is the whole current value — a real gain from nothing). The rest are
+    counted by status and the largest of them named: by baseline for
+    no_current, by value for no_baseline. Definitions in metrics.yaml
+    comparisons.<kind>.rank_by.modes; the order strings there are what this
+    implements.
+    """
+    ranked = [r for r in compared if r.get("change") is not None]
+    if mode == "biggest_drop":
+        # Most negative first; ties broken by the larger baseline, so a drop
+        # from more money ranks ahead of the same drop from less.
+        ranked.sort(key=lambda r: (r["change"], -(r.get("baseline") or 0)))
+    elif mode == "biggest_gain":
+        ranked.sort(key=lambda r: (-r["change"], -(r.get("value") or 0)))
+    else:
+        raise ValueError(f"Unknown change ranking {mode!r}.")
+
+    unranked = [r for r in compared if r.get("change") is None]
+    counts: dict[str, int] = {}
+    for r in unranked:
+        counts[r["baseline_status"]] = counts.get(r["baseline_status"], 0) + 1
+    no_current = sorted((r for r in unranked if r["baseline_status"] == "no_current"),
+                        key=lambda r: -(r.get("baseline") or 0))
+    no_baseline = sorted((r for r in unranked if r["baseline_status"] == "no_baseline"),
+                         key=lambda r: -(r.get("value") or 0))
+    not_ranked = {
+        "counts": counts,
+        "note": (
+            "Subjects with no numeric change are not ranked by change. "
+            "no_current traded in the baseline and not in this window (named "
+            "largest baseline first); no_baseline is new this window (named "
+            "largest value first). Their change_pct is null and must not be "
+            "filled in."
+        ),
+        "no_current": [
+            {"subject": _subject_label(r), "baseline": r.get("baseline"), "unit": r.get("unit")}
+            for r in no_current[:max_named]
+        ],
+        "no_baseline": [
+            {"subject": _subject_label(r), "value": r.get("value"), "unit": r.get("unit")}
+            for r in no_baseline[:max_named]
+        ],
+        "ranked_subjects": len(ranked),
+    }
+    if top_n is not None:
+        ranked = ranked[:top_n]
+    return ranked, not_ranked
+
+
 def get_sales(
     group_by: Any,
     date_range: Any,
@@ -336,6 +423,7 @@ def get_sales(
     metric: str = "net_sales",
     top_n: Optional[int] = None,
     compare_to: Optional[str] = None,
+    rank_by: Optional[str] = None,
 ) -> dict:
     """
     Sales figures grouped as requested.
@@ -365,10 +453,28 @@ def get_sales(
                     against the week before, last_month against the month
                     before). Rows then carry value, baseline, change,
                     change_pct, direction and baseline_status, all computed
-                    here; read change_pct, never derive it. Only with no
-                    grouping or group_by='store'. Refused on a window still in
-                    progress (this_week, this_month, today): use the closed
-                    preset it names instead.
+                    here; read change_pct, never derive it. With no grouping,
+                    or grouped by a SUBJECT — store, product or category —
+                    where the metric allows that grouping (product_revenue
+                    or units_sold by product; never net_sales or ATP, which
+                    are transaction grain). Never by day/week/month. Refused
+                    on a window still in progress (this_week, this_month,
+                    today): use the closed preset it names instead. To
+                    explain a change in net_sales, read its drivers —
+                    transaction_count and average_transaction_value — with
+                    the same date_range, filters and compare_to (metrics.yaml
+                    metrics.net_sales.drivers).
+        rank_by:    with compare_to and top_n, which end to return:
+                    'value' (default: largest current value, as top_n always
+                    ranked), 'biggest_drop' (most negative change first) or
+                    'biggest_gain' (most positive first). Ranked here, after
+                    both windows are matched per subject, by absolute change
+                    in the metric's unit — never by change_pct. Rows with no
+                    numeric change (no_current, no_baseline) are not ranked
+                    by change; meta.comparison.not_ranked counts and names
+                    them. "Which products are driving the decline?" is
+                    product_revenue, group_by='product', compare_to=
+                    'previous_period', top_n, rank_by='biggest_drop'.
 
     Returns:
         {"rows": [...], "meta": {...}}. A non-empty meta["notice"] MUST be
@@ -412,6 +518,28 @@ def get_sales(
                 f"compare_to={compare_to!r} does not apply to get_sales "
                 f"(metrics.yaml comparisons.{compare_to}.applies_to)."
             )
+
+    # ---- rank_by ---------------------------------------------------------
+    # Which end of a COMPARED result top_n returns. Its modes and its null
+    # handling are definitions (comparisons.<kind>.rank_by), and the ranking
+    # itself happens below, after both windows are matched — never by the
+    # model over two lists.
+    rank_mode: Optional[str] = None
+    if rank_by is not None:
+        if cdef is None:
+            raise ValueError(
+                f"rank_by={rank_by!r} needs compare_to: it ranks a comparison. "
+                f"Without one, top_n already ranks by the current value."
+            )
+        modes = _req(cdef, "rank_by.modes")
+        if rank_by not in modes:
+            raise ValueError(
+                f"Unknown rank_by {rank_by!r}. Valid: {', '.join(modes)}."
+            )
+        rank_mode = rank_by
+    elif cdef is not None:
+        rank_mode = _req(cdef, "rank_by.default")
+    change_ranked = rank_mode is not None and rank_mode != "value"
 
     # ---- group_by --------------------------------------------------------
     if group_by is None:
@@ -743,7 +871,13 @@ def get_sales(
 
             # Time series read chronologically; everything else ranks by measure.
             time_cols = [a for a, _ in select_terms if a in ("day", "week", "month")]
-            if top_n is not None and group_terms:
+            if change_ranked:
+                # A change ranking needs BOTH windows whole: the cut happens
+                # after matching, in _rank_compared. top_n is not applied in
+                # SQL here, and the ordering below is provisional.
+                order_sql = "\nORDER BY value DESC NULLS LAST" if group_terms else ""
+                ordering = _req(cdef, f"rank_by.modes.{rank_mode}.order")
+            elif top_n is not None and group_terms:
                 # "Top N" means the N largest by the metric. This deliberately
                 # OVERRIDES chronological ordering for time buckets, so
                 # top_n=5 with group_by='day' gives the five biggest days, not
@@ -766,7 +900,8 @@ def get_sales(
                 f"WHERE {where_sql}"
                 f"{group_sql}{order_sql}"
             )
-            sql = f"{sql_body}\nLIMIT {top_n or _MAX_ROWS}"
+            sql_top_n = None if change_ranked else top_n
+            sql = f"{sql_body}\nLIMIT {sql_top_n or _MAX_ROWS}"
 
             cur.execute(sql, params)
             rows = [dict(r) for r in cur.fetchall()]
@@ -778,11 +913,21 @@ def get_sales(
             if cdef is not None:
                 cur.execute(f"{sql_body}\nLIMIT {_MAX_ROWS}", base_params)
                 baseline_rows = [dict(r) for r in cur.fetchall()]
+                if change_ranked and (len(rows) >= _MAX_ROWS or len(baseline_rows) >= _MAX_ROWS):
+                    # comparisons.<kind>.rank_by.whole_set_required: a ranking
+                    # by change over a prefix of the subjects is a different
+                    # and wrong ranking, so it is refused rather than served.
+                    raise ValueError(
+                        f"rank_by={rank_mode!r} needs every subject in both "
+                        f"windows, and one window has at least {_MAX_ROWS} — the "
+                        f"tool's row cap. Narrow the window, add a filter, or "
+                        f"group by category instead of product."
+                    )
 
             truncated = len(rows) == _MAX_ROWS
             # full_row_count costs a query, so only pay for it when the result
             # was actually limited. When it was not, what came back IS the set.
-            if truncated or (top_n is not None and len(rows) == top_n):
+            if truncated or (sql_top_n is not None and len(rows) == sql_top_n):
                 cur.execute(
                     f"SELECT COUNT(*) AS n FROM (\n"
                     f"SELECT 1 FROM {from_sql}\nWHERE {where_sql}{group_sql}\n) x",
@@ -878,27 +1023,35 @@ def get_sales(
 
     # ---- the comparison, row by row --------------------------------------
     comparison_meta: Optional[dict] = None
+    not_ranked_meta: Optional[dict] = None
     if cdef is not None:
         key_fields = [alias for alias, _ in select_terms]
         label_fields = key_fields + (["store"] if "store_id" in key_fields else [])
-        rows = _compare_rows(rows, baseline_rows, key_fields, label_fields,
-                             _req(mdef, "unit"), cdef, ranked=top_n is not None)
+        # Under a VALUE ranking top_n already cut the current period in SQL,
+        # so a subject absent from it was cut by the rank (ranked=True). Under
+        # a CHANGE ranking both windows are whole, every subject is matched,
+        # and the cut happens after — in _rank_compared, below.
+        compared = _compare_rows(rows, baseline_rows, key_fields, label_fields,
+                                 _req(mdef, "unit"), cdef,
+                                 ranked=(sql_top_n is not None))
         statuses: dict[str, int] = {}
-        for r in rows:
+        for r in compared:
             statuses[r["baseline_status"]] = statuses.get(r["baseline_status"], 0) + 1
-        incomplete = [r for r in rows if r["baseline_status"] != "ok"]
+        # The notice is computed over the WHOLE matched set, before any
+        # change-ranking cut: a product that vanished is reported whether or
+        # not it survived the ranking, and it never survives one by change.
+        incomplete = [r for r in compared if r["baseline_status"] != "ok"]
         if incomplete:
             described = _req(cdef, "baseline_statuses")
             notices.append({
                 "kind": "comparison_incomplete",
                 "message": (
-                    f"{len(incomplete)} of {len(rows)} compared row(s) could not be "
+                    f"{len(incomplete)} of {len(compared)} compared row(s) could not be "
                     f"compared against the {baseline_meta['start']} to "
                     f"{baseline_meta['end']} baseline: "
-                    + "; ".join(
-                        f"{r.get('store') or 'the total'} — {r['baseline_status']} "
-                        f"({described.get(r['baseline_status'], '')})"
-                        for r in incomplete
+                    + _describe_incomplete(
+                        incomplete, described,
+                        int(_req(cdef, "incomplete_notice_max_named")),
                     )
                     + ". Say which, and why, rather than reporting the comparison "
                     "as whole; change_pct is null on those rows and must not be "
@@ -906,6 +1059,15 @@ def get_sales(
                 ),
                 "source": f"definitions/metrics.yaml: comparisons.{compare_to}.baseline_statuses",
             })
+        if change_ranked:
+            rows, not_ranked_meta = _rank_compared(
+                compared, rank_mode, top_n,
+                int(_req(cdef, "rank_by.not_ranked_max_named")),
+            )
+            # The set is every matched subject; the rows are the ranked cut.
+            full_row_count = len(compared)
+        else:
+            rows = compared
         comparison_meta = {
             "kind": compare_to,
             "display_name": _req(cdef, "display_name"),
@@ -917,18 +1079,29 @@ def get_sales(
             "change_pct_formula": _req(cdef, "change_pct_formula"),
             "baseline_statuses": statuses,
             "row_count_baseline": len(baseline_rows),
-            # top_n ranks the CURRENT period. Subjects outside the ranking are
-            # not compared at all — not reported as absent — because they were
-            # cut by the rank, not missing from trade.
-            "ranked_by_current": top_n is not None,
+            # Which ranking applied, and how the rows were cut. Under `value`
+            # top_n ranks the CURRENT period in SQL: subjects outside the
+            # ranking are not compared at all — not reported as absent —
+            # because they were cut by the rank, not missing from trade. Under
+            # a change mode both windows are whole, every subject is matched,
+            # and only rows with a numeric change are ranked (rank_by.modes).
+            "rank_by": rank_mode,
+            "ranked_by_current": sql_top_n is not None,
             "ranking_note": (
                 f"top_n={top_n} ranked the current period; only those {top_n} "
                 f"subjects are compared, and a subject outside them is not "
                 f"absent from trade — it was not ranked."
-                if top_n is not None else None
+                if sql_top_n is not None else
+                f"rank_by={rank_mode!r}: every subject in both windows was "
+                f"matched, then rows with a numeric change were ranked by change "
+                f"and cut to top_n={top_n}. Subjects with no numeric change are "
+                f"in not_ranked, never in the ranking."
+                if change_ranked else None
             ),
             "source": f"definitions/metrics.yaml: comparisons.{compare_to}",
         }
+        if not_ranked_meta is not None:
+            comparison_meta["not_ranked"] = not_ranked_meta
 
     # A derived ratio over a window with no qualifying transactions is NULL,
     # and the answer has to say "undefined", not "zero" — the legacy analytics

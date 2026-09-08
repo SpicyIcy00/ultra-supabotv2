@@ -174,6 +174,51 @@ GOLDEN = [
                              compare_to="previous_period")
      ["meta"]["comparison"]["baseline_statuses"], {"ok": 7}),
 
+    # ---- previous_period by SUBJECT, ranked by change (6) -------------------
+    # Investigation V1, 2026-09-08. product_revenue per product over the same
+    # two closed weeks, matched per product in the tool and ranked by absolute
+    # change. Cross-checked by hand on 2026-09-08 with a direct GROUP BY on
+    # both windows: 528 products traded in one week or the other — 347 with a
+    # numeric change (335 in both weeks, 12 whose baseline week summed to
+    # zero: free items rung through at PHP 0, a real gain from nothing), 79
+    # in the baseline only, 102 new — and the largest measured drop
+    # was Aji Mix (SH1), 450,394.50 -> 348,880.50; the largest gain Aji Kiamoy
+    # Strips (SH1145), 36,815 -> 76,217. Neither a vanished product (largest
+    # baseline 1,598) nor a new one outranks them, because a null change is
+    # never ranked. Categories: tradsnax fell most, 749,551.90 -> 640,653.00.
+    ("compare/week-products-biggest-drop",
+     lambda: (lambda r: (r["sku"], r["value"], r["baseline"], r["change"], r["baseline_status"]))(
+         sales.get_sales("product", WEEK_AUG_24, metric="product_revenue",
+                         compare_to="previous_period", top_n=3, rank_by="biggest_drop")["rows"][0]),
+     ("SH1", 348880.5, 450394.5, -101514.0, "ok")),
+    ("compare/week-products-biggest-gain",
+     lambda: (lambda r: (r["sku"], r["change"]))(
+         sales.get_sales("product", WEEK_AUG_24, metric="product_revenue",
+                         compare_to="previous_period", top_n=3, rank_by="biggest_gain")["rows"][0]),
+     ("SH1145", 39402.0)),
+    ("compare/week-products-statuses-over-the-whole-set",
+     lambda: (lambda m: (m["comparison"]["baseline_statuses"], m["full_row_count"], m["row_count"],
+                         m["comparison"]["not_ranked"]["counts"],
+                         m["comparison"]["not_ranked"]["ranked_subjects"]))(
+         sales.get_sales("product", WEEK_AUG_24, metric="product_revenue",
+                         compare_to="previous_period", top_n=3, rank_by="biggest_drop")["meta"]),
+     ({"ok": 335, "zero_baseline": 12, "no_current": 79, "no_baseline": 102}, 528, 3,
+      {"no_current": 79, "no_baseline": 102}, 347)),
+    ("compare/week-products-vanished-are-named-not-ranked",
+     lambda: sales.get_sales("product", WEEK_AUG_24, metric="product_revenue",
+                             compare_to="previous_period", top_n=3, rank_by="biggest_drop")
+     ["meta"]["comparison"]["not_ranked"]["no_current"][0]["baseline"], 1598.0),
+    ("compare/week-categories-biggest-drop",
+     lambda: (lambda r: (r["category"], r["change"]))(
+         sales.get_sales("category", WEEK_AUG_24, metric="product_revenue",
+                         compare_to="previous_period", top_n=1, rank_by="biggest_drop")["rows"][0]),
+     ("tradsnax", -108898.9)),
+    ("compare/week-products-value-ranking-is-unchanged",
+     lambda: (lambda m: (m["comparison"]["rank_by"], m["comparison"]["ranked_by_current"], m["row_count"]))(
+         sales.get_sales("product", WEEK_AUG_24, metric="product_revenue",
+                         compare_to="previous_period", top_n=5)["meta"]),
+     ("value", True, 5)),
+
     # ---- inventory (4) ---------------------------------------------------
     # as_of reads inventory_snapshots, which is immutable history.
     # meta.total_matching was replaced by meta.full_row_count when top_n landed:
@@ -1060,3 +1105,62 @@ def test_a_comparison_never_changes_the_current_figure():
     compared = sales.get_sales([], WEEK_AUG_24, metric="net_sales",
                                compare_to="previous_period")["rows"][0]["value"]
     assert plain == compared
+
+
+# ---------------------------------------------------------------------------
+# Subject comparisons and change rankings (Investigation V1, 2026-09-08):
+# what widened, and what stayed refused.
+# ---------------------------------------------------------------------------
+
+def test_a_time_bucket_beside_a_comparison_is_still_refused_as_a_lag_series():
+    with pytest.raises(ValueError, match="lag series"):
+        sales.get_sales("day", WEEK_AUG_24, metric="net_sales", compare_to="previous_period")
+
+
+def test_a_transaction_grain_metric_is_still_refused_by_product_even_when_compared():
+    """The comparison's grouping list widened; net_sales' own did not."""
+    with pytest.raises(ValueError, match="cannot be grouped by 'product'"):
+        sales.get_sales("product", WEEK_AUG_24, metric="net_sales", compare_to="previous_period")
+    with pytest.raises(ValueError, match="cannot be grouped by 'product'"):
+        sales.get_sales("product", WEEK_AUG_24, metric="average_transaction_value",
+                        compare_to="previous_period")
+
+
+def test_rank_by_needs_a_comparison_and_a_known_mode():
+    with pytest.raises(ValueError, match="needs compare_to"):
+        sales.get_sales("product", WEEK_AUG_24, metric="product_revenue", top_n=3,
+                        rank_by="biggest_drop")
+    with pytest.raises(ValueError, match="Unknown rank_by"):
+        sales.get_sales("product", WEEK_AUG_24, metric="product_revenue",
+                        compare_to="previous_period", top_n=3, rank_by="change_pct")
+
+
+def test_a_change_ranking_never_puts_a_null_change_in_its_rows():
+    r = sales.get_sales("product", WEEK_AUG_24, metric="product_revenue",
+                        compare_to="previous_period", top_n=20, rank_by="biggest_drop")
+    assert all(row["change"] is not None for row in r["rows"])
+    changes = [row["change"] for row in r["rows"]]
+    assert changes == sorted(changes), "most negative first"
+    assert r["meta"]["comparison"]["ranking_note"].startswith("rank_by='biggest_drop'")
+    assert r["meta"]["ordering"] == req(load_defs(), "comparisons.previous_period.rank_by.modes.biggest_drop.order")
+
+
+def test_a_change_ranking_still_raises_the_incomplete_notice_over_the_whole_set():
+    """Three ranked rows are all `ok`; the 181 subjects that could not be compared still surface."""
+    r = sales.get_sales("product", WEEK_AUG_24, metric="product_revenue",
+                        compare_to="previous_period", top_n=3, rank_by="biggest_drop")
+    assert all(row["baseline_status"] == "ok" for row in r["rows"])
+    notice = r["meta"]["notice"]
+    kinds = [n["kind"] for n in notice["items"]] if notice.get("kind") == "multiple" else [notice["kind"]]
+    assert "comparison_incomplete" in kinds
+    text = notice["message"]
+    assert "79 no_current" in text and "102 no_baseline" in text and "and 74 more" in text
+
+
+def test_transaction_count_by_product_compares_and_still_says_it_was_redefined():
+    r = sales.get_sales("product", WEEK_AUG_24, metric="transaction_count",
+                        compare_to="previous_period", top_n=3, rank_by="biggest_drop")
+    notice = r["meta"]["notice"]
+    kinds = [n["kind"] for n in notice["items"]] if notice.get("kind") == "multiple" else [notice["kind"]]
+    assert "metric_redefined" in kinds
+    assert all(isinstance(row["change"], int) for row in r["rows"])
