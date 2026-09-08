@@ -69,8 +69,32 @@ export interface ComparisonRow {
   row: Record<string, unknown>;
 }
 
+/** What a change ranking could not rank, as the tool counted and named it. */
+export interface NotRanked {
+  counts: Record<string, number>;
+  noCurrent: { subject: string; baseline: number | null; unit?: string }[];
+  noBaseline: { subject: string; value: number | null; unit?: string }[];
+  rankedSubjects: number;
+}
+
 export type Shape =
   | { kind: 'number'; value: number; unit?: string; label?: string }
+  | {
+      /**
+       * A comparison the TOOL RANKED BY CHANGE (get_sales rank_by =
+       * biggest_drop | biggest_gain). Rows are in the tool's order, every one
+       * with a numeric `change`; what could not be ranked is in `notRanked`.
+       * Drawn as a Delta Ranking. A `rank_by` of 'value' or none is a plain
+       * comparison: its order is by current value, and drawing it as movers
+       * would lie about the ordering.
+       */
+      kind: 'ranking';
+      rows: ComparisonRow[];
+      mode: 'biggest_drop' | 'biggest_gain';
+      label?: string;
+      unit?: string;
+      notRanked?: NotRanked;
+    }
   | {
       kind: 'comparison';
       rows: ComparisonRow[];
@@ -206,6 +230,32 @@ export function inferShape(
     // never from prose; absent on results from an older backend.
     const label =
       typeof result.meta?.metric_label === 'string' ? result.meta.metric_label : undefined;
+    // A ranking, when and only when the tool ranked by change. Two or more
+    // rows, every one with the numeric change the tool ranked on; a single
+    // row is a figure with its delta, not a ranking of one.
+    const mode = result.meta?.comparison?.rank_by;
+    if (
+      (mode === 'biggest_drop' || mode === 'biggest_gain') &&
+      comparison.length >= 2 &&
+      comparison.every((r) => typeof r.change === 'number')
+    ) {
+      const nr = result.meta?.comparison?.not_ranked;
+      return {
+        kind: 'ranking',
+        rows: comparison,
+        mode,
+        label,
+        unit: comparison[0].unit ?? result.meta?.metric_unit,
+        notRanked: nr
+          ? {
+              counts: nr.counts ?? {},
+              noCurrent: nr.no_current ?? [],
+              noBaseline: nr.no_baseline ?? [],
+              rankedSubjects: nr.ranked_subjects ?? comparison.length,
+            }
+          : undefined,
+      };
+    }
     return { kind: 'comparison', rows: comparison, label };
   }
 

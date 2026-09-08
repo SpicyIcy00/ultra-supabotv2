@@ -329,6 +329,9 @@ export function quietLabel(blocks: ResultBlock[]): string {
   if (results.every((r) => r.shape.kind === 'chart')) {
     return n === 1 ? 'Chart' : `${n} charts`;
   }
+  if (results.every((r) => r.shape.kind === 'ranking')) {
+    return n === 1 ? 'Ranking' : `${n} rankings`;
+  }
   return n === 1 ? 'Figure' : `${n} figures`;
 }
 

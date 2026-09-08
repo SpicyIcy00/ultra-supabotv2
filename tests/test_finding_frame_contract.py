@@ -224,7 +224,18 @@ def test_the_tool_result_names_no_source():
     # A label read nothing and must never become the figures' provenance.
     out = findings.record_findings([{"seq": 1, "role": "primary"}], calls=CALLS, defs=_DEFS)
     assert "source_table" not in out["meta"]
-    assert out["rows"] == [{"seq": 1, "role": "primary", "of": None, "tool": "get_sales"}]
+    assert out["rows"] == [{"seq": 1, "role": "primary", "of": None, "tool": "get_sales",
+                            "identity": "net_sales = transaction_count x average_transaction_value"}]
+
+
+def test_the_identity_on_a_primary_is_the_definitions_and_only_for_a_metric_with_drivers():
+    # The Driver Split prints it. It comes from metrics.yaml, never the model.
+    accepted, _ = _validate([{"seq": 6, "role": "primary"}])        # get_stock
+    assert accepted[0]["identity"] is None
+    accepted, _ = _validate([{"seq": 11, "role": "primary"}])       # returns_value: no drivers
+    assert accepted[0]["identity"] is None
+    accepted, _ = _validate([{"seq": 1, "role": "primary"}])
+    assert accepted[0]["identity"] == _DEFS["metrics"]["net_sales"]["drivers"]["identity"]
 
 
 # ---------------------------------------------------------------------------

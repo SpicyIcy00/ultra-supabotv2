@@ -34,7 +34,9 @@ export const WIDE_GROUP_MEMBERS = 3;
  * collide, and columns wrap until the figures are unreadable.
  */
 export function widthForShape(shape: Shape): WorkspaceWidth {
-  return shape.kind === 'chart' || shape.kind === 'table' ? 'wide' : 'reading';
+  return shape.kind === 'chart' || shape.kind === 'table' || shape.kind === 'ranking'
+    ? 'wide'
+    : 'reading';
 }
 
 /** The width one block asks for. A group of three or more is read across. */

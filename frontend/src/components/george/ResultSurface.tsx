@@ -25,6 +25,8 @@
  * below the sentence it qualifies.
  */
 import { GeorgeChart } from './GeorgeChart';
+import { ComparisonCoverage, DeltaRanking } from './Instruments';
+import { coverageFromComparison } from './instrumentShape';
 import { ReceiptsBlock } from './ReceiptsBlock';
 import { Comparison, Metric, MetricGroup, ResultTable } from './ResultBlocks';
 import type { ResultBlock, ShapedResult } from './resultShape';
@@ -45,6 +47,8 @@ function Body({ result, lead, large }: { result: ShapedResult; lead: boolean; la
       return (
         <Comparison shape={shape} size={lead ? (large ? 'lead' : 'default') : 'grouped'} />
       );
+    case 'ranking':
+      return <DeltaRanking shape={shape} size={lead && large ? 'lead' : 'default'} />;
     case 'chart':
       return (
         <GeorgeChart shape={shape} meta={source.meta} height={lead ? (large ? 220 : 200) : 160} />
@@ -74,6 +78,15 @@ export function ResultSurface({
           {block.kind === 'single' ? (
             <>
               <Body result={block.result} lead large={large} />
+              {/* How much of a comparison was actually measured, from its own
+                  meta — the caveat's shape, beside the figure it qualifies.
+                  The notice above the answer still says it in words. */}
+              {(block.result.shape.kind === 'comparison' || block.result.shape.kind === 'ranking') && (
+                <ComparisonCoverage
+                  meta={block.result.source.meta}
+                  coverage={coverageFromComparison(block.result.source.meta)}
+                />
+              )}
               <ReceiptsBlock meta={block.result.source.meta} />
             </>
           ) : (

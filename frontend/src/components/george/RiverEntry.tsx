@@ -38,6 +38,7 @@ import { ChevronRight, Pin as PinIcon, Save as SaveIcon } from 'lucide-react';
 import type { Post } from '../../types/river';
 import type { PinnedFrame, SavedFrame } from '../../types/george';
 import { ActivityDisclosure } from './ActivityDisclosure';
+import { DriverSplit } from './Instruments';
 import { MARK_PATH } from './markState';
 import { NoticeBanner } from './NoticeBanner';
 import { PageChangeNote } from './PageChangeNote';
@@ -185,10 +186,24 @@ function Figures({
  * not rendered at all — the composition never creates one.
  */
 function WorkSectionView({ section }: { section: WorkSection }) {
+  const split = section.instrument === 'driver_split' ? section.blocks[0] : null;
   return (
     <section aria-label={section.label}>
       <p className="mb-3 text-[11px] uppercase tracking-wider text-george-muted">{section.label}</p>
-      <ResultSurface blocks={section.blocks} />
+      {split && split.kind === 'group' ? (
+        <>
+          <DriverSplit members={split.members} identity={section.identity} />
+          {/* The same receipts rule the group would have had: one line when
+              every member provably shares one, else each its own. */}
+          {split.sharedMeta ? (
+            <ReceiptsBlock meta={split.sharedMeta} />
+          ) : (
+            split.members.map((m) => <ReceiptsBlock key={m.source.seq} meta={m.source.meta} />)
+          )}
+        </>
+      ) : (
+        <ResultSurface blocks={section.blocks} />
+      )}
     </section>
   );
 }

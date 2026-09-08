@@ -151,6 +151,14 @@ def scope_of(call: Mapping[str, Any]) -> tuple:
     )
 
 
+def _identity(call: Mapping[str, Any], defs: Mapping[str, Any]) -> Optional[str]:
+    if call.get("tool") != METRIC_TOOL:
+        return None
+    drivers = ((defs.get("metrics") or {}).get(_metric(call)) or {}).get("drivers") or {}
+    identity = drivers.get("identity")
+    return identity if isinstance(identity, str) and identity else None
+
+
 def _check_read(call: Optional[Mapping[str, Any]], seq: Any) -> Mapping[str, Any]:
     if call is None:
         raise Rejected(f"call {seq} did not run in this turn")
@@ -243,7 +251,12 @@ def validate(submitted: Iterable[Any], calls: Mapping[int, Mapping[str, Any]],
             call = _check_read(calls.get(seq), seq)
             primary_seq = seq
             accepted.append({"seq": seq, "role": "primary", "of": None,
-                             "tool": call.get("tool")})
+                             "tool": call.get("tool"),
+                             # The definitions' own sentence for this metric's
+                             # drivers, so the Driver Split can print it. From
+                             # metrics.yaml, never from the model; None when the
+                             # metric declares no drivers or is not a metric.
+                             "identity": _identity(call, defs)})
         except Rejected as why:
             rejected.append({"seq": seq, "role": role, "reason": str(why)})
 

@@ -35,6 +35,7 @@
  * it, and the receipts should say so.
  */
 import type { Finding } from '../../types/george';
+import { driverSplitMembers } from './instrumentShape';
 import { resultBlocks, type ResultBlock, type ResultSource } from './resultShape';
 
 export type SectionRole = Finding['role'];
@@ -61,6 +62,18 @@ export interface WorkSection {
   role: SectionRole;
   label: string;
   blocks: ResultBlock[];
+  /**
+   * The instrument this section is drawn with, when one applies.
+   *
+   * `driver_split`: the driver section, when resultShape grouped its members
+   * into one group of single compared figures that all carry a numeric
+   * change_pct (instrumentShape.driverSplitMembers). Decided HERE, from the
+   * blocks and the role, never from the model — a role says where a result
+   * sits, and this is the one case where "where" changes the drawing.
+   */
+  instrument?: 'driver_split';
+  /** The definitions' identity for the drivers, off the primary finding. */
+  identity?: string | null;
 }
 
 /** The two things a surface can be, and the flag that says which. */
@@ -109,11 +122,23 @@ export function composeWork(
     partition.get(roleOf.get(source.seq) ?? 'context')!.push(source);
   }
 
+  const identity = findings!.find((f) => f.role === 'primary')?.identity ?? null;
   const sections: WorkSection[] = [];
   for (const role of SECTION_ORDER) {
     const members = partition.get(role)!;
     if (members.length === 0) continue;
-    sections.push({ role, label: SECTION_LABEL[role], blocks: resultBlocks(members) });
+    const blocks = resultBlocks(members);
+    const section: WorkSection = { role, label: SECTION_LABEL[role], blocks };
+    if (
+      role === 'driver' &&
+      blocks.length === 1 &&
+      blocks[0].kind === 'group' &&
+      driverSplitMembers(blocks[0].members)
+    ) {
+      section.instrument = 'driver_split';
+      section.identity = identity;
+    }
+    sections.push(section);
   }
   return { kind: 'structured', sections };
 }

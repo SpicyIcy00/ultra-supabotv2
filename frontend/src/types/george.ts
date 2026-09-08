@@ -56,6 +56,20 @@ export interface ToolMeta {
     baseline?: { kind?: string; name?: string; start?: string; end?: string };
     baseline_statuses?: Record<string, number>;
     ranked_by_current?: boolean;
+    /**
+     * Which ranking the tool applied: null, 'value', 'biggest_drop' or
+     * 'biggest_gain'. A Delta Ranking is drawn ONLY for the last two — the
+     * tool ranked by change in the metric's unit after matching both windows
+     * per subject, and that is the only ordering a ranking may claim.
+     */
+    rank_by?: string | null;
+    /** Under a change ranking: the subjects with no numeric change, counted and named. */
+    not_ranked?: {
+      counts: Record<string, number>;
+      no_current: { subject: string; baseline: number | null; unit?: string }[];
+      no_baseline: { subject: string; value: number | null; unit?: string }[];
+      ranked_subjects: number;
+    };
   };
   definitions_version?: number;
 }
@@ -302,6 +316,13 @@ export interface Finding {
   /** For a driver or a breakdown: the seq of the primary it hangs off. */
   of: number | null;
   tool: string;
+  /**
+   * On the primary only: the definitions' identity for its drivers —
+   * "net_sales = transaction_count x average_transaction_value" — read from
+   * metrics.yaml by the loop, never written by the model. The Driver Split
+   * prints it as the one line that is not a row.
+   */
+  identity?: string | null;
 }
 
 export interface FindingFrame {

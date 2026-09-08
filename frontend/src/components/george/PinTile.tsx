@@ -35,6 +35,8 @@ import { Clock } from 'lucide-react';
 import type { Pin, PinCallResult, PinRun } from '../../types/pins';
 import { errorMessage, runPin } from '../../services/pinsApi';
 import { ago, missingLabel, replayState } from './pinShape';
+import { CoverageStrip } from './Instruments';
+import { coverageFromReplay, type Coverage } from './instrumentShape';
 import { blocksFromPinRun } from './resultShape';
 import { ResultSurface } from './ResultSurface';
 import { NoticeBanner } from './NoticeBanner';
@@ -179,7 +181,12 @@ function RunBody({ data, lead }: { data: PinRun; lead: boolean }) {
       ) : (
         <>
           {state.missing.length > 0 && (
-            <PartialReplay missing={state.missing} total={data.results.length} ranAt={data.ran_at} />
+            <PartialReplay
+              missing={state.missing}
+              total={data.results.length}
+              ranAt={data.ran_at}
+              coverage={coverageFromReplay(data.results)}
+            />
           )}
 
           <ResultSurface blocks={blocks} large={lead} />
@@ -204,10 +211,12 @@ function PartialReplay({
   missing,
   total,
   ranAt,
+  coverage,
 }: {
   missing: PinCallResult[];
   total: number;
   ranAt: string;
+  coverage: Coverage | null;
 }) {
   return (
     <div
@@ -227,6 +236,9 @@ function PartialReplay({
           </li>
         ))}
       </ul>
+      {/* The same fact as a shape: what came back, solid; what did not,
+          hatched and named. The words above stay — this is beside them. */}
+      {coverage && <CoverageStrip coverage={coverage} />}
       <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-george-muted">
         <Clock className="h-3 w-3" aria-hidden />
         Checked {ago(ranAt)}
