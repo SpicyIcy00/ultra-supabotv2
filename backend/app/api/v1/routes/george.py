@@ -1349,7 +1349,8 @@ async def _safe_stream(question: str, user_id: Optional[str],
                        parent_id: Optional[str] = None,
                        page_reader: Optional[PageReader] = None,
                        page_scope: Optional[dict] = None,
-                       page_writer: Optional[PageWriter] = None) -> AsyncIterator[str]:
+                       page_writer: Optional[PageWriter] = None,
+                       page_references: Optional[list[dict]] = None) -> AsyncIterator[str]:
     """
     Wrap the loop so a crash still closes the stream cleanly.
 
@@ -1372,6 +1373,7 @@ async def _safe_stream(question: str, user_id: Optional[str],
             page_reader=page_reader,
             page_scope=page_scope,
             page_writer=page_writer,
+            page_references=page_references,
         ):
             yield frame
     except Exception as exc:  # noqa: BLE001
@@ -1458,6 +1460,12 @@ async def ask(
     # role performs, and it has to be done before the 200 goes out, while a
     # failure can still be handled as something other than an error frame.
     recall = await _recall_for(user.username, history, thread)
+    # Lightweight owner-scoped discovery: no pin replay or business query.
+    async with AsyncSessionLocal() as session:
+        page_references = [
+            {"page_id": str(p.id), "title": p.title}
+            for p in (await page_writer.list_pages(session, user.username))[:page_writer.MAX_PAGES_PER_OWNER]
+        ]
 
     return StreamingResponse(
         _safe_stream(
@@ -1473,6 +1481,7 @@ async def ask(
             parent_id=parent,
             page_reader=page_reader,
             page_scope=page_scope,
+            page_references=page_references,
             # Always: every signed-in caller may build and edit their own
             # pages. "This page" is the resolved scope, or nothing.
             page_writer=_PageWriter(

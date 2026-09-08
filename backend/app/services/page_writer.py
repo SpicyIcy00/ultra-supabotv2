@@ -235,6 +235,15 @@ async def list_pages(db: AsyncSession, owner: str) -> list[GeorgePage]:
     return list(rows)
 
 
+async def lock_workspace(db: AsyncSession, owner: str) -> None:
+    """Serialize structural writes for one owner until commit or rollback.
+
+    Covers empty Pages and Ungrouped too, where no parent row can be locked.
+    This is a parameterized application-role query; George never connects.
+    """
+    await db.execute(select(func.pg_advisory_xact_lock(func.hashtextextended(owner, 87103))))
+
+
 async def page_titles(db: AsyncSession, owner: str) -> list[str]:
     rows = (
         await db.execute(select(GeorgePage.title).where(GeorgePage.owner == owner))
@@ -454,6 +463,7 @@ async def create_page(
     actor: Actor = USER, allow_similar_page: bool = False,
 ) -> GeorgePage:
     """An empty page. It exists from this moment, with nothing on it yet."""
+    await lock_workspace(db, owner)
     name = normalize_title(title)
     why = normalize_purpose(purpose)
     if await _count_pages(db, owner) >= MAX_PAGES_PER_OWNER:
@@ -482,6 +492,7 @@ async def rename_page(
     keeps pointing here. A case-only change of THIS page's own title is
     allowed; a collision with ANOTHER page is refused as on create.
     """
+    await lock_workspace(db, owner)
     page = await get_page(db, owner, page_id)
     name = normalize_title(title)
     if name == page.title:
@@ -501,6 +512,7 @@ async def set_purpose(
     db: AsyncSession, *, owner: str, page_id: uuid.UUID, purpose: Optional[str],
     actor: Actor = USER,
 ) -> GeorgePage:
+    await lock_workspace(db, owner)
     page = await get_page(db, owner, page_id)
     why = normalize_purpose(purpose)
     if why == page.purpose:
@@ -529,6 +541,7 @@ async def delete_page(
     deleted. Manual UI only — George has no delete in V1 — but it lives here
     so the semantics cannot be re-decided by a route.
     """
+    await lock_workspace(db, owner)
     page = await get_page(db, owner, page_id)
     pins = await page_pins(db, owner, page.id)
     for pin in pins:
@@ -599,6 +612,9 @@ async def move_pin(
     the run history are never touched, and nothing is re-run: membership is
     not a figure.
     """
+    await lock_workspace(db, owner)
+    if pin.created_by != owner:
+        raise PinNotFound("Pin not found.")
     if to_page is not None and to_page.owner != owner:
         # Unreachable through get_page, kept so a caller cannot hand in a row
         # it fetched some other way.
@@ -670,6 +686,7 @@ async def place_pin(
     db: AsyncSession, *, owner: str, pin: GeorgePin, place: Placement, actor: Actor = USER,
 ) -> GeorgePin:
     """Reorder within the pin's own page. Refused for a pin in Ungrouped."""
+    await lock_workspace(db, owner)
     if pin.page_id is None:
         raise NotAPage("This analysis is in Ungrouped, which keeps no order. Put it on a page first.")
     page = await get_page(db, owner, pin.page_id)
@@ -685,6 +702,7 @@ async def append_new_pin(
     pin_writer.create_pin only; the pin is not yet flushed. Ungrouped is a
     no-op beyond leaving page_id NULL.
     """
+    await lock_workspace(db, owner)
     if to_page is None:
         pin.page_id = None
         pin.page_obj = None
@@ -717,6 +735,7 @@ async def page_for_write(
     still comes into being the moment something is pinned to a new name;
     None or blank is Ungrouped. The collision rule applies as everywhere.
     """
+    await lock_workspace(db, owner)
     name = normalize_page(title)
     if not name:
         return None

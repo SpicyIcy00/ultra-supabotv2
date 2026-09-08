@@ -425,6 +425,7 @@ async def delete_pin(
     invariant every other write keeps — and the deletion is recorded on the
     page's audit as the pin leaving it.
     """
+    await page_writer.lock_workspace(db, user.username)
     pin = await _owned(db, pin_id, user)
     if pin.page_id is not None:
         # Off the page first, through the one function that keeps the page

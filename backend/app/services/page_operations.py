@@ -32,6 +32,7 @@ Sections are absent by decision (V1.1). Positions are page-wide.
 
 from __future__ import annotations
 
+import json
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -139,10 +140,13 @@ async def _plan_analyses(
         )
     planned: list[_NewAnalysis | _ExistingAnalysis] = []
     seen_pins: set[uuid.UUID] = set()
+    seen_calls: set[str] = set()
     for i, entry in enumerate(analyses):
         if not isinstance(entry, dict):
             raise PageValidationError(f"analyses[{i}] must be an object.")
         if entry.get("pin_id") is not None:
+            if entry.get("tool_calls") is not None:
+                raise PageValidationError("Give pin_id or tool_calls, not both.")
             pin = await page_writer.resolve_pin(db, owner, pin_id=entry["pin_id"])
             if pin.id in seen_pins:
                 raise PageValidationError(f"analyses[{i}] names pin {pin.id} twice.")
@@ -150,6 +154,7 @@ async def _plan_analyses(
             planned.append(_ExistingAnalysis(pin))
         elif entry.get("tool_calls") is not None:
             calls = pin_writer.validate_pin_calls(entry["tool_calls"])
+            _unique_calls(calls, seen_calls)
             planned.append(_NewAnalysis(_normalize_analysis_title(entry.get("title"), calls), calls))
         else:
             raise PageValidationError(
@@ -157,6 +162,14 @@ async def _plan_analyses(
                 f"pin_id (an existing one)."
             )
     return planned
+
+
+def _unique_calls(calls: list[dict], seen: set[str]) -> None:
+    for call in calls:
+        key = json.dumps(call, sort_keys=True, separators=(",", ":"))
+        if key in seen:
+            raise PageValidationError("A Page build/edit cannot add the same read twice.")
+        seen.add(key)
 
 
 async def build_page(
@@ -182,6 +195,7 @@ async def build_page(
     page after them, each landing at the bottom, so the page reads in the
     order it was described.
     """
+    await page_writer.lock_workspace(db, owner)
     name = normalize_title(title)
     why = normalize_purpose(purpose)
     planned = await _plan_analyses(db, owner, analyses)
@@ -255,22 +269,21 @@ async def _resolve_target_pin(
 async def _resolve_destination(
     db: AsyncSession, owner: str, op: dict,
 ) -> Optional[GeorgePage]:
-    """move_to_page's destination: a page id, a page title, or null for Ungrouped."""
-    if "page_id" in op and op["page_id"] is None and op.get("page_title") is None:
+    """Writes accept stable identity only; title discovery belongs to reads."""
+    if "page_title" in op:
+        raise PageValidationError("Resolve the destination from owned Page metadata and supply page_id.")
+    if "page_id" in op and op["page_id"] is None:
         return None
-    which = _one_of(op, "page_id", "page_title")
-    if which is None:
+    if "page_id" not in op:
         raise PageValidationError(
-            "move_to_page: give the destination as page_id, page_title, or "
+            "move_to_page: give the destination as page_id, or "
             "page_id: null for Ungrouped."
         )
-    if which == "page_id":
-        try:
-            pid = uuid.UUID(str(op["page_id"]))
-        except ValueError as exc:
-            raise PageNotFound(f"{op['page_id']!r} is not a page id.") from exc
-        return await page_writer.get_page(db, owner, pid)
-    return await page_writer.resolve_page_title(db, owner, op["page_title"])
+    try:
+        pid = uuid.UUID(str(op["page_id"]))
+    except ValueError as exc:
+        raise PageNotFound(f"{op['page_id']!r} is not a page id.") from exc
+    return await page_writer.get_page(db, owner, pid)
 
 
 async def plan_edit(
@@ -294,6 +307,7 @@ async def plan_edit(
     on_page = len(await page_writer.page_pins(db, owner, page.id))
     adds = 0
     new_pins = 0
+    seen_calls: set[str] = set()
     titles_in_use = {p.title for p in await page_writer.list_pages(db, owner) if p.id != page.id}
     for i, op in enumerate(operations):
         if not isinstance(op, dict) or not isinstance(op.get("op"), str):
@@ -306,6 +320,10 @@ async def plan_edit(
 
         if kind == "rename":
             name = normalize_title(op.get("title"))
+            await page_writer.ensure_title_free(
+                db, owner, name, except_page_id=page.id,
+                allow_similar_page=bool(op.get("allow_similar_page")),
+            )
             if name != page.title and name in titles_in_use:
                 raise PageValidationError(f"You already have a page called {name!r}.")
             plan.steps.append({"op": kind, "title": name,
@@ -321,6 +339,7 @@ async def plan_edit(
                     f"One edit may add at most {MAX_ADDS_PER_EDIT} analyses."
                 )
             calls = pin_writer.validate_pin_calls(op.get("tool_calls") or [])
+            _unique_calls(calls, seen_calls)
             title = _normalize_analysis_title(op.get("title"), calls)
             on_page += 1
             new_pins += 1
@@ -382,7 +401,49 @@ async def plan_edit(
 
     if new_pins:
         await pin_writer.ensure_pin_quota(db, owner, adding=new_pins)
+    await _preflight_order(db, owner, plan)
     return plan
+
+
+async def _preflight_order(db: AsyncSession, owner: str, plan: _Plan) -> None:
+    """Simulate all memberships and relational placements without changing ORM rows."""
+    orders: dict[uuid.UUID, list[GeorgePin]] = {}
+    locations: dict[uuid.UUID, Optional[uuid.UUID]] = {}
+
+    async def order(pid):
+        if pid not in orders:
+            orders[pid] = list(await page_writer.page_pins(db, owner, pid))
+        return orders[pid]
+
+    for step in plan.steps:
+        kind = step["op"]
+        if kind in ("rename", "set_purpose"):
+            continue
+        if kind == "add":
+            pin = GeorgePin(id=uuid.uuid4())
+            source = None
+        else:
+            pin = step["pin"]
+            source = locations.get(pin.id, pin.page_id)
+            if kind in ("remove", "move_to_page", "place") and source != plan.page.id:
+                raise PageValidationError("An earlier operation already moved this analysis off the Page.")
+        destination = plan.page.id
+        if kind == "remove":
+            destination = None
+        elif kind == "move_to_page":
+            destination = step["dest"].id if step["dest"] else None
+        if source is not None:
+            orders[source] = [p for p in await order(source) if p.id != pin.id]
+        if destination is not None:
+            target = [p for p in await order(destination) if p.id != pin.id]
+            index = page_writer._placement_index(target, pin, step.get("place"))
+            target.insert(index, pin)
+            if len(target) > MAX_PINS_PER_PAGE:
+                raise PageQuotaError(f"A Page holds at most {MAX_PINS_PER_PAGE} analyses.")
+            orders[destination] = target
+        elif step.get("place"):
+            raise NotAPage("Ungrouped keeps no order.")
+        locations[pin.id] = destination
 
 
 async def apply_edit(
@@ -402,6 +463,7 @@ async def apply_edit(
     the caller substitutes the page in scope before calling; a null scope
     means there is nothing to edit.
     """
+    await page_writer.lock_workspace(db, owner)
     if page_id is None:
         raise NotAPage(
             "Ungrouped is not a page: it cannot be renamed, described or reordered. "

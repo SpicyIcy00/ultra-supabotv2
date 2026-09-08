@@ -645,6 +645,7 @@ def _normalize_analyses(analyses: Any, ctx: WriteContext, max_analyses: int) -> 
             f"the rest when the user asks."
         )
     out = []
+    seen_calls: set[str] = set()
     for i, entry in enumerate(analyses):
         if not isinstance(entry, dict):
             raise PageRefused(f"analyses[{i}] must be an object.")
@@ -666,6 +667,11 @@ def _normalize_analyses(analyses: Any, ctx: WriteContext, max_analyses: int) -> 
         if not isinstance(title, str) or not title.strip():
             raise PageRefused(f"analyses[{i}] needs a title.")
         _refuse_unrun(calls, ctx, f"analyses[{i}] ({title.strip()!r})")
+        for call in calls:
+            key = call_key(call["tool"], call["arguments"])
+            if key in seen_calls:
+                raise PageRefused("A Page build cannot add the same read twice.")
+            seen_calls.add(key)
         out.append({"title": title.strip(), "tool_calls": calls})
     return out
 
@@ -773,7 +779,7 @@ async def edit_page(
             already has, from Ungrouped or another page;
             remove {pin_id | title} — off this page and KEPT in Ungrouped;
             nothing is deleted;
-            move_to_page {pin_id | title, page_id | page_title | page_id: null}
+            move_to_page {pin_id | title, page_id: UUID | null}
             — to another of the user's pages, or to Ungrouped;
             place {pin_id | title, place} where place is exactly one of
             {"before": pin_id}, {"after": pin_id}, {"at": "top"},
@@ -813,6 +819,8 @@ async def edit_page(
         if not isinstance(op, dict) or not isinstance(op.get("op"), str):
             raise PageRefused(f"operations[{i}] must be an object with an 'op'.")
         kind = op["op"]
+        if "page_title" in op:
+            raise PageRefused("Resolve the destination from owned Page references and supply page_id.")
         if kind not in PAGE_EDIT_OPERATIONS:
             raise PageRefused(
                 f"operations[{i}]: unknown op {kind!r}. One of: "

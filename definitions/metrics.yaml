@@ -3515,6 +3515,16 @@ pages:
       - now on the page
       - set the purpose
       - purpose is now
+    # A successful rename does not license a claim that an analysis moved.
+    # Keep this bounded phrase check operation-specific, retaining negations.
+    operation_phrases:
+      create: [created the page, created a page, created a new page, "i'll create the page", i will create the page, let me create the page, "i'll build the page", let me build the page]
+      rename: [the page is now called, renamed the page, renamed it to, renamed to, "i'll rename", let me rename]
+      add: [page now has, added it to the page, added them to the page, now on the page, "i'll add it to the page"]
+      move_to_page: [moved it to, moved the analysis, "i'll move it", let me move it]
+      remove: [removed it from, removed from the page, taken it off the page, took it off the page, "i'll remove it", let me remove it]
+      place: [moved it to, moved it above, moved it below, moved it up, moved it down, moved it to the top, moved it to the bottom, moved the analysis, reordered the page, reordered the analyses, "i'll move it", let me move it, "i'll reorder"]
+      set_purpose: [set the purpose, purpose is now]
     intents:
       - i'll create the page
       - i will create the page

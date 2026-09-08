@@ -193,12 +193,14 @@ async def create_pin(
     (page_id is not theirs), or SimilarPageError (the page name needs a decision
     the caller must not make for them).
     """
+    await page_writer.lock_workspace(db, username)
     calls = validate_pin_calls(tool_calls)
     await ensure_pin_quota(db, username, adding=1)
 
     target: Optional[GeorgePage] = None
-    if page_id is not UNSET and page_id is not None:
-        target = await page_writer.get_page(db, username, uuid.UUID(str(page_id)))
+    if page_id is not UNSET:
+        if page_id is not None:
+            target = await page_writer.get_page(db, username, uuid.UUID(str(page_id)))
     elif page is not UNSET and page is not None:
         target = await page_writer.page_for_write(
             db, owner=username, title=page, actor=actor,
@@ -263,12 +265,14 @@ async def update_pin(
     THE CALLS ARE NEVER TOUCHED and nothing is re-run: membership is not a
     figure. Somebody else's pin is PinNotFound, indistinguishable from none.
     """
+    await page_writer.lock_workspace(db, username)
     pin = await page_writer.get_pin(db, username, pin_id)
 
     moving = page_id is not UNSET or page is not UNSET
     if moving:
-        if page_id is not UNSET and page_id is not None:
-            target = await page_writer.get_page(db, username, uuid.UUID(str(page_id)))
+        if page_id is not UNSET:
+            target = (await page_writer.get_page(db, username, uuid.UUID(str(page_id)))
+                      if page_id is not None else None)
         elif page is not UNSET and page is not None:
             target = await page_writer.page_for_write(
                 db, owner=username, title=page, actor=actor,
@@ -318,6 +322,7 @@ async def rename_page(
     id, so nothing bound to it moves. `pins_moved` is the pin count, which is
     what the old contract reported and still the number a reader wants.
     """
+    await page_writer.lock_workspace(db, username)
     name = page_writer.normalize_page(old)
     if not name:
         raise PageNotFound("Ungrouped is not a page and cannot be renamed.")

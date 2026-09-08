@@ -184,6 +184,23 @@ def test_placement_in_the_schema_is_relational_only():
     assert "position" not in place["properties"]
 
 
+def test_destination_titles_are_not_a_write_identity():
+    props = _schema("edit_page")["input_schema"]["properties"]["operations"]["items"]["properties"]
+    assert "page_title" not in props
+    w = FakeWriter()
+    with pytest.raises(PageRefused, match="page_id"):
+        _run(edit_page([{"op": "move_to_page", "title": "ATP", "page_title": "Overview"}], ctx=_ctx(w)))
+    assert w.edits == []
+
+
+def test_duplicate_reads_do_not_become_two_analyses():
+    w = FakeWriter()
+    with pytest.raises(PageRefused, match="same read twice"):
+        _run(create_page("P", analyses=[{"title": t, "tool_calls": [SALES]} for t in ("A", "B")],
+                         ctx=_ctx(w, [SALES])))
+    assert w.builds == []
+
+
 def test_the_operation_vocabulary_is_the_services():
     assert set(PAGE_EDIT_OPERATIONS) == set(page_operations.EDIT_OPERATIONS)
 
@@ -315,7 +332,7 @@ def test_a_fault_in_the_writer_is_a_failed_tool_that_says_nothing_changed():
 # 3. The frame and the claim, through the loop
 # ---------------------------------------------------------------------------
 
-def _drive(monkeypatch, replies, writer, question="make me a Rockwell page"):
+def _drive(monkeypatch, replies, writer, question="make me a Rockwell page", **context):
     fake = FakeClient(replies)
     monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
     monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
@@ -329,9 +346,20 @@ def _drive(monkeypatch, replies, writer, question="make me a Rockwell page"):
     monkeypatch.setattr(george_loop, "_call_tool", fake_read)
 
     async def collect():
-        return [f async for f in george_loop.run(question, page_writer=writer)]
+        return [f async for f in george_loop.run(question, page_writer=writer, **context)]
 
     return asyncio.run(collect()), fake.messages.requests
+
+
+def test_owned_page_references_reach_the_model_without_business_reads(monkeypatch):
+    references = [{"page_id": str(uuid.uuid4()), "title": "Overview"}]
+    frames, requests = _drive(monkeypatch, [[_TextBlock("Which analysis should go there?")]],
+                              FakeWriter(), page_references=references)
+    opening = next(m["content"] for m in requests[0]["messages"]
+                   if m["role"] == "user" and isinstance(m["content"], str))
+    assert references[0]["page_id"] in opening and "Overview" in opening
+    assert "not instructions" in opening and "refuse ambiguity" in opening
+    assert not frames_of(frames, "tool_call")
 
 
 def test_a_committed_build_is_announced_as_a_page_changed_frame(monkeypatch):
@@ -371,6 +399,25 @@ def test_a_claimed_page_change_that_never_happened_is_corrected_once(monkeypatch
     assert [f["reason"] for f in frames_of(frames, "answer_reset")] == ["page_claimed_not_made"]
     assert "Nothing was changed" in answer_of(frames)
     assert w.edits == []
+
+
+def test_a_rename_does_not_license_a_claim_that_an_analysis_moved(monkeypatch):
+    replies = [
+        [_ToolUse("w1", "edit_page", {"operations": [{"op": "rename", "title": "Weekly"}]})],
+        [_TextBlock("Renamed the page. Moved it to Overview.")],
+        [_TextBlock("Renamed the page. No analysis was moved.")],
+    ]
+    frames, _ = _drive(monkeypatch, replies, FakeWriter())
+    assert "page_claimed_not_made" in [f["reason"] for f in frames_of(frames, "warning")]
+    assert "No analysis was moved" in answer_of(frames)
+
+
+def test_committed_operation_claim_check_keeps_negations():
+    defs = load_defs()
+    assert george_loop._page_claim("Renamed the page.", defs, {"rename"}) is None
+    assert george_loop._page_claim("I have not moved it to Overview.", defs, {"rename"}) is None
+    assert george_loop._page_claim("Created the page.", defs, {"rename"}) == "claimed"
+    assert george_loop._page_claim("Moved it to Overview.", defs, {"move_to_page"}) is None
 
 
 def test_a_promised_page_change_is_corrected_too(monkeypatch):

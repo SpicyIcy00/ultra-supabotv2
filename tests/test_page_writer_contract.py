@@ -309,6 +309,35 @@ def test_an_unknown_operation_is_refused_by_name():
     assert "explode" in str(exc.value)
 
 
+def test_bad_placement_after_purpose_is_rejected_before_any_mutation():
+    page = _page()
+    pin = _pin(page=page)
+    s = FakeSession(pages=[page], pins=[pin])
+    with pytest.raises(PinNotFound):
+        _run(page_operations.apply_edit(s, owner=ME, page_id=page.id, operations=[
+            {"op": "set_purpose", "purpose": "Must not persist"},
+            {"op": "place", "pin_id": str(pin.id), "place": {"before": str(uuid.uuid4())}},
+        ]))
+    assert page.purpose is None
+    assert s.added == [] and s.flushed == 0
+
+
+def test_foreign_ungrouped_pin_cannot_be_passed_directly_to_membership_writer():
+    page = _page()
+    pin = _pin(owner="someone-else")
+    s = FakeSession(pages=[page], pins=[pin])
+    with pytest.raises(PinNotFound, match="^Pin not found\\.$"):
+        _run(page_writer.move_pin(s, owner=ME, pin=pin, to_page=page))
+    assert pin.page_id is None and s.flushed == 0
+
+
+def test_destination_title_is_refused_before_reading_or_mutating():
+    s = FakeSession()
+    with pytest.raises(PageValidationError, match="page_id"):
+        _run(page_operations._resolve_destination(s, ME, {"page_title": "Overview"}))
+    assert not s.statements
+
+
 # ---------------------------------------------------------------------------
 # 3. Ambiguity refuses
 # ---------------------------------------------------------------------------

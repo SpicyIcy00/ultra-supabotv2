@@ -79,6 +79,14 @@ async def _migration_round_trip() -> None:
     await engine.dispose()
     async with AsyncSessionLocal() as s:
         try:
+            before_columns = set((await s.execute(text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_schema='george' AND table_name='pins'"))).scalars().all())
+            before_calls = (await s.execute(text(
+                "SELECT id, tool_calls FROM george.pins ORDER BY id"))).all()
+            before_groups = ((await s.execute(text(
+                "SELECT id, page FROM george.pins ORDER BY id"))).all()
+                if "page" in before_columns else None)
             conn = await s.connection()
             ran = await conn.run_sync(pages_live.apply_migration_if_needed)
             # Whether it ran now or earlier, the shape is the shape.
@@ -86,6 +94,8 @@ async def _migration_round_trip() -> None:
                 "SELECT column_name FROM information_schema.columns "
                 " WHERE table_schema='george' AND table_name='pins'"))).scalars().all())
             assert {"page_id", "position"} <= cols and "page" not in cols
+            assert (await s.execute(text(
+                "SELECT id, tool_calls FROM george.pins ORDER BY id"))).all() == before_calls
             # Every grouped pin's positions are dense and every page is owned
             # by the owner of its pins — the assertions the revision ran,
             # restated from outside it.
@@ -110,8 +120,17 @@ async def _migration_round_trip() -> None:
                     "SELECT table_name FROM information_schema.tables "
                     " WHERE table_schema='george'"))).scalars().all())
                 assert "pages" not in tables and "page_events" not in tables
+                assert (await s.execute(text(
+                    "SELECT id, page FROM george.pins ORDER BY id"))).all() == before_groups
         finally:
             await s.rollback()
+    async with AsyncSessionLocal() as verify:
+        after_columns = set((await verify.execute(text(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_schema='george' AND table_name='pins'"))).scalars().all())
+        assert after_columns == before_columns
+        assert (await verify.execute(text(
+            "SELECT id, tool_calls FROM george.pins ORDER BY id"))).all() == before_calls
     await engine.dispose()
 
 
@@ -143,8 +162,22 @@ async def _scenario() -> None:
         assert await _positions(s, a, rock.id) == [("Net sales", 0), ("Transactions", 1), ("ATP", 2)]
         assert p1.page_id == p2.page_id == p3.page_id == rock.id
 
+        # Preflight must reject the whole batch before even its first mutation.
+        original_purpose = rock.purpose
+        with pytest.raises(PinNotFound):
+            await page_operations.apply_edit(s, owner=a, page_id=rock.id, operations=[
+                {"op": "set_purpose", "purpose": "Must not persist"},
+                {"op": "place", "pin_id": str(p1.id), "place": {"before": str(uuid.uuid4())}},
+            ])
+        assert rock.purpose == original_purpose
+        assert await _positions(s, a, rock.id) == [("Net sales", 0), ("Transactions", 1), ("ATP", 2)]
+
         # A NEW title on a pin still brings a page into being.
         loose = (await pin_writer.create_pin(s, username=a, tool_calls=[SALES], title="Loose")).row
+        assert loose.page_id is None
+        # An explicit null ID wins over a stale legacy display title.
+        await pin_writer.update_pin(s, username=a, pin_id=loose.id,
+                                    page_id=None, page=rock.title)
         assert loose.page_id is None
         made = (await pin_writer.create_pin(s, username=a, tool_calls=[SALES], title="First",
                                             page=f"Aji Overview {run}")).row
@@ -155,6 +188,9 @@ async def _scenario() -> None:
         theirs = await page_writer.create_page(s, owner=b, title=f"Rockwell {run}")
         their_pin = (await pin_writer.create_pin(s, username=b, tool_calls=[SALES],
                                                  title="Net sales", page_id=theirs.id)).row
+        their_loose = (await pin_writer.create_pin(s, username=b, tool_calls=[SALES], title="Private loose")).row
+        with pytest.raises(PinNotFound, match="^Pin not found\\.$"):
+            await page_writer.move_pin(s, owner=a, pin=their_loose, to_page=rock)
 
         # ---- ownership: foreign == missing, on every path -----------------------
         ghost = uuid.uuid4()
@@ -223,12 +259,12 @@ async def _scenario() -> None:
         assert res.operations[-1]["to"] == "ungrouped"
         assert res.page["page_id"] == str(rock.id)
 
-        # Move to another page by TITLE resolves through trusted metadata, and
+        # Resolve human titles in trusted metadata; mutations use the ID, and
         # both pages are dense afterwards.
         await page_operations.apply_edit(
             s, owner=a, page_id=rock.id,
             operations=[{"op": "move_to_page", "pin_id": str(p2.id),
-                         "page_title": f"aji overview {run}"}],   # unique case variant
+                         "page_id": str(overview.id)}],
         )
         assert _dense(await _positions(s, a, rock.id))
         assert await _positions(s, a, overview.id) == [("First", 0), ("Transactions", 1)]
@@ -297,6 +333,15 @@ async def _scenario() -> None:
                 await page_operations.apply_edit(
                     s, owner=a, page_id=built_id,
                     operations=[{"op": "add", "title": "Four", "tool_calls": [SALES]}])
+            # Overview has two analyses: each move fits alone, both cannot fit.
+            with pytest.raises(PageQuotaError):
+                await page_operations.apply_edit(s, owner=a, page_id=rock.id, operations=[
+                    {"op": "set_purpose", "purpose": "Must not persist"},
+                    {"op": "move_to_page", "pin_id": str(p3.id), "page_id": str(overview.id)},
+                    {"op": "move_to_page", "pin_id": str(loose.id), "page_id": str(overview.id)},
+                ])
+            assert rock.purpose == "Weekly Rockwell performance."
+            assert await _positions(s, a, overview.id) == [("First", 0), ("Transactions", 1)]
         finally:
             page_writer.MAX_PINS_PER_PAGE = page_operations.MAX_PINS_PER_PAGE = 50
         assert await _positions(s, a, built_id) == [("Sales", 0), ("Net sales", 1), ("Basket", 2)]
