@@ -52,10 +52,14 @@ import type { Post } from '../../types/river';
 import { storedPageContext } from './pageScope';
 import { postView, storedCalls, type PostView } from './postShape';
 import { composeWork, compositionBlocks, type Composition } from './composeWork';
+import { dedupeSources } from './dedupe';
 import {
+  blockResults,
   sourcesFromCalls,
   sourcesFromCharted,
   type ResultBlock,
+  type ResultSource,
+  type ShapedResult,
 } from './resultShape';
 import { pinnableCalls } from './turnShape';
 
@@ -81,6 +85,15 @@ export interface Utterance {
   post: Post | null;
   /** Whether the viewer may share this into the river. */
   canShare: boolean;
+  /**
+   * Where the person was when they asked, when that is a known fact: the
+   * page the thread is bound to. Never a title the model made up.
+   */
+  eyebrow: string | null;
+  /** This question continues the work above it (see `continuesWork`). */
+  continues: boolean;
+  /** Live only: the post this question replied to, as the composer sent it. */
+  parentId?: string | null;
 }
 
 /** A piece of George's work: the question, what he did, and what he found. */
@@ -119,6 +132,16 @@ export interface WorkUnit {
   composition: Composition;
   /** The roles that stood, exactly as the loop validated them. Empty is honest. */
   findings: Finding[];
+  /** The sources the surface was composed from, after deduplication. */
+  sources: ResultSource[];
+  /** What was suppressed as a duplicate of another result, with what shows it. */
+  suppressed: { seq: number; coveredBy: number[] }[];
+  /** The primary result, when George said which it was and it was drawn. */
+  primary: ShapedResult | null;
+  /** This work continues the work above it. Presentation only; the post is its own. */
+  continues: boolean;
+  /** A later piece of work continues this one. */
+  continuedBy: boolean;
   /** The fallback receipts, used only when nothing was drawn. */
   receipts?: ToolMeta;
   pageContext?: PageContextFrame;
@@ -219,6 +242,8 @@ export function workUnitFromTurn(
     conversationId: turn.done?.conversation_id ?? turn.post?.conversation_id ?? null,
     post: null,
     view: null,
+    continues: false,
+    continuedBy: false,
   };
 }
 
@@ -237,11 +262,17 @@ export function workUnitFromTurn(
  * flat block list is derived from it so the two cannot disagree.
  */
 function composed(
-  sources: ReturnType<typeof sourcesFromCalls>,
+  raw: ResultSource[],
   findings: Finding[] | undefined,
-): Pick<WorkUnit, 'composition' | 'blocks' | 'findings'> {
-  const composition = composeWork(sources, findings);
-  return { composition, blocks: compositionBlocks(composition), findings: findings ?? [] };
+): Pick<WorkUnit, 'composition' | 'blocks' | 'findings' | 'sources' | 'suppressed' | 'primary'> {
+  // One fact, one representation (dedupe.ts) — before composition, so a
+  // suppressed result is neither drawn nor sectioned.
+  const { kept, suppressed } = dedupeSources(raw);
+  const composition = composeWork(kept, findings);
+  const blocks = compositionBlocks(composition);
+  const primarySeq = (findings ?? []).find((f) => f.role === 'primary')?.seq;
+  const primary = blockResults(blocks).find((r) => r.source.seq === primarySeq) ?? null;
+  return { composition, blocks, findings: findings ?? [], sources: kept, suppressed, primary };
 }
 
 /**
@@ -294,6 +325,8 @@ export function workUnitFromPost(post: Post, question: string | undefined): Work
     conversationId: post.conversation_id ?? null,
     post,
     view: postView(post),
+    continues: false,
+    continuedBy: false,
   };
 }
 
@@ -307,6 +340,8 @@ export function utteranceFromPost(post: Post): Utterance {
     authorUser: post.author_user ?? null,
     post,
     canShare: view.canShare,
+    eyebrow: null,
+    continues: false,
   };
 }
 
@@ -325,7 +360,66 @@ export function utteranceFromPost(post: Post): Utterance {
  * stored at the same instant and both must keep their place when they do.
  */
 export function riverItems(posts: Post[], pending: GeorgeTurn[]): RiverItem[] {
-  return [...storedItems(posts), ...liveItems(pending)];
+  return withContinuity([...storedItems(posts), ...liveItems(pending)]);
+}
+
+/* ------------------------------------------------------------ continuity -- */
+
+/**
+ * The scope a piece of work was measured over, from the call George named as
+ * primary — or, before he has, from its first call. Window, filters and
+ * comparison: the same three facts findings.scope_of compares on the server.
+ */
+export function workScope(unit: WorkUnit): string | null {
+  const primarySeq = unit.findings.find((f) => f.role === 'primary')?.seq;
+  const call = unit.calls.find((c) => c.seq === primarySeq) ?? unit.calls[0];
+  if (!call) return null;
+  const a = call.arguments ?? {};
+  const filters = a.filters && typeof a.filters === 'object' ? a.filters : null;
+  return JSON.stringify([a.date_range ?? null, filters, a.compare_to ?? null]);
+}
+
+/**
+ * Whether a question and its work CONTINUE the work above them.
+ *
+ * DETERMINISTIC AND NARROW. Three facts, all of them structural, none from
+ * prose: the question is a REPLY to the earlier answer (its post's parent is
+ * that answer, or — live — the parent the composer sent is that answer's
+ * id); the two pieces of work are in ONE thread; and the later work measured
+ * the SAME scope as the earlier — same window, same filters, same
+ * comparison. "Why?" after "How did Rockwell do last week?" reads the drivers
+ * over the same scope and continues; "And Magnolia?" changes the filter and
+ * starts its own piece of work. A follow-up whose first call has not landed
+ * yet is not a continuation until it has: the surface composes when the
+ * scope is known, never before.
+ *
+ * What it changes is PRESENTATION ONLY. The posts stay separate rows; the
+ * audit trail is untouched; a reload composes the same way from the same
+ * facts.
+ */
+export function continuesWork(prev: WorkUnit, question: Utterance, next: WorkUnit): boolean {
+  const replyTo = question.post?.parent_id ?? question.parentId ?? null;
+  if (!replyTo || replyTo !== prev.id) return false;
+  if (prev.post && next.post && prev.post.thread_id !== next.post.thread_id) return false;
+  const a = workScope(prev);
+  const b = workScope(next);
+  return a !== null && b !== null && a === b;
+}
+
+/** Marks continuations in place. Items are returned in the same order. */
+export function withContinuity(items: RiverItem[]): RiverItem[] {
+  for (let i = 2; i < items.length; i++) {
+    const prev = items[i - 2];
+    const q = items[i - 1];
+    const next = items[i];
+    if (prev.kind !== 'work' || q.kind !== 'utterance' || next.kind !== 'work') continue;
+    if (continuesWork(prev, q, next)) {
+      q.continues = true;
+      next.continues = true;
+      prev.continuedBy = true;
+    }
+  }
+  return items;
 }
 
 /**
@@ -342,15 +436,17 @@ export function riverItems(posts: Post[], pending: GeorgeTurn[]): RiverItem[] {
  * stops being enough and virtualization starts.
  */
 export function storedItems(posts: Post[]): RiverItem[] {
-  return posts.map((post) =>
-    post.author === 'user'
-      ? utteranceFromPost(post)
-      : workUnitFromPost(post, questionForPost(posts, post)),
+  return withContinuity(
+    posts.map((post) =>
+      post.author === 'user'
+        ? utteranceFromPost(post)
+        : workUnitFromPost(post, questionForPost(posts, post)),
+    ),
   );
 }
 
 /** The live half: the turns riverMerge did not drop. */
-export function liveItems(pending: GeorgeTurn[]): RiverItem[] {
+export function liveItems(pending: GeorgeTurn[], eyebrow: string | null = null): RiverItem[] {
   const items: RiverItem[] = [];
   for (let i = 0; i < pending.length; i++) {
     const turn = pending[i];
@@ -366,6 +462,9 @@ export function liveItems(pending: GeorgeTurn[]): RiverItem[] {
         authorUser: null,
         post: null,
         canShare: false,
+        eyebrow,
+        continues: false,
+        parentId: turn.parentId ?? null,
       });
       continue;
     }
@@ -455,6 +554,7 @@ export interface WorkSubstance {
   /** The composition too: a reload must structure the answer as it was structured live. */
   composition: Composition;
   findings: Finding[];
+  suppressed: { seq: number; coveredBy: number[] }[];
   receipts?: ToolMeta;
   pageContext?: PageContextFrame;
   pinnable: PinToolCall[] | null;
@@ -468,6 +568,7 @@ export function workSubstance(unit: WorkUnit): WorkSubstance {
     blocks: unit.blocks,
     composition: unit.composition,
     findings: unit.findings,
+    suppressed: unit.suppressed,
     receipts: unit.receipts,
     pageContext: unit.pageContext,
     pinnable: unit.pinnable,

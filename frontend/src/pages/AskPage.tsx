@@ -61,7 +61,8 @@ import { markDetail } from '../components/george/markState';
 import { riverMerge } from '../components/george/riverMerge';
 import { threadHistory } from '../components/george/threadHistory';
 import { blocksFromCalls, blocksFromCharted } from '../components/george/resultShape';
-import { liveItems, storedItems, streamSignal } from '../components/george/workUnit';
+import { liveItems, storedItems, streamSignal, withContinuity } from '../components/george/workUnit';
+import { ROOT_HINT, composerHint } from '../components/george/composerHint';
 import { widestWidth, workspaceWidth } from '../components/george/workspaceWidth';
 import {
   SHELL_COLUMN,
@@ -187,7 +188,7 @@ function EmptyAsk() {
           onAsk={onAsk}
           onCancel={cancel}
           busy={busy}
-          placeholder="Ask a follow-up…"
+          placeholder={composerHint(pageScope, liveItems(turns, pageScope?.title ?? null))}
           column={column}
         />
       </div>
@@ -219,6 +220,7 @@ function EmptyAsk() {
               onAsk={onAsk}
               onCancel={cancel}
               busy={busy}
+              placeholder={ROOT_HINT}
               /* A draft can arrive from elsewhere — Workflows offering to run
                  a rule — and it lands in the box unsent, for the person to
                  read and send. */
@@ -315,8 +317,16 @@ function ThreadAsk({ threadId }: { threadId: string }) {
   // single memo over both would hand every stored entry a new object each time
   // — defeating RiverEntry's memoization exactly when it matters most.
   const stored = useMemo(() => storedItems(merged.posts), [merged.posts]);
-  const pendingItems = useMemo(() => liveItems(merged.pending), [merged.pending]);
-  const items = useMemo(() => [...stored, ...pendingItems], [stored, pendingItems]);
+  const pendingItems = useMemo(
+    () => liveItems(merged.pending, scope?.title ?? null),
+    [merged.pending, scope?.title],
+  );
+  // Continuity across the seam: a live follow-up may continue the stored
+  // work above it. Marked on copies so the memoized halves stay untouched.
+  const items = useMemo(
+    () => withContinuity([...stored.map((i) => ({ ...i })), ...pendingItems.map((i) => ({ ...i }))]),
+    [stored, pendingItems],
+  );
   const narration = useMemo(
     () =>
       busy && here
@@ -437,7 +447,7 @@ function ThreadAsk({ threadId }: { threadId: string }) {
         onAsk={onAsk}
         onCancel={cancel}
         busy={busy}
-        placeholder="Reply in this thread…"
+        placeholder={composerHint(scope, items)}
         draft={state.draft ?? null}
         column={column}
       />

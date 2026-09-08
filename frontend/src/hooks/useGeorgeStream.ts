@@ -288,7 +288,9 @@ export function useGeorgeStream() {
       const now = new Date().toISOString();
       setTurns((prev) => [
         ...prev,
-        { role: 'user', text: question, at: now },
+        // The parent travels on the turn so the surface can tell a reply
+        // from a new piece of work before the post frame names it.
+        { role: 'user', text: question, at: now, parentId: thread ? (options.parentId ?? null) : null },
         {
           role: 'george',
           text: '',

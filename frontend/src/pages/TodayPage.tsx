@@ -34,6 +34,7 @@ import { approvalsView } from '../components/george/approvalState';
 import { liveCognition } from '../components/george/cognition';
 import { markDetail } from '../components/george/markState';
 import { riverMerge } from '../components/george/riverMerge';
+import { ROOT_HINT } from '../components/george/composerHint';
 import type { StatusQuery } from '../components/george/statusState';
 import { SHELL_COLUMN, SHELL_PAGE_HEIGHT } from '../components/shell/shellLayout';
 import { useShare } from '../hooks/useShare';
@@ -131,7 +132,7 @@ export default function TodayPage() {
         </div>
       </div>
 
-      <AskComposer onAsk={onAsk} onCancel={cancel} busy={busy} placeholder="Tell George…" />
+      <AskComposer onAsk={onAsk} onCancel={cancel} busy={busy} placeholder={ROOT_HINT} />
     </div>
   );
 }
