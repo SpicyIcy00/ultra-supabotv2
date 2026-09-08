@@ -16,12 +16,25 @@
  * so paging backwards never counts from the beginning of history, and reverses
  * for rendering — see app/services/river.py. Nothing here re-sorts.
  */
+import { useMemo } from 'react';
 import type { Post } from '../../types/river';
-import { PostCard } from './PostCard';
-import { groupsWith, questionFor } from './postShape';
+import type { GeorgeTurn } from '../../types/george';
+import { RiverEntries } from './RiverEntry';
+import { liveItems, storedItems } from './workUnit';
 
 interface Props {
   posts: Post[];
+  /**
+   * The live turns riverMerge did not drop.
+   *
+   * Passed IN rather than rendered after the feed, so the stored posts and the
+   * turn about to join them are siblings in one list. Rendering them as two
+   * blocks meant the handoff tore down a subtree and rebuilt it — see
+   * RiverEntries.
+   */
+  pending?: GeorgeTurn[];
+  /** What the newest entry is doing, when one is running. */
+  narration?: { detail: string; cognition: string } | null;
   /** True while the first page is in flight. Never rendered as emptiness. */
   loading?: boolean;
   /** Set when the read failed. Never rendered as emptiness either. */
@@ -39,6 +52,8 @@ interface Props {
 
 export function RiverFeed({
   posts,
+  pending = [],
+  narration = null,
   loading = false,
   error = null,
   hasOlder = false,
@@ -49,6 +64,12 @@ export function RiverFeed({
   onShare,
   sharingId = null,
 }: Props) {
+  // Memoized separately: see workUnit.storedItems. The live half changes on
+  // every delta and the stored half must not be rebuilt with it.
+  const stored = useMemo(() => storedItems(posts), [posts]);
+  const live = useMemo(() => liveItems(pending), [pending]);
+  const items = useMemo(() => [...stored, ...live], [stored, live]);
+
   if (loading && posts.length === 0) {
     return (
       <p className="py-10 text-center text-[13px] text-george-muted">
@@ -91,25 +112,21 @@ export function RiverFeed({
         )
       )}
 
-      {posts.length === 0 && (
+      {posts.length === 0 && pending.length === 0 && (
         <p className="py-10 text-center text-[13px] leading-relaxed text-george-slate">
           Nothing here yet. George posts the morning brief, anything he notices,
           and every answer he gives.
         </p>
       )}
 
-      {posts.map((post, i) => (
-        <PostCard
-          key={post.id}
-          post={post}
-          grouped={groupsWith(posts[i - 1], post)}
-          onAsk={onAsk}
-          onOpenThread={onOpenThread}
-          onShare={onShare}
-          sharing={sharingId === post.id}
-          question={questionFor(posts, post)}
-        />
-      ))}
+      <RiverEntries
+        items={items}
+        narration={narration}
+        onAsk={onAsk}
+        onOpenThread={onOpenThread}
+        onShare={onShare}
+        sharingId={sharingId}
+      />
 
       {/* A failure that arrives after some posts are on screen must not replace
           them — the posts are still true. */}

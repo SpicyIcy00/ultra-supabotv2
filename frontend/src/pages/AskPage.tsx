@@ -54,13 +54,14 @@ import { AnswerTurns } from '../components/george/AnswerTurn';
 import { AskComposer } from '../components/george/AskComposer';
 import { PageScopeLine } from '../components/george/PageScopeLine';
 import { threadScope } from '../components/george/pageScope';
-import { PostCard } from '../components/george/PostCard';
+import { RiverEntries } from '../components/george/RiverEntry';
 import { ReactiveMark } from '../components/george/ReactiveMark';
-import { groupsWith, questionFor } from '../components/george/postShape';
+import { liveCognition } from '../components/george/cognition';
+import { markDetail } from '../components/george/markState';
 import { riverMerge } from '../components/george/riverMerge';
 import { threadHistory } from '../components/george/threadHistory';
 import { blocksFromCalls, blocksFromCharted } from '../components/george/resultShape';
-import { streamSignal } from '../components/george/workUnit';
+import { liveItems, storedItems, streamSignal } from '../components/george/workUnit';
 import { widestWidth, workspaceWidth } from '../components/george/workspaceWidth';
 import {
   SHELL_COLUMN,
@@ -308,6 +309,25 @@ function ThreadAsk({ threadId }: { threadId: string }) {
     () => riverMerge(thread.posts, here ? turns : []),
     [thread.posts, turns, here],
   );
+  // Both halves through one normalisation, so a live answer and its stored
+  // copy are the same kind of thing with the same identity (workUnit.ts).
+  //
+  // Memoized SEPARATELY. The live half rebuilds on every streamed delta, and a
+  // single memo over both would hand every stored entry a new object each time
+  // — defeating RiverEntry's memoization exactly when it matters most.
+  const stored = useMemo(() => storedItems(merged.posts), [merged.posts]);
+  const pendingItems = useMemo(() => liveItems(merged.pending), [merged.pending]);
+  const items = useMemo(() => [...stored, ...pendingItems], [stored, pendingItems]);
+  const narration = useMemo(
+    () =>
+      busy && here
+        ? {
+            detail: markDetail(george.presence, george.live.running, george.live.lastResult),
+            cognition: liveCognition(george.presence, george.live.thinking),
+          }
+        : null,
+    [busy, here, george.presence, george.live.running, george.live.lastResult, george.live.thinking],
+  );
   const lastPost = thread.posts[thread.posts.length - 1];
 
   // How wide the column has to be, decided by what is IN it. A thread of prose
@@ -385,20 +405,19 @@ function ThreadAsk({ threadId }: { threadId: string }) {
               </div>
             )}
 
-            {merged.posts.map((post, i) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                grouped={groupsWith(merged.posts[i - 1], post)}
-                onAsk={onAsk}
-                onShare={share.share}
-                sharing={share.sharingId === post.id}
-                question={questionFor(merged.posts, post)}
-                quiet={i < merged.posts.length - 1 || merged.pending.length > 0}
-              />
-            ))}
-
-            {merged.pending.length > 0 && <AnswerTurns turns={merged.pending} focusLatest />}
+            {/* ONE LIST. The stored posts and the live turn are siblings in
+                one array under one parent, so when the refetch lands and
+                riverMerge drops the live copy, the entry at that position
+                keeps its id, its component and its DOM — the handoff changes
+                `state` instead of tearing a subtree down. */}
+            <RiverEntries
+              items={items}
+              focusLatest
+              narration={narration}
+              onAsk={onAsk}
+              onShare={share.share}
+              sharingId={share.sharingId}
+            />
 
             {elsewhere && (
               <p className="text-[12px] leading-relaxed text-george-muted">

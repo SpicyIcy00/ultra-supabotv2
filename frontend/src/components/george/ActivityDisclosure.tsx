@@ -23,13 +23,10 @@
  */
 import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
-import type { GeorgeTurn } from '../../types/george';
 import { ToolCallRow } from './ToolCallRow';
-import { activitySummary, hasActivity, isRunning, workLine } from './turnShape';
+import { activitySummary, hasActivity, isRunning, workLine, type Activity } from './turnShape';
 
-type AnswerTurn = Extract<GeorgeTurn, { role: 'george' }>;
-
-export function ActivityDisclosure({ turn, live }: { turn: AnswerTurn; live: boolean }) {
+export function ActivityDisclosure({ turn, live }: { turn: Activity; live: boolean }) {
   const [open, setOpen] = useState(false);
   if (!hasActivity(turn)) return null;
 

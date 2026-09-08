@@ -98,6 +98,15 @@ export function sourcesFromCalls(calls: ToolCall[]): ResultSource[] {
  * so anything here is already safe to draw — the prefix problem was settled
  * before it was written. Rows that are not an array are dropped rather than
  * rendered as an empty result, which would look like a zero.
+ *
+ * THE ARGUMENTS COME THROUGH, and until 2026-09-08 they did not. The loop
+ * stores them beside the rows (agent/loop.py, `charted.append`) precisely so a
+ * stored answer can be composed the way the live one was — `storeArgument`
+ * reads `filters.store` off them, and `scopeKey` groups by it. Dropping them
+ * here meant two figures scoped to Rockwell grouped under one heading while
+ * the answer streamed and separated on reload: the same answer reading two
+ * ways, which is the divergence UI rule 3 exists to prevent. Found by the
+ * work-unit equivalence test, which is what that test is for.
  */
 export function sourcesFromCharted(charted: unknown): ResultSource[] {
   if (!Array.isArray(charted)) return [];
@@ -108,11 +117,19 @@ export function sourcesFromCharted(charted: unknown): ResultSource[] {
       {
         seq: typeof e.seq === 'number' ? e.seq : i,
         tool: typeof e.tool === 'string' ? e.tool : '',
+        // Only a real object. A payload that carries something else carries no
+        // arguments at all, rather than a shape the scope key would read
+        // nonsense out of.
+        ...(isPlainObject(e.arguments) ? { arguments: e.arguments } : {}),
         rows: e.rows as Record<string, unknown>[],
         meta: (e.meta ?? {}) as ToolMeta,
       },
     ];
   });
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
 /**

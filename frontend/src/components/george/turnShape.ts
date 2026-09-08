@@ -35,7 +35,28 @@ import type { PinToolCall } from '../../types/pins';
 import { actLine, deedLine } from './cognition';
 import { PAGE_READ_TOOL } from './pageContextShape';
 
-type AnswerTurn = Extract<GeorgeTurn, { role: 'george' }>;
+/**
+ * The part of a piece of work these decisions actually read.
+ *
+ * Widened from AnswerTurn on 2026-09-08 so a STORED post can narrate its
+ * activity too. A stored post carries the validated `calls` payload — the
+ * tools and the arguments they ran with — and until now it drew no activity
+ * line at all, so a reopened thread lost the account of what George did. The
+ * calls have no results, so the line says the deeds without a row count, which
+ * is true rather than invented.
+ *
+ * AnswerTurn satisfies this structurally, so every existing caller and every
+ * existing test is unaffected. See workUnit.ts, which builds one of these from
+ * either source.
+ */
+export interface Activity {
+  toolCalls: ToolCall[];
+  thinking: string;
+  narration?: string;
+  done?: { iterations: number; cache_hit: boolean };
+  cancelled?: boolean;
+  error?: string;
+}
 
 export type Emphasis = 'latest' | 'earlier';
 
@@ -48,7 +69,7 @@ export function emphasisOf(index: number, turns: GeorgeTurn[]): Emphasis {
 }
 
 /** Whether a turn is over — done, stopped, or failed — as opposed to running. */
-export function isOver(turn: AnswerTurn): boolean {
+export function isOver(turn: Activity): boolean {
   return Boolean(turn.done || turn.cancelled || turn.error);
 }
 
@@ -59,7 +80,7 @@ export function isOver(turn: AnswerTurn): boolean {
  * thread's earlier answers never narrate in the present tense while the newest
  * one runs.
  */
-export function isRunning(turn: AnswerTurn, live: boolean): boolean {
+export function isRunning(turn: Activity, live: boolean): boolean {
   return live && !isOver(turn);
 }
 
@@ -76,7 +97,7 @@ export function isRunning(turn: AnswerTurn, live: boolean): boolean {
  * stopped rather than reporting a finished-sounding sentence for work that did
  * not finish.
  */
-export function workLine(turn: AnswerTurn, live: boolean): string {
+export function workLine(turn: Activity, live: boolean): string {
   // The calls with their arguments, so the line can say "comparing
   // transactions and ATP at Rockwell" rather than "reading sales" five times.
   // A duplicate — served from the turn's record, not re-read — is not an
@@ -120,7 +141,7 @@ export function workLine(turn: AnswerTurn, live: boolean): string {
  * arrived, iterations from `done`. A stopped turn says so rather than
  * reporting a finished count for work that did not finish.
  */
-export function activitySummary(turn: AnswerTurn): string {
+export function activitySummary(turn: Activity): string {
   const calls = turn.toolCalls.length;
   const duplicates = turn.toolCalls.filter((c) => typeof c.duplicate_of === 'number').length;
   const parts: string[] = [];
@@ -136,7 +157,7 @@ export function activitySummary(turn: AnswerTurn): string {
 }
 
 /** Whether there is any activity to disclose at all. */
-export function hasActivity(turn: AnswerTurn): boolean {
+export function hasActivity(turn: Activity): boolean {
   return (
     turn.toolCalls.length > 0 ||
     turn.thinking.trim().length > 0 ||

@@ -27,11 +27,12 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useGeorge } from '../hooks/useGeorge';
 import { useRiver } from '../hooks/useRiver';
-import { AnswerTurns } from '../components/george/AnswerTurn';
 import { AskComposer } from '../components/george/AskComposer';
 import { RiverFeed } from '../components/george/RiverFeed';
 import { StatusBand } from '../components/george/StatusBand';
 import { approvalsView } from '../components/george/approvalState';
+import { liveCognition } from '../components/george/cognition';
+import { markDetail } from '../components/george/markState';
 import { riverMerge } from '../components/george/riverMerge';
 import type { StatusQuery } from '../components/george/statusState';
 import { SHELL_COLUMN, SHELL_PAGE_HEIGHT } from '../components/shell/shellLayout';
@@ -40,7 +41,7 @@ import { listApprovals } from '../services/workflowsApi';
 import { readStatus } from '../services/statusApi';
 
 export default function TodayPage() {
-  const { turns, ask, reset, cancel, busy } = useGeorge();
+  const { turns, ask, reset, cancel, busy, presence, live } = useGeorge();
   const navigate = useNavigate();
   const river = useRiver();
   const share = useShare();
@@ -80,6 +81,17 @@ export default function TodayPage() {
         : { status: 'success', approvals: approvals.data ?? [] },
   ).count;
 
+  const narration = useMemo(
+    () =>
+      busy
+        ? {
+            detail: markDetail(presence, live.running, live.lastResult),
+            cognition: liveCognition(presence, live.thinking),
+          }
+        : null,
+    [busy, presence, live.running, live.lastResult, live.thinking],
+  );
+
   /** A new thread, and the workspace to watch it in. */
   const onAsk = useCallback(
     (question: string) => {
@@ -111,14 +123,11 @@ export default function TodayPage() {
             onOpenThread={(id) => navigate(`/ask/${id}`)}
             onShare={share.share}
             sharingId={share.sharingId}
+            /* The live turn goes INTO the feed's own list rather than under
+               it, so the stored copy replacing it keeps the same DOM. */
+            pending={merged.pending}
+            narration={narration}
           />
-
-          {/* The live turn as a PENDING POST, same column, same shape. */}
-          {merged.pending.length > 0 && (
-            <div className="mt-5">
-              <AnswerTurns turns={merged.pending} />
-            </div>
-          )}
         </div>
       </div>
 
