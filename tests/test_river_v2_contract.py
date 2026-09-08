@@ -44,6 +44,8 @@ _ROOT = Path(__file__).resolve().parents[1]
 _ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "george.py"
 _ASK_PAGE = _ROOT / "frontend" / "src" / "pages" / "AskPage.tsx"
 _ANSWER_TURN = _ROOT / "frontend" / "src" / "components" / "george" / "AnswerTurn.tsx"
+# The one renderer both a live turn and a stored post go through (Stage 1).
+_ENTRY = _ROOT / "frontend" / "src" / "components" / "george" / "RiverEntry.tsx"
 _HOOK = _ROOT / "frontend" / "src" / "hooks" / "useGeorgeStream.ts"
 _THREAD_HOOK = _ROOT / "frontend" / "src" / "hooks" / "useThread.ts"
 _FOLLOW = _ROOT / "frontend" / "src" / "hooks" / "useAutoFollow.ts"
@@ -205,13 +207,14 @@ def test_the_work_is_rendered_where_it_was_asked():
 
 
 def test_the_turn_list_no_longer_scrolls_anything():
-    turn = _source(_ANSWER_TURN)
-    assert "scrollIntoView" not in turn
-    assert "scrollTop" not in turn
+    for path in (_ANSWER_TURN, _ENTRY):
+        source = _source(path)
+        assert "scrollIntoView" not in source, f"{path.name} scrolls"
+        assert "scrollTop" not in source, f"{path.name} scrolls"
 
 
 def test_nothing_in_the_workspace_asks_for_smooth_scrolling():
-    for path in (_ANSWER_TURN, _ASK_PAGE, _FOLLOW):
+    for path in (_ANSWER_TURN, _ENTRY, _ASK_PAGE, _FOLLOW):
         assert "smooth" not in _source(path), f"{path.name} animates the stream"
 
 
@@ -270,9 +273,10 @@ def test_a_finished_turn_never_shows_prose_the_river_does_not_have():
 
 
 def test_the_superseded_answer_is_marked_as_being_replaced():
-    turn = _source(_ANSWER_TURN)
-    assert "SupersededAnswer" in turn
-    body = turn.split("function SupersededAnswer(", 1)[1].split("\n}", 1)[0]
+    # Drawn by the one renderer since Stage 1, live and stored alike.
+    entry = _source(_ENTRY)
+    assert "SupersededAnswer" in entry
+    body = entry.split("function SupersededAnswer(", 1)[1].split("\n}", 1)[0]
     assert "Rewriting" in body, "text about to stop being true must say so"
 
 
