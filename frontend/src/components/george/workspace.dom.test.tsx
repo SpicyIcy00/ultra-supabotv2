@@ -81,12 +81,22 @@ describe('the work is the answer', () => {
     expect(precedes(figures, prose)).toBe(true);
   });
 
-  it('draws one performance instrument, not three figures and a table', () => {
+  it('draws the ladder — the figure, then what moved it as one split — and no table', () => {
     const { container } = mount([QUESTION, post('a1', {})]);
+    // George said which was primary: the figure leads, the two drivers are
+    // one split instrument beneath it. Each figure is printed once.
     expect(container.querySelectorAll('[data-instrument="performance"]')).toHaveLength(1);
     expect(container.querySelector('table')).toBeNull();
-    // The headline figure once, large; the metric rows once each.
-    expect(screen.getAllByText('₱203,717').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('₱203,717')).toHaveLength(1);
+    expect(screen.getAllByText('₱366')).toHaveLength(1);
+  });
+
+  it('draws a headline set with no roles as one performance instrument, not three figures', () => {
+    const p = post('a1', {});
+    const { container } = mount([QUESTION, { ...p, payload: { ...(p.payload as object), findings: undefined } } as Post]);
+    expect(container.querySelectorAll('[data-instrument="performance"]')).toHaveLength(1);
+    expect(container.querySelector('.grid-cols-1')).toBeNull(); // no MetricGroup grid
+    expect(screen.getAllByText('₱203,717')).toHaveLength(1);
     expect(screen.getAllByText('₱366')).toHaveLength(1);
   });
 

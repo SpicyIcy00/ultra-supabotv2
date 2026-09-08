@@ -343,7 +343,9 @@ export function Performance({
               <span className="truncate text-[13px] text-george-navy">{bar.label}</span>
               <DivergingBar zero={layout.zero} extent={bar.extent} negative={bar.negative} label={`${bar.label}: ${signedPct(bar.row.changePct)}`} />
               <span className="grid grid-cols-[6.5rem_4.5rem] items-baseline gap-x-2 text-right tabular-nums">
-                <span className="text-[13px] text-george-navy">{figure(bar.row)}</span>
+                {/* The headline figure is printed large above; its row keeps
+                    the bar and the delta and does not print it again. */}
+                <span className="text-[13px] text-george-navy">{bar.headline ? '' : figure(bar.row)}</span>
                 <span className="text-[12px] text-george-slate">{signedPct(bar.row.changePct)}</span>
               </span>
             </li>

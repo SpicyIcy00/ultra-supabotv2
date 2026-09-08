@@ -25,8 +25,8 @@
  * below the sentence it qualifies.
  */
 import { GeorgeChart } from './GeorgeChart';
-import { ComparisonCoverage, DeltaRanking, SubjectComparison } from './Instruments';
-import { coverageFromComparison } from './instrumentShape';
+import { ComparisonCoverage, DeltaRanking, Performance, SubjectComparison } from './Instruments';
+import { coverageFromComparison, performanceMembers } from './instrumentShape';
 import { ReceiptsBlock } from './ReceiptsBlock';
 import { Comparison, Metric, MetricGroup, ResultTable } from './ResultBlocks';
 import type { ResultBlock, ShapedResult } from './resultShape';
@@ -100,6 +100,23 @@ export function ResultSurface({
               <ReceiptsBlock meta={block.result.source.meta} />
             </>
           ) : (
+            performanceMembers(block.members) ? (
+            // One subject's compared headline set — "how did it do" — is one
+            // instrument, not three figures abreast, whether or not George
+            // recorded which was primary (composeWork routes the sectioned
+            // case; this is the adjacency case).
+            <>
+              {block.heading && (
+                <p className="mb-3 text-[11px] uppercase tracking-wider text-george-muted">{block.heading}</p>
+              )}
+              <Performance members={block.members} large={large} />
+              {block.sharedMeta ? (
+                <ReceiptsBlock meta={block.sharedMeta} scopeInHeading={Boolean(block.heading)} />
+              ) : (
+                block.members.map((m) => <ReceiptsBlock key={m.source.seq} meta={m.source.meta} scopeInHeading={Boolean(block.heading)} />)
+              )}
+            </>
+          ) : (
             <>
               <MetricGroup heading={block.heading}>
                 {block.members.map((m) => (
@@ -119,7 +136,7 @@ export function ResultSurface({
                 <ReceiptsBlock meta={block.sharedMeta} scopeInHeading={Boolean(block.heading)} />
               )}
             </>
-          )}
+          ))}
         </div>
       ))}
     </div>
