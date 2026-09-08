@@ -77,18 +77,33 @@ export function isRunning(turn: AnswerTurn, live: boolean): boolean {
  * not finish.
  */
 export function workLine(turn: AnswerTurn, live: boolean): string {
-  const tools = turn.toolCalls.map((c) => c.tool);
+  // The calls with their arguments, so the line can say "comparing
+  // transactions and ATP at Rockwell" rather than "reading sales" five times.
+  // A duplicate — served from the turn's record, not re-read — is not an
+  // act and adds nothing here.
+  const calls = turn.toolCalls
+    .filter((c) => typeof c.duplicate_of !== 'number')
+    .map((c) => ({ tool: c.tool, arguments: c.arguments }));
   if (isRunning(turn, live)) {
-    const running = turn.toolCalls.filter((c) => !c.result).map((c) => c.tool);
-    const line = actLine(running.length > 0 ? running : tools);
+    const running = turn.toolCalls
+      .filter((c) => !c.result && typeof c.duplicate_of !== 'number')
+      .map((c) => ({ tool: c.tool, arguments: c.arguments }));
+    const line = actLine(running.length > 0 ? running : calls);
     return line ? line[0].toUpperCase() + line.slice(1) : 'Working…';
   }
 
-  const deeds = deedLine(tools);
-  // A page read's rows are pins, not data; they are not counted as rows.
+  const deeds = deedLine(calls);
+  // A page read's rows are pins, not data; they are not counted as rows. A
+  // duplicate's rows are the original's, already counted once.
   const rows = turn.toolCalls.reduce(
     (n, c) =>
-      n + (c.result && !c.result.error && c.tool !== PAGE_READ_TOOL ? (c.result.row_count ?? 0) : 0),
+      n +
+      (c.result &&
+      !c.result.error &&
+      c.tool !== PAGE_READ_TOOL &&
+      typeof c.duplicate_of !== 'number'
+        ? (c.result.row_count ?? 0)
+        : 0),
     0,
   );
   const counted = rows > 0 ? ` — ${rows.toLocaleString('en-PH')} ${rows === 1 ? 'row' : 'rows'}` : '';
@@ -107,9 +122,11 @@ export function workLine(turn: AnswerTurn, live: boolean): string {
  */
 export function activitySummary(turn: AnswerTurn): string {
   const calls = turn.toolCalls.length;
+  const duplicates = turn.toolCalls.filter((c) => typeof c.duplicate_of === 'number').length;
   const parts: string[] = [];
   if (turn.cancelled) parts.push('stopped');
   parts.push(`${calls} ${calls === 1 ? 'call' : 'calls'}`);
+  if (duplicates > 0) parts.push(`${duplicates} not re-read`);
   if (turn.done) {
     parts.push(`${turn.done.iterations} ${turn.done.iterations === 1 ? 'iteration' : 'iterations'}`);
     if (turn.done.cache_hit) parts.push('cache hit');

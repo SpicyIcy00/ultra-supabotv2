@@ -338,6 +338,9 @@ export function useGeorgeStream() {
                     seq: Number(data.seq),
                     tool: String(data.tool),
                     arguments: (data.arguments ?? {}) as Record<string, unknown>,
+                    ...(typeof data.duplicate_of === 'number'
+                      ? { duplicate_of: data.duplicate_of }
+                      : {}),
                   });
                 });
                 break;

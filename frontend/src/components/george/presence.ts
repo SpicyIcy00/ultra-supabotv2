@@ -63,8 +63,11 @@ export function presenceState({ state, composer, figures = 0 }: PresenceInput): 
 }
 
 export interface LiveActivity {
-  /** Tools in flight in the newest turn, for the narration line. */
-  running: string[];
+  /**
+   * Calls in flight in the newest turn — tool and the arguments the loop
+   * dispatched — for the narration line, which is built from them.
+   */
+  running: { tool: string; arguments: Record<string, unknown> }[];
   /** The newest completed call, so the line can say what came back. */
   lastResult: LastResult | null;
   /** The reasoning arriving now, raw; the components take the last clause. */
@@ -97,7 +100,9 @@ export function liveActivity(turns: GeorgeTurn[]): LiveActivity {
   const done = last.toolCalls.filter((c) => c.result);
   const newest = done.length ? done.reduce((a, b) => (b.seq > a.seq ? b : a)) : null;
   return {
-    running: last.toolCalls.filter((c) => !c.result).map((c) => c.tool),
+    running: last.toolCalls
+      .filter((c) => !c.result)
+      .map((c) => ({ tool: c.tool, arguments: c.arguments })),
     lastResult: newest
       ? {
           tool: newest.tool,

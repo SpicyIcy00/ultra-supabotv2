@@ -101,7 +101,7 @@ describe('liveActivity', () => {
       ],
     });
     const live = liveActivity([turn]);
-    expect(live.running).toEqual(['get_stock']);
+    expect(live.running).toEqual([{ tool: 'get_stock', arguments: {} }]);
     expect(live.lastResult).toEqual({ tool: 'get_purchasing', rowCount: 0, error: null });
     expect(live.thinking).toBe('Looking at last week.');
     expect(live.toolResults).toBe(2);

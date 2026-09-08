@@ -48,12 +48,16 @@
  */
 import type { GeorgeState } from '../../types/george';
 import { markClass, markDetail, markPath } from './markState';
-import { liveCognition, type LastResult } from './cognition';
+import { liveCognition, type CallLike, type LastResult } from './cognition';
 
 interface Props {
   state: GeorgeState;
-  /** Tool names currently in flight, shown while state === 'running'. */
-  running?: string[];
+  /**
+   * The calls currently in flight — tool and arguments — shown while
+   * state === 'running'. Bare tool names are accepted and read less
+   * specifically.
+   */
+  running?: CallLike[];
   /**
    * How many tool results have landed in this turn. Each increment beats the
    * mark once, so work arriving is visible as well as described. It is a count

@@ -71,6 +71,13 @@ export interface ToolCall {
   seq: number;
   tool: string;
   arguments: Record<string, unknown>;
+  /**
+   * The seq of the call this one repeats, when the loop served it from this
+   * turn's own record instead of running it again. Said by the loop on the
+   * tool_call frame: the row reads "same as call N, not re-read", the rows
+   * are not charted twice, and the call is not pinnable — the original is.
+   */
+  duplicate_of?: number;
   /** Filled when the matching tool_result frame arrives. */
   result?: {
     row_count: number | null;

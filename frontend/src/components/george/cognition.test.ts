@@ -12,6 +12,7 @@ import {
   actLine,
   actName,
   cognitionTail,
+  deedLine,
   liveCognition,
   narrateCall,
   narrateResult,
@@ -294,5 +295,88 @@ describe('narrateResult — what he is seeing', () => {
   it('counts a page read in pins, because its rows are pins and not data', () => {
     expect(narrateResult({ tool: 'view_page', rowCount: 5 })).toBe('The page came back — 5 pins');
     expect(narrateResult({ tool: 'view_page', rowCount: 1 })).toBe('The page came back — 1 pin');
+  });
+});
+
+describe('describeCall — the act, from the arguments the loop dispatched', () => {
+  const sales = (args: Record<string, unknown>) => ({ tool: 'get_sales', arguments: args });
+
+  it('reads a plain figure by its metric', () => {
+    expect(actLine([sales({ metric: 'net_sales', group_by: [] })])).toBe('reading sales…');
+    expect(actLine([sales({ metric: 'transaction_count' })])).toBe('reading transactions…');
+  });
+
+  it('compares when compare_to is set, and names the store filter', () => {
+    expect(
+      actLine([sales({ metric: 'net_sales', compare_to: 'previous_period', filters: { store: 'Rockwell' } })]),
+    ).toBe('comparing sales at Rockwell…');
+  });
+
+  it('joins calls that share a verb and a place — a headline set reads as one act', () => {
+    const at = { compare_to: 'previous_period', filters: { store: 'Rockwell' }, group_by: [] };
+    expect(
+      actLine([
+        sales({ metric: 'net_sales', ...at }),
+        sales({ metric: 'transaction_count', ...at }),
+        sales({ metric: 'average_transaction_value', ...at }),
+      ]),
+    ).toBe('comparing sales, transactions and ATP at Rockwell…');
+  });
+
+  it('does not join calls that differ in place', () => {
+    expect(
+      actLine([
+        sales({ metric: 'net_sales', compare_to: 'previous_period', filters: { store: 'Rockwell' } }),
+        sales({ metric: 'net_sales', compare_to: 'previous_period', group_by: 'store' }),
+      ]),
+    ).toBe('comparing sales at Rockwell and comparing sales by store…');
+  });
+
+  it('looks at product changes when grouped by product beside a comparison, and mix without one', () => {
+    expect(
+      actLine([sales({ metric: 'product_revenue', group_by: 'product', compare_to: 'previous_period', top_n: 10, rank_by: 'biggest_drop' })]),
+    ).toBe('looking at product changes…');
+    expect(actLine([sales({ metric: 'product_revenue', group_by: ['category'] })])).toBe(
+      'looking at category mix…',
+    );
+  });
+
+  it('shows an unknown metric as its own key rather than guessing', () => {
+    expect(actLine([sales({ metric: 'margin' })])).toBe('reading margin…');
+  });
+
+  it('accepts a bare tool name and reads it less specifically', () => {
+    expect(actLine(['get_sales'])).toBe('reading sales…');
+    expect(actLine([{ tool: 'get_stock', arguments: { store: 'AJI BARN' } }])).toBe('counting stock…');
+  });
+
+  it('keeps the two-phrase limit across groups', () => {
+    expect(
+      actLine([
+        sales({ metric: 'net_sales', compare_to: 'previous_period' }),
+        { tool: 'get_stock', arguments: {} },
+        { tool: 'get_movement', arguments: {} },
+      ]),
+    ).toBe('comparing sales and 2 other things…');
+  });
+
+  it('never invents a stage — the words are the call, not a plan', () => {
+    const line = actLine([sales({ metric: 'net_sales', compare_to: 'previous_period' })]);
+    for (const word of ['verify', 'decompose', 'localize', 'step', 'stage']) {
+      expect(line.toLowerCase()).not.toContain(word);
+    }
+  });
+});
+
+describe('deedLine — the same acts in the past', () => {
+  const sales = (args: Record<string, unknown>) => ({ tool: 'get_sales', arguments: args });
+
+  it('compared, read, looked at', () => {
+    const at = { compare_to: 'previous_period', filters: { store: 'Rockwell' } };
+    expect(deedLine([sales({ metric: 'transaction_count', ...at }), sales({ metric: 'average_transaction_value', ...at })]))
+      .toBe('Compared transactions and ATP at Rockwell');
+    expect(deedLine([sales({ metric: 'product_revenue', group_by: 'product', compare_to: 'previous_period' })]))
+      .toBe('Looked at product changes');
+    expect(deedLine(['get_sales', 'get_stock'])).toBe('Read sales and counted stock');
   });
 });

@@ -183,3 +183,41 @@ describe('a page read in the work line', () => {
     expect(workLine(turn, false)).toBe('Read the page and read sales — 7 rows');
   });
 });
+
+describe('workLine — from the arguments, and duplicates', () => {
+  const result = (rows: number) => ({
+    row_count: rows, source_table: 't', truncated: false, duration_ms: 1, error: null,
+  });
+  const compared = (seq: number, metric: string) => ({
+    seq, tool: 'get_sales',
+    arguments: { metric, compare_to: 'previous_period', filters: { store: 'Rockwell' }, group_by: [] },
+  });
+
+  it('describes a running round from the calls it is made of', () => {
+    const turn = george({ toolCalls: [compared(1, 'transaction_count'), compared(2, 'average_transaction_value')] });
+    expect(workLine(turn, true)).toBe('Comparing transactions and ATP at Rockwell…');
+  });
+
+  it('describes a finished round the same way, in the past', () => {
+    const turn = george({
+      toolCalls: [
+        { ...compared(1, 'net_sales'), result: result(1) },
+        { ...compared(2, 'transaction_count'), result: result(1) },
+      ],
+      done,
+    });
+    expect(workLine(turn, false)).toBe('Compared sales and transactions at Rockwell — 2 rows');
+  });
+
+  it('leaves a duplicate out of the line and out of the row count', () => {
+    const turn = george({
+      toolCalls: [
+        { ...compared(1, 'net_sales'), result: result(7) },
+        { ...compared(2, 'net_sales'), duplicate_of: 1, result: result(7) },
+      ],
+      done,
+    });
+    expect(workLine(turn, false)).toBe('Compared sales at Rockwell — 7 rows');
+    expect(activitySummary(turn)).toBe('2 calls · 1 not re-read · 2 iterations · cache hit');
+  });
+});

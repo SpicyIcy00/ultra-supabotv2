@@ -21,6 +21,9 @@ export function ToolCallRow({ call }: { call: ToolCall }) {
   const [open, setOpen] = useState(false);
   const done = Boolean(call.result);
   const failed = Boolean(call.result?.error);
+  // Served from this turn's record, not run again. Said by the loop; the
+  // row says it in place of a row count, because there was no read to count.
+  const duplicate = typeof call.duplicate_of === 'number';
 
   return (
     <div className="rounded-lg border border-george-line bg-george-paper">
@@ -44,11 +47,18 @@ export function ToolCallRow({ call }: { call: ToolCall }) {
           {args(call.arguments)}
         </span>
 
-        {done && !failed && (
-          <span className="hidden xs:inline shrink-0 text-[11px] text-george-muted tabular-nums">
-            {call.result!.row_count ?? 0} {call.result!.row_count === 1 ? 'row' : 'rows'} ·{' '}
-            {call.result!.duration_ms}ms
+        {duplicate ? (
+          <span className="shrink-0 text-[11px] text-george-muted tabular-nums">
+            same as call {call.duplicate_of} · not re-read
           </span>
+        ) : (
+          done &&
+          !failed && (
+            <span className="hidden xs:inline shrink-0 text-[11px] text-george-muted tabular-nums">
+              {call.result!.row_count ?? 0} {call.result!.row_count === 1 ? 'row' : 'rows'} ·{' '}
+              {call.result!.duration_ms}ms
+            </span>
+          )
         )}
 
         <ChevronRight
@@ -64,6 +74,15 @@ export function ToolCallRow({ call }: { call: ToolCall }) {
           </pre>
           {call.result && (
             <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+              {duplicate && (
+                <>
+                  <dt className="text-george-muted">repeats</dt>
+                  <dd className="text-george-navy">
+                    call {call.duplicate_of} — identical arguments, served from this turn’s
+                    record; nothing was read again
+                  </dd>
+                </>
+              )}
               <dt className="text-george-muted">source</dt>
               <dd className="text-george-navy break-words">{call.result.source_table ?? '—'}</dd>
               <dt className="text-george-muted">rows</dt>
