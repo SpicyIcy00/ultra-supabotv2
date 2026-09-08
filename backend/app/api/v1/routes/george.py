@@ -53,6 +53,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, AsyncIterator, List, Literal, Optional
 
+from app.core.config import settings
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -1474,7 +1476,8 @@ async def ask(
             page_context=request.page_context,
             pin_writer=_pin_writer(user.username),
             history=history,
-            workflow_writer=_WorkflowWriter(user.username, user.role),
+            workflow_writer=(_WorkflowWriter(user.username, user.role)
+                             if settings.GEORGE_ENABLE_WORKFLOW_WRITES else None),
             workflow_runner=_workflow_runner(user.username, user.role),
             thread_id=thread,
             recall=recall,

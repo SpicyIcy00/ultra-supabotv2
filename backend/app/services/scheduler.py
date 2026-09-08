@@ -96,6 +96,10 @@ async def chat_report_tick() -> None:
 
 def start_scheduler() -> None:
     global _scheduler
+    from app.core.config import settings
+    if not settings.SCHEDULERS_ENABLED:
+        print("Schedulers disabled: no jobs registered or started")
+        return
     if _scheduler is not None:
         return
     _scheduler = AsyncIOScheduler(timezone=MANILA)

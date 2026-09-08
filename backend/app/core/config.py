@@ -39,6 +39,14 @@ class Settings(BaseSettings):
     DATABASE_POOL_SIZE: int = 20
     DATABASE_MAX_OVERFLOW: int = 10
 
+    # Permanent deployment gates. Defaults preserve existing production behavior.
+    # Staging must explicitly disable these before its first boot.
+    SCHEDULERS_ENABLED: bool = True
+    GEORGE_ENABLE_WORKFLOW_WRITES: bool = True
+    BUSINESS_WRITES_ENABLED: bool = True
+    STARTUP_BOOTSTRAP_ENABLED: bool = True
+    AUTO_MIGRATE_ON_START: bool = True
+
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
     REDIS_ENABLED: bool = False  # Set to True to enable Redis caching

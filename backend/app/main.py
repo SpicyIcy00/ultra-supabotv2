@@ -1,7 +1,8 @@
 import sys
 import asyncio
 from pathlib import Path
-from fastapi import FastAPI, Response, status
+from fastapi import Depends, FastAPI, Response, status
+from app.core.deployment import require_business_writes
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import assert_secret_key_usable, settings
 from app.services.schema_context import SchemaContext
@@ -27,6 +28,7 @@ except Exception as exc:
     raise
 
 app = FastAPI(
+    dependencies=[Depends(require_business_writes)],
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     openapi_url=f"{settings.API_V1_PREFIX}/openapi.json"

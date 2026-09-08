@@ -60,7 +60,9 @@ from app.services.workflow_writer import (
     set_enabled,
 )
 
-router = APIRouter(tags=["george-workflows"])
+from app.core.deployment import require_workflow_writes
+
+router = APIRouter(tags=["george-workflows"], dependencies=[Depends(require_workflow_writes)])
 
 # Workflows are George's, so they live behind George's page — the same gate as
 # /george/ask and /george/pins. The finer-grained verbs are checked in the
