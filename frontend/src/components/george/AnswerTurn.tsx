@@ -33,6 +33,7 @@ import { markDetail, MARK_PATH } from './markState';
 import { ActivityDisclosure } from './ActivityDisclosure';
 import { Prose } from './Prose';
 import { NoticeBanner } from './NoticeBanner';
+import { PageChangeNote } from './PageChangeNote';
 import { PageContextBlock } from './PageContextBlock';
 import { ReceiptsBlock } from './ReceiptsBlock';
 import { ResultSurface } from './ResultSurface';
@@ -138,6 +139,10 @@ function AnswerTurn({
         ))}
         {turn.saved.map((s) => (
           <SavedNote key={`${s.workflow_id}-${s.version}`} saved={s} />
+        ))}
+        {/* A page created or changed, from the committed result. */}
+        {turn.pageChanges.map((c, i) => (
+          <PageChangeNote key={`${c.page_id}-${i}`} change={c} />
         ))}
 
         {/* What George considered of the page, when he read one. */}

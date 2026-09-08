@@ -58,6 +58,7 @@ import {
   shellColumn,
 } from '../components/shell/shellLayout';
 import { listChats } from '../services/chatsApi';
+import { listPages } from '../services/pagesApi';
 import type { PageScope } from '../types/george';
 
 interface RouteState {
@@ -161,6 +162,10 @@ function ThreadAsk({ threadId }: { threadId: string }) {
   const share = useShare();
   const location = useLocation();
   const state = (location.state ?? {}) as RouteState;
+  // The person's pages, for one thing only: a thread stored before
+  // 2026-09-08 knew its page by title, and the title resolves against the
+  // pages that exist NOW, exactly, or not at all (pageScope.threadScope).
+  const pages = useQuery({ queryKey: ['pages'], queryFn: listPages, staleTime: 30_000 });
 
   // Load the thread into the one stream, once — unless it is already the
   // thread the stream is on, in which case the live turns ARE the newest
@@ -170,16 +175,19 @@ function ThreadAsk({ threadId }: { threadId: string }) {
   // thread opens (the effect re-runs when `busy` clears).
   const loadedFor = useRef<string | null>(null);
   useEffect(() => {
-    if (!thread.ready) return;
+    if (!thread.ready || pages.isPending) return;
     if (openThread === threadId) {
       loadedFor.current = threadId;
       return;
     }
     if (busy || loadedFor.current === threadId) return;
     loadedFor.current = threadId;
-    // The thread's own scope, recovered from its stored answers — or none.
-    open(threadHistory(thread.posts, thread.chat, threadId), threadId, threadScope(thread.posts));
-  }, [thread.ready, thread.posts, thread.chat, threadId, openThread, open, busy]);
+    // The thread's own scope, recovered from its stored answers — by id, or
+    // by exact title for an old thread, or none.
+    open(threadHistory(thread.posts, thread.chat, threadId), threadId,
+         threadScope(thread.posts, pages.data ?? []));
+  }, [thread.ready, thread.posts, thread.chat, threadId, openThread, open, busy,
+      pages.isPending, pages.data]);
 
   // The stream's turns belong to THIS thread only when it is the open one.
   const here = openThread === threadId;
@@ -187,8 +195,8 @@ function ThreadAsk({ threadId }: { threadId: string }) {
   // The scope shown is this thread's: the stream's while it is the open
   // thread, otherwise what its stored answers say.
   const scope = useMemo(
-    () => (here ? pageScope : threadScope(thread.posts)),
-    [here, pageScope, thread.posts],
+    () => (here ? pageScope : threadScope(thread.posts, pages.data ?? [])),
+    [here, pageScope, thread.posts, pages.data],
   );
   const merged = useMemo(
     () => riverMerge(thread.posts, here ? turns : []),
