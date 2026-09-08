@@ -20,7 +20,7 @@
  * with no time on it is a claim with no expiry (UI rule 6), so the missing case
  * says so in words rather than rendering an empty slot.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Post } from '../../types/river';
 import { ChevronRight } from 'lucide-react';
 import { NoticeBanner } from './NoticeBanner';
@@ -137,12 +137,26 @@ function FollowUpChips({
  * now go through resultShape.
  */
 function ChartedResults({ blocks, quiet = false }: { blocks: ResultBlock[]; quiet?: boolean }) {
-  const [shown, setShown] = useState(false);
+  // FIGURES NEVER COLLAPSE ON THEIR OWN. `quiet` is a property of the thread
+  // and it moves under the reader: sending a new question makes every earlier
+  // post quiet, so charts somebody was reading folded away behind a disclosure
+  // line with no action of theirs. That is the second half of "content
+  // disappears when sending something new" — the first half was answer_reset.
+  //
+  // So `quiet` may only ever OPEN this. Once these figures have been on screen
+  // — because they led the thread, or because the reader asked for them — they
+  // stay. There is no control that closes them again, exactly as there was
+  // none before: a figure that has been read is not something to tidy away.
+  const [shown, setShown] = useState(!quiet);
+  useEffect(() => {
+    if (!quiet) setShown(true);
+  }, [quiet]);
+
   if (blocks.length === 0) return null;
   // An earlier post's figures wait behind one line that NAMES them. The
   // receipts under each come with them, so a figure is never on screen without
   // its time; the notices above the body were never here to hide.
-  if (quiet && !shown) {
+  if (!shown) {
     return (
       <button
         type="button"

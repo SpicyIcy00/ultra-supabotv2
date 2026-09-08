@@ -1,11 +1,10 @@
 /**
- * /ask — the workspace. Empty until asked; then the answer.
+ * /ask — the workspace. Empty until asked; then the work.
  *
  * THE EMPTY STATE IS ALMOST NOTHING. The mark, "Ask anything.", the box, and
- * three starting points. No caption under the mark — its behaviour says it
- * is ready, and a word saying so would be a caption on a photograph. No
- * cards, no suggestions grid, no summary of the business. The whitespace is
- * the design.
+ * what you asked before. No caption under the mark — its behaviour says it is
+ * ready, and a word saying so would be a caption on a photograph. No cards, no
+ * suggestions grid, no summary of the business. The whitespace is the design.
  *
  * NOTHING TO CHOOSE FIRST. There were three words under the box — Data,
  * Analyze, Automate — and they were the wrong shape for George twice over.
@@ -13,19 +12,24 @@
  * before asking it, which is work George should be doing; and they were
  * ambiguous even as prompts, because "reading sales by store" is data and
  * analysis and could end in a saved rule. George infers what kind of work a
- * question is from the question. So the box is the whole interface, and what
- * a person typed last time is the only other thing on the page.
+ * question is from the question. So the box is the whole interface.
  *
- * /ask/:threadId IS THE THREAD. The stored posts are drawn as posts, the
- * turn in flight as a pending post beneath them, and the box continues the
- * same thread. Opening a thread loads its history into the one stream so
- * "pin that" can resolve against the calls behind an earlier answer — from
- * the caller's own chat only; a George post travels as text (threadHistory).
- * The newest answer leads and earlier turns go quieter; nothing is hidden
- * and nothing is summarised (turnShape).
+ * THE ANSWER ARRIVES WHERE IT WAS ASKED (changed 2026-09-08). Asking from the
+ * empty state used to navigate to /ask/:threadId the instant the `start` frame
+ * named the thread — which is emitted before a single tool runs and long before
+ * any post is written. The thread read there was a guaranteed 404 until the
+ * turn finished, so the reader was shown "That thread isn't available." over an
+ * answer streaming underneath it. Now the work renders HERE, in place, and the
+ * URL follows only once the `post` frame says the posts exist. Nothing is
+ * navigated to that cannot be read.
  *
- * Asking from the empty state names the thread in the `start` frame, and
- * the URL follows it, so the exchange has an address from its first frame.
+ * /ask/:threadId IS THE THREAD. The stored posts are drawn as posts, the turn
+ * in flight beneath them, and the box continues the same thread. Opening a
+ * thread loads its history into the one stream so "pin that" can resolve
+ * against the calls behind an earlier answer — from the caller's own chat only;
+ * a George post travels as text (threadHistory). The newest answer leads and
+ * earlier turns go quieter; nothing is hidden and nothing is summarised
+ * (turnShape).
  *
  * A THREAD'S PAGE IS THE THREAD'S. A question asked from a page binds its
  * thread to that page (the stream holds the scope, not route state); one
@@ -33,11 +37,17 @@
  * the scope from what George recorded on its answers (pageScope.threadScope),
  * so a follow-up after a reload is still about the same page — and a fresh
  * Ask, or another thread, has its own scope or none.
+ *
+ * SCROLLING BELONGS TO THE CONTAINER (changed 2026-09-08). See useAutoFollow:
+ * the reader keeps their position the moment they scroll up, and the only way
+ * back is the pill.
  */
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { ArrowDown } from 'lucide-react';
 import { useGeorge } from '../hooks/useGeorge';
+import { useAutoFollow } from '../hooks/useAutoFollow';
 import { useShare } from '../hooks/useShare';
 import { useThread } from '../hooks/useThread';
 import { AnswerTurns } from '../components/george/AnswerTurn';
@@ -50,6 +60,7 @@ import { groupsWith, questionFor } from '../components/george/postShape';
 import { riverMerge } from '../components/george/riverMerge';
 import { threadHistory } from '../components/george/threadHistory';
 import { blocksFromCalls, blocksFromCharted } from '../components/george/resultShape';
+import { streamSignal } from '../components/george/workUnit';
 import { widestWidth, workspaceWidth } from '../components/george/workspaceWidth';
 import {
   SHELL_COLUMN,
@@ -69,23 +80,118 @@ interface RouteState {
   pageScope?: PageScope;
 }
 
+/**
+ * The way back to the bottom, once the reader has left it.
+ *
+ * Shown from `atBottom` and never from "is George busy": a pill that appeared
+ * whenever he started working would appear while you were already at the
+ * bottom watching him work. Nothing here wears the approvals colour — coming
+ * back to the bottom is something you chose, not something waiting on you
+ * (UI rule 5).
+ */
+function FollowPill({
+  show,
+  writing,
+  onClick,
+}: {
+  show: boolean;
+  writing: boolean;
+  onClick: () => void;
+}) {
+  if (!show) return null;
+  return (
+    <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
+      <button
+        type="button"
+        onClick={onClick}
+        className="pointer-events-auto flex min-h-touch items-center gap-1.5 rounded-full border border-george-line bg-george-paper px-3.5 py-1.5 text-[12px] text-george-slate shadow-sm hover:text-george-navy"
+      >
+        <ArrowDown className="h-3.5 w-3.5" aria-hidden />
+        {writing ? 'George is still writing' : 'Latest'}
+      </button>
+    </div>
+  );
+}
+
 function EmptyAsk() {
-  const { presence, live, ask, reset, cancel, busy, pageScope } = useGeorge();
+  const { presence, live, turns, ask, reset, cancel, busy, pageScope } = useGeorge();
   const location = useLocation();
   const state = (location.state ?? {}) as RouteState;
 
   const recent = useQuery({ queryKey: ['chats'], queryFn: listChats, staleTime: 30_000 });
 
+  // Once a question has been asked HERE, this is the workspace until the URL
+  // catches up. Two layouts, one component, so nothing unmounts between them.
+  //
+  // Asked here, not "the stream has turns". The stream is above the routes and
+  // keeps the last thread's turns, so testing the turns would make /ask show
+  // the previous conversation instead of the empty state — and testing
+  // `storedThreadId` instead would flash the empty state for the frame between
+  // the `post` frame arriving and the router acting on it. A flag set when the
+  // question is sent has neither problem, and a fresh navigation to /ask is a
+  // fresh mount with it false, which is exactly the rule: /ask is where a new
+  // question is asked.
+  const [workingHere, setWorkingHere] = useState(false);
+  const working = workingHere && turns.length > 0;
+
+  const width = useMemo(
+    () =>
+      widestWidth(
+        turns.map((t) => workspaceWidth(t.role === 'george' ? blocksFromCalls(t.toolCalls) : [])),
+      ),
+    [turns],
+  );
+  const column = `${shellColumn(width)} ${SHELL_COLUMN_TRANSITION}`;
+
+  const follow = useAutoFollow(streamSignal(turns), working);
+
   const onAsk = useCallback(
     (question: string) => {
-      reset();
+      // The first question asked here starts fresh, and that clears whatever
+      // thread the shared stream was holding. A follow-up asked before the URL
+      // has caught up continues the same thread — the stream already has its
+      // id, and resetting would throw away the turns that give "pin that" its
+      // referent.
+      if (!working) reset();
+      setWorkingHere(true);
       void ask(question, {
         pageContext: state.pageContext ?? null,
         pageScope: state.pageScope ?? null,
       });
     },
-    [ask, reset, state.pageContext, state.pageScope],
+    [ask, reset, working, state.pageContext, state.pageScope],
   );
+
+  if (working) {
+    return (
+      <div className={`${SHELL_PAGE_HEIGHT} flex flex-col`}>
+        <div className="relative flex-1 overflow-hidden">
+          <div
+            ref={follow.ref}
+            className="h-full overflow-y-auto overscroll-contain px-4 py-5 md:px-8"
+          >
+            <div className={`${column} space-y-5`}>
+              <AnswerTurns turns={turns} focusLatest />
+            </div>
+          </div>
+          <FollowPill show={!follow.atBottom} writing={busy} onClick={follow.jumpToBottom} />
+        </div>
+
+        {pageScope && (
+          <div className="px-4 md:px-8">
+            <PageScopeLine scope={pageScope} className={`${column} mb-1.5`} />
+          </div>
+        )}
+        <AskComposer
+          onAsk={onAsk}
+          onCancel={cancel}
+          busy={busy}
+          placeholder="Ask a follow-up…"
+          column={column}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={`${SHELL_PAGE_HEIGHT} flex flex-col overflow-y-auto px-4 md:px-8`}>
@@ -224,6 +330,14 @@ function ThreadAsk({ threadId }: { threadId: string }) {
   );
   const column = `${shellColumn(width)} ${SHELL_COLUMN_TRANSITION}`;
 
+  // What the container follows: how much has been written and how much has
+  // come back, plus how many posts are on screen so a refetch that adds one
+  // still brings the reader with it.
+  const follow = useAutoFollow(
+    `${merged.posts.length}:${streamSignal(merged.pending)}`,
+    !thread.loading,
+  );
+
   const onAsk = useCallback(
     (question: string) => {
       void ask(question, { parentId: lastPost?.id ?? null, pageContext: state.pageContext ?? null });
@@ -233,41 +347,67 @@ function ThreadAsk({ threadId }: { threadId: string }) {
 
   return (
     <div className={`${SHELL_PAGE_HEIGHT} flex flex-col`}>
-      <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-5 md:px-8">
-        <div className={`${column} space-y-5`}>
-          {thread.loading && (
-            <p className="py-10 text-center text-[13px] text-george-muted">Opening…</p>
-          )}
-          {thread.unavailable && (
-            <div className="py-10 text-center">
-              <p className="text-[14px] text-george-navy">That thread isn’t available.</p>
-              <p className="mx-auto mt-1 max-w-sm text-[12px] leading-relaxed text-george-slate">
-                It may have been deleted, or it may be somebody else’s.
+      <div className="relative flex-1 overflow-hidden">
+        <div
+          ref={follow.ref}
+          className="h-full overflow-y-auto overscroll-contain px-4 py-5 md:px-8"
+        >
+          <div className={`${column} space-y-5`}>
+            {thread.loading && (
+              <p className="py-10 text-center text-[13px] text-george-muted">Opening…</p>
+            )}
+
+            {/* Three outcomes, three renderings (UI rule 8). A 404 is the
+                thread being gone or somebody else's — one answer, as on the
+                server. Anything else is the lookup failing, which is
+                retryable and must never be reported as work that vanished. */}
+            {thread.unavailable && (
+              <div className="py-10 text-center">
+                <p className="text-[14px] text-george-navy">That thread isn’t available.</p>
+                <p className="mx-auto mt-1 max-w-sm text-[12px] leading-relaxed text-george-slate">
+                  It may have been deleted, or it may be somebody else’s.
+                </p>
+              </div>
+            )}
+            {thread.failed && (
+              <div className="py-10 text-center">
+                <p className="text-[14px] text-george-navy">Couldn’t open this thread.</p>
+                <p className="mx-auto mt-1 max-w-sm text-[12px] leading-relaxed text-george-slate">
+                  The lookup failed. The thread is still there.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void thread.refetch()}
+                  className="mt-3 min-h-touch rounded-full border border-george-line bg-george-paper px-3 py-1.5 text-[12px] text-george-slate hover:text-george-navy"
+                >
+                  Try again
+                </button>
+              </div>
+            )}
+
+            {merged.posts.map((post, i) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                grouped={groupsWith(merged.posts[i - 1], post)}
+                onAsk={onAsk}
+                onShare={share.share}
+                sharing={share.sharingId === post.id}
+                question={questionFor(merged.posts, post)}
+                quiet={i < merged.posts.length - 1 || merged.pending.length > 0}
+              />
+            ))}
+
+            {merged.pending.length > 0 && <AnswerTurns turns={merged.pending} focusLatest />}
+
+            {elsewhere && (
+              <p className="text-[12px] leading-relaxed text-george-muted">
+                George is still answering in another thread. This one opens when he is done.
               </p>
-            </div>
-          )}
-
-          {merged.posts.map((post, i) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              grouped={groupsWith(merged.posts[i - 1], post)}
-              onAsk={onAsk}
-              onShare={share.share}
-              sharing={share.sharingId === post.id}
-              question={questionFor(merged.posts, post)}
-              quiet={i < merged.posts.length - 1 || merged.pending.length > 0}
-            />
-          ))}
-
-          {merged.pending.length > 0 && <AnswerTurns turns={merged.pending} focusLatest />}
-
-          {elsewhere && (
-            <p className="text-[12px] leading-relaxed text-george-muted">
-              George is still answering in another thread. This one opens when he is done.
-            </p>
-          )}
+            )}
+          </div>
         </div>
+        <FollowPill show={!follow.atBottom} writing={busy && here} onClick={follow.jumpToBottom} />
       </div>
 
       {scope && (
@@ -288,21 +428,25 @@ function ThreadAsk({ threadId }: { threadId: string }) {
 }
 
 /**
- * Follows the stream: a question asked from empty gets its thread's URL.
+ * Follows the stream to the thread's address — once the thread is READABLE.
  *
- * Only a thread that STARTED here. Arriving at /ask while an earlier thread
- * is still in the stream must not bounce straight back into it — /ask is
- * where a new question is asked.
+ * `storedThreadId` comes off the `post` frame, which the loop emits after it
+ * has written the posts. Following `threadId` instead (the `start` frame) sent
+ * every first question to a URL that 404s for the whole turn.
+ *
+ * Only a thread that STARTED here. Arriving at /ask while an earlier thread is
+ * still in the stream must not bounce straight back into it — /ask is where a
+ * new question is asked.
  */
 function FollowThread() {
-  const { threadId } = useGeorge();
+  const { storedThreadId } = useGeorge();
   const navigate = useNavigate();
-  const arrivedWith = useRef(threadId);
+  const arrivedWith = useRef(storedThreadId);
   useEffect(() => {
-    if (threadId && threadId !== arrivedWith.current) {
-      navigate(`/ask/${threadId}`, { replace: true });
+    if (storedThreadId && storedThreadId !== arrivedWith.current) {
+      navigate(`/ask/${storedThreadId}`, { replace: true });
     }
-  }, [threadId, navigate]);
+  }, [storedThreadId, navigate]);
   return null;
 }
 

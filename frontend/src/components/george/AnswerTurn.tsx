@@ -24,7 +24,7 @@
  * (UI rule 4). A caveat that qualifies a number has to be read before the
  * number, not found afterwards.
  */
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { Pin as PinIcon, Save as SaveIcon } from 'lucide-react';
 import type { GeorgeTurn, PinnedFrame, SavedFrame } from '../../types/george';
 import { useGeorge } from '../../hooks/useGeorge';
@@ -51,11 +51,6 @@ interface Props {
 
 export function AnswerTurns({ turns, focusLatest = false }: Props) {
   const { busy, presence, live } = useGeorge();
-  const endRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [turns]);
 
   if (turns.length === 0) return null;
 
@@ -86,7 +81,6 @@ export function AnswerTurns({ turns, focusLatest = false }: Props) {
           />
         ),
       )}
-      <div ref={endRef} />
     </div>
   );
 }
@@ -123,6 +117,13 @@ function AnswerTurn({
 
         {/* The finding, then the working. See Prose. */}
         {turn.text && <Prose text={turn.text} lede quiet={quiet} />}
+
+        {/* An answer George is replacing, still on screen because a blank
+            screen is worse than a stale paragraph that says it is stale.
+            Cleared the moment the first delta of the rewrite lands, and again
+            on `done` — so this can never be what the reader is left with, and
+            can never disagree with what the river stored. */}
+        {!turn.text && turn.superseded && <SupersededAnswer text={turn.superseded} />}
 
         <ResultSurface blocks={blocks} />
 
@@ -165,6 +166,35 @@ function AnswerTurn({
         )}
       </div>
     </article>
+  );
+}
+
+/**
+ * The answer being replaced, while it is being replaced.
+ *
+ * WHY IT IS STILL HERE. The loop asks the model to write the answer again from
+ * seven places (agent/loop.py `_reset_answer`) — a caveat that went unsurfaced,
+ * a pin or save or page claimed but never made, the volunteering cap, the
+ * convergence cap. Every one of those is right to fire. What was wrong was
+ * what the client did with it: `text` was emptied on arrival, so a finished
+ * paragraph somebody was reading vanished and the screen sat blank until the
+ * rewrite streamed. Keeping it visible costs nothing and loses nothing.
+ *
+ * IT IS MARKED, NOT QUIETLY LEFT. Slate rather than navy, and a line above it
+ * saying what is happening — because this text is about to stop being true, and
+ * an unmarked paragraph is a claim. It is not a notice and wears no notice
+ * chrome: nothing is being caveated and nobody is being asked for anything.
+ */
+function SupersededAnswer({ text }: { text: string }) {
+  return (
+    <div aria-live="off">
+      <p className="mb-1.5 text-[11px] uppercase tracking-wider text-george-muted">
+        Rewriting this answer
+      </p>
+      <p className="font-george-serif text-[15px] leading-relaxed text-george-slate opacity-70 whitespace-pre-wrap">
+        {text}
+      </p>
+    </div>
   );
 }
 

@@ -769,8 +769,23 @@ async def read_thread(
     One thread, oldest first.
 
     Same visibility filter, so a thread cannot be a way around it: a private
-    post in someone else's thread is simply not returned, and an empty result
-    is a 404 rather than a blank thread that implies something was hidden.
+    post in someone else's thread is simply not returned.
+
+    AN EMPTY THREAD IS TWO DIFFERENT FACTS AND THIS TELLS THEM APART.
+
+    A thread the caller may CONTINUE — their own conversation, or one whose
+    root post is George's and org-visible (app.services.thread_access) — but
+    which holds no visible post yet is a real, ordinary state: the turn that
+    names the thread is still running, and its posts are written at the END of
+    the loop. Returning 404 for it meant the first question of every new thread
+    was read at an address that was guaranteed to fail until the answer
+    finished, and the client drew "That thread isn't available." over an answer
+    that was arriving underneath it. `200 []` is the honest answer: the thread
+    is yours, and nothing is in it yet.
+
+    Everything else stays a 404, and it stays deliberately ambiguous between
+    "no such thread" and "not yours" — a caller who could tell those apart
+    could enumerate other people's threads by id.
     """
     rows = (
         await db.execute(
@@ -783,6 +798,12 @@ async def read_thread(
         )
     ).mappings().all()
     if not rows:
+        # The route's own session, not _thread_continuable's, which opens a
+        # second one. Every George database URL goes through the 5432
+        # session-mode pooler and connections are the scarce thing; a read that
+        # already holds a session has no business asking for another.
+        if await thread_continuable(db, user.username, thread_id):
+            return []
         raise HTTPException(status_code=404, detail="No thread with that id.")
     return [RiverPost.model_validate(p) for p in thread_of(rows, user.username)]
 

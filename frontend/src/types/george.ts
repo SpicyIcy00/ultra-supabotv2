@@ -298,6 +298,31 @@ export type GeorgeTurn =
        * final answer only.
        */
       narration?: string;
+      /**
+       * The answer George is replacing, kept on screen until the replacement
+       * starts arriving.
+       *
+       * SUPERSEDED, NOT BLANKED. Seven paths ask the model to write the answer
+       * again (agent/loop.py, `_reset_answer`) — an unsurfaced caveat, a pin or
+       * save or page claimed but never made, the volunteering cap, the
+       * convergence cap. Each is right to fire, and until 2026-09-08 each one
+       * emptied `text` on arrival: a complete paragraph the reader was halfway
+       * through vanished, and the screen sat blank for as long as the rewrite
+       * took. That is the "content disappears and then reappears" the dogfood
+       * found.
+       *
+       * So the old answer moves here and stays visible, marked as being
+       * rewritten, until the first delta of the new one lands and clears it.
+       * Nothing is lost, nothing is claimed to be final, and the stored answer
+       * is still only ever `text`.
+       *
+       * NOT SET FOR `interim_prose`. That reason means George narrated and then
+       * went to read something, and CLAUDE.md fixes where that prose belongs:
+       * the activity disclosure, never above the answer. It goes to `narration`
+       * alone, and the screen is not blank meanwhile because the activity line
+       * is saying what he is doing.
+       */
+      superseded?: string;
       toolCalls: ToolCall[];
       notices: GeorgeNotice[];
       /** Pins created during this turn, in the order they were made. */

@@ -138,6 +138,16 @@ export function useGeorgeStream() {
   const [turns, setTurns] = useState<GeorgeTurn[]>([]);
   const [state, setState] = useState<GeorgeState>('idle');
   const [threadId, setThreadId] = useState<string | null>(null);
+  /**
+   * The thread id once its posts are actually in the river.
+   *
+   * Separate from `threadId` on purpose, and the difference is the whole of the
+   * "That thread isn't available." bug. `threadId` arrives in the `start` frame
+   * and is what the NEXT question is sent with — it has to be early. This one
+   * arrives in the `post` frame, which the loop emits after `log.posts(...)`
+   * has written them, and is the only id a reader may be sent to look at.
+   */
+  const [storedThreadId, setStoredThreadId] = useState<string | null>(null);
   const [pageScope, setPageScope] = useState<PageScope | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const qc = useQueryClient();
@@ -168,6 +178,12 @@ export function useGeorgeStream() {
   const setThread = useCallback((id: string | null) => {
     threadRef.current = id;
     setThreadId(id);
+  }, []);
+
+  const storedThreadRef = useRef<string | null>(null);
+  const setStoredThread = useCallback((id: string | null) => {
+    storedThreadRef.current = id;
+    setStoredThreadId(id);
   }, []);
 
   // The thread's page scope, read at submit time like the thread id.
@@ -222,8 +238,9 @@ export function useGeorgeStream() {
     cancel();
     setTurns([]);
     setThread(null);
+    setStoredThread(null);
     setScope(null);
-  }, [cancel, setThread, setScope]);
+  }, [cancel, setThread, setStoredThread, setScope]);
 
   /**
    * Load stored turns. They take the place of whatever was on screen, and the
@@ -239,11 +256,14 @@ export function useGeorgeStream() {
       turnsRef.current = loaded;
       setTurns(loaded);
       setThread(thread);
+      // A thread being OPENED was read from the river, so its posts exist by
+      // definition — it is already at an address a reader can be sent to.
+      setStoredThread(thread);
       // The reopened thread's own scope, or none. Never the previous
       // thread's: opening B after A must not carry A's page into B.
       setScope(scope);
     },
-    [cancel, setThread, setScope],
+    [cancel, setThread, setStoredThread, setScope],
   );
 
   const ask = useCallback(
@@ -387,6 +407,11 @@ export function useGeorgeStream() {
               case 'text':
                 setState('answering');
                 patchLast((t) => {
+                  // The replacement has started arriving, so the answer it
+                  // replaces comes off the screen now — not when the rewrite
+                  // finishes, or the two would be on screen together saying
+                  // different things.
+                  if (t.superseded) t.superseded = undefined;
                   t.text += String(data.delta ?? '');
                 });
                 break;
@@ -405,8 +430,20 @@ export function useGeorgeStream() {
                 // reasoning — never above the answer, which is what it was
                 // doing until the loop learned to say which it was.
                 patchLast((t) => {
-                  if (data.reason === 'interim_prose' && t.text.trim()) {
-                    t.narration = [t.narration, t.text.trim()].filter(Boolean).join('\n\n');
+                  const written = t.text.trim();
+                  if (data.reason === 'interim_prose') {
+                    // Narration. It belongs in the activity disclosure and
+                    // nowhere else, so it is NOT superseded prose — putting it
+                    // back above the answer is exactly what the loop learned to
+                    // stop doing.
+                    if (written) {
+                      t.narration = [t.narration, written].filter(Boolean).join('\n\n');
+                    }
+                  } else if (written) {
+                    // Every other reason is a REWRITE of the answer. Keep what
+                    // is on screen until the replacement starts, so the reader
+                    // is never left looking at nothing (see `superseded`).
+                    t.superseded = written;
                   }
                   t.text = '';
                 });
@@ -475,6 +512,16 @@ export function useGeorgeStream() {
                     stored: Boolean(data.stored),
                   } satisfies PostFrame;
                 });
+                // The thread now EXISTS in the river, and only now may a
+                // client navigate to its address. `start` names the thread id
+                // before a single tool has run and long before any post is
+                // written, so following it there sent every first question to a
+                // URL whose read is a guaranteed 404 — which is where "That
+                // thread isn't available." came from, drawn above an answer
+                // that was streaming perfectly well underneath it.
+                if (data.stored && typeof data.thread_id === 'string' && data.thread_id) {
+                  setStoredThread(data.thread_id);
+                }
                 break;
 
               case 'receipts':
@@ -512,6 +559,11 @@ export function useGeorgeStream() {
               case 'done':
                 patchLast((t) => {
                   t.done = data as unknown as DoneFrame;
+                  // A rewrite that never arrived is not the answer. `answer` was
+                  // reset on the server too, so the stored post holds the
+                  // rewrite or nothing — and the screen may not show prose the
+                  // river does not have.
+                  t.superseded = undefined;
                 });
                 // Not straight to idle: a turn that finishes and leaves no
                 // trace looks like one that never ran. `complete` is the
@@ -549,7 +601,7 @@ export function useGeorgeStream() {
         setState((s) => (s === 'error' || s === 'complete' ? s : 'idle'));
       }
     },
-    [cancel, patchLast, qc, setThread, setScope],
+    [cancel, patchLast, qc, setThread, setStoredThread, setScope],
   );
 
   return {
@@ -563,6 +615,8 @@ export function useGeorgeStream() {
     // take the next question immediately, whatever the mark is still doing.
     busy: state !== 'idle' && state !== 'error' && state !== 'complete',
     threadId,
+    /** The thread id once its posts exist. What a router may follow. */
+    storedThreadId,
     open,
     reset,
   };

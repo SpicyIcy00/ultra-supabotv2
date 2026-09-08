@@ -37,11 +37,23 @@ export function useThread(threadId: string) {
     retry: false,
   });
 
+  // A 404 and a 500 are different facts and were rendering as one sentence.
+  // The server says 404 for a thread that does not exist OR is not the
+  // caller's — deliberately indistinguishable, so a probe cannot enumerate
+  // other people's threads. Everything else is the lookup failing, which is
+  // retryable and must never be reported as "isn't available": that tells
+  // somebody their work is gone when the network hiccuped.
+  const status =
+    posts.isError && axios.isAxiosError(posts.error) ? posts.error.response?.status : undefined;
+
   return {
     posts: posts.data ?? [],
     loading: posts.isPending,
     /** Missing or not visible — the two are one answer, as on the server. */
-    unavailable: posts.isError,
+    unavailable: posts.isError && status === 404,
+    /** The read failed and may work on a retry. Never drawn as emptiness. */
+    failed: posts.isError && status !== 404,
+    refetch: posts.refetch,
     chat: chat.data ?? null,
     /** Both reads settled, so history can be built once and opened. */
     ready: posts.isSuccess && (chat.isSuccess || chat.isError),
