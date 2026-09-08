@@ -37,6 +37,7 @@
  * have is a value parsed out of what George wrote.
  */
 import type {
+  Finding,
   GeorgeNotice,
   GeorgeTurn,
   PageChangedFrame,
@@ -50,7 +51,12 @@ import type { PinToolCall } from '../../types/pins';
 import type { Post } from '../../types/river';
 import { storedPageContext } from './pageScope';
 import { postView, storedCalls, type PostView } from './postShape';
-import { blocksFromCalls, blocksFromCharted, type ResultBlock } from './resultShape';
+import { composeWork, compositionBlocks, type Composition } from './composeWork';
+import {
+  sourcesFromCalls,
+  sourcesFromCharted,
+  type ResultBlock,
+} from './resultShape';
 import { pinnableCalls } from './turnShape';
 
 /**
@@ -99,8 +105,20 @@ export interface WorkUnit {
   /** George's answer. */
   prose: string;
   notices: GeorgeNotice[];
-  /** The results, already composed by resultShape. */
+  /** The results, already composed by resultShape. Every block, in reading order. */
   blocks: ResultBlock[];
+  /**
+   * The same results, composed by ROLE when George said what each read was.
+   *
+   * `adjacent` is the V1 surface and is what a turn with no findings gets;
+   * `structured` is the ladder — the figure, what moved it, where it sits —
+   * built from the validated `finding` frame (composeWork.ts). `blocks` is
+   * always this composition flattened, so anything that only needs the blocks
+   * keeps working unchanged.
+   */
+  composition: Composition;
+  /** The roles that stood, exactly as the loop validated them. Empty is honest. */
+  findings: Finding[];
   /** The fallback receipts, used only when nothing was drawn. */
   receipts?: ToolMeta;
   pageContext?: PageContextFrame;
@@ -181,7 +199,7 @@ export function workUnitFromTurn(
     question,
     prose: turn.text,
     notices: turn.notices,
-    blocks: blocksFromCalls(turn.toolCalls),
+    ...composed(sourcesFromCalls(turn.toolCalls), turn.findings),
     receipts: turn.receipts,
     pageContext: turn.pageContext,
     // Only the calls the LOOP marked pinnable, and only once the turn is over:
@@ -214,6 +232,45 @@ export function workUnitFromTurn(
  * `seq` is the position in that list, which is the order the loop stored — the
  * only order this layer is entitled to.
  */
+/**
+ * Compose once, hand out every view of it. The composition is the thing; the
+ * flat block list is derived from it so the two cannot disagree.
+ */
+function composed(
+  sources: ReturnType<typeof sourcesFromCalls>,
+  findings: Finding[] | undefined,
+): Pick<WorkUnit, 'composition' | 'blocks' | 'findings'> {
+  const composition = composeWork(sources, findings);
+  return { composition, blocks: compositionBlocks(composition), findings: findings ?? [] };
+}
+
+/**
+ * The roles a stored post carries, or none.
+ *
+ * The loop persists only the VALIDATED list (agent/loop.py `_answer_payload`),
+ * so what is here already passed every check. It is still read defensively:
+ * a payload is data somebody could have edited, and a malformed entry is
+ * dropped rather than trusted — the surface then falls back to adjacency,
+ * which is never wrong, only less.
+ */
+export function storedFindings(post: Post): Finding[] | undefined {
+  const raw = (post.payload as { findings?: unknown } | null)?.findings;
+  if (!Array.isArray(raw)) return undefined;
+  const out: Finding[] = [];
+  for (const entry of raw) {
+    const e = entry as Partial<Finding> | null;
+    if (!e || typeof e.seq !== 'number') continue;
+    if (e.role !== 'primary' && e.role !== 'driver' && e.role !== 'breakdown' && e.role !== 'context') continue;
+    out.push({
+      seq: e.seq,
+      role: e.role,
+      of: typeof e.of === 'number' ? e.of : null,
+      tool: typeof e.tool === 'string' ? e.tool : '',
+    });
+  }
+  return out.length ? out : undefined;
+}
+
 export function workUnitFromPost(post: Post, question: string | undefined): WorkUnit {
   const payload = post.payload as { charted?: unknown } | null;
   const pinnable = storedCalls(post);
@@ -224,7 +281,7 @@ export function workUnitFromPost(post: Post, question: string | undefined): Work
     question,
     prose: post.body ?? '',
     notices: post.notices ?? [],
-    blocks: blocksFromCharted(payload?.charted),
+    ...composed(sourcesFromCharted(payload?.charted), storedFindings(post)),
     receipts: post.receipts ?? undefined,
     pageContext: storedPageContext(post) ?? undefined,
     pinnable,
@@ -395,6 +452,9 @@ export interface WorkSubstance {
   prose: string;
   notices: GeorgeNotice[];
   blocks: ResultBlock[];
+  /** The composition too: a reload must structure the answer as it was structured live. */
+  composition: Composition;
+  findings: Finding[];
   receipts?: ToolMeta;
   pageContext?: PageContextFrame;
   pinnable: PinToolCall[] | null;
@@ -406,6 +466,8 @@ export function workSubstance(unit: WorkUnit): WorkSubstance {
     prose: unit.prose,
     notices: unit.notices,
     blocks: unit.blocks,
+    composition: unit.composition,
+    findings: unit.findings,
     receipts: unit.receipts,
     pageContext: unit.pageContext,
     pinnable: unit.pinnable,

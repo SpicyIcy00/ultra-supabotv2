@@ -180,6 +180,36 @@ describe.each(['live', 'stored'] as const)('an entry, %s', (which) => {
     expect(screen.getAllByText(/read /).length).toBeGreaterThanOrEqual(1);
   });
 
+  it('keeps the label tool out of the always-visible surface too', () => {
+    // A turn that recorded roles carries a record_findings call. It has no
+    // rows and no receipts, and its name is an identifier; the work line says
+    // what it did in words (cognition.ts) and the rows behind the disclosure
+    // are the only place the name appears.
+    const turn = {
+      ...TURN,
+      toolCalls: [
+        CALL,
+        { seq: 2, tool: 'record_findings', arguments: { findings: [{ seq: 1, role: 'primary' }] },
+          result: { row_count: 0, source_table: null, truncated: false, duration_ms: 1,
+                    error: null, rows: [], rows_complete: false, meta: null, pinnable: false } },
+      ],
+      findings: [{ seq: 1, role: 'primary' as const, of: null, tool: 'get_sales' }],
+    };
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { container } = render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter>
+          <GeorgeStreamProvider>
+            <RiverEntry item={workUnitFromTurn(turn, 'How did Rockwell do?', 'live-0')} />
+          </GeorgeStreamProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(container.textContent).not.toContain('record_findings');
+    // And the ladder is drawn: the primary figure sits under its rung.
+    expect(container.textContent).toContain('The figure');
+  });
+
   it('keeps the tool name out of the always-visible surface', () => {
     const { container } = mount(which);
     // The activity line says what George did in words; `get_sales` lives in

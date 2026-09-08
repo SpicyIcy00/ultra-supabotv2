@@ -48,6 +48,7 @@ import { retitled, scopeForAsk, scopeForRequest } from '../components/george/pag
 import type {
   AskHistoryTurn,
   DoneFrame,
+  FindingFrame,
   GeorgeNotice,
   GeorgeState,
   GeorgeTurn,
@@ -522,6 +523,16 @@ export function useGeorgeStream() {
                 if (data.stored && typeof data.thread_id === 'string' && data.thread_id) {
                   setStoredThread(data.thread_id);
                 }
+                break;
+
+              case 'finding':
+                // The roles that stood, already validated by the loop. Replaces
+                // rather than accumulates: a later recording is the model
+                // refining one reading, not adding a second. Nothing here is
+                // read from prose, and nothing here is a figure.
+                patchLast((t) => {
+                  t.findings = ((data as unknown as FindingFrame).findings ?? []).slice();
+                });
                 break;
 
               case 'receipts':

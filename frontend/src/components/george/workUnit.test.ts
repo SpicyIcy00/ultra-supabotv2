@@ -369,3 +369,43 @@ describe('the memoization that makes a long thread affordable', () => {
     }
   });
 });
+
+describe('findings survive the handoff', () => {
+  const FINDINGS = [
+    { seq: 1, role: 'primary' as const, of: null, tool: 'get_sales' },
+  ];
+
+  it('composes a live turn and its stored post identically when both carry roles', () => {
+    const live = workUnitFromTurn(finishedTurn({ findings: FINDINGS }), undefined, 'live-0');
+    const stored = workUnitFromPost(
+      storedAnswer({ payload: { ...(storedAnswer().payload as object), findings: FINDINGS } } as never),
+      undefined,
+    );
+    expect(workSubstance(live)).toEqual(workSubstance(stored));
+    expect(live.composition.kind).toBe('structured');
+  });
+
+  it('composes as adjacency, live and stored, when neither carries roles', () => {
+    const live = workUnitFromTurn(finishedTurn(), undefined, 'live-0');
+    const stored = workUnitFromPost(storedAnswer(), undefined);
+    expect(live.composition.kind).toBe('adjacent');
+    expect(stored.composition.kind).toBe('adjacent');
+    expect(live.findings).toEqual([]);
+    expect(stored.findings).toEqual([]);
+  });
+
+  it('drops a malformed stored role rather than trusting it', () => {
+    const stored = workUnitFromPost(
+      storedAnswer({
+        payload: {
+          ...(storedAnswer().payload as object),
+          findings: [{ seq: 'one', role: 'primary' }, { seq: 1, role: 'insight' }],
+        },
+      } as never),
+      undefined,
+    );
+    // Nothing survived validation, so the surface is adjacency — never wrong.
+    expect(stored.findings).toEqual([]);
+    expect(stored.composition.kind).toBe('adjacent');
+  });
+});

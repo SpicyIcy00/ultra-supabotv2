@@ -52,7 +52,7 @@ from typing import Any, AsyncIterator, Callable, Optional
 
 import anthropic
 
-from agent import composite_tools, write_tools
+from agent import composite_tools, findings, write_tools
 from agent.write_tools import WriteContext, call_key
 from tools import (
     brief,
@@ -154,6 +154,21 @@ TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
     "get_purchasing": purchasing.get_purchasing,
     "get_cost_history": cost_history.get_cost_history,
     "get_brief": brief.get_brief,
+}
+
+# The one tool that reads nothing. It labels calls that already ran with the
+# role each played — primary, driver, breakdown, context — and the loop
+# validates every label against the executed set and metrics.yaml before any
+# of it reaches a client (agent/findings.py).
+#
+# KEPT OUT OF TOOL_FUNCTIONS ON PURPOSE. That dict is what a pin and a workflow
+# step may contain (pin_runner.validate_call, workflow_runner), and a label is
+# not a figure: a tile that re-ran `record_findings` would re-run nothing. It
+# is always offered — no capability gates it — so every session's schema
+# carries it at the same position and the cached prefix holds.
+FINDING_TOOL = "record_findings"
+FINDING_TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
+    FINDING_TOOL: findings.record_findings,
 }
 
 
@@ -386,6 +401,29 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
             },
         }
 
+    if pname == "findings":
+        # The whole of what the model may say about composition: a call it
+        # already made, and a word from a closed list. No field exists for a
+        # figure, a label, a colour, a component, a layout, a threshold or an
+        # order, so none can arrive (agent/findings.py).
+        return {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 12,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "seq": {"type": "integer",
+                            "description": "meta.call_seq of a read that returned this turn"},
+                    "role": {"type": "string", "enum": list(findings.ROLES)},
+                    "of": {"type": "integer",
+                           "description": "for driver and breakdown: the seq of the primary"},
+                },
+                "required": ["seq", "role"],
+                "additionalProperties": False,
+            },
+        }
+
     if pname == "operations":
         # The closed set of page edits. `op` is enumerated; the fields each op
         # takes are described on the tool, validated in the tool and again in
@@ -525,6 +563,7 @@ def build_tool_schemas(defs: Optional[dict] = None,
     schemas = []
 
     surface: dict[str, Callable[..., Any]] = dict(TOOL_FUNCTIONS)
+    surface.update(FINDING_TOOL_FUNCTIONS)
     if include_write:
         surface.update(write_tools.WRITE_TOOL_FUNCTIONS)
         surface.update(composite_tools.COMPOSITE_TOOL_FUNCTIONS)
@@ -532,8 +571,13 @@ def build_tool_schemas(defs: Optional[dict] = None,
         surface.update(extra)
 
     reads = sorted(n for n in surface if n in TOOL_FUNCTIONS)
-    injected = sorted(n for n in surface if n not in TOOL_FUNCTIONS)
-    for name in reads + injected:
+    labels = sorted(n for n in surface if n in FINDING_TOOL_FUNCTIONS)
+    injected = sorted(n for n in surface
+                      if n not in TOOL_FUNCTIONS and n not in FINDING_TOOL_FUNCTIONS)
+    # Reads, then the label tool, then whatever was injected. The label tool is
+    # in every session, so it sits inside the shared prefix rather than after
+    # the part that varies.
+    for name in reads + labels + injected:
         fn = surface[name]
         summary, argdocs = _parse_docstring(fn)
         sig = inspect.signature(fn)
@@ -654,6 +698,8 @@ INVESTIGATING
 4. EXPLAIN. Keep the kinds of statement apart. "Down 12.1%" is measured. "So basket value is the stronger measured driver" is your reading of measured figures, and say it as a reading. "The largest measured revenue declines were A and B" is localization, and localization is not cause: "customers switched to cheaper products" or "A caused the ATP decline" may be said only when the evidence that supports it is in this conversation — and a product ranking supports "the weakness is concentrated in A and B", not why.
 
 5. STOP, AND SAY WHAT IS NEXT. Stop when the premise is false; when one driver clearly dominates and nothing more was asked; when the next step is unsupported by any tool or a tool refused it; when the evidence is mixed; when a further read would repeat one already made; or when the reads cannot establish cause. Then say what the data establishes, what it does not, and the one thing that would need to be checked next. That sentence is part of the answer, not a volunteered fact. "Basket value fell much more than transactions; these reads don't establish why" beats a cause you invented.
+
+6. RECORD WHAT EACH READ WAS. Before you answer, call record_findings once with the role each read played: the primary fact (one, the figure the question is about), each driver of it, each breakdown of it, and context for anything else worth showing. Use meta.call_seq from each result. A role is a label on a read you already made — it draws the answer's figures in their proper structure and it cannot compute, order or colour anything. The loop checks every role against the definitions and refuses what does not hold; a refused role was not applied, so never describe the answer as structured in a way it is not. A plain question with one read needs one primary and nothing else; a question you answered from an earlier turn's figures needs no call at all.
 
 Every read in a round keeps the primary fact's window, baseline, store scope and filters; if you change scope, say why. A page you have read is evidence: a pin that already carries a comparison is a verified primary fact, and you do not re-read it merely because you are investigating — fresh reads are for what the page does not show. Lead with the conclusion: figures first, then your reading, then what you could not establish.
 """
@@ -1030,7 +1076,8 @@ def _forced_caveats(missing: list[dict]) -> str:
 # --------------------------------------------------------------------------
 
 def _answer_payload(charted: Optional[list], calls: Optional[list],
-                    page_context: Optional[dict] = None) -> Optional[str]:
+                    page_context: Optional[dict] = None,
+                    findings: Optional[list] = None) -> Optional[str]:
     """
     The answer post's payload: the charted snapshot, the calls behind it, and
     the page George read to produce it.
@@ -1055,6 +1102,11 @@ def _answer_payload(charted: Optional[list], calls: Optional[list],
         payload["calls"] = calls
     if page_context:
         payload["page_context"] = page_context
+    # The roles that stood (2026-09-08). Stored with the snapshot so a reload
+    # composes the answer exactly as it composed live — and only ever the
+    # validated list, never what the model submitted.
+    if findings:
+        payload["findings"] = findings
     return json.dumps(payload) if payload else None
 
 
@@ -1258,7 +1310,7 @@ class ConversationLog:
                 # the post can be PINNED after a reload. The chart is a
                 # snapshot; the pin re-runs. Both are true of one answer.
                 _answer_payload(kw.get("charted"), kw.get("calls"),
-                                kw.get("page_context")),
+                                kw.get("page_context"), kw.get("findings")),
                 json.dumps(_json_safe(kw["receipts"])) if kw.get("receipts") else None,
                 json.dumps(_json_safe(kw.get("notices") or [])),
                 self.conversation_id, datetime.now(timezone.utc),
@@ -1630,6 +1682,17 @@ async def run(
     # pin it made rather than a figure, and a workflow's steps are its own to
     # replay. See ConversationLog.posts and _answer_payload.
     calls_made: list[dict] = []
+
+    # Every call this turn, by seq, as the finding validator sees it: what
+    # ran, with what, whether it succeeded, whether it was a re-read, and
+    # whether it was a trusted read at all. Written as results land, so a
+    # label can only ever name a call that already returned.
+    calls_by_seq: dict[int, dict] = {}
+
+    # The roles that stood, for the ANSWER POST and the UI. A later
+    # record_findings call REPLACES this: the model refining its reading is
+    # one reading, not two.
+    findings_recorded: list[dict] = []
 
     # What George read of the page, for the ANSWER POST and the UI: compact
     # evidence — which page, when, which pins with what status — never the
@@ -2059,7 +2122,8 @@ async def run(
             duplicate_of: dict[int, str] = {}       # seq -> the key it repeats
             for b in tool_uses:
                 is_read = (b.name not in write_tools.WRITE_TOOL_FUNCTIONS
-                           and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS)
+                           and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS
+                           and b.name not in FINDING_TOOL_FUNCTIONS)
                 key = call_key(b.name, dict(b.input)) if is_read else None
                 frame = {"seq": seq, "tool": b.name, "arguments": b.input}
                 if key is not None and (key in served_reads or key in batch_keys):
@@ -2091,9 +2155,11 @@ async def run(
                       if b.name in write_tools.WRITE_TOOL_FUNCTIONS]
             composites = [(g, b) for g, b in batch
                           if b.name in composite_tools.COMPOSITE_TOOL_FUNCTIONS]
+            labels = [(g, b) for g, b in batch if b.name in FINDING_TOOL_FUNCTIONS]
             reads = [(g, b) for g, b in batch
                      if b.name not in write_tools.WRITE_TOOL_FUNCTIONS
                      and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS
+                     and b.name not in FINDING_TOOL_FUNCTIONS
                      and g not in duplicate_of]
             dupes = [(g, b) for g, b in batch if g in duplicate_of]
 
@@ -2169,10 +2235,62 @@ async def run(
                     ((gseq, b), await _call_write_tool(b.name, dict(b.input), write_ctx))
                 )
 
+            # Everything that ran this batch goes on the record BEFORE a label
+            # is checked, so a label may name a read from this batch — and so
+            # it can never name one that has not returned.
+            for (gseq, b), (result, err, _ms) in done_calls:
+                calls_by_seq[gseq] = {
+                    "tool": b.name,
+                    "arguments": dict(b.input),
+                    "error": err,
+                    "duplicate": gseq in duplicate_of,
+                    "is_read": (b.name in TOOL_FUNCTIONS
+                                and b.name not in write_tools.WRITE_TOOL_FUNCTIONS
+                                and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS),
+                }
+
+            # Labels last: a statement about calls that already happened, which
+            # reads nothing and can therefore run after everything that does.
+            # Validation is the whole of the work (agent/findings.py); the
+            # frame carries only what survived it, and a warning names what did
+            # not so a refused role is visible rather than silently absent.
+            for gseq, b in labels:
+                started = time.perf_counter()
+                try:
+                    result = findings.record_findings(
+                        (b.input or {}).get("findings"),
+                        calls=calls_by_seq, defs=defs,
+                    )
+                    err = None
+                except (ValueError, KeyError, TypeError) as exc:
+                    result, err = {"rows": [], "meta": {"error": str(exc)}}, str(exc)
+                ms = int((time.perf_counter() - started) * 1000)
+                done_calls.append(((gseq, b), (result, err, ms)))
+                if err is None:
+                    findings_recorded = list(result["rows"])
+                    yield _sse("finding", {
+                        "seq": gseq,
+                        "findings": findings_recorded,
+                        "rejected": result["meta"].get("rejected") or [],
+                    })
+                    if result["meta"].get("rejected"):
+                        yield _sse("warning", {
+                            "reason": "findings_rejected",
+                            "detail": "; ".join(
+                                f"call {r.get('seq')} as {r.get('role')}: {r.get('reason')}"
+                                for r in result["meta"]["rejected"]
+                            ),
+                        })
+
             tool_results = []
             for (gseq, b), (result, err, ms) in done_calls:
                 capped = _truncate(result)
-                meta = capped.get("meta") or {}
+                # The call's own number, on its own result, so the model has
+                # something to name when it records what the call WAS. The
+                # loop's annotation, not the tool's; a tool's meta is never
+                # otherwise touched here.
+                capped.setdefault("meta", {})["call_seq"] = gseq
+                meta = capped["meta"]
                 is_duplicate = gseq in duplicate_of
                 # A duplicate's notices are the original's, already pending
                 # and already announced; adding them again would have the
@@ -2202,7 +2320,7 @@ async def run(
                     pass                     # its gap was logged when it was decided
                 elif err:
                     log.gap("tool_refused", err[:2000], b.name)
-                elif not (capped.get("rows") or []):
+                elif not (capped.get("rows") or []) and b.name not in FINDING_TOOL_FUNCTIONS:
                     log.gap("empty_result", json.dumps(_json_safe(b.input))[:2000], b.name)
 
                 # Rows for the client, so an answer can draw the chart a tile
@@ -2224,6 +2342,7 @@ async def run(
                     not err
                     and not is_duplicate
                     and b.name not in write_tools.WRITE_TOOL_FUNCTIONS
+                    and b.name not in FINDING_TOOL_FUNCTIONS
                     and b.name != composite_tools.PAGE_CONTEXT_TOOL
                     and len(full_rows) <= MAX_ROWS_TO_CLIENT
                 )
@@ -2377,7 +2496,7 @@ async def run(
         user_id=user_id, asked_at=asked_at, question=question,
         final_answer=answer or None, notices=pending, receipts=last_meta,
         charted=charted, calls=calls_made, parent_id=parent_id,
-        page_context=page_evidence,
+        page_context=page_evidence, findings=findings_recorded,
     )
 
     # The ids of the two posts, so a client that is rendering the river can

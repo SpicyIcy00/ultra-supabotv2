@@ -282,6 +282,37 @@ export interface PageContextFrame {
   reads?: number;
 }
 
+/**
+ * What one read WAS in this piece of work — the `finding` frame, and the same
+ * object an answer post keeps in `payload.findings`.
+ *
+ * THE WHOLE OF WHAT THE MODEL MAY SAY ABOUT COMPOSITION. An integer naming a
+ * call that already ran, and one of four words. The loop has validated every
+ * entry against the executed set and against metrics.yaml before it is sent
+ * (agent/findings.py): a call that failed, a write, a re-read, a driver the
+ * definitions do not declare, a breakdown the metric refuses, or a read over a
+ * different window is REJECTED and named in `rejected` rather than sent here.
+ * So the client trusts this list absolutely and composes from it — and a turn
+ * with no frame composes exactly as it did before the frame existed.
+ */
+export interface Finding {
+  /** The call's seq — the same number on its tool_call and tool_result frames. */
+  seq: number;
+  role: 'primary' | 'driver' | 'breakdown' | 'context';
+  /** For a driver or a breakdown: the seq of the primary it hangs off. */
+  of: number | null;
+  tool: string;
+}
+
+export interface FindingFrame {
+  /** The seq of the record_findings call itself. */
+  seq: number;
+  /** Every role that stood. Replaces, never accumulates. */
+  findings: Finding[];
+  /** What the model asked for and the loop refused, with the reason. */
+  rejected: { seq: number | null; role: string | null; reason: string }[];
+}
+
 export type GeorgeTurn =
   | { role: 'user'; text: string; at: string }
   | {
@@ -331,6 +362,12 @@ export type GeorgeTurn =
       saved: SavedFrame[];
       /** Pages created or changed during this turn, in order, from the frame. */
       pageChanges: PageChangedFrame[];
+      /**
+       * The roles that stood, from the newest `finding` frame. Absent until
+       * one arrives, and absent for good on a turn that never recorded any —
+       * which composes as adjacency, exactly as before.
+       */
+      findings?: Finding[];
       /** meta of the last tool result — the receipts shown under the answer. */
       receipts?: ToolMeta;
       /**

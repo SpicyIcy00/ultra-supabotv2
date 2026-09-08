@@ -46,6 +46,7 @@ import { Prose } from './Prose';
 import { ReceiptsBlock } from './ReceiptsBlock';
 import { ResultActions } from './ResultActions';
 import { ResultSurface } from './ResultSurface';
+import type { Composition, WorkSection } from './composeWork';
 import { quietLabel, type ResultBlock } from './resultShape';
 import type { Activity } from './turnShape';
 import { TIME_UNKNOWN } from './postShape';
@@ -136,7 +137,15 @@ function FollowUpChips({ post, onAsk }: { post: Post; onAsk: (q: string) => void
  * screen they stay, and there is no control that closes them again — a figure
  * that has been read is not something to tidy away.
  */
-function Figures({ blocks, quiet }: { blocks: ResultBlock[]; quiet: boolean }) {
+function Figures({
+  blocks,
+  composition,
+  quiet,
+}: {
+  blocks: ResultBlock[];
+  composition: Composition;
+  quiet: boolean;
+}) {
   const [shown, setShown] = useState(!quiet);
   useEffect(() => {
     if (!quiet) setShown(true);
@@ -156,7 +165,32 @@ function Figures({ blocks, quiet }: { blocks: ResultBlock[]; quiet: boolean }) {
       </button>
     );
   }
-  return <ResultSurface blocks={blocks} />;
+  if (composition.kind === 'adjacent') return <ResultSurface blocks={composition.blocks} />;
+  return (
+    <div className="space-y-6">
+      {composition.sections.map((section) => (
+        <WorkSectionView key={section.role} section={section} />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * One rung of the ladder: the figure, what moved it, where it sits.
+ *
+ * THE LABEL IS THE DEFINITIONS' WORD FOR THE RUNG (composeWork.SECTION_LABEL),
+ * never the model's and never parsed from prose. The blocks inside are the same
+ * blocks resultShape composes for any surface; the section decides where they
+ * sit and nothing about what they are. A section with nothing drawn in it is
+ * not rendered at all — the composition never creates one.
+ */
+function WorkSectionView({ section }: { section: WorkSection }) {
+  return (
+    <section aria-label={section.label}>
+      <p className="mb-3 text-[11px] uppercase tracking-wider text-george-muted">{section.label}</p>
+      <ResultSurface blocks={section.blocks} />
+    </section>
+  );
 }
 
 /**
@@ -414,7 +448,7 @@ function WorkUnitView({
 
         {!unit.prose && unit.superseded && <SupersededAnswer text={unit.superseded} />}
 
-        <Figures blocks={unit.blocks} quiet={quiet} />
+        <Figures blocks={unit.blocks} composition={unit.composition} quiet={quiet} />
 
         {unit.error && (
           <p className="rounded-lg border border-george-line bg-george-paper px-3 py-2.5 text-[13px] text-george-navy">
