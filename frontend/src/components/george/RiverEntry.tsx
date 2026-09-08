@@ -235,7 +235,7 @@ export interface EntryProps {
  */
 function UtteranceView({ item, onOpenThread, onShare, sharing }: { item: Utterance; onOpenThread?: (t: string) => void; onShare?: (p: string) => void; sharing: boolean }) {
   return (
-    <div data-intent data-continues={item.continues ? 'true' : undefined} className={`flex gap-2.5 ${item.continues ? 'mt-1' : ''}`}>
+    <div data-intent data-entry-id={item.id} data-continues={item.continues ? 'true' : undefined} className={`flex gap-2.5 ${item.continues ? 'mt-1' : ''}`}>
       <div className="w-7 shrink-0" aria-hidden>
         {item.continues && <span className="ml-3 block text-[13px] leading-none text-george-muted">↳</span>}
       </div>
@@ -282,7 +282,7 @@ function WorkUnitView({ unit, grouped, quiet, narration, onAsk, onOpenThread, on
   const label = unit.view?.label ?? null;
 
   return (
-    <article data-work data-continues={unit.continues ? 'true' : undefined} className={`flex gap-2.5 ${unit.continues ? 'mt-3' : ''}`}>
+    <article data-work data-entry-id={unit.id} data-continues={unit.continues ? 'true' : undefined} className={`flex gap-2.5 ${unit.continues ? 'mt-3' : ''}`}>
       <div className="flex w-7 shrink-0 flex-col items-center">
         {!grouped && !unit.continues && <MarkAvatar />}
         <WorkSpine calls={unit.calls} findings={unit.findings} settled={unit.state !== 'streaming'} live={live} />
