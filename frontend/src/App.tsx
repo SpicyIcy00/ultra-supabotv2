@@ -115,6 +115,7 @@ function App() {
                   <Route path="/ask/:threadId" element={george(<AskPage />)} />
                   <Route path="/inbox" element={george(<InboxPage />)} />
                   <Route path="/pages" element={george(<PagesPage />)} />
+                  <Route path="/pages/:pageId" element={george(<PagesPage />)} />
                   <Route path="/workflows" element={george(<WorkflowsPage />)} />
                   {/* The paths George lived at until 2026-09-07. */}
                   <Route path="/george" element={<Navigate to="/today" replace />} />

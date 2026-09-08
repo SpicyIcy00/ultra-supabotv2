@@ -92,7 +92,7 @@ describe('a stored answer that kept its calls', () => {
   it('pins exactly the stored calls, with the question as the title', async () => {
     createPin.mockResolvedValue({
       id: 'pin-1', title: 'How is Fame doing?', question: 'How is Fame doing?', page: null,
-      conversation_id: 'conv-1', tool_calls: [{ tool: 'get_sales', arguments: ARGS }],
+      page_id: null, position: 0, conversation_id: 'conv-1', tool_calls: [{ tool: 'get_sales', arguments: ARGS }],
       created_at: '2026-09-07T09:01:00+08:00', last_run_at: null, last_ok_at: null,
       last_status: null,
     });

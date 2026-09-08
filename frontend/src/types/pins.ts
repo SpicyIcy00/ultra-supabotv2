@@ -1,10 +1,11 @@
 /**
- * Types for the pins API.
+ * Types for the pins and pages API.
  *
  * These mirror the Pydantic models in
- * backend/app/api/v1/routes/george_pins.py one-for-one, the same discipline
- * types/george.ts sets for the SSE frames. There is no runtime validation, so
- * drift shows up as an undefined field in the UI rather than an error.
+ * backend/app/api/v1/routes/george_pins.py and george_pages.py one-for-one,
+ * the same discipline types/george.ts sets for the SSE frames. There is no
+ * runtime validation, so drift shows up as an undefined field in the UI rather
+ * than an error.
  */
 import type { GeorgeNotice, ToolMeta } from './george';
 
@@ -27,7 +28,12 @@ export interface Pin {
   id: string;
   title: string;
   question: string | null;
+  /** The TITLE of the page it sits on — presentation. Null for Ungrouped. */
   page: string | null;
+  /** The page's identity. Null for Ungrouped, which is not a page. */
+  page_id: string | null;
+  /** Its place on a real page, dense 0..n-1; meaningless in Ungrouped. */
+  position: number;
   conversation_id: string | null;
   tool_calls: PinToolCall[];
   created_at: string;
@@ -36,9 +42,25 @@ export interface Pin {
   last_status: PinStatus | null;
 }
 
-/** A page is a collection of pins; it has no existence apart from them. */
+/**
+ * A page: a person's ordered workspace of pins, with a title and a one-line
+ * purpose. A row since 2026-09-08, so it can be empty and can be renamed
+ * without anything bound to it moving.
+ */
+export interface Page {
+  id: string;
+  title: string;
+  purpose: string | null;
+  created_at: string;
+  updated_at: string;
+  /** How many pins sit on it. Zero is a real state. */
+  pins: number;
+}
+
+/** The legacy listing: a page's title and id, or `page: null` for Ungrouped. */
 export interface PinPage {
   page: string | null;
+  page_id: string | null;
   pins: number;
 }
 
@@ -69,6 +91,8 @@ export interface CreatePinRequest {
   title?: string;
   question?: string;
   conversation_id?: string;
+  /** Where it lands: by identity, or by title (an existing title joins, a new one creates). */
+  page_id?: string;
   page?: string;
   tool_calls: PinToolCall[];
   /** Accept a page name differing from an existing one only by case. */
@@ -83,17 +107,64 @@ export interface SimilarPageConflict {
 }
 
 /**
- * A membership or title change. A field left out is left alone; `page: null`
- * is ungrouped, which is how a pin leaves a page without being deleted.
+ * Where on its page a pin goes, relationally. Exactly one field; the
+ * service owns the arithmetic.
+ */
+export interface Placement {
+  before?: string;
+  after?: string;
+  at?: 'top' | 'bottom';
+}
+
+/**
+ * A membership, order or title change. A field left out is left alone;
+ * `page_id: null` is Ungrouped, which is how a pin leaves a page without
+ * being deleted.
  */
 export interface UpdatePinRequest {
-  page?: string | null;
+  page_id?: string | null;
+  page?: string;
+  place?: Placement;
   title?: string;
   allow_similar_page?: boolean;
 }
 
-/** What a page rename did: the name it settled on and how many pins followed. */
+/** What a page rename did: the page, the name it settled on, and its pin count. */
 export interface PageRenameResult {
+  page_id: string;
   page: string;
   pins_moved: number;
+}
+
+export interface CreatePageRequest {
+  title: string;
+  purpose?: string;
+  allow_similar_page?: boolean;
+}
+
+/** A title or purpose change. `purpose: null` clears it. */
+export interface UpdatePageRequest {
+  title?: string;
+  purpose?: string | null;
+  allow_similar_page?: boolean;
+}
+
+export interface PageDeleted {
+  id: string;
+  title: string;
+  /** Every pin the page held is in Ungrouped now. None was deleted. */
+  pins_ungrouped: number;
+}
+
+/** One structural write to a page, whoever made it. Metadata only. */
+export interface PageEvent {
+  id: string;
+  page_id: string | null;
+  actor: 'user' | 'george';
+  operation: string;
+  pin_id: string | null;
+  before: Record<string, unknown> | null;
+  after: Record<string, unknown> | null;
+  conversation_id: string | null;
+  at: string;
 }

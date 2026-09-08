@@ -14,9 +14,17 @@
  * query, and until it has answered the picker must not imply there are none:
  * loading says it is checking, failed says the lookup failed, and only a
  * loaded empty list says there are no pages yet.
+ *
+ * An existing page is chosen BY ID; its title is the label. Empty pages are
+ * offered too — a page a person just made is exactly where a pin goes next.
  */
 import { useId } from 'react';
 import type { PageChoice } from './pageChoice';
+
+export interface PickablePage {
+  page_id: string;
+  title: string;
+}
 
 export function PagePicker({
   pages,
@@ -25,8 +33,8 @@ export function PagePicker({
   value,
   onChange,
 }: {
-  /** The caller's existing page names, once loaded. */
-  pages: string[];
+  /** The caller's existing pages, once loaded. */
+  pages: PickablePage[];
   loading: boolean;
   failed: boolean;
   value: PageChoice;
@@ -57,15 +65,15 @@ export function PagePicker({
       )}
 
       {pages.map((page) => (
-        <label key={page} className={row}>
+        <label key={page.page_id} className={row}>
           <input
             type="radio"
             name={group}
             className={radio}
-            checked={value.kind === 'existing' && value.page === page}
-            onChange={() => onChange({ kind: 'existing', page })}
+            checked={value.kind === 'existing' && value.pageId === page.page_id}
+            onChange={() => onChange({ kind: 'existing', pageId: page.page_id, title: page.title })}
           />
-          {page}
+          {page.title}
         </label>
       ))}
 

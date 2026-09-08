@@ -118,13 +118,15 @@ export function PinTile({
             {run.isPending ? 'Reading…' : 'Refresh'}
           </button>
           {actions}
+          {/* The destructive act, named as one. "Remove from page" — the
+              non-destructive act — is the page's to offer beside it. */}
           <button
             type="button"
             onClick={() => onDelete(pin.id)}
-            aria-label={`Remove ${pin.title}`}
+            aria-label={`Delete ${pin.title}`}
             className="text-george-muted hover:text-george-navy"
           >
-            Remove
+            Delete
           </button>
         </div>
       </div>

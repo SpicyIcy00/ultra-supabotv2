@@ -32,11 +32,15 @@ afterEach(() => {
 
 const CALLS: PinToolCall[] = [{ tool: 'get_sales', arguments: { metric: 'net_sales' } }];
 
+const PAGE_IDS: Record<string, string> = { Fame: 'p-fame', Purchasing: 'p-purch', 'Drink Mix': 'p-mix' };
+
 const stored = (page: string | null): Pin => ({
   id: 'pin-1',
   title: 'How is Fame doing?',
   question: 'How is Fame doing?',
   page,
+  page_id: page ? PAGE_IDS[page] : null,
+  position: 0,
   conversation_id: 'conv-1',
   tool_calls: [{ tool: 'get_sales', arguments: { metric: 'net_sales' } }],
   created_at: '2026-09-07T09:00:00+08:00',
@@ -47,9 +51,9 @@ const stored = (page: string | null): Pin => ({
 
 function mount() {
   listPinPages.mockResolvedValue([
-    { page: 'Fame', pins: 2 },
-    { page: 'Purchasing', pins: 1 },
-    { page: null, pins: 3 },
+    { page: 'Fame', page_id: 'p-fame', pins: 2 },
+    { page: 'Purchasing', page_id: 'p-purch', pins: 1 },
+    { page: null, page_id: null, pins: 3 },
   ]);
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -104,7 +108,7 @@ describe('choosing a page', () => {
 });
 
 describe('pinning', () => {
-  it('sends the chosen page and reports where the pin went, with a way there', async () => {
+  it('sends the chosen page BY ID and reports where the pin went, with a way there', async () => {
     createPin.mockResolvedValue(stored('Fame'));
     mount();
     await openDialog();
@@ -114,13 +118,14 @@ describe('pinning', () => {
     await screen.findByText(/Pinned/);
     expect(createPin).toHaveBeenCalledTimes(1);
     const body = createPin.mock.calls[0][0];
-    expect(body.page).toBe('Fame');
+    expect(body.page_id).toBe('p-fame');
+    expect(body.page).toBeUndefined();
     expect(body.tool_calls).toEqual([{ tool: 'get_sales', arguments: { metric: 'net_sales' } }]);
     expect(body.conversation_id).toBe('conv-1');
 
     expect(screen.getByText('Fame')).toBeTruthy();
     const open = screen.getByRole('link', { name: 'Open' }) as HTMLAnchorElement;
-    expect(open.getAttribute('href')).toBe('/pages?p=Fame');
+    expect(open.getAttribute('href')).toBe('/pages/p-fame');
   });
 
   it('sends a new page as a name — the page exists because the pin does', async () => {
@@ -132,6 +137,7 @@ describe('pinning', () => {
     fireEvent.click(screen.getAllByRole('button', { name: /^Pin$/ }).at(-1) as HTMLElement);
     await screen.findByText(/Pinned/);
     expect(createPin.mock.calls[0][0].page).toBe('Drink Mix');
+    expect(createPin.mock.calls[0][0].page_id).toBeUndefined();
   });
 
   it('sends no page for none, and says so', async () => {
@@ -141,8 +147,9 @@ describe('pinning', () => {
     fireEvent.click(screen.getAllByRole('button', { name: /^Pin$/ }).at(-1) as HTMLElement);
     await screen.findByText(/with no page/);
     expect(createPin.mock.calls[0][0].page).toBeUndefined();
+    expect(createPin.mock.calls[0][0].page_id).toBeUndefined();
     expect((screen.getByRole('link', { name: 'Open' }) as HTMLAnchorElement).getAttribute('href'))
-      .toBe('/pages?p=~');
+      .toBe('/pages/ungrouped');
   });
 
   it('turns a case-only collision into a choice rather than deciding it', async () => {
@@ -167,7 +174,9 @@ describe('pinning', () => {
     await waitFor(() => expect((screen.getByLabelText('Fame') as HTMLInputElement).checked).toBe(true));
     fireEvent.click(screen.getAllByRole('button', { name: /^Pin$/ }).at(-1) as HTMLElement);
     await screen.findByText(/Pinned/);
-    expect(createPin.mock.calls[1][0].page).toBe('Fame');
+    // "Use Fame" chose the EXISTING page, so the retry goes by its id.
+    expect(createPin.mock.calls[1][0].page_id).toBe('p-fame');
+    expect(createPin.mock.calls[1][0].page).toBeUndefined();
     expect(createPin.mock.calls[1][0].allow_similar_page).toBe(false);
   });
 

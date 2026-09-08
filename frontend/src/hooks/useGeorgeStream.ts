@@ -44,7 +44,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { useQueryClient } from '@tanstack/react-query';
 import { authenticatedFetch } from '../services/httpAuth';
-import { scopeForAsk } from '../components/george/pageScope';
+import { retitled, scopeForAsk, scopeForRequest } from '../components/george/pageScope';
 import type {
   AskHistoryTurn,
   DoneFrame,
@@ -296,7 +296,7 @@ export function useGeorgeStream() {
           body: JSON.stringify({
             question,
             page_context: options.pageContext ?? null,
-            page_scope: scope,
+            page_scope: scopeForRequest(scope),
             history,
             thread_id: thread,
             parent_id: thread ? (options.parentId ?? null) : null,
@@ -449,7 +449,13 @@ export function useGeorgeStream() {
                 patchLast((t) => {
                   t.pageChanges.push(data as unknown as PageChangedFrame);
                 });
+                // A rename of the page this thread is bound to changes the
+                // indicator's word and nothing else: the identity is the id.
+                if (typeof data.page_id === 'string' && typeof data.title === 'string') {
+                  setScope(retitled(scopeRef.current, data.page_id, data.title));
+                }
                 qc.invalidateQueries({ queryKey: ['pages'] });
+                qc.invalidateQueries({ queryKey: ['page'] });
                 qc.invalidateQueries({ queryKey: ['pin-pages'] });
                 qc.invalidateQueries({ queryKey: ['pins'] });
                 break;

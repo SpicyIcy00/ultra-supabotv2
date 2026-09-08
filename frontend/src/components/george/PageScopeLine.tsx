@@ -19,7 +19,7 @@ export function PageScopeLine({ scope, className = '' }: { scope: PageScope | nu
     <p className={`flex items-baseline gap-1.5 text-[12px] text-george-muted ${className}`}>
       <span className="text-[11px] uppercase tracking-wider">Page context</span>
       <span aria-hidden>·</span>
-      <Link to={pagePath(scope.name)} className="truncate text-george-slate hover:text-george-navy">
+      <Link to={pagePath(scope.page_id)} className="truncate text-george-slate hover:text-george-navy">
         {scopeLabel(scope)}
       </Link>
     </p>

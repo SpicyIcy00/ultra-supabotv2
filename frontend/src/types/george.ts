@@ -213,15 +213,18 @@ export interface PageChangedFrame {
 }
 
 /**
- * A George page as an IDENTITY: its name, or null for the ungrouped pins.
+ * A George page as an IDENTITY: its id, or null for the ungrouped pins.
  *
- * Mirrors PageScope in backend/app/api/v1/routes/george.py. This is what
- * binds the server's page reader to one page of the caller's, and it is
- * distinct from the display string `page_context` on purpose — an identity
- * is never parsed back out of "Pages / <name>" (pageScope.ts).
+ * Mirrors PageScope in backend/app/api/v1/routes/george.py, which binds the
+ * server's page reader AND writer to one page of the caller's. `title` rides
+ * along for the indicator only — it is what the page was called when the
+ * scope was taken, it is never compared, and it is not sent as the identity
+ * (pageScope.scopeForRequest). A rename retitles the indicator; the thread
+ * stays bound to the same id.
  */
 export interface PageScope {
-  name: string | null;
+  page_id: string | null;
+  title: string | null;
 }
 
 /**
@@ -250,8 +253,17 @@ export interface PageContextPin {
 }
 
 export interface PageContextFrame {
-  /** The page's name; null is the ungrouped pins. */
+  /**
+   * The page's identity; null is the ungrouped pins. Absent on an answer
+   * stored before 2026-09-08, which knew the page by title only.
+   */
+  page_id?: string | null;
+  /** The page's title at the time of the answer; null is the ungrouped pins. */
   page: string | null;
+  /** The owner's one-line purpose, as it read then. */
+  purpose?: string | null;
+  /** True when the page had nothing on it. */
+  empty?: boolean;
   read_at: string;
   figures: boolean;
   pins_total: number;

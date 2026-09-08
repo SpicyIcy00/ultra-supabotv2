@@ -15,7 +15,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 interface Sent {
   question: string;
   page_context: string | null;
-  page_scope: { name: string | null } | null;
+  page_scope: { page_id: string | null } | null;
   thread_id: string | null;
 }
 
@@ -68,33 +68,36 @@ describe('page scope on the stream', () => {
   it('binds a new thread to the page it was asked from, and every follow-up carries it', async () => {
     const { result } = mount();
     await act(() => result.current.ask('What has changed?', {
-      pageContext: 'Pages / AJI BARN Reorder', pageScope: { name: 'AJI BARN Reorder' },
+      pageContext: 'Pages / AJI BARN Reorder',
+      pageScope: { page_id: 'p-reorder', title: 'AJI BARN Reorder' },
     }));
     await waitFor(() => expect(result.current.threadId).toBe('thread-1'));
-    expect(result.current.pageScope).toEqual({ name: 'AJI BARN Reorder' });
-    expect(sent[0].page_scope).toEqual({ name: 'AJI BARN Reorder' });
+    expect(result.current.pageScope).toEqual({ page_id: 'p-reorder', title: 'AJI BARN Reorder' });
+    // The identity goes to the server; the title is the indicator's alone.
+    expect(sent[0].page_scope).toEqual({ page_id: 'p-reorder' });
+    expect(JSON.stringify(sent[0].page_scope)).not.toContain('Reorder');
     expect(sent[0].page_context).toBe('Pages / AJI BARN Reorder');
 
     // The follow-up names no page — the person may have navigated away —
     // and still goes out under the thread's scope.
     await act(() => result.current.ask('Which one matters most?'));
     expect(sent[1].thread_id).toBe('thread-1');
-    expect(sent[1].page_scope).toEqual({ name: 'AJI BARN Reorder' });
+    expect(sent[1].page_scope).toEqual({ page_id: 'p-reorder' });
     expect(sent[1].page_context).toBeNull();
   });
 
   it('ignores a different scope offered inside a thread', async () => {
     const { result } = mount();
-    await act(() => result.current.ask('q', { pageScope: { name: 'A' } }));
+    await act(() => result.current.ask('q', { pageScope: { page_id: 'a', title: 'A' } }));
     await waitFor(() => expect(result.current.threadId).toBe('thread-1'));
-    await act(() => result.current.ask('q2', { pageScope: { name: 'B' } }));
-    expect(sent[1].page_scope).toEqual({ name: 'A' });
-    expect(result.current.pageScope).toEqual({ name: 'A' });
+    await act(() => result.current.ask('q2', { pageScope: { page_id: 'b', title: 'B' } }));
+    expect(sent[1].page_scope).toEqual({ page_id: 'a' });
+    expect(result.current.pageScope).toEqual({ page_id: 'a', title: 'A' });
   });
 
   it('has no scope on a fresh Ask, and reset clears it', async () => {
     const { result } = mount();
-    await act(() => result.current.ask('q', { pageScope: { name: 'A' } }));
+    await act(() => result.current.ask('q', { pageScope: { page_id: 'a', title: 'A' } }));
     await waitFor(() => expect(result.current.threadId).toBe('thread-1'));
 
     act(() => result.current.reset());
@@ -110,15 +113,15 @@ describe('page scope on the stream', () => {
 
   it('gives an opened thread its own scope, never the previous thread’s', async () => {
     const { result } = mount();
-    await act(() => result.current.ask('q', { pageScope: { name: 'A' } }));
+    await act(() => result.current.ask('q', { pageScope: { page_id: 'a', title: 'A' } }));
     await waitFor(() => expect(result.current.threadId).toBe('thread-1'));
 
     // Thread B, reopened with the scope recovered from its stored answers.
-    act(() => result.current.open([], 'thread-B', { name: 'B' }));
-    expect(result.current.pageScope).toEqual({ name: 'B' });
+    act(() => result.current.open([], 'thread-B', { page_id: 'b', title: 'B' }));
+    expect(result.current.pageScope).toEqual({ page_id: 'b', title: 'B' });
     await act(() => result.current.ask('and here?'));
     expect(sent[1].thread_id).toBe('thread-B');
-    expect(sent[1].page_scope).toEqual({ name: 'B' });
+    expect(sent[1].page_scope).toEqual({ page_id: 'b' });
 
     // An ordinary thread, reopened: nothing from A or B.
     act(() => result.current.open([], 'thread-C'));
@@ -131,9 +134,9 @@ describe('page scope on the stream', () => {
   it('carries the ungrouped scope as null, never as a word', async () => {
     const { result } = mount();
     await act(() => result.current.ask('q', {
-      pageContext: 'Pages / Ungrouped', pageScope: { name: null },
+      pageContext: 'Pages / Ungrouped', pageScope: { page_id: null, title: null },
     }));
-    expect(sent[0].page_scope).toEqual({ name: null });
+    expect(sent[0].page_scope).toEqual({ page_id: null });
     expect(JSON.stringify(sent[0].page_scope)).not.toContain('Ungrouped');
   });
 

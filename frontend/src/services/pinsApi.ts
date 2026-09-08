@@ -5,6 +5,10 @@
  * here caches a figure — `runPin` is the only source of a number, and every
  * number it returns arrives with its own meta.
  *
+ * PAGES ARE ADDRESSED BY ID (2026-09-08). A listing is scoped by page_id, or
+ * `null` for Ungrouped; a move names a page_id, or a title only when it is a
+ * NEW page being brought into being. pagesApi.ts is the page's own surface.
+ *
  * Bare axios, matching dashboardDefaultsApi: the auth interceptors are
  * installed on both the shared instance and global axios (see httpAuth.ts).
  */
@@ -21,13 +25,18 @@ import type {
 
 const API_BASE = '/api/v1/george/pins';
 
-export const listPins = async (page?: string | null): Promise<Pin[]> => {
+/**
+ * The caller's pins. `undefined` is every pin, newest first; `null` is the
+ * ungrouped pins; a string is one page by id, in the page's own order.
+ */
+export const listPins = async (pageId?: string | null): Promise<Pin[]> => {
   const params =
-    page === null ? { ungrouped: true } : page ? { page } : undefined;
+    pageId === null ? { ungrouped: true } : pageId ? { page_id: pageId } : undefined;
   const { data } = await axios.get<Pin[]>(API_BASE, { params });
   return data;
 };
 
+/** The legacy listing, for the picker: every real page with its id, and Ungrouped. */
 export const listPinPages = async (): Promise<PinPage[]> => {
   const { data } = await axios.get<PinPage[]>(`${API_BASE}/pages`);
   return data;
@@ -38,21 +47,22 @@ export const createPin = async (body: CreatePinRequest): Promise<Pin> => {
   return data;
 };
 
+/** Delete the pin itself — the saved analysis, not just its place on a page. */
 export const deletePin = async (id: string): Promise<void> => {
   await axios.delete(`${API_BASE}/${id}`);
 };
 
 /**
- * Move a pin to a page (existing or new), off a page (`page: null`), or
- * retitle it. The calls and the run history are untouched and nothing is
- * re-run: membership is not a figure.
+ * Move a pin to a page (by id, or by a NEW title), off a page (`page_id:
+ * null`), place it on its page, or retitle it. The calls and the run history
+ * are untouched and nothing is re-run: membership is not a figure.
  */
 export const updatePin = async (id: string, body: UpdatePinRequest): Promise<Pin> => {
   const { data } = await axios.patch<Pin>(`${API_BASE}/${id}`, body);
   return data;
 };
 
-/** Rename one of the caller's pages: every pin of theirs on it, in one write. */
+/** Rename one of the caller's pages by its current exact title (legacy; pagesApi.updatePage is the one by id). */
 export const renamePage = async (
   page: string,
   name: string,

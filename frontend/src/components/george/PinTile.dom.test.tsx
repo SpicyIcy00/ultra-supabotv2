@@ -51,6 +51,8 @@ const PIN: Pin = {
   title: 'Fame this week',
   question: 'How is Fame doing this week?',
   page: 'Fame',
+  page_id: 'p-fame',
+  position: 0,
   conversation_id: null,
   tool_calls: [
     { tool: 'get_sales', arguments: { metric: 'net_sales' } },

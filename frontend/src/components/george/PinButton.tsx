@@ -31,7 +31,7 @@ import {
   listPinPages,
   similarPageConflict,
 } from '../../services/pinsApi';
-import { chosenPage, isChoiceReady, type PageChoice } from './pageChoice';
+import { choiceBody, isChoiceReady, type PageChoice } from './pageChoice';
 import { pagePath } from './pageShape';
 import { PagePicker } from './PagePicker';
 
@@ -73,7 +73,12 @@ export function PinButton({
         title: question?.slice(0, 200) || undefined,
         question,
         conversation_id: conversationId ?? undefined,
-        page: chosenPage(choice) ?? undefined,
+        ...(() => {
+          const body = choiceBody(choice);
+          if (!body) return {};
+          if ('page' in body) return { page: body.page };
+          return body.page_id ? { page_id: body.page_id } : {};
+        })(),
         tool_calls: calls,
         allow_similar_page: allowSimilar,
       }),
@@ -120,7 +125,7 @@ export function PinButton({
           )}
         </span>
         <span className="text-george-muted" aria-hidden>·</span>
-        <Link to={pagePath(pinned.page)} className="text-george-navy hover:underline">
+        <Link to={pagePath(pinned.page_id)} className="text-george-navy hover:underline">
           Open
         </Link>
       </span>
@@ -128,7 +133,9 @@ export function PinButton({
   }
 
   const tooMany = calls.length > MAX_CALLS;
-  const existing = (pages.data ?? []).flatMap((p) => (p.page ? [p.page] : []));
+  const existing = (pages.data ?? []).flatMap((p) =>
+    p.page_id && p.page ? [{ page_id: p.page_id, title: p.page }] : [],
+  );
 
   const close = () => {
     setOpen(false);
@@ -178,16 +185,21 @@ export function PinButton({
                 <div className="mt-2 rounded-lg border border-george-line bg-george-paper p-2">
                   <p className="text-[12px] leading-relaxed text-george-navy">{conflict.message}</p>
                   <div className="mt-2 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setChoice({ kind: 'existing', page: conflict.existing_page });
-                        setConflict(null);
-                      }}
-                      className="rounded-md border border-george-line px-2 py-1 text-[12px] text-george-navy"
-                    >
-                      Use “{conflict.existing_page}”
-                    </button>
+                    {(() => {
+                      const match = existing.find((p) => p.title === conflict.existing_page);
+                      return match ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setChoice({ kind: 'existing', pageId: match.page_id, title: match.title });
+                            setConflict(null);
+                          }}
+                          className="rounded-md border border-george-line px-2 py-1 text-[12px] text-george-navy"
+                        >
+                          Use “{conflict.existing_page}”
+                        </button>
+                      ) : null;
+                    })()}
                     <button
                       type="button"
                       onClick={() => create.mutate(true)}
