@@ -387,11 +387,21 @@ export function useGeorgeStream() {
 
               case 'answer_reset':
                 // George is about to write the answer again — because a caveat
-                // was missing, a pin was claimed but not made, or the tool
-                // budget ran out. Deltas accumulate into one turn, so without
+                // was missing, a pin was claimed but not made, the tool
+                // budget ran out, or what he wrote so far was narration
+                // before a read. Deltas accumulate into one turn, so without
                 // this the rewrite lands UNDER the draft it replaces and the
                 // whole answer reads twice.
+                //
+                // Interim prose is KEPT, as narration: "Rockwell is down; let
+                // me look at the drivers" is a true account of what he did,
+                // and it belongs in the activity disclosure beside his
+                // reasoning — never above the answer, which is what it was
+                // doing until the loop learned to say which it was.
                 patchLast((t) => {
+                  if (data.reason === 'interim_prose' && t.text.trim()) {
+                    t.narration = [t.narration, t.text.trim()].filter(Boolean).join('\n\n');
+                  }
                   t.text = '';
                 });
                 break;

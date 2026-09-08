@@ -1532,6 +1532,19 @@ async def run(
             messages.append({"role": "assistant", "content": final.content})
             tool_uses = [b for b in final.content if b.type == "tool_use"]
 
+            # Prose in an iteration that goes on to call tools is NARRATION,
+            # not the answer — "Rockwell is down; let me look at the drivers"
+            # before the drivers are read. It streamed to the client as text
+            # deltas, so until this frame existed it stayed on screen ABOVE
+            # the answer that followed, while the stored post held the last
+            # iteration's text only: the live conversation and the stored one
+            # disagreed about what the answer was. The reset tells the client
+            # to move what it has into the activity disclosure, where the
+            # model's own account of its work already lives, and to start the
+            # answer again from nothing.
+            if tool_uses and "".join(text_parts).strip():
+                yield _reset_answer("interim_prose")
+
             # ---- no more tools: candidate answer -------------------------
             if not tool_uses:
                 answer = "".join(text_parts).strip()

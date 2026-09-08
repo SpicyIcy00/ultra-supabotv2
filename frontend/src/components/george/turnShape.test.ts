@@ -74,6 +74,10 @@ describe('activity', () => {
     expect(hasActivity(george({ toolCalls: [call(1)] }))).toBe(true);
     expect(hasActivity(george({ thinking: 'x' }))).toBe(true);
     expect(hasActivity(george({ done }))).toBe(true);
+    // Narration — what he said before a read — is activity too, and blank
+    // narration is not.
+    expect(hasActivity(george({ narration: 'Rockwell is down; checking the drivers.' }))).toBe(true);
+    expect(hasActivity(george({ narration: '  ' }))).toBe(false);
   });
 });
 

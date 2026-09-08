@@ -120,7 +120,12 @@ export function activitySummary(turn: AnswerTurn): string {
 
 /** Whether there is any activity to disclose at all. */
 export function hasActivity(turn: AnswerTurn): boolean {
-  return turn.toolCalls.length > 0 || turn.thinking.trim().length > 0 || Boolean(turn.done);
+  return (
+    turn.toolCalls.length > 0 ||
+    turn.thinking.trim().length > 0 ||
+    Boolean(turn.narration?.trim()) ||
+    Boolean(turn.done)
+  );
 }
 
 /**

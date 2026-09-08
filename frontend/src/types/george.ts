@@ -247,6 +247,16 @@ export type GeorgeTurn =
       role: 'george';
       text: string;
       thinking: string;
+      /**
+       * What George said BEFORE he read something — prose from an iteration
+       * that went on to call tools, moved here by an `answer_reset` with
+       * reason `interim_prose`. Narration, not the answer: it is shown in
+       * the activity disclosure beside his reasoning and never above the
+       * answer, so what is on screen and what the river stored agree about
+       * what he concluded. Absent on a stored turn; the server keeps the
+       * final answer only.
+       */
+      narration?: string;
       toolCalls: ToolCall[];
       notices: GeorgeNotice[];
       /** Pins created during this turn, in the order they were made. */

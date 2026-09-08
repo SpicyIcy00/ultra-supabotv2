@@ -65,6 +65,15 @@ export function ActivityDisclosure({ turn, live }: { turn: AnswerTurn; live: boo
               ))}
             </div>
           )}
+          {/* What he said while working — prose from before a read, moved
+              here by the loop's interim_prose reset. His words, in his
+              register, but an account of the work rather than the answer:
+              same treatment as the reasoning below. */}
+          {turn.narration && (
+            <p className="border-l-2 border-george-line pl-3 font-george-serif text-[13px] leading-relaxed text-george-slate whitespace-pre-wrap">
+              {turn.narration}
+            </p>
+          )}
           {/* The full reasoning, once the live line under the mark has gone.
               While the turn runs it streams there instead, and showing it
               here too would be the same text twice on one screen. */}
