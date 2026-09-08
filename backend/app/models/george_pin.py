@@ -10,17 +10,27 @@ Written by the APPLICATION role, not by either George role: george_ro is
 read-only and has no access to this schema, and george_log has INSERT without
 SELECT so it could never list a pin. Reading and deleting are scoped to
 created_by IN THE QUERY, because this table deliberately has RLS off.
+
+MEMBERSHIP IS A FOREIGN KEY NOW (2026-09-08, Page Workshop V1). `page_id`
+points at george.pages; NULL is Ungrouped, which stays virtual. `position` is
+the pin's place on its page — dense 0..n-1, owned and renumbered by the
+service on every structural write, never supplied by a caller as a raw
+integer. On the ungrouped pins position is meaningless and the order stays
+created_at DESC. The old `page` text column is gone; `page` below is the
+title of the page the pin sits on, read through the relationship, so every
+consumer that showed a page NAME still can — but nothing writes one.
 """
 
 from datetime import datetime
 from typing import Any, Optional
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, DateTime, Index, Text, func, text
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, Text, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PgUUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+from app.models.george_page import GeorgePage
 
 # The states a pin (or one of its tool calls) can be in after a run. Kept here
 # and mirrored by the CHECK constraint in the migration.
@@ -41,13 +51,10 @@ class GeorgePin(Base):
         ),
         CheckConstraint("jsonb_array_length(tool_calls) > 0",
                         name="ck_pins_tool_calls_not_empty"),
-        CheckConstraint("page IS NULL OR page = btrim(page)",
-                        name="ck_pins_page_trimmed"),
-        CheckConstraint("page IS NULL OR length(page) > 0",
-                        name="ck_pins_page_not_blank"),
+        CheckConstraint("position >= 0", name="ck_pins_position_non_negative"),
         Index("ix_pins_owner_created", "created_by", text("created_at DESC")),
-        Index("ix_pins_owner_page", "created_by", "page"),
-        Index("ix_pins_owner_page_lower", "created_by", text("lower(page)")),
+        Index("ix_pins_page_position", "page_id", "position"),
+        Index("ix_pins_owner_page_id", "created_by", "page_id"),
         {"schema": "george"},
     )
 
@@ -62,9 +69,20 @@ class GeorgePin(Base):
     question: Mapped[Optional[str]] = mapped_column(Text)
     conversation_id: Mapped[Optional[UUID]] = mapped_column(PgUUID(as_uuid=True))
 
-    # NULL means ungrouped. Normalised on write; a case-insensitive
-    # near-duplicate is refused rather than silently forking a page.
-    page: Mapped[Optional[str]] = mapped_column(Text)
+    # NULL means ungrouped. SET NULL on delete is the database's backstop; the
+    # service ungroups explicitly so positions stay dense.
+    page_id: Mapped[Optional[UUID]] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("george.pages.id", name="fk_pins_page", ondelete="SET NULL"),
+    )
+    # Dense 0..n-1 within a real page; unused when page_id is NULL.
+    position: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+
+    # Loaded with the pin, always, so `page` below can be read on an object
+    # that came back from any select without a lazy load — which the async
+    # session would refuse. Code that sets page_id on a loaded pin must set
+    # this too; the service does, in one place.
+    page_obj: Mapped[Optional[GeorgePage]] = relationship(GeorgePage, lazy="joined")
 
     # [{tool, arguments}, ...] in call order.
     tool_calls: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False)
@@ -73,3 +91,8 @@ class GeorgePin(Base):
     last_run_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     last_ok_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     last_status: Mapped[Optional[str]] = mapped_column(Text)
+
+    @property
+    def page(self) -> Optional[str]:
+        """The TITLE of the page this pin sits on, or None for Ungrouped. Read-only."""
+        return self.page_obj.title if self.page_obj is not None else None

@@ -26,6 +26,12 @@ from app.models.vending import (
     VendingOrder,
     VendingOrderLine,
 )
+from app.models.george_page import (
+    GeorgePage,
+    GeorgePageEvent,
+    PAGE_EVENT_ACTORS,
+    PAGE_OPERATIONS,
+)
 from app.models.george_pin import GeorgePin, PIN_STATUSES
 from app.models.george_post import (
     GeorgePost,
@@ -69,6 +75,10 @@ __all__ = [
     "VendingAisle",
     "VendingOrder",
     "VendingOrderLine",
+    "GeorgePage",
+    "GeorgePageEvent",
+    "PAGE_EVENT_ACTORS",
+    "PAGE_OPERATIONS",
     "GeorgePin",
     "PIN_STATUSES",
     "GeorgePost",
