@@ -55,7 +55,7 @@ import { AskComposer } from '../components/george/AskComposer';
 import { PageScopeLine } from '../components/george/PageScopeLine';
 import { threadScope } from '../components/george/pageScope';
 import { RiverEntries } from '../components/george/RiverEntry';
-import { ReactiveMark } from '../components/george/ReactiveMark';
+import { PresenceMark } from '../components/george/PresenceMark';
 import { liveCognition } from '../components/george/cognition';
 import { markDetail } from '../components/george/markState';
 import { riverMerge } from '../components/george/riverMerge';
@@ -198,8 +198,7 @@ function EmptyAsk() {
     <div className={`${SHELL_PAGE_HEIGHT} flex flex-col overflow-y-auto px-4 md:px-8`}>
       <div className={`${SHELL_COLUMN} flex flex-1 flex-col`}>
         <div className="flex flex-1 flex-col items-center justify-center pb-10 pt-16">
-          <ReactiveMark
-            variant="mark"
+          <PresenceMark
             state={presence}
             running={live.running}
             lastResult={live.lastResult}

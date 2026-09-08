@@ -10,11 +10,13 @@
  * pretends to be a gauge. The rules are in instrumentShape.ts, where the suite
  * holds them without a DOM. This file draws what it is handed.
  *
- * NO COLOUR CARRIES MEANING YET. Position does: bars diverge from a drawn zero
- * line, so a fall reads as a fall by where it sits, and hatching says
- * "unmeasured". Stage 5 adds the semantic data tokens on top of that, never
- * instead of it — colour must never be the only carrier (dataviz: a legend or
- * a label, always; ~8% of men cannot separate red from green).
+ * COLOUR REINFORCES; POSITION CARRIES. Bars diverge from a drawn zero line
+ * and the signed figure is printed beside each, so a fall reads as a fall
+ * with no colour at all. On top of that, and only on a diverging bar — never
+ * a bare figure, never a plain comparison — a rise is `george-data-up` and a
+ * fall `george-data-down`: blue and coral, validated as separable by a reader
+ * who cannot separate red from green (tailwind.config.js). Hatching, not
+ * colour, says "unmeasured".
  *
  * TEXT WEARS TEXT TOKENS. Every figure printed here is navy or slate ink,
  * tabular, beside its mark. Nothing is printed in a series colour.
@@ -74,8 +76,8 @@ function DivergingBar({
       <div
         data-bar
         data-direction={negative ? 'down' : 'up'}
-        className={`absolute top-0 h-full bg-george-navy ${
-          negative ? 'rounded-l-[4px]' : 'rounded-r-[4px]'
+        className={`absolute top-0 h-full ${
+          negative ? 'rounded-l-[4px] bg-george-data-down' : 'rounded-r-[4px] bg-george-data-up'
         }`}
         style={{ left: `${left}%`, width: `${Math.max(width, extent > 0 ? 0.5 : 0)}%` }}
       />

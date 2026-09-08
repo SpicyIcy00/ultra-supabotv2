@@ -47,7 +47,7 @@
  * the chrome around it on every turn.
  */
 import type { GeorgeState } from '../../types/george';
-import { markClass, markDetail, markPath } from './markState';
+import { MARK_LABEL, markClass, markDetail, markPath } from './markState';
 import { liveCognition, type CallLike, type LastResult } from './cognition';
 
 interface Props {
@@ -163,9 +163,16 @@ export function ReactiveMark({
         className="h-14 w-14 md:h-20 md:w-20"
       />
       <p className="mt-3 font-george-serif text-[17px] leading-none text-george-navy">George</p>
-      <p className="mt-1.5 max-w-[22rem] truncate text-xs text-george-slate" aria-live="polite">
-        {detail}
+      {/* THE LIVE REGION ANNOUNCES TRANSITIONS, NOT DELTAS. This used to be the
+          detail line, which changes on every frame — a screen reader was read
+          "I'm checking purchasing… Purchasing came back — 14 rows… I'm reading
+          sales…" as a firehose of half-sentences. What is announced now is the
+          state's label, which changes only when the state does; the detail
+          stays on screen for the eye and is a plain paragraph. */}
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {state === 'idle' ? '' : MARK_LABEL[state]}
       </p>
+      <p className="mt-1.5 max-w-[22rem] truncate text-xs text-george-slate">{detail}</p>
       {/* Two lines' worth, always reserved. aria-hidden because the label above
           already announces the state, and reading a half-formed thought aloud
           on every delta would make the page unusable with a screen reader. */}

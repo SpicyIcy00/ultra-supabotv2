@@ -87,6 +87,26 @@ describe('UI rule 5 — the error state changes the drawing, never the hue', () 
   });
 });
 
+describe('the live region announces transitions, not deltas', () => {
+  it('announces the state label and never the per-frame detail', () => {
+    const { container } = render(
+      <ReactiveMark variant="hero" state="running" running={['get_sales']} />,
+    );
+    const live = container.querySelector('[aria-live]')!;
+    expect(live.getAttribute('aria-atomic')).toBe('true');
+    expect(live.textContent).toBe(MARK_LABEL.running);
+    // The detail — "I'm reading sales…" — is on screen for the eye and is
+    // not live: it changes on every frame and was being read aloud as a
+    // firehose of half-sentences.
+    expect(live.textContent).not.toContain('reading sales');
+  });
+
+  it('says nothing at rest', () => {
+    const { container } = render(<ReactiveMark variant="hero" state="idle" />);
+    expect(container.querySelector('[aria-live]')!.textContent).toBe('');
+  });
+});
+
 describe('the beat on a landing result', () => {
   it('does not pulse before anything has come back', () => {
     expect(markOf('thinking', { toolResults: 0 }).querySelector('.george-mark-pulse')).toBeNull();

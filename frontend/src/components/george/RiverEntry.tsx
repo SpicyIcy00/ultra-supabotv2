@@ -39,6 +39,7 @@ import type { Post } from '../../types/river';
 import type { PinnedFrame, SavedFrame } from '../../types/george';
 import { ActivityDisclosure } from './ActivityDisclosure';
 import { DriverSplit } from './Instruments';
+import { WorkSpine } from './WorkSpine';
 import { MARK_PATH } from './markState';
 import { NoticeBanner } from './NoticeBanner';
 import { PageChangeNote } from './PageChangeNote';
@@ -438,8 +439,18 @@ function WorkUnitView({
   return (
     <article className="flex gap-2.5">
       {/* The avatar slot is held even in a grouped run, so bodies stay aligned
-          down the column rather than stepping left under the first of a pair. */}
-      <div className="w-7 shrink-0">{!grouped && <MarkAvatar />}</div>
+          down the column rather than stepping left under the first of a pair.
+          Under the avatar, the work spine: one segment per call, filling as
+          results land — George's work beside the work (WorkSpine.tsx). */}
+      <div className="flex w-7 shrink-0 flex-col items-center">
+        {!grouped && <MarkAvatar />}
+        <WorkSpine
+          calls={unit.calls}
+          findings={unit.findings}
+          settled={unit.state !== 'streaming'}
+          live={live}
+        />
+      </div>
 
       <div className="min-w-0 flex-1 space-y-3">
         {narration && <Narration {...narration} />}

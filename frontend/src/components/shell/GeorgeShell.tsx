@@ -31,7 +31,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useGeorge } from '../../hooks/useGeorge';
 import { listApprovals } from '../../services/workflowsApi';
 import { approvalsView, attentionAccent } from '../george/approvalState';
-import { ReactiveMark } from '../george/ReactiveMark';
+import { PresenceMark } from '../george/PresenceMark';
 import { markDetail } from '../george/markState';
 import {
   isActive,
@@ -101,8 +101,7 @@ function Presence({ compact = false }: { compact?: boolean }) {
   const detail = presence === 'idle' ? '' : markDetail(presence, live.running, live.lastResult);
   return (
     <div className="flex items-center gap-2.5">
-      <ReactiveMark
-        variant="mark"
+      <PresenceMark
         state={presence}
         running={live.running}
         lastResult={live.lastResult}

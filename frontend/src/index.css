@@ -282,7 +282,23 @@ body {
 
 .george-mark-pulse      { animation: george-pulse 260ms cubic-bezier(0.3, 0.8, 0.4, 1); }
 
+/* The work spine (WorkSpine.tsx). A segment fills once, when its result lands:
+   George did this, therefore this changed. Nothing loops. */
+.george-spine-segment {
+  transition: background-color 320ms ease-out, opacity 320ms ease-out,
+              border-color 320ms ease-out;
+}
+/* A refused call: hatched, never coloured. The tool answered by declining. */
+.george-spine-segment--refused {
+  background-image: repeating-linear-gradient(
+    135deg, currentColor 0 1px, transparent 1px 3px);
+  color: #4A5D78; /* george-slate */
+}
+
 @media (prefers-reduced-motion: reduce) {
+  /* The spine fills instantly. The state is carried by the segment's form
+     and its label, so nothing is lost by not animating the fill. */
+  .george-spine-segment { transition: none; }
   /* Opacity only, and no beat on a tool result. The state is still carried by
      the aria-live label under the mark, so nothing is lost by standing still. */
   .george-mark--listening,

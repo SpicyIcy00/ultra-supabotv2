@@ -28,6 +28,23 @@ const SHELL_DIR = join(__dirname, '..', 'shell');
 const ACCENT = /george-accent/;
 
 /**
+ * The semantic data tokens (Stage 5): `george-data-up`, `-down`, `-flat`, and
+ * whatever real state joins them. A separate family from the accent with a
+ * separate rule: they may appear ONLY inside an instrument whose own data
+ * declares a direction. Never on a bare figure, never on a plain comparison,
+ * never in the shell, never on a page, never in a notice — each of those
+ * would be colour saying something the tool did not say.
+ */
+const DATA = /george-data-/;
+
+const DATA_ALLOWED: Record<string, string> = {
+  // Diverging bars in a ranking by change and in a driver split. The bar
+  // already diverges from a drawn zero line with its signed figure printed
+  // beside it; colour reinforces a direction the tool measured.
+  'Instruments.tsx': 'diverging bars whose data declares direction',
+};
+
+/**
  * The only files that may name the accent, and why.
  *
  * Every entry is a deliberate, recorded exemption. Nothing joins this list
@@ -105,6 +122,42 @@ describe('UI rule 5 — one colour means "needs you"', () => {
   it('is not used to mark measures disagreeing', () => {
     const source = readFileSync(join(GEORGE_DIR, 'ReceiptsBlock.tsx'), 'utf8');
     expect(ACCENT.test(source)).toBe(false);
+  });
+
+  it('confines the data tokens to instruments whose data declares direction', () => {
+    const offenders: string[] = [];
+    for (const [dir, files] of [
+      [GEORGE_DIR, sourceFiles(GEORGE_DIR)],
+      [PAGES_DIR, sourceFiles(PAGES_DIR)],
+      [SHELL_DIR, sourceFiles(SHELL_DIR)],
+    ] as [string, string[]][]) {
+      for (const name of files) {
+        const source = readFileSync(join(dir, name), 'utf8');
+        if (!DATA.test(source)) continue;
+        if (!(name in DATA_ALLOWED)) offenders.push(name);
+      }
+    }
+    expect(
+      offenders,
+      `These files use a data-direction token outside an instrument. A bare ` +
+        `figure, a plain comparison, a notice, the shell and a page carry no ` +
+        `direction of their own; colour there would be saying something the ` +
+        `tool did not say.`,
+    ).toEqual([]);
+  });
+
+  it('never lets a data token onto a bare figure or a plain comparison', () => {
+    // The narrowing recorded in the V2 proposal: "no colour carries the
+    // direction" stays true for a single figure. A fall in sales is
+    // information, and whether it is bad depends on the question.
+    expect(DATA.test(readFileSync(join(GEORGE_DIR, 'ResultBlocks.tsx'), 'utf8'))).toBe(false);
+    expect(DATA.test(readFileSync(join(GEORGE_DIR, 'NoticeBanner.tsx'), 'utf8'))).toBe(false);
+    expect(DATA.test(readFileSync(join(GEORGE_DIR, 'WorkSpine.tsx'), 'utf8'))).toBe(false);
+  });
+
+  it('never lets the accent onto an instrument or the spine', () => {
+    expect(ACCENT.test(readFileSync(join(GEORGE_DIR, 'Instruments.tsx'), 'utf8'))).toBe(false);
+    expect(ACCENT.test(readFileSync(join(GEORGE_DIR, 'WorkSpine.tsx'), 'utf8'))).toBe(false);
   });
 
   it('keeps the exemption list short enough to read', () => {

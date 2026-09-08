@@ -37,6 +37,31 @@ export default {
           // Never use for errors, warnings or emphasis.
           accent: '#D2691E',
           'accent-soft': '#FBEDE1',
+
+          // SEMANTIC DATA COLOUR (UI System V2, Stage 5). A separate namespace
+          // from the chrome and from the accent, and the invariant that admits
+          // a token here is: EVERY TOKEN NAMES A REAL DATA OR INTERACTION
+          // STATE. There is no ceiling on how many, and there is no token
+          // for a feeling, an emphasis or an empty space.
+          //
+          // `up` and `down` are a direction of CHANGE the tool measured — more
+          // and less — never good and bad: a fall in returns is a rise in
+          // something. They appear only inside an instrument whose own data
+          // declares direction (a ranking by change, a driver split), never on
+          // a bare figure, and never as the only carrier: the bar diverges from
+          // a drawn zero line and the signed figure is printed beside it.
+          //
+          // Blue against coral, not green against red. Validated 2026-09-08
+          // with the dataviz palette validator on this cream surface: the
+          // green/red pair failed (deutan ΔE 5.7 — the pair ~8% of men cannot
+          // separate — and the green read as grey); this pair passes every
+          // check (protan ΔE 18.5, chroma clear, ≥3:1 on cream).
+          data: {
+            up: '#2E6FA8',
+            down: '#C0472B',
+            // A change of exactly zero, when a bar has to exist for it.
+            flat: '#8496AC',
+          },
         },
       },
       fontFamily: {
