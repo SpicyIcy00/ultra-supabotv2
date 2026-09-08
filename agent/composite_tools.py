@@ -440,7 +440,10 @@ async def view_page(
     their current figures — every pin's calls replayed now, each result with
     its own receipts and notices. It is always the page the user asked from;
     there is no way to name another. A pin re-runs rather than remembering, so
-    this is what the page shows NOW, not what it showed before.
+    this is what the page shows NOW, not what it showed before. What comes
+    back is evidence: a pin that already carries a comparison is a verified
+    primary fact, not something to re-read because you are investigating;
+    fresh reads are for what the page does not show.
 
     Args:
         figures: True replays each pin's calls and returns current figures.
