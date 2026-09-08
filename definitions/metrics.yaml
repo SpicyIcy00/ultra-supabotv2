@@ -676,6 +676,34 @@ metrics:
     # combination rather than answer it — see metrics.product_revenue for the
     # measure that is valid at that grain.
     valid_group_by: [store, day, week, month]
+    # DRIVERS — what a change in net_sales is explained by FIRST. Added
+    # 2026-09-08 (Investigation V1). The relationship is not asserted here; it
+    # is the trusted ATP definition rearranged: average_transaction_value is
+    # net_sales / transaction_count, so net_sales is transaction_count x
+    # average_transaction_value, and tests/test_investigation_contract.py holds
+    # this list to that formula — one driver must be the derived metric whose
+    # numerator is this metric, the other must be its denominator.
+    #
+    # READING IS QUALITATIVE. George reads change_pct off each driver's
+    # compared row and names the one that moved more; he may NOT say what
+    # share of the change each accounts for. Splitting a change in a product
+    # between its factors has no unique answer (log, sequential and Shapley
+    # decompositions all disagree), so a percentage attribution would be a
+    # convention nobody agreed — a definition. Until one is chosen here and
+    # computed in a tool, it is not a trusted figure. See `investigation`.
+    drivers:
+      introduced: "2026-09-08"
+      components: [transaction_count, average_transaction_value]
+      relation: product
+      identity: "net_sales = transaction_count x average_transaction_value"
+      derived_via: average_transaction_value
+      reading: qualitative
+      attribution_math: not_supported
+      attribution_reason: >
+        Splitting a change in a product of two factors between them has no
+        unique answer; the split is a convention, which makes it a definition,
+        and no definition has been chosen. George names the driver with the
+        larger measured change_pct and never a share.
     # source: t.total is the measure used by every store-level example in
     #   business_rules.yaml (examples 2, 7, 8, 11, 12, 13, 15, 18, 20, 21, 23,
     #   25, 28, 31) and by the MANDATORY year-over-year template at
@@ -1019,11 +1047,72 @@ comparisons:
     empty_window_note: "SUM over no rows is NULL (no_baseline); COUNT over no rows is 0 (zero_baseline)"
     # Any row not `ok` raises this notice naming the subjects and why.
     incomplete_notice_kind: comparison_incomplete
-    # Grouping allowed beside a comparison in V1: none, or by store. Rows are
-    # matched on the store id. A time bucket beside a comparison would mean
-    # each bucket against its own predecessor — a lag series, which is the
-    # per_bucket_lag mode below and is not built.
-    valid_group_by: [store]
+    # When more subjects than this could not be compared, the notice names
+    # this many per status and counts the rest: a product comparison can have
+    # dozens of new or vanished products, and a notice that lists every one
+    # buries the figures it qualifies.
+    incomplete_notice_max_named: 5
+    # Grouping allowed beside a comparison: none, or by SUBJECT — store,
+    # product, category. Rows are matched on the subject's key. A time bucket
+    # beside a comparison would mean each bucket against its own predecessor
+    # — a lag series, which is the per_bucket_lag mode below and is not built,
+    # and this list is what keeps it refused.
+    #
+    # product and category ADDED 2026-09-08 (Investigation V1). They are not
+    # a lag series: the same two windows are read once each and matched per
+    # subject, exactly as stores are. Whether a METRIC may be grouped that way
+    # is still the metric's own valid_group_by — net_sales and
+    # average_transaction_value are transaction grain and stay refused by
+    # product; product_revenue and units_sold are line grain and are the
+    # measures a product-level change is read from. "Which products are
+    # driving it?" was unanswerable before this: the only route was two
+    # rankings and a subtraction in prose, which is the one calculation this
+    # file exists to keep out of prose.
+    valid_group_by: [store, product, category]
+
+    # RANKING A COMPARED RESULT. Added 2026-09-08. With top_n, `rank_by`
+    # says which end of what is returned, and the ranking happens INSIDE the
+    # tool AFTER current and baseline subjects have been matched — never by
+    # the model over two lists.
+    #
+    # NOT BY change_pct. A tiny baseline makes a percentage enormous while
+    # the money is trivial: PHP 40 to PHP 400 is +900% and irrelevant.
+    # Ranking is by absolute change in the metric's own unit.
+    #
+    # NULL HANDLING IS EXPLICIT because it is where a ranking lies. A row
+    # whose change is null (no_baseline, no_current) has nothing to rank by,
+    # and letting a null sort first or last by accident would put a product
+    # that simply did not trade at the top of "biggest drop". So under the two
+    # change modes only rows with a NUMERIC change are ranked (ok, and
+    # zero_baseline — whose change is the whole current value, a real gain
+    # from nothing); the unranked subjects are counted by status in
+    # meta.comparison.not_ranked, the largest of them named there by baseline
+    # or by value, and the comparison_incomplete notice still fires over the
+    # WHOLE matched set, not over the rows that survived the cut.
+    rank_by:
+      introduced: "2026-09-08"
+      default: value
+      requires_compare_to: true
+      modes:
+        value:
+          order: "current value DESC (ranking.sales.ordering_with_top_n), in SQL, before matching"
+          participates: "every subject in the current window; a subject absent from it is not ranked (meta.comparison.ranked_by_current)"
+        biggest_drop:
+          order: "change ASC — most negative first; ties by baseline DESC; nulls never ranked"
+          participates: "rows with a numeric change: ok, zero_baseline"
+          not_ranked: "no_current (traded in the baseline, not now — named in meta.comparison.not_ranked by baseline), no_baseline (new this window — counted there)"
+        biggest_gain:
+          order: "change DESC — most positive first; ties by value DESC; nulls never ranked"
+          participates: "rows with a numeric change: ok, zero_baseline"
+          not_ranked: "no_baseline (new this window — named in meta.comparison.not_ranked by value), no_current (counted there)"
+      # How many unranked subjects are NAMED per status in meta.comparison.
+      # The rest are counted. Deterministic order: by baseline for
+      # no_current, by value for no_baseline, largest first.
+      not_ranked_max_named: 10
+      # Both windows are read whole for a change ranking, so a window with
+      # more subjects than the tool's row cap cannot be ranked honestly and
+      # is refused rather than ranked over a prefix.
+      whole_set_required: true
 
   not_supported:
     same_period_last_year:
@@ -1042,6 +1131,100 @@ comparisons:
     custom_baseline:
       supported: false
       reason: "an arbitrary baseline window is a definition supplied by the caller, which this file forbids"
+
+
+# =============================================================================
+# INVESTIGATION — how George reasons about "why", as a definition. Added
+# 2026-09-08 (Investigation V1).
+#
+# NOTHING HERE EXECUTES. An investigation is reasoning behaviour inside an
+# ordinary conversation: no planner, no table, no workflow, no page type, no
+# composite tool. The loop stays model -> tool call -> answer (CLAUDE.md rule
+# 5). What this section holds is the VOCABULARY George is given — the ladder,
+# where each rung reads from, when to stop, and what he may and may not say —
+# so that the prompt is built from definitions rather than typed, and so a
+# change of mind here is one edit.
+#
+# The ladder is conceptual. "Is it transactions or ATP?" is verify and
+# decompose, and stops. "Why is Rockwell down?" may reach localize. Nothing
+# runs every rung for every question.
+# =============================================================================
+investigation:
+  introduced: "2026-09-08"
+  executes_nothing: true
+
+  # The five rungs, in order. Each names what it establishes and which
+  # trusted read establishes it. `reads` are get_sales argument shapes; the
+  # window, filters and compare_to are the primary fact's, unchanged.
+  ladder:
+    verify:
+      establishes: "whether the claimed change is real, in the asked metric, over a closed window, against previous_period"
+      read: "the asked metric with compare_to='previous_period', scoped to the store named"
+      on_false_premise: stop
+    decompose:
+      establishes: "which declared driver moved more"
+      read: "each metric in metrics.<metric>.drivers.components with the SAME date_range, filters and compare_to, in one batch"
+      reading: "the driver whose change_pct is larger in magnitude is the stronger MEASURED driver; similar magnitudes mean both moved and no single driver is named"
+    localize:
+      establishes: "where the change is concentrated"
+      reads:
+        store:    "the same metric, group_by='store', same compare_to"
+        product:  "product_revenue (or units_sold) group_by='product', same window and compare_to, top_n with rank_by='biggest_drop' or 'biggest_gain'"
+        category: "product_revenue (or units_sold) group_by='category', same window and compare_to, rank_by as above"
+        time:     "the same metric group_by='day' WITHOUT compare_to — a series to characterise, never to difference"
+      rule: "one grouped or ranked call per dimension, never one call per subject"
+    explain:
+      establishes: "what the reads establish, said as what they are"
+      registers:
+        fact:           "a figure on a row — 'down 12.1%'"
+        derived_fact:   "a figure a tool computed from others — ATP, change_pct"
+        inference:      "a reading of measured figures — 'so basket value is the stronger measured driver'"
+        recommendation: "the next check — 'product-level comparison would be the next useful check'"
+      causality: >
+        Localization is not cause. "The largest measured revenue declines
+        were A and B" is a fact; "customers switched away from premium
+        products" and "A caused the ATP decline" are causes, and a cause
+        may be stated only when the evidence that supports it is in the
+        conversation.
+    next:
+      establishes: "what would need to be read to go further, when the reads cannot"
+      one_line: true
+
+  # Driver reading in V1 is qualitative and there is NO numeric threshold for
+  # "similar". A threshold would make George subtract two percentages, and a
+  # tool that compared metrics across calls would execute a metric set, which
+  # metric_sets forbids. Clear cases are held by behavioural evals; if they
+  # show he cannot tell dominant from mixed movement, that is reported, not
+  # patched with a number invented on a branch.
+  driver_reading: qualitative
+  attribution_math: not_supported
+  dominance_threshold: none
+  dominance_threshold_reason: >
+    A percentage-point threshold is a business definition nobody has set,
+    and applying one would be arithmetic in prose. George names the driver
+    that moved more and says "both moved" when they are close.
+
+  # When George stops. Any one of these is enough.
+  stop_when:
+    - "the premise is false — the figure is up, flat, or the comparison is missing"
+    - "one driver clearly dominates and nothing further was asked"
+    - "the next decomposition is unsupported by any tool, or a tool refused it"
+    - "the evidence is mixed"
+    - "a further read would repeat one already made this turn"
+    - "the available reads cannot establish cause"
+
+  # A statement of what the evidence establishes, what it does not, and the
+  # next check is PART OF THE ANSWER. It is not a volunteered fact and the
+  # volunteering cap does not count it (volunteering.not_counted).
+  limitation_statement_is_answer: true
+
+  # A page read is evidence. A pin that already carries a comparison — metric,
+  # window, baseline, receipts, freshness — is a verified primary fact, and a
+  # compared pin is not re-read merely because an investigation is under way.
+  # Fresh reads are for dimensions the page does not show.
+  page_evidence:
+    compared_pin_is_verified: true
+    reread_compared_pin: never_merely_to_investigate
 
 
 # =============================================================================
@@ -3627,6 +3810,23 @@ volunteering:
     - "Separately"
     - "Also worth"
   max_corrective_turns: 1
+  # WHAT THE CAP DOES NOT COUNT. Added 2026-09-08 (Investigation V1). Two
+  # things look like "more than was asked" and are not the same thing:
+  #   A) an unsolicited extra business fact — "14 POs are open against that
+  #      SKU" — which is what the cap bounds, and which announces itself with
+  #      a marker above;
+  #   B) a statement of what the reads establish, what they do not, and the
+  #      next evidence that would be needed — "these reads establish that ATP
+  #      is the stronger measured driver, but not why it fell; a product-level
+  #      comparison would be the next check" — which is part of answering an
+  #      investigation honestly (investigation.next).
+  # B carries no marker, states no new figure, and is never counted. No
+  # phrasing is reserved for it: the distinction is what the sentence DOES,
+  # and the test holds that a limitation statement without a marker is not
+  # counted while a marked fact still is.
+  not_counted:
+    analytical_limitation: "what the evidence establishes, what it does not, and the next check that would be needed"
+    is_part_of_answer: true
 
 
 # =============================================================================
