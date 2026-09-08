@@ -411,29 +411,35 @@ A pin re-runs; a save is the rule it re-runs. "Bookmark", "widget", "card",
 "favourite" and "snapshot" are not other names for these — if one of them seems
 needed, the concept is probably wrong.
 
-*Amended 2026-09-07, Persistence V1: **a page is still derived from its pins,
-and that is a decision, not a gap.*** There is no `george.pages` table. A page
-is the `page` column on `george.pins`, grouped; it comes into being when the
-first useful result is pinned to its name, and it cannot be empty, because a
-page that says nothing is not a workspace. What was added is **membership as a
-write**: a pin can be moved between pages, off a page (`page = null`, which is
-how a pin leaves a page WITHOUT being deleted — Remove still deletes, and there
-is no second removal verb), or retitled, and a page can be renamed, which is
-every pin of the caller's on that exact name changing its label in one
-statement. Both live in [pin_writer.py](backend/app/services/pin_writer.py)
-beside `create_pin`, so a writer injected into the loop later ("put this on
-Purchasing", "create a page for Fame") calls what the button calls today, and
-the page-name rule — trim, collapse, keep case, refuse a case-only collision
-with another page — is one function applied on every route. A move re-runs
-nothing: membership is not a figure. River posts that named the old page stay
-as written. Reorder is deferred; it needs a position column and this branch
-adds no migration.
+*Amended 2026-09-08, Page Workshop V1:* **Page is a persistent personal
+object in `george.pages`.** This supersedes Persistence V1's derived name
+grouping. Empty Pages, purpose, rename-safe identity and explicit analysis
+ordering now require a parent row. No sentinel Pins or name cascades.
 
-Three things would force a pages table, and none has arrived: a page-level
-description or purpose that is not derivable from its pins' titles; a page
-shared or owned at org level (pins are per person, so pages are); or an empty
-page. Until one does, a table would be a second source of truth for a fact the
-pins already carry.
+`page_id` is identity; title is presentation. `/pages/:pageId` and
+`/pages/ungrouped` are canonical. Ungrouped is virtual (`page_id = NULL`),
+never a Page row. A Page's Pins use dense integer positions, normalized on
+every membership/order write in the same transaction. New analyses append.
+
+George's injected `create_page` and `edit_page` capabilities call the same
+owner-scoped services as manual controls. They accept stable Page IDs and
+reproducible calls that already executed, never prose or figures. Owned Page
+references in request context allow title discovery without replaying content;
+the write service does not resolve destination titles. Writes commit once
+before `page_changed` confirms them. `george.page_events` is the structural
+audit; no structural-edit River post kind is introduced.
+
+Purpose is visible, editable, single-line descriptive metadata (200 characters),
+explicitly user-authored when read by George. It never overrides system rules,
+metrics definitions, tool constraints or ownership. A thread stays bound to its
+Page UUID after rename. Legacy title-only posts recover scope only by an exact
+current owner-scoped match; historical payloads are never rewritten.
+
+**Remove from Page keeps the Pin in Ungrouped. Delete deletes the Pin.** Manual
+Delete Page moves all Pins to Ungrouped; George has no Page deletion operation.
+V1 provides ordered analyses. Sections are a V1.1 candidate and must preserve
+`page_id` and position semantics. See [Page Workshop V1](ops/PAGE_WORKSHOP_V1.md)
+for the migration, bounds, validation and verification record.
 
 *Two more facts from the same milestone, recorded because the code cannot say
 why.* **A pinned tile draws every result its run brought back**, through
@@ -497,8 +503,9 @@ nothing. Five decisions, recorded because the code cannot say why:
     why page context used to survive exactly one turn
     ([pageScope.ts](frontend/src/components/george/pageScope.ts)).
 
-**No page write through George.** Move, rename, add, remove, reorder and
-create stay the page's own controls. This is read and reason only.
+**Superseded by Page Workshop V1 (2026-09-08):** George now creates and edits
+Pages through the injected PageWriter described above. The PageReader remains
+an owner-scoped read capability, bound to the stable Page ID.
 
 *Amended 2026-09-05: **Chat is retired**, and Post and Thread replace it.* Chat
 was defined here on 2026-09-04 as "a session: one thread of turns, one person's,
