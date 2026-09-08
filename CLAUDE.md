@@ -453,17 +453,19 @@ date) offers no Pin, and the client never fills one in from rows or prose: an
 invented call is the one thing a pin must never hold
 ([postShape.ts](frontend/src/components/george/postShape.ts), `storedCalls`).
 
-**"Ask George about this page…"** at the foot of a page hands the question to
-Ask with the page's NAME as context and nothing else. George cannot read a
-page's pins — they live in a schema `george_ro` cannot see — so the context
-names where the person is, not what is on the page. Page-aware George is a
-later capability through an injected reader, and it is not manufactured with
-words in the meantime.
+**"Ask George about this page..."** originally handed Ask only the Page name.
+At Persistence V1, George could not read its pins: `george_ro` cannot see that
+schema. That historical limitation ended with the injected Page reader in
+Page Context V1; it is not a current restriction.
 
-*Amended 2026-09-07, Page Context V1: **the reader arrived, and the words did
-not change.*** The composer still sends the name as context, and beside it now
-sends the page's IDENTITY as `page_scope` — `{name}`, with null for the
-ungrouped pins, never the word "Ungrouped" and never parsed back out of
+*Amended 2026-09-07, Page Context V1; identity updated by Page Workshop V1
+(2026-09-08):* `george.pages` is authoritative. UUID is Page identity; title is
+mutable presentation. The composer sends `{page_id}` as `page_scope`, with null
+for virtual Ungrouped (which is not a Page row). The web process resolves that
+identity for the authenticated owner and binds `view_page` to it. George may
+read the Page's analyses and their receipts through that injected reader.
+Purpose is descriptive user metadata, never instructions. Context survives a
+rename because scope and URLs use the UUID, never text parsed back out of
 "Pages / …". The scope is what the web process binds a reader to, and George
 is told he is on a page he can read and has not read; `view_page` is his to
 call when the question needs it, and simply opening Ask from a page reads
