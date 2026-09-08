@@ -35,7 +35,7 @@
  * it, and the receipts should say so.
  */
 import type { Finding } from '../../types/george';
-import { driverSplitMembers } from './instrumentShape';
+import { driverSplitMembers, performanceMembers } from './instrumentShape';
 import { resultBlocks, type ResultBlock, type ResultSource } from './resultShape';
 
 export type SectionRole = Finding['role'];
@@ -71,7 +71,7 @@ export interface WorkSection {
    * blocks and the role, never from the model — a role says where a result
    * sits, and this is the one case where "where" changes the drawing.
    */
-  instrument?: 'driver_split';
+  instrument?: 'driver_split' | 'performance';
   /** The definitions' identity for the drivers, off the primary finding. */
   identity?: string | null;
 }
@@ -129,14 +129,14 @@ export function composeWork(
     if (members.length === 0) continue;
     const blocks = resultBlocks(members);
     const section: WorkSection = { role, label: SECTION_LABEL[role], blocks };
-    if (
-      role === 'driver' &&
-      blocks.length === 1 &&
-      blocks[0].kind === 'group' &&
-      driverSplitMembers(blocks[0].members)
-    ) {
+    const oneGroup = blocks.length === 1 && blocks[0].kind === 'group' ? blocks[0] : null;
+    if (role === 'driver' && oneGroup && driverSplitMembers(oneGroup.members)) {
       section.instrument = 'driver_split';
       section.identity = identity;
+    } else if (role === 'primary' && oneGroup && performanceMembers(oneGroup.members)) {
+      // The headline set for one subject and one scope — "how did it do" —
+      // drawn as one instrument rather than three figures abreast.
+      section.instrument = 'performance';
     }
     sections.push(section);
   }

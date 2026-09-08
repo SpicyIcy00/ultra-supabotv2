@@ -25,7 +25,7 @@
  * below the sentence it qualifies.
  */
 import { GeorgeChart } from './GeorgeChart';
-import { ComparisonCoverage, DeltaRanking } from './Instruments';
+import { ComparisonCoverage, DeltaRanking, SubjectComparison } from './Instruments';
 import { coverageFromComparison } from './instrumentShape';
 import { ReceiptsBlock } from './ReceiptsBlock';
 import { Comparison, Metric, MetricGroup, ResultTable } from './ResultBlocks';
@@ -38,17 +38,24 @@ import type { ResultBlock, ShapedResult } from './resultShape';
  * section of a page, which sets a lone figure and a lone chart bigger. A
  * grouped figure is never large: its members are peers read across.
  */
-function Body({ result, lead, large }: { result: ShapedResult; lead: boolean; large: boolean }) {
+function Body({
+  result, lead, large, onSubject,
+}: { result: ShapedResult; lead: boolean; large: boolean; onSubject?: (r: ShapedResult, s: string) => void }) {
   const { shape, source } = result;
+  const ask = onSubject ? (s: string) => onSubject(result, s) : undefined;
   switch (shape.kind) {
     case 'number':
       return <Metric shape={shape} size={lead ? (large ? 'lead' : 'default') : 'grouped'} />;
     case 'comparison':
-      return (
+      // One subject: a figure with its delta. Several: a dense comparison —
+      // seven stores are seven rows, not seven paragraphs.
+      return shape.rows.length > 1 ? (
+        <SubjectComparison shape={shape} meta={source.meta} onSubject={ask} />
+      ) : (
         <Comparison shape={shape} size={lead ? (large ? 'lead' : 'default') : 'grouped'} />
       );
     case 'ranking':
-      return <DeltaRanking shape={shape} size={lead && large ? 'lead' : 'default'} />;
+      return <DeltaRanking shape={shape} onSubject={ask} />;
     case 'chart':
       return (
         <GeorgeChart shape={shape} meta={source.meta} height={lead ? (large ? 220 : 200) : 160} />
@@ -61,10 +68,13 @@ function Body({ result, lead, large }: { result: ShapedResult; lead: boolean; la
 export function ResultSurface({
   blocks,
   large = false,
+  onSubject,
 }: {
   blocks: ResultBlock[];
   /** The first section of a page: a lone figure or chart is set larger. */
   large?: boolean;
+  /** A subject row's own follow-up, when the definitions allow one. */
+  onSubject?: (result: ShapedResult, subject: string) => void;
 }) {
   if (blocks.length === 0) return null;
 
@@ -77,7 +87,7 @@ export function ResultSurface({
         >
           {block.kind === 'single' ? (
             <>
-              <Body result={block.result} lead large={large} />
+              <Body result={block.result} lead large={large} onSubject={onSubject} />
               {/* How much of a comparison was actually measured, from its own
                   meta — the caveat's shape, beside the figure it qualifies.
                   The notice above the answer still says it in words. */}
@@ -94,7 +104,7 @@ export function ResultSurface({
               <MetricGroup heading={block.heading}>
                 {block.members.map((m) => (
                   <div key={m.source.seq}>
-                    <Body result={m} lead={false} large={false} />
+                    <Body result={m} lead={false} large={false} onSubject={onSubject} />
                     {/* Each figure keeps its own receipts unless the whole
                         group provably shares one. */}
                     {!block.sharedMeta && (

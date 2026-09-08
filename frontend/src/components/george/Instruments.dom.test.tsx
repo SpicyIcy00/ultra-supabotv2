@@ -81,9 +81,11 @@ describe('Delta Ranking', () => {
 
   it('names an unranked subject and gives it no bar', () => {
     const { container } = render(<DeltaRanking shape={ranking()} />);
-    expect(container.textContent).toContain('Not ranked');
-    expect(container.textContent).toContain('Ghost');
-    expect(container.textContent).toContain('was ₱50');
+    // One compact line — "1 not ranked — 1 none now" — with the names one
+    // tap down. No giant paragraph under the graphic.
+    expect(container.textContent).toContain('1 not ranked');
+    expect(container.querySelector('details')!.textContent).toContain('Ghost');
+    expect(container.querySelector('details')!.textContent).toContain('was ₱50');
     // Three bars for three ranked rows; nothing drawn for Ghost.
     expect(container.querySelectorAll('[data-bar]')).toHaveLength(3);
   });
@@ -115,9 +117,9 @@ describe('Driver Split', () => {
     const { container } = render(<DriverSplit members={members} />);
     const bars = container.querySelectorAll('[data-bar]');
     expect(bars).toHaveLength(2);
-    // Two rows, each with one bar: never one stacked bar.
+    // Two rows, each with one bar, on ONE zero line: never one stacked bar.
     expect(container.querySelectorAll('li')).toHaveLength(2);
-    expect(container.textContent).toContain('one axis');
+    expect(container.querySelectorAll('[data-zero-line]')).toHaveLength(1);
   });
 
   it('never prints a share or a total', () => {

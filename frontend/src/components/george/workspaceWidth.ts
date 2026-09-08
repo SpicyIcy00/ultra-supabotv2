@@ -34,7 +34,10 @@ export const WIDE_GROUP_MEMBERS = 3;
  * collide, and columns wrap until the figures are unreadable.
  */
 export function widthForShape(shape: Shape): WorkspaceWidth {
-  return shape.kind === 'chart' || shape.kind === 'table' || shape.kind === 'ranking'
+  return shape.kind === 'chart' ||
+    shape.kind === 'table' ||
+    shape.kind === 'ranking' ||
+    (shape.kind === 'comparison' && shape.rows.length > 1)
     ? 'wide'
     : 'reading';
 }

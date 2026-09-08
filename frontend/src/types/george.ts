@@ -44,6 +44,16 @@ export interface ToolMeta {
   metric_kind?: string;
   metric_label?: string;
   /**
+   * What the DEFINITIONS permit next of this metric (get_sales, from
+   * metrics.yaml): the subjects it may be broken down by, and the metrics
+   * that explain a change in it. A surface offers "by store" or "why?" only
+   * where these say so; nothing is decided by a client or by the model.
+   */
+  valid_group_by?: string[];
+  drivers?: string[];
+  /** The top_n the call was made with, when it was: the rows are ordered by value. */
+  top_n?: number | null;
+  /**
    * get_sales compare_to: both periods and how the baseline was chosen. The
    * deltas themselves are on the rows; this is what they were measured
    * against, for the receipts.
@@ -335,7 +345,7 @@ export interface FindingFrame {
 }
 
 export type GeorgeTurn =
-  | { role: 'user'; text: string; at: string }
+  | { role: 'user'; text: string; at: string; parentId?: string | null }
   | {
       role: 'george';
       text: string;

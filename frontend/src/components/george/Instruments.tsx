@@ -1,43 +1,48 @@
 /**
- * The first V2 instruments: Delta Ranking, Driver Split, Coverage Strip.
+ * The instruments: Subject Comparison, Delta Ranking, Performance, Coverage.
  *
  * INSTRUMENTS, NOT CHARTS, and the difference is what they refuse. A chart
  * draws a series. Each of these draws one specific thing a tool computed and
- * declines to draw anything the tool did not: a ranking keeps the tool's
- * order and lengths its bars by change in the metric's unit, never by
- * percentage; a driver split puts two measured movements on one axis and
- * never stacks them into a share; a coverage strip counts states and never
- * pretends to be a gauge. The rules are in instrumentShape.ts, where the suite
- * holds them without a DOM. This file draws what it is handed.
+ * declines to draw anything the tool did not: a comparison keeps the tool's
+ * order and says whether that order is by level; a ranking lengths its bars
+ * by change in the unit, never by percentage; a performance set puts the
+ * headline metrics on one axis and never sums them into a share; a coverage
+ * strip counts states and never pretends to be a gauge. The rules live in
+ * instrumentShape.ts, where the suite holds them without a DOM.
  *
- * COLOUR REINFORCES; POSITION CARRIES. Bars diverge from a drawn zero line
- * and the signed figure is printed beside each, so a fall reads as a fall
- * with no colour at all. On top of that, and only on a diverging bar — never
- * a bare figure, never a plain comparison — a rise is `george-data-up` and a
- * fall `george-data-down`: blue and coral, validated as separable by a reader
- * who cannot separate red from green (tailwind.config.js). Hatching, not
- * colour, says "unmeasured".
+ * ONE ROW FORM. Subject · bar · figure · delta, on a fixed grid, so a store
+ * comparison, a product ranking and a metric set all read the same way and
+ * the eye learns the form once. Density comes from the grid: seven stores are
+ * seven rows of one line each, not seven paragraphs.
+ *
+ * COLOUR REINFORCES; POSITION CARRIES. Bars diverge from a drawn zero line and
+ * the signed figure is printed beside each, so a fall reads as a fall with no
+ * colour at all. On a diverging bar only — never a level bar, never a bare
+ * figure — a rise is `george-data-up` and a fall `george-data-down`, a pair
+ * validated as separable by a reader who cannot separate red from green.
+ *
+ * SALIENCE IS THE DATA'S. A row is set heavier when the data establishes it
+ * as the exception — it moved against the majority — or when it leads a
+ * ranking by definition. Nothing else is emphasised, and no score decides.
  *
  * TEXT WEARS TEXT TOKENS. Every figure printed here is navy or slate ink,
- * tabular, beside its mark. Nothing is printed in a series colour.
- *
- * MARKS. Thin, ends anchored to the zero line and rounded away from it, a
- * two-pixel gap between neighbours. Plain SVG and CSS rather than a charting
- * library: there is nothing here a library would decide better, and a
- * ranking of eight rows must render identically live, stored and pinned
- * (UI rule 3), which is easier to hold with no layout engine in between.
+ * tabular, beside its mark.
  */
 import type { ToolMeta } from '../../types/george';
 import { fmt, unitPrefix, type ComparisonRow, type Shape } from './pinShape';
 import type { ShapedResult } from './resultShape';
 import {
-  driverSplitLayout,
+  coverageLine,
+  levelCaption,
+  levelLayout,
+  performanceLayout,
   rankingCaption,
   rankingLayout,
   type Coverage,
 } from './instrumentShape';
 
-/** A signed change, in the row's unit, printed. */
+/* ------------------------------------------------------------ helpers -- */
+
 function signedChange(row: ComparisonRow): string {
   if (typeof row.change !== 'number') return '—';
   const sign = row.change < 0 ? '−' : row.change > 0 ? '+' : '';
@@ -50,192 +55,303 @@ function signedPct(pct: number | null): string {
   return `${sign}${Math.abs(pct).toLocaleString('en-PH')}%`;
 }
 
+function figure(row: ComparisonRow): string {
+  return row.value === null ? '—' : `${unitPrefix(row.unit)}${fmt(row.value)}`;
+}
+
+/** The grid every row form shares: subject · bar · figures. */
+const ROW_GRID = { gridTemplateColumns: 'minmax(6rem, 28%) minmax(0, 1fr) auto' } as const;
+
 /**
- * One bar on a diverging track.
- *
- * The track is the full width; the bar is placed from the zero line outward,
- * by the extent the layout gave it. A negative bar ends at the zero line and
- * reaches left; a positive one starts there and reaches right. The zero line
- * itself is drawn once, by the parent, down the whole list.
+ * One bar on a diverging track. The zero line is drawn once by the parent.
  */
 function DivergingBar({
   zero,
   extent,
   negative,
   label,
+  thick = false,
 }: {
   zero: number;
   extent: number;
   negative: boolean;
   label: string;
+  thick?: boolean;
 }) {
   const width = extent * (negative ? zero : 1 - zero) * 100;
   const left = negative ? (zero - extent * zero) * 100 : zero * 100;
   return (
-    <div className="relative h-[14px] w-full" role="img" aria-label={label}>
+    <div className={`relative w-full ${thick ? 'h-[18px]' : 'h-[12px]'}`} role="img" aria-label={label}>
       <div
         data-bar
         data-direction={negative ? 'down' : 'up'}
         className={`absolute top-0 h-full ${
           negative ? 'rounded-l-[4px] bg-george-data-down' : 'rounded-r-[4px] bg-george-data-up'
         }`}
-        style={{ left: `${left}%`, width: `${Math.max(width, extent > 0 ? 0.5 : 0)}%` }}
+        style={{ left: `${left}%`, width: `${Math.max(width, extent > 0 ? 0.6 : 0)}%` }}
       />
     </div>
   );
 }
 
-/* ---------------------------------------------------------- ranking -- */
+/** A level bar: length is the value against the largest. Ink, never a hue. */
+function LevelBar({ level, label }: { level: number; label: string }) {
+  return (
+    <div className="relative h-[12px] w-full" role="img" aria-label={label}>
+      <div
+        data-bar
+        data-kind="level"
+        className="absolute left-0 top-0 h-full rounded-r-[4px] bg-george-navy"
+        style={{ width: `${Math.max(level * 100, level > 0 ? 0.6 : 0)}%` }}
+      />
+    </div>
+  );
+}
+
+function ZeroLine({ zero }: { zero: number }) {
+  return (
+    <div
+      aria-hidden
+      data-zero-line
+      className="pointer-events-none absolute bottom-0 top-0 w-px bg-george-slate/70"
+      style={{ left: `calc(28% + (72% - 8.5rem) * ${zero})` }}
+    />
+  );
+}
+
+function Caption({ children }: { children: React.ReactNode }) {
+  return (
+    <figcaption className="mb-2.5 text-[11px] uppercase tracking-wider text-george-muted">
+      {children}
+    </figcaption>
+  );
+}
+
+/* ------------------------------------------------- subject comparison -- */
+
+/**
+ * How subjects compare, by LEVEL.
+ *
+ * One row per subject: the name, a bar as long as its value is against the
+ * largest, the value, and the delta the tool supplied with a small diverging
+ * mark of its own. Ordered as the tool ordered — "largest first" when the
+ * tool ranked by value, otherwise in its order — and captioned so, because
+ * this is never a ranking by change and must not read as one.
+ */
+export function SubjectComparison({
+  shape,
+  meta,
+  onSubject,
+}: {
+  shape: Extract<Shape, { kind: 'comparison' }>;
+  meta?: ToolMeta;
+  /** A row's own follow-up, when the definitions allow one. */
+  onSubject?: (subject: string) => void;
+}) {
+  const layout = levelLayout(shape.rows, meta);
+  return (
+    <figure data-instrument="subject-comparison">
+      <Caption>{levelCaption(layout, shape.label)}</Caption>
+      <ol className="space-y-[3px]">
+        {layout.bars.map((bar, i) => (
+          <li
+            key={`${bar.row.subject}-${i}`}
+            data-exception={bar.exception ? 'true' : undefined}
+            className={`grid items-center gap-x-3 rounded-sm py-[2px] ${
+              bar.exception ? 'bg-george-paper' : ''
+            }`}
+            style={ROW_GRID}
+          >
+            <span className="min-w-0">
+              {onSubject && bar.row.subject ? (
+                <button
+                  type="button"
+                  onClick={() => onSubject(bar.row.subject)}
+                  title={bar.row.subject}
+                  className={`block max-w-full truncate text-left text-[13px] hover:underline ${
+                    bar.exception ? 'font-medium text-george-navy' : 'text-george-navy'
+                  }`}
+                >
+                  {bar.row.subject}
+                </button>
+              ) : (
+                <span title={bar.row.subject} className={`block truncate text-[13px] ${bar.exception ? 'font-medium' : ''} text-george-navy`}>
+                  {bar.row.subject}
+                </span>
+              )}
+            </span>
+            <LevelBar level={bar.level} label={`${bar.row.subject}: ${figure(bar.row)}`} />
+            <span className="grid grid-cols-[6.5rem_4.5rem] items-baseline gap-x-2 text-right tabular-nums">
+              <span className={`text-[14px] ${bar.exception ? 'font-medium' : ''} text-george-navy`}>{figure(bar.row)}</span>
+              <span
+                data-delta
+                className={`text-[12px] ${
+                  bar.row.changePct === null
+                    ? 'text-george-muted'
+                    : bar.exception
+                      ? 'font-medium text-george-navy'
+                      : 'text-george-slate'
+                }`}
+              >
+                {bar.row.changePct === null ? missingDeltaWord(bar.row) : signedPct(bar.row.changePct)}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ol>
+    </figure>
+  );
+}
+
+function missingDeltaWord(row: ComparisonRow): string {
+  switch (row.baselineStatus) {
+    case 'no_baseline': return 'new';
+    case 'zero_baseline': return 'from zero';
+    case 'no_current': return 'none now';
+    default: return 'n/a';
+  }
+}
+
+/* ------------------------------------------------------------ ranking -- */
 
 /**
  * Where the change is concentrated.
  *
- * Rows in the tool's order, one line each: the subject, the bar, the change
- * and its percentage. Below the axis, the subjects the tool could not rank —
- * a product that vanished, a product that is new — named with the figure
- * they do have and given no bar, because a bar of length zero would read as
- * "no change", which is the opposite of what happened to them.
+ * Rows in the tool's order with bars diverging from one zero line, long in
+ * proportion to the change in pesos. The first row leads by definition of
+ * the mode and is set heavier. What could not be ranked is one compact line
+ * below, named, with no bar — a bar of length zero would read as "no change",
+ * the opposite of what happened to a product that vanished.
  */
 export function DeltaRanking({
   shape,
-  size = 'default',
+  onSubject,
 }: {
   shape: Extract<Shape, { kind: 'ranking' }>;
-  size?: 'lead' | 'default';
+  onSubject?: (subject: string) => void;
 }) {
   const layout = rankingLayout(shape.rows);
   const nr = shape.notRanked;
+  const unranked = (nr?.counts.no_current ?? 0) + (nr?.counts.no_baseline ?? 0);
   return (
-    <figure>
-      <figcaption className="mb-3 text-[11px] uppercase tracking-wider text-george-muted">
-        {shape.label ? `${shape.label} · ` : ''}
-        {rankingCaption(shape)}
-      </figcaption>
-
+    <figure data-instrument="delta-ranking">
+      <Caption>{shape.label ? `${shape.label} · ` : ''}{rankingCaption(shape)}</Caption>
       <div className="relative">
-        {/* The zero line, once, down the whole list. */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute bottom-0 top-0 w-px bg-george-slate"
-          style={{ left: `calc(${(0.3 + layout.zero * 0.45) * 100}% )` }}
-        />
-        <ol className="space-y-[2px]">
+        <ZeroLine zero={layout.zero} />
+        <ol className="space-y-[3px]">
           {layout.bars.map((bar, i) => (
             <li
               key={`${bar.row.subject}-${i}`}
-              className="grid items-center gap-x-3"
-              style={{ gridTemplateColumns: '30% 45% 25%' }}
+              data-exception={bar.exception ? 'true' : undefined}
+              className="grid items-center gap-x-3 py-[2px]"
+              style={ROW_GRID}
             >
-              <span className="truncate text-[13px] text-george-navy">{bar.row.subject}</span>
+              {onSubject && bar.row.subject ? (
+                <button
+                  type="button"
+                  onClick={() => onSubject(bar.row.subject)}
+                  title={bar.row.subject}
+                  className={`block max-w-full truncate text-left text-[13px] text-george-navy hover:underline ${bar.exception ? 'font-medium' : ''}`}
+                >
+                  {bar.row.subject}
+                </button>
+              ) : (
+                <span title={bar.row.subject} className={`block truncate text-[13px] text-george-navy ${bar.exception ? 'font-medium' : ''}`}>
+                  {bar.row.subject}
+                </span>
+              )}
               <DivergingBar
                 zero={layout.zero}
                 extent={bar.extent}
                 negative={bar.negative}
+                thick={bar.exception}
                 label={`${bar.row.subject}: ${signedChange(bar.row)}`}
               />
-              <span
-                className={`text-right tabular-nums text-george-navy ${
-                  size === 'lead' ? 'text-[15px]' : 'text-[13px]'
-                }`}
-              >
-                {signedChange(bar.row)}
-                <span className="ml-1.5 text-[11px] text-george-slate">
-                  {signedPct(bar.row.changePct)}
-                </span>
+              <span className="grid grid-cols-[6.5rem_4.5rem] items-baseline gap-x-2 text-right tabular-nums">
+                <span className={`text-[14px] text-george-navy ${bar.exception ? 'font-medium' : ''}`}>{signedChange(bar.row)}</span>
+                <span className="text-[12px] text-george-slate">{signedPct(bar.row.changePct)}</span>
               </span>
             </li>
           ))}
         </ol>
       </div>
-
-      {nr && (nr.noCurrent.length > 0 || nr.noBaseline.length > 0) && (
-        <div className="mt-3 border-t border-george-line pt-2 text-[12px] leading-relaxed text-george-slate">
-          <span className="text-george-navy">Not ranked</span>
-          {' — no change to rank by. '}
-          {nr.noCurrent.length > 0 && (
-            <span>
-              Nothing this period:{' '}
-              {nr.noCurrent.map((s) => `${s.subject} (was ${unitPrefix(s.unit)}${fmt(s.baseline)})`).join(', ')}
-              {(nr.counts.no_current ?? 0) > nr.noCurrent.length &&
-                ` and ${(nr.counts.no_current ?? 0) - nr.noCurrent.length} more`}
-              .{' '}
-            </span>
-          )}
-          {nr.noBaseline.length > 0 && (
-            <span>
-              New this period:{' '}
-              {nr.noBaseline.map((s) => `${s.subject} (${unitPrefix(s.unit)}${fmt(s.value)})`).join(', ')}
-              {(nr.counts.no_baseline ?? 0) > nr.noBaseline.length &&
-                ` and ${(nr.counts.no_baseline ?? 0) - nr.noBaseline.length} more`}
-              .
-            </span>
-          )}
-        </div>
+      {nr && unranked > 0 && (
+        <details className="mt-2 text-[12px] text-george-slate">
+          <summary className="cursor-pointer list-none">
+            <span className="text-george-navy">{unranked} not ranked</span>
+            {' — '}
+            {[
+              (nr.counts.no_baseline ?? 0) > 0 ? `${nr.counts.no_baseline} new` : null,
+              (nr.counts.no_current ?? 0) > 0 ? `${nr.counts.no_current} none now` : null,
+            ].filter(Boolean).join(', ')}
+            <span className="ml-1.5 text-george-muted">Details</span>
+          </summary>
+          <div className="mt-1.5 space-y-0.5 pl-3 leading-relaxed">
+            {nr.noCurrent.length > 0 && (
+              <p>Nothing this period: {nr.noCurrent.map((s) => `${s.subject} (was ${unitPrefix(s.unit)}${fmt(s.baseline)})`).join(', ')}.</p>
+            )}
+            {nr.noBaseline.length > 0 && (
+              <p>New this period: {nr.noBaseline.map((s) => `${s.subject} (${unitPrefix(s.unit)}${fmt(s.value)})`).join(', ')}.</p>
+            )}
+          </div>
+        </details>
       )}
     </figure>
   );
 }
 
-/* ----------------------------------------------------- driver split -- */
+/* ------------------------------------------------------- performance -- */
 
 /**
- * Which driver moved more.
+ * How one subject did: its headline metrics, one axis.
  *
- * One row per driver, each its own bar on a SHARED percentage axis, so the
- * eye compares two lengths and nothing else. Never stacked: a stacked bar
- * asserts the two add to the whole, and metrics.yaml records that split as
- * `attribution_math: not_supported`. Never a total, never a share. The
- * identity under the figure is the definitions' own sentence — the ATP
- * formula rearranged — and it is the only thing here the tool did not return
- * as a row.
+ * The first metric is the headline and is set large — it is the figure the
+ * question was about. Under it, every metric of the set in one row form with
+ * a bar on a SHARED percentage axis, so "traffic-led" or "basket-led" is a
+ * comparison of two lengths and never a share. Never stacked, never summed:
+ * attribution_math is not_supported. The identity under it is the
+ * definitions' own sentence when there is one.
  */
-export function DriverSplit({
+export function Performance({
   members,
   identity,
+  large = false,
 }: {
   members: ShapedResult[];
   identity?: string | null;
+  large?: boolean;
 }) {
-  const layout = driverSplitLayout(members);
+  const layout = performanceLayout(members);
+  const head = layout.bars[0];
   return (
-    <figure data-instrument="driver-split">
-      <figcaption className="mb-3 text-[11px] uppercase tracking-wider text-george-muted">
-        Change against the previous period · one axis
-      </figcaption>
+    <figure data-instrument="performance">
+      <div className="mb-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <span className={`font-george-serif leading-none tabular-nums text-george-navy ${large ? 'text-[54px]' : 'text-[40px]'}`}>
+          {figure(head.row)}
+        </span>
+        <span className="text-[15px] tabular-nums text-george-navy">{signedPct(head.row.changePct)}</span>
+        <span className="text-[13px] text-george-slate">
+          {head.label}
+          {head.row.baseline !== undefined && ` · from ${unitPrefix(head.row.unit)}${fmt(head.row.baseline)}`}
+        </span>
+      </div>
       <div className="relative">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute bottom-0 top-0 w-px bg-george-slate"
-          style={{ left: `calc(${(0.3 + layout.zero * 0.45) * 100}% )` }}
-        />
-        <ol className="space-y-2">
+        <ZeroLine zero={layout.zero} />
+        <ol className="space-y-[3px]">
           {layout.bars.map((bar) => (
-            <li
-              key={bar.label}
-              className="grid items-center gap-x-3"
-              style={{ gridTemplateColumns: '30% 45% 25%' }}
-            >
+            <li key={bar.label} className="grid items-center gap-x-3 py-[2px]" style={ROW_GRID}>
               <span className="truncate text-[13px] text-george-navy">{bar.label}</span>
-              <DivergingBar
-                zero={layout.zero}
-                extent={bar.extent}
-                negative={bar.negative}
-                label={`${bar.label}: ${signedPct(bar.row.changePct)}`}
-              />
-              <span className="text-right text-[13px] tabular-nums text-george-navy">
-                {signedPct(bar.row.changePct)}
-                <span className="ml-1.5 text-[11px] text-george-slate">
-                  {unitPrefix(bar.row.unit)}
-                  {fmt(bar.row.value)}
-                  {bar.row.baseline !== undefined && ` from ${unitPrefix(bar.row.unit)}${fmt(bar.row.baseline)}`}
-                </span>
+              <DivergingBar zero={layout.zero} extent={bar.extent} negative={bar.negative} label={`${bar.label}: ${signedPct(bar.row.changePct)}`} />
+              <span className="grid grid-cols-[6.5rem_4.5rem] items-baseline gap-x-2 text-right tabular-nums">
+                <span className="text-[13px] text-george-navy">{figure(bar.row)}</span>
+                <span className="text-[12px] text-george-slate">{signedPct(bar.row.changePct)}</span>
               </span>
             </li>
           ))}
         </ol>
       </div>
       {identity && (
-        <p className="mt-3 text-[11px] text-george-muted">
+        <p className="mt-2.5 text-[11px] text-george-muted">
           {identity} — the definitions' identity, not a split of the change.
         </p>
       )}
@@ -243,28 +359,18 @@ export function DriverSplit({
   );
 }
 
-/* --------------------------------------------------------- coverage -- */
+/** The drivers, drawn as the performance set they are. */
+export function DriverSplit({ members, identity }: { members: ShapedResult[]; identity?: string | null }) {
+  return <Performance members={members} identity={identity} />;
+}
 
-/**
- * How much of this was measured.
- *
- * A strip of counts. Measured segments are solid; unmeasured are hatched —
- * texture, so the state survives print, forced colours and a reader who cannot
- * separate hues — and every segment is named with its count beside the strip.
- * It is never a percentage of anything but its own rows, and it never says
- * "full".
- */
+/* ---------------------------------------------------------- coverage -- */
+
 export function CoverageStrip({ coverage, caption }: { coverage: Coverage; caption?: string }) {
-  const id = `hatch-${Math.abs(caption?.length ?? 0)}`;
+  const id = `hatch-${coverage.total}-${coverage.measured}`;
   return (
-    <figure data-instrument="coverage" className="mt-3">
-      <svg
-        role="img"
-        aria-label={`${coverage.measured} of ${coverage.total} measured`}
-        viewBox="0 0 100 6"
-        preserveAspectRatio="none"
-        className="block h-[6px] w-full"
-      >
+    <figure data-instrument="coverage" className="mt-2">
+      <svg role="img" aria-label={`${coverage.measured} of ${coverage.total} measured`} viewBox="0 0 100 6" preserveAspectRatio="none" className="block h-[6px] w-full">
         <defs>
           <pattern id={id} width="3" height="3" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
             <line x1="0" y1="0" x2="0" y2="3" stroke="currentColor" strokeWidth="1" className="text-george-slate" />
@@ -276,17 +382,8 @@ export function CoverageStrip({ coverage, caption }: { coverage: Coverage; capti
             const w = (seg.count / coverage.total) * 100;
             const gap = i < coverage.segments.length - 1 ? 0.6 : 0;
             const el = (
-              <rect
-                key={seg.key}
-                data-segment={seg.key}
-                data-measured={seg.measured ? 'true' : 'false'}
-                x={x}
-                y="0"
-                width={Math.max(0, w - gap)}
-                height="6"
-                fill={seg.measured ? 'currentColor' : `url(#${id})`}
-                className={seg.measured ? 'text-george-navy' : 'text-george-slate'}
-              />
+              <rect key={seg.key} data-segment={seg.key} data-measured={seg.measured ? 'true' : 'false'} x={x} y="0" width={Math.max(0, w - gap)} height="6"
+                fill={seg.measured ? 'currentColor' : `url(#${id})`} className={seg.measured ? 'text-george-navy' : 'text-george-slate'} />
             );
             x += w;
             return el;
@@ -296,16 +393,36 @@ export function CoverageStrip({ coverage, caption }: { coverage: Coverage; capti
       <figcaption className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-george-slate">
         {caption && <span className="text-george-navy">{caption}</span>}
         {coverage.segments.map((seg) => (
-          <span key={seg.key}>
-            <span className="tabular-nums text-george-navy">{seg.count}</span> {seg.label}
-          </span>
+          <span key={seg.key}><span className="tabular-nums text-george-navy">{seg.count}</span> {seg.label}</span>
         ))}
       </figcaption>
     </figure>
   );
 }
 
-/** For a comparison block: the strip, or nothing, from its own meta. */
+/**
+ * A caveat as the data state it is: one line, the strip, the tool's full
+ * sentence one tap down. Above the figure, never collapsible — what is
+ * behind the tap is the LENGTH of the caveat, not the caveat.
+ */
+export function CoverageCaveat({ coverage, label, message, source }: { coverage: Coverage; label: string; message: string; source?: string }) {
+  return (
+    <div role="note" data-caveat="coverage" className="border-l-2 border-george-slate bg-george-paper px-3 py-2">
+      <p className="text-[13px] text-george-navy">
+        <span className="font-medium">{label}</span>
+        <span className="ml-2 tabular-nums">{coverageLine(coverage)}</span>
+      </p>
+      <CoverageStrip coverage={coverage} />
+      <details className="mt-1.5 text-[12px] text-george-slate">
+        <summary className="cursor-pointer list-none text-george-muted">Details</summary>
+        <p className="mt-1 leading-relaxed text-george-navy">{message}</p>
+        {source && <p className="mt-1 text-[11px] text-george-muted">{source}</p>}
+      </details>
+    </div>
+  );
+}
+
+/** For a compared block: the strip, or nothing, from its own meta. */
 export function ComparisonCoverage({ meta, coverage }: { meta?: ToolMeta; coverage: Coverage | null }) {
   if (!coverage) return null;
   const label = meta?.comparison?.display_name ? `Compared ${meta.comparison.display_name}` : undefined;
