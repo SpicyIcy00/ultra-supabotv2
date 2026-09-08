@@ -82,3 +82,7 @@ storehub exports/
 new storehub exports/
 *.csv
 !tests/**/*.csv
+
+# Local integration verification artifacts
+verification/
+.worktrees/
