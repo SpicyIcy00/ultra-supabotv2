@@ -1143,6 +1143,13 @@ def get_sales(
         "metric_kind": metric_kind,
         "metric_label": _req(mdef, "display_name"),
         "metric_domain": _req(mdef, "domain"),
+        # What the DEFINITIONS say may be asked next of this metric, so a
+        # surface can offer "by store" or "why?" only where a follow-up is
+        # valid — read from metrics.yaml here, never decided by a client and
+        # never by the model (UI System V2, contextual actions).
+        "valid_group_by": list(_req(mdef, "valid_group_by")),
+        "drivers": list((mdef.get("drivers") or {}).get("components") or []),
+        "top_n": top_n,
         "group_by": group_by,
         "window": window_meta,
         "filters_applied": filters_applied,
