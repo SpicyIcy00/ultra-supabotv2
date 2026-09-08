@@ -150,7 +150,7 @@ def _needs_database(item) -> bool:
             "test_recall_contract", "test_approvals_contract",
             "test_voice_contract", "test_river_contract",
             "test_river_writer_contract", "test_post_frame_contract",
-            "test_thread_continue_contract", "test_pin_membership_contract",
+            "test_thread_continue_contract", "test_page_writer_contract",
             "test_investigation_contract", "test_duplicate_read_contract",
             "test_interim_prose_contract", "test_eval_checks_contract",
             "test_stored_calls_contract", "test_page_reader_contract",

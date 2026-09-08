@@ -69,6 +69,21 @@ class MigrationVerificationFailed(RuntimeError):
     """A backfill assertion did not hold. The old column has NOT been dropped."""
 
 
+def _applying() -> bool:
+    """
+    Whether this is a real application against a connection.
+
+    False under `alembic upgrade --sql`. True under a normal upgrade, and
+    also when the revision is applied programmatically through
+    Operations.context with no EnvironmentContext at all — which is how the
+    live test suite applies it inside a transaction it then rolls back.
+    """
+    try:
+        return not context.is_offline_mode()
+    except Exception:  # noqa: BLE001 - no environment context configured
+        return True
+
+
 def _scalar(sql: str):
     return op.get_bind().execute(sa.text(sql)).scalar()
 
@@ -254,7 +269,7 @@ def upgrade() -> None:
     # ------------------------------------------------------------------ verify
     # Offline rendering (`alembic upgrade --sql`) has no rows to check and no
     # connection to check them with; the assertions run only when applying.
-    if not context.is_offline_mode():
+    if _applying():
         _verify()
 
     # ---------------------------------------------------- drop the old column

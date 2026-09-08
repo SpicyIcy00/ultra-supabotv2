@@ -1,9 +1,9 @@
 """
 Creating a pin — the ONE write path, shared by the button and by George.
 
-This module exists because there are now two ways to pin an answer: the Pin
-button on a chat turn (POST /pins) and George pinning his own answer when asked
-in conversation (the `pin_answer` tool). They must not be two implementations.
+This module exists because there are two ways to pin an answer: the Pin button
+on a chat turn (POST /pins) and George pinning his own answer when asked in
+conversation (the `pin_answer` tool). They must not be two implementations.
 Every guarantee a pin carries — that its calls still run against the live tool
 surface, that a page name is not a case-typo of an existing page, that a tile
 holds at most MAX_TOOL_CALLS_PER_PIN calls — is enforced here, once, so a fix to
@@ -21,14 +21,15 @@ FAILURES ARE TYPED, NOT FORMATTED. The route turns them into status codes, and
 George turns them into a refusal the model can act on. Neither reads a string to
 decide which is which.
 
-MEMBERSHIP IS A WRITE TOO (added 2026-09-07, Persistence V1). A page is still
-derived from its pins — there is no pages table, and a page with no pins is not
-a thing — so "move this pin to Purchasing" and "rename FFR Overview" are both
-UPDATEs on george.pins, scoped to the caller in the query because that table has
-RLS off. They live here beside create_pin for the same reason create_pin does:
-the route calls them today, and a writer injected into the loop would call the
-same functions tomorrow, so "put this on Purchasing" said in conversation cannot
-drift from the button. Neither re-runs anything: membership is not a figure.
+MEMBERSHIP MOVED TO page_writer (2026-09-08, Page Workshop V1). A page is a row
+now, a pin points at it by id and holds a position on it, and every membership
+or order change — including the one a create makes by landing a pin at the
+bottom of a page — goes through app.services.page_writer, which keeps positions
+dense and writes the audit row. What stays here is the pin itself: its calls
+validated, its quota checked, its title, its question and its provenance. The
+page-by-NAME forms (`page="Replenishment"`) are kept because the Pin dialog and
+pin_answer still speak in names; page_writer.page_for_write turns a name into
+the existing page or a new one under the same collision rule as always.
 """
 
 from __future__ import annotations
@@ -38,17 +39,25 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.river_writer import post_pin_confirmation
+from app.models.george_page import GeorgePage
 from app.models.george_pin import GeorgePin
-from app.services.pin_runner import (
-    PinValidationError,
-    find_similar_page,
-    normalize_page,
-    validate_calls,
+from app.services import page_writer
+from app.services.page_writer import (   # noqa: F401 - re-exported for the routes and tests
+    USER,
+    Actor,
+    AmbiguousTarget,
+    NotAPage,
+    PageNotFound,
+    PageQuotaError,
+    PageValidationError,
+    PinNotFound,
+    SimilarPageError,
 )
+from app.services.pin_runner import PinValidationError, validate_calls
+from app.services.river_writer import post_pin_confirmation
 
 # A tile that needs more than this is probably several tiles.
 MAX_TOOL_CALLS_PER_PIN = 8
@@ -61,40 +70,6 @@ class TooManyCallsError(PinValidationError):
 
 class PinQuotaError(ValueError):
     """The caller is at MAX_PINS_PER_USER."""
-
-
-class SimilarPageError(ValueError):
-    """
-    The page name differs from an existing one only by case.
-
-    Carries both names because the caller has to offer the choice rather than
-    resolve it — silently merging or silently forking are both guesses. See
-    find_similar_page for why the match is case-only and never fuzzy.
-    """
-
-    def __init__(self, existing_page: str, submitted_page: str) -> None:
-        self.existing_page = existing_page
-        self.submitted_page = submitted_page
-        super().__init__(
-            f"You already have a page called {existing_page!r}. You sent "
-            f"{submitted_page!r}, which differs only by capitalisation. Reuse "
-            f"the existing name, or resend with allow_similar_page=true to "
-            f"keep both."
-        )
-
-
-class PinNotFound(LookupError):
-    """
-    No pin with that id belongs to the caller.
-
-    Whether the id exists at all is not information a caller is entitled to,
-    so the route renders this as a 404 exactly as it renders somebody else's
-    pin — see routes/george_pins._owned.
-    """
-
-
-class PageNotFound(LookupError):
-    """The caller has no pins on a page of that exact name."""
 
 
 class _Unset:
@@ -124,23 +99,64 @@ class CreatedPin:
 
 
 async def pages_for(db: AsyncSession, username: str) -> list[str]:
-    """The caller's existing page names. Scoped in the query — this table has RLS off."""
-    rows = (
+    """The caller's existing page titles. Scoped in the query — RLS is off."""
+    return await page_writer.page_titles(db, username)
+
+
+async def count_pins(db: AsyncSession, username: str) -> int:
+    return (
         await db.execute(
-            select(GeorgePin.page)
-            .where(GeorgePin.created_by == username, GeorgePin.page.isnot(None))
-            .distinct()
+            select(func.count()).select_from(GeorgePin).where(GeorgePin.created_by == username)
         )
-    ).scalars().all()
-    return [r for r in rows if r]
+    ).scalar_one()
 
 
-async def _count_on_page(db: AsyncSession, username: str, page: Optional[str]) -> int:
-    stmt = select(func.count()).select_from(GeorgePin).where(
-        GeorgePin.created_by == username
-    )
-    stmt = stmt.where(GeorgePin.page.is_(None) if page is None else GeorgePin.page == page)
+async def _count_on_page(db: AsyncSession, username: str, page_id: Optional[uuid.UUID]) -> int:
+    stmt = select(func.count()).select_from(GeorgePin).where(GeorgePin.created_by == username)
+    stmt = stmt.where(GeorgePin.page_id.is_(None) if page_id is None
+                      else GeorgePin.page_id == page_id)
     return (await db.execute(stmt)).scalar_one()
+
+
+def validate_pin_calls(tool_calls: list[dict[str, Any]]) -> list[dict]:
+    """
+    The call-level rules, factored so a page build can validate EVERY analysis
+    before it stores ANY: the cap, and each call against the live surface.
+    """
+    if len(tool_calls) > MAX_TOOL_CALLS_PER_PIN:
+        raise TooManyCallsError(
+            f"A pin may hold at most {MAX_TOOL_CALLS_PER_PIN} tool calls; "
+            f"this answer used {len(tool_calls)}. A tile that needs more than "
+            f"that is probably several tiles."
+        )
+    return validate_calls(tool_calls)
+
+
+async def ensure_pin_quota(db: AsyncSession, username: str, adding: int = 1) -> None:
+    count = await count_pins(db, username)
+    if count + adding > MAX_PINS_PER_USER:
+        raise PinQuotaError(
+            f"You have {count} pins and the maximum is {MAX_PINS_PER_USER}; "
+            f"adding {adding} more is not possible. Delete some first."
+        )
+
+
+def new_pin_row(
+    *, username: str, calls: list[dict], title: Optional[str], question: Optional[str],
+    conversation_id: Optional[uuid.UUID],
+) -> GeorgePin:
+    """The row, unattached. page_writer.append_new_pin puts it somewhere."""
+    return GeorgePin(
+        id=uuid.uuid4(),
+        created_by=username,
+        created_at=datetime.now(timezone.utc),
+        title=(title or question or calls[0]["tool"]).strip()[:200],
+        question=question,
+        conversation_id=conversation_id,
+        page_id=None,
+        position=0,
+        tool_calls=calls,
+    )
 
 
 async def create_pin(
@@ -151,8 +167,11 @@ async def create_pin(
     title: Optional[str] = None,
     question: Optional[str] = None,
     conversation_id: Optional[uuid.UUID] = None,
-    page: Optional[str] = None,
+    page: Any = UNSET,
+    page_id: Any = UNSET,
     allow_similar_page: bool = False,
+    actor: Actor = USER,
+    announce: bool = True,
 ) -> CreatedPin:
     """
     Store the tool calls behind an answer so a tile can re-run them.
@@ -163,89 +182,52 @@ async def create_pin(
     answer they tried to pin, or still in the conversation where they asked for
     it.
 
+    Where it lands: `page_id` names one of the caller's pages by identity;
+    `page` names one by TITLE (an existing title joins it, a new title creates
+    it, None or blank is Ungrouped); neither means Ungrouped. A new pin joins a
+    page at the BOTTOM. `announce=False` skips the river confirmation, for a
+    page build that announces itself once rather than once per analysis.
+
     Raises TooManyCallsError / PinValidationError (the pin cannot be stored),
-    PinQuotaError (the caller is full), or SimilarPageError (the page name needs
-    a decision the caller must not make for them).
+    PinQuotaError / PageQuotaError (the caller or the page is full), PageNotFound
+    (page_id is not theirs), or SimilarPageError (the page name needs a decision
+    the caller must not make for them).
     """
-    if len(tool_calls) > MAX_TOOL_CALLS_PER_PIN:
-        raise TooManyCallsError(
-            f"A pin may hold at most {MAX_TOOL_CALLS_PER_PIN} tool calls; "
-            f"this answer used {len(tool_calls)}. A tile that needs more than "
-            f"that is probably several tiles."
+    calls = validate_pin_calls(tool_calls)
+    await ensure_pin_quota(db, username, adding=1)
+
+    target: Optional[GeorgePage] = None
+    if page_id is not UNSET and page_id is not None:
+        target = await page_writer.get_page(db, username, uuid.UUID(str(page_id)))
+    elif page is not UNSET and page is not None:
+        target = await page_writer.page_for_write(
+            db, owner=username, title=page, actor=actor,
+            allow_similar_page=allow_similar_page,
         )
 
-    count = (
-        await db.execute(
-            select(func.count())
-            .select_from(GeorgePin)
-            .where(GeorgePin.created_by == username)
-        )
-    ).scalar_one()
-    if count >= MAX_PINS_PER_USER:
-        raise PinQuotaError(
-            f"You already have {count} pins, the maximum. Delete some first."
-        )
-
-    calls = validate_calls(tool_calls)
-
-    normalized = await _check_page_name(db, username, page, allow_similar_page)
-
-    pin = GeorgePin(
-        id=uuid.uuid4(),
-        created_by=username,
-        created_at=datetime.now(timezone.utc),
-        title=(title or question or calls[0]["tool"]).strip()[:200],
-        question=question,
-        conversation_id=conversation_id,
-        page=normalized,
-        tool_calls=calls,
-    )
+    pin = new_pin_row(username=username, calls=calls, title=title, question=question,
+                      conversation_id=conversation_id)
+    await page_writer.append_new_pin(db, owner=username, pin=pin, to_page=target, actor=actor)
     db.add(pin)
     await db.flush()
 
     # The pin in the river, so it has a durable record beside everything else
     # George did. PRIVATE and owned by whoever pinned: a pin is one person's
-    # tile, and "Ice pinned Rockwell net sales" is somebody's workspace rather
-    # than a company-level fact (app/models/george_post.PRIVATE_GEORGE_KINDS).
-    #
-    # Here rather than in the route, because this is the path the route AND
-    # George's injected writer both take — two call sites would drift, which is
-    # the reason this module exists at all. Idempotent on the pin id.
-    #
-    # Never fatal: a pin that failed to announce itself is still a pin, and
-    # raising here would lose the write over a post.
-    try:
-        await post_pin_confirmation(
-            db, pin_id=pin.id, title=pin.title, page=normalized,
-            owner=username, tool_calls=len(calls),
-            conversation_id=conversation_id,
-        )
-    except Exception as exc:  # noqa: BLE001 - a post must not cost a pin
-        print(f"[pins] river post failed for pin {pin.id}: "
-              f"{type(exc).__name__}: {exc}")
+    # tile (app/models/george_post.PRIVATE_GEORGE_KINDS). Here rather than in
+    # the route, because this is the path the route AND George's injected
+    # writer both take. Idempotent on the pin id. Never fatal.
+    if announce:
+        try:
+            await post_pin_confirmation(
+                db, pin_id=pin.id, title=pin.title, page=pin.page,
+                owner=username, tool_calls=len(calls),
+                conversation_id=conversation_id,
+            )
+        except Exception as exc:  # noqa: BLE001 - a post must not cost a pin
+            print(f"[pins] river post failed for pin {pin.id}: "
+                  f"{type(exc).__name__}: {exc}")
 
-    return CreatedPin(
-        row=pin,
-        pins_on_page=await _count_on_page(db, username, normalized),
-    )
-
-
-async def _check_page_name(
-    db: AsyncSession, username: str, page: Optional[str], allow_similar_page: bool,
-) -> Optional[str]:
-    """
-    Normalise a page name and refuse a case-only near-duplicate.
-
-    THE SAME RULE create_pin APPLIES, factored so a move and a rename cannot
-    apply a looser one. An exact match is the same page and passes — that is
-    how a pin joins an existing page.
-    """
-    normalized = normalize_page(page)
-    if normalized and not allow_similar_page:
-        similar = find_similar_page(normalized, await pages_for(db, username))
-        if similar:
-            raise SimilarPageError(existing_page=similar, submitted_page=normalized)
-    return normalized
+    return CreatedPin(row=pin, pins_on_page=await _count_on_page(db, username, pin.page_id))
 
 
 @dataclass(frozen=True)
@@ -262,38 +244,44 @@ async def update_pin(
     username: str,
     pin_id: uuid.UUID,
     page: Any = UNSET,
+    page_id: Any = UNSET,
     title: Any = UNSET,
+    place: Any = UNSET,
     allow_similar_page: bool = False,
+    actor: Actor = USER,
 ) -> MovedPin:
     """
-    Change which page a pin sits on, or what it is called. Nothing else.
+    Change which page a pin sits on, where on it, or what it is called.
 
-    `page` accepts an existing page (the pin joins it), a new name (the page
-    now exists, because a page is its pins), or None (the pin is ungrouped —
-    which is how a pin is REMOVED from a page without being deleted). A field
-    not sent is left exactly as it was, which is what UNSET is for: None is a
-    value here, not an absence.
+    `page_id` (identity) or `page` (title: existing, new, or None for
+    Ungrouped) moves it; `place` — {"before": id} | {"after": id} |
+    {"at": "top"|"bottom"} — positions it on the page it ends up on; `title`
+    retitles it. A field not sent is left exactly as it was, which is what
+    UNSET is for: None is a value here, not an absence. Positions on every
+    page touched are dense again before this returns.
 
-    THE CALLS ARE NEVER TOUCHED. A move changes a label on a row and leaves
-    tool_calls, question, conversation_id and the run history alone, and it
-    does not re-run the pin: membership is not a figure, and a tile re-reads
-    when it is next looked at anyway.
-
-    Scoped to the caller in the query. Somebody else's pin is PinNotFound,
-    indistinguishable from no pin at all.
+    THE CALLS ARE NEVER TOUCHED and nothing is re-run: membership is not a
+    figure. Somebody else's pin is PinNotFound, indistinguishable from none.
     """
-    pin = (
-        await db.execute(
-            select(GeorgePin).where(
-                GeorgePin.id == pin_id, GeorgePin.created_by == username,
-            )
-        )
-    ).scalar_one_or_none()
-    if pin is None:
-        raise PinNotFound("Pin not found.")
+    pin = await page_writer.get_pin(db, username, pin_id)
 
-    if page is not UNSET:
-        pin.page = await _check_page_name(db, username, page, allow_similar_page)
+    moving = page_id is not UNSET or page is not UNSET
+    if moving:
+        if page_id is not UNSET and page_id is not None:
+            target = await page_writer.get_page(db, username, uuid.UUID(str(page_id)))
+        elif page is not UNSET and page is not None:
+            target = await page_writer.page_for_write(
+                db, owner=username, title=page, actor=actor,
+                allow_similar_page=allow_similar_page,
+            )
+        else:
+            target = None
+        await page_writer.move_pin(
+            db, owner=username, pin=pin, to_page=target,
+            place=None if place is UNSET else place, actor=actor,
+        )
+    elif place is not UNSET and place is not None:
+        await page_writer.place_pin(db, owner=username, pin=pin, place=place, actor=actor)
 
     if title is not UNSET:
         cleaned = (title or "").strip()[:200]
@@ -302,13 +290,14 @@ async def update_pin(
         pin.title = cleaned
 
     await db.flush()
-    return MovedPin(row=pin, pins_on_page=await _count_on_page(db, username, pin.page))
+    return MovedPin(row=pin, pins_on_page=await _count_on_page(db, username, pin.page_id))
 
 
 @dataclass(frozen=True)
 class RenamedPage:
-    """What a rename did: the name it settled on, and how many pins followed it."""
+    """What a rename did: the page, the name it settled on, and how many pins it holds."""
 
+    page_id: uuid.UUID
     page: str
     pins_moved: int
 
@@ -320,44 +309,24 @@ async def rename_page(
     old: str,
     new: str,
     allow_similar_page: bool = False,
+    actor: Actor = USER,
 ) -> RenamedPage:
     """
-    Rename one of the caller's pages: every pin of theirs on it, in one UPDATE.
+    Rename one of the caller's pages, named by its current EXACT title.
 
-    A page is derived from its pins, so renaming it IS moving its pins, and the
-    one statement below is the whole operation — there is no page row to keep
-    in step and no second write that could half-succeed.
-
-    ONLY THE CALLER'S PINS. The WHERE carries created_by, so another person's
-    page of the same name is untouched: pages are per person because pins are.
-    Historical river posts that name the old page are left as they are — they
-    record what was true when they were written.
-
-    The exact-name rule is deterministic and is the one create_pin uses:
-    trim, collapse whitespace, keep case. A rename to a case-variant of ANOTHER
-    existing page is refused as a near-duplicate unless the caller says they
-    want both; a rename that only changes the case of THIS page is allowed,
-    because the old name is about to stop existing.
+    Kept for the legacy route (PATCH /pins/pages/{name}); the page keeps its
+    id, so nothing bound to it moves. `pins_moved` is the pin count, which is
+    what the old contract reported and still the number a reader wants.
     """
-    old_name = normalize_page(old)
-    new_name = normalize_page(new)
-    if not old_name:
+    name = page_writer.normalize_page(old)
+    if not name:
         raise PageNotFound("Ungrouped is not a page and cannot be renamed.")
-    if not new_name:
-        raise PinValidationError("A page needs a name.")
-
-    if new_name != old_name and not allow_similar_page:
-        others = [p for p in await pages_for(db, username) if p != old_name]
-        similar = find_similar_page(new_name, others)
-        if similar:
-            raise SimilarPageError(existing_page=similar, submitted_page=new_name)
-
-    result = await db.execute(
-        update(GeorgePin)
-        .where(GeorgePin.created_by == username, GeorgePin.page == old_name)
-        .values(page=new_name)
+    page = await page_writer.find_page_by_title(db, username, name)
+    if page is None:
+        raise PageNotFound(f"You have no page called {name!r}.")
+    renamed = await page_writer.rename_page(
+        db, owner=username, page_id=page.id, title=new, actor=actor,
+        allow_similar_page=allow_similar_page,
     )
-    moved = int(result.rowcount or 0)
-    if moved == 0:
-        raise PageNotFound(f"You have no page called {old_name!r}.")
-    return RenamedPage(page=new_name, pins_moved=moved)
+    return RenamedPage(page_id=renamed.id, page=renamed.title,
+                       pins_moved=await _count_on_page(db, username, renamed.id))
