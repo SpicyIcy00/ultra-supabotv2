@@ -59,19 +59,8 @@ async def startup_event():
     from app.core.schema_check import verify as _verify_schema
     app.state.schema = (await _verify_schema(_engine)).as_dict()
 
-    # Debug: Print database connection info (redacted)
-    try:
-        db_url = settings.DATABASE_URL
-        if "@" in db_url:
-            # simple redaction
-            prefix = db_url.split("@")[0]
-            suffix = db_url.split("@")[1]
-            redacted_prefix = prefix.split(":")[0] + ":****"
-            print(f"DEBUG: Connecting to database at: {redacted_prefix}@{suffix}")
-        else:
-            print(f"DEBUG: Connecting to database at: {db_url}")
-    except Exception as e:
-        print(f"DEBUG: Error logging DB info: {e}")
+    # Do not print connection strings or exception payloads at startup.
+    print("Database configuration loaded; schema verified")
 
     # Apply any pending schema changes that bypass alembic
     try:
@@ -230,7 +219,7 @@ async def startup_event():
             """))
         print("Schema migration: max_cover_days + product_barcodes + percentile columns + store config + auto_report + scheduled_reports ensured")
     except Exception as e:
-        print(f"Schema migration warning: {e}")
+        print(f"Schema migration warning: {type(e).__name__}")
 
     # --- Warehouse Packing step 1: auth + role-based page access ---
     # Mirrors backend/sql/001_auth_roles.sql so a fresh deploy self-heals.
@@ -329,7 +318,7 @@ async def startup_event():
             )).scalar()
         print(f"Auth migration: app_users ensured ({users} account(s) able to sign in, {grants} page grant(s))")
     except Exception as e:
-        print(f"AUTH MIGRATION FAILED — login will not work: {e}")
+        print(f"AUTH MIGRATION FAILED — login will not work: {type(e).__name__}")
 
     # --- Warehouse Packing step 2: packing schema ---
     # Mirrors backend/sql/003_packing_schema.sql. Own transaction for the same
@@ -458,7 +447,7 @@ async def startup_event():
             )).scalar()
         print(f"Packing migration: schema ensured ({seeded} product(s) with a pack weight)")
     except Exception as e:
-        print(f"PACKING MIGRATION FAILED: {e}")
+        print(f"PACKING MIGRATION FAILED: {type(e).__name__}")
 
     # Initialize schema context with database connection
     business_rules_path = Path(__file__).parent.parent / "business_rules.yaml"
@@ -474,7 +463,7 @@ async def startup_event():
         from app.services.scheduler import start_scheduler
         start_scheduler()
     except Exception as e:
-        print(f"Scheduler start warning: {e}")
+        print(f"Scheduler start warning: {type(e).__name__}")
 
     print("REGISTERED ROUTES START")
     for route in app.routes:
@@ -491,7 +480,7 @@ async def shutdown_event():
         from app.services.scheduler import shutdown_scheduler
         shutdown_scheduler()
     except Exception as e:
-        print(f"Scheduler shutdown warning: {e}")
+        print(f"Scheduler shutdown warning: {type(e).__name__}")
     SchemaContext.shutdown()
     print("SchemaContext shut down")
 
