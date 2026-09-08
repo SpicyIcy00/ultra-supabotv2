@@ -1,0 +1,168 @@
+"""
+The behavioural evals' own checks, held as code.
+
+NO DATABASE, NO API. A check that misreads prose would pass a bad answer or
+fail a good one silently, so each is pinned here against the sentences the
+evals are meant to tell apart.
+"""
+
+from __future__ import annotations
+
+from tests.evals.checks import (
+    attribution_claims,
+    compared_windows,
+    enumeration,
+    limitation_statement,
+    named_driver,
+    stronger_from_rows,
+    ungrounded_numerals,
+)
+
+ROWS = [{"tool": "get_sales", "result": {
+    "rows": [{"value": 1489194.8, "baseline": 1769190.1, "change": -279995.3,
+              "change_pct": -15.8, "direction": "down", "baseline_status": "ok"}],
+    "meta": {"window": {"start": "2026-08-24", "end": "2026-08-31"}, "row_count": 1,
+             "full_row_count": 528, "zero_total_transactions": 110},
+}}]
+
+
+# ---------------------------------------------------------------------------
+# Numeral grounding
+# ---------------------------------------------------------------------------
+
+def test_a_returned_figure_is_grounded_however_it_is_formatted():
+    answer = ("Net sales were ₱1,489,194.80 in the week to 31 Aug 2026, down 15.8% "
+              "from ₱1,769,190 — a fall of ₱279,995. That is ₱1.49M against ₱1.77M.")
+    assert ungrounded_numerals(answer, [r["result"] for r in ROWS]) == []
+
+
+def test_an_invented_figure_is_caught():
+    answer = "Net sales were ₱1,489,195, and ATP was ₱435.82, so 82% of the fall is basket."
+    found = ungrounded_numerals(answer, [r["result"] for r in ROWS])
+    assert [f.value for f in found] == [435.82, 82.0]
+
+
+def test_dates_counts_and_years_are_excused():
+    answer = ("On 2026-08-24, in 3 of 7 stores, the 24 Aug 2026 week ran to 31 August 2026; "
+              "two rounds, 12 products, 528 subjects.")
+    assert ungrounded_numerals(answer, [r["result"] for r in ROWS]) == []
+
+
+def test_a_percentage_is_never_excused_as_a_small_count():
+    assert [f.value for f in ungrounded_numerals("Down 9%.", [r["result"] for r in ROWS])] == [9.0]
+
+
+def test_a_rounded_representation_is_grounded_and_a_wrong_rounding_is_not():
+    assert ungrounded_numerals("down 16%", [r["result"] for r in ROWS]) == []
+    assert [f.value for f in ungrounded_numerals("down 15.9%", [r["result"] for r in ROWS])] == [15.9]
+
+
+# ---------------------------------------------------------------------------
+# Attribution
+# ---------------------------------------------------------------------------
+
+def test_attribution_shares_are_caught_and_qualitative_readings_are_not():
+    assert attribution_claims("82% of the decline came from ATP.")
+    assert attribution_claims("ATP accounts for about 80% of it.")
+    assert attribution_claims("Most of the decline was ATP.")
+    assert attribution_claims("Transactions explain 60% of the drop.")
+    assert attribution_claims(
+        "Transactions were down 2%, while ATP fell 9%. That makes lower basket value "
+        "the stronger measured driver of the sales decline."
+    ) == []
+
+
+# ---------------------------------------------------------------------------
+# Driver naming
+# ---------------------------------------------------------------------------
+
+def test_the_named_driver_is_read_from_the_conclusion():
+    assert named_driver(
+        "Transactions were down 2.0%, while ATP fell 9.3%. That makes lower basket "
+        "value the stronger measured driver."
+    ) == "atp"
+    assert named_driver(
+        "Sales fell 18.6% at OPUS. Transactions dropped 21.2% while ATP rose 3.2%, "
+        "so traffic is the driver, not basket size."
+    ) == "transactions"
+    assert named_driver(
+        "Transactions fell 8.0% and ATP fell 8.3%: both moved by about the same amount, "
+        "so neither is the stronger driver."
+    ) == "both"
+    assert named_driver("Sales were up 7.8%, so there is no decline to explain.") is None
+
+
+def test_the_rows_decide_what_the_stronger_driver_should_be():
+    assert stronger_from_rows(-21.2, 3.2) == "transactions"
+    assert stronger_from_rows(5.0, -16.4) == "atp"
+    assert stronger_from_rows(-8.0, -8.3) == "both"
+    assert stronger_from_rows(None, -8.3) is None
+
+
+# ---------------------------------------------------------------------------
+# Calls
+# ---------------------------------------------------------------------------
+
+def test_compared_windows_are_normalised_and_refusals_ignored():
+    calls = [
+        {"tool": "get_sales", "arguments": {"date_range": ["2026-08-24", "2026-08-31"], "compare_to": "previous_period"}},
+        {"tool": "get_sales", "arguments": {"date_range": ("2026-08-24", "2026-08-31"), "compare_to": "previous_period", "metric": "transaction_count"}},
+        {"tool": "get_sales", "arguments": {"date_range": "this_week", "compare_to": "previous_period"}, "error": "refused"},
+        {"tool": "get_sales", "arguments": {"date_range": ["2026-08-24", "2026-08-31"]}},
+    ]
+    assert len(compared_windows(calls)) == 1
+
+
+def test_enumeration_is_the_same_call_over_three_subjects():
+    per_store = [{"tool": "get_sales", "arguments": {"metric": "net_sales", "date_range": "last_week",
+                                                     "filters": {"store": s}}}
+                 for s in ("Rockwell", "OPUS", "Shang")]
+    assert enumeration(per_store)
+    two = per_store[:2]
+    assert enumeration(two) == []
+    different = per_store[:1] + [{"tool": "get_sales", "arguments": {"metric": "transaction_count", "date_range": "last_week", "filters": {"store": "OPUS"}}}]
+    assert enumeration(different) == []
+
+
+# ---------------------------------------------------------------------------
+# Limitation
+# ---------------------------------------------------------------------------
+
+def test_a_limitation_statement_is_recognised():
+    assert limitation_statement(
+        "Basket value fell much more than transactions. I can establish that as the "
+        "main measured driver, but the current reads don't establish why basket value fell."
+    )
+    assert limitation_statement("A product-level comparison would be the next useful check.")
+    assert limitation_statement("Customers are buying fewer premium products.") is None
+
+
+def test_a_half_rounded_up_is_grounded_and_a_notice_figure_counts():
+    results = [{"rows": [{"value": 172918.5, "change": -25168.5}],
+                "meta": {"notice": {"message": "disagree by 12,340.00 PHP"}}}]
+    assert ungrounded_numerals("₱172,919 and ₱25,169 and ₱12,340", results) == []
+
+
+def test_a_contrast_names_the_driver_without_the_word():
+    assert named_driver(
+        "It was footfall, not basket: transactions fell 21.2% while average "
+        "transaction value actually rose 3.2%."
+    ) == "transactions"
+    assert named_driver("Basket value, not traffic, is what moved.") == "atp"
+
+
+def test_george_s_own_phrasings_from_the_first_live_run_are_read_correctly():
+    """Sentences George actually wrote on 2026-09-08, which the first checks missed."""
+    assert named_driver(
+        "It was traffic, not baskets. Transactions fell 21.2% (874 against 1,109); average "
+        "transaction value actually rose 3.2%. So fewer people came in, and the ones who did spent slightly more each."
+    ) == "transactions"
+    assert named_driver(
+        "Both, in near-equal measure — which is the honest answer, not a dodge. Traffic fell 8.0% and "
+        "basket value fell 8.3%. Those are close enough that I won't name a dominant driver."
+    ) == "both"
+    assert limitation_statement(
+        "What this establishes: cheaper mix, concentrated in tradsnax. What it doesn't: whether "
+        "customers chose down or the shelf chose for them."
+    )
+    assert limitation_statement("The bev row makes me want the stock snapshots before anyone concludes it was demand.")
