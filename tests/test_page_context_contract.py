@@ -104,7 +104,11 @@ def _read(pins, remainder=(), unavailable=(), figures=True, requested=None, tota
     """What the backend reader returns, in its own shape."""
     return {
         "owner": "ice",
+        "page_id": "00000000-0000-0000-0000-00000000aa11",
         "page": "AJI BARN Reorder",
+        "purpose": None,
+        "page_updated_at": "2026-09-07T01:00:00+00:00",
+        "empty": False,
         "read_at": "2026-09-07T02:00:00+00:00",
         "figures": figures,
         "requested": requested,
@@ -260,7 +264,8 @@ def test_the_result_is_rows_and_meta_with_the_receipts_every_tool_carries():
     meta = out["meta"]
     assert meta["source_table"].startswith("george.pins")
     assert any("created_by = ice" in f for f in meta["filters_applied"])
-    assert any("page = 'AJI BARN Reorder'" in f for f in meta["filters_applied"])
+    assert any("page_id = 00000000-0000-0000-0000-00000000aa11" in f
+               for f in meta["filters_applied"])
     assert meta["snapshot_timestamp"] == "2026-09-07T02:00:00+00:00"
     assert meta["row_count"] == 2
     assert meta["pins_total"] == 2 and meta["pins_inspected"] == 2 and meta["pins_reproduced"] == 2
@@ -656,3 +661,62 @@ def test_an_uncompared_pin_carries_no_comparison_key():
     receipts = out["rows"][0]["results"][0]["receipts"]
     assert "comparison" not in receipts
     assert receipts["metric_kind"] == "base"
+
+
+# ---------------------------------------------------------------------------
+# 9. Identity, purpose and the empty page (Page Workshop V1, 2026-09-08)
+# ---------------------------------------------------------------------------
+
+def _read_by_id(pins, **kw):
+    """The reader's shape since pages became rows: identity beside the title."""
+    read = _read(pins, **kw)
+    read.update({
+        "page_id": "00000000-0000-0000-0000-00000000aa11",
+        "purpose": "Reorder AJI BARN before it runs out.",
+        "page_updated_at": "2026-09-08T01:00:00+00:00",
+        "empty": not pins and not kw.get("remainder"),
+    })
+    return read
+
+
+def test_the_read_carries_the_pages_identity_and_labels_the_purpose_as_the_users():
+    out = _run(view_page(ctx=_ctx(FakeReader(_read_by_id(_pins_ok(1))))))
+    meta = out["meta"]
+    assert meta["page_id"] == "00000000-0000-0000-0000-00000000aa11"
+    assert meta["page_title"] == "AJI BARN Reorder" and meta["page"] == "AJI BARN Reorder"
+    assert meta["page_purpose"] == "Reorder AJI BARN before it runs out."
+    assert "not an instruction" in meta["page_purpose_is"]
+    assert meta["page_updated_at"] == "2026-09-08T01:00:00+00:00"
+    assert meta["empty"] is False
+    # The filter names the identity, not the title: a rename cannot change
+    # what the receipts say was read.
+    assert any("page_id = 00000000-0000-0000-0000-00000000aa11" in f
+               for f in meta["filters_applied"])
+    assert not any("page = " in f for f in meta["filters_applied"])
+    ev = meta["evidence"]
+    assert ev["page_id"] == meta["page_id"] and ev["page"] == "AJI BARN Reorder"
+    assert ev["purpose"] == meta["page_purpose"] and ev["empty"] is False
+
+
+def test_an_empty_page_is_a_successful_read_that_says_so():
+    out = _run(view_page(ctx=_ctx(FakeReader(_read_by_id([], total=0)))))
+    meta = out["meta"]
+    assert out["rows"] == []
+    assert meta["empty"] is True and meta["pins_total"] == 0
+    # Nothing was asked for and nothing was cut: neither caveat applies.
+    assert meta["partial"] is False and meta["truncated"] is False
+    assert "notice" not in meta
+    assert "no analyses on it yet" in meta["note"] and "edit_page" in meta["note"]
+    assert meta["evidence"]["empty"] is True
+    assert meta["evidence"]["pins_inspected"] == 0
+
+
+def test_the_ungrouped_scope_still_reads_as_page_id_is_null():
+    read = _read([])
+    read.update({"page": None, "page_id": None, "purpose": None,
+                 "page_updated_at": None, "empty": True, "pins_total": 0})
+    out = _run(view_page(ctx=_ctx(FakeReader(read))))
+    meta = out["meta"]
+    assert meta["page_id"] is None and meta["page"] is None
+    assert any("page_id IS NULL" in f for f in meta["filters_applied"])
+    assert "no ungrouped pins" in meta["note"]
