@@ -203,6 +203,113 @@ rather than working around it.
    authoritative FFR source must provide before attachment metrics or FFR
    ATP can be defined. That is a separate data-source milestone.
 
+10. **An investigation is reasoning behaviour inside an ordinary
+    conversation. It is not an object, a tool, a table or a page.**
+
+    *Locked 2026-09-08, Investigation V1.* "Why is Rockwell down?" is
+    answered by a bounded ladder — **verify, decompose, localize, explain,
+    stop** — that George climbs in rounds, each round's results deciding the
+    next, and that he does not climb whole for every question. The loop is
+    unchanged in shape (rule 5): no planner, no investigation table, no
+    workflow, no page type, no `investigate_sales` composite. The vocabulary
+    lives in `metrics.yaml` `investigation` and the prompt's INVESTIGATING
+    section is built from it at import, exactly as the scope sentence is.
+
+    **The primary fact is verified before any cause is looked for, and a
+    false premise stops the investigation.** "Why is Rockwell down?" when
+    Rockwell is up 4.2% is answered by saying the premise does not hold for
+    the measured period. Nobody goes looking for the causes of a decline
+    that did not occur.
+
+    **Drivers are declared, and rest on a definition, not an assertion.**
+    `metrics.net_sales.drivers` names `transaction_count` and
+    `average_transaction_value` because that is the ATP formula rearranged
+    (`net_sales = transaction_count × average_transaction_value`), and
+    `tests/test_investigation_contract.py` holds the list to exactly the
+    derived ratio whose numerator is net_sales plus that ratio's
+    denominator. Drivers are read in the same batch as the primary fact,
+    with the SAME window, filters and comparison — a decomposition never
+    compares net sales for one period against ATP for another.
+
+    **The reading is qualitative and there is no numeric "similar"
+    threshold.** George names the driver whose `change_pct` is larger in
+    magnitude and says "both moved" when they are close. He may say "ATP
+    fell substantially more than transactions, so basket value is the
+    stronger measured driver." He may NOT say "82% of the decline came from
+    ATP": splitting a change in a product of two factors has no unique
+    answer, so a share is a convention nobody chose — a definition — and
+    `attribution_math: not_supported` records it. A percentage-point
+    threshold for "similar" was declined for the same reason and because
+    applying one would be arithmetic in prose; if the behavioural evals
+    show George cannot tell dominant from mixed movement, that is reported
+    and a deterministic contribution primitive is designed then, not a
+    number invented on a branch.
+
+    **Localization is one grouped or ranked call per dimension, and
+    localization is not cause.** `get_sales` now compares by any SUBJECT —
+    store, product, category — where the metric's own `valid_group_by`
+    allows it (product_revenue and units_sold by product; net_sales and ATP
+    stay refused by product; a time bucket stays refused as the lag series
+    the definitions record as not built). `rank_by` — `value`,
+    `biggest_drop`, `biggest_gain` — ranks a compared result INSIDE the tool
+    after both windows are matched per subject, by absolute change in the
+    metric's unit and never by `change_pct`, which a tiny baseline makes
+    enormous. Only rows with a numeric change are ranked; a vanished product
+    (`no_current`) or a new one (`no_baseline`) is counted and named in
+    `meta.comparison.not_ranked` and never outranks a measured change
+    because a null sorted somewhere. George never ranks two lists himself.
+    "The largest measured revenue declines were A and B" is a fact;
+    "customers switched to cheaper products" is a cause, and may be said
+    only when evidence at that level is in the conversation.
+
+    **Stopping is named.** A false premise; one driver clearly dominating
+    with nothing more asked; the next step unsupported by any tool or
+    refused; mixed evidence; a read that would repeat one already made;
+    reads that cannot establish cause. Then George says what the data
+    establishes, what it does not, and the one thing that would need to be
+    checked next — and that sentence is part of the answer, not a
+    volunteered fact (`volunteering.not_counted`, prompt rule 14). "Basket
+    value fell much more than transactions; these reads don't establish
+    why" beats a cause he invented.
+
+    **Two loop mechanics arrived with this, and they are not investigation
+    features.** An exact duplicate read — same tool, same `call_key`, same
+    turn — is served once: successful, empty and refused reads are all
+    recorded, the duplicate is answered with the ORIGINAL outcome (its own
+    `snapshot_timestamp`, or its refusal) plus `duplicate_of`, gets a seq
+    and frames, is never pinnable, sends no rows to be charted twice, and
+    spends none of the read budget, which bounds database work. The record
+    lives as long as `run()`; a later user turn re-reads freely. And prose
+    written in an iteration that then calls tools is NARRATION: the loop
+    resets it with reason `interim_prose`, the client moves it into the
+    activity disclosure, and the live answer is the stored answer — until
+    this date they disagreed, because the stored post kept the last
+    iteration's text and the screen kept all of it.
+
+    **Page evidence is evidence.** A pin that already carries a comparison
+    — metric, window, baseline, receipts, freshness — is a verified primary
+    fact and is not re-read merely because an investigation is under way;
+    fresh reads are for dimensions the page does not show. The partial and
+    truncated page notices stay mandatory.
+
+    **What enforces this, stated exactly.** The definitions and their
+    contract tests; the tool, which refuses what the definitions refuse and
+    ranks what the model may not; the prompt section, held by tests; the
+    duplicate guard and the interim reset, held by loop contract tests; and
+    the behavioural evals in `tests/evals/`, which run the real model
+    against the real database on CLOSED windows, opt-in, and assert
+    structure: the tools called and their arguments, one window per round,
+    no fan-out over subjects, bounded calls and iterations, every notice
+    conveyed without being forced, no attribution math, and — as an EVAL
+    only — that every figure in the prose is a figure a tool returned. A
+    rubric judge is optional and never gates. **Production still does not
+    mechanically verify prose numerals against rows**; rule 9's statement
+    of enforcement is unchanged, and this rule adds no claim beyond it.
+    The answer-level receipts line is still the last successful read's
+    meta (a known limit, noted in `agent/loop.py`); each result keeps its
+    own receipts on the surface, and widening that was deliberately kept
+    out of this milestone.
+
 ## Repo context George lives in
 
 This repo is **Ultra Supabot v2**, an existing retail BI app (FastAPI +
