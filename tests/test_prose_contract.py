@@ -44,6 +44,10 @@ _LOOP = _ROOT / "agent" / "loop.py"
 _DEFS = _ROOT / "definitions" / "metrics.yaml"
 _NOTICE_BANNER = _ROOT / "frontend" / "src" / "components" / "george" / "NoticeBanner.tsx"
 _RECEIPTS = _ROOT / "frontend" / "src" / "components" / "george" / "ReceiptsBlock.tsx"
+# scopeLine lives apart from the component, as pinShape does: a decision the
+# suite can hold without a DOM, and a component file that also exports helpers
+# breaks fast refresh.
+_RECEIPT_SHAPE = _ROOT / "frontend" / "src" / "components" / "george" / "receiptShape.ts"
 
 # Every module that builds a notice dict.
 _NOTICE_SOURCES = sorted((_ROOT / "tools").glob("*.py")) + [
@@ -215,7 +219,7 @@ def test_the_citation_is_one_tap_down():
 
 def test_the_receipts_line_leads_with_scope_and_not_a_table_name():
     receipts = _ts_source(_RECEIPTS)
-    assert "export function scopeLine(" in receipts
+    assert "export function scopeLine(" in _ts_source(_RECEIPT_SHAPE)
     collapsed = receipts.split("aria-expanded={open}", 1)[1].split("</button>", 1)[0]
     assert "scopeLine(meta)" in collapsed
     assert "source_table" not in collapsed, (
@@ -233,12 +237,11 @@ def test_the_read_time_is_still_always_visible():
 
 
 def test_the_scope_line_is_built_from_meta_and_never_from_prose():
-    receipts = _ts_source(_RECEIPTS)
-    body = receipts.split("export function scopeLine(", 1)[1].split("\n}", 1)[0]
+    shape = _ts_source(_RECEIPT_SHAPE)
     for field in ("meta.metric_label", "meta.window", "meta.comparison"):
-        assert field in body
+        assert field in shape, f"the scope line does not read {field}"
     # A result with no window gets no window, rather than a guessed one.
-    assert "Scope not recorded" in body
+    assert "SCOPE_UNKNOWN" in shape and "Scope not recorded" in shape
 
 
 # ---------------------------------------------------------------------------

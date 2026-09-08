@@ -11,6 +11,7 @@
 import { useState } from 'react';
 import { ChevronRight, Clock } from 'lucide-react';
 import type { ToolMeta } from '../../types/george';
+import { scopeLine } from './receiptShape';
 
 /** "read 4 min ago" — relative, paired with the absolute time, never alone. */
 function ago(iso?: string): string {
@@ -29,45 +30,6 @@ function manila(iso?: string): string {
     timeStyle: 'short',
     timeZone: 'Asia/Manila',
   }).format(new Date(iso));
-}
-
-/**
- * What a figure covers, in the language of the question that asked for it.
- *
- * LEVEL 2 OF THE FOUR (metrics.yaml notices.contract records the same split for
- * caveats): the business caveat, then the scope, then the method, then the raw
- * receipt. This is the scope — the window and what it was narrowed to — and it
- * is built from `meta.window` and `meta.metric_label`, which are structured
- * values the tool supplied. Nothing here is parsed out of prose, and nothing is
- * invented: a result with no window gets no window in the line rather than a
- * guessed one.
- *
- * A preset prints its NAME with the underscores opened out, because the name is
- * what metrics.yaml defines and what the filters cite. Same rule as
- * resultShape.windowLabel, which does this for a group's heading.
- */
-export function scopeLine(meta: ToolMeta): string {
-  const parts: string[] = [];
-  if (meta.metric_label) parts.push(meta.metric_label);
-
-  const w = meta.window;
-  if (w) {
-    if (w.kind === 'preset' && w.name) {
-      const words = w.name.replace(/_/g, ' ').trim();
-      if (words) parts.push(words[0].toUpperCase() + words.slice(1));
-    } else if (w.start && w.end) {
-      parts.push(`${w.start} → ${w.end}`);
-    }
-  }
-
-  // A comparison is part of the scope, not a detail of it: a figure measured
-  // against another period covers two windows, and saying so is the difference
-  // between "up 12%" meaning something and meaning nothing.
-  if (meta.comparison?.baseline) {
-    parts.push(`vs ${meta.comparison.display_name ?? 'the previous period'}`);
-  }
-
-  return parts.length ? parts.join(' · ') : 'Scope not recorded';
 }
 
 /** filters_applied entries are "<sql>   # metrics.yaml: <key>" */
