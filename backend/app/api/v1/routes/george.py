@@ -73,6 +73,8 @@ from app.services.river import (
     next_cursor,
     thread_of,
 )
+from app.services import page_writer
+from app.services.page_writer import PageNotFound as PageWriterPageNotFound
 from app.services.page_reader import (
     PageNotFound as PageReadNotFound,
     PageReadRefused as PageReadServiceRefused,
@@ -147,13 +149,24 @@ class PageScope(BaseModel):
     """
     The George page the question is asked from, as an IDENTITY.
 
-    `name` is the exact page name; null is the ungrouped pins, which are a
-    real scope with no name. This is what binds the injected page reader, and
-    it is distinct from `page_context` below on purpose: that field is a
-    display string ("Pages / AJI BARN Reorder") the loop reads out to the
-    model, and an identity is never parsed back out of a display string.
+    `page_id` is the page's id; null is the ungrouped pins, which are a real
+    scope with no row. This is what binds the injected page reader and
+    writer, and it is distinct from `page_context` below on purpose: that
+    field is a display string ("Pages / AJI BARN Reorder") the loop reads out
+    to the model, and an identity is never parsed back out of a display
+    string.
+
+    `name` is the scope as it was sent until 2026-09-08 — the exact title —
+    and is accepted for one reason: a thread reopened from before that date
+    has only a title in its stored answers. When `page_id` is absent the
+    title is resolved to the caller's page of exactly that name at request
+    time (page_writer.find_page_by_title); a title that no longer resolves
+    binds NOTHING, deliberately — the page was renamed or removed, and a
+    guess would read somebody the wrong page. A title is never the write
+    identity: the writer is closed over the id the resolution produced.
     """
 
+    page_id: Optional[uuid.UUID] = None
     name: Optional[str] = Field(None, max_length=100)
 
 
@@ -1133,27 +1146,29 @@ def _workflow_runner(username: str, role: str):
     return run
 
 
-def _page_reader(username: str, page: Optional[str]) -> PageReader:
+def _page_reader(username: str, page_id: Optional[uuid.UUID]) -> PageReader:
     """
     George's route to READING the page the caller is on.
 
     A read, injected exactly like the workflow runner: the pins live in the
     george schema, which george_ro cannot see. Both the username and the page
-    are captured HERE — the username from the verified token, the page from
-    the request's page_scope — so the tool that calls this has no argument
-    for either. Nothing the model emits can point it at another person's
-    page, or at a page the person is not on.
+    are captured HERE — the username from the verified token, the page's ID
+    from the request's page_scope — so the tool that calls this has no
+    argument for either. Nothing the model emits can point it at another
+    person's page, or at a page the person is not on; and a page renamed
+    while the thread is open is still the page being read.
 
-    Its own session, like the runner's, and it commits nothing: this branch
-    is read-only, and a read from George does not even touch the pins' run
-    bookkeeping — that stays the tile's.
+    Its own session, like the runner's, and it commits nothing: a read from
+    George does not even touch the pins' run bookkeeping — that stays the
+    tile's.
     """
 
     async def read(pins: Optional[list[str]], figures: bool) -> dict:
         async with AsyncSessionLocal() as session:
             try:
                 return await read_page(
-                    session, username=username, page=page, pins=pins, figures=figures,
+                    session, username=username, page_id=page_id, pins=pins,
+                    figures=figures,
                 )
             except (PageReadNotFound, PageReadServiceRefused) as exc:
                 # Expected refusals, in the words a person can act on. They
@@ -1167,6 +1182,32 @@ def _page_reader(username: str, page: Optional[str]) -> PageReader:
                 ) from exc
 
     return read
+
+
+async def _resolve_scope(username: str, scope: PageScope) -> Optional[dict]:
+    """
+    The scope as the loop takes it: {"page_id": str | None, "name": title | None}.
+
+    An id is checked to be the caller's — somebody else's, or nobody's, binds
+    nothing rather than binding a reader that would refuse every read. The
+    ungrouped scope is {page_id: None}. A legacy title is resolved to the
+    caller's page of exactly that name, or binds nothing; see PageScope.
+    """
+    async with AsyncSessionLocal() as session:
+        if scope.page_id is not None:
+            try:
+                page = await page_writer.get_page(session, username, scope.page_id)
+            except PageWriterPageNotFound:
+                return None
+            return {"page_id": str(page.id), "name": page.title}
+        if "page_id" in scope.model_fields_set:
+            return {"page_id": None, "name": None}
+        if scope.name is None:
+            return {"page_id": None, "name": None}
+        page = await page_writer.find_page_by_title(session, username, scope.name)
+        if page is None:
+            return None
+        return {"page_id": str(page.id), "name": page.title}
 
 
 async def _recall_for(username: str, history: list[dict],
@@ -1297,13 +1338,17 @@ async def ask(
     thread = str(request.thread_id) if request.thread_id else None
     parent = str(request.parent_id) if request.parent_id else None
 
-    # The page reader, bound to the caller and the exact page they are on.
-    # Only when a page is in scope: without one there is nothing to read, and
-    # the tool stays out of the schema. Nothing is read here — the page is
-    # looked up only if George decides the question needs it.
+    # The page in scope, as an identity the caller owns. Only when a page is
+    # in scope: without one there is nothing to read, and the tool stays out
+    # of the schema. Nothing is read here — the page is looked up only if
+    # George decides the question needs it. The title travels beside the id
+    # for the sentence George is given; it binds nothing.
     page_reader: Optional[PageReader] = None
+    page_scope: Optional[dict] = None
     if request.page_scope is not None:
-        page_reader = _page_reader(user.username, request.page_scope.name)
+        page_scope = await _resolve_scope(user.username, request.page_scope)
+    if page_scope is not None:
+        page_reader = _page_reader(user.username, page_scope["page_id"])
     # Awaited here rather than inside the stream: it is a read the caller's own
     # role performs, and it has to be done before the 200 goes out, while a
     # failure can still be handled as something other than an error frame.
@@ -1322,9 +1367,7 @@ async def ask(
             recall=recall,
             parent_id=parent,
             page_reader=page_reader,
-            page_scope=(
-                {"name": request.page_scope.name} if request.page_scope else None
-            ),
+            page_scope=page_scope,
         ),
         media_type="text/event-stream",
         headers={

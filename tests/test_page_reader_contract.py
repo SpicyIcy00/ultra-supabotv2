@@ -38,6 +38,7 @@ pytest.importorskip("psycopg", reason="agent.loop imports the tools, which impor
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
 from agent.write_tools import PageReadRefused as AgentPageReadRefused, WriteContext  # noqa: E402
+from app.models.george_page import GeorgePage                                     # noqa: E402
 from app.models.george_pin import GeorgePin                                       # noqa: E402
 from app.services.page_reader import (                                            # noqa: E402
     DEFAULT_PINS,
@@ -64,31 +65,42 @@ STOCK = {"tool": "get_stock", "arguments": {"location": "AJI BARN"}}
 
 T0 = datetime(2026, 9, 7, tzinfo=timezone.utc)
 
+# The page every fixture pin sits on. A row, with an id: that id is the scope.
+PAGE = GeorgePage(id=uuid.UUID(int=0xA11), owner=ME, title="AJI BARN Reorder",
+                  purpose=None, created_at=T0, updated_at=T0)
+PAGE_ID = PAGE.id
+
 
 def _run(coro):
     return asyncio.run(coro)
 
 
-def _pin(i: int, page: str | None = "AJI BARN Reorder", calls=(SALES,)) -> GeorgePin:
+def _pin(i: int, page: GeorgePage | None = PAGE, calls=(SALES,)) -> GeorgePin:
     """Pin number i, created i hours after T0 — so a higher i is newer."""
-    return GeorgePin(
+    pin = GeorgePin(
         id=uuid.UUID(int=i + 1),
         created_by=ME,
         created_at=T0 + timedelta(hours=i),
         title=f"Pin {i}",
         question=f"Question {i}?",
         conversation_id=None,
-        page=page,
+        page_id=page.id if page else None,
+        position=0,
         tool_calls=[dict(c) for c in calls],
         last_run_at=None,
         last_ok_at=None,
         last_status=None,
     )
+    pin.page_obj = page
+    return pin
 
 
 def _page(n: int, **kw) -> list[GeorgePin]:
-    """n pins in PAGE ORDER: newest first, as the list statement returns them."""
-    return [_pin(i, **kw) for i in range(n - 1, -1, -1)]
+    """n pins in PAGE ORDER, as the list statement returns them."""
+    pins = [_pin(i, **kw) for i in range(n - 1, -1, -1)]
+    for pos, pin in enumerate(pins):
+        pin.position = pos
+    return pins
 
 
 class _Scalars:
@@ -98,18 +110,32 @@ class _Scalars:
 
     def all(self): return list(self._rows)
 
+    def scalar_one_or_none(self): return self._rows[0] if self._rows else None
+
 
 class FakeSession:
-    """Answers the one read the reader makes and records the statement."""
+    """
+    Answers the two reads the reader makes — the page row, then its pins —
+    and records every statement. Which is which is decided from the
+    statement's own entity, never from call order.
+    """
 
-    def __init__(self, pins: list[GeorgePin]) -> None:
+    def __init__(self, pins: list[GeorgePin], page: GeorgePage | None = PAGE) -> None:
         self.pins = pins
+        self.page = page
         self.statements: list = []
 
     async def execute(self, stmt):
         self.statements.append(stmt)
         assert isinstance(stmt, Select), type(stmt)
+        first = stmt.column_descriptions[0]
+        if first.get("entity") is GeorgePage:
+            return _Scalars([self.page] if self.page is not None else [])
         return _Scalars(self.pins)
+
+    def pin_statements(self) -> list:
+        return [st for st in self.statements
+                if st.column_descriptions[0].get("entity") is GeorgePin]
 
 
 def _compiled(stmt) -> str:
@@ -132,30 +158,37 @@ def _ok(calls: list[dict]) -> dict:
 
 def test_the_list_is_scoped_to_the_caller_and_the_exact_page():
     s = FakeSession([])
-    _run(list_page_pins(s, username=ME, page="AJI BARN Reorder"))
-    sql = _compiled(s.statements[0])
+    _run(list_page_pins(s, username=ME, page_id=PAGE_ID))
+    sql = _compiled(s.pin_statements()[0])
     assert "pins.created_by = " in sql
-    assert "pins.page = " in sql
-    # Exact, not LIKE, not lower(): case is the user's and is not evidence of
-    # a different page — but it is not the same page either.
+    assert "pins.page_id = " in sql
+    # By identity: no title anywhere in the statement, so a rename cannot
+    # change which page is read.
+    assert "title" not in sql.split("WHERE")[1]
     assert "lower(" not in sql.lower()
     assert "like" not in sql.lower()
 
 
 def test_the_ungrouped_scope_is_page_is_null_not_a_name():
     s = FakeSession([])
-    _run(list_page_pins(s, username=ME, page=None))
-    sql = _compiled(s.statements[0])
+    _run(list_page_pins(s, username=ME, page_id=None))
+    sql = _compiled(s.pin_statements()[0])
     assert "pins.created_by = " in sql
-    assert "pins.page IS NULL" in sql
+    assert "pins.page_id IS NULL" in sql
     assert "Ungrouped" not in sql
 
 
 def test_the_order_is_the_page_s_order_and_it_is_total():
     s = FakeSession([])
-    _run(list_page_pins(s, username=ME, page="X"))
-    sql = _compiled(s.statements[0])
+    _run(list_page_pins(s, username=ME, page_id=PAGE_ID))
+    sql = _compiled(s.pin_statements()[0])
+    assert re.search(r"ORDER BY .*position ASC, .*created_at DESC, .*id DESC", sql), sql
+    # Ungrouped keeps no positions: newest first, id as the tie-break.
+    s = FakeSession([])
+    _run(list_page_pins(s, username=ME, page_id=None))
+    sql = _compiled(s.pin_statements()[0])
     assert re.search(r"ORDER BY .*created_at DESC, .*id DESC", sql), sql
+    assert "position" not in sql.split("ORDER BY")[1]
 
 
 # ---------------------------------------------------------------------------
@@ -310,16 +343,39 @@ def test_at_most_the_concurrency_is_in_flight():
 # 4. The read as a whole
 # ---------------------------------------------------------------------------
 
-def test_a_missing_page_is_a_clear_condition():
+def test_a_missing_or_foreign_page_is_one_clear_condition():
+    """The page row is looked up by id, scoped to the caller; nothing is one answer."""
     with pytest.raises(PageNotFound) as exc:
-        _run(read_page(FakeSession([]), username=ME, page="Nowhere"))
-    assert "no page called 'Nowhere'" in str(exc.value)
+        _run(read_page(FakeSession([], page=None), username=ME, page_id=uuid.UUID(int=77)))
+    assert str(exc.value) == "Page not found."
+
+
+def test_an_empty_page_is_a_successful_empty_read():
+    """A page exists before anything is on it; reading it says so, and reads nothing."""
+    out = _run(read_page(FakeSession([]), username=ME, page_id=PAGE_ID))
+    assert out["empty"] is True
+    assert out["pins_total"] == 0 and out["pins"] == [] and out["remainder"] == []
+    assert out["page_id"] == str(PAGE_ID) and out["page"] == "AJI BARN Reorder"
 
 
 def test_an_empty_ungrouped_scope_is_reported_not_invented():
-    with pytest.raises(PageNotFound) as exc:
-        _run(read_page(FakeSession([]), username=ME, page=None))
-    assert "no ungrouped pins" in str(exc.value)
+    out = _run(read_page(FakeSession([]), username=ME, page_id=None))
+    assert out["empty"] is True and out["pins_total"] == 0
+    assert out["page_id"] is None and out["page"] is None
+
+
+def test_the_read_carries_identity_and_the_users_own_purpose():
+    page = GeorgePage(id=uuid.UUID(int=0xB22), owner=ME, title="Rockwell Weekly",
+                      purpose="Watch Rockwell.", created_at=T0, updated_at=T0)
+    pins = _page(2, page=page)
+    out = _run(read_page(FakeSession(pins, page=page), username=ME, page_id=page.id,
+                         figures=False))
+    assert out["page_id"] == str(page.id)
+    assert out["page"] == "Rockwell Weekly"
+    assert out["purpose"] == "Watch Rockwell."
+    assert out["page_updated_at"] == T0.isoformat()
+    assert out["pins"][0]["page_id"] == str(page.id)
+    assert out["pins"][0]["position"] == 0
 
 
 def test_definitions_only_runs_nothing():
@@ -330,7 +386,7 @@ def test_definitions_only_runs_nothing():
         calls.append(c)
         return _ok(c)
 
-    out = _run(read_page(FakeSession(pins), username=ME, page="AJI BARN Reorder",
+    out = _run(read_page(FakeSession(pins), username=ME, page_id=PAGE_ID,
                          figures=False, run=run))
     assert calls == []
     assert out["figures"] is False
@@ -342,7 +398,7 @@ def test_definitions_only_runs_nothing():
 
 def test_a_page_with_one_pin_reads_it_whole():
     pins = _page(1)
-    out = _run(read_page(FakeSession(pins), username=ME, page="AJI BARN Reorder",
+    out = _run(read_page(FakeSession(pins), username=ME, page_id=PAGE_ID,
                          run=lambda c: _coro(_ok(c))))
     assert out["pins_total"] == 1
     assert len(out["pins"]) == 1
@@ -353,7 +409,7 @@ def test_a_page_with_one_pin_reads_it_whole():
 
 def test_a_large_page_reports_what_was_read_and_what_remains():
     pins = _page(7)
-    out = _run(read_page(FakeSession(pins), username=ME, page="AJI BARN Reorder",
+    out = _run(read_page(FakeSession(pins), username=ME, page_id=PAGE_ID,
                          run=lambda c: _coro(_ok(c))))
     assert out["pins_total"] == 7 and out["pins_limit"] == 5
     assert [p["title"] for p in out["pins"]] == [f"Pin {i}" for i in (6, 5, 4, 3, 2)]
@@ -373,7 +429,7 @@ def test_mixed_outcomes_are_kept_per_pin_not_rolled_up():
         return _ok(calls)
 
     pins[1].tool_calls = [dict(STOCK)]
-    out = _run(read_page(FakeSession(pins), username=ME, page="AJI BARN Reorder", run=run))
+    out = _run(read_page(FakeSession(pins), username=ME, page_id=PAGE_ID, run=run))
     assert [p["read"] for p in out["pins"]] == ["ok", "refused", "ok"]
     assert out["pins"][1]["results"][0]["error"] == "low stock is not configured"
 
@@ -386,7 +442,7 @@ def test_a_pin_the_deadline_stopped_is_named_with_its_reason():
         clock.now += clock.step
         return _ok(calls)
 
-    out = _run(read_page(FakeSession(pins), username=ME, page="P", run=run,
+    out = _run(read_page(FakeSession(pins), username=ME, page_id=PAGE_ID, run=run,
                          clock=clock, deadline_s=50.0, concurrency=1))
     assert [(p["read"], p.get("not_read_reason")) for p in out["pins"]] == [
         ("ok", None), ("not_read", NOT_READ_DEADLINE), ("not_read", NOT_READ_DEADLINE),
@@ -396,7 +452,7 @@ def test_a_pin_the_deadline_stopped_is_named_with_its_reason():
 def test_the_requested_ids_are_recorded_deduplicated():
     pins = _page(3)
     a = str(pins[0].id)
-    out = _run(read_page(FakeSession(pins), username=ME, page="P", pins=[a, a],
+    out = _run(read_page(FakeSession(pins), username=ME, page_id=PAGE_ID, pins=[a, a],
                          run=lambda c: _coro(_ok(c))))
     assert out["requested"] == [a]
     assert [p["pin_id"] for p in out["pins"]] == [a]
@@ -406,7 +462,7 @@ def test_the_read_writes_nothing():
     """No flush, no commit, no update: the reader has none of those to call."""
     pins = _page(2)
     s = FakeSession(pins)
-    _run(read_page(s, username=ME, page="P", run=lambda c: _coro(_ok(c))))
+    _run(read_page(s, username=ME, page_id=PAGE_ID, run=lambda c: _coro(_ok(c))))
     assert all(isinstance(st, Select) for st in s.statements)
     assert not hasattr(s, "flush") and not hasattr(s, "commit")
     assert pins[0].last_run_at is None and pins[0].last_status is None
@@ -420,19 +476,20 @@ async def _coro(value):
 # 5. The binding in the web process
 # ---------------------------------------------------------------------------
 
-def test_the_reader_is_bound_to_the_user_and_the_page_and_takes_neither():
+def test_the_reader_is_bound_to_the_user_and_the_page_id_and_takes_neither():
     src = _ROUTE.read_text(encoding="utf-8")
-    m = re.search(r"def _page_reader\(username: str, page: Optional\[str\]\).*?return read\n",
+    m = re.search(r"def _page_reader\(username: str, page_id: Optional\[uuid\.UUID\]\).*?return read\n",
                   src, re.S)
     assert m, "_page_reader is missing from the route"
     body = m.group(0)
     assert "async def read(pins: Optional[list[str]], figures: bool)" in body
-    assert "username=username" in body and "page=page" in body
-    # The route builds it only from the request's page_scope, never from the
-    # display string.
+    assert "username=username" in body and "page_id=page_id" in body
+    # The route builds it only from the RESOLVED page_scope — an id the caller
+    # owns — never from the display string and never from a bare title.
     ask = src[src.index("async def ask("):]
-    assert "_page_reader(user.username, request.page_scope.name)" in ask
+    assert '_page_reader(user.username, page_scope["page_id"])' in ask
     assert "page_context" not in ask[ask.index("page_reader"):ask.index("_page_reader(")]
+    assert "_resolve_scope(user.username, request.page_scope)" in ask
 
 
 def test_the_context_carries_the_reader_and_defaults_to_none():
@@ -449,18 +506,42 @@ def test_the_agent_side_refusal_is_a_value_error():
     assert issubclass(PageNotFound, LookupError)
 
 
-def test_the_request_accepts_a_scope_and_legacy_callers_still_work():
+def test_the_request_accepts_a_scope_by_id_and_legacy_callers_still_work():
     from app.api.v1.routes.george import AskRequest, PageScope
 
     legacy = AskRequest(question="hi", page_context="warehouse")
     assert legacy.page_scope is None
 
-    scoped = AskRequest(question="hi", page_scope={"name": "AJI BARN Reorder"})
-    assert scoped.page_scope == PageScope(name="AJI BARN Reorder")
+    pid = uuid.uuid4()
+    scoped = AskRequest(question="hi", page_scope={"page_id": str(pid)})
+    assert scoped.page_scope == PageScope(page_id=pid)
 
-    ungrouped = AskRequest(question="hi", page_scope={"name": None})
-    assert ungrouped.page_scope is not None and ungrouped.page_scope.name is None
+    ungrouped = AskRequest(question="hi", page_scope={"page_id": None})
+    assert ungrouped.page_scope is not None and ungrouped.page_scope.page_id is None
+    assert "page_id" in ungrouped.page_scope.model_fields_set
+
+    # A pre-2026-09-08 client sends a title. Accepted, resolved server-side,
+    # never the identity the writer or reader is closed over.
+    old = AskRequest(question="hi", page_scope={"name": "AJI BARN Reorder"})
+    assert old.page_scope.page_id is None and old.page_scope.name == "AJI BARN Reorder"
     # Both may travel together: the string is what the loop says, the scope
     # is what the reader is bound to.
-    both = AskRequest(question="hi", page_context="Pages / X", page_scope={"name": "X"})
-    assert both.page_scope.name == "X"
+    both = AskRequest(question="hi", page_context="Pages / X", page_scope={"page_id": str(pid)})
+    assert both.page_scope.page_id == pid
+
+
+def test_scope_resolution_prefers_the_id_and_never_guesses_from_a_title():
+    """
+    The resolver in the route: an owned id binds; a title binds only when it
+    resolves exactly; anything else binds nothing rather than something.
+    """
+    src = _ROUTE.read_text(encoding="utf-8")
+    m = re.search(r"async def _resolve_scope\(.*?\n\n\nasync def ", src, re.S)
+    assert m, "_resolve_scope is missing from the route"
+    body = m.group(0)
+    assert "page_writer.get_page(session, username, scope.page_id)" in body
+    assert "find_page_by_title(session, username, scope.name)" in body
+    assert "return None" in body
+    # The ungrouped scope is the null id, and a null title on its own is
+    # still the legacy ungrouped scope.
+    assert '{"page_id": None, "name": None}' in body

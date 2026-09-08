@@ -29,7 +29,8 @@ pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 if not os.environ.get("DATABASE_URL"):
     pytest.skip("DATABASE_URL is not set", allow_module_level=True)
 
-from app.core.database import AsyncSessionLocal, engine               # noqa: E402
+from tests import pages_live                                          # noqa: E402
+from app.services import page_writer                                  # noqa: E402
 from app.services.page_reader import (                                # noqa: E402
     DEFAULT_PINS,
     PageNotFound,
@@ -50,69 +51,76 @@ async def _scenario() -> None:
     a, b = f"test-a-{run}", f"test-b-{run}"
     page = f"Shared Name {run}"
 
-    # A fresh pool for THIS event loop: a connection left by an earlier
-    # asyncio.run in the process belongs to a loop that is now closed.
-    await engine.dispose()
-    async with AsyncSessionLocal() as s:
-        try:
-            mine = []
-            for i in range(DEFAULT_PINS + 2):
-                mine.append((await create_pin(
-                    s, username=a, tool_calls=[SALES], title=f"A{i}", page=page,
-                )).row)
-            theirs = (await create_pin(
-                s, username=b, tool_calls=[SALES], title="B0", page=page,
-            )).row
-            loose = (await create_pin(s, username=a, tool_calls=[SALES], title="Loose")).row
+    # The pages schema present (applied in this transaction if the database
+    # has not had it), everything rolled back, the engine left clean.
+    async with pages_live.migrated_session() as s:
+        mine = []
+        for i in range(DEFAULT_PINS + 2):
+            mine.append((await create_pin(
+                s, username=a, tool_calls=[SALES], title=f"A{i}", page=page,
+            )).row)
+        mine_page = await page_writer.find_page_by_title(s, a, page)
+        theirs = (await create_pin(
+            s, username=b, tool_calls=[SALES], title="B0", page=page,
+        )).row
+        their_page = await page_writer.find_page_by_title(s, b, page)
+        loose = (await create_pin(s, username=a, tool_calls=[SALES], title="Loose")).row
+        assert mine_page is not None and their_page is not None and mine_page.id != their_page.id
 
-            # --- own page: only a's pins, newest first, bounded ------------------
-            out = await read_page(s, username=a, page=page, figures=False, run=_noop_run)
-            assert out["pins_total"] == DEFAULT_PINS + 2
-            titles = [p["title"] for p in out["pins"]] + [p["title"] for p in out["remainder"]]
-            assert "B0" not in titles
-            assert len(out["pins"]) == DEFAULT_PINS
-            assert titles == [f"A{i}" for i in range(DEFAULT_PINS + 1, -1, -1)]
+        # --- own page: only a's pins, in page order, bounded ----------------------
+        out = await read_page(s, username=a, page_id=mine_page.id, figures=False, run=_noop_run)
+        assert out["pins_total"] == DEFAULT_PINS + 2
+        titles = [p["title"] for p in out["pins"]] + [p["title"] for p in out["remainder"]]
+        assert "B0" not in titles
+        assert len(out["pins"]) == DEFAULT_PINS
+        # New pins append at the bottom, so the page reads in creation order.
+        assert titles == [f"A{i}" for i in range(DEFAULT_PINS + 2)]
+        assert out["page_id"] == str(mine_page.id) and out["page"] == page
 
-            # --- the other person's same-named page is a different page ----------
-            other = await read_page(s, username=b, page=page, figures=False, run=_noop_run)
-            assert [p["title"] for p in other["pins"]] == ["B0"]
+        # --- the other person's same-named page is a different page ---------------
+        other = await read_page(s, username=b, page_id=their_page.id, figures=False, run=_noop_run)
+        assert [p["title"] for p in other["pins"]] == ["B0"]
+        # And their page's id, from me, is a page that does not exist.
+        with pytest.raises(PageNotFound):
+            await read_page(s, username=a, page_id=their_page.id, figures=False)
 
-            # --- their pin by id is indistinguishable from a missing one ----------
-            ghost = str(uuid.uuid4())
-            out = await read_page(s, username=a, page=page, figures=False, run=_noop_run,
-                                  pins=[str(theirs.id), ghost, str(mine[0].id)])
-            assert [p["title"] for p in out["pins"]] == ["A0"]
-            assert out["unavailable"] == [str(theirs.id), ghost]
+        # --- their pin by id is indistinguishable from a missing one ---------------
+        ghost = str(uuid.uuid4())
+        out = await read_page(s, username=a, page_id=mine_page.id, figures=False, run=_noop_run,
+                              pins=[str(theirs.id), ghost, str(mine[0].id)])
+        assert [p["title"] for p in out["pins"]] == ["A0"]
+        assert out["unavailable"] == [str(theirs.id), ghost]
 
-            # --- a missing page, and the ungrouped scope --------------------------
-            with pytest.raises(PageNotFound):
-                await read_page(s, username=a, page=f"Nowhere {run}", figures=False)
-            with pytest.raises(PageNotFound):
-                await read_page(s, username=b, page=None, figures=False)
-            ungrouped = await read_page(s, username=a, page=None, figures=False, run=_noop_run)
-            assert [p["title"] for p in ungrouped["pins"]] == ["Loose"]
-            assert ungrouped["page"] is None
+        # --- a missing page; an empty page; the ungrouped scope --------------------
+        with pytest.raises(PageNotFound):
+            await read_page(s, username=a, page_id=uuid.uuid4(), figures=False)
+        empty = await page_writer.create_page(s, owner=a, title=f"Empty {run}")
+        out = await read_page(s, username=a, page_id=empty.id, figures=False, run=_noop_run)
+        assert out["empty"] is True and out["pins_total"] == 0
+        none_ungrouped = await read_page(s, username=b, page_id=None, figures=False, run=_noop_run)
+        assert none_ungrouped["empty"] is True and none_ungrouped["pins"] == []
+        ungrouped = await read_page(s, username=a, page_id=None, figures=False, run=_noop_run)
+        assert [p["title"] for p in ungrouped["pins"]] == ["Loose"]
+        assert ungrouped["page"] is None and ungrouped["page_id"] is None
 
-            # --- one real replay, through george_ro, with a tile's receipts -------
-            if os.environ.get("GEORGE_DATABASE_URL"):
-                live = await read_page(s, username=a, page=None)
-                [pin] = live["pins"]
-                assert pin["read"] == "ok", pin
-                [result] = pin["results"]
-                assert result["meta"]["source_table"]
-                assert result["meta"]["snapshot_timestamp"]
-                assert result["meta"]["filters_applied"]
+        # --- a rename does not move the scope --------------------------------------
+        await page_writer.rename_page(s, owner=a, page_id=mine_page.id, title=f"Renamed {run}")
+        after = await read_page(s, username=a, page_id=mine_page.id, figures=False, run=_noop_run)
+        assert after["page"] == f"Renamed {run}" and after["pins_total"] == DEFAULT_PINS + 2
 
-            # --- nothing was written ----------------------------------------------
-            await s.refresh(loose)
-            assert loose.last_run_at is None and loose.last_status is None
-        finally:
-            await s.rollback()
-    # And left clean for the next one: a connection this loop opened would be
-    # handed to the next asyncio.run in the process and fail with "Event loop
-    # is closed" — which is what test_pin_membership_live saw when it ran
-    # after this file.
-    await engine.dispose()
+        # --- one real replay, through george_ro, with a tile's receipts ------------
+        if os.environ.get("GEORGE_DATABASE_URL"):
+            live = await read_page(s, username=a, page_id=None)
+            [pin] = live["pins"]
+            assert pin["read"] == "ok", pin
+            [result] = pin["results"]
+            assert result["meta"]["source_table"]
+            assert result["meta"]["snapshot_timestamp"]
+            assert result["meta"]["filters_applied"]
+
+        # --- nothing was written -----------------------------------------------------
+        await s.refresh(loose)
+        assert loose.last_run_at is None and loose.last_status is None
 
 
 def test_page_reads_against_the_database_rolled_back():

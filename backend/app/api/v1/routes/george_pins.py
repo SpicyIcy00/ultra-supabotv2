@@ -23,13 +23,16 @@ already bitten this database twice. Every read, update and delete filters on
 created_by, and a pin belonging to someone else is a 404, not a 403: whether a
 given pin id exists is not information a caller is entitled to.
 
-MEMBERSHIP (added 2026-09-07). PATCH /{pin_id} moves a pin between pages or
-retitles it; PATCH /pages/{page} renames a page, which is every pin of the
-caller's on it in one statement, because a page is derived from its pins and
-has no row of its own. Both are UPDATEs on the label and nothing else: the
-calls, the question, the provenance and the run history are untouched, and
-nothing is re-run. ROUTE ORDER IS LOAD-BEARING: the /pages routes are declared
-before /{pin_id} so that "pages" is never read as a pin id.
+MEMBERSHIP (2026-09-07, by name; 2026-09-08, by id). A page is a row now
+(routes/george_pages.py) and a pin points at it with `page_id` and holds a
+`position` on it. PATCH /{pin_id} moves a pin by page id — or by TITLE, which
+still creates a page under a new name, as the Pin dialog always could — places
+it relative to another pin, or retitles it. The calls, the question, the
+provenance and the run history are untouched and nothing is re-run. The two
+name-keyed routes under /pages are kept for callers that have not moved to
+ids: the listing now carries each page's id, and the rename resolves the exact
+title to its row and keeps the id. ROUTE ORDER IS LOAD-BEARING: the /pages
+routes are declared before /{pin_id} so that "pages" is never read as a pin id.
 """
 
 from __future__ import annotations
@@ -47,10 +50,14 @@ from app.core.database import get_db
 from app.core.deps import require_page
 from app.models.app_user import AppUser
 from app.models.george_pin import GeorgePin
-from app.services.pin_runner import PinValidationError, normalize_page, run_pin
+from app.services import page_writer
+from app.services.pin_runner import PinValidationError, run_pin
 from app.services.pin_writer import (
     UNSET,
+    NotAPage,
     PageNotFound,
+    PageQuotaError,
+    PageValidationError,
     PinNotFound,
     PinQuotaError,
     SimilarPageError,
@@ -78,6 +85,9 @@ class PinCreate(BaseModel):
     title: Optional[str] = Field(None, max_length=200)
     question: Optional[str] = Field(None, max_length=2000)
     conversation_id: Optional[uuid.UUID] = None
+    # Where it lands: by identity, or by title (an existing title joins that
+    # page, a new title creates one). Neither means Ungrouped.
+    page_id: Optional[uuid.UUID] = None
     page: Optional[str] = Field(None, max_length=100)
     tool_calls: List[ToolCallIn] = Field(..., min_length=1)
     # Set true to accept a page name that differs from an existing one only by
@@ -85,13 +95,30 @@ class PinCreate(BaseModel):
     allow_similar_page: bool = False
 
 
+class Placement(BaseModel):
+    """
+    Where on its page a pin goes, relationally. Exactly one field; never a raw
+    integer — the service owns position arithmetic.
+    """
+    before: Optional[uuid.UUID] = None
+    after: Optional[uuid.UUID] = None
+    at: Optional[str] = Field(None, pattern="^(top|bottom)$")
+
+    def as_place(self) -> dict:
+        return {k: (str(v) if isinstance(v, uuid.UUID) else v)
+                for k, v in self.model_dump().items() if v is not None}
+
+
 class PinUpdate(BaseModel):
     """
-    A membership or title change. A field left out is left alone; `page` sent
-    as null means ungrouped, which is how a pin leaves a page without being
-    deleted. Pydantic tells the two apart through model_fields_set.
+    A membership, order or title change. A field left out is left alone;
+    `page_id` (or `page`) sent as null means Ungrouped, which is how a pin
+    leaves a page without being deleted. Pydantic tells the two apart through
+    model_fields_set.
     """
+    page_id: Optional[uuid.UUID] = None
     page: Optional[str] = Field(None, max_length=100)
+    place: Optional[Placement] = None
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     allow_similar_page: bool = False
 
@@ -102,6 +129,7 @@ class PageRename(BaseModel):
 
 
 class PageRenameOut(BaseModel):
+    page_id: uuid.UUID
     page: str
     pins_moved: int
 
@@ -110,7 +138,11 @@ class PinOut(BaseModel):
     id: uuid.UUID
     title: str
     question: Optional[str]
+    # The page's title, kept under its old key for every reader of it; and the
+    # identity, which is what the client now navigates and scopes by.
     page: Optional[str]
+    page_id: Optional[uuid.UUID]
+    position: int
     conversation_id: Optional[uuid.UUID]
     tool_calls: List[dict]
     created_at: datetime
@@ -122,7 +154,9 @@ class PinOut(BaseModel):
 
 
 class PageOut(BaseModel):
+    """The legacy listing shape, with the id beside the name. Ungrouped is `page: null`."""
     page: Optional[str]
+    page_id: Optional[uuid.UUID] = None
     pins: int
 
 
@@ -207,17 +241,20 @@ async def create_pin(
             title=payload.title,
             question=payload.question,
             conversation_id=payload.conversation_id,
-            page=payload.page,
+            page_id=payload.page_id if payload.page_id is not None else UNSET,
+            page=payload.page if payload.page is not None else UNSET,
             allow_similar_page=payload.allow_similar_page,
         )
-    except PinValidationError as exc:
+    except (PinValidationError, PageValidationError) as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
-    except PinQuotaError as exc:
+    except (PinQuotaError, PageQuotaError) as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
+    except PageNotFound as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except SimilarPageError as exc:
         raise _similar_page_conflict(exc) from exc
 
@@ -226,24 +263,43 @@ async def create_pin(
 
 @router.get("", response_model=List[PinOut])
 async def list_pins(
-    page: Optional[str] = Query(None, description="Filter to one page."),
+    page_id: Optional[uuid.UUID] = Query(None, description="Filter to one page, by id."),
+    page: Optional[str] = Query(None, description="Filter to one page, by exact title (legacy)."),
     ungrouped: bool = Query(False, description="Only pins with no page."),
     db: AsyncSession = Depends(get_db),
     user: AppUser = Depends(_pin_user),
 ) -> List[PinOut]:
     """
-    The caller's pins, newest first.
+    The caller's pins.
 
-    Ordering is created_at only — there is no manual position yet, so a page
-    renders in the order its tiles were pinned.
+    Scoped to one page they come back in the page's order — by position — and
+    Ungrouped comes back newest first, because it keeps no order. Unscoped
+    they come back newest first across every page. A page id that is not the
+    caller's is a 404; a title that matches none of their pages is an empty
+    list, as it always was.
     """
-    stmt = select(GeorgePin).where(GeorgePin.created_by == user.username)
     if ungrouped:
-        stmt = stmt.where(GeorgePin.page.is_(None))
-    elif page is not None:
-        stmt = stmt.where(GeorgePin.page == normalize_page(page))
-    stmt = stmt.order_by(GeorgePin.created_at.desc())
+        return [PinOut.model_validate(p)
+                for p in await page_writer.page_pins(db, user.username, None)]
+    if page_id is not None:
+        try:
+            await page_writer.get_page(db, user.username, page_id)
+        except PageNotFound as exc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        return [PinOut.model_validate(p)
+                for p in await page_writer.page_pins(db, user.username, page_id)]
+    if page is not None:
+        found = await page_writer.find_page_by_title(db, user.username, page)
+        if found is None:
+            return []
+        return [PinOut.model_validate(p)
+                for p in await page_writer.page_pins(db, user.username, found.id)]
 
+    stmt = (
+        select(GeorgePin)
+        .where(GeorgePin.created_by == user.username)
+        .order_by(GeorgePin.created_at.desc(), GeorgePin.id.desc())
+    )
     rows = (await db.execute(stmt)).scalars().all()
     return [PinOut.model_validate(p) for p in rows]
 
@@ -254,21 +310,24 @@ async def list_pages(
     user: AppUser = Depends(_pin_user),
 ) -> List[PageOut]:
     """
-    The caller's pages, with pin counts.
-
-    Derived from the pins, because a page IS a collection of pins (CLAUDE.md) —
-    it has no independent existence and an empty one is not a thing. Ungrouped
-    pins are reported as a page of None rather than hidden.
+    The caller's pages, with pin counts — the legacy listing, kept for the
+    picker. Every real page is here, EMPTY ONES INCLUDED, each with its id;
+    the ungrouped pins are reported as a page of None, without an id, when
+    there are any. /george/pages is the full shape.
     """
-    rows = (
+    pages = await page_writer.list_pages(db, user.username)
+    counts = dict((
         await db.execute(
-            select(GeorgePin.page, func.count())
+            select(GeorgePin.page_id, func.count())
             .where(GeorgePin.created_by == user.username)
-            .group_by(GeorgePin.page)
-            .order_by(GeorgePin.page.asc().nulls_last())
+            .group_by(GeorgePin.page_id)
         )
-    ).all()
-    return [PageOut(page=p, pins=n) for p, n in rows]
+    ).all())
+    out = [PageOut(page=p.title, page_id=p.id, pins=counts.get(p.id, 0))
+           for p in sorted(pages, key=lambda p: p.title)]
+    if counts.get(None):
+        out.append(PageOut(page=None, page_id=None, pins=counts[None]))
+    return out
 
 
 @router.patch("/pages/{page}", response_model=PageRenameOut)
@@ -279,13 +338,12 @@ async def rename_page(
     user: AppUser = Depends(_pin_user),
 ) -> PageRenameOut:
     """
-    Rename one of the caller's pages.
+    Rename one of the caller's pages, named by its current exact title.
 
-    Every pin of theirs on that exact page, in one scoped UPDATE — a page is
-    its pins, so this is the whole operation. Another person's page of the
-    same name is untouched, and river posts that named the old page stay as
-    written. A rename to a case-variant of a DIFFERENT existing page is a 409
-    the caller resolves, as on create.
+    Legacy route; PATCH /george/pages/{id} is the one by identity. The page
+    keeps its id, so nothing bound to it moves. Another person's page of the
+    same name is untouched. A rename to a case-variant of a DIFFERENT
+    existing page is a 409 the caller resolves, as on create.
     """
     try:
         renamed = await rename_page_rows(
@@ -303,7 +361,8 @@ async def rename_page(
         ) from exc
     except SimilarPageError as exc:
         raise _similar_page_conflict(exc) from exc
-    return PageRenameOut(page=renamed.page, pins_moved=renamed.pins_moved)
+    return PageRenameOut(page_id=renamed.page_id, page=renamed.page,
+                         pins_moved=renamed.pins_moved)
 
 
 @router.patch("/{pin_id}", response_model=PinOut)
@@ -314,11 +373,15 @@ async def update_pin(
     user: AppUser = Depends(_pin_user),
 ) -> PinOut:
     """
-    Move one of the caller's pins to a page, off a page, or retitle it.
+    Move one of the caller's pins to a page, off a page, place it on its
+    page, or retitle it.
 
-    `page` may be an existing page, a new name, or null for ungrouped. The
-    calls and the run history are not touched and the pin is not re-run:
-    membership is not a figure. Somebody else's pin is a 404.
+    `page_id` (identity) or `page` (title: existing, new, or null for
+    Ungrouped) moves it; `place` puts it before or after another pin or at
+    the top or bottom; both may travel together. Every page touched has
+    dense positions again before this returns. The calls and the run history
+    are not touched and the pin is not re-run: membership is not a figure.
+    Somebody else's pin is a 404, and so is somebody else's page.
     """
     sent = payload.model_fields_set
     try:
@@ -326,16 +389,20 @@ async def update_pin(
             db,
             username=user.username,
             pin_id=pin_id,
+            page_id=payload.page_id if "page_id" in sent else UNSET,
             page=payload.page if "page" in sent else UNSET,
+            place=payload.place.as_place() if payload.place is not None else UNSET,
             title=payload.title if "title" in sent else UNSET,
             allow_similar_page=payload.allow_similar_page,
         )
-    except PinNotFound as exc:
+    except (PinNotFound, PageNotFound) as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    except PinValidationError as exc:
+    except (PinValidationError, PageValidationError, NotAPage) as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
+    except PageQuotaError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     except SimilarPageError as exc:
         raise _similar_page_conflict(exc) from exc
     return PinOut.model_validate(moved.row)
@@ -351,8 +418,18 @@ async def delete_pin(
     db: AsyncSession = Depends(get_db),
     user: AppUser = Depends(_pin_user),
 ) -> Response:
-    """Delete one of the caller's pins. A pin belonging to someone else is a 404."""
-    await _owned(db, pin_id, user)
+    """
+    Delete one of the caller's pins. A pin belonging to someone else is a 404.
+
+    The page it sat on is renumbered so its positions stay dense — the same
+    invariant every other write keeps — and the deletion is recorded on the
+    page's audit as the pin leaving it.
+    """
+    pin = await _owned(db, pin_id, user)
+    if pin.page_id is not None:
+        # Off the page first, through the one function that keeps the page
+        # dense and writes the event; then the row goes.
+        await page_writer.move_pin(db, owner=user.username, pin=pin, to_page=None)
     await db.execute(
         sa_delete(GeorgePin).where(
             GeorgePin.id == pin_id, GeorgePin.created_by == user.username

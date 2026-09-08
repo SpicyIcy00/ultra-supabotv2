@@ -21,10 +21,14 @@ this exact page is "not on this page" — whether it exists elsewhere, or belong
 to somebody else, is not information the caller is entitled to, and the two
 cases are deliberately one answer.
 
-A PAGE IS ITS PINS. Zero matching pins means the page does not exist, which is
-the same rule the pins routes apply. The ungrouped pins are the explicit null
-scope: readable, and reported as empty when there are none, never invented as a
-persistent page object.
+A PAGE IS A ROW, READ BY ID (2026-09-08, Page Workshop V1). The scope is the
+page's identity — `page_id`, or None for the ungrouped pins — never its title,
+so a page renamed mid-thread is still the page being read. An EMPTY page is a
+successful empty read: it exists, it says so, and nothing on it was inspected
+because there was nothing. A page id that is not the caller's is PageNotFound,
+indistinguishable from one that never existed. The ungrouped pins are the
+explicit null scope: readable, reported as empty when there are none, never a
+page object.
 
 BOUNDED, AND HONEST ABOUT THE BOUND. A page read is one tool call to the model
 but many vetted reads underneath, so the work is capped and the cap is
@@ -47,11 +51,15 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Optional
 
-from sqlalchemy import select
+import uuid
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.george_page import GeorgePage
 from app.models.george_pin import GeorgePin
-from app.services.pin_runner import normalize_page, run_pin
+from app.services import page_writer
+from app.services.page_writer import PageNotFound  # noqa: F401 - the reader's own refusal
+from app.services.pin_runner import run_pin
 
 # How many pins a no-argument read inspects: the newest few, in the order the
 # page shows them. Operational, not a business definition — the same judgement
@@ -78,10 +86,6 @@ NOT_READ_DEADLINE = "deadline"
 NOT_READ_FIGURES_OFF = "figures_not_requested"
 
 
-class PageNotFound(LookupError):
-    """The caller has no pins on a page of that exact name (or none ungrouped)."""
-
-
 class PageReadRefused(ValueError):
     """The read cannot be made as asked — too many ids, or ids of the wrong shape."""
 
@@ -91,22 +95,15 @@ class PageReadRefused(ValueError):
 # ---------------------------------------------------------------------------
 
 async def list_page_pins(
-    db: AsyncSession, *, username: str, page: Optional[str],
+    db: AsyncSession, *, username: str, page_id: Optional[uuid.UUID],
 ) -> list[GeorgePin]:
     """
-    Every pin of the caller's on this exact page, in the order the page shows
-    them: newest first, id as the tie-break so the order is total.
-
-    `page` None is the ungrouped scope. Scoped to created_by IN THE STATEMENT,
-    because the table has RLS off.
+    Every pin of the caller's on this page, in the page's order: by position
+    on a real page, newest first in Ungrouped. Scoped to created_by IN THE
+    STATEMENT, because the table has RLS off. One implementation, shared with
+    every write, so the reader and the page cannot disagree about order.
     """
-    stmt = select(GeorgePin).where(GeorgePin.created_by == username)
-    if page is None:
-        stmt = stmt.where(GeorgePin.page.is_(None))
-    else:
-        stmt = stmt.where(GeorgePin.page == page)
-    stmt = stmt.order_by(GeorgePin.created_at.desc(), GeorgePin.id.desc())
-    return list((await db.execute(stmt)).scalars().all())
+    return await page_writer.page_pins(db, username, page_id)
 
 
 def dedupe_ids(requested: list[Any]) -> list[str]:
@@ -259,6 +256,8 @@ def _definition(pin: GeorgePin) -> dict:
         "title": pin.title,
         "question": pin.question,
         "page": pin.page,
+        "page_id": str(pin.page_id) if pin.page_id else None,
+        "position": pin.position,
         "pinned_at": _iso(pin.created_at),
         "calls": [dict(c) for c in (pin.tool_calls or [])],
         "last_run_at": _iso(pin.last_run_at),
@@ -271,7 +270,7 @@ async def read_page(
     db: AsyncSession,
     *,
     username: str,
-    page: Optional[str],
+    page_id: Optional[uuid.UUID],
     pins: Optional[list[Any]] = None,
     figures: bool = True,
     run: Runner = run_pin,
@@ -282,21 +281,28 @@ async def read_page(
     """
     Read one page of the caller's pins: definitions always, figures on request.
 
-    Returns a plain dict — the shape agent/composite_tools.get_page_context
-    turns into {rows, meta} — with every pin either read, not read for a named
-    reason, or listed as beyond the bound. Raises PageNotFound when the caller
-    has no pins on the page, and PageReadRefused when the request itself
-    cannot be honoured.
+    Returns a plain dict — the shape agent/composite_tools.view_page turns
+    into {rows, meta} — with every pin either read, not read for a named
+    reason, or listed as beyond the bound. An empty page returns with no pins
+    and `empty` true. Raises PageNotFound when `page_id` is not one of the
+    caller's pages, and PageReadRefused when the request itself cannot be
+    honoured.
     """
-    name = normalize_page(page)
-    all_pins = await list_page_pins(db, username=username, page=name)
-    if not all_pins:
-        raise PageNotFound(
-            "You have no ungrouped pins." if name is None
-            else f"You have no page called {name!r}."
-        )
+    page: Optional[GeorgePage] = None
+    if page_id is not None:
+        page = await page_writer.get_page(db, username, page_id)
+    all_pins = await list_page_pins(db, username=username, page_id=page_id)
 
-    selection = select_pins(all_pins, pins)
+    if all_pins:
+        selection = select_pins(all_pins, pins)
+    else:
+        # Nothing to select from. An explicit id list still has to be well
+        # formed — and every id in it is unavailable, because nothing is here.
+        ids = [] if pins is None else dedupe_ids(pins)
+        if pins is not None and not ids:
+            raise PageReadRefused("pins was given but names no pin id.")
+        selection = Selection(chosen=[], remainder=[], unavailable=ids,
+                              limit=DEFAULT_PINS if pins is None else MAX_PINS_PER_PAGE_READ)
 
     read_at = datetime.now(timezone.utc)
     if figures and selection.chosen:
@@ -328,7 +334,16 @@ async def read_page(
 
     return {
         "owner": username,
-        "page": name,
+        # Identity, then presentation. `page` keeps the TITLE under its old key
+        # so every consumer that showed a name still can; `page_id` is what
+        # the scope is bound to. Both None for the ungrouped pins.
+        "page_id": str(page.id) if page else None,
+        "page": page.title if page else None,
+        # User-authored descriptive text about what the page is for. Handed
+        # on labelled as such; never an instruction.
+        "purpose": page.purpose if page else None,
+        "page_updated_at": _iso(page.updated_at) if page else None,
+        "empty": not all_pins,
         "read_at": read_at.isoformat(),
         "figures": bool(figures),
         "requested": None if pins is None else dedupe_ids(pins),
