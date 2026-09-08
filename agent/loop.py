@@ -1364,6 +1364,21 @@ async def run(
     called_tools: list[str] = []
     conceded = False
     iterations = 0
+    # Exact duplicate reads, served once per turn. Keyed by call_key — the
+    # same canonical form a pin is matched on, and nothing looser: an omitted
+    # argument and an explicit None are different calls here for the same
+    # reason they are there. Every read that reached a tool this turn is
+    # recorded with its outcome, refusals included, because replaying the
+    # identical call inside the same turn cannot change anything: the data
+    # was read seconds ago and a refusal is deterministic. A duplicate gets
+    # its own seq and frames so it is inspectable, is answered to the model
+    # with the ORIGINAL outcome, and spends none of the read budget — the
+    # budget bounds database work, and a duplicate does none. The guard is
+    # this dict, which lives exactly as long as run(); a later user turn
+    # re-reads freely. Observed before this existed: every exact repeat in
+    # the log was a refusal retried verbatim (34 of 34, all time).
+    served_reads: dict[str, tuple[dict, Optional[str], int, int]] = {}
+    duplicate_reads = 0
     corrective_turns = 0
     max_corrective = req(defs, "notices.max_corrective_turns")
     # Writes actually made this run, and the budget for asking the model to
@@ -1676,10 +1691,17 @@ async def run(
             # 19-call fan-out (per-SKU movement, because no grouped call
             # exists) was followed by one save_workflow, and the cap refused
             # the save.
+            # A read already served this turn is not more searching either:
+            # it is answered from the record whether or not the budget is
+            # spent, so it does not trip the cap.
             more_reads = [b for b in tool_uses
                           if b.name not in write_tools.WRITE_TOOL_FUNCTIONS
-                          and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS]
-            if seq >= MAX_TOOL_CALLS and not conceded and more_reads:
+                          and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS
+                          and call_key(b.name, dict(b.input)) not in served_reads]
+            # The budget is what actually ran. A duplicate served from this
+            # turn's own record did no work and is not counted against it.
+            executed = seq - duplicate_reads
+            if executed >= MAX_TOOL_CALLS and not conceded and more_reads:
                 conceded = True
                 attempted = ", ".join(
                     f"{name} x{n}" for name, n in
@@ -1687,10 +1709,11 @@ async def run(
                            key=lambda kv: -kv[1])
                 )
                 log.gap("convergence_cap",
-                        f"{seq} calls without converging: {attempted}"[:2000])
+                        f"{executed} calls without converging: {attempted}"[:2000])
                 yield _sse("warning", {
                     "reason": "convergence_cap",
-                    "tool_calls": seq,
+                    "tool_calls": executed,
+                    "duplicate_reads": duplicate_reads,
                     "limit": MAX_TOOL_CALLS,
                     "attempted": attempted,
                 })
@@ -1709,7 +1732,7 @@ async def run(
                 refused = []
                 for b in tool_uses:
                     reason = (
-                        f"Not run: {seq} tool calls have already been made on "
+                        f"Not run: {executed} tool calls have already been made on "
                         f"this question, past the limit of {MAX_TOOL_CALLS}. "
                         f"Answer from the results you already have."
                     )
@@ -1735,7 +1758,7 @@ async def run(
                     "content": refused + [{
                         "type": "text",
                         "text": (
-                            f"STOP CALLING TOOLS. You have made {seq} calls on this "
+                            f"STOP CALLING TOOLS. You have made {executed} calls on this "
                             f"question ({attempted}) without reaching an answer, "
                             f"which is past the limit of {MAX_TOOL_CALLS}.\n\n"
                             "Do not call another tool. Answer now with three things:\n"
@@ -1759,11 +1782,27 @@ async def run(
             # row used the index within the batch, so two tools called in
             # parallel both reported seq 0 — a client or a query keying on seq
             # would collide them.
+            # A read identical to one already served this turn — in an earlier
+            # iteration, or earlier in this same batch — is a duplicate. It is
+            # decided here, before dispatch, so a batch that asks twice runs
+            # once; its frame says which call it repeats.
             batch = []
+            batch_keys: dict[str, int] = {}         # key -> seq, this batch
+            duplicate_of: dict[int, str] = {}       # seq -> the key it repeats
             for b in tool_uses:
+                is_read = (b.name not in write_tools.WRITE_TOOL_FUNCTIONS
+                           and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS)
+                key = call_key(b.name, dict(b.input)) if is_read else None
+                frame = {"seq": seq, "tool": b.name, "arguments": b.input}
+                if key is not None and (key in served_reads or key in batch_keys):
+                    duplicate_of[seq] = key
+                    frame["duplicate_of"] = (served_reads[key][3] if key in served_reads
+                                             else batch_keys[key])
+                elif key is not None:
+                    batch_keys[key] = seq
                 batch.append((seq, b))
                 called_tools.append(b.name)
-                yield _sse("tool_call", {"seq": seq, "tool": b.name, "arguments": b.input})
+                yield _sse("tool_call", frame)
                 seq += 1
 
             # Reads run together; composites next; writes last, in order.
@@ -1786,7 +1825,9 @@ async def run(
                           if b.name in composite_tools.COMPOSITE_TOOL_FUNCTIONS]
             reads = [(g, b) for g, b in batch
                      if b.name not in write_tools.WRITE_TOOL_FUNCTIONS
-                     and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS]
+                     and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS
+                     and g not in duplicate_of]
+            dupes = [(g, b) for g, b in batch if g in duplicate_of]
 
             done_calls = list(zip(reads, await asyncio.gather(*[
                 _call_tool(b.name, dict(b.input)) for _, b in reads
@@ -1794,12 +1835,39 @@ async def run(
 
             # The provenance record. A call that refused is deliberately absent:
             # a pin of a call that has never once succeeded is a tile born broken.
-            for (_, b), (_, err, _ms) in done_calls:
+            for (gseq, b), (result, err, ms) in done_calls:
+                args = dict(b.input)
                 if err is None:
-                    args = dict(b.input)
                     write_ctx.executed[call_key(b.name, args)] = {
                         "tool": b.name, "arguments": args,
                     }
+                # What this turn has served, refusals included, for the
+                # duplicate guard. Recorded whatever the outcome: an identical
+                # call cannot make a refusal succeed.
+                served_reads[call_key(b.name, args)] = (result, err, ms, gseq)
+
+            # Duplicates, answered from the record. The ORIGINAL outcome,
+            # faithfully — its rows, its meta with its own snapshot_timestamp,
+            # or its refusal — with two fields added so the model and the log
+            # can see it was not re-read. Nothing is executed.
+            for gseq, b in dupes:
+                orig_result, orig_err, _orig_ms, orig_seq = served_reads[duplicate_of[gseq]]
+                dup_result = dict(orig_result)
+                dup_result["meta"] = {
+                    **(orig_result.get("meta") or {}),
+                    "duplicate_of": orig_seq,
+                    "duplicate_note": (
+                        f"Identical to call {orig_seq} in this turn, which was not "
+                        f"re-run: this is that call's result, read at its "
+                        f"snapshot_timestamp. Reading the same thing twice in one "
+                        f"turn changes nothing — use the result you already have."
+                    ),
+                }
+                done_calls.append(((gseq, b), (dup_result, orig_err, 0)))
+                duplicate_reads += 1
+                log.gap("duplicate_read",
+                        f"call {gseq} repeats call {orig_seq}: "
+                        f"{json.dumps(_json_safe(dict(b.input)))}"[:2000], b.name)
 
             for gseq, b in composites:
                 outcome = await _call_composite_tool(b.name, dict(b.input), write_ctx)
@@ -1837,7 +1905,11 @@ async def run(
             for (gseq, b), (result, err, ms) in done_calls:
                 capped = _truncate(result)
                 meta = capped.get("meta") or {}
-                found = _notices_from(capped)
+                is_duplicate = gseq in duplicate_of
+                # A duplicate's notices are the original's, already pending
+                # and already announced; adding them again would have the
+                # correction name each caveat twice.
+                found = [] if is_duplicate else _notices_from(capped)
                 pending.extend(found)
 
                 # Keep the last meta that describes real data. A refusal's meta
@@ -1852,12 +1924,15 @@ async def run(
                 # its own inside it. The page_context frame is its provenance.
                 if (not err and meta.get("source_table")
                         and b.name not in write_tools.WRITE_TOOL_FUNCTIONS
-                        and b.name != composite_tools.PAGE_CONTEXT_TOOL):
+                        and b.name != composite_tools.PAGE_CONTEXT_TOOL
+                        and not is_duplicate):
                     last_meta = meta
 
                 log.tool_call(gseq, b.name, dict(b.input), capped, ms, err)
 
-                if err:
+                if is_duplicate:
+                    pass                     # its gap was logged when it was decided
+                elif err:
                     log.gap("tool_refused", err[:2000], b.name)
                 elif not (capped.get("rows") or []):
                     log.gap("empty_result", json.dumps(_json_safe(b.input))[:2000], b.name)
@@ -1872,9 +1947,14 @@ async def run(
                 # A page read's rows are pins, not figures: they are never
                 # sent to be drawn and never charted. Its evidence went out
                 # as the page_context frame above.
-                full_rows = [] if err else (result.get("rows") or [])
+                # A duplicate's rows are the original's, already on screen
+                # under the original's seq: sent again they would be charted
+                # twice, and a second pinnable record of one read would be a
+                # second execution that never happened.
+                full_rows = [] if (err or is_duplicate) else (result.get("rows") or [])
                 rows_complete = (
                     not err
+                    and not is_duplicate
                     and b.name not in write_tools.WRITE_TOOL_FUNCTIONS
                     and b.name != composite_tools.PAGE_CONTEXT_TOOL
                     and len(full_rows) <= MAX_ROWS_TO_CLIENT
@@ -1897,7 +1977,10 @@ async def run(
                     # ran without error. Said by the loop so the client never
                     # decides from a name — a workflow run and a page read are
                     # calls George made, and neither is a tile.
-                    "pinnable": bool(not err and b.name in TOOL_FUNCTIONS),
+                    "pinnable": bool(not err and not is_duplicate and b.name in TOOL_FUNCTIONS),
+                    # Which earlier call this one repeats, when it does. The
+                    # row for it says "same as call N, not re-read".
+                    **({"duplicate_of": meta.get("duplicate_of")} if is_duplicate else {}),
                 })
                 # Kept for the ANSWER POST, so a chart survives a reload. Same
                 # all-or-none rule as the frame above: a result that could not
@@ -1913,6 +1996,7 @@ async def run(
                 # tools only, and only ones that ran without error: the
                 # arguments are the ones the tool accepted and answered.
                 if (not err
+                        and not is_duplicate
                         and b.name in TOOL_FUNCTIONS
                         and b.name not in write_tools.WRITE_TOOL_FUNCTIONS
                         and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS):
@@ -2056,6 +2140,10 @@ async def run(
         "thread_id": log.thread_id,
         "iterations": iterations,
         "tool_calls": seq,
+        # Two counts, kept apart: what reached a tool, and what was answered
+        # from this turn's own record without reaching one.
+        "executed_calls": seq - duplicate_reads,
+        "duplicate_reads": duplicate_reads,
         "status": status,
         "notice_forced": notice_forced,
         "usage": usage,
