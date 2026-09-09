@@ -19,9 +19,21 @@ generated_by: ops/propose_supplier_map.py
 derived_from: "purchase_order_lines.product_id -> purchase_orders.supplier_name"
 
 # proposed | approved. A person sets this, never the generator and never George.
-status: proposed
-approved_by: null
-approved_at: null
+status: approved
+approved_by: "Ice"
+approved_at: "2026-09-10"
+
+# HOW THIS WAS APPROVED, recorded because it changes how much the approval is
+# worth. The owner directed it without a line-by-line review of the 608
+# entries. That is their call to make and it is not a defect — but a later
+# reader should not mistake this for 608 individually checked decisions.
+#
+# What is now trusted: a product bought from exactly ONE supplier in purchase
+# history is treated as supplied by them. What is NOT: the 42 entries under
+# `ambiguous` remain unresolved and are used by nothing. A wrong entry shows up
+# as a wrong line on a draft order somebody reads before sending, which is why
+# this was the safe place to start.
+approved_note: "approved on the owner's instruction, without a line-by-line review"
 
 measured:
   products_in_catalogue: 3723

@@ -59,14 +59,25 @@ def test_the_map_is_only_authoritative_once_approved(link):
     assert set(req(link, "map_status_values")) == {"proposed", "approved"}
 
 
-def test_the_generated_file_arrives_unapproved(mapfile):
+def test_an_approval_always_carries_a_name_and_a_date(mapfile, link):
     """
-    A proposal that took effect on being written would not be a proposal. The
-    generator can only ever produce `proposed`; a person sets the other value.
+    The status may legitimately be either — a proposal that has been read and
+    accepted is the point of the gate, not a violation of it. What must never
+    happen is an approval nobody signed: a file that says `approved` with no
+    approver is indistinguishable from one that approved itself, which is
+    exactly the failure the gate exists to make impossible.
+
+    That the GENERATOR can only ever write `proposed` is a separate property
+    and is held by test_the_generator_never_writes_approved below. This test
+    is about the file as it stands.
     """
-    assert mapfile["status"] == "proposed"
-    assert mapfile["approved_by"] is None
-    assert mapfile["approved_at"] is None
+    assert mapfile["status"] in req(link, "map_status_values")
+    if mapfile["status"] == "approved":
+        assert mapfile["approved_by"], "approved with no approver"
+        assert mapfile["approved_at"], "approved with no date"
+    else:
+        assert mapfile["approved_by"] is None
+        assert mapfile["approved_at"] is None
 
 
 def test_an_unapproved_map_changes_nothing(defs, monkeypatch):
