@@ -210,6 +210,20 @@ class PageReader(Protocol):
     async def __call__(self, pins: Optional[list[str]], figures: bool) -> dict: ...
 
 
+class BeliefStore(Protocol):
+    """
+    Where George's understanding is kept. Implemented in the web process, bound
+    to the authenticated user for provenance only — beliefs are about the
+    business and are shared, so there is no owner scope on the read.
+
+    `record` takes beliefs that agent/beliefs.py has already ruled admissible
+    and returns one row per belief saying what happened to it: new, confirmed,
+    revised or refused.
+    """
+
+    async def record(self, accepted: list[dict]) -> list[dict]: ...
+
+
 class PageRefused(ValueError):
     """
     The page cannot be created or edited as asked, and the message says why:
@@ -290,6 +304,11 @@ class WriteContext:
     # The caller's pages, writable through the application role. Bound to the
     # owner (and to the page in scope, for "this page") in the web process.
     page_writer: Optional[PageWriter] = None
+    # Where George's understanding is kept. A write, injected like the others;
+    # what he currently believes is READ before the loop starts and arrives as
+    # part of the question, because it shapes the whole turn rather than being
+    # fetched during one.
+    belief_store: Optional[BeliefStore] = None
 
 
 def call_key(tool: str, arguments: Any) -> str:
@@ -853,11 +872,82 @@ async def edit_page(
     return _page_result(stored, "page_edit")
 
 
+async def record_belief(beliefs: list[dict], *, ctx: WriteContext) -> dict:
+    """
+    Record what you now believe about the business, so you still know it tomorrow.
+
+    A belief is one view about one thing, kept between conversations. Record one
+    when a read has settled what you think — not for every figure you read.
+    Re-recording a view you already hold simply confirms it, which is how "held
+    since Friday" stays true.
+
+    Args:
+        beliefs: The views to keep, as a list of objects:
+            subject_kind — one of store, warehouse, supplier, product, category,
+                estate.
+            subject — the thing itself, by the name a person uses: "Rockwell",
+                "AJI BARN", "Seikyo SEK001".
+            stance — needs_attention, unremarkable, unexplained, not_visible or
+                waiting.
+            claim — what you think, in ONE sentence and with NO FIGURE in it. A
+                stored number is wrong a week later and tells nobody; say what
+                the figures MEAN. "Rockwell is losing customers rather than
+                smaller baskets", not "Rockwell is down nine percent".
+            evidence — the calls this rests on, as
+                [{"tool": ..., "arguments": {...}}]. Only calls you have already
+                run in this conversation; a view has to rest on something that
+                actually happened. A read that found nothing counts.
+            supersedes — the id of a belief this replaces, from the block of
+                current beliefs attached to the question. Include it when a read
+                has changed your mind.
+            why — required when superseding: what this read established that the
+                old view did not account for.
+
+    Returns:
+        {rows, meta} like every other tool. Each row says what happened to one
+        belief: new, confirmed, revised or refused.
+    """
+    if ctx.belief_store is None:
+        raise PinRefused(
+            "George cannot keep beliefs in this session — it requires a signed-in "
+            "user. Say what you think in the answer; it will not be remembered."
+        )
+    from tools._common import load_defs   # local: agent/ imports tools/ lazily here
+    defs = load_defs()
+
+    def is_executed(call: dict) -> bool:
+        return call_key(call["tool"], call["arguments"]) in ctx.executed
+
+    return await _record_beliefs(beliefs, defs=defs, is_executed=is_executed,
+                                 store=ctx.belief_store)
+
+
+async def _record_beliefs(beliefs, *, defs, is_executed, store) -> dict:
+    """The async half of agent/beliefs.record — validation is pure, storing is not."""
+    from agent import beliefs as belief_rules
+    accepted, rejected = belief_rules.validate(beliefs, defs, is_executed=is_executed)
+    stored = await store.record(accepted) if accepted else []
+    return {
+        "rows": stored,
+        "meta": {
+            "held": len([r for r in stored if r.get("outcome") != "refused"]),
+            "rejected": rejected,
+            "stances": list(belief_rules.stances_for(defs)),
+            "note": (
+                "What George now believes about these things, kept until a later "
+                "read changes it. Nothing was read. A rejected belief is not held "
+                "and the answer must not describe it as though it were."
+            ),
+        },
+    }
+
+
 WRITE_TOOL_FUNCTIONS = {
     "pin_answer": pin_answer,
     "save_workflow": save_workflow,
     "create_page": create_page,
     "edit_page": edit_page,
+    "record_belief": record_belief,
 }
 
 # The two page tools, by name, for the loop's frame and claim check.
@@ -872,4 +962,5 @@ WRITE_TOOL_REQUIRES = {
     "save_workflow": "workflow_writer",
     "create_page": "page_writer",
     "edit_page": "page_writer",
+    "record_belief": "belief_store",
 }

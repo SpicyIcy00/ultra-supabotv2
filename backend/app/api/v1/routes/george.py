@@ -67,6 +67,7 @@ from app.core.deps import require_page
 from app.models.app_user import AppUser
 from app.services.chat_history import build_turns, question_of, title_of
 from app.services.george_greeting import build_greeting
+from app.services import belief_store as beliefs_service
 from app.services.george_recall import as_block, recent_figures
 from app.services.river import (
     DEFAULT_LIMIT as RIVER_LIMIT,
@@ -1473,6 +1474,55 @@ async def _resolve_scope(username: str, scope: PageScope) -> Optional[dict]:
         return {"page_id": str(page.id), "name": page.title}
 
 
+def _belief_store(username: str, conversation_id: Optional[str]):
+    """
+    George's route to KEEPING what he believes.
+
+    A write, injected exactly as the pin writer is: beliefs live in the george
+    schema, which neither of the loop's identities can see. The username is
+    captured HERE, from the verified token, and is recorded as PROVENANCE only
+    — beliefs are about the business and are shared, so nothing the model emits
+    and nothing in the query scopes them to a person.
+
+    Its own session, and it commits: a view George formed during a turn has to
+    survive the turn, which is the entire point of the table.
+    """
+
+    class _Store:
+        async def record(self, accepted: list[dict]) -> list[dict]:
+            async with AsyncSessionLocal() as session:
+                return await beliefs_service.record(
+                    session, accepted,
+                    created_by=username, conversation_id=conversation_id,
+                )
+
+    return _Store()
+
+
+async def _beliefs_for() -> Optional[str]:
+    """
+    What George currently believes, as the block attached to the question.
+
+    UNLIKE RECALL, THIS IS SENT ON EVERY TURN. Recall is a nicety that stops
+    being useful once the conversation has its own history; a view is the frame
+    the question is read in, and dropping it mid-thread would let George
+    contradict himself between one follow-up and the next.
+
+    Freshness is computed against the transaction stream here, so a belief last
+    checked before today's data arrives marked unconfirmed rather than
+    authoritative. Failure is never fatal: an answer must not be lost to a
+    lookup that could not run, and George without his beliefs is the George of
+    last week.
+    """
+    try:
+        async with AsyncSessionLocal() as session:
+            rows = await beliefs_service.current(session)
+            latest = await beliefs_service.latest_data_at(session)
+        return beliefs_service.as_block(rows, latest_data=latest)
+    except SQLAlchemyError:
+        return None
+
+
 async def _recall_for(username: str, history: list[dict],
                       thread_id: Optional[str]) -> Optional[str]:
     """
@@ -1622,6 +1672,8 @@ async def ask(
     # role performs, and it has to be done before the 200 goes out, while a
     # failure can still be handled as something other than an error frame.
     recall = await _recall_for(user.username, history, thread)
+    # Every turn, unlike recall: a view is the frame a question is read in.
+    held_beliefs = await _beliefs_for()
     # Lightweight owner-scoped discovery: no pin replay or business query.
     async with AsyncSessionLocal() as session:
         page_references = [
@@ -1641,6 +1693,8 @@ async def ask(
             workflow_runner=_workflow_runner(user.username, user.role),
             thread_id=thread,
             recall=recall,
+            beliefs=held_beliefs,
+            belief_store=_belief_store(user.username, thread),
             parent_id=parent,
             page_reader=page_reader,
             page_scope=page_scope,
