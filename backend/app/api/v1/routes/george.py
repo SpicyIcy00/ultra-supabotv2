@@ -49,7 +49,7 @@ import asyncio
 import json
 import sys
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, AsyncIterator, List, Literal, Optional
 
@@ -91,11 +91,12 @@ from app.services.page_reader import (
     read_page,
 )
 from app.services.pin_writer import (
+    MAX_TOOL_CALLS_PER_PIN,
     PinQuotaError,
     SimilarPageError,
     create_pin,
 )
-from app.services.pin_runner import PinValidationError
+from app.services.pin_runner import PinValidationError, run_pin, validate_calls
 from app.services.thread_access import parent_in_thread, thread_continuable
 from app.services.workflow_runner import (
     WorkflowValidationError,
@@ -184,8 +185,59 @@ class PageScope(BaseModel):
     name: Optional[str] = Field(None, max_length=100)
 
 
+# The desk's bounds, from the definitions, at import: the number the client is
+# told is the number the route refuses past (metrics.yaml surface.desk).
+_DESK = _req(_load_defs(), "surface.desk")
+_DESK_MAX_SUBJECTS = int(_req(_DESK, "selection.max_subjects"))
+_DESK_DIMENSIONS = tuple(str(d) for d in _req(_DESK, "selection.dimensions"))
+
+
+class DeskSubject(BaseModel):
+    """One selected subject: the id a row carried, and the label beside it."""
+
+    id: str = Field(..., min_length=1, max_length=64)
+    label: str = Field(..., min_length=1, max_length=200)
+
+
+class DeskSelection(BaseModel):
+    """
+    What the person has selected or focused on the workspace.
+
+    IDS FROM ROWS, NEVER LABELS THE MODEL INFERRED. The client takes these off
+    the rows the tools returned (store_id, product_id, category); the loop
+    names them to George on the question in words and never as a figure. The
+    dimension is one of the definitions' subject dimensions and nothing else.
+    """
+
+    dimension: Literal["store", "product", "category"]
+    subjects: List[DeskSubject] = Field(default_factory=list, max_length=_DESK_MAX_SUBJECTS)
+
+
+class DeskWindow(BaseModel):
+    """The window a replay moved the work to: a preset by name, or explicit dates."""
+
+    kind: Literal["preset", "explicit"]
+    name: Optional[str] = Field(None, max_length=40)
+    start: Optional[str] = Field(None, max_length=10)
+    end: Optional[str] = Field(None, max_length=10)
+
+
+class DeskContext(BaseModel):
+    """
+    The desk as the question was asked from it. Bounded here, named to the
+    model by the loop, and kept on the question post's payload so a reload
+    restores the same focus from the same record (surface.desk.selection).
+    """
+
+    selection: Optional[DeskSelection] = None
+    window: Optional[DeskWindow] = None
+
+
 class AskRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
+    # What the person has selected on the workspace, and the window they moved
+    # it to. Optional: an empty desk sends nothing, exactly as before it existed.
+    desk: Optional[DeskContext] = None
     # The page the user is asking from, e.g. "replenishment". George is present
     # wherever the user already is and receives that page as context.
     #
@@ -1394,7 +1446,8 @@ async def _safe_stream(question: str, user_id: Optional[str],
                        page_reader: Optional[PageReader] = None,
                        page_scope: Optional[dict] = None,
                        page_writer: Optional[PageWriter] = None,
-                       page_references: Optional[list[dict]] = None) -> AsyncIterator[str]:
+                       page_references: Optional[list[dict]] = None,
+                       desk: Optional[dict] = None) -> AsyncIterator[str]:
     """
     Wrap the loop so a crash still closes the stream cleanly.
 
@@ -1418,6 +1471,7 @@ async def _safe_stream(question: str, user_id: Optional[str],
             page_scope=page_scope,
             page_writer=page_writer,
             page_references=page_references,
+            desk=desk,
         ):
             yield frame
     except Exception as exc:  # noqa: BLE001
@@ -1527,6 +1581,8 @@ async def ask(
             page_reader=page_reader,
             page_scope=page_scope,
             page_references=page_references,
+            # The desk, bounded by the model above; an empty one is nothing.
+            desk=request.desk.model_dump(exclude_none=True) if request.desk else None,
             # Always: every signed-in caller may build and edit their own
             # pages. "This page" is the resolved scope, or nothing.
             page_writer=_PageWriter(
@@ -1543,6 +1599,125 @@ async def ask(
             # arrives as one lump when the answer is already finished.
             "X-Accel-Buffering": "no",
         },
+    )
+
+
+# ---------------------------------------------------------------------------
+# The desk: a replay, and the definitions it is drawn from
+#
+# A window change on the workspace re-runs calls a person already has on
+# screen with one scope argument changed. No model is consulted — this is the
+# pin's path: the same validation (read tools only, the pin's own limit) and
+# the same runner, returning the same {rows, meta, notices} per call with the
+# full receipts a tile shows. It is TRANSIENT (metrics.yaml surface.desk.replay):
+# nothing is written, and the record of the change is the next question, which
+# carries the window in `desk.window`.
+# ---------------------------------------------------------------------------
+
+class ReplayRequest(BaseModel):
+    calls: List[HistoryCall] = Field(..., min_length=1, max_length=MAX_TOOL_CALLS_PER_PIN)
+
+
+class ReplayOut(BaseModel):
+    status: str
+    results: List[dict[str, Any]]
+    notices: List[dict[str, Any]]
+    ran_at: datetime
+
+
+@router.post("/replay", response_model=ReplayOut)
+async def replay(
+    request: ReplayRequest,
+    user: AppUser = Depends(_george_user),
+) -> ReplayOut:
+    """
+    Re-run calls already on the workspace, over another window.
+
+    Validated exactly as a pin is before anything runs: a write, a composite,
+    an unknown tool or an argument the definitions no longer accept is a 422
+    with the runner's own words. A refusal from a tool at run time — a
+    comparison over a window still in progress — is a 200 with that status on
+    the call, because the tool declining to mislead is a real answer the
+    workspace has to draw.
+    """
+    try:
+        calls = validate_calls([c.model_dump() for c in request.calls])
+    except PinValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    outcome = await run_pin(calls)
+    return ReplayOut(
+        status=outcome["status"],
+        results=outcome["results"],
+        notices=outcome["notices"],
+        ran_at=datetime.now(timezone.utc),
+    )
+
+
+class DeskWindowDef(BaseModel):
+    """One date preset, as the definitions state it."""
+
+    name: str
+    includes_partial_day: bool
+    closed_alternative: Optional[str] = None
+    relative: dict[str, Any] = Field(default_factory=dict)
+
+
+class DeskLocation(BaseModel):
+    """A place in the business, from the one store list (metrics.yaml stores)."""
+
+    id: str
+    display_name: str
+    kind: Literal["retail", "warehouse"]
+
+
+class DeskDefinitions(BaseModel):
+    """
+    Everything the workspace reads from the definitions, in one read.
+
+    NOTHING HERE IS A FIGURE. The business's name, the date presets and which
+    are still in progress, which argument carries a window per tool, the
+    resting reads, the selection bounds and the locations — all of it is
+    `metrics.yaml`, served so the client never keeps a copy that can drift.
+    """
+
+    business: dict[str, Any]
+    windows: List[DeskWindowDef]
+    window_arguments: dict[str, str]
+    rest_reads: List[dict[str, Any]]
+    selection: dict[str, Any]
+    direct_manipulation: List[str]
+    locations: List[DeskLocation]
+
+
+@router.get("/definitions/desk", response_model=DeskDefinitions)
+async def desk_definitions(user: AppUser = Depends(_george_user)) -> DeskDefinitions:
+    defs = _load_defs()
+    desk = _req(defs, "surface.desk")
+    presets = _req(defs, "sales_day.presets")
+    windows = [
+        DeskWindowDef(
+            name=name,
+            includes_partial_day=bool(p.get("includes_partial_day")),
+            closed_alternative=p.get("closed_alternative"),
+            relative=dict(p.get("relative") or {}),
+        )
+        for name, p in presets.items()
+    ]
+    locations = [
+        DeskLocation(id=s["id"], display_name=s["display_name"], kind="retail")
+        for s in _req(defs, "stores.active_retail")
+    ] + [
+        DeskLocation(id=s["id"], display_name=s["display_name"], kind="warehouse")
+        for s in _req(defs, "stores.warehouse")
+    ]
+    return DeskDefinitions(
+        business=dict(_req(desk, "business")),
+        windows=windows,
+        window_arguments=dict(_req(defs, "workflows.backtest.window_arguments")),
+        rest_reads=[dict(r) for r in _req(desk, "rest.reads")],
+        selection=dict(_req(desk, "selection")),
+        direct_manipulation=[str(op) for op in _req(desk, "direct_manipulation")],
+        locations=locations,
     )
 
 

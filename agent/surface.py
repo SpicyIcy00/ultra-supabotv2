@@ -132,6 +132,93 @@ def work_sentence(calls: Iterable[Mapping[str, Any]], defs: Mapping[str, Any]) -
     )
 
 
+# ---------------------------------------------------------------------------
+# The desk: what the person selected, and the window they moved to
+#
+# The selection is a set of subjects a person picked on the workspace — ids
+# and labels off rows the tools returned — and it reaches the model the same
+# way the work sentence does: on the QUESTION, in words, never in the cached
+# prefix and never as a figure. A label is quoted and neutralised (one line,
+# no brackets) because it is client-supplied text, exactly like the question.
+# ---------------------------------------------------------------------------
+
+_LABEL_MAX = 80
+_NOUN = {"store": "store", "product": "product", "category": "category"}
+
+
+def _clean_label(value: Any) -> str:
+    text = " ".join(str(value if value is not None else "").split())
+    text = text.replace("[", "(").replace("]", ")").replace("'", "’")
+    return text[:_LABEL_MAX]
+
+
+def _subject_words(dimension: str, subjects: list[Mapping[str, Any]]) -> str:
+    parts: list[str] = []
+    for s in subjects:
+        label = _clean_label(s.get("label"))
+        if not label:
+            continue
+        ident = " ".join(str(s.get("id") or "").split())[:64]
+        # A store is named to the tools by its display name; a product's name
+        # may be three products, so its id travels with it.
+        if dimension == "product" and ident:
+            parts.append(f"'{label}' (product_id {ident})")
+        else:
+            parts.append(f"'{label}'")
+    if not parts:
+        return ""
+    if len(parts) == 1:
+        return parts[0]
+    return ", ".join(parts[:-1]) + " and " + parts[-1]
+
+
+def _window_words(window: Mapping[str, Any]) -> Optional[str]:
+    if window.get("kind") == "preset" and isinstance(window.get("name"), str):
+        return window["name"].replace("_", " ")
+    start, end = window.get("start"), window.get("end")
+    if isinstance(start, str) and isinstance(end, str):
+        return f"{start} to {end}"
+    return None
+
+
+def desk_sentence(desk: Optional[Mapping[str, Any]], defs: Mapping[str, Any]) -> Optional[str]:
+    """
+    One line naming what is on the desk: the selected subjects, and the
+    window the work was re-read for. Names and a window only — no figure.
+    """
+    if not desk:
+        return None
+    dims = list(req(defs, "surface.desk.selection.dimensions"))
+    parts: list[str] = []
+
+    sel = desk.get("selection") or {}
+    dimension = sel.get("dimension") if isinstance(sel, Mapping) else None
+    subjects = [s for s in ((sel.get("subjects") or []) if isinstance(sel, Mapping) else [])
+                if isinstance(s, Mapping)]
+    if dimension in dims and subjects:
+        words = _subject_words(dimension, subjects)
+        if words:
+            noun = _NOUN.get(dimension, dimension)
+            plural = "" if len(subjects) == 1 else "s"
+            parts.append(f"the user has selected the {noun}{plural} {words} on the surface")
+
+    window = desk.get("window")
+    if isinstance(window, Mapping):
+        when = _window_words(window)
+        if when:
+            parts.append(f"the work above was re-read for {when}, which is now its window")
+
+    if not parts:
+        return None
+    return (
+        "[On the desk: " + "; ".join(parts) + ". A short instruction — why, compare "
+        "these, products — applies to that selection: read for these subjects by "
+        "name, keep the work's window and comparison, answer from figures already "
+        "on the surface where they hold the answer, and record findings for any "
+        "new read so it joins the same surface.]"
+    )
+
+
 def _whole_words(terms: Iterable[Any], text: str) -> list[str]:
     low = text.lower()
     found: list[str] = []
