@@ -15,7 +15,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUp, Square } from 'lucide-react';
 import { useGeorge } from '../../hooks/useGeorge';
-import type { DeskActionItem } from './deskActions';
 
 export interface DeskLineProps {
   onAsk: (question: string) => void;
@@ -23,16 +22,20 @@ export interface DeskLineProps {
   busy: boolean;
   /** What the question will carry, in words. Null when the desk is empty. */
   context: string | null;
-  actions: DeskActionItem[];
-  onAction: (action: DeskActionItem) => void;
+  /**
+   * What George is doing right now, in his own words, derived from the frames
+   * that arrived. Shown only while a turn runs — presence is a fact, and
+   * there is no line when nothing is happening.
+   */
+  narration?: string | null;
   placeholder?: string;
-  /** Text to start with, unsent — from an action, for the person to edit. */
+  /** Text to start with, unsent — from a move, for the person to edit. */
   draft?: string | null;
   draftKey?: number;
 }
 
 export function DeskLine({
-  onAsk, onCancel, busy, context, actions, onAction,
+  onAsk, onCancel, busy, context, narration = null,
   placeholder = 'Ask George, or touch something above…', draft = null, draftKey = 0,
 }: DeskLineProps) {
   const { setComposer } = useGeorge();
@@ -70,27 +73,13 @@ export function DeskLine({
   return (
     <div className="px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 md:px-8" data-desk-line>
       <div className="mx-auto w-full max-w-4xl">
-        {/* What the definitions let you do from here, and what a click does. */}
-        {actions.length > 0 && (
-          <div className="mb-2.5 flex flex-wrap gap-1.5" data-actions>
-            {actions.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => onAction(a)}
-                title={a.question ?? a.label}
-                data-action={a.id}
-                data-kind={a.kind}
-                className="min-h-touch rounded-full bg-george-paper px-3.5 py-1.5 text-[12px] text-george-navy transition-shadow desk-lift hover:shadow-md"
-              >
-                {a.label}
-              </button>
-            ))}
-          </div>
+        {/* What George is doing, while he is doing it. Never a fake state. */}
+        {busy && narration && (
+          <p className="mb-1.5 truncate text-[12px] text-george-slate" data-narration>{narration}</p>
         )}
 
         {/* What the question will carry. Never a figure. */}
-        {context && (
+        {context && !busy && (
           <p className="mb-1.5 truncate text-[11px] text-george-muted" data-desk-context>
             George will read this as: {context}
           </p>

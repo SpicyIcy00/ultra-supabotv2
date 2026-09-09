@@ -347,6 +347,115 @@ def test_replay_is_bounded_by_the_pins_own_limit_and_gated_by_georges_page():
     assert "run_pin(" in replay_src
 
 
+def test_the_representation_rules_are_declared_and_bounded():
+    """A plane is not the default and has to earn its second axis."""
+    rep = DESK["representation"]
+    assert rep["default"] == "ranked"
+    assert set(rep["kinds"]) >= {"ranked", "plane", "anatomy", "compare", "figures", "statement"}
+    plane = rep["plane_requires"]
+    assert plane["two_declared_drivers"] is True
+    assert plane["subjects_in_more_than_one_quadrant"] is True
+    assert plane["min_subjects"] >= 2
+    assert plane["max_subjects"] > plane["min_subjects"]
+    # A drawing a person has to be taught carries the teaching, briefly.
+    assert rep["guidance_required_for"] == ["plane"]
+    assert rep["guidance_max_sentences"] <= 3
+
+    # The client implements exactly these, and the quadrant test is structural.
+    compose = _FRONT / "components" / "desk" / "deskCompose.ts"
+    src = compose.read_text(encoding="utf-8")
+    assert "export function planeEarnsItsPlace" in src
+    assert "export function quadrantOf" in src
+    assert f"PLANE_MIN_SUBJECTS = {plane['min_subjects']}" in src
+    assert f"PLANE_MAX_SUBJECTS = {plane['max_subjects']}" in src
+    # No score, no threshold on a business figure: the sign of a change only.
+    quadrant = src.split("export function quadrantOf", 1)[1].split("\n}", 1)[0]
+    assert ">= 0" in quadrant
+    assert not re.search(r"[-+*/]\s*0\.\d", quadrant)
+
+
+def test_initiative_is_grounded_declared_and_honest_about_ask():
+    """Explain and recommend are derived; ask is the prompt's and says so."""
+    initiative = DESK["initiative"]
+    assert initiative["explain"]["characterisation_only"] is True
+    assert initiative["explain"]["max_sentences"] == 1
+    grounds = initiative["recommend"]["grounded_in"]
+    assert set(grounds) == {
+        "drivers_diverge", "against_the_majority", "ranked_first", "no_breakdown_yet"}
+    assert initiative["recommend"]["max"] == 1
+    assert initiative["recommend"]["must_carry_an_action"] is True
+    assert initiative["recommend"]["must_name_its_evidence"] is True
+    # The one thing that is behaviour and not a mechanism says so.
+    assert initiative["ask"]["enforced_by"] == "prompt"
+
+    # The client produces exactly those grounds and nothing else.
+    src = (_FRONT / "components" / "desk" / "initiative.ts").read_text(encoding="utf-8")
+    declared = set(re.findall(r"ground: '([a-z_]+)'", src))
+    assert declared == set(grounds), declared
+    union = re.search(r"export type Ground =([^;]+);", src)
+    assert union and set(re.findall(r"'([a-z_]+)'", union.group(1))) == set(grounds)
+
+
+def test_a_caveat_is_levelled_by_consequence_and_never_shows_a_diagnostic():
+    caveats = DESK["caveats"]
+    assert caveats["levels"] == ["non_material", "relevant", "answer_limiting"]
+    assert caveats["answer_limiting_when"] == "nothing_comparable"
+    assert caveats["raw_diagnostics_in"] == "inspector_only"
+    forbidden = caveats["never_in_the_answer"]
+    assert {"baseline_status", "no_baseline", "no_current", "NULL"} <= set(forbidden)
+
+    src = (_FRONT / "components" / "desk" / "caveats.ts").read_text(encoding="utf-8")
+    for level in caveats["levels"]:
+        assert f"'{level}'" in src
+    # The scan the client uses covers every word this file forbids, so a
+    # diagnostic cannot reach the answer by being left out of the guard.
+    guard = src.split("RAW_DIAGNOSTIC", 1)[1].split("\n", 1)[0]
+    for word in forbidden:
+        assert word in guard, f"RAW_DIAGNOSTIC does not scan for {word!r}"
+
+
+def test_the_sidebar_is_navigation_and_the_reading_is_with_the_work():
+    """The left column holds no answer prose; George's reading is in the work."""
+    sidebar = (_FRONT / "components" / "desk" / "Sidebar.tsx").read_text(encoding="utf-8")
+    # Navigation into the states of one environment.
+    for entry in ("Home", "Needs you", "Running", "Kept", "History"):
+        assert f'label="{entry}"' in sidebar, entry
+    # And none of what belongs with the work.
+    for forbidden in ("Prose", "conclusion", "ReceiptsBlock", "recommendation", "attentionLine"):
+        assert forbidden not in sidebar, f"the sidebar draws {forbidden!r}"
+
+    # The reading and the recommendation are drawn by the answer.
+    answer = (_FRONT / "components" / "desk" / "Answer.tsx").read_text(encoding="utf-8")
+    assert "layout.conclusion" in answer or "conclusion={layout.conclusion}" in answer
+    assert "recommendation" in answer
+    assert "ReceiptsBlock" in answer
+
+
+def test_the_work_trail_is_states_from_server_truth_and_not_a_transcript():
+    src = (_FRONT / "components" / "desk" / "workTrail.ts").read_text(encoding="utf-8")
+    # A step is a question and the desk it was asked from — both on the post.
+    assert "intent?.desk?.selection" in src
+    assert "kind: 'stored'" in src and "kind: 'current'" in src
+    for forbidden in ("localStorage", "sessionStorage", "indexedDB"):
+        assert forbidden not in src
+    bar = (_FRONT / "components" / "desk" / "TrailBar.tsx").read_text(encoding="utf-8")
+    # It restores a state; it does not render an exchange.
+    assert "onStep" in bar
+    for forbidden in ("RiverEntries", "AskComposer", "Prose", "body"):
+        assert forbidden not in bar, f"the trail draws {forbidden!r}"
+
+
+def test_the_prompt_tells_george_when_a_question_is_worth_more_than_a_guess():
+    george_loop = _loop()
+    prompt = george_loop.SYSTEM_PROMPT
+    assert "INITIATIVE" in prompt
+    # The three things, and the one that is his alone.
+    assert "recommend" in prompt.lower()
+    assert "ask" in prompt.lower()
+    # He does not ask when the reads can answer it.
+    assert "already answer" in prompt or "can answer" in prompt
+
+
 def test_the_desk_definitions_endpoint_mirrors_the_yaml():
     pytest.importorskip("fastapi")
     from app.api.v1.routes import george as route
@@ -365,6 +474,17 @@ def test_the_desk_definitions_endpoint_mirrors_the_yaml():
     assert out.window_arguments == DEFS["workflows"]["backtest"]["window_arguments"]
     assert [r["tool"] for r in out.rest_reads] == [r["tool"] for r in DESK["rest"]["reads"]]
     assert out.selection["dimensions"] == DESK["selection"]["dimensions"]
+    # The dimensions SOME metric permits a breakdown by — not the headline
+    # metric's own. Net sales refuses a product grouping while the ladder
+    # localizes by product through product_revenue, so a client reading the
+    # headline's permissions would never offer the move the ladder is built
+    # around. product must be in this list for exactly that reason.
+    assert "product" in out.breakdown_dimensions
+    groupable = {g for m in DEFS["metrics"].values() if isinstance(m, dict)
+                 for g in (m.get("valid_group_by") or [])}
+    assert set(out.breakdown_dimensions) == {
+        d for d in DESK["selection"]["dimensions"] if d in groupable}
+    assert "net_sales" not in str(out.breakdown_dimensions)
     assert [l.display_name for l in out.locations if l.kind == "retail"] == [
         s["display_name"] for s in DEFS["stores"]["active_retail"]]
     assert any(l.kind == "warehouse" for l in out.locations)

@@ -143,10 +143,23 @@ def test_the_desk_at_rest_reads_the_definitions_not_a_feed():
     assert "useRiver('attention')" not in hook
 
 
-def test_the_desk_fabricates_nothing():
+def test_the_desk_invents_no_judgement_of_its_own():
+    """
+    A score, a severity, a health reading or an alert is the app deciding
+    something nobody measured, and none may appear.
+
+    "Recommend" WAS on this list, and came off on 2026-09-09 when George
+    gained initiative. The reason it was banned has not changed — a suggestion
+    with nothing behind it is a fabrication — but the guarantee moved from
+    "the word does not appear" to "every recommendation names the trusted fact
+    that produced it": `metrics.yaml surface.desk.initiative.recommend
+    .grounded_in` is a closed list, and test_desk_contract holds the client to
+    producing exactly those grounds and no others. A ban on the word would
+    now forbid the honest version along with the dishonest one.
+    """
     for path in (_DESK, _USE_DESK):
         source = _source(path)
-        for word in ("alert", "recommend", "score", "severity", "health"):
+        for word in ("alert", "score", "severity", "health", "confidence", "importance"):
             assert not re.search(rf"\b{word}", source, re.I), f"{path.name} mentions {word!r}"
 
 

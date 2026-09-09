@@ -1687,6 +1687,16 @@ class DeskDefinitions(BaseModel):
     selection: dict[str, Any]
     direct_manipulation: List[str]
     locations: List[DeskLocation]
+    #: The subject dimensions SOME metric can be broken down by.
+    #:
+    #: Not the headline metric's own `valid_group_by`: net sales is
+    #: transaction grain and refuses a product grouping, while the
+    #: investigation ladder localizes by product through product_revenue
+    #: (metrics.yaml investigation.ladder.localize). So "is a product
+    #: breakdown a thing that exists here" is a question about the
+    #: DEFINITIONS, answered here rather than guessed by a client that
+    #: cannot see them.
+    breakdown_dimensions: List[str]
 
 
 @router.get("/definitions/desk", response_model=DeskDefinitions)
@@ -1710,8 +1720,18 @@ async def desk_definitions(user: AppUser = Depends(_george_user)) -> DeskDefinit
         DeskLocation(id=s["id"], display_name=s["display_name"], kind="warehouse")
         for s in _req(defs, "stores.warehouse")
     ]
+    # Every subject dimension at least one metric permits a grouping by.
+    dimensions = [str(d) for d in _req(desk, "selection.dimensions")]
+    groupable = {
+        g
+        for metric in (_req(defs, "metrics") or {}).values()
+        if isinstance(metric, dict)
+        for g in (metric.get("valid_group_by") or [])
+    }
+
     return DeskDefinitions(
         business=dict(_req(desk, "business")),
+        breakdown_dimensions=[d for d in dimensions if d in groupable],
         windows=windows,
         window_arguments=dict(_req(defs, "workflows.backtest.window_arguments")),
         rest_reads=[dict(r) for r in _req(desk, "rest.reads")],

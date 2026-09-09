@@ -21,7 +21,7 @@ import type { Subject } from './subject';
 import { subjectKey } from './subject';
 
 export function Compare({
-  subjects, fields, selection, onSelect, reading = [], asList = false,
+  subjects, fields, selection, onSelect, reading = [], asList = false, guidance = null,
 }: {
   subjects: AnatomyPlan[];
   fields: FieldPlan[];
@@ -29,10 +29,16 @@ export function Compare({
   onSelect: (subject: Subject, additive: boolean) => void;
   reading?: Subject[];
   asList?: boolean;
+  /** How to read the drawing, drawn once above the pair rather than twice. */
+  guidance?: string | null;
 }) {
   if (fields.length > 0) {
     return (
-      <div data-compare="fields" className="grid gap-8 md:grid-cols-2">
+      <div data-compare="fields">
+        {guidance && (
+          <p data-guidance className="mb-3 max-w-2xl text-[12px] leading-relaxed text-george-slate">{guidance}</p>
+        )}
+        <div className="grid gap-8 md:grid-cols-2">
         {fields.map((field, i) => (
           <div key={`${field.within ?? 'estate'}-${field.headline.source.seq}`} className={i > 0 ? 'desk-enter' : undefined}>
             <p className="desk-label mb-2">{field.within ?? 'All stores'}</p>
@@ -42,10 +48,11 @@ export function Compare({
               onSelect={onSelect}
               reading={reading}
               asList={asList}
-              height={320}
+              height={300}
             />
           </div>
         ))}
+        </div>
       </div>
     );
   }

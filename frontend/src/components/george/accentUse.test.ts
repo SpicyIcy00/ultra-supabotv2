@@ -75,11 +75,11 @@ const ALLOWED: Record<string, string> = {
   // The approval queue itself, and Promote: the one accent-coloured ACTION
   // in the app, because this is what the colour is for.
   'InboxPage.tsx': 'the approval queue and its one decision — the reserved use',
-  // The desk's own line carries the same needs-you count the shell's rail
+  // The desk's own sidebar carries the same needs-you count the shell's rail
   // does, for a loaded and non-zero result only. It replaces GeorgeShell's
   // use on the surface a person actually lives on, rather than adding a
   // fifth: the shell keeps its own for the three rooms.
-  'ShellLine.tsx': 'the needs-you count on the desk',
+  'Sidebar.tsx': 'the needs-you count on the desk',
 };
 
 /**

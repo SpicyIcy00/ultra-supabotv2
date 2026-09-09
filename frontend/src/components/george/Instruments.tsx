@@ -142,11 +142,19 @@ export function SubjectComparison({
   shape,
   meta,
   onSubject,
+  isSelected,
 }: {
   shape: Extract<Shape, { kind: 'comparison' }>;
   meta?: ToolMeta;
   /** A row's own follow-up, when the definitions allow one. */
   onSubject?: (subject: string) => void;
+  /**
+   * Which rows a person has selected, when this is drawn on a surface where
+   * subjects can be selected (the desk). A selected row is set heavier and
+   * carries `data-selected`, so the same subject reads the same whichever
+   * representation the composer chose — colour is not involved.
+   */
+  isSelected?: (subject: string) => boolean;
 }) {
   const layout = levelLayout(shape.rows, meta);
   return (
@@ -156,9 +164,11 @@ export function SubjectComparison({
         {layout.bars.map((bar, i) => (
           <li
             key={`${bar.row.subject}-${i}`}
+            data-subject={bar.row.subject}
+            data-selected={isSelected?.(bar.row.subject) ? 'true' : undefined}
             data-exception={bar.exception ? 'true' : undefined}
             className={`grid items-center gap-x-3 rounded-sm py-[2px] ${
-              bar.exception ? 'bg-george-paper' : ''
+              isSelected?.(bar.row.subject) ? 'bg-george-paper ring-1 ring-george-navy/25' : bar.exception ? 'bg-george-paper' : ''
             }`}
             style={ROW_GRID}
           >
@@ -226,9 +236,12 @@ function missingDeltaWord(row: ComparisonRow): string {
 export function DeltaRanking({
   shape,
   onSubject,
+  isSelected,
 }: {
   shape: Extract<Shape, { kind: 'ranking' }>;
   onSubject?: (subject: string) => void;
+  /** Which rows are selected, on a surface where subjects can be. */
+  isSelected?: (subject: string) => boolean;
 }) {
   const layout = rankingLayout(shape.rows);
   const nr = shape.notRanked;
@@ -242,8 +255,12 @@ export function DeltaRanking({
           {layout.bars.map((bar, i) => (
             <li
               key={`${bar.row.subject}-${i}`}
+              data-subject={bar.row.subject}
+              data-selected={isSelected?.(bar.row.subject) ? 'true' : undefined}
               data-exception={bar.exception ? 'true' : undefined}
-              className="grid items-center gap-x-3 py-[2px]"
+              className={`grid items-center gap-x-3 rounded-sm py-[2px] ${
+                isSelected?.(bar.row.subject) ? 'bg-george-paper ring-1 ring-george-navy/25' : ''
+              }`}
               style={ROW_GRID}
             >
               {onSubject && bar.row.subject ? (

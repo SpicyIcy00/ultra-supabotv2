@@ -36,6 +36,13 @@ export interface DeskDefinitions {
   selection: { dimensions: DeskDimension[]; max_subjects: number; identity: Record<string, string> };
   direct_manipulation: string[];
   locations: DeskLocation[];
+  /**
+   * The subject dimensions SOME metric can be broken down by — not the
+   * headline metric's own, because net sales refuses a product grouping while
+   * the investigation ladder localizes by product through product revenue.
+   * Served, so the client never decides what the definitions permit.
+   */
+  breakdown_dimensions: DeskDimension[];
 }
 
 export const readDeskDefinitions = async (): Promise<DeskDefinitions> => {

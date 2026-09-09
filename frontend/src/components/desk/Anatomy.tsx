@@ -66,7 +66,17 @@ export function identityWords(anatomy: AnatomyPlan): string | null {
   return `${anatomy.headline.label} is ${anatomy.drivers[0].label.toLowerCase()} × ${anatomy.drivers[1].label.toLowerCase()}`;
 }
 
-export function Anatomy({ anatomy, size = 'lead' }: { anatomy: AnatomyPlan; size?: 'lead' | 'abreast' }) {
+export function Anatomy({ anatomy, conclusion = null, size = 'lead' }: {
+  anatomy: AnatomyPlan;
+  /**
+   * George's reading, between the figure and the drivers it is about — so the
+   * sentence and the figures explain each other rather than sitting in two
+   * different parts of the screen. It carries no numeral by construction
+   * (conclusion.ts); the figures it describes are directly beneath it.
+   */
+  conclusion?: string | null;
+  size?: 'lead' | 'abreast';
+}) {
   const deltas = anatomy.drivers.map((d) => Math.abs(d.changePct ?? 0));
   const largest = Math.max(0, ...deltas);
   const identity = identityWords(anatomy);
@@ -93,6 +103,16 @@ export function Anatomy({ anatomy, size = 'lead' }: { anatomy: AnatomyPlan; size
           {baseline && ` · from ${baseline}`}
         </span>
       </p>
+
+      {/* THE READING, WITH THE FIGURES IT READS. One sentence, no numeral in
+          it, immediately above the drivers it is about. */}
+      {conclusion && (
+        <p data-conclusion className={`mt-4 max-w-2xl leading-relaxed text-george-navy ${
+          size === 'lead' ? 'text-[16px]' : 'text-[14px]'
+        }`}>
+          {conclusion}
+        </p>
+      )}
 
       {anatomy.drivers.length > 0 && (
         <>

@@ -30,6 +30,16 @@ export interface DeskActionItem {
   local?: DeskAction;
 }
 
+/**
+ * How many moves George offers, and why there is a cap at all.
+ *
+ * A row of every valid follow-up is a menu, and a menu is what the box below
+ * already is. These are the few most relevant NEXT MOVES, in the order the
+ * evidence supports them — the recommendation George makes in the answer is
+ * drawn separately and is not repeated here.
+ */
+export const MAX_MOVES = 3;
+
 function ask(instruction: SurfaceInstruction, meta: ToolMeta, anchor?: SurfaceAnchor): DeskActionItem {
   const id = instruction.op === 'break_down' ? `break_down:${instruction.dimension}` : instruction.op;
   return {
@@ -62,7 +72,25 @@ export function localizeQuestion(dimension: 'product' | 'category', store: strin
   return `Which ${noun} moved most${where}${when ? ` ${when}` : ''}?`;
 }
 
-export function deskActions(layout: DeskLayout, state: DeskState): DeskActionItem[] {
+/**
+ * The moves on offer, prioritised and capped.
+ *
+ * `exclude` is the question George has already made his recommendation about:
+ * offering it twice, once as his suggestion and once as a chip, reads as two
+ * different moves and is one.
+ */
+export function deskActions(
+  layout: DeskLayout,
+  state: DeskState,
+  exclude?: string | null,
+): DeskActionItem[] {
+  const all = allActions(layout, state);
+  const asks = all.filter((a) => a.kind === 'ask' && a.question !== exclude).slice(0, MAX_MOVES);
+  const locals = all.filter((a) => a.kind === 'local');
+  return [...asks, ...locals];
+}
+
+function allActions(layout: DeskLayout, state: DeskState): DeskActionItem[] {
   const meta = layout.headlineMeta;
   const anchor = questionAnchor(layout);
   const out: DeskActionItem[] = [];

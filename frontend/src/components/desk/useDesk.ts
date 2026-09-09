@@ -32,7 +32,9 @@ import { riverSurfaces, type Surface } from '../george/surfaceCompose';
 import { liveItems, storedItems, withContinuity } from '../george/workUnit';
 import { markDetail } from '../george/markState';
 import { composeDesk, readingSubjects, type DeskLayout } from './deskCompose';
-import { deskActions, type DeskActionItem } from './deskActions';
+import { deskActions, questionAnchor, type DeskActionItem } from './deskActions';
+import { recommendationFor, type Recommendation } from './initiative';
+import { activeStep, workTrail, type TrailStep } from './workTrail';
 import {
   deskContextFor, deskReducer, INITIAL_DESK, restoreDeskState, selectionWords,
 } from './deskState';
@@ -189,7 +191,59 @@ export function useDesk(threadId: string | undefined) {
     return readingSubjects(george.live.running, field);
   }, [layout, george.live.running]);
 
-  const actions: DeskActionItem[] = useMemo(() => deskActions(layout, state), [layout, state]);
+  /**
+   * WHAT GEORGE WOULD CHECK NEXT, and what else the evidence supports.
+   *
+   * The recommendation is derived from trusted rows and the definitions' own
+   * ladder (initiative.ts) and carries the action that performs it. The moves
+   * are the few others, with his suggestion excluded so one thing is not
+   * offered twice under two names.
+   */
+  const breakdownShown = useMemo(() => {
+    const stage = layout.stage;
+    if (stage.kind === 'anatomy') return stage.breakdown?.dimension ?? null;
+    if (stage.kind === 'field') return stage.field.within ? stage.field.dimension : null;
+    if (stage.kind === 'compare') return stage.fields[0]?.dimension ?? null;
+    return null;
+  }, [layout.stage]);
+
+  const recommendation: Recommendation | null = useMemo(
+    () => recommendationFor(
+      layout,
+      questionAnchor(layout),
+      breakdownShown,
+      definitions.data?.breakdown_dimensions ?? [],
+    ),
+    [layout, breakdownShown, definitions.data],
+  );
+
+  const actions: DeskActionItem[] = useMemo(
+    () => deskActions(layout, state, recommendation?.action.question ?? null),
+    [layout, state, recommendation],
+  );
+
+  /**
+   * THE WORK TRAIL: where this investigation has been.
+   *
+   * Composed from the posts of the work — each step is a question and the desk
+   * it was asked from, both on the question's own post — plus the state being
+   * made now, which is marked as such and becomes server truth the moment
+   * anything is asked (workTrail.ts).
+   */
+  const trail: TrailStep[] = useMemo(() => workTrail(surface, state), [surface, state]);
+  const active = useMemo(() => activeStep(trail, state), [trail, state]);
+
+  /**
+   * Restore a step: the workspace recomposes at that state.
+   *
+   * The step's own selection comes back with it, because a step IS a question
+   * and the scope it was asked in. Nothing is replayed and nothing is
+   * refetched — the posts are already here.
+   */
+  const onStep = useCallback((step: TrailStep) => {
+    dispatch({ type: 'step', index: step.index });
+    dispatch({ type: 'select', subjects: step.selection ?? [] });
+  }, []);
 
   /* ------------------------------------------------------------ the doing -- */
 
@@ -237,6 +291,10 @@ export function useDesk(threadId: string | undefined) {
     dispatch,
     layout,
     surface: shown,
+    trail,
+    activeStepId: active?.id ?? '',
+    onStep,
+    recommendation,
     actions,
     reading,
     inProgress,

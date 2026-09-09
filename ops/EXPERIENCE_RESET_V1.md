@@ -189,6 +189,109 @@ free-form canvas; a notification centre; multiple desks; any new AI framework.
 - **No behavioural evals were run.** They call the real model against the real
   database and are opt-in.
 
+## 6b. The refinement (2026-09-09, after the human dogfood)
+
+The workspace behaved like a workspace and did not feel like George. Eight
+things were wrong, and each has a decision.
+
+**1. The explanation was detached from the visual.** George's reading sat in
+the left rail; the figures it read sat in the middle. Two failures at once —
+the explanation was in the one place a reader's eye does not go, and the
+persistent navigation a workspace needs had nowhere to live. The left column
+is now navigation (Home, Needs you, Running, Kept, History, Operations) and a
+test forbids prose, receipts, a summary and a recommendation from it, because
+all four drifted there once.
+
+**2. Words and visual did not explain each other.** The workspace now composes
+ONE answer in one reading order: the caveat, the figure, the reading, the
+drivers, the visual, what the data singles out, George's next move, the other
+moves. The reading sits BETWEEN the figure and the drivers it is about.
+
+**3. The reading was a paragraph.** It is one sentence and carries no numeral
+— "transactions rose while average transaction value fell, and transactions
+moved more; it carried the rise". That is a characterisation of rows, the same
+warrant `attentionLine` has had since V3, and it is why the composer may author
+it at all. George's own prose is drawn beneath, lead sentence first, the rest
+behind a disclosure.
+
+**4. A spatial field was drawn whether or not position said anything.** The
+default is now `ranked` — the conventional instrument, one row per subject with
+its label, bar, figure and delta — and a plane must earn its second axis. The
+test is structural: do the subjects fall into more than one QUADRANT of the two
+driver changes? One quadrant means both drivers moved the same way for
+everyone and a ranked list says it in one dimension. It reads the sign of a
+change the tool computed and counts distinct quadrants; there is no threshold
+and no arithmetic on a business figure.
+
+The resting desk reads ONE metric, so it is ranked and always will be. The
+plane appears for the three-read headline set when the estate's drivers
+disagree — which is when it is worth two axes.
+
+**5. Novel visuals needed explaining.** A plane now carries one line saying
+what each axis means, what size means and what a click does. A conventional
+drawing carries nothing, because a caption on a bar chart is noise. The ranked
+view carries a one-line hint that shift-click compares, since a control nobody
+knows about does not exist.
+
+**6. Technical warnings dominated.** "105 of 256 compare row(s) could not be
+compared... 56 no_baseline... NULL" was drawn at full size above the answer.
+Caveats are now levelled by CONSEQUENCE:
+
+| level | when | how it is drawn |
+|---|---|---|
+| answer_limiting | nothing comparable | whole, above everything, and says what still stands |
+| relevant | some subjects excluded | one line in business words beside the answer |
+| non_material | everything else | one quiet mark; detail in the inspector |
+
+"56 products are new this week, so they are left out of the growth comparison"
+replaces the statuses. A scan holds `baseline_status`, `no_baseline`,
+`no_current`, `zero_baseline`, `NULL` and `row_count` out of the answer, and
+the tool's own sentence survives whole underneath. UI rule 4 is unchanged —
+this is its 2026-09-05 amendment, surfacing without spelling out.
+
+A notice whose consequence cannot be read stays at `relevant` with the tool's
+own words. Unknown consequence is not the same as none, and quietening
+something we cannot read would be guessing.
+
+**7. Past work disappeared.** The work trail is above the work: "The business →
+What's going on with the stores? → Why? → Products". Each step is a question
+and the desk it was asked from — both on the question's own post — so a step is
+server truth and clicking one recomposes the workspace at that state. The one
+step that is not stored is the one being made now; it is marked `current` and
+becomes server truth the moment anything is asked. No transcript, no
+localStorage, no client snapshot.
+
+**8. George waited to be asked.** He now explains, recommends and asks.
+Explain and recommend are DERIVED from trusted rows and the definitions'
+ladder: a recommendation is produced only by one of four grounds
+(`drivers_diverge`, `against_the_majority`, `ranked_first`,
+`no_breakdown_yet`), names that evidence, and carries the action that performs
+it. There is no path from an empty screen to a suggestion — a bare figure with
+no measured change gets nothing, because localizing is a rung under a change.
+Asking is the model's and is held by the PROMPT, not by a mechanism, and
+`initiative.ask.enforced_by: prompt` records that rather than pretending
+otherwise.
+
+**One thing found while building it.** Whether a product breakdown EXISTS is a
+question about the definitions, not about the headline metric: net sales is
+transaction grain and refuses a product grouping, while the ladder localizes by
+product through `product_revenue`. A client reading `meta.valid_group_by` would
+therefore never offer the one move the ladder is built around. The desk
+definitions endpoint now serves `breakdown_dimensions`, computed from
+`metrics.yaml`, and the client decides nothing.
+
+### What still is not George
+
+- The `figures` fallback stage still draws through the old result primitives
+  for anything the grammar cannot place — a time series, a mixed result.
+- Inbox, Pages and Workflows keep the old chrome, so leaving the desk still
+  feels like leaving.
+- ASK is prompt behaviour with no mechanical check, exactly as recorded.
+- The trail's step view is presentational: it shows earlier steps of the same
+  surface, it does not re-derive the plan as it stood then.
+- A replayed window is not re-read by George, and the desk does not yet say
+  that the reading belongs to the earlier window.
+
 ## 7. Human dogfood
 
 See the dogfood script in the milestone report. The environment is

@@ -24,10 +24,20 @@
  * A FIELD ENCODES ONLY WHAT ROWS CARRY (metrics.yaml surface.desk.field).
  * Position is a change the tool computed, or a value it returned; size is a
  * value; fill is the tool's own direction; a halo is the composer's attention
- * or the person's selection. Seven stores on the two DRIVERS of net sales is
- * a plane because it shows every store's driver mix at once, which a bar
- * cannot; nothing on it is computed — the drivers are rows of two more reads
- * the definitions name, matched to the store by the id the rows carry.
+ * or the person's selection. Nothing on it is computed — the drivers are rows
+ * of two more reads the definitions name, matched to the store by the id the
+ * rows carry.
+ *
+ * THE CONVENTIONAL DRAWING WINS BY DEFAULT (2026-09-09). A ranked comparison
+ * of seven stores is read in seconds and keeps every label; a plane costs the
+ * reader two axes and a size legend before it says anything. So `ranked` is
+ * the default and the plane has to EARN its second axis: it is used only when
+ * the two driver changes disagree across subjects — when they fall into more
+ * than one quadrant. If every subject sits in one quadrant, both drivers moved
+ * the same way for everyone and the ranked list says exactly that in one
+ * dimension. That is a structural test on rows, not a score: it reads the
+ * SIGN of a change the tool already computed and counts the quadrants
+ * (metrics.yaml surface.desk.representation).
  *
  * NOTHING IS COMPUTED AND NOTHING IS INVENTED. Every figure in a layout is a
  * row's field, reached by seq and row index. Choosing the larger of two
@@ -53,6 +63,9 @@ import type {
   SurfaceSectionPlan,
 } from '../george/surfaceModel';
 import type { SectionRole } from '../george/composeWork';
+import { levelCaveats, type Caveat } from './caveats';
+import { conclusionOf } from './conclusion';
+import { guidanceFor } from './initiative';
 import { focusOf, type DeskState } from './deskState';
 import {
   dimensionOf,
@@ -86,6 +99,16 @@ export interface Figure {
 
 export type FieldEncoding = 'plane' | 'change' | 'level';
 
+/**
+ * How a field is DRAWN, as opposed to what it encodes.
+ *
+ * `ranked` is the conventional instrument — one row per subject, its label,
+ * its bar, its figure and its delta — and it is the default. `plane` is the
+ * spatial field, and it is used only where the second axis separates subjects
+ * the first does not.
+ */
+export type Representation = 'ranked' | 'plane';
+
 export interface FieldAxis {
   key: 'change_pct' | 'change' | 'value';
   /** The metric's own display name, from meta. */
@@ -108,6 +131,10 @@ export interface FieldObject {
 export interface FieldPlan {
   dimension: Dimension;
   encoding: FieldEncoding;
+  /** Which drawing the composer chose, and why it is allowed to. */
+  representation: Representation;
+  /** Why a plane was NOT used, when one could have been. For the record. */
+  planeDeclined: string | null;
   x: FieldAxis;
   y: FieldAxis | null;
   size: FieldAxis;
@@ -156,6 +183,19 @@ export type Level = 'business' | 'subject' | 'breakdown';
 export interface DeskLayout {
   grammar: 'investigate';
   title: string;
+  /**
+   * George's reading of the figures, in one sentence carrying no numeral.
+   * Derived from the tool's own directions and the qualitative driver
+   * reading the definitions fix (conclusion.ts). Null when there is nothing
+   * a reader could not see at a glance.
+   */
+  conclusion: string | null;
+  /**
+   * How to read the drawing, when it is one a person has not met. One line,
+   * attached to it. Null for a conventional representation, which explains
+   * itself and where a caption would be noise.
+   */
+  guidance: string | null;
   /** The subjects in scope, narrowest last: ["North Edsa"], ["North Edsa", "Mango Gummy"]. */
   scope: string[];
   level: Level;
@@ -164,6 +204,11 @@ export interface DeskLayout {
   attention: SurfaceAttention[];
   attentionLine: string | null;
   notices: GeorgeNotice[];
+  /**
+   * The notices, levelled by what they cost the reader (caveats.ts). The
+   * answer draws them by level; the raw statuses stay in the inspector.
+   */
+  caveats: Caveat[];
   refinements: SurfaceRefinement[];
   /** The meta of the figure under the person's hand, for questions and receipts. */
   headlineMeta: ToolMeta | null;
@@ -229,6 +274,53 @@ function captionOf(result: ShapedResult): string {
   if (w) parts.push(w);
   if (meta.comparison?.baseline) parts.push(`vs ${meta.comparison.display_name ?? 'the previous period'}`);
   return parts.join(' · ');
+}
+
+/* ------------------------------------------------------- representation -- */
+
+/** Bounds on a plane, from the definitions. Below or above, a list is better. */
+export const PLANE_MIN_SUBJECTS = 3;
+export const PLANE_MAX_SUBJECTS = 24;
+
+/**
+ * Which quadrant of (driver one, driver two) an object sits in.
+ *
+ * The SIGN of two changes the tool computed, and nothing else — no magnitude,
+ * no threshold, no arithmetic on figures. A subject with either change missing
+ * has no quadrant and is not counted.
+ */
+export function quadrantOf(object: FieldObject): string | null {
+  const x = object.x;
+  const y = object.y;
+  if (x === null || y === null) return null;
+  return `${x >= 0 ? '+' : '-'}${y >= 0 ? '+' : '-'}`;
+}
+
+/**
+ * Whether a plane's second axis earns itself: do the subjects fall into more
+ * than one quadrant?
+ *
+ * One quadrant means both drivers moved the same way for every subject, and a
+ * ranked list says that in one dimension with its labels intact. Two or more
+ * means the mix IS the finding — some shops selling more baskets, some selling
+ * dearer ones — and that is what a plane shows and a bar cannot.
+ */
+export function planeEarnsItsPlace(objects: FieldObject[]): boolean {
+  if (objects.length < PLANE_MIN_SUBJECTS || objects.length > PLANE_MAX_SUBJECTS) return false;
+  const quadrants = new Set<string>();
+  for (const o of objects) {
+    const q = quadrantOf(o);
+    if (q) quadrants.add(q);
+  }
+  return quadrants.size > 1;
+}
+
+/** Why the plane was declined, in words, when it could have been drawn. */
+export function planeDeclinedReason(objects: FieldObject[]): string | null {
+  if (objects.length < PLANE_MIN_SUBJECTS) return 'too few subjects to read as a field';
+  if (objects.length > PLANE_MAX_SUBJECTS) return 'too many subjects to read as a field';
+  if (planeEarnsItsPlace(objects)) return null;
+  return 'every subject moved the same way on both drivers, so a second axis separates nothing';
 }
 
 /* ---------------------------------------------------------------- fields -- */
@@ -307,9 +399,18 @@ export function fieldFrom(
     else objects.push(object);
   });
 
+  // The drawing. A plane only where its second axis separates subjects the
+  // first does not; the conventional ranked comparison otherwise.
+  const couldBePlane = encoding === 'plane';
+  const earns = couldBePlane && planeEarnsItsPlace(objects);
+  const representation: Representation = earns ? 'plane' : 'ranked';
+  const planeDeclined = couldBePlane && !earns ? planeDeclinedReason(objects) : null;
+
   return {
     dimension,
     encoding,
+    representation,
+    planeDeclined,
     x,
     y,
     size: { key: 'value', label: metricLabel(headline), unit },
@@ -440,6 +541,8 @@ export function emptyLayout(): DeskLayout {
   return {
     grammar: 'investigate',
     title: '',
+    conclusion: null,
+    guidance: null,
     scope: [],
     level: 'business',
     stage: { kind: 'statement' },
@@ -447,6 +550,7 @@ export function emptyLayout(): DeskLayout {
     attention: [],
     attentionLine: null,
     notices: [],
+    caveats: [],
     refinements: [],
     headlineMeta: null,
     anchor: null,
@@ -634,9 +738,25 @@ export function composeDesk(surface: Surface | null, state: DeskState): DeskLayo
     scope = plan.anchor.subjects.slice(0, 3);
   }
 
+  // The drawing on the stage, for the guidance that has to be attached to it.
+  const drawn: FieldPlan | null =
+    stage.kind === 'field' ? stage.field
+      : stage.kind === 'anatomy' ? stage.breakdown
+        : stage.kind === 'compare' ? stage.fields[0] ?? null
+          : null;
+
+  // The dimension a caveat's subjects are of, so it can name them.
+  const dimension = drawn?.dimension ?? (stage.kind === 'anatomy' ? stage.anatomy.subject.dimension : null);
+
   const layout: DeskLayout = {
     grammar: 'investigate',
     title: plan.title,
+    // George's reading of the anatomy on screen — one sentence, no numeral.
+    conclusion:
+      stage.kind === 'anatomy' ? conclusionOf(stage.anatomy)
+        : stage.kind === 'compare' && stage.subjects.length > 0 ? conclusionOf(stage.subjects[0])
+          : null,
+    guidance: drawn ? guidanceFor(drawn) : null,
     scope,
     level,
     stage,
@@ -644,6 +764,7 @@ export function composeDesk(surface: Surface | null, state: DeskState): DeskLayo
     attention: plan.attention,
     attentionLine: attentionWords(plan.attention),
     notices: plan.notices,
+    caveats: levelCaveats(plan.notices, plan.evidence.map((e) => e.meta), dimension),
     refinements: plan.refinements,
     headlineMeta,
     anchor: plan.anchor,
@@ -664,7 +785,12 @@ export function fingerprintOf(layout: DeskLayout): string {
     : stage.kind === 'compare' ? [...stage.subjects.map((s) => subjectKey(s.subject)), ...stage.fields.flatMap((f) => f.objects.map((o) => subjectKey(o.subject)))]
     : stage.kind === 'figures' ? blockResults(stage.blocks).map((r) => String(r.source.seq))
     : [];
-  return JSON.stringify([stage.kind, layout.level, layout.title, layout.scope, subjects,
+  const representation =
+    stage.kind === 'field' ? stage.field.representation
+      : stage.kind === 'anatomy' ? stage.breakdown?.representation ?? 'anatomy'
+        : stage.kind === 'compare' ? stage.fields[0]?.representation ?? 'compare'
+          : stage.kind;
+  return JSON.stringify([stage.kind, representation, layout.level, layout.title, layout.scope, subjects,
     layout.receded.map((r) => (r.kind === 'field' ? `field:${r.field.dimension}` : `section:${r.section.role}`))]);
 }
 

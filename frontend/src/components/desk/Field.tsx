@@ -34,7 +34,7 @@ import { deltaText, fieldRows, figureText } from './deskCompose';
 import { axisEnds, layoutField, type Placed } from './fieldLayout';
 import { sameSubject, subjectKey, type Subject } from './subject';
 import { useSize } from './useSize';
-import { SubjectComparison } from '../george/Instruments';
+import { DeltaRanking, SubjectComparison } from '../george/Instruments';
 
 /** Past this many objects the soft body is dropped: the same field, drawn cheaply. */
 export const SOFT_LIMIT = 24;
@@ -45,8 +45,14 @@ export interface FieldProps {
   onSelect: (subject: Subject, additive: boolean) => void;
   /** Subjects George is reading right now, as a light under them. */
   reading?: Subject[];
-  /** Draw the rows instead of the field. The same rows, the conventional form. */
+  /**
+   * Force the ranked rows. The composer already chose `ranked` for anything a
+   * plane would not separate; this is the person overriding the rare case
+   * where it chose a plane.
+   */
   asList?: boolean;
+  /** How to read the drawing, when it is one a person has not met. */
+  guidance?: string | null;
   height?: number;
 }
 
@@ -218,29 +224,50 @@ function Unranked({ objects, onSelect, selection }: {
   );
 }
 
-export function Field({ field, selection, onSelect, reading = [], asList = false, height = 420 }: FieldProps) {
+export function Field({
+  field, selection, onSelect, reading = [], asList = false, guidance = null, height = 420,
+}: FieldProps) {
   const { ref, size } = useSize<HTMLDivElement>({ width: 720, height });
   const id = `f-${field.dimension}-${field.headline.source.seq}`;
+  // The composer's choice, unless the person overrode it.
+  const ranked = asList || field.representation === 'ranked';
 
-  if (asList) {
-    // The same rows, the conventional instrument. Nothing is lost: the
-    // comparison prints every subject, its figure and its delta.
+  if (ranked) {
+    // THE CONVENTIONAL INSTRUMENT, AND THE DEFAULT. One row per subject with
+    // its label, its bar, its figure and its delta — read in seconds, and
+    // nothing about it needs explaining. Clicking a subject opens it, exactly
+    // as clicking an object on a plane does, so the interaction is the same
+    // whichever drawing the composer chose.
     const shape = field.headline.shape;
+    const all = [...field.objects, ...field.unranked];
+    const pick = (name: string, additive: boolean) => {
+      const object = all.find((o) => o.subject.label === name);
+      if (object) onSelect(object.subject, additive);
+    };
+    const selected = (name: string) =>
+      selection.some((s) => all.some((o) => o.subject.label === name && sameSubject(s, o.subject)));
     return (
-      <div data-field data-view="list">
-        {shape.kind === 'comparison' || shape.kind === 'ranking' ? (
+      <div data-field data-view="ranked" data-representation="ranked">
+        {shape.kind === 'ranking' ? (
+          // The tool ranked by CHANGE, so the bars diverge from a zero line in
+          // the metric's own unit — never by percentage.
+          <DeltaRanking shape={shape} onSubject={(n) => pick(n, false)} isSelected={selected} />
+        ) : shape.kind === 'comparison' ? (
           <SubjectComparison
             shape={{ kind: 'comparison', rows: fieldRows(field), label: field.headline.source.meta.metric_label }}
             meta={field.headline.source.meta}
-            onSubject={(name) => {
-              const object = [...field.objects, ...field.unranked].find((o) => o.subject.label === name);
-              if (object) onSelect(object.subject, false);
-            }}
+            onSubject={(n) => pick(n, false)}
+            isSelected={selected}
           />
         ) : (
           <ul className="space-y-1.5">
-            {[...field.objects, ...field.unranked].map((o) => (
-              <li key={subjectKey(o.subject)} className="flex items-baseline justify-between gap-4 text-[14px]">
+            {all.map((o) => (
+              <li
+                key={subjectKey(o.subject)}
+                data-subject={o.subject.label}
+                data-selected={selection.some((s) => sameSubject(s, o.subject)) ? 'true' : undefined}
+                className="flex items-baseline justify-between gap-4 text-[14px]"
+              >
                 <button type="button" onClick={() => onSelect(o.subject, false)} className="min-h-touch text-george-navy hover:underline">
                   {o.subject.label}
                 </button>
@@ -252,6 +279,13 @@ export function Field({ field, selection, onSelect, reading = [], asList = false
             ))}
           </ul>
         )}
+        {/* Shift-clicking is how a comparison is built, and a control nobody
+            knows about is a control that does not exist. */}
+        {all.length > 1 && (
+          <p data-hint className="mt-2 text-[11px] text-george-muted">
+            Click one to open it; shift-click to compare.
+          </p>
+        )}
       </div>
     );
   }
@@ -260,7 +294,16 @@ export function Field({ field, selection, onSelect, reading = [], asList = false
   const soft = field.objects.length <= SOFT_LIMIT;
 
   return (
-    <div data-field data-view="field" data-encoding={field.encoding}>
+    <div data-field data-view="field" data-representation="plane" data-encoding={field.encoding}>
+      {/* HOW TO READ IT, ATTACHED TO IT. A plane is the one drawing here a
+          person may not have met, so it says what each axis means, what size
+          means and what a click does — in one line, always visible, never a
+          modal and never a paragraph (metrics.yaml representation.guidance). */}
+      {guidance && (
+        <p data-guidance className="mb-2 max-w-2xl text-[12px] leading-relaxed text-george-slate">
+          {guidance}
+        </p>
+      )}
       <div ref={ref} style={{ height }} className="w-full">
         <svg
           className="desk-field h-full w-full overflow-visible"

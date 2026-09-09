@@ -64,8 +64,8 @@ export default function DeskPage() {
         desk={desk}
         busy={george.busy}
         onCancel={george.cancel}
-        onOpenWork={openWork}
         onHistory={() => setHistoryOpen(true)}
+        historyOpen={historyOpen}
         draft={draft}
         draftKey={draftKey}
         onAction={(a) => {

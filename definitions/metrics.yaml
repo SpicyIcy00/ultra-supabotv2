@@ -4251,6 +4251,112 @@ surface:
       colour_is_never_the_only_signal: true
       list_equivalent_required: true
 
+    # -------------------------------------------------------------------------
+    # REPRESENTATION — which drawing, and when a novel one has earned itself.
+    # Added 2026-09-09, the workspace refinement.
+    #
+    # GENERATIVE UI IS NOT A LICENCE FOR NOVELTY. The composer chooses the
+    # representation that communicates fastest, and the conventional one wins
+    # by default: a ranked comparison of seven stores is read in seconds, and
+    # a plane costs the reader two axes and a size legend before it says
+    # anything. Order of optimisation: comprehension, relevance, continuity,
+    # interaction, expression — in that order, and novelty is not on the list.
+    # -------------------------------------------------------------------------
+    representation:
+      kinds: [ranked, plane, anatomy, compare, figures, statement]
+      default: ranked
+
+      # WHEN A PLANE EARNS ITS SECOND AXIS. Only when the two driver changes
+      # DISAGREE across subjects — when the subjects fall in more than one
+      # quadrant of (driver one, driver two). If every subject sits in one
+      # quadrant, both drivers moved the same way for everyone and a ranked
+      # list says exactly that in one dimension, with its labels intact.
+      #
+      # This is a STRUCTURAL test on rows the tools returned, not a score:
+      # counting the quadrants subjects fall into involves no threshold and
+      # no arithmetic on business figures beyond reading the sign of a change
+      # the tool already computed.
+      plane_requires:
+        two_declared_drivers: true
+        subjects_in_more_than_one_quadrant: true
+        min_subjects: 3
+        max_subjects: 24
+      plane_not_used_reason: >
+        Every store moved the same way on both drivers, so position on a
+        second axis separates nothing a ranked list does not already show.
+
+      # A representation a reader has to be taught needs the teaching ATTACHED
+      # to it, in one line, always visible. If it needs more than a line every
+      # time, it is the wrong representation.
+      guidance_required_for: [plane]
+      guidance_max_sentences: 2
+
+    # -------------------------------------------------------------------------
+    # INITIATIVE — what George says without being asked, and what grounds it.
+    #
+    # THREE THINGS, AND EACH HAS A DIFFERENT WARRANT. Explain and recommend are
+    # DERIVED from rows the tools returned and the definitions' own ladder, so
+    # they are as trustworthy as the figures beside them and cannot be a
+    # generic suggestion dressed as intelligence. Ask is the model's, because
+    # only the model can notice that the business intent is missing — and it is
+    # held by the prompt, not mechanically, which this file records rather than
+    # pretends otherwise.
+    # -------------------------------------------------------------------------
+    initiative:
+      explain:
+        # A CHARACTERISATION OF ROWS, CARRYING NO NUMERAL. The figures are
+        # drawn beside the sentence; repeating them in it is the "prose
+        # restates the figures" failure the surface rules already forbid.
+        characterisation_only: true
+        max_sentences: 1
+        derived_from: [direction, stronger_driver]
+      recommend:
+        # The only things that may PRODUCE a recommendation. Each is a fact a
+        # tool established; a recommendation with no entry here is not made.
+        grounded_in:
+          - drivers_diverge          # the two declared drivers moved opposite ways
+          - against_the_majority     # a subject moved against the direction the rest did
+          - ranked_first             # the tool's own change ranking put this first
+          - no_breakdown_yet         # the metric permits a breakdown nobody has read
+        max: 1
+        must_name_its_evidence: true
+        must_carry_an_action: true
+      ask:
+        # NOT MECHANICALLY ENFORCED, and this file will not claim it is. The
+        # prompt tells George when a question is worth more than a guess; no
+        # scan checks that he obeyed.
+        enforced_by: prompt
+        when: >
+          the business intent materially changes which read comes next, and
+          the data cannot settle it
+        never_when: the reads already answer the question
+
+    # -------------------------------------------------------------------------
+    # CAVEATS BY CONSEQUENCE — what a caveat COSTS the reader, not what kind of
+    # thing it is.
+    #
+    # THE FAILURE THIS ANSWERS. "105 of 256 compare rows could not be compared;
+    # 56 no_baseline; NULL" was drawn at full size above the answer. Every word
+    # of it is true and none of it is a sentence: it is a diagnostic, in tool
+    # vocabulary, competing with the finding for the most prominent place on
+    # the screen. UI rule 4 requires a caveat to be SURFACED, which it already
+    # distinguishes from SPELLED OUT.
+    # -------------------------------------------------------------------------
+    caveats:
+      levels: [non_material, relevant, answer_limiting]
+      # Nothing at all could be compared: there is no finding to qualify, only
+      # the caveat. This is the one level that may take the reader's attention.
+      answer_limiting_when: nothing_comparable
+      # Some subjects were excluded and the finding still stands: said in
+      # business words, beside the thing it qualifies, never as counts of
+      # internal statuses.
+      relevant_when: some_subjects_excluded
+      # Raw statuses, row counts, NULLs, fingerprints and tool structures.
+      raw_diagnostics_in: inspector_only
+      # "NULL" is quoted because YAML reads a bare NULL as the null literal —
+      # which would silently drop the very word this list exists to forbid.
+      never_in_the_answer: [baseline_status, no_baseline, no_current, zero_baseline, "NULL", row_count]
+
 
 # =============================================================================
 # SYSTEMS — the user-facing word for something built with George

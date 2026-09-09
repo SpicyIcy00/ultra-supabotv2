@@ -25,9 +25,9 @@ describe('the presence seam', () => {
   });
 
   it('is the only way the workspace reaches the drawing', () => {
-    const line = read(DESK, 'ShellLine.tsx');
-    expect(line).toContain("from '../george/PresenceMark'");
-    expect(line).not.toMatch(/ReactiveMark/);
+    const sidebar = read(DESK, 'Sidebar.tsx');
+    expect(sidebar).toContain("from '../george/PresenceMark'");
+    expect(sidebar).not.toMatch(/ReactiveMark/);
   });
 
   it('is the one place the current look is chosen', () => {

@@ -95,6 +95,28 @@ export function headlineSet(seqs = [1, 2, 3]) {
   return [chain(seqs[0], 'net_sales'), chain(seqs[1], 'transaction_count'), chain(seqs[2], 'average_transaction_value')];
 }
 
+/**
+ * The canonical investigation: a store growing on transactions while its
+ * baskets get smaller.
+ *
+ * North Edsa's net sales rise, its transactions rise further, and its average
+ * transaction value falls — the case the whole "which products are behind the
+ * extra transactions" question exists for. Every other store moves the same
+ * way on both drivers, so the estate has two quadrants and North Edsa is the
+ * one whose drivers disagree.
+ */
+export function divergingSet(seqs = [1, 2, 3]) {
+  const set = headlineSet(seqs);
+  const NE = 3; // the index of North Edsa in STORES
+  const rewrite = (rows: Record<string, unknown>[], value: number, baseline: number) =>
+    rows.map((r, i) => (i === NE ? { ...r, ...cmp(value, baseline) } : r));
+  return [
+    { ...set[0], rows: rewrite(set[0].rows, 172971, 154438) },   // net sales up
+    { ...set[1], rows: rewrite(set[1].rows, 536, 400) },          // transactions up more
+    { ...set[2], rows: rewrite(set[2].rows, 323, 386) },          // basket value down
+  ];
+}
+
 /** A single compared figure scoped to one store. */
 export function atom(seq: number, metric: string, store: string, v: number, b: number) {
   return { seq, tool: 'get_sales', arguments: args(metric, store), rows: [cmp(v, b)], meta: metaFor(metric) };

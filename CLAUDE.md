@@ -1136,10 +1136,88 @@ Recorded here because each line is a decision the code cannot read back
   `prefers-reduced-motion` every transition collapses to a crossfade or
   nothing, with the interaction model unchanged.
 - **Two rules that did not move.** The accent still means "needs you" and
-  nothing else: the mark, the count in the shell line, and the Needs-you
-  rail with its one Promote. A notice still sits above the figure it
-  qualifies, whole, in every stage; a stage that cannot show it is the wrong
-  stage.
+  nothing else: the mark, the count in the sidebar, and the Needs-you rail
+  with its one Promote. A notice still sits above the figure it qualifies,
+  whole, wherever it would change what the figure means.
+
+*Refined 2026-09-09, after the human dogfood.* The workspace behaved like a
+workspace and still did not feel like George: the explanation sat in the left
+rail away from the figures it explained, a spatial field was drawn whether or
+not position said anything, technical diagnostics took the most prominent place
+on the screen, and George waited to be asked. Seven decisions, each recorded
+because the code cannot say why
+([ops/EXPERIENCE_RESET_V1.md](ops/EXPERIENCE_RESET_V1.md) carries the full
+record).
+
+- **The left column is navigation, and holds nothing that belongs in the
+  work.** George, the business, then the states of his environment — Home,
+  Needs you, Running, Kept, History — and Operations at its foot. It held
+  George's reading before, which put the explanation in the one place a
+  reader's eye does not go AND left the persistent navigation a workspace
+  needs with nowhere to live. A test forbids prose, receipts, a summary and a
+  recommendation from that column, because all four drifted there once.
+- **One answer, not a picture with a caption.** The workspace composes the
+  caveat, the figure, George's reading, the drivers, the visual, what the data
+  singles out, his suggested next move and the few other moves as ONE object
+  in one reading order. The reading sits between the figure and the drivers it
+  is about, so the words and the figures explain each other rather than
+  occupying different parts of the screen.
+- **The reading carries no numeral, and that is what lets the composer write
+  it.** "Transactions rose while average transaction value fell, and
+  transactions moved more — it carried the rise" is a characterisation of
+  rows, the same warrant the attention line has had since V3. The figures are
+  an inch away; repeating them in prose is the failure the surface rules
+  already name. George's own words are drawn beneath, lead sentence first,
+  the rest behind a disclosure — brief, and never a column.
+- **The conventional drawing wins by default.** `ranked` is the default
+  representation and a plane must EARN its second axis: it is used only when
+  the two driver changes disagree across subjects, which is the structural
+  test of whether the subjects fall into more than one quadrant. Every subject
+  in one quadrant means both drivers moved the same way for everyone, and a
+  ranked list says exactly that in one dimension with its labels intact.
+  Generative UI means George chooses the representation that communicates
+  fastest, optimising for comprehension, relevance, continuity, interaction
+  and expression in that order. Novelty is not on the list.
+- **A drawing a person has to be taught carries the teaching.** One line,
+  attached to it, always visible, saying what each axis means, what size means
+  and what a click does — a control nobody knows about is a control that does
+  not exist. A conventional drawing gets nothing, because a caption on a bar
+  chart is noise. If a representation needs more than a line every time, it is
+  the wrong representation.
+- **A caveat is drawn by what it COSTS the reader, not by what kind of thing
+  it is.** Three levels: answer-limiting takes attention and says what still
+  stands; relevant is one line in business words beside the answer ("56
+  products are new this week, so they are left out of the growth
+  comparison"); non-material is one quiet mark with the detail in the
+  inspector. No raw diagnostic ever reaches the answer — a scan holds
+  `baseline_status`, `no_baseline`, `no_current`, `zero_baseline`, `NULL` and
+  `row_count` out of it — and the tool's own sentence survives whole
+  underneath. UI rule 4 is unchanged: this is its 2026-09-05 amendment,
+  surfacing without spelling out, applied to a comparison.
+- **The work trail is states, not messages.** "The business → What's going on
+  with the stores? → Why? → Products", above the work, each step a question
+  and the desk it was asked from — both of which are on the question's own
+  post, so a step is server truth and clicking one recomposes the workspace at
+  that state. The one step that is not stored is the one being made now: it is
+  marked current, and it becomes server truth the moment anything is asked.
+  Nothing scrolls to an old message and no answer is repeated.
+- **George has initiative, and it is grounded or absent.** He explains what
+  the figures mean, recommends ONE next move, and asks when the business
+  intent genuinely changes what to read next. Explain and recommend are
+  DERIVED from trusted rows and the definitions' own ladder — a recommendation
+  is produced only by one of four facts a tool established (the declared
+  drivers went opposite ways, a subject moved against the rest, the tool's
+  ranking put something first, a breakdown exists that nobody has read), it
+  names that evidence, and it carries the action that performs it. There is no
+  path from an empty screen to a suggestion. Asking is the model's and is held
+  by the prompt, not by a mechanism, and `initiative.ask.enforced_by: prompt`
+  says so rather than pretending otherwise.
+- **Whether a breakdown EXISTS is the definitions' question, and the server
+  answers it.** Net sales is transaction grain and refuses a product grouping,
+  while the investigation ladder localizes by product through product revenue
+  — so a client reading the headline metric's own `valid_group_by` would never
+  offer the one move the ladder is built around. `breakdown_dimensions` on the
+  desk definitions is computed from `metrics.yaml` and served.
 
 ### These rules are already backed by the tool contract
 
