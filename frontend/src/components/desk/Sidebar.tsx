@@ -24,7 +24,7 @@ import { useGeorge } from '../../hooks/useGeorge';
 import { useAuthStore } from '../../stores/authStore';
 import { approvalsView, attentionAccent } from '../george/approvalState';
 import { PresenceMark } from '../george/PresenceMark';
-import { operationsFor } from '../shell/shellNav';
+import { operationsFor, PRIMARY } from '../shell/shellNav';
 import { listApprovals, listWorkflows } from '../../services/workflowsApi';
 import { listPins } from '../../services/pinsApi';
 
@@ -94,6 +94,15 @@ export function Sidebar({ business, onHistory, historyOpen }: SidebarProps) {
   const workflows = useQuery({ queryKey: ['workflows'], queryFn: listWorkflows, staleTime: 60_000, retry: 1 });
   const pins = useQuery({ queryKey: ['pins'], queryFn: () => listPins(), staleTime: 60_000, retry: 1 });
 
+  // A count only where a result came back, keyed by the destination it counts
+  // (UI rule 8: a claim about state renders from a loaded result).
+  const counts: Record<string, number | null> = {
+    '/': null,
+    '/inbox': needsYou,
+    '/workflows': workflows.data?.length ?? null,
+    '/pages': pins.data?.length ?? null,
+  };
+
   return (
     <nav
       aria-label="George"
@@ -115,11 +124,25 @@ export function Sidebar({ business, onHistory, historyOpen }: SidebarProps) {
         <p className="desk-label mt-3" data-business>{business}</p>
       </div>
 
+      {/* ONE LIST, ONE VOCABULARY. These words used to be typed here and
+          typed again, differently, in the shell's rail — so leaving the desk
+          renamed every destination. Both now read shellNav.PRIMARY, and a
+          count is attached by PATH rather than by label, so renaming a word
+          cannot silently move a number onto the wrong entry. */}
       <div className="flex flex-col gap-2.5">
-        <Entry to="/" label="Home" />
-        <Entry to="/inbox" label="Needs you" count={needsYou} accent={attentionAccent(needsYou)} />
-        <Entry to="/workflows" label="Running" count={workflows.data?.length ?? null} />
-        <Entry to="/pages" label="Kept" count={pins.data?.length ?? null} />
+        {/* Unfiltered on purpose: all four sit behind the one `george` page
+            key, and that key already gated the route this column is drawn on.
+            Filtering again would blank the navigation for the moment before
+            the user record loads — a claim about access nobody checked. */}
+        {PRIMARY.map((item) => (
+          <Entry
+            key={item.path}
+            to={item.path}
+            label={item.label}
+            count={counts[item.path] ?? undefined}
+            accent={item.path === '/inbox' && attentionAccent(needsYou)}
+          />
+        ))}
         <Entry label="History" onClick={onHistory} active={historyOpen} />
       </div>
 

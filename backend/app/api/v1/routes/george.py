@@ -190,6 +190,11 @@ class PageScope(BaseModel):
 _DESK = _req(_load_defs(), "surface.desk")
 _DESK_MAX_SUBJECTS = int(_req(_DESK, "selection.max_subjects"))
 _DESK_DIMENSIONS = tuple(str(d) for d in _req(_DESK, "selection.dimensions"))
+# What the workspace may say about itself, and how much of it. Declared in
+# metrics.yaml surface.desk.context, so the bound the client is held to is the
+# bound the definitions state and neither side keeps its own copy.
+_DESK_MAX_DRAWN = int(_req(_DESK, "context.max_drawn_subjects"))
+_DESK_MAX_ATTENTION = int(_req(_DESK, "context.max_attention"))
 
 
 class DeskSubject(BaseModel):
@@ -222,15 +227,65 @@ class DeskWindow(BaseModel):
     end: Optional[str] = Field(None, max_length=10)
 
 
+class DeskDrawn(BaseModel):
+    """
+    What is on the screen the question was asked from.
+
+    A LAYOUT, NOT A FIGURE. The representation the composer chose, the subject
+    dimension, the subjects it drew BY NAME, the metric's own display label
+    and whether the figures carry a comparison. No value, no delta, no count
+    of anything but subjects. Without this a question asked with nothing
+    selected told George nothing about what the person was looking at, which
+    is why "show me" and "is that actually bad?" had no referent.
+    """
+
+    representation: Optional[str] = Field(None, max_length=40)
+    dimension: Optional[Literal["store", "product", "category"]] = None
+    subjects: List[str] = Field(default_factory=list, max_length=_DESK_MAX_DRAWN)
+    metric_label: Optional[str] = Field(None, max_length=80)
+    compared: bool = False
+
+
+class DeskAttention(BaseModel):
+    """
+    One thing the DATA singled out, as the surface composed it.
+
+    The reason is one of two words a tool established — the subject moved
+    against the direction the majority moved in, or the tool's own ranking put
+    it first (surface.desk.context.attention_reasons). Nothing here is scored,
+    thresholded or inferred.
+    """
+
+    subject: str = Field(..., min_length=1, max_length=200)
+    reason: Literal["against_the_majority", "ranked_first"]
+
+
+class DeskRecommendation(BaseModel):
+    """
+    The move George last offered, by the ground that produced it.
+
+    Carried so a bare "what would you do?" or "yes, do that" refers to
+    something, and so George does not offer the same move twice under two
+    names. The ground is one of `initiative.recommend.grounded_in`.
+    """
+
+    ground: str = Field(..., min_length=1, max_length=40)
+    question: Optional[str] = Field(None, max_length=200)
+
+
 class DeskContext(BaseModel):
     """
     The desk as the question was asked from it. Bounded here, named to the
     model by the loop, and kept on the question post's payload so a reload
-    restores the same focus from the same record (surface.desk.selection).
+    restores the same focus from the same record (surface.desk.selection,
+    surface.desk.context).
     """
 
     selection: Optional[DeskSelection] = None
     window: Optional[DeskWindow] = None
+    drawn: Optional[DeskDrawn] = None
+    attention: List[DeskAttention] = Field(default_factory=list, max_length=_DESK_MAX_ATTENTION)
+    recommendation: Optional[DeskRecommendation] = None
 
 
 class AskRequest(BaseModel):
@@ -972,13 +1027,20 @@ async def get_chat(
     for c in calls:
         calls_by.setdefault(str(c["conversation_id"]), []).append(c)
 
+    # `page` is the TITLE of the page a pin sits on, read through the foreign
+    # key. Page Workshop V1 dropped the old `page` text column and migrated the
+    # ORM path; these two raw statements still selected it, so every call to
+    # this endpoint raised UndefinedColumnError and the whole thread failed to
+    # load. A LEFT JOIN keeps Ungrouped (page_id IS NULL) as NULL, which is
+    # exactly what the dropped column held for it.
     pins = (
         await db.execute(
             text(
-                "SELECT id, title, page, conversation_id, tool_calls "
-                "FROM george.pins "
-                "WHERE created_by = :u AND conversation_id = ANY(:ids) "
-                "ORDER BY created_at"
+                "SELECT p.id, p.title, pg.title AS page, p.conversation_id, p.tool_calls "
+                "FROM george.pins p "
+                "LEFT JOIN george.pages pg ON pg.id = p.page_id "
+                "WHERE p.created_by = :u AND p.conversation_id = ANY(:ids) "
+                "ORDER BY p.created_at"
             ),
             {"u": user.username, "ids": ids},
         )
@@ -992,8 +1054,10 @@ async def get_chat(
         counts = (
             await db.execute(
                 text(
-                    "SELECT page, COUNT(*) AS n FROM george.pins "
-                    "WHERE created_by = :u GROUP BY page"
+                    "SELECT pg.title AS page, COUNT(*) AS n "
+                    "FROM george.pins p "
+                    "LEFT JOIN george.pages pg ON pg.id = p.page_id "
+                    "WHERE p.created_by = :u GROUP BY pg.title"
                 ),
                 {"u": user.username},
             )

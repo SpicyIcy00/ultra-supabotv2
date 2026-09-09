@@ -375,9 +375,41 @@ export interface DeskWindow {
   end?: string;
 }
 
+/**
+ * What the workspace is showing, as a layout and never as a figure.
+ *
+ * The representation the composer chose, the subject dimension, the subjects
+ * it drew BY NAME, the metric's display label and whether the figures carry a
+ * comparison (metrics.yaml surface.desk.context). Without it a question asked
+ * with nothing selected told George nothing about what the person was
+ * looking at.
+ */
+export interface DeskDrawn {
+  representation?: string | null;
+  dimension?: DeskDimension | null;
+  subjects: string[];
+  metric_label?: string | null;
+  compared: boolean;
+}
+
+/** One thing the data singled out, with the reason a tool established. */
+export interface DeskAttentionMark {
+  subject: string;
+  reason: 'against_the_majority' | 'ranked_first';
+}
+
+/** The move the workspace last offered, by the ground that produced it. */
+export interface DeskRecommendationRef {
+  ground: string;
+  question?: string | null;
+}
+
 export interface DeskContext {
   selection?: DeskSelection | null;
   window?: DeskWindow | null;
+  drawn?: DeskDrawn | null;
+  attention?: DeskAttentionMark[];
+  recommendation?: DeskRecommendationRef | null;
 }
 
 export type GeorgeTurn =

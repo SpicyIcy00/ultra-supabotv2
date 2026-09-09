@@ -14,7 +14,10 @@ describe('the two groups', () => {
   it('offers the desk and its three rooms behind one key', () => {
     // Today and Ask stopped being places on 2026-09-09: the desk at "/" is
     // the business at rest and its own line is where George is asked.
-    expect(PRIMARY.map((i) => i.label)).toEqual(['Desk', 'Inbox', 'Pages', 'Workflows']);
+    // ONE VOCABULARY FOR ONE ENVIRONMENT. The desk's sidebar renders this
+    // same list, so these four words are the only names these four
+    // destinations have anywhere in the product.
+    expect(PRIMARY.map((i) => i.label)).toEqual(['Home', 'Needs you', 'Running', 'Kept']);
     expect(new Set(PRIMARY.map((i) => i.page))).toEqual(new Set(['george']));
     expect(primaryFor(['george'])).toHaveLength(4);
     expect(primaryFor(['dashboard', 'packing'])).toEqual([]);
@@ -47,15 +50,15 @@ describe('the two groups', () => {
 });
 
 describe('the phone', () => {
-  it('puts the desk, Inbox and Pages in the bar and the rest behind More', () => {
-    expect(phoneTabs(['george']).map((i) => i.label)).toEqual(['Desk', 'Inbox', 'Pages']);
-    expect(phoneMore(['george']).map((i) => i.label)).toEqual(['Workflows']);
+  it('puts home, what needs you and what is running in the bar', () => {
+    expect(phoneTabs(['george']).map((i) => i.path)).toEqual(['/', '/inbox', '/workflows']);
+    expect(phoneMore(['george']).map((i) => i.path)).toEqual(['/pages']);
   });
 });
 
 describe('active state', () => {
   it('matches a route and everything under it', () => {
-    const pages = PRIMARY.find((i) => i.label === 'Pages')!;
+    const pages = PRIMARY.find((i) => i.path === '/pages')!;
     expect(isActive(pages, '/pages')).toBe(true);
     expect(isActive(pages, '/pages/abc')).toBe(true);
     expect(isActive(pages, '/pagesetter')).toBe(false);
@@ -64,7 +67,7 @@ describe('active state', () => {
   });
 
   it('marks the desk on "/" and on a piece of work, and nowhere else', () => {
-    const desk = PRIMARY.find((i) => i.label === 'Desk')!;
+    const desk = PRIMARY.find((i) => i.path === '/')!;
     expect(isActive(desk, '/')).toBe(true);
     expect(isActive(desk, '/w/thread-1')).toBe(true);
     expect(isActive(desk, '/workflows')).toBe(false);

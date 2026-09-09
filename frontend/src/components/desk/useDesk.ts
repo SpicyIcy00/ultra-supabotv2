@@ -27,18 +27,21 @@ import { useRiver } from '../../hooks/useRiver';
 import { useThread } from '../../hooks/useThread';
 import { readDeskDefinitions, replayCalls as postReplay } from '../../services/deskApi';
 import { withFocus } from '../george/askHome';
+import { threadHistory } from '../george/threadHistory';
 import { riverMerge } from '../george/riverMerge';
 import { riverSurfaces, type Surface } from '../george/surfaceCompose';
 import { liveItems, storedItems, withContinuity } from '../george/workUnit';
 import { markDetail } from '../george/markState';
 import { composeDesk, readingSubjects, type DeskLayout } from './deskCompose';
-import { deskActions, questionAnchor, type DeskActionItem } from './deskActions';
+import { deskActions, localizeQuestion, questionAnchor, type DeskActionItem } from './deskActions';
 import { recommendationFor, type Recommendation } from './initiative';
 import { activeStep, workTrail, type TrailStep } from './workTrail';
 import {
   deskContextFor, deskReducer, INITIAL_DESK, restoreDeskState, selectionWords,
 } from './deskState';
 import { replayCalls, replayedSurface, restSurface } from './replay';
+import { workLine } from './workLine';
+import { deskFindings, type DeskFinding } from './findings';
 import { windowWords } from './TimeRibbon';
 import { sameSubject, type Subject } from './subject';
 
@@ -88,6 +91,37 @@ export function useDesk(threadId: string | undefined) {
     [threadId, river.posts, thread.posts],
   );
 
+  /**
+   * OPENING THE THREAD IS WHAT GIVES GEORGE HIS MEMORY.
+   *
+   * `useGeorgeStream` sends the history it holds, and it holds nothing until
+   * a thread is opened into it. Until this existed the desk never called
+   * `open`, so after any reload `ask` sent `history: []`, `thread_id: null`
+   * and — because the hook drops a parent when it has no thread —
+   * `parent_id: null`. Every follow-up silently started a NEW thread with no
+   * memory of the work on screen. Within one unbroken session it appeared to
+   * work, because the first turn's own frame set the thread; that is why it
+   * failed "sometimes".
+   *
+   * The two reads it needs were already here: the river's thread read is what
+   * is SHOWN, the chats read is what George is TOLD, and `threadHistory`
+   * merges them (useThread.ts). Opened once per thread, never while a turn is
+   * running — `open` cancels — and never when the stream is already on it,
+   * which is the case immediately after asking at rest.
+   */
+  const opened = useRef<string | null>(null);
+  const openThread = george.open;
+  useEffect(() => {
+    if (!threadId) {
+      opened.current = null;
+      return;
+    }
+    if (opened.current === threadId || george.threadId === threadId) return;
+    if (george.busy || !thread.ready) return;
+    opened.current = threadId;
+    openThread(threadHistory(thread.posts, thread.chat, threadId), threadId);
+  }, [threadId, thread.ready, thread.posts, thread.chat, george.threadId, george.busy, openThread]);
+
   const merged = useMemo(() => riverMerge(posts, george.turns), [posts, george.turns]);
   const stored = useMemo(() => storedItems(merged.posts), [merged.posts]);
   const live = useMemo(() => liveItems(merged.pending), [merged.pending]);
@@ -125,7 +159,12 @@ export function useDesk(threadId: string | undefined) {
   const rest = useQuery({
     queryKey: ['desk-rest', restReads],
     queryFn: () => postReplay(restReads as PinToolCall[]),
-    enabled: Boolean(restReads) && !focused,
+    // Read whenever the work in focus has nothing drawn yet — which includes
+    // the moment a question is asked at rest. Disabling it on `focused` alone
+    // meant the estate was thrown away exactly when it was needed to keep the
+    // screen from going empty. React Query keeps the rows once the work has
+    // its own evidence, so this stops fetching without losing what it read.
+    enabled: Boolean(restReads) && (!focused || focused.plan.evidence.length === 0),
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: true,
   });
@@ -139,7 +178,13 @@ export function useDesk(threadId: string | undefined) {
       const out = await postReplay(calls);
       return { id: surface.id, window, results: out.results };
     },
-    onSuccess: (out) => setReplay(out),
+    // Both together: the rows and the window they were read for. The
+    // dispatch is here and not at the click so the label and the figures
+    // change in the same commit and can never disagree.
+    onSuccess: (out) => {
+      setReplay(out);
+      dispatch({ type: 'window', window: out.window });
+    },
   });
 
   // A replay belongs to the surface it was made from. Opening other work
@@ -166,11 +211,29 @@ export function useDesk(threadId: string | undefined) {
 
   /* ------------------------------------------------------------ the layout -- */
 
+  /**
+   * THE WORKSPACE NEVER BLANKS.
+   *
+   * Asking at rest makes the live turn the work in focus before it has read
+   * anything, and a surface with no evidence composes to `statement`, which
+   * draws nothing. The screen went empty at the exact moment a person most
+   * needs to see that they were heard — and the resting figures they had just
+   * been looking at went with it.
+   *
+   * So a piece of work with no evidence yet does not replace what is on
+   * screen: the resting estate stays until the first result lands, and then
+   * the workspace FORMS from real arriving evidence. `composeDesk` is pure
+   * over whatever results exist and a live turn accumulates them frame by
+   * frame, so this needs no new machinery — it only stops the empty case
+   * winning.
+   */
   const surface: Surface | null = useMemo(() => {
-    const base = focused ?? (rest.data ? restSurface(rest.data.results, rest.data.ran_at) : null);
-    if (!base) return null;
-    if (replay && replay.id === base.id) return replayedSurface(base, replay.results, base.latest.at);
-    return base;
+    const resting = rest.data ? restSurface(rest.data.results, rest.data.ran_at) : null;
+    const working = focused && focused.plan.evidence.length > 0 ? focused : null;
+    const chosen = working ?? resting ?? focused;
+    if (!chosen) return null;
+    if (replay && replay.id === chosen.id) return replayedSurface(chosen, replay.results, chosen.latest.at);
+    return chosen;
   }, [focused, rest.data, replay]);
 
   // A step of the trail: the work as it stood then, composed from the same
@@ -207,6 +270,28 @@ export function useDesk(threadId: string | undefined) {
     return null;
   }, [layout.stage]);
 
+  /**
+   * WHAT GEORGE FOUND, as several things rather than one line.
+   *
+   * A broad read establishes facts about several shops out of one grouped
+   * call, and the composer already recorded them per subject — it just joined
+   * them into a sentence before drawing them. These are those same marks,
+   * unflattened, each with the subject's own figures and its own next move
+   * (findings.ts). The field they came from stays on screen beneath, so this
+   * is a reading of one drawing and not a grid of tiles.
+   */
+  const findings: DeskFinding[] = useMemo(() => {
+    const stage = layout.stage;
+    const field = stage.kind === 'field' ? stage.field
+      : stage.kind === 'anatomy' ? stage.breakdown
+        : stage.kind === 'compare' ? stage.fields[0] ?? null
+          : null;
+    // One subject on screen is not a set of findings — it is the answer, and
+    // the anatomy already says everything a finding would.
+    if (!field || field.objects.length < 2) return [];
+    return deskFindings(field, layout.attention, layout.identity);
+  }, [layout]);
+
   const recommendation: Recommendation | null = useMemo(
     () => recommendationFor(
       layout,
@@ -215,6 +300,34 @@ export function useDesk(threadId: string | undefined) {
       definitions.data?.breakdown_dimensions ?? [],
     ),
     [layout, breakdownShown, definitions.data],
+  );
+
+  /**
+   * The one move that investigates a finding further.
+   *
+   * The ladder's own next rung, scoped to that subject: which products moved
+   * most there. Offered only where the definitions say a breakdown of that
+   * dimension EXISTS — served, because net sales is transaction grain and
+   * refuses a product grouping while the ladder localizes through product
+   * revenue, so a client reading the headline metric's own valid_group_by
+   * would never offer the move the ladder is built around.
+   */
+  const breakdownDimensions = definitions.data?.breakdown_dimensions ?? [];
+  const moveFor = useCallback(
+    (finding: DeskFinding) => {
+      const meta = finding.anatomy.headline.meta;
+      const dimension = breakdownDimensions.includes('product')
+        ? 'product'
+        : breakdownDimensions.includes('category')
+          ? 'category'
+          : null;
+      if (!dimension || finding.subject.dimension !== 'store') return null;
+      return {
+        label: `Why ${finding.subject.label}?`,
+        question: localizeQuestion(dimension, finding.subject.label, meta),
+      };
+    },
+    [breakdownDimensions],
   );
 
   const actions: DeskActionItem[] = useMemo(
@@ -251,16 +364,41 @@ export function useDesk(threadId: string | undefined) {
     dispatch(additive ? { type: 'toggle', subject } : { type: 'focus', subject });
   }, []);
 
+  /**
+   * A WINDOW CHANGE IS ATOMIC, OR IT DID NOT HAPPEN.
+   *
+   * This used to move the ribbon FIRST and then fire the replay, so between
+   * the click and the rows the chip said "last month" over last week's
+   * figures — and if the replay failed it stayed there, labelling old numbers
+   * with a window they were never read for. A figure under the wrong window
+   * is the one thing this product must never show.
+   *
+   * So the state moves only when rows come back (`onSuccess` below), the
+   * ribbon marks the pending window as pending rather than current, and a
+   * failure leaves both the chip and the figures where they were.
+   */
   const onWindow = useCallback((window: DeskWindow) => {
     if (!surface) return;
-    dispatch({ type: 'window', window });
     replaying.mutate({ surface, window });
   }, [surface, replaying]);
 
+  /**
+   * A QUESTION CARRIES THE WORKSPACE IT WAS ASKED FROM.
+   *
+   * The selection and the window as before, and now the layout George is
+   * being asked about: what is drawn, what the rows already singled out, and
+   * the move he last offered. All of it names and closed vocabularies, none
+   * of it a figure (deskState.deskContextFor, metrics.yaml
+   * surface.desk.context). This is what gives "show me", "products" and
+   * "what would you do?" a referent.
+   */
   const ask = useCallback((question: string) => {
     const parent = focused?.latest.post?.id ?? null;
-    void george.ask(question, { parentId: parent, desk: deskContextFor(state) });
-  }, [george, focused, state]);
+    void george.ask(question, {
+      parentId: parent,
+      desk: deskContextFor(state, layout, recommendation),
+    });
+  }, [george, focused, state, layout, recommendation]);
 
   /* ------------------------------------------------- what the line will say -- */
 
@@ -282,6 +420,29 @@ export function useDesk(threadId: string | undefined) {
     ? markDetail(george.presence, george.live.running, george.live.lastResult)
     : null;
 
+  /**
+   * WHAT THE PERSON JUST SAID, ON SCREEN, IMMEDIATELY.
+   *
+   * `ask` appends the user turn to the stream synchronously, so this is
+   * available on the very next render — before the request has opened, let
+   * alone returned. Until now nothing drew it and the only acknowledgement
+   * was a truncated line above the composer, which is why a submitted
+   * instruction could not be told apart from one that never sent.
+   */
+  const asked = useMemo(() => {
+    for (let i = merged.pending.length - 1; i >= 0; i -= 1) {
+      const turn = merged.pending[i];
+      if (turn.role === 'user' && turn.text.trim()) return turn.text.trim();
+    }
+    return null;
+  }, [merged.pending]);
+
+  /** What George is doing to the business, from frames that actually arrived. */
+  const work = useMemo(
+    () => workLine({ running: george.live.running, completed: george.live.completed }, george.busy),
+    [george.live.running, george.live.completed, george.busy],
+  );
+
   // Whether the figures on screen carry a comparison, so the ribbon knows
   // which windows the tool would refuse.
   const compared = Boolean(layout.headlineMeta?.comparison?.baseline);
@@ -300,6 +461,14 @@ export function useDesk(threadId: string | undefined) {
     inProgress,
     contextWords,
     narration,
+    /** The instruction being worked on, drawn the instant it is submitted. */
+    asked,
+    /** What George has read and is reading, in business words. */
+    work,
+    /** What he found: a few subjects the rows singled out, with their figures. */
+    findings,
+    /** The ladder's next move for one finding, or null. */
+    moveFor,
     compared,
     windows: definitions.data?.windows ?? [],
     definitions,
@@ -308,6 +477,8 @@ export function useDesk(threadId: string | undefined) {
     ask,
     replaying: replaying.isPending,
     replayFailed: replaying.isError,
+    /** The window a replay is reading now, before its rows have landed. */
+    pendingWindow: replaying.isPending ? (replaying.variables?.window ?? null) : null,
     /** True while the desk has nothing to draw yet and is still asking. */
     loading: threadId
       ? !focused && (river.loading || thread.loading)

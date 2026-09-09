@@ -190,7 +190,15 @@ def test_prompt_carries_the_surface_section_built_from_the_definitions():
     george_loop = _loop()
     prompt = george_loop.SYSTEM_PROMPT
     assert "THE SURFACE" in prompt
-    assert "SMALLEST SURFACE" in prompt
+    # REPLACED 2026-09-09 (UNDERSTAND). "THE SMALLEST SURFACE THAT COMPLETELY
+    # ANSWERS THE QUESTION" governed every message, including "how are we
+    # doing?", and was the direct cause of a broad intent coming back with one
+    # figure. How much George READS is now decided by SCOPE; how much he SHOWS
+    # is still decided by what the figures establish, and that half is what
+    # this section keeps.
+    assert "SMALLEST SURFACE" not in prompt
+    assert "READ AS WIDELY AS THE INTENT IS WIDE" in prompt
+    assert "PRESENT NARROWLY" in prompt
     assert "PROSE IS SECONDARY" in prompt
     for term in ("rank_by", "change_pct", "baseline_status"):
         assert f"`{term}`" in prompt

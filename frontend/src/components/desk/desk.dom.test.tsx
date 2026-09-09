@@ -176,10 +176,25 @@ describe('2–4. the business reorganises, and "Why?" transforms it', () => {
     // No table of the same rows beside it, and no tool vocabulary anywhere.
     expect(container.querySelector('table')).toBeNull();
     expect(container.textContent).not.toMatch(/get_sales|group_by|compare_to|change_pct/);
-    // What the data singles out, in words, with no figure in them.
-    const attention = container.querySelector('[data-attention-line]')!;
-    expect(attention.textContent).toContain('North Edsa and Magnolia fell');
-    expect(attention.textContent).not.toMatch(/\d/);
+    // WHAT THE DATA SINGLED OUT IS SAID PER SUBJECT, not joined into one
+    // sentence under the drawing. Each finding names its own shop, states the
+    // fact a tool established about it, and carries that shop's own figures.
+    const found = [...container.querySelectorAll('[data-finding]')];
+    expect(found.length).toBeGreaterThanOrEqual(2);
+    expect(found.length).toBeLessThanOrEqual(4);
+    const named = found.map((f) => f.getAttribute('data-finding-subject'));
+    expect(named).toContain('North Edsa');
+    expect(named).toContain('Magnolia');
+    // Every one rests on a ground a tool established. There is no score here.
+    for (const f of found) {
+      expect(['against_the_majority', 'ranked_first', 'drivers_diverge'])
+        .toContain(f.getAttribute('data-finding'));
+    }
+    // Why a finding is here carries no numeral: its figures are beside it.
+    expect(found[0].querySelector('p')!.textContent).not.toMatch(/\d/);
+    // And the field they were read from is still on screen underneath, so this
+    // is a reading of ONE drawing and not a grid of tiles.
+    expect(objects(container)).toHaveLength(7);
   });
 
   it('3. clicking a store focuses it: one object deepens, the estate recedes, nothing is appended', async () => {
@@ -227,9 +242,16 @@ describe('2–4. the business reorganises, and "Why?" transforms it', () => {
     expect(asked[0].question).toBe('Why did net sales change for North Edsa last week?');
     // Selection is context, by the id the ROW carried — never a label the
     // model inferred, and never a figure.
-    expect(asked[0].options.desk).toEqual({
-      selection: { dimension: 'store', subjects: [{ id: 's-north-edsa', label: 'North Edsa' }] },
+    expect(asked[0].options.desk!.selection).toEqual({
+      dimension: 'store', subjects: [{ id: 's-north-edsa', label: 'North Edsa' }],
     });
+    // AND WHAT IS ON SCREEN, so a follow-up with nothing clicked still has a
+    // referent. Names and closed vocabularies; never a figure.
+    const drawn = asked[0].options.desk!.drawn!;
+    expect(drawn.dimension).toBe('store');
+    expect(drawn.subjects).toContain('North Edsa');
+    expect(drawn.subjects.length).toBeLessThanOrEqual(12);
+    expect(JSON.stringify(asked[0].options.desk)).not.toMatch(/\d+\.\d/);
   });
 
   it('a stored "Why?" composes into the SAME object — one stage, two steps in the trail', async () => {
@@ -304,12 +326,11 @@ describe('6. several objects selected, and one contextual action for them', () =
 
     fireEvent.click(container.querySelector('[data-action="explain_selection"]')!);
     expect(asked[0].question).toBe('Why did net sales change for North Edsa and Magnolia last week?');
-    expect(asked[0].options.desk).toEqual({
-      selection: {
-        dimension: 'store',
-        subjects: [{ id: 's-north-edsa', label: 'North Edsa' }, { id: 's-magnolia', label: 'Magnolia' }],
-      },
+    expect(asked[0].options.desk!.selection).toEqual({
+      dimension: 'store',
+      subjects: [{ id: 's-north-edsa', label: 'North Edsa' }, { id: 's-magnolia', label: 'Magnolia' }],
     });
+    expect(asked[0].options.desk!.drawn?.dimension).toBe('store');
   });
 
   it('the line says what the question will carry, so nothing about it is a guess', async () => {

@@ -125,7 +125,12 @@ def test_the_desk_reads_the_work_stream_from_persistence():
 
 def test_history_reads_the_whole_river_and_is_the_rivers_user_facing_role():
     page = _source(_DESK_PAGE)
-    assert "useRiver()" in page, "History reads both streams"
+    # Both streams — no argument means everything, work and attention alike.
+    assert "useRiver(undefined," in page, "History reads both streams"
+    # AND ONLY WHILE IT IS LOOKED AT. This read used to run on every desk
+    # visit whether or not the drawer was ever opened, so opening George cost
+    # two full river reads: the work stream's and this one's.
+    assert "useRiver(undefined, historyOpen)" in page
     assert "<History" in page
     history = _source(_HISTORY)
     # Opening one restores a WORKSPACE, not a transcript.

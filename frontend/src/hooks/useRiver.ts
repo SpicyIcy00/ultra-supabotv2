@@ -42,14 +42,21 @@ export function flattenPages(pages: RiverPage[]): Post[] {
 }
 
 /**
+ * @param enabled whether to read at all. False keeps the hook mounted and
+ *   the cache keyed without issuing a request, for a surface that is not on
+ *   screen yet.
  * @param stream which of the river's two streams to read. Keyed into the
  *   query so Ask's work and Today's attention are two caches of one server
  *   read, invalidated together under RIVER_KEY when a turn stores.
  */
-export function useRiver(stream?: RiverStream) {
+export function useRiver(stream?: RiverStream, enabled: boolean = true) {
   const query = useInfiniteQuery({
     queryKey: [...RIVER_KEY, stream ?? 'all'],
     queryFn: ({ pageParam }) => readRiver(pageParam, undefined, stream),
+    // The History drawer's full-river read used to run on every desk visit
+    // whether or not the drawer was ever opened — a second GET /river beside
+    // the work stream's, on every load. It is now read when it is looked at.
+    enabled,
     initialPageParam: null as string | null,
     // "Next" is OLDER: the cursor names the page above this one.
     getNextPageParam: (last) => last.before ?? undefined,

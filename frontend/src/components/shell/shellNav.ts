@@ -37,12 +37,23 @@ export interface NavItem {
 
 const under = (root: string) => (p: string) => p === root || p.startsWith(`${root}/`);
 
-/** The way back to the desk, and the three rooms. One page key for all four. */
+/**
+ * The way back to the desk, and the three rooms. One page key for all four.
+ *
+ * ONE VOCABULARY, BECAUSE THERE IS ONE ENVIRONMENT (2026-09-09, UNDERSTAND).
+ * These four destinations had two sets of names: the desk's sidebar called
+ * them Home, Needs you, Running and Kept, and this rail called the same four
+ * Desk, Inbox, Pages and Workflows. Clicking a word in one vocabulary landed
+ * a person in a chrome using the other for the same place, which is what
+ * "the sidebar tabs map incorrectly" was. The desk's words win: they name
+ * STATES of George's environment rather than pages of an application, which
+ * is the whole claim the workspace makes.
+ */
 export const PRIMARY: NavItem[] = [
-  { label: 'Desk', path: '/', page: 'george', matches: (p) => p === '/' || under('/w')(p) },
-  { label: 'Inbox', path: '/inbox', page: 'george', matches: under('/inbox') },
-  { label: 'Pages', path: '/pages', page: 'george', matches: under('/pages') },
-  { label: 'Workflows', path: '/workflows', page: 'george', matches: under('/workflows') },
+  { label: 'Home', path: '/', page: 'george', matches: (p) => p === '/' || under('/w')(p) },
+  { label: 'Needs you', path: '/inbox', page: 'george', matches: under('/inbox') },
+  { label: 'Running', path: '/workflows', page: 'george', matches: under('/workflows') },
+  { label: 'Kept', path: '/pages', page: 'george', matches: under('/pages') },
 ];
 
 /**
@@ -71,7 +82,7 @@ export const OPERATIONS: NavItem[] = [
 ];
 
 /** The three that fit a phone's bottom bar; the rest live behind More. */
-export const PHONE_TABS = ['/', '/inbox', '/pages'];
+export const PHONE_TABS = ['/', '/inbox', '/workflows'];
 
 export function primaryFor(allowedPages: string[]): NavItem[] {
   return PRIMARY.filter((i) => allowedPages.includes(i.page));

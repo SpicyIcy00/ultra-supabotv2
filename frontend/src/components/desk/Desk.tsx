@@ -28,6 +28,7 @@ import { TimeRibbon } from './TimeRibbon';
 import { WorkTrail } from './TrailBar';
 import type { DeskActionItem } from './deskActions';
 import type { useDesk } from './useDesk';
+import { workSentence } from './workLine';
 import { useMotionMode, MOTION_CLASS } from './motion';
 import { CompactNotices } from '../george/NoticeBanner';
 import { GreetingUnavailable } from '../george/Greeting';
@@ -61,6 +62,36 @@ function Opening() {
         {greeting.data.headline}
       </p>
       <CompactNotices notices={greeting.data.notices} />
+    </div>
+  );
+}
+
+/**
+ * WHAT WAS ASKED, AND WHAT GEORGE IS DOING ABOUT IT.
+ *
+ * The instruction is drawn the instant it is submitted — before the request
+ * has opened — because the one thing a person must never have to guess is
+ * whether they were heard. Beneath it, one line of what he has read and is
+ * reading, every word of it derived from frames that arrived (workLine.ts).
+ *
+ * NEITHER OF THESE IS THE ANSWER. They sit above the workspace, which keeps
+ * drawing what it has and then FORMS as each result lands. Nothing is
+ * replaced by a spinner and nothing is hidden while he works.
+ */
+function Working({ asked, sentence }: { asked: string | null; sentence: string | null }) {
+  if (!asked && !sentence) return null;
+  return (
+    <div className="mb-8 border-l-2 border-george-line pl-4" data-working>
+      {asked && (
+        <p className="max-w-3xl font-george-serif text-[18px] leading-relaxed text-george-navy" data-asked>
+          {asked}
+        </p>
+      )}
+      {sentence && (
+        <p className="mt-1.5 text-[12px] leading-relaxed text-george-slate" data-work-line>
+          {sentence}
+        </p>
+      )}
     </div>
   );
 }
@@ -107,6 +138,7 @@ export function Desk({
                 <TimeRibbon
                   windows={desk.windows}
                   current={state.window ?? (layout.anchor?.window ? { kind: 'preset', name: layout.anchor.window.name } : null)}
+                  pending={desk.pendingWindow}
                   compared={desk.compared}
                   onChoose={desk.onWindow}
                   busy={desk.replaying}
@@ -142,6 +174,9 @@ export function Desk({
                 </p>
               )}
 
+              {/* The instruction, immediately; then the work, as it happens. */}
+              <Working asked={desk.asked} sentence={workSentence(desk.work)} />
+
               {!desk.loading && !desk.failed && !desk.unavailable && (
                 <Answer
                   layout={layout}
@@ -154,6 +189,10 @@ export function Desk({
                   moves={desk.actions}
                   onAction={onAction}
                   onInspect={() => dispatch({ type: 'inspect', target: { kind: 'notices' } })}
+                  findings={desk.findings}
+                  onOpenSubject={(subject) => desk.onSelect(subject, false)}
+                  onAskQuestion={desk.ask}
+                  moveFor={desk.moveFor}
                 />
               )}
             </div>

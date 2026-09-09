@@ -213,6 +213,13 @@ export interface DeskLayout {
   /** The meta of the figure under the person's hand, for questions and receipts. */
   headlineMeta: ToolMeta | null;
   anchor: SurfaceAnchor | null;
+  /**
+   * The definitions' identity for the drivers, as George recorded it on the
+   * primary read: "net_sales = transaction_count x average_transaction_value".
+   * Carried here so a per-subject reading can be composed without going back
+   * to the surface for it.
+   */
+  identity: string | null;
   focus: Subject | null;
   selection: Subject[];
   /** A deterministic summary: same posts, same fingerprint. */
@@ -545,6 +552,7 @@ export function emptyLayout(): DeskLayout {
     guidance: null,
     scope: [],
     level: 'business',
+    identity: null,
     stage: { kind: 'statement' },
     receded: [],
     attention: [],
@@ -768,6 +776,7 @@ export function composeDesk(surface: Surface | null, state: DeskState): DeskLayo
     refinements: plan.refinements,
     headlineMeta,
     anchor: plan.anchor,
+    identity,
     focus,
     selection,
     fingerprint: '',

@@ -63,12 +63,27 @@ export function DeskLine({
     return () => setComposer('idle');
   }, [value, focused, setComposer]);
 
+  /**
+   * A QUESTION IS NEVER REFUSED BECAUSE GEORGE IS BUSY.
+   *
+   * This used to return early while a turn ran, and the send button became
+   * Stop, so the only way to say anything was to wait or reload. A turn that
+   * never terminated — a dropped stream, an error with no `done` frame — left
+   * the composer dead. The guard bought nothing either way: `ask` in
+   * useGeorgeStream already cancels the running turn before it starts a new
+   * one, and marks the stopped turn as stopped rather than finished.
+   */
   const submit = () => {
-    if (!value.trim() || busy) return;
+    if (!value.trim()) return;
     onAsk(value.trim());
     setValue('');
     if (ref.current) ref.current.style.height = 'auto';
   };
+
+  // Stop is offered while a turn runs and the box is empty. The moment there
+  // is something to send, the button sends it — a person who has typed a new
+  // instruction has already decided what to do with the turn in flight.
+  const stopping = busy && !value.trim();
 
   return (
     <div className="px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 md:px-8" data-desk-line>
@@ -105,12 +120,12 @@ export function DeskLine({
           />
           <button
             type="button"
-            onClick={busy ? onCancel : submit}
+            onClick={stopping ? onCancel : submit}
             disabled={!busy && !value.trim()}
-            aria-label={busy ? 'Stop' : 'Send'}
+            aria-label={stopping ? 'Stop' : 'Send'}
             className="flex h-9 w-9 min-h-touch min-w-touch shrink-0 items-center justify-center rounded-full bg-george-navy text-george-cream transition-opacity disabled:opacity-25"
           >
-            {busy ? <Square className="h-3.5 w-3.5" /> : <ArrowUp className="h-4 w-4" />}
+            {stopping ? <Square className="h-3.5 w-3.5" /> : <ArrowUp className="h-4 w-4" />}
           </button>
         </div>
       </div>

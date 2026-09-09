@@ -1197,6 +1197,93 @@ investigation:
   # show he cannot tell dominant from mixed movement, that is reported, not
   # patched with a number invented on a branch.
   driver_reading: qualitative
+
+  # HOW WIDE TO INVESTIGATE, AND WHO DECIDES (2026-09-09, UNDERSTAND).
+  #
+  # Until now one rule governed every question: the smallest surface that
+  # completely answers it. That is right for "how did OPUS do last week?"
+  # and wrong for "how are we doing?" — a broad intent answered narrowly
+  # reads as an assistant waiting to be told where to look, and the person
+  # then has to name the store, the metric and the dimension themselves.
+  # Having to name them is the product failing, not the person helping.
+  #
+  # So SCOPE is declared, and it decides the read POLICY. It does not decide
+  # what is presented: a broad investigation still resolves to a few
+  # findings, never a dashboard. Investigate broadly, present narrowly.
+  #
+  # EXECUTES NOTHING. This is prompt vocabulary, exactly like `ladder` above.
+  # There is no classifier, no planner and no branch in the loop — the model
+  # reads its own intent against these descriptions, the same way it already
+  # decides whether a question is an investigation at all.
+  scope:
+    executes_nothing: true
+    kinds:
+      broad:
+        means: >
+          the message names no subject, no metric and no dimension, or names
+          the business as a whole
+        reads: >
+          the sales_headline metric set grouped by store over a closed window
+          with compare_to='previous_period' — one grouped call per metric,
+          never one per store — and then ONE localization on whichever driver
+          moved more
+        grouped_not_fanned_out: true
+        max_reads: 5
+        never: >
+          a read per subject; a second window; a metric no finding rests on
+      focused:
+        means: the message names a subject, a metric, a dimension or a window
+        reads: the smallest set that completely answers it
+        max_reads: 4
+      ambiguous:
+        means: >
+          the message is short or referential and could be either — "why?",
+          "products", "show me", "is that bad?"
+        resolve_from:
+          - the selection on the desk
+          - the subjects the workspace is drawing
+          - the window the work is on
+          - the reads already in this conversation
+        ask_only_when: >
+          the workspace cannot settle it AND the two readings would send
+          different reads to the database
+        clarification_is_not_the_default: true
+    presentation:
+      findings_min: 2
+      findings_max: 4
+      # A finding is a reading of rows a tool returned about ONE subject. It
+      # is not a second primary fact: a broad read produces several findings
+      # from the SAME grouped call, which is why the one-primary rule in
+      # agent/findings.py is untouched.
+      from_the_same_primary: true
+      never_manufactured_to_fill_the_range: true
+      no_synthetic_score: true
+
+  # A MESSAGE IS NOT ALWAYS A QUESTION (2026-09-09, UNDERSTAND).
+  #
+  # The prompt described questions and answers and nothing else, so an
+  # observation had no defined behaviour and was answered as though it had
+  # been asked. These are the five things a person actually sends, and what
+  # each one means for the next read. Prompt vocabulary; executes nothing.
+  message_kinds:
+    executes_nothing: true
+    kinds:
+      question: answer it
+      intent: >
+        a goal rather than a question — investigate what it implies and
+        report what the data establishes about it
+      instruction: >
+        do the thing, using the workspace as its scope; do not restate it
+        back as a question
+      observation: >
+        a claim about the business — VERIFY it first, exactly as the ladder
+        verifies a premise, and say plainly when it does not hold
+      correction: >
+        the previous reading was wrong or misread — accept it, re-read what
+        it changes, and do not defend the earlier answer
+      steering: >
+        a narrowing or widening of the work on screen — apply it to the
+        current investigation rather than starting a new one
   attribution_math: not_supported
   dominance_threshold: none
   dominance_threshold_reason: >
@@ -4200,6 +4287,29 @@ surface:
         category: category
       max_subjects: 12
       ids_from_rows: true
+      stored_on: question_post_payload
+
+    # WHAT THE WORKSPACE TELLS GEORGE ABOUT ITSELF (2026-09-09, UNDERSTAND).
+    #
+    # A selection used to be the only thing on this channel, so a question
+    # asked with nothing clicked told George nothing about what was on
+    # screen. "Show me", "is that actually bad?" and "what would you do?"
+    # refer to the WORKSPACE, not to the transcript, and they had no
+    # referent at all.
+    #
+    # Every field below is a name, a count or a word from a closed
+    # vocabulary declared here. NOTHING IN IT IS A FIGURE, and nothing in it
+    # is the model's own account of anything: `drawn` comes from the layout
+    # the composer produced, `attention` from marks the tools' own rows
+    # established, and `standing_recommendation` from a ground in
+    # `initiative.recommend.grounded_in`. George is told what he is looking
+    # at; he still reads every figure from a tool result.
+    context:
+      sends: [drawn, attention, standing_recommendation]
+      max_drawn_subjects: 12
+      max_attention: 6
+      attention_reasons: [against_the_majority, ranked_first]
+      never_a_figure: true
       stored_on: question_post_payload
 
     # A replay re-runs calls already recorded, with one scope argument changed

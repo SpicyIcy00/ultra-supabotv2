@@ -36,7 +36,10 @@ export default function DeskPage() {
   const [draftKey, setDraftKey] = useState(0);
 
   // The river, for the history drawer only: everything, both streams.
-  const river = useRiver();
+  // Read only while the drawer is open. Mounted always so the cache is keyed
+  // and an already-loaded river reopens instantly; requested only when looked
+  // at, so opening the desk no longer costs two full river reads.
+  const river = useRiver(undefined, historyOpen);
 
   // A turn asked at rest moves to its own address once its posts exist.
   useEffect(() => {

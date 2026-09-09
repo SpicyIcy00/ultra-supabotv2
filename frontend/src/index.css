@@ -450,6 +450,15 @@ body {
   50%      { opacity: 0.62; }
 }
 
+/* The hairline joining an object to its label when the label had to be
+   nudged clear of a neighbour's. Drawn only when the two have parted, so a
+   field with no collisions has no extra ink in it at all. */
+.desk-object__leader {
+  stroke: var(--desk-line, rgba(30, 41, 59, 0.25));
+  stroke-width: 1;
+  fill: none;
+}
+
 .desk-object__name {
   font-size: 12.5px;
   letter-spacing: 0.06em;

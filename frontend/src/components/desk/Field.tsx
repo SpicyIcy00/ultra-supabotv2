@@ -31,7 +31,7 @@
 import { memo } from 'react';
 import type { FieldObject, FieldPlan } from './deskCompose';
 import { deltaText, fieldRows, figureText } from './deskCompose';
-import { axisEnds, layoutField, type Placed } from './fieldLayout';
+import { axisEnds, labelsFit, layoutField, type Placed } from './fieldLayout';
 import { sameSubject, subjectKey, type Subject } from './subject';
 import { useSize } from './useSize';
 import { DeltaRanking, SubjectComparison } from '../george/Instruments';
@@ -107,6 +107,10 @@ const Objekt = memo(function Objekt({
   onSelect: (subject: Subject, additive: boolean) => void;
 }) {
   const { object, x, y, r, labelSide } = placed;
+  // The label may have been nudged clear of a neighbour's. The OBJECT never
+  // moves — its position is the measurement — so the offset is applied to the
+  // text alone, and a leader line is drawn when the two have parted.
+  const labelDy = (placed.labelY ?? y) - y;
   const tone = toneOf(object.figure.direction);
   const label = object.subject.label;
   const figure = figureText(object.figure);
@@ -156,8 +160,18 @@ const Objekt = memo(function Objekt({
       />
       {attention && <circle className="desk-object__ring" r={r + 7} />}
       {selected && <circle className="desk-object__selected" r={r + 7} />}
-      <text className="desk-object__name" x={dx} y={-2} textAnchor={anchor}>{label}</text>
-      <text className="desk-object__figure" x={dx} y={14} textAnchor={anchor}>
+      {Math.abs(labelDy) > 2 && (
+        <line
+          className="desk-object__leader"
+          x1={labelSide === 'left' ? -r : r}
+          y1={0}
+          x2={dx}
+          y2={labelDy - 6}
+          aria-hidden
+        />
+      )}
+      <text className="desk-object__name" x={dx} y={labelDy - 2} textAnchor={anchor}>{label}</text>
+      <text className="desk-object__figure" x={dx} y={labelDy + 14} textAnchor={anchor}>
         {figure}
         {delta && <tspan className="desk-object__delta" dx="7">{delta}</tspan>}
       </text>
@@ -229,8 +243,19 @@ export function Field({
 }: FieldProps) {
   const { ref, size } = useSize<HTMLDivElement>({ width: 720, height });
   const id = `f-${field.dimension}-${field.headline.source.seq}`;
-  // The composer's choice, unless the person overrode it.
-  const ranked = asList || field.representation === 'ranked';
+  // Laid out first, because whether the plane can be READ is a property of
+  // the geometry and not a preference. Cheap, pure, and the same call the
+  // drawing makes below.
+  const geometry = layoutField(field, size.width, size.height);
+
+  // The composer's choice, unless the person overrode it — OR the labels
+  // cannot be separated inside the plot. A plane whose names sit on top of
+  // each other has stopped saying which shop is which, and a ranked list
+  // says the same thing with one row per subject and no overlap possible.
+  // A simpler drawing that communicates beats an interesting one that does
+  // not, so legibility is allowed to overrule the representation.
+  const illegible = !labelsFit(geometry, size.height);
+  const ranked = asList || field.representation === 'ranked' || illegible;
 
   if (ranked) {
     // THE CONVENTIONAL INSTRUMENT, AND THE DEFAULT. One row per subject with
@@ -247,7 +272,12 @@ export function Field({
     const selected = (name: string) =>
       selection.some((s) => all.some((o) => o.subject.label === name && sameSubject(s, o.subject)));
     return (
-      <div data-field data-view="ranked" data-representation="ranked">
+      <div
+        data-field
+        data-view="ranked"
+        data-representation="ranked"
+        data-fallback={illegible && field.representation === 'plane' ? 'labels_collide' : undefined}
+      >
         {shape.kind === 'ranking' ? (
           // The tool ranked by CHANGE, so the bars diverge from a zero line in
           // the metric's own unit — never by percentage.
@@ -290,7 +320,6 @@ export function Field({
     );
   }
 
-  const geometry = layoutField(field, size.width, size.height);
   const soft = field.objects.length <= SOFT_LIMIT;
 
   return (

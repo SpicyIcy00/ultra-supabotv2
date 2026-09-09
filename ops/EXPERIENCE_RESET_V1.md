@@ -292,6 +292,83 @@ definitions endpoint now serves `breakdown_dimensions`, computed from
 - A replayed window is not re-read by George, and the desk does not yet say
   that the reading belongs to the earlier window.
 
+## 6c. UNDERSTAND (2026-09-09, after the second human dogfood)
+
+The workspace was coherent and still felt like a chatbot with charts. Thirteen
+concrete failures were traced to root causes before any code was written; the
+inspection is summarised here so a later reader can see what was actually
+wrong rather than what was changed.
+
+### What was broken, and why
+
+| Reported | Root cause |
+|---|---|
+| follow-ups don't reliably work | the desk never called `open`, so history, `thread_id` and `parent_id` were all empty after a reload |
+| repeated backend 500s | two raw statements in `get_chat` still selected `george.pins.page`, dropped by Page Workshop V1 — 11 of 11 calls failed |
+| submitted messages not acknowledged | a live turn with no evidence composed to `statement`, which drew nothing, and the resting figures were dropped with it |
+| broad questions return too little | the prompt's "SMALLEST SURFACE" rule governed every message, including "how are we doing?" |
+| George waits to be told where to look | the same rule, plus no vocabulary for a message that is not a question |
+| I cannot watch George work | the desk imported no activity view; the loop's per-call frames reached the client and were discarded |
+| one chart dominates the answer | `attentionWords` joined a plural, per-subject, tool-derived list into one sentence under one drawing |
+| chart labels overlap | labels were placed at a fixed offset with only a left/right flip |
+| sidebar tabs map incorrectly | two hand-typed vocabularies for the same four destinations |
+| date changes mix old and new | the ribbon moved on the click; the replay followed |
+| new questions sometimes cannot send | the composer returned early while busy, and `ask` already cancels |
+| analytics endpoint errors | the local dogfood database lacks `v_new_transaction_items_resolved`; legacy Operations only |
+| frontend startTime undefined | unresolved — see below |
+
+### The six stages
+
+1. **Continuity.** `get_chat` reads the page title through the foreign key.
+   `useDesk` opens the thread from `useThread`'s `chat` and `ready`, which
+   existed for exactly this and had no caller.
+2. **Presence.** Work with no evidence does not replace what is drawn; the
+   resting read stays enabled while the focused work is empty; the
+   instruction is drawn on the render after submit; one line says what has
+   been read and what is being read; the composer never refuses a question.
+3. **Understanding.** `surface.desk.context` declares a bounded channel for
+   what is DRAWN, what was singled out and the move already offered. The
+   grouping matrix is stated in the prompt from each metric's own
+   `valid_group_by`.
+4. **Breadth.** `investigation.scope` declares broad, focused and ambiguous,
+   with the reads and the bound for each; `investigation.message_kinds`
+   declares the five things a message can be besides a question. The
+   minimalism rule is replaced. `MAX_TOOL_CALLS` does not move.
+5. **Findings.** `findings.ts` unflattens the attention marks into 2-4
+   per-subject findings, each with its ground, its own figures, a numeral-free
+   reading and one next move. `drivers_diverge` is added as a third ground,
+   read off the sign of two changes the tool computed.
+6. **Coherence.** One navigation list. Atomic window transitions. Label
+   deconfliction with a ranked fallback. The legacy `figures` path is named
+   as a fallback. The History drawer reads the river only when opened.
+
+### What is still not George
+
+- ASK is prompt behaviour with no mechanical check, as recorded in V1.
+- The `figures` fallback still draws through the older primitives; it is now
+  labelled rather than passed off as the workspace's own drawing.
+- Inbox, Pages and Workflows keep the old chrome, so leaving the desk still
+  feels like leaving — though it no longer renames everything on the way.
+- A replayed window is not re-read by George; the ribbon says so, and the
+  reading still belongs to the earlier window until he is asked.
+- The scope policy is prompt behaviour. It is held by contract tests and by
+  the definitions, and its BEHAVIOUR needs the opt-in live evals to confirm.
+
+### The unresolved one
+
+`startTime` appears nowhere in `frontend/src`. In the production bundle it
+ships from exactly two places, both React 19.2.0's own: the scheduler's timer
+queue (`timer.startTime`, guarded), and the performance-track
+`estimateBandwidth` helper (`overlapEntry.startTime`, whose loop is bounded by
+`resourceEntries.length`). Neither has an unguarded read that static reading
+can fault, no application code ships the identifier, and the service worker
+does not contain it at all.
+
+**What would close it:** the browser console stack trace from a reproduction —
+the frame that threw, and whether it appears with the service worker
+unregistered and with React DevTools disabled. Without that, any change would
+be a guess at somebody else's code.
+
 ## 7. Human dogfood
 
 See the dogfood script in the milestone report. The environment is

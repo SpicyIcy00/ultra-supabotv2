@@ -32,6 +32,12 @@ export interface Placed {
   r: number;
   /** Which side of the object its label sits on, so labels stay inside. */
   labelSide: 'left' | 'right';
+  /**
+   * Where the label's text is drawn, which may be BELOW the object when a
+   * neighbour's name would have overlapped it. The object never moves: its
+   * position is the measurement, and only the words are nudged.
+   */
+  labelY?: number;
 }
 
 export interface FieldGeometry {
@@ -133,13 +139,66 @@ export function layoutField(field: FieldPlan, width: number, height: number): Fi
   });
 
   return {
-    placed,
+    placed: deconflict(placed),
     zeroX: isChange ? scale(0, domainX, plot.left, right) : null,
     zeroY: domainY ? scale(0, domainY, bottom, plot.top) : null,
     domainX,
     domainY,
     plot,
   };
+}
+
+/**
+ * LABELS THAT COLLIDE ARE NOT A SMALLER CHART, THEY ARE A WRONG ONE.
+ *
+ * Each label was drawn at a fixed offset from its object with only a
+ * left/right flip near the right edge, so subjects that sit close together —
+ * which on a plane is exactly the interesting case, everything near the
+ * origin — printed their names on top of each other. A reader then cannot
+ * tell which shop is which, and the drawing has stopped saying anything.
+ *
+ * Two steps, in order:
+ *
+ *   1. NUDGE. Labels are laid out top to bottom and pushed down where one
+ *      would land within a line-height of the one above it. The nudge moves
+ *      the TEXT only — never the object, whose position is the measurement —
+ *      so no figure is misrepresented by a pixel.
+ *   2. GIVE UP HONESTLY. If nudging cannot separate them inside the plot,
+ *      the geometry says so and the field falls back to the ranked list,
+ *      which has one row per subject and cannot overlap at all. A simpler
+ *      representation that communicates is worth more than an interesting
+ *      one that does not (metrics.yaml surface.desk.representation).
+ */
+const LABEL_LINE = 26;
+
+function deconflict(placed: Placed[]): Placed[] {
+  const byY = [...placed].sort((a, b) => a.y - b.y || a.x - b.x);
+  const sides: Placed[][] = [
+    byY.filter((p) => p.labelSide === 'right'),
+    byY.filter((p) => p.labelSide === 'left'),
+  ];
+  const moved = new Map<Placed, number>();
+  for (const side of sides) {
+    let floor = -Infinity;
+    for (const p of side) {
+      const y = Math.max(p.y, floor);
+      moved.set(p, y);
+      floor = y + LABEL_LINE;
+    }
+  }
+  return placed.map((p) => ({ ...p, labelY: moved.get(p) ?? p.y }));
+}
+
+/**
+ * Whether the labels still fit the plot after nudging.
+ *
+ * False means the field must be drawn as a ranked list instead. Read by
+ * `Field` before it chooses a drawing, so the fallback is a property of the
+ * geometry and not a guess made in the component.
+ */
+export function labelsFit(geometry: FieldGeometry, height: number): boolean {
+  const lowest = Math.max(...geometry.placed.map((p) => p.labelY ?? p.y), -Infinity);
+  return !Number.isFinite(lowest) || lowest <= height - 4;
 }
 
 /** The words at the ends of an axis: which way is more, in the tool's own terms. */

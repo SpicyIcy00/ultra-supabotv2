@@ -162,7 +162,10 @@ def test_the_contract_is_recorded_in_the_definitions():
 def _rule_17() -> str:
     source = _LOOP.read_text(encoding="utf-8")
     start = source.index("17. THE READER DOES NOT KNOW")
-    return source[start : source.index('""" + INVESTIGATING_SECTION', start)]
+    # The numbered rules end where the built sections are appended. Keyed on
+    # the closing quotes rather than on which section comes first, so adding a
+    # section in front of INVESTIGATING does not silently empty this slice.
+    return source[start : source.index('""" + ', start)]
 
 
 def test_the_prompt_forbids_internal_vocabulary_in_an_answer():

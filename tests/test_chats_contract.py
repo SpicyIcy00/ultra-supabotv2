@@ -211,3 +211,49 @@ def test_a_row_without_a_thread_is_its_own_thread():
     cid = uuid.uuid4()
     turns = build_turns([_row(cid, None, "q", "a")], {}, {}, {}, {})
     assert turns[1]["done"]["thread_id"] == str(cid)
+
+
+# ---------------------------------------------------------------------------
+# 4. The route reads the columns that exist
+# ---------------------------------------------------------------------------
+#
+# Page Workshop V1 replaced george.pins.page (text) with page_id (FK) and
+# migrated the ORM path. Two raw statements in get_chat kept selecting the
+# dropped column, so EVERY call to GET /george/chats/{id} raised
+# UndefinedColumnError — 11 of 11 in the 2026-09-09 dogfood — and the desk
+# could never load a thread's history. These hold the fix without a database.
+
+def _get_chat_sql() -> str:
+    import inspect as _inspect
+
+    from app.api.v1.routes.george import get_chat
+
+    return _inspect.getsource(get_chat)
+
+
+def test_get_chat_never_selects_the_dropped_pins_page_column():
+    sql = _get_chat_sql()
+    # The bare column is gone from the table. Any raw reference to it — in a
+    # select list, a GROUP BY or a predicate — is the bug that shipped.
+    assert "SELECT id, title, page," not in sql
+    assert "GROUP BY page" not in sql
+    assert "FROM george.pins p " in sql
+
+
+def test_get_chat_reads_the_page_title_through_the_foreign_key():
+    sql = _get_chat_sql()
+    # `page` is the TITLE of the page a pin sits on (george_pin.GeorgePin.page),
+    # so raw SQL has to join for it. LEFT, because Ungrouped is page_id IS NULL
+    # and must stay NULL rather than dropping the pin from the result.
+    assert sql.count("LEFT JOIN george.pages pg ON pg.id = p.page_id") == 2
+    assert "pg.title AS page" in sql
+
+
+def test_the_pin_model_has_no_page_column_to_select():
+    from app.models.george_pin import GeorgePin
+
+    columns = {c.name for c in GeorgePin.__table__.columns}
+    assert "page_id" in columns
+    # If this ever comes back as a real column, the join above is wrong and
+    # this test is the place that says so.
+    assert "page" not in columns

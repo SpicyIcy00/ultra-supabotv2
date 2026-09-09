@@ -1219,6 +1219,109 @@ record).
   offer the one move the ladder is built around. `breakdown_dimensions` on the
   desk definitions is computed from `metrics.yaml` and served.
 
+*Understood 2026-09-09, after the second human dogfood.* The workspace was
+coherent and still felt like a chatbot with charts: a broad question came back
+with one figure, the screen went empty the moment anybody asked anything, a
+follow-up after a reload had no memory of what it was following up, and George
+waited to be told where to look. Nine decisions, each recorded because the code
+cannot say why. The full record is
+[ops/EXPERIENCE_RESET_V1.md](ops/EXPERIENCE_RESET_V1.md) section 6c.
+
+- **The desk OPENS the thread it is on, and that is what gives George a
+  memory.** `useGeorgeStream` sends the history it holds and it holds nothing
+  until a thread is opened into it. Nothing in the desk ever called `open`, so
+  after any reload a question travelled with an empty history, no `thread_id`
+  and — because the hook drops a parent when it has no thread — no
+  `parent_id`. Every follow-up silently began a NEW thread. Inside one
+  unbroken session it worked, because the first turn's own frame set the
+  thread, and that is exactly why it failed "sometimes". Both reads it needed
+  already existed and were already documented as existing for this purpose:
+  the river's thread read is what is SHOWN, the chats read is what George is
+  TOLD, and `threadHistory` merges them.
+- **How much George READS is decided by scope; how much he SHOWS is decided by
+  what the figures establish.** These are two dials and both used to be set to
+  narrow. "THE SMALLEST SURFACE THAT COMPLETELY ANSWERS THE QUESTION" governed
+  every message including "how are we doing?", and it is why a broad intent
+  came back with a single number. It is replaced by
+  `investigation.scope`: a BROAD message is investigated without asking where
+  to look — the headline set grouped by store, one grouped call per metric,
+  then one localization on whichever driver moved more; a FOCUSED one is not
+  widened because it could be; an AMBIGUOUS one is resolved from the
+  workspace before anybody is asked anything. **Clarification is not the
+  default**: a question that could have been answered from the screen is a
+  question that should not have been asked.
+- **A message is not always a question.** The prompt described questions and
+  answers and nothing else, so an observation was answered as though it had
+  been asked. `investigation.message_kinds` names the five other things a
+  person sends — intent, instruction, observation, correction, steering — and
+  an observation is a PREMISE, verified before it is used, exactly as the
+  ladder verifies one.
+- **The workspace never blanks, and it FORMS.** Asking at rest made the live
+  turn the work in focus before it had read anything; a surface with no
+  evidence composes to `statement`, which drew nothing, and the resting
+  figures went with it. So work with no evidence yet does not replace what is
+  on screen. Nothing new was built for the forming: `composeDesk` is pure over
+  whatever results exist and a live turn accumulates them frame by frame, so
+  the workspace already assembled itself as reads landed — the empty case was
+  simply winning first.
+- **The instruction appears before the request opens.** `ask` appends the user
+  turn synchronously, so it is available on the very next render. Until now
+  nothing drew it and the only acknowledgement was a truncated line above the
+  composer, which is why a submitted question could not be told from one that
+  never sent.
+- **Watching George work is two clauses of business language, not a log.**
+  What he has read and what he is reading, both through the vocabulary the
+  mark's narration already used (`cognition.describeCall`), which derives from
+  the arguments the loop actually dispatched. No plan, no stage, no checklist:
+  there is no such thing on the wire and inventing one would narrate work that
+  is not happening. The reads themselves are already visible — they become the
+  workspace.
+- **A finding is the unit of a broad answer, and it is not a second primary
+  fact.** `plan.attention` was already plural, per-subject and tool-derived,
+  and `attentionWords` joined the whole of it into one run-on sentence under
+  one hero chart: ten discoveries arrived and one line went out. Unflattened,
+  each is a subject, the fact a tool established about it, that subject's own
+  figures and the one move that investigates it. They are several readings of
+  the SAME grouped read, which is why **the one-primary rule in
+  `agent/findings.py` is untouched** and must stay so. There is no score, no
+  rating and no composite anywhere in them; order is by which KIND of fact,
+  never by magnitude, so no ranking is invented on top of the tool's own.
+- **The workspace tells George what it is showing, and it is all names.**
+  `desk_sentence` returned nothing unless something was selected, so a
+  question asked from a full screen said nothing about what the person was
+  looking at — and "show me", "is that actually bad?" and "what would you do?"
+  had no referent at all. It now carries what is DRAWN, what the rows singled
+  out and the move already offered, each checked against a vocabulary in
+  `metrics.yaml` before it is repeated (`surface.desk.context`). **Nothing on
+  that channel is a figure**, and George still reads every number from a tool
+  result.
+- **Which metrics break down by which subject is STATED, not discovered by
+  refusal.** One `group_by` enum cannot depend on another argument's value, so
+  the schema offers the union of every metric's `valid_group_by` — George was
+  offered `product` for net sales and then refused for it, and the ladder's
+  central move looked unavailable until a call had already failed. The matrix
+  is now a sentence built from the same entry `agent/findings.py` validates
+  against, so he cannot be told one thing and held to another.
+- **A window label never sits over figures read for another window.** The
+  ribbon moved on the click and the replay followed, so between them the chip
+  said one window over another window's numbers — and a failed replay left it
+  there. The state now moves only when the rows arrive, the pending window is
+  drawn as pending, and the line says the figures below are still the earlier
+  window's.
+- **A legible drawing beats an interesting one.** Labels were placed at a
+  fixed offset with only a left/right flip, so subjects sitting close together
+  — on a plane, exactly the interesting case — printed their names on top of
+  each other. Labels are nudged apart with a leader line, the OBJECT never
+  moves because its position is the measurement, and where nudging cannot
+  separate them inside the plot the field falls back to the ranked list, which
+  cannot overlap at all.
+- **One environment has one set of names.** Home, Needs you, Running and Kept
+  were typed in the desk's sidebar and typed again — as Desk, Inbox,
+  Workflows and Pages — in the shell's rail, so leaving the desk renamed every
+  destination. Both render `shellNav.PRIMARY` now, and a count is attached by
+  PATH rather than by label so renaming a word cannot move a number onto the
+  wrong entry.
+
 ### These rules are already backed by the tool contract
 
 Rules 3, 4 and 6 are not aspirations the frontend has to invent — every tool

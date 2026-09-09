@@ -16,7 +16,8 @@
  * direct_manipulation); the page asks George for interpretation, and the
  * selection travels with the question as context (deskContextFor).
  */
-import type { DeskContext, DeskWindow } from '../../types/george';
+import type { DeskContext, DeskDrawn, DeskWindow } from '../../types/george';
+import type { DeskLayout } from './deskCompose';
 import type { Surface } from '../george/surfaceCompose';
 import { sameSubject, subjectFromLabel, type Dimension, type Subject } from './subject';
 
@@ -109,7 +110,11 @@ export function deskReducer(state: DeskState, action: DeskAction): DeskState {
  * Ids and labels the rows carried, and the window. Nothing else: not what is
  * open, not which step is being looked at, and never a figure.
  */
-export function deskContextFor(state: DeskState): DeskContext | null {
+export function deskContextFor(
+  state: DeskState,
+  layout?: DeskLayout | null,
+  recommendation?: { ground: string; action: { question: string | null } } | null,
+): DeskContext | null {
   const out: DeskContext = {};
   if (state.selection.length > 0) {
     out.selection = {
@@ -118,7 +123,90 @@ export function deskContextFor(state: DeskState): DeskContext | null {
     };
   }
   if (state.window) out.window = state.window;
-  return out.selection || out.window ? out : null;
+
+  // WHAT IS ON SCREEN, WHETHER OR NOT ANYTHING IS SELECTED.
+  //
+  // A selection used to be the only thing on this channel, so a full
+  // workspace with nothing clicked told George nothing at all — and the
+  // short steers that matter most ("show me", "is that actually bad?")
+  // refer to the workspace, not to the transcript. Read off the layout the
+  // composer produced, capped by the definitions' own bound, and never a
+  // figure: a representation, a dimension, subject NAMES, the metric's
+  // display label, and whether the figures carry a comparison.
+  if (layout) {
+    const drawn = drawnFrom(layout);
+    if (drawn) out.drawn = drawn;
+    const marks = layout.attention
+      .slice(0, MAX_ATTENTION)
+      .map((a) => ({ subject: a.subject, reason: a.reason }));
+    if (marks.length > 0) out.attention = marks;
+  }
+  if (recommendation) {
+    out.recommendation = {
+      ground: recommendation.ground,
+      question: recommendation.action.question,
+    };
+  }
+
+  return out.selection || out.window || out.drawn || out.attention || out.recommendation
+    ? out
+    : null;
+}
+
+/** The definitions cap this at 6; the server refuses past its own copy. */
+const MAX_ATTENTION = 6;
+/** And this at 12 — the same bound a selection has. */
+const MAX_DRAWN = 12;
+
+/**
+ * The layout as the four facts George needs to know what he is looking at.
+ *
+ * Names only. The subjects are the labels already drawn on screen, which came
+ * off rows the tools returned; the metric label is the tool's own
+ * `metric_label`; the representation is the one the composer chose. Nothing
+ * is parsed out of prose and nothing is a value.
+ */
+function drawnFrom(layout: DeskLayout): DeskDrawn | null {
+  const stage = layout.stage;
+  const field =
+    stage.kind === 'field' ? stage.field
+      : stage.kind === 'anatomy' ? stage.breakdown
+        : stage.kind === 'compare' ? stage.fields[0] ?? null
+          : null;
+
+  const subjects =
+    stage.kind === 'anatomy'
+      ? [stage.anatomy.subject.label, ...(stage.breakdown?.objects.map((o) => o.subject.label) ?? [])]
+      : stage.kind === 'compare'
+        ? stage.subjects.map((s) => s.subject.label)
+        : field
+          ? field.objects.map((o) => o.subject.label)
+          : [];
+
+  const representation =
+    stage.kind === 'field' ? stage.field.representation
+      : stage.kind === 'anatomy' ? stage.breakdown?.representation ?? 'anatomy'
+        : stage.kind === 'compare' ? stage.fields[0]?.representation ?? 'compare'
+          : stage.kind;
+
+  const meta = layout.headlineMeta;
+  const metricLabel = typeof meta?.metric_label === 'string' ? meta.metric_label : null;
+  const compared = Boolean(meta?.comparison?.baseline);
+
+  if (stage.kind === 'statement' && subjects.length === 0 && !metricLabel) return null;
+
+  const subjectDimension =
+    stage.kind === 'anatomy' ? stage.anatomy.subject.dimension
+      : stage.kind === 'compare' ? stage.subjects[0]?.subject.dimension ?? null
+        : null;
+
+  return {
+    representation,
+    dimension: field?.dimension ?? subjectDimension,
+    subjects: [...new Set(subjects)].slice(0, MAX_DRAWN),
+    metric_label: metricLabel,
+    compared,
+  };
 }
 
 /**

@@ -70,6 +70,14 @@ export interface LiveActivity {
   running: { tool: string; arguments: Record<string, unknown> }[];
   /** The newest completed call, so the line can say what came back. */
   lastResult: LastResult | null;
+  /**
+   * Every call that has COMPLETED in the newest turn, in the order the loop
+   * dispatched them, with the arguments it sent. The desk's work line reads
+   * these to say what George has done so far, in the same vocabulary
+   * `describeCall` uses for what he is doing now — so watching a turn is one
+   * sentence of business language and never a list of calls.
+   */
+  completed: { tool: string; arguments: Record<string, unknown> }[];
   /** The reasoning arriving now, raw; the components take the last clause. */
   thinking: string;
   /** How many results have landed in the newest turn — one beat each. */
@@ -92,7 +100,7 @@ export interface LiveActivity {
  */
 export function liveActivity(turns: GeorgeTurn[]): LiveActivity {
   const none: LiveActivity = {
-    running: [], lastResult: null, thinking: '', toolResults: 0, figures: 0,
+    running: [], lastResult: null, completed: [], thinking: '', toolResults: 0, figures: 0,
   };
   const last = turns[turns.length - 1];
   if (last?.role !== 'george' || last.done || last.cancelled) return none;
@@ -110,6 +118,9 @@ export function liveActivity(turns: GeorgeTurn[]): LiveActivity {
           error: newest.result?.error ?? null,
         }
       : null,
+    completed: [...done]
+      .sort((a, b) => a.seq - b.seq)
+      .map((c) => ({ tool: c.tool, arguments: c.arguments })),
     thinking: last.thinking,
     toolResults: done.length,
     figures: done.filter(

@@ -31,6 +31,8 @@ import { Anatomy } from './Anatomy';
 import { Compare } from './Compare';
 import { Field } from './Field';
 import { Caveats } from './CaveatNotes';
+import { FindingList } from './FindingList';
+import type { DeskFinding } from './findings';
 import type { DeskActionItem } from './deskActions';
 import type { DeskLayout, FieldPlan, Receded } from './deskCompose';
 import { leadAndRest } from './conclusion';
@@ -52,6 +54,14 @@ export interface AnswerProps {
   moves: DeskActionItem[];
   onAction: (action: DeskActionItem) => void;
   onInspect: () => void;
+  /** What the rows singled out, each with its own figures (findings.ts). */
+  findings?: DeskFinding[];
+  /** Open a finding's subject on the workspace. */
+  onOpenSubject?: (subject: Subject) => void;
+  /** Ask a finding's own next question. */
+  onAskQuestion?: (question: string) => void;
+  /** The move that investigates one finding further, when the ladder has one. */
+  moveFor?: (finding: DeskFinding) => { label: string; question: string } | null;
 }
 
 /**
@@ -178,6 +188,7 @@ function Suggestion({ recommendation, onAction }: {
 export function Answer({
   layout, selection, onSelect, reading = [], asList = false, prose = '',
   recommendation, moves, onAction, onInspect,
+  findings = [], onOpenSubject, onAskQuestion, moveFor,
 }: AnswerProps) {
   const stage = layout.stage;
 
@@ -234,14 +245,49 @@ export function Answer({
           />
         )}
 
-        {stage.kind === 'figures' && <ResultSurface blocks={stage.blocks} large />}
+        {/* THE FALLBACK, AND IT SAYS SO. A time series or a mixed result the
+            desk grammar cannot place is still drawn — dropping a read the
+            receipts record would be hiding work that happened — but through
+            the older primitives, whose visual language is not this one. It is
+            named rather than passed off as the workspace's own drawing. */}
+        {stage.kind === 'figures' && (
+          <div data-figures-fallback>
+            <ResultSurface blocks={stage.blocks} large />
+          </div>
+        )}
+
+        {/* NOTHING IS DRAWN YET, AND THAT IS A STATE OF ITS OWN (UI rule 8).
+            It is reached while a piece of work is still reading and before its
+            first result lands. The workspace above keeps whatever it had, so
+            this is never the whole screen; it exists so the region is never
+            silently empty. */}
+        {stage.kind === 'statement' && !prose && (
+          <p className="py-6 text-[13px] text-george-muted" data-statement>
+            Nothing drawn yet.
+          </p>
+        )}
       </div>
 
-      {/* What the data singles out: a characterisation of rows, no figure. */}
-      {layout.attentionLine && (
-        <p data-attention-line className="mt-6 max-w-2xl border-l-2 border-george-navy pl-3 text-[14px] leading-relaxed text-george-navy">
-          {layout.attentionLine}
-        </p>
+      {/* WHAT GEORGE FOUND. The same per-subject marks the attention line used
+          to join into one sentence, drawn as the findings they are — each with
+          the subject's own figures and its own next move. The line remains for
+          the case findings cannot serve: a single subject on screen, where the
+          anatomy above already says everything a finding would. */}
+      {findings.length > 0 && onOpenSubject ? (
+        <div className="mt-8">
+          <FindingList
+            findings={findings}
+            onOpen={onOpenSubject}
+            onAsk={onAskQuestion}
+            moveFor={moveFor}
+          />
+        </div>
+      ) : (
+        layout.attentionLine && (
+          <p data-attention-line className="mt-6 max-w-2xl border-l-2 border-george-navy pl-3 text-[14px] leading-relaxed text-george-navy">
+            {layout.attentionLine}
+          </p>
+        )
       )}
 
       {/* George's own words, briefly. */}

@@ -417,9 +417,18 @@ def test_a_caveat_is_levelled_by_consequence_and_never_shows_a_diagnostic():
 def test_the_sidebar_is_navigation_and_the_reading_is_with_the_work():
     """The left column holds no answer prose; George's reading is in the work."""
     sidebar = (_FRONT / "components" / "desk" / "Sidebar.tsx").read_text(encoding="utf-8")
-    # Navigation into the states of one environment.
-    for entry in ("Home", "Needs you", "Running", "Kept", "History"):
-        assert f'label="{entry}"' in sidebar, entry
+
+    # NAVIGATION INTO THE STATES OF ONE ENVIRONMENT, AND ONE SET OF NAMES.
+    # These words used to be typed here AND typed again, differently, in the
+    # shell rail — so leaving the desk renamed every destination. Both now
+    # render shellNav.PRIMARY, which is checked here rather than a copy of it:
+    # a hardcoded list in this column is exactly how the two drifted apart.
+    assert "PRIMARY.map" in sidebar and "shellNav" in sidebar
+    nav = (_FRONT / "components" / "shell" / "shellNav.ts").read_text(encoding="utf-8")
+    for entry in ("Home", "Needs you", "Running", "Kept"):
+        assert f"label: '{entry}'" in nav, entry
+    # History is a state of this environment and not a route, so it stays here.
+    assert 'label="History"' in sidebar
     # And none of what belongs with the work.
     for forbidden in ("Prose", "conclusion", "ReceiptsBlock", "recommendation", "attentionLine"):
         assert forbidden not in sidebar, f"the sidebar draws {forbidden!r}"

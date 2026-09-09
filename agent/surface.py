@@ -181,15 +181,130 @@ def _window_words(window: Mapping[str, Any]) -> Optional[str]:
     return None
 
 
+def _names(labels: list[str]) -> str:
+    """A list of names, in words. Cleaned like every other client-supplied label."""
+    parts = [_clean_label(x) for x in labels]
+    parts = [p for p in parts if p]
+    if not parts:
+        return ""
+    if len(parts) == 1:
+        return parts[0]
+    return ", ".join(parts[:-1]) + " and " + parts[-1]
+
+
+_ATTENTION_WORDS = {
+    "against_the_majority": "moved against the way the rest moved",
+    "ranked_first": "is the largest measured change",
+}
+
+
+def _drawn_words(drawn: Mapping[str, Any], defs: Mapping[str, Any]) -> Optional[str]:
+    """
+    What is on screen, in words: the representation, the subjects and the
+    metric. Every value is checked against the definitions' own vocabularies
+    before it is repeated, so a client cannot put a sentence of its own into
+    George's context by naming a representation that does not exist.
+    """
+    kinds = [str(k) for k in req(defs, "surface.desk.representation.kinds")]
+    dims = [str(d) for d in req(defs, "surface.desk.selection.dimensions")]
+    cap = int(req(defs, "surface.desk.context.max_drawn_subjects"))
+
+    representation = drawn.get("representation")
+    dimension = drawn.get("dimension")
+    subjects = [x for x in (drawn.get("subjects") or []) if isinstance(x, str)][:cap]
+    metric = _clean_label(drawn.get("metric_label")) if drawn.get("metric_label") else ""
+
+    if representation not in kinds:
+        representation = None
+    if dimension not in dims:
+        dimension = None
+    if representation is None and not subjects and not metric:
+        return None
+
+    said = "the workspace is showing"
+    if metric:
+        said += f" {metric}"
+    if dimension and subjects:
+        noun = _NOUN.get(dimension, dimension)
+        plural = "" if len(subjects) == 1 else "s"
+        said += f" for the {noun}{plural} {_names(subjects)}"
+    elif dimension:
+        said += f" by {_NOUN.get(dimension, dimension)}"
+    if drawn.get("compared") is True:
+        said += ", compared with the period before"
+    if representation:
+        said += f" (drawn as {representation})"
+    return said
+
+
+def _attention_words(marks: list[Any], defs: Mapping[str, Any]) -> Optional[str]:
+    """What the data has already singled out, by subject and trusted reason."""
+    allowed = [str(r) for r in req(defs, "surface.desk.context.attention_reasons")]
+    cap = int(req(defs, "surface.desk.context.max_attention"))
+    by_reason: dict[str, list[str]] = {}
+    for m in marks[:cap]:
+        if not isinstance(m, Mapping):
+            continue
+        reason = m.get("reason")
+        subject = _clean_label(m.get("subject"))
+        if reason not in allowed or not subject:
+            continue
+        names = by_reason.setdefault(str(reason), [])
+        if subject not in names:
+            names.append(subject)
+    said = [
+        f"{_names(names)} {_ATTENTION_WORDS[reason]}"
+        for reason, names in by_reason.items()
+        if reason in _ATTENTION_WORDS and names
+    ]
+    if not said:
+        return None
+    return "the figures already single out " + "; ".join(said)
+
+
+def _recommendation_words(rec: Mapping[str, Any], defs: Mapping[str, Any]) -> Optional[str]:
+    """The move already offered, so it is not offered again under another name."""
+    grounds = [str(g) for g in req(defs, "surface.desk.initiative.recommend.grounded_in")]
+    if rec.get("ground") not in grounds:
+        return None
+    question = _clean_label(rec.get("question")) if rec.get("question") else ""
+    if not question:
+        return "the workspace has already offered a next move"
+    return f"the workspace has already offered the next move '{question}'"
+
+
 def desk_sentence(desk: Optional[Mapping[str, Any]], defs: Mapping[str, Any]) -> Optional[str]:
     """
-    One line naming what is on the desk: the selected subjects, and the
-    window the work was re-read for. Names and a window only — no figure.
+    One line naming what the person is looking at.
+
+    WHAT IT SAYS AND WHY. Until 2026-09-09 this returned None unless something
+    was selected or a window had been moved, so a question asked from a full
+    workspace with nothing clicked told George nothing about what was on
+    screen. Short steers refer to the WORKSPACE — "show me", "is that
+    actually bad?", "what would you do?" — and they had no referent at all.
+
+    Four things now travel, and every one of them is a name, a count or a word
+    from a vocabulary declared in metrics.yaml (surface.desk.context):
+
+      drawn           the representation, the metric, the subjects on screen
+      selection       what the person has clicked, ids off rows
+      attention       what the tools' own rows singled out, by trusted reason
+      recommendation  the move already offered, by its ground
+
+    NOTHING HERE IS A FIGURE, and every value is checked against the
+    definitions before it is repeated. George is told what he is looking at;
+    he still reads every number from a tool result.
     """
     if not desk:
         return None
     dims = list(req(defs, "surface.desk.selection.dimensions"))
     parts: list[str] = []
+
+    drawn = desk.get("drawn")
+    if isinstance(drawn, Mapping):
+        words = _drawn_words(drawn, defs)
+        if words:
+            parts.append(words)
 
     sel = desk.get("selection") or {}
     dimension = sel.get("dimension") if isinstance(sel, Mapping) else None
@@ -202,6 +317,18 @@ def desk_sentence(desk: Optional[Mapping[str, Any]], defs: Mapping[str, Any]) ->
             plural = "" if len(subjects) == 1 else "s"
             parts.append(f"the user has selected the {noun}{plural} {words} on the surface")
 
+    marks = desk.get("attention")
+    if isinstance(marks, list):
+        words = _attention_words(marks, defs)
+        if words:
+            parts.append(words)
+
+    rec = desk.get("recommendation")
+    if isinstance(rec, Mapping):
+        words = _recommendation_words(rec, defs)
+        if words:
+            parts.append(words)
+
     window = desk.get("window")
     if isinstance(window, Mapping):
         when = _window_words(window)
@@ -211,11 +338,11 @@ def desk_sentence(desk: Optional[Mapping[str, Any]], defs: Mapping[str, Any]) ->
     if not parts:
         return None
     return (
-        "[On the desk: " + "; ".join(parts) + ". A short instruction — why, compare "
-        "these, products — applies to that selection: read for these subjects by "
-        "name, keep the work's window and comparison, answer from figures already "
-        "on the surface where they hold the answer, and record findings for any "
-        "new read so it joins the same surface.]"
+        "[On the desk: " + "; ".join(parts) + ". A short instruction — why, show "
+        "me, compare these, products, what would you do — applies to THIS work: "
+        "read for these subjects by name, keep the work's window and comparison, "
+        "answer from figures already on the surface where they hold the answer, "
+        "and record findings for any new read so it joins the same surface.]"
     )
 
 

@@ -86,7 +86,7 @@ function george(extra: Partial<Extract<GeorgeTurn, { role: 'george' }>> = {}): G
 describe('liveActivity', () => {
   it('is empty when there is no turn, or the newest is the person’s', () => {
     expect(liveActivity([])).toEqual({
-      running: [], lastResult: null, thinking: '', toolResults: 0, figures: 0,
+      running: [], lastResult: null, completed: [], thinking: '', toolResults: 0, figures: 0,
     });
     expect(liveActivity([{ role: 'user', text: 'x', at: '' }]).running).toEqual([]);
   });
