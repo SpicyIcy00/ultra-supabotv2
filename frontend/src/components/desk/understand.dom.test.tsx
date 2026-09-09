@@ -28,6 +28,7 @@ const opened: { turns: unknown[]; thread: string | null }[] = [];
 const stream = {
   turns: [] as Record<string, unknown>[],
   busy: false,
+  errored: false,
   threadId: null as string | null,
   running: [] as { tool: string; arguments: Record<string, unknown> }[],
   completed: [] as { tool: string; arguments: Record<string, unknown> }[],
@@ -70,8 +71,10 @@ vi.mock('../../services/deskApi', () => ({
 }));
 vi.mock('../../hooks/useGeorge', () => ({
   useGeorge: () => ({
-    turns: stream.turns, state: stream.busy ? 'running' : 'idle',
-    presence: stream.busy ? 'running' : 'idle', busy: stream.busy,
+    turns: stream.turns,
+    state: stream.errored ? 'error' : stream.busy ? 'running' : 'idle',
+    presence: stream.errored ? 'error' : stream.busy ? 'running' : 'idle',
+    busy: stream.busy,
     live: {
       running: stream.running, completed: stream.completed,
       lastResult: null, thinking: '', toolResults: stream.completed.length, figures: 0,
@@ -117,7 +120,7 @@ afterEach(cleanup);
 beforeEach(() => {
   readRiver.mockReset(); readThread.mockReset(); getChat.mockReset(); replayCalls.mockReset();
   asked.length = 0; opened.length = 0;
-  stream.turns = []; stream.busy = false; stream.threadId = null;
+  stream.turns = []; stream.busy = false; stream.errored = false; stream.threadId = null;
   stream.running = []; stream.completed = [];
   readRiver.mockResolvedValue({ posts: [], before: null });
   readThread.mockResolvedValue([]);
@@ -236,6 +239,48 @@ describe('3. a question is never refused because George is busy', () => {
     fireEvent.change(container.querySelector('textarea')!, { target: { value: 'Products.' } });
     // The moment there is something to send, the button sends it.
     expect(container.querySelector('[aria-label="Send"]')).toBeTruthy();
+  });
+});
+
+/* --------------------------------------------------------------- failure -- */
+
+describe('3b. a turn that failed says so', () => {
+  it('reports the failure instead of leaving the screen unchanged', async () => {
+    // THE FAILURE: the stream recorded an error frame on the turn and the desk
+    // drew neither it nor the state. A turn that died left the screen exactly
+    // as it was, so a failed answer and a message that never sent looked
+    // identical — which is what "no message is sending" looks like from the
+    // outside. Observed on the local dogfood, where the model key is omitted
+    // by design and every question errored silently.
+    stream.busy = false;
+    stream.errored = true;
+    stream.turns = [
+      { role: 'user', text: 'How are we doing?', at: '2026-09-09T10:00:00+08:00' },
+      {
+        role: 'george', text: '', thinking: '', toolCalls: [], notices: [],
+        pinned: [], saved: [], pageChanges: [], at: '2026-09-09T10:00:00+08:00',
+        error: 'TypeError: Could not resolve authentication method.',
+      },
+    ];
+    const { container } = mount('/');
+    await waitFor(() => expect(container.querySelector('[data-failure]')).toBeTruthy());
+    const said = container.querySelector('[data-failure]')!.textContent ?? '';
+    expect(said).toContain('couldn’t answer');
+    expect(said).toContain('nothing was lost');
+    // The server's own words are kept, but behind a disclosure — an exception
+    // string in the reading order is the debug text this workspace forbids.
+    const detail = container.querySelector('[data-failure-detail]')!;
+    expect(detail.textContent).toContain('Could not resolve authentication method');
+    expect(detail.closest('details')).toBeTruthy();
+    // And the workspace it failed over is still on screen.
+    await waitFor(() =>
+      expect(container.querySelectorAll('[data-object], [data-subject]').length).toBeGreaterThan(0));
+  });
+
+  it('says nothing about failure when nothing failed', async () => {
+    const { container } = mount('/');
+    await waitFor(() => expect(container.querySelector('[data-desk]')).toBeTruthy());
+    expect(container.querySelector('[data-failure]')).toBeNull();
   });
 });
 

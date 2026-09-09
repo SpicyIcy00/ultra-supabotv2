@@ -78,8 +78,12 @@ function Opening() {
  * drawing what it has and then FORMS as each result lands. Nothing is
  * replaced by a spinner and nothing is hidden while he works.
  */
-function Working({ asked, sentence }: { asked: string | null; sentence: string | null }) {
-  if (!asked && !sentence) return null;
+function Working({ asked, sentence, failure }: {
+  asked: string | null;
+  sentence: string | null;
+  failure: string | null;
+}) {
+  if (!asked && !sentence && !failure) return null;
   return (
     <div className="mb-8 border-l-2 border-george-line pl-4" data-working>
       {asked && (
@@ -87,10 +91,31 @@ function Working({ asked, sentence }: { asked: string | null; sentence: string |
           {asked}
         </p>
       )}
-      {sentence && (
+      {sentence && !failure && (
         <p className="mt-1.5 text-[12px] leading-relaxed text-george-slate" data-work-line>
           {sentence}
         </p>
+      )}
+
+      {/* A TURN THAT FAILED SAYS SO, IN WORDS, AND KEEPS ITS DETAIL BEHIND A
+          DISCLOSURE. Drawing nothing meant a failed answer and a message that
+          never sent looked identical from the outside. The server's own text
+          is the truth and is kept — but it is an exception string, and an
+          exception string in the reading order is the debug text this
+          workspace is not allowed to show. It is navy, never the accent:
+          nothing here needs doing (UI rule 5). */}
+      {failure && (
+        <div className="mt-2" data-failure>
+          <p className="text-[14px] leading-relaxed text-george-navy">
+            George couldn’t answer that. Your question is saved — nothing was lost.
+          </p>
+          <details className="mt-1">
+            <summary className="cursor-pointer text-[12px] text-george-slate">What went wrong</summary>
+            <p className="mt-1 max-w-2xl break-words text-[12px] leading-relaxed text-george-muted" data-failure-detail>
+              {failure}
+            </p>
+          </details>
+        </div>
       )}
     </div>
   );
@@ -175,7 +200,7 @@ export function Desk({
               )}
 
               {/* The instruction, immediately; then the work, as it happens. */}
-              <Working asked={desk.asked} sentence={workSentence(desk.work)} />
+              <Working asked={desk.asked} sentence={workSentence(desk.work)} failure={desk.failure} />
 
               {!desk.loading && !desk.failed && !desk.unavailable && (
                 <Answer

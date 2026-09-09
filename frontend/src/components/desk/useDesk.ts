@@ -437,6 +437,28 @@ export function useDesk(threadId: string | undefined) {
     return null;
   }, [merged.pending]);
 
+  /**
+   * A TURN THAT FAILED SAYS SO.
+   *
+   * The stream records the error frame on the turn and sets its state; the
+   * desk drew neither, so a turn that died — a dropped connection, a model
+   * the server cannot reach, a refusal upstream — left the screen exactly as
+   * it was. The person had typed something, watched nothing happen, and had
+   * no way to tell a failed answer from a message that never sent. That is
+   * what "no message is sending" looks like from the outside.
+   *
+   * Read from the newest George turn, so it survives the turn being stored
+   * and stops the moment the next question is asked.
+   */
+  const failure = useMemo(() => {
+    if (george.state !== 'error') return null;
+    for (let i = george.turns.length - 1; i >= 0; i -= 1) {
+      const turn = george.turns[i];
+      if (turn.role === 'george') return turn.error ?? 'Unknown error';
+    }
+    return null;
+  }, [george.state, george.turns]);
+
   /** What George is doing to the business, from frames that actually arrived. */
   const work = useMemo(
     () => workLine({ running: george.live.running, completed: george.live.completed }, george.busy),
@@ -467,6 +489,8 @@ export function useDesk(threadId: string | undefined) {
     work,
     /** What he found: a few subjects the rows singled out, with their figures. */
     findings,
+    /** Why the last turn produced no answer, when one failed. */
+    failure,
     /** The ladder's next move for one finding, or null. */
     moveFor,
     compared,
