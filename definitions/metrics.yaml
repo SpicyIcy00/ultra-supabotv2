@@ -3196,6 +3196,96 @@ purchasing:
 
   # Not answerable. The receipt date lives only in free-text notes, which are
   # deliberately not parsed (storehub.notes.parse_received_date: false).
+  # ---------------------------------------------------------------------------
+  # PURCHASE PLANNING. Added 2026-09-09, and it exists to replace a chore done
+  # by hand: export sales from StoreHub, look at them per supplier, and order
+  # enough of each product to last.
+  #
+  # Goods land at AJI BARN and are distributed from there, so demand is the
+  # whole retail estate's and the stock position is the estate plus the
+  # warehouse.
+  # ---------------------------------------------------------------------------
+  plan:
+    # WHO SUPPLIES A PRODUCT IS INFERRED FROM HISTORY, NOT DECLARED. There is
+    # no supplier column on products and no supplier master
+    # (suppliers.purchase_orders.supplier_master_exists: false), so the only
+    # link is what was bought from whom before.
+    #
+    # MEASURED 2026-09-09: 650 of 3,723 products appear on a purchase order
+    # with a supplier — 608 with exactly one, 42 with more than one. Of the
+    # 1,130 products that sold in the previous 90 days, only 456 can be traced
+    # to a supplier at all. A plan therefore covers roughly two selling
+    # products in five, and MUST say so: a supplier's plan that silently omits
+    # three fifths of what they supply reads as a complete order.
+    supplier_link:
+      derived_from: "purchase_order_lines.product_id -> purchase_orders.supplier_name"
+      is_declared: false
+      products_with_a_supplier: 650
+      products_with_exactly_one: 608
+      products_with_several: 42
+      selling_products_90d: 1130
+      selling_products_traceable: 456
+      ambiguous_notice_kind: supplier_ambiguous
+      coverage_notice_kind: supplier_coverage
+      coverage_notice_mandatory: true
+
+    # THE COVER PERIOD IS A JUDGEMENT, NOT A DEFINITION. Confirmed with the
+    # business 2026-09-09: there is no rule — it is decided per order, per
+    # supplier, each time. So a tool NEVER invents one. Without it the plan
+    # reports demand, stock and how long the stock will last; with it, and only
+    # then, it reports a quantity to order.
+    cover_days:
+      is_a_business_rule: false
+      supplied_by: caller
+      invent_a_default: false
+
+    demand:
+      lookback_days: 90
+      scope: active_retail          # the warehouse does not sell
+      excludes_cancelled: true
+      units_column: "ti.quantity"
+
+    # A NEGATIVE ON HAND IS READ AS NONE AT THAT LOCATION, NEVER AS A DEFICIT.
+    #
+    # This is the most important line in this section. shipment_plans sizes its
+    # request as (min_level - on_hand) against the raw figure, and on the
+    # 2026-09-06 run 662 lines with a negative on hand accounted for 59,715 of
+    # the 95,799 units requested — 62% of that plan — because a reading of
+    # -174,877 adds its own magnitude to the order. Purchasing must not repeat
+    # it: a broken record means the stock is unknown, not that 174,877 units
+    # are owed. The raw sum is reported beside the planning figure so nothing
+    # is hidden.
+    negative_on_hand:
+      read_as: none_at_that_location
+      never_as_a_deficit: true
+      raw_sum_also_reported: true
+      notice_kind: purchase_plan_negative_on_hand
+      notice_mandatory: true
+
+    # A RATE MEASURED WHILE A PRODUCT WAS UNAVAILABLE UNDERSTATES DEMAND. Days
+    # with no sellable stock anywhere are counted and reported per product, and
+    # they NEVER adjust the rate: inflating a measured figure to what it might
+    # have been is inventing a sale. The reader decides what to do about it,
+    # which is the same judgement the cover period already is.
+    availability:
+      flag_only: true
+      adjusts_the_rate: false
+      source: inventory.history
+      notice_kind: demand_suppressed_by_stockouts
+
+    # What is already coming. `Open` does not mean `not received`
+    # (purchasing.open_is_not_outstanding), so an on-order quantity may already
+    # be on the shelf and the notice is mandatory.
+    on_order:
+      source: open purchase order lines
+      may_already_have_arrived: true
+
+    # Nothing records when goods actually arrived, so a plan cannot add cover
+    # for the wait. Stated on every result rather than silently omitted.
+    lead_time_available: false
+
+    max_rows: 300
+
   delivery_lead_time_supported: false
   delivery_lead_time_refusal: >
     Delivery lead time is not answerable from this data. Nothing records when
@@ -3569,6 +3659,74 @@ notices:
       # with an AttributeError — verified 2026-09-03, this exact line. Same for
       # yes/on/off/null/~ anywhere in a fingerprint.
       - ["no", not exist, unknown, not found]
+  # ---- stock history (2026-09-09) -----------------------------------------
+  negative_on_hand:
+    must_convey:
+      - [negative]
+      - [record, records, stock, reading, readings, "on hand"]
+  replenishment_days_of_stock_tail:
+    must_convey:
+      - [cover, "days of stock", "days of cover"]
+      - ["not", trickle, unreliable, "real", huge, misleading]
+  history_coverage:
+    must_convey:
+      - [day, days]
+      - ["no record", "no stock record", "not read", missing, gap, "without"]
+  # ---- replenishment (2026-09-09) -----------------------------------------
+  replenishment_partial_run:
+    must_convey:
+      - [shop, shops, store, stores]
+      - ["not", only, some, fewer, partial, "did not"]
+  replenishment_run_stale:
+    must_convey:
+      - [calculated, planned, "worked out", ran, run]
+      - ["days ago", since, old, "not today", earlier]
+  replenishment_allocation_not_binding:
+    must_convey:
+      - [ship, shipped, sent, shipment, confirmed, moved]
+      - ["not", "does not", "no", "may not"]
+  replenishment_fallback_velocity:
+    must_convey:
+      - [demand, "sales rate", "how fast", "how much"]
+      - [understate, low, unavailable, "out of stock", starved, slow]
+  replenishment_mixed_algorithms:
+    must_convey:
+      - [method, methods, way, ways, calculation]
+      - ["more than one", two, both, mixed, different]
+  replenishment_negative_on_hand:
+    must_convey:
+      - [negative]
+      - [record, records, stock, reading, readings]
+  # ---- purchase planning (2026-09-09) --------------------------------------
+  supplier_coverage:
+    must_convey:
+      - [supplier, suppliers]
+      - ["not", cannot, "no record", unknown, "part of", missing, "some"]
+  supplier_ambiguous:
+    must_convey:
+      - [supplier, suppliers]
+      - [also, another, "more than one", different, other]
+  purchase_plan_negative_on_hand:
+    must_convey:
+      - [negative]
+      - [record, records, stock, reading, readings]
+  demand_suppressed_by_stockouts:
+    must_convey:
+      - ["out of stock", "nothing on the shelf", unavailable, "no stock", "not on the shelf"]
+      - [understate, "would have sold", "more than", low, suppressed]
+  purchasing_open_not_outstanding:
+    must_convey:
+      - [open]
+      - ["not", "may already", "already arrived", received, "may have"]
+  delivery_lead_time_unsupported:
+    must_convey:
+      - [arrive, arrived, arrival, delivery, wait, "lead time"]
+      - ["not", nothing, "no record", "does not", "cannot"]
+  cover_period_not_chosen:
+    must_convey:
+      - ["how long", cover, last, period]
+      - ["no", "not", say, choose, "tell me", "give"]
+
   ambiguous_sku:
     must_convey:
       - [different products, three products, more than one product, several products, multiple products]
@@ -4073,11 +4231,17 @@ workflows:
       get_vending: date_range
       get_purchasing: date_range
       get_dead_stock: window
+      get_purchase_plan: lookback_days
 
     # The window rebinds, but one side of the answer is still read live. Real
     # and useful, and it must say so — reporting it as fully reproduced would
     # attribute a present-day fact to a past morning.
     partially_reproducible:
+      get_purchase_plan: >
+        The sales window rebinds, but stock on hand and what is on order are
+        read LIVE: a backtest reports today's shelf against a past period's
+        demand. Useful for checking how a rule would have sized an order, and
+        never a reconstruction of the shelf as it was that morning.
       get_dead_stock: >
         The sales window rebinds, but the stock side is read live: a backtest
         shows which products are held TODAY and had no sale during the past

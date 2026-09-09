@@ -77,7 +77,40 @@ def emitted_kinds() -> dict[str, str]:
                 continue
             for name in _kind_names(node.values[keys.index("kind")]):
                 found.setdefault(name, path.name)
+
+    # A BLIND SPOT THIS TEST HAD UNTIL 2026-09-09, and it hid fourteen kinds.
+    #
+    # A tool may pick its kind from the definitions rather than write it inline
+    # — `{"kind": _req(hist, "coverage_notice_kind"), ...}` — and to the AST
+    # that value is a Call, not a string. Both halves of this file were wrong
+    # about such a notice at once: it looked unfingerprinted from one side and
+    # its fingerprint looked dead from the other, so adding the fingerprint
+    # broke the very test that asked for it.
+    #
+    # The declarations ARE the source of truth for those, so read them: any
+    # string in metrics.yaml under a key named `notice_kind` or ending in
+    # `_notice_kind` is a kind some tool emits.
+    for key, name in _declared_kinds(yaml.safe_load(
+            (ROOT / "definitions" / "metrics.yaml").read_text(encoding="utf-8"))):
+        found.setdefault(name, f"metrics.yaml: {key}")
     return found
+
+
+def _declared_kinds(node, path: str = "") -> list[tuple[str, str]]:
+    """Every (yaml path, kind) declared under a `*notice_kind` key."""
+    out: list[tuple[str, str]] = []
+    if isinstance(node, dict):
+        for k, v in node.items():
+            here = f"{path}.{k}" if path else str(k)
+            if isinstance(k, str) and isinstance(v, str) and (
+                    k == "notice_kind" or k.endswith("_notice_kind")):
+                out.append((here, v))
+            else:
+                out.extend(_declared_kinds(v, here))
+    elif isinstance(node, list):
+        for i, v in enumerate(node):
+            out.extend(_declared_kinds(v, f"{path}[{i}]"))
+    return out
 
 
 def _kind_names(value: ast.expr) -> list[str]:

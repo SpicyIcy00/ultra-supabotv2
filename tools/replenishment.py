@@ -492,6 +492,23 @@ def get_replenishment(
                         "source": "definitions/metrics.yaml: replenishment.negative_on_hand",
                     })
 
+            # A cover figure in the thousands is not a cover figure. Say so
+            # when one is on screen rather than letting it read as 419,916
+            # days of stock.
+            dos = _req(rep, "days_of_stock")
+            absurd_above = int(_req(dos, "absurd_above"))
+            wild = [r for r in rows if (r.get("days_of_stock") or 0) > absurd_above]
+            if wild:
+                notices.append({
+                    "kind": _req(dos, "notice_kind"),
+                    "message": (
+                        f"{len(wild)} of these lines show more than {absurd_above:,} days of "
+                        f"cover. That is a product with a trickle of sales and some stock, not a "
+                        f"real cover figure, and nothing here is ranked or averaged on it."
+                    ),
+                    "source": "definitions/metrics.yaml: replenishment.days_of_stock",
+                })
+
             alloc = _req(rep, "allocation")
             if view == "plan" and rows and _req(alloc, "defaults_to_requested"):
                 notices.append({
