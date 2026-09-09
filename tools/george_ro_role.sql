@@ -63,12 +63,46 @@ GRANT SELECT ON
     shipment_plans
 TO george_ro;
 
+-- ===========================================================================
+-- A GRANT IS NOT ENOUGH ON ITS OWN. Learned 2026-09-10, the hard way.
+--
+-- Row-level security is ENABLED on most tables in this database, so a role
+-- with SELECT and no POLICY reads zero rows and the tool reports the table as
+-- empty. That is the worst possible failure mode: not "permission denied",
+-- which names itself, but a confident "no runs have ever been recorded" about
+-- a table holding 125,283 of them.
+--
+-- Every business table George reads therefore needs BOTH:
+--
+--     GRANT SELECT ON <table> TO george_ro;
+--     CREATE POLICY george_ro_read ON <table> FOR SELECT TO george_ro USING (true);
+--
+-- The policy name is the convention already used on inventory,
+-- inventory_snapshots and new_transactions. `products` is readable by a
+-- public policy instead, and `purchase_orders` has RLS off entirely — three
+-- different arrangements, which is why this has to be CHECKED per table
+-- rather than assumed:
+--
+--     SELECT c.relname, c.relrowsecurity,
+--            (SELECT count(*) FROM pg_policies p WHERE p.tablename = c.relname)
+--     FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+--     WHERE n.nspname = 'public' AND c.relname = '<table>';
+--
+-- RLS enabled with zero policies means George sees nothing.
+-- ===========================================================================
+
+-- 3b. Policies for the tables that have RLS enabled.
+CREATE POLICY george_ro_read ON shipment_plans FOR SELECT TO george_ro USING (true);
+
 -- ---------------------------------------------------------------------------
 -- IF THE ROLE ALREADY EXISTS, the statement above is not enough on its own —
 -- running the whole script again would fail at CREATE ROLE. Apply just the new
 -- grant instead:
 --
 --     GRANT SELECT ON shipment_plans TO george_ro;
+--     CREATE POLICY george_ro_read ON shipment_plans FOR SELECT TO george_ro USING (true);
+--
+-- Both. A grant without a policy reads zero rows under RLS.
 --
 -- Until that is applied, get_replenishment refuses with a message naming this
 -- file rather than leaking a raw permission error.
