@@ -4028,3 +4028,108 @@ pushback:
   # Said once. The second time the user asks, George does it.
   complies_when_insisted: true
   max_restatements: 1
+
+
+# =============================================================================
+# SURFACE — the work in front of the user, as a definition. Added 2026-09-09,
+# Generative Workspace V3.
+#
+# George decides WHAT matters; deterministic code decides how trusted data
+# becomes pixels (frontend/src/components/george/surfaceCompose.ts). This block
+# records the vocabulary both sides read, so neither can drift from the other:
+# the closed set of refinements a surface may offer, the words that must never
+# reach a reader, and the wording rule for transactions.
+#
+# EXECUTES NOTHING. Nothing here is a threshold, a score or a formula. The
+# composer ranks by role and folds by scope; attention is the tool's own
+# direction and ranking, or absent (surface.attention below says so in as many
+# words, because a future "importance score" is the obvious thing to add here
+# and it must not be).
+# =============================================================================
+surface:
+  introduced: "2026-09-09"
+  executes_nothing: true
+
+  # What a piece of work IS ABOUT versus how it is being LOOKED AT. Identity
+  # ends a surface when it changes; shape never does. Subjects are handled by
+  # relation (same, expanded, narrowed keep the work; disjoint starts new
+  # work) — see surfaceAnchor.ts, which is the code this describes.
+  identity: [business, window, population_filters]
+  shape: [comparison, grouping, metric, subjects]
+
+  # The one question the composer asks: the smallest surface that completely
+  # answers this. Ranks are by role; context is folded — never dropped — when
+  # it reaches outside the anchor's subjects.
+  ranks: [primary, supporting, context]
+  minimum_sufficient: true
+
+  # The refinements a surface may offer, and the seam a click or a spoken
+  # phrase crosses to become one. Each is an op plus a value taken from trusted
+  # state, never from the DOM and never from prose (surfaceEvents.ts). Offered
+  # only where the metric's own `valid_group_by` and `drivers` permit.
+  refinements: [explain, break_down, compare_subject, focus_subject]
+
+  # Attention is what the DATA singles out. Two sources, both the tool's:
+  attention:
+    reasons: [against_the_majority, ranked_first]
+    score: not_supported
+    threshold: not_supported
+    severity: not_supported
+    reason_not_supported: >
+      A score, a threshold or a severity would be a business definition nobody
+      has set, applied as arithmetic in the presentation layer. Attention is
+      communicated by ordering, emphasis, annotation and grouping from facts
+      the tools already established.
+
+  # Prose is INTERPRETATION once the figures are drawn.
+  prose:
+    # Sentences of prose when the drawn figures already carry the answer. Not
+    # a hard cap — a caveat or an uncertainty that needs explaining may take
+    # more — but the default the prompt asks for.
+    sentences_when_drawn: 3
+    # Words that must never reach a reader. The loop scans the answer for
+    # these and records a gap; the prompt (rule 17 and SURFACE) forbids them.
+    # Whole-word, case-insensitive. Not a licence to be vague: the caveat is
+    # rewritten in business words, never dropped.
+    leaks:
+      - get_sales
+      - get_stock
+      - get_product
+      - get_movement
+      - get_vending
+      - get_vending_stock
+      - get_dead_stock
+      - get_purchasing
+      - get_cost_history
+      - get_brief
+      - view_page
+      - record_findings
+      - group_by
+      - rank_by
+      - compare_to
+      - top_n
+      - date_range
+      - change_pct
+      - baseline_status
+      - call_seq
+      - metrics.yaml
+      - biggest_drop
+      - biggest_gain
+      - previous_period
+      - "unchanged from a moment ago"
+      - "regardless of capitalisation"
+      - "regardless of capitalization"
+    # A transaction is a transaction. None of these is established as its
+    # meaning by any definition in this file; the loop records a gap when one
+    # appears beside transaction figures, and the prompt says not to.
+    transaction_synonyms_not_established:
+      - customers
+      - people
+      - visits
+      - visitors
+      - traffic
+      - footfall
+      - shoppers
+    causal_words_to_avoid:
+      - caused
+      - because of
