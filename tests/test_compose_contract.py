@@ -152,7 +152,7 @@ def test_every_block_has_a_key_and_keys_are_unique(defs):
         {"kind": "table", "key": "same", "seq": 1},
         {"kind": "table", "key": "same", "seq": 1},
     ], defs)
-    assert any("used twice" in r["reason"] for r in rejected)
+    assert any("edited twice" in r["reason"] for r in rejected)
 
 
 def test_a_key_is_a_slug(defs):
@@ -204,3 +204,80 @@ def test_the_vocabulary_is_the_definitions(defs):
         assert spec["about"], f"{kind} has no meaning"
         assert isinstance(spec["needs"], list)
     assert "hero" in voc["widgets"] and "draft" in voc["widgets"] and "text" in voc["widgets"]
+
+
+# ---------------------------------------------------------------------------
+# THE BOARD (2026-09-10). A composition is a set of edits to something that
+# persists, so most of what a follow-up does is change one object rather than
+# redraw a screen. The rules that matter are the ones that stop a partial edit
+# from becoming a lie: a quiet or a drop may not smuggle a figure, and a change
+# of subject must name the read the subject comes from.
+# ---------------------------------------------------------------------------
+
+def test_put_is_what_an_edit_is_when_nothing_says_otherwise(defs):
+    accepted, rejected = only([{"kind": "table", "key": "shops", "seq": 1}], defs)
+    assert rejected == []
+    assert accepted[0]["op"] == "put"
+
+
+def test_quiet_and_drop_name_a_key_and_nothing_else(defs):
+    accepted, rejected = only([
+        {"op": "quiet", "key": "shops"},
+        {"op": "drop", "key": "old-thing"},
+    ], defs)
+    assert rejected == []
+    assert accepted[0] == {"op": "quiet", "key": "shops", "weight": "quiet"}
+    assert accepted[1] == {"op": "drop", "key": "old-thing"}
+
+    _, rejected = only([{"op": "quiet", "key": "shops", "seq": 1}], defs)
+    assert "names a key and nothing else" in rejected[0]["reason"]
+
+
+def test_a_change_may_move_prominence_alone(defs):
+    accepted, rejected = only([{"op": "change", "key": "shops", "weight": "lead"}], defs)
+    assert rejected == []
+    assert accepted[0] == {"op": "change", "key": "shops", "weight": "lead"}
+
+
+def test_a_change_of_subject_must_name_the_read_it_comes_from(defs):
+    """Otherwise the object claims to be about something its rows never carried."""
+    accepted, rejected = only([{"op": "change", "key": "shops", "subject": "OPUS"}], defs)
+    assert accepted == []
+    assert "name the read it comes from" in rejected[0]["reason"]
+
+    accepted, rejected = only([{"op": "change", "key": "shops", "seq": 1, "subject": "OPUS"}], defs)
+    assert rejected == []
+    assert accepted[0]["subject"] == "OPUS" and accepted[0]["seq"] == 1
+
+    # And the subject still has to be a row of that read.
+    accepted, rejected = only([{"op": "change", "key": "s", "seq": 1, "subject": "Shangri-La"}], defs)
+    assert accepted == [] and "no row for" in rejected[0]["reason"]
+
+
+def test_a_change_has_to_change_something(defs):
+    accepted, rejected = only([{"op": "change", "key": "shops"}], defs)
+    assert accepted == [] and "change something" in rejected[0]["reason"]
+
+
+def test_one_object_is_edited_once_per_turn(defs):
+    accepted, rejected = only([
+        {"op": "quiet", "key": "a"},
+        {"op": "drop", "key": "a"},
+    ], defs)
+    assert len(accepted) == 1
+    assert "edited twice in one turn" in rejected[0]["reason"]
+
+
+def test_an_unknown_op_is_refused(defs):
+    accepted, rejected = only([{"op": "explode", "key": "a"}], defs)
+    assert accepted == [] and "is not one of" in rejected[0]["reason"]
+
+
+def test_the_ops_are_the_definitions(defs):
+    voc = req(defs, "composition")
+    assert set(voc["ops"]) == {"put", "change", "quiet", "drop"}
+    assert voc["default_op"] == "put"
+    assert voc["change_subject_requires_seq"] is True
+    assert int(voc["max_objects"]) >= 8
+    for name, spec in voc["ops"].items():
+        assert spec["about"], f"{name} has no meaning"

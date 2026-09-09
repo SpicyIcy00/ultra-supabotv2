@@ -31,6 +31,13 @@ already lives by:
   - KEYS TRANSFORM. A key is a short slug; a later composition that uses the
     same key is the same object changing, which is what keeps the workspace
     from stacking.
+  - A COMPOSITION IS A SET OF EDITS, NOT A SCREEN (2026-09-10). `put`,
+    `change`, `quiet` and `drop` apply to a board that persists between turns,
+    so an object George does not mention this turn simply stays — with its own
+    read, its own receipts and its own read time. Only `put` needs a whole
+    block; the other three need a key and what is changing. A `change` that
+    names a subject must name the read it comes from, or George could rename
+    what an object is about while it still draws an older read's rows.
 
 It opens no connection, holds nothing, and its result names no source table,
 for the reason findings.py gives: the loop keeps the last meta that describes
@@ -97,6 +104,9 @@ def validate(
     chart_forms = set(voc.get("chart_forms", []))
     state_labels = set(voc.get("state_labels", []))
 
+    ops: Mapping[str, Any] = voc["ops"]
+    default_op = str(voc["default_op"])
+
     accepted: list[dict] = []
     rejected: list[dict] = []
     keys_seen: set[str] = set()
@@ -123,15 +133,70 @@ def validate(
                     f"draws (metrics.yaml composition.allowed_fields)"
                 )
 
-            kind = item.get("kind")
-            if kind not in widgets:
-                raise Rejected(f"{kind!r} is not a widget (metrics.yaml composition.widgets)")
+            op = item.get("op", default_op)
+            if op not in ops:
+                raise Rejected(f"{op!r} is not one of {', '.join(ops)} (metrics.yaml composition.ops)")
 
             key = item.get("key")
             if not isinstance(key, str) or not key_re.match(key):
                 raise Rejected("every block needs a short key like 'rockwell' or 'seikyo-order'")
             if key in keys_seen:
-                raise Rejected(f"key {key!r} is used twice")
+                raise Rejected(f"key {key!r} is edited twice in one turn")
+
+            # An edit to something already on the board carries only what
+            # changes. Nothing here can name a figure, so a partial edit is as
+            # safe as a whole one — with the one exception below.
+            if op in ("drop", "quiet"):
+                for field in ("kind", "seq", "subject", "subjects", "form", "label"):
+                    if field in item:
+                        raise Rejected(f"a {op} names a key and nothing else; drop {field!r}")
+                keys_seen.add(key)
+                edit = {"op": op, "key": key}
+                if op == "quiet":
+                    edit["weight"] = "quiet"
+                accepted.append(edit)
+                continue
+
+            kind = item.get("kind")
+            if op == "change" and kind is None:
+                # Changing prominence, or which read an object draws, without
+                # restating what kind of object it is.
+                weight = item.get("weight")
+                if weight is not None and weight not in weights:
+                    raise Rejected(f"weight {weight!r} is not one of {', '.join(weights)}")
+                if weight == "lead" and voc.get("one_lead") and lead_key is not None:
+                    raise Rejected(f"only one block leads, and {lead_key!r} already does")
+                edit = {"op": "change", "key": key}
+                if weight:
+                    edit["weight"] = weight
+                    if weight == "lead":
+                        lead_key = key
+                if "seq" in item:
+                    call = _read(calls, item.get("seq"))
+                    edit["seq"] = item["seq"]
+                    edit["tool"] = call.get("tool")
+                    for field in ("subject", "subjects", "form", "label"):
+                        if field in item:
+                            edit[field] = item[field]
+                    if isinstance(edit.get("subject"), str) and not _row_has(call, edit["subject"]):
+                        raise Rejected(f"read {item['seq']} has no row for {edit['subject']!r}")
+                    for s in edit.get("subjects") or []:
+                        if not isinstance(s, str) or not _row_has(call, s):
+                            raise Rejected(f"read {item['seq']} has no row for {s!r}")
+                elif voc.get("change_subject_requires_seq") and ("subject" in item or "subjects" in item):
+                    # Otherwise the object would claim to be about something the
+                    # rows it still draws never carried.
+                    raise Rejected(
+                        "to change what an object is about, name the read it comes from too"
+                    )
+                if len(edit) == 2:
+                    raise Rejected("a change has to change something: a weight, or a read and subject")
+                keys_seen.add(key)
+                accepted.append(edit)
+                continue
+
+            if kind not in widgets:
+                raise Rejected(f"{kind!r} is not a widget (metrics.yaml composition.widgets)")
 
             weight = item.get("weight", "supporting")
             if weight not in weights:
@@ -142,7 +207,7 @@ def validate(
                 raise Rejected(f"only one block leads, and {lead_key!r} already does")
 
             needs = list(widgets[kind].get("needs") or [])
-            block: dict[str, Any] = {"kind": kind, "key": key, "weight": weight}
+            block: dict[str, Any] = {"op": op, "kind": kind, "key": key, "weight": weight}
 
             if "seq" in needs:
                 call = _read(calls, item.get("seq"))
@@ -222,9 +287,10 @@ def compose(blocks: Any, *, calls: Mapping[int, Mapping[str, Any]],
             "rejected": rejected,
             "widgets": list(vocabulary(defs)["widgets"]),
             "note": (
-                "How the workspace is composed, from reads that already ran. "
-                "Nothing was read. A refused block is not drawn and the answer "
-                "must not describe the screen as showing it."
+                "How the board changed, from reads that already ran. Nothing "
+                "was read, and nothing you did not name has moved. A refused "
+                "edit did not happen and the answer must not describe the "
+                "board as though it did."
             ),
         },
     }

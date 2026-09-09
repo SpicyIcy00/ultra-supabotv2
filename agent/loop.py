@@ -492,6 +492,9 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
             "items": {
                 "type": "object",
                 "properties": {
+                    "op": {"type": "string", "enum": list(voc["ops"]),
+                           "description": "put a new object, change one already there, "
+                                          "quiet it, or drop it. Defaults to put."},
                     "kind": {"type": "string", "enum": list(voc["widgets"])},
                     "key": {"type": "string", "pattern": voc["key_pattern"],
                             "description": "a short slug naming this object; a later turn that "
@@ -507,7 +510,7 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
                     "form": {"type": "string", "enum": list(voc["chart_forms"])},
                     "label": {"type": "string", "enum": list(voc["state_labels"])},
                 },
-                "required": ["kind", "key"],
+                "required": ["key"],
                 "additionalProperties": False,
             },
         }
@@ -1067,21 +1070,41 @@ def _composing_section(defs: dict) -> str:
     """
     voc = req(defs, "composition")
     kinds = "\n".join(f"  {k} — {v['about']}" for k, v in req(voc, "widgets").items())
+    ops = "\n".join(f"  {k} — {v['about']}" for k, v in req(voc, "ops").items())
     weights = ", ".join(str(w) for w in req(voc, "weights"))
     return f"""
-COMPOSING THE WORKSPACE
+THE BOARD
 
-The screen is not a transcript. It is ONE piece of work that you compose from what you read, and the person works inside it. After your reads return and before you write the answer, call compose once with the blocks that should be on screen, in order, from this closed vocabulary:
+The person is not reading your answers. They are working on a BOARD, and you work on it with them. It holds objects — a shop, a draft order, a table, your reading of something — and each one stays exactly where it is, drawing the read it was made from, until somebody moves it. It is not a page you redraw and it is not a transcript.
+
+So `compose` does not describe a screen. It is a set of EDITS to that board:
+
+{ops}
+
+**An object you do not mention does not move.** That is the most important sentence here. If the board holds a supplier's draft order and the person then asks about a shop's week, you put the shop on the board and say NOTHING about the draft — it stays, with its own figures and its own read time. Composing it again to keep it would replace it with today's reads, and dropping it because you are not talking about it would throw away their work.
+
+WHAT AN OBJECT CAN BE:
 
 {kinds}
 
-Each block names the read it draws from by meta.call_seq and, where it is about one thing, a subject that is a value in that read's rows — a shop, a product, a supplier, exactly as the row spells it. Give every block a short key ("rockwell", "seikyo-order", "shops"): a follow-up about the same thing composes the SAME key, so the object on screen changes in place instead of being drawn again beneath itself. Weight is {weights}: exactly one block leads and the eye goes to it first; what supports it sits beside it; what is on screen because it is true rather than because it matters is quiet. A hero is the lead by definition, and there is at most one.
+Every edit names a short key you choose — "rockwell", "seikyo-order", "shops". The key IS the object: an edit with a key already on the board changes that object in place, which is how a follow-up transforms the work instead of adding to it. A `put` needs the whole object; `change`, `quiet` and `drop` need the key and only what is changing.
 
-WHAT COMPOSING IS. Judgment made visible. A question about one shop leads with that shop. "How are we doing?" leads with the one thing that most needs attention and places the rest beside it, quiet. A ranked read leads with the subject that matters and keeps the table behind it. "What do I need from Seikyo?" leads with the draft. A process question leads with its state. A composition where everything has the same weight has not been composed.
+Weight is {weights}. Exactly one object leads and the eye goes to it first; what supports it sits beside it; what is on screen because it is true rather than because it matters is quiet. Making something new the lead pushes the old lead down on its own — you do not have to demote it.
 
-WHAT IT IS NOT. A figure, a colour, a size, a title, a layout. Every number on screen is drawn by the system from a row of the read a block names; you choose the row, never the value. A block carrying anything beyond the fields above is refused, and a refused block is not on screen — never describe the screen as showing something the compose result rejected.
+HOW A CONVERSATION MOVES THE BOARD. Looking at Rockwell, and they say:
+  "Products"          — change the Rockwell object to the product read, same key. The board does not gain a second Rockwell.
+  "Compare with OPUS" — change it to a comparison of both, or put OPUS beside it. Both are on the same board either way.
+  "Why?"              — put the evidence next to what is already there and quiet what it displaced. Do not start a new page.
+  "Not that"          — drop it.
+A short follow-up almost never needs a `put` of everything. It is usually one `change`.
 
-Your prose goes in a text block, placed where it belongs: leading when the reading matters more than any one figure, supporting when the figures carry the answer. A plain factual question needs one figure or one subject leading and your text beside it. A comparison of a few subjects from one read is a comparison. A read you answered from an earlier turn's results needs no new read, but the screen is still yours to compose — say what stays and what changes, by key. If a later read changes what should be on screen, call compose again; the newest composition replaces the earlier one.
+WHAT COMPOSING IS. Judgment made visible. A question about one shop leads with that shop. "How are we doing?" leads with the one thing that most needs attention and puts the rest beside it, quiet. A ranked read leads with the subject that matters and keeps the table behind it. "What do I need from Seikyo?" leads with the draft. A composition where everything has the same weight has not been composed.
+
+CHOOSE THE FORM, NOT JUST THE FACT. Eight weeks of one shop is a distribution or a chart, not a table. Seven shops ranked is a comparison of the two that matter with the table quiet behind them. One number that answers the question outright is a figure. A process — a run, a plan, something waiting — is a state. Reaching for a table every time is not composing.
+
+WHAT IT IS NOT. A figure, a colour, a size, a title, a layout. Every number on screen is drawn by the system from a row of the read an object names; you choose the row, never the value. To change what an object is ABOUT you must name the read it comes from as well, or it would claim to be about something its rows never carried. An edit carrying anything else is refused, and a refused edit did not happen — never describe the board as though it did.
+
+Your prose is an object too: a text block with a key. Give it the same key each time and your reading transforms with everything else instead of piling up. Put it where it belongs — leading when the reading matters more than any single figure, supporting when the figures carry the answer.
 """
 
 

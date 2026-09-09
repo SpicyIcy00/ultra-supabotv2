@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import type { GeorgeNotice, ToolMeta } from '../types/george';
+import { sorted, type Local } from './board';
 import { changeOf, rowFor, subjectOf, valueOf, type Resolved } from './composition';
 
 /* ------------------------------------------------------------ formatting */
@@ -142,6 +143,15 @@ export interface WidgetProps {
   r: Resolved;
   selected: boolean;
   onSelect?: (subject: string) => void;
+  /**
+   * WHAT THE PERSON HAS DONE TO THIS OBJECT — a sort, an expansion. Theirs,
+   * not George's, applied on top of what he composed and never sent back to
+   * him as though he had decided it. Nothing in here is or produces a figure:
+   * sorting rows the read returned is reordering, not computing, which is why
+   * it can happen instantly instead of costing a turn.
+   */
+  local?: Local;
+  setLocal?: (patch: Local) => void;
   /** George's prose, for the text widget. */
   text?: string;
   notices?: GeorgeNotice[];
@@ -258,12 +268,14 @@ export function ComparisonWidget({ r, selected, onSelect }: WidgetProps) {
   );
 }
 
-export function TableWidget({ r }: WidgetProps) {
-  const rows = r.rows.slice(0, 40);
+export function TableWidget({ r, local, setLocal }: WidgetProps) {
+  const sort = local?.sort;
+  const rows = sorted(r.rows, sort).slice(0, 40);
   // A small table folded to its heading is a card that reads
   // "PRODUCT REVENUE · 5 ROWS" and nothing else — quiet is not the same as
   // empty. Only a long one is worth folding away.
-  const [open, setOpen] = useState(r.block.weight !== 'quiet' || r.rows.length <= 8);
+  const open = local?.open ?? (r.block.weight !== 'quiet' || r.rows.length <= 8);
+  const setOpen = (v: boolean) => setLocal?.({ open: v });
   if (!rows.length) return <Missing what="rows" />;
   const meta = r.call?.result?.meta;
 
@@ -298,13 +310,27 @@ export function TableWidget({ r }: WidgetProps) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
         <p className="ws-mk">{[title, `${r.rows.length} rows`, ...constant].join(' · ')}</p>
         {r.rows.length > 8 && (
-          <button className="ws-word" style={{ margin: 0 }} onClick={() => setOpen((o) => !o)}>{open ? 'less' : 'show'}</button>
+          <button className="ws-word" style={{ margin: 0 }} onClick={() => setOpen(!open)}>{open ? 'less' : 'show'}</button>
         )}
       </div>
       {open && (
         <div style={{ overflowX: 'auto', marginTop: 12 }}>
           <table className="ws-rows">
-            <thead><tr>{shown.map((c) => <th key={c} className={typeof rows[0][c] === 'number' ? 'n' : ''}>{c.replace(/_/g, ' ')}</th>)}</tr></thead>
+            <thead>
+              <tr>
+                {shown.map((c) => (
+                  <th
+                    key={c}
+                    className={`${typeof rows[0][c] === 'number' ? 'n' : ''} ws-sortable`}
+                    aria-sort={sort?.column === c ? (sort.desc ? 'descending' : 'ascending') : 'none'}
+                    onClick={() => setLocal?.({ sort: { column: c, desc: sort?.column === c ? !sort.desc : true } })}
+                  >
+                    {c.replace(/_/g, ' ')}
+                    {sort?.column === c && <span className="ws-sort-mark">{sort.desc ? '▾' : '▴'}</span>}
+                  </th>
+                ))}
+              </tr>
+            </thead>
             <tbody>
               {rows.map((row, i) => (
                 <tr key={i}>{shown.map((c) => <td key={c} className={typeof row[c] === 'number' ? 'n' : ''}>{c === 'change_pct' ? <Delta row={row} /> : cell(c, row)}</td>)}</tr>
@@ -474,10 +500,47 @@ function measureOf(meta: ToolMeta | null | undefined, key: string): string {
 /** Widgets that are a scrollbar in a quarter column, whatever their weight. */
 const NEEDS_ROOM = new Set(['table', 'chart', 'distribution', 'draft', 'comparison']);
 
-export function Wrap({ weight, kind, children, live }: { weight: string; kind?: string; children: ReactNode; live?: boolean }) {
+/**
+ * The frame every object on the board sits in.
+ *
+ * It carries the two things that are the PERSON'S and not George's: bring this
+ * forward, and set this aside. Both are instant — they change which object
+ * leads and what is on screen, and neither can produce, alter or hide a
+ * figure, so neither has any business costing a model turn. Before this, three
+ * things on the whole surface responded to touch and two of them were toggles.
+ *
+ * "From earlier" is on an object the newest turn did not touch. It is not
+ * decoration: the board deliberately mixes reads taken at different moments,
+ * and each object's own receipts carry its own read time — this says at a
+ * glance which ones to check.
+ */
+export function Wrap({ weight, kind, children, live, earlier, focused, onFocus, onClose }: {
+  weight: string;
+  kind?: string;
+  children: ReactNode;
+  live?: boolean;
+  earlier?: boolean;
+  focused?: boolean;
+  onFocus?: () => void;
+  onClose?: () => void;
+}) {
   // A FLOOR ON ROOM, NOT A CHANGE OF WEIGHT. A quiet table stays quiet — no
   // shadow, muted ground — but a table in three columns of twelve is a
   // horizontal scrollbar, which is what the first dogfood put on screen.
   const roomy = weight === 'quiet' && kind && NEEDS_ROOM.has(kind);
-  return <div className={`ws-w-${weight}${roomy ? ' ws-w-roomy' : ''} ${live ? 'ws-in' : ''}`}>{children}</div>;
+  return (
+    <div className={`ws-obj ws-w-${weight}${roomy ? ' ws-w-roomy' : ''} ${live ? 'ws-in' : ''}`}>
+      <div className="ws-obj-bar">
+        {earlier && <span className="ws-obj-age">from earlier</span>}
+        <span style={{ flex: 1 }} />
+        {onFocus && (
+          <button type="button" className="ws-obj-btn" onClick={onFocus}>
+            {focused ? 'release' : 'focus'}
+          </button>
+        )}
+        {onClose && <button type="button" className="ws-obj-btn" onClick={onClose}>set aside</button>}
+      </div>
+      {children}
+    </div>
+  );
 }

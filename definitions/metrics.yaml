@@ -4847,9 +4847,49 @@ composition:
   # changes rather than being drawn again beneath itself.
   key_pattern: "^[a-z0-9][a-z0-9-]{0,30}$"
 
+  # ---------------------------------------------------------------------------
+  # THE BOARD. Added 2026-09-10, and it is the difference between a screen and
+  # a place.
+  #
+  # Until now a composition WAS the screen: whatever George composed this turn
+  # was drawn, and everything from the turn before disappeared. That made the
+  # workspace a function of the last question — ask about Seikyo, then ask
+  # about North Edsa, and the draft order is gone. A workspace holds things.
+  #
+  # So a composition is now a set of EDITS to a board that persists. An object
+  # George does not mention stays exactly as it was, with its own receipts and
+  # its own read time. He adds, changes, pushes aside and removes; he never
+  # redraws what he has not touched.
+  # ---------------------------------------------------------------------------
+  ops:
+    put:
+      about: "put an object on the board, or replace the one under this key"
+      needs_full_block: true
+    change:
+      about: "change an object already on the board — what it shows, or how much it matters"
+      needs_full_block: false
+    quiet:
+      about: "push an object aside without removing it: still true, no longer the point"
+      needs_full_block: false
+    drop:
+      about: "take an object off the board — it is finished, or it was wrong"
+      needs_full_block: false
+  default_op: put
+
+  # A board is bounded, and the bound is the person's attention rather than a
+  # technical limit. When it is exceeded the OLDEST QUIET object leaves first:
+  # what was pushed aside longest ago is what nobody is coming back to.
+  max_objects: 12
+
+  # A CHANGE THAT NAMES A SUBJECT MUST NAME ITS READ. Without this, George
+  # could rename what an object is about while it still draws an older read's
+  # rows — a subject the data behind it never carried. Weight may change on its
+  # own, because a weight is not a figure.
+  change_subject_requires_seq: true
+
   # Anything not in this list on a block is refused with the block. This is
   # the list that keeps a choice from becoming a value.
-  allowed_fields: [kind, key, weight, seq, subject, subjects, form, label]
+  allowed_fields: [op, kind, key, weight, seq, subject, subjects, form, label]
 
 surface:
   introduced: "2026-09-09"

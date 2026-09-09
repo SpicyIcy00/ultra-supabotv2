@@ -1,18 +1,21 @@
 /**
- * The workspace: one piece of work, composed by George, on a calm ground.
+ * The workspace: a board you work on, with George.
  *
- * WHAT IS ON SCREEN. The newest answer's composition, at full size. Earlier
- * turns of the same thread sit beneath it, folded to one line each — history,
- * not a feed. Your own words are small and marginal; the things George made
- * take the room.
+ * WHAT IS ON SCREEN. The board — every object George has put there, still
+ * drawing the read it was made from, at the weight he gave it. It is not the
+ * last answer. Ask about Seikyo, then ask about North Edsa, and the draft
+ * order is still there; that is the difference between a place and a screen,
+ * and until 2026-09-10 this page had the screen.
  *
- * WHAT IS NOT HERE. No home screen and no dashboard: when nothing has been
- * asked the ground is quiet with the mark and a line, because George at rest
- * is quiet presence, not an empty state asking to be filled. No chat bubbles.
- * No layout the client decides — every widget on screen is one George chose.
+ * WHAT IS YOURS. Bring something forward, set something aside, sort a table.
+ * Instant, local, and never sent to George as though he had decided it. Only a
+ * new FACT costs a turn.
  *
- * Built beside the desk at /w2. It uses the same stream, the same thread
- * loading and the same passcode session; only the surface is new.
+ * WHAT IS NOT HERE. No stack of past answers — the conversation is not the
+ * visual history of the work, and a follow-up transforms an object rather than
+ * drawing a second one beneath it. What you asked is kept as a trail at the
+ * foot, in your own words, because knowing where you have been is not the same
+ * as re-reading it.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -20,8 +23,9 @@ import { useGeorge } from '../hooks/useGeorge';
 import { useThread } from '../hooks/useThread';
 import { threadHistory } from '../components/george/threadHistory';
 import type { GeorgeTurn } from '../types/george';
+import { buildBoard, type Local } from './board';
 import { restoreFromPosts } from './composition';
-import { Composition } from './render';
+import { Board } from './render';
 import './workspace.css';
 
 type AnswerTurn = Extract<GeorgeTurn, { role: 'george' }>;
@@ -32,29 +36,54 @@ export default function WorkspacePage() {
   const george = useGeorge();
   const thread = useThread(threadId ?? '');
   const [selection, setSelection] = useState<string[]>([]);
+  const [local, setLocal] = useState<Record<string, Local>>({});
+  const [focused, setFocused] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const opened = useRef<string | null>(null);
 
-  // A stored thread opens once into the stream, exactly as the desk does.
+  // A stored thread opens once into the stream, with its rows and its
+  // compositions restored from the posts — so the board a reload rebuilds is
+  // the board that was there.
   useEffect(() => {
     if (!threadId || !thread.ready || opened.current === threadId) return;
     opened.current = threadId;
     george.open(restoreFromPosts(threadHistory(thread.posts, thread.chat, threadId), thread.posts), threadId);
   }, [threadId, thread.ready, thread.posts, thread.chat, george]);
 
-  // A new thread started here gets its own address, so a reload keeps it.
   useEffect(() => {
     if (!threadId && george.storedThreadId) navigate(`/w2/${george.storedThreadId}`, { replace: true });
   }, [threadId, george.storedThreadId, navigate]);
 
-  const answers = useMemo(() => george.turns.filter((t): t is AnswerTurn => t.role === 'george'), [george.turns]);
-  const latest = answers[answers.length - 1] ?? null;
-  const earlier = answers.slice(0, -1);
+  const answers = useMemo(
+    () => george.turns.filter((t): t is AnswerTurn => t.role === 'george'),
+    [george.turns],
+  );
+  const board = useMemo(() => buildBoard(answers), [answers]);
   const busy = george.busy;
-  const asked = useMemo(() => {
-    const users = george.turns.filter((t) => t.role === 'user');
-    return users[users.length - 1]?.text ?? '';
-  }, [george.turns]);
+  const latest = answers[answers.length - 1] ?? null;
+
+  const patch = useCallback((key: string, p: Local) => {
+    setLocal((s) => ({ ...s, [key]: { ...s[key], ...p } }));
+  }, []);
+
+  // George putting an object back is him disagreeing with your having set it
+  // aside, deliberately and by name — so it comes back. Everything else you
+  // did to it (a sort, a fold) survives, because he did not touch that.
+  useEffect(() => {
+    const newest = answers.length - 1;
+    setLocal((s) => {
+      let next = s;
+      for (const o of board) {
+        if (o.touched === newest && s[o.key]?.closed) {
+          if (next === s) next = { ...s };
+          next[o.key] = { ...next[o.key], closed: false };
+        }
+      }
+      return next;
+    });
+  }, [answers.length, board]);
+
+  const aside = board.filter((o) => local[o.key]?.closed);
 
   const say = useCallback((text: string) => {
     const q = text.trim();
@@ -69,50 +98,80 @@ export default function WorkspacePage() {
     setSelection((s) => (s.includes(subject) ? s.filter((x) => x !== subject) : [...s, subject]));
   }, []);
 
+  const asked = useMemo(
+    () => george.turns.filter((t) => t.role === 'user').map((t) => t.text),
+    [george.turns],
+  );
+
   return (
     <div className="ws" style={{ display: 'flex', flexDirection: 'column' }}>
-      {/* The top line: who, where, and the mark. Nothing else. */}
       <header style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '18px clamp(18px,4vw,48px) 0' }}>
         <span className={`ws-mark ${busy ? 'ws-mark--busy' : ''}`} />
         <span className="ws-mk" style={{ color: 'var(--ws-ink-2)' }}>Aji Ichiban</span>
-        {asked && <span className="ws-mk" style={{ marginLeft: 6 }}>› {asked.length > 60 ? asked.slice(0, 60) + '…' : asked}</span>}
+        {board.length > 0 && (
+          <span className="ws-mk">{board.length} on the board</span>
+        )}
         <span style={{ flex: 1 }} />
-        <button className="ws-word" onClick={() => { george.reset(); setSelection([]); navigate('/w2'); }}>new</button>
+        <button className="ws-word" style={{ margin: 0 }} onClick={() => {
+          george.reset(); setSelection([]); setLocal({}); setFocused(null); navigate('/w2');
+        }}>clear the board</button>
       </header>
 
-      <main style={{ flex: 1, padding: '22px clamp(18px,4vw,48px) 140px', maxWidth: 1240, width: '100%', margin: '0 auto' }}>
-        {latest ? (
-          <>
-            {busy && latest.toolCalls.length > 0 && (
-              <p className="ws-mk" style={{ color: 'var(--ws-george)', marginBottom: 14 }}>
-                {describe(latest)}
-              </p>
-            )}
-            <Composition turn={latest} selection={selection} onSelect={toggle} live={busy} />
-            {latest.error && <p className="ws-note" style={{ marginTop: 16 }}>{latest.error}</p>}
-          </>
+      <main style={{ flex: 1, padding: '18px clamp(18px,4vw,48px) 150px', maxWidth: 1240, width: '100%', margin: '0 auto' }}>
+        {busy && latest && latest.toolCalls.length > 0 && (
+          <p className="ws-mk" style={{ color: 'var(--ws-george)', marginBottom: 14 }}>{describe(latest)}</p>
+        )}
+
+        {board.length > 0 ? (
+          <Board
+            answers={answers}
+            board={board}
+            local={local}
+            focused={focused}
+            selection={selection}
+            live={busy}
+            onSelect={toggle}
+            onFocus={(key) => setFocused((f) => (f === key ? null : key))}
+            onClose={(key) => { patch(key, { closed: true }); setFocused((f) => (f === key ? null : f)); }}
+            onLocal={patch}
+          />
         ) : (
           <Quiet loading={Boolean(threadId) && thread.loading} />
         )}
 
-        {earlier.length > 0 && (
-          <div style={{ marginTop: 44 }}>
-            <p className="ws-mk">earlier in this work</p>
-            {earlier.slice().reverse().map((t, i) => (
-              <Earlier key={t.at + i} turn={t} question={questionBefore(george.turns, t)} selection={selection} onSelect={toggle} />
+        {latest?.error && <p className="ws-note" style={{ marginTop: 16 }}>{latest.error}</p>}
+
+        {aside.length > 0 && (
+          <div className="ws-aside">
+            <span className="ws-mk">set aside</span>
+            {aside.map((o) => (
+              <button key={o.key} className="ws-pill" style={{ border: 0, cursor: 'pointer' }}
+                onClick={() => patch(o.key, { closed: false })}>
+                {o.key} ↩
+              </button>
             ))}
+          </div>
+        )}
+
+        {asked.length > 1 && (
+          <div style={{ marginTop: 40 }}>
+            <p className="ws-mk">what you asked</p>
+            <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+              {asked.slice().reverse().map((q, i) => (
+                <p key={`${i}-${q}`} className="ws-src">{q}</p>
+              ))}
+            </div>
           </div>
         )}
       </main>
 
-      {/* The line. Small, at the foot, with what is selected beside it. */}
       <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, padding: '0 clamp(18px,4vw,48px) 22px', pointerEvents: 'none' }}>
         <div style={{ maxWidth: 1240, margin: '0 auto', pointerEvents: 'auto' }}>
           <div style={{ display: 'flex', gap: 4, marginBottom: 6, flexWrap: 'wrap' }}>
             {selection.map((s) => (
               <button key={s} className="ws-pill ws-pill--george" onClick={() => toggle(s)} style={{ border: 0, cursor: 'pointer' }}>{s} ×</button>
             ))}
-            {!selection.length && !busy && !latest && ['how are we doing?', 'what do I need to order from Seikyo?', 'what is out of stock longest?'].map((w) => (
+            {!selection.length && !busy && board.length === 0 && ['how are we doing?', 'what do I need to order from Seikyo?', 'what is out of stock longest?'].map((w) => (
               <button key={w} className="ws-word" onClick={() => say(w)}>{w}</button>
             ))}
           </div>
@@ -141,28 +200,6 @@ function Quiet({ loading }: { loading: boolean }) {
       <p className="ws-say" style={{ margin: '0 auto', color: 'var(--ws-ink-2)' }}>{loading ? 'Opening…' : ''}</p>
     </div>
   );
-}
-
-function Earlier({ turn, question, selection, onSelect }: { turn: AnswerTurn; question: string; selection: string[]; onSelect: (s: string) => void }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{ marginTop: 10 }}>
-      <button className="ws-word" onClick={() => setOpen((o) => !o)} style={{ color: open ? 'var(--ws-ink)' : undefined }}>
-        {open ? '▾' : '▸'} {question || 'earlier'}
-      </button>
-      {open && (
-        <div style={{ marginTop: 10, opacity: 0.92 }}>
-          <Composition turn={turn} selection={selection} onSelect={onSelect} live={false} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function questionBefore(turns: GeorgeTurn[], answer: AnswerTurn): string {
-  const i = turns.indexOf(answer);
-  for (let j = i - 1; j >= 0; j--) if (turns[j].role === 'user') return turns[j].text;
-  return '';
 }
 
 /** What George is doing, in words, from the calls — never from his prose. */

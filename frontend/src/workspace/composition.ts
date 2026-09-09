@@ -17,12 +17,12 @@ export type AnswerTurn = Extract<GeorgeTurn, { role: 'george' }>;
 
 /** A block joined to the result it draws from. */
 export interface Resolved {
-  block: Block;
+  block: { seq?: number } & Partial<Block>;
   call: ToolCall | null;
   rows: Record<string, unknown>[];
 }
 
-export function resolve(turn: AnswerTurn, block: Block): Resolved {
+export function resolve(turn: AnswerTurn, block: { seq?: number } & Partial<Block>): Resolved {
   const call = block.seq === undefined ? null
     : turn.toolCalls.find((c) => c.seq === block.seq) ?? null;
   return { block, call, rows: call?.result?.rows ?? [] };

@@ -345,10 +345,17 @@ export interface Finding {
  * `payload.composition.blocks`. Nothing here is a figure or a pixel.
  */
 export interface CompositionBlock {
-  kind: 'text' | 'figure' | 'hero' | 'subject' | 'comparison' | 'table' | 'chart' | 'distribution' | 'draft' | 'state';
+  /**
+   * What this edit does to the board (2026-09-10). A composition is a set of
+   * edits, not a screen: an object George does not name stays exactly as it
+   * was. Absent means `put`.
+   */
+  op?: 'put' | 'change' | 'quiet' | 'drop';
+  kind?: 'text' | 'figure' | 'hero' | 'subject' | 'comparison' | 'table' | 'chart' | 'distribution' | 'draft' | 'state';
   /** George's key for the object. The same key in a later turn is the same object, changed. */
   key: string;
-  weight: 'lead' | 'supporting' | 'quiet';
+  /** Absent on a `change` that only re-points the object at another read. */
+  weight?: 'lead' | 'supporting' | 'quiet';
   /** The read it draws from. Absent for text and a state with no read. */
   seq?: number;
   tool?: string;
