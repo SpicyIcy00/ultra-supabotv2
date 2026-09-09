@@ -52,7 +52,10 @@ actually arrived, so no plan here can add cover for the wait.
 
 from __future__ import annotations
 
+import pathlib
 from typing import Any, Optional
+
+import yaml
 
 from ._common import (
     DICT_ROW,
@@ -70,6 +73,57 @@ def _plan(defs: dict) -> dict:
 
 def _retail_ids(defs: dict) -> list[str]:
     return [s["id"] for s in _req(defs, "stores.active_retail")]
+
+
+_MAP: Optional[dict] = None
+
+
+def _load_map(defs: dict) -> dict:
+    """
+    The product -> supplier mapping, and whether anybody has approved it.
+
+    Always returns a dict with `status`. A missing file is `absent`, which is a
+    real state and not an error: this tool worked before the file existed and
+    still does.
+    """
+    global _MAP
+    if _MAP is None:
+        link = _req(defs, "purchasing.plan.supplier_link")
+        path = pathlib.Path(__file__).resolve().parent.parent / _req(link, "map_file")
+        if not path.exists():
+            _MAP = {"status": "absent", "confident": {}, "overrides": {}}
+        else:
+            with path.open(encoding="utf-8") as fh:
+                _MAP = yaml.safe_load(fh) or {}
+            _MAP.setdefault("status", "proposed")
+            _MAP.setdefault("confident", {})
+            _MAP.setdefault("overrides", {})
+    return _MAP
+
+
+def _mapped_products(defs: dict, supplier: str) -> Optional[list[str]]:
+    """
+    Product ids this supplier supplies according to the APPROVED map, or None.
+
+    None means "no approved map" and the caller falls back to purchase history.
+    An override beats a proposal for the same product, which is what makes the
+    file correctable by hand without the generator undoing it.
+    """
+    link = _req(defs, "purchasing.plan.supplier_link")
+    m = _load_map(defs)
+    if m.get("status") != _req(link, "map_authoritative_when"):
+        return None
+    want = supplier.strip().lower()
+    chosen: dict[str, str] = {}
+    for pid, entry in (m.get(_req(link, "map_confident_key")) or {}).items():
+        if isinstance(entry, dict) and entry.get("supplier"):
+            chosen[pid] = str(entry["supplier"])
+    for pid, entry in (m.get(_req(link, "map_override_key")) or {}).items():
+        if isinstance(entry, dict) and entry.get("supplier"):
+            chosen[pid] = str(entry["supplier"])
+        elif isinstance(entry, str):
+            chosen[pid] = entry
+    return [pid for pid, name in chosen.items() if name.strip().lower() == want]
 
 
 # --------------------------------------------------------------------------
@@ -121,11 +175,7 @@ GROUP BY 1
 # it so nothing is hidden.
 _SELECT_PLAN = """
 WITH mine AS (
-    SELECT DISTINCT l.product_id
-    FROM purchase_order_lines l
-    JOIN purchase_orders o ON o.id = l.purchase_order_id
-    WHERE lower(o.supplier_name) = lower(%(supplier)s)
-      AND l.product_id IS NOT NULL
+    {mine}
 ),
 demand AS (
     SELECT ti.product_id, SUM(ti.quantity) AS units_sold
@@ -182,6 +232,17 @@ LEFT JOIN incoming i  ON i.product_id = m.product_id
 ORDER BY {order_by}
 LIMIT {limit}
 """
+
+# Where the product list comes from. The approved map when there is one, and
+# otherwise what has been bought from them before — which is the same evidence
+# the map was proposed from, minus anybody having agreed to it.
+_MINE_FROM_HISTORY = """SELECT DISTINCT l.product_id
+    FROM purchase_order_lines l
+    JOIN purchase_orders o ON o.id = l.purchase_order_id
+    WHERE lower(o.supplier_name) = lower(%(supplier)s)
+      AND l.product_id IS NOT NULL"""
+
+_MINE_FROM_MAP = """SELECT UNNEST(%(mapped_ids)s::text[]) AS product_id"""
 
 _ORDER_BY = {
     "most_needed": "suggested_order_qty DESC NULLS LAST, units_per_day DESC NULLS LAST",
@@ -323,10 +384,6 @@ def get_purchase_plan(
                 f"   # metrics.yaml: suppliers.purchase_orders.supplier_is_free_text"
             )
             filters.append(
-                f"products = whatever has been bought from them before"
-                f"   # metrics.yaml: purchasing.plan.supplier_link"
-            )
-            filters.append(
                 f"demand = {days} days of sales across {len(retail)} retail shops, "
                 f"cancelled excluded   # metrics.yaml: purchasing.plan.demand"
             )
@@ -347,12 +404,27 @@ def get_purchase_plan(
                 "cover_days": cover_days,
                 "open_statuses": ["Open"],
             }
+            # The approved map is authoritative when it exists; otherwise the
+            # history it was proposed from.
+            mapped = _mapped_products(defs, supplier)
+            map_status = _load_map(defs).get("status")
+            if mapped is not None:
+                params["mapped_ids"] = mapped
+                mine_sql = _MINE_FROM_MAP
+                filters.append(
+                    f"products = the approved supplier mapping ({len(mapped)} products)"
+                    f"   # definitions/product_suppliers.yaml"
+                )
+            else:
+                mine_sql = _MINE_FROM_HISTORY
+
             selling = "WHERE COALESCE(d.units_sold, 0) > 0" if selling_only else ""
             if selling_only:
                 filters.append("only products that sold in the window")
 
             cur.execute(
                 _SELECT_PLAN.format(
+                    mine=mine_sql,
                     selling_predicate=selling,
                     order_by=_ORDER_BY[rank_by],
                     limit=limit,
@@ -422,6 +494,25 @@ def get_purchase_plan(
                     "guidance": (
                         "The link is purchase_order_lines -> purchase_orders.supplier_name. "
                         "A declared supplier per product would close the gap."
+                    ),
+                    "source": "definitions/metrics.yaml: purchasing.plan.supplier_link",
+                })
+
+            if mapped is None and map_status == "proposed":
+                m = _load_map(defs)
+                measured = m.get("measured") or {}
+                notices.append({
+                    "kind": _req(link, "unapproved_notice_kind"),
+                    "message": (
+                        f"A product-to-supplier mapping has been proposed — "
+                        f"{measured.get('proposed', 0)} products where the purchase history "
+                        f"names exactly one supplier, and {measured.get('ambiguous', 0)} where it "
+                        f"names several — and nobody has approved it yet. Until somebody does, "
+                        f"this plan is built from purchase history alone."
+                    ),
+                    "guidance": (
+                        "definitions/product_suppliers.yaml, status: proposed. A person sets it "
+                        "to approved after reading it."
                     ),
                     "source": "definitions/metrics.yaml: purchasing.plan.supplier_link",
                 })
@@ -535,6 +626,11 @@ def get_purchase_plan(
             for s in scope_ids if s in catalog
         ],
         "coverage": coverage,
+        "supplier_map": {
+            "status": map_status,
+            "authoritative": mapped is not None,
+            "products_from_map": len(mapped) if mapped is not None else None,
+        },
         "ranked_by": rank_by,
         "row_count": len(rows),
         "full_row_count": full_row_count,

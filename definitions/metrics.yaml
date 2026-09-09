@@ -296,6 +296,16 @@ sales_day:
 # detectable; `display_name` is what George shows the user.
 # NOTE: "(6) Aji Ichiban  OPUS" contains a DOUBLE SPACE. Preserved verbatim.
 stores:
+  # ---------------------------------------------------------------------------
+  # ALL 22 ROWS OF `stores` ARE CLASSIFIED BELOW, counted 2026-09-10:
+  #   7 active_retail · 1 warehouse · 2 pending_retail · 2 closed
+  #   1 vending_stock_location · 9 non_trading
+  # A row that appears in none of these is a place George cannot name, and a row
+  # in two of them is a place he would count twice. test_store_scope_contract
+  # holds both properties.
+  # ---------------------------------------------------------------------------
+  total_rows_in_stores_table: 22
+
   active_retail:
     - id: "6639efd54694700008d7ccc6"
       name: "(1) Aji Ichiban Food Products"
@@ -317,7 +327,10 @@ stores:
       display_name: "OPUS"
     - id: "69c73fcb277aa600076dfaaa"
       name: "Ajiichiban SHANG"
-      display_name: "Shang"
+      # The store record's own display_name is "Shangri-La"; this file said
+      # "Shang" and George therefore called it something the business does not.
+      # Corrected 2026-09-10.
+      display_name: "Shangri-La"
 
   # The warehouse. NOT a retail store — excluded from every sales metric (see
   # filters.excluded_from_sales) but in scope for inventory, because stock genuinely sits
@@ -382,6 +395,32 @@ stores:
       po_destination_count: 76
       po_total_measured: 227
 
+    # -------------------------------------------------------------------------
+    # AJI PINA. Added 2026-09-10, and it had been missing from every group.
+    #
+    # A real shop that traded and stopped: 92 transactions between 2025-06-03
+    # and 2025-08-08, then nothing. It holds no inventory rows and appears in no
+    # snapshot, so it is not a current place at all.
+    #
+    # WHAT ITS ABSENCE ACTUALLY COST, stated precisely rather than dramatically.
+    # Current figures were never wrong: active_retail is bound by id and PINA
+    # was not in it, which is correct for a shop that shut. The cost was on
+    # HISTORICAL questions — a 2025 sales figure silently omitted 92
+    # transactions, and asking about "AJI PINA" by name resolved to nothing
+    # instead of "that closed in August 2025", which is the same failure
+    # stores.closed exists to prevent for MACOPA.
+    # -------------------------------------------------------------------------
+    - id: "6639efd64694700008d7cd17"
+      name: "AJI PINA"
+      display_name: "AJI PINA"
+      kind: retail
+      closed_at: "2025-08-08"
+      id_source: storehub
+      id_is_storehub_objectid: true
+      closed_at_derivation: "last recorded transaction; this location has no movement records"
+      transactions: 92
+      first_transaction: "2025-06-03"
+
   # Two more storefronts exist in `stores` with ZERO transactions to date and are
   # presumed to be the 8th and 9th candy stores. They are deliberately NOT in
   # active_retail until they transact. Move them up when they do.
@@ -391,6 +430,49 @@ stores:
       name: "Ajiichiban ROBINSONS super market lucky Chinatown"
     - id: "6982c9a9aa1210000783594d"
       name: "AJI ROBINSONS supermarket robinsons galleria"
+
+  # The AJI CMG row in `stores`. Listed so all 22 rows are accounted for, and
+  # deliberately in a group of its own: it is NOT retail, NOT the warehouse, and
+  # NOT the vending business. It holds store-side stock (3,534 inventory rows,
+  # 512,043 snapshots) and takes no transactions. The vending DOMAIN is Weimi
+  # and is read by tools/vending.py; see the note above `vending:` — the two
+  # must never be conflated, which is exactly why this row needs a name here
+  # rather than being left unclassified.
+  vending_stock_location:
+    - id: "667bde0cd749a000079f4650"
+      name: "AJI CMG"
+      display_name: "AJI CMG"
+      holds_stock: true
+      takes_transactions: false
+      is_the_weimi_vending_domain: false
+
+  # ---------------------------------------------------------------------------
+  # EVERYTHING ELSE IN `stores`. Added 2026-09-10 after counting all 22 rows.
+  #
+  # These are StoreHub locations that have never taken a transaction and hold no
+  # stock. They are recorded so that a question naming one gets "that has never
+  # traded" instead of "no such place", and so nobody mistakes the count of rows
+  # in `stores` for a count of shops.
+  #
+  # TWO OF THEM ARE TEST DATA IN THE PRODUCTION TABLE — `Test stoee` (sic) and
+  # `test store 2`. They are named here rather than quietly skipped: a filter
+  # that silently drops rows matching "test" would one day drop a real shop.
+  #
+  # A NOTE WORTH ACTING ON SEPARATELY: the replenishment engine has historically
+  # written shipment plans for most of these, including both test rows — around
+  # 2,990 lines each. Recent runs cover only the seven trading shops, so this is
+  # historical rather than live, but it means a plan figure taken across all
+  # runs includes locations that cannot receive stock.
+  non_trading:
+    - {id: "6680e5a3a8fc2d00071d07a9", name: "AJI ONLINE",                kind: channel}
+    - {id: "6639efd64694700008d7cd59", name: "Digital Store",             kind: channel}
+    - {id: "68a40bd8b79152000619e7d7", name: "Aji Packing",               kind: operations}
+    - {id: "6699c88bd38fa400074ba3da", name: "AJI Disposal",              kind: operations}
+    - {id: "693646be0abea30007b77334", name: "Hello AJI vending",         kind: vending}
+    - {id: "69b6fb6d185092000783c8a4", name: "AJI VENDO",                 kind: vending}
+    - {id: "668263b71c04d30007dbd150", name: "Aji Ichiban Food Products", kind: duplicate_looking}
+    - {id: "68db56270374e300079eaf4e", name: "Test stoee",                kind: test_data}
+    - {id: "69ba1a9b6f1eab000717a4c5", name: "test store 2",              kind: test_data}
 
   sql:
     # The canonical sales scope. Tools bind this list; they never inline names.
@@ -3229,6 +3311,30 @@ purchasing:
       coverage_notice_kind: supplier_coverage
       coverage_notice_mandatory: true
 
+      # THE MAP, AND THE GATE ON IT. Added 2026-09-10.
+      #
+      # ops/propose_supplier_map.py reads purchase history and writes
+      # definitions/product_suppliers.yaml with `status: proposed`. NOTHING
+      # reads it until a person sets `status: approved` and commits — the
+      # review is the gate, the diff is the audit trail, and approval is a
+      # commit. Until then this tool works from purchase history exactly as it
+      # did, and says a mapping is waiting.
+      #
+      # This is the workflow promotion gate applied to a definition rather than
+      # to a rule: proposed by machine, evidenced, made permanent by a person.
+      # It is the smallest safe instance of George extending what he knows, and
+      # it is deliberately the first, because a wrong entry here costs one
+      # wrong line on a draft order that somebody is going to read anyway.
+      map_file: definitions/product_suppliers.yaml
+      map_authoritative_when: approved
+      map_status_values: [proposed, approved]
+      # `overrides` beats `confident` for the same product, is never written by
+      # the generator, and is where a product with no purchase history gets its
+      # real supplier.
+      map_override_key: overrides
+      map_confident_key: confident
+      unapproved_notice_kind: supplier_map_not_approved
+
     # THE COVER PERIOD IS A JUDGEMENT, NOT A DEFINITION. Confirmed with the
     # business 2026-09-09: there is no rule — it is decided per order, per
     # supplier, each time. So a tool NEVER invents one. Without it the plan
@@ -3702,6 +3808,10 @@ notices:
     must_convey:
       - [supplier, suppliers]
       - ["not", cannot, "no record", unknown, "part of", missing, "some"]
+  supplier_map_not_approved:
+    must_convey:
+      - [supplier, suppliers, mapping, map]
+      - [proposed, waiting, "not approved", approve, review]
   supplier_ambiguous:
     must_convey:
       - [supplier, suppliers]
