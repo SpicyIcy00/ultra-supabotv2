@@ -1,0 +1,259 @@
+"""
+What George believes about the business, and what makes a belief admissible.
+
+WHY THIS EXISTS. Until now George forgot the business between questions. Every
+conversation began cold, he could never say "this is the third week", and a view
+he formed on Tuesday was gone by Wednesday — which is why he produced answers
+rather than an understanding. A belief is that view, kept.
+
+THIS MODULE DECIDES ADMISSIBILITY AND NOTHING ELSE. It opens no connection,
+holds no credential and stores nothing; the store is injected by whoever runs
+the loop, exactly as the pin, workflow and page writers are (agent/write_tools.py
+explains that pattern and this follows it without amending it). What lives here
+is the pure question: is this a belief George is allowed to hold?
+
+FOUR RULES, AND EACH ONE IS THE ANSWER TO A WAY MEMORY GOES WRONG.
+
+  1. A BELIEF NAMES THE READS BEHIND IT, as CALLS rather than as row numbers.
+     At least one, every one a call actually run in this conversation — the
+     same provenance rule pin_answer has, reused rather than reinvented, and
+     for the same reason: a stored call can be re-run, so a belief can be
+     re-checked. This is `judgment.grounding` made mechanical:
+     an ungrounded view is an invention, and an invention that persists is
+     worse than one that does not, because tomorrow nobody remembers it was
+     invented. A read that established NOTHING counts — "I looked and there is
+     nothing there" is grounded in the looking.
+
+  2. A BELIEF CARRIES NO FIGURE. This is the rule that keeps memory from
+     becoming a lie. "Rockwell is down 9.4%" is false a week later and says so
+     to nobody; "Rockwell is losing customers rather than smaller baskets"
+     degrades gracefully and can be re-checked. The figures live in the
+     evidence, which can be re-run. It is the same warrant the composer's own
+     one-sentence readings have had since they were introduced: characterise
+     the rows, never restate them.
+
+  3. A STANCE IS ONE OF FIVE WORDS. metrics.yaml `judgment.stances`, and the
+     same five the prompt teaches. A sixth stance invented at the keyboard
+     would be a category of business situation nobody defined.
+
+  4. CHANGING A VIEW KEEPS THE OLD ONE AND SAYS WHY. A belief that supersedes
+     another must name it and give a reason. A view that can be silently
+     replaced cannot be wrong, and a view that cannot be wrong is not a view —
+     it is a cache.
+
+WHAT THIS MODULE DOES NOT CHECK, deliberately: whether the superseded belief
+exists, and whether the subject is real. Both need the store, both are checked
+where the store is, and pretending to check them here would be a second source
+of truth for the same fact.
+"""
+
+from __future__ import annotations
+
+import re
+from typing import Any, Callable, Iterable, Mapping, Optional
+
+#: A belief is a sentence about a thing, not a reading of a number. Any digit
+#: is refused — including a window, which belongs to the evidence rather than
+#: to the claim.
+_DIGIT = re.compile(r"\d")
+
+#: Bounds. A claim longer than this is an answer being stored, not a view.
+MAX_CLAIM = 240
+MAX_WHY = 240
+MAX_BELIEFS_PER_TURN = 6
+
+
+def stances_for(defs: Mapping[str, Any]) -> tuple[str, ...]:
+    """The five stances, read from the definitions so the two cannot drift."""
+    return tuple(defs["judgment"]["stances"].keys())
+
+
+def subject_kinds_for(defs: Mapping[str, Any]) -> tuple[str, ...]:
+    return tuple(defs["judgment"]["subject_kinds"])
+
+
+def _reject(item: Any, reason: str) -> dict:
+    return {"belief": item, "reason": reason}
+
+
+def validate(
+    submitted: Iterable[Any],
+    defs: Mapping[str, Any],
+    *,
+    is_executed: Callable[[Mapping[str, Any]], bool],
+) -> tuple[list[dict], list[dict]]:
+    """
+    Split proposed beliefs into those George may hold and those he may not.
+
+    `is_executed` answers one question about one call: was this actually run,
+    successfully, in this conversation? The predicate is supplied rather than
+    the executed set itself, so this module never has to know how a call is
+    keyed — that lives with the writer, in one place, and passing it as a
+    function also keeps agent/write_tools.py and this file from importing each
+    other.
+
+    Returns (accepted, rejected). A rejected belief is NOT stored and the answer
+    must not describe it as though it were.
+    """
+    stances = stances_for(defs)
+    kinds = subject_kinds_for(defs)
+
+    accepted: list[dict] = []
+    rejected: list[dict] = []
+
+    if submitted is None:
+        return accepted, rejected
+    if isinstance(submitted, Mapping):
+        submitted = [submitted]
+
+    for item in list(submitted)[: MAX_BELIEFS_PER_TURN + 1]:
+        if len(accepted) >= MAX_BELIEFS_PER_TURN:
+            rejected.append(_reject(item, (
+                f"more than {MAX_BELIEFS_PER_TURN} beliefs in one turn; a turn that "
+                f"changes this much of the picture is an investigation, not a view"
+            )))
+            continue
+        if not isinstance(item, Mapping):
+            rejected.append(_reject(item, "not an object"))
+            continue
+
+        stance = item.get("stance")
+        if stance not in stances:
+            rejected.append(_reject(item, (
+                f"stance {stance!r} is not one of {', '.join(stances)} "
+                f"(metrics.yaml: judgment.stances)"
+            )))
+            continue
+
+        kind = item.get("subject_kind")
+        if kind not in kinds:
+            rejected.append(_reject(item, (
+                f"subject_kind {kind!r} is not one of {', '.join(kinds)} "
+                f"(metrics.yaml: judgment.subject_kinds)"
+            )))
+            continue
+
+        subject = item.get("subject")
+        if not isinstance(subject, str) or not subject.strip():
+            rejected.append(_reject(item, "no subject — a view is held about a thing"))
+            continue
+
+        claim = item.get("claim")
+        if not isinstance(claim, str) or not claim.strip():
+            rejected.append(_reject(item, "no claim"))
+            continue
+        claim = claim.strip()
+        if len(claim) > MAX_CLAIM:
+            rejected.append(_reject(item, (
+                f"claim longer than {MAX_CLAIM} characters; that is an answer being "
+                f"stored rather than a view"
+            )))
+            continue
+        if _DIGIT.search(claim):
+            rejected.append(_reject(item, (
+                "a belief carries no figure. A stored number goes stale silently — "
+                "the figures are in the evidence and can be re-read. Say what the "
+                "figures MEAN, in words"
+            )))
+            continue
+
+        evidence, why_bad = _evidence(item.get("evidence"), is_executed)
+        if why_bad:
+            rejected.append(_reject(item, why_bad))
+            continue
+
+        supersedes = item.get("supersedes")
+        why = item.get("why")
+        if supersedes is not None:
+            if not isinstance(supersedes, (str, int)) or not str(supersedes).strip():
+                rejected.append(_reject(item, "supersedes must name a belief"))
+                continue
+            if not isinstance(why, str) or not why.strip():
+                rejected.append(_reject(item, (
+                    "changing a view needs a reason: what did this read establish "
+                    "that the old view did not account for?"
+                )))
+                continue
+            why = why.strip()[:MAX_WHY]
+        else:
+            why = None
+
+        accepted.append({
+            "stance": stance,
+            "subject_kind": kind,
+            "subject": subject.strip(),
+            "claim": claim,
+            "evidence": evidence,
+            "supersedes": str(supersedes).strip() if supersedes is not None else None,
+            "why": why,
+        })
+
+    return accepted, rejected
+
+
+def _evidence(raw: Any, is_executed: Callable[[Mapping[str, Any]], bool],
+              ) -> tuple[list[dict], Optional[str]]:
+    """
+    The calls behind a belief, each one actually run in this conversation.
+
+    A read that came back EMPTY is admissible and is the point: "I looked at
+    OPUS and there is nothing there" rests on the looking. A call that never ran
+    is not admissible under any stance — that is the whole rule, and it is the
+    same one that makes "pin that but daily" safe.
+    """
+    if raw is None:
+        return [], "a belief names the reads behind it; this one names none"
+    if isinstance(raw, Mapping):
+        raw = [raw]
+    if not isinstance(raw, (list, tuple)):
+        return [], "evidence must be a list of calls, as [{'tool': ..., 'arguments': {...}}]"
+
+    calls: list[dict] = []
+    for entry in raw:
+        if not isinstance(entry, Mapping):
+            return [], f"evidence {entry!r} is not a call"
+        tool = entry.get("tool")
+        args = entry.get("arguments") or {}
+        if not isinstance(tool, str) or not tool.strip():
+            return [], "a piece of evidence names no tool"
+        if not isinstance(args, Mapping):
+            return [], f"arguments for {tool} are not an object"
+        call = {"tool": tool.strip(), "arguments": dict(args)}
+        if not is_executed(call):
+            return [], (
+                f"{tool} was not run with those arguments in this conversation. A view "
+                f"has to rest on something that actually happened — run it, read it, "
+                f"then hold the view"
+            )
+        if call not in calls:
+            calls.append(call)
+    if not calls:
+        return [], "a belief names the reads behind it; this one names none"
+    return calls, None
+
+
+def record(beliefs: Any, *, defs: Mapping[str, Any],
+           is_executed: Callable[[Mapping[str, Any]], bool], store: Any) -> dict:
+    """
+    The tool body. Returns {rows, meta} like every other tool.
+
+    NO `source_table` IN meta, and for the same reason record_findings has none:
+    the loop keeps the last meta that describes real data as the answer's
+    receipts, and this result read nothing. It is a statement about what George
+    now holds.
+    """
+    accepted, rejected = validate(beliefs, defs, is_executed=is_executed)
+    stored = store.record(accepted) if accepted else []
+    return {
+        "rows": stored,
+        "meta": {
+            "held": len(stored),
+            "rejected": rejected,
+            "stances": list(stances_for(defs)),
+            "note": (
+                "What George now believes about these things, kept until a later "
+                "read changes it. Nothing was read. A rejected belief is not held "
+                "and the answer must not describe it as though it were."
+            ),
+        },
+    }
