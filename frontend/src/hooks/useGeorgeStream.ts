@@ -49,6 +49,7 @@ import type {
   AskHistoryTurn,
   DeskContext,
   DoneFrame,
+  CompositionFrame,
   FindingFrame,
   GeorgeNotice,
   GeorgeState,
@@ -547,6 +548,15 @@ export function useGeorgeStream() {
                 // read from prose, and nothing here is a figure.
                 patchLast((t) => {
                   t.findings = ((data as unknown as FindingFrame).findings ?? []).slice();
+                });
+                break;
+
+              case 'compose':
+                // The screen George composed, already validated by the loop.
+                // Replaces rather than accumulates, like a finding. Nothing
+                // here is read from prose, and nothing here is a figure.
+                patchLast((t) => {
+                  t.composition = data as unknown as CompositionFrame;
                 });
                 break;
 

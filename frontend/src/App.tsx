@@ -29,6 +29,8 @@ import { GeorgeShell } from './components/shell/GeorgeShell';
 
 // George.
 const DeskPage = React.lazy(() => import('./pages/DeskPage'));
+// The workspace George composes (2026-09-10). Beside the desk while it is proven.
+const WorkspacePage = React.lazy(() => import('./workspace/WorkspacePage'));
 // The rooms: reachable from the desk's line, not destinations beside it.
 const InboxPage = React.lazy(() => import('./pages/InboxPage'));
 const PagesPage = React.lazy(() => import('./pages/PagesPage'));
@@ -115,6 +117,8 @@ function App() {
                     everybody else to their own first page. */}
                 <Route path="/" element={<LandingRedirect />} />
                 <Route path="/w/:threadId" element={george(<DeskPage />)} />
+                <Route path="/w2" element={george(<WorkspacePage />)} />
+                <Route path="/w2/:threadId" element={george(<WorkspacePage />)} />
 
                 {/* The rooms, in George's chrome. */}
                 <Route element={<GeorgeShell />}>

@@ -52,7 +52,7 @@ from typing import Any, AsyncIterator, Callable, Optional
 
 import anthropic
 
-from agent import composite_tools, findings, surface, write_tools
+from agent import compose, composite_tools, findings, surface, write_tools
 from agent.write_tools import WriteContext, call_key
 from tools import (
     brief,
@@ -173,8 +173,14 @@ TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
 # is always offered — no capability gates it — so every session's schema
 # carries it at the same position and the cached prefix holds.
 FINDING_TOOL = "record_findings"
+# The second label tool (2026-09-10). `compose` says what the person SEES —
+# which reads, as which kind of object, at what weight — and is validated the
+# same way against the same record (agent/compose.py). Same exclusion from
+# TOOL_FUNCTIONS for the same reason: a composition re-run draws nothing.
+COMPOSE_TOOL = "compose"
 FINDING_TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
     FINDING_TOOL: findings.record_findings,
+    COMPOSE_TOOL: compose.compose,
 }
 
 
@@ -433,6 +439,39 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
                            "description": "for driver and breakdown: the seq of the primary"},
                 },
                 "required": ["seq", "role"],
+                "additionalProperties": False,
+            },
+        }
+
+    if pname == "blocks":
+        # The whole of what the model may say about the SCREEN: a widget from
+        # a closed list, a key, a weight, a read it made and a subject a row
+        # of that read carries. No field exists for a figure, a colour, a
+        # size or a title, so none can arrive (agent/compose.py).
+        voc = req(_load_defs(), "composition")
+        return {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": int(voc["max_blocks"]),
+            "items": {
+                "type": "object",
+                "properties": {
+                    "kind": {"type": "string", "enum": list(voc["widgets"])},
+                    "key": {"type": "string", "pattern": voc["key_pattern"],
+                            "description": "a short slug naming this object; a later turn that "
+                                           "composes the same key changes it in place"},
+                    "weight": {"type": "string", "enum": list(voc["weights"])},
+                    "seq": {"type": "integer",
+                            "description": "meta.call_seq of a read that returned this turn"},
+                    "subject": {"type": "string",
+                                "description": "a value a row of that read carries: a shop, "
+                                               "product or supplier name"},
+                    "subjects": {"type": "array", "items": {"type": "string"},
+                                 "minItems": 2, "maxItems": compose.MAX_SUBJECTS},
+                    "form": {"type": "string", "enum": list(voc["chart_forms"])},
+                    "label": {"type": "string", "enum": list(voc["state_labels"])},
+                },
+                "required": ["kind", "key"],
                 "additionalProperties": False,
             },
         }
@@ -983,6 +1022,35 @@ RECOMMEND nothing the evidence does not support. The workspace offers the next m
 
 DESK_SECTION = _desk_section(_load_defs())
 
+
+def _composing_section(defs: dict) -> str:
+    """
+    COMPOSING section of the prompt. Built at import from metrics.yaml
+    `composition`, so the vocabulary George is taught is the one the loop
+    validates and the client draws, and the bytes are stable for the cache.
+    """
+    voc = req(defs, "composition")
+    kinds = "\n".join(f"  {k} — {v['about']}" for k, v in req(voc, "widgets").items())
+    weights = ", ".join(str(w) for w in req(voc, "weights"))
+    return f"""
+COMPOSING THE WORKSPACE
+
+The screen is not a transcript. It is ONE piece of work that you compose from what you read, and the person works inside it. After your reads return and before you write the answer, call compose once with the blocks that should be on screen, in order, from this closed vocabulary:
+
+{kinds}
+
+Each block names the read it draws from by meta.call_seq and, where it is about one thing, a subject that is a value in that read's rows — a shop, a product, a supplier, exactly as the row spells it. Give every block a short key ("rockwell", "seikyo-order", "shops"): a follow-up about the same thing composes the SAME key, so the object on screen changes in place instead of being drawn again beneath itself. Weight is {weights}: exactly one block leads and the eye goes to it first; what supports it sits beside it; what is on screen because it is true rather than because it matters is quiet. A hero is the lead by definition, and there is at most one.
+
+WHAT COMPOSING IS. Judgment made visible. A question about one shop leads with that shop. "How are we doing?" leads with the one thing that most needs attention and places the rest beside it, quiet. A ranked read leads with the subject that matters and keeps the table behind it. "What do I need from Seikyo?" leads with the draft. A process question leads with its state. A composition where everything has the same weight has not been composed.
+
+WHAT IT IS NOT. A figure, a colour, a size, a title, a layout. Every number on screen is drawn by the system from a row of the read a block names; you choose the row, never the value. A block carrying anything beyond the fields above is refused, and a refused block is not on screen — never describe the screen as showing something the compose result rejected.
+
+Your prose goes in a text block, placed where it belongs: leading when the reading matters more than any one figure, supporting when the figures carry the answer. A plain factual question needs one figure or one subject leading and your text beside it. A comparison of a few subjects from one read is a comparison. A read you answered from an earlier turn's results needs no new read, but the screen is still yours to compose — say what stays and what changes, by key. If a later read changes what should be on screen, call compose again; the newest composition replaces the earlier one.
+"""
+
+
+COMPOSING_SECTION = _composing_section(_load_defs())
+
 SYSTEM_PROMPT = _scope_sentence(_load_defs()) + """
 
 Your job is to be trustworthy about numbers, not clever about them.
@@ -1026,7 +1094,7 @@ RULES
     THE EXCEPTION IS BEING ASKED. When somebody asks how you got a figure, what a metric means, where it came from, or what you can and cannot do, name the thing plainly — that IS the question, and being coy about it would be the failure. A refusal needs its real reason, and the reason may be technical.
 
     THIS IS NOT A LICENCE TO BE VAGUE, and it removes nothing the rules above require. The window, the scope, the caveat and the date on every figure are all still stated, in full, in plain words. Dropping a caveat because it sounded technical is far worse than the leak this rule is about: rewrite it, never omit it.
-""" + SCOPE_SECTION + JUDGMENT_SECTION + INVESTIGATING_SECTION + PAGES_SECTION + SURFACE_SECTION + DESK_SECTION + """
+""" + SCOPE_SECTION + JUDGMENT_SECTION + INVESTIGATING_SECTION + PAGES_SECTION + SURFACE_SECTION + DESK_SECTION + COMPOSING_SECTION + """
 VOICE
 
 You are a person with a job, not an assistant. First person, warm and precise, occasionally dry. Never sycophantic, never corporate, never breathless, never apologetic — you did not do anything wrong by reporting a number somebody dislikes. No "Great question", no "I'd be happy to", no "Certainly", no "Absolutely", no "Let me help you with that" — an answer that opens with manners has spent its first line saying nothing.
@@ -1330,7 +1398,8 @@ def _forced_caveats(missing: list[dict]) -> str:
 
 def _answer_payload(charted: Optional[list], calls: Optional[list],
                     page_context: Optional[dict] = None,
-                    findings: Optional[list] = None) -> Optional[str]:
+                    findings: Optional[list] = None,
+                    composition: Optional[list] = None) -> Optional[str]:
     """
     The answer post's payload: the charted snapshot, the calls behind it, and
     the page George read to produce it.
@@ -1360,6 +1429,11 @@ def _answer_payload(charted: Optional[list], calls: Optional[list],
     # validated list, never what the model submitted.
     if findings:
         payload["findings"] = findings
+    # The composition that stood (2026-09-10): the validated blocks, so a
+    # reopened thread draws the screen George composed, from the charted rows
+    # beside it, and never a layout the client derived.
+    if composition:
+        payload["composition"] = {"blocks": composition}
     return json.dumps(payload) if payload else None
 
 
@@ -1573,7 +1647,8 @@ class ConversationLog:
                 # the post can be PINNED after a reload. The chart is a
                 # snapshot; the pin re-runs. Both are true of one answer.
                 _answer_payload(kw.get("charted"), kw.get("calls"),
-                                kw.get("page_context"), kw.get("findings")),
+                                kw.get("page_context"), kw.get("findings"),
+                                kw.get("composition")),
                 json.dumps(_json_safe(kw["receipts"])) if kw.get("receipts") else None,
                 json.dumps(_json_safe(kw.get("notices") or [])),
                 self.conversation_id, datetime.now(timezone.utc),
@@ -1989,6 +2064,10 @@ async def run(
     # record_findings call REPLACES this: the model refining its reading is
     # one reading, not two.
     findings_recorded: list[dict] = []
+
+    # The blocks that stood, for the ANSWER POST and the UI. A later compose
+    # call REPLACES this, for the same reason.
+    composition_recorded: list[dict] = []
 
     # What George read of the page, for the ANSWER POST and the UI: compact
     # evidence — which page, when, which pins with what status — never the
@@ -2540,6 +2619,9 @@ async def run(
                     "arguments": dict(b.input),
                     "error": err,
                     "duplicate": gseq in duplicate_of,
+                    # The rows, so a composition's subject can be checked
+                    # against what the read actually carried (agent/compose.py).
+                    "rows": (result.get("rows") if isinstance(result, dict) else None) or [],
                     "is_read": (b.name in TOOL_FUNCTIONS
                                 and b.name not in write_tools.WRITE_TOOL_FUNCTIONS
                                 and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS),
@@ -2553,16 +2635,38 @@ async def run(
             for gseq, b in labels:
                 started = time.perf_counter()
                 try:
-                    result = findings.record_findings(
-                        (b.input or {}).get("findings"),
-                        calls=calls_by_seq, defs=defs,
-                    )
+                    if b.name == COMPOSE_TOOL:
+                        result = compose.compose(
+                            (b.input or {}).get("blocks"),
+                            calls=calls_by_seq, defs=defs,
+                        )
+                    else:
+                        result = findings.record_findings(
+                            (b.input or {}).get("findings"),
+                            calls=calls_by_seq, defs=defs,
+                        )
                     err = None
                 except (ValueError, KeyError, TypeError) as exc:
                     result, err = {"rows": [], "meta": {"error": str(exc)}}, str(exc)
                 ms = int((time.perf_counter() - started) * 1000)
                 done_calls.append(((gseq, b), (result, err, ms)))
-                if err is None:
+                if err is None and b.name == COMPOSE_TOOL:
+                    composition_recorded = list(result["rows"])
+                    yield _sse("compose", {
+                        "seq": gseq,
+                        "blocks": composition_recorded,
+                        "rejected": result["meta"].get("rejected") or [],
+                    })
+                    if result["meta"].get("rejected"):
+                        yield _sse("warning", {
+                            "reason": "composition_rejected",
+                            "detail": "; ".join(
+                                f"{(r.get('block') or {}).get('key') if isinstance(r.get('block'), dict) else '?'}: "
+                                f"{r.get('reason')}"
+                                for r in result["meta"]["rejected"]
+                            ),
+                        })
+                elif err is None:
                     findings_recorded = list(result["rows"])
                     yield _sse("finding", {
                         "seq": gseq,
@@ -2793,7 +2897,7 @@ async def run(
         final_answer=answer or None, notices=pending, receipts=last_meta,
         charted=charted, calls=calls_made, parent_id=parent_id,
         page_context=page_evidence, findings=findings_recorded,
-        desk=desk,
+        composition=composition_recorded, desk=desk,
     )
 
     # The ids of the two posts, so a client that is rendering the river can

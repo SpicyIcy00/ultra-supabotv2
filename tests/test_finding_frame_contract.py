@@ -254,8 +254,12 @@ def test_the_tool_sits_inside_the_shared_prefix():
     bare = [t["name"] for t in george_loop.build_tool_schemas()]
     full = [t["name"] for t in george_loop.build_tool_schemas(include_write=True)]
     assert full[: len(bare)] == bare
+    # Reads sorted, then the label tools sorted (two since 2026-09-10: the
+    # roles and the composition). Both read nothing and both are offered to
+    # every session, so both sit inside the shared prefix.
     reads = sorted(george_loop.TOOL_FUNCTIONS)
-    assert bare == reads + [george_loop.FINDING_TOOL]
+    assert bare == reads + sorted(george_loop.FINDING_TOOL_FUNCTIONS)
+    assert george_loop.FINDING_TOOL in bare and george_loop.COMPOSE_TOOL in bare
 
 
 def test_a_pin_and_a_workflow_can_never_hold_a_label():

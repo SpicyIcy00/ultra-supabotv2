@@ -1,0 +1,156 @@
+/*
+ * THE WORKSPACE'S VISUAL LANGUAGE.
+ *
+ * From one reference, read literally this time: a pale ground, cards of
+ * different KINDS with generous corners and soft depth, numbers set in a
+ * dot-matrix, one hero on an expressive field with a tick ruler beneath it,
+ * small pills for states, and everything else quiet grey. The numbers are the
+ * only loud thing.
+ *
+ * Orange is George and nothing else. Blue/coral are measured direction and
+ * nothing else. There is no colour for emphasis.
+ */
+
+:root {
+  --ws-ground: #F3F1EC;
+  --ws-card: #FFFFFF;
+  --ws-ink: #14203A;
+  --ws-ink-2: #55617A;
+  --ws-ink-3: #97A0B0;
+  --ws-hair: rgba(20, 32, 58, 0.09);
+  --ws-george: #E2691B;
+  --ws-up: #2E6FA8;
+  --ws-down: #C0472B;
+  --ws-flat: #97A0B0;
+  --ws-chip: #E5F27A;          /* the one accent chip, and it means something */
+  --ws-radius: 22px;
+  --ws-serif: ui-serif, Georgia, 'Iowan Old Style', serif;
+  --ws-sans: ui-sans-serif, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --ws-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.ws { min-height: 100dvh; background: var(--ws-ground); color: var(--ws-ink); font-family: var(--ws-sans); }
+
+/* ---- type ---------------------------------------------------------------- */
+.ws-mk { font: 500 10.5px/1.2 var(--ws-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ws-ink-3); }
+.ws-say { font-family: var(--ws-serif); font-size: 20px; line-height: 1.45; color: var(--ws-ink); max-width: 52ch; margin: 0; }
+.ws-say--lead { font-size: 24px; line-height: 1.4; max-width: 46ch; }
+.ws-note { font: 400 13px/1.55 var(--ws-sans); color: var(--ws-ink-2); max-width: 56ch; margin: 0; }
+
+/* A figure in dot-matrix: legible as a magnitude, unmistakably a designed
+   object rather than a number in a font. */
+.ws-num {
+  font-family: var(--ws-sans); font-weight: 700; letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums; line-height: 1; display: inline-block;
+  color: transparent;
+  background-image: radial-gradient(circle, var(--ws-ink) 1.05px, transparent 1.25px);
+  background-size: 3.2px 3.2px;
+  -webkit-background-clip: text; background-clip: text;
+}
+.ws-num--soft { background-image: radial-gradient(circle, var(--ws-ink-2) 1px, transparent 1.2px); }
+.ws-num--white { background-image: radial-gradient(circle, #fff 1.05px, transparent 1.25px); }
+
+/* The tick ruler under a hero figure: the scale it sits on, with a marker. */
+.ws-ruler { position: relative; height: 12px;
+  background-image: repeating-linear-gradient(to right, rgba(20,32,58,.28) 0 1px, transparent 1px 7px); }
+.ws-ruler::after { content: ''; position: absolute; left: var(--at, 50%); top: -4px; width: 2px; height: 20px; background: #fff; box-shadow: 0 0 0 1px rgba(20,32,58,.15); }
+
+/* ---- cards --------------------------------------------------------------- */
+.ws-card {
+  background: var(--ws-card); border-radius: var(--ws-radius);
+  box-shadow: 0 1px 2px rgba(20,32,58,.04), 0 14px 34px -22px rgba(20,32,58,.28);
+  padding: 22px 24px; position: relative;
+  transition: box-shadow 260ms var(--ws-ease), transform 380ms var(--ws-ease), opacity 260ms var(--ws-ease);
+}
+.ws-card--quiet { box-shadow: none; background: rgba(255,255,255,.55); }
+.ws-card--selected { box-shadow: 0 0 0 2px var(--ws-george), 0 14px 34px -22px rgba(20,32,58,.28); }
+.ws-card[data-clickable] { cursor: pointer; }
+.ws-card[data-clickable]:hover { box-shadow: 0 2px 4px rgba(20,32,58,.05), 0 18px 40px -20px rgba(20,32,58,.32); }
+
+/* The hero: a soft expressive field. The gradient is the one place colour
+   carries feeling, and it earns it by being the single most important thing. */
+.ws-hero {
+  border-radius: var(--ws-radius); padding: 28px 30px 24px; color: #fff; position: relative; overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 20% 20%, rgba(255,255,255,.22), transparent 55%),
+    radial-gradient(90% 80% at 85% 90%, rgba(255,255,255,.10), transparent 55%),
+    linear-gradient(135deg, var(--h1), var(--h2) 60%, var(--h3));
+  box-shadow: 0 24px 50px -26px rgba(20,32,58,.45);
+}
+.ws-hero--down { --h1: #F08A4B; --h2: #E2691B; --h3: #C0472B; }
+.ws-hero--up   { --h1: #6FB0E6; --h2: #2E6FA8; --h3: #1F4C7A; }
+.ws-hero--flat { --h1: #B7BEC9; --h2: #8F98A8; --h3: #6B7688; }
+.ws-hero .ws-mk { color: rgba(255,255,255,.78); }
+
+/* ---- pills --------------------------------------------------------------- */
+.ws-pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 10px;
+  font: 500 11.5px/1 var(--ws-sans); background: rgba(20,32,58,.06); color: var(--ws-ink-2); }
+.ws-pill--up { color: var(--ws-up); background: rgba(46,111,168,.10); }
+.ws-pill--down { color: var(--ws-down); background: rgba(192,71,43,.10); }
+.ws-pill--chip { background: var(--ws-chip); color: var(--ws-ink); }
+.ws-pill--george { background: rgba(226,105,27,.12); color: var(--ws-george); }
+
+/* ---- layout -------------------------------------------------------------- */
+.ws-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; align-items: start; }
+.ws-w-lead { grid-column: span 12; }
+.ws-w-supporting { grid-column: span 6; }
+.ws-w-quiet { grid-column: span 4; }
+@media (min-width: 1100px) {
+  .ws-w-lead { grid-column: span 8; }
+  .ws-w-supporting { grid-column: span 4; }
+  .ws-w-quiet { grid-column: span 3; }
+}
+@media (max-width: 720px) {
+  .ws-w-lead, .ws-w-supporting, .ws-w-quiet { grid-column: span 12; }
+}
+
+/* ---- tables / rows ------------------------------------------------------- */
+.ws-rows { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ws-rows th { text-align: left; font: 500 10.5px/1.2 var(--ws-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--ws-ink-3); padding: 0 8px 10px 0; border-bottom: 1px solid var(--ws-hair); }
+.ws-rows td { padding: 9px 8px 9px 0; border-bottom: 1px solid var(--ws-hair); color: var(--ws-ink); vertical-align: baseline; }
+.ws-rows td.n { text-align: right; font-variant-numeric: tabular-nums; }
+.ws-rows tr:last-child td { border-bottom: 0; }
+
+/* ---- distribution -------------------------------------------------------- */
+.ws-dots { display: flex; align-items: center; gap: 9px; height: 40px; }
+.ws-dots i { display: block; border-radius: 50%; width: var(--d, 8px); height: var(--d, 8px); background: var(--c, var(--ws-flat));
+  transform: translateY(var(--y, 0)); transition: transform 380ms var(--ws-ease); }
+.ws-dots i.now { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--ws-george); }
+
+/* ---- seam ---------------------------------------------------------------- */
+.ws-seam { position: relative; }
+.ws-seam::before { content: ''; position: absolute; left: 50%; top: 12px; bottom: 12px; width: 1px; background: var(--ws-hair); }
+
+/* ---- draft rows ---------------------------------------------------------- */
+.ws-draft-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 14px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--ws-hair); }
+.ws-draft-row:last-child { border-bottom: 0; }
+.ws-qty { display: inline-flex; align-items: center; gap: 6px; }
+.ws-qty button { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--ws-hair); background: #fff; color: var(--ws-ink-2); cursor: pointer; font-size: 14px; line-height: 1; }
+.ws-qty button:hover { border-color: var(--ws-ink-3); color: var(--ws-ink); }
+.ws-qty input { width: 64px; text-align: right; border: 0; border-bottom: 1px solid var(--ws-hair); background: transparent; font: 600 14px/1.4 var(--ws-sans); font-variant-numeric: tabular-nums; color: var(--ws-ink); outline: 0; }
+
+/* ---- state --------------------------------------------------------------- */
+.ws-progress { position: relative; height: 2px; background: var(--ws-hair); margin: 14px 0 6px; }
+.ws-progress i { position: absolute; top: -4px; width: 10px; height: 10px; border-radius: 50%; }
+.ws-progress i.at { left: var(--at, 0%); background: var(--ws-chip); box-shadow: 0 0 0 2px #fff; }
+.ws-progress i.end { right: 0; border: 1.5px dashed var(--ws-ink-3); background: #fff; }
+
+/* ---- george ------------------------------------------------------------- */
+.ws-mark { width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 40% 38%, #FFB27A, var(--ws-george) 60%, #B8531A); flex-shrink: 0; }
+.ws-mark--busy { animation: ws-breathe 1400ms var(--ws-ease) infinite; }
+@keyframes ws-breathe { 0%,100% { transform: scale(1); opacity: .85 } 50% { transform: scale(1.18); opacity: 1 } }
+
+/* ---- line (composer) ----------------------------------------------------- */
+.ws-line { display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 999px; padding: 8px 10px 8px 18px;
+  box-shadow: 0 1px 2px rgba(20,32,58,.04), 0 18px 40px -22px rgba(20,32,58,.3); }
+.ws-line input { flex: 1; border: 0; outline: 0; background: transparent; font: 400 15px/1.4 var(--ws-serif); color: var(--ws-ink); }
+.ws-line input::placeholder { color: var(--ws-ink-3); }
+.ws-send { width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--ws-george); color: #fff; cursor: pointer; display: grid; place-items: center; font-size: 15px; }
+.ws-send:disabled { background: rgba(20,32,58,.12); cursor: default; }
+.ws-word { border: 0; background: none; padding: 6px 0; margin-right: 16px; font: 400 13px/1 var(--ws-serif); color: var(--ws-ink-3); cursor: pointer; }
+.ws-word:hover { color: var(--ws-george); }
+
+/* ---- motion ------------------------------------------------------------- */
+.ws-in { animation: ws-in 420ms var(--ws-ease) both; }
+@keyframes ws-in { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; } }

@@ -1,0 +1,206 @@
+"""
+What George may compose, and — mostly — what he may not.
+
+NO DATABASE. The vocabulary and the validator.
+
+The whole point of `compose` is that the model chooses the screen. The whole
+danger of it is the same sentence. These tests spend their effort on the line
+between a CHOICE and a VALUE: a block that carries a colour, a width or a
+figure is refused with its reason, and a subject that is not a row of the read
+it points at is refused too. What survives is a choice among things that
+already exist.
+"""
+
+import pytest
+
+from tools._common import load_defs, req
+from agent import compose
+
+
+@pytest.fixture(scope="module")
+def defs():
+    return load_defs()
+
+
+ROWS = [
+    {"store": "Rockwell", "net_sales": 412884, "direction": "down"},
+    {"store": "OPUS", "net_sales": 121451, "direction": "up"},
+    {"store": "Fairview", "net_sales": 288110, "direction": "up"},
+]
+
+CALLS = {
+    1: {"tool": "get_sales", "arguments": {}, "error": None, "duplicate": False,
+        "is_read": True, "rows": ROWS},
+    2: {"tool": "get_sales", "arguments": {}, "error": "refused", "duplicate": False,
+        "is_read": True, "rows": []},
+    3: {"tool": "pin_answer", "arguments": {}, "error": None, "duplicate": False,
+        "is_read": False, "rows": []},
+}
+
+
+def only(blocks, defs):
+    return compose.validate({"blocks": blocks}, CALLS, defs)
+
+
+# ------------------------------------------------------------- choices
+
+
+def test_a_well_formed_composition_is_accepted(defs):
+    accepted, rejected = only([
+        {"kind": "hero", "key": "rockwell", "seq": 1, "subject": "Rockwell", "weight": "lead"},
+        {"kind": "text", "key": "reading", "weight": "supporting"},
+        {"kind": "table", "key": "shops", "seq": 1, "weight": "quiet"},
+    ], defs)
+    assert rejected == []
+    assert [b["kind"] for b in accepted] == ["hero", "text", "table"]
+    assert accepted[0]["subject"] == "Rockwell"
+    assert accepted[0]["tool"] == "get_sales"
+
+
+def test_a_comparison_names_rows_of_the_read(defs):
+    accepted, rejected = only([
+        {"kind": "comparison", "key": "two", "seq": 1, "subjects": ["Rockwell", "OPUS"]},
+    ], defs)
+    assert rejected == []
+    assert accepted[0]["subjects"] == ["Rockwell", "OPUS"]
+
+
+def test_subject_match_is_case_insensitive(defs):
+    accepted, _ = only([{"kind": "subject", "key": "r", "seq": 1, "subject": "rockwell"}], defs)
+    assert accepted and accepted[0]["subject"] == "rockwell"
+
+
+# ------------------------------------------------------------- values
+
+
+@pytest.mark.parametrize("field, value", [
+    ("colour", "orange"),
+    ("color", "#fff"),
+    ("width", 300),
+    ("value", 412884),
+    ("title", "Rockwell is down"),
+    ("figure", "9.4%"),
+])
+def test_anything_that_is_a_pixel_or_a_figure_is_refused(defs, field, value):
+    """The line between composing and drawing."""
+    accepted, rejected = only([
+        {"kind": "figure", "key": "r", "seq": 1, "subject": "Rockwell", field: value},
+    ], defs)
+    assert accepted == []
+    assert "George composes, the system draws" in rejected[0]["reason"]
+
+
+def test_a_subject_that_is_not_a_row_is_refused(defs):
+    """George may choose which row leads; he may not introduce one."""
+    accepted, rejected = only([
+        {"kind": "hero", "key": "x", "seq": 1, "subject": "Shangri-La", "weight": "lead"},
+    ], defs)
+    assert accepted == []
+    assert "no row for 'Shangri-La'" in rejected[0]["reason"]
+
+
+def test_a_block_over_a_failed_read_is_refused(defs):
+    accepted, rejected = only([{"kind": "table", "key": "t", "seq": 2}], defs)
+    assert accepted == []
+    assert "failed" in rejected[0]["reason"]
+
+
+def test_a_block_over_a_write_is_refused(defs):
+    accepted, rejected = only([{"kind": "table", "key": "t", "seq": 3}], defs)
+    assert accepted == []
+    assert "not a read" in rejected[0]["reason"]
+
+
+def test_a_block_over_a_read_that_never_ran_is_refused(defs):
+    accepted, rejected = only([{"kind": "table", "key": "t", "seq": 99}], defs)
+    assert accepted == []
+    assert "did not run" in rejected[0]["reason"]
+
+
+# ------------------------------------------------------------- weight
+
+
+def test_only_one_block_leads(defs):
+    accepted, rejected = only([
+        {"kind": "figure", "key": "a", "seq": 1, "subject": "Rockwell", "weight": "lead"},
+        {"kind": "figure", "key": "b", "seq": 1, "subject": "OPUS", "weight": "lead"},
+    ], defs)
+    assert len(accepted) == 1
+    assert "only one block leads" in rejected[0]["reason"]
+
+
+def test_a_hero_must_lead(defs):
+    accepted, rejected = only([
+        {"kind": "hero", "key": "r", "seq": 1, "subject": "Rockwell", "weight": "quiet"},
+    ], defs)
+    assert accepted == []
+    assert "lead by definition" in rejected[0]["reason"]
+
+
+def test_weight_defaults_to_supporting(defs):
+    accepted, _ = only([{"kind": "table", "key": "t", "seq": 1}], defs)
+    assert accepted[0]["weight"] == "supporting"
+
+
+# ------------------------------------------------------------- keys
+
+
+def test_every_block_has_a_key_and_keys_are_unique(defs):
+    _, rejected = only([{"kind": "table", "seq": 1}], defs)
+    assert "needs a short key" in rejected[0]["reason"]
+    _, rejected = only([
+        {"kind": "table", "key": "same", "seq": 1},
+        {"kind": "table", "key": "same", "seq": 1},
+    ], defs)
+    assert any("used twice" in r["reason"] for r in rejected)
+
+
+def test_a_key_is_a_slug(defs):
+    _, rejected = only([{"kind": "table", "key": "Rockwell Store!", "seq": 1}], defs)
+    assert "short key" in rejected[0]["reason"]
+
+
+# ------------------------------------------------------------- bounds
+
+
+def test_a_composition_is_bounded(defs):
+    n = int(req(defs, "composition.max_blocks"))
+    accepted, rejected = only([
+        {"kind": "table", "key": f"t{i}", "seq": 1} for i in range(n + 2)
+    ], defs)
+    assert len(accepted) == n
+    assert any("not a report" in r["reason"] for r in rejected)
+
+
+def test_a_chart_needs_a_known_form(defs):
+    _, rejected = only([{"kind": "chart", "key": "c", "seq": 1, "form": "pie"}], defs)
+    assert "chart form" in rejected[0]["reason"]
+
+
+def test_a_state_needs_a_known_label(defs):
+    accepted, rejected = only([{"kind": "state", "key": "s", "label": "exploding"}], defs)
+    assert accepted == [] and "state label" in rejected[0]["reason"]
+    accepted, _ = only([{"kind": "state", "key": "s", "label": "pending"}], defs)
+    assert accepted[0]["label"] == "pending"
+
+
+def test_nothing_submitted_is_not_an_error(defs):
+    assert compose.validate(None, CALLS, defs) == ([], [])
+    assert compose.validate({"blocks": []}, CALLS, defs) == ([], [])
+
+
+# ------------------------------------------------------------- the body
+
+
+def test_the_result_names_no_source_table(defs):
+    out = compose.compose({"blocks": [{"kind": "table", "key": "t", "seq": 1}]}, calls=CALLS, defs=defs)
+    assert "source_table" not in out["meta"]
+    assert out["meta"]["accepted"] == 1
+
+
+def test_the_vocabulary_is_the_definitions(defs):
+    voc = req(defs, "composition")
+    for kind, spec in voc["widgets"].items():
+        assert spec["about"], f"{kind} has no meaning"
+        assert isinstance(spec["needs"], list)
+    assert "hero" in voc["widgets"] and "draft" in voc["widgets"] and "text" in voc["widgets"]

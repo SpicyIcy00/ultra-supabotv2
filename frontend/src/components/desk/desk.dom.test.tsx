@@ -22,7 +22,8 @@ import type { Post } from '../../types/river';
 const readRiver = vi.fn();
 const readThread = vi.fn();
 const replayCalls = vi.fn();
-const asked: { question: string; options: Record<string, unknown> }[] = [];
+type AskedOptions = { desk?: import('../../types/george').DeskContext | null };
+const asked: { question: string; options: AskedOptions }[] = [];
 
 vi.mock('../../services/riverApi', () => ({
   readRiver: (...a: unknown[]) => readRiver(...a),
@@ -71,7 +72,7 @@ vi.mock('../../hooks/useGeorge', () => ({
     turns: [], state: 'idle', presence: 'idle', busy: false,
     live: { running: [], lastResult: null, thinking: '', toolResults: 0, figures: 0 },
     composer: 'idle', setComposer: vi.fn(),
-    ask: (question: string, options: Record<string, unknown>) => { asked.push({ question, options }); return Promise.resolve(); },
+    ask: (question: string, options: AskedOptions) => { asked.push({ question, options }); return Promise.resolve(); },
     cancel: vi.fn(), reset: vi.fn(), open: vi.fn(),
     threadId: null, storedThreadId: null, pageScope: null,
   }),

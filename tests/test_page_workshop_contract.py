@@ -158,7 +158,13 @@ def test_the_read_prefix_holds_by_construction_whatever_the_names():
     read = george_loop.build_tool_schemas()
     both = george_loop.build_tool_schemas(include_write=True)
     assert both[: len(read)] == read
-    assert [s["name"] for s in read] == sorted(s["name"] for s in read)
+    # Reads sorted, then the label tools sorted: the structure the builder
+    # guarantees, which is what a shared prefix needs. Since 2026-09-10 the
+    # second label tool ("compose") sorts before "get_...", so the prefix as
+    # a whole is no longer alphabetical — and never needed to be.
+    assert [s["name"] for s in read] == (
+        sorted(george_loop.TOOL_FUNCTIONS) + sorted(george_loop.FINDING_TOOL_FUNCTIONS)
+    )
     injected = [s["name"] for s in both[len(read):]]
     assert injected == sorted(injected)
     assert injected[0] == "create_page" and injected[-1] == composite_tools.PAGE_CONTEXT_TOOL

@@ -337,6 +337,36 @@ export interface Finding {
   identity?: string | null;
 }
 
+/**
+ * One block of the composition George made (2026-09-10): which read, as which
+ * kind of object, at what weight, under which key. Validated by the loop
+ * (agent/compose.py) against the vocabulary in metrics.yaml `composition`
+ * before it is sent; the same object an answer post keeps in
+ * `payload.composition.blocks`. Nothing here is a figure or a pixel.
+ */
+export interface CompositionBlock {
+  kind: 'text' | 'figure' | 'hero' | 'subject' | 'comparison' | 'table' | 'chart' | 'distribution' | 'draft' | 'state';
+  /** George's key for the object. The same key in a later turn is the same object, changed. */
+  key: string;
+  weight: 'lead' | 'supporting' | 'quiet';
+  /** The read it draws from. Absent for text and a state with no read. */
+  seq?: number;
+  tool?: string;
+  subject?: string;
+  subjects?: string[];
+  form?: 'line' | 'bar';
+  label?: 'pending' | 'running' | 'waiting' | 'done' | 'blocked';
+}
+
+export interface CompositionFrame {
+  /** The seq of the compose call itself; -1 when restored from a stored post. */
+  seq: number;
+  /** The blocks that stood. Replaces, never accumulates. */
+  blocks: CompositionBlock[];
+  /** What the model asked for and the loop refused, with the reason. */
+  rejected: { block: unknown; reason: string }[];
+}
+
 export interface FindingFrame {
   /** The seq of the record_findings call itself. */
   seq: number;
@@ -474,6 +504,11 @@ export type GeorgeTurn =
        * which composes as adjacency, exactly as before.
        */
       findings?: Finding[];
+      /**
+       * The screen George composed, from the newest `compose` frame. Absent
+       * on a turn that never composed — which the workspace draws plainly.
+       */
+      composition?: CompositionFrame;
       /** meta of the last tool result — the receipts shown under the answer. */
       receipts?: ToolMeta;
       /**

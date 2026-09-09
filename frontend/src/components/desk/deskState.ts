@@ -113,7 +113,7 @@ export function deskReducer(state: DeskState, action: DeskAction): DeskState {
 export function deskContextFor(
   state: DeskState,
   layout?: DeskLayout | null,
-  recommendation?: { ground: string; action: { question: string | null } } | null,
+  recommendation?: { ground: string; action: { question?: string | null } } | null,
 ): DeskContext | null {
   const out: DeskContext = {};
   if (state.selection.length > 0) {

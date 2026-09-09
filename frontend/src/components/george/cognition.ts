@@ -54,6 +54,7 @@ const ACTS: Record<string, string> = {
   // The label tool (agent/findings.py). It reads nothing; it says what each
   // read WAS. Named here so the work line never falls back to its identifier.
   record_findings: 'noting what each read was',
+  compose: 'composing the workspace',
 };
 
 /**
@@ -293,6 +294,7 @@ const DEEDS: Record<string, string> = {
   run_workflow: 'ran the workflow',
   view_page: 'read the page',
   record_findings: 'noted what each read was',
+  compose: 'composed the workspace',
 };
 
 /**

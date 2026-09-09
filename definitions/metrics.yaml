@@ -4774,6 +4774,83 @@ judgment:
   # later be attached to that thing rather than to a conversation.
   subject_kinds: [store, warehouse, supplier, product, category, estate]
 
+# =============================================================================
+# COMPOSITION — George composes the workspace; the system draws it.
+#
+# Added 2026-09-10. Until now the screen was a pure function of rows: a
+# composer derived a layout and the model had one integer-and-a-word channel
+# into it. That produced a document — chart, findings, prose, in a fixed order
+# — and a document with its paragraphs reordered is still a document.
+#
+# Now George says what you see: which of the results he read, as which kind of
+# object, at what weight. He does this through `compose`, a label tool like
+# record_findings — it reads nothing, it is validated here before any of it
+# reaches a client, and what is refused is named as a warning.
+#
+# WHAT HE MAY NOT DO, and this is the whole safety property: emit a figure, a
+# colour, a size, a pixel, or any text beyond a key and a closed label. Every
+# number on screen comes from a result by seq; every subject he names must be
+# a row in that result. The composition is a CHOICE, never a value.
+# =============================================================================
+composition:
+  introduced: "2026-09-10"
+  executes_nothing: true
+
+  # THE VOCABULARY. Closed. `needs` says what a block must carry to be drawn;
+  # `about` is the one-line meaning George is taught.
+  widgets:
+    text:
+      about: "your own words — the reading, the caveat, the next thing"
+      needs: []
+    figure:
+      about: "one number from one row, large, on its own"
+      needs: [seq, subject]
+    hero:
+      about: "the ONE thing that matters most: a subject's figure, its change and its scale, on an expressive field — at most one, and it must lead"
+      needs: [seq, subject]
+    subject:
+      about: "a business object — a shop, product or supplier — with its headline figure and drivers where the read has them"
+      needs: [seq, subject]
+    comparison:
+      about: "two to four subjects from one read, side by side across a seam"
+      needs: [seq, subjects]
+    table:
+      about: "the rows of a read, when precision beats shape"
+      needs: [seq]
+    chart:
+      about: "a conventional line or bar chart of one read, when a shape says it faster than rows"
+      needs: [seq, form]
+    distribution:
+      about: "a series or ranked set as dots along an axis — eight weeks, seven shops"
+      needs: [seq]
+    draft:
+      about: "an order or document you have produced, with editable rows and a total — the purchase plan"
+      needs: [seq]
+    state:
+      about: "where a process stands: pending, running, waiting, and what happens next"
+      needs: [label]
+  chart_forms: [line, bar]
+  state_labels: [pending, running, waiting, done, blocked]
+
+  # WEIGHT IS JUDGMENT MADE VISIBLE. One lead, which the eye goes to first; what
+  # supports it; and what is on screen because it is true, not because it
+  # matters. A composition where everything is the same weight has not been
+  # composed.
+  weights: [lead, supporting, quiet]
+  one_lead: true
+  hero_must_lead: true
+  max_blocks: 8
+
+  # KEYS ARE HOW THE WORKSPACE TRANSFORMS INSTEAD OF STACKING. Every block has
+  # a short key George chooses — "rockwell", "seikyo-order". A follow-up that
+  # is about the same thing composes the SAME key, and the object on screen
+  # changes rather than being drawn again beneath itself.
+  key_pattern: "^[a-z0-9][a-z0-9-]{0,30}$"
+
+  # Anything not in this list on a block is refused with the block. This is
+  # the list that keeps a choice from becoming a value.
+  allowed_fields: [kind, key, weight, seq, subject, subjects, form, label]
+
 surface:
   introduced: "2026-09-09"
   executes_nothing: true

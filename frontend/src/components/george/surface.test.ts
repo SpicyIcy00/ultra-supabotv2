@@ -203,7 +203,7 @@ describe('9–10. attention only from trusted findings, and no synthetic score',
   it('marks the first row of a change ranking the TOOL performed', () => {
     const unit = work('a1', [...OPUS, products(4)], [finding(1, 'primary'), finding(4, 'breakdown', 1)]);
     const plan = composeSurface('a1', [{ intent: null, unit }], anchorOf(unit));
-    expect(plan.attention).toEqual([{ subject: 'Mango Gummy', reason: 'ranked_first', direction: 'down', role: 'breakdown' }]);
+    expect(plan.attention).toEqual([{ subject: 'Mango Gummy', reason: 'ranked_first', direction: 'down', role: 'breakdown', measure: 'Product revenue' }]);
   });
 
   it('carries no score, threshold, severity or confidence anywhere on the plan', () => {
