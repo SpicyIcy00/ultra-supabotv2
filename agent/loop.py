@@ -48,6 +48,7 @@ import re
 import time
 import uuid
 from datetime import date, datetime, timezone
+from decimal import Decimal
 from typing import Any, AsyncIterator, Callable, Optional
 
 import anthropic
@@ -439,6 +440,41 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
                            "description": "for driver and breakdown: the seq of the primary"},
                 },
                 "required": ["seq", "role"],
+                "additionalProperties": False,
+            },
+        }
+
+    if pname == "beliefs":
+        # A belief is a list of objects, and the schema has to SAY so. Until
+        # 2026-09-10 this fell through to {"type": "string"}, the model
+        # obediently sent the list as a JSON string, and the validator saw a
+        # string's characters — so George formed views in prose every turn
+        # and held none (`beliefs held: 0` across the whole dogfood).
+        from agent import beliefs as _beliefs
+        _defs = _load_defs()
+        return {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": _beliefs.MAX_BELIEFS_PER_TURN,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "subject_kind": {"type": "string", "enum": list(_beliefs.subject_kinds_for(_defs))},
+                    "subject": {"type": "string"},
+                    "stance": {"type": "string", "enum": list(_beliefs.stances_for(_defs))},
+                    "claim": {"type": "string", "maxLength": _beliefs.MAX_CLAIM,
+                              "description": "one sentence, no figure in it"},
+                    "evidence": {
+                        "type": "array", "minItems": 1,
+                        "items": {"type": "object",
+                                  "properties": {"tool": {"type": "string"},
+                                                 "arguments": {"type": "object"}},
+                                  "required": ["tool", "arguments"]},
+                    },
+                    "supersedes": {"type": "string"},
+                    "why": {"type": "string"},
+                },
+                "required": ["subject_kind", "subject", "stance", "claim", "evidence"],
                 "additionalProperties": False,
             },
         }
@@ -1132,6 +1168,17 @@ A genuinely broad question — the morning brief, a multi-store investigation, a
 # --------------------------------------------------------------------------
 
 def _json_safe(obj: Any) -> Any:
+    """
+    What leaves the loop as JSON — a frame, a stored payload, a tool result
+    handed to the model. Dates become ISO strings. A Decimal becomes a float
+    (2026-09-10): Postgres `numeric` arrives as Decimal through psycopg, and a
+    tool whose SQL divides — units per day, days of cover — returned rows the
+    loop could not serialize, so every purchase plan failed INSIDE the loop
+    while the tool itself worked when called directly. Converting here, once,
+    is the fix for every tool rather than a patch in each.
+    """
+    if isinstance(obj, Decimal):
+        return float(obj)
     if isinstance(obj, (datetime, date)):
         return obj.isoformat()
     if isinstance(obj, dict):

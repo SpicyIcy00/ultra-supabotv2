@@ -229,3 +229,40 @@ def test_a_refused_belief_never_reaches_the_store(defs):
     beliefs.record([good(stance="critical")], defs=defs,
                    is_executed=executed_only(RAN), store=store)
     assert store.seen is None, "a refused belief was passed to the store"
+
+
+# ---------------------------------------------------------------------------
+# The schema the model is handed, and a list that arrives as its own JSON text.
+#
+# Found 2026-09-10, after a whole dogfood of `beliefs held: 0`: the parameter's
+# annotation is list[dict], the schema builder had no branch for it, and the
+# model was told {"type": "string"}. It obediently sent the list as a JSON
+# string; the validator iterated the string's characters and refused each one
+# as "not an object". George formed a view in prose every turn and held none.
+# ---------------------------------------------------------------------------
+
+def test_the_schema_offers_a_list_of_objects_and_not_a_string():
+    from agent import loop as george_loop
+    schema = next(t for t in george_loop.build_tool_schemas(include_write=True)
+                  if t["name"] == "record_belief")
+    beliefs_schema = schema["input_schema"]["properties"]["beliefs"]
+    assert beliefs_schema["type"] == "array"
+    items = beliefs_schema["items"]
+    assert items["type"] == "object"
+    assert set(items["required"]) == {"subject_kind", "subject", "stance", "claim", "evidence"}
+    assert items["additionalProperties"] is False
+    assert set(items["properties"]["stance"]["enum"]) == set(beliefs.stances_for(load_defs()))
+    assert set(items["properties"]["subject_kind"]["enum"]) == set(beliefs.subject_kinds_for(load_defs()))
+
+
+def test_a_list_that_arrives_as_json_text_is_still_that_list():
+    import json
+    view = {"subject_kind": "supplier", "subject": "Seikyo SEK001", "stance": "needs_attention",
+            "claim": "The Seikyo range is chronically out of stock rather than merely low.",
+            "evidence": [{"tool": "get_purchase_plan", "arguments": {"supplier": "Seikyo SEK001"}}]}
+    accepted, rejected = beliefs.validate(json.dumps([view]), load_defs(), is_executed=lambda c: True)
+    assert rejected == []
+    assert len(accepted) == 1 and accepted[0]["subject"] == "Seikyo SEK001"
+    # Text that is not JSON is one refusal with a reason, not a refusal per character.
+    accepted, rejected = beliefs.validate("not json at all", load_defs(), is_executed=lambda c: True)
+    assert accepted == [] and len(rejected) == 1

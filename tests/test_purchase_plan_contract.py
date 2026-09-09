@@ -206,3 +206,21 @@ def test_it_writes_nothing():
     src = inspect.getsource(purchase_plan)
     for forbidden in ("INSERT", "UPDATE", "DELETE ", "COMMIT"):
         assert forbidden not in src.upper().replace("DELETED", "")
+
+
+def test_a_plan_row_survives_the_loop_as_json():
+    """
+    Postgres `numeric` arrives as Decimal, and the plan's SQL divides. Until
+    2026-09-10 the loop could not serialize such a row, so every plan call
+    failed inside the loop while the tool worked when called directly. The
+    loop's one serializer now converts it; hold that here, beside the tool
+    whose rows found the gap.
+    """
+    import json
+    from decimal import Decimal
+    from agent.loop import _json_safe
+    row = {"product": "Aji Mix", "units_per_day": Decimal("3.711"), "on_order": Decimal(0),
+           "days_of_cover": Decimal("0.0"), "suggested_order_qty": 334}
+    out = json.loads(json.dumps(_json_safe({"rows": [row], "meta": {"cover_days": Decimal(60)}})))
+    assert out["rows"][0]["units_per_day"] == 3.711
+    assert out["meta"]["cover_days"] == 60

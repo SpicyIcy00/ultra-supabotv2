@@ -49,6 +49,8 @@ of truth for the same fact.
 
 from __future__ import annotations
 
+import json
+
 import re
 from typing import Any, Callable, Iterable, Mapping, Optional
 
@@ -103,6 +105,15 @@ def validate(
 
     if submitted is None:
         return accepted, rejected
+    # A list that arrived as its own JSON text is still that list. The schema
+    # now says "array of objects" (agent/loop.py), but a model that has seen
+    # the string form once may send it again, and refusing a well-formed view
+    # for its wrapping would be the tool being clever at the person's expense.
+    if isinstance(submitted, str):
+        try:
+            submitted = json.loads(submitted)
+        except ValueError:
+            return accepted, [_reject(submitted, "not a list of belief objects")]
     if isinstance(submitted, Mapping):
         submitted = [submitted]
 
