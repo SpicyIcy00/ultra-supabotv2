@@ -13,7 +13,7 @@
  */
 import { compositionFor, resolve, type AnswerTurn, type Block } from './composition';
 import {
-  ChartWidget, ComparisonWidget, DistributionWidget, DraftWidget, FigureWidget,
+  Caveats, ChartWidget, ComparisonWidget, DistributionWidget, DraftWidget, FigureWidget,
   HeroWidget, StateWidget, SubjectWidget, TableWidget, TextWidget, Wrap,
 } from './widgets';
 
@@ -35,22 +35,16 @@ export function Composition({ turn, selection, onSelect, live }: RenderProps) {
     <div className="ws-grid" data-composition>
       {/* Caveats first, always, unless the text block leads and carries them. */}
       {!textLeads && notices.length > 0 && (
-        <div className="ws-w-lead" key="__notices">
-          <div style={{ display: 'grid', gap: 8 }}>
-            {notices.map((n, i) => (
-              <p key={`${n.kind}-${i}`} className="ws-note" style={{ borderLeft: '2px solid var(--ws-ink)', paddingLeft: 12 }}>{n.message}</p>
-            ))}
-          </div>
-        </div>
+        <div className="ws-w-lead" key="__notices"><Caveats notices={notices} /></div>
       )}
       {/* Prose George did not place still shows, after the lead. */}
       {!hasText && turn.text && (
-        <Wrap key="__text" weight={lead ? 'supporting' : 'lead'} live={live}>
+        <Wrap key="__text" kind="text" weight={lead ? 'supporting' : 'lead'} live={live}>
           <TextWidget text={turn.text} weight={lead ? 'supporting' : 'lead'} live={live} />
         </Wrap>
       )}
       {blocks.map((block) => (
-        <Wrap key={block.key} weight={block.weight} live={live}>
+        <Wrap key={block.key} kind={block.kind} weight={block.weight} live={live}>
           <Widget block={block} turn={turn} selection={selection} onSelect={onSelect} live={live} textLeads={textLeads} />
         </Wrap>
       ))}

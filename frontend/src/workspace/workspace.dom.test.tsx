@@ -7,11 +7,12 @@
  *     screen George did not compose looks like one;
  *   - every figure on screen is a row value; nothing is computed here.
  */
-import { cleanup, render } from '@testing-library/react';
+import { cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { GeorgeTurn, ToolCall } from '../types/george';
 import type { Post } from '../types/river';
 import { compositionFor, restoreFromPosts, type AnswerTurn } from './composition';
+import { fmt, splitCaveat } from './widgets';
 import { Composition } from './render';
 
 afterEach(cleanup);
@@ -27,9 +28,9 @@ const SHOPS: ToolCall = {
     row_count: 3, source_table: 'new_transactions', truncated: false, duration_ms: 12, error: null, rows_complete: true,
     meta: META,
     rows: [
-      { store: 'Rockwell', value: 412884, baseline: 455000, change: -42116, change_pct: -9.3, direction: 'down', baseline_status: 'ok' },
-      { store: 'OPUS', value: 121451, baseline: 118000, change: 3451, change_pct: 2.9, direction: 'up', baseline_status: 'ok' },
-      { store: 'Fairview', value: 288110, baseline: 288000, change: 110, change_pct: 0.0, direction: 'flat', baseline_status: 'ok' },
+      { unit: 'PHP', store: 'Rockwell', value: 412884, baseline: 455000, change: -42116, change_pct: -9.3, direction: 'down', baseline_status: 'ok' },
+      { unit: 'PHP', store: 'OPUS', value: 121451, baseline: 118000, change: 3451, change_pct: 2.9, direction: 'up', baseline_status: 'ok' },
+      { unit: 'PHP', store: 'Fairview', value: 288110, baseline: 288000, change: 110, change_pct: 0.0, direction: 'flat', baseline_status: 'ok' },
     ],
   },
 };
@@ -109,6 +110,72 @@ describe('a composed turn', () => {
     });
     const { container } = render(<Composition turn={t} selection={[]} onSelect={() => {}} live={false} />);
     expect(container.textContent).toContain('which this read does not carry');
+  });
+});
+
+/**
+ * THE CAVEAT, WHOLE, WITHOUT THE WALL.
+ *
+ * The first dogfood put forty product SKUs and the word NULL in the top two
+ * hundred pixels, above the answer. The rule these tests hold is the one
+ * CLAUDE.md already states: the caveat is surfaced above the number, and a
+ * caveat that pushes the claim off the screen has not surfaced anything.
+ */
+describe('a caveat', () => {
+  const REAL = '126 of 515 compared row(s) could not be compared against the 2026 08 24 to 2026 08 31 '
+    + 'baseline: 66 no_baseline (the baseline window returned no figure (NULL) — nothing to compare '
+    + 'against): Sari Kesari BALI Indonesian peanuts salted garlic (INDO 2); Sari Kesari BALI Indonesian '
+    + 'peanuts spicy (INDO01); Original Flavor Beef Jerky 80G (SH843); Aji Royal Peak Emperor Plum 250g '
+    + '(SH5032); Lucky Big Rongkan (SH744) and 61 more.';
+
+  it('keeps the count and the reason visible and puts only the list behind a word', () => {
+    const { head, detail } = splitCaveat(REAL);
+    expect(head).toContain('126 of 515');
+    expect(head).toContain('no_baseline');
+    expect(head).toContain('nothing to compare against');
+    expect(head).not.toContain('Sari Kesari');
+    expect(detail).toContain('Sari Kesari');
+    expect(detail).toContain('and 61 more');
+  });
+
+  it('leaves a short caveat entirely alone', () => {
+    const short = '300 of 650 products cannot be placed against the earlier window.';
+    expect(splitCaveat(short)).toEqual({ head: short, detail: null });
+  });
+
+  it('is drawn above everything, and the list is not there until it is asked for', () => {
+    const t = turn({
+      notices: [{ kind: 'comparison_incomplete', message: REAL, source: 'get_sales' }],
+      composition: { seq: 3, rejected: [], blocks: [{ kind: 'hero', key: 'r', weight: 'lead', seq: 1, subject: 'Rockwell' }] },
+    });
+    const { container } = render(<Composition turn={t} selection={[]} onSelect={() => {}} live={false} />);
+    const first = container.querySelector('[data-composition] > *')!;
+    expect(first.querySelector('[data-caveats]')).not.toBeNull();
+    expect(container.textContent).toContain('126 of 515');
+    expect(container.textContent).not.toContain('Sari Kesari');
+    fireEvent.click(container.querySelector('.ws-more')!);
+    expect(container.textContent).toContain('Sari Kesari');
+  });
+});
+
+describe('a table', () => {
+  it('says a constant column once above the rows instead of on every row', () => {
+    const t = turn({ composition: { seq: 3, rejected: [], blocks: [{ kind: 'table', key: 'shops', weight: 'supporting', seq: 1 }] } });
+    const { container } = render(<Composition turn={t} selection={[]} onSelect={() => {}} live={false} />);
+    const table = container.querySelector('[data-widget="table"]')!;
+    const heads = [...table.querySelectorAll('th')].map((el) => el.textContent);
+    expect(heads).not.toContain('unit');
+    expect(table.querySelector('.ws-mk')!.textContent).toContain('PHP');
+    // And the baseline is money, like the value beside it.
+    expect(table.textContent).toContain('₱455,000');
+  });
+});
+
+describe('figures', () => {
+  it('keeps centavos off a large peso figure and on a small rate', () => {
+    expect(fmt('net_sales', 141838.5)).toBe('₱141,839');
+    expect(fmt('units_per_day', 3.711)).toBe('3.71');
+    expect(fmt('net_sales', 412884)).toBe('₱412,884');
   });
 });
 

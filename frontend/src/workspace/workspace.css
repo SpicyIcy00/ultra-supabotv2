@@ -82,6 +82,26 @@
 .ws-hero--flat { --h1: #B7BEC9; --h2: #8F98A8; --h3: #6B7688; }
 .ws-hero .ws-mk { color: rgba(255,255,255,.78); }
 
+/* The caveats. Navy on the pale ground, never the accent: a notice qualifies
+   a number already on screen and asks nobody for anything (CLAUDE.md UI rule
+   5). Prominence comes from POSITION — above the work, never collapsible —
+   and the colour is stated explicitly here so nothing upstream can tint it. */
+.ws-caveats { display: grid; gap: 10px; border-left: 2px solid var(--ws-ink); padding-left: 14px; }
+.ws-caveat { font: 400 13px/1.6 var(--ws-sans); color: var(--ws-ink-2); max-width: 64ch; margin: 0; }
+.ws-caveat-detail { display: block; margin-top: 7px; color: var(--ws-ink-3); font-size: 12px; line-height: 1.6; }
+.ws-more { border: 0; background: none; padding: 0; font: inherit; color: var(--ws-ink); cursor: pointer;
+  text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.ws-more:hover { color: var(--ws-george); }
+
+/* Receipts: the provenance under every figure, set to be findable and not to
+   be read first. Deliberately NOT .ws-mk — that shouts, and these are 12
+   words of table name. */
+.ws-src { font: 400 10.5px/1.55 var(--ws-sans); color: var(--ws-ink-3); margin: 0; word-break: break-word; }
+
+/* The ruler's ends, so the scale says what it is without a sentence. */
+.ws-ruler-ends { display: flex; justify-content: space-between; margin-top: 7px;
+  font: 500 9.5px/1 var(--ws-sans); letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.62); }
+
 /* ---- pills --------------------------------------------------------------- */
 .ws-pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 10px;
   font: 500 11.5px/1 var(--ws-sans); background: rgba(20,32,58,.06); color: var(--ws-ink-2); }
@@ -100,8 +120,12 @@
   .ws-w-supporting { grid-column: span 4; }
   .ws-w-quiet { grid-column: span 3; }
 }
+/* A floor on room for the widgets that are a scrollbar without it. Two
+   classes, so it beats the single-class rules above wherever they sit. */
+.ws-w-quiet.ws-w-roomy { grid-column: span 6; }
+@media (min-width: 1100px) { .ws-w-quiet.ws-w-roomy { grid-column: span 4; } }
 @media (max-width: 720px) {
-  .ws-w-lead, .ws-w-supporting, .ws-w-quiet { grid-column: span 12; }
+  .ws-w-lead, .ws-w-supporting, .ws-w-quiet, .ws-w-quiet.ws-w-roomy { grid-column: span 12; }
 }
 
 /* ---- tables / rows ------------------------------------------------------- */

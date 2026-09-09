@@ -49,7 +49,8 @@ export function compositionFor(turn: AnswerTurn): Block[] {
 
 /** The subject column of a row, by the conventions the tools use. */
 export function subjectOf(row: Record<string, unknown>): string | null {
-  for (const k of ['store', 'label', 'product', 'name', 'subject', 'supplier', 'category']) {
+  for (const k of ['store', 'label', 'product', 'name', 'subject', 'supplier', 'category',
+                   'day', 'week', 'month', 'date', 'period', 'bucket', 'snapshot_date', 'sku']) {
     const v = row[k];
     if (typeof v === 'string' && v.trim()) return v;
   }

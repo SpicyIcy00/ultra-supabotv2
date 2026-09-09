@@ -16,13 +16,26 @@ import { changeOf, rowFor, subjectOf, valueOf, type Resolved } from './compositi
 
 const PESO_KEYS = /sales|revenue|value|subtotal|total|cost|price|amount|_php$|peso/i;
 
+/**
+ * How many decimals a figure keeps.
+ *
+ * A peso figure in the hundreds of thousands does not need centavos —
+ * "₱141,838.5" reads as a number that broke, not as a precise one — while a
+ * rate of 3.711 units a day needs two. The threshold is the magnitude, not the
+ * column name, so it holds for a figure nobody has seen before.
+ */
+function digits(n: number): number {
+  if (Number.isInteger(n)) return 0;
+  return Math.abs(n) >= 1000 ? 0 : 2;
+}
+
 export function fmt(key: string, v: unknown): string {
   if (v === null || v === undefined || v === '') return '—';
   if (typeof v === 'number' || (typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v))) {
     const n = Number(v);
-    if (PESO_KEYS.test(key)) return `₱${n.toLocaleString('en-PH', { maximumFractionDigits: n % 1 ? 2 : 0 })}`;
+    if (PESO_KEYS.test(key)) return `₱${n.toLocaleString('en-PH', { maximumFractionDigits: digits(n) })}`;
     if (/pct|percent|share/i.test(key)) return `${n > 0 ? '+' : ''}${n.toFixed(1)}%`;
-    return n.toLocaleString('en-PH', { maximumFractionDigits: n % 1 ? 2 : 0 });
+    return n.toLocaleString('en-PH', { maximumFractionDigits: digits(n) });
   }
   if (typeof v === 'boolean') return v ? 'yes' : 'no';
   if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10);
@@ -32,6 +45,63 @@ export function fmt(key: string, v: unknown): string {
 function pct(n: number | null): string {
   if (n === null) return '';
   return `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n).toFixed(1)}%`;
+}
+
+/**
+ * THE CAVEATS, above the work, in words a person reads on the way to the number.
+ *
+ * A caveat stays above the figure it qualifies and never sits behind a
+ * disclosure that gives no hint it is there (CLAUDE.md UI rule 4). What it may
+ * not do is push the claim off the screen — the greeting amendment says exactly
+ * that, in those words — and the first dogfood of this workspace was a page
+ * whose top two hundred pixels were forty product SKUs and the word NULL, with
+ * the answer below them.
+ *
+ * So the notice's own sentence is always visible, whole: the count, the reason,
+ * and the fact that it happened. Where the message goes on to ENUMERATE — "…:
+ * Sari Kesari BALI peanuts (INDO 2); …and 40 more" — the list sits behind one
+ * word on the same line. Nothing is hidden that the sentence has not already
+ * announced, and nothing is summarised here: the split is at a punctuation
+ * boundary in George's own text, never a rewrite of it.
+ */
+export function splitCaveat(message: string): { head: string; detail: string | null } {
+  const firstItem = message.indexOf(';');
+  if (firstItem < 0) return { head: message, detail: null };
+  const cut = message.lastIndexOf(':', firstItem);
+  if (cut < 0) return { head: message, detail: null };
+  const detail = message.slice(cut + 1).trim();
+  // Only split when the list is the long half: a two-item list is shorter than
+  // the word that would hide it.
+  if (detail.length < 90) return { head: message, detail: null };
+  return { head: message.slice(0, cut).trim().replace(/[:,]$/, '') + '.', detail };
+}
+
+function Caveat({ notice }: { notice: GeorgeNotice }) {
+  const [open, setOpen] = useState(false);
+  const { head, detail } = splitCaveat(notice.message);
+  return (
+    <p className="ws-caveat">
+      {head}
+      {detail && (
+        <>
+          {' '}
+          <button type="button" className="ws-more" onClick={() => setOpen((o) => !o)}>
+            {open ? 'less' : 'which ones'}
+          </button>
+          {open && <span className="ws-caveat-detail">{detail}</span>}
+        </>
+      )}
+    </p>
+  );
+}
+
+export function Caveats({ notices }: { notices?: GeorgeNotice[] }) {
+  if (!notices || notices.length === 0) return null;
+  return (
+    <div className="ws-caveats" data-caveats={notices.length}>
+      {notices.map((n, i) => <Caveat key={`${n.kind}-${i}`} notice={n} />)}
+    </div>
+  );
 }
 
 export function Delta({ row, light = false }: { row: Record<string, unknown>; light?: boolean }) {
@@ -55,9 +125,13 @@ export function Receipts({ meta, compact = false }: { meta?: ToolMeta | null; co
   if (!meta) return null;
   const when = meta.snapshot_timestamp ? new Date(meta.snapshot_timestamp).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : null;
   const win = meta.window?.name ?? (meta.window?.start ? `${meta.window.start} → ${meta.window.end}` : null);
+  // Set quietly, in lower case. Every card used to END in
+  // NEW_TRANSACTION_ITEMS + NEW_TRANSACTIONS + PRODUCTS, because the receipts
+  // wore the same shouting style as a label — the provenance every figure must
+  // carry (UI rules 3 and 6) was the loudest small thing on the screen.
   return (
-    <p className="ws-mk" style={{ marginTop: compact ? 8 : 12, lineHeight: 1.6, letterSpacing: '.06em' }}>
-      {[meta.source_table, win, when ? `read ${when}` : null].filter(Boolean).join(' · ')}
+    <p className="ws-src" style={{ marginTop: compact ? 8 : 12 }}>
+      {[meta.source_table, win?.replace(/_/g, ' '), when ? `read ${when}` : null].filter(Boolean).join(' · ')}
     </p>
   );
 }
@@ -78,11 +152,7 @@ export function TextWidget({ text, weight, notices, live }: { text: string; weig
   return (
     <div data-widget="text">
       {notices && notices.length > 0 && (
-        <div style={{ display: 'grid', gap: 8, marginBottom: 14 }}>
-          {notices.map((n, i) => (
-            <p key={`${n.kind}-${i}`} className="ws-note" style={{ borderLeft: '2px solid var(--ws-ink)', paddingLeft: 12 }}>{n.message}</p>
-          ))}
-        </div>
+        <div style={{ marginBottom: 16 }}><Caveats notices={notices} /></div>
       )}
       <p className={`ws-say ${weight === 'lead' ? 'ws-say--lead' : ''}`} style={{ whiteSpace: 'pre-wrap' }}>
         {text || (live ? '' : '')}
@@ -103,7 +173,7 @@ export function FigureWidget({ r, selected, onSelect }: WidgetProps) {
         <Numeral text={v ? fmt(v.key, v.value) : '—'} size={30} />
         <Delta row={row} />
       </div>
-      {v && <p className="ws-mk" style={{ marginTop: 8 }}>{r.call?.result?.meta?.metric_label ?? v.key.replace(/_/g, ' ')}</p>}
+      {v && <p className="ws-mk" style={{ marginTop: 8 }}>{measureOf(r.call?.result?.meta, v.key)}</p>}
       <Receipts meta={r.call?.result?.meta} compact />
     </div>
   );
@@ -133,8 +203,12 @@ export function HeroWidget({ r, selected, onSelect }: WidgetProps) {
         {r.call?.result?.meta?.metric_label ?? (v ? v.key.replace(/_/g, ' ') : '')}
         {r.call?.result?.meta?.comparison?.baseline?.name ? ` · against ${r.call.result.meta.comparison.baseline.name.replace(/_/g, ' ')}` : ''}
       </p>
-      <div className="ws-ruler" style={{ marginTop: 22, '--at': `${at}%` } as CSSProperties} />
-      <p className="ws-mk" style={{ marginTop: 8 }}>where it sits between the largest fall and rise in this read</p>
+      {pcts.length > 1 && (
+        <>
+          <div className="ws-ruler" style={{ marginTop: 22, '--at': `${at}%` } as CSSProperties} />
+          <div className="ws-ruler-ends"><span>largest fall</span><span>largest rise</span></div>
+        </>
+      )}
     </div>
   );
 }
@@ -185,30 +259,61 @@ export function ComparisonWidget({ r, selected, onSelect }: WidgetProps) {
 }
 
 export function TableWidget({ r }: WidgetProps) {
-  const [open, setOpen] = useState(r.block.weight !== 'quiet');
   const rows = r.rows.slice(0, 40);
+  // A small table folded to its heading is a card that reads
+  // "PRODUCT REVENUE · 5 ROWS" and nothing else — quiet is not the same as
+  // empty. Only a long one is worth folding away.
+  const [open, setOpen] = useState(r.block.weight !== 'quiet' || r.rows.length <= 8);
   if (!rows.length) return <Missing what="rows" />;
-  const cols = Object.keys(rows[0]).filter((k) => !k.endsWith('_id') && !['seq', 'call_seq', 'direction', 'baseline_status'].includes(k)).slice(0, 7);
-  const title = r.call?.result?.meta?.metric_label ?? r.block.tool?.replace(/^get_/, '').replace(/_/g, ' ') ?? 'rows';
+  const meta = r.call?.result?.meta;
+
+  // A column with one value on every row is a fact about the TABLE, not a
+  // column. "PHP" seven times down the left of a table of pesos is noise; said
+  // once, above it, it is the scope. Nothing is dropped — it moves.
+  const keys = Object.keys(rows[0]).filter(
+    (k) => !k.endsWith('_id') && !['seq', 'call_seq', 'direction', 'baseline_status'].includes(k));
+  const constant: string[] = [];
+  const cols: string[] = [];
+  for (const k of keys) {
+    const distinct = new Set(rows.map((row) => String(row[k] ?? '')));
+    const only = String(rows[0][k] ?? '');
+    if (rows.length >= 3 && distinct.size === 1 && only.length <= 24 && !PESO_KEYS.test(k)) {
+      constant.push(fmt(k, rows[0][k]));
+    } else {
+      cols.push(k);
+    }
+  }
+
+  // A comparison's `change` and `baseline` are in the same unit as its `value`,
+  // and were the only figures on screen without their peso sign.
+  const money = /sales|revenue|price|cost|peso/i.test(String(meta?.metric_label ?? ''))
+    || rows.some((row) => String(row.unit ?? '').toUpperCase() === 'PHP');
+  const cell = (c: string, row: Record<string, unknown>) =>
+    (money && (c === 'change' || c === 'baseline') ? fmt('net_sales', row[c]) : fmt(c, row[c]));
+
+  const shown = cols.slice(0, 7);
+  const title = meta?.metric_label ?? r.block.tool?.replace(/^get_/, '').replace(/_/g, ' ') ?? 'rows';
   return (
     <div className={`ws-card ${r.block.weight === 'quiet' ? 'ws-card--quiet' : ''}`} data-widget="table">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <p className="ws-mk">{title} · {r.rows.length} rows</p>
-        {r.block.weight === 'quiet' && <button className="ws-word" onClick={() => setOpen((o) => !o)}>{open ? 'less' : 'show'}</button>}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+        <p className="ws-mk">{[title, `${r.rows.length} rows`, ...constant].join(' · ')}</p>
+        {r.rows.length > 8 && (
+          <button className="ws-word" style={{ margin: 0 }} onClick={() => setOpen((o) => !o)}>{open ? 'less' : 'show'}</button>
+        )}
       </div>
       {open && (
         <div style={{ overflowX: 'auto', marginTop: 12 }}>
           <table className="ws-rows">
-            <thead><tr>{cols.map((c) => <th key={c}>{c.replace(/_/g, ' ')}</th>)}</tr></thead>
+            <thead><tr>{shown.map((c) => <th key={c} className={typeof rows[0][c] === 'number' ? 'n' : ''}>{c.replace(/_/g, ' ')}</th>)}</tr></thead>
             <tbody>
               {rows.map((row, i) => (
-                <tr key={i}>{cols.map((c) => <td key={c} className={typeof row[c] === 'number' ? 'n' : ''}>{c === 'change_pct' ? <Delta row={row} /> : fmt(c, row[c])}</td>)}</tr>
+                <tr key={i}>{shown.map((c) => <td key={c} className={typeof row[c] === 'number' ? 'n' : ''}>{c === 'change_pct' ? <Delta row={row} /> : cell(c, row)}</td>)}</tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-      <Receipts meta={r.call?.result?.meta} compact />
+      <Receipts meta={meta} compact />
     </div>
   );
 }
@@ -230,7 +335,7 @@ export function DistributionWidget({ r }: WidgetProps) {
           );
         })}
       </div>
-      <p className="ws-mk" style={{ marginTop: 6 }}>{subjectOf(rows[0]) ?? ''} → {subjectOf(rows[rows.length - 1]) ?? ''} · the last is ringed</p>
+      <p className="ws-mk" style={{ marginTop: 6 }}>{span(rows)} · the last is ringed</p>
       <Receipts meta={r.call?.result?.meta} compact />
     </div>
   );
@@ -337,7 +442,7 @@ export function ChartWidget({ r }: WidgetProps) {
           ? vals.map((v, i) => <rect key={i} x={x(i) - (W / rows.length) * 0.3} y={y(v)} width={(W / rows.length) * 0.6} height={H - pad - y(v)} fill="var(--ws-up)" opacity={0.85} rx={3} />)
           : <polyline fill="none" stroke="var(--ws-ink)" strokeWidth={1.6} points={vals.map((v, i) => `${x(i)},${y(v)}`).join(' ')} />}
       </svg>
-      <p className="ws-mk" style={{ marginTop: 6 }}>{subjectOf(rows[0]) ?? ''} → {subjectOf(rows[rows.length - 1]) ?? ''}</p>
+      <p className="ws-mk" style={{ marginTop: 6 }}>{span(rows)}</p>
       <Receipts meta={r.call?.result?.meta} compact />
     </div>
   );
@@ -347,6 +452,32 @@ function Missing({ what }: { what: string }) {
   return <div className="ws-card ws-card--quiet"><p className="ws-note">George composed this from {what}, which this read does not carry.</p></div>;
 }
 
-export function Wrap({ weight, children, live }: { weight: string; children: ReactNode; live?: boolean }) {
-  return <div className={`ws-w-${weight} ${live ? 'ws-in' : ''}`}>{children}</div>;
+/**
+ * What a series is CALLED, from its rows.
+ *
+ * It used to read "→" and nothing else whenever the series was a run of days,
+ * because the subject conventions carried no date column — a card whose whole
+ * caption was an arrow.
+ */
+function span(rows: Record<string, unknown>[]): string {
+  const first = subjectOf(rows[0]);
+  const last = subjectOf(rows[rows.length - 1]);
+  return first && last && first !== last ? `${first} → ${last}` : first ?? last ?? '';
+}
+
+/** The measure a figure is IN, and never the column name "value". */
+function measureOf(meta: ToolMeta | null | undefined, key: string): string {
+  if (meta?.metric_label) return meta.metric_label;
+  return /^(value|amount|total|n|count)$/.test(key) ? '' : key.replace(/_/g, ' ');
+}
+
+/** Widgets that are a scrollbar in a quarter column, whatever their weight. */
+const NEEDS_ROOM = new Set(['table', 'chart', 'distribution', 'draft', 'comparison']);
+
+export function Wrap({ weight, kind, children, live }: { weight: string; kind?: string; children: ReactNode; live?: boolean }) {
+  // A FLOOR ON ROOM, NOT A CHANGE OF WEIGHT. A quiet table stays quiet — no
+  // shadow, muted ground — but a table in three columns of twelve is a
+  // horizontal scrollbar, which is what the first dogfood put on screen.
+  const roomy = weight === 'quiet' && kind && NEEDS_ROOM.has(kind);
+  return <div className={`ws-w-${weight}${roomy ? ' ws-w-roomy' : ''} ${live ? 'ws-in' : ''}`}>{children}</div>;
 }
