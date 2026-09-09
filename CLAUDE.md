@@ -174,70 +174,142 @@ superseded, and so nobody reports progress that has not happened.
   does not exist when nobody is looking at him, so he can never come to you.
   `Watch` is named in the vocabulary below and has never been built.
 
-### The plan
+### The plan — how the 26 get built
 
-*Added 2026-09-09.* Six phases. **A phase ends when the person using George
-says it feels right — never when the architecture is finished.** That rule is
-the whole process change: the previous three weeks produced milestones that
-satisfied their specifications exactly and still felt like an analytics
-chatbot, because completion was measured against the spec instead of against
-the feeling.
+*Rewritten 2026-09-10, keyed by number to the features at the top of this file.
+It supersedes the six-phase plan of 2026-09-09, which was a reading of that
+section and began to be used in place of it.*
 
-Each phase must be usable on its own. No phase may be built as infrastructure
-for the next one.
+**Every stage is ONE IDEA, delivers named features, and is usable the day it
+lands. No stage may be built as infrastructure for the next. A stage ends when
+the person using George says it feels right — never when the architecture is
+finished.**
 
-- **0 · The honest baseline.** Correct what George is wrong about. The store
-  list is the live example: 22 stores exist and the definitions know 11, so
-  **AJI PINA's 92 transactions are missing from every figure George quotes**,
-  and two rows called `Test stoee` and `test store 2` are in the production
-  store table. Also: apply the `shipment_plans` grant so the replenishment tool
-  can run.
-- **1 · George forms a view and keeps it.** The world becomes real objects, and
-  George records what he believes about each one — with the evidence, when he
-  last confirmed it, and what changed his mind. Judgment is unblocked.
-  *Done when:* you stop asking questions to find out what is happening.
-- **2 · The workspace transforms.** One evolving situation instead of stacked
-  answers. Point and speak. Hierarchy follows George's judgment, so what matters
-  is large and what does not is quiet.
-  *Done when:* after five steers you are still in one piece of work.
-- **3 · George works when you are not there.** The between-times. He notices a
-  real change, investigates, and may conclude that nothing important happened.
-  Truthful about what he actually watched.
-  *Done when:* he tells you something you did not know to ask.
-- **4 · BUILD.** George proposes a definition, metric or system; it is
-  backtested; a person approves it; it becomes permanent. **This is the existing
-  workflow promotion gate generalised**, and it is how George grows without
-  inventing a number.
-- **5 · RUN.** He operates what was built. "Three things need you" because three
-  systems reached states needing a decision.
+#### What is already true, and is not to be rebuilt
 
-**The order is not arbitrary.** Everything in phases 3–5 needs phase 1: a
-George with no memory cannot notice a change, cannot hold a system's state, and
-cannot tell you what he did while you were away.
+- **Feature 1, in its hardest part.** George composes the screen — `compose`
+  (agent/compose.py) — validated so he can never emit a figure, a colour, a
+  size or a subject that is not a row of a read that ran. Every previous
+  attempt at the interface lacked this, and it is what makes the rest safe.
+- **Feature 5.** Thirteen read tools: sales, stock, stock over time,
+  replenishment, purchase plans, purchasing, movement, products, vending, dead
+  stock, costs, the brief.
+- **Feature 8.** `metrics.yaml` as the single source of business meaning, with
+  notices, refusals and receipts on every figure.
+- **Features 9 and 10, in prose.** He decomposes into drivers unasked and says
+  what he would look at first.
+- **Features 14, 17, 18 and 19 exist as CAPABILITIES WITH NO SURFACE.**
+  `pin_answer`, `create_page`, `edit_page`, `save_workflow`, `run_workflow`,
+  the approvals queue and the backtest-and-promote gate are all built. The
+  workspace at `/w2` renders none of them and cannot navigate to any of them.
+  Much of B and C is therefore connection, not construction.
 
-**What blocks progress is rarely code.** Today it is three data facts: the
-estate list is wrong, `george_ro` has no grant on `shipment_plans`, and only 456
-of the 1,130 products that sold in the last 90 days can be traced to a supplier
-at all — which is a gap in purchase-order history, not in any tool.
+#### A · The workspace is a place you work inside — 1, 2, 3, 4, 6, 7, 13
 
-Three things below were written for a question-answering agent and now sit in
-tension with the mission. They are **not repealed here** — repealing a trust
-rule by implication is exactly how numbers stop being trustworthy — but each
-needs a deliberate decision rather than silent erosion:
+The screen is currently a function of the last question: it renders the newest
+answer and folds everything before it into one line. That single fact is why 2,
+3, 6, 7 and 13 are all partial.
+
+1. **The board persists.** `compose` stops describing a screen and starts
+   editing a board — put, change, quiet, drop — keyed by George's own object
+   key. The board survives the turn, the thread and the reload. *(2)*
+2. **Objects answer to touch immediately.** A closed set of client-side
+   manipulations that cannot invent a figure: focus, expand, sort by a column
+   the read returned, filter to rows already on the board, close, move.
+   Anything needing a new fact is still a read. Today three things respond to
+   touch and two of them are toggles. *(3, 7)*
+3. **The vocabulary he actually reaches for.** Five of ten widgets have never
+   been drawn once; `timeline`, `control` and `recommendation` from feature 1's
+   own list do not exist. Add them, and make the choice of FORM part of what he
+   is asked to judge. *(1, 4)*
+4. **Work you can see.** Evidence lands on the board as each read returns,
+   instead of one grey line for forty-five seconds. *(13)*
+5. **Fragments resolve against the board, not the thread.** "Why?" "These two."
+   "Products." "No, exclude Air." *(6)*
+
+*Feels right when:* you are looking at Rockwell, you say "Products" and it
+becomes products; "compare with OPUS" brings OPUS into the same workspace;
+"why" reveals the evidence — and the Seikyo draft you opened an hour ago is
+still where you left it.
+
+*Stop and rethink if:* after 1 and 2 it still feels like a chatbot. Then the
+problem is not layout, and reskinning a fifth time is the wrong move.
+
+#### B · Nothing starts from zero — 11, 14, 21, 10, 22 in part
+
+1. **George records what he believes.** The table, validator, store and schema
+   are built and correct as of 2026-09-10; he still does not reach for the
+   tool, because the prompt says "a handful a week, not one an answer" and he
+   reads that as never. `beliefs held: 0` is the number to move. *(11)*
+2. **The board persists across sessions**, so returning to a subject returns to
+   the work. *(2, 11)*
+3. **"Keep this" makes an object permanent.** Pages become boards of live
+   objects rather than a list of tiles — the page capability already exists and
+   is simply not connected. *(14, 22)*
+4. **The cold open is what he already thinks:** what changed, what is
+   unresolved, what he is waiting on. Not a dashboard, and not empty. *(21)*
+
+*Feels right when:* you stop asking questions to find out what is happening,
+and something you made last week is still there and still true.
+
+#### C · You build things with him — 15, 16, 22
+
+1. **Decide the three questions below first.** They are decisions, not code,
+   and C cannot start honestly without them.
+2. **Propose → backtest → approve → permanent.** George proposes a definition,
+   metric, system or interface; anything carrying a figure is backtested; a
+   person approves; it becomes a real part of the business. This is the
+   existing promotion gate generalised beyond workflows.
+3. **Change it by describing the change.** "Add supplier lead time." "Managers
+   can request this but only I can approve it." "Show warehouse stock here."
+
+*Feels right when:* you described a purchasing system in words and it exists,
+and changing it does not mean opening an editor.
+
+#### D · It runs without you — 12, 17, 18, 19, 20
+
+1. **Watch** — a condition George checks on a schedule, which posts only when
+   the answer changes. Named in the vocabulary since 2026-09-05 and never
+   built. Silence is its normal state. *(12, 17)*
+2. **He operates what was built:** prepares the weekly purchase orders, checks
+   conditions, follows up, handles routine work, escalates the exceptions.
+   *(18)*
+3. **Inbox is what genuinely needs you**, and deciding is one action — approve,
+   reject, change it, or give a standing instruction. *(19, 20)*
+
+*Feels right when:* he tells you something you did not know to ask, and handles
+something without you.
+
+#### E · It reaches your real world — 23, 24, 25, 26
+
+Cross-business, documents and unstructured information, actions in the tools
+the businesses actually use, and voice. **E is a set, not a sequence** — each
+needs a source or an integration that does not exist in this repo yet, and each
+is separate groundwork that can start whenever its source arrives.
+
+#### Three decisions that block C and D
+
+Recorded 2026-09-09, still open, and each needs a deliberate answer rather than
+silent erosion:
 
 - **Architecture rule 5 (shallow loop)** forbids planning and decomposition.
-  "Investigates on his own" will press on it. The 2026-09-08 reading already
-  bent it once by putting the investigation ladder in the prompt instead of the
-  loop; that trick does not extend to Build.
-- **Architecture rule 4 (read-only role)** has been extended four times by
+  The 2026-09-08 reading bent it once by putting the investigation ladder in
+  the prompt; that trick does not extend to Build.
+- **Architecture rule 4 (read-only role)** has been extended five times by
   injecting a narrow writer per capability. Build and Run need more writers
-  than that pattern comfortably carries, and the pattern should be reviewed
-  before the fifth.
-- **Architecture rule 7 (nothing runs unattended until backtested and
-  promoted)** is the right shape for Run and is the one piece of the future
-  already built. It is also the mechanism by which George could safely extend
-  himself: propose, backtest, an administrator promotes. Today it applies only
-  to workflows.
+  than that pattern comfortably carries. Review the pattern before the sixth.
+- **Architecture rule 7 (nothing unattended until backtested and promoted)** is
+  the right shape for Run and is the one piece of the future already built. It
+  is also how George could safely extend himself. Today it covers workflows
+  only.
+
+#### Two things no code fixes
+
+- **Supplier traceability.** Nothing records who supplies what; the map is
+  inferred from purchase-order history and approved by the owner. In the live
+  Seikyo run, 450 of the 787 products that sold could not be traced to any
+  supplier. That bounds feature 18 for purchasing until the source improves.
+- **There is no document source at all.** Feature 24 has nothing to read yet.
 
 ### The estate
 
