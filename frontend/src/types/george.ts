@@ -43,6 +43,8 @@ export interface ToolMeta {
   /** The metric model (metrics.yaml metric_model): base or derived, and its name. */
   metric_kind?: string;
   metric_label?: string;
+  /** The business the metric belongs to (metrics.yaml metric_model.registries). */
+  metric_domain?: string;
   /**
    * What the DEFINITIONS permit next of this metric (get_sales, from
    * metrics.yaml): the subjects it may be broken down by, and the metrics
