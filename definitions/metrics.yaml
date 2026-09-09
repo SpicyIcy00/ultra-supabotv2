@@ -1583,6 +1583,141 @@ inventory:
 
 
 # =============================================================================
+# REPLENISHMENT — the plan the business already runs on
+#
+# Added 2026-09-09. shipment_plans is written by
+# backend/app/services/replenishment_service.py, so every meaning below is read
+# out of that generator rather than inferred from the column names.
+#
+# WHY THIS SECTION MATTERS BEYOND ITS FIGURES. Until today this file recorded
+# "no low-stock threshold has ever been set" as a fact about the business. That
+# is true of inventory.warning_stock and false about the company: the table
+# below has held computed min and max levels per SKU per store since January.
+# A limitation measured on one column had been recorded as a limitation of the
+# business, and every design decision downstream inherited it.
+#
+# MEASURED STATE — 2026-09-09, all 125,283 rows:
+#   59 run dates, 2026-01-29 -> 2026-09-06. Runs are IRREGULAR, roughly weekly,
+#     and some cover a single store (2026-08-06 and 2026-08-26 each covered one).
+#   The latest run, 2026-09-06, is 3,076 lines across all 7 retail shops and
+#     780 SKUs; 1,623 lines ask for stock. Every line resolves to a real
+#     product and a real store.
+#   Two algorithms: `legacy` on 113,054 rows and `percentile` on 12,229. Only
+#     the percentile rows carry abc_class, segment, service_quantile and
+#     needs_count; on every legacy row those four are NULL.
+#   calculation_mode: fallback 75,361, snapshot 36,589, percentile 12,229,
+#     unified 977, auto 127.
+#   days_of_stock in the latest run: median 13.9, p90 420, maximum 419,916, and
+#     1,128 of 3,076 lines are zero. The tail is not a real cover figure.
+# =============================================================================
+replenishment:
+  source_table: shipment_plans
+  generated_by: backend/app/services/replenishment_service.py
+  review_period_days: 7          # REVIEW_PERIOD_DAYS in the service
+  warehouse_store_id: "667bde393126e50006c8058c"   # AJI BARN ships the stores
+
+  # HOW A LINE IS SIZED, transcribed from the service so a tool never restates
+  # it differently. season_adj_sales is the seasonality-adjusted daily rate and
+  # the tier parameters come from store_tiers.
+  formulas:
+    safety_stock: "season_adjusted_daily_sales * tier.safety_days"
+    min_level: "(season_adjusted_daily_sales * tier.target_cover_days) + safety_stock"
+    max_level: "season_adjusted_daily_sales * tier.max_cover_days"
+    final_max: "min(max_level, expiry_cap) when expiry_cap > 0, else max_level"
+    requested_ship_qty: "max(0, ceil(min_level - on_hand))"
+
+  # A RUN IS AN EVENT, NOT A DAY. Runs are irregular and some cover one store.
+  # A tool must name the run it read and say how much of the estate it covered,
+  # or a single-store plan reads as the whole company's.
+  runs_are_regular: false
+  partial_run_notice_kind: replenishment_partial_run
+  stale_run_notice_kind: replenishment_run_stale
+  stale_after_days: 10
+
+  # ALLOCATION IS NOT INDEPENDENT EVIDENCE. The service sets
+  # allocated_ship_qty = requested_ship_qty as its default ("Default: full
+  # allocation", replenishment_service.py). The two being equal therefore means
+  # nothing was allocated away — it does NOT mean a shipment was confirmed, and
+  # allocated must never be reported as what actually shipped. What actually
+  # moved is stock_transfers, which is a different question and a different tool.
+  allocation:
+    defaults_to_requested: true
+    is_evidence_of_shipment: false
+    notice_kind: replenishment_allocation_not_binding
+
+  # THE TWO ALGORITHMS ARE NOT INTERCHANGEABLE. `percentile` carries an ABC
+  # class, a segment and a service quantile; `legacy` carries none of them, and
+  # on a legacy row those columns are NULL rather than unknown-but-existing. A
+  # result mixing both must say so rather than showing four mostly-empty
+  # columns as though the data were missing.
+  algorithms:
+    known: [legacy, percentile]
+    percentile_only_columns: [abc_class, segment, service_quantile, needs_count]
+    mixed_notice_kind: replenishment_mixed_algorithms
+
+  # CALCULATION MODE CHANGES WHAT THE VELOCITY MEANS. The service computes a
+  # daily rate over ACTIVE days — days the product had stock, or sold — so a
+  # product is not marked slow merely for having been unavailable
+  # (_get_daily_sales, "Active day = snapshot shows stock > 0 OR a sale occurred
+  # that day"). `fallback` is the path taken when snapshot history is too thin
+  # for that, and it is the majority of rows. A plan read without knowing which
+  # mode produced it can understate demand for exactly the products that were
+  # out of stock, which is the failure this whole domain is about.
+  calculation_modes:
+    known: [snapshot, fallback, percentile, unified, auto]
+    uses_active_days: [snapshot, unified, auto, percentile]
+    understates_stockouts: [fallback]
+    notice_kind: replenishment_fallback_velocity
+
+  # ON HAND CAN BE NEGATIVE, AND THE SIZING USES IT DIRECTLY.
+  #
+  # requested_ship_qty = max(0, ceil(min_level - on_hand)). A negative on_hand
+  # therefore INFLATES the request by its own magnitude: a line whose shop
+  # records -174,877 on hand asks for the min level PLUS 174,877, and the
+  # engine has no way to tell a broken record from a real deficit.
+  #
+  # MEASURED on the 2026-09-06 run: 662 of 3,076 lines carry a negative on
+  # hand, 640 of them are ordering, and those lines account for 59,715 of the
+  # 95,799 units requested — 62% of the plan. Across all 59 runs, 25,086 of
+  # 125,283 lines. This is the same corruption inventory_snapshots carries
+  # (inventory.history.negative_on_hand), arriving in the plan that is acted on.
+  #
+  # A result must say so. This is not a footnote about data quality: it is the
+  # reason the biggest lines in the plan are the biggest.
+  negative_on_hand:
+    inflates_request: true
+    formula_note: "requested_ship_qty = max(0, ceil(min_level - on_hand))"
+    notice_kind: replenishment_negative_on_hand
+    notice_mandatory: true
+
+  # days_of_stock IS NOT A TRUSTWORTHY COVER FIGURE AT THE TAIL. Median 13.9 in
+  # the latest run, p90 420, maximum 419,916 — a product with a trickle of
+  # sales and any stock at all produces an enormous number. It is reported as
+  # the engine computed it and is never ranked on, never averaged, and never
+  # summed.
+  days_of_stock:
+    trustworthy_at_tail: false
+    absurd_above: 3650
+    rankable: false
+    notice_kind: replenishment_days_of_stock_tail
+
+  # How the plan may be ranked. Name -> the ORDER BY applied over the whole set
+  # before any limit, so the model never sorts rows itself. Ranked on units and
+  # on the engine's own priority score, never on days_of_stock.
+  rank_modes:
+    most_requested: "p.requested_ship_qty DESC NULLS LAST"
+    highest_priority: "p.priority_score DESC NULLS LAST"
+    biggest_shortfall: "(p.min_level - p.on_hand) DESC NULLS LAST"
+
+  views:
+    plan: "one row per store and SKU in the run: what the engine wants shipped and the levels behind it"
+    summary: "one row per store: lines, lines wanting stock, and units requested"
+    runs: "one row per run: when it ran, how many stores it covered, how many lines"
+
+  max_rows: 500
+
+
+# =============================================================================
 # PRODUCT CATALOG
 # =============================================================================
 products:
@@ -3921,6 +4056,11 @@ workflows:
       # inventory_snapshots rows for a past date do not change afterwards.
       # source: tools/stock_history.py get_stock_history(end=...).
       get_stock_history: end
+      # `run_date` selects the latest run ON OR BEFORE it — the plan that was
+      # actually in force that day. Runs are irregular, so an exact-match
+      # argument would refuse almost every as_of a backtest could pass.
+      # source: tools/replenishment.py get_replenishment(run_date=...).
+      get_replenishment: run_date
 
     # Arguments carrying a [start, end) window. A preset there is resolved
     # against now(), so a backtest rewrites it to the explicit Manila dates the

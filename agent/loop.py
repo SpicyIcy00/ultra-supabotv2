@@ -62,6 +62,7 @@ from tools import (
     movement,
     products,
     purchasing,
+    replenishment,
     sales,
     stock_history,
     vending,
@@ -154,6 +155,7 @@ TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
     "get_vending_stock": vending.get_vending_stock,
     "get_dead_stock": dead_stock.get_dead_stock,
     "get_purchasing": purchasing.get_purchasing,
+    "get_replenishment": replenishment.get_replenishment,
     "get_cost_history": cost_history.get_cost_history,
     "get_brief": brief.get_brief,
 }
@@ -251,6 +253,9 @@ def _enum_sources(defs: dict) -> dict[tuple[str, str], list]:
         ("get_stock_history", "store"): retail + warehouse,
         ("get_stock_history", "view"): list(req(defs, "inventory.history.views")),
         ("get_stock_history", "rank_by"): list(req(defs, "inventory.history.rank_modes")),
+        ("get_replenishment", "store"): retail,
+        ("get_replenishment", "view"): list(req(defs, "replenishment.views")),
+        ("get_replenishment", "rank_by"): list(req(defs, "replenishment.rank_modes")),
         # Wider than get_stock's: a closed warehouse has no current stock but a
         # thousand recorded transfers.
         ("get_movement", "store"): historical_locations,

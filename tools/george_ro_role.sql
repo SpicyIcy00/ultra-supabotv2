@@ -55,8 +55,24 @@ GRANT SELECT ON
     purchase_order_lines,
     stock_transfers,
     stock_transfer_lines,
-    storehub_imports
+    storehub_imports,
+    -- The replenishment plan (migration a1b2c3d4e5f6). Added 2026-09-09 for
+    -- get_replenishment. Read-only like everything else here: the plan is
+    -- WRITTEN by backend/app/services/replenishment_service.py on the
+    -- application's role, and George only ever reads it back.
+    shipment_plans
 TO george_ro;
+
+-- ---------------------------------------------------------------------------
+-- IF THE ROLE ALREADY EXISTS, the statement above is not enough on its own —
+-- running the whole script again would fail at CREATE ROLE. Apply just the new
+-- grant instead:
+--
+--     GRANT SELECT ON shipment_plans TO george_ro;
+--
+-- Until that is applied, get_replenishment refuses with a message naming this
+-- file rather than leaking a raw permission error.
+-- ---------------------------------------------------------------------------
 
 -- 4. No default privileges on anything created later. Stated explicitly so the
 --    intent survives someone running a blanket GRANT elsewhere.
