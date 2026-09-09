@@ -4067,7 +4067,11 @@ surface:
   # phrase crosses to become one. Each is an op plus a value taken from trusted
   # state, never from the DOM and never from prose (surfaceEvents.ts). Offered
   # only where the metric's own `valid_group_by` and `drivers` permit.
-  refinements: [explain, break_down, compare_subject, focus_subject]
+  refinements: [explain, break_down, compare_subject, focus_subject, compare_selection, explain_selection]
+  # The two selection-aware ops arrived with the Experience Reset (2026-09-09).
+  # Each takes its subjects from the desk's selection — ids and labels off rows
+  # the tools returned — and becomes one business-language question naming
+  # them, so "Compare these" needs nobody to restate three store names.
 
   # Attention is what the DATA singles out. Two sources, both the tool's:
   attention:
@@ -4133,3 +4137,185 @@ surface:
     causal_words_to_avoid:
       - caused
       - because of
+
+  # ---------------------------------------------------------------------------
+  # THE DESK — the one workspace, and what may change on it without George.
+  # Added 2026-09-09, George Experience Reset (Phases 1 and 2).
+  #
+  # "Desk" is the INTERNAL name of the workspace model. It is not a word a
+  # person is asked to learn: the product is George, and the screen is the
+  # business laid out in front of them. Recorded here so the client, the loop
+  # and the prompt read one vocabulary for it.
+  #
+  # EXECUTES NOTHING. Nothing below is a threshold, a score or a formula. Every
+  # figure on the desk is a row a tool returned; every position and size on a
+  # field is a ratio of two such rows, which is geometry; every selection is a
+  # set of ids the rows carried. The model sees the selection as names on the
+  # question and never as a figure.
+  # ---------------------------------------------------------------------------
+  desk:
+    introduced: "2026-09-09"
+    executes_nothing: true
+
+    # The business the desk lays out. One at a time; FFR arrives only with an
+    # authoritative source (data_availability.ffr) and is not placeholdered.
+    business:
+      name: "Aji Ichiban"
+      short: "AJI"
+
+    # The interaction grammars the workspace may be in. A CLOSED set, derived
+    # from the state of the work and never chosen by the model. Only the first
+    # exists in Phase 2; the rest are named so they cannot arrive under other
+    # names: prepare (an editable draft), build (a System under construction),
+    # decide (one approval), operate (a running System).
+    grammars: [investigate]
+    grammars_deferred: [prepare, build, decide, operate]
+
+    # What a person may do on the desk WITHOUT a model turn. Each is either a
+    # change of view over rows already on screen, or a deterministic replay of
+    # calls already recorded. George is consulted for interpretation and for
+    # evidence the desk does not hold — never as a substitute for a click.
+    direct_manipulation:
+      - select          # a set of subjects, by id, from the rows drawn
+      - focus           # one subject to the centre; the rest recede, never leave
+      - clear           # nothing selected, nothing focused
+      - back            # one level out: product to store, store to business
+      - change_window   # the same calls replayed over another closed window
+      - sort            # reorder the rows of a loaded set
+      - show_as_list    # the same rows as the conventional instrument
+      - inspect         # receipts and details for one figure or subject
+      - trail           # restore an earlier step of the same work
+    model_consulted_for: [interpretation, evidence_the_desk_does_not_hold]
+
+    # Selection is semantic context. It travels on the question as
+    # `desk.selection` — ids and labels the rows carried, never labels the
+    # model inferred — and the loop names the subjects to George on the
+    # question, beside the work sentence. The question post keeps it in its
+    # payload so a reload restores the same focus from the same record.
+    selection:
+      dimensions: [store, product, category]
+      identity:
+        store: store_id
+        product: product_id
+        category: category
+      max_subjects: 12
+      ids_from_rows: true
+      stored_on: question_post_payload
+
+    # A replay re-runs calls already recorded, with one scope argument changed
+    # (the window), through the same validation a pin passes and the same
+    # runner a tile uses. No model. Its figures carry their own receipts and
+    # read time. It is TRANSIENT: the record of a window change is the next
+    # thing George is asked about it, which carries the window in `desk.window`
+    # and is stored like any other turn. A comparison needs a closed window,
+    # so the ribbon offers a partial preset only where the work is uncompared.
+    replay:
+      model_consulted: false
+      max_calls: 8
+      validated_as: pin
+      compared_windows_must_be_closed: true
+      recorded: transient_until_next_turn
+
+    # What the business looks like BEFORE anything is asked: one grouped read
+    # per resting field, replayed deterministically when the desk opens. A
+    # closed window against the period before it, so every store has a
+    # measured position and the composer's own attention rule applies.
+    rest:
+      reads:
+        - tool: get_sales
+          arguments:
+            group_by: [store]
+            date_range: last_7_days
+            compare_to: previous_period
+            metric: net_sales
+
+    # George's presence on the desk is where he is READING: a soft light under
+    # the objects a running call names, from tool_call frames and nothing
+    # else. No hue of its own — the approvals colour stays the mark's and the
+    # count's — and nothing lights when no frame is in flight.
+    presence:
+      source: tool_call_frames
+      hue: none
+
+    # A field encodes ONLY what rows carry. Position is a change the tool
+    # computed or a value it returned; size is a value; fill is the tool's
+    # own direction; a halo is the composer's attention (against the
+    # majority, or ranked first) or the person's selection. Colour is never
+    # the only carrier: every object prints its figure and every field has
+    # the same rows as a list one control away.
+    field:
+      position_from: [change_pct, change, value]
+      size_from: value
+      fill_from: direction
+      halo_from: [attention, selection]
+      colour_is_never_the_only_signal: true
+      list_equivalent_required: true
+
+
+# =============================================================================
+# SYSTEMS — the user-facing word for something built with George
+#
+# Approved 2026-09-09, George Experience Reset. A System is the persistent
+# object a person and George construct together: its executable logic is a
+# WORKFLOW (versions, backtest, promotion — everything the `workflows` section
+# above defines, unchanged), and around that logic it gathers the settings it
+# was bound with, its schedule, its runs, its outputs and the approvals it is
+# waiting on. "Workflow" stays the name of the rule inside; "System" is the
+# thing a person opens, runs, pauses and asks about.
+#
+# NOTHING HERE EXECUTES. The workflow engine is unchanged; this block records
+# the vocabulary so the build grammar (a later phase) cannot arrive calling the
+# same object a job, an automation or a playbook.
+# =============================================================================
+systems:
+  introduced: "2026-09-09"
+  executes_nothing: true
+  user_facing_word: System
+  contains: [workflow, settings, versions, schedules, runs, outputs, approvals]
+  workflow_is: "the executable logic inside a System; its versions, backtest and promotion are the workflows section's, unchanged"
+  not_called: [job, automation, playbook, recipe, template]
+  # The build grammar (surface.desk.grammars_deferred) is where a System is
+  # constructed. Until it exists, a System is saved as it always was — through
+  # save_workflow in conversation — and read on the desk's Running rail.
+  built_in: build_grammar_deferred
+
+
+# =============================================================================
+# SETTINGS — declared, bounded, user-adjustable values inside a definition
+#
+# Approved 2026-09-09 as an amendment to architecture rule 6. A vetted
+# definition MAY expose a setting a person adjusts. Each declaration must
+# state what the setting MEANS, its TYPE, its BOUNDS or allowed values, its
+# DEFAULT, and WHERE it participates in the deterministic calculation. The
+# formula stays in the definition; the person binds a value inside the bounds;
+# the value is versioned with the System that used it and recorded on every
+# run's receipts.
+#
+# WHAT THE MODEL MAY AND MAY NOT DO is stated here so the prompt and the
+# tools read one rule. George may explain a setting and, when asked, bind a
+# value within its bounds through the same service a control uses. He may not
+# invent a setting the definition does not declare, escape its bounds, supply a
+# formula, replace a calculation with reasoning, or change a value without
+# saying so.
+#
+# NOTHING IS DECLARED YET. `declared` is empty in this phase: the first
+# declarations arrive with the purchasing definitions (a later phase). A
+# contract test holds the contract keys and refuses any declaration that
+# omits one of the five required fields.
+# =============================================================================
+settings:
+  introduced: "2026-09-09"
+  executes_nothing: true
+  amends: "architecture rule 6"
+  declaration_requires: [meaning, type, bounds, default, participates_in]
+  bound_by: person
+  model_may: [explain, bind_within_bounds_when_asked]
+  model_may_not:
+    - invent_undeclared_settings
+    - escape_declared_bounds
+    - invent_formulas
+    - replace_deterministic_definitions_with_reasoning
+    - change_a_setting_silently
+  versioned: true
+  provenance: "the bound value is recorded on the version that used it and on every run's receipts"
+  declared: {}

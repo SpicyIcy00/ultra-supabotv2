@@ -119,6 +119,23 @@ rather than working around it.
    A workflow **parameter** is scope — which store, which window, how many rows.
    A business threshold is not a parameter.
 
+   *Amended 2026-09-09, George Experience Reset — **declared bounded
+   settings**.* A vetted definition MAY expose a setting a person adjusts.
+   A declaration states five things or it is not a declaration: what the
+   setting **means**, its **type**, its **bounds** or allowed values, its
+   **default**, and **where it participates** in the deterministic
+   calculation. The formula stays in `metrics.yaml`; the person binds a
+   value inside the bounds; the value is versioned with the System that
+   used it and recorded on every run's receipts. George may explain a
+   setting and, when asked, bind a value within its bounds through the
+   same service a control uses. He may NOT invent a setting the definition
+   does not declare, escape its bounds, supply a formula, replace a
+   calculation with reasoning, or change a value without saying so. A
+   bound value is still not a parameter in this rule's sense: a parameter
+   is scope, a setting is a declared part of a definition. The contract is
+   `metrics.yaml settings`; nothing is declared under it yet, and the
+   first declarations arrive with the purchasing definitions.
+
 7. **Nothing runs unattended until it has been backtested and promoted.**
    A schedule pins a version id, never "whatever is current". An edit makes a
    new version, which starts ungated; the schedule keeps running the promoted
@@ -394,8 +411,8 @@ that a connection using it succeeds — and print the assertion, not the value.
 
 ### Vocabulary
 
-Six words, six distinct meanings. Use them consistently in code, copy and
-conversation; do not introduce synonyms.
+Seven words, seven distinct meanings. Use them consistently in code, copy
+and conversation; do not introduce synonyms.
 
 - **Pin** — an answer becomes a live tile that re-runs.
 - **Save** — logic becomes a versioned rule.
@@ -406,10 +423,32 @@ conversation; do not introduce synonyms.
 - **Thread** — a post and its replies. A thread is not started, it **emerges**:
   the first reply to a post makes one. Nobody ever opens an empty one.
 - **Watch** — a saved condition George checks, which posts when it fires.
+- **System** — something built with George that persists: its executable
+  logic is a workflow (versions, backtest, promotion, unchanged), and
+  around it the settings it was bound with, its schedule, its runs, its
+  outputs and the approvals it waits on. "Workflow" stays the name of
+  the rule inside. Approved 2026-09-09; `metrics.yaml systems`.
 
 A pin re-runs; a save is the rule it re-runs. "Bookmark", "widget", "card",
 "favourite" and "snapshot" are not other names for these — if one of them seems
-needed, the concept is probably wrong.
+needed, the concept is probably wrong. A System is not a "job", an
+"automation", a "playbook", a "recipe" or a "template".
+
+*Added 2026-09-09, George Experience Reset.* Two things that are NOT
+user-facing words, recorded so they are not promoted into ones by accident:
+
+- **Desk** is the internal name of the one workspace model — the business
+  laid out in front of a person, with George working on it. A person is
+  never asked to learn it; the product is George. It appears in code
+  (`components/desk/`, `desk` on the ask request) and in these notes.
+- **Selection** is a channel, not an object. Whatever is selected or
+  focused on the desk — a set of subject ids and labels the rows carried —
+  travels on the next question as `desk.selection`, is named to George on
+  the question beside the work sentence, and is kept on the question
+  post's payload. It is never a label the model inferred and never a
+  figure.
+- **Document** is reserved for a later phase (an order draft, a report)
+  and is deliberately not built or placeholdered here.
 
 *Amended 2026-09-08, Page Workshop V1:* **Page is a persistent personal
 object in `george.pages`.** This supersedes Persistence V1's derived name
@@ -788,6 +827,16 @@ These are hard constraints, like the architecture rules above.
 the existing application sits behind it as **Operations**. Recorded here
 because each line is a decision that cannot be read back from the code.
 
+*Superseded 2026-09-09 by the desk ("The desk", below) in one respect:*
+**Today, Ask, Inbox, Pages and Workflows are no longer destinations.** Ask
+is the input line on the desk; Today is the desk at rest; Needs you,
+Running and Kept are rails on the desk; History is a drawer over it. The
+old paths redirect and nothing bookmarked stops resolving. Everything else
+in this section — Operations as the migration boundary, one George above
+both chromes, the mark's real states, reconciliation by post id, a
+stopped turn never looking finished, thread access, disclosure by
+position — is unchanged and is what the desk is built on.
+
 - **Five words, one key.** Today, Ask, Inbox, Pages, Workflows all sit behind
   the `george` page key. Operations lists every legacy page the caller may
   see, at its existing path, in its existing chrome. Warehouse, Packing,
@@ -999,6 +1048,98 @@ concepts, adopt nothing).
   synonyms no definition establishes are recorded as gaps and warning frames
   — RECORDED, NOT CORRECTED, because rule 17's exception cannot be told
   from a leak mechanically. Rule 9's statement of enforcement is unchanged.
+
+### The desk
+
+*Added 2026-09-09, George Experience Reset, Phases 1 and 2.* One workspace:
+the business laid out in front of a person, with George working on it. The
+product is George; "desk" is the model's name in code and in these notes.
+Recorded here because each line is a decision the code cannot read back
+([ops/EXPERIENCE_RESET_V1.md](ops/EXPERIENCE_RESET_V1.md) is the full record).
+
+- **Five regions, one dominant.** A shell line (the mark, the business and
+  the narrowest subject in focus, the needs-you count, Running, Kept,
+  History); a trail column (how we got here, George's reading, then the
+  quiet rails); the workspace, which is the only region that transforms; an
+  inspector that exists only while something is opened (receipts, a
+  subject, a notice) and closes on Escape; and the line, where a person
+  talks to George, which shows the context it will send and never grows
+  into a column. Below `lg` the trail and the inspector become sheets and
+  the workspace is the screen.
+- **`/` is the business at rest.** The resting field is a deterministic
+  replay of `metrics.yaml surface.desk.rest.reads` — one grouped read over a
+  closed window against the period before it — with George's morning
+  sentence above it and the composer's own attention rule on it. It is not
+  a KPI dashboard: every object is a subject a person can focus, select and
+  ask about, and nothing on it is a literal (UI rule 8). A piece of work has
+  its own address, `/w/:threadId`, which a turn started at rest moves to
+  once its posts exist, so a reload keeps the person in the work.
+- **A grammar is derived, never chosen.** Which interaction grammar the
+  workspace is in comes from the state of the work: read tools only is
+  Investigate. Prepare, Build, Decide and Operate are named in
+  `surface.desk.grammars_deferred` so they cannot arrive under other names.
+  Within a grammar the composer decides composition, hierarchy, focus,
+  representation, controls, what recedes and what is suppressed — from
+  trusted rows and meta. The model reaches none of it: its channels are the
+  finding frame and its prose, as before.
+- **The field encodes only what rows carry.** Position is a change the tool
+  computed (or a value it returned), size is a value, fill is the tool's own
+  direction, a halo is the composer's attention or the person's selection.
+  Seven stores on the two drivers of net sales is a field because it shows
+  every store's driver mix at once, which bars cannot; a ranked list stays
+  a ranked list where that reads better. Colour is never the only carrier:
+  every object prints its figure, and the same rows are one control away as
+  the conventional instrument. Every position and size is a ratio of two
+  figures the tool returned, which is geometry and not a metric.
+- **Direct manipulation never costs a model turn.** Select, focus, clear,
+  back, change the window, sort, show as a list, inspect, restore a step of
+  the trail: each is a change of view over rows already on screen, or a
+  deterministic replay of calls already recorded. George is consulted for
+  interpretation and for evidence the desk does not hold, and for nothing a
+  click can do. `metrics.yaml surface.desk.direct_manipulation` is the list.
+- **Selection is context.** The subjects selected or focused travel on the
+  next question as ids and labels the rows carried (`desk.selection`), the
+  loop names them to George beside the work sentence, and the question post
+  keeps them in its payload. "Why?" with a store focused is enough; "Compare
+  these" with three stores selected becomes one question naming the three.
+  Continuity reads it too: a reply whose selection keeps a subject of the
+  work above joins that work even when its own reads name a different one,
+  which is how "compare that with Magnolia" stays one piece of work.
+- **"Why?" deepens the object in front of the person.** When the desk already
+  holds the focused subject's figures (a headline set grouped by store), the
+  anatomy is drawn from those rows — the primary and its declared drivers —
+  and George is asked to interpret, not to re-read. He reads only what the
+  desk does not hold. Nothing is appended beneath; the workspace transforms
+  and the reading is replaced, with the earlier reading kept behind a line
+  that names it.
+- **A window change is a replay, and a replay is transient.** The same
+  calls, one scope argument changed, through the validation a pin passes
+  (`POST /george/replay`, read tools only, at most eight) and the runner a
+  tile uses. Its figures carry their own receipts and read time. It is not
+  stored: the record of a window change is the next thing George is asked,
+  which carries the window in `desk.window`. A comparison needs a closed
+  window, so a partial preset is offered only where the work is uncompared
+  — the refusal is the tool's own, drawn as a refusal.
+- **Presence is where George is reading.** A soft light under the objects a
+  running call names, from `tool_call` frames and nothing else, in the ink
+  and never in the approvals colour. No orb, no avatar, no idle animation
+  on the field. The mark keeps its tested states.
+- **History is a drawer, not the surface.** The river is unchanged as
+  storage, provenance, reconstruction and audit. The drawer lists work,
+  briefs, runs and approvals by time; opening one rebuilds the workspace
+  from its posts, exactly as a reload does. Nothing on the client is a
+  source of truth: no `localStorage`, no route state that must survive.
+- **Motion says what happened.** A focused object moves to the centre and
+  the rest recede; a comparison enters beside the focus; deeper evidence
+  grows from the object it explains; a reading fades in under the figures.
+  Nothing plays without a frame or a click behind it, and under
+  `prefers-reduced-motion` every transition collapses to a crossfade or
+  nothing, with the interaction model unchanged.
+- **Two rules that did not move.** The accent still means "needs you" and
+  nothing else: the mark, the count in the shell line, and the Needs-you
+  rail with its one Promote. A notice still sits above the figure it
+  qualifies, whole, in every stage; a stage that cannot show it is the wrong
+  stage.
 
 ### These rules are already backed by the tool contract
 

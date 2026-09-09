@@ -158,10 +158,18 @@ export type SurfaceInstruction =
   | { op: 'explain' }
   | { op: 'break_down'; dimension: string }
   | { op: 'compare_subject'; subject: string }
-  | { op: 'focus_subject'; subject: string };
+  | { op: 'focus_subject'; subject: string }
+  /**
+   * The two selection-aware ops (2026-09-09, the desk). Their subjects are
+   * the desk's selection — labels off rows the tools returned, never text
+   * from the DOM — and each becomes ONE question naming every subject, so
+   * "Compare these" needs nobody to restate three store names.
+   */
+  | { op: 'compare_selection'; subjects: string[] }
+  | { op: 'explain_selection'; subjects: string[] };
 
 export const SURFACE_OPS: readonly SurfaceInstruction['op'][] = [
-  'explain', 'break_down', 'compare_subject', 'focus_subject',
+  'explain', 'break_down', 'compare_subject', 'focus_subject', 'compare_selection', 'explain_selection',
 ];
 
 export interface SurfaceRefinement {

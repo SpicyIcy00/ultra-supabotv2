@@ -50,7 +50,17 @@ export function instructionId(instruction: SurfaceInstruction): string {
       return `compare_subject:${instruction.subject}`;
     case 'focus_subject':
       return `focus_subject:${instruction.subject}`;
+    case 'compare_selection':
+      return `compare_selection:${instruction.subjects.join('|')}`;
+    case 'explain_selection':
+      return `explain_selection:${instruction.subjects.join('|')}`;
   }
+}
+
+/** "A, B and C" — names copied verbatim from rows, joined for a sentence. */
+export function joinSubjects(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? '';
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
 /** The scope in business words, from trusted state only. */
@@ -101,6 +111,17 @@ export function instructionQuestion(
       return tidy(
         `How did ${instruction.subject} do ${window}? Show ${label} compared with the previous period.`,
       );
+    case 'compare_selection':
+      // The selected subjects, named; the store they sit in when the work is
+      // scoped to one, so a product comparison says where it is.
+      return tidy(
+        `Compare ${joinSubjects(instruction.subjects)} ${only ? `at ${only} ` : ''}${window}, ` +
+          `${label} against the previous period`,
+      );
+    case 'explain_selection':
+      return tidy(
+        `Why did ${label} change for ${joinSubjects(instruction.subjects)} ${scope}?`,
+      );
   }
 }
 
@@ -115,6 +136,10 @@ export function instructionLabel(instruction: SurfaceInstruction): string {
       return `Compare ${instruction.subject}`;
     case 'focus_subject':
       return `Focus on ${instruction.subject}`;
+    case 'compare_selection':
+      return 'Compare these';
+    case 'explain_selection':
+      return 'Why these?';
   }
 }
 
