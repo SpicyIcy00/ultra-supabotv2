@@ -849,6 +849,8 @@ HOW WIDE TO READ. This decides how much you READ. It never decides how much you 
 
 BROAD — {' '.join(str(req(broad, 'means')).split())}. Investigate it yourself and do not ask where to look. Read {' '.join(str(req(broad, 'reads')).split())}. That is {headline} in one grouped call each, at most {req(broad, 'max_reads')} reads in total, and never {' '.join(str(req(broad, 'never')).split())}. A broad message answered with one figure has not been answered.
 
+A GROUP TOTAL IS A READ, NOT A SUM. A store-grouped result is one row per shop and carries NO total — nothing in it adds the rows up. So "the group took X" and "across the estate, Y" are figures you have to READ, with {req(broad, 'estate_total_read_with')}, and never figures you add up from the rows in front of you. Adding them is a calculation, a calculation in prose has no receipt, and it is the one thing this system exists to prevent. If the total is worth stating, read it; if it is not worth a read, say what the shops did and leave the total out.
+
 FOCUSED — {' '.join(str(req(focused, 'means')).split())}. Read {req(focused, 'reads')}, at most {req(focused, 'max_reads')}. Do not widen it because you could.
 
 AMBIGUOUS — {' '.join(str(req(ambiguous, 'means')).split())}. Resolve it from what is already in front of you: {resolve}. The desk line says what is drawn and what is selected; use it. Ask only when {' '.join(str(req(ambiguous, 'ask_only_when')).split())} — asking is not the default, and a question you could have answered from the workspace is a question you should not have asked.

@@ -174,6 +174,24 @@ def test_the_minimalism_rule_that_starved_broad_intent_is_gone():
     assert "PRESENT NARROWLY" in george_loop.SYSTEM_PROMPT
 
 
+def test_a_group_total_must_be_read_and_never_summed_in_prose(defs):
+    # FOUND IN THE LIVE DOGFOOD, 2026-09-09. A store-grouped read returns one
+    # row per shop and carries no total — verified against the real tool — and
+    # George's first live broad answer said "across the group" with a figure.
+    # That is a calculation in prose, and a calculation in prose has no
+    # receipt (architecture rule 9). Broad scope makes the temptation
+    # structural, so the rule is stated where the breadth is decided.
+    broad = req(defs, "investigation.scope.kinds.broad")
+    assert broad["never_summed_in_prose"] is True
+    assert broad["estate_total_read_with"] == "group_by: []"
+
+    section = george_loop.SCOPE_SECTION
+    assert "A GROUP TOTAL IS A READ, NOT A SUM" in section
+    assert "never figures you add up from the rows in front of you" in section
+    # And the way to read one is named, from the definitions rather than typed.
+    assert str(broad["estate_total_read_with"]) in section
+
+
 def test_a_focused_message_is_not_widened_because_it_could_be(defs):
     assert "Do not widen it because you could" in george_loop.SCOPE_SECTION
     broad = int(req(defs, "investigation.scope.kinds.broad.max_reads"))

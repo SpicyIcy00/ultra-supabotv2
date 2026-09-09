@@ -1231,6 +1231,16 @@ investigation:
         max_reads: 5
         never: >
           a read per subject; a second window; a metric no finding rests on
+        # A GROUP TOTAL IS A READ, NOT A SUM (2026-09-09, from the live
+        # dogfood). A store-grouped read returns one row per shop and NO
+        # total: `meta` carries the window, the comparison and the row count,
+        # and nothing that adds the rows up. The first live broad answer said
+        # "across the group" with a figure, which is a calculation in prose —
+        # and a calculation in prose has no receipt (architecture rule 9).
+        # `group_by: []` is how the estate's own total is read, and it is the
+        # only way that figure may be stated.
+        estate_total_read_with: 'group_by: []'
+        never_summed_in_prose: true
       focused:
         means: the message names a subject, a metric, a dimension or a window
         reads: the smallest set that completely answers it

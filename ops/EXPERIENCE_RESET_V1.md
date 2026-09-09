@@ -354,6 +354,25 @@ wrong rather than what was changed.
 - The scope policy is prompt behaviour. It is held by contract tests and by
   the definitions, and its BEHAVIOUR needs the opt-in live evals to confirm.
 
+### Found by the live dogfood: a group total was being summed in prose
+
+The first live broad answer said "₱1.78m against ₱1.49m across the group". A
+store-grouped read returns one row per shop and **no total** — verified against
+the running tool: `meta` carries the window, the comparison, the row count and
+the grain, and nothing that adds the rows up. So that figure was a sum
+performed in prose, which architecture rule 9 forbids and which has no receipt.
+
+It is a pre-existing gap — CLAUDE.md rule 9 has recorded since 2026-09-07 that
+nothing checks prose numerals against rows — but broad scope makes the
+temptation structural: a question about the business invites a business-level
+figure, and the reads that answer it are per shop.
+
+So the rule is stated where the breadth is decided. `group_by: []` is how the
+estate's own total is READ, `investigation.scope.kinds.broad` records it, and
+the SCOPE section says a group total is a read and never a sum. Re-run against
+the live model, the summed figure was gone and every number in the answer was
+one a tool had returned.
+
 ### The unresolved one
 
 `startTime` appears nowhere in `frontend/src`. In the production bundle it
