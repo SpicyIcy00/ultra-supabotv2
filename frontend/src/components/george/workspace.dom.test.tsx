@@ -150,20 +150,25 @@ describe('operability', () => {
 describe('continuity', () => {
   const FOLLOW = post('q2', { kind: 'question', author: 'user', author_user: 'ice', body: 'Why?', parent_id: 'a1', payload: null, receipts: null });
 
-  it('composes a same-scope reply into the object above it', () => {
+  it('composes a same-scope reply into ONE work surface, not a second answer', () => {
     const { container } = mount([QUESTION, post('a1', {}), FOLLOW, post('a2', {})]);
-    const intents = container.querySelectorAll('[data-intent]');
-    expect(intents[1].getAttribute('data-continues')).toBe('true');
-    const works = container.querySelectorAll('[data-work]');
-    expect(works[1].getAttribute('data-continues')).toBe('true');
-    // One avatar for the composed object, not two.
+    // One surface: one [data-work], one avatar; the refinement is its trail.
+    expect(container.querySelectorAll('[data-work]')).toHaveLength(1);
     expect(container.querySelectorAll('[data-work] .rounded-full.bg-george-navy')).toHaveLength(1);
+    const intents = container.querySelectorAll('[data-intent]');
+    expect(intents).toHaveLength(2);
+    expect(intents[1].getAttribute('data-continues')).toBe('true');
+    expect(intents[1].textContent).toContain('Why?');
+    // The re-read of the same three facts is not drawn twice.
+    expect(container.querySelectorAll('[data-instrument="performance"]')).toHaveLength(1);
+    expect(screen.getAllByText('₱203,717')).toHaveLength(1);
   });
 
-  it('does not compose a reply over another scope', () => {
-    const other = post('a2', { payload: { ...(post('a2', {}).payload as object), calls: [{ seq: 1, tool: 'get_sales', arguments: { ...ARGS, filters: { store: 'Magnolia' } } }] } as never });
+  it('does not compose a reply over another subject', () => {
+    const magnolia = CALLS.map((c) => ({ ...c, arguments: { ...c.arguments, filters: { store: 'Magnolia' } } }));
+    const other = post('a2', { payload: { ...(post('a2', {}).payload as object), charted: magnolia, calls: magnolia.map((c) => ({ seq: c.seq, tool: c.tool, arguments: c.arguments })) } as never });
     const { container } = mount([QUESTION, post('a1', {}), FOLLOW, other]);
-    expect(container.querySelectorAll('[data-work]')[1].getAttribute('data-continues')).toBeNull();
+    expect(container.querySelectorAll('[data-work]')).toHaveLength(2);
     expect(container.querySelectorAll('[data-work] .rounded-full.bg-george-navy')).toHaveLength(2);
   });
 });

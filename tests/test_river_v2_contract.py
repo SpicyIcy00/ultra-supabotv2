@@ -46,6 +46,9 @@ _ASK_PAGE = _ROOT / "frontend" / "src" / "pages" / "AskPage.tsx"
 _ANSWER_TURN = _ROOT / "frontend" / "src" / "components" / "george" / "AnswerTurn.tsx"
 # The one renderer both a live turn and a stored post go through (Stage 1).
 _ENTRY = _ROOT / "frontend" / "src" / "components" / "george" / "RiverEntry.tsx"
+# The parts both renderers draw from since Generative Workspace V3 (2026-09-09):
+# an entry on its own, and a surface composed of several.
+_PARTS = _ROOT / "frontend" / "src" / "components" / "george" / "entryParts.tsx"
 _HOOK = _ROOT / "frontend" / "src" / "hooks" / "useGeorgeStream.ts"
 _THREAD_HOOK = _ROOT / "frontend" / "src" / "hooks" / "useThread.ts"
 _FOLLOW = _ROOT / "frontend" / "src" / "hooks" / "useAutoFollow.ts"
@@ -274,11 +277,14 @@ def test_a_finished_turn_never_shows_prose_the_river_does_not_have():
 
 
 def test_the_superseded_answer_is_marked_as_being_replaced():
-    # Drawn by the one renderer since Stage 1, live and stored alike.
+    # Drawn by the one renderer since Stage 1, live and stored alike — and,
+    # since V3, by the surface too, through the shared parts.
     entry = _source(_ENTRY)
+    parts = _source(_PARTS)
     assert "SupersededAnswer" in entry
-    body = entry.split("function SupersededAnswer(", 1)[1].split("\n}", 1)[0]
+    body = parts.split("function SupersededAnswer(", 1)[1].split("\n}", 1)[0]
     assert "Rewriting" in body, "text about to stop being true must say so"
+    assert "SupersededAnswer" in _source(_ROOT / "frontend" / "src" / "components" / "george" / "WorkSurface.tsx")
 
 
 # ---------------------------------------------------------------------------
