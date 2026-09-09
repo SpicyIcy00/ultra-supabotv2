@@ -66,15 +66,63 @@ Recorded so that no session builds around a constraint the mission has
 superseded, and so nobody reports progress that has not happened.
 
 - **Understand — partly built.** Trusted reads with receipts, definitions in one
-  file, an investigation ladder, comparisons, findings, pins and pages. What is
-  missing is memory: George holds no view of the business between sessions, so
-  every conversation starts cold and he can never say "this is the third week."
+  file, an investigation ladder, comparisons, findings, pins and pages. Since
+  2026-09-09 also stock over time, the replenishment plan, and a purchase draft
+  per supplier. What is missing is memory: George holds no view of the business
+  between sessions, so every conversation starts cold and he can never say
+  "this is the third week."
 - **Build — barely started.** He can create and edit pages, and save workflows
   out of calls that already ran. He cannot add a metric, a tool, a data source
   or any capability of his own. Nothing in this repo lets George grow.
 - **Run — does not exist.** There is no background process of any kind. George
   does not exist when nobody is looking at him, so he can never come to you.
   `Watch` is named in the vocabulary below and has never been built.
+
+### The plan
+
+*Added 2026-09-09.* Six phases. **A phase ends when the person using George
+says it feels right — never when the architecture is finished.** That rule is
+the whole process change: the previous three weeks produced milestones that
+satisfied their specifications exactly and still felt like an analytics
+chatbot, because completion was measured against the spec instead of against
+the feeling.
+
+Each phase must be usable on its own. No phase may be built as infrastructure
+for the next one.
+
+- **0 · The honest baseline.** Correct what George is wrong about. The store
+  list is the live example: 22 stores exist and the definitions know 11, so
+  **AJI PINA's 92 transactions are missing from every figure George quotes**,
+  and two rows called `Test stoee` and `test store 2` are in the production
+  store table. Also: apply the `shipment_plans` grant so the replenishment tool
+  can run.
+- **1 · George forms a view and keeps it.** The world becomes real objects, and
+  George records what he believes about each one — with the evidence, when he
+  last confirmed it, and what changed his mind. Judgment is unblocked.
+  *Done when:* you stop asking questions to find out what is happening.
+- **2 · The workspace transforms.** One evolving situation instead of stacked
+  answers. Point and speak. Hierarchy follows George's judgment, so what matters
+  is large and what does not is quiet.
+  *Done when:* after five steers you are still in one piece of work.
+- **3 · George works when you are not there.** The between-times. He notices a
+  real change, investigates, and may conclude that nothing important happened.
+  Truthful about what he actually watched.
+  *Done when:* he tells you something you did not know to ask.
+- **4 · BUILD.** George proposes a definition, metric or system; it is
+  backtested; a person approves it; it becomes permanent. **This is the existing
+  workflow promotion gate generalised**, and it is how George grows without
+  inventing a number.
+- **5 · RUN.** He operates what was built. "Three things need you" because three
+  systems reached states needing a decision.
+
+**The order is not arbitrary.** Everything in phases 3–5 needs phase 1: a
+George with no memory cannot notice a change, cannot hold a system's state, and
+cannot tell you what he did while you were away.
+
+**What blocks progress is rarely code.** Today it is three data facts: the
+estate list is wrong, `george_ro` has no grant on `shipment_plans`, and only 456
+of the 1,130 products that sold in the last 90 days can be traced to a supplier
+at all — which is a gap in purchase-order history, not in any tool.
 
 Three things below were written for a question-answering agent and now sit in
 tension with the mission. They are **not repealed here** — repealing a trust
