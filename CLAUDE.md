@@ -948,6 +948,58 @@ say anything it likes in prose; it may not reach the renderer.
   has no frame behind it, and an approval waiting is a fact about the QUEUE
   that stays the count beside Inbox (UI rule 5).
 
+### The work surface
+
+*Added 2026-09-09, Generative Workspace V3.* A piece of work is ONE object on
+screen that refinements deepen and recompose; the posts underneath stay
+separate, append-only, and are what a reload rebuilds it from. Recorded here
+because each line is a decision the code cannot read back
+([ops/GENERATIVE_WORKSPACE_V3.md](ops/GENERATIVE_WORKSPACE_V3.md) is the full
+record, including the AG-UI / A2UI / CopilotKit evaluation — adapt the
+concepts, adopt nothing).
+
+- **Identity is not shape.** Business, window and population filters are the
+  work's identity; comparison, grouping, metric and subjects are its shape.
+  "Why?", "compare it with Rockwell" and "the products" change shape and stay
+  on the surface; a different window or a disjoint subject ("And Magnolia?")
+  starts new work. Subjects are related — same, expanded, narrowed,
+  disjoint — never matched by equality
+  ([surfaceAnchor.ts](frontend/src/components/george/surfaceAnchor.ts)).
+  The reply link and the thread are still required; the question TEXT is
+  never consulted.
+- **The Surface Composer asks one question: the smallest surface that
+  completely answers this.** Facts are deduplicated across the surface's
+  steps, so a refinement's re-read of the figure it explains is not drawn
+  twice and its drivers re-hang on the figure already on screen. Sections
+  are ranked by role; context that reaches outside the anchor's subjects is
+  FOLDED behind a line that names it, never dropped
+  ([surfaceCompose.ts](frontend/src/components/george/surfaceCompose.ts)).
+- **The plan is data the model cannot author.** `surfaceModel.ts` declares
+  the closed vocabularies and `surfaceViolations` fails any plan carrying
+  markup, a colour, a dimension, a component name, or a numeral the
+  evidence does not carry. The model's channel into composition is still
+  the finding frame and nothing else.
+- **Attention is the data's or absent.** A subject is singled out only
+  because it moved against the majority or the tool ranked it first under a
+  change ranking it performed; `metrics.yaml surface.attention` records
+  score, threshold and severity as `not_supported`. The attention line
+  characterises rows and carries no number.
+- **A UI event is a semantic instruction, not a scraped string.** `explain`,
+  `break_down`, `compare_subject`, `focus_subject`, with values from trusted
+  state, become a business-language question in one place
+  ([surfaceEvents.ts](frontend/src/components/george/surfaceEvents.ts)).
+  That seam is what voice will speak through.
+- **George is told the same state the screen composes**, from the same
+  facts: a line on the question naming the work the previous answer left —
+  metrics, subject, window, comparison — built from CALLS and carrying no
+  figure ([agent/surface.py](agent/surface.py)). It rides on the question,
+  never in the cached prefix.
+- **Prose is secondary once the figures are drawn.** The prompt's SURFACE
+  section says so; tool and implementation vocabulary and transaction
+  synonyms no definition establishes are recorded as gaps and warning frames
+  — RECORDED, NOT CORRECTED, because rule 17's exception cannot be told
+  from a leak mechanically. Rule 9's statement of enforcement is unchanged.
+
 ### These rules are already backed by the tool contract
 
 Rules 3, 4 and 6 are not aspirations the frontend has to invent — every tool
