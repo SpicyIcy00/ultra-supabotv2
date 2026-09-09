@@ -23,6 +23,10 @@ import { describe, expect, it } from 'vitest';
 const GEORGE_DIR = join(__dirname);
 const PAGES_DIR = join(__dirname, '..', '..', 'pages');
 const SHELL_DIR = join(__dirname, '..', 'shell');
+// The desk is scanned too (2026-09-09). It is the surface a person spends the
+// day on, and it draws the most colour in the app — exactly where a fifth use
+// of the approvals hue would go unnoticed.
+const DESK_DIR = join(__dirname, '..', 'desk');
 
 /** The accent token, in every form Tailwind lets it be written. */
 const ACCENT = /george-accent/;
@@ -42,6 +46,13 @@ const DATA_ALLOWED: Record<string, string> = {
   // already diverges from a drawn zero line with its signed figure printed
   // beside it; colour reinforces a direction the tool measured.
   'Instruments.tsx': 'diverging bars whose data declares direction',
+  // An object on a field, whose row declares `direction`. Its figure and its
+  // delta are printed beside it and the same rows are one control away as a
+  // list, so the hue reinforces and never carries (the desk, 2026-09-09).
+  'Field.tsx': 'field objects whose rows declare direction',
+  // The driver bars in an anatomy: the same diverging form as the split, from
+  // the same rows, with the signed figure beside each.
+  'Anatomy.tsx': 'driver bars whose data declares direction',
 };
 
 /**
@@ -64,6 +75,11 @@ const ALLOWED: Record<string, string> = {
   // The approval queue itself, and Promote: the one accent-coloured ACTION
   // in the app, because this is what the colour is for.
   'InboxPage.tsx': 'the approval queue and its one decision — the reserved use',
+  // The desk's own line carries the same needs-you count the shell's rail
+  // does, for a loaded and non-zero result only. It replaces GeorgeShell's
+  // use on the surface a person actually lives on, rather than adding a
+  // fifth: the shell keeps its own for the three rooms.
+  'ShellLine.tsx': 'the needs-you count on the desk',
 };
 
 /**
@@ -88,6 +104,7 @@ describe('UI rule 5 — one colour means "needs you"', () => {
       [GEORGE_DIR, sourceFiles(GEORGE_DIR)],
       [PAGES_DIR, sourceFiles(PAGES_DIR)],
       [SHELL_DIR, sourceFiles(SHELL_DIR)],
+      [DESK_DIR, sourceFiles(DESK_DIR)],
     ] as [string, string[]][]) {
       for (const name of files) {
         const source = readFileSync(join(dir, name), 'utf8');
@@ -130,6 +147,7 @@ describe('UI rule 5 — one colour means "needs you"', () => {
       [GEORGE_DIR, sourceFiles(GEORGE_DIR)],
       [PAGES_DIR, sourceFiles(PAGES_DIR)],
       [SHELL_DIR, sourceFiles(SHELL_DIR)],
+      [DESK_DIR, sourceFiles(DESK_DIR)],
     ] as [string, string[]][]) {
       for (const name of files) {
         const source = readFileSync(join(dir, name), 'utf8');
@@ -168,8 +186,15 @@ describe('UI rule 5 — one colour means "needs you"', () => {
     // Rails.tsx — the old approval rail — was deleted with the old George
     // page. Held at 4 on 2026-09-07 when the shell arrived: PostCard's dead
     // branch and the drawer left, the shell's Inbox count and the Inbox page
-    // took their places. If somebody wants a fifth, the honest move is to
-    // ask whether the colour still means one thing.
-    expect(Object.keys(ALLOWED).length).toBeLessThanOrEqual(4);
+    // took their places.
+    //
+    // Five on 2026-09-09, with the desk, and this is the one increase that
+    // has been argued rather than absorbed: the desk's line carries the count
+    // for the surface a person lives on, and the shell's rail still carries
+    // it for the three rooms. They are the SAME fact in two chromes during
+    // the migration, not a second meaning — and when the rooms move onto the
+    // desk this returns to 4. If somebody wants a sixth, the honest move is
+    // to ask whether the colour still means one thing.
+    expect(Object.keys(ALLOWED).length).toBeLessThanOrEqual(5);
   });
 });

@@ -668,6 +668,44 @@ export function fingerprintOf(layout: DeskLayout): string {
     layout.receded.map((r) => (r.kind === 'field' ? `field:${r.field.dimension}` : `section:${r.section.role}`))]);
 }
 
+/* --------------------------------------------------------- reading light -- */
+
+/**
+ * The subjects George is reading RIGHT NOW, from the calls in flight.
+ *
+ * A call scoped to one store names that store; a call grouped by the field's
+ * own dimension names every object on it; anything else names nothing. Read
+ * off `tool_call` frames and their arguments — never a guess, never a name
+ * from prose — so the light on the desk is where George actually is, and
+ * there is no light when no call is out (metrics.yaml surface.desk.presence).
+ */
+export function readingSubjects(
+  running: { tool: string; arguments?: Record<string, unknown> }[],
+  field: FieldPlan | null,
+): Subject[] {
+  if (!field || running.length === 0) return [];
+  const all = [...field.objects, ...field.unranked].map((o) => o.subject);
+  const out = new Map<string, Subject>();
+  for (const call of running) {
+    const args = call.arguments ?? {};
+    const g = args.group_by;
+    const groups = Array.isArray(g) ? g.map(String) : typeof g === 'string' && g ? [g] : [];
+    if (groups.includes(field.dimension)) {
+      for (const s of all) out.set(subjectKey(s), s);
+      continue;
+    }
+    const filters = args.filters;
+    if (filters && typeof filters === 'object') {
+      for (const value of Object.values(filters as Record<string, unknown>)) {
+        if (typeof value !== 'string') continue;
+        const hit = all.find((s) => s.label === value);
+        if (hit) out.set(subjectKey(hit), hit);
+      }
+    }
+  }
+  return [...out.values()];
+}
+
 /* ------------------------------------------------------------- the list -- */
 
 /** A field's objects as the rows of its list equivalent, in the tool's order. */

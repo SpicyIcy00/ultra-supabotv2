@@ -361,7 +361,7 @@ describe('the memoization that makes a long thread affordable', () => {
   it('builds the stored half apart from the live half', () => {
     // A single builder over both hands every stored entry a new object on
     // every delta, and memo never fires.
-    for (const file of ['../../pages/AskPage.tsx', 'RiverFeed.tsx']) {
+    for (const file of ['../desk/useDesk.ts', 'RiverFeed.tsx']) {
       const src = read(file);
       expect(src).toMatch(/storedItems\(/);
       expect(src).toMatch(/liveItems\(/);

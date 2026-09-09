@@ -5,10 +5,15 @@
  * backend/app/models/role_page_access.py.
  *
  * ORDER IS THE LANDING. `landingPathFor` takes the first allowed page, so
- * George comes first: a person with George lands in George, and everyone
- * else lands where they always did. "/" is nobody's path any more — it is
- * only ever a redirect (LandingRedirect), so the dashboard has a real URL of
- * its own and a bookmark to "/" still resolves.
+ * George comes first: a person with George lands in George, and everyone else
+ * lands where they always did. The dashboard keeps its own real URL, so a
+ * bookmark to it still resolves.
+ *
+ * "/" IS GEORGE'S OWN PATH SINCE 2026-09-09. It was nobody's, because George
+ * was a place you were sent to; the Experience Reset makes the desk the
+ * environment, so "/" renders it (LandingRedirect) rather than redirecting.
+ * Nothing loops: a person without George is navigated away from "/" to their
+ * own first page, and no other page's path is "/".
  */
 export interface PageDef {
   key: string;
@@ -17,7 +22,11 @@ export interface PageDef {
 }
 
 export const PAGES: PageDef[] = [
-  { key: 'george', path: '/ask', label: 'George' },
+  // George is not a destination any more (2026-09-09, the Experience Reset):
+  // "/" IS the desk, and LandingRedirect renders it rather than navigating to
+  // it. The entry stays so `pathForPage('george')` answers, and so the legacy
+  // chrome's George link has somewhere to point.
+  { key: 'george', path: '/', label: 'George' },
   { key: 'dashboard', path: '/dashboard', label: 'Dashboard' },
   { key: 'analytics', path: '/analytics', label: 'Analytics' },
   { key: 'ai_chat', path: '/ai-chat', label: 'AI Chat' },

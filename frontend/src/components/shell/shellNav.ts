@@ -5,14 +5,21 @@
  * apart from the panel that draws it: which links a person sees is a claim
  * about their access, and a claim is tested here without a DOM.
  *
- * TWO GROUPS, AND THE ORDER IS THE PRODUCT. The primary five are George's
- * environment — Today, Ask, Inbox, Pages, Workflows — and all five sit behind
- * the one `george` page key, so a person either has George or does not.
+ * TWO GROUPS, AND THE ORDER IS THE PRODUCT. Every primary item sits behind the
+ * one `george` page key, so a person either has George or does not.
  * Operations is the migration boundary: the dashboards and the operational
  * tools that already exist, reachable, secondary, and not going anywhere.
  * Warehouse, Packing, Barcodes and the rest are business applications, not
  * pages to be retired; George may one day orchestrate them, and they will
  * still be here.
+ *
+ * THE PRIMARY GROUP IS NO LONGER FIVE DESTINATIONS (2026-09-09, the
+ * Experience Reset). Today and Ask are gone as places: the desk at "/" IS the
+ * business at rest, and its own line is where a person talks to George. What
+ * is left are the three ROOMS that line links to — the approval queue, the
+ * kept pages, the running rules — each still at its own path, and none of
+ * them somewhere a person has to go before asking a question. `Desk` leads
+ * the list so the way back is always the first word in the rail.
  *
  * Every item carries its `role_page_access` key and is filtered by the
  * caller's allowed pages, so nobody sees a link they cannot open. The server
@@ -30,10 +37,9 @@ export interface NavItem {
 
 const under = (root: string) => (p: string) => p === root || p.startsWith(`${root}/`);
 
-/** George's environment. One page key for all five. */
+/** The way back to the desk, and the three rooms. One page key for all four. */
 export const PRIMARY: NavItem[] = [
-  { label: 'Today', path: '/today', page: 'george', matches: under('/today') },
-  { label: 'Ask', path: '/ask', page: 'george', matches: under('/ask') },
+  { label: 'Desk', path: '/', page: 'george', matches: (p) => p === '/' || under('/w')(p) },
   { label: 'Inbox', path: '/inbox', page: 'george', matches: under('/inbox') },
   { label: 'Pages', path: '/pages', page: 'george', matches: under('/pages') },
   { label: 'Workflows', path: '/workflows', page: 'george', matches: under('/workflows') },
@@ -65,7 +71,7 @@ export const OPERATIONS: NavItem[] = [
 ];
 
 /** The three that fit a phone's bottom bar; the rest live behind More. */
-export const PHONE_TABS = ['/today', '/ask', '/inbox'];
+export const PHONE_TABS = ['/', '/inbox', '/pages'];
 
 export function primaryFor(allowedPages: string[]): NavItem[] {
   return PRIMARY.filter((i) => allowedPages.includes(i.page));

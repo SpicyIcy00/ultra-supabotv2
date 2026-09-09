@@ -122,7 +122,7 @@ const navItems = [
   // George's own shell. This link leaves the legacy chrome; the shell's
   // Operations group is the way back. It carries the page it was clicked
   // from, so a question asked next arrives with that page as context.
-  { to: '/ask', page: 'george', icon: navIcons.george, label: 'George', match: (p: string) => p.startsWith('/ask') },
+  { to: '/', page: 'george', icon: navIcons.george, label: 'George', match: (p: string) => p === '/' || p.startsWith('/w/') },
   // Warehouse owns two tabs: Replenishment Reports and Barcode Generator
   { to: '/warehouse', page: 'warehouse', icon: navIcons.warehouse, label: 'Warehouse', match: (p: string) => p === '/warehouse' },
   { to: '/packing', page: 'packing', icon: navIcons.packing, label: 'Packing', match: (p: string) => p === '/packing' },

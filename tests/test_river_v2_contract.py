@@ -42,7 +42,11 @@ from fastapi import HTTPException                                      # noqa: E
 
 _ROOT = Path(__file__).resolve().parents[1]
 _ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "george.py"
-_ASK_PAGE = _ROOT / "frontend" / "src" / "pages" / "AskPage.tsx"
+# The workspace, since the Experience Reset (2026-09-09): the desk, and the
+# hook that wires it to persistence. Ask stopped being a page.
+_DESK_PAGE = _ROOT / "frontend" / "src" / "pages" / "DeskPage.tsx"
+_DESK = _ROOT / "frontend" / "src" / "components" / "desk" / "Desk.tsx"
+_USE_DESK = _ROOT / "frontend" / "src" / "components" / "desk" / "useDesk.ts"
 _ANSWER_TURN = _ROOT / "frontend" / "src" / "components" / "george" / "AnswerTurn.tsx"
 # The one renderer both a live turn and a stored post go through (Stage 1).
 _ENTRY = _ROOT / "frontend" / "src" / "components" / "george" / "RiverEntry.tsx"
@@ -185,24 +189,25 @@ def test_the_stream_exposes_the_thread_id_only_once_its_posts_exist():
     )
 
 
-def test_the_root_never_navigates_to_a_thread_address_on_ask():
-    # 2026-09-08: the client followed the post frame to /ask/:id so the work
-    # had an address. 2026-09-09: the work's home IS the root — the river of
-    # persisted work is read there — so nothing navigates on a question and
-    # /ask/:id is only a focus somebody arrives at (test_river_home_contract).
-    page = _source(_ASK_PAGE)
-    assert "FollowThread" not in page
+def test_the_reader_is_sent_to_a_work_address_only_once_its_posts_exist():
+    # The rule is unchanged and its address is not: a question asked at rest
+    # moves to /w/:threadId, and it moves on the POST frame — `storedThreadId`,
+    # which the hook sets only when the frame says the posts were stored.
+    page = _source(_DESK_PAGE)
+    assert "storedThreadId" in page
+    assert "navigate(`/w/${desk.storedThreadId}`" in page
+    # Nothing follows the start frame, and nothing navigates on a question.
+    assert "threadId" in page
     assert "navigate(`/ask/" not in page
-    assert "useRiver('work')" in page
 
 
 def test_the_work_is_rendered_where_it_was_asked():
-    # The root draws the river and the live turn in one list, so asking from
-    # the root shows the answer in place — and every earlier piece of work
-    # above it, from persistence.
-    page = _source(_ASK_PAGE)
-    assert "<RiverEntries" in page
-    assert "riverMerge(posts, here ? turns : [])" in page
+    # The desk reads persisted work and merges the live turn into it, so the
+    # answer transforms the workspace in place rather than arriving elsewhere.
+    hook = _source(_USE_DESK)
+    assert "useRiver('work')" in hook
+    assert "riverMerge(posts, george.turns)" in hook
+    assert "riverSurfaces(" in hook
 
 
 # ---------------------------------------------------------------------------
@@ -218,21 +223,21 @@ def test_the_turn_list_no_longer_scrolls_anything():
 
 
 def test_nothing_in_the_workspace_asks_for_smooth_scrolling():
-    for path in (_ANSWER_TURN, _ENTRY, _ASK_PAGE, _FOLLOW):
+    for path in (_ANSWER_TURN, _ENTRY, _DESK, _FOLLOW):
         assert "smooth" not in _source(path), f"{path.name} animates the stream"
 
 
-def test_the_scroll_container_owns_following():
-    page = _source(_ASK_PAGE)
-    assert "useAutoFollow" in page
-    # The ref goes on the element that actually scrolls.
-    assert re.search(r"ref=\{follow\.ref\}", page)
-
-
-def test_there_is_a_way_back_to_the_bottom():
-    page = _source(_ASK_PAGE)
-    assert "FollowPill" in page
-    assert "jumpToBottom" in page
+def test_the_workspace_scrolls_nothing_by_itself():
+    # THE STAGE IS NOT A FEED (2026-09-09). The river's answer to "the content
+    # grew under me" was to follow it; the desk's is that the workspace does
+    # not grow — a question TRANSFORMS what is on screen, so there is nothing
+    # to chase and nothing to jump back to. Anything here that moved the
+    # viewport would be moving it for content the reader did not add.
+    for path in (_DESK, _DESK_PAGE):
+        source = _source(path)
+        assert "scrollIntoView" not in source, f"{path.name} scrolls"
+        assert "scrollTop" not in source, f"{path.name} scrolls"
+        assert "useAutoFollow" not in source, f"{path.name} follows a stream it does not have"
 
 
 # ---------------------------------------------------------------------------
@@ -301,8 +306,14 @@ def test_the_client_tells_a_404_apart_from_a_failed_lookup():
     )
 
 
-def test_the_page_draws_the_failed_lookup_as_its_own_state():
-    page = _source(_ASK_PAGE)
-    assert "thread.failed" in page
-    assert "thread.unavailable" in page
-    assert "refetch" in page, "a retryable failure needs a way to retry"
+def test_the_workspace_draws_the_failed_lookup_as_its_own_state():
+    hook = _source(_USE_DESK)
+    assert "thread.failed" in hook
+    assert "thread.unavailable" in hook
+    assert "thread.refetch" in hook, "a retryable failure needs a way to retry"
+    desk = _source(_DESK)
+    # Four outcomes, four renderings, and none may borrow another's words.
+    assert "desk.loading" in desk
+    assert "desk.unavailable" in desk
+    assert "desk.failed" in desk
+    assert "Try again" in desk

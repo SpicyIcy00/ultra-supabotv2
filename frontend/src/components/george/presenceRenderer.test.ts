@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
 
 const GEORGE = join(__dirname);
 const SHELL = join(__dirname, '..', 'shell');
-const PAGES = join(__dirname, '..', '..', 'pages');
+const DESK = join(__dirname, '..', 'desk');
 const read = (dir: string, name: string) =>
   readFileSync(join(dir, name), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 
@@ -25,9 +25,9 @@ describe('the presence seam', () => {
   });
 
   it('is the only way the workspace reaches the drawing', () => {
-    const ask = read(PAGES, 'AskPage.tsx');
-    expect(ask).toContain("from '../components/george/PresenceMark'");
-    expect(ask).not.toMatch(/ReactiveMark/);
+    const line = read(DESK, 'ShellLine.tsx');
+    expect(line).toContain("from '../george/PresenceMark'");
+    expect(line).not.toMatch(/ReactiveMark/);
   });
 
   it('is the one place the current look is chosen', () => {

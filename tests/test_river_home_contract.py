@@ -1,11 +1,19 @@
 """
 The home of George's work: the river's two streams, and who reads which.
 
-ASK: I go to George. TODAY: George comes to me. So /ask reads the WORK stream
-of the river — questions and answers, from persistence, every visit — and
-/today reads the ATTENTION stream, what George initiated. One table, one
-visibility clause, one cursor; the split is a WHERE on `kind` and nothing a
+THE STREAMS ARE UNCHANGED AND ARE STILL INFRASTRUCTURE. One table, one
+visibility clause, one cursor; the split is a WHERE on `kind`, and nothing a
 caller may not see in one stream can appear in the other.
+
+WHO READS THEM CHANGED ON 2026-09-09, with the Experience Reset. Ask and Today
+were two pages: one read the WORK stream, the other the ATTENTION stream. They
+are not pages any more — the desk is the environment, its own line is where
+George is asked, and its resting state is the business rather than a feed. So
+the WORK stream is read by the desk, to compose the work a person has done;
+the whole river is read by History, which is the river's one remaining
+user-facing role; and what George initiated reaches a person as the morning
+sentence, the needs-you count and the marks on the objects themselves, rather
+than as a second feed to scroll.
 
 The route is driven with the same fake session test_river_v2_contract uses.
 The client-side rules are read from source, as accentUse.test.ts does.
@@ -25,8 +33,11 @@ from fastapi import HTTPException                                      # noqa: E
 
 _ROOT = Path(__file__).resolve().parents[1]
 _ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "george.py"
-_ASK = _ROOT / "frontend" / "src" / "pages" / "AskPage.tsx"
-_TODAY = _ROOT / "frontend" / "src" / "pages" / "TodayPage.tsx"
+_DESK_PAGE = _ROOT / "frontend" / "src" / "pages" / "DeskPage.tsx"
+_DESK = _ROOT / "frontend" / "src" / "components" / "desk" / "Desk.tsx"
+_USE_DESK = _ROOT / "frontend" / "src" / "components" / "desk" / "useDesk.ts"
+_STATE = _ROOT / "frontend" / "src" / "components" / "desk" / "deskState.ts"
+_HISTORY = _ROOT / "frontend" / "src" / "components" / "desk" / "History.tsx"
 _HOME = _ROOT / "frontend" / "src" / "components" / "george" / "askHome.ts"
 _RIVER_HOOK = _ROOT / "frontend" / "src" / "hooks" / "useRiver.ts"
 
@@ -106,65 +117,76 @@ def test_an_unknown_stream_is_refused():
 # Who reads which
 # ---------------------------------------------------------------------------
 
-
-def test_ask_reads_the_work_stream_from_persistence():
-    ask = _source(_ASK)
-    assert "useRiver('work')" in ask
-
-
-def test_today_reads_the_attention_stream_and_never_the_work():
-    today = _source(_TODAY)
-    assert "useRiver('attention')" in today
-    assert "useRiver('work')" not in today
-    assert "useRiver()" not in today
+def test_the_desk_reads_the_work_stream_from_persistence():
+    hook = _source(_USE_DESK)
+    assert "useRiver('work')" in hook
+    assert "riverSurfaces(" in hook
 
 
-def test_today_has_no_general_composer():
-    # One canonical river of user-directed work, not two. A brief's follow-up
-    # chip may still ask George; the work it starts lands in Ask.
-    today = _source(_TODAY)
-    assert "<AskComposer" not in today
-    assert "navigate('/ask')" in today
+def test_history_reads_the_whole_river_and_is_the_rivers_user_facing_role():
+    page = _source(_DESK_PAGE)
+    assert "useRiver()" in page, "History reads both streams"
+    assert "<History" in page
+    history = _source(_HISTORY)
+    # Opening one restores a WORKSPACE, not a transcript.
+    assert "onOpen" in history
+    assert "RiverEntries" not in history
+    assert "AskComposer" not in history
 
 
-def test_today_fabricates_nothing():
-    today = _source(_TODAY)
-    for word in ("alert", "recommend", "health", "score", "watch"):
-        assert not re.search(rf"\b{word}", today, re.I), f"Today mentions {word!r}"
-    assert "NothingToSurface" in today
+def test_the_desk_at_rest_reads_the_definitions_not_a_feed():
+    hook = _source(_USE_DESK)
+    # The business at rest is a deterministic replay of the definitions' own
+    # reading list — no model, and no second river to scroll.
+    assert "rest_reads" in hook
+    assert "restSurface(" in hook
+    assert "useRiver('attention')" not in hook
 
 
-def test_ask_has_no_new_chat_no_thread_picker_and_no_recent_list():
-    ask = _source(_ASK)
-    for word in ("New chat", "Recent", "listChats", "thread picker"):
-        assert word not in ask, f"Ask still offers {word!r}"
+def test_the_desk_fabricates_nothing():
+    for path in (_DESK, _USE_DESK):
+        source = _source(path)
+        for word in ("alert", "recommend", "score", "severity", "health"):
+            assert not re.search(rf"\b{word}", source, re.I), f"{path.name} mentions {word!r}"
 
 
-def test_ask_does_not_navigate_to_a_thread_address_on_ask():
-    # Following the post frame to /ask/:id on every question made the URL a
-    # chat. The work stays at the root; /ask/:id is a focus you arrive at.
-    ask = _source(_ASK)
-    assert "FollowThread" not in ask
-    assert "navigate(`/ask/" not in ask
+def test_the_desk_has_no_new_chat_no_thread_picker_and_no_recent_list():
+    for path in (_DESK_PAGE, _DESK):
+        source = _source(path)
+        for word in ("New chat", "New work", "Recent", "listChats", "thread picker"):
+            assert word not in source, f"{path.name} still offers {word!r}"
 
 
-def test_ask_keeps_no_client_side_source_of_truth():
-    for path in (_ASK, _HOME, _RIVER_HOOK):
+def test_the_desk_keeps_no_client_side_source_of_truth():
+    for path in (_DESK_PAGE, _DESK, _USE_DESK, _STATE, _HOME, _RIVER_HOOK):
         src = _source(path)
         for forbidden in ("localStorage", "sessionStorage", "indexedDB"):
-            assert forbidden not in src, f"{path.name} keeps history in {forbidden}"
+            assert forbidden not in src, f"{path.name} keeps state in {forbidden}"
+
+
+def test_the_focus_is_restored_from_the_server_and_never_from_the_client():
+    # What a person was looking at comes back from what their newest QUESTION
+    # carried — the desk on its stored post — so a reload lands where they were
+    # without the client having remembered anything.
+    hook = _source(_USE_DESK)
+    assert "restoreDeskState(" in hook
+    state = _source(_STATE)
+    assert "export function restoreDeskState" in state
+    assert "intent?.desk?.selection" in state
 
 
 def test_the_deep_link_folds_only_the_thread_read_in():
-    # The thread read is filtered by the same visibility clause; folding its
-    # posts into the river exposes nothing the river would not.
+    # The thread read is filtered by the SAME visibility clause; folding its
+    # posts into the river exposes nothing the river read would not.
     home = _source(_HOME)
     assert "export function withFocus" in home
-    ask = _source(_ASK)
-    assert "withFocus(river.posts, thread.posts)" in ask
+    hook = _source(_USE_DESK)
+    assert "withFocus(river.posts, thread.posts)" in hook
 
 
-def test_a_foreign_thread_stays_a_404_and_the_river_still_shows_own_work():
-    ask = _source(_ASK)
-    assert "thread.unavailable" in ask
-    assert "Your own work is here" in ask
+def test_a_foreign_piece_of_work_stays_a_404_and_the_desk_still_stands():
+    hook = _source(_USE_DESK)
+    assert "thread.unavailable" in hook
+    desk = _source(_DESK)
+    assert "That work isn’t available." in desk
+    assert "somebody else’s" in desk

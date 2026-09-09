@@ -11,10 +11,12 @@ import {
 } from './shellNav';
 
 describe('the two groups', () => {
-  it('offers George’s five behind one key', () => {
-    expect(PRIMARY.map((i) => i.label)).toEqual(['Today', 'Ask', 'Inbox', 'Pages', 'Workflows']);
+  it('offers the desk and its three rooms behind one key', () => {
+    // Today and Ask stopped being places on 2026-09-09: the desk at "/" is
+    // the business at rest and its own line is where George is asked.
+    expect(PRIMARY.map((i) => i.label)).toEqual(['Desk', 'Inbox', 'Pages', 'Workflows']);
     expect(new Set(PRIMARY.map((i) => i.page))).toEqual(new Set(['george']));
-    expect(primaryFor(['george'])).toHaveLength(5);
+    expect(primaryFor(['george'])).toHaveLength(4);
     expect(primaryFor(['dashboard', 'packing'])).toEqual([]);
   });
 
@@ -45,20 +47,28 @@ describe('the two groups', () => {
 });
 
 describe('the phone', () => {
-  it('puts Today, Ask and Inbox in the bar and the rest behind More', () => {
-    expect(phoneTabs(['george']).map((i) => i.label)).toEqual(['Today', 'Ask', 'Inbox']);
-    expect(phoneMore(['george']).map((i) => i.label)).toEqual(['Pages', 'Workflows']);
+  it('puts the desk, Inbox and Pages in the bar and the rest behind More', () => {
+    expect(phoneTabs(['george']).map((i) => i.label)).toEqual(['Desk', 'Inbox', 'Pages']);
+    expect(phoneMore(['george']).map((i) => i.label)).toEqual(['Workflows']);
   });
 });
 
 describe('active state', () => {
   it('matches a route and everything under it', () => {
-    const ask = PRIMARY.find((i) => i.label === 'Ask')!;
-    expect(isActive(ask, '/ask')).toBe(true);
-    expect(isActive(ask, '/ask/abc')).toBe(true);
-    expect(isActive(ask, '/askew')).toBe(false);
+    const pages = PRIMARY.find((i) => i.label === 'Pages')!;
+    expect(isActive(pages, '/pages')).toBe(true);
+    expect(isActive(pages, '/pages/abc')).toBe(true);
+    expect(isActive(pages, '/pagesetter')).toBe(false);
     const dash = OPERATIONS.find((i) => i.label === 'Dashboard')!;
     expect(isActive(dash, '/vending')).toBe(true);
+  });
+
+  it('marks the desk on "/" and on a piece of work, and nowhere else', () => {
+    const desk = PRIMARY.find((i) => i.label === 'Desk')!;
+    expect(isActive(desk, '/')).toBe(true);
+    expect(isActive(desk, '/w/thread-1')).toBe(true);
+    expect(isActive(desk, '/workflows')).toBe(false);
+    expect(isActive(desk, '/pages')).toBe(false);
   });
 });
 
@@ -71,7 +81,12 @@ describe('landing', () => {
     expect(landingPathFor([])).toBe('/no-access');
   });
 
-  it('never lands on "/" — that path is only ever a redirect', () => {
-    for (const p of PAGES) expect(p.path).not.toBe('/');
+  it('gives "/" to George and to nobody else', () => {
+    // The desk IS "/" since the Experience Reset: LandingRedirect renders it
+    // rather than navigating, so a person with George is never sent anywhere.
+    // Every other page keeps a path of its own, which is what stops the
+    // redirect for a person WITHOUT George from looping.
+    expect(pathForPage('george')).toBe('/');
+    for (const p of PAGES) if (p.key !== 'george') expect(p.path).not.toBe('/');
   });
 });

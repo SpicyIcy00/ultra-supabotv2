@@ -1,16 +1,19 @@
 /**
  * Routing.
  *
- * TWO CHROMES DURING THE MIGRATION, ONE GEORGE ABOVE BOTH. GeorgeShell is
- * the primary environment — Today, Ask, Inbox, Pages, Workflows — on cream.
- * Layout is the existing application on dark: dashboards and the operational
- * tools, every route kept at its own path. The stream provider sits above
- * both so an answer keeps arriving whichever chrome the person is in.
+ * "/" IS GEORGE (2026-09-09, the Experience Reset). The desk is the
+ * environment, not a destination inside one: a person with George lands on
+ * the business at rest and a piece of work has its own address at
+ * `/w/:threadId`. Today, Ask, Inbox, Pages and Workflows stopped being five
+ * places to navigate between — Ask is the line on the desk, Today is the desk
+ * at rest, and the other three are rooms reachable from the line above it.
+ * Everything anybody bookmarked still resolves: the old paths redirect.
  *
- * "/" is a redirect and nothing else: a person with George lands in George,
- * everyone else where they always did (constants/pages.ts). The dashboard
- * has a real path of its own now, and the old George paths forward to the
- * new ones so nothing anybody bookmarked or sent stops resolving.
+ * TWO CHROMES DURING THE MIGRATION, ONE GEORGE ABOVE BOTH. The desk draws its
+ * own five regions and wears no rail. GeorgeShell remains the chrome for the
+ * rooms, and Layout is the existing application on dark, every route at its
+ * own path. The stream provider sits above all of it, so an answer keeps
+ * arriving whichever surface the person is on.
  */
 import React, { Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
@@ -24,9 +27,9 @@ import { LandingRedirect } from './components/LandingRedirect';
 import { GeorgeStreamProvider } from './components/george/GeorgeStreamProvider';
 import { GeorgeShell } from './components/shell/GeorgeShell';
 
-// George's environment.
-const TodayPage = React.lazy(() => import('./pages/TodayPage'));
-const AskPage = React.lazy(() => import('./pages/AskPage'));
+// George.
+const DeskPage = React.lazy(() => import('./pages/DeskPage'));
+// The rooms: reachable from the desk's line, not destinations beside it.
 const InboxPage = React.lazy(() => import('./pages/InboxPage'));
 const PagesPage = React.lazy(() => import('./pages/PagesPage'));
 const WorkflowsPage = React.lazy(() => import('./pages/WorkflowsPage'));
@@ -51,13 +54,13 @@ const PageSpinner = () => (
   </div>
 );
 
-/** The old thread path, forwarded with its id. */
-function ThreadRedirect() {
+/** An old thread path, forwarded to the work's own address. */
+function WorkRedirect() {
   const { threadId = '' } = useParams();
-  return <Navigate to={`/ask/${threadId}`} replace />;
+  return <Navigate to={`/w/${threadId}`} replace />;
 }
 
-/** George's routes, inside the shell. One page key for all of them. */
+/** George's routes. One page key for all of them. */
 function george(element: React.ReactNode) {
   return <RequirePage pageKey="george">{element}</RequirePage>;
 }
@@ -67,7 +70,6 @@ function ChromeRoutes() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<LandingRedirect />} />
         {/* Dashboard owns two tabs: Stores (/dashboard) and Vending (/vending) */}
         <Route path="/dashboard" element={<RequirePage pageKey="dashboard"><Dashboard /></RequirePage>} />
         <Route path="/vending" element={<RequirePage pageKey="dashboard"><Dashboard /></RequirePage>} />
@@ -101,7 +103,7 @@ function App() {
           <GeorgeStreamProvider>
             <Suspense fallback={<PageSpinner />}>
               <Routes>
-                {/* The print sheet sits outside both chromes so there is no
+                {/* The print sheet sits outside every chrome so there is no
                     sidebar or header to hide — a bare page for the printer. */}
                 <Route
                   path="/packing/:listId/print"
@@ -109,18 +111,25 @@ function App() {
                 />
                 <Route path="/george/preview" element={<RiverPreview />} />
 
+                {/* The desk. "/" renders it for a person with George and sends
+                    everybody else to their own first page. */}
+                <Route path="/" element={<LandingRedirect />} />
+                <Route path="/w/:threadId" element={george(<DeskPage />)} />
+
+                {/* The rooms, in George's chrome. */}
                 <Route element={<GeorgeShell />}>
-                  <Route path="/today" element={george(<TodayPage />)} />
-                  <Route path="/ask" element={george(<AskPage />)} />
-                  <Route path="/ask/:threadId" element={george(<AskPage />)} />
                   <Route path="/inbox" element={george(<InboxPage />)} />
                   <Route path="/pages" element={george(<PagesPage />)} />
                   <Route path="/pages/:pageId" element={george(<PagesPage />)} />
                   <Route path="/workflows" element={george(<WorkflowsPage />)} />
-                  {/* The paths George lived at until 2026-09-07. */}
-                  <Route path="/george" element={<Navigate to="/today" replace />} />
-                  <Route path="/george/t/:threadId" element={<ThreadRedirect />} />
                 </Route>
+
+                {/* Where George used to live. Every one of these still resolves. */}
+                <Route path="/ask" element={<Navigate to="/" replace />} />
+                <Route path="/ask/:threadId" element={<WorkRedirect />} />
+                <Route path="/today" element={<Navigate to="/" replace />} />
+                <Route path="/george" element={<Navigate to="/" replace />} />
+                <Route path="/george/t/:threadId" element={<WorkRedirect />} />
 
                 <Route path="*" element={<ChromeRoutes />} />
               </Routes>

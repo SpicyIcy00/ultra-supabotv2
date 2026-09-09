@@ -323,3 +323,234 @@ body {
     50%      { opacity: 0.72; }
   }
 }
+
+/* ---------------------------------------------------------------------------
+   THE DESK — the one workspace.
+
+   THE VISUAL LANGUAGE, AND WHY EACH PART OF IT IS ALLOWED. The references this
+   was drawn from share four things: luminous radial colour rather than flat
+   fills, large expressive numerals, micro-labels in wide-tracked capitals, and
+   depth from light rather than from borders. Every one of those is presentation
+   over figures the tools returned — a blob's CENTRE is a position a row gave
+   it, its AREA is a value, its HUE is the tool's own `direction`, and its glow
+   is rendering. Nothing here encodes anything the rows do not.
+
+   THE ONE COLOUR THAT IS NOT HERE is the accent. A figure never needs you
+   (UI rule 5), so `george-accent` appears nowhere on the desk's surface —
+   only on the mark, the needs-you count and the one Promote.
+
+   COLOUR IS NEVER THE ONLY SIGNAL. Every object prints its figure and its
+   delta beside it, every field has the same rows one control away as a list,
+   and the ramps below are built on the validated pair: the CORE of each
+   gradient is `george-data-up` / `george-data-down` exactly, so the dense
+   middle and every printed mark keep the contrast and the protan/deutan
+   separation the palette was measured for. What the ramp adds is light.
+   --------------------------------------------------------------------------- */
+
+:root {
+  /* Luminous ramps. Core = the validated token; edge = where it dissolves. */
+  --desk-up-core:    #2E6FA8;
+  --desk-up-mid:     #5AA0DC;
+  --desk-up-edge:    #CFE9FF;
+  --desk-down-core:  #C0472B;
+  --desk-down-mid:   #E8794C;
+  --desk-down-edge:  #FFE0CE;
+  --desk-flat-core:  #8496AC;
+  --desk-flat-mid:   #A9B8C8;
+  --desk-flat-edge:  #E6ECF3;
+  --desk-ink:        #12233F;
+  --desk-cream:      #FBF7EF;
+
+  /* Depth: light, never a border. Three steps, and the third is the drawer. */
+  --desk-lift-1: 0 1px 2px rgba(18, 35, 63, 0.04), 0 4px 16px rgba(18, 35, 63, 0.045);
+  --desk-lift-2: 0 2px 6px rgba(18, 35, 63, 0.05), 0 12px 36px rgba(18, 35, 63, 0.07);
+  --desk-lift-3: 0 8px 24px rgba(18, 35, 63, 0.08), 0 32px 80px rgba(18, 35, 63, 0.12);
+}
+
+/* The ground. Cream, with a grain so light it is felt rather than seen — the
+   texture the references carry, at an opacity that cannot touch legibility. */
+.desk-ground {
+  background-color: var(--desk-cream);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+}
+
+/* A raised surface: the inspector, the line, a drawer. Light, not a box. */
+.desk-lift   { box-shadow: var(--desk-lift-1); }
+.desk-lift-2 { box-shadow: var(--desk-lift-2); }
+.desk-lift-3 { box-shadow: var(--desk-lift-3); }
+
+/* A micro-label: what the references use to name a region without shouting. */
+.desk-label {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8496AC;
+}
+
+/* ---- the field ---------------------------------------------------------- */
+
+.desk-field { display: block; }
+
+/* An object moves; it does not remount. Keyed by its subject, so a window
+   change slides the same shop and a focus carries it to the centre. */
+.desk-object {
+  cursor: pointer;
+  transition: transform 520ms cubic-bezier(0.22, 0.68, 0.24, 1);
+}
+.desk-object:focus { outline: none; }
+.desk-object:focus-visible .desk-object__body {
+  stroke: var(--desk-ink);
+  stroke-width: 2px;
+}
+
+/* The cloud: the luminous body, blurred so it reads as light rather than as a
+   token. Its RADIUS is the figure; the blur is the same at every size. */
+.desk-object__body {
+  transition: r 520ms cubic-bezier(0.22, 0.68, 0.24, 1), opacity 320ms ease-out;
+  opacity: 0.92;
+}
+.desk-object:hover .desk-object__body { opacity: 1; }
+
+/* The core: a small dense centre at the object's exact position, so the eye
+   locates it precisely and the soft cloud does not become a vague region. */
+.desk-object__core {
+  transition: r 520ms cubic-bezier(0.22, 0.68, 0.24, 1);
+  opacity: 0.9;
+}
+
+/* The data singled this one out. A ring, in the ink — form, never a hue, and
+   never the approvals colour. */
+.desk-object__ring {
+  fill: none;
+  stroke: var(--desk-ink);
+  stroke-width: 1px;
+  opacity: 0.34;
+  transition: r 520ms cubic-bezier(0.22, 0.68, 0.24, 1);
+}
+
+/* The person selected this one. A closed ring in the ink, heavier than
+   attention, so the two are told apart without colour. */
+.desk-object__selected {
+  fill: none;
+  stroke: var(--desk-ink);
+  stroke-width: 2px;
+  opacity: 0.85;
+  transition: r 520ms cubic-bezier(0.22, 0.68, 0.24, 1);
+}
+
+/* George is reading this object: a diffuse light under it, for as long as a
+   call naming it is in flight. Nothing pulses when nothing is running. */
+.desk-object__light {
+  opacity: 0;
+  animation: desk-reading 1900ms ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes desk-reading {
+  0%, 100% { opacity: 0.30; }
+  50%      { opacity: 0.62; }
+}
+
+.desk-object__name {
+  font-size: 12.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  fill: var(--desk-ink);
+  paint-order: stroke;
+  stroke: var(--desk-cream);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.desk-object[data-selected='true'] .desk-object__name,
+.desk-object[data-attention='true'] .desk-object__name { font-weight: 600; }
+
+.desk-object__figure {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  fill: var(--desk-ink);
+  paint-order: stroke;
+  stroke: var(--desk-cream);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.desk-object__delta { fill: #4A5D78; }
+
+.desk-axis__zero { stroke: #4A5D78; stroke-width: 1px; opacity: 0.3; }
+.desk-axis__label {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  fill: #8496AC;
+}
+
+/* ---- the figure ---------------------------------------------------------- */
+
+/* A large numeral over a soft field of its own direction's light. The wash is
+   behind the type and never touches its contrast: navy on cream throughout. */
+.desk-figure { position: relative; display: inline-block; isolation: isolate; }
+.desk-figure::before {
+  content: '';
+  position: absolute;
+  inset: -28% -18%;
+  border-radius: 999px;
+  background: radial-gradient(60% 60% at 30% 40%, var(--wash, transparent), transparent 72%);
+  opacity: 0.5;
+  z-index: -1;
+  pointer-events: none;
+}
+.desk-figure--up   { --wash: var(--desk-up-edge); }
+.desk-figure--down { --wash: var(--desk-down-edge); }
+
+/* ---- transformation ------------------------------------------------------ */
+
+/* The stage changes. Deeper evidence GROWS from the object it explains, and
+   a comparison ENTERS beside what is already there — the motion says which
+   happened. Nothing loops; each plays once, on a click or a frame. */
+.desk-stage { animation: desk-emerge 380ms cubic-bezier(0.22, 0.68, 0.24, 1) both; }
+@keyframes desk-emerge {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+.desk-enter { animation: desk-enter 420ms cubic-bezier(0.22, 0.68, 0.24, 1) both; }
+@keyframes desk-enter {
+  from { opacity: 0; transform: translateX(18px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* What recedes: smaller, quieter, still there. */
+.desk-receded {
+  opacity: 0.42;
+  transition: opacity 320ms ease-out;
+}
+.desk-receded:hover { opacity: 0.78; }
+
+/* The reading arrives under the figures it interprets. */
+.desk-reading-in { animation: desk-fade 420ms ease-out both; }
+@keyframes desk-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---- reduced motion ------------------------------------------------------ */
+
+/* THE SAME MODEL WITH NO TRAVEL. Focus still focuses, selection still selects,
+   the field still recomposes — objects arrive at their places instead of
+   moving to them, and the reading light stops breathing. */
+.desk-motion--reduced .desk-object,
+.desk-motion--reduced .desk-object__body,
+.desk-motion--reduced .desk-object__core,
+.desk-motion--reduced .desk-object__ring,
+.desk-motion--reduced .desk-object__selected { transition: none; }
+.desk-motion--reduced .desk-object__light { animation: none; opacity: 0.45; }
+.desk-motion--reduced .desk-stage,
+.desk-motion--reduced .desk-enter,
+.desk-motion--reduced .desk-reading-in { animation: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .desk-object,
+  .desk-object__body,
+  .desk-object__core,
+  .desk-object__ring,
+  .desk-object__selected { transition: none; }
+  .desk-object__light { animation: none; opacity: 0.45; }
+  .desk-stage, .desk-enter, .desk-reading-in { animation: none; }
+}
