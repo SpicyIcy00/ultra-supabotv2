@@ -63,6 +63,7 @@ from tools import (
     products,
     purchasing,
     sales,
+    stock_history,
     vending,
 )
 from tools._common import load_defs as _load_defs, req
@@ -146,6 +147,7 @@ MAX_TOOL_CALLS = 12
 TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
     "get_sales": sales.get_sales,
     "get_stock": inventory.get_stock,
+    "get_stock_history": stock_history.get_stock_history,
     "get_product": products.get_product,
     "get_movement": movement.get_movement,
     "get_vending": vending.get_vending,
@@ -246,6 +248,9 @@ def _enum_sources(defs: dict) -> dict[tuple[str, str], list]:
         ("get_stock", "state"): states,
         ("get_stock", "group_by"): list(req(defs, "ranking.stock_grouping.valid_group_by")),
         ("get_stock", "store"): retail + warehouse,
+        ("get_stock_history", "store"): retail + warehouse,
+        ("get_stock_history", "view"): list(req(defs, "inventory.history.views")),
+        ("get_stock_history", "rank_by"): list(req(defs, "inventory.history.rank_modes")),
         # Wider than get_stock's: a closed warehouse has no current stock but a
         # thousand recorded transfers.
         ("get_movement", "store"): historical_locations,

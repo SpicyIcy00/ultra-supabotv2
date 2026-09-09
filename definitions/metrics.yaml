@@ -1425,6 +1425,45 @@ inventory:
   # rather than return an empty list as though nothing were low. Do not restore
   # a default to make the report non-empty — populate warning_stock, or agree a
   # real floor with the business and set it here.
+  #
+  # ---------------------------------------------------------------------------
+  # CORRECTED 2026-09-09. Everything above is true of the COLUMN and was being
+  # read as true of the BUSINESS, which it is not.
+  #
+  # `inventory.warning_stock` is indeed NULL on all 31,716 rows. Meanwhile
+  # `shipment_plans` holds 125,283 rows across 59 run dates, most recently
+  # 2026-09-06, covering 18 stores and 3,257 SKUs — and min_level, max_level,
+  # safety_stock and days_of_stock are populated on every single one of them.
+  # There is a replenishment engine computing stock levels per SKU per store,
+  # and it ran three days before this note was written.
+  #
+  # So "nobody has ever set a threshold" was a sentence George said many times
+  # while a system next door was setting them daily. The lesson is not about
+  # low stock: a limitation measured on one column was recorded as a fact about
+  # the company, and every design decision downstream inherited it.
+  #
+  # What is NOT being changed here, deliberately: `low_stock` still means
+  # inventory.warning_stock, and it is still not operational. shipment_plans
+  # min_level is a REPLENISHMENT level computed by an algorithm, not a
+  # threshold the business agreed as "low", and quietly redefining low_stock to
+  # mean it would be inventing a business rule in exactly the way this file
+  # exists to prevent. The pointer below is a fact, not a definition.
+  # ---------------------------------------------------------------------------
+  low_stock_thresholds_elsewhere:
+    table: shipment_plans
+    columns: [min_level, max_level, safety_stock, days_of_stock]
+    populated_rows: 125283
+    run_dates: 59
+    latest_run: "2026-09-06"
+    stores: 18
+    skus: 3257
+    is_a_low_stock_definition: false
+    note: >
+      Say this when refusing a low-stock question: the thresholds on the
+      inventory table were never set, AND a replenishment plan with its own
+      levels exists and can be read instead. Refusing without mentioning it
+      leaves the user believing the business has no stock levels at all.
+
   low_stock_operational: false
   low_stock_blocked_reason: "inventory.warning_stock is NULL on 100% of rows"
 
@@ -1446,11 +1485,101 @@ inventory:
     - "69c73fcb277aa600076dfaaa"   # Shang
     - "667bde393126e50006c8058c"   # AJI BARN — warehouse, inventory scope only
 
-  # NOT DEFINED YET. `inventory` is point-in-time state, so a stockout EVENT or
-  # DURATION ("how long was X out of stock") cannot be answered from it. That
-  # needs a definition built on inventory_snapshots. Do not improvise one in a
-  # tool — add it here first.
-  stockout_duration_supported: false
+  # ---------------------------------------------------------------------------
+  # STOCK HISTORY. Added 2026-09-09.
+  #
+  # This section exists because the note that stood here said a stockout EVENT
+  # or DURATION needs a definition built on inventory_snapshots and must not be
+  # improvised in a tool. It is that definition.
+  #
+  # MEASURED STATE OF inventory_snapshots — 2026-09-09, all 5,133,521 rows:
+  #   188 distinct snapshot_date values, 2026-02-13 -> 2026-09-08, across 208
+  #     calendar days: FIVE gaps, the longest 14 days (resumed 2026-04-07).
+  #   9 locations, and they do not all start together — six shops from
+  #     2026-02-13, AJI BARN and AJI CMG from 2026-03-23, Shangri-La from
+  #     2026-04-07. An early "gap" for a shop is often the shop not existing
+  #     in the file yet, which is not the same fact as a missing day.
+  #   31,767 (store, product) pairs. Only 2,170 appear on all 188 days; the
+  #     average pair appears on 162 of them.
+  #   quantity_on_hand: 4,122,054 rows are zero, and 370,703 are NEGATIVE
+  #     (7.2%), the lowest being -24,734,969 at AJI BARN. Negatives are NOT a
+  #     historic artifact — they grow every month, from 18,271 in February to
+  #     72,132 in August.
+  #   The most recent 60 observed days (2026-07-11 -> 2026-09-08) cover 60
+  #     calendar days with no gap at all. Recent history is clean; the early
+  #     months are not, and a result must say which it drew on.
+  # ---------------------------------------------------------------------------
+  history:
+    table: inventory_snapshots
+    grain: [store_id, product_id, snapshot_date]
+
+    # A DAY WITH NO ROW IS UNOBSERVED, NEVER ZERO. The average pair is absent
+    # on 26 of 188 days. A tool reading absence as "no stock" would invent a
+    # stockout on every one of them, and the invented ones would outnumber the
+    # real ones. Absence and zero are different facts and are counted
+    # separately on every result.
+    absent_day_means: unobserved
+
+    # A RUN COUNTS CONSECUTIVE OBSERVED DAYS ONLY. A missing day ends a run; it
+    # is never bridged and never interpolated. `observed_days` and
+    # `calendar_days` both travel on every result, so a run is always read
+    # against the coverage that produced it.
+    run_spans_gaps: false
+    # Applied where the day columns are already projected, so the columns are
+    # bare rather than aliased to the snapshot table.
+    run_break_sql: "prev_day IS NULL OR prev_day <> snapshot_date - 1"
+
+    # NEGATIVE ON HAND IS A FAULT, NOT A LEVEL. Minus 24.7 million is not a
+    # stock position, and one such row destroys any total it enters. A negative
+    # row counts as not-in-stock for state purposes — it is certainly not
+    # sellable — is never summed into a quantity, and is always named.
+    negative_on_hand:
+      is_a_fault: true
+      counts_as: out_of_stock
+      exclude_from_sums: true
+      notice_kind: negative_on_hand
+      notice_mandatory: true
+
+    # What "out of stock" means for a HISTORY row. inventory.states cannot be
+    # reused unchanged, because its low_stock branch keys off warning_stock and
+    # inventory_snapshots has no such column.
+    out_of_stock_sql: "s.quantity_on_hand <= 0"
+
+    # Coverage is mandatory. "Out of stock for 9 days" means nothing without
+    # the number of days actually observed behind it.
+    coverage_mandatory: true
+    coverage_notice_kind: history_coverage
+
+    # The default window, in observed days back from the latest one in the
+    # file. Chosen because the most recent 60 observed days are continuous.
+    default_window_days: 30
+    max_window_days: 400
+
+    # THE BOUND IS ON WORK, NOT ON CALENDAR. A run has to be computed over
+    # every row in the window, so the cost is days x locations. 30 days across
+    # all 8 locations is 240 store-days and returns comfortably; 200 days
+    # across 8 is 1,600 and is killed by the statement timeout, which reaches
+    # the caller as a crash instead of an answer. A long window over ONE shop
+    # is cheap and stays allowed, which is why the bound is not a day count.
+    max_store_days: 400
+
+    # How the stockout view may be ranked. Name -> the ORDER BY the database
+    # applies over the WHOLE set before the limit, so the model never sorts
+    # rows itself. Ranked by day counts, never by a percentage: a product
+    # observed twice would otherwise outrank one observed every day.
+    rank_modes:
+      longest_out: "longest_stockout_run DESC, days_out_of_stock DESC"
+      still_out: "current_stockout_run DESC, days_out_of_stock DESC"
+      most_days_out: "days_out_of_stock DESC, longest_stockout_run DESC"
+
+    views:
+      stockouts: "one row per store and product: observed days, days out, longest and current run"
+      series:    "one row per observed day for a single product at a single store"
+      coverage:  "one row per store: which days exist in the window and which do not"
+
+  # SUPERSEDED 2026-09-09 by inventory.history above, which defines a stockout
+  # run over observed days. The key is kept so nothing reading it breaks.
+  stockout_duration_supported: true
 
 
 # =============================================================================
@@ -3786,6 +3915,12 @@ workflows:
     as_of_arguments:
       get_stock: as_of
       get_brief: as_of
+      # `end` is the as-of date: move it and the whole window moves with it,
+      # since `start` is derived backwards from `end`. More reproducible than
+      # get_stock, not less — this tool has no live fallback at all, and
+      # inventory_snapshots rows for a past date do not change afterwards.
+      # source: tools/stock_history.py get_stock_history(end=...).
+      get_stock_history: end
 
     # Arguments carrying a [start, end) window. A preset there is resolved
     # against now(), so a backtest rewrites it to the explicit Manila dates the
