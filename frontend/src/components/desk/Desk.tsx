@@ -43,6 +43,8 @@ export interface DeskProps {
   draft: string | null;
   draftKey: number;
   onAction: (action: DeskActionItem) => void;
+  /** Put the work down and go back to the business at rest. Deletes nothing. */
+  onClear: () => void;
 }
 
 /**
@@ -66,63 +68,8 @@ function Opening() {
   );
 }
 
-/**
- * WHAT WAS ASKED, AND WHAT GEORGE IS DOING ABOUT IT.
- *
- * The instruction is drawn the instant it is submitted — before the request
- * has opened — because the one thing a person must never have to guess is
- * whether they were heard. Beneath it, one line of what he has read and is
- * reading, every word of it derived from frames that arrived (workLine.ts).
- *
- * NEITHER OF THESE IS THE ANSWER. They sit above the workspace, which keeps
- * drawing what it has and then FORMS as each result lands. Nothing is
- * replaced by a spinner and nothing is hidden while he works.
- */
-function Working({ asked, sentence, failure }: {
-  asked: string | null;
-  sentence: string | null;
-  failure: string | null;
-}) {
-  if (!asked && !sentence && !failure) return null;
-  return (
-    <div className="mb-8 border-l-2 border-george-line pl-4" data-working>
-      {asked && (
-        <p className="max-w-3xl font-george-serif text-[18px] leading-relaxed text-george-navy" data-asked>
-          {asked}
-        </p>
-      )}
-      {sentence && !failure && (
-        <p className="mt-1.5 text-[12px] leading-relaxed text-george-slate" data-work-line>
-          {sentence}
-        </p>
-      )}
-
-      {/* A TURN THAT FAILED SAYS SO, IN WORDS, AND KEEPS ITS DETAIL BEHIND A
-          DISCLOSURE. Drawing nothing meant a failed answer and a message that
-          never sent looked identical from the outside. The server's own text
-          is the truth and is kept — but it is an exception string, and an
-          exception string in the reading order is the debug text this
-          workspace is not allowed to show. It is navy, never the accent:
-          nothing here needs doing (UI rule 5). */}
-      {failure && (
-        <div className="mt-2" data-failure>
-          <p className="text-[14px] leading-relaxed text-george-navy">
-            George couldn’t answer that. Your question is saved — nothing was lost.
-          </p>
-          <details className="mt-1">
-            <summary className="cursor-pointer text-[12px] text-george-slate">What went wrong</summary>
-            <p className="mt-1 max-w-2xl break-words text-[12px] leading-relaxed text-george-muted" data-failure-detail>
-              {failure}
-            </p>
-          </details>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function Desk({
-  desk, busy, onCancel, onHistory, historyOpen, draft, draftKey, onAction,
+  desk, busy, onCancel, onHistory, historyOpen, draft, draftKey, onAction, onClear,
 }: DeskProps) {
   const motion = useMotionMode();
   const { layout, state, dispatch } = desk;
@@ -159,7 +106,28 @@ export function Desk({
 
               {/* Where this investigation has been, and time as a control over it. */}
               <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 pb-6 pt-3">
-                <WorkTrail steps={desk.trail} activeId={desk.activeStepId} onStep={desk.onStep} />
+                <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                  <WorkTrail steps={desk.trail} activeId={desk.activeStepId} onStep={desk.onStep} />
+                  {/* PUT THE WORK DOWN. A trail four or five steps long stops
+                      being orientation and starts being clutter, and there was
+                      no way back to a clean desk except reloading the page.
+                      This ends the piece of work and returns to the business
+                      at rest. It DELETES NOTHING — the river is append-only
+                      and every step of it is still in History, which is what
+                      the label has to say so nobody avoids the control for
+                      fear of losing their work. */}
+                  {!desk.atRest && (
+                    <button
+                      type="button"
+                      onClick={onClear}
+                      data-clear
+                      title="Put this work down and start fresh. Nothing is deleted — it stays in History."
+                      className="min-h-touch shrink-0 rounded-full px-2.5 py-1 text-[12px] text-george-muted transition-colors hover:bg-george-paper hover:text-george-navy"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
                 <TimeRibbon
                   windows={desk.windows}
                   current={state.window ?? (layout.anchor?.window ? { kind: 'preset', name: layout.anchor.window.name } : null)}
@@ -199,9 +167,6 @@ export function Desk({
                 </p>
               )}
 
-              {/* The instruction, immediately; then the work, as it happens. */}
-              <Working asked={desk.asked} sentence={workSentence(desk.work)} failure={desk.failure} />
-
               {!desk.loading && !desk.failed && !desk.unavailable && (
                 <Answer
                   layout={layout}
@@ -236,7 +201,9 @@ export function Desk({
           onCancel={onCancel}
           busy={busy}
           context={desk.contextWords}
-          narration={desk.narration}
+          asked={desk.asked}
+          work={workSentence(desk.work)}
+          failure={desk.failure}
           draft={draft}
           draftKey={draftKey}
         />

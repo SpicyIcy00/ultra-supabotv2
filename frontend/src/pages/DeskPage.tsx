@@ -61,6 +61,29 @@ export default function DeskPage() {
     navigate(`/w/${thread}`);
   }, [navigate]);
 
+  /**
+   * PUT THE WORK DOWN, AND DELETE NOTHING.
+   *
+   * A long investigation eventually stops being orientation and starts being
+   * clutter, and there was no way back to a clean desk short of reloading the
+   * page. This ends the piece of work: the stream is reset so the next
+   * question starts its own thread rather than continuing this one, the draft
+   * goes, the drawer closes, and the address returns to the business at rest —
+   * which drops the focus, the selection, the window and the trail with it,
+   * because all four are derived from the work in focus.
+   *
+   * NOTHING IS REMOVED. The river is append-only and this writes nothing to
+   * it; every step is still in History and still reopens. That is what makes
+   * this safe to offer as one click with no confirmation — there is nothing
+   * to confirm, because there is nothing to lose.
+   */
+  const onClear = useCallback(() => {
+    george.reset();
+    setDraft(null);
+    setHistoryOpen(false);
+    navigate('/');
+  }, [george, navigate]);
+
   return (
     <>
       <Desk
@@ -69,6 +92,7 @@ export default function DeskPage() {
         onCancel={george.cancel}
         onHistory={() => setHistoryOpen(true)}
         historyOpen={historyOpen}
+        onClear={onClear}
         draft={draft}
         draftKey={draftKey}
         onAction={(a) => {

@@ -23,6 +23,8 @@ const getChat = vi.fn();
 const replayCalls = vi.fn();
 const asked: { question: string; options: Record<string, unknown> }[] = [];
 const opened: { turns: unknown[]; thread: string | null }[] = [];
+const reset = vi.fn();
+const deleted: string[] = [];
 
 /** The live stream, as a test may set it turn by turn. */
 const stream = {
@@ -38,6 +40,7 @@ vi.mock('../../services/riverApi', () => ({
   readRiver: (...a: unknown[]) => readRiver(...a),
   readThread: (...a: unknown[]) => readThread(...a),
   sharePost: vi.fn(),
+  deleteThread: (id: string) => { deleted.push(id); return Promise.resolve(); },
 }));
 vi.mock('../../services/chatsApi', () => ({
   getChat: (...a: unknown[]) => getChat(...a),
@@ -84,7 +87,7 @@ vi.mock('../../hooks/useGeorge', () => ({
       asked.push({ question, options });
       return Promise.resolve();
     },
-    cancel: vi.fn(), reset: vi.fn(),
+    cancel: vi.fn(), reset,
     open: (turns: unknown[], thread: string | null) => { opened.push({ turns, thread }); },
     threadId: stream.threadId, storedThreadId: null, pageScope: null,
   }),
@@ -119,7 +122,7 @@ function storesWork(): Post[] {
 afterEach(cleanup);
 beforeEach(() => {
   readRiver.mockReset(); readThread.mockReset(); getChat.mockReset(); replayCalls.mockReset();
-  asked.length = 0; opened.length = 0;
+  asked.length = 0; opened.length = 0; deleted.length = 0; reset.mockClear();
   stream.turns = []; stream.busy = false; stream.errored = false; stream.threadId = null;
   stream.running = []; stream.completed = [];
   readRiver.mockResolvedValue({ posts: [], before: null });
@@ -188,7 +191,18 @@ describe('2. the instruction shows at once, and the workspace never blanks', () 
     ];
     const { container } = mount('/');
     await waitFor(() => expect(container.querySelector('[data-asked]')).toBeTruthy());
-    expect(container.querySelector('[data-asked]')!.textContent).toBe('How are we doing?');
+    const said = container.querySelector('[data-asked]')!;
+    expect(said.textContent).toBe('How are we doing?');
+
+    // AND IT IS BESIDE THE BOX IT WAS TYPED INTO, not at the head of the
+    // answer. The answer region scrolls and the composer does not, so after
+    // reading one answer the acknowledgement for the next question would
+    // render above the fold and never be seen — which is what "where is my
+    // message supposed to show up?" meant. Moving the viewport instead was
+    // declined: the workspace scrolls nothing by itself
+    // (tests/test_river_v2_contract.py).
+    expect(said.closest('[data-desk-line]')).toBeTruthy();
+    expect(said.closest('main')).toBeNull();
   });
 
   it('keeps the business on screen while George reads, rather than emptying it', async () => {
@@ -211,6 +225,34 @@ describe('2. the instruction shows at once, and the workspace never blanks', () 
     const work = container.querySelector('[data-work-line]');
     expect(work).toBeTruthy();
     expect(work!.textContent).not.toMatch(/get_sales|group_by|compare_to/);
+  });
+});
+
+/* ------------------------------------------------------- clearing the work -- */
+
+describe('2b. the work can be put down, and nothing is deleted', () => {
+  it('offers Clear only while a piece of work is in focus', async () => {
+    readRiver.mockResolvedValue({ posts: [], before: null });
+    const { container } = mount('/');
+    await waitFor(() => expect(container.querySelector('[data-desk]')).toBeTruthy());
+    // At rest there is nothing to clear, so the control is not offered.
+    expect(container.querySelector('[data-clear]')).toBeNull();
+  });
+
+  it('returns to the business at rest without writing anything', async () => {
+    readRiver.mockResolvedValue({ posts: storesWork(), before: null });
+    readThread.mockResolvedValue(storesWork());
+    stream.threadId = 't1';
+    const { container } = mount('/w/t1');
+    await waitFor(() => expect(container.querySelector('[data-clear]')).toBeTruthy());
+
+    fireEvent.click(container.querySelector('[data-clear]')!);
+    // The stream is reset, so the next question starts its own thread rather
+    // than continuing this one.
+    expect(reset).toHaveBeenCalled();
+    // And the river was never asked to remove anything: this is append-only
+    // persistence, and every step stays in History.
+    expect(deleted).toEqual([]);
   });
 });
 

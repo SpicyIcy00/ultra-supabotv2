@@ -1295,6 +1295,29 @@ cannot say why. The full record is
   `metrics.yaml` before it is repeated (`surface.desk.context`). **Nothing on
   that channel is a figure**, and George still reads every number from a tool
   result.
+- **The acknowledgement lives at the composer, because the answer scrolls and
+  the composer does not.** Drawing the instruction at the head of the answer
+  region was correct in principle and invisible in practice: after reading one
+  answer a person has scrolled, so the next question was acknowledged above
+  the fold. Scrolling them back was declined — the workspace transforms in
+  place and moves nobody's viewport, which is a rule with its own test. What
+  you said, what George is reading, and any failure now sit directly above the
+  box you typed into.
+- **The work can be put down, and putting it down deletes nothing.** A trail
+  four or five steps long stops being orientation and becomes clutter, and
+  there was no way back to a clean desk except reloading. Clear ends the piece
+  of work — the stream resets so the next question starts its own thread, and
+  the address returns to the business at rest, which drops the focus, the
+  selection, the window and the trail because all four are derived from the
+  work in focus. It writes nothing to the river, every step stays in History,
+  and the control says so; that is what makes it one click with no
+  confirmation, because there is nothing to lose.
+- **A group total is a READ, not a sum.** Found in the first live dogfood of
+  the broad policy: a store-grouped read returns one row per shop and no
+  total, and George answered "across the group" with a figure he had added up.
+  A calculation in prose has no receipt (architecture rule 9). `group_by: []`
+  is how the estate's own total is read, and it is the only way that figure
+  may be stated.
 - **Which metrics break down by which subject is STATED, not discovered by
   refusal.** One `group_by` enum cannot depend on another argument's value, so
   the schema offers the union of every metric's `valid_group_by` — George was

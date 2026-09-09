@@ -23,11 +23,23 @@ export interface DeskLineProps {
   /** What the question will carry, in words. Null when the desk is empty. */
   context: string | null;
   /**
-   * What George is doing right now, in his own words, derived from the frames
-   * that arrived. Shown only while a turn runs — presence is a fact, and
-   * there is no line when nothing is happening.
+   * THE INSTRUCTION JUST GIVEN, drawn the moment it is submitted.
+   *
+   * It belongs HERE and not at the head of the answer, because the answer
+   * scrolls and this does not. Acknowledging a question above the fold of a
+   * region the reader has scrolled past is the same as not acknowledging it —
+   * which is exactly what "where is my message supposed to show up?" meant.
+   * The workspace still moves nobody's viewport.
    */
-  narration?: string | null;
+  asked?: string | null;
+  /**
+   * What George has read and is reading, in business words derived from the
+   * frames that arrived (workLine.ts). Shown only while a turn runs —
+   * presence is a fact, and there is no line when nothing is happening.
+   */
+  work?: string | null;
+  /** Why the last turn produced no answer, when one failed. */
+  failure?: string | null;
   placeholder?: string;
   /** Text to start with, unsent — from a move, for the person to edit. */
   draft?: string | null;
@@ -35,7 +47,7 @@ export interface DeskLineProps {
 }
 
 export function DeskLine({
-  onAsk, onCancel, busy, context, narration = null,
+  onAsk, onCancel, busy, context, asked = null, work = null, failure = null,
   placeholder = 'Ask George, or touch something above…', draft = null, draftKey = 0,
 }: DeskLineProps) {
   const { setComposer } = useGeorge();
@@ -88,13 +100,41 @@ export function DeskLine({
   return (
     <div className="px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 md:px-8" data-desk-line>
       <div className="mx-auto w-full max-w-4xl">
-        {/* What George is doing, while he is doing it. Never a fake state. */}
-        {busy && narration && (
-          <p className="mb-1.5 truncate text-[12px] text-george-slate" data-narration>{narration}</p>
+        {/* WHAT YOU SAID, AND WHAT HE IS DOING ABOUT IT — beside the box you
+            said it in. The instruction first, because being heard is the
+            thing in doubt; then the reads as they happen, every word of them
+            derived from frames that actually arrived. */}
+        {asked && (
+          <p className="mb-1 line-clamp-2 text-[13px] leading-snug text-george-navy" data-asked>
+            {asked}
+          </p>
+        )}
+        {busy && work && (
+          <p className="mb-1.5 truncate text-[12px] text-george-slate" data-work-line>{work}</p>
+        )}
+
+        {/* A TURN THAT FAILED SAYS SO. Drawing nothing meant a failed answer
+            and a message that never sent looked identical from the outside.
+            The server's own text is kept behind a disclosure: it is an
+            exception string, and an exception string in the reading order is
+            the debug text this workspace is not allowed to show. Navy, never
+            the accent — nothing here needs doing (UI rule 5). */}
+        {failure && (
+          <div className="mb-1.5" data-failure>
+            <p className="text-[13px] leading-snug text-george-navy">
+              George couldn’t answer that. Your question is saved — nothing was lost.
+            </p>
+            <details>
+              <summary className="cursor-pointer text-[11px] text-george-muted">What went wrong</summary>
+              <p className="mt-1 break-words text-[11px] leading-relaxed text-george-muted" data-failure-detail>
+                {failure}
+              </p>
+            </details>
+          </div>
         )}
 
         {/* What the question will carry. Never a figure. */}
-        {context && !busy && (
+        {context && !busy && !asked && (
           <p className="mb-1.5 truncate text-[11px] text-george-muted" data-desk-context>
             George will read this as: {context}
           </p>
