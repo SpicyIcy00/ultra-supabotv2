@@ -346,8 +346,49 @@ export interface FindingFrame {
   rejected: { seq: number | null; role: string | null; reason: string }[];
 }
 
+/**
+ * The desk as a question was asked from it (2026-09-09).
+ *
+ * Mirrors DeskContext in backend/app/api/v1/routes/george.py. The subjects
+ * are ids and labels OFF ROWS the tools returned — never a label the model
+ * inferred, never text read back out of the DOM — and the window is the one
+ * a replay moved the work to. The loop names it to George on the question,
+ * and the question post keeps it in its payload so a reload restores the
+ * same focus from the same record. Nothing in it is a figure.
+ */
+export type DeskDimension = 'store' | 'product' | 'category';
+
+export interface DeskSubject {
+  id: string;
+  label: string;
+}
+
+export interface DeskSelection {
+  dimension: DeskDimension;
+  subjects: DeskSubject[];
+}
+
+export interface DeskWindow {
+  kind: 'preset' | 'explicit';
+  name?: string;
+  start?: string;
+  end?: string;
+}
+
+export interface DeskContext {
+  selection?: DeskSelection | null;
+  window?: DeskWindow | null;
+}
+
 export type GeorgeTurn =
-  | { role: 'user'; text: string; at: string; parentId?: string | null }
+  | {
+      role: 'user';
+      text: string;
+      at: string;
+      parentId?: string | null;
+      /** What was on the desk when this was asked, as it was sent. */
+      desk?: DeskContext | null;
+    }
   | {
       role: 'george';
       text: string;

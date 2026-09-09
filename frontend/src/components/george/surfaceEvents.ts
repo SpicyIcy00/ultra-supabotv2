@@ -139,7 +139,7 @@ export function instructionLabel(instruction: SurfaceInstruction): string {
     case 'compare_selection':
       return 'Compare these';
     case 'explain_selection':
-      return 'Why these?';
+      return instruction.subjects.length === 1 ? 'Why?' : 'Why these?';
   }
 }
 

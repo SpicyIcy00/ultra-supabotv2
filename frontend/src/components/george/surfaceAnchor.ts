@@ -240,7 +240,29 @@ export function belongsToSurface(prev: WorkUnit, question: Utterance, next: Work
   if (prev.post && next.post && prev.post.thread_id !== next.post.thread_id) return false;
   if (next.calls.length === 0 && next.sources.length === 0) return true;
   if (next.calls.length === 0 || readsOf(prev).length === 0) return false;
-  return CONTINUING_RELATIONS.includes(anchorRelation(anchorOf(prev), anchorOf(next)));
+  return CONTINUING_RELATIONS.includes(anchorRelation(anchorOf(prev), withSelection(anchorOf(next), question)));
+}
+
+/**
+ * The next anchor, with the subjects the person had SELECTED when they asked.
+ *
+ * SELECTION IS CONTEXT (2026-09-09). "Compare that with Magnolia" with North
+ * Edsa focused is a question about both shops, and the reads that answer it
+ * may name only Magnolia — a single scoped read of the newcomer. Judged on
+ * its reads alone the relation is `disjoint` and the work would split, which
+ * is the one thing the person did not mean. So the selection the question
+ * carried — stored on its post, never inferred from its text — joins the
+ * next anchor's subjects before the relation is taken. Labels, because
+ * anchors are made of the labels the filters and rows carry; a selection in
+ * another dimension (products chosen, stores read) adds nothing.
+ */
+export function withSelection(anchor: SurfaceAnchor, question: Utterance): SurfaceAnchor {
+  const sel = question.desk?.selection;
+  if (!sel || sel.subjects.length === 0) return anchor;
+  if (anchor.subjectDimension && sel.dimension !== anchor.subjectDimension) return anchor;
+  if (anchor.subjects.length === 0) return anchor; // the whole estate covers every selection
+  const subjects = [...new Set([...anchor.subjects, ...sel.subjects.map((s) => s.label)])].sort();
+  return { ...anchor, subjects, subjectDimension: anchor.subjectDimension ?? sel.dimension };
 }
 
 /**

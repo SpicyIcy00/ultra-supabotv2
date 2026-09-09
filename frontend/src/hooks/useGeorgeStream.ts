@@ -47,6 +47,7 @@ import { authenticatedFetch } from '../services/httpAuth';
 import { retitled, scopeForAsk, scopeForRequest } from '../components/george/pageScope';
 import type {
   AskHistoryTurn,
+  DeskContext,
   DoneFrame,
   FindingFrame,
   GeorgeNotice,
@@ -130,6 +131,12 @@ export interface AskOptions {
    * meaningful when a thread is open; the server validates it is in the thread.
    */
   parentId?: string | null;
+  /**
+   * What is on the desk: the subjects selected (ids and labels off rows) and
+   * the window a replay moved the work to. Named to George on the question
+   * by the loop; kept on the question post so a reload restores it.
+   */
+  desk?: DeskContext | null;
 }
 
 /** How long the mark holds `complete` before settling back to `idle`. */
@@ -290,7 +297,11 @@ export function useGeorgeStream() {
         ...prev,
         // The parent travels on the turn so the surface can tell a reply
         // from a new piece of work before the post frame names it.
-        { role: 'user', text: question, at: now, parentId: thread ? (options.parentId ?? null) : null },
+        {
+          role: 'user', text: question, at: now,
+          parentId: thread ? (options.parentId ?? null) : null,
+          desk: options.desk ?? null,
+        },
         {
           role: 'george',
           text: '',
@@ -323,6 +334,8 @@ export function useGeorgeStream() {
             history,
             thread_id: thread,
             parent_id: thread ? (options.parentId ?? null) : null,
+            // The desk: ids and labels off rows, and a window. Never a figure.
+            desk: options.desk ?? null,
           }),
           signal: ctrl.signal,
           openWhenHidden: true,

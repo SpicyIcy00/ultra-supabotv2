@@ -37,6 +37,7 @@
  * have is a value parsed out of what George wrote.
  */
 import type {
+  DeskContext,
   Finding,
   GeorgeNotice,
   GeorgeTurn,
@@ -94,6 +95,13 @@ export interface Utterance {
   continues: boolean;
   /** Live only: the post this question replied to, as the composer sent it. */
   parentId?: string | null;
+  /**
+   * What was on the desk when this was asked: the subjects selected and the
+   * window moved to. From the question post's payload once stored, and from
+   * the ask options while live — the same object, so a reload restores the
+   * same focus. Never read from prose.
+   */
+  desk?: DeskContext | null;
 }
 
 /** A piece of George's work: the question, what he did, and what he found. */
@@ -297,6 +305,10 @@ export function storedFindings(post: Post): Finding[] | undefined {
       role: e.role,
       of: typeof e.of === 'number' ? e.of : null,
       tool: typeof e.tool === 'string' ? e.tool : '',
+      // The definitions' identity for the drivers, on the primary only, as
+      // the loop read it from metrics.yaml. Kept so a reload draws the same
+      // line under the drivers the live turn drew.
+      ...(e.role === 'primary' && typeof e.identity === 'string' && e.identity ? { identity: e.identity } : {}),
     });
   }
   return out.length ? out : undefined;
@@ -330,6 +342,41 @@ export function workUnitFromPost(post: Post, question: string | undefined): Work
   };
 }
 
+/**
+ * The desk a stored question carries, or null.
+ *
+ * Read from the payload the loop wrote (agent/loop.py, ConversationLog.posts)
+ * and read defensively: a payload is data somebody could have edited, and a
+ * malformed selection is dropped rather than trusted. A subject needs a
+ * string id and a string label; a dimension outside the three the
+ * definitions name is not a dimension.
+ */
+export function storedDesk(post: Post): DeskContext | null {
+  const raw = (post.payload as { desk?: unknown } | null)?.desk;
+  if (!raw || typeof raw !== 'object') return null;
+  const d = raw as { selection?: unknown; window?: unknown };
+  const out: DeskContext = {};
+  const sel = d.selection as { dimension?: unknown; subjects?: unknown } | null | undefined;
+  if (sel && typeof sel === 'object' && (sel.dimension === 'store' || sel.dimension === 'product' || sel.dimension === 'category')) {
+    const subjects = Array.isArray(sel.subjects)
+      ? (sel.subjects as { id?: unknown; label?: unknown }[])
+          .filter((s) => s && typeof s.id === 'string' && s.id && typeof s.label === 'string' && s.label)
+          .map((s) => ({ id: s.id as string, label: s.label as string }))
+      : [];
+    if (subjects.length > 0) out.selection = { dimension: sel.dimension, subjects };
+  }
+  const win = d.window as { kind?: unknown; name?: unknown; start?: unknown; end?: unknown } | null | undefined;
+  if (win && typeof win === 'object' && (win.kind === 'preset' || win.kind === 'explicit')) {
+    out.window = {
+      kind: win.kind,
+      ...(typeof win.name === 'string' ? { name: win.name } : {}),
+      ...(typeof win.start === 'string' ? { start: win.start } : {}),
+      ...(typeof win.end === 'string' ? { end: win.end } : {}),
+    };
+  }
+  return out.selection || out.window ? out : null;
+}
+
 export function utteranceFromPost(post: Post): Utterance {
   const view = postView(post);
   return {
@@ -342,6 +389,47 @@ export function utteranceFromPost(post: Post): Utterance {
     canShare: view.canShare,
     eyebrow: null,
     continues: false,
+    desk: storedDesk(post),
+  };
+}
+
+/**
+ * A piece of work from results that were REPLAYED rather than answered —
+ * the desk at rest, or the same calls over another window.
+ *
+ * THE SAME BUILDER, THE SAME COMPOSITION. Sources go through dedupe and
+ * composeWork exactly as a turn's do, so a replayed field is composed by the
+ * one path an answer is. It has no prose (nobody was asked), no post (nothing
+ * was written), and its receipts are each result's own. `state` is `stored`
+ * because the unit is settled and nothing is streaming into it.
+ */
+export function workUnitFromResults(
+  id: string,
+  sources: ResultSource[],
+  findings: Finding[] | undefined,
+  calls: ToolCall[],
+  at: string,
+): WorkUnit {
+  return {
+    kind: 'work',
+    id,
+    state: 'stored',
+    prose: '',
+    notices: [],
+    ...composed(sources, findings),
+    receipts: sources[sources.length - 1]?.meta,
+    pinnable: null,
+    thinking: '',
+    calls,
+    pinned: [],
+    saved: [],
+    pageChanges: [],
+    at,
+    conversationId: null,
+    post: null,
+    view: null,
+    continues: false,
+    continuedBy: false,
   };
 }
 
@@ -465,6 +553,7 @@ export function liveItems(pending: GeorgeTurn[], eyebrow: string | null = null):
         eyebrow,
         continues: false,
         parentId: turn.parentId ?? null,
+        desk: turn.desk ?? null,
       });
       continue;
     }
