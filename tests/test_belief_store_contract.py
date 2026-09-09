@@ -166,3 +166,66 @@ def test_the_prompt_tells_george_to_read_them_first_and_never_contradict_silentl
     assert "KEEPING A VIEW" in section
     assert "never contradict it silently" in section
     assert "A STORED VIEW CARRIES NO" in section
+
+
+# ------------------------------------------------------- the wiring itself
+
+
+def test_the_stream_wrapper_forwards_everything_it_accepts():
+    """
+    THE TEST THAT WAS MISSING, and the bug it now catches actually shipped.
+
+    `_safe_stream` sits between the route and the loop purely so a crash can
+    close the stream cleanly. It is a pass-through, and a pass-through that
+    quietly drops an argument is invisible: the route builds a capability, the
+    wrapper accepts it, the loop never receives it, and nothing fails until a
+    person asks a question. Adding `beliefs` and `belief_store` to the route
+    and the loop while forgetting the wrapper produced a 500 on the first real
+    question with 1,097 tests passing.
+
+    Two properties, and together they close the gap from both sides: every
+    parameter the wrapper takes is handed on, and everything it hands on is
+    something the loop accepts.
+    """
+    import inspect
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "backend"))
+    from app.api.v1.routes import george as route
+
+    src = inspect.getsource(route._safe_stream)
+    wrapper = [n for n in inspect.signature(route._safe_stream).parameters
+               if n not in ("question", "user_id")]
+    dropped = [n for n in wrapper if f"{n}={n}" not in src]
+    assert not dropped, f"_safe_stream accepts but never forwards: {dropped}"
+
+    accepted_by_loop = set(inspect.signature(george_loop.run).parameters)
+    unknown = [n for n in wrapper if n not in accepted_by_loop]
+    assert not unknown, f"_safe_stream forwards what the loop cannot take: {unknown}"
+
+
+def test_the_route_only_passes_the_wrapper_what_it_accepts():
+    """
+    The other direction, and the half that actually broke: an argument the
+    route hands to _safe_stream that the wrapper has no parameter for. Read
+    from the syntax tree rather than by matching text, so a reformatted call
+    site cannot make this test quietly stop looking.
+    """
+    import ast
+    import inspect
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "backend"))
+    from app.api.v1.routes import george as route
+
+    accepted = set(inspect.signature(route._safe_stream).parameters)
+    tree = ast.parse(pathlib.Path(route.__file__).read_text(encoding="utf-8"))
+
+    passed: set[str] = set()
+    for node in ast.walk(tree):
+        if (isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == "_safe_stream"):
+            passed |= {kw.arg for kw in node.keywords if kw.arg}
+
+    assert passed, "no call to _safe_stream found; this test has stopped looking"
+    unknown = passed - accepted
+    assert not unknown, f"the route passes _safe_stream arguments it cannot take: {unknown}"

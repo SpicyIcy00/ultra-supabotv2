@@ -138,6 +138,18 @@ export interface SurfaceSectionPlan {
 export interface SurfaceAttention {
   subject: string;
   reason: 'against_the_majority' | 'ranked_first';
+  /**
+   * WHICH MEASURE THE FACT IS ABOUT, from the result's own metric label.
+   *
+   * Added 2026-09-10 after a real contradiction on screen: every shop rose on
+   * net sales while three rose on basket value against four that fell, and the
+   * line rendered as "Rockwell rose while the rest of the estate went the
+   * other way" — with no measure in it, on a screen whose headline figure was
+   * net sales. George's own prose two blocks below said all seven were up.
+   * A characterisation of rows that does not say WHICH rows is not a
+   * characterisation.
+   */
+  measure?: string;
   direction: 'up' | 'down' | 'flat' | null;
   /** Which section it was found in, so the renderer never has to search. */
   role: SectionRole;

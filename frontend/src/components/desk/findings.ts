@@ -73,16 +73,31 @@ function movedWord(direction: Direction): string {
   return direction === 'up' ? 'rose' : direction === 'down' ? 'fell' : 'moved';
 }
 
-function whyOf(ground: FindingGround, subject: Subject, direction: Direction): string {
+/**
+ * WHY A SUBJECT IS HERE, AND IN WHAT.
+ *
+ * `measure` is the metric label off the result the fact came from, and leaving
+ * it out produced a real contradiction on screen: every shop rose on net sales
+ * while three rose on basket value against four that fell, and this sentence
+ * read "Rockwell rose while the rest of the estate went the other way" on a
+ * screen whose headline figure was net sales — directly against George's own
+ * prose, which said all seven were up. A characterisation of rows that does
+ * not say WHICH rows is not a characterisation, it is an assertion.
+ */
+function whyOf(ground: FindingGround, subject: Subject, direction: Direction,
+               measure?: string): string {
+  const inWhat = measure ? `${measure.toLowerCase()} ` : '';
   switch (ground) {
     case 'against_the_majority':
-      return `${subject.label} ${movedWord(direction)} while the rest of the estate went the other way.`;
+      return measure
+        ? `${subject.label}'s ${measure.toLowerCase()} ${movedWord(direction)} while the rest of the estate's went the other way.`
+        : `${subject.label} ${movedWord(direction)} while the rest of the estate went the other way.`;
     case 'ranked_first':
       return direction === 'down'
-        ? `${subject.label} is the largest measured fall.`
+        ? `${subject.label} is the largest measured ${inWhat}fall.`
         : direction === 'up'
-          ? `${subject.label} is the largest measured rise.`
-          : `${subject.label} is the largest measured change.`;
+          ? `${subject.label} is the largest measured ${inWhat}rise.`
+          : `${subject.label} is the largest measured ${inWhat}change.`;
     case 'drivers_diverge':
       return `${subject.label} moved on both of its drivers, and they pulled against each other.`;
   }
@@ -119,17 +134,19 @@ export function deskFindings(
 
   // Ground per subject, strongest kept. The marks come from the surface, which
   // composed them from the tools' rows; divergence is read off the field.
-  const grounds = new Map<string, { object: FieldObject; ground: FindingGround }>();
-  const remember = (object: FieldObject, ground: FindingGround) => {
+  const grounds = new Map<string, { object: FieldObject; ground: FindingGround; measure?: string }>();
+  const remember = (object: FieldObject, ground: FindingGround, measure?: string) => {
     const key = `${object.subject.dimension}:${object.subject.id || object.subject.label}`;
     const held = grounds.get(key);
     if (held && ORDER.indexOf(held.ground) <= ORDER.indexOf(ground)) return;
-    grounds.set(key, { object, ground });
+    grounds.set(key, { object, ground, measure });
   };
 
   for (const mark of attention) {
     const object = objects.find((o) => o.subject.label === mark.subject);
-    if (object) remember(object, mark.reason);
+    // The measure travels with the mark: a fact about basket value must not
+    // be told as a fact about the headline figure.
+    if (object) remember(object, mark.reason, mark.measure);
   }
   // Divergence only where the field actually carries two driver axes; on a
   // one-metric field y is null for every object and nothing is claimed.
@@ -141,7 +158,7 @@ export function deskFindings(
 
   const found: DeskFinding[] = [];
   for (const ground of ORDER) {
-    for (const { object, ground: g } of grounds.values()) {
+    for (const { object, ground: g, measure } of grounds.values()) {
       if (g !== ground) continue;
       const anatomy = anatomyFromField(field, object.subject, identity);
       if (!anatomy) continue;
@@ -150,7 +167,7 @@ export function deskFindings(
         subject: object.subject,
         ground,
         direction: anatomy.headline.direction,
-        why: whyOf(ground, object.subject, anatomy.headline.direction),
+        why: whyOf(ground, object.subject, anatomy.headline.direction, measure),
         reading: conclusionOf(anatomy),
         anatomy,
       });

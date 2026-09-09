@@ -277,6 +277,7 @@ export function attentionIn(sections: SurfaceSectionPlan[]): SurfaceAttention[] 
           reason: 'ranked_first',
           direction: rows[0].direction,
           role: section.role,
+          measure: result.source.meta?.metric_label,
         });
         continue;
       }
@@ -287,6 +288,7 @@ export function attentionIn(sections: SurfaceSectionPlan[]): SurfaceAttention[] 
         out.push({
           subject: bar.row.subject,
           reason: 'against_the_majority',
+          measure: result.source.meta?.metric_label,
           direction: bar.row.direction,
           role: section.role,
         });
