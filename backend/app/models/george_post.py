@@ -49,6 +49,9 @@ from app.core.database import Base
 POST_KINDS = (
     "brief", "notice", "answer", "question",
     "approval", "workflow_run", "pin_confirmation", "system",
+    # A watch that fired. Org, like everything George initiates — and unlike
+    # the other George kinds, most days it writes nothing at all.
+    "watch",
 )
 
 POST_AUTHORS = ("george", "user")
@@ -57,7 +60,7 @@ POST_VISIBILITY = ("org", "private")
 # Which kinds George writes. He authors all of these; who they BELONG to is a
 # separate question, answered by default_visibility below.
 GEORGE_KINDS = ("brief", "notice", "answer", "approval",
-                "workflow_run", "pin_confirmation", "system")
+                "workflow_run", "pin_confirmation", "system", "watch")
 
 # George's kinds that are nonetheless somebody's private business.
 #
@@ -75,7 +78,7 @@ class GeorgePost(Base):
     __table_args__ = (
         CheckConstraint(
             "kind IN ('brief', 'notice', 'answer', 'question', 'approval', "
-            "'workflow_run', 'pin_confirmation', 'system')",
+            "'workflow_run', 'pin_confirmation', 'system', 'watch')",
             name="ck_posts_kind",
         ),
         CheckConstraint("author IN ('george', 'user')", name="ck_posts_author"),

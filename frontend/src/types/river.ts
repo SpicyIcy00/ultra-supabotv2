@@ -23,6 +23,7 @@ export type PostKind =
   | 'approval'
   | 'workflow_run'
   | 'pin_confirmation'
+  | 'watch'
   | 'system';
 
 export type PostAuthor = 'george' | 'user';

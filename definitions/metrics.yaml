@@ -4034,6 +4034,20 @@ notices:
       - [skipped, missed, "did not run", "not run", passed over]
       - [slot, run, scheduled, schedule]
 
+  # A watch that has stopped, and a watch that cannot see. Both exist because
+  # silence is a watch's normal state and therefore cannot carry the news that
+  # something is wrong — the one failure mode a watch has that a brief does
+  # not. Each is said ONCE, when it starts, not every morning after.
+  watch_backtest_stale:
+    must_convey:
+      - [stopped, "no longer", changed, halted]
+      - [backtest, definitions, measured, version]
+
+  watch_could_not_look:
+    must_convey:
+      - ["could not", cannot, unable, blind]
+      - [check, look, read, source]
+
   # Notices whose kind is "multiple" carry an `items` list; the loop checks each
   # item's own kind against the fingerprints above rather than the container.
   container_kind: multiple
@@ -4713,6 +4727,152 @@ pushback:
 # investigation.driver_reading already grants for saying which driver moved
 # more. The composer computes nothing; George thinks.
 # =============================================================================
+# =============================================================================
+# WATCHES — a condition George checks on a schedule, which posts when it fires.
+#
+# THE ONE PROPERTY THAT MAKES A WATCH DIFFERENT FROM EVERYTHING ELSE HERE:
+# SILENCE IS ITS NORMAL STATE. A pin that finds nothing still renders. A
+# standing question that finds nothing still answers. A watch that finds
+# nothing says nothing at all — which is what makes the times it speaks worth
+# reading, and which is also why every quiet check is RECORDED. "It has been
+# quiet for eleven days" has to be a fact somebody can check, not a hope.
+#
+# A WATCH CARRIES NO NUMBERS. It names one of the conditions below, and each of
+# those is a reference to a threshold that already exists in `brief:` — measured
+# against a noise floor on real data, with the measurement written down beside
+# it. So a watch can never disagree with the briefing about what "down" means,
+# and George can never invent a threshold, because there is no field for one.
+# "Alert me when Rockwell drops 10% instead of 30%" is a request to change a
+# DEFINITION, and the answer is to change it in `brief:` — where the evidence
+# for the current number is — or to say why it should not change.
+#
+# Added 2026-09-11. Additive, so `version` does not move (version_policy).
+# =============================================================================
+watches:
+
+  # What a watch may be about. A closed set: three, because three is what the
+  # data supports, and each one is a section the brief already computes.
+  #
+  # EVALUATION IS THE BRIEF TOOL, not new SQL. A check calls get_brief for the
+  # day, keeps the rows of the named section, and applies the scope. That is
+  # deliberate and it is the whole reason a watch cannot drift: there is one
+  # implementation of "Rockwell is down", and both the morning brief and the
+  # watch are reading it.
+  conditions:
+
+    sales_moved:
+      section: sales_vs_same_weekday
+      thresholds_ref: brief.sales_vs_same_weekday
+      subject: store
+      # Which way, chosen when the watch is made. `either` is the honest
+      # default for a business: a shop up 80% overnight is as much a thing to
+      # look at as one down 80%, and usually a data problem.
+      directions: [down, up, either]
+      says: "a shop's sales moved against the same weekday last week"
+
+    stock_crossed_out:
+      section: stock_crossed_out
+      thresholds_ref: brief.stock_crossed_out
+      subject: product
+      directions: [either]
+      says: "a product crossed into out of stock"
+
+    newly_dead:
+      section: newly_dead
+      thresholds_ref: brief.newly_dead
+      subject: product
+      directions: [either]
+      says: "a product crossed 30 days without a sale"
+
+  # WHAT IS NOT AVAILABLE, AND WHAT WOULD MAKE IT AVAILABLE. Recorded here
+  # rather than left as an absence, because an absence reads as George being
+  # bad at something.
+  not_available:
+    deliveries:
+      reason: >
+        Both delivery sources are frozen — purchase_orders and stock_transfers
+        were loaded once from CSV and are ~64 days stale (brief.freshness) — so
+        a watch over them would evaluate identical rows every morning forever
+        and could never fire. Beyond staleness the data cannot express the
+        question: received_qty is sparse, is never reconciled to what was
+        ordered, and may legitimately exceed it; transfers carry no received
+        quantity per line at all; and "Open" does not mean "not received" —
+        8 of 151 orders are Open with notes saying the goods arrived.
+      needs: >
+        A scheduled export rather than a one-off import, and a per-line
+        received quantity with a date. Then "did it arrive as ordered" becomes
+        a definition that can be measured against a noise floor, like the three
+        conditions above, and a watch can name it.
+    low_stock:
+      reason: >
+        warning_stock is NULL on 100% of inventory rows, so there is no
+        threshold to cross (brief.stock_crossed_out.low_stock_available).
+      needs: >
+        A populated per-product-per-location reorder level.
+
+  # HOW A CHECK DECIDES WHETHER TO SPEAK.
+  #
+  # The state of a watch is the SET OF SUBJECTS currently firing, with each
+  # subject's direction for a condition that has one. A check posts when that
+  # set differs from the last one it recorded — never merely because it is
+  # non-empty.
+  #
+  # This is the rule that keeps a watch worth reading: a shop down five
+  # mornings running is ONE alert, not five, because five identical alerts is
+  # how a signal stops meaning anything. When a subject stops firing that is
+  # also a change and is also worth a line — "Rockwell is back to normal" is
+  # the half people otherwise never get told.
+  firing:
+    state: subjects_and_direction
+    posts_when: state_changed
+    # A first check has no previous state. It posts only if something is
+    # firing — otherwise a watch switched on during a quiet week would announce
+    # its own silence.
+    first_check_posts_only_if_firing: true
+    quiet_checks_recorded: true
+
+  # WHAT A PERSON SEES BEFORE IT RUNS.
+  #
+  # A watch computes, so architecture rule 7 applies — but there is no authored
+  # LOGIC to promote: the condition is one of the three above and its numbers
+  # are `brief:`'s, which were measured and reviewed when they were set. What a
+  # person needs before switching one on is not approval of a rule, it is
+  # knowing what the rule WOULD have done, and that is the backtest.
+  #
+  # So: a watch cannot be switched on without a stored backtest over a window
+  # that has closed, and the backtest names the days it would have fired and
+  # for whom. That is also the number worth having on its own — "this would
+  # have fired on 4 of the last 60 days" tells you whether to want it.
+  backtest:
+    required_before_enabled: true
+    window_days: 60
+    # Replaying a closed morning is get_brief(as_of=that day), which is the
+    # same code path the real check takes. A backtest that ran different code
+    # would be measuring the wrong thing.
+    method: replay_get_brief_per_day
+    # The backtest is recorded with the definitions version it was measured
+    # under. Change a threshold in `brief:` and every backtest is describing a
+    # rule that no longer exists — so the watch STOPS and says so, once,
+    # rather than going quiet. A watch that goes silent for a reason must say
+    # the reason, because silence is its normal state and therefore carries no
+    # information on its own.
+    invalidated_by_definitions_change: true
+
+  # The river, and only the river, in V1. A watch that also messaged Telegram
+  # would be a second delivery path to keep in step with the first, and the
+  # river is the one surface (CLAUDE.md, "The river"). Watch posts are org —
+  # what George initiates is a company-level fact.
+  channel: river
+  post_kind: watch
+
+  # Bounds. Each exists so a misunderstanding cannot fill a table, not because
+  # the next number would be wrong.
+  max_per_owner: 12
+  max_subjects_named_in_a_post: 8
+  # A check is one get_brief call, so a watch cannot usefully run more often
+  # than the sources behind it move — transactions land daily.
+  kinds: [daily, weekly]
+
 judgment:
   introduced: "2026-09-10"
   executes_nothing: true

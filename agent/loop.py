@@ -574,6 +574,33 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
             "additionalProperties": False,
         }
 
+    if fn_name == write_tools.WATCH_TOOL:
+        # A watch's whole surface: an action and a condition from closed sets,
+        # a scope of shops, and a time. Every list is declared here as a list
+        # so none of them falls through to the scalar branches below.
+        if pname == "action":
+            return {"type": "string", "enum": list(write_tools.WATCH_ACTIONS)}
+        if pname == "condition":
+            voc = req(_load_defs(), "watches.conditions")
+            return {"type": "string", "enum": sorted(voc),
+                    "description": "; ".join(f"{k}: {v['says']}" for k, v in voc.items())}
+        if pname == "direction":
+            return {"type": "string", "enum": ["down", "up", "either"]}
+        if pname == "stores":
+            return {"type": "array", "items": {"type": "string"},
+                    "description": "Shop names. Omit to watch every shop."}
+        if pname == "all_shops":
+            return {"type": "boolean",
+                    "description": "rescope only: widen back to every shop."}
+        if pname == "days":
+            return {"type": "array", "minItems": 1, "maxItems": 7,
+                    "items": {"type": "integer", "minimum": 0, "maximum": 6},
+                    "description": "0=Monday … 6=Sunday. Omit for every day."}
+        if pname == "hour":
+            return {"type": "integer", "minimum": 0, "maximum": 23}
+        if pname == "minute":
+            return {"type": "integer", "minimum": 0, "maximum": 59}
+
     if fn_name == write_tools.STANDING_TOOL:
         # A standing question's whole surface: an action from a closed list, a
         # time, weekdays, and sentences. Declared HERE as well as in the tool
@@ -1962,6 +1989,7 @@ async def run(
     memory_reader: Optional[write_tools.MemoryReader] = None,
     automations_reader: Optional[write_tools.AutomationsReader] = None,
     standing_writer: Optional[write_tools.StandingQuestionWriter] = None,
+    watch_writer: Optional[write_tools.WatchWriter] = None,
     page_scope: Optional[dict] = None,
     page_writer: Optional[write_tools.PageWriter] = None,
     belief_store: Optional[write_tools.BeliefStore] = None,
@@ -2064,6 +2092,7 @@ async def run(
         memory_reader=memory_reader,
         automations_reader=automations_reader,
         standing_writer=standing_writer,
+        watch_writer=watch_writer,
     )
     # Per capability, not per session: a caller with a pin writer and no
     # workflow writer gets pin_answer and not save_workflow.

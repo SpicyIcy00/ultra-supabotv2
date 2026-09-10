@@ -69,6 +69,9 @@ from app.services.chat_history import build_turns, question_of, title_of
 from app.services.george_greeting import build_greeting
 from app.services import belief_store as beliefs_service
 from app.services import standing_questions
+from app.services import watch_runner
+from app.services import watches as watches_service
+from app.services.watches import WatchRefused as WatchServiceRefused
 from app.services.standing_questions import StandingRefused as StandingServiceRefused
 from app.services import self_reader
 from app.services.george_recall import as_block, recent_figures
@@ -139,6 +142,7 @@ from agent.write_tools import (  # noqa: E402
     PageRefused,
     PageWriter,
     StandingRefused,
+    WatchRefused,
 )
 
 # The prefix is supplied by main.py, matching every other router in this app.
@@ -1557,6 +1561,120 @@ def _standing_writer(username: str):
     return _Writer()
 
 
+def _watch_writer(username: str):
+    """
+    George's route to KEEPING A WATCH, and to running its backtest.
+
+    A write, injected exactly as the pin writer is: the owner is captured here
+    from the verified token, so the tool has no argument for whose watch, and
+    George holds no credential. It calls the same service functions any manual
+    control would.
+
+    THE BACKTEST RUNS HERE rather than in the tool because it finishes by
+    STORING its result on the watch — the gate that lets it be switched on is
+    the stored record, not a number that appeared once in a conversation and
+    was believed.
+
+    NOT injected into a scheduled ask (app/services/standing_runner.py):
+    nothing that runs unattended may change what else runs unattended.
+    """
+
+    async def apply(action: str, fields: dict) -> dict:
+        async with AsyncSessionLocal() as session:
+            try:
+                if action == "create":
+                    watch = await watches_service.create(
+                        session, owner=username,
+                        condition=fields.get("condition"),
+                        direction=fields.get("direction") or "either",
+                        stores=fields.get("stores"),
+                        hour=fields.get("hour"), minute=fields.get("minute"),
+                        days_of_week=fields.get("days"),
+                    )
+                    wrote, extra = "created", {}
+                elif action == "backtest":
+                    watch = await watches_service._owned(
+                        session, username, fields.get("which"))
+                    result = await watch_runner.backtest(watch)
+                    watch = await watches_service.record_backtest(
+                        session, owner=username, which=str(watch.id), result=result)
+                    wrote, extra = "backtested", {"backtest": result}
+                elif action == "rescope":
+                    watch = await watches_service.rescope(
+                        session, owner=username, which=fields.get("which"),
+                        stores=fields.get("stores"),
+                        direction=fields.get("direction"),
+                        all_shops=bool(fields.get("all_shops")))
+                    wrote, extra = "rescoped", {}
+                elif action in ("switch_on", "switch_off"):
+                    watch = await watches_service.switch(
+                        session, owner=username, which=fields.get("which"),
+                        on=action == "switch_on")
+                    wrote, extra = ("switched on" if action == "switch_on"
+                                    else "switched off"), {}
+                elif action == "reschedule":
+                    watch = await watches_service.reschedule(
+                        session, owner=username, which=fields.get("which"),
+                        hour=fields.get("hour"), minute=fields.get("minute"),
+                        days_of_week=fields.get("days"))
+                    wrote, extra = "rescheduled", {}
+                elif action == "remove":
+                    watch = await watches_service.remove(
+                        session, owner=username, which=fields.get("which"))
+                    wrote, extra = "removed", {}
+                else:  # pragma: no cover - the tool checked the vocabulary
+                    raise WatchRefused(f"{action!r} is not a watch action.")
+
+                row = watches_service.as_row(watch)
+                await session.commit()
+            except WatchServiceRefused as exc:
+                await session.rollback()
+                raise WatchRefused(str(exc)) from exc
+            except SQLAlchemyError as exc:
+                await session.rollback()
+                raise WatchRefused(
+                    f"That could not be saved: {type(exc).__name__}. Nothing "
+                    f"was changed — tell the user, and do not describe it as done."
+                ) from exc
+
+        meta = {
+            "source_table": "george.watches",
+            "filters_applied": ["owner = the signed-in user"],
+            "snapshot_timestamp": row.get("last_checked"),
+            "wrote": wrote,
+            "enabled": row["state"] == "watching",
+            "note": {
+                "created": (
+                    "Set up, and NOT switched on: a watch cannot run until it "
+                    "has been backtested. Back it and say how often it would "
+                    "have spoken before asking whether to start it."
+                ),
+                "backtested": (
+                    "This is what it would have done, not what it will do. "
+                    "Give them the count and the days; a watch that would have "
+                    "fired most days is one nobody will read."
+                ),
+                "rescoped": (
+                    "The scope changed, so the old backtest no longer describes "
+                    "this watch — it has been discarded and the watch switched "
+                    "off. Back it again and give them the new number."
+                ),
+                "switched on": (
+                    "It will say nothing on a normal day. Silence is the "
+                    "normal state, and it posts only when the answer changes."
+                ),
+            }.get(wrote, "Nothing already posted is affected."),
+        }
+        meta.update(extra)
+        return {"rows": [row], "meta": meta}
+
+    class _Writer:
+        async def apply(self, action: str, fields: dict) -> dict:
+            return await apply(action, fields)
+
+    return _Writer()
+
+
 def _page_reader(username: str, page_id: Optional[uuid.UUID]) -> PageReader:
     """
     George's route to READING the page the caller is on.
@@ -1804,6 +1922,7 @@ async def _safe_stream(question: str, user_id: Optional[str],
                        memory_reader=None,
                        automations_reader=None,
                        standing_writer=None,
+                       watch_writer=None,
                        desk: Optional[dict] = None) -> AsyncIterator[str]:
     """
     Wrap the loop so a crash still closes the stream cleanly.
@@ -1833,6 +1952,7 @@ async def _safe_stream(question: str, user_id: Optional[str],
             memory_reader=memory_reader,
             automations_reader=automations_reader,
             standing_writer=standing_writer,
+            watch_writer=watch_writer,
             desk=desk,
         ):
             yield frame
@@ -1956,6 +2076,8 @@ async def ask(
             # and ask it on a schedule. Bound to them; the tool has no owner
             # argument.
             standing_writer=_standing_writer(user.username),
+            # Always: every signed-in caller may keep watches of their own.
+            watch_writer=_watch_writer(user.username),
             # The desk, bounded by the model above; an empty one is nothing.
             desk=request.desk.model_dump(exclude_none=True) if request.desk else None,
             # Always: every signed-in caller may build and edit their own

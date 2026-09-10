@@ -53,6 +53,7 @@ MAX_SKIPPED_COUNTED = 60
 CLAIMABLE = frozenset({
     "george.workflow_schedules",
     "george.standing_questions",
+    "george.watches",
 })
 
 

@@ -34,6 +34,7 @@ from app.services.river_writer import (  # noqa: E402
     post_brief,
     post_id,
     post_pin_confirmation,
+    post_watch,
     post_workflow_run,
 )
 
@@ -313,9 +314,10 @@ def test_a_pin_announces_itself_once() -> None:
 # The kinds nothing writes yet, each with the reason. A kind leaves this list
 # by being wired, not by being added to it.
 UNWIRED = {
-    # Reserved for Watch — "George noticed something BETWEEN briefs". Filling
-    # it with the brief's other items would make a one-post morning into seven
-    # and spend the word before the concept arrives (CLAUDE.md, Watch).
+    # Still reserved. It was held for Watch — "George noticed something BETWEEN
+    # briefs" — and Watch arrived on 2026-09-11 with its own kind rather than
+    # borrowing this one, because a watch is a saved thing with a schedule, a
+    # backtest and a state, and `notice` is a bare remark. Nothing raises one.
     "notice",
     # Written by the agent loop through ConversationLog, not from here.
     "question", "answer",
@@ -324,7 +326,8 @@ UNWIRED = {
 }
 
 WIRED = {"brief": post_brief, "workflow_run": post_workflow_run,
-         "approval": post_approval, "pin_confirmation": post_pin_confirmation}
+         "approval": post_approval, "pin_confirmation": post_pin_confirmation,
+         "watch": post_watch}
 
 
 def test_every_kind_is_either_wired_or_deliberately_not() -> None:

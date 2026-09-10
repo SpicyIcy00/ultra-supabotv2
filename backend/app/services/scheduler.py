@@ -23,6 +23,10 @@ from app.services.standing_runner import (
     TICK_MINUTES as STANDING_TICK_MINUTES,
     tick_safely as standing_tick,
 )
+from app.services.watch_runner import (
+    TICK_MINUTES as WATCH_TICK_MINUTES,
+    tick_safely as watch_tick,
+)
 
 MANILA = ZoneInfo("Asia/Manila")
 TICK_MINUTES = 15
@@ -152,11 +156,25 @@ def start_scheduler() -> None:
         coalesce=True,
         next_run_time=datetime.now(MANILA) + timedelta(seconds=75),
     )
+    # Watches. The fifth job, and the quietest by design: on a normal day it
+    # writes nothing at all. It makes no model call — a check is one vetted
+    # read and a named condition — which is what lets it run unattended
+    # without the capability argument standing questions needed.
+    _scheduler.add_job(
+        watch_tick,
+        "interval",
+        minutes=WATCH_TICK_MINUTES,
+        id="watch_tick",
+        max_instances=1,
+        coalesce=True,
+        next_run_time=datetime.now(MANILA) + timedelta(seconds=90),
+    )
     _scheduler.start()
     print(f"Schedulers started (auto-report every {TICK_MINUTES} min, "
           f"chat-reports every {CHAT_REPORT_TICK_MINUTES} min, "
           f"workflows every {WORKFLOW_TICK_MINUTES} min, "
-          f"standing questions every {STANDING_TICK_MINUTES} min)")
+          f"standing questions every {STANDING_TICK_MINUTES} min, "
+          f"watches every {WATCH_TICK_MINUTES} min)")
 
 
 def shutdown_scheduler() -> None:

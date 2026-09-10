@@ -247,6 +247,31 @@ class StandingQuestionWriter(Protocol):
     async def apply(self, action: str, fields: dict[str, Any]) -> dict: ...
 
 
+class WatchRefused(ValueError):
+    """
+    The watch cannot be set, backtested, switched or removed as asked, and the
+    message says why: an unknown condition, a shop that does not exist, a
+    switch-on with no backtest behind it. A ValueError like every other
+    refusal here — the loop turns it into a real answer with a route out.
+    """
+
+
+class WatchWriter(Protocol):
+    """
+    Keeps and changes the caller's watches, and runs their backtests.
+    Implemented in the web process, closed over the authenticated owner — so
+    no method takes one, and "watch Alice's shops for her" has nowhere to put
+    the name.
+
+    A BACKTEST IS A READ that happens to be expensive, and it lives behind the
+    same writer because it is stored on the watch when it finishes. It must
+    raise WatchRefused, with a message a person could act on, for every
+    expected failure.
+    """
+
+    async def apply(self, action: str, fields: dict[str, Any]) -> dict: ...
+
+
 class BeliefStore(Protocol):
     """
     Where George's understanding is kept. Implemented in the web process, bound
@@ -363,6 +388,11 @@ class WriteContext:
     # scheduled ask (app/services/standing_runner.py): a question that can
     # reschedule itself is a thing that gets away from you.
     standing_writer: Optional[StandingQuestionWriter] = None
+    # The conditions the caller has asked George to keep an eye on. A write,
+    # bound to the owner here. Withheld from a scheduled ask for the same
+    # reason the standing writer is: nothing that runs unattended may change
+    # what else runs unattended.
+    watch_writer: Optional[WatchWriter] = None
 
 
 def call_key(tool: str, arguments: Any) -> str:
@@ -1107,6 +1137,126 @@ async def set_standing_question(
     return await ctx.standing_writer.apply(action, fields)
 
 
+# Sorts after set_standing_question and before view_automations, so the
+# cached prefix property holds: view_page stays the only conditional tool and
+# still sorts last (build_tool_schemas).
+WATCH_TOOL = "set_watch"
+
+WATCH_ACTIONS = (
+    "create",
+    "backtest",
+    "rescope",
+    "switch_on",
+    "switch_off",
+    "reschedule",
+    "remove",
+)
+
+
+async def set_watch(
+    action: str,
+    condition: Optional[str] = None,
+    direction: Optional[str] = None,
+    stores: Optional[list[str]] = None,
+    all_shops: Optional[bool] = None,
+    hour: Optional[int] = None,
+    minute: Optional[int] = None,
+    days: Optional[list[int]] = None,
+    which: Optional[str] = None,
+    *,
+    ctx: WriteContext,
+) -> dict:
+    """
+    Keep a condition and check it on a schedule, telling them only when it changes.
+
+    A watch is how somebody hears about a thing they did not ask about that
+    morning. Use it when they say "tell me when", "let me know if", "keep an
+    eye on" — not when they are asking what is true now, which is a question
+    you answer.
+
+    SILENCE IS THE POINT, and say so when you set one up. A watch posts only
+    when the answer CHANGES: a shop down five mornings running is one message,
+    not five, and when it recovers that is a message too. Most days it says
+    nothing at all, and that is what makes the days it speaks worth reading.
+
+    IT CARRIES NO NUMBERS AND YOU CANNOT GIVE IT ANY. A watch names one of the
+    conditions below, each of which uses a threshold that was measured against
+    real noise and is written down in the definitions. "Tell me when Rockwell
+    drops 10% instead of 30%" cannot be saved here — that is a request to
+    change a DEFINITION. Say so, say what the current one is and why it is
+    that, and do not pretend to have set it.
+
+    IT MUST BE BACKTESTED BEFORE IT CAN BE SWITCHED ON, and the backtest is the
+    thing they actually want: "this would have fired on 4 of the last 60 days,
+    on these dates, mostly about Fairview" is how somebody decides whether to
+    want it at all. Run it, TELL THEM THE NUMBER, and let them decide — a watch
+    that would have fired 40 times in 60 days is one nobody will read.
+
+    Args:
+        action: What to do.
+            create — set one up. Needs `condition` and `hour`. Never switched
+                on by this; it cannot be until it is backtested.
+            backtest — replay the last 60 closed mornings and record what it
+                would have done. Takes a moment. Report the count and the days.
+            rescope — point it at different shops or a different direction.
+                This THROWS THE BACKTEST AWAY and switches it off, because a
+                watch over one shop is a different watch from one over seven —
+                say so, and back it again. This is the dial when a backtest
+                says it would fire too often: narrowing the scope is allowed,
+                changing the threshold is not.
+            switch_on / switch_off — start or stop checking.
+            reschedule — change when it checks. Needs `hour`.
+            remove — forget it. Anything it already posted stays.
+        condition: What to watch, from the closed set the definitions declare:
+            sales_moved (a shop's sales moved against the same weekday last
+            week), stock_crossed_out (a product crossed into out of stock),
+            newly_dead (a product crossed 30 days without a sale). Deliveries
+            cannot be watched — the sources are frozen; say that plainly and
+            say what would change it rather than offering a substitute.
+        direction: down, up or either. Only sales_moved has a direction.
+            "either" is usually right: a shop up 80% overnight is as much a
+            thing to look at as one down 80%, and often a data problem.
+        stores: Which shops, by name. On create, leave it out to watch all of
+            them. On rescope, leaving it out means "leave the scope alone" —
+            to widen a watch back to every shop, pass all_shops instead.
+        all_shops: On rescope only: clear the shop scope so it watches all of
+            them again.
+        hour: The hour it checks, 0–23, Manila time.
+        minute: The minute. Defaults to 0.
+        days: Weekdays for a weekly watch, 0=Monday … 6=Sunday. Omit for daily.
+        which: The id of the watch, from a read that returned it
+            (view_automations lists them). Omit when there is only one.
+
+    Returns:
+        {rows, meta} like every other tool. The row is the watch as it now
+        stands; for a backtest, `meta.backtest` carries what it would have done.
+
+        THIS IS A WRITE, so nothing may be composed over it. To put a watch on
+        the board, read it back with view_automations and compose over that.
+    """
+    if ctx.watch_writer is None:
+        raise WatchRefused(
+            "George cannot keep watches in this session. Say what would need "
+            "to be true and answer it now; nothing will be checked later."
+        )
+    if action not in WATCH_ACTIONS:
+        raise WatchRefused(
+            f"{action!r} is not something that can be done to a watch. It is "
+            f"one of: {', '.join(WATCH_ACTIONS)}."
+        )
+
+    return await ctx.watch_writer.apply(action, {
+        "condition": condition,
+        "direction": direction,
+        "stores": stores,
+        "all_shops": bool(all_shops),
+        "hour": hour,
+        "minute": minute,
+        "days": days,
+        "which": which,
+    })
+
+
 WRITE_TOOL_FUNCTIONS = {
     "pin_answer": pin_answer,
     "save_workflow": save_workflow,
@@ -1114,6 +1264,7 @@ WRITE_TOOL_FUNCTIONS = {
     "edit_page": edit_page,
     "record_belief": record_belief,
     STANDING_TOOL: set_standing_question,
+    WATCH_TOOL: set_watch,
 }
 
 # The two page tools, by name, for the loop's frame and claim check.
@@ -1130,4 +1281,5 @@ WRITE_TOOL_REQUIRES = {
     "edit_page": "page_writer",
     "record_belief": "belief_store",
     STANDING_TOOL: "standing_writer",
+    WATCH_TOOL: "watch_writer",
 }

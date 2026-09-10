@@ -39,10 +39,25 @@ from app.services.river import build_post, build_river, next_cursor  # noqa: E40
 
 _ROOT = Path(__file__).resolve().parents[1]
 _TS = _ROOT / "frontend" / "src" / "types" / "river.ts"
-_MIGRATION = (
-    _ROOT / "backend" / "alembic" / "versions"
-    / "2026_09_05_0001-n8o9p0q1r2s3_add_george_posts.py"
-)
+# THE MIGRATION THAT CURRENTLY DEFINES THE CHECK, which is not always the one
+# that created the table: a new post kind cannot be appended to a CHECK, so
+# adding one means dropping and rebuilding the constraint in a later migration.
+# Pinning this to the creating migration made the test assert against a
+# constraint the database had already replaced — it failed the day `watch` was
+# added, correctly, but for the wrong reason. The newest file declaring a
+# KINDS tuple is the one in force.
+_VERSIONS = _ROOT / "backend" / "alembic" / "versions"
+
+
+def _current_kinds_migration() -> Path:
+    declaring = [p for p in sorted(_VERSIONS.glob("*.py"))
+                 if re.search(r"^KINDS = \(", p.read_text(encoding="utf-8"), re.M)
+                 and "ck_posts_kind" in p.read_text(encoding="utf-8")]
+    assert declaring, "no migration declares the post kinds"
+    return declaring[-1]
+
+
+_MIGRATION = _current_kinds_migration()
 
 
 def _ts_union(source: str, name: str) -> set[str]:
@@ -104,7 +119,10 @@ def test_kinds_agree_between_model_and_migration(migration: str) -> None:
     assert m, "no KINDS tuple in the migration"
     assert set(re.findall(r'"([a-z_]+)"', m.group(1))) == set(POST_KINDS)
 
-    check = re.search(r"CONSTRAINT ck_posts_kind CHECK \(kind IN \(\{kinds\}\)\)", migration)
+    # However the constraint is written — created with the table, or dropped
+    # and rebuilt to admit a new kind — it is built FROM the tuple above and
+    # never from a second hand-written list.
+    check = re.search(r"ck_posts_kind CHECK \(kind IN \(\{kinds\}\)\)", migration)
     assert check, "the kind CHECK constraint is not built from KINDS"
 
 

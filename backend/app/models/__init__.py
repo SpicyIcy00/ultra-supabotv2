@@ -26,6 +26,13 @@ from app.models.vending import (
     VendingOrder,
     VendingOrderLine,
 )
+from app.models.george_watch import (
+    GeorgeWatch,
+    GeorgeWatchCheck,
+    WATCH_DIRECTIONS,
+    WATCH_KINDS,
+    WATCH_STATUSES,
+)
 from app.models.george_standing import (
     GeorgeStandingQuestion,
     STANDING_KINDS,
@@ -80,6 +87,11 @@ __all__ = [
     "VendingAisle",
     "VendingOrder",
     "VendingOrderLine",
+    "GeorgeWatch",
+    "GeorgeWatchCheck",
+    "WATCH_DIRECTIONS",
+    "WATCH_KINDS",
+    "WATCH_STATUSES",
     "GeorgeStandingQuestion",
     "STANDING_KINDS",
     "STANDING_STATUSES",

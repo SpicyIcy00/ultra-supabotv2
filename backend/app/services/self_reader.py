@@ -93,7 +93,7 @@ async def read_automations(session: AsyncSession, *, username: str) -> dict:
     """
     What the systems have been doing, and what is waiting on somebody.
 
-    Three things in one read on purpose. From the owner's side they are one
+    Four things in one read on purpose. From the owner's side they are one
     question — "what is going on with the things we built" — and a run that
     failed and a version awaiting promotion both end the same way: needing him.
 
@@ -146,6 +146,22 @@ async def read_automations(session: AsyncSession, *, username: str) -> dict:
         LIMIT 20
     """), {"owner": username})).mappings().all()
 
+    # What he has been asked to keep an eye on. Owner-scoped like the standing
+    # questions above, and in this same read for the same reason: from the
+    # owner's side "what is going on with the things we set up" is one
+    # question. A watch that has STOPPED needs him exactly as much as a
+    # version awaiting promotion does, and its whole failure mode is looking
+    # identical to a quiet one from outside.
+    watching = (await session.execute(text("""
+        SELECT id, condition, direction, stores, enabled, hour, minute, kind,
+               days_of_week, backtest, last_checked_at, last_fired_at,
+               last_status, last_state
+        FROM george.watches
+        WHERE owner = :owner
+        ORDER BY enabled DESC, hour, minute
+        LIMIT 20
+    """), {"owner": username})).mappings().all()
+
     rows: list[dict[str, Any]] = []
     for q in standing:
         instructions = list(q["instructions"] or [])
@@ -167,6 +183,30 @@ async def read_automations(session: AsyncSession, *, username: str) -> dict:
                          else "never asked yet")),
             # The id, so a change to this question can name which one it means.
             "id": str(q["id"]),
+        })
+    for w in watching:
+        where = ", ".join(w["stores"]) if w["stores"] else "any shop"
+        way = "" if w["direction"] == "either" else f" {w['direction']}"
+        firing = sorted((w["last_state"] or {}).keys())
+        backtest = w["backtest"] or {}
+        rows.append({
+            "what": f"watching{way}: {w['condition']} — {where}",
+            # A watch has four states and they are NOT interchangeable:
+            # quiet means it looked and there was nothing; stopped means it is
+            # not looking; and "never backtested" means it cannot start.
+            "state": (
+                ("firing: " + ", ".join(firing[:5])) if (w["enabled"] and firing)
+                else "watching, quiet" if w["enabled"]
+                else "ready — not switched on" if backtest
+                else "not backtested yet"
+            ),
+            "when": w["last_checked_at"],
+            "by": (
+                f"would have fired {backtest.get('days_fired')} of the last "
+                f"{backtest.get('days_checked')} days"
+                if backtest else "no backtest, so it cannot be switched on"
+            ),
+            "id": str(w["id"]),
         })
     for r in runs:
         rows.append({
@@ -195,10 +235,10 @@ async def read_automations(session: AsyncSession, *, username: str) -> dict:
         "meta": {
             "source_table": "george.workflow_runs + george.workflow_versions "
                             "+ george.workflow_schedules "
-                            "+ george.standing_questions",
+                            "+ george.standing_questions + george.watches",
             "filters_applied": [
                 f"runs started_at > now() - interval '{RUNS_WINDOW_DAYS} days'",
-                "standing questions: owner = the signed-in user",
+                "standing questions and watches: owner = the signed-in user",
                 "waiting: promoted_at IS NULL AND backtest_run_id IS NOT NULL",
                 "archived rules excluded",
             ],
@@ -206,12 +246,15 @@ async def read_automations(session: AsyncSession, *, username: str) -> dict:
             "metric_label": "Running and waiting",
             "ran": len(runs),
             "standing": len(standing),
+            "watching": sum(1 for w in watching if w["enabled"]),
             "standing_on": sum(1 for q in standing if q["enabled"]),
             "waiting": len(waiting),
             "scheduled": sum(1 for s in schedules if s["enabled"]),
             "note": (
                 "A schedule that is switched off fires nothing, and a standing "
-                "question that is not being asked produces no answer. A version "
+                "question that is not being asked produces no answer. A watch "
+                "that is quiet looked and found nothing, which is its normal "
+                "state; one that is not switched on is not looking at all. A version "
                 "waiting on you has been backtested but not promoted, so the "
                 "schedule is still firing the older one."
             ),

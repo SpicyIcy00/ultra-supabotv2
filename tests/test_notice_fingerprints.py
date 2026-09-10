@@ -49,6 +49,9 @@ EXTRA_EMITTERS = [
     # which is now app/services/slots.py, shared by the workflow scheduler and
     # by standing questions rather than written out twice.
     ROOT / "backend" / "app" / "services" / "slots.py",
+    # A watch's two: it has stopped, and it cannot see. Both are raised where
+    # the check happens, because only there is it known which one is true.
+    ROOT / "backend" / "app" / "services" / "watch_runner.py",
     # A page read raises its own two: something asked for did not come back,
     # and something on the page was not read at all.
     ROOT / "agent" / "composite_tools.py",

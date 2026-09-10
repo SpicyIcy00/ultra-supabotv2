@@ -47,6 +47,11 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.george_post import default_visibility
+from tools._common import load_defs, req
+
+# How many subjects one watch post may name before it says "and N more". From
+# the definitions, so the bound is stated once (metrics.yaml watches).
+MAX_NAMED = int(req(load_defs(), "watches.max_subjects_named_in_a_post"))
 
 # The columns every post carries. Written once so a new writer cannot quietly
 # omit receipts or notices — UI rules 3, 4 and 6 apply to all eight kinds.
@@ -296,4 +301,81 @@ async def post_pin_confirmation(
         receipts=None,
         notices=[],
         conversation_id=conversation_id,
+    )
+
+
+# ---------------------------------------------------------------------------
+# A watch that fired
+# ---------------------------------------------------------------------------
+
+async def post_watch(
+    db: AsyncSession, *, watch_id: uuid.UUID, as_of: date, label: str,
+    added: list[dict[str, Any]], cleared: list[dict[str, Any]],
+    calls: list[dict[str, Any]], receipts: Optional[dict[str, Any]] = None,
+    notices: Optional[list[dict[str, Any]]] = None,
+) -> Optional[uuid.UUID]:
+    """
+    Something a watch noticed, as a post.
+
+    ORG, like everything George initiates — and unlike every other kind here,
+    most mornings this writes nothing at all. Silence is a watch's normal
+    state (CLAUDE.md, Watch), so the existence of this post is itself the
+    signal, before anybody reads a word of it.
+
+    THE BODY NAMES WHAT CHANGED, NOT WHAT IS TRUE. A shop down five mornings
+    running is one post, not five, so this is written against the DIFFERENCE
+    from the last check: what started, and what stopped. "Rockwell is back to
+    normal" is the half people otherwise never get told, and it is the half
+    that makes the first post trustworthy — you learn that the watch tracks
+    both ends rather than only shouting.
+
+    THE CALLS TRAVEL WITH IT, which is what makes "investigate this" an
+    ordinary reply rather than new machinery. The post carries the exact
+    get_brief call behind it, so replying re-runs that read and George climbs
+    the investigation ladder from a fact rather than from prose. No
+    investigation object, no second path (CLAUDE.md architecture rule 10).
+
+    NO FIGURE IS WRITTEN HERE THAT A ROW DID NOT CARRY. Every number in the
+    body comes off a brief row; the phrasing is this function's and the
+    arithmetic is the tool's.
+
+    Keyed on the watch and the morning it evaluated, so a slot re-run after a
+    crash cannot post the same news twice.
+    """
+    def name(entry: dict[str, Any]) -> str:
+        subject = str(entry.get("subject") or "something")
+        pct = entry.get("change_pct")
+        if pct is None:
+            return subject
+        way = "down" if str(entry.get("direction")) == "down" else "up"
+        return f"{subject} {way} {abs(float(pct)):.1f}%"
+
+    bits: list[str] = []
+    if added:
+        bits.append(", ".join(name(a) for a in added[:MAX_NAMED]))
+        if len(added) > MAX_NAMED:
+            bits[-1] += f" and {len(added) - MAX_NAMED} more"
+    if cleared:
+        back = ", ".join(str(c.get("subject") or "one") for c in cleared[:MAX_NAMED])
+        more = f" and {len(cleared) - MAX_NAMED} more" if len(cleared) > MAX_NAMED else ""
+        bits.append(f"back to normal: {back}{more}")
+
+    body = f"{label} — " + ("; ".join(bits) if bits else "state changed")
+
+    return await _write(
+        db,
+        kind="watch",
+        key=f"{watch_id}:{as_of.isoformat()}",
+        body=body,
+        payload={
+            "watch_id": str(watch_id),
+            "as_of": as_of.isoformat(),
+            "added": added,
+            "cleared": cleared,
+            # What a reply re-runs. The same shape a stored answer keeps, so
+            # the ordinary reply path can pick it up without a special case.
+            "calls": calls,
+        },
+        receipts=receipts,
+        notices=notices or [],
     )

@@ -925,6 +925,84 @@ that finds nothing says nothing at all. Not "alert", "trigger", "monitor" or
 "rule". Deferred until after C.4; written down now so it cannot be built under
 a different name in the meantime.
 
+*Built 2026-09-11, and the reservation held.* Watch was written down on
+2026-09-05 with no code behind it, precisely so it could not be built under a
+different name in the meantime. What arrived is what was described: a condition
+plus a channel, checked on a schedule, posting only when the answer changes.
+Five decisions, recorded because the code cannot say why.
+
+  - **A watch is one of the brief's own conditions, plus a scope, plus a slot.**
+    `metrics.yaml` `watches.conditions` is a closed set of three —
+    `sales_moved`, `stock_crossed_out`, `newly_dead` — and each REFERENCES a
+    threshold in `brief:` that was measured against a noise floor with the
+    measurement written down beside it. Evaluation is `get_brief` itself, not
+    new SQL, so there is exactly one implementation of "Rockwell is down" and
+    a watch cannot drift away from the morning it agrees with. **There is no
+    threshold column and no threshold argument**: "alert me at 10% instead of
+    30%" is a request to change a DEFINITION, and it is refused with the
+    current number and the evidence for it, never half-saved.
+
+  - **It posts on CHANGE, never on truth, and recovery is news too.** The state
+    is the set of firing subjects with each one's direction; a check speaks only
+    when that set differs from the last. A shop down five mornings running is
+    one post, because five identical alerts is how a signal stops meaning
+    anything. "Rockwell is back to normal" is the half people otherwise never
+    get told, and it is what makes the alarming half trustworthy. A direction
+    flip counts as new — down 40% yesterday and up 40% today is not more of the
+    same. A first check with nothing firing says nothing, or a watch switched
+    on during a quiet week would announce its own silence.
+
+  - **"Nothing fired" and "I could not look" are different answers, and every
+    check is written down.** `get_brief` says per section whether it `ran`; a
+    section that could not run yields NO state rather than an empty one, the
+    last thing actually seen is left untouched, and the blindness is said once
+    when it starts. Collapsing the two would announce that every shop recovered
+    on the morning a source went stale — good news, invented, and
+    indistinguishable from the real thing. `george.watch_checks` records the
+    quiet checks as well, because from outside, "quiet for eleven days" and
+    "broken for eleven days" are otherwise the same observation, and the second
+    is the one somebody needs.
+
+  - **The backtest is the gate and it is also the feature.** Architecture rule
+    7 applies — a watch computes — but there is no authored logic to promote:
+    the condition is one of three and its numbers are the brief's, already
+    reviewed. So there is no administrator's approval, and what a person must
+    see instead is what the rule WOULD have done. `NOT enabled OR backtest IS
+    NOT NULL` is a CHECK constraint, not just a service rule. It paid for
+    itself on the first live use: asked to watch every shop for a sales cliff,
+    George backtested it, reported **47 of the last 60 mornings**, and said "that
+    is not a watch, that's a habit you'd mute by week two" — then narrowed the
+    scope to two shops and got 25. The backtest counts POSTS, not firing days,
+    walking the days in order and carrying the state, because the number
+    somebody decides on is how often they would be interrupted. A backtest
+    measured under a different `definitions_version` does not count, and
+    **rescoping throws the backtest away and switches the watch off**: a watch
+    over one shop is a different watch from one over seven, and 47 becomes 4.
+
+  - **Narrowing the scope is the dial; the threshold is not.** When a backtest
+    says a watch would fire too often there is exactly one honest lever, and
+    the tool says which. This is the rule most likely to be eroded by a
+    reasonable-sounding request, which is why it is written here and held by a
+    test.
+
+**No model call, and that is what makes it safe to run unattended** — a check
+is one vetted read, a named condition and a comparison with the last result.
+George thinks when you REPLY: the post carries the exact `get_brief` call
+behind it, so "investigate this" re-runs a fact and he climbs the ordinary
+ladder from there. No investigation object, no second path (architecture rule
+10). Posts are `org`, like everything George initiates, and go to the river
+only — a second delivery channel would be a second thing to keep in step.
+
+**Delivery watches are NOT built, and `metrics.yaml`
+`watches.not_available.deliveries` says why and what would end it.** Both
+sources are frozen at ~64 days, `received_qty` is sparse and never reconciled
+and may legitimately exceed what was ordered, transfers carry no per-line
+received quantity, and "Open" does not mean "not received" — 8 of 151 orders
+are Open with notes saying the goods arrived. A watch over them would evaluate
+identical rows every morning forever. Recorded rather than left as an absence,
+because an absence reads as George being bad at something.
+
+
 *Added 2026-09-11: **Standing question** is the seventh word, and the bar for a
 seventh is higher than it was for the fifth.* It is a question George is asked
 on a SCHEDULE, answered fresh each time by the ordinary loop, waiting for you
