@@ -23,7 +23,7 @@ import { useGeorge } from '../hooks/useGeorge';
 import { useThread } from '../hooks/useThread';
 import { threadHistory } from '../components/george/threadHistory';
 import type { GeorgeTurn } from '../types/george';
-import { buildBoard, type Local } from './board';
+import { boardContext, buildBoard, type Local } from './board';
 import { restoreFromPosts, type Dimension } from './composition';
 import { Board } from './render';
 import './workspace.css';
@@ -93,8 +93,11 @@ export default function WorkspacePage() {
     const q = text.trim();
     if (!q) return;
     setDraft('');
-    void george.ask(q, selection.length ? {
-      desk: {
+    // The board travels with every question, whether or not anything is
+    // selected: "why?" asked with nothing clicked still means the thing that
+    // is leading, and George could not know what that was until now.
+    const desk = {
+      ...(selection.length ? {
         selection: {
           // One dimension per selection, and it is the first thing touched —
           // "compare these" over a shop and a product is not a comparison the
@@ -104,9 +107,11 @@ export default function WorkspacePage() {
             .filter((s) => s.dimension === selection[0].dimension)
             .map((s) => ({ id: s.label, label: s.label })),
         },
-      },
-    } : {});
-  }, [george, selection]);
+      } : {}),
+      ...(board.length ? { board: boardContext(answers, board, local, focused) } : {}),
+    };
+    void george.ask(q, Object.keys(desk).length ? { desk } : {});
+  }, [george, selection, answers, board, local, focused]);
 
   const toggle = useCallback((subject: string, dimension: Dimension | null) => {
     setSelection((s) => (s.some((x) => x.label === subject)

@@ -273,6 +273,76 @@ def _recommendation_words(rec: Mapping[str, Any], defs: Mapping[str, Any]) -> Op
     return f"the workspace has already offered the next move '{question}'"
 
 
+def board_sentence(board: Optional[Any], defs: Mapping[str, Any]) -> Optional[str]:
+    """
+    One line naming WHAT IS ON THE BOARD, so a fragment has something to land on.
+
+    "Why?" "Products." "These two." "Last month." — the shortest and most
+    natural things a person says — were resolved against the TRANSCRIPT until
+    2026-09-10, because that was all George could see. That worked while the
+    screen was the last answer and stopped working the moment the board could
+    hold six things at once: "why?" meant the last thing said, not the thing
+    being looked at.
+
+    So the board travels with the question, as names and closed vocabulary:
+
+      key       the object's own key, which George chose when he composed it
+      kind      one of composition.widgets
+      weight    one of composition.weights — which of them is LEADING
+      about     the subject it is drawn for, a value off a row of its read
+      measure   the metric's display name, from the definitions
+      window    the window that read was taken over
+
+    NOTHING HERE IS A FIGURE. Not a value, not a change, not a count of rows.
+    George is told what he is looking at and what each object is FOR; every
+    number he says still comes from a tool result he can point at.
+
+    The key matters more than it looks: naming it is what lets a follow-up
+    CHANGE the object the person means instead of putting a second one beside
+    it. Without the key on this line, "products" could only ever be a new
+    object, and the board would grow every time it was steered.
+    """
+    if not isinstance(board, (list, tuple)) or not board:
+        return None
+
+    voc = req(defs, "composition")
+    kinds = set(req(voc, "widgets"))
+    weights = set(req(voc, "weights"))
+    limit = int(req(voc, "max_objects"))
+
+    said: list[str] = []
+    for obj in list(board)[:limit]:
+        if not isinstance(obj, Mapping):
+            continue
+        key = _clean_label(obj.get("key"))
+        kind = obj.get("kind")
+        if not key or kind not in kinds:
+            continue
+        weight = obj.get("weight") if obj.get("weight") in weights else None
+        shape = [str(kind)]
+        if weight == "lead":
+            shape.append("LEADING")
+        elif weight == "quiet":
+            shape.append("quiet")
+        line = f"{key} ({', '.join(shape)})"
+        about = [_clean_label(obj.get(field)) for field in ("about", "measure", "window")]
+        about = [a for a in about if a]
+        if about:
+            line += " — " + ", ".join(about)
+        said.append(line)
+
+    if not said:
+        return None
+    return (
+        "[On the board: " + "; ".join(said) + ". A short instruction — why, "
+        "products, compare these, last month, not that — applies to what is on "
+        "the board: resolve it against the LEADING object unless something is "
+        "selected, and change that object by its own KEY rather than putting a "
+        "second one beside it. Answer from what is already there when it holds "
+        "the answer. Nothing on this line is a figure.]"
+    )
+
+
 def desk_sentence(desk: Optional[Mapping[str, Any]], defs: Mapping[str, Any]) -> Optional[str]:
     """
     One line naming what the person is looking at.

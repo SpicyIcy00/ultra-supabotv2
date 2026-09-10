@@ -14,7 +14,7 @@ import { cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CompositionBlock, GeorgeTurn, ToolCall } from '../types/george';
 import type { Post } from '../types/river';
-import { buildBoard, inOrder, sorted, type Local } from './board';
+import { boardContext, buildBoard, inOrder, sorted, type Local } from './board';
 import { dimensionOf, restoreFromPosts, type AnswerTurn } from './composition';
 import { fmt, splitCaveat } from './widgets';
 import { Board } from './render';
@@ -328,5 +328,38 @@ describe('a subject knows what kind of thing it is', () => {
     );
     fireEvent.click(container.querySelector('[data-widget="hero"]')!);
     expect(picked).toEqual([['Rockwell', 'store']]);
+  });
+});
+
+// --------------------------------------------------------------- what travels
+
+describe('what the board tells George', () => {
+  const answers = [
+    turn([{ op: 'put', kind: 'draft', key: 'seikyo-order', weight: 'supporting', seq: 2 }]),
+    turn([{ op: 'put', kind: 'hero', key: 'rockwell', weight: 'lead', seq: 1, subject: 'Rockwell' }]),
+  ];
+
+  it('names every object by its key, with what it is about and what it is in', () => {
+    const ctx = boardContext(answers, buildBoard(answers), {}, null);
+    expect(ctx.map((o) => o.key).sort()).toEqual(['rockwell', 'seikyo-order']);
+    const hero = ctx.find((o) => o.key === 'rockwell')!;
+    expect(hero).toMatchObject({ kind: 'hero', weight: 'lead', about: 'Rockwell', measure: 'Net sales' });
+    expect(ctx.find((o) => o.key === 'seikyo-order')!.measure).toBe('Purchase plan');
+  });
+
+  it('carries no figure — the property the whole line rests on', () => {
+    const ctx = boardContext(answers, buildBoard(answers), {}, null);
+    const text = JSON.stringify(ctx);
+    for (const leak of ['412884', '121451', '9.3', '334', '954']) {
+      expect(text).not.toContain(leak);
+    }
+  });
+
+  it('follows the person: what they focused leads, what they set aside is not on it', () => {
+    const board = buildBoard(answers);
+    expect(boardContext(answers, board, {}, 'seikyo-order')[0].key).toBe('seikyo-order');
+    expect(boardContext(answers, board, {}, 'seikyo-order')[0].weight).toBe('lead');
+    const left = boardContext(answers, board, { 'seikyo-order': { closed: true } }, null);
+    expect(left.map((o) => o.key)).toEqual(['rockwell']);
   });
 });

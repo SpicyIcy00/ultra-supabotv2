@@ -196,6 +196,9 @@ _DESK_DIMENSIONS = tuple(str(d) for d in _req(_DESK, "selection.dimensions"))
 # bound the definitions state and neither side keeps its own copy.
 _DESK_MAX_DRAWN = int(_req(_DESK, "context.max_drawn_subjects"))
 _DESK_MAX_ATTENTION = int(_req(_DESK, "context.max_attention"))
+# The board's bound is the board's own, from metrics.yaml composition, so the
+# number the client folds to is the number the route refuses past.
+_BOARD_MAX = int(_req(_load_defs(), "composition.max_objects"))
 
 
 class DeskSubject(BaseModel):
@@ -274,6 +277,24 @@ class DeskRecommendation(BaseModel):
     question: Optional[str] = Field(None, max_length=200)
 
 
+class BoardObject(BaseModel):
+    """
+    One object on the board as the question was asked from it.
+
+    Names and closed vocabulary, never a figure: the key George gave it, the
+    kind of object it is, whether it leads, what it is about, the measure it is
+    in and the window it was read over. This is what lets "why?" and "products"
+    mean the thing being LOOKED at rather than the last thing said.
+    """
+
+    key: str = Field(..., min_length=1, max_length=40)
+    kind: str = Field(..., min_length=1, max_length=20)
+    weight: Optional[str] = Field(None, max_length=12)
+    about: Optional[str] = Field(None, max_length=200)
+    measure: Optional[str] = Field(None, max_length=80)
+    window: Optional[str] = Field(None, max_length=60)
+
+
 class DeskContext(BaseModel):
     """
     The desk as the question was asked from it. Bounded here, named to the
@@ -285,6 +306,9 @@ class DeskContext(BaseModel):
     selection: Optional[DeskSelection] = None
     window: Optional[DeskWindow] = None
     drawn: Optional[DeskDrawn] = None
+    # What is on the board (2026-09-10), so a fragment resolves against what is
+    # being looked at instead of against the transcript.
+    board: List[BoardObject] = Field(default_factory=list, max_length=_BOARD_MAX)
     attention: List[DeskAttention] = Field(default_factory=list, max_length=_DESK_MAX_ATTENTION)
     recommendation: Optional[DeskRecommendation] = None
 

@@ -443,6 +443,15 @@ export interface DeskRecommendationRef {
 
 export interface DeskContext {
   selection?: DeskSelection | null;
+  /**
+   * What is on the board, so a fragment resolves against what is being looked
+   * at rather than against the transcript (2026-09-10). Keys, kinds, weights
+   * and names only — never a figure.
+   */
+  board?: {
+    key: string; kind: string; weight: string;
+    about?: string; measure?: string; window?: string;
+  }[];
   window?: DeskWindow | null;
   drawn?: DeskDrawn | null;
   attention?: DeskAttentionMark[];

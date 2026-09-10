@@ -281,3 +281,81 @@ def test_the_ops_are_the_definitions(defs):
     assert int(voc["max_objects"]) >= 8
     for name, spec in voc["ops"].items():
         assert spec["about"], f"{name} has no meaning"
+
+
+# ---------------------------------------------------------------------------
+# THE BOARD LINE (2026-09-10). "Why?" "Products." "These two." were resolved
+# against the transcript, because that was all George could see. That worked
+# while the screen was the last answer and broke the moment the board could
+# hold six things: "why?" meant the last thing SAID, not the thing being
+# LOOKED at. So what is on the board travels with the question — as names,
+# keys and closed vocabulary, and never as a figure.
+# ---------------------------------------------------------------------------
+
+BOARD = [
+    {"key": "rockwell", "kind": "hero", "weight": "lead", "about": "Rockwell",
+     "measure": "Net sales", "window": "last week"},
+    {"key": "seikyo-order", "kind": "draft", "weight": "supporting", "about": "Seikyo SEK001",
+     "measure": "Purchase plan"},
+    {"key": "shops", "kind": "table", "weight": "quiet", "measure": "Net sales"},
+]
+
+
+def test_the_board_line_names_every_object_by_its_key(defs):
+    from agent import surface
+    line = surface.board_sentence(BOARD, defs)
+    for key in ("rockwell", "seikyo-order", "shops"):
+        assert key in line, f"{key} is how a follow-up changes that object instead of adding one"
+    assert "Rockwell" in line and "Seikyo SEK001" in line
+    assert "Net sales" in line and "last week" in line
+
+
+def test_the_board_line_says_which_object_leads(defs):
+    from agent import surface
+    line = surface.board_sentence(BOARD, defs)
+    assert "LEADING" in line
+    assert line.index("LEADING") < line.index("seikyo-order")
+    assert "quiet" in line
+
+
+def test_the_board_line_carries_no_figure(defs):
+    """The same rule as the desk line, and the reason both can be trusted."""
+    from agent import surface
+    poisoned = [dict(BOARD[0], value=412884, change_pct=-9.3, rows=515)]
+    line = surface.board_sentence(poisoned, defs)
+    for leak in ("412884", "412,884", "9.3", "515"):
+        assert leak not in line, f"{leak!r} is a figure and reached the prompt"
+
+
+def test_the_board_line_ignores_what_is_not_a_widget(defs):
+    from agent import surface
+    line = surface.board_sentence([{"key": "x", "kind": "iframe", "weight": "lead"}], defs)
+    assert line is None
+
+
+def test_nothing_on_the_board_is_no_line_at_all(defs):
+    from agent import surface
+    assert surface.board_sentence([], defs) is None
+    assert surface.board_sentence(None, defs) is None
+    assert surface.board_sentence("nonsense", defs) is None
+
+
+def test_the_board_line_is_bounded_by_the_definitions(defs):
+    from agent import surface
+    limit = int(req(defs, "composition.max_objects"))
+    many = [{"key": f"k{i}", "kind": "table", "weight": "quiet"} for i in range(limit + 6)]
+    line = surface.board_sentence(many, defs)
+    assert f"k{limit - 1}" in line
+    assert f"k{limit}" not in line
+
+
+def test_the_loop_puts_the_board_line_on_the_question():
+    """Held here because a line George never receives is a line that does nothing."""
+    import ast
+    import inspect
+    from agent import loop as george_loop
+    tree = ast.parse(inspect.getsource(george_loop.run))
+    calls = [n for n in ast.walk(tree)
+             if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+             and n.func.attr == "board_sentence"]
+    assert calls, "run() never builds the board line"

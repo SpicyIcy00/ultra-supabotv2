@@ -178,6 +178,51 @@ export function inOrder(
   return [...lead, ...shown.filter((o) => o.weight !== 'lead')];
 }
 
+/**
+ * WHAT IS ON THE BOARD, as it travels with the next question.
+ *
+ * This is what makes "why?", "products" and "these two" land on the thing being
+ * LOOKED at rather than the last thing said. It carries the key George gave
+ * each object — without that a follow-up could only ever add a second object
+ * beside the one meant — plus what each is about, the measure it is in and the
+ * window it was read over.
+ *
+ * NOTHING HERE IS A FIGURE, and nothing is computed: every field is a name off
+ * a row, a label from the definitions, or a word George already chose. What
+ * the person has set aside is not on it, because it is not on the board.
+ */
+export interface BoardContextObject {
+  key: string;
+  kind: string;
+  weight: string;
+  about?: string;
+  measure?: string;
+  window?: string;
+}
+
+export function boardContext(
+  answers: AnswerTurn[],
+  board: BoardObject[],
+  local: Record<string, Local>,
+  focused: string | null,
+): BoardContextObject[] {
+  return inOrder(board, local, focused).map((o) => {
+    const call = o.seq === undefined ? null
+      : answers[o.turn]?.toolCalls.find((c) => c.seq === o.seq) ?? null;
+    const meta = call?.result?.meta;
+    const about = o.subject ?? (o.subjects?.length ? o.subjects.join(' and ') : undefined);
+    const win = meta?.window?.name ?? undefined;
+    return {
+      key: o.key,
+      kind: o.kind,
+      weight: o.weight,
+      ...(about ? { about } : {}),
+      ...(meta?.metric_label ? { measure: meta.metric_label } : {}),
+      ...(win ? { window: win.replace(/_/g, ' ') } : {}),
+    };
+  });
+}
+
 /** Rows in the order the person asked for. Reordering is not computing. */
 export function sorted(
   rows: Record<string, unknown>[],

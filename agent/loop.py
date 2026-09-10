@@ -1091,6 +1091,8 @@ Every edit names a short key you choose — "rockwell", "seikyo-order", "shops".
 
 Weight is {weights}. Exactly one object leads and the eye goes to it first; what supports it sits beside it; what is on screen because it is true rather than because it matters is quiet. Making something new the lead pushes the old lead down on its own — you do not have to demote it.
 
+WHAT IS ALREADY THERE. When the board holds anything, the question carries a line beginning "[On the board" naming every object on it — its key, what kind it is, which one is LEADING, and what each is about. Read it before you decide anything. A short instruction resolves against the LEADING object unless the person has selected something, and the key on that line is how you change the object they mean instead of putting a second one beside it. If the board already holds the figures that answer the question, say so from them and read nothing.
+
 HOW A CONVERSATION MOVES THE BOARD. Looking at Rockwell, and they say:
   "Products"          — change the Rockwell object to the product read, same key. The board does not gain a second Rockwell.
   "Compare with OPUS" — change it to a comparison of both, or put OPUS beside it. Both are on the same board either way.
@@ -2040,6 +2042,10 @@ async def run(
             # What the person selected on the desk, and the window they moved
             # to: names and a window, never a figure (agent/surface.py).
             surface.desk_sentence(desk, defs),
+            # What is ON the board, by key, so "why?" and "products" land on
+            # the object being looked at and change it rather than adding
+            # beside it (agent/surface.py board_sentence). Never a figure.
+            surface.board_sentence((desk or {}).get("board"), defs),
             # What he already thinks, before what was already said: a view
             # is the frame a question is read in.
             beliefs,
