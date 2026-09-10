@@ -39,9 +39,14 @@ export function Board(p: BoardProps) {
   // "you can feel him working".
   const settling = p.live && !p.answers[newest]?.composition;
 
-  // What leads sits in its own row at the top, in George's order. Everything
-  // after it packs into columns — see the note in room.css.
-  const lead = objects.filter((o) => o.weight === 'lead' || p.focused === o.key);
+  // What leads sits in its own row at the top, in George's order — AND HIS
+  // READING GOES WITH IT, wherever he weighted it. A lead subject carries one
+  // figure; on its own it stretches across the whole board for a single
+  // number, and the sentence explaining it ends up three columns away from
+  // the thing it explains. They belong together.
+  const leading = objects.filter((o) => o.weight === 'lead' || p.focused === o.key);
+  const reading = objects.find((o) => o.kind === 'text' && !leading.includes(o));
+  const lead = reading ? [...leading, reading] : leading;
   const rest = objects.filter((o) => !lead.includes(o));
 
   const draw = (o: (typeof objects)[number], n: number) => (
