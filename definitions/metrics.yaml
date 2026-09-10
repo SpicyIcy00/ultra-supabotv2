@@ -5167,6 +5167,128 @@ composition:
   chart_forms: [line, bar]
   state_labels: [pending, running, waiting, done, blocked]
 
+
+  # ===========================================================================
+  # THE GRAMMAR — how George composes a shape nobody listed in advance.
+  #
+  # WHY THIS EXISTS. The widgets above are a MENU: fourteen forms, decided
+  # ahead of time, for questions nobody had asked yet. That was a deliberate
+  # trade — a block has no field for a figure, so George cannot invent one —
+  # but the owner's feature 1 asks for an interface that becomes whatever the
+  # work needs, and a menu cannot do that however long it gets.
+  #
+  # THE TRADE IS SEPARABLE FROM THE MENU, and that is the whole insight. What
+  # makes the screen trustworthy is not the fixed list of shapes; it is that a
+  # figure is BOUND, never authored. A mark below names a read and a FIELD.
+  # The renderer resolves the value. There is nowhere in this grammar to type
+  # a number, a label, a colour or a size — so an infinite space of shapes
+  # costs nothing in trust.
+  #
+  # THE FOURTEEN ARE NOT REPLACED. They stay as shorthand, because they work
+  # and because most answers want an ordinary shape. A block carries EITHER a
+  # `kind` (a named widget) or a `spec` (a tree of the nodes below), never
+  # both. Reach for the grammar when nothing named fits.
+  #
+  # Added 2026-09-11. Additive, so `version` does not move (version_policy).
+  # ===========================================================================
+  grammar:
+
+    # What a node may be. Exactly one of `layout` or `mark` — a node either
+    # arranges other nodes or draws something, and one that did both would be
+    # two nodes with a shared name.
+    layouts:
+      stack:
+        about: "children one under another — the default reading order"
+        takes: [children, gap]
+      row:
+        about: "children side by side, wrapping when there is no room"
+        takes: [children, gap]
+      grid:
+        about: "children in even columns — a set of like things"
+        takes: [children, cols, gap]
+      panel:
+        about: "a bordered area with its own heading, holding one arrangement"
+        takes: [children, heading, hue]
+
+    # What a mark may DRAW. Each names a read and a field; none takes a value.
+    marks:
+      value:
+        about: "one field of one row, as a number or a word, at the size its weight implies"
+        needs: [seq, field]
+      delta:
+        about: "a signed change from a compared read — the pill, with its direction"
+        needs: [seq, field]
+      bar:
+        about: "length encodes a field, one bar per row — a ranking, a split, a driver"
+        needs: [seq, field]
+      line:
+        about: "a field over an ordered field — a series, connected"
+        needs: [seq, field, by]
+      point:
+        about: "one dot per row along an ordered field — a distribution, a timeline"
+        needs: [seq, field, by]
+      cell:
+        about: "a grid of cells whose colour encodes a field — a heatmap, a matrix"
+        needs: [seq, field, by]
+      rows:
+        about: "the read as a table, when precision beats shape"
+        needs: [seq]
+      label:
+        about: "a field of a row as a caption — a name, a state, a date"
+        needs: [seq, field]
+      prose:
+        about: "your own words: the reading, the caveat, the next thing"
+        needs: []
+
+    # How a field reaches a channel. Every one of these names a FIELD, never a
+    # value — which is what makes the grammar safe at any size.
+    channels:
+      field: "the column this mark draws"
+      by: "the column that positions or groups it — a shop, a week, a product"
+      colour:
+        about: >
+          the column whose VALUE chooses a hue. Identity where the value names
+          a thing the palette knows (a shop), direction where the column is a
+          direction. Never a colour George picked: a hue that meant whatever
+          he felt would be a figure by another route.
+        from_field_only: true
+      order: "the column to sort by"
+      label: "the column that names each row"
+      subject:
+        about: >
+          WHICH ROW this node and everything under it draws. Unlike every
+          other channel it names a VALUE rather than a column — "OPUS",
+          "Aji Mix" — and it is the one place a value may appear, because a
+          selector is not a figure: it is checked against the rows and refused
+          if no row carries it, exactly as a named widget's `subject` is.
+          Without it a panel per shop draws the first row seven times, which
+          is the worst kind of wrong — plausible and identical.
+        names_a_value_not_a_column: true
+        inherited_by_children: true
+
+    # A workspace is not a document. Bounds exist so a composition stays a
+    # thing you can take in, and so a runaway tree cannot become the answer.
+    max_nodes: 40
+    max_depth: 4
+    max_cols: 6
+    max_rows_drawn: 40
+
+    # WHAT A NODE MAY CARRY, and nothing else. The closed set is the guarantee:
+    # add `value` or `text` or `colour: "#ff0000"` here and the grammar starts
+    # being able to say things no tool returned.
+    allowed_fields: [layout, mark, children, cols, gap, heading, hue,
+                     seq, field, by, colour, order, label, weight, limit,
+                     subject]
+
+    # Said once, here, because it is the rule the whole grammar rests on.
+    no_literals_because: >
+      Every value on screen is resolved by the renderer from the rows of the
+      read a mark names. A grammar that accepted a literal anywhere would let a
+      figure onto the screen that no tool produced, and no amount of prompting
+      undoes a shape that can lie. The validator refuses any node carrying a
+      number or a free string in a value position, and the fields above are the
+      only ones a node may carry at all.
+
   # WHAT A RECOMMENDATION MAY RECOMMEND. Closed, like every other vocabulary
   # here, and for the same reason: George chooses WHICH action, never invents
   # one, and never supplies the figure that justifies it — that comes off the
@@ -5255,7 +5377,7 @@ composition:
   # Anything not in this list on a block is refused with the block. This is
   # the list that keeps a choice from becoming a value.
   allowed_fields: [op, kind, key, weight, seq, subject, subjects, form, label,
-                   action, argument]
+                   action, argument, spec]
 
 surface:
   introduced: "2026-09-09"

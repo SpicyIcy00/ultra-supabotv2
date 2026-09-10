@@ -146,3 +146,67 @@ describe('a recommendation shows the verb and the read’s figure', () => {
     expect(screen.getByText(/203,717/)).toBeTruthy();
   });
 });
+
+
+describe('a shape George composed', () => {
+  // The grammar's whole promise: a shape nobody listed in advance, drawing
+  // only values the renderer resolved from rows.
+  const SPEC = {
+    layout: 'panel' as const,
+    heading: { seq: 0, field: 'store' },
+    children: [
+      { layout: 'row' as const, children: [
+        { mark: 'value' as const, seq: 0, field: 'value', weight: 'lead' as const },
+        { mark: 'delta' as const, seq: 0, field: 'change_pct' },
+      ] },
+      { layout: 'grid' as const, cols: 2, children: [
+        { mark: 'bar' as const, seq: 0, field: 'value', by: 'store', colour: 'direction' },
+        { mark: 'point' as const, seq: 0, field: 'value', by: 'store' },
+        { mark: 'cell' as const, seq: 0, field: 'value', by: 'store', colour: 'store' },
+        { mark: 'rows' as const, seq: 0 },
+      ] },
+      { mark: 'prose' as const },
+    ],
+  };
+
+  it('draws a tree of layouts and marks nobody enumerated', () => {
+    const { container } = draw([object('spec', { spec: SPEC, seqs: [0] })]);
+    expect(container.querySelector('.r-spec-panel')).toBeTruthy();
+    expect(container.querySelectorAll('.r-spec-bar').length).toBe(2);
+    expect(container.querySelectorAll('.r-spec-cell').length).toBe(2);
+  });
+
+  it('resolves every value from the rows, never from the spec', () => {
+    draw([object('spec', { spec: SPEC, seqs: [0] })]);
+    // The heading is a column's VALUE, the figure is a row's, the prose is
+    // the turn's. None of the three appears anywhere in the spec itself.
+    expect(screen.getAllByText(/Rockwell/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/203,717/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Both shops are up/)).toBeTruthy();
+    expect(JSON.stringify(SPEC)).not.toMatch(/203,?717|Both shops/);
+  });
+});
+
+
+describe('a composed shape draws the row it names', () => {
+  it('scopes a panel and everything inside it to its subject', () => {
+    // THE BUG THIS HOLDS. Without a subject a panel-per-shop drew the FIRST
+    // row on every panel — seven panels, identical figures, each headed with
+    // the same shop. Plausible and wrong is worse than not drawing.
+    const panel = (subject: string) => ({
+      layout: 'panel' as const, subject,
+      heading: { seq: 0, field: 'store' },
+      children: [{ mark: 'value' as const, seq: 0, field: 'value' }],
+    });
+    const { container } = draw([
+      object('spec', { key: 'a', spec: panel('Rockwell'), seqs: [0] }),
+      object('spec', { key: 'b', spec: panel('OPUS'), seqs: [0] }),
+    ]);
+    const text = container.textContent ?? '';
+    expect(text).toMatch(/203,717/);
+    expect(text).toMatch(/555,147/);
+    // And each heading is its own shop, not the first row's twice.
+    expect(text).toMatch(/Rockwell/);
+    expect(text).toMatch(/OPUS/);
+  });
+});

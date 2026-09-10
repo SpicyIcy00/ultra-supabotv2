@@ -375,6 +375,44 @@ export interface CompositionBlock {
   action?: 'order' | 'investigate' | 'check' | 'hold' | 'switch_on' | 'leave_it';
   /** What a control changes: scope only, never a threshold. */
   argument?: 'date_range' | 'top_n';
+  /**
+   * A shape George composed himself, instead of naming a widget.
+   *
+   * A tree of layouts and marks (metrics.yaml composition.grammar, validated
+   * in agent/grammar.py). Every mark names a read and a COLUMN — there is
+   * nowhere in it for a figure, a word, a colour or a size — so a shape
+   * nobody listed in advance is exactly as trustworthy as a named one.
+   */
+  spec?: SpecNode;
+  /** Every read a spec draws from, so the loop charts them all. */
+  seqs?: number[];
+}
+
+/** One node of a composed shape: a layout that arranges, or a mark that draws. */
+export interface SpecNode {
+  layout?: 'stack' | 'row' | 'grid' | 'panel';
+  children?: SpecNode[];
+  cols?: number;
+  gap?: 'tight' | 'normal' | 'loose';
+  heading?: { seq: number; field: string };
+
+  mark?: 'value' | 'delta' | 'bar' | 'line' | 'point' | 'cell' | 'rows' | 'label' | 'prose';
+  seq?: number;
+  tool?: string;
+  /**
+   * WHICH ROW this node and its children draw. The one channel naming a
+   * VALUE rather than a column — a selector, checked against the rows and
+   * refused if none carries it.
+   */
+  subject?: string;
+  /** Each of these names a COLUMN of the read, never a value. */
+  field?: string;
+  by?: string;
+  colour?: string;
+  order?: string;
+  label?: string;
+  limit?: number;
+  weight?: 'lead' | 'supporting' | 'quiet';
 }
 
 export interface CompositionFrame {

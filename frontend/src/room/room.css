@@ -480,3 +480,38 @@
   from { opacity: 0; transform: translateY(-2px); }
   to { opacity: 1; transform: none; }
 }
+
+/* --------------------------------------------------------- composed shapes
+   The marks of the grammar (Spec.tsx). Every colour here comes from a --hue
+   the renderer resolved out of a row: there is no palette choice in this
+   block, because a hue George picked would be a claim no tool made. */
+.r-spec-panel {
+  border: 1px solid var(--edge); border-radius: 14px; padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.35);
+}
+.r-spec-bars { display: flex; flex-direction: column; gap: 7px; width: 100%; }
+.r-spec-bar { display: grid; grid-template-columns: minmax(6ch, 12ch) 1fr auto; gap: 10px; align-items: center; }
+.r-spec-bar-name { font: 400 11.5px/1.3 var(--sans); color: var(--ink-2); min-width: 0;
+                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.r-spec-bar-track { height: 8px; border-radius: 4px; background: rgba(17, 24, 39, 0.06); overflow: hidden; }
+.r-spec-bar-track i { display: block; height: 100%; border-radius: 4px; }
+.r-spec-bar-figure { font: 400 11.5px/1.3 var(--mono); color: var(--ink);
+                     font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.r-spec-points, .r-spec-line { position: relative; width: 100%; }
+.r-spec-line svg { position: absolute; inset: 0 0 26px 0; width: 100%; height: calc(100% - 26px); }
+.r-spec-axis { position: relative; display: flex; justify-content: space-between;
+               align-items: flex-end; height: 96px; }
+.r-spec-point { position: relative; flex: 1 1 0; min-width: 0; height: 100%; }
+.r-spec-point i { position: absolute; left: 50%; transform: translateX(-50%);
+                  width: 8px; height: 8px; border-radius: 50%; }
+.r-spec-point em { position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
+                   font: 500 9px/1.2 var(--sans); letter-spacing: 0.06em; text-transform: uppercase;
+                   color: var(--ink-3); white-space: nowrap; font-style: normal; }
+
+.r-spec-cells { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
+.r-spec-cell { border-radius: 8px; padding: 9px 10px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.r-spec-cell em { font: 500 9px/1.2 var(--sans); letter-spacing: 0.06em; text-transform: uppercase;
+                  color: var(--ink-2); font-style: normal; overflow: hidden;
+                  text-overflow: ellipsis; white-space: nowrap; }
+.r-spec-cell b { font: 500 13px/1.2 var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }

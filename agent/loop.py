@@ -523,6 +523,34 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
                     # validator knew about these before the schema did, so the
                     # model reached for `label` on a recommendation — the only
                     # nearby word it could see — and was refused for it.
+                    # A COMPOSED SHAPE, when nothing named fits. Loose here
+                    # and strict in agent/grammar.py: the tree is recursive,
+                    # which a tool schema expresses badly, and the validator
+                    # refuses precisely — naming the node and the reason —
+                    # where a schema could only say "invalid".
+                    "spec": {
+                        "type": "object",
+                        "description": (
+                            "A shape you compose yourself, instead of `kind`. A tree of nodes; "
+                            "each node is EITHER a layout or a mark, never both. "
+                            "  layout: " + ", ".join(
+                                f"{k} ({v['about']})" for k, v in
+                                (req(_load_defs(), 'composition.grammar.layouts') or {}).items()
+                            ) + ". A layout carries `children`, and `grid` carries `cols`; "
+                            "`panel` may carry `heading: {seq, field}`. "
+                            "  mark: " + ", ".join(
+                                f"{k} ({v['about']})" for k, v in
+                                (req(_load_defs(), 'composition.grammar.marks') or {}).items()
+                            ) + ". "
+                            "  A mark names `seq` (a read you made) and channels that each name a "
+                            "COLUMN of that read: " + ", ".join(
+                                str(k) for k in
+                                (req(_load_defs(), 'composition.grammar.channels') or {})
+                            ) + ". There is nowhere to put a figure, a word, a colour or a size — "
+                            "every value on screen is resolved from the rows, which is what makes "
+                            "any shape you invent as trustworthy as a named one."
+                        ),
+                    },
                     "action": {"type": "string",
                                "enum": list(voc["recommendation_actions"]),
                                "description": "for a recommendation: which action, never a new one"},
@@ -1188,6 +1216,10 @@ FOUR MORE FORMS, AND WHEN THEY ARE THE RIGHT ONE.
   system          — when something that RUNS is part of the answer: a saved rule, a standing question, a watch. Draw it over view_automations, which is the read that returns them, and name which one it is about. Their states are not interchangeable: quiet means it looked and found nothing, not switched on means it is not looking.
 
 AFTER YOU CHANGE SOMETHING, READ IT BACK BEFORE YOU DRAW IT. An object is drawn over a READ, so that every figure on screen has receipts behind it — and a write is not a read. Saving a page, keeping a standing question, pinning an answer: each returns what it did, and none of them may be composed over. If the change belongs on the board, make the read that shows the new state (view_automations for anything running on a schedule) and compose over that. Composing over the write is refused, and a refused edit did not happen.
+
+WHEN NOTHING NAMED FITS, COMPOSE THE SHAPE YOURSELF. A block carries EITHER a `kind` from the list above or a `spec` — a tree of layouts (stack, row, grid, panel) and marks (value, delta, bar, line, point, cell, rows, label, prose). Use it when the work wants a shape the list does not have: a driver split beside its own ranking, a matrix of shops against weeks, a panel that holds a figure, its movement and the three lines behind it. Do not reach for it to redraw something a named widget already does well — the names are shorthand, they are proven, and most answers want an ordinary shape.
+
+A MARK NAMES A READ AND A COLUMN, AND THAT IS ALL IT CAN NAME. `field`, `by`, `colour`, `order` and `label` each name a COLUMN of the read; the system reads the value out of the rows. There is nowhere in a spec to put a figure, a word, a heading, a colour or a size — a panel's heading names a column too. That is deliberate and it is what makes a shape you invented exactly as trustworthy as one I did: you choose what is shown and how it is arranged, never what it says. `colour` names the column whose VALUE picks the hue — a direction, or a shop whose colour is its identity.
 
 WHAT IT IS NOT. A figure, a colour, a size, a title, a layout. Every number on screen is drawn by the system from a row of the read an object names; you choose the row, never the value. To change what an object is ABOUT you must name the read it comes from as well, or it would claim to be about something its rows never carried. An edit carrying anything else is refused, and a refused edit did not happen — never describe the board as though it did.
 

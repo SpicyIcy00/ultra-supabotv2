@@ -49,6 +49,8 @@ from __future__ import annotations
 import re
 from typing import Any, Iterable, Mapping, Optional
 
+from agent import grammar
+
 MAX_SUBJECTS = 4
 
 
@@ -221,6 +223,38 @@ def validate(
                     raise Rejected("a change has to change something: a weight, or a read and subject")
                 keys_seen.add(key)
                 accepted.append(edit)
+                continue
+
+            # A COMPOSED SHAPE, when nothing named fits. The block carries a
+            # tree instead of a widget name, and agent/grammar.py holds it to
+            # the same guarantee by a stricter route: every mark names a read
+            # and a COLUMN, so a shape nobody listed in advance still cannot
+            # put a figure on screen that no tool returned.
+            if item.get("spec") is not None:
+                if kind is not None:
+                    raise Rejected(
+                        "a block carries a kind or a spec, never both — the "
+                        "named widgets are shorthand for shapes this grammar "
+                        "can also express"
+                    )
+                weight = item.get("weight", "supporting")
+                if weight not in weights:
+                    raise Rejected(f"weight {weight!r} is not one of {', '.join(weights)}")
+                if weight == "lead" and voc.get("one_lead") and lead_key is not None:
+                    raise Rejected(f"only one block leads, and {lead_key!r} already does")
+                try:
+                    spec = grammar.validate_spec(item["spec"], calls=calls, defs=defs)
+                except grammar.Rejected as why:
+                    raise Rejected(str(why)) from why
+                keys_seen.add(key)
+                if weight == "lead":
+                    lead_key = key
+                accepted.append({
+                    "op": op, "key": key, "weight": weight, "spec": spec,
+                    # Which reads it draws, so the loop charts them exactly as
+                    # it charts a widget's single read.
+                    "seqs": grammar.reads_in(spec),
+                })
                 continue
 
             if kind not in widgets:

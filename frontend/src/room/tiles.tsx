@@ -21,6 +21,7 @@ import {
 } from './data';
 import { directionRgb, hueFor, type Rgb } from './identity';
 import { ObjectPanel, kindOf } from './ObjectPanel';
+import { Spec } from './Spec';
 
 export interface TileActions {
   /** Bring it forward and give it the room. */
@@ -861,6 +862,32 @@ export function SystemTile(p: TileProps) {
           last {when.toLocaleString()}
         </p>
       )}
+      <Receipts meta={call?.result?.meta} />
+    </Shell>
+  );
+}
+
+/* -------------------------------------------------------------- composed
+ *
+ * A shape George composed rather than named. The tile is the ordinary shell —
+ * so it cools, sets aside and carries receipts exactly like every other
+ * object — and what is inside it is his tree (Spec.tsx).
+ *
+ * RECEIPTS COME FROM THE READS THE SHAPE NAMES. A composed object may rest on
+ * several, so it shows the first one's; each mark's own figures are resolved
+ * from its own read, and nothing here is shared across them.
+ */
+export function SpecTile(p: TileProps) {
+  if (!p.o.spec) return <Missing what="a shape" />;
+  const first = (p.o.seqs ?? [])[0];
+  const call = first === undefined ? null : (p.retuned ?? callOf(p.turn, first));
+  const lit = !p.earlier && p.o.weight !== 'quiet';
+
+  return (
+    <Shell quiet={!lit} hue={hueFor(null, null, kindOfRead(p.o.tool))}
+           landing={p.landing} delay={p.delay} picked={p.focused}
+           onOpen={() => p.on.open(p.o.key)}>
+      <Spec node={p.o.spec} turn={p.turn} retuned={{}} />
       <Receipts meta={call?.result?.meta} />
     </Shell>
   );

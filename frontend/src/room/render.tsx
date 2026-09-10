@@ -15,7 +15,7 @@ import type { AnswerTurn, Dimension } from './data';
 import type { ToolCall } from '../types/george';
 import {
   Caveats, ChartTile, ComparisonTile, ControlTile, DistributionTile, DraftTile,
-  RecommendationTile, StateTile, SubjectTile, SystemTile, TableTile, TextTile,
+  RecommendationTile, SpecTile, StateTile, SubjectTile, SystemTile, TableTile, TextTile,
   TimelineTile, type TileActions, type TileProps,
 } from './tiles';
 
@@ -88,6 +88,8 @@ export function Board(p: BoardProps) {
 
 function Piece(props: TileProps) {
   if (!props.turn) return null;
+  // A composed shape has no `kind` — it carries its own tree instead.
+  if (props.o.spec) return <SpecTile {...props} />;
   switch (props.o.kind) {
     case 'text': return <TextTile {...props} />;
     case 'hero': return <SubjectTile {...props} size="lead" />;
