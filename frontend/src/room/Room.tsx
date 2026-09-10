@@ -23,12 +23,6 @@ import { Rail } from './Rail';
 import type { TileActions } from './tiles';
 import './room.css';
 
-const OPENERS = [
-  'how are we doing?',
-  'what do I need to order from Seikyo?',
-  'what is out of stock longest?',
-];
-
 export default function Room() {
   const { threadId } = useParams();
   const navigate = useNavigate();
@@ -126,7 +120,7 @@ export default function Room() {
 
       <main className="r-main">
         {board.length === 0 ? (
-          <Opening loading={Boolean(threadId) && thread.loading} onAsk={(q) => ask(q, [])} />
+          <Opening loading={Boolean(threadId) && thread.loading} />
         ) : (
           <>
             {busy && latest && latest.toolCalls.length > 0 && (
@@ -209,17 +203,19 @@ export default function Room() {
  * openers below it are the shortest way into the three things he actually does
  * on a normal morning, not a menu.
  */
-function Opening({ loading, onAsk }: { loading: boolean; onAsk(q: string): void }) {
+function Opening({ loading }: { loading: boolean }) {
   if (loading) return <p className="r-label" style={{ paddingTop: '16vh' }}>Opening…</p>;
   return (
     <div style={{ paddingTop: '14vh', maxWidth: 640 }}>
       <p className="r-greeting">{greeting()}</p>
       <p className="r-greeting-sub">What are we looking at?</p>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 26 }}>
-        {OPENERS.map((q) => (
-          <button key={q} type="button" className="r-chip" onClick={() => onAsk(q)}>{q}</button>
-        ))}
-      </div>
+      {/*
+        NOTHING SUGGESTED HERE. Three example questions used to sit on this
+        screen — mine, not George's. Proposing what to ask is his job and he
+        has the whole business to draw on; a hardcoded list is me pretending to
+        be him, and it is exactly the habit this build keeps falling into.
+        Until he speaks first (the briefing), the door stays open and empty.
+      */}
     </div>
   );
 }

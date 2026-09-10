@@ -130,7 +130,7 @@
       rgba(var(--hue), calc(0.10 + var(--i) * 0.12)) 44%,
       transparent 78%);
 }
-.r-tile > * { position: relative; z-index: 1; }
+.r-tile > * { position: relative; z-index: 1; min-width: 0; }
 
 /*
  * A SOLID TILE — the reference, and the whole of what it was for.
