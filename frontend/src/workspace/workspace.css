@@ -181,6 +181,11 @@
 .ws-obj { position: relative; }
 .ws-obj-bar { display: flex; align-items: center; gap: 10px; height: 16px; margin-bottom: 4px; padding: 0 4px; }
 .ws-obj-age { font: 500 9.5px/1 var(--ws-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--ws-ink-3); }
+/* Evidence that has landed but has not been placed yet. George's colour,
+   because this is George working — and it is gone the moment he composes. */
+.ws-obj-landing { font: 500 9.5px/1 var(--ws-sans); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ws-george); animation: ws-pulse 1600ms var(--ws-ease) infinite; }
+@keyframes ws-pulse { 0%,100% { opacity: .55 } 50% { opacity: 1 } }
 /* ALWAYS THERE, QUIET UNTIL WANTED. They were hover-only for one commit,
    which on a phone — the layout CLAUDE.md calls the real one — meant they did
    not exist at all. Opacity, not display: a control you cannot see is still a

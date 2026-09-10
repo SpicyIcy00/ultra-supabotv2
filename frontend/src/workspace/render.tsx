@@ -38,6 +38,11 @@ export function Board(p: BoardProps) {
   const newest = p.answers.length - 1;
   const notices = p.answers[newest]?.notices ?? [];
   const textLeads = objects[0]?.kind === 'text';
+  // WHILE HE IS STILL READING, what has landed is evidence, not composition:
+  // George has not said where any of it goes yet. It is drawn as it arrives —
+  // that is the whole of "you can feel him working" — and marked as what it
+  // is, so nothing on screen claims to be a decision he has not made.
+  const settling = p.live && !p.answers[newest]?.composition;
 
   return (
     <div className="ws-grid" data-composition data-objects={objects.length}>
@@ -51,6 +56,7 @@ export function Board(p: BoardProps) {
           weight={o.weight}
           live={p.live && o.touched === newest}
           earlier={o.touched < newest}
+          landing={settling && o.turn === newest}
           focused={p.focused === o.key}
           onFocus={() => p.onFocus(o.key)}
           onClose={() => p.onClose(o.key)}

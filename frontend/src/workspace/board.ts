@@ -75,7 +75,12 @@ function carried(edit: Block): Partial<BoardObject> {
 function editsFor(turn: AnswerTurn, i: number): Block[] {
   const composed = turn.composition?.blocks;
   if (composed?.length) return composed;
-  const out: Block[] = [{ op: 'put', kind: 'text', key: `t${i}-reading`, weight: 'lead' }];
+  // NO OBJECT FOR A THOUGHT HE HAS NOT HAD YET. While a turn is still running
+  // there is no prose, and an empty text block leading the board was forty-five
+  // seconds of blank paper above the work.
+  const out: Block[] = turn.text
+    ? [{ op: 'put', kind: 'text', key: `t${i}-reading`, weight: 'lead' }]
+    : [];
   for (const c of turn.toolCalls) {
     if (!c.result || c.result.error || !c.result.rows?.length || c.duplicate_of !== undefined) continue;
     if (c.tool.startsWith('record_') || c.tool === 'compose') continue;

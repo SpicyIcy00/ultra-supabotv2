@@ -514,12 +514,13 @@ const NEEDS_ROOM = new Set(['table', 'chart', 'distribution', 'draft', 'comparis
  * and each object's own receipts carry its own read time — this says at a
  * glance which ones to check.
  */
-export function Wrap({ weight, kind, children, live, earlier, focused, onFocus, onClose }: {
+export function Wrap({ weight, kind, children, live, earlier, landing, focused, onFocus, onClose }: {
   weight: string;
   kind?: string;
   children: ReactNode;
   live?: boolean;
   earlier?: boolean;
+  landing?: boolean;
   focused?: boolean;
   onFocus?: () => void;
   onClose?: () => void;
@@ -531,7 +532,8 @@ export function Wrap({ weight, kind, children, live, earlier, focused, onFocus, 
   return (
     <div className={`ws-obj ws-w-${weight}${roomy ? ' ws-w-roomy' : ''} ${live ? 'ws-in' : ''}`}>
       <div className="ws-obj-bar">
-        {earlier && <span className="ws-obj-age">from earlier</span>}
+        {landing ? <span className="ws-obj-landing">just read</span>
+          : earlier ? <span className="ws-obj-age">from earlier</span> : null}
         <span style={{ flex: 1 }} />
         {onFocus && (
           <button type="button" className="ws-obj-btn" onClick={onFocus}>

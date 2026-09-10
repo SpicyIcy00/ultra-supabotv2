@@ -225,16 +225,31 @@ function Quiet({ loading }: { loading: boolean }) {
   );
 }
 
-/** What George is doing, in words, from the calls — never from his prose. */
+/**
+ * WHAT GEORGE IS DOING, IN WORDS, from the calls and never from his prose.
+ *
+ * Everything in it is derived from frames, so it may be read as fact — unlike
+ * the model's own account of itself. It names every read IN FLIGHT rather than
+ * the last one, because two reads running together looked like one, and it
+ * says what he is doing with them once they land: the objects that appear on
+ * the board are the rest of the answer to "is anything happening?".
+ */
+const READING: Record<string, string> = {
+  get_sales: 'reading sales', get_stock: 'counting stock', get_stock_history: 'reading stock over time',
+  get_replenishment: 'reading the replenishment plan', get_purchase_plan: 'drafting the order',
+  get_purchasing: 'reading purchase orders', get_movement: 'reading transfers', get_product: 'looking up a product',
+  get_vending: 'reading vending', get_vending_stock: 'reading vending stock', get_dead_stock: 'finding dead stock',
+  get_cost_history: 'reading costs', get_brief: 'reading the morning brief', view_page: 'reading the page',
+};
+
 function describe(turn: AnswerTurn): string {
-  const names: Record<string, string> = {
-    get_sales: 'reading sales', get_stock: 'counting stock', get_stock_history: 'reading stock over time',
-    get_replenishment: 'reading the replenishment plan', get_purchase_plan: 'drafting the order',
-    get_purchasing: 'reading purchase orders', get_movement: 'reading transfers', get_product: 'looking up a product',
-    get_vending: 'reading vending', get_vending_stock: 'reading vending stock', get_dead_stock: 'finding dead stock',
-    get_cost_history: 'reading costs', get_brief: 'reading the morning brief',
-  };
-  const pending = turn.toolCalls.filter((c) => !c.result && names[c.tool]);
-  const last = pending[pending.length - 1] ?? turn.toolCalls[turn.toolCalls.length - 1];
-  return last ? `${names[last.tool] ?? 'working'}…` : 'working…';
+  const inFlight = turn.toolCalls.filter((c) => !c.result && READING[c.tool]);
+  if (inFlight.length) {
+    const words = [...new Set(inFlight.map((c) => READING[c.tool]))];
+    return `${words.join(', ')}…`;
+  }
+  // Everything is back and he is deciding what it means and where it goes.
+  const landed = turn.toolCalls.filter((c) => c.result && !c.result.error && READING[c.tool]).length;
+  if (landed) return turn.text ? 'writing…' : 'working out what this means…';
+  return 'thinking…';
 }

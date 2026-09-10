@@ -363,3 +363,34 @@ describe('what the board tells George', () => {
     expect(left.map((o) => o.key)).toEqual(['rockwell']);
   });
 });
+
+// --------------------------------------------------------------- visible work
+
+describe('while George is still reading', () => {
+  it('lands the evidence on the board as it arrives, marked as evidence', () => {
+    const live = turn(null, { text: '' });          // no composition yet, nothing said yet
+    const { container } = render(
+      <Board answers={[live]} board={buildBoard([live])} local={{}} focused={null} selection={[]}
+        live onSelect={() => {}} onFocus={() => {}} onClose={() => {}} onLocal={() => {}} />,
+    );
+    expect(container.querySelectorAll('[data-widget="table"]').length).toBeGreaterThan(0);
+    expect([...container.querySelectorAll('.ws-obj-landing')].map((e) => e.textContent))
+      .toContain('just read');
+  });
+
+  it('puts no empty thought at the top of the board', () => {
+    const live = turn(null, { text: '' });
+    expect(buildBoard([live]).some((o) => o.kind === 'text')).toBe(false);
+    const done = turn(null, { text: 'Rockwell is the one to look at.' });
+    expect(buildBoard([done]).some((o) => o.kind === 'text')).toBe(true);
+  });
+
+  it('stops calling it evidence the moment he composes', () => {
+    const composed = turn([{ op: 'put', kind: 'hero', key: 'r', weight: 'lead', seq: 1, subject: 'Rockwell' }]);
+    const { container } = render(
+      <Board answers={[composed]} board={buildBoard([composed])} local={{}} focused={null} selection={[]}
+        live onSelect={() => {}} onFocus={() => {}} onClose={() => {}} onLocal={() => {}} />,
+    );
+    expect(container.querySelector('.ws-obj-landing')).toBeNull();
+  });
+});
