@@ -894,6 +894,85 @@ async def open_object(
     )
 
 
+# ---------------------------------------------------------------------------
+# What George noticed
+#
+# A watch writes an org post and says nothing else. Until this read existed the
+# post went into the river and the ROOM never showed it, so a watch could fire
+# correctly and still be invisible to the person it fired for — which is the
+# same as not having fired.
+#
+# NOT "NEEDS YOU". The accent colour and that phrase belong to the approval
+# queue and to nothing else (UI rule 5): an approval is a thing somebody must
+# act on, and a watch is a thing that happened. Conflating them would spend the
+# one colour reserved for a summons on a fact.
+#
+# BOUNDED BY TIME, NOT BY A SEEN FLAG. A "seen" mark is a write per person per
+# post, and the first version of this does not need one: a watch speaks rarely,
+# so the last few days of them is a short list, and dismissing one is a
+# per-viewer convenience the client keeps for the session.
+# ---------------------------------------------------------------------------
+
+NOTICED_DAYS = 7
+NOTICED_LIMIT = 5
+
+
+class NoticedItem(BaseModel):
+    """One thing a watch reported, with the thread a reply belongs in."""
+
+    post_id: str
+    thread_id: str
+    body: str
+    created_at: datetime
+    #: The watch that produced it, so a client can group or mute by watch.
+    watch_id: Optional[str] = None
+    #: True when the read behind it travelled with the post, which is what
+    #: makes "look into it" re-run a fact rather than work from the sentence.
+    has_calls: bool = False
+
+
+@router.get("/noticed", response_model=List[NoticedItem])
+async def read_noticed(
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_george_user),
+) -> List[NoticedItem]:
+    """
+    The things George noticed lately, newest first.
+
+    Only `watch` posts. A brief, a workflow run and an approval are also things
+    George initiated, and each already has its own home — putting them here
+    would make this the river with a different name.
+
+    An empty list is a real answer and the client must render it as one: a
+    quiet week is what a watch is FOR, and "nothing to report" is different
+    from "not loaded yet" (UI rule 8).
+    """
+    rows = (
+        await db.execute(
+            text(
+                f"SELECT {_POST_COLUMNS} FROM george.posts p "
+                f"WHERE {_POST_VISIBLE} AND p.kind = 'watch' "
+                f"  AND p.created_at > now() - make_interval(days => :days) "
+                f"ORDER BY p.created_at DESC LIMIT :limit"
+            ),
+            {"me": user.username, "days": NOTICED_DAYS, "limit": NOTICED_LIMIT},
+        )
+    ).mappings().all()
+
+    items: List[NoticedItem] = []
+    for row in rows:
+        payload = row["payload"] or {}
+        items.append(NoticedItem(
+            post_id=str(row["id"]),
+            thread_id=str(row["thread_id"]),
+            body=row["body"] or "",
+            created_at=row["created_at"],
+            watch_id=payload.get("watch_id"),
+            has_calls=bool(payload.get("calls")),
+        ))
+    return items
+
+
 @router.get("/status", response_model=StatusBand)
 async def status_band(
     db: AsyncSession = Depends(get_db),
@@ -1003,7 +1082,11 @@ async def read_river(
             raise HTTPException(
                 status_code=422, detail="before must be an ISO timestamp."
             ) from exc
-        cursor = " AND p.created_at < :before"
+        # APPENDED, NEVER ASSIGNED. This used to overwrite the stream filter,
+        # so the first page of `attention` was George's posts and the second
+        # page was everything — the filter silently stopped applying exactly
+        # when somebody scrolled far enough to care.
+        cursor += " AND p.created_at < :before"
 
     rows = (
         await db.execute(

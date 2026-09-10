@@ -456,3 +456,69 @@ def test_every_service_that_claims_a_slot_is_allowed_to():
             f"{service.__name__} claims slots in {service.TABLE}, which "
             f"slots.claim refuses"
         )
+
+
+# ---------------------------------------------------------------------------
+# A watch that fires must be visible to the person it fired for
+# ---------------------------------------------------------------------------
+
+def test_what_george_noticed_is_only_watch_posts():
+    """
+    A brief, a workflow run and an approval are also things George initiated,
+    and each already has its own home. Putting them here would make this the
+    river under a different name — and would bury the one kind that has
+    nowhere else to appear.
+    """
+    from app.api.v1.routes import george as route
+
+    source = inspect.getsource(route.read_noticed)
+    assert "p.kind = 'watch'" in source
+    assert "NOTICED_LIMIT" in source or ":limit" in source
+
+
+def test_what_george_noticed_is_never_the_approvals_colour():
+    """
+    UI rule 5: the accent belongs to the approval queue and nothing else. An
+    approval is something you must act on; a watch is something that happened.
+    Spending the summons colour on a fact destroys the summons.
+    """
+    import re
+    from pathlib import Path
+
+    panel = (Path(__file__).resolve().parents[1]
+             / "frontend" / "src" / "room" / "Noticed.tsx").read_text(encoding="utf-8")
+    # The COMMENTS explain the rule and quote the phrase; the code is what is
+    # bound by it. Scanning the whole file failed on its own explanation, the
+    # same way the objects test failed on a comment mentioning connect().
+    code = re.sub(r"/\*.*?\*/", "", panel, flags=re.S)
+    code = re.sub(r"//.*", "", code)
+    assert "needs you" not in code.lower()
+    assert "--accent" not in code
+
+
+def test_look_into_it_is_only_offered_when_the_read_travelled():
+    """
+    The post carries the call that fired it, and that is what makes a reply
+    re-run a fact. Offering the action for a post with no calls would promise
+    to re-run something that was never stored.
+    """
+    from pathlib import Path
+
+    panel = (Path(__file__).resolve().parents[1]
+             / "frontend" / "src" / "room" / "Noticed.tsx").read_text(encoding="utf-8")
+    assert "item.has_calls &&" in panel
+
+
+def test_paging_the_river_keeps_the_stream_filter():
+    """
+    THE BUG THIS FOUND. `cursor` was ASSIGNED when a `before` cursor was
+    present, discarding the stream clause built a line earlier — so the first
+    page of `attention` was George's own posts and the second page was
+    everything. The filter stopped applying exactly when somebody scrolled far
+    enough to care.
+    """
+    from app.api.v1.routes import george as route
+
+    source = inspect.getsource(route.read_river)
+    assert 'cursor += " AND p.created_at < :before"' in source
+    assert 'cursor = " AND p.created_at < :before"' not in source

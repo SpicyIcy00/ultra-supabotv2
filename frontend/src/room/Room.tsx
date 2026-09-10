@@ -11,7 +11,7 @@
  * though he had decided it. Only a new FACT costs a turn.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useGeorge } from '../hooks/useGeorge';
 import { useThread } from '../hooks/useThread';
 import { threadHistory } from '../components/george/threadHistory';
@@ -19,6 +19,7 @@ import { restoreFromPosts } from '../workspace/composition';
 import { boardContext, buildBoard, type Local } from './board';
 import type { AnswerTurn, Dimension } from './data';
 import { Board } from './render';
+import { Noticed } from './Noticed';
 import { Rail } from './Rail';
 import { dismissStanding, useStandingOpening } from './useStandingOpening';
 import type { TileActions } from './tiles';
@@ -27,6 +28,8 @@ import './room.css';
 export default function Room() {
   const { threadId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const asked = useRef<string | null>(null);
   const george = useGeorge();
   const thread = useThread(threadId ?? '');
 
@@ -60,6 +63,19 @@ export default function Room() {
   useEffect(() => {
     if (opening) navigate(`/w/${opening.thread_id}`, { replace: true });
   }, [opening, navigate]);
+
+  // LOOKING INTO SOMETHING GEORGE NOTICED. The watch post carries the read
+  // that fired it, so this is an ordinary reply in its thread — George re-runs
+  // that call and climbs from a fact. The question rides in router state so it
+  // survives the navigation, and `asked` makes sure it happens once.
+  const pending = (location.state as { ask?: string } | null)?.ask;
+  useEffect(() => {
+    if (!pending || !threadId || !thread.ready) return;
+    if (asked.current === threadId) return;
+    asked.current = threadId;
+    navigate(location.pathname, { replace: true, state: null });
+    void george.ask(pending);
+  }, [pending, threadId, thread.ready, george, navigate, location.pathname]);
 
   const answers = useMemo(
     () => george.turns.filter((t): t is AnswerTurn => t.role === 'george'),
@@ -134,6 +150,12 @@ export default function Room() {
       <Rail busy={busy} onNew={clear} />
 
       <main className="r-main">
+        {/* Above the board, always — what happened while you were away comes
+            before this morning's figures, the same way a caveat does. */}
+        <Noticed onLookInto={(item) => navigate(`/w/${item.thread_id}`, {
+          state: { ask: 'what happened here? look into it.' },
+        })} />
+
         {board.length === 0 ? (
           <Opening loading={Boolean(threadId) && thread.loading} />
         ) : (
