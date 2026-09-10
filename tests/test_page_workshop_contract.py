@@ -167,7 +167,14 @@ def test_the_read_prefix_holds_by_construction_whatever_the_names():
     )
     injected = [s["name"] for s in both[len(read):]]
     assert injected == sorted(injected)
-    assert injected[0] == "create_page" and injected[-1] == composite_tools.PAGE_CONTEXT_TOOL
+    # The property is that the injected names are SORTED and disjoint from the
+    # reads, so a session with one capability shares a byte-identical prefix
+    # with a session that has another. Which name happens to sort last was
+    # incidental, and stopped being view_page when George gained the two reads
+    # that let him see his own views and his own rules (2026-09-11).
+    assert injected[0] == "create_page"
+    assert composite_tools.PAGE_CONTEXT_TOOL in injected
+    assert set(injected) >= set(composite_tools.COMPOSITE_TOOL_FUNCTIONS)
 
 
 def test_a_page_can_never_hold_a_page_read_or_a_write():

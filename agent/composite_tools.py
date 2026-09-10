@@ -634,15 +634,94 @@ async def view_page(
     return {"rows": rows, "meta": meta}
 
 
+# BOTH NAMES SORT BEFORE "view_page", AND THAT IS LOAD-BEARING. The schema
+# builder emits injected tools in sorted order, and view_page is CONDITIONAL —
+# it is only in the list when the caller asked from a page. These two are
+# always injected. If either sorted after view_page, a session with a page and
+# a session without would stop sharing a prefix, and every page-scoped question
+# would miss the cache. view_page was itself named to sort last for this exact
+# reason; these keep that true. Renaming one to anything after "p" breaks it,
+# and test_page_context_contract will say so.
+MEMORY_TOOL = "view_memory"
+AUTOMATIONS_TOOL = "view_automations"
+
+
+class SelfReadUnavailable(RuntimeError):
+    """Raised when the capability was not injected — not signed in."""
+
+
+async def view_memory(*, ctx: WriteContext) -> dict:
+    """
+    Read what you currently believe about the business, as rows you can put on
+    the board. These are the same views you are handed before the turn starts —
+    reading them here is what lets one become an OBJECT rather than only
+    something you can mention, because composing an object needs a read behind
+    it. A view marked unconfirmed has not been checked against data that has
+    landed since; re-read before leaning on it, and say that you did. A stored
+    view never carries a figure, so nothing here can be quoted as a number.
+
+    Returns:
+        {"rows": [...], "meta": {...}}. One row per view that still stands, with
+        its subject, its stance, what you think, when you first held it and when
+        you last confirmed it. meta says how many you hold and how many have
+        gone unconfirmed since data landed.
+    """
+    if ctx.memory_reader is None:
+        raise SelfReadUnavailable(
+            "Your own views are not readable in this session. Tell the user you "
+            "cannot see what you previously thought."
+        )
+    return await ctx.memory_reader()
+
+
+async def view_automations(*, ctx: WriteContext) -> dict:
+    """
+    Read what the saved rules have been doing: what ran on its own in the last
+    week, what is scheduled, and what has been backtested and is waiting on a
+    person to promote it. Use it to say what is running without you and what
+    needs somebody — never to claim a rule ran that this does not show.
+
+    Returns:
+        {"rows": [...], "meta": {...}}. One row per run, per version waiting and
+        per schedule, each saying which of the three it is in `state`. meta
+        counts them and notes that a switched-off schedule fires nothing.
+    """
+    if ctx.automations_reader is None:
+        raise SelfReadUnavailable(
+            "The saved rules are not readable in this session. Tell the user you "
+            "cannot see what has been running."
+        )
+    return await ctx.automations_reader()
+
+
 # The composite surface, by name. Merged into the model's schema only when its
 # capability has been injected, and NEVER into agent.loop.TOOL_FUNCTIONS — see
 # the module docstring for why that separation is the whole point.
 COMPOSITE_TOOL_FUNCTIONS = {
     "run_workflow": run_workflow,
     PAGE_CONTEXT_TOOL: view_page,
+    MEMORY_TOOL: view_memory,
+    AUTOMATIONS_TOOL: view_automations,
 }
+
+# COMPOSITES THAT ARE STILL READS, and may therefore be COMPOSED.
+#
+# `compose` refuses an object over anything that is not a read, which is right:
+# a widget over a write draws nothing. But it decided "is a read" by excluding
+# every composite, and that swept up the two self-reads — so George called
+# view_automations, tried to put what is running on the board, and was refused
+# for using the very tool that exists to let him.
+#
+# view_page stays out, deliberately and for its own reason: its rows are
+# several REPLAYED PINS, each with its own receipts, and CLAUDE.md records that
+# a page read is evidence rather than a figure — the loop never charts it and
+# never makes it the answer's receipts. These two return one ordinary
+# {rows, meta} with one source_table, exactly as a read tool does.
+COMPOSABLE_READS = frozenset({MEMORY_TOOL, AUTOMATIONS_TOOL})
 
 COMPOSITE_TOOL_REQUIRES = {
     "run_workflow": "workflow_runner",
     PAGE_CONTEXT_TOOL: "page_reader",
+    MEMORY_TOOL: "memory_reader",
+    AUTOMATIONS_TOOL: "automations_reader",
 }

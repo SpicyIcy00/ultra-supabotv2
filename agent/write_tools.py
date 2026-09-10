@@ -210,6 +210,18 @@ class PageReader(Protocol):
     async def __call__(self, pins: Optional[list[str]], figures: bool) -> dict: ...
 
 
+class MemoryReader(Protocol):
+    """Reads what George currently believes. Bound to the caller in the web process."""
+
+    async def __call__(self) -> dict: ...
+
+
+class AutomationsReader(Protocol):
+    """Reads what the saved rules have been doing. Bound to the caller likewise."""
+
+    async def __call__(self) -> dict: ...
+
+
 class BeliefStore(Protocol):
     """
     Where George's understanding is kept. Implemented in the web process, bound
@@ -309,6 +321,18 @@ class WriteContext:
     # part of the question, because it shapes the whole turn rather than being
     # fetched during one.
     belief_store: Optional[BeliefStore] = None
+    # The two things that are most his and that he cannot otherwise see: his
+    # own held views, and what the systems he built have been doing. Both live
+    # in the `george` schema, which george_ro has no access to. Reads, injected
+    # exactly like the page reader — bound to the authenticated user here, so
+    # neither tool has an argument for whose memory or whose systems.
+    #
+    # He is already GIVEN his beliefs as text before a turn starts, which is
+    # enough to reason with. It is not enough to put one on the board: an
+    # object needs a read with a seq behind it, and there was no read. That gap
+    # is why a briefing composer once got hand-written in Python.
+    memory_reader: Optional[MemoryReader] = None
+    automations_reader: Optional[AutomationsReader] = None
 
 
 def call_key(tool: str, arguments: Any) -> str:

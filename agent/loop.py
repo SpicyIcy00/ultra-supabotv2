@@ -1935,6 +1935,8 @@ async def run(
     beliefs: Optional[str] = None,
     parent_id: Optional[str] = None,
     page_reader: Optional[write_tools.PageReader] = None,
+    memory_reader: Optional[write_tools.MemoryReader] = None,
+    automations_reader: Optional[write_tools.AutomationsReader] = None,
     page_scope: Optional[dict] = None,
     page_writer: Optional[write_tools.PageWriter] = None,
     belief_store: Optional[write_tools.BeliefStore] = None,
@@ -2030,6 +2032,8 @@ async def run(
         page_reader=page_reader,
         page_writer=page_writer,
         belief_store=belief_store,
+        memory_reader=memory_reader,
+        automations_reader=automations_reader,
     )
     # Per capability, not per session: a caller with a pin writer and no
     # workflow writer gets pin_answer and not save_workflow.
@@ -2707,9 +2711,15 @@ async def run(
                     # The rows, so a composition's subject can be checked
                     # against what the read actually carried (agent/compose.py).
                     "rows": (result.get("rows") if isinstance(result, dict) else None) or [],
-                    "is_read": (b.name in TOOL_FUNCTIONS
-                                and b.name not in write_tools.WRITE_TOOL_FUNCTIONS
-                                and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS),
+                    # A read is something an object may be composed over. The
+                    # self-reads are composites by injection but reads by
+                    # shape — see composite_tools.COMPOSABLE_READS.
+                    "is_read": (
+                        b.name in composite_tools.COMPOSABLE_READS
+                        or (b.name in TOOL_FUNCTIONS
+                            and b.name not in write_tools.WRITE_TOOL_FUNCTIONS
+                            and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS)
+                    ),
                 }
 
             # Labels last: a statement about calls that already happened, which

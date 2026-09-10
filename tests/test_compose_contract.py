@@ -359,3 +359,52 @@ def test_the_loop_puts_the_board_line_on_the_question():
              if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
              and n.func.attr == "board_sentence"]
     assert calls, "run() never builds the board line"
+
+
+# ---------------------------------------------------------------------------
+# THE SELF-READS (2026-09-11). George gained two reads for the things he could
+# not otherwise see: what he believes, and what the saved rules have been
+# doing. Both are COMPOSITES because they need injection — and `compose`
+# decided "is a read" by excluding every composite, so the first time he used
+# one he was refused for putting it on the board. Which is the only reason the
+# tools exist.
+# ---------------------------------------------------------------------------
+
+def test_a_self_read_may_be_composed(defs):
+    from agent import composite_tools
+    calls = {
+        1: {"tool": "view_memory", "arguments": {}, "error": None,
+            "duplicate": False, "is_read": True,
+            "rows": [{"subject": "AJI BARN", "stance": "needs_attention"}]},
+        2: {"tool": "view_automations", "arguments": {}, "error": None,
+            "duplicate": False, "is_read": True,
+            "rows": [{"what": "weekly order", "state": "waiting on you"}]},
+    }
+    accepted, rejected = compose.validate(
+        {"blocks": [
+            {"kind": "table", "key": "what-i-think", "seq": 1},
+            {"kind": "table", "key": "running", "seq": 2},
+        ]}, calls, defs)
+    assert rejected == []
+    assert [b["tool"] for b in accepted] == ["view_memory", "view_automations"]
+    assert set(composite_tools.COMPOSABLE_READS) == {"view_memory", "view_automations"}
+
+
+def test_a_page_read_is_still_not_composable():
+    """
+    Its rows are several replayed pins, each with its own receipts. CLAUDE.md
+    records that a page read is evidence rather than a figure, and the loop
+    never charts it — so an object drawn over it would have no single source.
+    """
+    from agent import composite_tools
+    assert composite_tools.PAGE_CONTEXT_TOOL not in composite_tools.COMPOSABLE_READS
+
+
+def test_the_loop_agrees_with_the_declaration():
+    """A read the loop marks unreadable is a tool George cannot compose over."""
+    import ast
+    import inspect
+    from agent import loop as george_loop
+    src = inspect.getsource(george_loop.run)
+    assert "COMPOSABLE_READS" in src, "the loop no longer honours the declaration"
+    ast.parse(src)

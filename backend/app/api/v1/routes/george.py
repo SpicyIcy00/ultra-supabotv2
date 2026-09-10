@@ -68,6 +68,7 @@ from app.models.app_user import AppUser
 from app.services.chat_history import build_turns, question_of, title_of
 from app.services.george_greeting import build_greeting
 from app.services import belief_store as beliefs_service
+from app.services import self_reader
 from app.services.george_recall import as_block, recent_figures
 from app.services.river import (
     DEFAULT_LIMIT as RIVER_LIMIT,
@@ -1343,6 +1344,51 @@ def _workflow_runner(username: str, role: str):
     return run
 
 
+def _memory_reader(username: str):
+    """
+    George's route to reading HIS OWN VIEWS.
+
+    He is already handed them as text before the turn starts, which is enough
+    to reason with. It is not enough to put one on the board: composing an
+    object needs a read with a seq behind it. Injected exactly like the page
+    reader — its own session, commits nothing, and the caller is captured here
+    so the tool has no argument for whose memory.
+    """
+
+    async def read() -> dict:
+        async with AsyncSessionLocal() as session:
+            try:
+                return await self_reader.read_memory(session, username=username)
+            except SQLAlchemyError as exc:
+                raise RuntimeError(
+                    f"Your views could not be read: {type(exc).__name__}. Tell the "
+                    f"user you cannot see what you previously thought."
+                ) from exc
+
+    return read
+
+
+def _automations_reader(username: str):
+    """
+    George's route to reading WHAT THE SAVED RULES HAVE BEEN DOING — what ran
+    on its own, what is scheduled, what is waiting on a person. Same pattern,
+    same reasons: the workflow tables are in the george schema, which george_ro
+    cannot see at all.
+    """
+
+    async def read() -> dict:
+        async with AsyncSessionLocal() as session:
+            try:
+                return await self_reader.read_automations(session, username=username)
+            except SQLAlchemyError as exc:
+                raise RuntimeError(
+                    f"The saved rules could not be read: {type(exc).__name__}. Tell "
+                    f"the user you cannot see what has been running."
+                ) from exc
+
+    return read
+
+
 def _page_reader(username: str, page_id: Optional[uuid.UUID]) -> PageReader:
     """
     George's route to READING the page the caller is on.
@@ -1587,6 +1633,8 @@ async def _safe_stream(question: str, user_id: Optional[str],
                        page_scope: Optional[dict] = None,
                        page_writer: Optional[PageWriter] = None,
                        page_references: Optional[list[dict]] = None,
+                       memory_reader=None,
+                       automations_reader=None,
                        desk: Optional[dict] = None) -> AsyncIterator[str]:
     """
     Wrap the loop so a crash still closes the stream cleanly.
@@ -1613,6 +1661,8 @@ async def _safe_stream(question: str, user_id: Optional[str],
             page_scope=page_scope,
             page_writer=page_writer,
             page_references=page_references,
+            memory_reader=memory_reader,
+            automations_reader=automations_reader,
             desk=desk,
         ):
             yield frame
@@ -1727,6 +1777,11 @@ async def ask(
             page_reader=page_reader,
             page_scope=page_scope,
             page_references=page_references,
+            # Always: the two things that are his and that he cannot otherwise
+            # see. Every signed-in caller gets both — they read nothing but
+            # George's own record.
+            memory_reader=_memory_reader(user.username),
+            automations_reader=_automations_reader(user.username),
             # The desk, bounded by the model above; an empty one is nothing.
             desk=request.desk.model_dump(exclude_none=True) if request.desk else None,
             # Always: every signed-in caller may build and edit their own
