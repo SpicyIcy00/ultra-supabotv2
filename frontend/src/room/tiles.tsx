@@ -55,10 +55,12 @@ export interface TileProps {
  * `change` only sets how brightly that hue burns. The two never trade places,
  * which is what lets a shop keep its colour through a bad week.
  */
-function Shell({ hue, change, quiet, george, landing, delay, picked, children, onOpen }: {
+function Shell({ hue, change, quiet, solid, george, landing, delay, picked, children, onOpen }: {
   hue?: Rgb;
   change?: Change | null;
   quiet?: boolean;
+  /** A name and a figure: fully coloured, the way the reference tiles are. */
+  solid?: boolean;
   george?: boolean;
   landing: boolean;
   delay: number;
@@ -69,8 +71,9 @@ function Shell({ hue, change, quiet, george, landing, delay, picked, children, o
   const i = change ? intensity(change) : 0;
   const cls = [
     'r-tile',
+    solid ? 'r-tile--solid' : '',
     george ? 'r-tile--george' : '',
-    quiet ? 'r-tile--quiet' : '',
+    quiet && !solid ? 'r-tile--quiet' : '',
     picked ? 'r-tile--picked' : '',
     landing ? 'r-landing' : '',
   ].filter(Boolean).join(' ');
@@ -182,9 +185,9 @@ export function SubjectTile(p: TileProps & { size?: 'lead' | 'normal' | 'small' 
   const figure = size === 'lead' ? 46 : size === 'small' ? 24 : 32;
 
   return (
-    <Shell hue={hueFor(label, dimension, p.o.kind)} change={change}
+    <Shell hue={hueFor(label, dimension, p.o.kind)} change={change} solid
            landing={p.landing} delay={p.delay} picked={p.focused || p.selected}
-           quiet={size === 'small'} onOpen={() => p.on.open(p.o.key)}>
+           onOpen={() => p.on.open(p.o.key)}>
       <p className="r-label">{label}{p.earlier ? ' · from earlier' : ''}</p>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
         <span className="r-num" style={{ '--size': `${figure}px` } as CSSProperties}>
@@ -193,7 +196,7 @@ export function SubjectTile(p: TileProps & { size?: 'lead' | 'normal' | 'small' 
         <Delta change={change} />
       </div>
       {v && <p className="r-label" style={{ marginTop: 9 }}>{measureOf(call?.result?.meta, v.key)}</p>}
-      {size !== 'small' && <Acts subject={label} dimension={dimension} o={p.o} on={p.on} />}
+      <Acts subject={label} dimension={dimension} o={p.o} on={p.on} />
       <Receipts meta={call?.result?.meta} />
     </Shell>
   );
@@ -219,7 +222,7 @@ export function ComparisonTile(p: TileProps) {
           const v = row ? valueOf(row) : null;
           const dimension = dimensionOf(rows, s);
           return (
-            <Shell key={s} hue={hueFor(s, dimension, 'subject')} change={change}
+            <Shell key={s} hue={hueFor(s, dimension, 'subject')} change={change} solid
                    landing={p.landing} delay={p.delay + n * 90}
                    picked={p.selection?.includes(s)}
                    onOpen={() => p.on.pick(s, dimension)}>
@@ -555,7 +558,7 @@ export function StateTile(p: TileProps) {
   }) | undefined;
   const label = p.o.label ?? 'pending';
   return (
-    <Shell quiet hue={hueFor(null, null, 'order')} landing={p.landing} delay={p.delay}>
+    <Shell solid hue={hueFor(null, null, 'order')} landing={p.landing} delay={p.delay}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <p className="r-label">{label}</p>
         <span className="r-delta r-delta--none">{label}</span>

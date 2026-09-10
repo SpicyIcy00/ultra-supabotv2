@@ -21,17 +21,21 @@
 /* ---------------------------------------------------------------- tokens */
 
 .room {
-  /* Paper. Not pure white — a flat #FFF ground gives a white card nothing to
-     sit on, and the wash off each tile has nowhere to fall. */
-  --ground: #F4F6F9;
-  --card: #FFFFFF;
-  --sunk: #EDF0F4;
-  --edge: rgba(17, 24, 39, 0.09);
-  --edge-strong: rgba(17, 24, 39, 0.18);
+  /* Cream, warm, and deliberately not white. A cool grey ground made the
+     coloured tiles look like stickers on an office wall; on cream they read
+     as objects made of something. */
+  --ground: #EFEAE1;
+  --card: #FBF8F3;          /* warm paper — for things you READ */
+  --sunk: #E7E1D6;
+  --edge: rgba(28, 25, 23, 0.10);
+  --edge-strong: rgba(28, 25, 23, 0.20);
 
-  --ink: #111827;
-  --ink-2: #4B5563;
-  --ink-3: #8A93A3;
+  --ink: #1C1917;
+  --ink-2: #57534E;
+  --ink-3: #8C837A;
+  /* On a fully coloured tile. Never pure white — it glares against a hue. */
+  --on-colour: #FFFDF9;
+  --on-colour-2: rgba(255, 253, 249, 0.78);
 
   /* Set per tile from identity.ts. Neutral until something says otherwise. */
   --hue: 124, 133, 150;
@@ -127,6 +131,55 @@
       transparent 78%);
 }
 .r-tile > * { position: relative; z-index: 1; }
+
+/*
+ * A SOLID TILE — the reference, and the whole of what it was for.
+ *
+ * The tiles in the peg are LABELS: a word on a field of colour, nothing else
+ * on them. That is why they can be fully saturated and still look good. An
+ * earlier pass took that gesture and applied it to cards carrying seven rows
+ * of figures, which forced the colour down to a wash in one corner until it
+ * meant nothing.
+ *
+ * So the board has two classes of object and they are different on purpose:
+ *   SOLID — a shop, a product, a supplier. A name, a figure, a delta. Scanned.
+ *   PAPER — a table, a chart, a draft. Dense figures. Read.
+ * The coloured ones are how you find something; the quiet ones are how you
+ * study it. Putting a table on a saturated gradient serves neither.
+ */
+.r-tile--solid {
+  border: 0;
+  color: var(--on-colour);
+  background:
+    radial-gradient(120% 96% at 20% 6%, rgba(255, 255, 255, 0.30), transparent 62%),
+    radial-gradient(90% 80% at 88% 96%, rgba(255, 255, 255, 0.12), transparent 58%),
+    linear-gradient(158deg,
+      rgba(var(--hue), 0.96) 0%,
+      rgba(var(--hue), 0.80) 52%,
+      rgba(var(--hue), 0.92) 100%);
+  /* Magnitude lives in the halo, not the fill: a tile has to stay the same
+     colour through a good week and a bad one, or the hue stops being an
+     identity. */
+  box-shadow:
+    0 2px 4px rgba(28, 25, 23, 0.06),
+    0 calc(14px + var(--i) * 20px) calc(30px + var(--i) * 40px) calc(-18px + var(--i) * 4px)
+      rgba(var(--hue), calc(0.32 + var(--i) * 0.40));
+}
+.r-tile--solid::before { display: none; }
+.r-tile--solid .r-label { color: var(--on-colour-2); }
+.r-tile--solid .r-num { color: var(--on-colour); }
+.r-tile--solid .r-src { color: rgba(255, 253, 249, 0.62); }
+.r-tile--solid .r-act { color: rgba(255, 253, 249, 0.72); }
+.r-tile--solid .r-act:hover, .r-tile--solid .r-act:focus-visible { color: var(--on-colour); }
+.r-tile--solid .r-say { color: var(--on-colour); }
+/* On colour, the delta pill goes to glass rather than to its own hue — a red
+   pill on a red tile disappears, and a green one on Greenhills lies. */
+.r-tile--solid .r-delta {
+  background: rgba(255, 255, 255, 0.22);
+  color: var(--on-colour);
+}
+.r-tile--solid .r-delta--none { background: rgba(255, 255, 255, 0.14); color: var(--on-colour-2); }
+.r-tile--solid[data-open]:hover { filter: brightness(1.05); }
 
 /* Long bodies scroll inside rather than making the tile define the page. */
 .r-scroll { overflow-y: auto; min-height: 0; }
