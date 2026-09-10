@@ -128,39 +128,42 @@ if str(BACKEND) not in sys.path:
     sys.path.insert(0, str(BACKEND))
 
 
+# Four modules that are pure without saying so in their name. Everything else
+# pure is a *_contract.py, which the rule below covers by construction.
+PURE_BY_NAME = (
+    "test_brief_render",
+    "test_notice_fingerprints",
+    "test_storehub_parser",
+    "test_undefined_names",
+)
+
+
 def _needs_database(item) -> bool:
     """
     Whether a test needs George's read-only role.
 
-    The StoreHub tests are pure — the parser is bytes in, documents out, and the
-    importer tests check statement construction and the parser/model contract
-    without connecting. They must NOT be swept up in the database skip below.
-    Skipping a test that could have run is the same failure as running one that
-    cannot: either way the result does not mean what it says.
+    THE RULE IS THE FILE'S NAME, and it used to be a list. Every `*_contract.py`
+    is pure — that is what the suffix means in this repo, and `*_live.py` is
+    what a database-backed test is called. The list was an allowlist of pure
+    modules, so a new contract file was database-backed until somebody
+    remembered to add it, and "somebody remembered" failed twice: every
+    test in test_compose_contract.py was skipped from the day it was written,
+    and test_standing_contract.py was skipped on its first run.
+
+    A SKIPPED TEST THAT COULD HAVE RUN IS THE SAME FAILURE AS ONE THAT CANNOT.
+    Either way the result does not mean what it says — and this direction is
+    the worse of the two, because it reports success. The whole-suite guard in
+    ops/verify_integration.py only catches a run where EVERY test skipped, so
+    one silently skipped module passes CI looking green.
+
+    A contract test that genuinely needs a database has been named wrong: call
+    it `*_live.py`, where the live suites will run it against a verified
+    target.
     """
-    pure = ("test_deployment_contract", "test_legacy_auth_contract", "test_storehub_parser", "test_storehub_import_contract",
-            "test_storehub_tools_contract", "test_pins_contract",
-            "test_pin_answer_contract", "test_config_contract",
-            "test_loop_correction_contract", "test_notice_fingerprints",
-            "test_brief_render", "test_undefined_names",
-            "test_workflows_contract", "test_store_scope_contract",
-            "test_chats_contract", "test_schema_check_contract",
-            "test_connection_gate_contract", "test_convergence_cap_contract",
-            "test_chart_rows_contract", "test_greeting_contract",
-            "test_recall_contract", "test_approvals_contract",
-            "test_voice_contract", "test_river_contract",
-            "test_river_writer_contract", "test_post_frame_contract",
-            "test_thread_continue_contract", "test_page_writer_contract",
-            "test_page_workshop_contract",
-            "test_investigation_contract", "test_duplicate_read_contract",
-            "test_interim_prose_contract", "test_eval_checks_contract",
-            "test_stored_calls_contract", "test_page_reader_contract",
-            "test_page_context_contract", "test_metric_model_contract",
-            "test_comparison_contract", "test_river_v2_contract", "test_prose_contract", "test_finding_frame_contract", "test_river_home_contract",
-            "test_surface_contract", "test_desk_contract",
-            "test_understand_contract", "test_stock_history_contract", "test_replenishment_contract", "test_purchase_plan_contract", "test_supplier_map_contract", "test_judgment_contract", "test_beliefs_contract", "test_belief_store_contract",
-            "test_compose_contract")
-    return not any(name in item.nodeid for name in pure)
+    name = item.nodeid
+    if "_contract" in name:
+        return False
+    return not any(pure in name for pure in PURE_BY_NAME)
 
 
 def pytest_collection_modifyitems(config, items):

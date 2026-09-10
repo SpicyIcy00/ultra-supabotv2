@@ -19,6 +19,10 @@ from app.services.workflow_scheduler import (
     TICK_MINUTES as WORKFLOW_TICK_MINUTES,
     tick_safely as workflow_tick,
 )
+from app.services.standing_runner import (
+    TICK_MINUTES as STANDING_TICK_MINUTES,
+    tick_safely as standing_tick,
+)
 
 MANILA = ZoneInfo("Asia/Manila")
 TICK_MINUTES = 15
@@ -135,10 +139,24 @@ def start_scheduler() -> None:
         coalesce=True,
         next_run_time=datetime.now(MANILA) + timedelta(seconds=60),
     )
+    # George's standing questions. The fourth job, and the only one that makes
+    # a MODEL call on its own — see app/services/standing_runner.py for what an
+    # unattended George is given and what is withheld from him. Claimed in the
+    # database like the workflows above, through the same app/services/slots.
+    _scheduler.add_job(
+        standing_tick,
+        "interval",
+        minutes=STANDING_TICK_MINUTES,
+        id="standing_tick",
+        max_instances=1,
+        coalesce=True,
+        next_run_time=datetime.now(MANILA) + timedelta(seconds=75),
+    )
     _scheduler.start()
     print(f"Schedulers started (auto-report every {TICK_MINUTES} min, "
           f"chat-reports every {CHAT_REPORT_TICK_MINUTES} min, "
-          f"workflows every {WORKFLOW_TICK_MINUTES} min)")
+          f"workflows every {WORKFLOW_TICK_MINUTES} min, "
+          f"standing questions every {STANDING_TICK_MINUTES} min)")
 
 
 def shutdown_scheduler() -> None:

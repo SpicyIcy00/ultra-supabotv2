@@ -450,6 +450,42 @@ rather than working around it.
    CHECK constraint. George may accept "every Monday at 6" in conversation — the
    schedule is created switched **off**.
 
+   *Reading of this rule, agreed 2026-09-11, standing questions:* a scheduled
+   ASK is unattended execution and it is deliberately **not** put behind this
+   gate — because the gate cannot mean anything here. A workflow version is
+   gated because it computes: its steps are fixed, so a backtest against a
+   closed window proves what it WOULD have said and an administrator approves
+   exactly that. A question has no steps to backtest; the answer is whatever
+   the morning's data makes true. A promotion ceremony over that would approve
+   nothing, and pretending otherwise is worse than having no gate.
+
+   **What stands in its place is capability, which is real.** The scheduled
+   turn is given the read tools, `compose`, `view_memory`, `view_automations`
+   and `record_belief` — and nothing else. It cannot pin, build or edit a page,
+   save a workflow, run one, read a page, or touch a standing question,
+   including its own: a question that can move its own slot or switch itself on
+   is a thing that gets away from you overnight. The withheld half is enforced
+   by ABSENCE, not by refusal — a tool with no injected capability is not in
+   the model's schema at all (rule 4) — and by a contract test that asserts the
+   offered set is exactly those three injected names.
+
+   **Remembering is deliberately on the given side.** A morning read that
+   settles what George thinks and then forgets it is the failure
+   `george.beliefs` exists to end, and mornings are when most of his views will
+   form. A belief is append-only, carries no figure, and names the calls behind
+   it, so the worst an unattended one can do is be wrong in a sentence that is
+   dated, attributable, and superseded by the next read.
+
+   **Two properties are kept from the workflow scheduler rather than reinvented**
+   (`app/services/slots.py`, extracted before this feature was written so the
+   existing tests proved the extraction): the slot is computed each tick rather
+   than registered as a cron trigger, so a restart cannot silently drop 06:00;
+   and it is CLAIMED in the database before the run, so a failure is recorded
+   rather than quietly re-delivered an hour later wearing the 06:00 timestamp.
+   `last_thread_id` moves only on success, because the room opens on it: a
+   morning that broke must not blank the screen.
+
+
 8. **Divergence is allowed. Silent divergence is not.**
    A manual run uses the newest version so that editing a rule and trying it
    does not need an approval first; a schedule fires the promoted one so that
@@ -888,6 +924,49 @@ what separates it from a pin — a pin that finds nothing still renders, a watch
 that finds nothing says nothing at all. Not "alert", "trigger", "monitor" or
 "rule". Deferred until after C.4; written down now so it cannot be built under
 a different name in the meantime.
+
+*Added 2026-09-11: **Standing question** is the seventh word, and the bar for a
+seventh is higher than it was for the fifth.* It is a question George is asked
+on a SCHEDULE, answered fresh each time by the ordinary loop, waiting for you
+when you open the room. "How are we doing?" every day at 06:00 is one. So is
+"anything out of stock at Rockwell?" every Monday.
+
+**Why nothing that already exists can say it.** A *pin* re-runs a call when you
+look at it — no model, no judgment. A *workflow* replays fixed steps on a
+schedule — no model, by design, and that is the property its promotion gate
+rests on. A *watch* checks a condition and stays SILENT unless it fires. A
+standing question always speaks, and what it says is not decided in advance: it
+is the only one of the four where the model runs unattended, and that is the
+entire point of it.
+
+**The word matters because of what it replaces.** The owner asked for a morning
+briefing he could steer by talking. The first attempt built the briefing — a
+Python composer that read the tables, chose the shops, wrote the sentence and
+handed George a finished object. He rejected it in one line: *"why do we need
+to build the brief? we're supposed to make George able to make those briefs on
+its own"*, and then *"make sure there's nothing else like this — parts where
+we're building something instead of building George to build those things."*
+So **there is no brief object, no brief table, no brief composer and no brief
+renderer.** There is a question, a slot, and whatever George decides that
+morning. `brief_board.py` and `make_example_board.py` were deleted the same
+day; `tools/brief.py` remains a READ George may call, not a thing that speaks
+on its own.
+
+**Steering it is two sentences and two columns.** "Make it 9am instead of 8"
+moves `hour`/`minute`. "Show more of Rockwell" appends to `instructions` — the
+owner's own words, handed to the model labelled as preferences about ATTENTION,
+never as definitions and never as evidence. There is no other numeric column on
+the table, so "alert me when Rockwell drops 10% instead of 30%" has physically
+nowhere to be written: it is refused, and told which comparison exists. A
+schedule is scope; a business threshold is a definition and lives in
+`metrics.yaml` where it was measured.
+
+**A standing question is one person's** (unlike a workflow, which is the
+company's rule) because its answer is a private post they own. **Answers
+outlive the question**: removing it deletes no post, because a thread is a
+record of something George actually said.
+
+
 
 ### Two visuals declined, and what would change the answer
 

@@ -68,7 +68,16 @@ def _read(calls: Mapping[int, Mapping[str, Any]], seq: Any) -> Mapping[str, Any]
     if call is None:
         raise Rejected(f"read {seq} did not run in this conversation")
     if not call.get("is_read"):
-        raise Rejected(f"call {seq} is not a read")
+        # Naming the way round matters: this fires most often when George has
+        # just CHANGED something and wants the result on screen. An object is
+        # drawn over a read so a figure always has receipts behind it, and a
+        # write is not one — but the thing he changed is almost always
+        # readable, so the refusal says so instead of just saying no.
+        raise Rejected(
+            f"call {seq} is not a read — an object is drawn over a read, so "
+            f"that a figure always has receipts. Read the thing back and "
+            f"compose over that read instead."
+        )
     if call.get("error"):
         raise Rejected(f"read {seq} failed; there is nothing to draw")
     return call

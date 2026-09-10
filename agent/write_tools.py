@@ -222,6 +222,31 @@ class AutomationsReader(Protocol):
     async def __call__(self) -> dict: ...
 
 
+class StandingRefused(ValueError):
+    """
+    The standing question cannot be created or changed as asked, and the
+    message says why: no question of that id, an ambiguous "which one", a
+    bound, a time that is not a time. A ValueError for the same reason
+    PinRefused is one — the loop turns it into a real answer with a route out.
+    """
+
+
+class StandingQuestionWriter(Protocol):
+    """
+    Creates and changes the caller's standing questions. Implemented in the web
+    process, closed over the authenticated owner — which is why no method here
+    takes one, and why "change Alice's morning question" has nowhere to put the
+    name.
+
+    `apply` takes an action and the fields that action needs, and returns the
+    question as a row plus what changed. Must raise StandingRefused, with a
+    message a person could act on, for every expected failure, and return only
+    after the write has COMMITTED.
+    """
+
+    async def apply(self, action: str, fields: dict[str, Any]) -> dict: ...
+
+
 class BeliefStore(Protocol):
     """
     Where George's understanding is kept. Implemented in the web process, bound
@@ -333,6 +358,11 @@ class WriteContext:
     # is why a briefing composer once got hand-written in Python.
     memory_reader: Optional[MemoryReader] = None
     automations_reader: Optional[AutomationsReader] = None
+    # The questions the caller has asked George to keep asking. A write, bound
+    # to the owner here like every other one. Deliberately NOT injected into a
+    # scheduled ask (app/services/standing_runner.py): a question that can
+    # reschedule itself is a thing that gets away from you.
+    standing_writer: Optional[StandingQuestionWriter] = None
 
 
 def call_key(tool: str, arguments: Any) -> str:
@@ -966,12 +996,124 @@ async def _record_beliefs(beliefs, *, defs, is_executed, store) -> dict:
     }
 
 
+# The name sorts after every other injected tool except view_page, which is
+# the only CONDITIONAL one — so the cached prefix property holds: a session
+# with a page in scope keeps a tools list that is an exact prefix of one
+# without. See build_tool_schemas.
+STANDING_TOOL = "set_standing_question"
+
+# Everything a person can say about a question they have George keep asking.
+# Each is one sentence in conversation and one line in the service; there is
+# no field on any of them for a threshold, a metric or a window.
+STANDING_ACTIONS = (
+    "create",
+    "reschedule",
+    "add_instruction",
+    "remove_instruction",
+    "rewrite",
+    "switch_on",
+    "switch_off",
+    "remove",
+)
+
+
+async def set_standing_question(
+    action: str,
+    question: Optional[str] = None,
+    hour: Optional[int] = None,
+    minute: Optional[int] = None,
+    days: Optional[list[int]] = None,
+    instruction: Optional[str] = None,
+    which: Optional[str] = None,
+    *,
+    ctx: WriteContext,
+) -> dict:
+    """
+    Keep a question and ask it on a schedule, or change one you already keep.
+
+    This is how a person gets a morning briefing: they do not get a briefing,
+    they get an ANSWER TO A QUESTION they asked you to keep asking. "How are we
+    doing?" every day at 06:00 is a standing question; so is "anything out of
+    stock at Rockwell?" every Monday. When the slot comes round you are asked
+    it exactly as if they had typed it, you read and compose the answer
+    yourself, and it is waiting for them when they open the room.
+
+    Use it when someone says they want something regularly — "brief me every
+    morning", "make it 9am instead of 8", "show more of Rockwell in that",
+    "stop sending me that one". Do not use it for a one-off question; just
+    answer that.
+
+    A NEW QUESTION IS CREATED SWITCHED OFF, and you must say so. They turn it
+    on, which is one more sentence and the sentence that matters — nothing
+    starts running unattended because a conversation drifted that way.
+
+    WHAT CANNOT BE STORED HERE. A time, days of the week, and sentences. There
+    is no argument for a threshold, a metric, a window or a store list, so
+    "alert me when Rockwell drops 10% instead of 30%" cannot be saved: say that
+    the comparison is a definition, not a setting, and name the one that
+    exists. An instruction steers ATTENTION — what to show more of, what to
+    leave out — and never what a number means.
+
+    Args:
+        action: What to do.
+            create — keep a new question. Needs `question` and `hour`.
+            reschedule — move it. Needs `hour`; `days` makes it weekly.
+            add_instruction / remove_instruction — one standing instruction,
+                in their words, at most 200 characters.
+            rewrite — change what is asked; the schedule and instructions stay.
+            switch_on / switch_off — start or stop asking it.
+            remove — forget the question. Answers it already gave are posts and
+                are not touched.
+        question: What to ask, in their words, on one line. For create and
+            rewrite.
+        hour: The hour, 0–23, Manila time.
+        minute: The minute, 0–59. Defaults to 0.
+        days: Weekdays for a weekly question, 0=Monday … 6=Sunday. Leave it out
+            for every day.
+        instruction: One standing instruction, for add_instruction and
+            remove_instruction. Removing matches on the text.
+        which: The id of the question, from a read that returned it
+            (view_automations lists them). Leave it out when there is only one
+            — naming an id they never said is worse than asking.
+
+    Returns:
+        {rows, meta} like every other tool. The row is the question as it now
+        stands — what is asked, when, its instructions and whether it is on.
+
+        THIS IS A WRITE, so nothing may be composed over it — an object is
+        drawn over a read so that a figure always has receipts. To put the
+        question on the board, read it back with view_automations, which lists
+        every standing question with its schedule, and compose over that.
+    """
+    if ctx.standing_writer is None:
+        raise StandingRefused(
+            "George cannot keep standing questions in this session. Answer the "
+            "question now; it will not be asked again on its own."
+        )
+    if action not in STANDING_ACTIONS:
+        raise StandingRefused(
+            f"{action!r} is not something that can be done to a standing "
+            f"question. It is one of: {', '.join(STANDING_ACTIONS)}."
+        )
+
+    fields = {
+        "question": question,
+        "hour": hour,
+        "minute": minute,
+        "days": days,
+        "instruction": instruction,
+        "which": which,
+    }
+    return await ctx.standing_writer.apply(action, fields)
+
+
 WRITE_TOOL_FUNCTIONS = {
     "pin_answer": pin_answer,
     "save_workflow": save_workflow,
     "create_page": create_page,
     "edit_page": edit_page,
     "record_belief": record_belief,
+    STANDING_TOOL: set_standing_question,
 }
 
 # The two page tools, by name, for the loop's frame and claim check.
@@ -987,4 +1129,5 @@ WRITE_TOOL_REQUIRES = {
     "create_page": "page_writer",
     "edit_page": "page_writer",
     "record_belief": "belief_store",
+    STANDING_TOOL: "standing_writer",
 }

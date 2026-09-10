@@ -37,14 +37,10 @@ anything a model said.
 
 from __future__ import annotations
 
-import calendar
-import os
-import socket
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Optional
-from zoneinfo import ZoneInfo
 
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import AsyncSessionLocal
@@ -53,7 +49,7 @@ from app.models.george_workflow import (
     GeorgeWorkflowSchedule,
     GeorgeWorkflowVersion,
 )
-from app.services import telegram_sender, workflow_telegram
+from app.services import slots, telegram_sender, workflow_telegram
 from app.services.workflow_runner import (
     WorkflowValidationError,
     run_version,
@@ -61,149 +57,48 @@ from app.services.workflow_runner import (
 from app.services.river_writer import post_workflow_run
 from app.services.workflow_writer import record_run
 
-MANILA = ZoneInfo("Asia/Manila")
+# Slots, claims and the skipped-slot notice now live in app.services.slots, so
+# the three things that fire on their own share one definition of "which slot
+# is due" and one claim statement. The wrappers below keep this module's own
+# signatures — they take a schedule ROW, which slots.py deliberately does not
+# know about.
+MANILA = slots.MANILA
 
 # Slots are minute-granular, so the tick has to be at least that fine to hit
 # 06:00 rather than 06:04. The work per tick is one indexed query returning
 # almost always zero rows.
 TICK_MINUTES = 1
 
-# How many missed slots are worth counting before the message just says "many".
-# A schedule that has been off for a year should not enumerate 365 of them.
-MAX_SKIPPED_COUNTED = 60
+MAX_SKIPPED_COUNTED = slots.MAX_SKIPPED_COUNTED
+
+TABLE = "george.workflow_schedules"
 
 
-def _who() -> str:
-    """Which process claimed a slot. Only ever read by a human debugging a race."""
-    return f"{socket.gethostname()}:{os.getpid()}"
-
-
-# ---------------------------------------------------------------------------
-# Slots
-# ---------------------------------------------------------------------------
-
-def _at(day: date, hour: int, minute: int) -> datetime:
-    return datetime(day.year, day.month, day.day, hour, minute, tzinfo=MANILA)
-
-
-def _month_day(year: int, month: int, day_of_month: int) -> date:
-    """day_of_month 31 means the last day of the month, as scheduled_reports uses."""
-    last = calendar.monthrange(year, month)[1]
-    return date(year, month, min(day_of_month, last))
+def _shape(schedule: GeorgeWorkflowSchedule) -> dict:
+    """One schedule row as the plain values slots.py works in."""
+    return {
+        "kind": schedule.kind,
+        "hour": schedule.hour,
+        "minute": schedule.minute,
+        "days_of_week": schedule.days_of_week,
+        "day_of_month": schedule.day_of_month,
+    }
 
 
 def slot_for(schedule: GeorgeWorkflowSchedule, now: datetime) -> Optional[datetime]:
-    """
-    The most recent occurrence of this schedule's slot at or before `now`.
-
-    Returns None only for a schedule that can never fire — a weekly one with no
-    weekdays, which create_schedule already refuses.
-    """
-    now = now.astimezone(MANILA)
-    today = now.date()
-
-    if schedule.kind == "daily":
-        slot = _at(today, schedule.hour, schedule.minute)
-        return slot if slot <= now else slot - timedelta(days=1)
-
-    if schedule.kind == "weekly":
-        days = [int(d) for d in (schedule.days_of_week or []) if 0 <= int(d) <= 6]
-        if not days:
-            return None
-        # Walk back at most a week; the first matching weekday whose time has
-        # passed is the slot.
-        for back in range(0, 8):
-            day = today - timedelta(days=back)
-            if day.weekday() in days:
-                slot = _at(day, schedule.hour, schedule.minute)
-                if slot <= now:
-                    return slot
-        return None
-
-    if schedule.kind == "monthly":
-        dom = schedule.day_of_month or 1
-        slot = _at(_month_day(today.year, today.month, dom),
-                   schedule.hour, schedule.minute)
-        if slot <= now:
-            return slot
-        year, month = (today.year - 1, 12) if today.month == 1 else (today.year, today.month - 1)
-        return _at(_month_day(year, month, dom), schedule.hour, schedule.minute)
-
-    return None
-
-
-def _previous_slot(schedule: GeorgeWorkflowSchedule,
-                   slot: datetime) -> Optional[datetime]:
-    """The slot immediately before `slot`. Used only to count what was missed."""
-    slot = slot.astimezone(MANILA)
-    if schedule.kind == "daily":
-        return slot - timedelta(days=1)
-
-    if schedule.kind == "weekly":
-        days = [int(d) for d in (schedule.days_of_week or []) if 0 <= int(d) <= 6]
-        if not days:
-            return None
-        for back in range(1, 8):
-            day = (slot - timedelta(days=back)).date()
-            if day.weekday() in days:
-                return _at(day, schedule.hour, schedule.minute)
-        return None
-
-    if schedule.kind == "monthly":
-        dom = schedule.day_of_month or 1
-        year, month = (slot.year - 1, 12) if slot.month == 1 else (slot.year, slot.month - 1)
-        return _at(_month_day(year, month, dom), schedule.hour, schedule.minute)
-
-    return None
+    """The most recent occurrence of this schedule's slot at or before `now`."""
+    return slots.slot_for(now=now, **_shape(schedule))
 
 
 def skipped_slots(schedule: GeorgeWorkflowSchedule, slot: datetime,
                   last_slot: Optional[datetime]) -> list[datetime]:
-    """
-    The slots between the last one that ran and this one — the ones nobody got.
+    """The slots between the last one that ran and this one — the ones nobody got."""
+    return slots.skipped_slots(slot=slot, last_slot=last_slot, **_shape(schedule))
 
-    Empty on the first ever run: a schedule that has never fired has not missed
-    anything, it has simply not started.
-    """
-    if last_slot is None:
-        return []
-    missed: list[datetime] = []
-    cursor = _previous_slot(schedule, slot)
-    while cursor is not None and cursor > last_slot.astimezone(MANILA):
-        missed.append(cursor)
-        if len(missed) >= MAX_SKIPPED_COUNTED:
-            break
-        cursor = _previous_slot(schedule, cursor)
-    return missed
-
-
-# ---------------------------------------------------------------------------
-# The claim
-# ---------------------------------------------------------------------------
 
 async def claim_slot(db: AsyncSession, schedule_id, slot: datetime) -> bool:
-    """
-    Take ownership of one slot, or report that somebody else already has it.
-
-    ONE STATEMENT, and the condition is the whole point: `last_slot < :slot`
-    means a second process attempting the same slot updates zero rows. Reading
-    then writing would leave the window between the two open, which on two
-    replicas is exactly where a duplicate 06:00 message comes from.
-
-    last_slot moves HERE, before the run — see the module docstring on why a
-    failed slot is reported rather than retried.
-    """
-    result = await db.execute(
-        text(
-            "UPDATE george.workflow_schedules "
-            "   SET last_slot = :slot, claimed_at = now(), claimed_by = :who "
-            " WHERE id = :id "
-            "   AND enabled "
-            "   AND (last_slot IS NULL OR last_slot < :slot)"
-        ),
-        {"slot": slot, "who": _who()[:200], "id": schedule_id},
-    )
-    return (result.rowcount or 0) > 0
+    """Take ownership of one slot, or report that somebody else already has it."""
+    return await slots.claim(db, table=TABLE, row_id=schedule_id, slot=slot)
 
 
 # ---------------------------------------------------------------------------
@@ -278,21 +173,9 @@ async def run_due_schedule(db: AsyncSession, schedule: GeorgeWorkflowSchedule,
         return "failed"
 
     if missed:
-        # Reported on the run that DID happen, because a run that did not happen
-        # leaves no row to carry a notice.
-        listed = ", ".join(m.strftime("%Y-%m-%d %H:%M") for m in missed[:5])
-        more = f" and {len(missed) - 5} others" if len(missed) > 5 else ""
-        capped = " (at least)" if len(missed) >= MAX_SKIPPED_COUNTED else ""
-        notice = {
-            "kind": "schedule_slots_skipped",
-            "message": (
-                f"{len(missed)}{capped} scheduled slots were skipped before this "
-                f"run: {listed}{more}. Only the most recent slot runs after an "
-                f"outage, so those results were never produced and are not "
-                f"included below."
-            ),
-            "source": "metrics.yaml: workflows.schedule.catch_up",
-        }
+        notice = slots.describe_skipped(
+            missed, source="metrics.yaml: workflows.schedule.catch_up"
+        )
         outcome["run_notices"] = [notice] + list(outcome.get("run_notices") or [])
         outcome["notices"] = [notice] + list(outcome.get("notices") or [])
 

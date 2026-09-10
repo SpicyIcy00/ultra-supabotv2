@@ -45,8 +45,10 @@ TOOLS = ROOT / "tools"
 # requirement to make a test tidy.
 EXTRA_EMITTERS = [
     ROOT / "backend" / "app" / "services" / "workflow_runner.py",
-    # The skipped-slot notice can only be raised where the slots are known.
-    ROOT / "backend" / "app" / "services" / "workflow_scheduler.py",
+    # The skipped-slot notice can only be raised where the slots are known —
+    # which is now app/services/slots.py, shared by the workflow scheduler and
+    # by standing questions rather than written out twice.
+    ROOT / "backend" / "app" / "services" / "slots.py",
     # A page read raises its own two: something asked for did not come back,
     # and something on the page was not read at all.
     ROOT / "agent" / "composite_tools.py",

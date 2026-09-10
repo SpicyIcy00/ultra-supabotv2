@@ -93,7 +93,7 @@ async def read_automations(session: AsyncSession, *, username: str) -> dict:
     """
     What the systems have been doing, and what is waiting on somebody.
 
-    Two things in one read on purpose. From the owner's side they are one
+    Three things in one read on purpose. From the owner's side they are one
     question — "what is going on with the things we built" — and a run that
     failed and a version awaiting promotion both end the same way: needing him.
 
@@ -130,7 +130,44 @@ async def read_automations(session: AsyncSession, *, username: str) -> dict:
         LIMIT 20
     """))).mappings().all()
 
+    # The questions he has been asked to keep asking. They belong in THIS read
+    # rather than a fourth one: from the owner's side "what is going on with
+    # the things we set up" is one question, and a standing question that has
+    # been failing every morning needs him exactly as much as a workflow
+    # version waiting to be promoted does. Owner-scoped, unlike the rest of
+    # this read: a workflow is the company's rule and a standing question is
+    # one person's.
+    standing = (await session.execute(text("""
+        SELECT id, question, instructions, kind, hour, minute, days_of_week,
+               enabled, last_run_at, last_status
+        FROM george.standing_questions
+        WHERE owner = :owner
+        ORDER BY enabled DESC, hour, minute
+        LIMIT 20
+    """), {"owner": username})).mappings().all()
+
     rows: list[dict[str, Any]] = []
+    for q in standing:
+        instructions = list(q["instructions"] or [])
+        when = f"{q['hour']:02d}:{q['minute']:02d}"
+        if q["kind"] == "weekly" and q["days_of_week"]:
+            names = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+            days = ", ".join(names[d] for d in sorted(q["days_of_week"]) if 0 <= d <= 6)
+            when = f"{days} at {when}"
+        else:
+            when = f"every day at {when}"
+        rows.append({
+            "what": q["question"],
+            # A standing question is not a workflow run and must not read like
+            # one: "asked" says a model answered it, "ran" says steps replayed.
+            "state": ("asked " + when) if q["enabled"] else "not being asked",
+            "when": q["last_run_at"],
+            "by": ("; ".join(instructions) if instructions
+                   else ("last time: " + q["last_status"] if q["last_status"]
+                         else "never asked yet")),
+            # The id, so a change to this question can name which one it means.
+            "id": str(q["id"]),
+        })
     for r in runs:
         rows.append({
             "what": r["name"],
@@ -157,19 +194,24 @@ async def read_automations(session: AsyncSession, *, username: str) -> dict:
         "rows": rows,
         "meta": {
             "source_table": "george.workflow_runs + george.workflow_versions "
-                            "+ george.workflow_schedules",
+                            "+ george.workflow_schedules "
+                            "+ george.standing_questions",
             "filters_applied": [
                 f"runs started_at > now() - interval '{RUNS_WINDOW_DAYS} days'",
+                "standing questions: owner = the signed-in user",
                 "waiting: promoted_at IS NULL AND backtest_run_id IS NOT NULL",
                 "archived rules excluded",
             ],
             "snapshot_timestamp": runs[0]["started_at"] if runs else None,
             "metric_label": "Running and waiting",
             "ran": len(runs),
+            "standing": len(standing),
+            "standing_on": sum(1 for q in standing if q["enabled"]),
             "waiting": len(waiting),
             "scheduled": sum(1 for s in schedules if s["enabled"]),
             "note": (
-                "A schedule that is switched off fires nothing. A version "
+                "A schedule that is switched off fires nothing, and a standing "
+                "question that is not being asked produces no answer. A version "
                 "waiting on you has been backtested but not promoted, so the "
                 "schedule is still firing the older one."
             ),

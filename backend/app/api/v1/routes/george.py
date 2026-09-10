@@ -68,6 +68,8 @@ from app.models.app_user import AppUser
 from app.services.chat_history import build_turns, question_of, title_of
 from app.services.george_greeting import build_greeting
 from app.services import belief_store as beliefs_service
+from app.services import standing_questions
+from app.services.standing_questions import StandingRefused as StandingServiceRefused
 from app.services import self_reader
 from app.services.george_recall import as_block, recent_figures
 from app.services.river import (
@@ -136,6 +138,7 @@ from agent.write_tools import (  # noqa: E402
     PageEditSpec,
     PageRefused,
     PageWriter,
+    StandingRefused,
 )
 
 # The prefix is supplied by main.py, matching every other router in this app.
@@ -723,6 +726,69 @@ class StatusBand(BaseModel):
     sources: List[SourceFreshness] = Field(default_factory=list)
     #: The Manila day this describes.
     as_of: str
+
+
+# ---------------------------------------------------------------------------
+# Standing questions
+#
+# A question George is asked on a schedule. These endpoints are the MANUAL half
+# of the same write path his injected tool takes — same service functions, same
+# owner scope, same refusals (CLAUDE.md rule 4). The room reads `latest` to
+# decide what it opens on.
+# ---------------------------------------------------------------------------
+
+
+class StandingQuestionOut(BaseModel):
+    id: str
+    question: str
+    instructions: List[str] = Field(default_factory=list)
+    #: The slot in words: "every day at 06:00", "Mon, Thu at 09:00".
+    when: str
+    #: "asked on schedule" or "switched off".
+    state: str
+    last_asked: Optional[datetime] = None
+    last_status: Optional[str] = None
+
+
+class StandingLatest(BaseModel):
+    """The newest standing answer waiting for this person, if there is one."""
+
+    thread_id: str
+    question: str
+    answered_at: Optional[datetime] = None
+    standing_question_id: str
+
+
+@router.get("/standing", response_model=List[StandingQuestionOut])
+async def list_standing(
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_george_user),
+) -> List[StandingQuestionOut]:
+    """Every question this person has asked George to keep asking."""
+    rows = await standing_questions.list_for(db, user.username)
+    return [StandingQuestionOut(**standing_questions.as_row(r)) for r in rows]
+
+
+@router.get("/standing/latest", response_model=Optional[StandingLatest])
+async def latest_standing(
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_george_user),
+) -> Optional[StandingLatest]:
+    """
+    What George has already said, unprompted, that this person has not asked for.
+
+    THIS IS WHAT THE ROOM OPENS ON, and it is the whole of the morning
+    briefing's implementation on the read side: there is no brief object, no
+    brief table and no brief renderer — there is the answer to a question he
+    was asked at 06:00, drawn by the same board that draws every other answer.
+
+    Null is a real answer and the client must render it as one: somebody with
+    no standing question, or one that has never run, has nothing waiting, and
+    a room that invented an opening for them would be stating something it
+    never checked (UI rule 8).
+    """
+    found = await standing_questions.latest_answer(db, user.username)
+    return StandingLatest(**found) if found else None
 
 
 @router.get("/status", response_model=StatusBand)
@@ -1389,6 +1455,108 @@ def _automations_reader(username: str):
     return read
 
 
+def _standing_writer(username: str):
+    """
+    George's route to KEEPING A QUESTION and to changing one already kept.
+
+    A write, injected exactly as the pin writer is: the owner is captured here
+    from the verified token, so the tool has no argument for whose question,
+    and George holds no credential. It calls the same service functions the
+    HTTP routes below call — one write path, whether the sentence was typed
+    into a form or said out loud.
+
+    NOT injected into a scheduled ask (app/services/standing_runner.py). A
+    question that can move its own slot, or switch itself on, is a thing that
+    gets away from you overnight.
+    """
+
+    async def apply(action: str, fields: dict) -> dict:
+        async with AsyncSessionLocal() as session:
+            try:
+                if action == "create":
+                    row = await standing_questions.create(
+                        session, owner=username,
+                        question=fields.get("question"),
+                        hour=fields.get("hour"), minute=fields.get("minute"),
+                        days_of_week=fields.get("days"),
+                    )
+                    wrote = "created"
+                elif action == "reschedule":
+                    row = await standing_questions.reschedule(
+                        session, owner=username, which=fields.get("which"),
+                        hour=fields.get("hour"), minute=fields.get("minute"),
+                        days_of_week=fields.get("days"),
+                    )
+                    wrote = "rescheduled"
+                elif action == "add_instruction":
+                    row = await standing_questions.add_instruction(
+                        session, owner=username, which=fields.get("which"),
+                        instruction=fields.get("instruction"),
+                    )
+                    wrote = "instruction added"
+                elif action == "remove_instruction":
+                    row = await standing_questions.remove_instruction(
+                        session, owner=username, which=fields.get("which"),
+                        instruction=fields.get("instruction"),
+                    )
+                    wrote = "instruction removed"
+                elif action == "rewrite":
+                    row = await standing_questions.rewrite(
+                        session, owner=username, which=fields.get("which"),
+                        question=fields.get("question"),
+                    )
+                    wrote = "question changed"
+                elif action in ("switch_on", "switch_off"):
+                    row = await standing_questions.switch(
+                        session, owner=username, which=fields.get("which"),
+                        on=action == "switch_on",
+                    )
+                    wrote = "switched on" if action == "switch_on" else "switched off"
+                elif action == "remove":
+                    row = await standing_questions.remove(
+                        session, owner=username, which=fields.get("which"),
+                    )
+                    wrote = "removed"
+                else:  # pragma: no cover - the tool checked the vocabulary first
+                    raise StandingRefused(f"{action!r} is not a standing-question action.")
+
+                as_row = standing_questions.as_row(row)
+                await session.commit()
+            except StandingServiceRefused as exc:
+                await session.rollback()
+                raise StandingRefused(str(exc)) from exc
+            except SQLAlchemyError as exc:
+                await session.rollback()
+                raise StandingRefused(
+                    f"That could not be saved: {type(exc).__name__}. Nothing was "
+                    f"changed — tell the user, and do not describe it as done."
+                ) from exc
+
+        return {
+            "rows": [as_row],
+            "meta": {
+                "source_table": "george.standing_questions",
+                "filters_applied": ["owner = the signed-in user"],
+                "snapshot_timestamp": as_row.get("last_asked"),
+                "wrote": wrote,
+                "enabled": as_row["state"] != "switched off",
+                "note": (
+                    "A standing question is created switched OFF and is asked "
+                    "only once the owner turns it on. Say which it is."
+                    if wrote == "created" else
+                    "This changes what is asked from the next slot onwards. "
+                    "Answers already given are unchanged."
+                ),
+            },
+        }
+
+    class _Writer:
+        async def apply(self, action: str, fields: dict) -> dict:
+            return await apply(action, fields)
+
+    return _Writer()
+
+
 def _page_reader(username: str, page_id: Optional[uuid.UUID]) -> PageReader:
     """
     George's route to READING the page the caller is on.
@@ -1635,6 +1803,7 @@ async def _safe_stream(question: str, user_id: Optional[str],
                        page_references: Optional[list[dict]] = None,
                        memory_reader=None,
                        automations_reader=None,
+                       standing_writer=None,
                        desk: Optional[dict] = None) -> AsyncIterator[str]:
     """
     Wrap the loop so a crash still closes the stream cleanly.
@@ -1663,6 +1832,7 @@ async def _safe_stream(question: str, user_id: Optional[str],
             page_references=page_references,
             memory_reader=memory_reader,
             automations_reader=automations_reader,
+            standing_writer=standing_writer,
             desk=desk,
         ):
             yield frame
@@ -1782,6 +1952,10 @@ async def ask(
             # George's own record.
             memory_reader=_memory_reader(user.username),
             automations_reader=_automations_reader(user.username),
+            # Always: every signed-in caller may have George keep a question
+            # and ask it on a schedule. Bound to them; the tool has no owner
+            # argument.
+            standing_writer=_standing_writer(user.username),
             # The desk, bounded by the model above; an empty one is nothing.
             desk=request.desk.model_dump(exclude_none=True) if request.desk else None,
             # Always: every signed-in caller may build and edit their own

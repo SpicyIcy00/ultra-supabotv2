@@ -20,6 +20,7 @@ import { boardContext, buildBoard, type Local } from './board';
 import type { AnswerTurn, Dimension } from './data';
 import { Board } from './render';
 import { Rail } from './Rail';
+import { dismissStanding, useStandingOpening } from './useStandingOpening';
 import type { TileActions } from './tiles';
 import './room.css';
 
@@ -49,6 +50,16 @@ export default function Room() {
   useEffect(() => {
     if (!threadId && george.storedThreadId) navigate(`/w/${george.storedThreadId}`, { replace: true });
   }, [threadId, george.storedThreadId, navigate]);
+
+  // THE COLD OPEN. Arriving with nothing in hand, the room opens on the
+  // newest answer George gave to a question he was asked to keep asking —
+  // this morning's, normally. Nothing here builds a briefing or knows what
+  // one is; it opens a thread, and the thread contains whatever he decided.
+  // Null is a real answer and stays the empty room.
+  const opening = useStandingOpening(!threadId && !george.storedThreadId && !george.busy);
+  useEffect(() => {
+    if (opening) navigate(`/w/${opening.thread_id}`, { replace: true });
+  }, [opening, navigate]);
 
   const answers = useMemo(
     () => george.turns.filter((t): t is AnswerTurn => t.role === 'george'),
@@ -111,8 +122,12 @@ export default function Room() {
 
   const aside = board.filter((o) => local[o.key]?.closed);
   const clear = useCallback(() => {
+    // Put away whatever is open, INCLUDING a standing answer: dismissing it
+    // has to outlive the navigate back to "/", or the cold open immediately
+    // reopens the thing just closed.
+    dismissStanding(threadId);
     george.reset(); setSelection([]); setLocal({}); setFocused(null); navigate('/');
-  }, [george, navigate]);
+  }, [george, navigate, threadId]);
 
   return (
     <div className="room">
