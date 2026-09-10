@@ -181,10 +181,19 @@
 .ws-obj { position: relative; }
 .ws-obj-bar { display: flex; align-items: center; gap: 10px; height: 16px; margin-bottom: 4px; padding: 0 4px; }
 .ws-obj-age { font: 500 9.5px/1 var(--ws-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--ws-ink-3); }
-.ws-obj-btn { border: 0; background: none; padding: 0; cursor: pointer; opacity: 0;
+/* ALWAYS THERE, QUIET UNTIL WANTED. They were hover-only for one commit,
+   which on a phone — the layout CLAUDE.md calls the real one — meant they did
+   not exist at all. Opacity, not display: a control you cannot see is still a
+   control you can reach with a finger or a tab key. */
+.ws-obj-btn { border: 0; background: none; padding: 2px 0; cursor: pointer; opacity: .42;
   font: 400 11px/1 var(--ws-sans); color: var(--ws-ink-3); transition: opacity 160ms var(--ws-ease), color 160ms var(--ws-ease); }
 .ws-obj:hover .ws-obj-btn, .ws-obj-btn:focus-visible { opacity: 1; }
-.ws-obj-btn:hover { color: var(--ws-george); }
+.ws-obj-btn:hover, .ws-obj-btn:focus-visible { color: var(--ws-george); }
+@media (hover: none) {
+  /* No pointer to hover with: the controls stay legible and get a finger-sized box. */
+  .ws-obj-btn { opacity: .72; padding: 6px 0; }
+  .ws-obj-bar { height: auto; }
+}
 
 /* A sortable header. Reordering rows a read returned is not computing. */
 .ws-sortable { cursor: pointer; user-select: none; white-space: nowrap; }

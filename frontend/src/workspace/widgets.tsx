@@ -11,7 +11,7 @@ import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import type { GeorgeNotice, ToolMeta } from '../types/george';
 import { sorted, type Local } from './board';
-import { changeOf, rowFor, subjectOf, valueOf, type Resolved } from './composition';
+import { changeOf, dimensionOf, rowFor, subjectOf, valueOf, type Dimension, type Resolved } from './composition';
 
 /* ------------------------------------------------------------ formatting */
 
@@ -142,7 +142,7 @@ export function Receipts({ meta, compact = false }: { meta?: ToolMeta | null; co
 export interface WidgetProps {
   r: Resolved;
   selected: boolean;
-  onSelect?: (subject: string) => void;
+  onSelect?: (subject: string, dimension: Dimension | null) => void;
   /**
    * WHAT THE PERSON HAS DONE TO THIS OBJECT — a sort, an expansion. Theirs,
    * not George's, applied on top of what he composed and never sent back to
@@ -177,7 +177,7 @@ export function FigureWidget({ r, selected, onSelect }: WidgetProps) {
   const v = valueOf(row);
   const label = r.block.subject ?? subjectOf(row) ?? '';
   return (
-    <div className={`ws-card ${selected ? 'ws-card--selected' : ''}`} data-widget="figure" data-clickable onClick={() => onSelect?.(label)}>
+    <div className={`ws-card ${selected ? 'ws-card--selected' : ''}`} data-widget="figure" data-clickable onClick={() => onSelect?.(label, dimensionOf(r.rows, label))}>
       <p className="ws-mk">{label}</p>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginTop: 8 }}>
         <Numeral text={v ? fmt(v.key, v.value) : '—'} size={30} />
@@ -203,7 +203,7 @@ export function HeroWidget({ r, selected, onSelect }: WidgetProps) {
   const lo = Math.min(0, ...pcts), hi = Math.max(0, ...pcts);
   const at = c.pct === null || hi === lo ? 50 : ((c.pct - lo) / (hi - lo)) * 100;
   return (
-    <div className={`ws-hero ${tone} ${selected ? 'ws-card--selected' : ''}`} data-widget="hero" data-clickable onClick={() => onSelect?.(label)} style={{ cursor: 'pointer' }}>
+    <div className={`ws-hero ${tone} ${selected ? 'ws-card--selected' : ''}`} data-widget="hero" data-clickable onClick={() => onSelect?.(label, dimensionOf(r.rows, label))} style={{ cursor: 'pointer' }}>
       <p className="ws-mk">{label}</p>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginTop: 10 }}>
         <Numeral text={v ? fmt(v.key, v.value) : '—'} size={54} white />
@@ -230,7 +230,7 @@ export function SubjectWidget({ r, selected, onSelect }: WidgetProps) {
   const label = r.block.subject ?? '';
   const quiet = r.block.weight === 'quiet';
   return (
-    <div className={`ws-card ${quiet ? 'ws-card--quiet' : ''} ${selected ? 'ws-card--selected' : ''}`} data-widget="subject" data-clickable onClick={() => onSelect?.(label)}>
+    <div className={`ws-card ${quiet ? 'ws-card--quiet' : ''} ${selected ? 'ws-card--selected' : ''}`} data-widget="subject" data-clickable onClick={() => onSelect?.(label, dimensionOf(r.rows, label))}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
         <p className="ws-say" style={{ fontSize: quiet ? 15 : 18 }}>{label}</p>
         <Delta row={row} />
@@ -253,7 +253,7 @@ export function ComparisonWidget({ r, selected, onSelect }: WidgetProps) {
         {rows.map(({ s, row }) => {
           const v = row ? valueOf(row) : null;
           return (
-            <div key={s} data-clickable onClick={() => onSelect?.(s)} style={{ cursor: 'pointer', outline: selected ? '2px solid var(--ws-george)' : 'none', borderRadius: 12, padding: 6 }}>
+            <div key={s} data-clickable onClick={() => onSelect?.(s, dimensionOf(r.rows, s))} style={{ cursor: 'pointer', outline: selected ? '2px solid var(--ws-george)' : 'none', borderRadius: 12, padding: 6 }}>
               <p className="ws-say" style={{ fontSize: 17 }}>{s}</p>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 8 }}>
                 <Numeral text={v ? fmt(v.key, v.value) : '—'} size={26} />

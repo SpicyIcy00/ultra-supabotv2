@@ -24,7 +24,7 @@ import { useThread } from '../hooks/useThread';
 import { threadHistory } from '../components/george/threadHistory';
 import type { GeorgeTurn } from '../types/george';
 import { buildBoard, type Local } from './board';
-import { restoreFromPosts } from './composition';
+import { restoreFromPosts, type Dimension } from './composition';
 import { Board } from './render';
 import './workspace.css';
 
@@ -35,7 +35,11 @@ export default function WorkspacePage() {
   const navigate = useNavigate();
   const george = useGeorge();
   const thread = useThread(threadId ?? '');
-  const [selection, setSelection] = useState<string[]>([]);
+  // A selected subject travels with WHAT KIND OF THING IT IS, read out of the
+  // column its name came from. Sending every one of them as a store — which
+  // this did until 2026-09-10 — told George a shop had moved when a product
+  // had.
+  const [selection, setSelection] = useState<{ label: string; dimension: Dimension }[]>([]);
   const [local, setLocal] = useState<Record<string, Local>>({});
   const [focused, setFocused] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -90,12 +94,24 @@ export default function WorkspacePage() {
     if (!q) return;
     setDraft('');
     void george.ask(q, selection.length ? {
-      desk: { selection: { dimension: 'store', subjects: selection.map((s) => ({ id: s, label: s })) } },
+      desk: {
+        selection: {
+          // One dimension per selection, and it is the first thing touched —
+          // "compare these" over a shop and a product is not a comparison the
+          // definitions have, so the first choice sets what is being compared.
+          dimension: selection[0].dimension,
+          subjects: selection
+            .filter((s) => s.dimension === selection[0].dimension)
+            .map((s) => ({ id: s.label, label: s.label })),
+        },
+      },
     } : {});
   }, [george, selection]);
 
-  const toggle = useCallback((subject: string) => {
-    setSelection((s) => (s.includes(subject) ? s.filter((x) => x !== subject) : [...s, subject]));
+  const toggle = useCallback((subject: string, dimension: Dimension | null) => {
+    setSelection((s) => (s.some((x) => x.label === subject)
+      ? s.filter((x) => x.label !== subject)
+      : [...s, { label: subject, dimension: dimension ?? 'store' }]));
   }, []);
 
   const asked = useMemo(
@@ -128,7 +144,7 @@ export default function WorkspacePage() {
             board={board}
             local={local}
             focused={focused}
-            selection={selection}
+            selection={selection.map((s) => s.label)}
             live={busy}
             onSelect={toggle}
             onFocus={(key) => setFocused((f) => (f === key ? null : key))}
@@ -169,7 +185,9 @@ export default function WorkspacePage() {
         <div style={{ maxWidth: 1240, margin: '0 auto', pointerEvents: 'auto' }}>
           <div style={{ display: 'flex', gap: 4, marginBottom: 6, flexWrap: 'wrap' }}>
             {selection.map((s) => (
-              <button key={s} className="ws-pill ws-pill--george" onClick={() => toggle(s)} style={{ border: 0, cursor: 'pointer' }}>{s} ×</button>
+              <button key={s.label} className="ws-pill ws-pill--george" onClick={() => toggle(s.label, s.dimension)} style={{ border: 0, cursor: 'pointer' }}>
+                {s.label} ×
+              </button>
             ))}
             {!selection.length && !busy && board.length === 0 && ['how are we doing?', 'what do I need to order from Seikyo?', 'what is out of stock longest?'].map((w) => (
               <button key={w} className="ws-word" onClick={() => say(w)}>{w}</button>

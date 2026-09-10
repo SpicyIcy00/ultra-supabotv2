@@ -13,7 +13,7 @@
  */
 import type { BoardObject, Local } from './board';
 import { inOrder } from './board';
-import { resolve, type AnswerTurn } from './composition';
+import { resolve, type AnswerTurn, type Dimension } from './composition';
 import {
   Caveats, ChartWidget, ComparisonWidget, DistributionWidget, DraftWidget, FigureWidget,
   HeroWidget, StateWidget, SubjectWidget, TableWidget, TextWidget, Wrap,
@@ -27,7 +27,7 @@ export interface BoardProps {
   focused: string | null;
   selection: string[];
   live: boolean;
-  onSelect: (subject: string) => void;
+  onSelect: (subject: string, dimension: Dimension | null) => void;
   onFocus: (key: string) => void;
   onClose: (key: string) => void;
   onLocal: (key: string, patch: Local) => void;

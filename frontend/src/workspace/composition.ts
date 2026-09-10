@@ -57,6 +57,32 @@ export function subjectOf(row: Record<string, unknown>): string | null {
   return null;
 }
 
+/**
+ * WHAT KIND OF THING A SUBJECT IS — one of metrics.yaml
+ * surface.desk.selection.dimensions.
+ *
+ * The selection sent with a question hardcoded 'store' until 2026-09-10, so
+ * touching a product and saying "why is this down?" told George a SHOP of that
+ * name had moved. He would then either read a shop that does not exist or
+ * quietly answer about the wrong thing. Derived from the column the name came
+ * out of, and never guessed from the text.
+ */
+export type Dimension = 'store' | 'product' | 'category';
+
+export function dimensionOf(rows: Record<string, unknown>[], subject: string): Dimension | null {
+  const want = subject.trim().toLowerCase();
+  const columns: [string, Dimension][] = [
+    ['store', 'store'], ['product', 'product'], ['sku', 'product'], ['category', 'category'],
+  ];
+  for (const row of rows) {
+    for (const [column, dimension] of columns) {
+      const v = row[column];
+      if (typeof v === 'string' && v.trim().toLowerCase() === want) return dimension;
+    }
+  }
+  return null;
+}
+
 export function rowFor(rows: Record<string, unknown>[], subject: string): Record<string, unknown> | null {
   const want = subject.trim().toLowerCase();
   return rows.find((r) => Object.values(r).some(

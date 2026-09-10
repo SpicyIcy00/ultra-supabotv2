@@ -15,7 +15,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CompositionBlock, GeorgeTurn, ToolCall } from '../types/george';
 import type { Post } from '../types/river';
 import { buildBoard, inOrder, sorted, type Local } from './board';
-import { restoreFromPosts, type AnswerTurn } from './composition';
+import { dimensionOf, restoreFromPosts, type AnswerTurn } from './composition';
 import { fmt, splitCaveat } from './widgets';
 import { Board } from './render';
 
@@ -296,5 +296,37 @@ describe('a reopened thread', () => {
 
     const [bare] = restoreFromPosts([stored], [{ ...post, payload: null }]) as AnswerTurn[];
     expect(bare.composition).toBeUndefined();
+  });
+});
+
+// --------------------------------------------------------------- defects fixed
+
+describe('a subject knows what kind of thing it is', () => {
+  it('reads the dimension off the column the name came from, and never guesses', () => {
+    const shops = SHOPS.result!.rows!;
+    const plan = PLAN.result!.rows!;
+    expect(dimensionOf(shops, 'Rockwell')).toBe('store');
+    expect(dimensionOf(plan, 'Kameda Orange Big Pack')).toBe('product');
+    expect(dimensionOf(plan, 'K-01')).toBe('product');          // an sku is a product
+    expect(dimensionOf(shops, 'Nowhere')).toBeNull();           // not in the rows: say nothing
+  });
+
+  it('hands the dimension up when an object is touched', () => {
+    const picked: [string, string | null][] = [];
+    const answers = [turn([{ op: 'put', kind: 'draft', key: 'seikyo-order', weight: 'lead', seq: 2 }])];
+    const board = buildBoard(answers);
+    render(
+      <Board answers={answers} board={board} local={{}} focused={null} selection={[]} live={false}
+        onSelect={(s, d) => picked.push([s, d])} onFocus={() => {}} onClose={() => {}} onLocal={() => {}} />,
+    );
+    // A draft has no clickable subject, so a hero stands in for the property:
+    const heroAnswers = [turn([{ op: 'put', kind: 'hero', key: 'r', weight: 'lead', seq: 1, subject: 'Rockwell' }])];
+    cleanup();
+    const { container } = render(
+      <Board answers={heroAnswers} board={buildBoard(heroAnswers)} local={{}} focused={null} selection={[]} live={false}
+        onSelect={(s, d) => picked.push([s, d])} onFocus={() => {}} onClose={() => {}} onLocal={() => {}} />,
+    );
+    fireEvent.click(container.querySelector('[data-widget="hero"]')!);
+    expect(picked).toEqual([['Rockwell', 'store']]);
   });
 });
