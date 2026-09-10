@@ -170,6 +170,13 @@ async def check(session: AsyncSession, watch: GeorgeWatch, *,
                 }],
             )
         watch.last_status = "stale_backtest"
+        # Recorded on the ROW, not only on the check: this is what the
+        # exception report reads, and a watch that stopped without saying why
+        # is only half-escalated.
+        watch.last_error = (
+            f"backtested under definitions version {measured}, now "
+            f"{req(defs, 'version')}"
+        )[:2000]
         watch.last_checked_at = datetime.now(slots.MANILA)
         await watches.record_check(session, watch_id=watch.id, as_of=day,
                                    fired=False, state=watch.last_state,

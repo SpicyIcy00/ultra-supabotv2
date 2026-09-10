@@ -75,10 +75,32 @@ export function Noticed({ onLookInto }: {
             marginTop: 10, paddingLeft: 10, borderLeft: '2px solid var(--edge)',
           }}
         >
-          <p className="r-note" style={{ flex: '1 1 26ch', margin: 0 }}>{item.body}</p>
-          <span className="r-label" style={{ opacity: 0.7 }}>
-            {new Date(item.created_at).toLocaleDateString()}
-          </span>
+          <div style={{ flex: '1 1 26ch' }}>
+            <p className="r-note" style={{ margin: 0 }}>
+              {/* A system that broke is named as one. NOT in the approvals
+                  colour: a failed run is not an approval (CLAUDE.md UI rule
+                  5, in those words), and borrowing the summons colour for it
+                  is how the summons stops meaning anything. */}
+              {item.kind === 'stuck' && (
+                <span className="r-label" style={{ marginRight: 8 }}>stopped ·</span>
+              )}
+              {item.body}
+            </p>
+            {/* What it said, then the one thing that would unstick it. Both
+                come from the system's own record — neither is George guessing
+                at a cause he has not established. */}
+            {item.why && (
+              <p className="r-label" style={{ marginTop: 4, opacity: 0.8 }}>{item.why}</p>
+            )}
+            {item.fix && (
+              <p className="r-note" style={{ marginTop: 4, opacity: 0.9 }}>{item.fix}</p>
+            )}
+          </div>
+          {item.created_at && (
+            <span className="r-label" style={{ opacity: 0.7 }}>
+              {new Date(item.created_at).toLocaleDateString()}
+            </span>
+          )}
           {/* Only offered when the read actually travelled with the post. A
               button that promised to re-run a call that was never stored
               would be inventing the one thing a reply must not invent. */}

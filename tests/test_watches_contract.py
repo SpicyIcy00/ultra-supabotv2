@@ -522,3 +522,54 @@ def test_paging_the_river_keeps_the_stream_filter():
     source = inspect.getsource(route.read_river)
     assert 'cursor += " AND p.created_at < :before"' in source
     assert 'cursor = " AND p.created_at < :before"' not in source
+
+
+def test_a_system_that_stops_says_why_on_its_own_row():
+    """
+    A watch that stops posts once and then goes quiet — and quiet is its normal
+    state, so the post is the only announcement there will ever be. The row has
+    to carry the reason too, because that is what the exception report reads
+    days later when nobody remembers the post.
+    """
+    from app.services import watch_runner as runner
+
+    stale = inspect.getsource(runner.check)
+    assert "watch.last_error = (" in stale
+    assert "definitions version" in stale
+
+
+def test_things_you_have_not_started_are_not_escalated_as_broken():
+    """
+    A question you have not switched on and a watch with no backtest yet are
+    things you have not STARTED, not things that broke. Listing them would turn
+    an exception report into a nag list, and a nag list is read once.
+
+    Held as a rule because the temptation to widen this is exactly what makes
+    attention surfaces useless.
+    """
+    from app.api.v1.routes import george as route
+
+    source = inspect.getsource(route._stuck)
+    # Only states that mean "was running, is not working".
+    assert "last_status = 'failed'" in source
+    assert "'failed', 'stale_backtest'" in source
+    assert "status <> 'ok'" in source
+    # And never the two that mean "not started".
+    assert "NOT enabled" not in source
+    assert "backtest IS NULL" not in source
+
+
+def test_a_failed_run_never_wears_the_approvals_colour():
+    """
+    CLAUDE.md UI rule 5, in its own words: "A failed run is not an approval and
+    must not borrow the colour." The exception report lands beside what George
+    noticed, in his colour, and the accent stays with the queue.
+    """
+    import re
+    from pathlib import Path
+
+    panel = (Path(__file__).resolve().parents[1]
+             / "frontend" / "src" / "room" / "Noticed.tsx").read_text(encoding="utf-8")
+    code = re.sub(r"/\*.*?\*/", "", panel, flags=re.S)
+    code = re.sub(r"//.*", "", code)
+    assert "--accent" not in code and "george-accent" not in code

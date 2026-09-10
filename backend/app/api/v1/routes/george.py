@@ -918,17 +918,142 @@ NOTICED_LIMIT = 5
 
 
 class NoticedItem(BaseModel):
-    """One thing a watch reported, with the thread a reply belongs in."""
+    """
+    One thing George noticed: a watch that fired, or a system that broke.
+
+    TWO KINDS, AND THEY ARE DIFFERENT FACTS. A "watch" is something true
+    about the business that changed. A "stuck" is something about GEORGE — a rule
+    that failed on its schedule, a question that could not be asked, a watch
+    that has stopped watching. The second kind matters precisely because it is
+    otherwise invisible: a watch's normal state is silence, so a broken one and
+    a quiet fortnight look identical from outside.
+    """
 
     post_id: str
+    #: Empty for a "stuck": nothing was posted, so there is no thread to reply
+    #: in. The client offers no "look into it" for one.
     thread_id: str
+    kind: str = "watch"
     body: str
-    created_at: datetime
+    created_at: Optional[datetime] = None
+    #: For a "stuck": what the system itself said went wrong.
+    why: Optional[str] = None
+    #: For a "stuck": the one thing that would unstick it.
+    fix: Optional[str] = None
     #: The watch that produced it, so a client can group or mute by watch.
     watch_id: Optional[str] = None
     #: True when the read behind it travelled with the post, which is what
     #: makes "look into it" re-run a fact rather than work from the sentence.
     has_calls: bool = False
+
+
+async def _stuck(db: AsyncSession, username: str) -> List["NoticedItem"]:
+    """
+    Things that RUN and have stopped working.
+
+    THE OWNER'S FEATURE 18: not just create workflows — operate the systems:
+    monitor, prepare work, check conditions, follow up, ESCALATE EXCEPTIONS.
+    Until this, a scheduled run that failed wrote a post nobody surfaced, a
+    standing question that broke recorded `failed` on its own row and said
+    nothing, and a watch that stopped because its thresholds moved went quiet —
+    which for a watch is indistinguishable from working perfectly.
+
+    A system that fails silently is worse than no system: it is a thing you
+    believe is watching.
+
+    WHAT IS DELIBERATELY NOT HERE. A question you have not switched on, a watch
+    with no backtest yet — those are things you have not started, not things
+    that broke. Listing them would turn an exception report into a nag list,
+    and a nag list is read once. This carries only what WAS running.
+
+    NEVER THE APPROVALS COLOUR (UI rule 5). A failed run is not an approval —
+    CLAUDE.md says so in those words — so this lands beside what George
+    noticed, in his own colour, and the accent stays with the queue.
+    """
+    items: List[NoticedItem] = []
+
+    # ---- scheduled runs that failed -------------------------------------
+    # Grouped, with a count: "failed three mornings running" is a different
+    # fact from "failed once", and only the first is worth waking up for.
+    runs = (await db.execute(text("""
+        SELECT w.name,
+               count(*) AS times,
+               max(r.started_at) AS last_at,
+               -- A run has no `error` column: what went wrong is the first
+               -- notice it carried, which is also what the run's own post
+               -- says, so the two accounts cannot disagree.
+               (array_agg(r.notices -> 0 ->> 'message'
+                          ORDER BY r.started_at DESC))[1] AS why
+          FROM george.workflow_runs r
+          JOIN george.workflows w ON w.id = r.workflow_id
+         WHERE r.status <> 'ok'
+           AND r.mode = 'scheduled'
+           AND r.started_at > now() - make_interval(days => :days)
+         GROUP BY w.name
+         ORDER BY max(r.started_at) DESC
+         LIMIT :limit
+    """), {"days": NOTICED_DAYS, "limit": NOTICED_LIMIT})).mappings().all()
+    for row in runs:
+        times = int(row["times"])
+        items.append(NoticedItem(
+            post_id=f"stuck:workflow:{row['name']}",
+            thread_id="",
+            kind="stuck",
+            body=(f"{row['name']} failed on its schedule"
+                  + (f", {times} times" if times > 1 else "")),
+            created_at=row["last_at"],
+            why=(str(row["why"])[:400] if row["why"] else None),
+            fix="Run it by hand to see the failure, or switch its schedule off.",
+        ))
+
+    # ---- standing questions that could not be asked ----------------------
+    questions = (await db.execute(text("""
+        SELECT question, last_run_at, last_error
+          FROM george.standing_questions
+         WHERE owner = :me AND last_status = 'failed'
+         ORDER BY last_run_at DESC NULLS LAST
+         LIMIT :limit
+    """), {"me": username, "limit": NOTICED_LIMIT})).mappings().all()
+    for row in questions:
+        items.append(NoticedItem(
+            post_id=f"stuck:question:{row['question'][:60]}",
+            thread_id="",
+            kind="stuck",
+            body=f"“{row['question']}” could not be answered on its schedule",
+            created_at=row["last_run_at"],
+            why=(str(row["last_error"])[:400] if row["last_error"] else None),
+            fix="Ask it now and see what happens, or change what it asks.",
+        ))
+
+    # ---- watches that are not watching -----------------------------------
+    # The one that matters most, because a watch's normal state is silence:
+    # from outside, a broken watch and a quiet fortnight look identical.
+    watches = (await db.execute(text("""
+        SELECT id, condition, direction, stores, last_status, last_error,
+               last_checked_at
+          FROM george.watches
+         WHERE owner = :me AND last_status IN ('failed', 'stale_backtest')
+         ORDER BY last_checked_at DESC NULLS LAST
+         LIMIT :limit
+    """), {"me": username, "limit": NOTICED_LIMIT})).mappings().all()
+    for row in watches:
+        where = ", ".join(row["stores"]) if row["stores"] else "any shop"
+        stopped = row["last_status"] == "stale_backtest"
+        items.append(NoticedItem(
+            post_id=f"stuck:watch:{row['id']}",
+            thread_id="",
+            kind="stuck",
+            body=(f"the watch on {row['condition']} ({where}) "
+                  + ("has stopped" if stopped else "could not check")),
+            created_at=row["last_checked_at"],
+            why=(str(row["last_error"])[:400] if row["last_error"] else None),
+            fix=("Back it again — the thresholds behind it changed, so what it "
+                 "would do is no longer what it was measured doing."
+                 if stopped else
+                 "It is blind rather than quiet. What it last saw is unchanged."),
+        ))
+
+    return items
 
 
 @router.get("/noticed", response_model=List[NoticedItem])
@@ -965,12 +1090,16 @@ async def read_noticed(
         items.append(NoticedItem(
             post_id=str(row["id"]),
             thread_id=str(row["thread_id"]),
+            kind="watch",
             body=row["body"] or "",
             created_at=row["created_at"],
             watch_id=payload.get("watch_id"),
             has_calls=bool(payload.get("calls")),
         ))
-    return items
+
+    # WHAT BROKE COMES FIRST. A watch reporting the business is news; a system
+    # that has stopped reporting is a thing you believe is running and is not.
+    return await _stuck(db, user.username) + items
 
 
 @router.get("/status", response_model=StatusBand)
