@@ -183,9 +183,22 @@ export function SubjectTile(p: TileProps & { size?: 'lead' | 'normal' | 'small' 
   const dimension = dimensionOf(rows, label);
   const size = p.size ?? (p.o.weight === 'lead' ? 'lead' : p.o.weight === 'quiet' ? 'small' : 'normal');
   const figure = size === 'lead' ? 46 : size === 'small' ? 24 : 32;
+  /*
+   * COLOUR FOLLOWS ATTENTION. A board keeps objects across turns, so putting
+   * every subject on a saturated field means six questions in you are looking
+   * at a fruit salad. What is live and leading burns; what has gone quiet or
+   * came from an earlier turn cools to paper and keeps its hue only on the
+   * edge — still findable, no longer shouting.
+   *
+   * Seven shops asked about at once are all live, so "how are we doing" still
+   * lights the whole board. Ask about a supplier next and they cool while the
+   * draft lights up.
+   */
+  const lit = !p.earlier && p.o.weight !== 'quiet';
 
   return (
-    <Shell hue={hueFor(label, dimension, p.o.kind)} change={change} solid
+    <Shell hue={hueFor(label, dimension, p.o.kind)} change={change}
+           solid={lit} quiet={!lit}
            landing={p.landing} delay={p.delay} picked={p.focused || p.selected}
            onOpen={() => p.on.open(p.o.key)}>
       <p className="r-label">{label}{p.earlier ? ' · from earlier' : ''}</p>

@@ -187,9 +187,12 @@
 .r-scroll::-webkit-scrollbar-thumb { background: rgba(17, 24, 39, 0.14); border-radius: 4px; }
 
 /* Quiet: on the paper rather than on a card of its own. */
+/* Cooled: on the paper, keeping its hue as an edge so it is still findable.
+   The left rule is what a shop looks like once it is no longer the point. */
 .r-tile--quiet {
   background: rgba(255, 255, 255, 0.55);
-  border-color: rgba(var(--hue), 0.18);
+  border-color: rgba(var(--hue), 0.20);
+  border-left: 3px solid rgba(var(--hue), 0.55);
   box-shadow: none;
 }
 .r-tile--quiet::before { opacity: 0.75; }
