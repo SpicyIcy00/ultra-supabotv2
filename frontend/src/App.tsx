@@ -27,10 +27,10 @@ import { LandingRedirect } from './components/LandingRedirect';
 import { GeorgeStreamProvider } from './components/george/GeorgeStreamProvider';
 import { GeorgeShell } from './components/shell/GeorgeShell';
 
-// George.
-const DeskPage = React.lazy(() => import('./pages/DeskPage'));
-// The workspace George composes (2026-09-10). Beside the desk while it is proven.
-const WorkspacePage = React.lazy(() => import('./workspace/WorkspacePage'));
+// George. One surface: the room he composes, at "/" and at a thread's own
+// address. It replaced the desk and the parallel /w2 board on 2026-09-11 —
+// three half-built answers to the same question became one.
+const Room = React.lazy(() => import('./room/Room'));
 // The rooms: reachable from the desk's line, not destinations beside it.
 const InboxPage = React.lazy(() => import('./pages/InboxPage'));
 const PagesPage = React.lazy(() => import('./pages/PagesPage'));
@@ -116,9 +116,10 @@ function App() {
                 {/* The desk. "/" renders it for a person with George and sends
                     everybody else to their own first page. */}
                 <Route path="/" element={<LandingRedirect />} />
-                <Route path="/w/:threadId" element={george(<DeskPage />)} />
-                <Route path="/w2" element={george(<WorkspacePage />)} />
-                <Route path="/w2/:threadId" element={george(<WorkspacePage />)} />
+                <Route path="/w/:threadId" element={george(<Room />)} />
+                {/* The parallel board's addresses, kept so a link still lands. */}
+                <Route path="/w2" element={<Navigate to="/" replace />} />
+                <Route path="/w2/:threadId" element={<WorkRedirect />} />
 
                 {/* The rooms, in George's chrome. */}
                 <Route element={<GeorgeShell />}>

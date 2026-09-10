@@ -1,0 +1,432 @@
+/*
+ * THE ROOM — George's surface.
+ *
+ * Taken from two references the owner gave: a book drawn as glowing
+ * translucent planes on near-black, and a grid of tiles each lit from inside
+ * by its own soft gradient. Both are dark grounds where the only thing making
+ * the ground anything other than flat is light spilling off the objects on it.
+ *
+ * NO GRAIN. NO NOISE. NO TEXTURE. Asked for explicitly, in those words, after
+ * an earlier pass proposed film grain. The depth here comes from the bloom and
+ * nothing else — do not add a turbulence overlay, a vignette image or a dot
+ * screen to "give it richness". It has richness.
+ *
+ * COLOUR IS PERFORMANCE, NOT IDENTITY. The owner chose this over the
+ * alternative: a tile's light says whether the thing went up or down, and how
+ * hard. Rockwell is not "the violet one" — you find it by where it sits and
+ * what it says. That means the palette is only ever three hues, and the
+ * variety in the reference images comes from INTENSITY across many tiles
+ * rather than from many colours.
+ *
+ * The one hue that is never a measurement is George's own: a warm white. His
+ * thoughts must never look like a figure that moved.
+ */
+
+/* ---------------------------------------------------------------- tokens */
+
+.room {
+  /* Ground. Near-black with a blue-violet bias — a true #000 reads as a hole
+     rather than as a room, and kills the bloom's falloff. */
+  --ground: #07080D;
+  --ground-2: #0C0E16;
+  --ground-3: #121522;
+  --edge: rgba(255, 255, 255, 0.07);
+  --edge-strong: rgba(255, 255, 255, 0.14);
+
+  --ink: #EDEFF7;
+  --ink-2: #9AA0B8;
+  --ink-3: #5C6480;
+
+  /* Performance, as rgb triples so alpha can be driven by intensity. */
+  --up: 70, 229, 196;
+  --down: 255, 94, 147;
+  --flat: 123, 132, 176;
+  /* George's voice. Never applied to a measurement. */
+  --george: 255, 246, 230;
+
+  --radius: 26px;
+  --radius-sm: 16px;
+
+  --sans: 'Schibsted Grotesk', ui-sans-serif, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+
+  min-height: 100dvh;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ------------------------------------------------------------------ type */
+
+.r-label {
+  font: 500 10px/1.2 var(--sans);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0;
+}
+
+.r-say {
+  font: 300 19px/1.55 var(--sans);
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  max-width: 58ch;
+  margin: 0;
+}
+.r-say--lead { font-size: 23px; line-height: 1.5; }
+
+.r-note {
+  font: 400 13px/1.6 var(--sans);
+  color: var(--ink-2);
+  max-width: 62ch;
+  margin: 0;
+}
+
+/* Receipts and machine facts. Findable, never read first. */
+.r-src {
+  font: 400 10px/1.6 var(--mono);
+  color: var(--ink-3);
+  margin: 0;
+  word-break: break-word;
+}
+
+/* A figure. Light and wide at size, like the reference's labels, with tabular
+   digits so a column of them lines up. */
+.r-num {
+  font: 300 var(--size, 34px) / 1 var(--sans);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  display: inline-block;
+}
+.r-num--soft { color: var(--ink-2); }
+
+/* ------------------------------------------------------------------ tile */
+
+/*
+ * `--i` is intensity, 0..1, set inline from |change| capped at 30%. It drives
+ * the bloom's alpha and the outer glow's reach, and nothing else — a tile that
+ * moved 2% and a tile that moved 30% are the same object at different
+ * temperatures, not two different designs.
+ */
+.r-tile {
+  position: relative;
+  border-radius: var(--radius);
+  background: var(--ground-2);
+  border: 1px solid var(--edge);
+  padding: 20px 22px;
+  overflow: hidden;
+  --bloom: var(--flat);
+  --i: 0;
+  box-shadow:
+    0 0 calc(24px + var(--i) * 64px) calc(-18px + var(--i) * 8px)
+      rgba(var(--bloom), calc(var(--i) * 0.45));
+  transition: border-color 240ms var(--ease), box-shadow 400ms var(--ease);
+}
+
+/* The light itself. One gradient, generous falloff, clipped by the tile. */
+.r-tile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(115% 90% at 22% -8%,
+      rgba(var(--bloom), calc(0.10 + var(--i) * 0.42)) 0%,
+      rgba(var(--bloom), calc(0.03 + var(--i) * 0.14)) 38%,
+      transparent 72%);
+}
+/* A second, tighter core so a hot tile has a source rather than a wash. */
+.r-tile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--i);
+  background: radial-gradient(38% 34% at 20% -4%, rgba(var(--bloom), 0.30), transparent 70%);
+}
+.r-tile > * { position: relative; z-index: 1; }
+
+/* NO ONE TILE MAY DEFINE THE PAGE'S HEIGHT. A board is a grid, and a single
+   tall object drags a whole row of empty space behind it — the first shot of
+   this room had a draft of forty lines beside two thirds of a screen of
+   nothing. Anything taller than this scrolls inside itself. */
+.r-tile { max-height: 560px; display: flex; flex-direction: column; }
+.r-tile--tall { max-height: none; }
+.r-scroll { overflow-y: auto; min-height: 0; }
+.r-scroll::-webkit-scrollbar { width: 8px; }
+.r-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.09); border-radius: 4px; }
+
+.r-tile--up { --bloom: var(--up); }
+.r-tile--down { --bloom: var(--down); }
+.r-tile--flat { --bloom: var(--flat); }
+/* George speaking. Warm white, and deliberately dimmer than any measurement. */
+.r-tile--george { --bloom: var(--george); --i: 0.16; }
+
+.r-tile--quiet {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+}
+.r-tile--quiet::after { opacity: 0; }
+
+.r-tile[data-open] { cursor: pointer; }
+.r-tile[data-open]:hover { border-color: var(--edge-strong); }
+.r-tile:focus-visible { outline: 2px solid rgba(var(--george), 0.7); outline-offset: 2px; }
+
+/* --------------------------------------------------------------- assembly */
+
+/*
+ * "i see it working... it generates ui bit by bit you can see it developing in
+ * front of you." Each tile lands as its read returns — not on a timer, not all
+ * at once. `--d` is the stagger the renderer sets from the tile's position.
+ */
+@keyframes r-land {
+  from { opacity: 0; transform: translateY(12px) scale(0.975); filter: blur(12px); }
+  60%  { filter: blur(0); }
+  to   { opacity: 1; transform: none; filter: blur(0); }
+}
+@keyframes r-figure-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes r-breathe {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.35); }
+}
+
+.r-landing { animation: r-land 520ms var(--ease) both; animation-delay: var(--d, 0ms); }
+.r-landing .r-num { animation: r-figure-in 380ms var(--ease) both; animation-delay: calc(var(--d, 0ms) + 240ms); }
+
+@media (prefers-reduced-motion: reduce) {
+  .r-landing, .r-landing .r-num { animation: none; }
+  * { transition-duration: 1ms !important; }
+}
+
+/* ------------------------------------------------------------------ rail */
+
+.r-rail {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  padding: 18px 0;
+  border-right: 1px solid var(--edge);
+  background: var(--ground);
+  z-index: 20;
+}
+
+/* George's mark: a small light. It breathes while he works and is still when
+   he isn't — that is the whole of his presence, no caption. */
+.r-mark {
+  width: 11px; height: 11px; border-radius: 50%;
+  background: rgb(var(--george));
+  box-shadow: 0 0 18px 2px rgba(var(--george), 0.55);
+  flex-shrink: 0;
+}
+.r-mark--busy { animation: r-breathe 1500ms var(--ease) infinite; }
+
+.r-rail-btn {
+  position: relative;
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  border: 0; border-radius: 11px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  font: 400 10px/1 var(--mono);
+  letter-spacing: 0.04em;
+  transition: color 180ms var(--ease), background 180ms var(--ease);
+}
+.r-rail-btn:hover, .r-rail-btn:focus-visible { color: var(--ink); background: var(--ground-3); }
+.r-rail-btn[aria-current='true'] { color: var(--ink); background: var(--ground-3); }
+
+/* The count beside "needs you". The one place a colour means "come here". */
+.r-rail-count {
+  position: absolute; top: 2px; right: 2px;
+  min-width: 15px; height: 15px; padding: 0 4px;
+  border-radius: 8px;
+  background: rgb(var(--down));
+  color: #14000A;
+  font: 600 9px/15px var(--sans);
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .r-rail {
+    top: auto; right: 0;
+    width: auto; height: 54px;
+    flex-direction: row;
+    justify-content: space-around;
+    gap: 0;
+    padding: 0 12px;
+    border-right: 0;
+    border-top: 1px solid var(--edge);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}
+
+/* ----------------------------------------------------------------- board */
+
+.r-main { padding: 26px clamp(18px, 3vw, 40px) 150px; margin-left: 56px; }
+@media (max-width: 720px) { .r-main { margin-left: 0; padding-bottom: 190px; } }
+
+/*
+ * A BOARD PACKS. It does not lay out in rows.
+ *
+ * A twelve-column grid gave every row the height of its tallest tile, so a
+ * draft of forty lines beside a two-line reading left three hundred pixels of
+ * nothing — which is what made the first shot of this room look unfinished
+ * rather than calm. Tiles are different heights by nature and always will be.
+ *
+ * So: what LEADS gets its own full-width row at the top, in George's order,
+ * because that is the thing he wants looked at first. Everything after it
+ * flows into columns and packs tight. Within the columns reading order runs
+ * down and then across, which is the one thing this costs — acceptable for
+ * peers, which is exactly what supporting and quiet objects are.
+ */
+.r-board { max-width: 1320px; }
+
+.r-board-lead {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+@media (min-width: 1100px) {
+  /* A lead beside its own caveats or reading, not stretched across the page. */
+  .r-board-lead { grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); }
+}
+
+.r-board-rest { columns: 3 340px; column-gap: 14px; }
+@media (max-width: 900px) { .r-board-rest { columns: 2 280px; } }
+@media (max-width: 640px) { .r-board-rest { columns: 1; } }
+.r-board-rest > * {
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  display: inline-block;   /* Safari and Firefox both need this to honour the break */
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+/* Focus takes the whole board width, out of the columns entirely. */
+.r-w-full { break-inside: avoid; }
+
+/* --------------------------------------------------------------- pieces */
+
+.r-delta {
+  display: inline-flex; align-items: center; gap: 4px;
+  font: 500 12px/1 var(--sans);
+  font-variant-numeric: tabular-nums;
+  padding: 4px 8px; border-radius: 999px;
+  background: rgba(var(--bloom), 0.14);
+  color: rgb(var(--bloom));
+}
+.r-delta--none { background: rgba(255,255,255,.05); color: var(--ink-3); }
+
+.r-rows { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.r-rows th {
+  text-align: left; padding: 0 10px 9px 0;
+  font: 500 9.5px/1.2 var(--sans); letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-3); border-bottom: 1px solid var(--edge); white-space: nowrap;
+}
+.r-rows td {
+  padding: 9px 10px 9px 0; border-bottom: 1px solid rgba(255,255,255,.04);
+  color: var(--ink-2); vertical-align: baseline;
+}
+.r-rows td.n, .r-rows th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* A name may wrap; a figure may not — a number broken across two lines stops
+   being a number. */
+.r-rows td:first-child { min-width: 8ch; }
+.r-rows tr:last-child td { border-bottom: 0; }
+.r-rows tbody tr:hover td { color: var(--ink); }
+
+/* Dots along an axis — a series or a ranked set, read as shape not as rows. */
+.r-dots { display: flex; align-items: center; gap: 7px; height: 42px; }
+.r-dots i {
+  display: block; border-radius: 50%;
+  width: var(--d, 8px); height: var(--d, 8px);
+  background: rgb(var(--c, var(--flat)));
+  box-shadow: 0 0 10px 0 rgba(var(--c, var(--flat)), .5);
+  transform: translateY(var(--y, 0));
+}
+
+/* An object's controls. Present always — a control only a mouse can find is
+   not a control, and the phone layout is the real layout. */
+.r-acts { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.r-act {
+  border: 0; background: none; padding: 3px 0; cursor: pointer;
+  font: 400 11px/1 var(--sans); color: var(--ink-3);
+  transition: color 160ms var(--ease);
+}
+.r-act:hover, .r-act:focus-visible { color: var(--ink); }
+@media (hover: none) { .r-act { padding: 7px 0; color: var(--ink-2); } }
+
+/* ------------------------------------------------------------------ line */
+
+.r-line-wrap {
+  position: fixed; left: 56px; right: 0; bottom: 0;
+  padding: 0 clamp(18px, 3vw, 40px) 22px;
+  background: linear-gradient(to top, var(--ground) 62%, transparent);
+  pointer-events: none; z-index: 15;
+}
+@media (max-width: 720px) { .r-line-wrap { left: 0; bottom: 54px; } }
+
+.r-line {
+  display: flex; align-items: center; gap: 10px;
+  max-width: 1320px; margin: 0 auto;
+  background: var(--ground-2);
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  padding: 9px 10px 9px 20px;
+  pointer-events: auto;
+}
+.r-line:focus-within { border-color: rgba(var(--george), 0.35); }
+.r-line input {
+  flex: 1; border: 0; outline: 0; background: transparent;
+  font: 300 15px/1.4 var(--sans); color: var(--ink);
+}
+.r-line input::placeholder { color: var(--ink-3); }
+
+.r-send {
+  width: 34px; height: 34px; border-radius: 50%; border: 0;
+  background: rgb(var(--george)); color: var(--ground);
+  display: grid; place-items: center; cursor: pointer; font-size: 15px;
+}
+.r-send:disabled { background: rgba(255,255,255,.08); color: var(--ink-3); cursor: default; }
+
+.r-chip {
+  border: 1px solid var(--edge); background: transparent;
+  border-radius: 999px; padding: 6px 13px; cursor: pointer;
+  font: 400 12.5px/1 var(--sans); color: var(--ink-2);
+  transition: border-color 160ms var(--ease), color 160ms var(--ease);
+}
+.r-chip:hover { border-color: var(--edge-strong); color: var(--ink); }
+
+/* --------------------------------------------------------------- opening */
+
+.r-greeting {
+  font: 200 clamp(30px, 5vw, 46px) / 1.15 var(--sans);
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  margin: 0;
+}
+.r-greeting-sub { margin-top: 10px; color: var(--ink-3); font: 300 15px/1.5 var(--sans); }
+
+/* A caveat. Above the work, never behind a disclosure that hides that it is
+   there, and never in a performance colour — it qualifies a figure, it is not
+   one. */
+.r-caveats { display: grid; gap: 9px; border-left: 1px solid var(--edge-strong); padding-left: 14px; }
+.r-caveat { font: 400 12.5px/1.6 var(--sans); color: var(--ink-2); max-width: 66ch; margin: 0; }
+.r-caveat-detail { display: block; margin-top: 6px; color: var(--ink-3); font-size: 11.5px; }
+.r-more {
+  border: 0; background: none; padding: 0; cursor: pointer; font: inherit;
+  color: var(--ink); text-decoration: underline; text-underline-offset: 3px;
+}
+.r-more:hover { color: rgb(var(--george)); }

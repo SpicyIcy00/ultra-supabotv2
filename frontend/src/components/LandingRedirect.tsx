@@ -13,15 +13,15 @@ import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { landingPathFor } from '../constants/pages';
 
-const DeskPage = React.lazy(() => import('../pages/DeskPage'));
+const Room = React.lazy(() => import('../room/Room'));
 
 export function LandingRedirect() {
   const user = useAuthStore((s) => s.user);
   if (!user) return null;
   if (user.allowed_pages.includes('george')) {
     return (
-      <Suspense fallback={<div className="desk-ground h-dvh" />}>
-        <DeskPage />
+      <Suspense fallback={<div style={{ minHeight: "100dvh", background: "#07080D" }} />}>
+        <Room />
       </Suspense>
     );
   }

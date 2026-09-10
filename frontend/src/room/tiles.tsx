@@ -1,0 +1,576 @@
+/**
+ * The things on the board.
+ *
+ * Every one is a tile lit from inside by its own figure: the hue says up or
+ * down, the brightness says how hard, and neither is ever chosen by hand — see
+ * `intensity()` in data.ts. A tile that carries no measurement (George's own
+ * words, a table of rows) burns at nothing and stays dark, which is what makes
+ * the ones that moved read across the room.
+ *
+ * None of these components computes a business figure. They pick a row, read a
+ * value the tool already returned, and format it.
+ */
+import { useState, type CSSProperties, type ReactNode } from 'react';
+import type { GeorgeNotice } from '../types/george';
+import type { BoardObject, Local } from './board';
+import {
+  callOf, changeOf, dimensionOf, fmt, intensity, measureOf, pct, receiptsLine,
+  rowFor, rowsOf, sorted, splitCaveat, subjectOf, tone, valueOf,
+  type AnswerTurn, type Change, type Dimension,
+} from './data';
+
+export interface TileActions {
+  /** Bring it forward and give it the room. */
+  open(key: string): void;
+  /** Put it in the selection, so the next thing said is about it. */
+  pick(subject: string, dimension: Dimension | null): void;
+  /** Ask George about this one thing, now. */
+  why(subject: string, dimension: Dimension | null): void;
+  aside(key: string): void;
+  patch(key: string, local: Local): void;
+}
+
+export interface TileProps {
+  o: BoardObject;
+  turn: AnswerTurn;
+  local: Local;
+  landing: boolean;
+  delay: number;
+  focused: boolean;
+  selected: boolean;
+  earlier: boolean;
+  on: TileActions;
+  notices?: GeorgeNotice[];
+}
+
+/* ------------------------------------------------------------------ shell */
+
+function Shell({ change, quiet, george, landing, delay, focused, selected, children, onOpen }: {
+  change?: Change | null;
+  quiet?: boolean;
+  george?: boolean;
+  landing: boolean;
+  delay: number;
+  focused?: boolean;
+  selected?: boolean;
+  children: ReactNode;
+  onOpen?: () => void;
+}) {
+  const i = change ? intensity(change) : 0;
+  const t = change ? tone(change) : 'flat';
+  const cls = [
+    'r-tile',
+    george ? 'r-tile--george' : `r-tile--${t}`,
+    quiet ? 'r-tile--quiet' : '',
+    landing ? 'r-landing' : '',
+  ].filter(Boolean).join(' ');
+  return (
+    <div
+      className={cls}
+      style={{
+        ...(george ? {} : { '--i': i.toFixed(3) }),
+        '--d': `${delay}ms`,
+        ...(focused || selected ? { borderColor: 'rgba(255,246,230,.4)' } : {}),
+      } as CSSProperties}
+      {...(onOpen ? { 'data-open': true, role: 'button', tabIndex: 0,
+        onClick: onOpen,
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); }
+        } } : {})}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Delta({ change }: { change: Change }) {
+  if (change.status && change.status !== 'ok') {
+    const word = change.status === 'no_baseline' ? 'new'
+      : change.status === 'no_current' ? 'none now' : 'was zero';
+    const long = change.status === 'no_baseline' ? 'new — nothing to compare against'
+      : change.status === 'no_current' ? 'nothing this period' : 'the previous period was zero';
+    return <span className="r-delta r-delta--none" title={long}>{word}</span>;
+  }
+  if (change.pct === null) return null;
+  if (change.pct === 0) return <span className="r-delta r-delta--none">no change</span>;
+  return <span className="r-delta">{pct(change.pct)}</span>;
+}
+
+function Receipts({ meta }: { meta: Parameters<typeof receiptsLine>[0] }) {
+  const line = receiptsLine(meta);
+  if (!line) return null;
+  return <p className="r-src" style={{ marginTop: 12 }}>{line}</p>;
+}
+
+/**
+ * The three things the owner asked to be able to do to an object without
+ * typing a sentence. Two are instant and local; only `why` costs a turn,
+ * because only `why` needs a new fact.
+ */
+function Acts({ subject, dimension, o, on }: {
+  subject: string | null; dimension: Dimension | null; o: BoardObject; on: TileActions;
+}) {
+  return (
+    <div className="r-acts" onClick={(e) => e.stopPropagation()}>
+      <button type="button" className="r-act" onClick={() => on.open(o.key)}>open</button>
+      {subject && (
+        <>
+          <button type="button" className="r-act" onClick={() => on.pick(subject, dimension)}>compare</button>
+          <button type="button" className="r-act" onClick={() => on.why(subject, dimension)}>why</button>
+        </>
+      )}
+      <button type="button" className="r-act" onClick={() => on.aside(o.key)}>set aside</button>
+    </div>
+  );
+}
+
+function Missing({ what }: { what: string }) {
+  return (
+    <div className="r-tile r-tile--quiet">
+      <p className="r-note">George composed this from {what}, which this read does not carry.</p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------- the objects */
+
+/**
+ * A SUBJECT — a shop, a product, a supplier. The workhorse of the board, and
+ * the thing the owner said he wants first: is it up or down, and by how much.
+ * `hero` and `figure` are this tile at different sizes.
+ */
+export function SubjectTile(p: TileProps & { size?: 'lead' | 'normal' | 'small' }) {
+  const call = callOf(p.turn, p.o.seq);
+  const rows = rowsOf(call);
+  const row = p.o.subject ? rowFor(rows, p.o.subject) : rows[0] ?? null;
+  if (!row) return <Missing what={p.o.subject ?? 'a row'} />;
+
+  const change = changeOf(row);
+  const v = valueOf(row);
+  const label = p.o.subject ?? subjectOf(row) ?? '';
+  const dimension = dimensionOf(rows, label);
+  const size = p.size ?? (p.o.weight === 'lead' ? 'lead' : p.o.weight === 'quiet' ? 'small' : 'normal');
+  const figure = size === 'lead' ? 46 : size === 'small' ? 24 : 32;
+
+  return (
+    <Shell change={change} landing={p.landing} delay={p.delay} focused={p.focused}
+           selected={p.selected} quiet={size === 'small'} onOpen={() => p.on.open(p.o.key)}>
+      <p className="r-label">{label}{p.earlier ? ' · from earlier' : ''}</p>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
+        <span className="r-num" style={{ '--size': `${figure}px` } as CSSProperties}>
+          {v ? fmt(v.key, v.value) : '—'}
+        </span>
+        <Delta change={change} />
+      </div>
+      {v && <p className="r-label" style={{ marginTop: 9 }}>{measureOf(call?.result?.meta, v.key)}</p>}
+      {size !== 'small' && <Acts subject={label} dimension={dimension} o={p.o} on={p.on} />}
+      <Receipts meta={call?.result?.meta} />
+    </Shell>
+  );
+}
+
+/** Two to four subjects from one read, each lit by its own figure. */
+export function ComparisonTile(p: TileProps) {
+  const call = callOf(p.turn, p.o.seq);
+  const rows = rowsOf(call);
+  const subjects = p.o.subjects ?? [];
+  if (!subjects.length) return <Missing what="the subjects" />;
+
+  return (
+    <div className={`r-tile r-tile--quiet ${p.landing ? 'r-landing' : ''}`}
+         style={{ '--d': `${p.delay}ms`, padding: 0, border: 0, background: 'transparent' } as CSSProperties}>
+      <p className="r-label" style={{ marginBottom: 10 }}>
+        {call?.result?.meta?.metric_label ?? 'compared'}{p.earlier ? ' · from earlier' : ''}
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+        {subjects.map((s, n) => {
+          const row = rowFor(rows, s);
+          const change = row ? changeOf(row) : { pct: null, direction: null } as Change;
+          const v = row ? valueOf(row) : null;
+          const dimension = dimensionOf(rows, s);
+          return (
+            <Shell key={s} change={change} landing={p.landing} delay={p.delay + n * 90}
+                   onOpen={() => p.on.pick(s, dimension)}>
+              <p className="r-label">{s}</p>
+              <div style={{ marginTop: 9 }}>
+                <span className="r-num" style={{ '--size': '26px' } as CSSProperties}>
+                  {v ? fmt(v.key, v.value) : '—'}
+                </span>
+              </div>
+              <div style={{ marginTop: 9 }}><Delta change={change} /></div>
+            </Shell>
+          );
+        })}
+      </div>
+      <Receipts meta={call?.result?.meta} />
+    </div>
+  );
+}
+
+/**
+ * George's own words. Warm white, dim, never a performance colour.
+ *
+ * CLAMPED, AND THAT IS THE POINT. He writes at length, and the board keeps
+ * every turn's reading — so two turns of unclamped prose is two essays, which
+ * is exactly what the last three builds looked like. What is on screen is the
+ * top of the thought; the rest is one word away. A reading from an earlier
+ * turn clamps harder still: it is context now, not the answer.
+ */
+export function TextTile(p: TileProps) {
+  const [open, setOpen] = useState(false);
+  const lines = p.earlier ? 2 : p.o.weight === 'lead' ? 6 : 4;
+  const text = p.turn.text ?? '';
+  // Only offer the toggle when there is genuinely more — roughly the
+  // characters that fit, not a character count anyone reads.
+  const long = text.length > lines * 62;
+  return (
+    <Shell george landing={p.landing} delay={p.delay}>
+      {p.notices && p.notices.length > 0 && (
+        <div style={{ marginBottom: 15 }}><Caveats notices={p.notices} /></div>
+      )}
+      <p
+        className={`r-say ${p.o.weight === 'lead' && !p.earlier ? 'r-say--lead' : ''}`}
+        style={{
+          whiteSpace: 'pre-wrap',
+          ...(open || !long ? {} : {
+            display: '-webkit-box',
+            WebkitLineClamp: lines,
+            WebkitBoxOrient: 'vertical' as const,
+            overflow: 'hidden',
+          }),
+        }}
+      >
+        {text}
+      </p>
+      {long && (
+        <button type="button" className="r-act" style={{ marginTop: 10 }}
+                onClick={() => setOpen((v) => !v)}>
+          {open ? 'less' : 'read the rest'}
+        </button>
+      )}
+    </Shell>
+  );
+}
+
+export function TableTile(p: TileProps) {
+  const call = callOf(p.turn, p.o.seq);
+  const all = rowsOf(call);
+  const sort = p.local.sort;
+  const rows = sorted(all, sort).slice(0, 40);
+  const open = p.local.open ?? (p.o.weight !== 'quiet' || all.length <= 8);
+  if (!rows.length) return <Missing what="rows" />;
+  const meta = call?.result?.meta;
+
+  // A column with one value on every row is a fact about the TABLE, not a
+  // column. Said once, above it, it is the scope.
+  const keys = Object.keys(rows[0]).filter(
+    (k) => !k.endsWith('_id') && !['seq', 'call_seq', 'direction', 'baseline_status'].includes(k));
+  const constant: string[] = [];
+  const cols: string[] = [];
+  for (const k of keys) {
+    const distinct = new Set(rows.map((r) => String(r[k] ?? '')));
+    if (rows.length >= 3 && distinct.size === 1 && String(rows[0][k] ?? '').length <= 24
+        && !/sales|revenue|value|total|cost|price/i.test(k)) {
+      constant.push(fmt(k, rows[0][k]));
+    } else {
+      cols.push(k);
+    }
+  }
+  const money = /sales|revenue|price|cost|peso/i.test(String(meta?.metric_label ?? ''))
+    || rows.some((r) => String(r.unit ?? '').toUpperCase() === 'PHP');
+  const cell = (c: string, row: Record<string, unknown>) =>
+    (money && (c === 'change' || c === 'baseline') ? fmt('net_sales', row[c]) : fmt(c, row[c]));
+
+  // WHAT THE ROW IS ABOUT, WHAT IT IS, AND WHICH WAY IT WENT — in that order,
+  // and at most five. A board packs tiles into columns, so a table that keeps
+  // all seven columns wraps product names over three lines and cuts the last
+  // figure in half. Baseline and absolute change are the first to go: the
+  // value and the percentage already carry the movement, and the full set is
+  // one tap away in the read's own receipts.
+  const RANK: Record<string, number> = {
+    product: 0, store: 0, category: 0, name: 0, supplier: 0, label: 0, day: 0, week: 0, month: 0,
+    sku: 1, value: 2, change_pct: 3, change: 6, baseline: 7,
+  };
+  const shown = cols
+    .slice()
+    .sort((a, b) => (RANK[a] ?? 4) - (RANK[b] ?? 4) || cols.indexOf(a) - cols.indexOf(b))
+    .slice(0, 5);
+  const title = meta?.metric_label ?? p.o.tool?.replace(/^get_/, '').replace(/_/g, ' ') ?? 'rows';
+
+  return (
+    <Shell quiet landing={p.landing} delay={p.delay}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+        <p className="r-label">
+          {[title, `${all.length} rows`, ...constant].join(' · ')}{p.earlier ? ' · from earlier' : ''}
+        </p>
+        {all.length > 8 && (
+          <button type="button" className="r-act" onClick={() => p.on.patch(p.o.key, { open: !open })}>
+            {open ? 'less' : 'show'}
+          </button>
+        )}
+      </div>
+      {open && (
+        <div className="r-scroll" style={{ overflowX: 'auto', marginTop: 12 }}>
+          <table className="r-rows">
+            <thead>
+              <tr>
+                {shown.map((c) => (
+                  <th key={c} className={typeof rows[0][c] === 'number' ? 'n' : ''}
+                      style={{ cursor: 'pointer' }}
+                      aria-sort={sort?.column === c ? (sort.desc ? 'descending' : 'ascending') : 'none'}
+                      onClick={() => p.on.patch(p.o.key,
+                        { sort: { column: c, desc: sort?.column === c ? !sort.desc : true } })}>
+                    {c.replace(/_/g, ' ')}{sort?.column === c ? (sort.desc ? ' ▾' : ' ▴') : ''}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, n) => (
+                <tr key={n}>
+                  {shown.map((c) => (
+                    <td key={c} className={typeof row[c] === 'number' ? 'n' : ''}>
+                      {c === 'change_pct' ? <Delta change={changeOf(row)} /> : cell(c, row)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <Receipts meta={meta} />
+    </Shell>
+  );
+}
+
+/** A series or a ranked set, read as shape. Each dot lit by its own move. */
+export function DistributionTile(p: TileProps) {
+  const call = callOf(p.turn, p.o.seq);
+  const rows = rowsOf(call);
+  if (!rows.length) return <Missing what="the series" />;
+  const changes = rows.map(changeOf);
+  const values = rows.map((r, n) => changes[n].pct ?? valueOf(r)?.value ?? 0);
+  const peak = Math.max(1, ...values.map(Math.abs));
+
+  return (
+    <Shell quiet landing={p.landing} delay={p.delay}>
+      <p className="r-label">
+        {call?.result?.meta?.metric_label ?? 'over time'}{p.earlier ? ' · from earlier' : ''}
+      </p>
+      <div className="r-dots" style={{ marginTop: 12 }}>
+        {rows.map((row, n) => {
+          const v = values[n];
+          const t = tone(changes[n]);
+          return (
+            <i key={n} title={`${subjectOf(row) ?? ''}: ${pct(v)}`}
+               style={{
+                 '--d': `${7 + (Math.abs(v) / peak) * 11}px`,
+                 '--c': `var(--${t})`,
+                 '--y': `${-(v / peak) * 11}px`,
+               } as CSSProperties} />
+          );
+        })}
+      </div>
+      <p className="r-label" style={{ marginTop: 8 }}>
+        {subjectOf(rows[0]) ?? ''} → {subjectOf(rows[rows.length - 1]) ?? ''}
+      </p>
+      <Receipts meta={call?.result?.meta} />
+    </Shell>
+  );
+}
+
+export function ChartTile(p: TileProps) {
+  const call = callOf(p.turn, p.o.seq);
+  const rows = rowsOf(call).slice(0, 60);
+  if (!rows.length) return <Missing what="the series" />;
+  const values = rows.map((r) => valueOf(r)?.value ?? 0);
+  const max = Math.max(1, ...values);
+  const W = 560, H = 130, pad = 8;
+  const x = (n: number) => pad + (n / Math.max(1, rows.length - 1)) * (W - pad * 2);
+  const y = (v: number) => H - pad - (v / max) * (H - pad * 2);
+  const line = values.map((v, n) => `${x(n)},${y(v)}`).join(' ');
+
+  return (
+    <Shell quiet landing={p.landing} delay={p.delay}>
+      <p className="r-label">
+        {call?.result?.meta?.metric_label ?? 'series'}{p.earlier ? ' · from earlier' : ''}
+      </p>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ marginTop: 10, display: 'block' }}
+           role="img" aria-label={call?.result?.meta?.metric_label ?? 'series'}>
+        <defs>
+          <linearGradient id={`fill-${p.o.key}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgb(70,229,196)" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="rgb(70,229,196)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {p.o.form === 'bar'
+          ? values.map((v, n) => (
+              <rect key={n} x={x(n) - (W / rows.length) * 0.3} y={y(v)}
+                    width={(W / rows.length) * 0.6} height={H - pad - y(v)}
+                    fill="rgb(70,229,196)" opacity={0.75} rx={2} />
+            ))
+          : (
+            <>
+              <polygon fill={`url(#fill-${p.o.key})`}
+                       points={`${pad},${H - pad} ${line} ${x(rows.length - 1)},${H - pad}`} />
+              <polyline fill="none" stroke="rgb(70,229,196)" strokeWidth={1.6} points={line} />
+              <circle cx={x(rows.length - 1)} cy={y(values[values.length - 1])} r={3.5}
+                      fill="rgb(70,229,196)" />
+            </>
+          )}
+      </svg>
+      <p className="r-label" style={{ marginTop: 6 }}>
+        {subjectOf(rows[0]) ?? ''} → {subjectOf(rows[rows.length - 1]) ?? ''}
+      </p>
+      <Receipts meta={call?.result?.meta} />
+    </Shell>
+  );
+}
+
+/**
+ * A DRAFT — an order George produced. The quantity a person nudges is theirs
+ * and lives here until they say to keep it; nothing is sent by nudging, and
+ * the suggested figure stays beside it so an edit is always an edit OF
+ * something.
+ */
+export function DraftTile(p: TileProps) {
+  const call = callOf(p.turn, p.o.seq);
+  const rows = rowsOf(call);
+  const [qty, setQty] = useState<Record<number, number>>({});
+  if (!rows.length) return <Missing what="the draft" />;
+  const meta = call?.result?.meta as (Record<string, unknown> & { supplier?: string; cover_days?: number }) | undefined;
+  const suggested = (row: Record<string, unknown>) =>
+    Number(row.suggested_order_qty ?? row.requested_ship_qty ?? 0) || 0;
+  const total = rows.reduce((s, row, n) => s + (qty[n] ?? suggested(row)), 0);
+
+  return (
+    <Shell landing={p.landing} delay={p.delay} change={{ pct: null, direction: 'flat' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+        <div>
+          <p className="r-label">draft order{meta?.supplier ? ` · ${meta.supplier}` : ''}</p>
+          <p className="r-say" style={{ fontSize: 17, marginTop: 7 }}>
+            {meta?.cover_days ? `Enough to last ${meta.cover_days} days` : 'What is running out'}
+          </p>
+        </div>
+        <span className="r-delta r-delta--none">nothing sent</span>
+      </div>
+
+      <div className="r-scroll" style={{ overflowX: 'auto', marginTop: 16 }}>
+        <table className="r-rows">
+          <thead>
+            <tr>
+              <th>product</th><th className="n">per day</th>
+              <th className="n">on hand</th><th className="n">order</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.slice(0, 30).map((row, n) => (
+              <tr key={n}>
+                <td>
+                  <div style={{ color: 'var(--ink)' }}>{String(row.product ?? row.sku ?? '')}</div>
+                  <div className="r-src" style={{ marginTop: 3 }}>
+                    {row.days_of_cover !== undefined && row.days_of_cover !== null
+                      ? `${fmt('days', row.days_of_cover)} days of cover` : ''}
+                    {Number(row.days_with_nothing ?? 0) > 0
+                      ? ` · out ${fmt('d', row.days_with_nothing)} days` : ''}
+                  </div>
+                </td>
+                <td className="n">{fmt('units_per_day', row.units_per_day)}</td>
+                <td className="n">{fmt('on_hand', row.on_hand)}</td>
+                <td className="n">
+                  <input
+                    value={qty[n] ?? suggested(row)}
+                    onChange={(e) => setQty((q) => ({ ...q, [n]: Math.max(0, Number(e.target.value) || 0) }))}
+                    style={{
+                      width: 62, textAlign: 'right', background: 'transparent', color: 'var(--ink)',
+                      border: 0, borderBottom: '1px solid var(--edge)', outline: 0,
+                      font: '400 13px/1.4 var(--sans)', fontVariantNumeric: 'tabular-nums',
+                    }}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
+                    marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--edge)' }}>
+        <div>
+          <p className="r-label">units to order</p>
+          <div style={{ marginTop: 7 }}>
+            <span className="r-num" style={{ '--size': '30px' } as CSSProperties}>
+              {total.toLocaleString('en-PH')}
+            </span>
+          </div>
+        </div>
+        <p className="r-label" style={{ textAlign: 'right' }}>
+          {rows.length} products{rows.length > 30 ? ' · showing 30' : ''}
+        </p>
+      </div>
+      <Receipts meta={call?.result?.meta} />
+    </Shell>
+  );
+}
+
+/** Where a process stands. */
+export function StateTile(p: TileProps) {
+  const call = callOf(p.turn, p.o.seq);
+  const meta = call?.result?.meta as (Record<string, unknown> & {
+    run?: { run_date?: string; age_days?: number; stores_covered?: number; lines?: number };
+  }) | undefined;
+  const label = p.o.label ?? 'pending';
+  return (
+    <Shell quiet landing={p.landing} delay={p.delay}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <p className="r-label">{label}</p>
+        <span className="r-delta r-delta--none">{label}</span>
+      </div>
+      {meta?.run && (
+        <>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 10 }}>
+            <span className="r-num" style={{ '--size': '28px' } as CSSProperties}>
+              {String(meta.run.age_days ?? '—')}
+            </span>
+            <span className="r-label">days since this ran</span>
+          </div>
+          <p className="r-note" style={{ marginTop: 7 }}>
+            run of {meta.run.run_date} · {meta.run.stores_covered} shops · {meta.run.lines?.toLocaleString()} lines
+          </p>
+        </>
+      )}
+      <Receipts meta={call?.result?.meta} />
+    </Shell>
+  );
+}
+
+/* ---------------------------------------------------------------- caveats */
+
+function Caveat({ notice }: { notice: GeorgeNotice }) {
+  const [open, setOpen] = useState(false);
+  const { head, detail } = splitCaveat(notice.message);
+  return (
+    <p className="r-caveat">
+      {head}
+      {detail && (
+        <>
+          {' '}
+          <button type="button" className="r-more" onClick={() => setOpen((o) => !o)}>
+            {open ? 'less' : detail.includes(';') ? 'which ones' : 'more'}
+          </button>
+          {open && <span className="r-caveat-detail">{detail}</span>}
+        </>
+      )}
+    </p>
+  );
+}
+
+export function Caveats({ notices }: { notices?: GeorgeNotice[] }) {
+  if (!notices || notices.length === 0) return null;
+  return (
+    <div className="r-caveats" data-caveats={notices.length}>
+      {notices.map((n, i) => <Caveat key={`${n.kind}-${i}`} notice={n} />)}
+    </div>
+  );
+}

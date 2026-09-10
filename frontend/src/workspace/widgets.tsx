@@ -105,11 +105,17 @@ export function Caveats({ notices }: { notices?: GeorgeNotice[] }) {
   );
 }
 
-export function Delta({ row, light = false }: { row: Record<string, unknown>; light?: boolean }) {
+export function Delta({ row, light = false, compact = false }: { row: Record<string, unknown>; light?: boolean; compact?: boolean }) {
   const c = changeOf(row);
   if (c.status && c.status !== 'ok') {
-    const word = c.status === 'no_baseline' ? 'new — nothing to compare' : c.status === 'no_current' ? 'nothing this period' : 'previous period was zero';
-    return <span className="ws-mk" style={light ? { color: 'rgba(255,255,255,.8)' } : undefined}>{word}</span>;
+    const long = c.status === 'no_baseline' ? 'new — nothing to compare'
+      : c.status === 'no_current' ? 'nothing this period' : 'previous period was zero';
+    const short = c.status === 'no_baseline' ? 'new' : c.status === 'no_current' ? 'none now' : 'was zero';
+    return (
+      <span className="ws-mk" title={long} style={{ whiteSpace: 'nowrap', ...(light ? { color: 'rgba(255,255,255,.8)' } : {}) }}>
+        {compact ? short : long}
+      </span>
+    );
   }
   if (c.pct === null) return null;
   const cls = c.direction === 'up' ? 'ws-pill ws-pill--up' : c.direction === 'down' ? 'ws-pill ws-pill--down' : 'ws-pill';
@@ -249,7 +255,7 @@ export function ComparisonWidget({ r, selected, onSelect }: WidgetProps) {
   return (
     <div className="ws-card" data-widget="comparison">
       <p className="ws-mk">{r.call?.result?.meta?.metric_label ?? 'compared'}</p>
-      <div className={subjects.length === 2 ? 'ws-seam' : ''} style={{ display: 'grid', gridTemplateColumns: `repeat(${subjects.length}, 1fr)`, gap: 20, marginTop: 14 }}>
+      <div className={subjects.length === 2 ? 'ws-seam' : ''} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 20, marginTop: 14 }}>
         {rows.map(({ s, row }) => {
           const v = row ? valueOf(row) : null;
           return (
@@ -333,7 +339,7 @@ export function TableWidget({ r, local, setLocal }: WidgetProps) {
             </thead>
             <tbody>
               {rows.map((row, i) => (
-                <tr key={i}>{shown.map((c) => <td key={c} className={typeof row[c] === 'number' ? 'n' : ''}>{c === 'change_pct' ? <Delta row={row} /> : cell(c, row)}</td>)}</tr>
+                <tr key={i}>{shown.map((c) => <td key={c} className={typeof row[c] === 'number' ? 'n' : ''}>{c === 'change_pct' ? <Delta row={row} compact /> : cell(c, row)}</td>)}</tr>
               ))}
             </tbody>
           </table>
@@ -530,7 +536,7 @@ export function Wrap({ weight, kind, children, live, earlier, landing, focused, 
   // horizontal scrollbar, which is what the first dogfood put on screen.
   const roomy = weight === 'quiet' && kind && NEEDS_ROOM.has(kind);
   return (
-    <div className={`ws-obj ws-w-${weight}${roomy ? ' ws-w-roomy' : ''} ${live ? 'ws-in' : ''}`}>
+    <div className={`ws-obj ws-w-${weight}${roomy ? ' ws-w-roomy' : ''}${focused ? ' ws-w-full' : ''} ${live ? 'ws-in' : ''}`}>
       <div className="ws-obj-bar">
         {landing ? <span className="ws-obj-landing">just read</span>
           : earlier ? <span className="ws-obj-age">from earlier</span> : null}

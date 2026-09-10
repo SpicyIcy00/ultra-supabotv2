@@ -37,18 +37,17 @@
 .ws-say--lead { font-size: 24px; line-height: 1.4; max-width: 46ch; }
 .ws-note { font: 400 13px/1.55 var(--ws-sans); color: var(--ws-ink-2); max-width: 56ch; margin: 0; }
 
-/* A figure in dot-matrix: legible as a magnitude, unmistakably a designed
-   object rather than a number in a font. */
+/* A figure, set to be read. It was a dot-matrix screen until 2026-09-10 —
+   my misreading of a reference whose figures were a designed TYPEFACE, not a
+   dot pattern. At any size that fits a card it read as a font that had broken,
+   which is the exact opposite of what a headline number is for. */
 .ws-num {
-  font-family: var(--ws-sans); font-weight: 700; letter-spacing: 0.04em;
+  font-family: var(--ws-sans); font-weight: 620; letter-spacing: -0.022em;
   font-variant-numeric: tabular-nums; line-height: 1; display: inline-block;
-  color: transparent;
-  background-image: radial-gradient(circle, var(--ws-ink) 1.05px, transparent 1.25px);
-  background-size: 3.2px 3.2px;
-  -webkit-background-clip: text; background-clip: text;
+  color: var(--ws-ink);
 }
-.ws-num--soft { background-image: radial-gradient(circle, var(--ws-ink-2) 1px, transparent 1.2px); }
-.ws-num--white { background-image: radial-gradient(circle, #fff 1.05px, transparent 1.25px); }
+.ws-num--soft { color: var(--ws-ink-2); }
+.ws-num--white { color: #fff; }
 
 /* The tick ruler under a hero figure: the scale it sits on, with a marker. */
 .ws-ruler { position: relative; height: 12px;
@@ -112,6 +111,8 @@
 
 /* ---- layout -------------------------------------------------------------- */
 .ws-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; align-items: start; }
+.ws-grid > * { min-width: 0; }        /* or wide content escapes its column and lands on its neighbour */
+.ws-card, .ws-hero { overflow: hidden; }
 .ws-w-lead { grid-column: span 12; }
 .ws-w-supporting { grid-column: span 6; }
 .ws-w-quiet { grid-column: span 4; }
@@ -122,8 +123,13 @@
 }
 /* A floor on room for the widgets that are a scrollbar without it. Two
    classes, so it beats the single-class rules above wherever they sit. */
-.ws-w-quiet.ws-w-roomy { grid-column: span 6; }
-@media (min-width: 1100px) { .ws-w-quiet.ws-w-roomy { grid-column: span 4; } }
+.ws-w-quiet.ws-w-roomy { grid-column: span 12; }
+@media (min-width: 1100px) { .ws-w-quiet.ws-w-roomy { grid-column: span 6; } }
+
+/* FOCUS IS HOW YOU EXPAND SOMETHING. It took the lead's width, which on a wide
+   screen is two thirds — so asking for a closer look at a table still left it
+   in a box. Focused takes the whole row. */
+.ws-w-full { grid-column: span 12 !important; }
 @media (max-width: 720px) {
   .ws-w-lead, .ws-w-supporting, .ws-w-quiet, .ws-w-quiet.ws-w-roomy { grid-column: span 12; }
 }
