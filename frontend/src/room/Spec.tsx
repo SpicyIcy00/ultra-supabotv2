@@ -96,6 +96,26 @@ function hueOf(node: SpecNode, row: Record<string, unknown>): string {
   return hueFor(typeof value === 'string' ? value : null, null, null);
 }
 
+/**
+ * WHETHER THIS ROW IS THE ONE.
+ *
+ * `emphasise` names a row that stays lit while the others cool — the same
+ * thing the board already does with weight at the object level, applied
+ * inside a mark. It is how a picture says "this is the one that matters"
+ * without a sentence underneath saying it, and a third of George's sentences
+ * were doing exactly that job.
+ *
+ * With nothing emphasised, every row is lit: a chart with no point to make
+ * should not look like one where everything failed to matter.
+ */
+function litness(node: SpecNode, row: Record<string, unknown>): number {
+  if (!node.emphasise) return 1;
+  const want = node.emphasise.trim().toLowerCase();
+  const hit = Object.values(row).some(
+    (v) => typeof v === 'string' && v.trim().toLowerCase() === want);
+  return hit ? 1 : 0.28;
+}
+
 function nameOf(node: SpecNode, row: Record<string, unknown>): string {
   const key = node.label ?? node.by;
   return key ? String(row[key] ?? '') : '';
@@ -153,9 +173,14 @@ function Mark(p: SpecProps) {
               <span className="r-spec-bar-name">{nameOf(node, row)}</span>
               <span className="r-spec-bar-track">
                 <i style={{ width: `${(values[n] / most) * 100}%`,
-                            background: `rgb(${hueOf(node, row)})` }} />
+                            background: `rgb(${hueOf(node, row)})`,
+                            opacity: litness(node, row) }} />
               </span>
               <span className="r-spec-bar-figure">{fmt(node.field!, row[node.field!])}</span>
+              {/* The note sits on the row it is about, not under the chart. */}
+              {node.note && litness(node, row) === 1 && node.emphasise && (
+                <span className="r-spec-note">{node.note}</span>
+              )}
             </div>
           ))}
         </div>
@@ -186,7 +211,8 @@ function Mark(p: SpecProps) {
             {rows.map((row, n) => (
               <span key={n} className="r-spec-point" title={nameOf(node, row)}>
                 <i style={{ background: `rgb(${hueOf(node, row)})`,
-                            bottom: `${at(values[n])}%` }} />
+                            bottom: `${at(values[n])}%`,
+                            opacity: litness(node, row) }} />
                 <em>{nameOf(node, row)}</em>
               </span>
             ))}
@@ -203,7 +229,7 @@ function Mark(p: SpecProps) {
         <div className="r-spec-cells">
           {rows.map((row, n) => (
             <span key={n} className="r-spec-cell"
-                  style={{ background: `rgba(${hueOf(node, row)}, ${0.12 + (Math.abs(values[n]) / high) * 0.7})` }}>
+                  style={{ background: `rgba(${hueOf(node, row)}, ${(0.12 + (Math.abs(values[n]) / high) * 0.7) * litness(node, row)})` }}>
               <em>{nameOf(node, row)}</em>
               <b>{fmt(node.field!, row[node.field!])}</b>
             </span>
@@ -248,7 +274,19 @@ function Mark(p: SpecProps) {
 
 export function Spec(p: SpecProps) {
   const node = p.node;
-  if (node.mark) return <Mark {...p} />;
+  if (node.mark) {
+    // A note with nothing emphasised labels the MARK rather than a row —
+    // "off the shelf all window" over a chart of days.
+    if (node.note && !node.emphasise) {
+      return (
+        <div>
+          <p className="r-spec-note r-spec-note--over">{node.note}</p>
+          <Mark {...p} />
+        </div>
+      );
+    }
+    return <Mark {...p} />;
+  }
 
   const gap = GAP[node.gap ?? 'normal'];
   const subject = node.subject ?? p.subject;

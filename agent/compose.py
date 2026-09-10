@@ -271,6 +271,18 @@ def validate(
             needs = list(widgets[kind].get("needs") or [])
             block: dict[str, Any] = {"op": op, "kind": kind, "key": key, "weight": weight}
 
+            # POINTING IS NOT A SHAPE. A note and an emphasis annotate whatever
+            # is drawn, so they belong on a named widget as much as on a
+            # composed one — held to the grammar's rules, which is where the
+            # "no digits in a note" guarantee lives.
+            for annotation in ("note", "emphasise"):
+                if annotation in item:
+                    try:
+                        checked = grammar.annotation(annotation, item[annotation], defs)
+                    except grammar.Rejected as why:
+                        raise Rejected(str(why)) from why
+                    block[annotation] = checked
+
             if "seq" in needs:
                 call = _read(calls, item.get("seq"))
                 block["seq"] = item["seq"]

@@ -551,6 +551,22 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
                             "any shape you invent as trustworthy as a named one."
                         ),
                     },
+                    "emphasise": {
+                        "type": "string",
+                        "description": (
+                            "which row stays lit while the others cool — a value a row "
+                            "carries, like a subject. Use it instead of writing 'one line "
+                            "dominates'. Works on a named widget as well as a spec."
+                        ),
+                    },
+                    "note": {
+                        "type": "string",
+                        "description": (
+                            "a few words ON what is drawn — 'carries the whole order', "
+                            "'off the shelf all window'. NO DIGITS: the figure is already "
+                            "drawn beside it, and a note with a number in it is refused."
+                        ),
+                    },
                     "action": {"type": "string",
                                "enum": list(voc["recommendation_actions"]),
                                "description": "for a recommendation: which action, never a new one"},
@@ -1299,6 +1315,18 @@ EACH CAVEAT IS A CLAUSE, NOT A PARAGRAPH — AND THE FULL TEXT IS ALREADY ON SCR
 Caveats stay mandatory, but each gets one tight line, not a paragraph. A notice can be brief as long as it is present — brevity never means dropping a notice, and every notice is still checked against the answer. After a notice, do not explain how to fix the underlying data unless the user asks; do keep a one-line offer of what CAN be answered instead.
 
 Do not restate the question. No "here's what I'll do" preamble. No summary of the answer after you have given it.
+
+SAY IT WITH THE SHAPE. The best answer here is often a very short one over a picture that carries the rest, and you have the means to build that picture. Before you write a sentence, ask whether the composition could say it instead — because a sentence that restates what is drawn is read twice and believed once. Measured over 51 of your own answers, a quarter of your sentences named a figure the board was already drawing beside them.
+
+  "one line carries this order"         -> emphasise that row; the rest cool
+  "this one has been off the shelf"     -> a note on that bar, three words
+  "Rockwell is the one to look at"      -> give Rockwell the lead weight
+  "growth is transactions, not basket"  -> both drivers as bars, side by side
+  "OPUS is a third of the estate"       -> the bar already shows it; say nothing
+
+WHAT PROSE IS STILL FOR, and it is not nothing: what the figures MEAN together, what they do NOT establish, what is absent from the data entirely, what you would check next, and what you have decided. A picture cannot say "nothing records who supplies a product" — no shape has a hole in it that means that. Those sentences are the answer; the rest was narration.
+
+A NOTE IS THREE OR FOUR WORDS AND CARRIES NO NUMBER — that is refused, not discouraged, because the number is already drawn an inch away. "carries the whole order", not "carries 40% of the order".
 
 THE FIGURES ARE ON SCREEN. Every result you read is drawn beside your answer, whole — the figure, its delta, its baseline, its window, its receipts — and when you record what each read was, they are drawn in their structure: the figure, what moved it, where it sits. So your prose is INTERPRETATION, not narration. Say what the figures mean, what is notable, what they do not establish, and what you would check next. Do not restate every figure that is already drawn; do not list the seven stores the ranking already lists; do not write a markdown table of numbers a result already shows. One or two figures in the sentence that makes your point is right — "Rockwell's lift is transaction-led: transactions rose 11.6% and basket value 2.0%" — and a paragraph reciting them all is the failure. A comparison the tool could not make whole is drawn as its coverage; name what it excludes in a clause, not a list.
 

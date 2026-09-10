@@ -5254,6 +5254,32 @@ composition:
         from_field_only: true
       order: "the column to sort by"
       label: "the column that names each row"
+      emphasise:
+        about: >
+          WHICH ROW MATTERS, among rows that are all drawn. Unlike `subject`
+          it hides nothing: every row stays, and the named one is lit while
+          the rest cool. It is how a picture says "this is the one" without a
+          sentence saying it — and it is the same rule the board already uses
+          at the object level, where a lead is lit and the rest are quiet.
+          Names a VALUE, checked against the rows like a subject.
+        names_a_value_not_a_column: true
+
+      note:
+        about: >
+          A few words ON the mark, characterising what is drawn: "carries the
+          whole order", "off the shelf all window". CLAUDE.md already permits
+          exactly this and bounds it exactly this way — an annotation may
+          point at rows and characterise them, and may NEVER introduce a
+          number. So a note carries no digits at all, which is checked, and
+          it is short by construction.
+
+          It exists because a third of George's sentences restate a figure the
+          board is already drawing. A word on the bar deletes the sentence
+          under it.
+        no_digits: true
+        max_length: 60
+        max_per_spec: 4
+
       subject:
         about: >
           WHICH ROW this node and everything under it draws. Unlike every
@@ -5278,7 +5304,7 @@ composition:
     # being able to say things no tool returned.
     allowed_fields: [layout, mark, children, cols, gap, heading, hue,
                      seq, field, by, colour, order, label, weight, limit,
-                     subject]
+                     subject, emphasise, note]
 
     # Said once, here, because it is the rule the whole grammar rests on.
     no_literals_because: >
@@ -5376,8 +5402,12 @@ composition:
 
   # Anything not in this list on a block is refused with the block. This is
   # the list that keeps a choice from becoming a value.
+  # `emphasise` and `note` are ANNOTATIONS, not shapes, so a named widget
+  # takes them as readily as a composed one. Without that, pointing at the
+  # row that matters was only possible by abandoning the widget that was
+  # right for the job — and George kept writing the sentence instead.
   allowed_fields: [op, kind, key, weight, seq, subject, subjects, form, label,
-                   action, argument, spec]
+                   action, argument, spec, emphasise, note]
 
 surface:
   introduced: "2026-09-09"

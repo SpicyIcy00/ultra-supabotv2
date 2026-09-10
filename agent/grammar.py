@@ -44,6 +44,17 @@ CHANNELS = ("field", "by", "colour", "order", "label")
 # first row on every panel, which is worse than refusing to draw at all.
 SUBJECT = "subject"
 
+# Which row is LIT among rows that are all drawn. Names a value like a subject
+# and hides nothing — it is how a picture says "this is the one" instead of a
+# sentence saying it.
+EMPHASISE = "emphasise"
+
+# A few words ON the mark. CLAUDE.md already permits exactly this and bounds it
+# exactly this way: an annotation may point at rows and characterise them, and
+# may NEVER introduce a number. So a note carries no digits at all — checked,
+# not asked for — and a spec may hold only a handful.
+NOTE = "note"
+
 
 class Rejected(ValueError):
     """One node refused, with a reason a person could act on."""
@@ -159,6 +170,33 @@ def _node(item: Any, *, calls: Mapping[int, Mapping[str, Any]],
             raise Rejected(f"{path}: subject names a value a row carries")
         subject = item[SUBJECT].strip()
 
+    if NOTE in item:
+        note = item[NOTE]
+        limits = (voc.get("channels") or {}).get(NOTE) or {}
+        longest = int(limits.get("max_length") or 60)
+        if not isinstance(note, str) or not note.strip():
+            raise Rejected(f"{path}: a note is a few words")
+        if any(ch.isdigit() for ch in note):
+            raise Rejected(
+                f"{path}: a note carries no digits — it characterises what is "
+                f"drawn, it never states a figure. The numbers are already on "
+                f"the mark (composition.grammar.channels.note)"
+            )
+        if len(note.strip()) > longest:
+            raise Rejected(
+                f"{path}: a note is at most {longest} characters — it is a "
+                f"label on a mark, not a sentence under it"
+            )
+        budget[1] -= 1
+        if budget[1] < 0:
+            raise Rejected(
+                f"more than {limits.get('max_per_spec')} notes in one shape; "
+                f"past a handful they stop pointing and start narrating"
+            )
+        out_note = note.strip()
+    else:
+        out_note = None
+
     is_layout = "layout" in item
     is_mark = "mark" in item
     if is_layout == is_mark:
@@ -238,6 +276,20 @@ def _node(item: Any, *, calls: Mapping[int, Mapping[str, Any]],
         if channel in item:
             out[channel] = _check_channel(channel, item[channel], call,
                                           f"{path}.{mark}")
+
+    # WHICH ROW IS LIT. A value, checked against the rows exactly as a subject
+    # is — and unlike a subject it hides nothing, so the others still draw.
+    if EMPHASISE in item:
+        want = item[EMPHASISE]
+        if not isinstance(want, str) or not want.strip():
+            raise Rejected(f"{path}: emphasise names a value a row carries")
+        want = want.strip()
+        if call is not None and not _row_has(call, want):
+            raise Rejected(_no_row(call, want, path, item.get("seq")))
+        out[EMPHASISE] = want
+
+    if out_note is not None:
+        out[NOTE] = out_note
     for required in needs:
         if required != "seq" and required not in out:
             raise Rejected(f"{path}: a {mark} needs {required}")
@@ -279,6 +331,32 @@ def _read(calls: Mapping[int, Mapping[str, Any]], seq: Any,
     return call
 
 
+def annotation(name: str, value: Any, defs: Mapping[str, Any]) -> str:
+    """
+    One annotation, held to the same rules wherever it appears.
+
+    A named widget may point at a row and characterise it exactly as a
+    composed shape may — they are annotations, not shapes. Sharing this
+    function is what stops a note on a widget quietly being allowed a figure
+    that a note on a mark is refused.
+    """
+    voc = vocabulary(defs)
+    limits = (voc.get("channels") or {}).get(name) or {}
+    if not isinstance(value, str) or not value.strip():
+        raise Rejected(f"{name} is a few words a row carries or characterises")
+    text = value.strip()
+    if name == NOTE:
+        if any(ch.isdigit() for ch in text):
+            raise Rejected(
+                "a note carries no digits — it characterises what is drawn, it "
+                "never states a figure (composition.grammar.channels.note)"
+            )
+        longest = int(limits.get("max_length") or 60)
+        if len(text) > longest:
+            raise Rejected(f"a note is at most {longest} characters")
+    return text
+
+
 def validate_spec(spec: Any, *, calls: Mapping[int, Mapping[str, Any]],
                   defs: Mapping[str, Any]) -> dict:
     """
@@ -290,7 +368,8 @@ def validate_spec(spec: Any, *, calls: Mapping[int, Mapping[str, Any]],
     voc = vocabulary(defs)
     if not voc:
         raise Rejected("the grammar is not defined")
-    budget = [int(voc.get("max_nodes") or 40)]
+    notes = int(((voc.get("channels") or {}).get(NOTE) or {}).get("max_per_spec") or 4)
+    budget = [int(voc.get("max_nodes") or 40), notes]
     return _node(spec, calls=calls, voc=voc, depth=1, budget=budget, path="spec")
 
 

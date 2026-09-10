@@ -264,3 +264,29 @@ describe('your arrangement beats his', () => {
       .toEqual(['b', 'a']);
   });
 });
+
+
+describe('the picture points, so the sentence does not have to', () => {
+  it('lights the row George named and cools the rest', () => {
+    const { container } = draw([object('table', { emphasise: 'OPUS' })]);
+    const rows = [...container.querySelectorAll('tbody tr')] as HTMLElement[];
+    const lit = rows.filter((r) => r.style.opacity === '1');
+    const cooled = rows.filter((r) => r.style.opacity === '0.4');
+    expect(lit).toHaveLength(1);
+    expect(cooled).toHaveLength(1);
+    expect(lit[0].textContent).toMatch(/OPUS/);
+  });
+
+  it('leaves every row lit when he pointed at nothing', () => {
+    // A chart with no point to make must not look like one where everything
+    // failed to matter.
+    const { container } = draw([object('table', {})]);
+    const rows = [...container.querySelectorAll('tbody tr')] as HTMLElement[];
+    expect(rows.every((r) => r.style.opacity === '1')).toBe(true);
+  });
+
+  it('draws his few words about what is shown', () => {
+    draw([object('table', { note: 'carries the whole week' })]);
+    expect(screen.getByText('carries the whole week')).toBeTruthy();
+  });
+});

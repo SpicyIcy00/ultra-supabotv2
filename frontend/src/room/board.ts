@@ -38,6 +38,8 @@ export interface BoardObject {
   /** A shape George composed, when no named widget fit. */
   spec?: Block['spec'];
   seqs?: Block['seqs'];
+  emphasise?: Block['emphasise'];
+  note?: Block['note'];
   /** The turn whose reads and prose this object draws. Never re-pointed silently. */
   turn: number;
   /** The turn that last touched it, so "from earlier" can be said honestly. */
@@ -68,7 +70,8 @@ export interface Local {
 }
 
 const FIELDS = ['kind', 'weight', 'seq', 'tool', 'subject', 'subjects', 'form',
-                'label', 'action', 'argument', 'spec', 'seqs'] as const;
+                'label', 'action', 'argument', 'spec', 'seqs',
+                'emphasise', 'note'] as const;
 
 function carried(edit: Block): Partial<BoardObject> {
   const out: Record<string, unknown> = {};

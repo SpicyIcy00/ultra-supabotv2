@@ -397,6 +397,10 @@ export interface CompositionBlock {
   spec?: SpecNode;
   /** Every read a spec draws from, so the loop charts them all. */
   seqs?: number[];
+  /** Which row stays lit while the rest cool. An annotation, not a shape. */
+  emphasise?: string;
+  /** A few words about what is drawn. Never a digit — that is enforced. */
+  note?: string;
 }
 
 /** One node of a composed shape: a layout that arranges, or a mark that draws. */
@@ -420,6 +424,10 @@ export interface SpecNode {
   field?: string;
   by?: string;
   colour?: string;
+  /** Which row stays lit while the others cool. Names a value, not a column. */
+  emphasise?: string;
+  /** A few words ON the mark. Never contains a digit — that is enforced. */
+  note?: string;
   order?: string;
   label?: string;
   limit?: number;

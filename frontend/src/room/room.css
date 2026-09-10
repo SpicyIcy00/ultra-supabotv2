@@ -531,3 +531,20 @@
 .r-acts-mine .r-act[aria-pressed='true'] { color: var(--ink); font-weight: 600; }
 .r-tile--solid .r-acts-mine { border-color: rgba(255, 255, 255, 0.28); }
 .r-tile--solid .r-acts-mine .r-act[aria-pressed='true'] { color: var(--on-colour); }
+
+/* ------------------------------------------------------------------- notes
+   A few words ON the mark, which is the whole point: the sentence that used
+   to sit under the chart saying "this line carries the order" becomes three
+   words beside the bar it is about. It never carries a figure — the grammar
+   refuses digits — because the figure is already drawn next to it. */
+.r-spec-note {
+  font: 400 10.5px/1.3 var(--sans); color: var(--ink-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding-left: 8px; opacity: 0.9;
+}
+.r-spec-note--over {
+  padding: 0 0 7px 0; white-space: normal;
+  font: 500 9.5px/1.3 var(--sans); letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.r-spec-bar { grid-template-columns: minmax(6ch, 12ch) 1fr auto auto; }

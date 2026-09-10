@@ -309,3 +309,64 @@ def test_a_refusal_teaches_the_fix_rather_than_stating_the_failure():
 
     missing = refused({"mark": "value", "seq": 0, "field": "value", "subject": "Fairview"})
     assert "Rockwell" in missing and "OPUS" in missing
+
+
+# ---------------------------------------------------------------------------
+# 6. Making the picture carry what the prose used to
+# ---------------------------------------------------------------------------
+
+def test_a_note_may_characterise_and_may_never_state_a_figure():
+    """
+    CLAUDE.md's rule on annotations, enforced: "An annotation may point at rows
+    and may characterise them in prose. It may never introduce a number."
+
+    That is what lets a picture take over from a sentence. "carries the whole
+    order" beside the bar deletes the paragraph under the chart; "carries 40%
+    of the order" would be George putting a figure on screen that no tool
+    computed, which is the one thing none of this may ever do.
+    """
+    ok = valid({"mark": "bar", "seq": 0, "field": "value", "by": "store",
+                "note": "carries the whole week"})
+    assert ok["note"] == "carries the whole week"
+
+    assert "carries no digits" in refused(
+        {"mark": "bar", "seq": 0, "field": "value", "note": "40% of the week"})
+    assert "at most" in refused(
+        {"mark": "bar", "seq": 0, "field": "value",
+         "note": "this line carries the whole order and has been off the shelf all window"})
+
+
+def test_notes_are_capped_so_they_point_rather_than_narrate():
+    many = {"layout": "stack", "children": [
+        {"mark": "bar", "seq": 0, "field": "value", "note": f"note {'x' * n}"}
+        for n in range(6)
+    ]}
+    assert "stop pointing and start narrating" in refused(many)
+
+
+def test_emphasis_lights_one_row_and_hides_none():
+    """
+    The difference from `subject`, and why both exist. A subject SCOPES — the
+    other rows go. An emphasis RANKS — they stay, cooled. "One line dominates"
+    needs the others visible or there is nothing to dominate.
+    """
+    ok = valid({"mark": "bar", "seq": 0, "field": "value", "by": "store",
+                "emphasise": "OPUS"})
+    assert ok["emphasise"] == "OPUS"
+    assert "subject" not in ok
+
+    assert "no row for 'Fairview'" in refused(
+        {"mark": "bar", "seq": 0, "field": "value", "emphasise": "Fairview"})
+
+
+def test_the_prompt_tells_him_the_shape_can_say_it():
+    """
+    The grammar existing is not the same as him using it. Half the point of
+    this work is the instruction to try the picture before the sentence.
+    """
+    from agent import loop as george_loop
+
+    assert "SAY IT WITH THE SHAPE" in george_loop.SYSTEM_PROMPT
+    assert "restates what is drawn" in george_loop.SYSTEM_PROMPT
+    # And what prose is still for, so this does not read as "stop explaining".
+    assert "WHAT PROSE IS STILL FOR" in george_loop.SYSTEM_PROMPT

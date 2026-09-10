@@ -250,6 +250,27 @@ function OwnCaveat({ meta }: { meta?: ToolMeta | null }) {
 }
 
 
+/**
+ * Whether a row is the one George pointed at.
+ *
+ * Shared by every tile that draws a list, so "the row that matters" looks the
+ * same whichever widget is showing it — and so a sentence naming it becomes
+ * unnecessary rather than merely redundant.
+ */
+function isLit(o: BoardObject, row: Record<string, unknown>): boolean {
+  if (!o.emphasise) return true;
+  const want = o.emphasise.trim().toLowerCase();
+  return Object.values(row).some(
+    (v) => typeof v === 'string' && v.trim().toLowerCase() === want);
+}
+
+/** George's few words about what is drawn. Never a figure. */
+function Note({ o }: { o: BoardObject }) {
+  if (!o.note) return null;
+  return <p className="r-spec-note r-spec-note--over">{o.note}</p>;
+}
+
+
 function kindOfRead(tool?: string | null): string {
   if (!tool) return 'product';
   if (tool.includes('purchas')) return 'supplier';
@@ -466,6 +487,7 @@ export function TableTile(p: TileProps) {
           </button>
         )}
       </div>
+      <Note o={p.o} />
       {open && (
         <div className="r-scroll" style={{ overflowX: 'auto', marginTop: 12 }}>
           <table className="r-rows">
@@ -484,7 +506,7 @@ export function TableTile(p: TileProps) {
             </thead>
             <tbody>
               {rows.map((row, n) => (
-                <tr key={n}>
+                <tr key={n} style={{ opacity: isLit(p.o, row) ? 1 : 0.4 }}>
                   {shown.map((c) => (
                     <td key={c} className={typeof row[c] === 'number' ? 'n' : ''}>
                       {c === 'change_pct' ? <Delta change={changeOf(row)} /> : cell(c, row)}
@@ -610,6 +632,7 @@ export function DraftTile(p: TileProps) {
           <p className="r-say" style={{ fontSize: 17, marginTop: 7 }}>
             {meta?.cover_days ? `Enough to last ${meta.cover_days} days` : 'What is running out'}
           </p>
+          <Note o={p.o} />
         </div>
         <span className="r-delta r-delta--none">nothing sent</span>
       </div>
@@ -624,7 +647,7 @@ export function DraftTile(p: TileProps) {
           </thead>
           <tbody>
             {rows.slice(0, 30).map((row, n) => (
-              <tr key={n}>
+              <tr key={n} style={{ opacity: isLit(p.o, row) ? 1 : 0.4 }}>
                 <td>
                   <div style={{ color: 'var(--ink)' }}>{String(row.product ?? row.sku ?? '')}</div>
                   <div className="r-src" style={{ marginTop: 3 }}>
