@@ -11,7 +11,7 @@
  * value the tool already returned, and format it.
  */
 import { useState, type CSSProperties, type ReactNode } from 'react';
-import type { GeorgeNotice } from '../types/george';
+import type { GeorgeNotice, ToolMeta } from '../types/george';
 import type { BoardObject, Local } from './board';
 import type { ToolCall } from '../types/george';
 import {
@@ -32,6 +32,12 @@ export interface TileActions {
   why(subject: string, dimension: Dimension | null): void;
   aside(key: string): void;
   patch(key: string, local: Local): void;
+  /** Move it earlier or later than where George put it. */
+  shift(key: string, by: -1 | 1): void;
+  /** Make it bigger or smaller than the weight he gave it. */
+  resize(key: string, to: 'big' | 'small' | null): void;
+  /** Hold on to it: a kept object survives clearing the room. */
+  keep(key: string, kept: boolean): void;
   /**
    * Re-run the read an object draws from with ONE scope argument changed.
    * No model turn: this is the desk replay's path, which is why a control
@@ -144,9 +150,24 @@ function Receipts({ meta }: { meta: Parameters<typeof receiptsLine>[0] }) {
  * typing a sentence. Two are instant and local; only `why` costs a turn,
  * because only `why` needs a new fact.
  */
-function Acts({ subject, dimension, o, on }: {
-  subject: string | null; dimension: Dimension | null; o: BoardObject; on: TileActions;
+/**
+ * What you can do to an object.
+ *
+ * TWO KINDS OF ACTION, AND THE DIFFERENCE IS THE POINT. `open`, `compare` and
+ * `why` are questions — they may cost a turn and they change what George is
+ * looking at. The rest change YOUR VIEW and nothing else: they are never sent
+ * back to him as though he had decided them, they cost nothing, and they are
+ * instant.
+ *
+ * He arranges the board because he knows what matters. You rearrange it
+ * because you know what you want to look at, and those are different
+ * questions — so both answers survive, yours on top.
+ */
+function Acts({ subject, dimension, o, on, local }: {
+  subject: string | null; dimension: Dimension | null; o: BoardObject;
+  on: TileActions; local?: Local;
 }) {
+  const size = local?.size;
   return (
     <div className="r-acts" onClick={(e) => e.stopPropagation()}>
       <button type="button" className="r-act" onClick={() => on.open(o.key)}>open</button>
@@ -156,6 +177,23 @@ function Acts({ subject, dimension, o, on }: {
           <button type="button" className="r-act" onClick={() => on.why(subject, dimension)}>why</button>
         </>
       )}
+      <span className="r-acts-mine">
+        <button type="button" className="r-act" title="Move it earlier"
+                aria-label="Move earlier" onClick={() => on.shift(o.key, -1)}>◀</button>
+        <button type="button" className="r-act" title="Move it later"
+                aria-label="Move later" onClick={() => on.shift(o.key, 1)}>▶</button>
+        <button type="button" className="r-act" aria-pressed={size === 'big'}
+                title="Give it the room" aria-label="Bigger"
+                onClick={() => on.resize(o.key, size === 'big' ? null : 'big')}>＋</button>
+        <button type="button" className="r-act" aria-pressed={size === 'small'}
+                title="Push it down" aria-label="Smaller"
+                onClick={() => on.resize(o.key, size === 'small' ? null : 'small')}>－</button>
+        <button type="button" className="r-act" aria-pressed={Boolean(local?.kept)}
+                title="Hold on to it" aria-label="Keep"
+                onClick={() => on.keep(o.key, !local?.kept)}>
+          {local?.kept ? 'kept' : 'keep'}
+        </button>
+      </span>
       <button type="button" className="r-act" onClick={() => on.aside(o.key)}>set aside</button>
     </div>
   );
@@ -181,6 +219,34 @@ function Missing({ what }: { what: string }) {
  */
 function callFor(p: TileProps): ToolCall | null {
   return p.retuned ?? callOf(p.turn, p.o.seq);
+}
+
+/**
+ * THE CAVEAT BELONGING TO THIS OBJECT'S OWN READ, drawn ON it and ABOVE its
+ * figures — which is what UI rule 4 asks for in its own words: "if a tile
+ * cannot show the caveat, the tile is the wrong shape."
+ *
+ * Until now every notice from every read was stacked above the whole board,
+ * so a draft order arrived under five warnings that belonged to it and to
+ * nothing else, and George had to repeat all five in prose to surface them.
+ * Measured over 51 answers: an answer over data with four-plus notices ran
+ * 386 words against 137 with none — almost three times, all of it caveat.
+ *
+ * A caveat on the thing it qualifies is read on the way to the figure, which
+ * is where it does its work.
+ */
+export function ownNotices(meta?: ToolMeta | null): GeorgeNotice[] {
+  const notice = meta?.notice;
+  if (!notice) return [];
+  // A `multiple` is a container and is never drawn itself — the loop checks
+  // each item's own kind, and so does the reader.
+  return notice.kind === 'multiple' ? notice.items ?? [] : [notice];
+}
+
+function OwnCaveat({ meta }: { meta?: ToolMeta | null }) {
+  const notices = ownNotices(meta);
+  if (!notices.length) return null;
+  return <Caveats notices={notices} />;
 }
 
 
@@ -231,6 +297,7 @@ export function SubjectTile(p: TileProps & { size?: 'lead' | 'normal' | 'small' 
            solid={lit} quiet={!lit}
            landing={p.landing} delay={p.delay} picked={p.focused || p.selected}
            onOpen={() => p.on.open(p.o.key)}>
+      <OwnCaveat meta={call?.result?.meta} />
       <p className="r-label">{label}{p.earlier ? ' · from earlier' : ''}</p>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
         <span className="r-num" style={{ '--size': `${figure}px` } as CSSProperties}>
@@ -239,7 +306,7 @@ export function SubjectTile(p: TileProps & { size?: 'lead' | 'normal' | 'small' 
         <Delta change={change} />
       </div>
       {v && <p className="r-label" style={{ marginTop: 9 }}>{measureOf(call?.result?.meta, v.key)}</p>}
-      <Acts subject={label} dimension={dimension} o={p.o} on={p.on} />
+      <Acts subject={label} dimension={dimension} o={p.o} on={p.on} local={p.local} />
       <Receipts meta={call?.result?.meta} />
     </Shell>
     {/* OPENED — BELOW THE TILE, NOT INSIDE IT. Focusing a subject no longer
@@ -775,7 +842,7 @@ export function RecommendationTile(p: TileProps) {
         {figure && <span className="r-label">{subject}</span>}
       </div>
       {figure && <p className="r-label" style={{ marginTop: 9 }}>{measureOf(call?.result?.meta, figure.key)}</p>}
-      <Acts subject={subject} dimension={dimension} o={p.o} on={p.on} />
+      <Acts subject={subject} dimension={dimension} o={p.o} on={p.on} local={p.local} />
       <Receipts meta={call?.result?.meta} />
     </Shell>
   );

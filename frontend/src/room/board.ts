@@ -49,6 +49,22 @@ export interface Local {
   closed?: boolean;
   sort?: { column: string; desc: boolean };
   open?: boolean;
+  /**
+   * WHERE YOU PUT IT. George composes an order; this overrides it for you.
+   * Lower comes first. Absent means "wherever he put it".
+   */
+  at?: number;
+  /**
+   * HOW BIG YOU WANT IT, over his weight. He says what matters; you say what
+   * you want to look at, and those are different questions.
+   */
+  size?: 'big' | 'small';
+  /**
+   * KEEP IT. A kept object survives clearing the room, because it is
+   * something you decided to hold on to rather than something this
+   * conversation happened to produce.
+   */
+  kept?: boolean;
 }
 
 const FIELDS = ['kind', 'weight', 'seq', 'tool', 'subject', 'subjects', 'form',
@@ -171,15 +187,39 @@ export function inOrder(
   local: Record<string, Local>,
   focused: string | null,
 ): BoardObject[] {
+  // IF YOU HAVE MADE SOMETHING BIG, HIS LEAD STANDS DOWN. Otherwise "bigger"
+  // would add a second lead rather than choosing one, and the board would
+  // have two things claiming to be the point — which is the arrangement
+  // neither of you asked for.
+  const yoursLeads = Object.values(local).some((l) => l?.size === 'big');
+
   const shown = board
     .filter((o) => !local[o.key]?.closed)
     .map((o) => {
-      if (!focused) return o;
+      // YOUR SIZE BEATS HIS WEIGHT. He is saying what matters; you are saying
+      // what you want to look at. Both are legitimate and they are not the
+      // same question, so yours wins on your screen — and his survives
+      // underneath, so an object he later leads with still leads.
+      const size = local[o.key]?.size;
+      const weight = size === 'big' ? 'lead' as const
+        : size === 'small' ? 'quiet' as const
+        : (yoursLeads && o.weight === 'lead') ? 'supporting' as const
+        : o.weight;
+      if (!focused) return { ...o, weight };
       if (o.key === focused) return { ...o, weight: 'lead' as const };
-      return o.weight === 'lead' ? { ...o, weight: 'supporting' as const } : o;
+      return weight === 'lead' ? { ...o, weight: 'supporting' as const } : { ...o, weight };
     });
-  const lead = shown.filter((o) => o.weight === 'lead');
-  return [...lead, ...shown.filter((o) => o.weight !== 'lead')];
+
+  // WHERE YOU PUT THINGS, over where he put them. An object you have never
+  // moved keeps his position exactly; one you have moved goes where you left
+  // it, and the two interleave rather than one list following the other.
+  const placed = shown
+    .map((o, n) => ({ o, at: local[o.key]?.at ?? n + shown.length }))
+    .sort((a, b) => a.at - b.at)
+    .map((x) => x.o);
+
+  const lead = placed.filter((o) => o.weight === 'lead');
+  return [...lead, ...placed.filter((o) => o.weight !== 'lead')];
 }
 
 /**

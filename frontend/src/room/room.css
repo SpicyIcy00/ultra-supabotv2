@@ -515,3 +515,19 @@
                   color: var(--ink-2); font-style: normal; overflow: hidden;
                   text-overflow: ellipsis; white-space: nowrap; }
 .r-spec-cell b { font: 500 13px/1.2 var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------- what is yours
+   Two kinds of action sit on a tile, and they should not read as one row.
+   `open`, `compare`, `why` are QUESTIONS — they may cost a turn and they
+   change what George is looking at. The group below changes YOUR VIEW and
+   nothing else: instant, free, never sent back to him. A thin rule and a
+   little air is the whole distinction, which is as much as it needs. */
+.r-acts-mine {
+  display: inline-flex; align-items: center; gap: 2px;
+  margin: 0 2px; padding: 0 8px;
+  border-left: 1px solid var(--edge); border-right: 1px solid var(--edge);
+}
+.r-acts-mine .r-act { padding-inline: 4px; min-width: 18px; text-align: center; }
+.r-acts-mine .r-act[aria-pressed='true'] { color: var(--ink); font-weight: 600; }
+.r-tile--solid .r-acts-mine { border-color: rgba(255, 255, 255, 0.28); }
+.r-tile--solid .r-acts-mine .r-act[aria-pressed='true'] { color: var(--on-colour); }

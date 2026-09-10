@@ -1294,6 +1294,8 @@ Default to short. A simple question gets a few sentences, not sections. Lead wit
 
 Every figure in prose carries its date or window — "₱13,544 on Wed 2 Sep 2026", not "₱13,544 yesterday". Take the dates from `meta.window` (`start` and `end`, half-open) on the result; never work them out yourself from "yesterday" or "this week". A relative word alone is not a window; a number with no date on it is a claim with no expiry.
 
+EACH CAVEAT IS A CLAUSE, NOT A PARAGRAPH — AND THE FULL TEXT IS ALREADY ON SCREEN. Every notice a read raised is drawn on the objects drawn from that read, above their figures, whole and in its own words, with its detail one tap away. So your job is to say what it MEANS for the answer, in a clause, once: "so these quantities are floors, not targets". Not to reproduce it. Restating a caveat the screen is already showing, in full, is the single biggest cause of a long answer here: measured over 51 answers, one over data carrying four or more notices ran 386 words against 137 for one carrying none, and almost all of that difference was caveat. Where several notices say the same thing for the answer's purposes, say that thing ONCE.
+
 Caveats stay mandatory, but each gets one tight line, not a paragraph. A notice can be brief as long as it is present — brevity never means dropping a notice, and every notice is still checked against the answer. After a notice, do not explain how to fix the underlying data unless the user asks; do keep a one-line offer of what CAN be answered instead.
 
 Do not restate the question. No "here's what I'll do" preamble. No summary of the answer after you have given it.
@@ -1436,7 +1438,52 @@ async def _call_composite_tool(name: str, args: dict,
 # Notice enforcement
 # --------------------------------------------------------------------------
 
-def _unsurfaced(pending: list[dict], answer: str, defs: dict) -> list[dict]:
+def _drawn_on_the_board(blocks: list[dict], charted: list[dict]) -> set[str]:
+    """
+    The notice kinds already on screen, because an object draws the read that
+    raised them.
+
+    WHY THIS EXEMPTION EXISTS, AND WHY IT IS NOT A WEAKENING. UI rule 4 asks
+    that a caveat be SURFACED, and its 2026-09-05 amendment says plainly that
+    surfaced is not the same as spelled out: a notice may be one line that
+    names it, visible without interaction, with its explanation on tap. The
+    room now draws every notice on the objects drawn from its read, above
+    their figures, whole.
+
+    Before this, the loop required the ANSWER to convey every notice, so a
+    caveat already on screen had to be reproduced in prose to pass. Measured
+    over 51 answers: one over data carrying four or more notices ran 386 words
+    against 137 for one carrying none, and nearly all of the difference was
+    caveat. George was not being verbose; he was discharging a check.
+
+    WHAT IS STILL REQUIRED. A notice from a read that NOTHING on the board
+    draws is not on screen at all, and stays mandatory in prose — which is the
+    case the rule was written for. And the answer must still MEAN something
+    about them: prompt rule 16 and the LENGTH section ask for the consequence
+    in a clause, which no mechanism can check.
+    """
+    if not blocks:
+        return set()
+    drawn = {b.get("seq") for b in blocks if isinstance(b.get("seq"), int)}
+    for block in blocks:
+        for seq in block.get("seqs") or []:
+            if isinstance(seq, int):
+                drawn.add(seq)
+    kinds: set[str] = set()
+    for call in charted:
+        if call.get("seq") not in drawn:
+            continue
+        notice = (call.get("meta") or {}).get("notice")
+        if not isinstance(notice, dict):
+            continue
+        for item in (notice.get("items") or [notice]):
+            if isinstance(item, dict) and item.get("kind"):
+                kinds.add(str(item["kind"]))
+    return kinds
+
+
+def _unsurfaced(pending: list[dict], answer: str, defs: dict,
+                on_screen: Optional[set[str]] = None) -> list[dict]:
     """
     Which pending notices the answer fails to convey.
 
@@ -1449,6 +1496,9 @@ def _unsurfaced(pending: list[dict], answer: str, defs: dict) -> list[dict]:
     low = answer.lower()
     missing = []
     for n in pending:
+        # Already on screen, on the object it qualifies: surfaced.
+        if on_screen and n.get("kind") in on_screen:
+            continue
         spec = fingerprints.get(n.get("kind"))
         if not isinstance(spec, dict) or "must_convey" not in spec:
             missing.append(n)
@@ -2562,7 +2612,10 @@ async def run(
                     })
                     continue
 
-                missing = _unsurfaced(pending, answer, defs)
+                missing = _unsurfaced(
+                    pending, answer, defs,
+                    on_screen=_drawn_on_the_board(composition_recorded, charted),
+                )
 
                 if missing and corrective_turns < max_corrective:
                     corrective_turns += 1

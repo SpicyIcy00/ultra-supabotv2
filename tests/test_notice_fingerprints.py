@@ -332,3 +332,53 @@ def test_fingerprints_are_shaped_as_the_loop_reads_them():
                 f"{kind}: fingerprints are matched against a lowercased answer, "
                 f"so an alternative with capitals can never match: {group!r}"
             )
+
+
+def test_a_notice_drawn_on_the_board_counts_as_surfaced():
+    """
+    UI rule 4 asks that a caveat be SURFACED, and its 2026-09-05 amendment says
+    surfaced is not the same as spelled out. The room now draws every notice on
+    the objects drawn from its read, above their figures and whole.
+
+    Before this the loop required the ANSWER to convey every notice, so a
+    caveat already on screen had to be reproduced in prose to pass the check.
+    Measured over 51 real answers: one over data carrying four or more notices
+    ran 386 words against 137 for one carrying none, almost all of it caveat.
+    George was not being verbose — he was discharging a check.
+    """
+    from agent.loop import _drawn_on_the_board, _unsurfaced
+    from tools._common import load_defs
+
+    defs = load_defs()
+    charted = [{
+        "seq": 0, "tool": "get_purchase_plan",
+        "meta": {"notice": {"kind": "multiple", "items": [
+            {"kind": "supplier_coverage", "message": "..."},
+            {"kind": "demand_suppressed_by_stockouts", "message": "..."},
+        ]}},
+    }]
+    pending = [{"kind": "supplier_coverage", "message": "..."},
+               {"kind": "demand_suppressed_by_stockouts", "message": "..."}]
+
+    # An object draws read 0, so both notices are on screen.
+    on_screen = _drawn_on_the_board([{"key": "draft", "seq": 0}], charted)
+    assert on_screen == {"supplier_coverage", "demand_suppressed_by_stockouts"}
+    assert _unsurfaced(pending, "Place the order.", defs, on_screen=on_screen) == []
+
+    # NOTHING on the board draws it: still mandatory in prose, which is the
+    # case the rule was written for.
+    assert len(_unsurfaced(pending, "Place the order.", defs, on_screen=set())) == 2
+    assert _drawn_on_the_board([], charted) == set()
+    assert _drawn_on_the_board([{"key": "other", "seq": 9}], charted) == set()
+
+
+def test_a_composed_shape_surfaces_the_notices_of_every_read_it_draws():
+    """A spec names several reads through `seqs`; all of them count."""
+    from agent.loop import _drawn_on_the_board
+
+    charted = [
+        {"seq": 0, "meta": {"notice": {"kind": "supplier_coverage", "message": "..."}}},
+        {"seq": 3, "meta": {"notice": {"kind": "comparison_incomplete", "message": "..."}}},
+    ]
+    assert _drawn_on_the_board([{"key": "shape", "seqs": [0, 3]}], charted) == {
+        "supplier_coverage", "comparison_incomplete"}

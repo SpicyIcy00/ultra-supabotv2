@@ -71,7 +71,7 @@ function object(kind: string, extra: Partial<BoardObject> = {}): BoardObject {
 
 const ACTIONS = (): TileActions => ({
   open: vi.fn(), pick: vi.fn(), why: vi.fn(), aside: vi.fn(), patch: vi.fn(),
-  retune: vi.fn(),
+  retune: vi.fn(), shift: vi.fn(), resize: vi.fn(), keep: vi.fn(),
 });
 
 function draw(objects: BoardObject[], on: TileActions = ACTIONS()) {
@@ -208,5 +208,59 @@ describe('a composed shape draws the row it names', () => {
     // And each heading is its own shop, not the first row's twice.
     expect(text).toMatch(/Rockwell/);
     expect(text).toMatch(/OPUS/);
+  });
+});
+
+
+describe('the board is yours to arrange', () => {
+  // George arranges it because he knows what matters. You rearrange it
+  // because you know what you want to look at. Both are legitimate, and
+  // yours wins on your screen — which is what makes it a workspace rather
+  // than a report he sends you.
+  it('offers move, resize and keep on an object', () => {
+    const on = ACTIONS();
+    draw([object('subject', { subject: 'Rockwell' })], on);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Move earlier' }));
+    expect(on.shift).toHaveBeenCalledWith('k-subject', -1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bigger' }));
+    expect(on.resize).toHaveBeenCalledWith('k-subject', 'big');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Keep' }));
+    expect(on.keep).toHaveBeenCalledWith('k-subject', true);
+  });
+
+  it('lets you turn a size back off rather than only on', () => {
+    const on = ACTIONS();
+    render(
+      <Board answers={[TURN]} board={[object('subject', { subject: 'Rockwell' })]}
+             local={{ 'k-subject': { size: 'big' } }} focused={null}
+             selection={[]} live={false} retuned={{}} on={on} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Bigger' }));
+    expect(on.resize).toHaveBeenCalledWith('k-subject', null);
+  });
+});
+
+describe('your arrangement beats his', () => {
+  it('puts a resized object where you put it, not where he did', async () => {
+    const { inOrder } = await import('./board');
+    const board = [
+      object('subject', { key: 'a', weight: 'lead', subject: 'Rockwell' }),
+      object('table', { key: 'b', weight: 'quiet' }),
+    ];
+    // He led with 'a'. You made 'b' big, so 'b' leads for you.
+    const ordered = inOrder(board, { b: { size: 'big' } }, null);
+    expect(ordered[0].key).toBe('b');
+    // And his weight survives underneath: clear your size and his order returns.
+    expect(inOrder(board, {}, null)[0].key).toBe('a');
+  });
+
+  it('honours a position you set', async () => {
+    const { inOrder } = await import('./board');
+    const board = [object('table', { key: 'a' }), object('table', { key: 'b' })];
+    expect(inOrder(board, { b: { at: 0 }, a: { at: 1 } }, null).map((o) => o.key))
+      .toEqual(['b', 'a']);
   });
 });

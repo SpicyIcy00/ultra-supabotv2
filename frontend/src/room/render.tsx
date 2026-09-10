@@ -16,7 +16,7 @@ import type { ToolCall } from '../types/george';
 import {
   Caveats, ChartTile, ComparisonTile, ControlTile, DistributionTile, DraftTile,
   RecommendationTile, SpecTile, StateTile, SubjectTile, SystemTile, TableTile, TextTile,
-  TimelineTile, type TileActions, type TileProps,
+  TimelineTile, ownNotices, type TileActions, type TileProps,
 } from './tiles';
 
 export interface BoardProps {
@@ -36,7 +36,17 @@ export interface BoardProps {
 export function Board(p: BoardProps) {
   const objects = inOrder(p.board, p.local, p.focused);
   const newest = p.answers.length - 1;
-  const notices = p.answers[newest]?.notices ?? [];
+  // THE TURN'S notices, minus the ones now drawn on the objects they belong
+  // to. A caveat shown twice is a caveat people learn to skip, and the one
+  // above the board is meant for what has no object of its own.
+  const all = p.answers[newest]?.notices ?? [];
+  const onObjects = new Set(
+    inOrder(p.board, p.local, p.focused).flatMap((o) => (
+      o.seq === undefined ? []
+        : ownNotices(p.answers[o.turn]?.toolCalls.find((c) => c.seq === o.seq)?.result?.meta)
+    )).map((n) => n.kind),
+  );
+  const notices = all.filter((n) => !onObjects.has(n.kind));
   const textLeads = objects[0]?.kind === 'text';
   // While he is still reading, what has landed is evidence — he has not said
   // where any of it goes yet. It is drawn as it arrives, which is the whole of

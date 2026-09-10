@@ -22,6 +22,11 @@ export interface Reconciliation {
 }
 
 export interface ToolMeta {
+  /**
+   * The caveat this read raised, which belongs to the objects drawn from it.
+   * `kind: "multiple"` wraps several.
+   */
+  notice?: GeorgeNotice | null;
   source_table?: string;
   filters_applied?: string[];
   snapshot_timestamp?: string;
@@ -90,6 +95,12 @@ export interface GeorgeNotice {
   kind: string;
   message: string;
   source?: string;
+  /**
+   * A `multiple` notice carries the real ones here — one read can raise
+   * several, and the purchase plan raises five. The container is never
+   * rendered itself; its items are.
+   */
+  items?: GeorgeNotice[];
 }
 
 /** One tool invocation, keyed by its conversation-global seq. */

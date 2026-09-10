@@ -16,7 +16,8 @@ import { useGeorge } from '../hooks/useGeorge';
 import { useThread } from '../hooks/useThread';
 import { threadHistory } from '../components/george/threadHistory';
 import { restoreFromPosts } from '../workspace/composition';
-import { boardContext, buildBoard, type Local } from './board';
+import { boardContext, buildBoard, inOrder, type Local } from './board';
+import { keepLocal, restoreLocal } from './arrangement';
 import type { AnswerTurn, Dimension } from './data';
 import { Board } from './render';
 import { replayCalls } from '../services/deskApi';
@@ -39,7 +40,15 @@ export default function Room() {
   const thread = useThread(threadId ?? '');
 
   const [selection, setSelection] = useState<{ label: string; dimension: Dimension }[]>([]);
-  const [local, setLocal] = useState<Record<string, Local>>({});
+  // WHAT YOU HAVE DONE TO THE BOARD — where things sit, how big they are,
+  // what you are holding on to. Restored per thread, because an arrangement
+  // you made is worth more than the trouble of remembering it, and lost on a
+  // reload it would teach you not to bother.
+  const [local, setLocal] = useState<Record<string, Local>>(
+    () => restoreLocal(threadId));
+  // Every arrangement you had before this one. Undo is the thing that makes
+  // rearranging safe to try.
+  const [history, setHistory] = useState<Record<string, Local>[]>([]);
   const [focused, setFocused] = useState<string | null>(null);
   // Reads re-run because somebody moved a control, by seq. TRANSIENT and
   // deliberately not sent back to George as though he had decided it: the
@@ -109,7 +118,18 @@ export default function Room() {
   const latest = answers[answers.length - 1] ?? null;
 
   const patch = useCallback((key: string, p: Local) => {
-    setLocal((s) => ({ ...s, [key]: { ...s[key], ...p } }));
+    setLocal((s) => {
+      setHistory((h) => [...h.slice(-19), s]);
+      return { ...s, [key]: { ...s[key], ...p } };
+    });
+  }, []);
+
+  const undo = useCallback(() => {
+    setHistory((h) => {
+      if (!h.length) return h;
+      setLocal(h[h.length - 1]);
+      return h.slice(0, -1);
+    });
   }, []);
 
   // George putting an object back is him disagreeing with your setting it
@@ -193,7 +213,30 @@ export default function Room() {
     aside: (key) => { patch(key, { closed: true }); setFocused((f) => (f === key ? null : f)); },
     patch,
     retune: (key, argument, value) => { void retune(key, argument, value); },
-  }), [ask, patch, retune]);
+    // MOVING SOMETHING IS A SWAP WITH ITS NEIGHBOUR, not a free-floating
+    // index: it keeps the order dense and it means one press does exactly one
+    // visible thing, which is what makes it undoable in your head as well as
+    // in the stack.
+    shift: (key, by) => {
+      const order = inOrder(board, local, focused);
+      const at = order.findIndex((o) => o.key === key);
+      const to = at + by;
+      if (at < 0 || to < 0 || to >= order.length) return;
+      const swap = order[to];
+      setLocal((s) => {
+        setHistory((h) => [...h.slice(-19), s]);
+        return {
+          ...s,
+          [key]: { ...s[key], at: to },
+          [swap.key]: { ...s[swap.key], at },
+        };
+      });
+    },
+    resize: (key, to) => patch(key, { size: to ?? undefined }),
+    keep: (key, kept) => patch(key, { kept }),
+  }), [ask, patch, retune, board, local, focused]);
+
+  useEffect(() => { keepLocal(threadId, local); }, [threadId, local]);
 
   const aside = board.filter((o) => local[o.key]?.closed);
   const clear = useCallback(() => {
@@ -201,8 +244,14 @@ export default function Room() {
     // has to outlive the navigate back to "/", or the cold open immediately
     // reopens the thing just closed.
     dismissStanding(threadId);
-    george.reset(); setSelection([]); setLocal({}); setFocused(null);
+    george.reset(); setSelection([]); setFocused(null);
     setRetuned({});
+    // WHAT YOU KEPT SURVIVES. Clearing is for the conversation, not for the
+    // things you decided to hold on to — losing those to a button meant for
+    // starting fresh is the reason people stop using a keep.
+    setLocal((s) => Object.fromEntries(
+      Object.entries(s).filter(([, v]) => v.kept)));
+    setHistory([]);
     navigate('/');
   }, [george, navigate, threadId]);
 
@@ -236,6 +285,18 @@ export default function Room() {
         )}
 
         {latest?.error && <p className="r-note" style={{ marginTop: 18 }}>{latest.error}</p>}
+
+        {/* UNDO IS WHAT MAKES REARRANGING SAFE TO TRY. It shows only when
+            there is something to undo — a permanent, always-dead control
+            teaches you it does nothing. It undoes YOUR changes to the board,
+            never George's reads: what he found is not yours to take back. */}
+        {history.length > 0 && (
+          <div style={{ marginTop: 26 }}>
+            <button type="button" className="r-chip" onClick={undo}>
+              ↺ undo {history.length > 1 ? `(${history.length})` : ''}
+            </button>
+          </div>
+        )}
 
         {aside.length > 0 && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 30 }}>
