@@ -18,6 +18,7 @@ import {
   rowFor, rowsOf, sorted, splitCaveat, subjectOf, tone, valueOf,
   type AnswerTurn, type Change, type Dimension,
 } from './data';
+import { directionRgb, hueFor, type Rgb } from './identity';
 
 export interface TileActions {
   /** Bring it forward and give it the room. */
@@ -41,36 +42,44 @@ export interface TileProps {
   earlier: boolean;
   on: TileActions;
   notices?: GeorgeNotice[];
+  /** What the person has picked, so a comparison can mark its own subjects. */
+  selection?: string[];
 }
 
 /* ------------------------------------------------------------------ shell */
 
-function Shell({ change, quiet, george, landing, delay, focused, selected, children, onOpen }: {
+/**
+ * The tile every object sits in.
+ *
+ * `hue` is WHAT THIS IS — from identity.ts, the same every time you see it.
+ * `change` only sets how brightly that hue burns. The two never trade places,
+ * which is what lets a shop keep its colour through a bad week.
+ */
+function Shell({ hue, change, quiet, george, landing, delay, picked, children, onOpen }: {
+  hue?: Rgb;
   change?: Change | null;
   quiet?: boolean;
   george?: boolean;
   landing: boolean;
   delay: number;
-  focused?: boolean;
-  selected?: boolean;
+  picked?: boolean;
   children: ReactNode;
   onOpen?: () => void;
 }) {
   const i = change ? intensity(change) : 0;
-  const t = change ? tone(change) : 'flat';
   const cls = [
     'r-tile',
-    george ? 'r-tile--george' : `r-tile--${t}`,
+    george ? 'r-tile--george' : '',
     quiet ? 'r-tile--quiet' : '',
+    picked ? 'r-tile--picked' : '',
     landing ? 'r-landing' : '',
   ].filter(Boolean).join(' ');
   return (
     <div
       className={cls}
       style={{
-        ...(george ? {} : { '--i': i.toFixed(3) }),
+        ...(george ? {} : { '--hue': hue, '--i': i.toFixed(3) }),
         '--d': `${delay}ms`,
-        ...(focused || selected ? { borderColor: 'rgba(255,246,230,.4)' } : {}),
       } as CSSProperties}
       {...(onOpen ? { 'data-open': true, role: 'button', tabIndex: 0,
         onClick: onOpen,
@@ -93,7 +102,13 @@ function Delta({ change }: { change: Change }) {
   }
   if (change.pct === null) return null;
   if (change.pct === 0) return <span className="r-delta r-delta--none">no change</span>;
-  return <span className="r-delta">{pct(change.pct)}</span>;
+  // The sign is always drawn, so direction survives being the same green as
+  // the shop called Greenhills.
+  return (
+    <span className="r-delta" style={{ '--dir': directionRgb(tone(change)) } as CSSProperties}>
+      {change.pct > 0 ? '▲' : '▼'} {pct(change.pct)}
+    </span>
+  );
 }
 
 function Receipts({ meta }: { meta: Parameters<typeof receiptsLine>[0] }) {
@@ -132,6 +147,20 @@ function Missing({ what }: { what: string }) {
   );
 }
 
+/**
+ * WHAT KIND OF THING A READ IS ABOUT, from the tool that produced it. A table
+ * of purchase orders is not the same kind of object as a table of shops, and
+ * on a board of ten tiles that difference is worth a colour.
+ */
+function kindOfRead(tool?: string | null): string {
+  if (!tool) return 'product';
+  if (tool.includes('purchas')) return 'supplier';
+  if (tool.includes('replenish') || tool.includes('movement')) return 'delivery';
+  if (tool.includes('stock') || tool.includes('dead')) return 'stock';
+  if (tool.includes('product') || tool.includes('cost')) return 'product';
+  return 'category';
+}
+
 /* ------------------------------------------------------------- the objects */
 
 /**
@@ -153,8 +182,9 @@ export function SubjectTile(p: TileProps & { size?: 'lead' | 'normal' | 'small' 
   const figure = size === 'lead' ? 46 : size === 'small' ? 24 : 32;
 
   return (
-    <Shell change={change} landing={p.landing} delay={p.delay} focused={p.focused}
-           selected={p.selected} quiet={size === 'small'} onOpen={() => p.on.open(p.o.key)}>
+    <Shell hue={hueFor(label, dimension, p.o.kind)} change={change}
+           landing={p.landing} delay={p.delay} picked={p.focused || p.selected}
+           quiet={size === 'small'} onOpen={() => p.on.open(p.o.key)}>
       <p className="r-label">{label}{p.earlier ? ' · from earlier' : ''}</p>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
         <span className="r-num" style={{ '--size': `${figure}px` } as CSSProperties}>
@@ -189,7 +219,9 @@ export function ComparisonTile(p: TileProps) {
           const v = row ? valueOf(row) : null;
           const dimension = dimensionOf(rows, s);
           return (
-            <Shell key={s} change={change} landing={p.landing} delay={p.delay + n * 90}
+            <Shell key={s} hue={hueFor(s, dimension, 'subject')} change={change}
+                   landing={p.landing} delay={p.delay + n * 90}
+                   picked={p.selection?.includes(s)}
                    onOpen={() => p.on.pick(s, dimension)}>
               <p className="r-label">{s}</p>
               <div style={{ marginTop: 9 }}>
@@ -298,7 +330,7 @@ export function TableTile(p: TileProps) {
   const title = meta?.metric_label ?? p.o.tool?.replace(/^get_/, '').replace(/_/g, ' ') ?? 'rows';
 
   return (
-    <Shell quiet landing={p.landing} delay={p.delay}>
+    <Shell quiet hue={hueFor(null, null, kindOfRead(p.o.tool))} landing={p.landing} delay={p.delay}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
         <p className="r-label">
           {[title, `${all.length} rows`, ...constant].join(' · ')}{p.earlier ? ' · from earlier' : ''}
@@ -354,7 +386,7 @@ export function DistributionTile(p: TileProps) {
   const peak = Math.max(1, ...values.map(Math.abs));
 
   return (
-    <Shell quiet landing={p.landing} delay={p.delay}>
+    <Shell quiet hue={hueFor(null, null, kindOfRead(p.o.tool))} landing={p.landing} delay={p.delay}>
       <p className="r-label">
         {call?.result?.meta?.metric_label ?? 'over time'}{p.earlier ? ' · from earlier' : ''}
       </p>
@@ -391,8 +423,9 @@ export function ChartTile(p: TileProps) {
   const y = (v: number) => H - pad - (v / max) * (H - pad * 2);
   const line = values.map((v, n) => `${x(n)},${y(v)}`).join(' ');
 
+  const hue = hueFor(p.o.subject, null, kindOfRead(p.o.tool));
   return (
-    <Shell quiet landing={p.landing} delay={p.delay}>
+    <Shell quiet hue={hue} landing={p.landing} delay={p.delay}>
       <p className="r-label">
         {call?.result?.meta?.metric_label ?? 'series'}{p.earlier ? ' · from earlier' : ''}
       </p>
@@ -400,23 +433,23 @@ export function ChartTile(p: TileProps) {
            role="img" aria-label={call?.result?.meta?.metric_label ?? 'series'}>
         <defs>
           <linearGradient id={`fill-${p.o.key}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgb(70,229,196)" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="rgb(70,229,196)" stopOpacity="0" />
+            <stop offset="0%" stopColor={`rgb(${hue})`} stopOpacity="0.30" />
+            <stop offset="100%" stopColor={`rgb(${hue})`} stopOpacity="0" />
           </linearGradient>
         </defs>
         {p.o.form === 'bar'
           ? values.map((v, n) => (
               <rect key={n} x={x(n) - (W / rows.length) * 0.3} y={y(v)}
                     width={(W / rows.length) * 0.6} height={H - pad - y(v)}
-                    fill="rgb(70,229,196)" opacity={0.75} rx={2} />
+                    fill={`rgb(${hue})`} opacity={0.75} rx={2} />
             ))
           : (
             <>
               <polygon fill={`url(#fill-${p.o.key})`}
                        points={`${pad},${H - pad} ${line} ${x(rows.length - 1)},${H - pad}`} />
-              <polyline fill="none" stroke="rgb(70,229,196)" strokeWidth={1.6} points={line} />
+              <polyline fill="none" stroke={`rgb(${hue})`} strokeWidth={1.6} points={line} />
               <circle cx={x(rows.length - 1)} cy={y(values[values.length - 1])} r={3.5}
-                      fill="rgb(70,229,196)" />
+                      fill={`rgb(${hue})`} />
             </>
           )}
       </svg>
@@ -445,7 +478,7 @@ export function DraftTile(p: TileProps) {
   const total = rows.reduce((s, row, n) => s + (qty[n] ?? suggested(row)), 0);
 
   return (
-    <Shell landing={p.landing} delay={p.delay} change={{ pct: null, direction: 'flat' }}>
+    <Shell hue={hueFor(meta?.supplier, null, 'supplier')} landing={p.landing} delay={p.delay}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
         <div>
           <p className="r-label">draft order{meta?.supplier ? ` · ${meta.supplier}` : ''}</p>
@@ -522,7 +555,7 @@ export function StateTile(p: TileProps) {
   }) | undefined;
   const label = p.o.label ?? 'pending';
   return (
-    <Shell quiet landing={p.landing} delay={p.delay}>
+    <Shell quiet hue={hueFor(null, null, 'order')} landing={p.landing} delay={p.delay}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <p className="r-label">{label}</p>
         <span className="r-delta r-delta--none">{label}</span>

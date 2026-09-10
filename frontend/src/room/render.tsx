@@ -54,6 +54,7 @@ export function Board(p: BoardProps) {
         delay={n * 110}
         focused={p.focused === o.key}
         selected={Boolean(o.subject && p.selection.includes(o.subject))}
+        selection={p.selection}
         earlier={o.touched < newest}
         on={p.on}
         notices={textLeads && o.kind === 'text' ? notices : undefined}
