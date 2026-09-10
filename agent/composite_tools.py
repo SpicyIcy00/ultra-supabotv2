@@ -719,6 +719,19 @@ COMPOSITE_TOOL_FUNCTIONS = {
 # {rows, meta} with one source_table, exactly as a read tool does.
 COMPOSABLE_READS = frozenset({MEMORY_TOOL, AUTOMATIONS_TOOL})
 
+# The other direction: an ordinary read tool whose rows CANNOT back an object.
+#
+# get_object returns SECTIONS — each a read of its own, with its own rows and
+# its own receipts — for the same reason view_page returns replayed pins. It is
+# a way IN to a thing, not a figure about it, and an object drawn over it would
+# have to pick a section to render and would render the section list instead.
+#
+# Live, that surfaced as "seikyo-history: read 0 has no row for 'Seikyo
+# SEK001'" — true, and useless: the rows are sections and none of them is a
+# subject. The right move is the specific read the section already ran, which
+# the section carries. So the refusal now says that instead.
+NOT_COMPOSABLE_READS = frozenset({"get_object"})
+
 COMPOSITE_TOOL_REQUIRES = {
     "run_workflow": "workflow_runner",
     PAGE_CONTEXT_TOOL: "page_reader",

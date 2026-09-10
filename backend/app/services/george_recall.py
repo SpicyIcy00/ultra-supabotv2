@@ -80,7 +80,15 @@ def _figure(receipts: Optional[dict]) -> str:
     metric = receipts.get("metric")
     if metric:
         parts.append(str(metric))
-    window = receipts.get("window") or {}
+    # TOLERATES ANYTHING. These receipts were stored by an earlier version of
+    # a tool, possibly weeks ago, and this runs on the path that answers every
+    # question — so a shape it did not expect must cost the recall LINE, never
+    # the answer. It cost every answer once: a tool put a bare string in
+    # meta.window and recall raised AttributeError on the next question asked
+    # in any conversation that had touched it.
+    window = receipts.get("window")
+    if not isinstance(window, dict):
+        return " ".join(parts)
     start, end = window.get("start"), window.get("end")
     if start and end:
         parts.append(f"over {start}→{end}")

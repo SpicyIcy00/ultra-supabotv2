@@ -2788,10 +2788,13 @@ async def run(
                     # self-reads are composites by injection but reads by
                     # shape — see composite_tools.COMPOSABLE_READS.
                     "is_read": (
-                        b.name in composite_tools.COMPOSABLE_READS
-                        or (b.name in TOOL_FUNCTIONS
-                            and b.name not in write_tools.WRITE_TOOL_FUNCTIONS
-                            and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS)
+                        b.name not in composite_tools.NOT_COMPOSABLE_READS
+                        and (
+                            b.name in composite_tools.COMPOSABLE_READS
+                            or (b.name in TOOL_FUNCTIONS
+                                and b.name not in write_tools.WRITE_TOOL_FUNCTIONS
+                                and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS)
+                        )
                     ),
                 }
 

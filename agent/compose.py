@@ -73,6 +73,15 @@ def _read(calls: Mapping[int, Mapping[str, Any]], seq: Any) -> Mapping[str, Any]
         # drawn over a read so a figure always has receipts behind it, and a
         # write is not one — but the thing he changed is almost always
         # readable, so the refusal says so instead of just saying no.
+        from agent import composite_tools
+
+        if call.get("tool") in composite_tools.NOT_COMPOSABLE_READS:
+            raise Rejected(
+                f"call {seq} ({call.get('tool')}) returns SECTIONS, each its "
+                f"own read — it is a way in to a thing, not a figure about it, "
+                f"so there is nothing for one object to draw. Run the specific "
+                f"read the section named and compose over that."
+            )
         raise Rejected(
             f"call {seq} is not a read — an object is drawn over a read, so "
             f"that a figure always has receipts. Read the thing back and "

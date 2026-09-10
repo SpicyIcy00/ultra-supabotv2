@@ -150,3 +150,30 @@ def test_order_is_preserved_so_the_newest_is_read_first():
         row("oldest", "B.", None, day=(2026, 8, 1)),
     ])
     assert block.index("newest") < block.index("oldest")
+
+
+def test_recall_survives_receipts_it_did_not_expect():
+    """
+    THE BUG THIS HOLDS. Recall runs on the path that answers EVERY question,
+    against receipts stored by whatever version of a tool wrote them — possibly
+    weeks ago. A shape it does not expect must cost the recall LINE and never
+    the answer.
+
+    It cost every answer once: tools/objects.py put a bare preset string in
+    meta.window, where every other tool puts a structured {kind, name, start,
+    end}. The next question asked in any conversation that had opened an object
+    raised AttributeError: 'str' object has no attribute 'get', and the ask
+    endpoint returned 500 before a single frame went out.
+
+    Both halves are fixed and both are held: the tool no longer overloads the
+    key (test_objects_contract), and this tolerates anything.
+    """
+    from app.services.george_recall import _figure
+
+    assert _figure({"metric": "net_sales", "window": "last_week"}) == "net_sales"
+    assert _figure({"metric": "x", "window": ["a", "b"]}) == "x"
+    assert _figure({"metric": "x", "window": None}) == "x"
+    assert _figure({"metric": "x"}) == "x"
+    assert _figure(None) == ""
+    # And the shape it does understand still works.
+    assert "over" in _figure({"metric": "x", "window": {"name": "last week"}})

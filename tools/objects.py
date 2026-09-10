@@ -388,7 +388,14 @@ def get_object(kind: str, name: str,
             # vouching for the stalest.
             "snapshot_timestamp": None,
             "object": {"kind": kind, "name": name},
-            "window": window,
+            # NOT `window`. Every other tool uses meta.window for a STRUCTURED
+            # window — {kind, name, start, end} — and the result vocabulary and
+            # george_recall both read it as one. Putting a bare preset string
+            # there crashed recall for every later question in any conversation
+            # that had opened an object (AttributeError: 'str' has no 'get').
+            # An object view has no single window anyway: each section carries
+            # its own, and the preset here is only what was ASKED for.
+            "window_preset": window,
             "sections": {s["section"]: s["state"] for s in sections},
             "available": sum(1 for s in sections if s["state"] == "available"),
             "failed": [s["section"] for s in sections if s["state"] == "failed"],

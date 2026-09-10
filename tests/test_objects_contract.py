@@ -326,3 +326,47 @@ def test_the_warehouse_notice_is_fingerprinted_like_every_other():
     fingerprints = req(DEFS, "notices")
     assert "object_has_no_sales" in fingerprints
     assert fingerprints["object_has_no_sales"]["must_convey"]
+
+
+def test_the_object_view_does_not_overload_the_window_key():
+    """
+    meta.window is a STRUCTURED window everywhere else — {kind, name, start,
+    end} — and both the result vocabulary and george_recall read it as one.
+    An object view has no single window (each section carries its own), so
+    putting a bare preset string there was a type collision on a conventional
+    key, and it took down the ask endpoint for every conversation that had
+    opened an object.
+    """
+    source = inspect.getsource(objects.get_object)
+    assert '"window_preset": window' in source
+    assert '"window": window,' not in source
+
+
+def test_an_object_read_cannot_back_a_tile():
+    """
+    An object read returns SECTIONS — each a read of its own with its own
+    receipts — for the same reason view_page returns replayed pins. It is a way
+    IN to a thing, not a figure about it, so an object drawn over it would have
+    to pick a section and would render the section list instead.
+
+    Live, this surfaced as "seikyo-history: read 0 has no row for 'Seikyo
+    SEK001'": true, and useless, because the rows are sections and none of them
+    is a subject. The refusal now names the way round.
+    """
+    from agent import compose, composite_tools
+
+    assert "get_object" in composite_tools.NOT_COMPOSABLE_READS
+
+    # The loop marks it not-a-read, whatever else is true of it.
+    source = inspect.getsource(loop.run)
+    assert "NOT_COMPOSABLE_READS" in source
+
+    # And the refusal explains rather than merely declining.
+    call = {"tool": "get_object", "is_read": False, "rows": []}
+    try:
+        compose._read({0: call}, 0)
+    except compose.Rejected as refused:
+        assert "SECTIONS" in str(refused)
+        assert "compose over that" in str(refused)
+    else:  # pragma: no cover
+        raise AssertionError("an object read was accepted as a tile's backing")
