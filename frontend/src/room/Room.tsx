@@ -163,7 +163,10 @@ export default function Room() {
         arguments: { ...call.arguments, [argument]: value },
       }]);
       const first = out.results?.[0];
-      if (!first || first.state !== 'ok') return;
+      // `status`, not `state` — PinCallResult's field. Written wrong, this
+      // was always truthy-unequal to 'ok', so every control click returned
+      // here and the chips did nothing at all.
+      if (!first || first.status !== 'ok') return;
       setRetuned((s) => ({
         ...s,
         [object.seq as number]: {

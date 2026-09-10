@@ -43,6 +43,10 @@ export const KIND_LABEL: Record<PostKind, string | null> = {
   approval: 'Needs you',
   workflow_run: 'Workflow ran',
   pin_confirmation: 'Pinned',
+  // A watch that fired. Not "Needs you" — that is the approval
+  // queue's phrase and its colour (UI rule 5); this is something
+  // that happened, not something to act on.
+  watch: 'I noticed',
   system: null,
 };
 

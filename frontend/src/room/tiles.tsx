@@ -853,7 +853,9 @@ export function SystemTile(p: TileProps) {
            picked={p.focused} onOpen={() => p.on.open(p.o.key)}>
       <p className="r-label">{subject}{p.earlier ? ' · from earlier' : ''}</p>
       <p className="r-note" style={{ marginTop: 8 }}>{state || 'no state recorded'}</p>
-      {row.by && <p className="r-label" style={{ marginTop: 8, opacity: 0.8 }}>{String(row.by)}</p>}
+      {row.by ? (
+        <p className="r-label" style={{ marginTop: 8, opacity: 0.8 }}>{String(row.by)}</p>
+      ) : null}
       {when && !Number.isNaN(when.getTime()) && (
         <p className="r-label" style={{ marginTop: 6, opacity: 0.75 }}>
           last {when.toLocaleString()}
