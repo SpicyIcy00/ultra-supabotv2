@@ -22,6 +22,7 @@ import { Board } from './render';
 import { replayCalls } from '../services/deskApi';
 import type { ToolCall } from '../types/george';
 import { Noticed } from './Noticed';
+import { Working } from './Working';
 import { Rail } from './Rail';
 import { dismissStanding, useStandingOpening } from './useStandingOpening';
 import type { TileActions } from './tiles';
@@ -202,11 +203,7 @@ export default function Room() {
           <Opening loading={Boolean(threadId) && thread.loading} />
         ) : (
           <>
-            {busy && latest && latest.toolCalls.length > 0 && (
-              <p className="r-label" style={{ color: 'rgb(var(--george))', marginBottom: 16 }}>
-                {describe(latest)}
-              </p>
-            )}
+            <Working turn={latest} live={busy} />
             <Board
               answers={answers}
               board={board}
@@ -305,29 +302,4 @@ function greeting(): string {
   if (hour < 12) return 'Morning.';
   if (hour < 18) return 'Afternoon.';
   return 'Evening.';
-}
-
-/**
- * What George is doing, in words, from the frames — never from his prose, so
- * it may be read as fact. Names every read in flight, because two running
- * together used to look like one.
- */
-const READING: Record<string, string> = {
-  get_sales: 'reading sales', get_stock: 'counting stock', get_stock_history: 'reading stock over time',
-  get_replenishment: 'reading the replenishment plan', get_purchase_plan: 'drafting the order',
-  get_purchasing: 'reading purchase orders', get_movement: 'reading transfers',
-  get_product: 'looking up a product', get_vending: 'reading vending',
-  get_vending_stock: 'reading vending stock', get_dead_stock: 'finding dead stock',
-  get_cost_history: 'reading costs', get_brief: 'reading the morning brief',
-  view_page: 'reading the page',
-};
-
-function describe(turn: AnswerTurn): string {
-  const inFlight = turn.toolCalls.filter((c) => !c.result && READING[c.tool]);
-  if (inFlight.length) {
-    return `${[...new Set(inFlight.map((c) => READING[c.tool]))].join(', ')}…`;
-  }
-  const landed = turn.toolCalls.filter((c) => c.result && !c.result.error && READING[c.tool]).length;
-  if (landed) return turn.text ? 'writing…' : 'working out what this means…';
-  return 'thinking…';
 }

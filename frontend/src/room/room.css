@@ -445,3 +445,28 @@
   display: block; margin-top: 5px; max-width: 12ch; margin-inline: auto;
   font: 400 11px/1.35 var(--sans); color: var(--ink-2);
 }
+
+/* -------------------------------------------------------------- visible work
+   Feature 13: feel him working. Every line here came from a frame — a call
+   that started, a result that landed — so nothing animates that is not
+   actually happening. What has landed goes quiet; what is still running is
+   the one line still lit. */
+.r-work-trail { margin-bottom: 20px; display: flex; flex-direction: column; gap: 3px; }
+.r-work {
+  margin: 0;
+  font: 400 12.5px/1.6 var(--sans);
+  color: rgb(var(--george));
+  display: flex; align-items: baseline; gap: 8px;
+}
+.r-work--done { color: var(--ink-3); }
+.r-work-n {
+  font: 400 10.5px/1.2 var(--mono);
+  color: var(--ink-3); opacity: 0.85;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .r-work { animation: r-work-in 260ms ease-out both; }
+}
+@keyframes r-work-in {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: none; }
+}

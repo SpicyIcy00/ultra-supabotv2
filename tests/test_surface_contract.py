@@ -241,3 +241,40 @@ def test_identity_and_shape_are_declared_and_attention_has_no_score():
     ts = _ANCHOR_TS.read_text(encoding="utf-8")
     for key in surface._SUBJECT_FILTERS:
         assert f"'{key}'" in ts
+
+
+def test_every_tool_george_can_call_has_words_on_the_room_surface():
+    """
+    THE OWNER'S FEATURE 13: feel him working. That means the screen says what
+    he is DOING, in words — "reading sales", not `get_sales {...}`, which is
+    implementation detail dressed as progress.
+
+    The room's map had stopped keeping up: thirteen tools — every one added in
+    the last week, and every write — had no entry, so opening a shop, checking
+    what he thinks, saving a rule and setting a watch all appeared as
+    "thinking…". A tool with no words is a tool whose work is invisible.
+
+    This fails the moment a tool is added without them.
+    """
+    import re
+    from pathlib import Path
+
+    from agent import composite_tools, loop, write_tools
+
+    source = (Path(__file__).resolve().parents[1]
+              / "frontend" / "src" / "room" / "Working.tsx").read_text(encoding="utf-8")
+    block = source[source.index("export const WORDS"):source.index("function rows(")]
+    named = set(re.findall(r"^\s{2}(\w+):\s*\[", block, re.M))
+
+    every = (set(loop.TOOL_FUNCTIONS)
+             | set(loop.FINDING_TOOL_FUNCTIONS)
+             | set(write_tools.WRITE_TOOL_FUNCTIONS)
+             | set(composite_tools.COMPOSITE_TOOL_FUNCTIONS))
+
+    assert not (every - named), (
+        f"these tools have no words on the room surface, so their work shows "
+        f"as 'thinking…': {sorted(every - named)}"
+    )
+    assert not (named - every), (
+        f"words for tools that do not exist: {sorted(named - every)}"
+    )
