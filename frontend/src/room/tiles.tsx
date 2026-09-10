@@ -13,6 +13,7 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import type { GeorgeNotice } from '../types/george';
 import type { BoardObject, Local } from './board';
+import type { ToolCall } from '../types/george';
 import {
   callOf, changeOf, dimensionOf, fmt, intensity, measureOf, pct, receiptsLine,
   rowFor, rowsOf, sorted, splitCaveat, subjectOf, tone, valueOf,
@@ -30,10 +31,26 @@ export interface TileActions {
   why(subject: string, dimension: Dimension | null): void;
   aside(key: string): void;
   patch(key: string, local: Local): void;
+  /**
+   * Re-run the read an object draws from with ONE scope argument changed.
+   * No model turn: this is the desk replay's path, which is why a control
+   * costs a second rather than forty. Optional, so a surface that has not
+   * wired it simply draws no control.
+   */
+  retune?(key: string, argument: string, value: string | number): void;
 }
 
 export interface TileProps {
   o: BoardObject;
+  /**
+   * A re-run of the read this object draws, after somebody moved a control.
+   *
+   * KEYED BY THE READ, NOT BY THE OBJECT, and that is the semantics: changing
+   * the window on a read changes EVERY object drawn from it, because they are
+   * all showing the same figures through different shapes. Absent means the
+   * turn's own call, exactly as before controls existed.
+   */
+  retuned?: ToolCall | null;
   turn: AnswerTurn;
   local: Local;
   landing: boolean;
@@ -156,6 +173,16 @@ function Missing({ what }: { what: string }) {
  * of purchase orders is not the same kind of object as a table of shops, and
  * on a board of ten tiles that difference is worth a colour.
  */
+/**
+ * The call an object draws from: the re-tuned one if a control moved, else the
+ * turn's own. One function so no tile can disagree with another about which
+ * figures are on screen.
+ */
+function callFor(p: TileProps): ToolCall | null {
+  return p.retuned ?? callOf(p.turn, p.o.seq);
+}
+
+
 function kindOfRead(tool?: string | null): string {
   if (!tool) return 'product';
   if (tool.includes('purchas')) return 'supplier';
@@ -173,7 +200,7 @@ function kindOfRead(tool?: string | null): string {
  * `hero` and `figure` are this tile at different sizes.
  */
 export function SubjectTile(p: TileProps & { size?: 'lead' | 'normal' | 'small' }) {
-  const call = callOf(p.turn, p.o.seq);
+  const call = callFor(p);
   const rows = rowsOf(call);
   const row = p.o.subject ? rowFor(rows, p.o.subject) : rows[0] ?? null;
   if (!row) return <Missing what={p.o.subject ?? 'a row'} />;
@@ -231,7 +258,7 @@ export function SubjectTile(p: TileProps & { size?: 'lead' | 'normal' | 'small' 
 
 /** Two to four subjects from one read, each lit by its own figure. */
 export function ComparisonTile(p: TileProps) {
-  const call = callOf(p.turn, p.o.seq);
+  const call = callFor(p);
   const rows = rowsOf(call);
   const subjects = p.o.subjects ?? [];
   if (!subjects.length) return <Missing what="the subjects" />;
@@ -315,7 +342,7 @@ export function TextTile(p: TileProps) {
 }
 
 export function TableTile(p: TileProps) {
-  const call = callOf(p.turn, p.o.seq);
+  const call = callFor(p);
   const all = rowsOf(call);
   const sort = p.local.sort;
   const rows = sorted(all, sort).slice(0, 40);
@@ -408,7 +435,7 @@ export function TableTile(p: TileProps) {
 
 /** A series or a ranked set, read as shape. Each dot lit by its own move. */
 export function DistributionTile(p: TileProps) {
-  const call = callOf(p.turn, p.o.seq);
+  const call = callFor(p);
   const rows = rowsOf(call);
   if (!rows.length) return <Missing what="the series" />;
   const changes = rows.map(changeOf);
@@ -443,7 +470,7 @@ export function DistributionTile(p: TileProps) {
 }
 
 export function ChartTile(p: TileProps) {
-  const call = callOf(p.turn, p.o.seq);
+  const call = callFor(p);
   const rows = rowsOf(call).slice(0, 60);
   if (!rows.length) return <Missing what="the series" />;
   const values = rows.map((r) => valueOf(r)?.value ?? 0);
@@ -498,7 +525,7 @@ export function ChartTile(p: TileProps) {
  * something.
  */
 export function DraftTile(p: TileProps) {
-  const call = callOf(p.turn, p.o.seq);
+  const call = callFor(p);
   const rows = rowsOf(call);
   const [qty, setQty] = useState<Record<number, number>>({});
   if (!rows.length) return <Missing what="the draft" />;
@@ -579,7 +606,7 @@ export function DraftTile(p: TileProps) {
 
 /** Where a process stands. */
 export function StateTile(p: TileProps) {
-  const call = callOf(p.turn, p.o.seq);
+  const call = callFor(p);
   const meta = call?.result?.meta as (Record<string, unknown> & {
     run?: { run_date?: string; age_days?: number; stores_covered?: number; lines?: number };
   }) | undefined;
@@ -635,5 +662,204 @@ export function Caveats({ notices }: { notices?: GeorgeNotice[] }) {
     <div className="r-caveats" data-caveats={notices.length}>
       {notices.map((n, i) => <Caveat key={`${n.kind}-${i}`} notice={n} />)}
     </div>
+  );
+}
+
+/* ---------------------------------------------------------------- timeline
+ *
+ * WHEN something happened, in order. A chart is for the shape of a series and
+ * a table for precision; this is for a sequence — eight weeks of a shop, an
+ * order history, the day stock crossed to zero.
+ *
+ * IT DRAWS ONLY WHAT THE READ CARRIES. The date column is found in the rows,
+ * never assumed, and a read with no date at all says so rather than inventing
+ * an order for things that have none.
+ */
+const DATEISH = /(date|day|week|month|_at$|when|period|sold|created)/i;
+
+function timeOf(row: Record<string, unknown>, column: string): number | null {
+  const raw = row[column];
+  if (raw == null) return null;
+  const at = new Date(String(raw)).getTime();
+  return Number.isFinite(at) ? at : null;
+}
+
+export function TimelineTile(p: TileProps) {
+  const call = callFor(p);
+  const rows = rowsOf(call);
+  if (!rows.length) return <Missing what="rows" />;
+
+  const column = Object.keys(rows[0]).find(
+    (k) => DATEISH.test(k) && timeOf(rows[0], k) !== null,
+  );
+  if (!column) return <Missing what="a date to lay out in time" />;
+
+  const points = rows
+    .map((row) => ({ row, at: timeOf(row, column) }))
+    .filter((point): point is { row: Record<string, unknown>; at: number } => point.at !== null)
+    .sort((a, b) => a.at - b.at);
+  if (!points.length) return <Missing what="a date to lay out in time" />;
+
+  const first = points[0].at;
+  const last = points[points.length - 1].at;
+  const span = Math.max(1, last - first);
+  const label = (row: Record<string, unknown>) =>
+    String(row.product ?? row.store ?? row.subject ?? row.what ?? row.name ?? row.basis ?? '');
+  const v = (row: Record<string, unknown>) => valueOf(row);
+
+  return (
+    <Shell quiet hue={hueFor(null, null, kindOfRead(p.o.tool))}
+           landing={p.landing} delay={p.delay}>
+      <p className="r-label">
+        {call?.result?.meta?.metric_label ?? 'in time'} · {points.length} points
+        {p.earlier ? ' · from earlier' : ''}
+      </p>
+      <div className="r-time">
+        <div className="r-time-axis" />
+        {points.map((point, n) => {
+          const at = ((point.at - first) / span) * 100;
+          const figure = v(point.row);
+          return (
+            <div key={n} className="r-time-point" style={{ left: `${at}%` }}>
+              <i />
+              <span className="r-time-when">
+                {new Date(point.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+              </span>
+              {(label(point.row) || figure) && (
+                <span className="r-time-what">
+                  {label(point.row)}
+                  {figure ? ` · ${fmt(figure.key, figure.value)}` : ''}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <Receipts meta={call?.result?.meta} />
+    </Shell>
+  );
+}
+
+/* ---------------------------------------------------------- recommendation
+ *
+ * ONE thing George thinks should be done, over the read that makes the case.
+ *
+ * THE VERB IS HIS AND THE NUMBER IS THE TOOL'S, and the block has no field for
+ * a figure, so it cannot be otherwise. "Order 806 units" is get_purchase_plan's
+ * quantity beside George's chosen word; "order about 800" is unrepresentable.
+ */
+const ACTS: Record<string, string> = {
+  order: 'Order', investigate: 'Look into', check: 'Check',
+  hold: 'Hold off on', switch_on: 'Switch on', leave_it: 'Leave',
+};
+
+export function RecommendationTile(p: TileProps) {
+  const call = callFor(p);
+  const rows = rowsOf(call);
+  const subject = p.o.subject ?? '';
+  const row = rowFor(rows, subject);
+  const figure = row ? valueOf(row) : null;
+  const dimension = dimensionOf(rows, subject);
+  const lit = !p.earlier && p.o.weight !== 'quiet';
+
+  return (
+    <Shell hue={hueFor(subject, dimension, 'subject')} solid={lit} quiet={!lit}
+           landing={p.landing} delay={p.delay} picked={p.focused || p.selected}
+           onOpen={() => p.on.open(p.o.key)}>
+      <p className="r-label">{ACTS[p.o.action ?? ''] ?? 'Consider'}</p>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
+        <span className="r-num" style={{ '--size': '30px' } as CSSProperties}>
+          {figure ? fmt(figure.key, figure.value) : subject}
+        </span>
+        {figure && <span className="r-label">{subject}</span>}
+      </div>
+      {figure && <p className="r-label" style={{ marginTop: 9 }}>{measureOf(call?.result?.meta, figure.key)}</p>}
+      <Acts subject={subject} dimension={dimension} o={p.o} on={p.on} />
+      <Receipts meta={call?.result?.meta} />
+    </Shell>
+  );
+}
+
+/* ----------------------------------------------------------------- control
+ *
+ * A HANDLE ON A READ THAT IS ALREADY ON SCREEN. Change the window and every
+ * object drawn from that read re-runs — no model turn, nothing read that the
+ * person did not ask for. This is the same path the desk replay takes, which
+ * is why it costs a second rather than forty.
+ *
+ * SCOPE ONLY. There is no control that changes a threshold, because a
+ * threshold is a definition and lives in metrics.yaml where it was measured.
+ * The vocabulary makes that structural rather than a matter of restraint.
+ */
+const WINDOWS = ['yesterday', 'last_week', 'last_month', 'last_30_days'];
+const COUNTS = [5, 10, 25];
+
+export function ControlTile(p: TileProps) {
+  const call = callFor(p);
+  const argument = p.o.argument ?? 'date_range';
+  const current = String(
+    (call?.arguments as Record<string, unknown> | undefined)?.[argument] ?? '',
+  );
+  const options: (string | number)[] = argument === 'top_n' ? COUNTS : WINDOWS;
+
+  return (
+    <Shell quiet hue={hueFor(null, null, 'order')} landing={p.landing} delay={p.delay}>
+      <p className="r-label">
+        {argument === 'top_n' ? 'how many' : 'window'}
+        {p.o.tool ? ` · ${p.o.tool.replace(/^get_/, '')}` : ''}
+      </p>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+        {options.map((option) => (
+          <button
+            key={String(option)}
+            type="button"
+            className="r-chip"
+            aria-pressed={String(option) === current}
+            style={String(option) === current
+              ? { borderColor: 'rgba(17,24,39,.32)', color: 'var(--ink)' }
+              : undefined}
+            onClick={() => p.on.retune?.(p.o.key, argument, option)}
+          >
+            {String(option).replace(/_/g, ' ')}
+          </button>
+        ))}
+      </div>
+      {/* No receipts: a control states no figure. What it changes carries its
+          own, and re-runs them when it moves. */}
+    </Shell>
+  );
+}
+
+/* ------------------------------------------------------------------ system
+ *
+ * SOMETHING THAT RUNS: a saved rule, a standing question, a watch. Drawn over
+ * view_automations, which is the read that returns them.
+ *
+ * The states are not interchangeable and are never collapsed into "on": a
+ * watch that is quiet LOOKED and found nothing; one that is not switched on is
+ * not looking; one that has never been backtested cannot start. Three
+ * different facts about a thing you might be relying on.
+ */
+export function SystemTile(p: TileProps) {
+  const call = callFor(p);
+  const rows = rowsOf(call);
+  const subject = p.o.subject ?? '';
+  const row = rowFor(rows, subject) ?? {};
+  const state = String(row.state ?? '');
+  const when = row.when ? new Date(String(row.when)) : null;
+
+  return (
+    <Shell quiet hue={hueFor(null, null, 'order')} landing={p.landing} delay={p.delay}
+           picked={p.focused} onOpen={() => p.on.open(p.o.key)}>
+      <p className="r-label">{subject}{p.earlier ? ' · from earlier' : ''}</p>
+      <p className="r-note" style={{ marginTop: 8 }}>{state || 'no state recorded'}</p>
+      {row.by && <p className="r-label" style={{ marginTop: 8, opacity: 0.8 }}>{String(row.by)}</p>}
+      {when && !Number.isNaN(when.getTime()) && (
+        <p className="r-label" style={{ marginTop: 6, opacity: 0.75 }}>
+          last {when.toLocaleString()}
+        </p>
+      )}
+      <Receipts meta={call?.result?.meta} />
+    </Shell>
   );
 }

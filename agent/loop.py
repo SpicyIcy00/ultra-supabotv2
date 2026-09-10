@@ -518,6 +518,17 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
                                  "minItems": 2, "maxItems": compose.MAX_SUBJECTS},
                     "form": {"type": "string", "enum": list(voc["chart_forms"])},
                     "label": {"type": "string", "enum": list(voc["state_labels"])},
+                    # A recommendation's verb and a control's handle. DECLARED
+                    # HERE OR THEY DO NOT EXIST: the vocabulary and the
+                    # validator knew about these before the schema did, so the
+                    # model reached for `label` on a recommendation — the only
+                    # nearby word it could see — and was refused for it.
+                    "action": {"type": "string",
+                               "enum": list(voc["recommendation_actions"]),
+                               "description": "for a recommendation: which action, never a new one"},
+                    "argument": {"type": "string",
+                                 "enum": list(voc["control_arguments"]),
+                                 "description": "for a control: which scope argument it changes"},
                 },
                 "required": ["key"],
                 "additionalProperties": False,
@@ -1169,6 +1180,12 @@ A short follow-up almost never needs a `put` of everything. It is usually one `c
 WHAT COMPOSING IS. Judgment made visible. A question about one shop leads with that shop. "How are we doing?" leads with the one thing that most needs attention and puts the rest beside it, quiet. A ranked read leads with the subject that matters and keeps the table behind it. "What do I need from Seikyo?" leads with the draft. A composition where everything has the same weight has not been composed.
 
 CHOOSE THE FORM, NOT JUST THE FACT. Eight weeks of one shop is a distribution or a chart, not a table. Seven shops ranked is a comparison of the two that matter with the table quiet behind them. One number that answers the question outright is a figure. A process — a run, a plan, something waiting — is a state. Reaching for a table every time is not composing.
+
+FOUR MORE FORMS, AND WHEN THEY ARE THE RIGHT ONE.
+  timeline        — when WHEN is the point. Costs, deliveries, an order history, the day something crossed. Use it when the dates are unevenly spaced and that spacing matters; a chart is for the shape of a series and a table for precision. If the series does not move, say so and draw a figure — a timeline of a flat line asserts a change that did not happen.
+  recommendation  — when the question is what to DO, not what is true. It names one subject, one action from the list, and the read that makes the case. The figure on it is the read's; you have no field for one, which is the point. Say 'leave_it' when that is the answer.
+  control         — when the person will obviously want the same read over a different window or a different number of rows. Put one beside the object it tunes; moving it re-runs the read for every object drawn from it, with no turn spent. It changes SCOPE only — there is no control for a threshold, because a threshold is a definition.
+  system          — when something that RUNS is part of the answer: a saved rule, a standing question, a watch. Draw it over view_automations, which is the read that returns them, and name which one it is about. Their states are not interchangeable: quiet means it looked and found nothing, not switched on means it is not looking.
 
 AFTER YOU CHANGE SOMETHING, READ IT BACK BEFORE YOU DRAW IT. An object is drawn over a READ, so that every figure on screen has receipts behind it — and a write is not a read. Saving a page, keeping a standing question, pinning an answer: each returns what it did, and none of them may be composed over. If the change belongs on the board, make the read that shows the new state (view_automations for anything running on a schedule) and compose over that. Composing over the write is refused, and a refused edit did not happen.
 

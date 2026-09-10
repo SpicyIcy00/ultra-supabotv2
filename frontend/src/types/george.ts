@@ -351,7 +351,15 @@ export interface CompositionBlock {
    * was. Absent means `put`.
    */
   op?: 'put' | 'change' | 'quiet' | 'drop';
-  kind?: 'text' | 'figure' | 'hero' | 'subject' | 'comparison' | 'table' | 'chart' | 'distribution' | 'draft' | 'state';
+  kind?:
+    | 'text' | 'figure' | 'hero' | 'subject' | 'comparison' | 'table'
+    | 'chart' | 'distribution' | 'draft' | 'state'
+    // Added 2026-09-11 to close the gap against the owner's feature 1, which
+    // names timelines, controls, business objects and recommendations among
+    // the things the workspace composes. `document` is deliberately absent:
+    // nothing in this system holds one yet (metrics.yaml
+    // composition.documents_not_a_widget_because).
+    | 'timeline' | 'recommendation' | 'control' | 'system';
   /** George's key for the object. The same key in a later turn is the same object, changed. */
   key: string;
   /** Absent on a `change` that only re-points the object at another read. */
@@ -363,6 +371,10 @@ export interface CompositionBlock {
   subjects?: string[];
   form?: 'line' | 'bar';
   label?: 'pending' | 'running' | 'waiting' | 'done' | 'blocked';
+  /** A recommendation's verb. George picks WHICH; he never invents one. */
+  action?: 'order' | 'investigate' | 'check' | 'hold' | 'switch_on' | 'leave_it';
+  /** What a control changes: scope only, never a threshold. */
+  argument?: 'date_range' | 'top_n';
 }
 
 export interface CompositionFrame {

@@ -14,7 +14,7 @@ already exist.
 import pytest
 
 from tools._common import load_defs, req
-from agent import compose
+from agent import compose, loop
 
 
 @pytest.fixture(scope="module")
@@ -408,3 +408,162 @@ def test_the_loop_agrees_with_the_declaration():
     src = inspect.getsource(george_loop.run)
     assert "COMPOSABLE_READS" in src, "the loop no longer honours the declaration"
     ast.parse(src)
+
+
+# ---------------------------------------------------------------------------
+# The four widgets added 2026-09-11, against the owner's feature 1
+# ---------------------------------------------------------------------------
+
+def test_the_widget_vocabulary_covers_what_feature_one_names(defs):
+    """
+    The owner's feature 1 names what the workspace composes: widgets,
+    visualizations, tables, comparisons, TIMELINES, documents, CONTROLS,
+    BUSINESS OBJECTS, RECOMMENDATIONS and status objects. Four of those had no
+    widget, so the interface could not change into them however the work went.
+
+    `document` is still absent and that is recorded rather than forgotten: no
+    document source exists, and a widget with nothing behind it is the failure
+    the declined visuals describe.
+    """
+    widgets = set(req(defs, "composition.widgets"))
+    for named in ("timeline", "recommendation", "control", "system"):
+        assert named in widgets
+    assert "document" not in widgets
+    assert req(defs, "composition.documents_not_a_widget_because")
+
+
+def test_a_recommendation_names_an_action_and_never_a_figure(defs):
+    """
+    George picks the VERB; the number comes off the read. A block has no field
+    for a figure, so "order 806 units" is the tool's quantity beside his word
+    and "order about 800" is unrepresentable.
+    """
+    actions = req(defs, "composition.recommendation_actions")
+    calls = {0: {"tool": "get_purchase_plan", "is_read": True,
+                 "rows": [{"product": "Aji Mix", "order_qty": 806}]}}
+
+    ok, no = compose.validate({"blocks": [
+        {"kind": "recommendation", "key": "a", "seq": 0,
+         "subject": "Aji Mix", "action": actions[0]},
+    ]}, calls, defs)
+    assert len(ok) == 1 and ok[0]["action"] == actions[0]
+
+    ok, no = compose.validate({"blocks": [
+        {"kind": "recommendation", "key": "b", "seq": 0,
+         "subject": "Aji Mix", "action": "buy_a_lot"},
+    ]}, calls, defs)
+    assert not ok and "recommendation_actions" in no[0]["reason"]
+
+
+def test_a_recommendation_can_say_do_nothing(defs):
+    """
+    A vocabulary with no way to say "leave it" only ever recommends action,
+    which makes every recommendation worth less.
+    """
+    assert "leave_it" in req(defs, "composition.recommendation_actions")
+
+
+def test_a_control_changes_scope_and_can_never_change_a_threshold(defs):
+    """
+    The same rule a workflow parameter obeys: scope is which window and how
+    many rows; a business threshold is a definition and lives in metrics.yaml
+    where it was measured. There is no control that could move one.
+    """
+    calls = {0: {"tool": "get_sales", "is_read": True,
+                 "rows": [{"store": "Rockwell", "value": 1}]}}
+
+    ok, _ = compose.validate({"blocks": [
+        {"kind": "control", "key": "w", "seq": 0, "argument": "date_range"},
+    ]}, calls, defs)
+    assert len(ok) == 1 and ok[0]["argument"] == "date_range"
+
+    for forbidden in ("pct_threshold", "absolute_floor_fraction", "cover_days"):
+        ok, no = compose.validate({"blocks": [
+            {"kind": "control", "key": "x", "seq": 0, "argument": forbidden},
+        ]}, calls, defs)
+        assert not ok, f"a control was allowed to change {forbidden}"
+        assert "threshold" in no[0]["reason"]
+
+
+def test_the_new_fields_are_in_the_closed_set_and_a_drop_may_not_carry_them(defs):
+    allowed = set(req(defs, "composition.allowed_fields"))
+    assert {"action", "argument"} <= allowed
+
+    calls = {0: {"tool": "get_sales", "is_read": True, "rows": [{"store": "Rockwell"}]}}
+    ok, no = compose.validate({"blocks": [
+        {"op": "drop", "key": "a", "action": "order"},
+    ]}, calls, defs)
+    assert not ok and "names a key and nothing else" in no[0]["reason"]
+
+
+def test_a_system_is_drawn_over_the_read_that_returns_one(defs):
+    """
+    Something that RUNS is an object like any other, and it is drawn over
+    view_automations — the read that can see the george schema — rather than
+    from a name George remembered.
+    """
+    calls = {0: {"tool": "view_automations", "is_read": True,
+                 "rows": [{"what": "Seikyo PO", "state": "scheduled"}]}}
+    ok, _ = compose.validate({"blocks": [
+        {"kind": "system", "key": "po", "seq": 0, "subject": "Seikyo PO"},
+    ]}, calls, defs)
+    assert len(ok) == 1 and ok[0]["subject"] == "Seikyo PO"
+
+
+def test_every_block_field_the_validator_accepts_is_in_the_schema(defs):
+    """
+    THE BUG THIS HOLDS. `action` and `argument` reached metrics.yaml and the
+    validator without reaching the tool SCHEMA, so the model could not see
+    them. Asked what to do about Seikyo it reached for a recommendation,
+    guessed `label` — the nearest word it could see — and was refused for it.
+
+    A field the validator accepts and the schema hides is a field that does not
+    exist, and the refusal blames the model for the omission.
+    """
+    schema = next(s for s in loop.build_tool_schemas() if s["name"] == "compose")
+    declared = set(schema["input_schema"]["properties"]["blocks"]["items"]["properties"])
+    allowed = set(req(defs, "composition.allowed_fields"))
+    assert allowed == declared, (
+        f"in the schema but not allowed: {sorted(declared - allowed)}; "
+        f"allowed but not in the schema: {sorted(allowed - declared)}"
+    )
+
+
+def test_every_widget_the_definitions_declare_is_offered_to_the_model(defs):
+    schema = next(s for s in loop.build_tool_schemas() if s["name"] == "compose")
+    kinds = schema["input_schema"]["properties"]["blocks"]["items"]["properties"]["kind"]
+    assert set(kinds["enum"]) == set(req(defs, "composition.widgets"))
+
+
+def test_a_control_must_name_an_argument_its_read_actually_takes(defs):
+    """
+    The closed list says which arguments a control MAY change. It does not say
+    this read has one.
+
+    Live, George put a window control on a get_purchase_plan draft and it was
+    accepted: that tool's window is `lookback_days`, a number of days, so the
+    four date presets drawn beside the order would each have been refused on
+    click. A control whose every option fails is worse than no control, and it
+    fails at the moment somebody trusts it.
+
+    The per-tool map is the one already declared for backtesting, so a control
+    and a backtest cannot disagree about what a tool's window is called.
+    """
+    windows = req(defs, "workflows.backtest.window_arguments")
+    assert windows["get_sales"] == "date_range"
+    assert windows["get_purchase_plan"] == "lookback_days"
+
+    def control_over(tool):
+        calls = {0: {"tool": tool, "is_read": True, "rows": [{"store": "Rockwell"}]}}
+        return compose.validate({"blocks": [
+            {"kind": "control", "key": "w", "seq": 0, "argument": "date_range"},
+        ]}, calls, defs)
+
+    ok, _ = control_over("get_sales")
+    assert len(ok) == 1
+
+    ok, no = control_over("get_purchase_plan")
+    assert not ok and "lookback_days" in no[0]["reason"]
+
+    ok, no = control_over("get_product")
+    assert not ok and "no window at all" in no[0]["reason"]

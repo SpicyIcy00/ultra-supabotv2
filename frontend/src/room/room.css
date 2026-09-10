@@ -419,3 +419,29 @@
   color: var(--ink); text-decoration: underline; text-underline-offset: 3px;
 }
 .r-more:hover { color: rgb(var(--george)); }
+
+/* ------------------------------------------------------------------ timeline
+   WHEN something happened, laid out in real time rather than in row order —
+   so two events a day apart sit a day apart, and a month's gap looks like one.
+   Points are placed by their own date against the span the read covers. */
+.r-time { position: relative; margin: 20px 0 8px; padding-bottom: 4px; min-height: 96px; }
+.r-time-axis {
+  position: absolute; left: 0; right: 0; top: 5px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--edge) 8%, var(--edge) 92%, transparent);
+}
+.r-time-point { position: absolute; top: 0; transform: translateX(-50%); text-align: center; }
+.r-time-point i {
+  display: block; width: 9px; height: 9px; border-radius: 50%; margin: 1px auto 0;
+  background: rgb(var(--hue)); box-shadow: 0 0 0 3px rgba(var(--hue), 0.14);
+}
+.r-time-when {
+  display: block; margin-top: 8px; white-space: nowrap;
+  font: 500 9.5px/1.2 var(--sans); letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+/* The label is allowed to be narrow and to wrap: a timeline is read along the
+   axis, and a point that stretched to fit its name would move the event. */
+.r-time-what {
+  display: block; margin-top: 5px; max-width: 12ch; margin-inline: auto;
+  font: 400 11px/1.35 var(--sans); color: var(--ink-2);
+}

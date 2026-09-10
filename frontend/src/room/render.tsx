@@ -12,9 +12,11 @@
 import type { BoardObject, Local } from './board';
 import { inOrder } from './board';
 import type { AnswerTurn, Dimension } from './data';
+import type { ToolCall } from '../types/george';
 import {
-  Caveats, ChartTile, ComparisonTile, DistributionTile, DraftTile, StateTile,
-  SubjectTile, TableTile, TextTile, type TileActions, type TileProps,
+  Caveats, ChartTile, ComparisonTile, ControlTile, DistributionTile, DraftTile,
+  RecommendationTile, StateTile, SubjectTile, SystemTile, TableTile, TextTile,
+  TimelineTile, type TileActions, type TileProps,
 } from './tiles';
 
 export interface BoardProps {
@@ -26,6 +28,8 @@ export interface BoardProps {
   selection: string[];
   /** True while George is still working — drives the landing sequence. */
   live: boolean;
+  /** Reads re-run by a control, by seq. Every object on that read follows. */
+  retuned: Record<number, ToolCall>;
   on: TileActions;
 }
 
@@ -61,6 +65,7 @@ export function Board(p: BoardProps) {
         selected={Boolean(o.subject && p.selection.includes(o.subject))}
         selection={p.selection}
         earlier={o.touched < newest}
+        retuned={o.seq === undefined ? null : p.retuned[o.seq] ?? null}
         on={p.on}
         notices={textLeads && o.kind === 'text' ? notices : undefined}
       />
@@ -94,6 +99,10 @@ function Piece(props: TileProps) {
     case 'distribution': return <DistributionTile {...props} />;
     case 'draft': return <DraftTile {...props} />;
     case 'state': return <StateTile {...props} />;
+    case 'timeline': return <TimelineTile {...props} />;
+    case 'recommendation': return <RecommendationTile {...props} />;
+    case 'control': return <ControlTile {...props} />;
+    case 'system': return <SystemTile {...props} />;
     default: return null;
   }
 }

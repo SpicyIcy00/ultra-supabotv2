@@ -5152,8 +5152,50 @@ composition:
     state:
       about: "where a process stands: pending, running, waiting, and what happens next"
       needs: [label]
+    timeline:
+      about: "events or a measure in time order — a stock line over eight weeks, an order history, when things crossed. Use it when WHEN is the point; a chart is for the shape of a series and a table for precision"
+      needs: [seq]
+    recommendation:
+      about: "ONE thing you think should be done about a subject, over the read that makes the case. You choose the subject and the action from the list; the figures are the read's and you supply none of them"
+      needs: [seq, subject, action]
+    control:
+      about: "a handle on a read already on the board: the person changes the window and every object drawn from that read re-runs, with no model turn and nothing read they did not ask for"
+      needs: [seq, argument]
+    system:
+      about: "something that RUNS — a saved rule, a standing question, a watch — with where it stands and what it did last. Drawn over a read that returned it, which is view_automations"
+      needs: [seq, subject]
   chart_forms: [line, bar]
   state_labels: [pending, running, waiting, done, blocked]
+
+  # WHAT A RECOMMENDATION MAY RECOMMEND. Closed, like every other vocabulary
+  # here, and for the same reason: George chooses WHICH action, never invents
+  # one, and never supplies the figure that justifies it — that comes off the
+  # read the block names. "Order 806 units" is the tool's number and George's
+  # verb; "order about 800" would be George's number and is impossible here,
+  # because a block has no field to put one in.
+  #
+  # "leave_it" is deliberately in the list. A recommendation vocabulary with no
+  # way to say "nothing" only ever recommends action.
+  recommendation_actions: [order, investigate, check, hold, switch_on, leave_it]
+
+  # WHAT A CONTROL MAY CHANGE. A control re-runs a read that is already on the
+  # board with ONE scope argument changed — the same path the desk replay takes
+  # (surface.desk.replay), so no model is consulted and nothing is read that
+  # the person did not ask for.
+  #
+  # SCOPE ONLY, never a threshold. Which window, how many rows. A business
+  # threshold is a definition and lives in this file where it was measured, so
+  # there is no control that could change one — the same rule a workflow
+  # parameter obeys.
+  control_arguments: [date_range, top_n]
+
+  # DOCUMENTS ARE NOT A WIDGET, AND THE REASON IS NOT AN OVERSIGHT. The owner's
+  # feature 1 names documents among the things the workspace composes, and
+  # nothing in this system has one: there is no ingestion, no store, no read.
+  # A document widget now would be a shape with nothing behind it, which is the
+  # failure the two declined visuals record (CLAUDE.md, "Two visuals declined").
+  # It arrives with feature 24, not before.
+  documents_not_a_widget_because: no_document_source_exists
 
   # WEIGHT IS JUDGMENT MADE VISIBLE. One lead, which the eye goes to first; what
   # supports it; and what is on screen because it is true, not because it
@@ -5212,7 +5254,8 @@ composition:
 
   # Anything not in this list on a block is refused with the block. This is
   # the list that keeps a choice from becoming a value.
-  allowed_fields: [op, kind, key, weight, seq, subject, subjects, form, label]
+  allowed_fields: [op, kind, key, weight, seq, subject, subjects, form, label,
+                   action, argument]
 
 surface:
   introduced: "2026-09-09"

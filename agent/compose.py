@@ -121,6 +121,14 @@ def validate(
     max_blocks = int(voc["max_blocks"])
     chart_forms = set(voc.get("chart_forms", []))
     state_labels = set(voc.get("state_labels", []))
+    actions = set(voc.get("recommendation_actions", []))
+    arguments = set(voc.get("control_arguments", []))
+    # Which argument carries a window, per tool. One map, already declared for
+    # backtesting (workflows.backtest.window_arguments), so a control and a
+    # backtest cannot disagree about what a tool's window is called.
+    windows_by_tool: Mapping[str, Any] = (
+        (defs.get("workflows") or {}).get("backtest") or {}
+    ).get("window_arguments") or {}
 
     ops: Mapping[str, Any] = voc["ops"]
     default_op = str(voc["default_op"])
@@ -165,7 +173,8 @@ def validate(
             # changes. Nothing here can name a figure, so a partial edit is as
             # safe as a whole one — with the one exception below.
             if op in ("drop", "quiet"):
-                for field in ("kind", "seq", "subject", "subjects", "form", "label"):
+                for field in ("kind", "seq", "subject", "subjects", "form",
+                              "label", "action", "argument"):
                     if field in item:
                         raise Rejected(f"a {op} names a key and nothing else; drop {field!r}")
                 keys_seen.add(key)
@@ -193,7 +202,8 @@ def validate(
                     call = _read(calls, item.get("seq"))
                     edit["seq"] = item["seq"]
                     edit["tool"] = call.get("tool")
-                    for field in ("subject", "subjects", "form", "label"):
+                    for field in ("subject", "subjects", "form", "label",
+                                  "action", "argument"):
                         if field in item:
                             edit[field] = item[field]
                     if isinstance(edit.get("subject"), str) and not _row_has(call, edit["subject"]):
@@ -259,6 +269,47 @@ def validate(
                 if len(cleaned) < 2:
                     raise Rejected("a comparison needs two different subjects")
                 block["subjects"] = cleaned
+
+            if "action" in needs:
+                # WHICH action, never a new one, and never the figure behind
+                # it: the block has no field for a number, so "order 806
+                # units" is the read's quantity beside George's verb.
+                action = item.get("action")
+                if action not in actions:
+                    raise Rejected(
+                        f"a recommendation's action is one of "
+                        f"{', '.join(sorted(actions))} "
+                        f"(metrics.yaml composition.recommendation_actions)"
+                    )
+                block["action"] = action
+
+            if "argument" in needs:
+                # SCOPE ONLY. A control re-runs a read with one scope argument
+                # changed; a threshold is a definition and has no control.
+                argument = item.get("argument")
+                if argument not in arguments:
+                    raise Rejected(
+                        f"a control changes one of "
+                        f"{', '.join(sorted(arguments))} — scope, never a "
+                        f"threshold (metrics.yaml composition.control_arguments)"
+                    )
+                # AND THE TOOL HAS TO TAKE IT. The closed list says which
+                # arguments a control MAY change; it does not say this read
+                # has one. get_purchase_plan's window is `lookback_days`, a
+                # number of days — offering it four date presets drew a
+                # control whose every option would have been refused on
+                # click, which is worse than no control.
+                assert call is not None
+                if argument == "date_range":
+                    carries = (windows_by_tool.get(str(call.get("tool"))) or "")
+                    if carries != "date_range":
+                        raise Rejected(
+                            f"{call.get('tool')} has no date_range to change"
+                            + (f" — its window is {carries!r}, which a window "
+                               f"control cannot set yet" if carries else
+                               " — it takes no window at all")
+                        )
+                block["argument"] = argument
 
             if "form" in needs:
                 form = item.get("form")

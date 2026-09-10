@@ -33,6 +33,8 @@ export interface BoardObject {
   subjects?: string[];
   form?: Block['form'];
   label?: Block['label'];
+  action?: Block['action'];
+  argument?: Block['argument'];
   /** The turn whose reads and prose this object draws. Never re-pointed silently. */
   turn: number;
   /** The turn that last touched it, so "from earlier" can be said honestly. */
@@ -46,7 +48,8 @@ export interface Local {
   open?: boolean;
 }
 
-const FIELDS = ['kind', 'weight', 'seq', 'tool', 'subject', 'subjects', 'form', 'label'] as const;
+const FIELDS = ['kind', 'weight', 'seq', 'tool', 'subject', 'subjects', 'form',
+                'label', 'action', 'argument'] as const;
 
 function carried(edit: Block): Partial<BoardObject> {
   const out: Record<string, unknown> = {};

@@ -19,6 +19,8 @@ import { restoreFromPosts } from '../workspace/composition';
 import { boardContext, buildBoard, type Local } from './board';
 import type { AnswerTurn, Dimension } from './data';
 import { Board } from './render';
+import { replayCalls } from '../services/deskApi';
+import type { ToolCall } from '../types/george';
 import { Noticed } from './Noticed';
 import { Rail } from './Rail';
 import { dismissStanding, useStandingOpening } from './useStandingOpening';
@@ -36,6 +38,11 @@ export default function Room() {
   const [selection, setSelection] = useState<{ label: string; dimension: Dimension }[]>([]);
   const [local, setLocal] = useState<Record<string, Local>>({});
   const [focused, setFocused] = useState<string | null>(null);
+  // Reads re-run because somebody moved a control, by seq. TRANSIENT and
+  // deliberately not sent back to George as though he had decided it: the
+  // record of the change is the next question, which carries the window on
+  // the desk (metrics.yaml surface.desk.replay).
+  const [retuned, setRetuned] = useState<Record<number, ToolCall>>({});
   const [draft, setDraft] = useState('');
   const opened = useRef<string | null>(null);
 
@@ -124,6 +131,38 @@ export default function Room() {
     void george.ask(q, Object.keys(desk).length ? { desk } : {});
   }, [george, selection, answers, board, local, focused]);
 
+  // MOVING A CONTROL COSTS NO MODEL TURN. It re-runs the read the control
+  // names with one scope argument changed, on the pin runner's path, and every
+  // object drawn from that read follows — which is what makes it one change
+  // rather than a screen full of them.
+  const retune = useCallback(async (key: string, argument: string,
+                                    value: string | number) => {
+    const object = board.find((o) => o.key === key);
+    const call = object?.seq === undefined ? null
+      : answers[object.turn]?.toolCalls.find((c) => c.seq === object.seq) ?? null;
+    if (!object || !call) return;
+    try {
+      const out = await replayCalls([{
+        tool: call.tool,
+        arguments: { ...call.arguments, [argument]: value },
+      }]);
+      const first = out.results?.[0];
+      if (!first || first.state !== 'ok') return;
+      setRetuned((s) => ({
+        ...s,
+        [object.seq as number]: {
+          ...call,
+          arguments: { ...call.arguments, [argument]: value },
+          result: { rows: first.rows ?? [], meta: first.meta ?? {} },
+        } as ToolCall,
+      }));
+    } catch {
+      // A replay that failed leaves the figures that are on screen alone.
+      // Showing nothing, or showing the old window under the new label, are
+      // both worse than the control simply not having moved.
+    }
+  }, [board, answers]);
+
   const on: TileActions = useMemo(() => ({
     open: (key) => setFocused((f) => (f === key ? null : key)),
     pick: (label, dimension) => setSelection((s) => (
@@ -134,7 +173,8 @@ export default function Room() {
     why: (label, dimension) => ask('why?', [{ label, dimension: dimension ?? 'store' }]),
     aside: (key) => { patch(key, { closed: true }); setFocused((f) => (f === key ? null : f)); },
     patch,
-  }), [ask, patch]);
+    retune: (key, argument, value) => { void retune(key, argument, value); },
+  }), [ask, patch, retune]);
 
   const aside = board.filter((o) => local[o.key]?.closed);
   const clear = useCallback(() => {
@@ -142,7 +182,9 @@ export default function Room() {
     // has to outlive the navigate back to "/", or the cold open immediately
     // reopens the thing just closed.
     dismissStanding(threadId);
-    george.reset(); setSelection([]); setLocal({}); setFocused(null); navigate('/');
+    george.reset(); setSelection([]); setLocal({}); setFocused(null);
+    setRetuned({});
+    navigate('/');
   }, [george, navigate, threadId]);
 
   return (
@@ -172,6 +214,7 @@ export default function Room() {
               focused={focused}
               selection={selection.map((s) => s.label)}
               live={busy}
+              retuned={retuned}
               on={on}
             />
           </>
