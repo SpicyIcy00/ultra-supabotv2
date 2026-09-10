@@ -47,6 +47,16 @@
   /* George's voice. Never a measurement, never an object's identity. */
   --george: 196, 128, 44;
 
+  /* THE ONE COLOUR THAT MEANS "NEEDS YOU" (CLAUDE.md UI rule 5). #D2691E, the
+     same hue the rest of the app reserves — one meaning, one value, whichever
+     chrome you are in.
+
+     The room had no such token, and its needs-you badge was painted in
+     `--down`. Three decisions waiting therefore read as three things falling,
+     which is both a false claim and a second use of a semantic colour. A count
+     of pending decisions is not a decline. */
+  --accent: 210, 105, 30;
+
   --radius: 22px;
 
   --sans: 'Schibsted Grotesk', ui-sans-serif, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -270,7 +280,7 @@
   position: absolute; top: 2px; right: 2px;
   min-width: 15px; height: 15px; padding: 0 4px;
   border-radius: 8px;
-  background: rgb(var(--down)); color: #fff;
+  background: rgb(var(--accent)); color: #fff;
   font: 600 9px/15px var(--sans); text-align: center;
 }
 

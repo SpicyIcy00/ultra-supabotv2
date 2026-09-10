@@ -27,9 +27,15 @@ const SHELL_DIR = join(__dirname, '..', 'shell');
 // day on, and it draws the most colour in the app — exactly where a fifth use
 // of the approvals hue would go unnoticed.
 const DESK_DIR = join(__dirname, '..', 'desk');
+// THE ROOM IS SCANNED TOO (2026-09-11), and it should have been from the day
+// it became "/". It is now the surface a person spends the day on, it draws
+// more colour than anything else in the app, and it was outside this guard
+// entirely — which is how its needs-you badge came to be painted in `--down`,
+// the DECLINE colour, so three decisions waiting read as three things falling.
+const ROOM_DIR = join(__dirname, '..', '..', 'room');
 
 /** The accent token, in every form Tailwind lets it be written. */
-const ACCENT = /george-accent/;
+const ACCENT = /george-accent|--accent|var\(--accent\)/;
 
 /**
  * The semantic data tokens (Stage 5): `george-data-up`, `-down`, `-flat`, and
@@ -80,6 +86,13 @@ const ALLOWED: Record<string, string> = {
   // use on the surface a person actually lives on, rather than adding a
   // fifth: the shell keeps its own for the three rooms.
   'Sidebar.tsx': 'the needs-you count on the desk',
+  // The room's rail carries the same count, for a loaded and non-zero result
+  // only. The room replaced the desk as "/" on 2026-09-11; this is the same
+  // fact in the chrome people actually use, not a new meaning.
+  'Rail.tsx': 'the needs-you count on the room rail',
+  // Where the room DEFINES the token. One value for the one meaning, so a
+  // second chrome cannot quietly invent a second approvals colour.
+  'room.css': 'the room defines the reserved token here',
 };
 
 /**
@@ -92,7 +105,13 @@ const ALLOWED: Record<string, string> = {
  */
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true })
-    .filter((e) => e.isFile() && /\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name))
+    .filter((e) => e.isFile()
+      // CSS is scanned too (2026-09-11). The room carries its palette in a
+      // stylesheet rather than in Tailwind classes, so a scan that read only
+      // TypeScript could not see where it defines — or misuses — the one
+      // reserved colour.
+      && /\.(tsx?|css)$/.test(e.name)
+      && !/\.test\.tsx?$/.test(e.name))
     .map((e) => e.name);
 }
 
@@ -105,6 +124,7 @@ describe('UI rule 5 — one colour means "needs you"', () => {
       [PAGES_DIR, sourceFiles(PAGES_DIR)],
       [SHELL_DIR, sourceFiles(SHELL_DIR)],
       [DESK_DIR, sourceFiles(DESK_DIR)],
+      [ROOM_DIR, sourceFiles(ROOM_DIR)],
     ] as [string, string[]][]) {
       for (const name of files) {
         const source = readFileSync(join(dir, name), 'utf8');
@@ -148,6 +168,7 @@ describe('UI rule 5 — one colour means "needs you"', () => {
       [PAGES_DIR, sourceFiles(PAGES_DIR)],
       [SHELL_DIR, sourceFiles(SHELL_DIR)],
       [DESK_DIR, sourceFiles(DESK_DIR)],
+      [ROOM_DIR, sourceFiles(ROOM_DIR)],
     ] as [string, string[]][]) {
       for (const name of files) {
         const source = readFileSync(join(dir, name), 'utf8');
@@ -191,10 +212,17 @@ describe('UI rule 5 — one colour means "needs you"', () => {
     // Five on 2026-09-09, with the desk, and this is the one increase that
     // has been argued rather than absorbed: the desk's line carries the count
     // for the surface a person lives on, and the shell's rail still carries
-    // it for the three rooms. They are the SAME fact in two chromes during
-    // the migration, not a second meaning — and when the rooms move onto the
-    // desk this returns to 4. If somebody wants a sixth, the honest move is
-    // to ask whether the colour still means one thing.
-    expect(Object.keys(ALLOWED).length).toBeLessThanOrEqual(5);
+    // it for the three rooms.
+    //
+    // SEVEN, from 2026-09-11, and the two additions are one fact and one
+    // definition rather than two new meanings. The ROOM replaced the desk as
+    // "/" and its rail carries the same count; room.css is where the room
+    // DEFINES the token, which is listed so a second chrome cannot quietly
+    // invent a second approvals colour with a different value.
+    //
+    // This number goes DOWN as chromes are retired, never up for a new
+    // feeling. If somebody wants an eighth, the honest move is to ask whether
+    // the colour still means one thing.
+    expect(Object.keys(ALLOWED).length).toBeLessThanOrEqual(7);
   });
 });

@@ -23,6 +23,8 @@ import { replayCalls } from '../services/deskApi';
 import type { ToolCall } from '../types/george';
 import { Noticed } from './Noticed';
 import { Working } from './Working';
+import { useQuery } from '@tanstack/react-query';
+import { listApprovals } from '../services/workflowsApi';
 import { Rail } from './Rail';
 import { dismissStanding, useStandingOpening } from './useStandingOpening';
 import type { TileActions } from './tiles';
@@ -44,6 +46,19 @@ export default function Room() {
   // record of the change is the next question, which carries the window on
   // the desk (metrics.yaml surface.desk.replay).
   const [retuned, setRetuned] = useState<Record<number, ToolCall>>({});
+
+  // WHAT NEEDS A DECISION. Read, never assumed: the rail draws a count only
+  // when a result says so, because "nothing needs you" is a claim about the
+  // world and the room may only make it while holding something that says it
+  // (UI rule 8). `undefined` until then, which draws nothing at all — this is
+  // the exact failure that rule was written from, where a rail said the queue
+  // was empty while a version sat in it waiting for somebody.
+  const approvals = useQuery({
+    queryKey: ['approvals'],
+    queryFn: listApprovals,
+    staleTime: 60_000,
+    retry: false,
+  });
   const [draft, setDraft] = useState('');
   const opened = useRef<string | null>(null);
 
@@ -190,7 +205,7 @@ export default function Room() {
 
   return (
     <div className="room">
-      <Rail busy={busy} onNew={clear} />
+      <Rail busy={busy} needsYou={approvals.data?.length} onNew={clear} />
 
       <main className="r-main">
         {/* Above the board, always — what happened while you were away comes
