@@ -791,7 +791,18 @@ def get_sales(
                     f"{compare_to}, same metric, grouping, stores and guards)"
                     f"   # metrics.yaml: comparisons.{compare_to}"
                 )
-            base_params = {**params, **base_win}
+            # base_params IS BUILT WHERE IT IS USED, not here. It used to be
+            # snapshotted at this line — before the SKU resolution below adds
+            # `sku_product_ids` to `params` — so a compared read with a sku
+            # filter bound the current window's parameter and not the
+            # baseline's, and psycopg refused the statement outright:
+            # "query parameter missing: sku_product_ids". Every
+            # get_sales(filters={'sku': ...}, compare_to=...) raised, for a
+            # VALID sku as much as an unknown one, so "how did Aji Mix do
+            # against last week" could not be answered at all. Found
+            # 2026-09-11 by tools/objects.py, which makes exactly that call
+            # for a product. A snapshot of a dict that is still being built
+            # is a bug waiting for the next parameter.
 
             # ---- SKU resolution --------------------------------------------
             # SKUs are NOT unique: 68 collide case-insensitively, and the
@@ -913,6 +924,9 @@ def get_sales(
             # top_n ranks the current period; the baseline is read whole so
             # every ranked subject finds its counterpart.
             baseline_rows: list[dict] = []
+            # Built HERE, after every filter has finished adding to `params` —
+            # see the note where this used to live.
+            base_params = {**params, **base_win}
             if cdef is not None:
                 cur.execute(f"{sql_body}\nLIMIT {_MAX_ROWS}", base_params)
                 baseline_rows = [dict(r) for r in cur.fetchall()]

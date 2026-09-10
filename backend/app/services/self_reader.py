@@ -20,7 +20,7 @@ names no user and no scope, because there is no argument for either.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -87,6 +87,51 @@ async def read_memory(session: AsyncSession, *, username: str) -> dict:
             ),
         },
     }
+
+
+async def view_of(session: AsyncSession, *, subject_kinds: tuple[str, ...],
+                  subject: str) -> Optional[dict]:
+    """
+    What George currently thinks about ONE thing, for the object view.
+
+    WHY THIS IS NOT A SECTION OF get_object. Beliefs live in the `george`
+    schema, which the read-only role the tools run on cannot see at all. That
+    boundary is right rather than inconvenient: it means a replay of a past
+    morning can never accidentally show today's opinion, because the tool that
+    replays it has no way to reach one.
+
+    So the view is composed ON TOP, here, on the application role — and it
+    carries its own provenance: when it was formed, when it was last checked,
+    and whether data has landed since. A held view presented without those is
+    an assertion with no expiry, which is the thing every receipts rule in this
+    repo exists to prevent.
+
+    Returns None when he has no view of this thing, and None is a real answer
+    the caller must render as one: "George has not formed a view" is different
+    from "George thinks nothing is wrong".
+    """
+    held = await belief_store.current(session)
+    latest_data = await belief_store.latest_data_at(session)
+    wanted = str(subject or "").strip().lower()
+
+    for belief in held:
+        if str(belief.get("subject_kind")) not in subject_kinds:
+            continue
+        if str(belief.get("subject") or "").strip().lower() != wanted:
+            continue
+        confirmed = belief.get("confirmed_at")
+        return {
+            "subject": belief.get("subject"),
+            "subject_kind": belief.get("subject_kind"),
+            "stance": belief.get("stance"),
+            "claim": belief.get("claim"),
+            "held_since": belief.get("held_since"),
+            "last_checked": confirmed,
+            "unconfirmed": bool(latest_data and confirmed and latest_data > confirmed),
+            "id": str(belief.get("id")) if belief.get("id") else None,
+            "source_table": "george.beliefs",
+        }
+    return None
 
 
 async def read_automations(session: AsyncSession, *, username: str) -> dict:

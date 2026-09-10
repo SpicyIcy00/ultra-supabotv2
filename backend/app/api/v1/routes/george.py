@@ -68,6 +68,7 @@ from app.models.app_user import AppUser
 from app.services.chat_history import build_turns, question_of, title_of
 from app.services.george_greeting import build_greeting
 from app.services import belief_store as beliefs_service
+from tools import objects as objects_tool
 from app.services import standing_questions
 from app.services import watch_runner
 from app.services import watches as watches_service
@@ -793,6 +794,104 @@ async def latest_standing(
     """
     found = await standing_questions.latest_answer(db, user.username)
     return StandingLatest(**found) if found else None
+
+
+# ---------------------------------------------------------------------------
+# Opening an object
+#
+# TAPPING A SHOP MUST NOT COST A MODEL TURN. Asking George to open Rockwell
+# takes roughly forty seconds and a model call; the figures are the same five
+# reads every time and there is no judgement in choosing them, so the client
+# calls this directly and gets them in about a second.
+#
+# NOTHING HERE DECIDES ANYTHING. The sections come from tools/objects.py, which
+# is the same tool George is given, so what a person sees when they tap and
+# what he sees when he reasons cannot drift apart. This endpoint adds exactly
+# one thing the tool cannot reach: what George currently THINKS about the
+# object, which lives in the `george` schema the read-only role cannot see.
+# ---------------------------------------------------------------------------
+
+# Which belief subject kinds answer to which object kind. A shop is a store or
+# the warehouse; both are places somebody would open by name.
+BELIEF_KINDS: dict[str, tuple[str, ...]] = {
+    "shop": ("store", "warehouse"),
+    "product": ("product",),
+    "supplier": ("supplier",),
+    "order": (),
+}
+
+
+class ObjectRequest(BaseModel):
+    kind: str = Field(..., description="shop, product, supplier or order")
+    name: str = Field(..., min_length=1, max_length=200)
+    date_range: Optional[str] = Field(default=None, max_length=40)
+
+
+class ObjectView(BaseModel):
+    """One object opened: its sections, and George's view of it if he has one."""
+
+    kind: str
+    name: str
+    #: Each section with its own rows, receipts and the call behind it.
+    sections: List[dict[str, Any]] = Field(default_factory=list)
+    meta: dict[str, Any] = Field(default_factory=dict)
+    #: What George thinks about this thing, or null. Null is a real answer:
+    #: "he has not formed a view" is not "he thinks nothing is wrong".
+    view: Optional[dict[str, Any]] = None
+
+
+@router.post("/object", response_model=ObjectView)
+async def open_object(
+    request: ObjectRequest,
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_george_user),
+) -> ObjectView:
+    """
+    Open a shop, a product, a supplier or an order.
+
+    The read runs on George's read-only role in a worker thread — the tools are
+    synchronous and blocking, and holding the event loop for a second would
+    stall every other request in this process. The belief lookup runs on the
+    application role, in the caller's own session, exactly as the greeting's
+    does.
+
+    A refusal from the tool — an unknown shop, a kind that does not exist — is
+    a 400 with the tool's own sentence, because that sentence already names
+    what to do instead.
+    """
+    try:
+        opened = await asyncio.to_thread(
+            objects_tool.get_object, request.kind, request.name,
+            request.date_range,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    view = None
+    kinds = BELIEF_KINDS.get(request.kind) or ()
+    if kinds:
+        # The object's resolved identity where there is one — a product asked
+        # for by name is opened by SKU, and the view is about the product, not
+        # about the word somebody typed.
+        subject = request.name
+        identity = next((s for s in opened["rows"]
+                         if s["section"] == "identity" and s["rows"]), None)
+        if identity and len(identity["rows"]) == 1:
+            subject = str(identity["rows"][0].get("name") or subject)
+        try:
+            view = await self_reader.view_of(
+                db, subject_kinds=kinds, subject=subject,
+            )
+        except SQLAlchemyError:
+            # A lookup that failed is not "he has no view" — those render
+            # differently (UI rule 8) — so it is reported as its own state.
+            view = {"state": "unavailable",
+                    "reason": "What George thinks could not be read."}
+
+    return ObjectView(
+        kind=request.kind, name=request.name,
+        sections=opened["rows"], meta=opened["meta"], view=view,
+    )
 
 
 @router.get("/status", response_model=StatusBand)

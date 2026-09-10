@@ -19,6 +19,7 @@ import {
   type AnswerTurn, type Change, type Dimension,
 } from './data';
 import { directionRgb, hueFor, type Rgb } from './identity';
+import { ObjectPanel, kindOf } from './ObjectPanel';
 
 export interface TileActions {
   /** Bring it forward and give it the room. */
@@ -197,6 +198,7 @@ export function SubjectTile(p: TileProps & { size?: 'lead' | 'normal' | 'small' 
   const lit = !p.earlier && p.o.weight !== 'quiet';
 
   return (
+    <>
     <Shell hue={hueFor(label, dimension, p.o.kind)} change={change}
            solid={lit} quiet={!lit}
            landing={p.landing} delay={p.delay} picked={p.focused || p.selected}
@@ -212,6 +214,18 @@ export function SubjectTile(p: TileProps & { size?: 'lead' | 'normal' | 'small' 
       <Acts subject={label} dimension={dimension} o={p.o} on={p.on} />
       <Receipts meta={call?.result?.meta} />
     </Shell>
+    {/* OPENED — BELOW THE TILE, NOT INSIDE IT. Focusing a subject no longer
+        just makes it bigger; it loads the object. The panel sits outside the
+        Shell for two reasons that are both bugs otherwise: a tile clips its
+        content (overflow:hidden, which the bloom needs), so an inside panel
+        was cut off mid-table; and a lit tile is a solid colour, so body text
+        and receipts inside it fought the fill. On the ground it reads. */}
+    {p.focused && label && kindOf(dimension) && (
+      <div onClick={(e) => e.stopPropagation()}>
+        <ObjectPanel kind={kindOf(dimension) as string} name={label} />
+      </div>
+    )}
+    </>
   );
 }
 

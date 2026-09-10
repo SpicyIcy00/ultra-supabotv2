@@ -61,6 +61,7 @@ from tools import (
     dead_stock,
     inventory,
     movement,
+    objects,
     products,
     purchase_plan,
     purchasing,
@@ -161,6 +162,11 @@ TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
     "get_purchase_plan": purchase_plan.get_purchase_plan,
     "get_cost_history": cost_history.get_cost_history,
     "get_brief": brief.get_brief,
+    # One object, opened up. Writes no SQL — it calls the reads above and keeps
+    # each result whole, so what a person sees when they TAP a shop and what
+    # George sees when he reasons about one are the same figures from the same
+    # definitions (tools/objects.py).
+    "get_object": objects.get_object,
 }
 
 # The one tool that reads nothing. It labels calls that already ran with the
@@ -245,6 +251,9 @@ def _enum_sources(defs: dict) -> dict[tuple[str, str], list]:
     movement_bases = sorted(list(req(defs, "movement.bases")) + ["both"])
 
     return {
+        # The object kinds, from the definitions, so adding one is a yaml edit.
+        ("get_object", "kind"): sorted(req(defs, "objects.kinds")),
+        ("get_object", "date_range"): presets,
         ("get_purchasing", "measure"): purch_measures,
         ("get_purchasing", "group_by"): purch_groups,
         ("get_purchasing", "date_range"): presets,

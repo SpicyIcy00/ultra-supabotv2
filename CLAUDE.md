@@ -1386,6 +1386,81 @@ position — is unchanged and is what the desk is built on.
   the calls the loop marked `pinnable` on the frame — read, never decided
   from a name.
 
+### Objects
+
+*Added 2026-09-11.* A shop, a product, a supplier or an order, opened up:
+`get_object(kind, name)` returns every section of one thing in a single call.
+Recorded here because each line is a decision the code cannot state.
+
+- **It writes no SQL — not even vetted SQL.** Everything an object view shows
+  is already defined somewhere: a shop's week is `get_sales`, its shelf is
+  `get_stock`, a product's costs are `get_cost_history`. So the tool CALLS
+  those and keeps each result whole. The consequence is the point: there is one
+  definition of what a shop's week is, shared by the object view, the morning
+  brief, a watch and anything George reasons with. A second implementation
+  would be a second definition, and the two would disagree on a Tuesday with
+  nobody able to say which was right.
+
+- **Tapping must not cost a model turn.** Asking George to open Rockwell takes
+  a model call and ~40 seconds; the same five reads take about a second and
+  involve no judgement, so the client calls the tool directly through
+  `POST /george/object`. Sections run concurrently (four at a time — the
+  read-only role is capped and `connect()` gates at 8 per process), which took
+  a shop from 4.8s to ~1.0s over HTTP. **George is given the identical tool**,
+  so what a person sees when they tap and what he sees when he thinks cannot
+  drift apart.
+
+- **Nothing is joined across sections**, for the reason a workflow may not join
+  its steps (architecture rule 6): a combination of two results is a
+  definition. One exception is named and bounded — resolving WHICH product
+  "Aji Mix" means before reading anything about it, which is identity, not
+  arithmetic, and the same act as matching a shop name against the store list.
+  Where several products answer to one word, the view says so and refuses to
+  pick: showing somebody another product's figures under the name they typed is
+  worse than showing nothing.
+
+- **The view carries no `snapshot_timestamp`, deliberately.** An object mixes a
+  week of sales with a live stock snapshot; one timestamp over both would be
+  the freshest source vouching for the stalest. Each section keeps its own
+  receipts and its own call. For the same reason `get_object` is classified
+  **partially_reproducible** in `workflows.backtest`: the window rebinds, the
+  shelf does not.
+
+- **Five section states, and they are five different facts** (UI rule 8):
+  available, empty, **refused**, failed, unresolved. A refusal is the tool
+  declining to produce a misleading number and is a real answer with a reason;
+  a failure is something going wrong. One word for both would file "AJI BARN is
+  a warehouse" beside "the database is down". A section is never dropped for
+  being empty — a section that vanished reads as "there is nothing here".
+
+- **A warehouse is never asked for its sales.** AJI BARN holds stock and
+  records no transactions, so five refusals in a row read as a broken screen.
+  The definitions already separate trading from not, so the tool reads that
+  line and says once what a warehouse is, then shows the shelf it does have.
+
+- **What George thinks is NOT a section**, and cannot be: beliefs live in the
+  `george` schema, which the read-only role has no access to. That boundary is
+  right rather than inconvenient — it means a replayed past morning can never
+  show today's opinion. The view is composed on top by the endpoint, on the
+  application role, carrying when it was formed, when it was last checked, and
+  whether data has landed since. **Null is a real answer**: "he has not formed
+  a view" is not "he thinks nothing is wrong".
+
+- **Supplier and order are thin, and say why.** Both sit on frozen CSV imports
+  ~64 days old with sparse, unreconciled `received_qty`. They return what the
+  record HAS with its age, rather than being dropped — an omitted section reads
+  as "nothing happened with this supplier" — and
+  `objects.thin_reasons.purchasing_sources_frozen` records what a real source
+  would have to provide.
+
+**One shipped bug this uncovered**, fixed here and held by a test:
+`get_sales(filters={'sku': ...}, compare_to=...)` raised
+`query parameter missing: sku_product_ids` **every time**, for a valid SKU as
+much as an unknown one, because `base_params` was snapshotted before the SKU
+resolution added its parameter. "How did Aji Mix do against last week" could
+not be answered at all, and nothing noticed until an object view made exactly
+that call. `base_params` is now built where it is used.
+
 ### The result vocabulary
 
 *Added 2026-09-07.* George decides WHAT matters; this app decides how what he

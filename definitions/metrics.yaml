@@ -4034,6 +4034,33 @@ notices:
       - [skipped, missed, "did not run", "not run", passed over]
       - [slot, run, scheduled, schedule]
 
+  # An object that could not be opened, or could not be opened for certain.
+  # A view returned for the wrong product under the name somebody typed is
+  # worse than no view, so ambiguity is stated rather than resolved.
+  object_ambiguous:
+    must_convey:
+      - [matches, several, ambiguous, "more than one"]
+      - [sku, product, exact, which]
+
+  object_not_found:
+    must_convey:
+      - ["no product", "not found", "does not exist", unknown]
+      - [sku, name, product]
+
+  # A warehouse has a shelf and no till, so it has no week to show. Said once
+  # and plainly, rather than as five refusals that look like breakage.
+  object_has_no_sales:
+    must_convey:
+      - [warehouse, "no transactions", "no sales", "does not sell"]
+      - [stock, shelf, holds]
+
+  # Supplier and order sit on frozen imports. The view is returned with its age
+  # rather than dropped, because an omitted section reads as "nothing happened".
+  object_view_thin:
+    must_convey:
+      - [frozen, stale, record, "as the record"]
+      - [order, supplier, purchas, received]
+
   # A watch that has stopped, and a watch that cannot see. Both exist because
   # silence is a watch's normal state and therefore cannot carry the news that
   # something is wrong — the one failure mode a watch has that a brief does
@@ -4356,6 +4383,9 @@ workflows:
       get_purchasing: date_range
       get_dead_stock: window
       get_purchase_plan: lookback_days
+      # An object view's sales sections take the window; see
+      # partially_reproducible below for the half that does not.
+      get_object: date_range
 
     # The window rebinds, but one side of the answer is still read live. Real
     # and useful, and it must say so — reporting it as fully reproduced would
@@ -4372,6 +4402,15 @@ workflows:
         window, not which products were held then.
       # source: tools/dead_stock.py:102-104, which already states that stock is
       # live and sales are a window and that the two are read at different times.
+      get_object: >
+        An object mixes reproducible and live sections BY CONSTRUCTION, which
+        is why it carries no snapshot_timestamp of its own. A shop's week and
+        its movers rebind with date_range; its shelf is get_stock read live,
+        and a product's identity and cost history have no time axis at all
+        (tools/objects.py). So a backtested object view shows a past week's
+        sales beside today's shelf, and each section's own receipts say which
+        is which — one timestamp over the view would be exactly the lie this
+        classification exists to prevent.
 
     # No time axis of any kind. In a backtest these return TODAY's figure,
     # labelled as today's, with a notice. Never silently omitted and never
@@ -4748,6 +4787,130 @@ pushback:
 #
 # Added 2026-09-11. Additive, so `version` does not move (version_policy).
 # =============================================================================
+# =============================================================================
+# OBJECTS — a shop, a product, a supplier, an order, opened up.
+#
+# WHY THIS IS ONE TOOL AND NOT NEW SQL. Everything an object read returns is
+# already defined and already vetted: a shop's week is get_sales, its shelf is
+# get_stock, a product's history is get_cost_history. So `get_object` WRITES NO
+# SQL AT ALL — it calls the existing tools and keeps each result whole, with
+# its own receipts, exactly as `brief:` returns three sections at once.
+#
+# The consequence is the point: there is ONE definition of what a shop's week
+# is, shared by the object view, the morning brief, a watch and anything George
+# reasons with. A second implementation would be a second definition, and the
+# two would disagree on a Tuesday.
+#
+# NOTHING IS JOINED ACROSS SECTIONS, for the same reason a workflow may not
+# join its steps (architecture rule 6): the moment two results are combined the
+# combination is a definition, and definitions live in this file behind vetted
+# SQL. Sections sit beside each other; the reader does the joining.
+#
+# WHY TAPPING MUST NOT COST A MODEL TURN. Opening a shop by asking George takes
+# roughly forty seconds and a model call. The same figures through this tool
+# take about a second and no model call at all, because nothing here is a
+# judgement — it is the same four reads every time. George uses the identical
+# tool when he is reasoning, so what a person sees when they tap and what he
+# sees when he thinks cannot drift apart.
+#
+# Added 2026-09-11. Additive, so `version` does not move (version_policy).
+# =============================================================================
+objects:
+
+  # An object read is several reads kept apart. This is the bound on how many,
+  # so an object cannot quietly become a page.
+  max_sections: 6
+  # Rows kept per section. An object view is a way in, not a report: the
+  # section names the handful that matter and the full read is one question
+  # away.
+  top_n: 5
+
+  kinds:
+
+    shop:
+      # Resolved against the store list and nothing else, so a shop that does
+      # not exist is refused by name rather than returning an empty view that
+      # reads as "this shop sold nothing".
+      identified_by: store_name
+      sections:
+        week:
+          says: "what it took last week, against the week before"
+          reads: get_sales
+        drivers:
+          # `says` is shown to a PERSON, above the figures, so it is written
+          # for one. The reasoning behind the choice — that these two are the
+          # factors net sales is the product of, which is what makes "and why"
+          # answerable rather than asserted — belongs in this comment and in
+          # metrics.net_sales.drivers, not on their screen.
+          says: "how many bought, and how much each spent"
+          reads: get_sales
+        moving:
+          says: "the products that added the most revenue"
+          reads: get_sales
+        slipping:
+          says: "the products that lost the most"
+          reads: get_sales
+        shelf:
+          says: "what is out of stock here"
+          reads: get_stock
+
+    product:
+      identified_by: sku_or_name
+      sections:
+        identity:
+          says: "what it is, in the catalogue"
+          reads: get_product
+        week:
+          says: "what it sold last week, against the week before, by shop"
+          reads: get_sales
+        shelf:
+          says: "where it is held and where it has run out"
+          reads: get_stock
+        cost:
+          says: "what it has cost over time"
+          reads: get_cost_history
+
+    supplier:
+      identified_by: supplier_name
+      # THIN, AND HONESTLY SO. Everything a supplier view could show sits on
+      # purchase_orders, which is a frozen CSV import ~64 days old
+      # (brief.freshness). The section is returned with its staleness rather
+      # than dropped, because an omitted section reads as "nothing happened
+      # with this supplier".
+      sections:
+        orders:
+          says: "what has been ordered from them"
+          reads: get_purchasing
+      thin_because: purchasing_sources_frozen
+
+    order:
+      identified_by: external_id
+      sections:
+        lines:
+          says: "what was ordered, and what the record says arrived"
+          reads: get_purchasing
+      thin_because: purchasing_sources_frozen
+
+  # WHY TWO KINDS ARE THIN, recorded rather than left to look like an oversight.
+  thin_reasons:
+    purchasing_sources_frozen: >
+      purchase_orders and stock_transfers were loaded once from CSV and are
+      ~64 days stale, received_qty is sparse and never reconciled to what was
+      ordered, and "Open" does not mean "not received" — 8 of 151 orders are
+      Open with notes saying the goods arrived. So a supplier or an order can
+      be shown as the record HAS it, with its age, and nothing more should be
+      inferred from it. A scheduled export with a per-line received quantity
+      and a date is what would make these as deep as a shop.
+
+  # WHAT GEORGE THINKS ABOUT THIS OBJECT is deliberately NOT a section here.
+  # Beliefs live in the `george` schema, which the read-only role cannot see at
+  # all, so this tool physically cannot reach them — and that is the right
+  # boundary rather than a limitation to work around. The view is composed on
+  # top, on the application role, by the endpoint the client calls
+  # (backend/app/api/v1/routes/george.py), carrying its own receipts. A
+  # backtest of a past day therefore cannot accidentally show today's opinion.
+  belief_is_composed_on_top: true
+
 watches:
 
   # What a watch may be about. A closed set: three, because three is what the
