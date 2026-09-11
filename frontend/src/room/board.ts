@@ -59,8 +59,14 @@ export interface Local {
   /**
    * HOW BIG YOU WANT IT, over his weight. He says what matters; you say what
    * you want to look at, and those are different questions.
+   *
+   * `normal` is the one a button never sets and a DRAG does: it is what
+   * dragging his lead down into the body of the board means. Without it that
+   * gesture had nowhere to be recorded, so the tile sprang back to the top
+   * the moment you let go of it — the arrangement lost to the weight, which
+   * is the opposite of what every other line here says.
    */
-  size?: 'big' | 'small';
+  size?: 'big' | 'normal' | 'small';
   /**
    * KEEP IT. A kept object survives clearing the room, because it is
    * something you decided to hold on to rather than something this
@@ -206,6 +212,7 @@ export function inOrder(
       const size = local[o.key]?.size;
       const weight = size === 'big' ? 'lead' as const
         : size === 'small' ? 'quiet' as const
+        : size === 'normal' ? 'supporting' as const
         : (yoursLeads && o.weight === 'lead') ? 'supporting' as const
         : o.weight;
       if (!focused) return { ...o, weight };
@@ -264,4 +271,42 @@ export function boardContext(
       ...(win ? { window: win.replace(/_/g, ' ') } : {}),
     };
   });
+}
+
+/**
+ * WHERE A DRAG LEAVES THE BOARD.
+ *
+ * Pure, and separate from the pointer, because the pointer is the part that
+ * cannot be tested and this is the part that can be wrong. Given the order on
+ * screen, the thing being carried and the thing it is over, this returns the
+ * position for EVERY object — dense, 0..n-1 — or null when the drag would
+ * change nothing.
+ *
+ * It renumbers everything rather than only what moved. A drag is the person
+ * saying where things go, and half an arrangement (some placed, some still
+ * wherever George put them) reads as the board fighting the cursor.
+ */
+export function dropped(
+  order: BoardObject[],
+  key: string,
+  target: string,
+  after: boolean,
+): Record<string, number> | null {
+  if (key === target) return null;
+  const from = order.findIndex((o) => o.key === key);
+  const onto = order.findIndex((o) => o.key === target);
+  if (from < 0 || onto < 0) return null;
+
+  const next = order.slice();
+  const [moved] = next.splice(from, 1);
+  const at = next.findIndex((o) => o.key === target);
+  next.splice(after ? at + 1 : at, 0, moved);
+
+  // Landing where it already was is not a move, and writing positions for it
+  // would put an arrangement in the undo stack that nobody made.
+  if (next.every((o, n) => o.key === order[n].key)) return null;
+
+  const out: Record<string, number> = {};
+  next.forEach((o, n) => { out[o.key] = n; });
+  return out;
 }

@@ -9,12 +9,14 @@
  * Notices belong to a TURN, not to the board: they qualify the figures that
  * just arrived, so they sit above everything from the newest turn only.
  */
+import { useMemo } from 'react';
 import type { BoardObject, Local } from './board';
 import { inOrder } from './board';
-import type { AnswerTurn, Dimension } from './data';
+import { useDrag } from './drag';
+import { callOf, dimensionOf, rowsOf, type AnswerTurn, type Dimension } from './data';
 import type { ToolCall } from '../types/george';
 import {
-  Caveats, ChartTile, ComparisonTile, ControlTile, DistributionTile, DraftTile,
+  Acts, Caveats, ChartTile, ComparisonTile, ControlTile, DistributionTile, DraftTile,
   RecommendationTile, SpecTile, StateTile, SubjectTile, SystemTile, TableTile, TextTile,
   TimelineTile, ownNotices, type TileActions, type TileProps,
 } from './tiles';
@@ -35,6 +37,12 @@ export interface BoardProps {
 
 export function Board(p: BoardProps) {
   const objects = inOrder(p.board, p.local, p.focused);
+  // THE DRAG LIVES HERE, not in a tile and not in the page. A tile cannot
+  // own it because the thing being dragged passes over every other tile;
+  // the page cannot, because what a drop means is a question about the
+  // board's own two regions. The page is told where things ended up.
+  const { dragging, grip, body } = useDrag(p.on);
+  const on = useMemo(() => ({ ...p.on, grip }), [p.on, grip]);
   const newest = p.answers.length - 1;
   // THE TURN'S notices, minus the ones now drawn on the objects they belong
   // to. A caveat shown twice is a caveat people learn to skip, and the one
@@ -64,7 +72,15 @@ export function Board(p: BoardProps) {
   const rest = objects.filter((o) => !lead.includes(o));
 
   const draw = (o: (typeof objects)[number], n: number) => (
-    <div key={o.key} className={p.focused === o.key ? 'r-w-full' : undefined}>
+    <div
+      key={o.key}
+      // The key the pointer finds under itself, and the class that takes the
+      // carried tile out of its own way so it finds the board beneath.
+      data-drag-key={o.key}
+      className={[p.focused === o.key ? 'r-w-full' : '', dragging === o.key ? 'r-dragging' : '']
+        .filter(Boolean).join(' ') || undefined}
+      {...body(o.key)}
+    >
       <Piece
         o={o}
         turn={p.answers[o.turn]}
@@ -76,8 +92,19 @@ export function Board(p: BoardProps) {
         selection={p.selection}
         earlier={o.touched < newest}
         retuned={o.seq === undefined ? null : p.retuned[o.seq] ?? null}
-        on={p.on}
+        on={on}
         notices={textLeads && o.kind === 'text' ? notices : undefined}
+      />
+      {/* WHAT YOU CAN DO TO IT — under every object, whatever shape it is.
+          It is quiet until the pointer is on the object or something inside
+          it has focus, so a board of ten things is ten things and not ten
+          things with a toolbar each. */}
+      <Acts
+        subject={o.subject ?? null}
+        dimension={dimensionFor(p, o)}
+        o={o}
+        on={on}
+        local={p.local[o.key]}
       />
     </div>
   );
@@ -94,6 +121,19 @@ export function Board(p: BoardProps) {
       {rest.length > 0 && <div className="r-board-rest">{rest.map((o, n) => draw(o, n + lead.length))}</div>}
     </div>
   );
+}
+
+/**
+ * Which kind of thing the subject is, for the colour and for `why`.
+ *
+ * Read off the ROWS, exactly as the subject tile has always read it — not
+ * from the object's kind, which says what shape it is drawn as and not what
+ * it is about.
+ */
+function dimensionFor(p: BoardProps, o: BoardObject): Dimension | null {
+  if (!o.subject || o.seq === undefined) return null;
+  const call = p.retuned[o.seq] ?? callOf(p.answers[o.turn], o.seq);
+  return dimensionOf(rowsOf(call), o.subject);
 }
 
 function Piece(props: TileProps) {

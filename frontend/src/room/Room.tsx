@@ -16,7 +16,7 @@ import { useGeorge } from '../hooks/useGeorge';
 import { useThread } from '../hooks/useThread';
 import { threadHistory } from '../components/george/threadHistory';
 import { restoreFromPosts } from '../workspace/composition';
-import { boardContext, buildBoard, inOrder, type Local } from './board';
+import { boardContext, buildBoard, dropped, inOrder, type Local } from './board';
 import { keepLocal, restoreLocal } from './arrangement';
 import type { AnswerTurn, Dimension } from './data';
 import { Board } from './render';
@@ -230,6 +230,32 @@ export default function Room() {
           [key]: { ...s[key], at: to },
           [swap.key]: { ...s[swap.key], at },
         };
+      });
+    },
+    // WHERE YOU PUT IT DOWN. The drag has already moved the board under the
+    // cursor by the time this runs — it is called on every crossing, not on
+    // release — so it writes the whole arrangement each time and one drag
+    // leaves one thing on the undo stack per tile it passed, not per pixel.
+    //
+    // THE REGION IS PART OF THE DROP, and this is the only place that fact
+    // exists. The top of the board is where the lead sits: something dragged
+    // up there is being made the point, and something dragged out of it is
+    // being told it is not — so the drop writes the size as well as the
+    // position, because otherwise the tile springs back to the row you just
+    // took it out of and the board looks like it is fighting you.
+    move: (key, target, after, region) => {
+      const order = inOrder(board, local, focused);
+      const at = dropped(order, key, target, after);
+      const his = board.find((o) => o.key === key)?.weight;
+      const size: Local['size'] | undefined = region === 'lead' ? 'big'
+        : his === 'lead' ? 'normal' : undefined;
+      if (!at && local[key]?.size === size) return;
+      setLocal((s2) => {
+        setHistory((h) => [...h.slice(-19), s2]);
+        const out = { ...s2 };
+        if (at) for (const [k, n] of Object.entries(at)) out[k] = { ...out[k], at: n };
+        out[key] = { ...out[key], size };
+        return out;
       });
     },
     resize: (key, to) => patch(key, { size: to ?? undefined }),

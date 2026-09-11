@@ -10,7 +10,9 @@
  * None of these components computes a business figure. They pick a row, read a
  * value the tool already returned, and format it.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import {
+  useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode,
+} from 'react';
 import type { GeorgeNotice, ToolMeta } from '../types/george';
 import type { BoardObject, Local } from './board';
 import type { ToolCall } from '../types/george';
@@ -20,6 +22,7 @@ import {
   type AnswerTurn, type Change, type Dimension,
 } from './data';
 import { directionRgb, hueFor, type Rgb } from './identity';
+import type { Region } from './drag';
 import { ObjectPanel, kindOf } from './ObjectPanel';
 import { Spec } from './Spec';
 
@@ -32,8 +35,18 @@ export interface TileActions {
   why(subject: string, dimension: Dimension | null): void;
   aside(key: string): void;
   patch(key: string, local: Local): void;
-  /** Move it earlier or later than where George put it. */
+  /**
+   * Move it earlier or later than where George put it.
+   *
+   * The keyboard's way in. Dragging is the way anybody actually does it, but
+   * a drag cannot be performed without a pointer, and a board you can only
+   * arrange with a mouse is a board somebody cannot arrange.
+   */
   shift(key: string, by: -1 | 1): void;
+  /** Put it down next to `target` — the drag's way in. See drag.ts. */
+  move(key: string, target: string, after: boolean, region: Region): void;
+  /** The grip's pointer handlers, supplied by the board that owns the drag. */
+  grip?(key: string): { onPointerDown(e: ReactPointerEvent): void };
   /** Make it bigger or smaller than the weight he gave it. */
   resize(key: string, to: 'big' | 'small' | null): void;
   /** Hold on to it: a kept object survives clearing the room. */
@@ -162,8 +175,16 @@ function Receipts({ meta }: { meta: Parameters<typeof receiptsLine>[0] }) {
  * He arranges the board because he knows what matters. You rearrange it
  * because you know what you want to look at, and those are different
  * questions — so both answers survive, yours on top.
+ *
+ * DRAWN BY THE BOARD, UNDER EVERY OBJECT. It used to be called by two tile
+ * kinds out of fourteen — so on a real board of ten things, nine of them
+ * could not be moved, kept, resized or set aside at all, and the one that
+ * could was whichever happened to be a subject. Arranging is a property of
+ * being ON the board, not of being a particular shape, so the board draws it.
+ * `compare` and `why` are the exceptions and stay conditional: they are
+ * questions about a subject, and an object with no subject has none to ask.
  */
-function Acts({ subject, dimension, o, on, local }: {
+export function Acts({ subject, dimension, o, on, local }: {
   subject: string | null; dimension: Dimension | null; o: BoardObject;
   on: TileActions; local?: Local;
 }) {
@@ -178,10 +199,19 @@ function Acts({ subject, dimension, o, on, local }: {
         </>
       )}
       <span className="r-acts-mine">
-        <button type="button" className="r-act" title="Move it earlier"
-                aria-label="Move earlier" onClick={() => on.shift(o.key, -1)}>◀</button>
-        <button type="button" className="r-act" title="Move it later"
-                aria-label="Move later" onClick={() => on.shift(o.key, 1)}>▶</button>
+        {/* PICK IT UP. Not a button that moves it one place — a handle you
+            drag, on a mouse anywhere on the tile and on a finger here. The
+            arrow keys do the same thing one step at a time, because a drag
+            needs a pointer and arranging the board should not. */}
+        <button type="button" className="r-act r-grip" title="Drag to move it"
+                aria-label="Move it" {...(on.grip?.(o.key) ?? {})}
+                onKeyDown={(e) => {
+                  const by = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1
+                    : e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : 0;
+                  if (!by) return;
+                  e.preventDefault();
+                  on.shift(o.key, by as -1 | 1);
+                }}>⠿</button>
         <button type="button" className="r-act" aria-pressed={size === 'big'}
                 title="Give it the room" aria-label="Bigger"
                 onClick={() => on.resize(o.key, size === 'big' ? null : 'big')}>＋</button>
@@ -327,7 +357,6 @@ export function SubjectTile(p: TileProps & { size?: 'lead' | 'normal' | 'small' 
         <Delta change={change} />
       </div>
       {v && <p className="r-label" style={{ marginTop: 9 }}>{measureOf(call?.result?.meta, v.key)}</p>}
-      <Acts subject={label} dimension={dimension} o={p.o} on={p.on} local={p.local} />
       <Receipts meta={call?.result?.meta} />
     </Shell>
     {/* OPENED — BELOW THE TILE, NOT INSIDE IT. Focusing a subject no longer
@@ -355,7 +384,13 @@ export function ComparisonTile(p: TileProps) {
   return (
     <div className={`r-tile r-tile--quiet ${p.landing ? 'r-landing' : ''}`}
          style={{ '--d': `${p.delay}ms`, padding: 0, border: 0, background: 'transparent' } as CSSProperties}>
-      <p className="r-label" style={{ marginBottom: 10 }}>
+      {/* THE TILE HAS NO PADDING so the subject cards can run edge to edge —
+          but its own label and receipts then sat flush against the boundary
+          while every other tile on the board inset its text by 22px. Against a
+          neighbour's rounded corner that reads as a clipped first letter, which
+          is exactly how it was reported. The text is inset to match; the cards
+          still are not. */}
+      <p className="r-label" style={{ marginBottom: 10, paddingLeft: 22 }}>
         {call?.result?.meta?.metric_label ?? 'compared'}{p.earlier ? ' · from earlier' : ''}
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
@@ -380,7 +415,7 @@ export function ComparisonTile(p: TileProps) {
           );
         })}
       </div>
-      <Receipts meta={call?.result?.meta} />
+      <div style={{ paddingLeft: 22 }}><Receipts meta={call?.result?.meta} /></div>
     </div>
   );
 }
@@ -865,7 +900,6 @@ export function RecommendationTile(p: TileProps) {
         {figure && <span className="r-label">{subject}</span>}
       </div>
       {figure && <p className="r-label" style={{ marginTop: 9 }}>{measureOf(call?.result?.meta, figure.key)}</p>}
-      <Acts subject={subject} dimension={dimension} o={p.o} on={p.on} local={p.local} />
       <Receipts meta={call?.result?.meta} />
     </Shell>
   );

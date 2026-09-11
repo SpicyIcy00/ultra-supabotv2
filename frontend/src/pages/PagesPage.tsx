@@ -30,8 +30,7 @@ import {
   pageViews,
 } from '../components/george/pageShape';
 import { ago } from '../components/george/pinShape';
-import { PageHeader } from '../components/shell/PageHeader';
-import { SHELL_COLUMN } from '../components/shell/shellLayout';
+import { RoomHead } from '../room/RoomShell';
 import type { SimilarPageConflict } from '../types/pins';
 import { createPage, listPages } from '../services/pagesApi';
 import { errorMessage, listPins, similarPageConflict } from '../services/pinsApi';
@@ -48,9 +47,7 @@ export default function PagesPage() {
 
   if (segment !== undefined) {
     return (
-      <div className={`${SHELL_COLUMN} px-4 pb-24 pt-10 md:px-8 md:pt-14`}>
-        <PinnedPage pageId={pageIdFromSegment(segment)} onBack={() => navigate('/pages')} />
-      </div>
+      <PinnedPage pageId={pageIdFromSegment(segment)} onBack={() => navigate('/pages')} />
     );
   }
 
@@ -58,94 +55,80 @@ export default function PagesPage() {
   // exist now, once they are known; a name nobody has is said, not guessed.
   if (legacy !== null) {
     if (pages.isPending) {
-      return <div className={`${SHELL_COLUMN} px-4 pt-10 md:px-8 md:pt-14`}><p className="text-[13px] text-george-muted">Finding that page…</p></div>;
+      return <p className="r-note">Finding that page…</p>;
     }
     const target = pages.data ? legacyPagePath(legacy, pages.data) : null;
     if (target) return <Navigate to={target} replace />;
     return (
-      <div className={`${SHELL_COLUMN} px-4 pb-24 pt-10 md:px-8 md:pt-14`}>
-        <PageHeader title="Pages" />
-        <p className="max-w-xl text-[15px] leading-relaxed text-george-slate">
+      <>
+        <RoomHead title="Kept" />
+        <p className="r-say" style={{ marginTop: 20 }}>
           {pages.isError
-            ? 'Could not load pages.'
+            ? 'The pages could not be read.'
             : `No page is called “${legacy}” any more. It may have been renamed or deleted.`}
         </p>
-        <button
-          type="button"
-          onClick={() => navigate('/pages', { replace: true })}
-          className="mt-4 text-[13px] text-george-navy hover:underline"
-        >
-          All pages
-        </button>
-      </div>
+        <div className="r-row-acts">
+          <button type="button" className="r-act"
+                  onClick={() => navigate('/pages', { replace: true })}>All pages</button>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className={`${SHELL_COLUMN} px-4 pb-24 pt-10 md:px-8 md:pt-14`}>
-      <PageHeader
-        title="Pages"
-        meta="Each page re-runs its questions when you open it, so what you read is what the data says now — not what it said when the page was made."
-      >
-        <NewPageControl onCreated={(id) => navigate(pagePath(id))} />
-      </PageHeader>
+    <>
+      <RoomHead
+        title="Kept"
+        says="Each page re-runs its questions when you open it, so what you read is what the data says now — not what it said when the page was made."
+        aside={<NewPageControl onCreated={(id) => navigate(pagePath(id))} />}
+      />
 
       {/* Three states; the first two never borrow the third's words. */}
-      {(pages.isPending || pins.isPending) && (
-        <p className="text-[13px] text-george-muted">Loading pages…</p>
-      )}
-      {(pages.isError || pins.isError) && (
-        <p className="text-[13px] leading-relaxed text-george-slate">Could not load pages.</p>
-      )}
-      {pages.isSuccess && pins.isSuccess && views.length === 0 && (
-        <p className="max-w-xl text-[15px] leading-relaxed text-george-slate">
-          No pages yet. Make one here and ask George to build it, or pin an answer in Ask
-          and name a page for it.
-        </p>
+      {(pages.isPending || pins.isPending || pages.isError || pins.isError
+        || (pages.isSuccess && pins.isSuccess && views.length === 0)) && (
+        <div className="r-empty">
+          {(pages.isPending || pins.isPending) && <p className="r-note">Checking…</p>}
+          {(pages.isError || pins.isError) && <p className="r-say">The pages could not be read.</p>}
+          {pages.isSuccess && pins.isSuccess && views.length === 0 && (
+            <p className="r-say">
+              Nothing kept yet. Make a page here and ask George to build it, or keep an
+              answer from the board and name a page for it.
+            </p>
+          )}
+        </div>
       )}
 
-      <ul>
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {views.map((p) => (
-          <li key={p.pageId ?? 'ungrouped'} className="border-t border-george-line first:border-t-0">
-            <button
-              type="button"
-              onClick={() => navigate(pagePath(p.pageId))}
-              className="group block w-full py-7 text-left first:pt-0"
-            >
-              <h2 className="font-george-serif text-[22px] leading-snug text-george-navy group-hover:underline group-hover:underline-offset-4">
-                {p.name}
-              </h2>
+          <li key={p.pageId ?? 'ungrouped'} className="r-item">
+            <button type="button" className="r-item-link"
+                    onClick={() => navigate(pagePath(p.pageId))}>
+              <h2 className="r-item-name">{p.name}</h2>
 
-              {p.purpose && (
-                <p className="mt-1.5 max-w-xl text-[14px] leading-relaxed text-george-slate">
-                  {p.purpose}
-                </p>
-              )}
+              {p.purpose && <p className="r-note" style={{ marginTop: 6 }}>{p.purpose}</p>}
 
               {/* What the page is for, quoted rather than described. */}
-              <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-george-slate">
+              <p className="r-note" style={{ marginTop: 8 }}>
                 {p.pins.length === 0 ? (
-                  <span className="text-george-muted">Nothing here yet.</span>
+                  <span style={{ color: 'var(--ink-3)' }}>Nothing here yet.</span>
                 ) : (
                   <>
                     {p.contents.join(' · ')}
                     {p.more > 0 && (
-                      <span className="text-george-muted">
-                        {' '}· and {p.more} more
-                      </span>
+                      <span style={{ color: 'var(--ink-3)' }}> · and {p.more} more</span>
                     )}
                   </>
                 )}
               </p>
 
-              <p className="mt-2.5 text-[12px] text-george-muted">
+              <p className="r-src" style={{ marginTop: 10 }}>
                 {p.pins.length === 0 ? 'nothing to read yet' : freshness(p.lastOk, ago)}
               </p>
             </button>
           </li>
         ))}
       </ul>
-    </div>
+    </>
   );
 }
 
@@ -188,19 +171,13 @@ function NewPageControl({ onCreated }: { onCreated: (id: string) => void }) {
 
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="shrink-0 text-[13px] text-george-slate hover:text-george-navy"
-      >
-        New page
-      </button>
+      <button type="button" className="r-act" onClick={() => setOpen(true)}>New page</button>
     );
   }
 
   return (
     <form
-      className="flex shrink-0 flex-col items-end gap-1.5"
+      className="r-newpage"
       onSubmit={(e) => { e.preventDefault(); if (title.trim()) create.mutate(false); }}
     >
       <input
@@ -212,7 +189,7 @@ function NewPageControl({ onCreated }: { onCreated: (id: string) => void }) {
         aria-label="New page title"
         placeholder="Rockwell Weekly"
         maxLength={100}
-        className="w-56 rounded-lg border border-george-line bg-george-paper px-2.5 py-1.5 text-[13px] text-george-navy outline-none focus:border-george-slate"
+        className="r-field"
       />
       <input
         type="text"
@@ -222,27 +199,25 @@ function NewPageControl({ onCreated }: { onCreated: (id: string) => void }) {
         aria-label="New page purpose"
         placeholder="What it is for, in one line (optional)"
         maxLength={200}
-        className="w-56 rounded-lg border border-george-line bg-george-paper px-2.5 py-1.5 text-[13px] text-george-navy outline-none focus:border-george-slate"
+        className="r-field"
       />
-      <div className="flex items-center gap-2 text-[12px]">
-        <button type="submit" disabled={create.isPending || !title.trim()} className="text-george-navy disabled:opacity-40">
+      <div className="r-row-acts" style={{ marginTop: 0, justifyContent: 'flex-end' }}>
+        <button type="submit" className="r-act" disabled={create.isPending || !title.trim()}>
           {create.isPending ? 'Creating…' : 'Create'}
         </button>
-        <button type="button" onClick={close} className="text-george-muted">Cancel</button>
+        <button type="button" className="r-act" onClick={close}>Cancel</button>
       </div>
       {conflict && (
-        <div className="w-72 rounded-lg border border-george-line bg-george-paper p-2 text-left">
-          <p className="text-[12px] leading-relaxed text-george-navy">{conflict.message}</p>
-          <button
-            type="button"
-            onClick={() => create.mutate(true)}
-            className="mt-2 rounded-md border border-george-line px-2 py-1 text-[12px] text-george-slate"
-          >
-            Keep both
-          </button>
+        <div className="r-tile r-tile--quiet" style={{ padding: 12 }}>
+          <p className="r-note">{conflict.message}</p>
+          <div className="r-row-acts" style={{ marginTop: 10 }}>
+            <button type="button" className="r-act" onClick={() => create.mutate(true)}>
+              Keep both
+            </button>
+          </div>
         </div>
       )}
-      {error && <p className="text-[12px] text-george-navy">{error}</p>}
+      {error && <p className="r-note">{error}</p>}
     </form>
   );
 }

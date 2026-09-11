@@ -1461,6 +1461,50 @@ resolution added its parameter. "How did Aji Mix do against last week" could
 not be answered at all, and nothing noticed until an object view made exactly
 that call. `base_params` is now built where it is used.
 
+### The board is arranged by moving things
+
+*Added 2026-09-11.* George composes the board because he knows what matters;
+the person rearranges it because they know what they want to look at. Three
+decisions, recorded because the code cannot say why.
+
+- **Arranging is a property of being ON the board, not of being a shape.**
+  The row of controls used to be drawn by the tile, and only two of the
+  fourteen kinds called it — so a real board of ten objects had nine that
+  could not be moved, kept, resized or set aside, and the one that could was
+  whichever happened to be a subject. `render.tsx` draws it once, under every
+  object. `compare` and `why` stay conditional, because they are questions
+  about a subject and an object with no subject has none to ask. It is quiet
+  until the pointer is on the object or something in it has focus, and always
+  visible where there is no hover (UI rule 7).
+
+- **Moving is a drag, and the arrows are gone.** A pair of buttons that swap a
+  tile with its neighbour is a machine for producing an arrangement, not the
+  arrangement — you have to count the presses. [drag.ts](frontend/src/room/drag.ts)
+  is pointer events with WINDOW listeners and no `setPointerCapture`, because
+  the dragged tile moves between the lead row and the body of the board and a
+  captured pointer dies with the element that captured it. It hit-tests with
+  `elementFromPoint` rather than modelling the CSS-columns layout, reorders
+  live so the board moves out of the way under the hand, and the carried tile
+  is `pointer-events: none` so it finds the board and not itself. The arrow
+  KEYS survive on the grip: a board that can only be arranged with a pointer
+  is a board somebody cannot arrange.
+
+- **`Local.size` gained `normal`, which no button sets.** Dropping a tile in
+  the lead row means "this is the point" and dropping it in the body means it
+  is not; with only `big` and `small` there was nowhere to record the second,
+  so George's lead sprang back to the top the moment it was let go — the
+  arrangement losing to the weight, which is the opposite of every other line
+  here.
+
+**And the three other screens wear the room's chrome.** What needs a decision,
+what you kept and what runs on its own rendered in the shell that existed
+BEFORE the room — a wide rail of words, serif display headings, its own type
+scale — so following a link off the board landed in what looked like another
+application. They are lists, not boards, so they get a column rather than a
+packing grid ([RoomShell.tsx](frontend/src/room/RoomShell.tsx)); a run's
+notices are drawn through the room's own caveat, whole, and nothing about
+which notices surface changed.
+
 ### The result vocabulary
 
 *Added 2026-09-07.* George decides WHAT matters; this app decides how what he

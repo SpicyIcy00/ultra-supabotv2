@@ -16,7 +16,7 @@
  * arriving whichever surface the person is on.
  */
 import React, { Suspense } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './services/queryClient';
 import { Layout } from './components/Layout';
@@ -25,7 +25,7 @@ import { SessionGuard } from './components/SessionGuard';
 import { RequirePage, NoAccessPage } from './components/RequirePage';
 import { LandingRedirect } from './components/LandingRedirect';
 import { GeorgeStreamProvider } from './components/george/GeorgeStreamProvider';
-import { GeorgeShell } from './components/shell/GeorgeShell';
+import { RoomShell } from './room/RoomShell';
 
 // George. One surface: the room he composes, at "/" and at a thread's own
 // address. It replaced the desk and the parallel /w2 board on 2026-09-11 —
@@ -68,6 +68,11 @@ function george(element: React.ReactNode) {
 }
 
 /** Everything that renders inside the legacy chrome. */
+/** The room's chrome around a nested route. */
+function RoomShellRoute() {
+  return <RoomShell><Outlet /></RoomShell>;
+}
+
 function ChromeRoutes() {
   return (
     <Layout>
@@ -122,7 +127,12 @@ function App() {
                 <Route path="/w2/:threadId" element={<WorkRedirect />} />
 
                 {/* The rooms, in George's chrome. */}
-                <Route element={<GeorgeShell />}>
+                {/* THE ROOM'S OWN CHROME, not the shell that came before it.
+                    These three are George's screens and they had been left in
+                    the previous surface — a wide rail of words, serif display
+                    headings, its own type scale — so following a link out of
+                    the board landed somewhere that looked like another app. */}
+                <Route element={<RoomShellRoute />}>
                   <Route path="/inbox" element={george(<InboxPage />)} />
                   <Route path="/pages" element={george(<PagesPage />)} />
                   <Route path="/pages/:pageId" element={george(<PagesPage />)} />

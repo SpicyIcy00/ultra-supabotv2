@@ -31,8 +31,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { approvalsView } from '../components/george/approvalState';
-import { PageHeader } from '../components/shell/PageHeader';
-import { SHELL_COLUMN } from '../components/shell/shellLayout';
+import { RoomHead } from '../room/RoomShell';
 import { errorMessage } from '../services/pinsApi';
 import { listApprovals, promoteVersion } from '../services/workflowsApi';
 import { useAuthStore } from '../stores/authStore';
@@ -61,53 +60,34 @@ function ApprovalRow({ approval, admin }: { approval: Approval; admin: boolean }
   });
 
   return (
-    <li className="border-l-2 border-george-accent py-1 pl-5">
-      <h2 className="font-george-serif text-[20px] leading-snug text-george-navy">
+    <li className="r-item">
+      <h2 className="r-item-name">
         {approval.name}{' '}
-        <span className="text-[15px] tabular-nums text-george-slate">v{approval.version}</span>
+        <span style={{ color: 'var(--ink-3)', fontVariantNumeric: 'tabular-nums' }}>
+          v{approval.version}
+        </span>
       </h2>
 
       {/* The server's words, verbatim: it distinguishes reasons that have
           different fixes, and a client that paraphrased would lose that. */}
-      <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-george-navy">
-        {approval.blocked_on}
+      <p className="r-note" style={{ marginTop: 8 }}>{approval.blocked_on}</p>
+
+      <p className="r-src" style={{ marginTop: 10 }}>
+        saved {manila(approval.created_at)} · {approval.created_by}
+        {' · '}backtested {manila(approval.backtested_at)}
       </p>
 
-      <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-1 text-[12px] text-george-muted">
-        <div className="flex gap-1.5">
-          <dt>saved</dt>
-          <dd className="text-george-slate">{manila(approval.created_at)} · {approval.created_by}</dd>
-        </div>
-        <div className="flex gap-1.5">
-          <dt>backtested</dt>
-          <dd className="text-george-slate">{manila(approval.backtested_at)}</dd>
-        </div>
-      </dl>
+      {refused && <p className="r-note" style={{ marginTop: 10 }}>{refused}</p>}
 
-      {refused && (
-        <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-george-navy">{refused}</p>
-      )}
-
-      <div className="mt-4 flex items-center gap-5">
+      <div className="r-row-acts">
         {admin && approval.backtested_at && (
-          <button
-            type="button"
-            onClick={() => promote.mutate()}
-            disabled={promote.isPending}
-            className="min-h-touch rounded-lg bg-george-accent px-4 text-[13px] text-george-cream disabled:opacity-60"
-          >
+          <button type="button" className="r-do" onClick={() => promote.mutate()}
+                  disabled={promote.isPending}>
             {promote.isPending ? 'Promoting…' : 'Promote'}
           </button>
         )}
-        <Link
-          to="/workflows"
-          className="min-h-touch text-[13px] leading-[44px] text-george-slate hover:text-george-navy"
-        >
-          Review in Workflows
-        </Link>
-        {!admin && (
-          <span className="text-[12px] text-george-muted">An administrator promotes.</span>
-        )}
+        <Link to="/workflows" className="r-act">Review in Workflows</Link>
+        {!admin && <span className="r-src">An administrator promotes.</span>}
       </div>
     </li>
   );
@@ -131,35 +111,30 @@ export default function InboxPage() {
   );
 
   return (
-    <div className={`${SHELL_COLUMN} px-4 pb-24 pt-10 md:px-8 md:pt-14`}>
-      <PageHeader
-        title="Inbox"
-        meta="Decisions waiting on a person. A version that has been backtested can be promoted here; everything else about a workflow lives in Workflows."
+    <>
+      <RoomHead
+        title="Needs you"
+        says="Decisions waiting on a person. A version that has been backtested can be promoted here; everything else about a workflow lives under Running."
       />
 
       {/* Loading, failed and empty are three renderings, and the first two
           may never borrow the third's words (UI rule 8). approvalsView
-          decides which; this places it. */}
-      <p
-        className={`text-[15px] leading-relaxed ${
-          view.accent ? 'text-george-accent' : 'text-george-slate'
-        }`}
-      >
-        {view.heading}
-      </p>
-      {view.detail && (
-        <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-george-muted">
-          {view.detail}
-        </p>
-      )}
+          decides which; this places it. The heading wears the approvals
+          colour only when the queue is loaded and something is in it. */}
+      <div className="r-empty">
+        {view.accent
+          ? <span className="r-chip r-chip--needs">{view.heading}</span>
+          : <p className="r-say">{view.heading}</p>}
+        {view.detail && <p className="r-note" style={{ marginTop: 10 }}>{view.detail}</p>}
+      </div>
 
       {view.kind === 'rows' && (
-        <ul className="mt-8 space-y-10">
+        <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
           {view.rows.map((a) => (
             <ApprovalRow key={a.version_id} approval={a} admin={admin} />
           ))}
         </ul>
       )}
-    </div>
+    </>
   );
 }

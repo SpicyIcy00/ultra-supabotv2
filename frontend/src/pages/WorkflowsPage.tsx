@@ -16,21 +16,20 @@
  * say where one workflow ends.
  *
  * NO BUILDER. Saving is George's (`save_workflow`, in conversation), promoting
- * is Inbox's, and running is George's too — so the one action here is a
+ * is Needs you's, and running is George's too — so the one action here is a
  * draft dropped into Ask, for the person to read and send. Versions, runs and
  * backtests keep their existing semantics; this page only reads them.
  *
- * A run's notices are drawn through NoticeBanner like every other caveat in
- * the app — a `version_divergence` notice is the record that the number on
+ * A run's notices are drawn through the room's Caveat like every other
+ * caveat on this surface — a `version_divergence` notice is the record that the number on
  * Monday was not the number in chat, and it travels with the run (CLAUDE.md
  * rule 8).
  */
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { NoticeBanner } from '../components/george/NoticeBanner';
+import { Caveats } from '../room/tiles';
 import { lastRunLine, workflowView } from '../components/george/workflowShape';
-import { PageHeader } from '../components/shell/PageHeader';
-import { SHELL_COLUMN } from '../components/shell/shellLayout';
+import { RoomHead } from '../room/RoomShell';
 import { listRuns, listSchedules, listWorkflows } from '../services/workflowsApi';
 import type { Workflow } from '../types/workflows';
 
@@ -41,16 +40,6 @@ function manila(iso: string | null): string {
   return d.toLocaleString('en-PH', {
     day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila',
   });
-}
-
-/** One labelled metadata pair. The only structure the footer row has. */
-function Fact({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex gap-1.5">
-      <dt className="text-george-muted">{label}</dt>
-      <dd className="text-george-slate">{children}</dd>
-    </div>
-  );
 }
 
 function WorkflowRow({ workflow }: { workflow: Workflow }) {
@@ -71,57 +60,52 @@ function WorkflowRow({ workflow }: { workflow: Workflow }) {
   const version = workflow.current_version;
 
   return (
-    <li className="border-t border-george-line py-8 first:border-t-0 first:pt-0">
-      <h2 className="font-george-serif text-[22px] leading-snug text-george-navy">
-        {workflow.name}
-      </h2>
+    <li className="r-item">
+      <h2 className="r-item-name">{workflow.name}</h2>
 
       {/* Where it stands: the line somebody reading down the page wants. */}
-      <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-george-navy">{view.state}</p>
+      <p className="r-say" style={{ marginTop: 8, fontSize: 15 }}>{view.state}</p>
 
       {view.next && (
-        <p className="mt-2.5 max-w-xl text-[13px] leading-relaxed text-george-slate">
-          <span className="text-george-muted">Next&nbsp;&nbsp;</span>
-          {view.nextTo ? (
-            <Link to={view.nextTo} className="text-george-navy underline-offset-2 hover:underline">
-              {view.next}
-            </Link>
-          ) : (
-            view.next
-          )}
+        <p className="r-note" style={{ marginTop: 10 }}>
+          <span className="r-label" style={{ display: 'inline', marginRight: 8 }}>next</span>
+          {view.nextTo ? <Link to={view.nextTo} className="r-link">{view.next}</Link> : view.next}
         </p>
       )}
 
-      {/* The last run's caveats, whole, through the one notice component. */}
+      {/* The last run's caveats, whole — through the ROOM's caveat, which is
+          the one this surface renders a notice through now. A
+          `version_divergence` notice is the record that Monday's number was
+          not chat's number, and it travels with the run (CLAUDE.md rule 8).
+          Nothing is dropped and nothing is collapsed; only the drawing
+          changed, and it changed to the one already on the board. */}
       {last && last.notices.length > 0 && (
-        <div className="mt-4">
-          <NoticeBanner notices={last.notices} />
-        </div>
+        <div style={{ marginTop: 14 }}><Caveats notices={last.notices} /></div>
       )}
 
-      <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-1 text-[12px]">
-        {version && (
-          <Fact label="version">
-            v{version.version} · {version.created_by} · {manila(version.created_at)}
-          </Fact>
-        )}
-        <Fact label="run">
-          {runs.isError ? 'could not be read' : lastRunLine(runs.data).replace(/^Last /, '')}
-          {last && ` · ${manila(last.started_at)}`}
-        </Fact>
-        {schedules.isError && <Fact label="schedule">could not be read</Fact>}
-      </dl>
+      <p className="r-src" style={{ marginTop: 12 }}>
+        {version && `v${version.version} · ${version.created_by} · ${manila(version.created_at)} · `}
+        {/* "Last run ok" reads as a sentence at the head of a line and as a
+            stutter in the middle of one; the row already says these are the
+            last facts about this rule. */}
+        {runs.isError ? 'run could not be read' : lastRunLine(runs.data).replace(/^Last /, '').toLowerCase()}
+        {last && ` · ${manila(last.started_at)}`}
+        {schedules.isError && ' · schedule could not be read'}
+      </p>
 
       {version && (
-        <button
-          type="button"
-          onClick={() =>
-            navigate('/ask', { state: { draft: `Run the "${workflow.name}" workflow` } })
-          }
-          className="mt-3 min-h-touch text-[13px] text-george-slate hover:text-george-navy"
-        >
-          Ask George to run it
-        </button>
+        // STRAIGHT TO THE BOARD WITH THE QUESTION ALREADY ASKED. This used to
+        // navigate to `/ask` with a draft in the route state — and `/ask` has
+        // been a redirect to `/` since the room landed, which carries no
+        // state, so the button went to an empty board and lost the sentence.
+        <div className="r-row-acts">
+          <button type="button" className="r-act"
+                  onClick={() => navigate('/', {
+                    state: { ask: `Run the "${workflow.name}" workflow` },
+                  })}>
+            Ask George to run it
+          </button>
+        </div>
       )}
     </li>
   );
@@ -136,27 +120,31 @@ export default function WorkflowsPage() {
   });
 
   return (
-    <div className={`${SHELL_COLUMN} px-4 pb-24 pt-10 md:px-8 md:pt-14`}>
-      <PageHeader
-        title="Workflows"
-        meta="The company's rules. Nothing runs unattended until an administrator promotes it."
+    <>
+      <RoomHead
+        title="Running"
+        says="The company's rules. Nothing runs unattended until an administrator promotes it."
       />
 
-      {workflows.isPending && <p className="text-[13px] text-george-muted">Loading workflows…</p>}
-      {workflows.isError && (
-        <p className="text-[13px] leading-relaxed text-george-slate">Could not load workflows.</p>
-      )}
-      {workflows.data?.length === 0 && (
-        <p className="max-w-xl text-[15px] leading-relaxed text-george-slate">
-          No workflows yet. Agree a rule with George in Ask and ask him to save it.
-        </p>
+      {/* Three states, three renderings, and the first two may never borrow
+          the third's words (UI rule 8). */}
+      {(workflows.isPending || workflows.isError || workflows.data?.length === 0) && (
+        <div className="r-empty">
+          {workflows.isPending && <p className="r-note">Checking…</p>}
+          {workflows.isError && <p className="r-say">The rules could not be read.</p>}
+          {workflows.data?.length === 0 && (
+            <p className="r-say">
+              Nothing runs yet. Agree a rule with George and ask him to save it.
+            </p>
+          )}
+        </div>
       )}
 
-      <ul>
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {(workflows.data ?? []).map((w) => (
           <WorkflowRow key={w.id} workflow={w} />
         ))}
       </ul>
-    </div>
+    </>
   );
 }

@@ -71,7 +71,7 @@ function object(kind: string, extra: Partial<BoardObject> = {}): BoardObject {
 
 const ACTIONS = (): TileActions => ({
   open: vi.fn(), pick: vi.fn(), why: vi.fn(), aside: vi.fn(), patch: vi.fn(),
-  retune: vi.fn(), shift: vi.fn(), resize: vi.fn(), keep: vi.fn(),
+  retune: vi.fn(), shift: vi.fn(), move: vi.fn(), resize: vi.fn(), keep: vi.fn(),
 });
 
 function draw(objects: BoardObject[], on: TileActions = ACTIONS()) {
@@ -105,6 +105,16 @@ describe('the room draws what it claims to draw', () => {
   it.each(KINDS)('draws a %s without crashing', (kind, extra) => {
     const { container } = draw([object(kind, extra)]);
     expect(container.firstChild).toBeTruthy();
+  });
+
+  // THE BUG THIS HOLDS. Arranging was drawn by the tile, and only two of the
+  // fourteen kinds drew it — so on a real board of ten objects, nine could
+  // not be moved, kept, resized or set aside, and nothing failed to say so.
+  it.each(KINDS)('lets you arrange a %s, whatever shape it is', (kind, extra) => {
+    const { container } = draw([object(kind, extra)]);
+    expect(container.querySelector('.r-grip')).toBeTruthy();
+    expect(container.querySelectorAll('[aria-label="Keep"]').length).toBe(1);
+    expect(container.querySelectorAll('[aria-label="Bigger"]').length).toBe(1);
   });
 
   it('draws a whole board of every kind at once', () => {
@@ -221,7 +231,10 @@ describe('the board is yours to arrange', () => {
     const on = ACTIONS();
     draw([object('subject', { subject: 'Rockwell' })], on);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Move earlier' }));
+    // MOVING IS A DRAG, AND THE KEYBOARD IS THE OTHER WAY IN. The grip is
+    // where a finger picks a tile up; the arrow keys on it do one step, so a
+    // board can still be arranged by somebody with no pointer.
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Move it' }), { key: 'ArrowLeft' });
     expect(on.shift).toHaveBeenCalledWith('k-subject', -1);
 
     fireEvent.click(screen.getByRole('button', { name: 'Bigger' }));
@@ -255,6 +268,37 @@ describe('your arrangement beats his', () => {
     expect(ordered[0].key).toBe('b');
     // And his weight survives underneath: clear your size and his order returns.
     expect(inOrder(board, {}, null)[0].key).toBe('a');
+  });
+
+  it('carries a tile to where the pointer left it, and renumbers the rest', async () => {
+    const { dropped } = await import('./board');
+    const order = [
+      object('table', { key: 'a' }), object('table', { key: 'b' }),
+      object('table', { key: 'c' }),
+    ];
+    // Carried over 'a' and released above its middle: it goes first.
+    expect(dropped(order, 'c', 'a', false)).toEqual({ c: 0, a: 1, b: 2 });
+    // Below its middle: straight after it.
+    expect(dropped(order, 'c', 'a', true)).toEqual({ a: 0, c: 1, b: 2 });
+    // Landing where it already was is not a move — it must not reach the
+    // undo stack, or one drag across the board fills the stack with the
+    // arrangement the board was already in.
+    expect(dropped(order, 'a', 'b', false)).toBeNull();
+    expect(dropped(order, 'a', 'a', true)).toBeNull();
+  });
+
+  it('lets you drag his lead out of the lead row without it springing back', async () => {
+    const { inOrder } = await import('./board');
+    const board = [
+      object('subject', { key: 'a', weight: 'lead', subject: 'Rockwell' }),
+      object('table', { key: 'b' }),
+    ];
+    // Dropped in the body of the board, below 'b'. `normal` is what records
+    // that; with only `big` and `small` there was nothing to write, and his
+    // weight pulled it straight back to the top.
+    const order = inOrder(board, { a: { at: 1, size: 'normal' }, b: { at: 0 } }, null);
+    expect(order.map((o) => o.key)).toEqual(['b', 'a']);
+    expect(order[1].weight).toBe('supporting');
   });
 
   it('honours a position you set', async () => {
