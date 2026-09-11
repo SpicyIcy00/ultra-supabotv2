@@ -444,3 +444,66 @@ describe('a comparison is drawn as an instrument, not only a pill', () => {
     expect(src.title).toContain('new_transactions');
   });
 });
+
+
+describe('the board maintains, not accumulates', () => {
+  // THE BUG THIS HOLDS. 168 puts to 3 changes: asked the same thing again,
+  // George put a twin beside the object he had, under a fresh key, and the
+  // board held the same read drawn five ways. An object is identified by
+  // the read it draws; a later put of that read replaces it where it stands.
+  const read = { seq: 0, tool: 'get_sales', arguments: { group_by: ['store'], date_range: 'last_week' },
+                 result: { rows: ROWS, meta: { source_table: 'new_transactions', snapshot_timestamp: '2026-09-11T08:00:00Z' } } };
+  const turnWith = (blocks: unknown[]) => ({
+    ...TURN, toolCalls: [read], composition: { blocks },
+  }) as unknown as AnswerTurn;
+
+  it('replaces the object that draws the same read, where it stands, under its old key', async () => {
+    const { buildBoard } = await import('./board');
+    const t1 = turnWith([{ op: 'put', key: 'shops', kind: 'table', seq: 0, weight: 'supporting' },
+                         { op: 'put', key: 'reading', kind: 'text', weight: 'quiet' }]);
+    const t2 = turnWith([{ op: 'put', key: 'shops-again', kind: 'comparison', seq: 0, subjects: ['Rockwell', 'OPUS'], weight: 'lead' }]);
+    const t3 = turnWith([{ op: 'put', key: 'wtd-table', kind: 'table', seq: 0, weight: 'supporting' }]);
+    const board = buildBoard([t1, t2, t3]);
+    const shops = board.filter((o) => o.seq === 0);
+    expect(shops).toHaveLength(1);
+    expect(shops[0].key).toBe('shops');
+    expect(shops[0].kind).toBe('table');
+    expect(shops[0].turn).toBe(2);
+  });
+
+  it('lands a later edit made under the twin\'s key on the old object', async () => {
+    const { buildBoard } = await import('./board');
+    const t1 = turnWith([{ op: 'put', key: 'shops', kind: 'table', seq: 0 }]);
+    const t2 = turnWith([{ op: 'put', key: 'shops-again', kind: 'table', seq: 0 }]);
+    const t3 = turnWith([{ op: 'quiet', key: 'shops-again' }]);
+    const board = buildBoard([t1, t2, t3]);
+    expect(board).toHaveLength(1);
+    expect(board[0].key).toBe('shops');
+    expect(board[0].weight).toBe('quiet');
+  });
+
+  it('keeps two subjects of one read as two objects', async () => {
+    const { buildBoard } = await import('./board');
+    const t1 = turnWith([{ op: 'put', key: 'rockwell', kind: 'subject', seq: 0, subject: 'Rockwell' },
+                         { op: 'put', key: 'opus', kind: 'subject', seq: 0, subject: 'OPUS' }]);
+    expect(buildBoard([t1])).toHaveLength(2);
+  });
+
+  it('lets a quiet object nobody touched for six turns leave — unless it was kept', async () => {
+    const { buildBoard, EXPIRE_AFTER_TURNS } = await import('./board');
+    const first = turnWith([{ op: 'put', key: 'old', kind: 'text', weight: 'quiet' }]);
+    const later = Array.from({ length: EXPIRE_AFTER_TURNS }, (_, n) =>
+      turnWith([{ op: 'put', key: `t${n}`, kind: 'text', weight: 'supporting' }]));
+    expect(buildBoard([first, ...later]).some((o) => o.key === 'old')).toBe(false);
+    expect(buildBoard([first, ...later.slice(0, -1)]).some((o) => o.key === 'old')).toBe(true);
+    expect(buildBoard([first, ...later], new Set(['old'])).some((o) => o.key === 'old')).toBe(true);
+  });
+
+  it('sends the read behind each object with the board, so the server can apply the same rule', async () => {
+    const { buildBoard, boardContext } = await import('./board');
+    const t1 = turnWith([{ op: 'put', key: 'shops', kind: 'table', seq: 0 }]);
+    const ctx = boardContext([t1], buildBoard([t1]), {}, null);
+    expect(ctx[0].read?.tool).toBe('get_sales');
+    expect(ctx[0].read?.arguments).toEqual({ group_by: ['store'], date_range: 'last_week' });
+  });
+});

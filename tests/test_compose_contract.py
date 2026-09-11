@@ -567,3 +567,44 @@ def test_a_control_must_name_an_argument_its_read_actually_takes(defs):
 
     ok, no = control_over("get_product")
     assert not ok and "no window at all" in no[0]["reason"]
+
+
+
+# ---------------------------------------------------------------------------
+# One read is one object (2026-09-12)
+# ---------------------------------------------------------------------------
+
+def test_a_put_of_a_read_already_on_the_board_becomes_a_change_of_that_object(defs):
+    """
+    THE BUG THIS HOLDS. 168 puts to 3 changes on the dogfood record: asked
+    the same thing again, George put a twin beside the object he had. The
+    board carries the read behind each object; a put of that read under a
+    new key is rewritten — not refused — to a change of the existing key,
+    and the rewrite is named so he uses that key from here on.
+    """
+    board = [{"key": "shops", "kind": "table", "weight": "supporting",
+              "read": {"tool": "get_sales", "arguments": {}}}]
+    ok, no = compose.validate({"blocks": [{"key": "shops-again", "kind": "table", "seq": 1}]},
+                              CALLS, defs, board=board)
+    assert not no
+    assert ok[0]["op"] == "change" and ok[0]["key"] == "shops"
+    assert ok[0]["rewritten_from"] == "shops-again"
+    out = compose.compose([{"key": "shops-again", "kind": "table", "seq": 1}],
+                          calls=CALLS, defs=defs, board=board)
+    assert out["meta"]["rewritten"] == [{"from": "shops-again", "to": "shops"}]
+
+
+def test_a_put_under_a_key_already_on_the_board_is_not_rewritten(defs):
+    board = [{"key": "shops", "kind": "table", "weight": "supporting",
+              "read": {"tool": "get_sales", "arguments": {}}}]
+    ok, _ = compose.validate({"blocks": [{"key": "shops", "kind": "table", "seq": 1}]},
+                             CALLS, defs, board=board)
+    assert ok[0]["op"] == "put" and "rewritten_from" not in ok[0]
+
+
+def test_a_different_read_is_a_different_object(defs):
+    board = [{"key": "shops", "kind": "table", "weight": "supporting",
+              "read": {"tool": "get_sales", "arguments": {"date_range": "last_month"}}}]
+    ok, _ = compose.validate({"blocks": [{"key": "shops-week", "kind": "table", "seq": 1}]},
+                             CALLS, defs, board=board)
+    assert ok[0]["op"] == "put" and ok[0]["key"] == "shops-week"

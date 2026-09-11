@@ -5458,6 +5458,11 @@ composition:
   # technical limit. When it is exceeded the OLDEST QUIET object leaves first:
   # what was pushed aside longest ago is what nobody is coming back to.
   max_objects: 12
+  # A QUIET OBJECT NOBODY HAS TOUCHED FOR THIS MANY TURNS LEAVES ON ITS OWN —
+  # unless the person kept it. Added 2026-09-12 with read identity: the board
+  # maintains a picture, it does not accumulate answers. Mirrored in
+  # frontend/src/room/board.ts EXPIRE_AFTER_TURNS.
+  expire_after_turns: 6
 
   # A CHANGE THAT NAMES A SUBJECT MUST NAME ITS READ. Without this, George
   # could rename what an object is about while it still draws an older read's

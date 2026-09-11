@@ -22,6 +22,12 @@ import type { AnswerTurn, Block } from './data';
 
 /** metrics.yaml composition.max_objects. A bound on attention, not on memory. */
 export const MAX_OBJECTS = 12;
+/**
+ * metrics.yaml composition.expire_after_turns. A quiet object nobody has
+ * touched for this many turns leaves the board on its own — unless the
+ * person KEPT it. Six turns of being pushed aside is nobody coming back.
+ */
+export const EXPIRE_AFTER_TURNS = 6;
 
 export interface BoardObject {
   key: string;
@@ -96,6 +102,36 @@ function carried(edit: Block): Partial<BoardObject> {
 }
 
 /**
+ * WHAT A READ IS, for the purpose of "this is that".
+ *
+ * Measured 2026-09-12: 168 `put` edits to 3 `change`. George almost never
+ * changes the object he already has; asked the same thing again he puts a
+ * twin beside it under a fresh key, and the board ends up holding the same
+ * read drawn five ways. The key is his memory and he does not keep it. So
+ * the board keeps its own: an object is identified by the READ it draws —
+ * tool, arguments, and the subject it is scoped to — and a later `put` of
+ * the same read REPLACES the object rather than joining it.
+ *
+ * Not a hash of the rows: the same read run again with new rows is the same
+ * object updated, which is exactly what "replace" should mean. And not the
+ * kind: a table of last week's shops and a comparison of last week's shops
+ * are the same thing shown two ways, and one board holds one of them.
+ */
+export function readIdentity(answers: AnswerTurn[], turn: number, edit: {
+  seq?: number; seqs?: number[]; subject?: string;
+}): string | null {
+  const seq = edit.seq ?? edit.seqs?.[0];
+  if (seq === undefined) return null;
+  const call = answers[turn]?.toolCalls.find((c) => c.seq === seq);
+  if (!call) return null;
+  const args = JSON.stringify(call.arguments ?? {}, Object.keys(call.arguments ?? {}).sort());
+  // A single `subject` SCOPES the object to one row, so two subjects of one
+  // read are two objects. `subjects` (a comparison) is the read shown another
+  // way, and one board holds one of those — so it is not part of identity.
+  return `${call.tool}|${args}|${edit.subject ?? ''}`;
+}
+
+/**
  * The edits a turn contributes.
  *
  * A turn George composed contributes his. A turn from before compose existed —
@@ -144,12 +180,30 @@ function bounded(board: BoardObject[]): BoardObject[] {
   return out;
 }
 
-export function buildBoard(answers: AnswerTurn[]): BoardObject[] {
+export function buildBoard(answers: AnswerTurn[], kept: ReadonlySet<string> = new Set()): BoardObject[] {
   let board: BoardObject[] = [];
+  // A key George chose for a twin, mapped to the key of the object it
+  // replaced — so his later edits under the new name land on the old object.
+  const aliases = new Map<string, string>();
   answers.forEach((turn, i) => {
     for (const edit of editsFor(turn, i)) {
-      const at = board.findIndex((o) => o.key === edit.key);
+      const key = aliases.get(edit.key) ?? edit.key;
+      let at = board.findIndex((o) => o.key === key);
       const op = edit.op ?? 'put';
+
+      // THIS IS THAT. A put under a new key whose read is already on the
+      // board replaces that object where it stands, keeping its key and so
+      // the person's arrangement of it. The new key becomes an alias.
+      if (op === 'put' && at < 0) {
+        const identity = readIdentity(answers, i, edit);
+        if (identity) {
+          const twin = board.findIndex((o) => readIdentity(answers, o.turn, o) === identity);
+          if (twin >= 0) {
+            aliases.set(edit.key, board[twin].key);
+            at = twin;
+          }
+        }
+      }
 
       if (op === 'drop') {
         if (at >= 0) board.splice(at, 1);
@@ -175,7 +229,7 @@ export function buildBoard(answers: AnswerTurn[]): BoardObject[] {
       }
 
       const object: BoardObject = {
-        key: edit.key,
+        key: at >= 0 ? board[at].key : edit.key,
         kind: edit.kind ?? (edit.spec ? 'spec' : 'text'),
         weight: edit.weight ?? 'supporting',
         ...carried(edit),
@@ -186,9 +240,22 @@ export function buildBoard(answers: AnswerTurn[]): BoardObject[] {
       else board.unshift(object);
     }
     board = oneLead(board);
+    board = expired(board, i, kept);
     board = bounded(board);
   });
   return board;
+}
+
+/**
+ * WHAT LEAVES ON ITS OWN. A quiet object nobody has touched for
+ * EXPIRE_AFTER_TURNS turns — pushed aside and never returned to — leaves
+ * without waiting for the board to fill. A kept object never does: keeping
+ * is the person saying "this stays", and it outranks a count.
+ */
+function expired(board: BoardObject[], now: number, kept: ReadonlySet<string>): BoardObject[] {
+  return board.filter((o) => (
+    o.weight !== 'quiet' || kept.has(o.key) || now - o.touched < EXPIRE_AFTER_TURNS
+  ));
 }
 
 /**
@@ -255,6 +322,12 @@ export interface BoardContextObject {
   about?: string;
   measure?: string;
   window?: string;
+  /**
+   * The read behind the object — tool and arguments, never rows — so the
+   * server can recognise a repeat of it and turn a `put` into a `change`
+   * (agent/compose.py). The same identity the client applies.
+   */
+  read?: { tool: string; arguments: Record<string, unknown> };
 }
 
 export function boardContext(
@@ -273,6 +346,7 @@ export function boardContext(
       key: o.key,
       kind: o.kind,
       weight: o.weight,
+      ...(call ? { read: { tool: call.tool, arguments: (call.arguments ?? {}) as Record<string, unknown> } } : {}),
       ...(about ? { about } : {}),
       ...(meta?.metric_label ? { measure: meta.metric_label } : {}),
       ...(win ? { window: win.replace(/_/g, ' ') } : {}),

@@ -2760,6 +2760,7 @@ async def run(
                         result = compose.compose(
                             (b.input or {}).get("blocks"),
                             calls=calls_by_seq, defs=defs,
+                            board=(desk or {}).get("board"),
                         )
                     else:
                         result = findings.record_findings(

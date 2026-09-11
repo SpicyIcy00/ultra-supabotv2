@@ -46,6 +46,7 @@ real data as the answer's receipts, and this read nothing.
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Any, Iterable, Mapping, Optional
 
@@ -106,15 +107,50 @@ def _row_has(call: Mapping[str, Any], subject: str) -> bool:
     return False
 
 
+def read_identity(tool: Any, arguments: Any, subject: Any = None) -> str:
+    """
+    What a read IS for "this is that": tool, arguments, and the one subject
+    the object is scoped to, if any. A comparison's `subjects` are a VIEW of
+    the read, not a scope, and are deliberately not part of it. The same
+    identity the client applies in board.ts, so the stored composition and
+    the screen agree about which object a repeat became.
+    """
+    args = json.dumps(arguments or {}, sort_keys=True, default=str)
+    return f"{tool}|{args}|{subject if isinstance(subject, str) else ''}"
+
+
+def _existing_reads(board: Any) -> dict[str, str]:
+    """identity -> key, for every object on the board that names its read."""
+    out: dict[str, str] = {}
+    for obj in board or []:
+        if not isinstance(obj, Mapping):
+            continue
+        read = obj.get("read")
+        key = obj.get("key")
+        if not isinstance(read, Mapping) or not isinstance(key, str):
+            continue
+        out.setdefault(read_identity(read.get("tool"), read.get("arguments"),
+                                     obj.get("about")), key)
+    return out
+
+
 def validate(
     submitted: Any,
     calls: Mapping[int, Mapping[str, Any]],
     defs: Mapping[str, Any],
+    board: Any = None,
 ) -> tuple[list[dict], list[dict]]:
     """
     Split a submitted composition into the blocks that may be drawn and those
     that may not, each refusal with a reason a person could act on.
+
+    `board` is what is already on the screen, as the question carried it
+    (key, kind, and the read behind each object). A `put` of a read already
+    there under a new key is REWRITTEN to a `change` of the existing key —
+    not refused: the model meant "show this", and the board's rule is that
+    one read is one object. The rewrite is named on the edit and in meta.
     """
+    existing = _existing_reads(board)
     voc = vocabulary(defs)
     widgets: Mapping[str, Any] = voc["widgets"]
     weights = list(voc["weights"])
@@ -187,6 +223,26 @@ def validate(
                 continue
 
             kind = item.get("kind")
+
+            # THIS IS THAT (server side). Only a fresh `put` under a key not on
+            # the board, over a read the board already draws for the same
+            # subject: it becomes a `change` of that object, and the model is
+            # told which key it became.
+            rewritten_from: Optional[str] = None
+            if op == "put" and existing and key not in {
+                o.get("key") for o in (board or []) if isinstance(o, Mapping)
+            }:
+                seq_for = item.get("seq")
+                if seq_for is None and isinstance(item.get("seqs"), (list, tuple)) and item["seqs"]:
+                    seq_for = item["seqs"][0]
+                call_for = calls.get(seq_for) if isinstance(seq_for, int) else None
+                if call_for is not None:
+                    ident = read_identity(call_for.get("tool"), call_for.get("arguments"),
+                                          item.get("subject"))
+                    twin = existing.get(ident)
+                    if twin and twin != key and twin not in keys_seen:
+                        rewritten_from, key, op = key, twin, "change"
+
             if op == "change" and kind is None:
                 # Changing prominence, or which read an object draws, without
                 # restating what kind of object it is.
@@ -375,6 +431,12 @@ def validate(
             keys_seen.add(key)
             if weight == "lead":
                 lead_key = key
+            if rewritten_from:
+                # Named on the edit, so the stored composition says what
+                # happened and the model learns the key it became.
+                block["op"] = "change"
+                block["key"] = key
+                block["rewritten_from"] = rewritten_from
             accepted.append(block)
         except Rejected as why:
             rejected.append({"block": item, "reason": str(why)})
@@ -383,7 +445,7 @@ def validate(
 
 
 def compose(blocks: Any, *, calls: Mapping[int, Mapping[str, Any]],
-            defs: Mapping[str, Any]) -> dict:
+            defs: Mapping[str, Any], board: Any = None) -> dict:
     """
     Compose the workspace: say which of the results you read the person sees, as which kind of object, at what weight. Call it once, after your reads return and before you answer. Nothing here is a figure — every number is drawn from the read a block names.
 
@@ -394,12 +456,17 @@ def compose(blocks: Any, *, calls: Mapping[int, Mapping[str, Any]],
         The tool body. Returns {rows, meta} like every other tool, and names no
     source_table, for the reason record_findings names none.
     """
-    accepted, rejected = validate(blocks, calls, defs)
+    accepted, rejected = validate(blocks, calls, defs, board=board)
     return {
         "rows": accepted,
         "meta": {
             "accepted": len(accepted),
             "rejected": rejected,
+            # A put of a read the board already drew became a change of that
+            # object: one read is one object. Named so the model uses the key
+            # it became from here on.
+            "rewritten": [{"from": e["rewritten_from"], "to": e["key"]}
+                          for e in accepted if e.get("rewritten_from")],
             "widgets": list(vocabulary(defs)["widgets"]),
             "note": (
                 "How the board changed, from reads that already ran. Nothing "

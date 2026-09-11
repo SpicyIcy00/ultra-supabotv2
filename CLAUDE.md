@@ -1505,6 +1505,33 @@ packing grid ([RoomShell.tsx](frontend/src/room/RoomShell.tsx)); a run's
 notices are drawn through the room's own caveat, whole, and nothing about
 which notices surface changed.
 
+### The board maintains, not accumulates
+
+*Added 2026-09-12.* Measured on George's own record since the 10th: 168 `put`
+edits to 3 `change` and 4 `quiet`. Asked the same thing again, he put a twin
+beside the object he had, under a fresh key, and every multi-turn board held
+1.2–2.0× as many objects as distinct reads — the same net sales per shop
+drawn as a table, two bar charts and two sets of solid tiles at once.
+
+- **An object is identified by the read it draws** — tool, arguments and the
+  one `subject` it is scoped to — not by the key George chose. A later `put`
+  of that read replaces the object where it stands, under its old key, so the
+  person's arrangement of it survives; the new key becomes an alias so his
+  later edits under it land on the same object
+  ([board.ts](frontend/src/room/board.ts) `readIdentity`, `buildBoard`).
+  A comparison's `subjects` are a view of the read, not a scope, and are not
+  part of identity: one board holds one of a read's views.
+- **The server applies the same rule** so the stored composition matches the
+  screen: the board travels with the question carrying each object's read,
+  and `compose` rewrites a fresh `put` of a read already there into a
+  `change` of the existing key — not a refusal; the model meant "show this"
+  — and names the rewrite in `meta.rewritten` ([compose.py](agent/compose.py)).
+- **A quiet object nobody touched for `composition.expire_after_turns` (6)
+  turns leaves on its own**, unless the person kept it. Keeping outranks a
+  count.
+- The prompt says it in one line: *one object per read; change what is
+  there; add only what is new.*
+
 ### The instruments
 
 *Added 2026-09-12, from the design board.* Five marks joined the grammar —

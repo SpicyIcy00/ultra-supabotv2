@@ -91,7 +91,12 @@ export default function Room() {
     () => george.turns.filter((t): t is AnswerTurn => t.role === 'george'),
     [george.turns],
   );
-  const board = useMemo(() => buildBoard(answers), [answers]);
+  // What the person KEPT never expires from the board.
+  const keptKeys = useMemo(
+    () => new Set(Object.entries(local).filter(([, l]) => l?.kept).map(([k]) => k)),
+    [local],
+  );
+  const board = useMemo(() => buildBoard(answers, keptKeys), [answers, keptKeys]);
   const busy = george.busy;
   const latest = answers[answers.length - 1] ?? null;
 
