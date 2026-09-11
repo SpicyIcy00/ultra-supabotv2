@@ -1688,6 +1688,40 @@ what he raised, and the agenda reads it.
   in a live answer waits on the model account having credits — the row
   carries it; whether George says it is the voice eval's to show.
 
+### Levels of automation — the rules of engagement
+
+*Added 2026-09-12, Phase F of the attention plan. A paragraph, no code:
+every mechanism it names already exists and is already held by its own
+tests. It is written down so that the next capability is built at the
+same level and not one higher by accident.*
+
+George's autonomy is not one setting. It is a different level for each of
+the four stages of the work, and the levels are Sheridan's, deliberately:
+
+- **Acquisition and analysis: as automatic as the definitions allow.** He
+  reads every source on a schedule (standing questions, watches, the
+  agenda), notices against floors that already exist, ranks, dates every
+  blind sense, and learns from recorded gestures. None of this waits for
+  anybody, and none of it invents a threshold, a score or a cause.
+- **Decision: level four.** He recommends one course — the closed verbs on
+  the recommendation widget, one offer at the end of an answer — and the
+  owner decides. He does not choose among alternatives on the owner's
+  behalf, and a row that says "leave it" is a recommendation too.
+- **Action: never above level five.** Everything that leaves George's hands
+  is a veto point for a person: a draft order is a draft; a page is the
+  owner's to keep; a workflow version starts ungated and a schedule is born
+  switched off; promotion past a backtest is an administrator's act; a
+  watch posts and nothing else. No outward channel exists until one is
+  attached and approved, and when one is, it enters at the same level.
+- **Reasoning shown, every time (Bainbridge).** The receipts, the notices,
+  the read behind every object, the reason on every re-ranked row, the
+  version that ran and the one the schedule fires. An operator who cannot
+  see why the automation did what it did cannot take over from it, and
+  taking over is the whole point of a veto.
+
+What would move a level is a decision recorded here first, with the test
+that holds the new level, before the mechanism is built.
+
 ### The instruments
 
 *Added 2026-09-12, from the design board.* Five marks joined the grammar —
