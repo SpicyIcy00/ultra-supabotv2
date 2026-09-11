@@ -1382,6 +1382,12 @@ investigation:
       steering: >
         a narrowing or widening of the work on screen — apply it to the
         current investigation rather than starting a new one
+      morning: >
+        "what should I look at", "what changed", "anything I should know",
+        the day's opening — read get_attention ONCE and answer one line per
+        thing that changed, ranked as it ranks them; when it is silent, say
+        so in one line and stop, and name a blind sense rather than letting
+        its silence read as calm
   attribution_math: not_supported
   dominance_threshold: none
   dominance_threshold_reason: >
@@ -3688,6 +3694,66 @@ brief:
 
 
 # =============================================================================
+# ATTENTION — what deserves attention today, as one read. Added 2026-09-12.
+#
+# THE JUDGEMENT LAYER. The brief is a fixed read at a fixed time; this is the
+# judgement over it: which sources can NOTICE (carry a definition of normal),
+# how their survivors rank against one another, and which senses are blind and
+# why. tools/attention.py composes it; George reads it for "what should I look
+# at", "what changed" and the morning.
+#
+# NO NEW THRESHOLD. Every `floor` below is a REFERENCE to a definition that
+# already exists — the same floors the brief applies — held by
+# tests/test_attention_contract.py. A source with no definition of normal is
+# listed under cannot_notice with the reason, so the morning says "I cannot
+# see deliveries" rather than letting silence read as calm.
+#
+# SILENCE IS THE NORMAL STATE. When nothing crossed, the read says so and the
+# room does not open on the morning (standing_runner records the outcome as
+# silent, and latest_answer offers only answers). Management by exception.
+# =============================================================================
+attention:
+  introduced: "2026-09-12"
+  sources:
+    sales_vs_same_weekday:
+      via: get_brief
+      section: sales_vs_same_weekday
+      floor: brief.sales_vs_same_weekday
+      measure: change            # absolute money, for brief.notability's reason
+    stock_crossed_out:
+      via: get_brief
+      section: stock_crossed_out
+      floor: brief.stock_crossed_out
+      measure: was
+    newly_dead:
+      via: get_brief
+      section: newly_dead
+      floor: brief.newly_dead
+      measure: quantity_on_hand
+  # Money first, then a shelf that just emptied, then what stopped selling —
+  # the same order and reasons as brief.notability.section_order.
+  order: [sales_vs_same_weekday, stock_crossed_out, newly_dead]
+  tie_break: subject
+  silent_when_nothing_crossed: true
+  senses_dated: true
+  # What cannot be noticed today and why. Each names the definition that
+  # records the gap; when the gap closes, the entry moves up into sources.
+  cannot_notice:
+    low_stock:
+      why: inventory.low_stock_operational
+      says: "low-stock thresholds have never been set, so nothing can be low — only the crossing to zero is seen"
+    deliveries:
+      why: brief.freshness.frozen_reason
+      says: "purchase orders and transfers were loaded once from an export and cannot change until someone imports again"
+    vending:
+      why: brief.freshness.max_age_days
+      says: "the vending sources are past their freshness limit, so a change there cannot be told from a stale feed"
+    cover:
+      why: purchasing.plan
+      says: "days of cover is measured per supplier plan, not estate-wide; a supplier's plan is watched as a standing question of its own"
+
+
+# =============================================================================
 # NOTICE FINGERPRINTS
 #
 # Every tool can attach meta.notice when a result is not what it appears — an
@@ -4365,6 +4431,7 @@ workflows:
     as_of_arguments:
       get_stock: as_of
       get_brief: as_of
+      get_attention: as_of
       # `end` is the as-of date: move it and the whole window moves with it,
       # since `start` is derived backwards from `end`. More reproducible than
       # get_stock, not less — this tool has no live fallback at all, and

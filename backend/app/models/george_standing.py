@@ -70,7 +70,7 @@ class GeorgeStandingQuestion(Base):
                         "AND jsonb_array_length(instructions) <= 8",
                         name="ck_standing_instructions_shape"),
         CheckConstraint(
-            "last_status IS NULL OR last_status IN ('ok', 'failed', 'refused')",
+            "last_status IS NULL OR last_status IN ('ok', 'failed', 'refused', 'silent')",
             name="ck_standing_last_status",
         ),
         Index("ix_standing_due", "last_slot", postgresql_where=text("enabled")),

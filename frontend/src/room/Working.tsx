@@ -48,6 +48,7 @@ export const WORDS: Record<string, [string, string]> = {
   get_purchase_plan: ['drafting the order', 'drafted the order'],
   get_cost_history: ['reading costs', 'read costs'],
   get_brief: ['reading the morning brief', 'read the morning brief'],
+  get_attention: ['looking at what deserves attention', 'looked at what deserves attention'],
   // ---- the things only he can see
   view_page: ['reading the page', 'read the page'],
   view_memory: ['checking what he thinks', 'checked what he thinks'],

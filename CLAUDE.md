@@ -1532,6 +1532,33 @@ drawn as a table, two bar charts and two sets of solid tiles at once.
 - The prompt says it in one line: *one object per read; change what is
   there; add only what is new.*
 
+### The agenda — what deserves attention today
+
+*Added 2026-09-12.* The judgement layer, as one read. The morning used to be
+a fixed read at a fixed time; `get_attention` ([tools/attention.py](tools/attention.py))
+is the judgement over it, declared in `metrics.yaml attention`.
+
+- **Every floor is a reference, never a number.** Each source names the
+  definition it is judged against — the brief's own floors — and
+  `tests/test_attention_contract.py` holds that every one resolves. A source
+  with no definition of normal is listed under `cannot_notice` with the
+  definition that records the gap, so the morning can say "I cannot see
+  deliveries" instead of letting silence read as calm.
+- **Every survivor ranked, money first, by absolute size against its floor,
+  ties by name** — `brief.notability` generalised from the one opening line
+  to the whole morning. Each row is a brief row, whole, with its receipts.
+- **Every sense is dated.** `meta.senses` carries each source's last
+  movement and, when blind, why: frozen, stale, could not run today, or no
+  definition of normal.
+- **Silence is the normal state.** `meta.silent` when nothing crossed. A
+  scheduled question that read a silent morning is recorded with
+  `last_status = 'silent'` (migration `u5v6w7x8y9z0`) — not `failed`, and not
+  `ok`, which is the only status `latest_answer` offers — so the room does
+  not open on a morning with nothing in it and falls through to the thread
+  you left (history as context).
+- `morning` is a message kind in `investigation.message_kinds`, so SCOPE
+  teaches which read it is: one call, one line per thing that changed.
+
 ### The instruments
 
 *Added 2026-09-12, from the design board.* Five marks joined the grammar —

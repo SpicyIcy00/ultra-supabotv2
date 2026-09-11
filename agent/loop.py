@@ -56,6 +56,7 @@ import anthropic
 from agent import compose, composite_tools, findings, surface, write_tools
 from agent.write_tools import WriteContext, call_key
 from tools import (
+    attention,
     brief,
     cost_history,
     dead_stock,
@@ -162,6 +163,10 @@ TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
     "get_purchase_plan": purchase_plan.get_purchase_plan,
     "get_cost_history": cost_history.get_cost_history,
     "get_brief": brief.get_brief,
+    # What deserves attention today: the judgement over the brief — every
+    # survivor ranked against its own floor, every sense dated, silent when
+    # nothing crossed (tools/attention.py, metrics.yaml attention).
+    "get_attention": attention.get_attention,
     # One object, opened up. Writes no SQL — it calls the reads above and keeps
     # each result whole, so what a person sees when they TAP a shop and what
     # George sees when he reasons about one are the same figures from the same

@@ -154,6 +154,22 @@ async def _beliefs_block() -> Optional[str]:
         return None
 
 
+def silent_in(event: Optional[str], data: dict) -> bool:
+    """
+    Whether a frame says the morning found nothing.
+
+    get_attention's meta.silent is the judgement layer saying "nothing
+    crossed"; a scheduled answer that read it is recorded as `silent` rather
+    than `ok`, and latest_answer offers only `ok` — so the room does not open
+    on a morning with nothing in it (management by exception: silence is the
+    normal state, and an opening that said "nothing" would be an alarm clock).
+    """
+    if event != "tool_result" or data.get("tool") != "get_attention":
+        return False
+    meta = data.get("meta") or {}
+    return bool(meta.get("silent"))
+
+
 def _parse(frame: str) -> tuple[Optional[str], dict]:
     """One SSE frame back into (event, data). The loop's only output shape."""
     event, data = None, {}
@@ -194,6 +210,7 @@ async def ask(row: GeorgeStandingQuestion, *, slot: datetime,
     status = "failed"
     error: Optional[str] = None
     calls = 0
+    silent = False
 
     try:
         async for frame in george_loop.run(
@@ -213,6 +230,8 @@ async def ask(row: GeorgeStandingQuestion, *, slot: datetime,
                 thread_id = data.get("thread_id")
             elif event == "tool_call":
                 calls += 1
+            elif silent_in(event, data):
+                silent = True
             elif event == "error":
                 error = str(data.get("message"))[:2000]
             elif event == "done":
@@ -220,6 +239,10 @@ async def ask(row: GeorgeStandingQuestion, *, slot: datetime,
                 status = "ok" if data.get("status") == "ok" else "failed"
     except Exception as exc:  # noqa: BLE001 - one question must not stop the tick
         status, error = "failed", f"{type(exc).__name__}: {exc}"
+    if status == "ok" and silent:
+        # Answered, and the answer was "nothing crossed". Recorded as its own
+        # outcome: not a failure, and not an answer the room opens on.
+        status = "silent"
 
     return {"status": status, "thread_id": thread_id, "error": error,
             "tool_calls": calls}
