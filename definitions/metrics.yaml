@@ -4825,6 +4825,22 @@ voice:
     max_numbered_rules: 10
     # "never", "do not", "don't" — the register is traits, not prohibitions.
     max_prohibitions: 20
+  # RESTATING A DRAWN FIGURE. Added 2026-09-12. Every result a turn reads is
+  # drawn beside the answer, whole; a sentence carrying a figure a drawn row
+  # holds says what the screen already shows. The long prompt asked for none
+  # in three places and got 22% of sentences; the short one asked once and
+  # got 19.5%. Words do not move it, so the loop enforces it as it enforces
+  # the volunteering cap: one corrective turn, then the answer stands. The
+  # check is agent/prose.restated_sentences — the same function the evals
+  # measure with — matched on digits, dates and small counts excused.
+  # Enforced ONLY when something is drawn: an answer over no charted result
+  # has nothing on screen to restate.
+  restatement:
+    introduced: "2026-09-12"
+    max_restated_sentences: 0
+    max_corrective_turns: 1
+    matched_on: digits
+    warning_reason: restated_figure
 
 
 # =============================================================================

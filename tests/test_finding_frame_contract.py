@@ -328,7 +328,7 @@ def _drive(monkeypatch, replies):
 def test_the_model_is_shown_each_call_s_seq(monkeypatch):
     _, fake = _drive(monkeypatch, [
         [_ToolUse("tu-1", "get_sales", SALES)],
-        [_TextBlock("Rockwell fell 50% on the week before.")],
+        [_TextBlock("Rockwell fell against the week before.")],
     ])
     # By type, not by position: the fake keeps the loop's own message list,
     # which goes on growing past the tool result once the answer is appended.
@@ -344,7 +344,7 @@ def test_accepted_roles_become_a_frame_and_are_persisted(monkeypatch):
         [_ToolUse("tu-3", george_loop.FINDING_TOOL,
                   {"findings": [{"seq": 0, "role": "primary"},
                                 {"seq": 1, "role": "driver", "of": 0}]})],
-        [_TextBlock("Rockwell fell 50% on the week before; transactions fell too.")],
+        [_TextBlock("Rockwell fell against the week before; transactions fell too.")],
     ])
     (frame,) = _frames_of(frames, "finding")
     assert [(f["seq"], f["role"], f["of"]) for f in frame["findings"]] == [
@@ -366,7 +366,7 @@ def test_a_rejected_role_is_named_and_the_rest_stand(monkeypatch):
         [_ToolUse("tu-2", george_loop.FINDING_TOOL,
                   {"findings": [{"seq": 0, "role": "primary"},
                                 {"seq": 42, "role": "driver", "of": 0}]})],
-        [_TextBlock("Rockwell fell 50% on the week before.")],
+        [_TextBlock("Rockwell fell against the week before.")],
     ])
     (frame,) = _frames_of(frames, "finding")
     assert [f["role"] for f in frame["findings"]] == ["primary"]
@@ -381,7 +381,7 @@ def test_a_label_is_never_charted_never_pinnable_and_never_the_receipts(monkeypa
         [_ToolUse("tu-1", "get_sales", SALES)],
         [_ToolUse("tu-2", george_loop.FINDING_TOOL,
                   {"findings": [{"seq": 0, "role": "primary"}]})],
-        [_TextBlock("Rockwell fell 50% on the week before.")],
+        [_TextBlock("Rockwell fell against the week before.")],
     ])
     results = _frames_of(frames, "tool_result")
     label = next(r for r in results if r["tool"] == george_loop.FINDING_TOOL)
@@ -405,7 +405,7 @@ def test_a_later_recording_replaces_an_earlier_one(monkeypatch):
                   {"findings": [{"seq": 0, "role": "context"}]})],
         [_ToolUse("tu-3", george_loop.FINDING_TOOL,
                   {"findings": [{"seq": 0, "role": "primary"}]})],
-        [_TextBlock("Rockwell fell 50% on the week before.")],
+        [_TextBlock("Rockwell fell against the week before.")],
     ])
     first, second = _frames_of(frames, "finding")
     assert [f["role"] for f in first["findings"]] == ["context"]
@@ -418,7 +418,7 @@ def test_a_later_recording_replaces_an_earlier_one(monkeypatch):
 def test_no_recording_means_no_frame_and_no_payload_key(monkeypatch):
     frames, _ = _drive(monkeypatch, [
         [_ToolUse("tu-1", "get_sales", SALES)],
-        [_TextBlock("Rockwell fell 50% on the week before.")],
+        [_TextBlock("Rockwell fell against the week before.")],
     ])
     assert _frames_of(frames, "finding") == []
     log = StubLog.instances[0]

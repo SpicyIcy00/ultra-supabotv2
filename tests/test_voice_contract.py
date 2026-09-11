@@ -262,3 +262,102 @@ def test_the_prompt_is_within_the_budget_the_definitions_set() -> None:
     assert words <= int(budget["max_words"]), f"{words} words; the budget is {budget['max_words']}"
     assert rules <= int(budget["max_numbered_rules"]), f"{rules} numbered rules"
     assert prohibitions <= int(budget["max_prohibitions"]), f"{prohibitions} prohibitions"
+
+
+# ---------------------------------------------------------------------------
+# The restatement gate (2026-09-12): a figure the board draws is not said again
+# ---------------------------------------------------------------------------
+
+import asyncio                                                              # noqa: E402
+from agent import prose                                                     # noqa: E402
+from tests.test_convergence_cap_contract import FakeClient, _ToolUse         # noqa: E402
+from tests.test_loop_correction_contract import StubLog, _TextBlock          # noqa: E402
+
+ROWS = [{"store": "Rockwell", "value": 48210.0}, {"store": "OPUS", "value": 61500.5}]
+META = {"source_table": "new_transactions", "filters_applied": [],
+        "snapshot_timestamp": "2026-09-11T00:00:00+00:00"}
+
+
+def _drive_drawn(monkeypatch, texts, rows=ROWS):
+    """One read that gets charted, then the scripted answers."""
+    fake = FakeClient([[_ToolUse("tu-1", "get_sales", {"group_by": "store", "date_range": "last_week"})]]
+                      + [[_TextBlock(t)] for t in texts])
+    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    StubLog.instances.clear()
+    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+
+    async def fake_read(name, args):
+        return ({"rows": list(rows), "meta": {**META, "row_count": len(rows)}}, None, 3)
+
+    monkeypatch.setattr(george_loop, "_call_tool", fake_read)
+
+    async def collect():
+        return [f async for f in george_loop.run("how did the shops do?")]
+
+    return asyncio.run(collect()), fake.messages.requests
+
+
+def _standing_answer(frames) -> str:
+    """The text after the last reset — the answer that stands, not every draft."""
+    out = []
+    for f in frames:
+        head, _, rest = f.partition("\n")
+        if head == "event: answer_reset":
+            out = []
+        elif head == "event: text":
+            import json as _json
+            out.append(_json.loads(rest.partition("data: ")[2]).get("delta", ""))
+    return "".join(out)
+
+
+RESTATING = "Rockwell took ₱48,210 last week, and OPUS ₱61,500.50. Rockwell is the one to watch."
+READING = "OPUS carried the week and Rockwell did not; the split is on the board. Worth a look at OPUS's products?"
+
+
+def test_the_gate_is_a_definition_and_the_evals_measure_with_the_same_function() -> None:
+    r = req(DEFS, "voice.restatement")
+    assert r["max_restated_sentences"] == 0 and r["max_corrective_turns"] == 1
+    assert r["warning_reason"] == "restated_figure"
+    from tests.evals import checks, voice_checks
+    assert checks.allowed_numbers is prose.allowed_numbers
+    assert voice_checks.restated_sentences(RESTATING, [{"rows": ROWS, "meta": META}]) == \
+        prose.restated_sentences(RESTATING, [{"rows": ROWS, "meta": META}])
+    assert len(prose.restated_sentences(RESTATING, [{"rows": ROWS, "meta": META}])) == 1
+    assert prose.restated_sentences(READING, [{"rows": ROWS, "meta": META}]) == []
+
+
+def test_a_sentence_restating_a_drawn_figure_costs_one_rewrite(monkeypatch) -> None:
+    frames, requests = _drive_drawn(monkeypatch, [RESTATING, READING])
+    warnings = [w for w in frames_of(frames, "warning") if w["reason"] == "restated_figure"]
+    assert len(warnings) == 1 and warnings[0]["found"] == 1 and warnings[0]["limit"] == 0
+    assert [r["reason"] for r in frames_of(frames, "answer_reset")] == ["restated_figure"]
+    assert _standing_answer(frames) == READING
+    sent = [m["content"] for req_ in requests for m in req_["messages"]
+            if m["role"] == "user" and isinstance(m["content"], str)]
+    correction = [c for c in sent if "board already draws" in c]
+    assert correction and "caveat" in correction[0].lower() and "48,210" in correction[0]
+
+
+def test_a_reading_over_drawn_figures_is_left_alone(monkeypatch) -> None:
+    frames, _ = _drive_drawn(monkeypatch, [READING])
+    assert "restated_figure" not in [w["reason"] for w in frames_of(frames, "warning")]
+    assert answer_of(frames) == READING
+
+
+def test_the_restatement_correction_is_capped(monkeypatch) -> None:
+    frames, _ = _drive_drawn(monkeypatch, [RESTATING, RESTATING, RESTATING])
+    warnings = [w for w in frames_of(frames, "warning") if w["reason"] == "restated_figure"]
+    assert len(warnings) == req(DEFS, "voice.restatement.max_corrective_turns") == 1
+    assert _standing_answer(frames) == RESTATING, "it gave up and kept the answer rather than spinning"
+
+
+def test_a_figure_with_nothing_drawn_is_not_gated(monkeypatch) -> None:
+    """No result on the board means nothing on screen to restate; the numeral rules stay the evals'."""
+    frames, _ = drive(monkeypatch, ["Rockwell took P48,210 on Wed 2 Sep 2026."], question="how did Rockwell do?")
+    assert "restated_figure" not in [w["reason"] for w in frames_of(frames, "warning")]
+
+
+def test_the_client_treats_the_warning_as_process_not_caveat() -> None:
+    from pathlib import Path
+    src = Path(__file__).resolve().parents[1].joinpath("frontend/src/room/render.tsx").read_text(encoding="utf-8")
+    assert "'restated_figure'" in src.split("const PROCESS")[1].split(";")[0]

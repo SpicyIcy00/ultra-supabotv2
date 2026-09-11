@@ -1613,6 +1613,20 @@ is not loosened to make the number. The prompt cut is therefore held as
 not having cut too much, and the three misses are the next voice work,
 measured the same way.
 
+**Restatement is now a gate, not a request** (`metrics.yaml
+voice.restatement`, [agent/prose.py](agent/prose.py)). The long prompt
+asked for no restated figures in three places and got 22%; the short one
+asked once and got 19.5%. Words do not move it, so the loop enforces it the
+way it enforces the volunteering cap: when something is drawn and a
+sentence carries a figure a drawn row already holds, one corrective turn
+names the sentences and asks for the reading instead, then the answer
+stands. The check is the evals' own function, moved into `agent/` so the
+measure and the gate cannot drift; matched on digits, with dates and small
+counts excused. The warning (`restated_figure`) is process, drawn in the
+activity and never as a caveat. What it does not do: verify a figure that
+is NOT on the board — that stays an eval, and rule 9's statement of what
+production enforces is unchanged.
+
 ### The board maintains, not accumulates
 
 *Added 2026-09-12.* Measured on George's own record since the 10th: 168 `put`

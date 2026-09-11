@@ -27,58 +27,18 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Optional
 
+# The numeral matching moved to agent/prose.py on 2026-09-12 so production
+# and the evals run ONE definition of "restates a drawn figure".
+from agent.prose import (  # noqa: F401 — re-exported for the eval modules
+    _DATE_PARTS, _NUMERAL, _matches, _sentences, _walk_numbers, allowed_numbers,
+)
+
 # ---------------------------------------------------------------------------
 # Numeral grounding
 # ---------------------------------------------------------------------------
 
-_NUMERAL = re.compile(
-    r"(?<![\w.])[₱$]?\s?(?P<num>\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)\s?(?P<suffix>[kKmM]\b|%)?"
-)
-_DATE_PARTS = re.compile(r"\b(?:19|20)\d{2}-\d{2}-\d{2}\b|\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+(?:19|20)\d{2}\b|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{1,2}(?:,\s*(?:19|20)\d{2})?\b|\b(?:19|20)\d{2}\b")
 
 
-def _walk_numbers(obj: Any, out: set[float]) -> None:
-    if isinstance(obj, bool):
-        return
-    if isinstance(obj, (int, float)):
-        out.add(float(obj))
-    elif isinstance(obj, str):
-        # Dates and iso timestamps contribute their parts; numeric strings —
-        # including a notice's "12,340.00 PHP" — contribute their value.
-        for m in re.finditer(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?", obj):
-            try:
-                out.add(float(m.group(0).replace(",", "")))
-            except ValueError:
-                pass
-    elif isinstance(obj, dict):
-        for v in obj.values():
-            _walk_numbers(v, out)
-    elif isinstance(obj, (list, tuple)):
-        for v in obj:
-            _walk_numbers(v, out)
-
-
-def allowed_numbers(results: Iterable[dict]) -> set[float]:
-    """Every number in every row and meta the tools returned this turn."""
-    out: set[float] = set()
-    for r in results:
-        _walk_numbers(r.get("rows") or [], out)
-        _walk_numbers(r.get("meta") or {}, out)
-    return out
-
-
-def _matches(n: float, decimals: int, allowed: set[float]) -> bool:
-    """
-    A prose numeral matches a returned number if it is that number rounded
-    to the precision written: within half a unit of the last digit. Compared
-    against the raw value, not a re-rounding of it — Python rounds halves to
-    even, and 172,918.5 written as ₱172,919 is a correct rounding.
-    """
-    tol = 0.5 * 10 ** (-decimals) + 1e-9
-    for v in allowed:
-        if abs(abs(v) - n) <= tol:
-            return True
-    return False
 
 
 @dataclass
@@ -153,8 +113,6 @@ _BOTH = re.compile(r"\b(both|similar|equally|alike|comparable|neither|roughly th
 _NEGATED = re.compile(r"\b(?:not|rather than|instead of|isn't|is not|wasn't|was not|aren't|are not)\b[^,.;:]*", re.I)
 
 
-def _sentences(text: str) -> list[str]:
-    return [s.strip() for s in re.split(r"(?<=[.!?])\s+|\n+", text) if s.strip()]
 
 
 def named_driver(answer: str) -> Optional[str]:

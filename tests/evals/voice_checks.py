@@ -24,7 +24,8 @@ from __future__ import annotations
 import re
 from typing import Any, Iterable
 
-from tests.evals.checks import _DATE_PARTS, _NUMERAL, _sentences, allowed_numbers, _matches
+from agent import prose
+from agent.prose import _DATE_PARTS, _NUMERAL, _sentences, allowed_numbers, _matches  # noqa: F401
 
 
 def word_count(answer: str) -> int:
@@ -42,6 +43,10 @@ def paragraphs(answer: str) -> int:
 
 def _figures(text: str, presentation_max: int = 31) -> list[tuple[float, int]]:
     """(value, decimals) of every business figure in `text`, dates and small counts excused."""
+    return prose.figures(text, presentation_max)
+
+
+def _figures_here(text: str, presentation_max: int = 31) -> list[tuple[float, int]]:  # pragma: no cover — superseded
     text = _DATE_PARTS.sub(" ", text)
     out: list[tuple[float, int]] = []
     for m in _NUMERAL.finditer(text):
@@ -61,10 +66,8 @@ def _figures(text: str, presentation_max: int = 31) -> list[tuple[float, int]]:
 
 
 def restated_sentences(answer: str, results: Iterable[dict]) -> list[str]:
-    """Sentences carrying a figure that a returned row or meta already holds."""
-    allowed = allowed_numbers(results)
-    return [s for s in sentences(answer)
-            if any(_matches(n, d, allowed) for n, d in _figures(s))]
+    """Sentences carrying a figure that a returned row or meta already holds — the production gate's own function."""
+    return prose.restated_sentences(answer, results)
 
 
 def figure_sentences(answer: str) -> list[str]:

@@ -53,6 +53,7 @@ from typing import Any, AsyncIterator, Callable, Optional
 
 import anthropic
 
+from agent import prose as _prose
 from agent import compose, composite_tools, findings, surface, write_tools
 from agent.write_tools import WriteContext, call_key
 from tools import (
@@ -2173,6 +2174,12 @@ async def run(
     volunteer_corrections = 0
     max_volunteered = req(defs, "volunteering.max_per_answer")
     max_volunteer_corrections = req(defs, "volunteering.max_corrective_turns")
+    # The restatement gate: a sentence carrying a figure the board already
+    # draws. Matched on digits by agent/prose — the evals' own measure.
+    restate_corrections = 0
+    max_restated = req(defs, "voice.restatement.max_restated_sentences")
+    max_restate_corrections = req(defs, "voice.restatement.max_corrective_turns")
+    restate_reason = str(req(defs, "voice.restatement.warning_reason"))
     # cache_creation is the write side, and it was missing: without it a cache
     # change can be argued about but not measured. A read is 0.1x base input
     # and a write is 1.25x, so "reads went up" is not the same claim as "it got
@@ -2495,6 +2502,42 @@ async def run(
                             "every figure's window exactly as they were — the "
                             "cap is on what you added, never on what qualifies "
                             "what you were asked."
+                        ),
+                    })
+                    continue
+
+                # Sentences that restate a figure the board already draws.
+                # Checked only when something IS drawn (charted): an answer
+                # over no result has nothing on screen to say again. One
+                # corrective turn, then the answer stands — a gate, not a loop.
+                restated = (_prose.restated_sentences(answer, charted)
+                            if answer and charted else [])
+                if (len(restated) > max_restated
+                        and restate_corrections < max_restate_corrections):
+                    restate_corrections += 1
+                    log.gap(restate_reason,
+                            f"{len(restated)} sentences restate a drawn figure: "
+                            + " | ".join(restated)[:1800])
+                    yield _sse("warning", {
+                        "reason": restate_reason,
+                        "found": len(restated),
+                        "limit": max_restated,
+                    })
+                    yield _reset_answer(restate_reason)
+                    answer = ""
+                    listed = "\n".join(f"- {s}" for s in restated[:6])
+                    messages.append({
+                        "role": "user",
+                        "content": (
+                            f"{len(restated)} of your sentences say a figure the "
+                            f"board already draws:\n{listed}\n\n"
+                            "The figures are on the board; the reading is yours. "
+                            "Rewrite the answer saying what those figures MEAN — "
+                            "which matters, what they do not settle, what to check "
+                            "next — and speak a figure only where no shape on the "
+                            "board holds it. Keep every caveat exactly as it was; "
+                            "the gate is on restated figures, never on what "
+                            "qualifies them."
                         ),
                     })
                     continue
