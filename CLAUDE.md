@@ -553,6 +553,34 @@ rather than working around it.
    baselines are recorded as not supported, with reasons, so they arrive as
    decisions and not as synonyms.
 
+   *Amended 2026-09-12, projection by definition.* Two of those decisions
+   arrived, and each is a **window rule and nothing else**: it `inherits`
+   `previous_period` — row fields, statuses, the change arithmetic, the
+   ranking, the groupings it allows — and the tool merges the parent under
+   the child once, so nothing below the lookup knows which mode it is
+   reading. `to_date_same_elapsed` is the pace read: the period so far
+   against the same elapsed portion of the period before, Monday 00:00 to
+   now against last Monday 00:00 to the same weekday and hour, bound as
+   Manila timestamps read in the same transaction, with the elapsed share
+   on `meta.comparison.elapsed` so a reader knows how much of the week a
+   figure covers. It REQUIRES a window in progress, which is the mirror of
+   the rule above, and a day's period before is the same weekday last week
+   by reference to what the brief measured, never yesterday.
+   `same_weekday_last_week` is the brief's own comparison promoted to a read
+   for any closed day or explicit window — the window shifted back by that
+   same measured offset — without the brief's noise floor, because the floor
+   belongs to the judgement and not to the figure. What stays declined is
+   named: `full_period_extrapolation`, "on pace for X this week", divides
+   the figure so far by the share elapsed and assumes the afternoon sells
+   like the morning; the same-point comparison is a fact and the pace is a
+   convention. The arithmetic is `tools/windows.py`, held by
+   `tests/test_comparison_contract.py` on fixed clocks. Beside it,
+   `get_purchase_plan` rows now carry `run_out_date` — today plus whole days
+   of cover, computed in SQL from the Manila date read in the same
+   transaction, with what is on order NOT counted because Open does not mean
+   received — so "when does it run out" is a date the tool wrote, not a
+   number the reader turned into one.
+
    **FFR is a data-availability limitation, not a gap in George.** Verified
    2026-09-07: the database holds no Fame or Air stores, no restaurant
    tables, no drink, side or rice roles, no slushie or siomai products.

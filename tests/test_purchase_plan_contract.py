@@ -224,3 +224,31 @@ def test_a_plan_row_survives_the_loop_as_json():
     out = json.loads(json.dumps(_json_safe({"rows": [row], "meta": {"cover_days": Decimal(60)}})))
     assert out["rows"][0]["units_per_day"] == 3.711
     assert out["meta"]["cover_days"] == 60
+
+
+# ------------------------------------------------------------- when the shelf empties
+
+
+def test_the_run_out_date_is_computed_in_sql_from_the_declared_formula(plan):
+    """
+    days_of_cover was a number the reader turned into a day. The date is the
+    tool's now — from the Manila date read in the same transaction, floored
+    to whole days, with on order NOT counted because Open does not mean not
+    received. The SQL is held to the definition, not the other way round.
+    """
+    r = req(plan, "run_out_date")
+    assert r["formula"] == "today + floor(on_hand / units_per_day) days"
+    assert r["counts_on_order"] is False
+    assert r["null_when"] == "no_sales_in_the_window"
+    sql = purchase_plan._SELECT_PLAN
+    assert "AS run_out_date" in sql
+    assert "%(today)s::date" in sql and "FLOOR(COALESCE(s.on_hand, 0) / (d.units_sold / %(days)s::numeric))" in sql
+    run_out = sql[sql.index("AS days_of_cover"):sql.index("AS run_out_date")]
+    assert "on_order" not in run_out, "on order must not move the date out"
+    assert "COALESCE(d.units_sold, 0) > 0" in run_out, "no rate, no date"
+
+
+def test_the_run_out_date_is_named_on_the_result(defs):
+    import inspect
+    src = inspect.getsource(purchase_plan.get_purchase_plan)
+    assert '"run_out_date"' in src and "run_out_date" in purchase_plan.get_purchase_plan.__doc__

@@ -389,3 +389,109 @@ def test_subject_labels_cover_every_grouping():
     assert _subject_label({"category": "tradsnax"}) == "tradsnax"
     assert _subject_label({"product": "Aji Mix", "sku": "SH1"}) == "Aji Mix (SH1)"
     assert _subject_label({}) == "the total"
+
+
+# ---------------------------------------------------------------------------
+# Two more window rules (2026-09-12): the period so far against the same
+# point last period, and a day against the same weekday last week. Each
+# inherits previous_period and owns only where its windows sit.
+# ---------------------------------------------------------------------------
+
+from datetime import datetime                                # noqa: E402
+
+SAT_AFTERNOON = datetime(2026, 9, 12, 14, 30)   # Saturday, 14:30 Manila
+DAY_OFFSET = int(req(DEFS, "brief.sales_vs_same_weekday.baseline_offset_days"))
+
+
+def _supported():
+    comps = req(DEFS, "comparisons")
+    return {k: v for k, v in comps.items()
+            if k != "not_supported" and isinstance(v, dict) and "applies_to" in v}
+
+
+def test_the_new_modes_inherit_and_own_only_a_window_rule():
+    sup = _supported()
+    for name in ("to_date_same_elapsed", "same_weekday_last_week"):
+        child = sup[name]
+        assert child["inherits"] == "previous_period"
+        assert "window_rule" in child
+        # Nothing the parent defines is typed again on the child.
+        for field in ("row_fields", "baseline_statuses", "rank_by", "valid_group_by",
+                      "change_pct_formula", "incomplete_notice_kind"):
+            assert field not in child, f"{name} restates {field}"
+    assert "to_date_same_elapsed" not in req(DEFS, "comparisons.not_supported")
+    assert "full_period_extrapolation" in req(DEFS, "comparisons.not_supported")
+
+
+def test_the_day_offset_is_a_reference_to_the_briefs_measured_definition():
+    for name, key in (("to_date_same_elapsed", "day_baseline_offset"),
+                      ("same_weekday_last_week", "offset_days")):
+        ref = req(DEFS, f"comparisons.{name}.{key}")
+        assert isinstance(ref, str) and ref.startswith("brief."), f"{name}: a number typed here"
+        assert req(DEFS, ref) == DAY_OFFSET
+
+
+def test_this_week_so_far_is_monday_to_now_against_last_monday_to_the_same_hour():
+    (cs, ce), (bs, be), meta = windows.same_elapsed(DEFS, "this_week", SAT_AFTERNOON, DAY_OFFSET)
+    assert (cs, ce) == (datetime(2026, 9, 7), SAT_AFTERNOON)
+    assert (bs, be) == (datetime(2026, 8, 31), datetime(2026, 9, 5, 14, 30))
+    assert be - bs == ce - cs, "the same elapsed portion"
+    assert meta["of"] == "week" and meta["baseline_clamped"] is False
+    assert meta["elapsed_fraction"] == round((ce - cs) / (datetime(2026, 9, 14) - cs), 3)
+    assert meta["day_baseline_offset_days"] is None
+
+
+def test_today_so_far_is_against_the_same_weekday_last_week_not_yesterday():
+    (cs, ce), (bs, be), meta = windows.same_elapsed(DEFS, "today", SAT_AFTERNOON, DAY_OFFSET)
+    assert (cs, ce) == (datetime(2026, 9, 12), SAT_AFTERNOON)
+    assert (bs, be) == (datetime(2026, 9, 5), datetime(2026, 9, 5, 14, 30))
+    assert meta["day_baseline_offset_days"] == DAY_OFFSET
+
+
+def test_the_end_of_march_against_february_is_clamped_to_the_whole_of_february():
+    now = datetime(2026, 3, 30, 14, 0)
+    (cs, ce), (bs, be), meta = windows.same_elapsed(DEFS, "this_month", now, DAY_OFFSET)
+    assert (cs, ce) == (datetime(2026, 3, 1), now)
+    assert (bs, be) == (datetime(2026, 2, 1), datetime(2026, 3, 1))
+    assert meta["baseline_clamped"] is True
+
+
+def test_a_closed_preset_is_refused_by_name_and_sent_to_previous_period():
+    with pytest.raises(ValueError, match="closed") as e:
+        windows.same_elapsed(DEFS, "last_week", SAT_AFTERNOON, DAY_OFFSET)
+    assert "previous_period" in str(e.value)
+
+
+def test_a_period_that_has_just_begun_is_refused():
+    with pytest.raises(ValueError, match="just begun"):
+        windows.same_elapsed(DEFS, "this_week", datetime(2026, 9, 7, 0, 0), DAY_OFFSET)
+
+
+def test_every_partial_preset_has_a_same_elapsed_reading():
+    for name, p in req(DEFS, "sales_day.presets").items():
+        if p.get("includes_partial_day"):
+            (cs, ce), (bs, be), _ = windows.same_elapsed(DEFS, name, SAT_AFTERNOON, DAY_OFFSET)
+            assert cs < ce and bs < be and be - bs <= ce - cs, name
+
+
+def test_same_weekday_last_week_shifts_the_whole_window_back_by_the_offset():
+    start, end = date(2026, 9, 10), date(2026, 9, 11)     # one Thursday
+    assert windows.shifted_back_by_days(start, end, DAY_OFFSET) == (date(2026, 9, 3), date(2026, 9, 4))
+    assert date(2026, 9, 3).weekday() == start.weekday()
+    with pytest.raises(ValueError, match="half-open"):
+        windows.shifted_back_by_days(end, start, DAY_OFFSET)
+
+
+def test_the_tool_merges_the_parent_under_the_child_and_binds_the_windows():
+    """
+    The ONE place a mode is looked up: nothing after it knows which mode it
+    is reading. Held on the source because the merge decides every field
+    below it.
+    """
+    import inspect
+    from tools import sales
+    src = inspect.getsource(sales.get_sales)
+    assert 'cdef.get("inherits")' in src
+    assert "cdef = {**supported[parent], **cdef}" in src
+    assert "_windows.same_elapsed(" in src and "_windows.shifted_back_by_days(" in src
+    assert "manila_now" in src, "the elapsed rule binds timestamps, not dates"

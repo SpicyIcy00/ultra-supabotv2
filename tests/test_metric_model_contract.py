@@ -279,7 +279,10 @@ def _george_loop():
 def test_the_sales_schema_offers_exactly_the_supported_comparisons():
     schema = next(s for s in _george_loop().build_tool_schemas() if s["name"] == "get_sales")
     prop = schema["input_schema"]["properties"]["compare_to"]
-    assert prop["enum"] == ["previous_period"]
+    offered = sorted(k for k, v in req(DEFS, "comparisons").items()
+                     if isinstance(v, dict) and "get_sales" in (v.get("applies_to") or []))
+    assert prop["enum"] == offered
+    assert set(offered) == {"previous_period", "same_weekday_last_week", "to_date_same_elapsed"}
     assert "compare_to" not in schema["input_schema"]["required"]
     # What was declined is documentation, never a choice offered.
     for declined in req(DEFS, "comparisons.not_supported"):

@@ -201,20 +201,32 @@ export function measureOf(meta: ToolMeta | null | undefined, key: string): strin
  * 12 Sep" over a read that stops at midnight on the 11th is a claim of a day
  * it never read.
  */
+// Day then month, three-letter month, deterministic — not the locale's
+// idea of it, which put the month first and spelt "Sept" elsewhere.
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const dayOf = (d: Date) => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+const timed = (s: string) => /[T ]\d\d:\d\d/.test(s);
+const parseBound = (s: string) => new Date(timed(s) ? s.replace(' ', 'T') : `${s}T00:00:00`);
+
 export function windowLabel(meta: ToolMeta | null | undefined): string | null {
   const w = meta?.window;
   if (!w) return null;
+  // A period so far, bound to the hour: "this week so far, to 12 Sep 14:32".
+  // The end is the read's own bound, never the clock on the screen.
+  if (w.end && timed(String(w.end))) {
+    const end = parseBound(String(w.end));
+    const hhmm = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
+    const name = w.name ? `${String(w.name).replace(/_/g, ' ')} so far` : dayOf(parseBound(String(w.start)));
+    return `${name}, to ${dayOf(end)} ${hhmm}`;
+  }
   if (w.name) return String(w.name).replace(/_/g, ' ');
   if (!w.start) return null;
-  const start = new Date(`${w.start}T00:00:00`);
-  const rawEnd = w.end ? new Date(`${w.end}T00:00:00`) : null;
+  const start = parseBound(String(w.start));
+  const rawEnd = w.end ? parseBound(String(w.end)) : null;
   if (rawEnd && /half-open/.test(String((w as { convention?: string }).convention ?? 'half-open'))) {
     rawEnd.setDate(rawEnd.getDate() - 1);
   }
-  // Day then month, three-letter month, deterministic — not the locale's
-  // idea of it, which put the month first and spelt "Sept" elsewhere.
-  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const day = (d: Date) => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  const day = dayOf;
   const year = (d: Date) => d.getFullYear();
   if (!rawEnd || rawEnd.getTime() <= start.getTime()) return `${day(start)} ${year(start)}`;
   const sameYear = year(start) === year(rawEnd);

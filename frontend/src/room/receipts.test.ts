@@ -33,3 +33,18 @@ describe('the receipts line', () => {
     expect(windowLabel({ window: { kind: 'preset', name: 'last_30_days' } } as unknown as ToolMeta)).toBe('last 30 days');
   });
 });
+
+describe('a window bound to the hour', () => {
+  // The week so far is Monday 00:00 to now, and "now" has an hour. The label
+  // says so, and does not step the end back a day as it does for a date-only
+  // half-open end, because 14:32 is not midnight.
+  it('names the day and the hour the read ran to', () => {
+    const meta = { window: { kind: 'preset', name: 'this_week', start: '2026-09-07 00:00:00',
+                             end: '2026-09-12 14:32:10', convention: 'half-open [start, end), Manila timestamps' } } as unknown as ToolMeta;
+    expect(windowLabel(meta)).toBe('this week so far, to 12 Sep 14:32');
+  });
+  it('still steps a date-only half-open end back to the last day covered', () => {
+    const meta = { window: { kind: 'explicit', start: '2026-09-07', end: '2026-09-12', convention: 'half-open [start, end)' } } as unknown as ToolMeta;
+    expect(windowLabel(meta)).toBe('7 Sep → 11 Sep 2026');
+  });
+});

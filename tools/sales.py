@@ -463,7 +463,16 @@ def get_sales(
                     or units_sold by product; never net_sales or ATP, which
                     are transaction grain). Never by day/week/month. Refused
                     on a window still in progress (this_week, this_month,
-                    today): use the closed preset it names instead. To
+                    today) — for those use 'to_date_same_elapsed': the period
+                    so far against the same elapsed portion of the period
+                    before (Monday to now against last Monday to the same
+                    weekday and hour; today against the same weekday last
+                    week to this hour), with meta.comparison.elapsed saying
+                    how much of the period the figure covers. "How is this
+                    week going?" is this_week + 'to_date_same_elapsed'.
+                    'same_weekday_last_week' is a closed day or explicit
+                    window against the same days a week earlier — the
+                    comparison the morning brief makes, for any day. To
                     explain a change in net_sales, read its drivers —
                     transaction_count and average_transaction_value — with
                     the same date_range, filters and compare_to (metrics.yaml
@@ -517,6 +526,18 @@ def get_sales(
                    if why else "")
             )
         cdef = supported[compare_to]
+        # A mode may INHERIT another: row fields, statuses, arithmetic and
+        # ranking come from the parent and only the window rule is its own
+        # (comparisons.<kind>.inherits). Merged here, once, so nothing
+        # below has to know which mode it is reading.
+        parent = cdef.get("inherits")
+        if parent:
+            if parent not in supported:
+                raise RuntimeError(
+                    f"metrics.yaml comparisons.{compare_to}.inherits names "
+                    f"{parent!r}, which is not a supported comparison."
+                )
+            cdef = {**supported[parent], **cdef}
         if "get_sales" not in _req(cdef, "applies_to"):
             raise ValueError(
                 f"compare_to={compare_to!r} does not apply to get_sales "
@@ -626,28 +647,56 @@ def get_sales(
     baseline_meta: Optional[dict] = None
     base_win: dict[str, Any] = {}
     preset_to_compare: Optional[str] = None
+    # WHICH WINDOW RULE. previous_period shifts back by the window's own
+    # length; same_weekday_last_week shifts back by the days the brief
+    # measured; to_date_same_elapsed reads the period so far against the
+    # same elapsed portion of the period before. Each is a definition
+    # (comparisons.<kind>.window_rule) and the arithmetic is tools/windows.py.
+    window_rule = (cdef or {}).get("window_rule") or "previous_period"
+    elapsed_rule = window_rule == "same_elapsed_portion_of_the_period_before"
+    day_shift_rule = window_rule == "shift_back_by_days"
+    elapsed_meta: Optional[dict] = None
     if cdef is None:
         start_sql, end_sql, win_params, window_meta = _resolve_window(defs, date_range)
     else:
         start_sql, end_sql = _EXPLICIT_START, _EXPLICIT_END
         if isinstance(date_range, str):
             # Refused HERE, before a connection is opened, when the preset is
-            # unknown or still in progress. The dates come once today's Manila
-            # date has been read.
-            _windows.check_preset_comparable(defs, date_range)
+            # unknown, or still in progress for a whole-window rule, or
+            # closed for the elapsed rule. The dates come once today's
+            # Manila date has been read.
+            if elapsed_rule:
+                _windows.check_preset_in_progress(defs, date_range)
+            else:
+                _windows.check_preset_comparable(defs, date_range)
             preset_to_compare = date_range
             win_params = {}
             window_meta = {"kind": "preset", "name": date_range,
-                           "includes_partial_day": False}
+                           "includes_partial_day": elapsed_rule}
         else:
+            if elapsed_rule:
+                raise ValueError(
+                    f"compare_to={compare_to!r} reads a period still in progress "
+                    f"(today, this_week, this_month, this_year); an explicit "
+                    f"window is closed. Use compare_to='previous_period' or "
+                    f"'same_weekday_last_week' on it."
+                )
             _, _, win_params, window_meta = _resolve_window(defs, date_range)
-            b_start, b_end = _windows.previous_period_explicit(
-                win_params["win_start"], win_params["win_end"]
-            )
+            if day_shift_rule:
+                offset = int(_req(defs, _req(cdef, "offset_days")))
+                b_start, b_end = _windows.shifted_back_by_days(
+                    win_params["win_start"], win_params["win_end"], offset
+                )
+            else:
+                b_start, b_end = _windows.previous_period_explicit(
+                    win_params["win_start"], win_params["win_end"]
+                )
             base_win = {"win_start": b_start, "win_end": b_end}
             baseline_meta = {"kind": "explicit", "start": b_start.isoformat(),
                              "end": b_end.isoformat(),
                              "convention": "half-open [start, end)"}
+            if day_shift_rule:
+                baseline_meta["shifted_back_days"] = offset
 
     # ---- shape of the query ---------------------------------------------
     grain = _req(mdef, "grain")
@@ -747,7 +796,8 @@ def get_sales(
         with conn.cursor(row_factory=DICT_ROW) as cur:
             cur.execute(
                 "SELECT now() AS read_at, "
-                "       (now() AT TIME ZONE 'Asia/Manila')::date AS manila_today"
+                "       (now() AT TIME ZONE 'Asia/Manila')::date AS manila_today, "
+                "       (now() AT TIME ZONE 'Asia/Manila')       AS manila_now"
             )
             head = cur.fetchone()
             snapshot_timestamp = head["read_at"]
@@ -772,18 +822,53 @@ def get_sales(
             # A compared preset: both windows from the preset's own calendar
             # definition, anchored on the Manila date this transaction read.
             if preset_to_compare is not None:
-                (c_start, c_end), (b_start, b_end) = _windows.previous_period_preset(
-                    defs, preset_to_compare, head["manila_today"]
-                )
-                window_meta.update(
-                    start=c_start.isoformat(), end=c_end.isoformat(),
-                    convention="half-open [start, end)",
-                    resolved_against=head["manila_today"].isoformat(),
-                )
-                baseline_meta = {"kind": "preset", "name": preset_to_compare,
-                                 "periods_back": 1,
-                                 "start": b_start.isoformat(), "end": b_end.isoformat(),
-                                 "convention": "half-open [start, end)"}
+                if elapsed_rule:
+                    # The period so far, to the minute, against the same
+                    # elapsed portion of the period before. Timestamps, not
+                    # dates: "now" has an hour.
+                    day_offset = int(_req(defs, _req(cdef, "day_baseline_offset")))
+                    (c_start, c_end), (b_start, b_end), elapsed_meta = _windows.same_elapsed(
+                        defs, preset_to_compare, head["manila_now"], day_offset
+                    )
+                    baseline_meta = {"kind": "preset", "name": preset_to_compare,
+                                     "periods_back": 1, "same_elapsed_portion": True,
+                                     "start": b_start.isoformat(sep=" "),
+                                     "end": b_end.isoformat(sep=" "),
+                                     "convention": "half-open [start, end), Manila timestamps"}
+                    if elapsed_meta.get("day_baseline_offset_days"):
+                        baseline_meta["shifted_back_days"] = elapsed_meta["day_baseline_offset_days"]
+                    window_meta.update(
+                        start=c_start.isoformat(sep=" "), end=c_end.isoformat(sep=" "),
+                        convention="half-open [start, end), Manila timestamps",
+                        resolved_against=head["manila_now"].isoformat(sep=" "),
+                    )
+                elif day_shift_rule:
+                    offset = int(_req(defs, _req(cdef, "offset_days")))
+                    c_iso = _windows.resolve_preset(defs, preset_to_compare, head["manila_today"])
+                    c_start, c_end = date.fromisoformat(c_iso[0]), date.fromisoformat(c_iso[1])
+                    b_start, b_end = _windows.shifted_back_by_days(c_start, c_end, offset)
+                    baseline_meta = {"kind": "preset", "name": preset_to_compare,
+                                     "shifted_back_days": offset,
+                                     "start": b_start.isoformat(), "end": b_end.isoformat(),
+                                     "convention": "half-open [start, end)"}
+                    window_meta.update(
+                        start=c_start.isoformat(), end=c_end.isoformat(),
+                        convention="half-open [start, end)",
+                        resolved_against=head["manila_today"].isoformat(),
+                    )
+                else:
+                    (c_start, c_end), (b_start, b_end) = _windows.previous_period_preset(
+                        defs, preset_to_compare, head["manila_today"]
+                    )
+                    baseline_meta = {"kind": "preset", "name": preset_to_compare,
+                                     "periods_back": 1,
+                                     "start": b_start.isoformat(), "end": b_end.isoformat(),
+                                     "convention": "half-open [start, end)"}
+                    window_meta.update(
+                        start=c_start.isoformat(), end=c_end.isoformat(),
+                        convention="half-open [start, end)",
+                        resolved_against=head["manila_today"].isoformat(),
+                    )
                 win_params = {"win_start": c_start, "win_end": c_end}
                 base_win = {"win_start": b_start, "win_end": b_end}
                 params.update(win_params)
@@ -1097,7 +1182,8 @@ def get_sales(
         comparison_meta = {
             "kind": compare_to,
             "display_name": _req(cdef, "display_name"),
-            "method": (_req(cdef, "preset_window") if preset_to_compare
+            "method": (window_rule if window_rule != "previous_period"
+                       else _req(cdef, "preset_window") if preset_to_compare
                        else _req(cdef, "explicit_window")),
             "current": {"start": window_meta["start"], "end": window_meta["end"]},
             "baseline": dict(baseline_meta),
@@ -1128,6 +1214,10 @@ def get_sales(
         }
         if not_ranked_meta is not None:
             comparison_meta["not_ranked"] = not_ranked_meta
+        if elapsed_meta is not None:
+            # How much of the period the figure covers, from the windows the
+            # tool bound — never from the clock on whoever reads it.
+            comparison_meta["elapsed"] = elapsed_meta
 
     # A derived ratio over a window with no qualifying transactions is NULL,
     # and the answer has to say "undefined", not "zero" — the legacy analytics

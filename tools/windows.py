@@ -24,7 +24,7 @@ sales_day.range_convention requires.
 from __future__ import annotations
 
 import calendar
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Any
 
 from ._common import req as _req
@@ -165,6 +165,103 @@ def previous_period_preset(defs: dict, preset: str, anchor: date) -> tuple[tuple
     base_start = shift(cur_start, unit, -length)
     base_end = cur_start
     return (cur_start, cur_end), (base_start, base_end)
+
+
+# ---------------------------------------------------------------------------
+# The same elapsed portion of the period before — comparisons.to_date_same_elapsed
+# ---------------------------------------------------------------------------
+
+def check_preset_in_progress(defs: dict, preset: str) -> None:
+    """
+    Refuse, by name, a preset that is NOT still in progress: a closed window
+    has previous_period, which compares it whole. The mirror of
+    check_preset_comparable, and separate for the same reason — a refusal
+    before any connection is opened.
+    """
+    presets = _req(defs, "sales_day.presets")
+    if preset not in presets:
+        raise ValueError(
+            f"Unknown window {preset!r}. Valid presets: {', '.join(sorted(presets))}."
+        )
+    if not presets[preset].get("includes_partial_day"):
+        open_ones = sorted(n for n, p in presets.items() if p.get("includes_partial_day"))
+        raise ValueError(
+            f"compare_to='to_date_same_elapsed' reads a period still in progress "
+            f"({', '.join(open_ones)}) against the same point in the period "
+            f"before; {preset!r} is closed. Use compare_to='previous_period', "
+            f"which compares it whole. (metrics.yaml: comparisons."
+            f"to_date_same_elapsed.partial_window_policy)"
+        )
+
+
+def same_elapsed(defs: dict, preset: str, manila_now: datetime,
+                 day_offset_days: int) -> tuple[tuple[datetime, datetime],
+                                                tuple[datetime, datetime], dict]:
+    """
+    The period so far, and the same elapsed portion of the period before.
+
+    Current: [period start, now). Baseline: [previous period start, previous
+    period start + elapsed) — last Monday 00:00 to last Saturday 14:32 when
+    it is Saturday 14:32 now — clamped to the end of the previous period when
+    the elapsed portion is longer than the whole of it (the 30th of March
+    against February; comparisons.to_date_same_elapsed.baseline_clamped_to_its_period).
+
+    A DAY's period before is `day_offset_days` back — the same weekday last
+    week, read from brief.sales_vs_same_weekday by the caller — not
+    yesterday. Every other unit shifts back by its own length, exactly as
+    previous_period_preset does.
+
+    Naive Manila timestamps in and out, so they bind through the same
+    `::timestamp AT TIME ZONE 'Asia/Manila'` expression a date does.
+    Returns ((cur_start, cur_end), (base_start, base_end), elapsed_meta).
+    """
+    check_preset_in_progress(defs, preset)
+    spec = _relative(defs, preset)
+    unit, length = spec["unit"], int(spec["length"])
+    today = manila_now.date()
+    cur_start_d = shift(truncate_to(today, unit), unit, int(spec["offset"]))
+    cur_start = datetime.combine(cur_start_d, time.min)
+    # To the second: a bound with microseconds on it is a receipt nobody can
+    # read, and the statement binds exactly what the receipt shows.
+    cur_end = manila_now.replace(tzinfo=None, microsecond=0)
+    elapsed = cur_end - cur_start
+    if elapsed <= timedelta(0):
+        raise ValueError(
+            f"{preset!r} has only just begun — nothing has elapsed to compare. "
+            f"Use compare_to='previous_period' on its closed alternative."
+        )
+    period_end = datetime.combine(shift(cur_start_d, unit, length), time.min)
+    if unit == "day":
+        base_start_d = cur_start_d - timedelta(days=int(day_offset_days))
+        base_period_end = datetime.combine(base_start_d + timedelta(days=length), time.min)
+    else:
+        base_start_d = shift(cur_start_d, unit, -length)
+        base_period_end = cur_start
+    base_start = datetime.combine(base_start_d, time.min)
+    base_end = min(base_start + elapsed, base_period_end)
+    meta = {
+        "of": unit,
+        "elapsed_seconds": int(elapsed.total_seconds()),
+        "elapsed_fraction": round(elapsed / (period_end - cur_start), 3),
+        "baseline_clamped": base_end < base_start + elapsed,
+        "day_baseline_offset_days": int(day_offset_days) if unit == "day" else None,
+    }
+    return (cur_start, cur_end), (base_start, base_end), meta
+
+
+def shifted_back_by_days(start: date, end: date, days: int) -> tuple[date, date]:
+    """
+    The same window `days` earlier — comparisons.same_weekday_last_week with
+    the offset brief.sales_vs_same_weekday measured. 2026-09-10..2026-09-11
+    with 7 -> 2026-09-03..2026-09-04: the same weekday, the same length.
+    """
+    if end <= start:
+        raise ValueError(
+            f"Window end ({end}) must be after start ({start}); ranges are "
+            f"half-open [start, end)."
+        )
+    d = timedelta(days=int(days))
+    return start - d, end - d
 
 
 def as_date(value: Any) -> date:

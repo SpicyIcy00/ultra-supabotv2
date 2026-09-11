@@ -1202,6 +1202,58 @@ comparisons:
       # is refused rather than ranked over a prefix.
       whole_set_required: true
 
+  # ---------------------------------------------------------------------------
+  # TWO MORE MODES, added 2026-09-12 (projection as definition). Each one
+  # INHERITS previous_period — row fields, statuses, the change arithmetic,
+  # the ranking, the grouping it allows — and changes ONLY where the two
+  # windows sit. A comparison mode is a window rule and nothing else; the
+  # tool merges the parent under the child, so a field typed here twice
+  # would be a definition meaning two things.
+  # ---------------------------------------------------------------------------
+  to_date_same_elapsed:
+    display_name: "vs the same point last period"
+    introduced: "2026-09-12"
+    applies_to: [get_sales]
+    inherits: previous_period
+    # THE PACE READ. "How is this week going?" used to be refused: a partial
+    # week against a whole week is a fall by construction. The honest figure
+    # is the same ELAPSED portion of the period before — Monday 00:00 to now
+    # against last Monday 00:00 to the same weekday and hour — so the
+    # comparison is like against like at any hour of the week. Both bounds
+    # are Manila timestamps read in the same transaction, and the elapsed
+    # share of the period goes on the receipt so a reader knows how much of
+    # the week a figure covers.
+    window_rule: same_elapsed_portion_of_the_period_before
+    partial_window_policy: require     # a closed window has previous_period
+    bounds: manila_timestamps
+    # A DAY'S PERIOD BEFORE IS THE SAME WEEKDAY LAST WEEK, not yesterday.
+    # brief.sales_vs_same_weekday measured why: day-over-day swings a median
+    # 21.3%, the same weekday a week earlier 12.5%, and Sunday averages three
+    # times Monday. Read from there, never typed here.
+    day_baseline_offset: brief.sales_vs_same_weekday.baseline_offset_days
+    # When the elapsed portion is longer than the whole of the period before
+    # (the 30th of a 31-day month against a 28-day February), the baseline
+    # is the whole of that period, and meta.comparison.elapsed says so.
+    baseline_clamped_to_its_period: true
+    # A figure for the period so far is not a figure for the whole period.
+    # Extrapolating it is recorded below as not supported.
+    reports: [of, elapsed_fraction, elapsed_seconds, baseline_clamped]
+  same_weekday_last_week:
+    display_name: "vs the same weekday last week"
+    introduced: "2026-09-12"
+    applies_to: [get_sales]
+    inherits: previous_period
+    # THE EXPECTATION READ for a day. What the brief judges every morning —
+    # yesterday against the same weekday a week earlier — promoted to a read
+    # George can make for any closed day or explicit window: the whole window
+    # shifted back by the offset the brief measured. For a seven-day window it
+    # is previous_period by another route; for one day it is the brief's own
+    # comparison WITHOUT the brief's noise floor, because the floor belongs to
+    # the judgement (attention, brief) and not to the figure.
+    window_rule: shift_back_by_days
+    offset_days: brief.sales_vs_same_weekday.baseline_offset_days
+    partial_window_policy: refuse      # to_date_same_elapsed is the partial read
+
   not_supported:
     same_period_last_year:
       supported: false
@@ -1210,9 +1262,15 @@ comparisons:
         August 2025 against 7 in August 2026 — so a company-wide year-over-year
         figure compares different populations unless a same-store rule exists.
         Define that rule first, then add the comparison.
-    to_date_same_elapsed:
+    # to_date_same_elapsed was listed here until 2026-09-12; it is now a mode.
+    full_period_extrapolation:
       supported: false
-      reason: "week-to-date against the same elapsed portion of last week is a separate comparison mode"
+      reason: >
+        "on pace for PHP X this week" divides the figure so far by the share
+        of the period elapsed, which assumes the rest of the week sells like
+        the part that has — a convention nobody chose, and the afternoon does
+        not sell like the morning. to_date_same_elapsed says where the period
+        stands against the same point in the period before, which is a fact.
     per_bucket_lag:
       supported: false
       reason: "each bucket against its predecessor is a lag series; the chart of the series already shows it"
@@ -3397,6 +3455,21 @@ purchasing:
     on_order:
       source: open purchase order lines
       may_already_have_arrived: true
+
+    # WHEN THE SHELF EMPTIES, AS A DATE. Added 2026-09-12. days_of_cover is a
+    # number the reader had to turn into a day; the tool does it once, in
+    # SQL, from the Manila date read in the same transaction. Whole days,
+    # floored: 1.9 days of cover empties tomorrow, not the day after. On
+    # order is NOT added — Open does not mean not received
+    # (purchasing.open_is_not_outstanding), so counting it would move the
+    # date out on goods that may already be on the shelf. No sales in the
+    # window means no rate and no date, never "never".
+    run_out_date:
+      introduced: "2026-09-12"
+      formula: "today + floor(on_hand / units_per_day) days"
+      today: manila_calendar_date_read_in_the_same_transaction
+      counts_on_order: false
+      null_when: no_sales_in_the_window
 
     # Nothing records when goods actually arrived, so a plan cannot add cover
     # for the wait. Stated on every result rather than silently omitted.

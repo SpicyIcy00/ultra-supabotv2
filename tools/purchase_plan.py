@@ -217,6 +217,10 @@ SELECT m.product_id,
        CASE WHEN COALESCE(d.units_sold, 0) > 0
             THEN ROUND(COALESCE(s.on_hand, 0) / (d.units_sold / %(days)s::numeric), 1)
             END                                      AS days_of_cover,
+       CASE WHEN COALESCE(d.units_sold, 0) > 0
+            THEN %(today)s::date
+                 + FLOOR(COALESCE(s.on_hand, 0) / (d.units_sold / %(days)s::numeric))::int
+            END                                      AS run_out_date,
        CASE WHEN %(cover_days)s::numeric IS NULL THEN NULL
             ELSE GREATEST(0, CEIL(
                 (COALESCE(d.units_sold, 0) / %(days)s::numeric) * %(cover_days)s::numeric
@@ -268,6 +272,10 @@ def get_purchase_plan(
 
     Replaces exporting sales from StoreHub and going through them per supplier.
     Produces a draft to read and change — it writes nothing and sends nothing.
+    Every row carries days_of_cover and run_out_date — the day the shelf
+    empties at the measured rate, computed here from today's date, with what
+    is on order NOT counted because it may already have arrived. Null with no
+    sales in the window: no rate, no date.
 
     Args:
         supplier: The supplier's name as it appears on their purchase orders,
@@ -376,8 +384,12 @@ def get_purchase_plan(
             since_sql = (
                 "((now() AT TIME ZONE 'Asia/Manila')::date - %(days)s * INTERVAL '1 day')"
             )
-            cur.execute(f"SELECT {since_sql} AS since", {"days": days})
-            since = cur.fetchone()["since"]
+            cur.execute(
+                f"SELECT {since_sql} AS since, (now() AT TIME ZONE 'Asia/Manila')::date AS today",
+                {"days": days},
+            )
+            _head = cur.fetchone()
+            since, today = _head["since"], _head["today"]
 
             filters.append(
                 f"supplier = {supplier!r} (free text on the purchase order; never normalised)"
@@ -400,6 +412,9 @@ def get_purchase_plan(
                 # The availability window is exactly `days` COMPLETE days and
                 # never includes today, whose snapshot has not been taken.
                 "since_date": (since.date() if hasattr(since, "date") else since),
+                # run_out_date counts forward from the Manila date read in
+                # this transaction (purchasing.plan.run_out_date.today).
+                "today": today,
                 "days": days,
                 "cover_days": cover_days,
                 "open_statuses": ["Open"],
@@ -449,6 +464,8 @@ def get_purchase_plan(
                                       for r in cur.fetchall()}
             for r in rows:
                 r["days_with_nothing"] = starved_by_product.get(r["product_id"], 0)
+                if hasattr(r.get("run_out_date"), "isoformat"):
+                    r["run_out_date"] = r["run_out_date"].isoformat()
 
             # ---------------------------------------------------------------
             # COVERAGE. How much of what this supplier actually supplies could
@@ -640,6 +657,10 @@ def get_purchase_plan(
             "suggested_order_qty":
                 "ceil(units_per_day * cover_days) - on_hand - on_order, floored at zero",
             "on_hand": "negative readings counted as none at that location, never as a deficit",
+            "run_out_date": (
+                f"{_req(_req(plan, 'run_out_date'), 'formula')}; on order not counted "
+                f"(it may already have arrived); null with no sales in the window"
+            ),
             "source": "definitions/metrics.yaml: purchasing.plan",
         },
     }
