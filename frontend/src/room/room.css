@@ -798,3 +798,6 @@ body.r-dragging-on .r-tile { transition: none; }
   background: var(--card); border: 1px solid var(--edge);
 }
 .r-spec-extreme--lo { color: var(--ink-2); }
+
+/* since you last looked — one line, above what lands */
+.r-since { margin: 0 0 14px; color: rgb(var(--george)); }

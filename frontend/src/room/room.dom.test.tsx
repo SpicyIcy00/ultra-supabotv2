@@ -364,3 +364,29 @@ describe('a bar chart names its bars', () => {
     expect(fills[1].style.opacity).toBe('1');
   });
 });
+
+
+describe('what arrived since you last looked comes to the centre', () => {
+  it('lands the objects touched from the first unseen answer on', () => {
+    const objects = [
+      object('table', { key: 'old', touched: 0 }),
+      object('table', { key: 'new', touched: 1 }),
+    ];
+    const { container } = render(
+      <Board answers={[TURN, TURN]} board={objects} local={{}} focused={null}
+             selection={[]} live={false} retuned={{}} on={ACTIONS()} seenUpTo={1} />,
+    );
+    const landing = [...container.querySelectorAll('[data-drag-key]')]
+      .filter((el) => el.querySelector('.r-landing'))
+      .map((el) => (el as HTMLElement).dataset.dragKey);
+    expect(landing).toEqual(['new']);
+  });
+
+  it('lands nothing when everything has been seen', () => {
+    const { container } = render(
+      <Board answers={[TURN]} board={[object('table', { touched: 0 })]} local={{}} focused={null}
+             selection={[]} live={false} retuned={{}} on={ACTIONS()} seenUpTo={1} />,
+    );
+    expect(container.querySelector('.r-landing')).toBeNull();
+  });
+});

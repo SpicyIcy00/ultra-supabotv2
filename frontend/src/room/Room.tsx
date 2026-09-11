@@ -28,6 +28,7 @@ import { useQuery } from '@tanstack/react-query';
 import { listApprovals } from '../services/workflowsApi';
 import { Rail } from './Rail';
 import { dismissStanding, useStandingOpening } from './useStandingOpening';
+import { arrivedSince, firstUnseen, forgetLast, lastSeen, lastThread, remember } from './history';
 import type { TileActions } from './tiles';
 import './room.css';
 
@@ -86,15 +87,51 @@ export default function Room() {
     if (!threadId && george.storedThreadId) navigate(`/w/${george.storedThreadId}`, { replace: true });
   }, [threadId, george.storedThreadId, navigate]);
 
+  const answers = useMemo(
+    () => george.turns.filter((t): t is AnswerTurn => t.role === 'george'),
+    [george.turns],
+  );
+  const board = useMemo(() => buildBoard(answers), [answers]);
+  const busy = george.busy;
+  const latest = answers[answers.length - 1] ?? null;
+
   // THE COLD OPEN. Arriving with nothing in hand, the room opens on the
   // newest answer George gave to a question he was asked to keep asking —
-  // this morning's, normally. Nothing here builds a briefing or knows what
-  // one is; it opens a thread, and the thread contains whatever he decided.
-  // Null is a real answer and stays the empty room.
-  const opening = useStandingOpening(!threadId && !george.storedThreadId && !george.busy);
+  // this morning's, normally — IF IT IS NEWER THAN YOUR LAST LOOK AT IT.
+  // Otherwise it opens where you were: the thread you left is the thread
+  // you return to. Nothing here builds a briefing or knows what one is; it
+  // opens a thread, and the thread contains whatever he decided. Nowhere to
+  // go back to and nothing new is a real answer, and stays the empty room.
+  const nothingInHand = !threadId && !george.storedThreadId && !george.busy;
+  const standing = useStandingOpening(nothingInHand);
   useEffect(() => {
-    if (opening) navigate(`/w/${opening.thread_id}`, { replace: true });
-  }, [opening, navigate]);
+    if (!nothingInHand) return;
+    const found = standing.found;
+    if (found) {
+      const seen = lastSeen(found.thread_id);
+      const fresh = !seen || !found.answered_at
+        || Date.parse(found.answered_at) > Date.parse(seen);
+      if (fresh) { navigate(`/w/${found.thread_id}`, { replace: true }); return; }
+    }
+    if (!standing.settled) return;
+    const back = lastThread();
+    if (back) navigate(`/w/${back}`, { replace: true });
+  }, [nothingInHand, standing.found, standing.settled, navigate]);
+
+  // WHEN YOU LAST LOOKED AT THIS THREAD — read once, as it opens, so that
+  // what arrived since can land with the glow and be counted. Once you ask
+  // something here you are no longer "back": the line and the glow stand
+  // down, and everything is marked seen as it settles.
+  const openedSeen = useMemo(() => lastSeen(threadId), [threadId]);
+  const askedHere = useRef<string | null>(null);
+  useEffect(() => { if (busy && threadId) askedHere.current = threadId; }, [busy, threadId]);
+  const sinceAt = askedHere.current === threadId ? null : openedSeen;
+  const arrived = arrivedSince(answers, sinceAt);
+  useEffect(() => { if (threadId) remember(threadId); }, [threadId]);
+  useEffect(() => {
+    if (!threadId || busy || !answers.length) return;
+    remember(threadId, answers[answers.length - 1].at);
+  }, [threadId, busy, answers]);
 
   // LOOKING INTO SOMETHING GEORGE NOTICED. The watch post carries the read
   // that fired it, so this is an ordinary reply in its thread — George re-runs
@@ -109,13 +146,6 @@ export default function Room() {
     void george.ask(pending);
   }, [pending, threadId, thread.ready, george, navigate, location.pathname]);
 
-  const answers = useMemo(
-    () => george.turns.filter((t): t is AnswerTurn => t.role === 'george'),
-    [george.turns],
-  );
-  const board = useMemo(() => buildBoard(answers), [answers]);
-  const busy = george.busy;
-  const latest = answers[answers.length - 1] ?? null;
 
   const patch = useCallback((key: string, p: Local) => {
     setLocal((s) => {
@@ -270,6 +300,8 @@ export default function Room() {
     // has to outlive the navigate back to "/", or the cold open immediately
     // reopens the thing just closed.
     dismissStanding(threadId);
+    // Leaving on purpose: "/" must not walk straight back in.
+    forgetLast();
     george.reset(); setSelection([]); setFocused(null);
     setRetuned({});
     // WHAT YOU KEPT SURVIVES. Clearing is for the conversation, not for the
@@ -297,6 +329,15 @@ export default function Room() {
         ) : (
           <>
             <Working turn={latest} live={busy} />
+            {/* SINCE YOU LAST LOOKED. A count of answers with a time after
+                the mark this browser kept — derived, never guessed (UI rule
+                8) — and only when there is one. What it counts is what
+                lands with the glow below. */}
+            {arrived > 0 && !busy && (
+              <p className="r-label r-since">
+                since you last looked · {arrived} {arrived === 1 ? 'answer' : 'answers'} arrived
+              </p>
+            )}
             <Board
               answers={answers}
               board={board}
@@ -306,6 +347,7 @@ export default function Room() {
               live={busy}
               retuned={retuned}
               on={on}
+              seenUpTo={firstUnseen(answers, sinceAt)}
             />
           </>
         )}

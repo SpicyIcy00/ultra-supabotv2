@@ -33,6 +33,12 @@ export interface BoardProps {
   /** Reads re-run by a control, by seq. Every object on that read follows. */
   retuned: Record<number, ToolCall>;
   on: TileActions;
+  /**
+   * The index of the first answer the person has not seen (history.ts).
+   * Objects touched from there on arrive with the landing glow, so what
+   * changed since they last looked is what comes to the centre.
+   */
+  seenUpTo?: number;
 }
 
 /** Warnings the loop raises about George's own edits — never a tool's notice. */
@@ -96,7 +102,8 @@ export function Board(p: BoardProps) {
         o={o}
         turn={p.answers[o.turn]}
         local={p.local[o.key] ?? {}}
-        landing={(settling && o.turn === newest) || (p.live && o.touched === newest)}
+        landing={(settling && o.turn === newest) || (p.live && o.touched === newest)
+          || (p.seenUpTo !== undefined && o.touched >= p.seenUpTo)}
         delay={n * 110}
         focused={p.focused === o.key}
         selected={Boolean(o.subject && p.selection.includes(o.subject))}

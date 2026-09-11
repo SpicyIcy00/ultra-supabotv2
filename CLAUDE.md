@@ -1539,6 +1539,30 @@ could be crossed by accident.
   Rockwell's violet tile in slate. A line now also names its high and its
   low — both rows the read returned, so both may be written.
 
+### History as context
+
+*Added 2026-09-12.* The one thing the research added to the plan: a Jarvis
+infers context from **time**, **place** and **history** before it asks. The
+room had the first two — the standing answer opens the morning; opening a
+shop opens its object. This is the third.
+
+- **The room reopens where you were.** "/" with nothing in hand opens this
+  morning's standing answer *if it is newer than your last look at it*, and
+  otherwise the thread you left. Nowhere to go back to and nothing new is a
+  real answer, and stays the empty room. Clearing the board forgets the last
+  thread on purpose — leaving must not walk straight back in.
+- **What arrived since you last looked comes to the centre.** Per thread,
+  the browser keeps the time of the newest answer that was on screen while
+  you were looking. On return, every object touched by a later answer lands
+  with the glow, and one line above the board says how many answers arrived
+  — a count of turns with a time after that mark, never a guess (UI rule 8).
+  Ask anything and you are no longer "back": the line and the glow stand
+  down, and everything is marked seen as it settles.
+- **Per viewer, per browser, never sent** — exactly like an arrangement.
+  When you last looked is a fact about a person's attention and stays on
+  their machine ([history.ts](frontend/src/room/history.ts)). A server-side
+  record of attention is a different thing and was not built.
+
 ### The result vocabulary
 
 *Added 2026-09-07.* George decides WHAT matters; this app decides how what he

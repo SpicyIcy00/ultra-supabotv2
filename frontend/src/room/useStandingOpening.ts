@@ -58,7 +58,11 @@ export function dismissStanding(threadId?: string): void {
  *   run at all then: opening on this morning's answer over the top of what
  *   somebody is doing is the opposite of helpful.
  */
-export function useStandingOpening(when: boolean): StandingLatest | null {
+export function useStandingOpening(when: boolean): {
+  found: StandingLatest | null;
+  /** The lookup has answered, one way or the other — so "none" is a fact. */
+  settled: boolean;
+} {
   const query = useQuery({
     queryKey: ['standing', 'latest'],
     queryFn: latestStanding,
@@ -69,7 +73,8 @@ export function useStandingOpening(when: boolean): StandingLatest | null {
     retry: false,
   });
 
+  const settled = !when || query.isSuccess || query.isError;
   const found = query.data ?? null;
-  if (!when || !found) return null;
-  return dismissed().includes(found.thread_id) ? null : found;
+  if (!when || !found) return { found: null, settled };
+  return { found: dismissed().includes(found.thread_id) ? null : found, settled };
 }
