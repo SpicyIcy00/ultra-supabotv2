@@ -4812,6 +4812,19 @@ voice:
     - "Absolutely"
     - "Let me help you with that"
   caveat_is_never_softened: true
+  # THE BUDGET. Added 2026-09-12, from the voice plan and the research it
+  # rests on: AgentIF's 707 real agent prompts average 1,723 words and 11.9
+  # constraints, and models "generally perform poorly" at that length; the
+  # 37th rule does not add to the first 36, it competes with them. The
+  # prompt was 8,623 words, then 4,137 — twice the target — because the
+  # generated sections were hard to move and the shortfall went unsaid.
+  # Held by tests/test_voice_contract.py so it cannot go unsaid again: what
+  # the prompt teaches past this budget belongs on the tool it describes.
+  budget:
+    max_words: 1800
+    max_numbered_rules: 10
+    # "never", "do not", "don't" — the register is traits, not prohibitions.
+    max_prohibitions: 20
 
 
 # =============================================================================

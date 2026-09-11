@@ -1533,6 +1533,65 @@ packing grid ([RoomShell.tsx](frontend/src/room/RoomShell.tsx)); a run's
 notices are drawn through the room's own caveat, whole, and nothing about
 which notices surface changed.
 
+### How George talks — the prompt is one screen
+
+*Added 2026-09-12, and corrected the same day.* The system prompt is built
+from four things, in this order, and it has a budget the suite enforces.
+
+- **Character, as traits.** WHO YOU ARE: the colleague who has read
+  everything and says the one thing; the same voice for good news and bad;
+  "I can't" (a fact about the system) kept apart from "I wouldn't" (an
+  opinion); acts on nothing alone. Traits generalise to the situation no
+  rule anticipated; a rule covers its own case.
+- **The shape of an answer.** Reading first, caveats as clauses in the same
+  breath, what the figures do not establish, one offer. The morning is one
+  line per thing that changed. Figures are spoken only when no shape on
+  the board holds them.
+- **Nine rules, every one held by code as well.** Numbers from tools,
+  notices surfaced, refusals followed, one grouped read, no arithmetic in
+  prose, a write only when its tool returned, one volunteered fact, no tool
+  vocabulary. Nothing in the rules is a preference.
+- **Mechanics live on the tools, not in the prompt.** Which metric breaks
+  down by which subject is on `get_sales`; how a board is worked — the
+  edits, the weights, one object per read — is on `compose`; the page
+  bounds and the remove wording are on `create_page` and `edit_page`
+  (`agent/loop.py _tool_addenda`, appended to a tool's description by
+  `build_tool_schemas`, generated from the same definitions). The model
+  reads a tool's description at the moment of choosing it, which is where
+  a sentence about a tool belongs. The sections that remain — SCOPE,
+  JUDGMENT, INVESTIGATING, THE SURFACE, THE DESK, THE BOARD — are still
+  built from `metrics.yaml` at import, and each is now a paragraph.
+
+**The budget** (`metrics.yaml voice.budget`, held by
+`tests/test_voice_contract.py`): at most 1,800 words, 10 numbered rules and
+20 prohibitions ("never", "do not", "don't"). The numbers, and why they are
+written down:
+
+| | Words | Numbered rules | Prohibitions |
+|---|---|---|---|
+| Before the voice work | 8,623 | many | 57 "never" alone |
+| First carve, reported as done | 4,233 | 18 | 64 |
+| Second carve, budget met | 1,793 | 9 | 18 |
+| AgentIF average (707 real agent prompts) | 1,723 | 11.9 constraints | |
+
+The research the plan rested on said models already perform poorly at
+AgentIF's length and that the thirty-seventh rule competes with the first
+thirty-six. The first carve moved the easy 4,000 words and left the
+generated sections whole, and the shortfall against the plan's 1,800 went
+unsaid until the owner quoted the research back. The budget test exists so
+that cannot happen silently again: the target is a definition, the suite
+holds it, and anything the prompt would teach past it goes onto the tool it
+describes. The behaviours the old sections taught are held by the same
+contract tests as before, re-anchored to where the words now live.
+
+**What the evals measure** (`tests/evals/test_voice_evals.py`, opt-in, the
+real model on twelve fixed questions; `verification/voice-before.json` is
+the run against the 8,623-word prompt): words per answer, sentences that
+restate a drawn figure, notices surfaced, refusals kept, reading-first, one
+paragraph, at most one offer. The after-run against the 1,793-word prompt
+waits on the model account having credits, and its transcripts are the
+owner's to read before this section claims the voice landed.
+
 ### The board maintains, not accumulates
 
 *Added 2026-09-12.* Measured on George's own record since the 10th: 168 `put`

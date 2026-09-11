@@ -244,9 +244,11 @@ def test_the_prompt_has_an_investigating_section_with_the_five_rungs_in_order():
     p = _prompt()
     assert "\nINVESTIGATING\n" in p
     section = p.split("\nINVESTIGATING\n", 1)[1].split("\nVOICE\n", 1)[0]
-    for rung in ("1. VERIFY", "2. DECOMPOSE", "3. LOCALIZE", "4. EXPLAIN", "5. STOP"):
+    # Unnumbered since 2026-09-12: a numbered rung reads as a rule, and the
+    # prompt's budget (voice.budget) counts rules. The order is what is held.
+    for rung in ("VERIFY", "DECOMPOSE", "LOCALIZE", "EXPLAIN", "STOP"):
         assert rung in section, rung
-    order = [section.index(r) for r in ("1. VERIFY", "2. DECOMPOSE", "3. LOCALIZE", "4. EXPLAIN", "5. STOP")]
+    order = [section.index(r) for r in ("VERIFY the primary fact", "DECOMPOSE —", "LOCALIZE only", "EXPLAIN,", "STOP when")]
     assert order == sorted(order)
 
 
@@ -285,7 +287,7 @@ def test_rule_14_exempts_the_limitation_statement_by_pointing_at_investigating()
     p = _prompt()
     # Found by what it says, not its number: renumbered in the 2026-09-12 rewrite.
     rule = next(line for line in p.splitlines() if "Volunteer at most ONE" in line)
-    assert "NOT a volunteered fact" in rule and "INVESTIGATING, 5" in rule
+    assert "NOT a volunteered fact" in rule and "INVESTIGATING" in rule
 
 
 def test_the_get_sales_description_names_the_drivers_and_the_product_route():

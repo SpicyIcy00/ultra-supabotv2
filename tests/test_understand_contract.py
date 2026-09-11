@@ -257,8 +257,11 @@ def test_the_five_things_that_are_not_questions_are_named(defs):
 # ---------------------------------------------------------------------------
 
 def test_george_is_told_which_metrics_break_down_by_which_subject(defs):
-    prompt = george_loop.SYSTEM_PROMPT
+    # On get_sales since 2026-09-12 (voice.budget): the matrix is read where
+    # the grouping is chosen, not in the prompt.
+    prompt = next(s for s in george_loop.build_tool_schemas() if s["name"] == "get_sales")["description"]
     assert "NOT EVERY METRIC BREAKS DOWN BY EVERY SUBJECT" in prompt
+    assert "NOT EVERY METRIC" not in george_loop.SYSTEM_PROMPT
 
     metrics = req(defs, "metrics")
     line = prompt[prompt.index("NOT EVERY METRIC BREAKS DOWN"):]

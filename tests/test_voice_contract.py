@@ -239,3 +239,26 @@ def test_an_opinion_yields_when_the_user_insists(monkeypatch) -> None:
     assert answer_of(frames)
     # The prior turn is replayable as ordinary history; nothing special-cases it.
     assert george_loop._seed_history(history, {})
+
+
+# ---------------------------------------------------------------------------
+# The budget (2026-09-12): the prompt is one screen, and the suite says so
+# ---------------------------------------------------------------------------
+
+def test_the_prompt_is_within_the_budget_the_definitions_set() -> None:
+    """
+    AgentIF: 707 real agent prompts average 1,723 words and models already
+    perform poorly at that length. The plan set 1,800 and the first carve
+    landed at 4,137 without saying so. This holds the number so it cannot go
+    unsaid again: anything the prompt would teach past it belongs on the
+    tool it describes, where the model reads it at the moment of choosing.
+    """
+    import re
+    budget = req(DEFS, "voice.budget")
+    words = len(SYSTEM_PROMPT.split())
+    rules = len(re.findall(r"^\s*\d+\. ", SYSTEM_PROMPT, re.M))
+    low = SYSTEM_PROMPT.lower()
+    prohibitions = low.count("never") + low.count("do not") + low.count("don't")
+    assert words <= int(budget["max_words"]), f"{words} words; the budget is {budget['max_words']}"
+    assert rules <= int(budget["max_numbered_rules"]), f"{rules} numbered rules"
+    assert prohibitions <= int(budget["max_prohibitions"]), f"{prohibitions} prohibitions"

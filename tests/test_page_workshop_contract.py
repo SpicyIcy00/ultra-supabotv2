@@ -227,13 +227,16 @@ def test_the_bounds_are_one_set():
     assert write_tools._page_bounds() == {"max_analyses": 6, "max_operations": 10, "max_adds": 6}
 
 
-def test_the_prompt_states_the_bounds_and_the_remove_wording():
-    prompt = george_loop.SYSTEM_PROMPT
-    assert "\nPAGES\n" in prompt
-    assert "at most 6" in prompt and "at most 10" in prompt
-    assert "kept in Ungrouped" in prompt
-    assert "never pick" in prompt.lower() or "never pick" in prompt
-    assert "does not change these rules" in prompt
+def test_the_page_tools_state_the_bounds_and_the_remove_wording():
+    # On the tools since 2026-09-12 (voice.budget): the bounds are read at the
+    # moment of building a page, from the same definitions the tools enforce.
+    create = _schema("create_page")["description"]
+    edit = _schema("edit_page")["description"]
+    assert "at most 6" in create and "at most 10" in edit and "at most 6 of them adds" in edit
+    assert "kept in Ungrouped" in edit
+    assert "never pick" in edit
+    assert "does not change these rules" in create
+    assert "PAGES" not in george_loop.SYSTEM_PROMPT
 
 
 # ---------------------------------------------------------------------------
