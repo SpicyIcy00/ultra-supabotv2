@@ -216,6 +216,17 @@ class MemoryReader(Protocol):
     async def __call__(self) -> dict: ...
 
 
+class DecisionsReader(Protocol):
+    """
+    Reads what people did with what George raised — kept, set aside, opened,
+    asked about, left — for the agenda to learn from. Bound in the web process
+    or the standing runner; the model never sees the argument it fills
+    (agent/loop.py INJECTED_READS).
+    """
+
+    async def __call__(self) -> list[dict]: ...
+
+
 class AutomationsReader(Protocol):
     """Reads what the saved rules have been doing. Bound to the caller likewise."""
 
@@ -383,6 +394,10 @@ class WriteContext:
     # is why a briefing composer once got hand-written in Python.
     memory_reader: Optional[MemoryReader] = None
     automations_reader: Optional[AutomationsReader] = None
+    # What people did with what he raised. Not a tool of its own: the loop
+    # hands it to get_attention as a keyword-only argument, so the ranking
+    # can learn from recorded gestures and the model cannot supply any.
+    decisions_reader: Optional[DecisionsReader] = None
     # The questions the caller has asked George to keep asking. A write, bound
     # to the owner here like every other one. Deliberately NOT injected into a
     # scheduled ask (app/services/standing_runner.py): a question that can

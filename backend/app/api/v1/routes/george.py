@@ -70,6 +70,7 @@ from app.services.george_greeting import build_greeting
 from app.services import belief_store as beliefs_service
 from tools import objects as objects_tool
 from app.services import standing_questions
+from app.services import decisions as decisions_service
 from app.services import watch_runner
 from app.services import watches as watches_service
 from app.services.watches import WatchRefused as WatchServiceRefused
@@ -755,6 +756,23 @@ class StandingQuestionOut(BaseModel):
     last_status: Optional[str] = None
 
 
+class DecisionIn(BaseModel):
+    """One gesture on one agenda row — see app/services/decisions.py."""
+    what: str = Field(min_length=1, max_length=500)
+    source: str = Field(default="", max_length=100)
+    subject: str = Field(default="", max_length=300)
+    outcome: str
+    raised_at: Optional[datetime] = None
+    thread_id: Optional[str] = Field(default=None, max_length=100)
+
+
+class DecisionOut(BaseModel):
+    id: str
+    what: str
+    outcome: str
+    decided_at: datetime
+
+
 class StandingLatest(BaseModel):
     """The newest standing answer waiting for this person, if there is one."""
 
@@ -762,6 +780,33 @@ class StandingLatest(BaseModel):
     question: str
     answered_at: Optional[datetime] = None
     standing_question_id: str
+
+
+@router.post("/decisions", response_model=DecisionOut, status_code=status.HTTP_201_CREATED)
+async def record_decision(
+    body: DecisionIn,
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_george_user),
+) -> DecisionOut:
+    """
+    What this person did with something George raised.
+
+    Written by the room's own gestures on an agenda row — keep, set aside,
+    open, ask why, put the morning away — and by nothing else. There is no
+    read here: George reads the log himself when he ranks the morning
+    (an injected reader on get_attention) and says on the row why it is
+    where it is. Shared, like beliefs: the agenda is about the business.
+    """
+    try:
+        row = await decisions_service.record(
+            db, what=body.what, source=body.source, subject=body.subject,
+            outcome=body.outcome, decided_by=user.username,
+            raised_at=body.raised_at, thread_id=body.thread_id,
+        )
+        await db.commit()
+    except decisions_service.DecisionRefused as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+    return DecisionOut(id=row.id, what=row.what, outcome=row.outcome, decided_at=row.decided_at)
 
 
 @router.get("/standing", response_model=List[StandingQuestionOut])
@@ -1749,6 +1794,23 @@ def _memory_reader(username: str):
     return read
 
 
+def _decisions_reader():
+    """
+    What people did with what George raised, for the agenda to learn from.
+
+    Injected like the memory reader — its own session, commits nothing — and
+    bound to nobody, because decisions are shared: the agenda is about the
+    business, and what its people did with it is one record. get_attention
+    receives the rows as a keyword-only argument the model cannot see.
+    """
+
+    async def read() -> list[dict]:
+        async with AsyncSessionLocal() as session:
+            return await decisions_service.recent(session)
+
+    return read
+
+
 def _automations_reader(username: str):
     """
     George's route to reading WHAT THE SAVED RULES HAVE BEEN DOING — what ran
@@ -2232,6 +2294,7 @@ async def _safe_stream(question: str, user_id: Optional[str],
                        page_references: Optional[list[dict]] = None,
                        memory_reader=None,
                        automations_reader=None,
+                       decisions_reader=None,
                        standing_writer=None,
                        watch_writer=None,
                        desk: Optional[dict] = None) -> AsyncIterator[str]:
@@ -2262,6 +2325,7 @@ async def _safe_stream(question: str, user_id: Optional[str],
             page_references=page_references,
             memory_reader=memory_reader,
             automations_reader=automations_reader,
+            decisions_reader=decisions_reader,
             standing_writer=standing_writer,
             watch_writer=watch_writer,
             desk=desk,
@@ -2383,6 +2447,9 @@ async def ask(
             # George's own record.
             memory_reader=_memory_reader(user.username),
             automations_reader=_automations_reader(user.username),
+            # Always: what people did with what he raised, so the agenda can
+            # learn from it. Shared, so bound to nobody.
+            decisions_reader=_decisions_reader(),
             # Always: every signed-in caller may have George keep a question
             # and ask it on a schedule. Bound to them; the tool has no owner
             # argument.

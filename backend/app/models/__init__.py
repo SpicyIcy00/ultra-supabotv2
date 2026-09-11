@@ -38,6 +38,10 @@ from app.models.george_standing import (
     STANDING_KINDS,
     STANDING_STATUSES,
 )
+from app.models.george_decision import (
+    GeorgeDecision,
+    DECISION_OUTCOMES,
+)
 from app.models.george_page import (
     GeorgePage,
     GeorgePageEvent,

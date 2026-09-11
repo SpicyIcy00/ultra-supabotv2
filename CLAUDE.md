@@ -1587,6 +1587,48 @@ is the judgement over it, declared in `metrics.yaml attention`.
 - `morning` is a message kind in `investigation.message_kinds`, so SCOPE
   teaches which read it is: one call, one line per thing that changed.
 
+### The decision log — memory that acts
+
+*Added 2026-09-12.* A shop raised every morning and set aside every morning
+ranked first every morning, and George could never say "raised Tuesday,
+left". `george.decisions` (migration `v6w7x8y9z0a1`,
+[decisions.py](backend/app/services/decisions.py)) is what people DID with
+what he raised, and the agenda reads it.
+
+- **A decision is a recorded gesture, never an inference.** Five outcomes,
+  a closed set held in the yaml, the model and the CHECK together: `kept`,
+  `dismissed` (set aside), `opened`, `asked` (why?), `left` (the morning put
+  away with it still on the board). The room writes them through
+  `POST /george/decisions` from its own gestures on an agenda row
+  ([decisions.ts](frontend/src/room/decisions.ts) decides whether an
+  object IS one, from the read behind it) and for nothing else. A row
+  nobody touched is a row nobody touched; nothing is written for it, and
+  nothing decays.
+- **Shared, like beliefs.** The agenda is about the business, and what its
+  people did with it is one record; `decided_by` is provenance. Nothing is
+  ever updated: kept on Tuesday and set aside on Thursday are two rows and
+  both count.
+- **The read back is injected, and the model never sees the argument.**
+  `george_ro` cannot see the schema, so `get_attention` takes `decisions`
+  keyword-only — absent from the schema by construction — and the loop
+  fills it from a reader bound in the web process or the standing runner
+  (`agent/loop.py INJECTED_READS`). A reader that fails hands the tool
+  `{"error": …}` rather than nothing, so "no log" and "could not read the
+  log" stay distinguishable on the result.
+- **Three rules, each a definition, each written on the row it moved**
+  (`attention.learning`): set aside three or more times in the window
+  ranks below everything not so dismissed, whatever its size; kept, opened
+  or asked about within seven days ranks first within its source, so money
+  still leads; kept is marked on the row. `learning.reason` says why
+  ("ranked lower: set aside 3 times"), every row carries its recent
+  decisions newest first, and a log absent or unreadable leaves the order
+  exactly as before and says so in `meta.learning`.
+- **Proven live** against the dogfood log: three dismissals recorded the
+  way the route records them, read back the way the loop reads them, and
+  the row ranked last of thirteen with its reason. "Raised Tuesday, left"
+  in a live answer waits on the model account having credits — the row
+  carries it; whether George says it is the voice eval's to show.
+
 ### The instruments
 
 *Added 2026-09-12, from the design board.* Five marks joined the grammar —

@@ -28,7 +28,7 @@ measure `metrics.yaml attention` declares.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Optional
 
 from tools._common import load_defs, req
@@ -42,6 +42,16 @@ def _size(row: dict, measure: str) -> float:
         return abs(float(row.get(measure) or 0))
     except (TypeError, ValueError):
         return 0.0
+
+
+def identity(source: str, row: dict) -> str:
+    """
+    What a decision is ABOUT: the source, the subject and (for a shelf) the
+    shop. Stable across mornings — a gesture on Tuesday finds the same thing
+    on Thursday whatever its figures are that day — and written on every row
+    so the room never has to invent one.
+    """
+    return f"{source}|{row.get('subject') or ''}|{row.get('store') or ''}"
 
 
 def rank(rows: list[dict], adefs: dict) -> list[dict]:
@@ -64,6 +74,7 @@ def rank(rows: list[dict], adefs: dict) -> list[dict]:
         for r in picked:
             out.append({
                 "source": source,
+                "identity": identity(source, r),
                 "measure": measure,
                 "size": r.get(measure),
                 # The definition this row was judged against — a reference,
@@ -114,7 +125,110 @@ def senses(brief_meta: dict, adefs: dict) -> list[dict]:
     return out
 
 
-def get_attention(as_of: Optional[date | str] = None) -> dict:
+def _when(value: Any) -> Optional[datetime]:
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    if isinstance(value, str) and value:
+        try:
+            v = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        return v if v.tzinfo else v.replace(tzinfo=timezone.utc)
+    return None
+
+
+def _ago(at: datetime, now: datetime) -> str:
+    days = (now.date() - at.date()).days
+    return "today" if days <= 0 else "yesterday" if days == 1 else f"{days} days ago"
+
+
+def learn(rows: list[dict], decisions: Any, ldefs: dict, order: list[str],
+          now: Optional[datetime] = None) -> tuple[list[dict], dict]:
+    """
+    The ranking, adjusted by what people did with these things before.
+
+    Pure. Three rules, each a definition (metrics.yaml attention.learning.rules)
+    and each written on the row it moved as `learning.reason`:
+      - set aside `times` or more in the window -> below everything not so
+        dismissed, whatever its size;
+      - kept, opened or asked about within `days` days -> first within its
+        source, so the money-first order still holds;
+      - kept, ever in the window -> the row says so (`kept`).
+    Every row carries its recent decisions, newest first, so "raised Tuesday,
+    left" is on the row. Nothing is inferred from silence: a row with no
+    decisions is ranked exactly as before.
+
+    `decisions` is the injected reader's answer: a list, or None when no log
+    was available in this session, or {"error": ...} when reading it failed —
+    both leave the ranking alone and say so in the meta.
+    """
+    if decisions is None:
+        return rows, {"read": False, "why": "no decision log in this session — nothing learned, nothing inferred"}
+    if isinstance(decisions, dict) and decisions.get("error"):
+        return rows, {"read": False, "why": f"the decision log could not be read: {decisions['error']}"}
+    now = now or datetime.now(timezone.utc)
+    rules = req(ldefs, "rules")
+    times = int(req(rules, "dismissed_ranks_last.times"))
+    days = int(req(rules, "attended_ranks_first.days"))
+    on_row = int(req(ldefs, "decisions_on_row"))
+    window = int(req(ldefs, "window_days"))
+    since = now - timedelta(days=window)
+    recent_since = now - timedelta(days=days)
+
+    by_what: dict[str, list[dict]] = {}
+    in_window = 0
+    for d in decisions or []:
+        at = _when(d.get("decided_at"))
+        if at is None or at < since:
+            continue
+        in_window += 1
+        by_what.setdefault(str(d.get("what")), []).append({**d, "_at": at})
+
+    src_idx = {s: i for i, s in enumerate(order)}
+    keyed: list[tuple[tuple, dict]] = []
+    adjusted = 0
+    for r in rows:
+        mine = sorted(by_what.get(r["identity"], []), key=lambda d: d["_at"], reverse=True)
+        r["decisions"] = [
+            {"outcome": d.get("outcome"), "decided_at": d["_at"].isoformat(),
+             "by": d.get("decided_by")} for d in mine[:on_row]
+        ]
+        dismissed = sum(1 for d in mine if d.get("outcome") == "dismissed")
+        attended = [d for d in mine if d.get("outcome") in ("kept", "opened", "asked")
+                    and d["_at"] >= recent_since]
+        kept = any(d.get("outcome") == "kept" for d in mine)
+        r["kept"] = kept
+        tier, first = 0, False
+        learning: Optional[dict] = None
+        if dismissed >= times:
+            tier = 1
+            learning = {"rule": "dismissed_ranks_last",
+                        "effect": str(req(rules, "dismissed_ranks_last.effect")),
+                        "reason": str(req(rules, "dismissed_ranks_last.reason")).format(n=dismissed)}
+        elif attended:
+            first = True
+            d = attended[0]
+            learning = {"rule": "attended_ranks_first",
+                        "effect": str(req(rules, "attended_ranks_first.effect")),
+                        "reason": str(req(rules, "attended_ranks_first.reason")).format(
+                            outcome=d.get("outcome"), ago=_ago(d["_at"], now))}
+        elif kept:
+            learning = {"rule": "kept_is_marked",
+                        "effect": str(req(rules, "kept_is_marked.effect")),
+                        "reason": str(req(rules, "kept_is_marked.reason"))}
+        if learning:
+            r["learning"] = learning
+            adjusted += 1
+        keyed.append(((tier, src_idx.get(r["source"], len(order)), not first), r))
+    # Stable: within (tier, source, first) the size order rank() gave holds.
+    out = [r for _, r in sorted(keyed, key=lambda kr: kr[0])]
+    for n, r in enumerate(out, 1):
+        r["rank"] = n
+    return out, {"read": True, "decisions_read": len(decisions or []), "in_window": in_window,
+                 "window_days": window, "adjusted": adjusted, "rules": list(rules)}
+
+
+def get_attention(as_of: Optional[date | str] = None, *, decisions: Any = None) -> dict:
     """
     What deserves attention today, ranked — and silent when nothing does.
 
@@ -126,7 +240,10 @@ def get_attention(as_of: Optional[date | str] = None) -> dict:
     is whole and carries its own receipts. meta.silent is true when nothing
     crossed: say so in one line and stop. meta.senses lists every source with
     whether it could notice today and why not: name a blind sense rather than
-    letting its silence read as calm.
+    letting its silence read as calm. Each row carries `decisions` — what was
+    done with it before (kept, set aside, opened, asked, left, and when) — and
+    `learning.reason` when that moved it in the ranking; say "raised Tuesday,
+    left" from the row, never from memory.
 
     Args:
         as_of: the Manila calendar day to write the morning for. Defaults to
@@ -147,17 +264,25 @@ def get_attention(as_of: Optional[date | str] = None) -> dict:
 
     rows = rank(list(brief.get("rows") or []), adefs)
     order = list(req(adefs, "order"))
+    # What people did with these things before — kept, set aside, opened,
+    # asked about, left — handed in by the loop, never by the model
+    # (agent/loop.py INJECTED_READS). Adjusts the order by the declared rules
+    # and writes the reason on every row it moved.
+    rows, learning_meta = learn(rows, decisions, req(adefs, "learning"), order)
     meta: dict[str, Any] = {
         "source_table": SOURCE_TABLE,
         "filters_applied": list(bmeta.get("filters_applied") or []) + [
             f"ranked: sources in the order {', '.join(order)}, then by |measure| "
             f"desc, then by subject   # metrics.yaml: attention.order, attention.sources.*.measure",
+            "adjusted by recorded decisions only — kept, set aside, opened, asked, left; "
+            "nothing inferred from silence   # metrics.yaml: attention.learning",
         ],
         "snapshot_timestamp": bmeta.get("snapshot_timestamp"),
         "as_of": bmeta.get("as_of"),
         "silent": len(rows) == 0,
         "ranked_by": order,
         "senses": senses(bmeta, adefs),
+        "learning": learning_meta,
         "sections": bmeta.get("sections"),
         "row_count": len(rows),
         "definitions_version": bmeta.get("definitions_version"),

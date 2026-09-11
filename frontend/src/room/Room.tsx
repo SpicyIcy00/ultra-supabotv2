@@ -16,7 +16,7 @@ import { useGeorge } from '../hooks/useGeorge';
 import { useThread } from '../hooks/useThread';
 import { threadHistory } from '../components/george/threadHistory';
 import { restoreFromPosts } from '../workspace/composition';
-import { boardContext, buildBoard, dropped, inOrder, type Local } from './board';
+import { boardContext, buildBoard, dropped, inOrder, type Local, type BoardObject } from './board';
 import { keepLocal, restoreLocal } from './arrangement';
 import type { AnswerTurn, Dimension } from './data';
 import { Board } from './render';
@@ -28,6 +28,8 @@ import { useQuery } from '@tanstack/react-query';
 import { listApprovals } from '../services/workflowsApi';
 import { Rail } from './Rail';
 import { dismissStanding, useStandingOpening } from './useStandingOpening';
+import { decisionFor, leftBehind } from './decisions';
+import { recordDecision, type Outcome } from '../services/decisionsApi';
 import { arrivedSince, firstUnseen, forgetLast, lastSeen, lastThread, remember } from './history';
 import type { TileActions } from './tiles';
 import './room.css';
@@ -237,15 +239,38 @@ export default function Room() {
     }
   }, [board, answers]);
 
+  // A GESTURE ON AN AGENDA ROW IS A DECISION, and George learns from it: what
+  // you keep, set aside, open, ask about or leave decides where it ranks next
+  // morning (metrics.yaml attention.learning). Recorded once per identity
+  // and outcome for this room, fire-and-forget: a record that fails must
+  // never stop the gesture. Nothing is recorded for any other object.
+  const decided = useRef(new Set<string>());
+  const decide = useCallback((o: BoardObject | undefined, outcome: Outcome) => {
+    if (!o) return;
+    const d = decisionFor(answers, o, outcome, threadId ?? null);
+    if (!d || decided.current.has(`${d.what}|${d.outcome}`)) return;
+    decided.current.add(`${d.what}|${d.outcome}`);
+    void recordDecision(d).catch(() => { /* the gesture stands; the record did not */ });
+  }, [answers, threadId]);
+
   const on: TileActions = useMemo(() => ({
-    open: (key) => setFocused((f) => (f === key ? null : key)),
+    open: (key) => {
+      if (focused !== key) decide(board.find((o) => o.key === key), 'opened');
+      setFocused((f) => (f === key ? null : key));
+    },
     pick: (label, dimension) => setSelection((s) => (
       s.some((x) => x.label === label)
         ? s.filter((x) => x.label !== label)
         : [...s, { label, dimension: dimension ?? 'store' }]
     )),
-    why: (label, dimension) => ask('why?', [{ label, dimension: dimension ?? 'store' }]),
-    aside: (key) => { patch(key, { closed: true }); setFocused((f) => (f === key ? null : f)); },
+    why: (label, dimension) => {
+      decide(board.find((o) => o.subject === label), 'asked');
+      ask('why?', [{ label, dimension: dimension ?? 'store' }]);
+    },
+    aside: (key) => {
+      decide(board.find((o) => o.key === key), 'dismissed');
+      patch(key, { closed: true }); setFocused((f) => (f === key ? null : f));
+    },
     patch,
     retune: (key, argument, value) => { void retune(key, argument, value); },
     // MOVING SOMETHING IS A SWAP WITH ITS NEIGHBOUR, not a free-floating
@@ -294,8 +319,11 @@ export default function Room() {
       });
     },
     resize: (key, to) => patch(key, { size: to ?? undefined }),
-    keep: (key, kept) => patch(key, { kept }),
-  }), [ask, patch, retune, board, local, focused]);
+    keep: (key, kept) => {
+      if (kept) decide(board.find((o) => o.key === key), 'kept');
+      patch(key, { kept });
+    },
+  }), [ask, patch, retune, board, local, focused, decide]);
 
   useEffect(() => { keepLocal(threadId, local); }, [threadId, local]);
 
@@ -305,6 +333,15 @@ export default function Room() {
     // has to outlive the navigate back to "/", or the cold open immediately
     // reopens the thing just closed.
     dismissStanding(threadId);
+    // PUTTING THE MORNING AWAY IS A GESTURE TOO. Every agenda row still on
+    // the board that nobody touched is recorded as left — not dismissed —
+    // so tomorrow George can say "raised Tuesday, left". A row already
+    // decided is not also left.
+    const already = new Set(Array.from(decided.current, (k) => k.split('|').slice(0, -1).join('|')));
+    for (const d of leftBehind(answers, board, already, threadId ?? null)) {
+      decided.current.add(`${d.what}|${d.outcome}`);
+      void recordDecision(d).catch(() => { /* see above */ });
+    }
     // Leaving on purpose: "/" must not walk straight back in.
     forgetLast();
     george.reset(); setSelection([]); setFocused(null);
@@ -316,7 +353,7 @@ export default function Room() {
       Object.entries(s).filter(([, v]) => v.kept)));
     setHistory([]);
     navigate('/');
-  }, [george, navigate, threadId]);
+  }, [george, navigate, threadId, answers, board]);
 
   return (
     <div className="room">

@@ -1218,6 +1218,31 @@ def _notices_from(result: dict) -> list[dict]:
     return [notice]
 
 
+# READS THAT TAKE ONE ARGUMENT THE MODEL NEVER SUPPLIES. tool -> (argument,
+# the WriteContext reader that fills it). The argument is keyword-only on the
+# tool, so build_tool_schemas never shows it; the reader is bound in the web
+# process or the standing runner, so george_ro reads nothing it cannot see.
+# A reader that fails hands the tool {"error": ...} rather than nothing, so
+# "no log" and "could not read the log" stay distinguishable on the result.
+INJECTED_READS: dict[str, tuple[str, str]] = {
+    "get_attention": ("decisions", "decisions_reader"),
+}
+
+
+async def _injected_args(name: str, args: dict, ctx: Optional[WriteContext]) -> dict:
+    spec = INJECTED_READS.get(name)
+    if spec is None or ctx is None:
+        return args
+    argument, reader_name = spec
+    reader = getattr(ctx, reader_name, None)
+    if reader is None:
+        return args
+    try:
+        return {**args, argument: await reader()}
+    except Exception as exc:  # noqa: BLE001 - a log that cannot be read must not fail the read
+        return {**args, argument: {"error": f"{type(exc).__name__}: {exc}"[:300]}}
+
+
 async def _call_tool(name: str, args: dict) -> tuple[dict, Optional[str], int]:
     """
     Run a tool off the event loop. Returns (payload, error_message, duration_ms).
@@ -1949,6 +1974,7 @@ async def run(
     page_reader: Optional[write_tools.PageReader] = None,
     memory_reader: Optional[write_tools.MemoryReader] = None,
     automations_reader: Optional[write_tools.AutomationsReader] = None,
+    decisions_reader: Optional[write_tools.DecisionsReader] = None,
     standing_writer: Optional[write_tools.StandingQuestionWriter] = None,
     watch_writer: Optional[write_tools.WatchWriter] = None,
     page_scope: Optional[dict] = None,
@@ -2052,6 +2078,7 @@ async def run(
         belief_store=belief_store,
         memory_reader=memory_reader,
         automations_reader=automations_reader,
+        decisions_reader=decisions_reader,
         standing_writer=standing_writer,
         watch_writer=watch_writer,
     )
@@ -2656,7 +2683,8 @@ async def run(
             dupes = [(g, b) for g, b in batch if g in duplicate_of]
 
             done_calls = list(zip(reads, await asyncio.gather(*[
-                _call_tool(b.name, dict(b.input)) for _, b in reads
+                _call_tool(b.name, await _injected_args(b.name, dict(b.input), write_ctx))
+                for _, b in reads
             ])))
 
             # The provenance record. A call that refused is deliberately absent:

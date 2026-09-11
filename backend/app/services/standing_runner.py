@@ -123,6 +123,18 @@ def _memory_reader(owner: str):
     return read
 
 
+def _decisions_reader():
+    """What people did with what George raised. Same service function the route binds."""
+    from app.core.database import AsyncSessionLocal
+    from app.services import decisions as decisions_service
+
+    async def read() -> list[dict]:
+        async with AsyncSessionLocal() as session:
+            return await decisions_service.recent(session)
+
+    return read
+
+
 def _automations_reader(owner: str):
     """What the systems have been doing. Same service function the route binds."""
     from app.core.database import AsyncSessionLocal
@@ -222,6 +234,10 @@ async def ask(row: GeorgeStandingQuestion, *, slot: datetime,
             belief_store=_belief_store(row.owner),
             memory_reader=_memory_reader(row.owner),
             automations_reader=_automations_reader(row.owner),
+            # A read, not a write: the morning learns from what was done with
+            # the last one. Nothing here lets a scheduled turn change what
+            # else runs unattended.
+            decisions_reader=_decisions_reader(),
             # Everything else is withheld on purpose — see the module
             # docstring. Absent capability means absent tool, not a refusal.
         ):

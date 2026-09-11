@@ -3825,6 +3825,41 @@ attention:
       why: purchasing.plan
       says: "days of cover is measured per supplier plan, not estate-wide; a supplier's plan is watched as a standing question of its own"
 
+  # ---------------------------------------------------------------------------
+  # LEARNING FROM WHAT YOU DO. Added 2026-09-12. The one place George's
+  # ranking changes because of a person, and every change is a RECORDED
+  # GESTURE — kept, set aside, opened, asked about, or left when the morning
+  # was put away — written to george.decisions by the room and read back
+  # through an injected reader, because george_ro cannot see that schema.
+  # Nothing is inferred from silence: a row nobody touched is a row nobody
+  # touched. Every adjustment is written on the row (`learning.reason`) so a
+  # reader can see why the order is what it is, and the rules are
+  # definitions, so changing what George learns from is one edit here.
+  # ---------------------------------------------------------------------------
+  learning:
+    introduced: "2026-09-12"
+    outcomes: [kept, dismissed, opened, asked, left]
+    only_recorded_gestures: true
+    window_days: 30
+    rules:
+      dismissed_ranks_last:
+        when: "set aside `times` or more times in the window"
+        times: 3
+        effect: below_everything_not_so_dismissed
+        reason: "ranked lower: set aside {n} times"
+      attended_ranks_first:
+        when: "kept, opened or asked about within `days` days"
+        days: 7
+        effect: first_within_its_source
+        reason: "ranked higher: {outcome} {ago}"
+      kept_is_marked:
+        when: "kept, ever in the window"
+        effect: row_carries_kept
+        reason: "kept"
+    # Each row carries its recent decisions, newest first, this many at most —
+    # so "raised Tuesday, left" is read off the row and never remembered.
+    decisions_on_row: 5
+
 
 # =============================================================================
 # NOTICE FINGERPRINTS

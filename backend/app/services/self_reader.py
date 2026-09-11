@@ -25,7 +25,7 @@ from typing import Any, Optional
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services import belief_store
+from app.services import belief_store, decisions
 
 # What he believes is a short list by design — agent/beliefs.py caps what he
 # may form in a turn, and a view he holds about everything is a view about
@@ -50,6 +50,10 @@ async def read_memory(session: AsyncSession, *, username: str) -> dict:
     """
     held = await belief_store.current(session)
     latest_data = await belief_store.latest_data_at(session)
+    # What people did with what he raised, lately. In meta and not in rows:
+    # a decision is not a view, and the agenda's own rows already carry
+    # theirs. Here so "what have I been putting aside" has a read behind it.
+    recent_decisions = await decisions.recent(session, window_days=RUNS_WINDOW_DAYS)
 
     rows: list[dict[str, Any]] = []
     for b in held[:MAX_VIEWS]:
@@ -80,6 +84,11 @@ async def read_memory(session: AsyncSession, *, username: str) -> dict:
             "held": len(held),
             "unconfirmed": sum(1 for r in rows if r["unconfirmed"]),
             "latest_data_at": latest_data,
+            "recent_decisions": [
+                {k: d.get(k) for k in ("what", "subject", "outcome", "decided_at", "decided_by")}
+                for d in recent_decisions[:MAX_RUNS]
+            ],
+            "recent_decisions_window_days": RUNS_WINDOW_DAYS,
             "note": (
                 "These are views, not figures — a stored view never carries a "
                 "number. One marked unconfirmed has not been checked against "
