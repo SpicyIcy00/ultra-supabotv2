@@ -127,6 +127,16 @@ function litness(node: SpecNode, row: Record<string, unknown>): number {
   return hit ? 1 : 0.28;
 }
 
+/** An ISO date as a person says it; anything else unchanged. */
+function niceDate(text: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(text);
+  if (!m) return text;
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const d = new Date(`${m[0]}T00:00:00`);
+  const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+}
+
 function nameOf(node: SpecNode, row: Record<string, unknown>): string {
   const key = node.label ?? node.by;
   return key ? String(row[key] ?? '') : '';
@@ -311,7 +321,7 @@ function Mark(p: SpecProps) {
               <span className="r-num" style={{ '--size': '28px' } as CSSProperties}>
                 {fmt(node.field, mark[node.field])}
               </span>
-              <span className="r-spec-range-when">{nameOf(node, mark)}</span>
+              <span className="r-spec-range-when">{niceDate(nameOf(node, mark))}</span>
             </div>
           )}
           <div className="r-spec-range-track"
@@ -326,6 +336,7 @@ function Mark(p: SpecProps) {
             <span>{fmt(node.field, lo)} · low</span>
             <span>high · {fmt(node.field, hi)}</span>
           </div>
+          <p className="r-spec-how">every row is a dot on the range · the line is the one named</p>
         </div>
       );
     }
@@ -356,6 +367,7 @@ function Mark(p: SpecProps) {
               </span>
             </div>
           ))}
+          <p className="r-spec-how">the track is the whole · the fill is the part</p>
         </div>
       );
     }
@@ -370,6 +382,7 @@ function Mark(p: SpecProps) {
       const n = rows.length;
       const R = 54, r0 = 26;
       return (
+        <div>
         <svg className="r-spec-ring" viewBox="0 0 120 120" role="img"
              aria-label={`${n} rows around a ring`}>
           {rows.map((row, i) => {
@@ -386,6 +399,8 @@ function Mark(p: SpecProps) {
             );
           })}
         </svg>
+        <p className="r-spec-how" style={{ textAlign: 'center' }}>one tick per row · longer is more · dim is none</p>
+        </div>
       );
     }
 
@@ -397,6 +412,7 @@ function Mark(p: SpecProps) {
       const values = rows.map((r) => Math.abs(Number(r[node.field!]) || 0));
       const most = Math.max(...values, 1);
       return (
+        <div>
         <div className="r-spec-dots">
           {rows.map((row, i) => {
             const d = values[i] ? 6 + Math.sqrt(values[i] / most) * 22 : 0;
@@ -409,6 +425,8 @@ function Mark(p: SpecProps) {
               </span>
             );
           })}
+        </div>
+        <p className="r-spec-how">size is how much</p>
         </div>
       );
     }
@@ -440,6 +458,7 @@ function Mark(p: SpecProps) {
               {d.at.getDate()}
             </span>
           ))}
+          <p className="r-spec-how" style={{ gridColumn: '1 / -1' }}>brighter is more · weeks run Monday to Sunday</p>
         </div>
       );
     }

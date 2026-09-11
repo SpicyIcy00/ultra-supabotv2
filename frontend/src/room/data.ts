@@ -195,14 +195,66 @@ export function measureOf(meta: ToolMeta | null | undefined, key: string): strin
   return /^(value|amount|total|n|count)$/.test(key) ? '' : key.replace(/_/g, ' ');
 }
 
+/**
+ * THE WINDOW, FOR A PERSON. A preset by its name; explicit dates as dates —
+ * and the half-open end shown as the last day it covers, because "12 Aug to
+ * 12 Sep" over a read that stops at midnight on the 11th is a claim of a day
+ * it never read.
+ */
+export function windowLabel(meta: ToolMeta | null | undefined): string | null {
+  const w = meta?.window;
+  if (!w) return null;
+  if (w.name) return String(w.name).replace(/_/g, ' ');
+  if (!w.start) return null;
+  const start = new Date(`${w.start}T00:00:00`);
+  const rawEnd = w.end ? new Date(`${w.end}T00:00:00`) : null;
+  if (rawEnd && /half-open/.test(String((w as { convention?: string }).convention ?? 'half-open'))) {
+    rawEnd.setDate(rawEnd.getDate() - 1);
+  }
+  // Day then month, three-letter month, deterministic — not the locale's
+  // idea of it, which put the month first and spelt "Sept" elsewhere.
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const day = (d: Date) => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  const year = (d: Date) => d.getFullYear();
+  if (!rawEnd || rawEnd.getTime() <= start.getTime()) return `${day(start)} ${year(start)}`;
+  const sameYear = year(start) === year(rawEnd);
+  return `${day(start)}${sameYear ? '' : ` ${year(start)}`} → ${day(rawEnd)} ${year(rawEnd)}`;
+}
+
+/** How the rows were grouped, in words. Never the column name. */
+function groupingLabel(meta: ToolMeta | null | undefined): string | null {
+  const raw = (meta as { group_by?: unknown } | null | undefined)?.group_by;
+  const groups = Array.isArray(raw) ? raw.map(String) : typeof raw === 'string' ? [raw] : [];
+  const words: Record<string, string> = {
+    store: 'per shop', product: 'per product', category: 'per category',
+    day: 'by day', week: 'by week', month: 'by month', hour: 'by hour of the day',
+    machine: 'per machine', supplier: 'per supplier', status: 'by status',
+  };
+  const named = groups.map((g) => words[g]).filter(Boolean);
+  return named.length ? named.join(', ') : null;
+}
+
+/**
+ * THE RECEIPTS, AS A LINE A PERSON READS: what was measured, how it was cut,
+ * which days, and when it was read. The table it came from is still the
+ * receipt — it is in the detail behind this line, on hover — but
+ * "new_transactions" at the foot of every tile told the reader where the
+ * figures lived and not what they were.
+ */
 export function receiptsLine(meta: ToolMeta | null | undefined): string {
   if (!meta) return '';
   const when = meta.snapshot_timestamp
-    ? new Date(meta.snapshot_timestamp).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })
+    ? new Date(meta.snapshot_timestamp).toLocaleString('en-PH', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
     : null;
-  const win = meta.window?.name ?? (meta.window?.start ? `${meta.window.start} → ${meta.window.end}` : null);
-  return [meta.source_table, win?.replace(/_/g, ' '), when ? `read ${when}` : null]
+  return [meta.metric_label ?? null, groupingLabel(meta), windowLabel(meta), when ? `read ${when}` : null]
     .filter(Boolean).join(' · ');
+}
+
+/** The rest of the receipt: the source and every filter, for the hover. */
+export function receiptsDetail(meta: ToolMeta | null | undefined): string {
+  if (!meta) return '';
+  const filters = (meta.filters_applied ?? []).map((f) => String(f).split('#')[0].trim()).filter(Boolean);
+  return [meta.source_table ? `from ${meta.source_table}` : null, ...filters].filter(Boolean).join('\n');
 }
 
 export function callOf(turn: AnswerTurn, seq: number | undefined): ToolCall | null {

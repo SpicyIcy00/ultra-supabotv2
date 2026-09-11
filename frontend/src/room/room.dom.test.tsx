@@ -390,3 +390,57 @@ describe('what arrived since you last looked comes to the centre', () => {
     expect(container.querySelector('.r-landing')).toBeNull();
   });
 });
+
+
+describe('a comparison is drawn as an instrument, not only a pill', () => {
+  const COMPARED_TURN = {
+    ...TURN,
+    toolCalls: [{
+      seq: 0, tool: 'get_sales', arguments: { compare_to: 'previous_period' },
+      result: { rows: [
+        { store: 'Rockwell', value: 203717, baseline: 179000, change_pct: 13.8, direction: 'up' },
+        { store: 'OPUS', value: 555147, baseline: 425000, change_pct: 30.6, direction: 'up' },
+      ], meta: { source_table: 'new_transactions', metric_label: 'Net sales', snapshot_timestamp: '2026-09-11T08:00:00Z' } },
+    }],
+  } as unknown as AnswerTurn;
+  const drawWith = (o: BoardObject) => render(
+    <Board answers={[COMPARED_TURN]} board={[o]} local={{}} focused={null}
+           selection={[]} live={false} retuned={{}} on={ACTIONS()} />,
+  );
+
+  it('puts a subject\'s value against its own baseline under the figure', () => {
+    const { container } = drawWith(object('subject', { subject: 'Rockwell' }));
+    expect(container.querySelector('.r-against')).toBeTruthy();
+    expect(container.querySelector('.r-against-band')).toBeNull();
+    expect(container.querySelector('.r-spec-how')?.textContent).toContain('179,000');
+  });
+
+  it('draws the noise floor when the row carries the definition it was judged by', () => {
+    const turn = { ...COMPARED_TURN, toolCalls: [{ ...COMPARED_TURN.toolCalls[0], result: {
+      ...COMPARED_TURN.toolCalls[0].result, rows: [{
+        subject: 'North Edsa', store: 'North Edsa', value: 28073.5, baseline: 13068.97, change_pct: 114.8, direction: 'up',
+        threshold_applied: { pct_threshold: 30, absolute_floor: 5473.26 },
+      }] } }] } as unknown as AnswerTurn;
+    const { container } = render(
+      <Board answers={[turn]} board={[object('hero', { subject: 'North Edsa', weight: 'lead' })]} local={{}}
+             focused={null} selection={[]} live={false} retuned={{}} on={ACTIONS()} />,
+    );
+    expect(container.querySelector('.r-against-band')).toBeTruthy();
+    expect(container.querySelector('.r-spec-how')?.textContent).toContain('noise floor');
+  });
+
+  it('draws a bar chart of compared rows as bullets — the track is the period before', () => {
+    const { container } = drawWith(object('chart', { form: 'bar' }));
+    expect(container.querySelectorAll('.r-spec-bullet')).toHaveLength(2);
+    expect(container.textContent).toContain('425,000');
+    expect(container.querySelector('.r-spec-how')?.textContent).toContain('period before');
+  });
+
+  it('says what and when at the foot, never which table', () => {
+    const { container } = drawWith(object('table'));
+    const src = container.querySelector('.r-src') as HTMLElement;
+    expect(src.textContent).toContain('Net sales');
+    expect(src.textContent).not.toContain('new_transactions');
+    expect(src.title).toContain('new_transactions');
+  });
+});

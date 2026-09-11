@@ -315,6 +315,17 @@ def get_object(kind: str, name: str,
             specs.append(("get_stock", {
                 "store": store, "state": "out_of_stock", "top_n": top_n,
             }, "shelf", says["shelf"]))
+            # THIRTY FULL DAYS, and the hours of the day — the instruments'
+            # reads. No top_n: a series cut to five is not a series. Always
+            # last_30_days, whatever window the object was asked for.
+            specs.append(("get_sales", {
+                "metric": "net_sales", "group_by": "day", "date_range": "last_30_days",
+                "filters": {"store": store},
+            }, "days", says["days"]))
+            specs.append(("get_sales", {
+                "metric": "net_sales", "group_by": "hour", "date_range": "last_30_days",
+                "filters": {"store": store},
+            }, "hours", says["hours"]))
             sections = _run_all(specs)
 
     elif kind == "product":

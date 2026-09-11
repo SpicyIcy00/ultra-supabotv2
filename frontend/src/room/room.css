@@ -801,3 +801,29 @@ body.r-dragging-on .r-tile { transition: none; }
 
 /* since you last looked — one line, above what lands */
 .r-since { margin: 0 0 14px; color: rgb(var(--george)); }
+
+/* ------------------------------------------------------- how to read it
+   One quiet line under an instrument saying what the drawing means — the
+   track, the fill, the mark. Never a figure of George's; the only numbers
+   here are a row's own. The design board carried these and the room did
+   not, and an instrument nobody can read is decoration. */
+.r-spec-how {
+  margin: 8px 0 0; font: 400 10.5px/1.45 var(--sans); color: var(--ink-3);
+}
+.r-spec-dots { margin-bottom: 4px; }
+.r-tile--solid .r-spec-how { color: var(--on-colour-2); }
+
+/* against: one row's value against its own baseline, with the noise floor
+   where the row carries one */
+.r-against { margin-top: 12px; }
+.r-against-track { position: relative; height: 8px; border-radius: 4px; background: var(--track); }
+.r-against-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: rgb(var(--hue)); }
+.r-against-band { position: absolute; top: -4px; bottom: -4px; border-radius: 6px; background: rgba(var(--hue), 0.18); }
+.r-against-base {
+  position: absolute; top: -6px; bottom: -6px; width: 2px; border-radius: 1px;
+  transform: translateX(-50%); background: var(--ink-2);
+}
+.r-tile--solid .r-against-track { background: rgba(0, 0, 0, 0.22); }
+.r-tile--solid .r-against-fill { background: var(--on-colour); }
+.r-tile--solid .r-against-band { background: rgba(255, 253, 249, 0.22); }
+.r-tile--solid .r-against-base { background: var(--on-colour); }

@@ -17,7 +17,7 @@ import type { GeorgeNotice, ToolMeta } from '../types/george';
 import type { BoardObject, Local } from './board';
 import type { ToolCall } from '../types/george';
 import {
-  callOf, changeOf, dimensionOf, fmt, intensity, measureOf, pct, receiptsLine,
+  callOf, changeOf, dimensionOf, fmt, intensity, measureOf, pct, receiptsDetail, receiptsLine,
   rowFor, rowsOf, sorted, splitCaveat, subjectOf, tone, valueOf,
   type AnswerTurn, type Change, type Dimension,
 } from './data';
@@ -155,7 +155,46 @@ function Delta({ change }: { change: Change }) {
 function Receipts({ meta }: { meta: Parameters<typeof receiptsLine>[0] }) {
   const line = receiptsLine(meta);
   if (!line) return null;
-  return <p className="r-src" style={{ marginTop: 12 }}>{line}</p>;
+  // The line says what and when; the source and the filters are one hover
+  // away, on the same element — inspectable, not hidden (UI rule 3).
+  return <p className="r-src" style={{ marginTop: 12 }} title={receiptsDetail(meta)}>{line}</p>;
+}
+
+/**
+ * HOW MUCH OF — a compared row's value against its own baseline, as a bullet.
+ * Both figures are the tool's, on the same row; nothing is divided here.
+ *
+ * And for a row from the brief, which carries the noise floor it was judged
+ * against, the band is drawn too: the one threshold in this system that IS
+ * a definition, so the one word — "above the noise floor" — may be said.
+ */
+export function Against({ row, keyName }: { row: Record<string, unknown>; keyName: string }) {
+  const value = Number(row[keyName]);
+  const baseline = Number(row.baseline);
+  if (!Number.isFinite(value) || !Number.isFinite(baseline) || baseline <= 0) return null;
+  const t = row.threshold_applied as { pct_threshold?: number; absolute_floor?: number } | undefined;
+  const band = t ? Math.max(baseline * (Number(t.pct_threshold) || 0) / 100, Number(t.absolute_floor) || 0) : 0;
+  const top = Math.max(value, baseline + band) * 1.08 || 1;
+  const x = (n: number) => `${Math.min(100, Math.max(0, (n / top) * 100)).toFixed(1)}%`;
+  return (
+    <div className="r-against" role="img"
+         aria-label={`${fmt(keyName, value)} against ${fmt(keyName, baseline)} before`}>
+      <div className="r-against-track">
+        {band > 0 && (
+          <i className="r-against-band"
+             style={{ left: x(Math.max(0, baseline - band)),
+                      width: `calc(${x(baseline + band)} - ${x(Math.max(0, baseline - band))})` }} />
+        )}
+        <i className="r-against-fill" style={{ width: x(value) }} />
+        <b className="r-against-base" style={{ left: x(baseline) }} />
+      </div>
+      <p className="r-spec-how">
+        {t
+          ? `the mark is the same weekday before, ${fmt(keyName, baseline)} · the band is the noise floor, ${t.pct_threshold}% or ${fmt(keyName, t.absolute_floor)}`
+          : `the mark is the period before, ${fmt(keyName, baseline)}`}
+      </p>
+    </div>
+  );
 }
 
 /**
@@ -357,6 +396,7 @@ export function SubjectTile(p: TileProps & { size?: 'lead' | 'normal' | 'small' 
         <Delta change={change} />
       </div>
       {v && <p className="r-label" style={{ marginTop: 9 }}>{measureOf(call?.result?.meta, v.key)}</p>}
+      {v && <Against row={row} keyName={v.key} />}
       <Receipts meta={call?.result?.meta} />
     </Shell>
     {/* OPENED — BELOW THE TILE, NOT INSIDE IT. Focusing a subject no longer
@@ -366,7 +406,8 @@ export function SubjectTile(p: TileProps & { size?: 'lead' | 'normal' | 'small' 
         was cut off mid-table; and a lit tile is a solid colour, so body text
         and receipts inside it fought the fill. On the ground it reads. */}
     {p.focused && label && kindOf(dimension) && (
-      <div onClick={(e) => e.stopPropagation()}>
+      <div onClick={(e) => e.stopPropagation()}
+           style={{ '--hue': hueFor(label, dimension, p.o.kind) } as CSSProperties}>
         <ObjectPanel kind={kindOf(dimension) as string} name={label} />
       </div>
     )}
@@ -411,6 +452,7 @@ export function ComparisonTile(p: TileProps) {
                 </span>
               </div>
               <div style={{ marginTop: 9 }}><Delta change={change} /></div>
+              {row && v && <Against row={row} keyName={v.key} />}
             </Shell>
           );
         })}
@@ -616,6 +658,12 @@ export function ChartTile(p: TileProps) {
    */
   if (p.o.form === 'bar') {
     const key = valueOf(rows[0])?.key ?? 'value';
+    // COMPARED ROWS ARE BULLETS. When every row carries the tool's baseline,
+    // a plain bar throws that figure away; the track is the period before
+    // and the fill is now — how much of, not just how much.
+    const compared = rows.every((r) => Number.isFinite(Number(r.baseline)) && Number(r.baseline) > 0);
+    const wholes = compared ? rows.map((r) => Number(r.baseline)) : values;
+    const most = Math.max(1, ...values, ...wholes);
     return (
       <Shell quiet hue={hue} landing={p.landing} delay={p.delay}>
         <p className="r-label">{label}{p.earlier ? ' · from earlier' : ''}</p>
@@ -626,18 +674,32 @@ export function ChartTile(p: TileProps) {
             const own = hueFor(name, dim, 'subject');
             const lit = isLit(p.o, row);
             return (
-              <div key={n} className="r-spec-bar">
+              <div key={n} className={`r-spec-bar ${compared ? 'r-spec-bullet' : ''}`}>
                 <span className="r-spec-bar-name">{name}</span>
-                <span className="r-spec-bar-track">
-                  <i style={{ width: `${(values[n] / max) * 100}%`,
-                              background: `rgb(${own === NEUTRAL_RGB ? hue : own})`,
-                              opacity: lit ? 1 : 0.28 }} />
+                {compared ? (
+                  <span className="r-spec-bullet-area">
+                    <span className="r-spec-bullet-whole" style={{ width: `${(wholes[n] / most) * 100}%` }}>
+                      <i style={{ width: `${Math.min(values[n] / (wholes[n] || 1), 1) * 100}%`,
+                                  background: `rgb(${own === NEUTRAL_RGB ? hue : own})`,
+                                  opacity: lit ? 1 : 0.28 }} />
+                    </span>
+                  </span>
+                ) : (
+                  <span className="r-spec-bar-track">
+                    <i style={{ width: `${(values[n] / most) * 100}%`,
+                                background: `rgb(${own === NEUTRAL_RGB ? hue : own})`,
+                                opacity: lit ? 1 : 0.28 }} />
+                  </span>
+                )}
+                <span className="r-spec-bar-figure">
+                  {fmt(key, row[key])}
+                  {compared && <small> / {fmt(key, row.baseline)}</small>}
                 </span>
-                <span className="r-spec-bar-figure">{fmt(key, row[key])}</span>
               </div>
             );
           })}
         </div>
+        {compared && <p className="r-spec-how">the track is the period before · the fill is this one</p>}
         <Receipts meta={call?.result?.meta} />
       </Shell>
     );

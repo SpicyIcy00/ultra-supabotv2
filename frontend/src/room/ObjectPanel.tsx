@@ -22,8 +22,10 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { openObject, type ObjectSection, type ObjectView } from '../services/objectApi';
-import type { Dimension } from './data';
-import { fmt } from './data';
+import type { AnswerTurn, Dimension } from './data';
+import { fmt, receiptsDetail, receiptsLine } from './data';
+import type { ToolMeta } from '../types/george';
+import { Spec } from './Spec';
 
 /** Which object kind a board subject is. Only these can be opened. */
 export function kindOf(dimension: Dimension | null | undefined): string | null {
@@ -95,11 +97,45 @@ function group(sections: ObjectSection[]): [string, ObjectSection[]][] {
   return out;
 }
 
+/**
+ * THE SECTIONS THAT ARE INSTRUMENTS. A shop's thirty days are a range and a
+ * calendar, its hours are dots — the same marks George composes with, drawn
+ * over the section's own rows, so opening a shop looks like the board and
+ * not like a report about it. Every other section is rows.
+ */
+const INSTRUMENTED = new Set(['days', 'hours']);
+
+function Instrument({ section }: { section: ObjectSection }) {
+  const turn = {
+    toolCalls: [{
+      seq: 0, tool: section.call?.tool, arguments: section.call?.arguments ?? {},
+      result: { rows: section.rows, meta: section.meta ?? {} },
+    }],
+  } as unknown as AnswerTurn;
+  if (section.section === 'days') {
+    return (
+      <>
+        <Spec node={{ mark: 'range', seq: 0, field: 'value', by: 'day' }} turn={turn} retuned={{}} />
+        <div style={{ marginTop: 16 }}>
+          <Spec node={{ mark: 'calendar', seq: 0, field: 'value', by: 'day' }} turn={turn} retuned={{}} />
+        </div>
+      </>
+    );
+  }
+  if (section.section === 'hours') {
+    return <Spec node={{ mark: 'dots', seq: 0, field: 'value', by: 'hour' }} turn={turn} retuned={{}} />;
+  }
+  return <Rows rows={section.rows} />;
+}
+
 function Section({ section }: { section: ObjectSection }) {
-  const receipts = section.meta?.snapshot_timestamp as string | undefined;
+  const meta = (section.meta ?? null) as ToolMeta | null;
+  const receipts = receiptsLine(meta);
   return (
     <div style={{ marginTop: 10 }}>
-      {section.state === 'available' && <Rows rows={section.rows} />}
+      {section.state === 'available' && (
+        INSTRUMENTED.has(section.section) ? <Instrument section={section} /> : <Rows rows={section.rows} />
+      )}
       {/* Each of the three non-available states says a different thing, and
           none of them is "nothing here". */}
       {section.state === 'empty' && (
@@ -116,9 +152,7 @@ function Section({ section }: { section: ObjectSection }) {
         <p className="r-note" style={{ marginTop: 6 }}>{section.reason}</p>
       )}
       {receipts && (
-        <p className="r-label" style={{ marginTop: 6, opacity: 0.75 }}>
-          {String(section.meta?.source_table ?? '')} · read {new Date(receipts).toLocaleString()}
-        </p>
+        <p className="r-src" style={{ marginTop: 8 }} title={receiptsDetail(meta)}>{receipts}</p>
       )}
     </div>
   );

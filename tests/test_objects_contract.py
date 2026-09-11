@@ -370,3 +370,17 @@ def test_an_object_read_cannot_back_a_tile():
         assert "compose over that" in str(refused)
     else:  # pragma: no cover
         raise AssertionError("an object read was accepted as a tile's backing")
+
+
+def test_a_shop_has_its_days_and_its_hours():
+    """
+    The instruments' sections, added 2026-09-12. A shop's thirty days are a
+    range and a calendar, its hours are dots — and a series cut to five is
+    not a series, so neither takes top_n.
+    """
+    from tools._common import load_defs, req
+    sections = req(load_defs(), "objects.kinds.shop.sections")
+    assert "days" in sections and "hours" in sections
+    assert sections["days"]["reads"] == "get_sales"
+    assert sections["hours"]["reads"] == "get_sales"
+    assert len(sections) <= int(req(load_defs(), "objects.max_sections"))
