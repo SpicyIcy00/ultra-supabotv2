@@ -411,7 +411,8 @@ export interface SpecNode {
   gap?: 'tight' | 'normal' | 'loose';
   heading?: { seq: number; field: string };
 
-  mark?: 'value' | 'delta' | 'bar' | 'line' | 'point' | 'cell' | 'rows' | 'label' | 'prose';
+  mark?: 'value' | 'delta' | 'bar' | 'line' | 'point' | 'cell' | 'rows' | 'label' | 'prose'
+    | 'range' | 'bullet' | 'ring' | 'dots' | 'calendar';
   seq?: number;
   tool?: string;
   /**
@@ -430,6 +431,8 @@ export interface SpecNode {
   note?: string;
   order?: string;
   label?: string;
+  /** The whole a bullet's field is part of — a column of the same row. */
+  against?: string;
   limit?: number;
   weight?: 'lead' | 'supporting' | 'quiet';
 }

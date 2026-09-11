@@ -97,6 +97,17 @@ function hueOf(node: SpecNode, row: Record<string, unknown>): string {
 }
 
 /**
+ * What a mark is PAINTED with: the row's own hue when `colour` names a
+ * column, otherwise the tile's — the object's identity, inherited as a CSS
+ * variable. Until this existed a mark with no colour channel drew in the
+ * neutral grey, so a chart of Rockwell sat on Rockwell's violet tile in
+ * slate. Returns an `r, g, b` triple or a var(), both valid inside rgb()/rgba().
+ */
+function paint(node: SpecNode, row: Record<string, unknown>): string {
+  return node.colour ? hueOf(node, row) : 'var(--hue)';
+}
+
+/**
  * WHETHER THIS ROW IS THE ONE.
  *
  * `emphasise` names a row that stays lit while the others cool — the same
@@ -173,7 +184,7 @@ function Mark(p: SpecProps) {
               <span className="r-spec-bar-name">{nameOf(node, row)}</span>
               <span className="r-spec-bar-track">
                 <i style={{ width: `${(values[n] / most) * 100}%`,
-                            background: `rgb(${hueOf(node, row)})`,
+                            background: `rgb(${paint(node, row)})`,
                             opacity: litness(node, row) }} />
               </span>
               <span className="r-spec-bar-figure">{fmt(node.field!, row[node.field!])}</span>
@@ -195,6 +206,8 @@ function Mark(p: SpecProps) {
       const high = Math.max(...values);
       const span = high - low || 1;
       const at = (v: number) => 8 + ((v - low) / span) * 84;
+      const iHi = values.indexOf(high);
+      const iLo = values.indexOf(low);
       return (
         <div className={node.mark === 'line' ? 'r-spec-line' : 'r-spec-points'}>
           {node.mark === 'line' && (
@@ -202,7 +215,7 @@ function Mark(p: SpecProps) {
               <polyline
                 points={rows.map((_, n) =>
                   `${(n / Math.max(rows.length - 1, 1)) * 100},${100 - at(values[n])}`).join(' ')}
-                fill="none" stroke={`rgb(${hueOf(node, rows[0])})`} strokeWidth="1.5"
+                fill="none" stroke={`rgb(${paint(node, rows[0])})`} strokeWidth="1.5"
                 vectorEffect="non-scaling-stroke"
               />
             </svg>
@@ -210,9 +223,18 @@ function Mark(p: SpecProps) {
           <div className="r-spec-axis">
             {rows.map((row, n) => (
               <span key={n} className="r-spec-point" title={nameOf(node, row)}>
-                <i style={{ background: `rgb(${hueOf(node, row)})`,
+                <i style={{ background: `rgb(${paint(node, row)})`,
                             bottom: `${at(values[n])}%`,
                             opacity: litness(node, row) }} />
+                {/* A LINE NAMES ITS HIGH AND ITS LOW. Both are rows the read
+                    returned, so both may be written; and a series whose
+                    extremes are named is one you can read without a table. */}
+                {node.mark === 'line' && rows.length > 2 && (n === iHi || n === iLo) && (
+                  <b className={`r-spec-extreme ${n === iHi ? 'r-spec-extreme--hi' : 'r-spec-extreme--lo'}`}
+                     style={{ bottom: `calc(${at(values[n])}% ${n === iHi ? '+' : '-'} 14px)` }}>
+                    {fmt(node.field!, row[node.field!])}
+                  </b>
+                )}
                 <em>{nameOf(node, row)}</em>
               </span>
             ))}
@@ -229,7 +251,7 @@ function Mark(p: SpecProps) {
         <div className="r-spec-cells">
           {rows.map((row, n) => (
             <span key={n} className="r-spec-cell"
-                  style={{ background: `rgba(${hueOf(node, row)}, ${(0.12 + (Math.abs(values[n]) / high) * 0.7) * litness(node, row)})` }}>
+                  style={{ background: `rgba(${paint(node, row)}, ${(0.12 + (Math.abs(values[n]) / high) * 0.7) * litness(node, row)})` }}>
               <em>{nameOf(node, row)}</em>
               <b>{fmt(node.field!, row[node.field!])}</b>
             </span>
@@ -261,6 +283,163 @@ function Mark(p: SpecProps) {
               ))}
             </tbody>
           </table>
+        </div>
+      );
+    }
+
+    /* ---- the instruments: a second reading of the figure, never a word on it */
+
+    case 'range': {
+      // ONE ROW ON THE RANGE OF ALL THE ROWS. Every row is a dot on a track
+      // from the lowest to the highest; the emphasised row — or the last, in
+      // `by` order — is the marker, and carries its figure. Where, never
+      // good or bad: the ends are the read's own extremes.
+      if (!node.field || !rows.length) return null;
+      const values = rows.map((r) => Number(r[node.field!]) || 0);
+      const lo = Math.min(...values);
+      const hi = Math.max(...values);
+      const span = hi - lo || 1;
+      const x = (v: number) => 3 + ((v - lo) / span) * 94;
+      const iMark = node.emphasise
+        ? rows.findIndex((r) => litness(node, r) === 1)
+        : rows.length - 1;
+      const mark = rows[iMark];
+      return (
+        <div className="r-spec-range">
+          {mark && (
+            <div className="r-spec-range-head">
+              <span className="r-num" style={{ '--size': '28px' } as CSSProperties}>
+                {fmt(node.field, mark[node.field])}
+              </span>
+              <span className="r-spec-range-when">{nameOf(node, mark)}</span>
+            </div>
+          )}
+          <div className="r-spec-range-track"
+               style={node.colour && mark ? { '--hue': hueOf(node, mark) } as CSSProperties : undefined}>
+            {rows.map((row, n) => (
+              <i key={n} className="r-spec-range-dot" style={{ left: `${x(values[n]).toFixed(1)}%` }}
+                 title={`${nameOf(node, row)} · ${fmt(node.field!, row[node.field!])}`} />
+            ))}
+            {mark && <b className="r-spec-range-mark" style={{ left: `${x(values[iMark]).toFixed(1)}%` }} />}
+          </div>
+          <div className="r-spec-range-ends">
+            <span>{fmt(node.field, lo)} · low</span>
+            <span>high · {fmt(node.field, hi)}</span>
+          </div>
+        </div>
+      );
+    }
+
+    case 'bullet': {
+      // PART OF A WHOLE, ONE PER ROW. The field fills a track whose length is
+      // `against` — both columns of the same row. Nothing is divided here
+      // that the tool did not put side by side.
+      if (!node.field || !node.against || !rows.length) return null;
+      const fills = rows.map((r) => Math.abs(Number(r[node.field!]) || 0));
+      const wholes = rows.map((r) => Math.abs(Number(r[node.against!]) || 0));
+      const most = Math.max(...wholes, ...fills, 1);
+      return (
+        <div className="r-spec-bars">
+          {rows.map((row, n) => (
+            <div key={n} className="r-spec-bar r-spec-bullet">
+              <span className="r-spec-bar-name">{nameOf(node, row)}</span>
+              <span className="r-spec-bullet-area">
+                <span className="r-spec-bullet-whole" style={{ width: `${(wholes[n] / most) * 100}%` }}>
+                  <i style={{ width: `${Math.min(fills[n] / (wholes[n] || 1), 1) * 100}%`,
+                              background: `rgb(${paint(node, row)})`,
+                              opacity: litness(node, row) }} />
+                </span>
+              </span>
+              <span className="r-spec-bar-figure">
+                {fmt(node.field!, row[node.field!])}
+                <small> / {fmt(node.against!, row[node.against!])}</small>
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    case 'ring': {
+      // ONE TICK PER ROW AROUND A CIRCLE, its length the field. A set of
+      // things read as a pattern: many short ticks IS the finding. Zero is
+      // short and dim, not red — zero is a fact, red would be a judgement.
+      if (!node.field || !rows.length) return null;
+      const values = rows.map((r) => Math.abs(Number(r[node.field!]) || 0));
+      const most = Math.max(...values, 1);
+      const n = rows.length;
+      const R = 54, r0 = 26;
+      return (
+        <svg className="r-spec-ring" viewBox="0 0 120 120" role="img"
+             aria-label={`${n} rows around a ring`}>
+          {rows.map((row, i) => {
+            const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+            const len = values[i] === 0 ? 4 : 6 + (values[i] / most) * (R - r0 - 6);
+            const x1 = 60 + Math.cos(a) * r0, y1 = 60 + Math.sin(a) * r0;
+            const x2 = 60 + Math.cos(a) * (r0 + len), y2 = 60 + Math.sin(a) * (r0 + len);
+            return (
+              <line key={i} x1={x1.toFixed(1)} y1={y1.toFixed(1)} x2={x2.toFixed(1)} y2={y2.toFixed(1)}
+                    stroke={`rgb(${paint(node, row)})`} strokeWidth={n > 60 ? 2 : 3} strokeLinecap="round"
+                    opacity={(values[i] === 0 ? 0.35 : 0.95) * litness(node, row)}>
+                <title>{nameOf(node, row)} · {fmt(node.field!, row[node.field!])}</title>
+              </line>
+            );
+          })}
+        </svg>
+      );
+    }
+
+    case 'dots': {
+      // WHEN, AND HOW MUCH. One dot per row along `by`, its size the field.
+      // Sales by hour of the day: the afternoon is visibly heavier than the
+      // morning without a single figure being read.
+      if (!node.field || !node.by || !rows.length) return null;
+      const values = rows.map((r) => Math.abs(Number(r[node.field!]) || 0));
+      const most = Math.max(...values, 1);
+      return (
+        <div className="r-spec-dots">
+          {rows.map((row, i) => {
+            const d = values[i] ? 6 + Math.sqrt(values[i] / most) * 22 : 0;
+            return (
+              <span key={i} className="r-spec-dot"
+                    title={`${nameOf(node, row)} · ${fmt(node.field!, row[node.field!])}`}>
+                <i style={{ width: d, height: d, background: `rgb(${paint(node, row)})`,
+                            opacity: (0.35 + 0.65 * (values[i] / most)) * litness(node, row) }} />
+                <em>{nameOf(node, row)}</em>
+              </span>
+            );
+          })}
+        </div>
+      );
+    }
+
+    case 'calendar': {
+      // THE ROWS AS WEEKS. Monday to Sunday across, one cell per day, its
+      // brightness the field. The rhythm of a shop — which weekday carries it
+      // — with no day lit for beating another, because that comparison is
+      // not one the tools make.
+      if (!node.field || !node.by || !rows.length) return null;
+      const dated = rows
+        .map((row) => ({ row, at: new Date(`${String(row[node.by!]).slice(0, 10)}T00:00:00`),
+                         v: Math.abs(Number(row[node.field!]) || 0) }))
+        .filter((d) => Number.isFinite(d.at.getTime()))
+        .sort((a, b) => a.at.getTime() - b.at.getTime());
+      if (!dated.length) return null;
+      const most = Math.max(...dated.map((d) => d.v), 1);
+      const lead = (dated[0].at.getDay() + 6) % 7;
+      return (
+        <div className="r-spec-cal">
+          {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((w, i) => (
+            <span key={`w${i}`} className="r-spec-cal-wd">{w}</span>
+          ))}
+          {Array.from({ length: lead }, (_, i) => <span key={`pad${i}`} />)}
+          {dated.map((d, i) => (
+            <span key={i} className="r-spec-cal-day"
+                  title={`${fmt(node.by!, d.row[node.by!])} · ${fmt(node.field!, d.row[node.field!])}`}
+                  style={{ background: `rgba(${paint(node, d.row)}, ${((0.08 + (d.v / most) * 0.85) * litness(node, d.row)).toFixed(3)})` }}>
+              {d.at.getDate()}
+            </span>
+          ))}
         </div>
       );
     }

@@ -724,3 +724,64 @@ body.r-dragging-on .r-tile { transition: none; }
 }
 .r-field:focus { border-color: var(--ink-3); }
 .r-field::placeholder { color: var(--ink-3); }
+
+/* ----------------------------------------------------------- instruments
+   Five marks that are a second reading of a figure — where, how much of,
+   how each stands, when, the rhythm. Every colour is the tile's own hue or
+   a row's; every extent is a row's value. See Spec.tsx. */
+
+/* range: a track from low to high, every row a dot, the marker a line */
+.r-spec-range { width: 100%; }
+.r-spec-range-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+.r-spec-range-when { font: 500 10px/1.2 var(--sans); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.r-spec-range-track {
+  position: relative; height: 10px; border-radius: 5px; margin: 14px 0 8px;
+  background: linear-gradient(90deg, rgba(var(--hue), 0.14), rgba(var(--hue), 0.85));
+}
+.r-spec-range-dot {
+  position: absolute; top: 50%; width: 5px; height: 5px; border-radius: 50%;
+  transform: translate(-50%, -50%); background: rgb(var(--hue)); opacity: 0.45;
+}
+.r-spec-range-mark {
+  position: absolute; top: -8px; bottom: -8px; width: 2px; border-radius: 1px;
+  transform: translateX(-50%); background: var(--ink);
+  box-shadow: 0 0 0 2px var(--card);
+}
+.r-spec-range-ends { display: flex; justify-content: space-between; font: 400 10px/1.4 var(--mono); color: var(--ink-3); }
+
+/* bullet: the whole is a track, the part fills it */
+.r-spec-bullet { grid-template-columns: minmax(6ch, 12ch) 1fr auto; }
+.r-spec-bullet-area { display: block; height: 10px; }
+.r-spec-bullet-whole { display: block; height: 100%; border-radius: 5px; background: var(--track); overflow: hidden; }
+.r-spec-bullet-whole i { display: block; height: 100%; border-radius: 5px; }
+.r-spec-bar-figure small { font-size: 0.9em; color: var(--ink-3); }
+
+/* ring: ticks around a circle, drawn in SVG */
+.r-spec-ring { width: 132px; height: 132px; margin: 4px auto; }
+
+/* dots: along an axis, sized by value */
+.r-spec-dots { display: flex; align-items: flex-end; justify-content: space-between; gap: 2px; height: 64px; padding-bottom: 18px; position: relative; }
+.r-spec-dot { position: relative; flex: 1 1 0; min-width: 0; height: 100%; display: flex; align-items: center; justify-content: center; }
+.r-spec-dot i { display: block; border-radius: 50%; }
+.r-spec-dot em { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%);
+                 font: 500 9px/1.2 var(--mono); color: var(--ink-3); font-style: normal; white-space: nowrap; }
+/* Only every third label survives when there are many, or they collide. */
+.r-spec-dot:nth-child(3n+2) em { display: none; }
+.r-spec-dot:nth-child(3n+3) em { display: none; }
+
+/* calendar: weeks across, brightness is the field */
+.r-spec-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; max-width: 320px; }
+.r-spec-cal-wd { font: 500 9px/1 var(--mono); color: var(--ink-3); text-align: center; letter-spacing: 0.08em; padding-bottom: 2px; }
+.r-spec-cal-day {
+  aspect-ratio: 1; border-radius: 8px; display: grid; place-items: center;
+  font: 500 10px/1 var(--mono); color: var(--ink-2); font-variant-numeric: tabular-nums;
+}
+
+/* a line's extremes, named */
+.r-spec-extreme {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  font: 500 9.5px/1 var(--mono); color: var(--ink); white-space: nowrap;
+  font-variant-numeric: tabular-nums; padding: 2px 5px; border-radius: 6px;
+  background: var(--card); border: 1px solid var(--edge);
+}
+.r-spec-extreme--lo { color: var(--ink-2); }

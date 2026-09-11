@@ -1505,6 +1505,40 @@ packing grid ([RoomShell.tsx](frontend/src/room/RoomShell.tsx)); a run's
 notices are drawn through the room's own caveat, whole, and nothing about
 which notices surface changed.
 
+### The instruments
+
+*Added 2026-09-12, from the design board.* Five marks joined the grammar —
+`range`, `bullet`, `ring`, `dots`, `calendar` — and one read joined the
+tools: `get_sales(group_by="hour")`. Recorded because each is a line that
+could be crossed by accident.
+
+- **An instrument is a second reading of a figure, never a word on it.** A
+  range says *where* a day sits on its own thirty; a bullet says *how much
+  of* a whole; a ring shows how each of a set stands; dots say *when*; a
+  calendar shows the rhythm of the weeks. None takes a value, and none says
+  good or bad. "Healthy / danger" bands are thresholds, and a threshold is a
+  definition (metrics.yaml) or it does not appear — the same reason the
+  fullness bar was declined above. The one word the board carries, "above
+  the noise floor", is the one the brief defines.
+- **A bullet's whole is a column of the same row.** `against` is a channel,
+  checked against the same read, and never a second `seq`: a bar measured
+  against another read's row would be a ratio nobody computed (the
+  composition-is-adjacency rule below, applied inside a mark).
+- **A calendar lights nothing for beating another day.** Each day against
+  its own weekday a week earlier is a per-bucket lag, which
+  `comparisons.not_supported.per_bucket_lag` records as not built. The
+  board's streak calendar therefore does not exist in the grammar; brightness
+  is the field, and the rhythm is what it shows. If a per-day same-weekday
+  comparison is ever wanted, it arrives as a comparison mode in the
+  definitions, not as renderer arithmetic.
+- **Hour is a bucket, not a series.** Thirty days grouped by hour is one set
+  of twenty-four figures — it orders by the hour, sums across the days, and
+  is never compared, for the reason day, week and month are not.
+- **A mark with no `colour` channel paints in the tile's own hue.** Until
+  this date it drew in the neutral grey, so Rockwell's chart sat on
+  Rockwell's violet tile in slate. A line now also names its high and its
+  low — both rows the read returned, so both may be written.
+
 ### The result vocabulary
 
 *Added 2026-09-07.* George decides WHAT matters; this app decides how what he

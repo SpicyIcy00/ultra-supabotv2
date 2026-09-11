@@ -35,7 +35,10 @@ from typing import Any, Mapping, Optional, Sequence
 # A value position is a channel: it must name a COLUMN, so what arrives has to
 # be a string that some row actually carries. Anything numeric here is George
 # having typed a figure, which is the one thing the grammar exists to prevent.
-CHANNELS = ("field", "by", "colour", "order", "label")
+# `against` is the whole a bullet's field is part of: a column of the SAME row,
+# so a bar is measured against a figure the tool put beside it and never
+# against another read.
+CHANNELS = ("field", "by", "colour", "order", "label", "against")
 
 # `subject` is the ONE channel that names a value rather than a column, and it
 # is not a hole in the rule. A selector is not a figure: it says which row to

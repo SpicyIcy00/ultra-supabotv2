@@ -370,3 +370,86 @@ def test_the_prompt_tells_him_the_shape_can_say_it():
     assert "restates what is drawn" in george_loop.SYSTEM_PROMPT
     # And what prose is still for, so this does not read as "stop explaining".
     assert "WHAT PROSE IS STILL FOR" in george_loop.SYSTEM_PROMPT
+
+
+# ---------------------------------------------------------------------------
+# 7. The instruments — five marks that are a second reading, never a word
+# ---------------------------------------------------------------------------
+
+DAYS = [
+    {"day": "2026-09-08", "value": 21244.0, "store": "Rockwell"},
+    {"day": "2026-09-09", "value": 24020.0, "store": "Rockwell"},
+    {"day": "2026-09-10", "value": 34124.0, "store": "Rockwell"},
+]
+HOURS = [{"hour": h, "value": v} for h, v in ((10, 9732.0), (15, 114928.0), (20, 93419.0))]
+COMPARED = [
+    {"store": "OPUS", "value": 555147.0, "baseline": 425000.0, "change_pct": 30.6, "direction": "up"},
+]
+CALLS_MORE = {
+    **CALLS,
+    1: {"tool": "get_sales", "is_read": True, "rows": DAYS},
+    2: {"tool": "get_sales", "is_read": True, "rows": HOURS},
+    3: {"tool": "get_sales", "is_read": True, "rows": COMPARED},
+}
+
+
+def valid_more(spec):
+    return grammar.validate_spec(spec, calls=CALLS_MORE, defs=DEFS)
+
+
+def test_every_instrument_is_a_mark_the_model_is_told_about():
+    """The design board earned five; a mark that is not in the schema is one
+    George cannot reach for."""
+    for mark in ("range", "bullet", "ring", "dots", "calendar"):
+        assert mark in GRAMMAR["marks"], mark
+    schema = next(s for s in loop.build_tool_schemas() if s["name"] == "compose")
+    described = schema["input_schema"]["properties"]["blocks"]["items"]["properties"]["spec"]["description"]
+    for mark in ("range", "bullet", "ring", "dots", "calendar"):
+        assert mark in described
+
+
+def test_a_range_marks_the_emphasised_row_and_needs_no_value():
+    ok = valid_more({"mark": "range", "seq": 1, "field": "value", "by": "day",
+                     "emphasise": "2026-09-10"})
+    assert ok["emphasise"] == "2026-09-10"
+    # The marker is a row, checked like any subject — a date no row carries
+    # is refused, not silently drawn at the end.
+    assert "no row for" in str(_refused_more(
+        {"mark": "range", "seq": 1, "field": "value", "by": "day", "emphasise": "2026-09-11"}))
+
+
+def test_a_bullet_measures_a_field_against_a_column_of_the_same_row():
+    """
+    THE LINE THIS HOLDS. A bar measured against another READ's row would be
+    a ratio nobody computed (CLAUDE.md: composition is adjacency, nothing is
+    ratioed across results). So `against` is a channel — a column, checked
+    against the same read — and never a second seq.
+    """
+    ok = valid_more({"mark": "bullet", "seq": 3, "field": "value", "against": "baseline", "by": "store"})
+    assert ok["against"] == "baseline"
+    assert "needs against" in str(_refused_more({"mark": "bullet", "seq": 3, "field": "value"}))
+    assert "must name a column" in str(_refused_more(
+        {"mark": "bullet", "seq": 3, "field": "value", "against": 425000}))
+    assert "has no column" in str(_refused_more(
+        {"mark": "bullet", "seq": 1, "field": "value", "against": "baseline"}))
+
+
+def test_dots_and_a_calendar_need_the_axis_they_lie_along():
+    assert valid_more({"mark": "dots", "seq": 2, "field": "value", "by": "hour"})["by"] == "hour"
+    assert "needs by" in str(_refused_more({"mark": "dots", "seq": 2, "field": "value"}))
+    assert valid_more({"mark": "calendar", "seq": 1, "field": "value", "by": "day"})["mark"] == "calendar"
+    assert "needs by" in str(_refused_more({"mark": "calendar", "seq": 1, "field": "value"}))
+
+
+def test_a_ring_is_one_tick_per_row_and_carries_no_count():
+    ok = valid_more({"mark": "ring", "seq": 0, "field": "value", "label": "store"})
+    assert ok["mark"] == "ring"
+    # No node may carry a figure for the centre; the ring is the reading.
+    assert "may not carry" in str(_refused_more(
+        {"mark": "ring", "seq": 0, "field": "value", "count": 27}))
+
+
+def _refused_more(spec):
+    with pytest.raises(grammar.Rejected) as caught:
+        grammar.validate_spec(spec, calls=CALLS_MORE, defs=DEFS)
+    return caught.value

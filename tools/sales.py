@@ -884,7 +884,9 @@ def get_sales(
             group_sql = f"\nGROUP BY {', '.join(group_terms)}" if group_terms else ""
 
             # Time series read chronologically; everything else ranks by measure.
-            time_cols = [a for a, _ in select_terms if a in ("day", "week", "month")]
+            # Hour of the day is not a series but it IS an order: the day runs
+            # from opening to closing, and a ranking by value would scramble it.
+            time_cols = [a for a, _ in select_terms if a in ("hour", "day", "week", "month")]
             if change_ranked:
                 # A change ranking needs BOTH windows whole: the cut happens
                 # after matching, in _rank_compared. top_n is not applied in

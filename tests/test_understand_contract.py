@@ -280,6 +280,8 @@ def test_the_matrix_agrees_with_what_the_finding_validator_enforces(defs):
     metrics = req(defs, "metrics")
     for name, m in metrics.items():
         allowed = set(m.get("valid_group_by") or [])
-        assert allowed <= {"store", "day", "week", "month", "product", "category"}
+        # hour joined the time buckets 2026-09-12 (sales_day.buckets.hour);
+        # like day, week and month it is a bucket, not a breakdown dimension.
+        assert allowed <= {"store", "hour", "day", "week", "month", "product", "category"}
         if name in ("net_sales", "average_transaction_value"):
             assert "product" not in allowed and "category" not in allowed

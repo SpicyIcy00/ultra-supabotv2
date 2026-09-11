@@ -167,6 +167,12 @@ sales_day:
     day:   "date_trunc('day',   (t.transaction_time AT TIME ZONE 'Asia/Manila'))::date"
     week:  "date_trunc('week',  (t.transaction_time AT TIME ZONE 'Asia/Manila'))::date"
     month: "date_trunc('month', (t.transaction_time AT TIME ZONE 'Asia/Manila'))::date"
+    # HOUR OF THE DAY, 0-23 Manila, summed across every day in the window.
+    # Added 2026-09-12 for "when does the day sell": it is not a time series
+    # — thirty days grouped by hour is one set of twenty-four figures — so it
+    # is never compared (comparisons.retail.valid_group_by leaves it out with
+    # the other buckets) and it orders by the hour, not by the value.
+    hour:  "extract(hour from (t.transaction_time AT TIME ZONE 'Asia/Manila'))::int"
 
   # ---------------------------------------------------------------------------
   # NAMED DATE RANGES. Half-open [start, end) timestamptz, all derived from the
@@ -757,7 +763,7 @@ metrics:
     # in a basket would invent a definition nobody agreed. Tools must REFUSE the
     # combination rather than answer it — see metrics.product_revenue for the
     # measure that is valid at that grain.
-    valid_group_by: [store, day, week, month]
+    valid_group_by: [store, hour, day, week, month]
     # DRIVERS — what a change in net_sales is explained by FIRST. Added
     # 2026-09-08 (Investigation V1). The relationship is not asserted here; it
     # is the trusted ATP definition rearranged: average_transaction_value is
@@ -821,7 +827,7 @@ metrics:
       - "t.store_id IN :active_retail_store_ids"
     date_column: "t.transaction_time"
     # Line grain, so every grouping is valid.
-    valid_group_by: [store, day, week, month, product, category]
+    valid_group_by: [store, hour, day, week, month, product, category]
     # source: business_rules.yaml:309 (revenue_calculation) and :197
     #   (column_synonyms.revenue marks item_total "the correct column for
     #   revenue in transaction_items").
@@ -887,7 +893,7 @@ metrics:
       - "t.store_id IN :active_retail_store_ids"
     date_column: "t.transaction_time"
     # Transaction grain, same restriction as net_sales.
-    valid_group_by: [store, day, week, month]
+    valid_group_by: [store, hour, day, week, month]
     # source: live data — 54 Return rows, ₱35,407.40, all with positive totals.
     # resolves: makes returns visible as a figure instead of leaving them
     #   silently folded into revenue, without asserting a netting convention
@@ -909,7 +915,7 @@ metrics:
       - "t.transaction_type = 'Sale'"
       - "t.store_id IN :active_retail_store_ids"
     date_column: "t.transaction_time"
-    valid_group_by: [store, day, week, month, product, category]
+    valid_group_by: [store, hour, day, week, month, product, category]
     # source: business_rules.yaml:312 (business_logic.units_sold) and :206-212
     #   (column_synonyms.units names `quantity` as the actual column).
     # ti.quantity is NUMERIC, not integer — weighted items sell in fractions
@@ -936,7 +942,7 @@ metrics:
       - "t.transaction_type = 'Sale'"
       - "t.store_id IN :active_retail_store_ids"
     date_column: "t.transaction_time"
-    valid_group_by: [store, day, week, month, product, category]
+    valid_group_by: [store, hour, day, week, month, product, category]
     # Grouping by product/category is permitted but redefines the metric, so a
     # tool MUST attach a notice saying so. Silently answering a different
     # question is the failure mode this entry exists to prevent.
@@ -1027,7 +1033,7 @@ metrics:
       - "t.transaction_type = 'Sale'"
       - "t.store_id IN :active_retail_store_ids"
     date_column: "t.transaction_time"
-    valid_group_by: [store, day, week, month]
+    valid_group_by: [store, hour, day, week, month]
     # Not one of the two money measures the net_sales/product_revenue
     # reconciliation governs; a ratio has nothing to reconcile against.
     reconcilable: false
@@ -5240,6 +5246,51 @@ composition:
         about: "your own words: the reading, the caveat, the next thing"
         needs: []
 
+      # THE INSTRUMENTS — added 2026-09-12, from the design board. Each is a
+      # second reading of a figure, not a decoration of it: a range says WHERE
+      # on its own history, a bullet says HOW MUCH OF a whole, a ring says how
+      # each of a set stands, dots say WHEN, a calendar says the rhythm of the
+      # weeks. None takes a value; none says good or bad. The words that would
+      # ("healthy", "danger") are thresholds, and a threshold is a definition
+      # or it is nothing (CLAUDE.md, "Two visuals declined").
+      range:
+        about: >
+          one row on the range of all the rows — a track from the lowest to
+          the highest value of the field, every row a dot on it, and the
+          emphasised row (or the last, in `by` order) marked with its figure.
+          "Yesterday against every day this month": where, never good or bad.
+        needs: [seq, field]
+      bullet:
+        about: >
+          part of a whole, one per row — the field fills a track whose length
+          is `against`, both columns of the SAME row, so the tool supplied both.
+          A compared read's value against its baseline; stock against a
+          suggested order. Never two reads: a bar measured against another
+          read's row would be a ratio nobody computed.
+        needs: [seq, field, against]
+      ring:
+        about: >
+          one tick per row around a circle, its length the field — a set of
+          things and how each stands, read as a pattern. Forty products' days
+          of cover at a glance: many short ticks is the picture. A zero is
+          drawn short and dim, not coloured, because zero is a fact and red
+          would be a judgement.
+        needs: [seq, field]
+      dots:
+        about: >
+          one dot per row along an ordered field, its SIZE the value — when
+          things happen and how much. Sales by hour of the day, orders by
+          week. Use `by: hour` with a read grouped by hour.
+        needs: [seq, field, by]
+      calendar:
+        about: >
+          the rows as weeks, Monday to Sunday, each day a cell whose brightness
+          is the field — the rhythm of a shop: which weekday carries it, which
+          week broke. `by` names the date column. Brightness only; a day is
+          never lit for beating another day, because that comparison is not a
+          read the tools make (comparisons.not_supported.per_bucket_lag).
+        needs: [seq, field, by]
+
     # How a field reaches a channel. Every one of these names a FIELD, never a
     # value — which is what makes the grammar safe at any size.
     channels:
@@ -5254,6 +5305,7 @@ composition:
         from_field_only: true
       order: "the column to sort by"
       label: "the column that names each row"
+      against: "the column that is the WHOLE a bullet's field is part of — the same row's baseline, target or total"
       emphasise:
         about: >
           WHICH ROW MATTERS, among rows that are all drawn. Unlike `subject`
@@ -5303,7 +5355,7 @@ composition:
     # add `value` or `text` or `colour: "#ff0000"` here and the grammar starts
     # being able to say things no tool returned.
     allowed_fields: [layout, mark, children, cols, gap, heading, hue,
-                     seq, field, by, colour, order, label, weight, limit,
+                     seq, field, by, colour, order, label, against, weight, limit,
                      subject, emphasise, note]
 
     # Said once, here, because it is the rule the whole grammar rests on.
