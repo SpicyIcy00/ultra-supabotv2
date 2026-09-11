@@ -136,3 +136,51 @@ describe('a line names its extremes', () => {
     expect(labels.join(' ')).toContain('12,258');
   });
 });
+
+describe('a composed shape is an object of its own kind', () => {
+  // THE BUG THIS HOLDS. A block with only a spec fell through `kind ?? 'text'`,
+  // so a leading shape counted as leading prose and the turn's caveats were
+  // drawn on every text tile on the board — three of them from earlier turns.
+  it('is `spec`, not text, on the board', async () => {
+    const { buildBoard } = await import('./board');
+    const turn = { ...TURN, composition: { blocks: [
+      { op: 'put', key: 'hours', weight: 'lead', seqs: [2],
+        spec: { mark: 'dots', seq: 2, field: 'value', by: 'hour' } },
+      { op: 'put', key: 'reading', kind: 'text', weight: 'supporting' },
+    ] } } as unknown as AnswerTurn;
+    const board = buildBoard([turn]);
+    expect(board.find((o) => o.key === 'hours')?.kind).toBe('spec');
+    expect(board.find((o) => o.key === 'reading')?.kind).toBe('text');
+  });
+
+  it('names itself from the read: the measure, and the shop it was filtered to', () => {
+    const turn = { ...TURN, toolCalls: [{ seq: 2, tool: 'get_sales',
+      arguments: { group_by: 'hour', filters: { store: 'Rockwell' } },
+      result: { rows: HOURS, meta: { ...meta, metric_label: 'Net sales' } } }] } as unknown as AnswerTurn;
+    const o = { key: 'k', kind: 'spec', weight: 'lead', turn: 0, touched: 0, seqs: [2],
+                spec: { mark: 'dots', seq: 2, field: 'value', by: 'hour' } } as BoardObject;
+    const { container } = render(
+      <Board answers={[turn]} board={[o]} local={{}} focused={null} selection={[]} live={false} retuned={{}} on={on} />,
+    );
+    expect(container.querySelector('.r-label')?.textContent).toBe('Rockwell · Net sales');
+  });
+
+  it('never draws the loop\'s warning about a refused edit as a caveat', () => {
+    const turn = { ...TURN, notices: [
+      { kind: 'composition_rejected', message: 'hours: a block carries a kind or a spec, never both', source: 'loop' },
+      { kind: 'dead_stock_share', message: '1802 of 3397 products recorded no sale', source: 'tool' },
+    ] } as unknown as AnswerTurn;
+    const objects = [
+      { key: 'hours', kind: 'spec', weight: 'lead', turn: 0, touched: 0, seqs: [2],
+        spec: { mark: 'dots', seq: 2, field: 'value', by: 'hour' } },
+      { key: 'reading', kind: 'text', weight: 'supporting', turn: 0, touched: 0 },
+    ] as BoardObject[];
+    const { container } = render(
+      <Board answers={[turn]} board={objects} local={{}} focused={null} selection={[]} live={false} retuned={{}} on={on} />,
+    );
+    const text = container.textContent ?? '';
+    expect(text).not.toContain('never both');
+    // A tool's notice still surfaces, always.
+    expect(text).toContain('recorded no sale');
+  });
+});

@@ -35,6 +35,9 @@ export interface BoardProps {
   on: TileActions;
 }
 
+/** Warnings the loop raises about George's own edits — never a tool's notice. */
+const PROCESS = new Set(['composition_rejected', 'findings_rejected']);
+
 export function Board(p: BoardProps) {
   const objects = inOrder(p.board, p.local, p.focused);
   // THE DRAG LIVES HERE, not in a tile and not in the page. A tile cannot
@@ -47,7 +50,15 @@ export function Board(p: BoardProps) {
   // THE TURN'S notices, minus the ones now drawn on the objects they belong
   // to. A caveat shown twice is a caveat people learn to skip, and the one
   // above the board is meant for what has no object of its own.
-  const all = p.answers[newest]?.notices ?? [];
+  //
+  // AND MINUS THE LOOP'S OWN WARNINGS ABOUT HIS EDITS. "rockwell-hours: a
+  // block carries a kind or a spec, never both" is the loop telling George
+  // an edit was refused — process, not a caveat on a figure. The refusal is
+  // already enforced (the edit did not happen) and already conveyed to him;
+  // drawing it above his old readings made three text tiles wear a sentence
+  // about a shape he learnt to compose on the third try. A tool's notice
+  // still surfaces, always (UI rule 4); this is not one.
+  const all = (p.answers[newest]?.notices ?? []).filter((n) => !PROCESS.has(n.kind));
   const onObjects = new Set(
     inOrder(p.board, p.local, p.focused).flatMap((o) => (
       o.seq === undefined ? []

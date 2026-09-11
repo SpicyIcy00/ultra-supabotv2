@@ -25,7 +25,14 @@ export const MAX_OBJECTS = 12;
 
 export interface BoardObject {
   key: string;
-  kind: NonNullable<Block['kind']>;
+  /**
+   * A composed shape has no widget kind; it is `spec`. Until this was said,
+   * a block with only a `spec` fell through `edit.kind ?? 'text'` and the
+   * board took George's leading shape for his prose — which is why the
+   * turn's caveats were drawn on every text tile on the board, including
+   * three from earlier turns, the moment a spec led.
+   */
+  kind: NonNullable<Block['kind']> | 'spec';
   weight: NonNullable<Block['weight']>;
   seq?: number;
   tool?: string;
@@ -169,7 +176,7 @@ export function buildBoard(answers: AnswerTurn[]): BoardObject[] {
 
       const object: BoardObject = {
         key: edit.key,
-        kind: edit.kind ?? 'text',
+        kind: edit.kind ?? (edit.spec ? 'spec' : 'text'),
         weight: edit.weight ?? 'supporting',
         ...carried(edit),
         turn: i,

@@ -429,8 +429,12 @@ def get_sales(
     Sales figures grouped as requested.
 
     Args:
-        group_by:   str or list of: store, day, week, month, product, category.
-                    [] gives a grand total.
+        group_by:   str or list of: store, hour, day, week, month, product,
+                    category. [] gives a grand total. `hour` is the hour of
+                    the day (0-23, Manila) summed across every day in the
+                    window — "when does the day sell" — and is never
+                    compared, because thirty days by hour is one set of
+                    figures, not a series.
         date_range: a preset name from metrics.yaml (sales_day.presets), or an
                     explicit (start, end) pair of Manila calendar dates.
                     Half-open: [start, end). Required — an unbounded sales query

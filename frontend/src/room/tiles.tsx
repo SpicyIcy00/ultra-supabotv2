@@ -1001,6 +1001,16 @@ export function SystemTile(p: TileProps) {
  * several, so it shows the first one's; each mark's own figures are resolved
  * from its own read, and nothing here is shared across them.
  */
+/** What a composed shape is OF: the read's own measure and scope. */
+function specLabel(call: ToolCall | null): string {
+  const meta = call?.result?.meta;
+  const filters = (call?.arguments as { filters?: Record<string, unknown> } | undefined)?.filters;
+  const store = typeof filters?.store === 'string' ? filters.store : null;
+  const parts = [store, meta?.metric_label ?? call?.tool?.replace(/^get_/, '').replace(/_/g, ' ')]
+    .filter((x): x is string => Boolean(x));
+  return parts.join(' · ') || 'composed';
+}
+
 export function SpecTile(p: TileProps) {
   if (!p.o.spec) return <Missing what="a shape" />;
   const first = (p.o.seqs ?? [])[0];
@@ -1011,7 +1021,16 @@ export function SpecTile(p: TileProps) {
     <Shell quiet={!lit} hue={hueFor(null, null, kindOfRead(p.o.tool))}
            landing={p.landing} delay={p.delay} picked={p.focused}
            onOpen={() => p.on.open(p.o.key)}>
-      <Spec node={p.o.spec} turn={p.turn} retuned={{}} />
+      {/* A SHAPE IS NAMED LIKE EVERY OTHER OBJECT. The grammar has no field
+          for a title — a heading is a column or nothing — so the label comes
+          from the read: what was measured, and the shop it was filtered to.
+          Both are the tool's words. Without this a dots chart of Rockwell's
+          hours sat on the board unlabelled, and the reader had to open the
+          receipts to learn what the dots were. */}
+      <p className="r-label">{specLabel(call)}{p.earlier ? ' · from earlier' : ''}</p>
+      <div style={{ marginTop: 10 }}>
+        <Spec node={p.o.spec} turn={p.turn} retuned={{}} />
+      </div>
       <Receipts meta={call?.result?.meta} />
     </Shell>
   );
