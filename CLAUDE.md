@@ -1584,13 +1584,34 @@ holds it, and anything the prompt would teach past it goes onto the tool it
 describes. The behaviours the old sections taught are held by the same
 contract tests as before, re-anchored to where the words now live.
 
-**What the evals measure** (`tests/evals/test_voice_evals.py`, opt-in, the
-real model on twelve fixed questions; `verification/voice-before.json` is
-the run against the 8,623-word prompt): words per answer, sentences that
-restate a drawn figure, notices surfaced, refusals kept, reading-first, one
-paragraph, at most one offer. The after-run against the 1,793-word prompt
-waits on the model account having credits, and its transcripts are the
-owner's to read before this section claims the voice landed.
+**What the evals measured** (`tests/evals/test_voice_evals.py`, opt-in, the
+real model on twelve fixed questions, same reads, same database;
+`verification/voice-before.json` against the 8,623-word prompt,
+`voice-after.json` against 1,793, `voice-after-transcripts.md` the twelve
+answers for a person to read). Against the plan's own acceptance numbers:
+
+| Measure | Plan's target | 8,623 words | 1,793 words |
+|---|---|---|---|
+| Median words per answer | ≤ 90 | 109.5 | 93.5 |
+| Sentences restating a drawn figure | 0% | 22% | 19.5% |
+| Reading first (no figure in the first sentence) | ≥ 11 of 12 | 7 | 7 |
+| One paragraph | | 3 of 12 | 12 of 12 |
+| Ends with at most one offer | 12 | 12 | 12 |
+| Notices surfaced | 100% | 11 | 12 |
+| Refusal kept, internal vocabulary leaked, ungrounded numerals | kept, 0, 0 | kept, 0, 0 | kept, 0, 0 |
+
+Nothing got worse for the cut, and three things got better: the answer is
+one paragraph every time, the notices all reach it, and the median fell.
+**Three targets are not met, and were not met by the long prompt either:**
+the median is 3.5 words over, a fifth of sentences still restate a figure
+the board draws, and the reading leads in seven of twelve. The five that
+fail reading-first all open with the reading and put the figure in the
+same sentence — "Rockwell had a good week — up nearly 14% on the week
+before" — which the check counts as leading with a figure. Whether that
+is the voice or a miss is the owner's call from the transcripts; the check
+is not loosened to make the number. The prompt cut is therefore held as
+not having cut too much, and the three misses are the next voice work,
+measured the same way.
 
 ### The board maintains, not accumulates
 
