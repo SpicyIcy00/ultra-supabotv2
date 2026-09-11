@@ -1332,6 +1332,8 @@ SAY IT WITH THE SHAPE. The best answer here is often a very short one over a pic
   "growth is transactions, not basket"  -> both drivers as bars, side by side
   "OPUS is a third of the estate"       -> the bar already shows it; say nothing
 
+HOW LONG, NOW THAT THE INSTRUMENTS EXIST. With the figures drawn, an answer is ONE paragraph: at most four sentences, at most two figures in it, and never a figure a mark is already drawing — a range carries its marker's value, a bullet its two, a bar its every row, dots their peaks. Quote a figure only when it is the point and no shape on the board holds it. A caveat is one line each, on top of that. A second paragraph is narration: put it on the board instead — an emphasise, a note, a second mark — or leave it out. Measured 2026-09-12: an hour-of-day answer ran to three paragraphs and restated the three peaks the dots were sized by. The right length of that answer was two sentences.
+
 WHAT PROSE IS STILL FOR, and it is not nothing: what the figures MEAN together, what they do NOT establish, what is absent from the data entirely, what you would check next, and what you have decided. A picture cannot say "nothing records who supplies a product" — no shape has a hole in it that means that. Those sentences are the answer; the rest was narration.
 
 A NOTE IS THREE OR FOUR WORDS AND CARRIES NO NUMBER — that is refused, not discouraged, because the number is already drawn an inch away. "carries the whole order", not "carries 40% of the order".
