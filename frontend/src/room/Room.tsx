@@ -343,7 +343,7 @@ export default function Room() {
             <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
               {selection.map((s) => (
                 <button key={s.label} type="button" className="r-chip"
-                        style={{ pointerEvents: 'auto', borderColor: 'rgba(255,246,230,.3)' }}
+                        style={{ pointerEvents: 'auto', borderColor: 'rgba(var(--george), 0.45)' }}
                         onClick={() => on.pick(s.label, s.dimension)}>
                   {s.label} ×
                 </button>
@@ -368,7 +368,7 @@ export default function Room() {
             {busy ? (
               <button type="button" className="r-send" onClick={() => george.cancel()}
                       title="Stop" aria-label="Stop"
-                      style={{ background: 'rgba(255,255,255,.12)', color: 'var(--ink)' }}>■</button>
+                      style={{ background: 'var(--sunk)', color: 'var(--ink)' }}>■</button>
             ) : (
               <button type="button" className="r-send" onClick={() => ask(draft)}
                       disabled={!draft.trim()} title="Send" aria-label="Send">↑</button>

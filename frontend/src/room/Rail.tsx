@@ -14,6 +14,7 @@
  * badge appears when the approvals query has answered, and not before.
  */
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useRoomTheme } from './theme';
 
 export interface RailProps {
   /** True while a turn is running. The mark's only input. */
@@ -28,6 +29,7 @@ export interface RailProps {
 
 export function Rail({ busy, needsYou, onNew }: RailProps) {
   const navigate = useNavigate();
+  const [theme, toggleTheme] = useRoomTheme();
   return (
     <nav className="r-rail" aria-label="George">
       <button
@@ -57,6 +59,13 @@ export function Rail({ busy, needsYou, onNew }: RailProps) {
       </NavLink>
 
       <span style={{ flex: 1 }} />
+
+      <button type="button" className="r-rail-btn r-rail-btn--theme" onClick={toggleTheme}
+              title={theme === 'dark' ? 'Lights on' : 'Lights off'}
+              aria-label={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
+              aria-pressed={theme === 'light'}>
+        <span aria-hidden="true">{theme === 'dark' ? '\u263c' : '\u263e'}</span>
+      </button>
 
       <button type="button" className="r-rail-btn" onClick={onNew} title="Clear the board"
               aria-label="Clear the board">

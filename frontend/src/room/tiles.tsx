@@ -382,7 +382,7 @@ export function ComparisonTile(p: TileProps) {
   if (!subjects.length) return <Missing what="the subjects" />;
 
   return (
-    <div className={`r-tile r-tile--quiet ${p.landing ? 'r-landing' : ''}`}
+    <div className={`r-tile r-tile--quiet r-tile--bare ${p.landing ? 'r-landing' : ''}`}
          style={{ '--d': `${p.delay}ms`, padding: 0, border: 0, background: 'transparent' } as CSSProperties}>
       {/* THE TILE HAS NO PADDING so the subject cards can run edge to edge —
           but its own label and receipts then sat flush against the boundary
@@ -941,7 +941,7 @@ export function ControlTile(p: TileProps) {
             className="r-chip"
             aria-pressed={String(option) === current}
             style={String(option) === current
-              ? { borderColor: 'rgba(17,24,39,.32)', color: 'var(--ink)' }
+              ? { borderColor: 'var(--edge-strong)', color: 'var(--ink)' }
               : undefined}
             onClick={() => p.on.retune?.(p.o.key, argument, option)}
           >

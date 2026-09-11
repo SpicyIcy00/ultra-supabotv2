@@ -21,40 +21,50 @@
 /* ---------------------------------------------------------------- tokens */
 
 .room {
-  /* Cream, warm, and deliberately not white. A cool grey ground made the
-     coloured tiles look like stickers on an office wall; on cream they read
-     as objects made of something. */
-  --ground: #EFEAE1;
-  --card: #FBF8F3;          /* warm paper — for things you READ */
-  --sunk: #E7E1D6;
-  --edge: rgba(28, 25, 23, 0.10);
-  --edge-strong: rgba(28, 25, 23, 0.20);
+  /* DARK IS THE DESIGN. Near-black with a blue-violet bias, and every object
+     lit from inside by its own colour. Chosen 2026-09-12 from the owner's
+     pegs, which the plan had said from the start; the cream room below was
+     my detour, kept as the light theme because it was complete and because
+     a toggle is a toggle only if both sides are real. */
+  --ground: #0B0B11;
+  --card: #14141C;          /* raised — for things you READ */
+  --sunk: #1B1B26;
+  --edge: rgba(255, 255, 255, 0.07);
+  --edge-strong: rgba(255, 255, 255, 0.16);
+  /* Quiet fill and neutral track — what a thing sits on when it has cooled. */
+  --paper: rgba(255, 255, 255, 0.03);
+  --track: rgba(255, 255, 255, 0.08);
 
-  --ink: #1C1917;
-  --ink-2: #57534E;
-  --ink-3: #8C837A;
+  --ink: #F1F0F6;
+  --ink-2: #A6A5B3;
+  --ink-3: #6E6D7B;
   /* On a fully coloured tile. Never pure white — it glares against a hue. */
   --on-colour: #FFFDF9;
-  --on-colour-2: rgba(255, 253, 249, 0.78);
+  --on-colour-2: rgba(255, 253, 249, 0.72);
+
+  /* How hard a tile's own colour burns under its surface. On dark it is the
+     whole light source; on cream it is a wash. */
+  --bloom: 0.62;
+  /* Neutral shadows. A shadow on near-black is deep and cheap; on cream it
+     is faint and warm. Never a hue — the hue has its own glow. */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.3), 0 16px 36px -20px rgba(0, 0, 0, 0.7);
 
   /* Set per tile from identity.ts. Neutral until something says otherwise. */
   --hue: 124, 133, 150;
 
   /* Direction. Semantic, and never an identity. */
-  --up: 14, 145, 100;
-  --down: 206, 43, 66;
-  --flat: 113, 122, 140;
-  /* George's voice. Never a measurement, never an object's identity. */
-  --george: 196, 128, 44;
+  --up: 79, 227, 181;
+  --down: 255, 92, 138;
+  --flat: 138, 143, 168;
+  /* George's voice. Warm white on dark, never a measurement, never an
+     object's identity. What sits ON it needs its own ink. */
+  --george: 255, 236, 205;
+  --on-george: #1C1917;
 
   /* THE ONE COLOUR THAT MEANS "NEEDS YOU" (CLAUDE.md UI rule 5). #D2691E, the
      same hue the rest of the app reserves — one meaning, one value, whichever
-     chrome you are in.
-
-     The room had no such token, and its needs-you badge was painted in
-     `--down`. Three decisions waiting therefore read as three things falling,
-     which is both a false claim and a second use of a semantic colour. A count
-     of pending decisions is not a decline. */
+     chrome you are in, whichever theme. */
   --accent: 210, 105, 30;
 
   --radius: 22px;
@@ -63,18 +73,46 @@
   --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
 
+  color-scheme: dark;
   min-height: 100dvh;
   background: var(--ground);
   color: var(--ink);
   font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
+  transition: background 240ms var(--ease), color 240ms var(--ease);
+}
+
+/* LIGHT — the cream room, complete. Warm and deliberately not white: a cool
+   grey ground made the coloured tiles look like stickers on an office wall.
+   Every token above is redefined here, so nothing has a colour that only
+   exists in one theme. Keyed on <html>, see theme.ts. */
+:root[data-room-theme="light"] .room {
+  --ground: #EFEAE1;
+  --card: #FBF8F3;
+  --sunk: #E7E1D6;
+  --edge: rgba(28, 25, 23, 0.10);
+  --edge-strong: rgba(28, 25, 23, 0.20);
+  --paper: rgba(255, 255, 255, 0.55);
+  --track: rgba(17, 24, 39, 0.06);
+  --ink: #1C1917;
+  --ink-2: #57534E;
+  --ink-3: #8C837A;
+  --bloom: 0.30;
+  --shadow-1: 0 1px 2px rgba(17, 24, 39, 0.04);
+  --shadow-2: 0 2px 4px rgba(17, 24, 39, 0.04), 0 16px 36px -20px rgba(17, 24, 39, 0.28);
+  --up: 14, 145, 100;
+  --down: 206, 43, 66;
+  --flat: 113, 122, 140;
+  --george: 196, 128, 44;
+  --on-george: #FFFDF9;
+  color-scheme: light;
 }
 
 /* ------------------------------------------------------------------ type */
 
 .r-label {
-  font: 500 10px/1.2 var(--sans);
-  letter-spacing: 0.11em;
+  font: 500 10.5px/1.2 var(--sans);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ink-3);
   margin: 0;
@@ -115,32 +153,41 @@
   position: relative;
   border-radius: var(--radius);
   background: var(--card);
-  border: 1px solid rgba(var(--hue), 0.26);
+  border: 1px solid rgba(var(--hue), 0.28);
   padding: 20px 22px;
   overflow: hidden;
   --i: 0;
+  /* The neutral shadow is the theme's; the glow is the tile's own hue, and
+     it grows with how hard the figure moved. */
   box-shadow:
-    0 1px 2px rgba(17, 24, 39, 0.04),
-    0 12px 30px -16px rgba(var(--hue), calc(0.28 + var(--i) * 0.42));
-  transition: border-color 240ms var(--ease), box-shadow 400ms var(--ease);
+    var(--shadow-1),
+    0 20px 50px -30px rgba(var(--hue), calc(0.35 + var(--i) * 0.45));
+  transition: border-color 240ms var(--ease), box-shadow 400ms var(--ease), background 240ms var(--ease);
   max-height: 560px;
   display: flex;
   flex-direction: column;
+  isolation: isolate;
 }
 
-/* The light falling across the card. One gradient, long falloff, clipped. */
+/* THE BLOOM. The object's own colour under its surface — a large soft
+   radial that falls off to nothing, with a fainter answer in the far corner
+   so the light has a direction. `--bloom` is the theme's strength; `--i` is
+   the figure's. Nothing else lights the ground. */
 .r-tile::before {
   content: '';
   position: absolute;
   inset: 0;
+  z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(118% 92% at 18% -12%,
-      rgba(var(--hue), calc(0.30 + var(--i) * 0.26)) 0%,
-      rgba(var(--hue), calc(0.10 + var(--i) * 0.12)) 44%,
-      transparent 78%);
+    radial-gradient(120% 80% at 18% -10%,
+      rgba(var(--hue), calc(var(--bloom) * (0.9 + var(--i) * 0.5))) 0%,
+      rgba(var(--hue), calc(var(--bloom) * 0.30)) 44%,
+      transparent 64%),
+    radial-gradient(70% 60% at 100% 110%,
+      rgba(var(--hue), calc(var(--bloom) * 0.35)), transparent 60%);
 }
-.r-tile > * { position: relative; z-index: 1; min-width: 0; }
+.r-tile > * { position: relative; min-width: 0; }
 
 /*
  * A SOLID TILE — the reference, and the whole of what it was for.
@@ -171,7 +218,7 @@
      colour through a good week and a bad one, or the hue stops being an
      identity. */
   box-shadow:
-    0 2px 4px rgba(28, 25, 23, 0.06),
+    var(--shadow-1),
     0 calc(14px + var(--i) * 20px) calc(30px + var(--i) * 40px) calc(-18px + var(--i) * 4px)
       rgba(var(--hue), calc(0.32 + var(--i) * 0.40));
 }
@@ -194,13 +241,13 @@
 /* Long bodies scroll inside rather than making the tile define the page. */
 .r-scroll { overflow-y: auto; min-height: 0; }
 .r-scroll::-webkit-scrollbar { width: 8px; }
-.r-scroll::-webkit-scrollbar-thumb { background: rgba(17, 24, 39, 0.14); border-radius: 4px; }
+.r-scroll::-webkit-scrollbar-thumb { background: var(--edge-strong); border-radius: 4px; }
 
 /* Quiet: on the paper rather than on a card of its own. */
 /* Cooled: on the paper, keeping its hue as an edge so it is still findable.
    The left rule is what a shop looks like once it is no longer the point. */
 .r-tile--quiet {
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--paper);
   border-color: rgba(var(--hue), 0.20);
   border-left: 3px solid rgba(var(--hue), 0.55);
   box-shadow: none;
@@ -210,6 +257,15 @@
 /* George speaking. His own warm hue, always at the same low strength, so his
    thoughts never look like a figure that moved. */
 .r-tile--george { --hue: var(--george); --i: 0.10; }
+/* His hue is a warm WHITE, and a white bloom at full strength on near-black
+   is a grey slab, not a glow. Held to a third, so it reads as candlelight. */
+.r-tile--george::before { opacity: 0.38; }
+
+/* A tile that is only a frame for other tiles — the comparison — carries no
+   surface of its own: no bloom, no shadow, or a rectangle of light floats
+   behind its label with nothing under it. */
+.r-tile--bare { box-shadow: none; }
+.r-tile--bare::before { display: none; }
 
 .r-tile[data-open] { cursor: pointer; }
 .r-tile[data-open]:hover { border-color: rgba(var(--hue), 0.4); }
@@ -284,6 +340,10 @@
   font: 600 9px/15px var(--sans); text-align: center;
 }
 
+/* The one setting on the rail. A glyph, not a switch: it is the room's
+   light, and you reach for the light without reading a label. */
+.r-rail-btn--theme { font-size: 15px; }
+
 @media (max-width: 720px) {
   .r-rail {
     top: auto; right: 0; width: auto; height: 54px;
@@ -335,7 +395,7 @@
   background: rgba(var(--dir, var(--flat)), 0.13);
   color: rgb(var(--dir, var(--flat)));
 }
-.r-delta--none { background: rgba(17, 24, 39, 0.05); color: var(--ink-3); font-weight: 500; }
+.r-delta--none { background: var(--track); color: var(--ink-3); font-weight: 500; }
 
 .r-rows { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .r-rows th {
@@ -344,7 +404,7 @@
   color: var(--ink-3); border-bottom: 1px solid var(--edge); white-space: nowrap;
 }
 .r-rows td {
-  padding: 9px 10px 9px 0; border-bottom: 1px solid rgba(17, 24, 39, 0.05);
+  padding: 9px 10px 9px 0; border-bottom: 1px solid var(--edge);
   color: var(--ink-2); vertical-align: baseline;
 }
 .r-rows td.n, .r-rows th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -402,7 +462,7 @@
   border: 1px solid var(--edge);
   border-radius: 999px;
   padding: 9px 10px 9px 20px;
-  box-shadow: 0 2px 4px rgba(17, 24, 39, 0.04), 0 16px 36px -20px rgba(17, 24, 39, 0.28);
+  box-shadow: var(--shadow-2);
   pointer-events: auto;
 }
 .r-line:focus-within { border-color: rgba(var(--george), 0.5); }
@@ -414,7 +474,7 @@
 
 .r-send {
   width: 34px; height: 34px; border-radius: 50%; border: 0;
-  background: rgb(var(--george)); color: #fff;
+  background: rgb(var(--george)); color: var(--on-george);
   display: grid; place-items: center; cursor: pointer; font-size: 15px;
 }
 .r-send:disabled { background: var(--sunk); color: var(--ink-3); cursor: default; }
@@ -503,13 +563,13 @@
    block, because a hue George picked would be a claim no tool made. */
 .r-spec-panel {
   border: 1px solid var(--edge); border-radius: 14px; padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.35);
+  background: var(--paper);
 }
 .r-spec-bars { display: flex; flex-direction: column; gap: 7px; width: 100%; }
 .r-spec-bar { display: grid; grid-template-columns: minmax(6ch, 12ch) 1fr auto; gap: 10px; align-items: center; }
 .r-spec-bar-name { font: 400 11.5px/1.3 var(--sans); color: var(--ink-2); min-width: 0;
                    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.r-spec-bar-track { height: 8px; border-radius: 4px; background: rgba(17, 24, 39, 0.06); overflow: hidden; }
+.r-spec-bar-track { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
 .r-spec-bar-track i { display: block; height: 100%; border-radius: 4px; }
 .r-spec-bar-figure { font: 400 11.5px/1.3 var(--mono); color: var(--ink);
                      font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -587,7 +647,7 @@
 .r-dragging .r-tile {
   transform: scale(0.985);
   border-color: rgba(var(--hue), 0.55);
-  box-shadow: 0 20px 46px -20px rgba(17, 24, 39, 0.36);
+  box-shadow: var(--shadow-2);
 }
 
 body.r-dragging-on { cursor: grabbing; user-select: none; }
