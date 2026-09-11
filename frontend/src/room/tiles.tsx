@@ -21,7 +21,7 @@ import {
   rowFor, rowsOf, sorted, splitCaveat, subjectOf, tone, valueOf,
   type AnswerTurn, type Change, type Dimension,
 } from './data';
-import { directionRgb, hueFor, type Rgb } from './identity';
+import { directionRgb, hueFor, NEUTRAL as NEUTRAL_RGB, type Rgb } from './identity';
 import type { Region } from './drag';
 import { ObjectPanel, kindOf } from './ObjectPanel';
 import { Spec } from './Spec';
@@ -600,43 +600,87 @@ export function ChartTile(p: TileProps) {
   if (!rows.length) return <Missing what="the series" />;
   const values = rows.map((r) => valueOf(r)?.value ?? 0);
   const max = Math.max(1, ...values);
+  const hue = hueFor(p.o.subject, null, kindOfRead(p.o.tool));
+  const label = call?.result?.meta?.metric_label ?? 'series';
+
+  /*
+   * A BAR CHART NAMES ITS BARS. The bar form used to be seven unlabelled
+   * rectangles in one colour over a caption reading "OPUS → Rockwell" — a
+   * ranking with nothing to say which bar was which shop or what any of
+   * them measured. That is a shape asserting an order and hiding the
+   * figures, which is the opposite of what the board is for. A bar is a row:
+   * its name, its length, its figure, and its own colour when it is a thing
+   * the palette knows. The named widget draws exactly what the grammar's
+   * `bar` mark draws, so a ranking looks the same whichever way George asked
+   * for it.
+   */
+  if (p.o.form === 'bar') {
+    const key = valueOf(rows[0])?.key ?? 'value';
+    return (
+      <Shell quiet hue={hue} landing={p.landing} delay={p.delay}>
+        <p className="r-label">{label}{p.earlier ? ' · from earlier' : ''}</p>
+        <div className="r-spec-bars" style={{ marginTop: 12 }}>
+          {rows.map((row, n) => {
+            const name = subjectOf(row) ?? String(row.day ?? row.week ?? row.month ?? row.hour ?? n + 1);
+            const dim = dimensionOf(rows, name);
+            const own = hueFor(name, dim, 'subject');
+            const lit = isLit(p.o, row);
+            return (
+              <div key={n} className="r-spec-bar">
+                <span className="r-spec-bar-name">{name}</span>
+                <span className="r-spec-bar-track">
+                  <i style={{ width: `${(values[n] / max) * 100}%`,
+                              background: `rgb(${own === NEUTRAL_RGB ? hue : own})`,
+                              opacity: lit ? 1 : 0.28 }} />
+                </span>
+                <span className="r-spec-bar-figure">{fmt(key, row[key])}</span>
+              </div>
+            );
+          })}
+        </div>
+        <Receipts meta={call?.result?.meta} />
+      </Shell>
+    );
+  }
+
   const W = 560, H = 130, pad = 8;
   const x = (n: number) => pad + (n / Math.max(1, rows.length - 1)) * (W - pad * 2);
   const y = (v: number) => H - pad - (v / max) * (H - pad * 2);
   const line = values.map((v, n) => `${x(n)},${y(v)}`).join(' ');
+  const iHi = values.indexOf(Math.max(...values));
+  const iLo = values.indexOf(Math.min(...values));
+  const key = valueOf(rows[0])?.key ?? 'value';
 
-  const hue = hueFor(p.o.subject, null, kindOfRead(p.o.tool));
   return (
     <Shell quiet hue={hue} landing={p.landing} delay={p.delay}>
-      <p className="r-label">
-        {call?.result?.meta?.metric_label ?? 'series'}{p.earlier ? ' · from earlier' : ''}
-      </p>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ marginTop: 10, display: 'block' }}
-           role="img" aria-label={call?.result?.meta?.metric_label ?? 'series'}>
+      <p className="r-label">{label}{p.earlier ? ' · from earlier' : ''}</p>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ marginTop: 10, display: 'block', overflow: 'visible' }}
+           role="img" aria-label={label}>
         <defs>
           <linearGradient id={`fill-${p.o.key}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={`rgb(${hue})`} stopOpacity="0.30" />
             <stop offset="100%" stopColor={`rgb(${hue})`} stopOpacity="0" />
           </linearGradient>
         </defs>
-        {p.o.form === 'bar'
-          ? values.map((v, n) => (
-              <rect key={n} x={x(n) - (W / rows.length) * 0.3} y={y(v)}
-                    width={(W / rows.length) * 0.6} height={H - pad - y(v)}
-                    fill={`rgb(${hue})`} opacity={0.75} rx={2} />
-            ))
-          : (
-            <>
-              <polygon fill={`url(#fill-${p.o.key})`}
-                       points={`${pad},${H - pad} ${line} ${x(rows.length - 1)},${H - pad}`} />
-              <polyline fill="none" stroke={`rgb(${hue})`} strokeWidth={1.6} points={line} />
-              <circle cx={x(rows.length - 1)} cy={y(values[values.length - 1])} r={3.5}
-                      fill={`rgb(${hue})`} />
-            </>
-          )}
+        <polygon fill={`url(#fill-${p.o.key})`}
+                 points={`${pad},${H - pad} ${line} ${x(rows.length - 1)},${H - pad}`} />
+        <polyline fill="none" stroke={`rgb(${hue})`} strokeWidth={1.6} points={line} />
+        {/* The high and the low, named — both rows the read returned. */}
+        {rows.length > 2 && [iHi, iLo].map((i) => (
+          <g key={i}>
+            <circle cx={x(i)} cy={y(values[i])} r={3.5} fill={`rgb(${hue})`} stroke="var(--card)" strokeWidth={1.5} />
+            <text x={x(i)} y={i === iHi ? y(values[i]) - 8 : y(values[i]) + 16}
+                  textAnchor={x(i) > W * 0.8 ? 'end' : x(i) < W * 0.2 ? 'start' : 'middle'}
+                  style={{ font: '500 10px var(--mono)', fill: 'var(--ink)' }}>
+              {fmt(key, rows[i][key])}
+            </text>
+          </g>
+        ))}
       </svg>
       <p className="r-label" style={{ marginTop: 6 }}>
-        {subjectOf(rows[0]) ?? ''} → {subjectOf(rows[rows.length - 1]) ?? ''}
+        {subjectOf(rows[0]) ?? fmt('day', rows[0].day ?? rows[0].week ?? rows[0].month ?? '')}
+        {' → '}
+        {subjectOf(rows[rows.length - 1]) ?? fmt('day', rows[rows.length - 1].day ?? rows[rows.length - 1].week ?? rows[rows.length - 1].month ?? '')}
       </p>
       <Receipts meta={call?.result?.meta} />
     </Shell>

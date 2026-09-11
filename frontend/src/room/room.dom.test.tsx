@@ -334,3 +334,33 @@ describe('the picture points, so the sentence does not have to', () => {
     expect(screen.getByText('carries the whole week')).toBeTruthy();
   });
 });
+
+
+describe('a bar chart names its bars', () => {
+  // THE BUG THIS HOLDS. The bar form drew seven unlabelled rectangles in one
+  // colour over "OPUS → Rockwell": a ranking with nothing to say which bar
+  // was which shop or what any of them measured. A bar is a row — its name,
+  // its length, its figure.
+  it('draws every row as a named bar with its figure', () => {
+    const { container } = draw([object('chart', { form: 'bar' })]);
+    const bars = [...container.querySelectorAll('.r-spec-bar')];
+    expect(bars).toHaveLength(2);
+    expect(bars[0].textContent).toContain('Rockwell');
+    expect(bars[0].textContent).toContain('203,717');
+    expect(bars[1].textContent).toContain('OPUS');
+    expect(container.textContent).not.toContain('→');
+  });
+
+  it('paints each shop in its own colour', () => {
+    const { container } = draw([object('chart', { form: 'bar' })]);
+    const fills = [...container.querySelectorAll('.r-spec-bar-track i')].map((i) => (i as HTMLElement).style.background);
+    expect(fills[0]).not.toBe(fills[1]);
+  });
+
+  it('cools the rows George did not point at', () => {
+    const { container } = draw([object('chart', { form: 'bar', emphasise: 'OPUS' })]);
+    const fills = [...container.querySelectorAll('.r-spec-bar-track i')] as HTMLElement[];
+    expect(fills[0].style.opacity).toBe('0.28');
+    expect(fills[1].style.opacity).toBe('1');
+  });
+});

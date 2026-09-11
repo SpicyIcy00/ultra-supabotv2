@@ -236,6 +236,14 @@
   color: var(--on-colour);
 }
 .r-tile--solid .r-delta--none { background: rgba(255, 255, 255, 0.14); color: var(--on-colour-2); }
+/* A caveat on a coloured tile reads in the tile's ink. It was drawn in the
+   board's grey, which on cyan is a whisper nobody can read — and a caveat
+   nobody can read has not surfaced (UI rule 4). */
+.r-tile--solid .r-caveats { border-color: rgba(255, 253, 249, 0.5); }
+.r-tile--solid .r-caveat { color: var(--on-colour); }
+.r-tile--solid .r-caveat-detail { color: var(--on-colour-2); }
+.r-tile--solid .r-more { color: var(--on-colour); }
+.r-tile--solid .r-more:hover { color: var(--on-colour); text-decoration-thickness: 2px; }
 .r-tile--solid[data-open]:hover { filter: brightness(1.05); }
 
 /* Long bodies scroll inside rather than making the tile define the page. */
@@ -257,6 +265,11 @@
 /* George speaking. His own warm hue, always at the same low strength, so his
    thoughts never look like a figure that moved. */
 .r-tile--george { --hue: var(--george); --i: 0.10; }
+/* A READING IS NEVER CUT. Every tile caps its height so a table cannot
+   define the page; his words are clamped to a few lines with "read the
+   rest" instead, and once opened they have to be all there — the cap was
+   clipping the opened reading mid-sentence. */
+.r-tile--george { max-height: none; }
 /* His hue is a warm WHITE, and a white bloom at full strength on near-black
    is a grey slab, not a glow. Held to a third, so it reads as candlelight. */
 .r-tile--george::before { opacity: 0.38; }
