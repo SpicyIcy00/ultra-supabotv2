@@ -115,7 +115,17 @@ async def run_workflow(
             rule would have produced on that morning. Windows move to that day;
             steps that can only report the present say so on the row and in a
             notice. Omit for a live run. A backtest is what a version needs
-            before an administrator can let it run on a schedule.
+            before an administrator can let it run on a schedule. Read every
+            step's `reproducible` before describing a backtest: anything other
+            than "full" is TODAY's position, and presenting it as the past is
+            a number without its caveat.
+
+    Returns one row per step, each with its own receipts, because the steps
+    read different sources at different moments. `meta.version` is the version
+    that ran — always name it. `meta.diverges_from_schedule` true means a
+    schedule fires a different (promoted) version: say which version produced
+    these figures, which each schedule fires and when, and why they differ —
+    a run uses the newest logic, a schedule keeps the approved one.
 
     Returns:
         {"rows": [...], "meta": {...}}. One row per step, each carrying its own

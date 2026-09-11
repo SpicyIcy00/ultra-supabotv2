@@ -213,3 +213,48 @@ def test_ordinary_business_words_are_not_mistaken_for_internals():
         "and filtered to Rockwell. The top three account for most of it."
     )
     assert internal_vocabulary(answer) == []
+
+
+# ---------------------------------------------------------------------------
+# The voice checks (plan phase A): pure, and held here so a false reading is
+# a bug and not an argument.
+# ---------------------------------------------------------------------------
+
+def test_voice_restated_sentences_match_on_digits_whatever_the_format():
+    from tests.evals import voice_checks as voice
+    results = [{"rows": [{"hour": 15, "value": 110876.5}], "meta": {}}]
+    answer = ("It's an afternoon shop. Peaking at 3pm (₱110,876.50) with a second push at six. "
+              "Thirty days stacked on one clock, so this is the shape of a day.")
+    restated = voice.restated_sentences(answer, results)
+    assert len(restated) == 1 and "3pm" in restated[0]
+    # A figure no result holds is not a restatement (it is an ungrounded numeral,
+    # which checks.py catches).
+    assert voice.restated_sentences("Trade only becomes real at ₱9,999.", results) == []
+
+
+def test_voice_leads_with_reading_means_no_figure_in_the_first_sentence():
+    from tests.evals import voice_checks as voice
+    assert voice.leads_with_reading("Rockwell is an afternoon shop — nothing before eleven. Peak ₱110,877 at three.")
+    assert not voice.leads_with_reading("Net sales were ₱1,777,622 last week. Up on the week before.")
+    # A correction or a caveat as the opening is still a reading.
+    assert voice.leads_with_reading("I was wrong last turn — the takings can be cut by hour. Here it is.")
+    # Small counts and dates are not figures.
+    assert voice.leads_with_reading("All 7 shops were up on Mon 7 Sep 2026. OPUS led.")
+
+
+def test_voice_paragraphs_and_offers():
+    from tests.evals import voice_checks as voice
+    one = "Rockwell is an afternoon shop. Thirty days on one clock. Want the same for OPUS?"
+    assert voice.paragraphs(one) == 1
+    assert voice.closing_offers(one) == 1
+    three = "First.\n\nSecond paragraph here.\n\nShall I draft it? Or hold it? Or both?"
+    assert voice.paragraphs(three) == 3
+    assert voice.closing_offers(three) == 3
+    assert voice.closing_offers("No question at the end. None at all.") == 0
+
+
+def test_voice_findings_carry_the_budget():
+    from tests.evals import voice_checks as voice
+    f = voice.voice_findings("One reading here.\n\nA caveat in its own paragraph.", [], notices=1)
+    assert f["paragraphs"] == 2 and f["paragraph_budget"] == 2
+    assert f["leads_with_reading"] and f["closing_offers"] == 0

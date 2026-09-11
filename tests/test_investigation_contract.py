@@ -270,7 +270,7 @@ def test_the_prompt_locks_the_false_premise_and_forbids_attribution_shares():
 def test_the_prompt_says_localization_is_not_cause_and_keeps_window_consistency():
     section = _prompt().split("\nINVESTIGATING\n", 1)[1]
     assert "localization is not cause" in section
-    assert "SAME date_range, filters and compare_to" in section
+    assert "same window, filters and comparison" in section
     assert "keeps the primary fact's window, baseline, store scope and filters" in section
 
 
@@ -283,7 +283,8 @@ def test_the_prompt_treats_a_compared_pin_as_verified_evidence():
 
 def test_rule_14_exempts_the_limitation_statement_by_pointing_at_investigating():
     p = _prompt()
-    rule = p.split("\n14. ", 1)[1].split("\n15. ", 1)[0]
+    # Found by what it says, not its number: renumbered in the 2026-09-12 rewrite.
+    rule = next(line for line in p.splitlines() if "Volunteer at most ONE" in line)
     assert "NOT a volunteered fact" in rule and "INVESTIGATING, 5" in rule
 
 

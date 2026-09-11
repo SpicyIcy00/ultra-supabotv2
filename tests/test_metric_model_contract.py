@@ -321,7 +321,7 @@ def test_the_prompt_forbids_computing_what_a_tool_returns():
     given, the tools return the figures, and the tests keep both true.
     """
     prompt = _george_loop().SYSTEM_PROMPT
-    assert "16." in prompt
+    assert "A figure made from figures comes from a tool" in prompt
     assert "average_transaction_value" in prompt
     assert "compare_to='previous_period'" in prompt
     assert "baseline_status" in prompt
