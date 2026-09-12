@@ -31,6 +31,16 @@ shippable. The full diagnosis is the report linked in section 6.
 - **The owner's prompts are complaints, not designs.** "Tap Rockwell, say
   products: 30 s and a second tile" is the good shape. If a prompt arrives as a
   design, restate it as the complaint it answers before building.
+- **The daily dogfood fix does not derail the phase.** Fix the top line if it
+  is an hour or less. If it is bigger, write it as a card in section 3 and
+  carry on with the current one — a queue of small fixes is how a phase dies.
+- **The plan's central assumption is still untested**, and honesty about it is
+  part of the job. Phase 1 assumes latency is what makes George feel like a
+  chatbot. That came from reading the code and the recorded evals, not from the
+  owner using the room — which is two days old and has never been dogfooded.
+  **P0.1's deploy is the test.** If the first real complaint after deploying is
+  not about speed, Phase 1 is re-ordered around the complaint that arrives, and
+  that re-ordering is a decision to record, not a failure.
 
 ---
 
@@ -71,30 +81,70 @@ Do the first one not marked done. One per session.
       turns per turn over 7 days. **Its first median is the Phase 1 baseline.**
 
 **Phase 1 — make the one surface fast.** No new features. Targets for the
-phase: **first visible change < 2 s, median answer < 10 s, ≥50% of follow-ups
-answered with no model call.** Every card reports against the P0.3 baseline and
-the twelve-question eval.
+phase: **first visible change < 2 s, median answer < 10 s, navigation
+fragments answered with no model call at all.** Every card reports against the
+baseline below and the twelve-question eval.
 
-- [ ] **P1.a fewer round trips** — reset the answer only when a READ is called
-      (not on `compose`/`record_findings`); fold `record_findings` into
-      `compose` as one call; confirm the first read batch dispatches in
-      parallel. Measure: iterations and calls per turn, median turn time.
-- [ ] **P1.b cheaper turns** — effort per turn (low for a label-only or
-      follow-up turn, medium for a fresh question, high for the investigation
-      ladder) via the mid-conversation effort message so the cache survives;
-      corrective gates become deterministic edits, keeping a model turn only
-      for a false write claim. Measure: median turn time, corrective turns per
-      turn, and every quality check on the twelve unchanged.
-- [ ] **P1.c the board fills when data lands** — when reads land and no
+**The measured baseline** (from `verification/voice-after.json`, the twelve
+questions, 2026-09-12 — wall-clock is the one number missing and P0.3 adds it):
+
+| | now | after Phase 1 |
+|---|---|---|
+| iterations per turn, median / max | **5.5 / 8** | ≤ 2.5 |
+| calls per turn, median | 5 | unchanged |
+| label calls as a share of all calls | **51%** (28 of 55) | ≤ 25% |
+| questions where `compose` was rejected | **8 of 12** | ≤ 1 |
+| median answer, wall-clock | unmeasured | < 10 s |
+
+**Read this before planning any Phase 1 card.** An iteration is one sequential
+model round trip, and it is iterations — not database reads — that make a turn
+slow. Reads are already batched and already run concurrently
+(`asyncio.gather`, `agent/loop.py`), so **parallelism is not a lever and is not
+a card.** Half of all tool calls are George labelling his own work, and
+`compose` is refused in two questions out of three, each refusal costing a
+whole round trip. One question ("cannot") spent 8 iterations and 4 `compose`
+calls to answer "I can't see foot traffic".
+
+- [ ] **P1.a compose stops round-tripping** — the biggest single win.
+      (a) Most refusals are structural, not about truth: a second block
+      weighted `lead`, a `change` carrying a field it may not, a `change` that
+      changes nothing. **Coerce those instead of refusing** — demote the second
+      lead, drop the stray field, ignore the no-op — and keep a refusal only
+      where drawing it would put a wrong or unbacked figure on screen (a seq
+      that did not run, a failed read, a subject with no row, an object
+      carrying a figure). `agent/compose.py` already has the precedent.
+      (b) Fold `record_findings` into `compose`: one schema, one call.
+      (c) Prose written beside a LABEL call is the answer, not narration —
+      reset only when a READ is called (`agent/loop.py`, the `interim_prose`
+      branch fires on any `tool_uses` today).
+      Measure: rejections per turn, label share, iterations per turn.
+- [ ] **P1.b the board fills when data lands** — when reads land and no
       `compose` has arrived, compose a default server-side from `inferShape`;
       George's later `compose` replaces it in place by key. Measure: time to
       first visible object. This is the card that has to hit 2 s.
-- [ ] **P1.d no model at all** — route the common fragments through
-      `POST /george/replay`: a tapped subject, "products" on a focused shop,
-      "last month", "compare these" with a selection, the window control.
-      Measure: share of follow-ups with no model call; target 50%.
-- [ ] **P1.✓ close the phase** — all three targets reported against their
-      numbers, plus which cards actually paid.
+- [ ] **P1.c cheaper turns** — effort per turn (low for a label-only or
+      follow-up turn, medium for a fresh question, high for the investigation
+      ladder) via the mid-conversation effort message so the cache survives;
+      the six corrective gates become deterministic edits, keeping a model turn
+      only for a false write claim. Measure: median turn time, corrective turns
+      per turn, and every quality check on the twelve unchanged.
+- [ ] **P1.d fragments skip the model** — route through
+      `POST /george/replay`. **Two kinds, and they differ:** a NAVIGATION
+      fragment (the window control, a tapped subject, "last month") redraws
+      with no model call at all; an ANALYTICAL fragment ("products", "why?",
+      "compare these") draws instantly from the replay and George's reading
+      follows in the same turn. A reading is the point of an analytical
+      question and must not be dropped to win a latency number.
+      Measure: time to first visible change for each kind.
+- [ ] **P1.✓ close the phase** — every target reported against its number,
+      plus which cards actually paid.
+
+**The standing gate on every Phase 1 card.** This phase dismantles the
+machinery that enforces George's trust guarantees, so each card re-runs the
+twelve and reports, beside its own number: notices surfaced (must stay 100%),
+no figure in prose that no tool returned, refusals still refusing. A card that
+buys speed by losing one of those has failed — say so rather than keeping the
+speed.
 
 **Phase 2 — deepen the seven.** Only after P1.✓ meets its numbers.
 
@@ -107,8 +157,19 @@ the twelve-question eval.
 - [ ] **P2.d** voice into the room's composer, carrying the same board
       selection a typed question carries.
 
-After Phase 2: proactive investigation, build-with-George beyond pages and
-workflows, then documents and integrations.
+After Phase 2: proactive investigation (already built — watches, standing
+questions and `get_attention` all work; what it needs is living with, not
+building), build-with-George beyond pages and workflows.
+
+**Blocked on data, not on code — and these have lead time.** Four of the
+owner's 26 features cannot be started by any session here, because no source
+exists: **people and permissions** (feature 8/16), **documents and
+unstructured information** (24), **actions into the tools the business
+actually uses** (25), and **cross-business** (23 — the database holds one
+business; the FFR record in `metrics.yaml data_availability.ffr` lists what an
+authoritative source must provide). Building shapes with nothing behind them is
+forbidden. These are the owner's to source, and starting them in parallel with
+Phase 1 is the only way they are ready when the interaction work lands.
 
 ---
 

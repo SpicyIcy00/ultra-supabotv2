@@ -38,3 +38,36 @@ task, not a rename.
 
 The accent allowlist fell 7 → 4 without a decision being reversed: three
 entries named chromes that no longer exist.
+
+## 2026-09-12 — The plan reviewed against its own evidence
+
+Reviewed the three-phase plan before starting it, by checking each card's
+premise in the code and in `verification/voice-after.json` rather than
+asserting it. Three of my own claims were wrong.
+
+**Parallelism is not a lever.** Reads already dispatch through
+`asyncio.gather` and the model already batches them (four `get_sales` in one
+iteration). That card is deleted, not deferred.
+
+**The bottleneck is labelling, not reading.** Median 5.5 iterations per turn,
+max 8. 28 of 55 tool calls across the twelve are `compose`/`record_findings`,
+and `compose` is REFUSED in 8 of the 12 questions — each refusal a whole model
+round trip. "What was the foot traffic at Rockwell?" spent 8 iterations and 4
+compose calls to answer "I can't see foot traffic". So the first Phase 1 card
+is now: coerce the structural refusals (a second `lead`, a stray field on a
+`change`, a no-op `change`) instead of refusing them, and keep refusals only
+where drawing would put an unbacked figure on screen. The trust boundary is
+"the model never authors a figure", never "exactly one lead".
+
+**A latency target must not cost a reading.** "50% of follow-ups with no model
+call" would have answered "why?" with figures and no interpretation, which is
+the product. Split: navigation fragments take no model call; analytical
+fragments draw instantly and the reading follows.
+
+Two things the plan had no answer for, now written into `ops/NOW.md`: a
+standing trust gate on every Phase 1 card, because the phase dismantles the
+machinery that enforces the guarantees; and the fact that the central
+assumption — that latency is what makes George feel like a chatbot — comes
+from code and evals, not from the owner using the room, which has never been
+dogfooded. The deploy after P0.1 is the test, and the plan re-orders around
+whatever complaint actually arrives.
