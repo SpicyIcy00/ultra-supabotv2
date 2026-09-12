@@ -71,3 +71,22 @@ assumption — that latency is what makes George feel like a chatbot — comes
 from code and evals, not from the owner using the room, which has never been
 dogfooded. The deploy after P0.1 is the test, and the plan re-orders around
 whatever complaint actually arrives.
+
+## 2026-09-12 — P0.1, main fast-forwarded (Phase 0, session 3)
+
+`main` is `5354ef6`: a clean fast-forward of 166 commits, 161 ahead of
+`origin/main` and 0 behind, so PR #1 was already in the branch and a push stays
+a fast-forward. Unpushed by instruction.
+
+The four deterministic suites are exact: **1,326** pure, **774** vitest, `tsc -b`
+and `npm run build` clean. Vitest first reported 759 because `node_modules`
+predated the branch's `@vercel/functions`; `npm ci` is part of taking the merge.
+
+The twelve ran **11 passed, 1 failed** — `why` tripped the strict
+`leads_with_reading` gate by opening "…transactions rose 34% while the average
+basket fell 16%". A fresh run of a real-model eval, not a regression: the trust
+properties held on all twelve (no forced notice, no ungrounded numeral), and the
+figures moved both ways against the recorded baseline — iterations 6.0/10 median/max
+(was 5.5/8), label share 52% (was 51%), compose rejected in 6 of 12 (was 8).
+**`verification/` is gitignored**, so `voice-after.json` is gone and NOW.md's
+table is the only durable baseline.

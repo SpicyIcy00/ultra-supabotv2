@@ -48,12 +48,11 @@ shippable. The full diagnosis is the report linked in section 6.
 
 | | |
 |---|---|
-| Product branch | `feature/workspace` — **not yet merged to `main`** |
-| Head | `d7fedb4` (the cut), unpushed |
-| `main` | `db4b22f`, 163 commits behind, 0 ahead |
+| Product branch | `main` — `feature/workspace` merged into it 2026-09-12 |
+| Head | `5354ef6`, **unpushed**; 161 ahead of `origin/main`, 0 behind |
 | Last deploy | none since 2026-09-07 |
 | Phase | 0, consolidating |
-| Next card | **P0.1, merge** |
+| Next card | **P0.2, rulebook** |
 
 The live surface is **the room** (`frontend/src/room/`, route `/`). The desk,
 the river pages, the shell chrome and the `/w2` renderer were deleted on
@@ -69,8 +68,10 @@ Do the first one not marked done. One per session.
 
 - [x] **P0.0 the cut** — 100 files / 16,660 lines deleted, production-reachable
       files unchanged at 194. `d7fedb4`.
-- [ ] **P0.1 merge** — fast-forward `main` to `feature/workspace`, run
-      everything in section 4, report. Do not push; the owner says when.
+- [x] **P0.1 merge** — fast-forward of 166 commits, `5354ef6`. Suites exact:
+      1,326 pure, 774 vitest (after `npm ci` — node_modules predated the
+      branch), `tsc` and `build` clean. The twelve: 11 passed, 1 failed
+      (`why`, strict `leads_with_reading`). Unpushed, awaiting the owner.
 - [ ] **P0.2 rulebook** — CLAUDE.md under 1,500 words; history moved to
       `ops/DECISIONS.md`; AGENTS.md merged or deleted; delete the assertions
       that hold exact system-prompt wording (15 files, ~33 assertions). The
@@ -85,15 +86,17 @@ phase: **first visible change < 2 s, median answer < 10 s, navigation
 fragments answered with no model call at all.** Every card reports against the
 baseline below and the twelve-question eval.
 
-**The measured baseline** (from `verification/voice-after.json`, the twelve
-questions, 2026-09-12 — wall-clock is the one number missing and P0.3 adds it):
+**The measured baseline** (the twelve questions, 2026-09-12 — wall-clock is the
+one number missing and P0.3 adds it). `verification/` is **gitignored**, so this
+table is the record, not the JSON; P0.1's re-run is in brackets, and the spread
+between the two is what one real-model run costs a figure:
 
 | | now | after Phase 1 |
 |---|---|---|
-| iterations per turn, median / max | **5.5 / 8** | ≤ 2.5 |
-| calls per turn, median | 5 | unchanged |
-| label calls as a share of all calls | **51%** (28 of 55) | ≤ 25% |
-| questions where `compose` was rejected | **8 of 12** | ≤ 1 |
+| iterations per turn, median / max | **5.5 / 8** [6.0 / 10] | ≤ 2.5 |
+| calls per turn, median | 5 [5] | unchanged |
+| label calls as a share of all calls | **51%** (28 of 55) [52%, 33 of 63] | ≤ 25% |
+| questions where `compose` was rejected | **8 of 12** [6 of 12] | ≤ 1 |
 | median answer, wall-clock | unmeasured | < 10 s |
 
 **Read this before planning any Phase 1 card.** An iteration is one sequential
@@ -179,6 +182,7 @@ Run from the repo root. The interpreter is `.venv\Scripts\python.exe`; a system
 `python` cannot import the backend (pinned SQLAlchemy).
 
     .venv\Scripts\python.exe ops/verify_integration.py pure     # 1,326 expected
+    cd frontend && npm ci                                       # after any merge
     cd frontend && npx vitest run                               # 774 expected
     cd frontend && npx tsc -b --noEmit
     cd frontend && npm run build
