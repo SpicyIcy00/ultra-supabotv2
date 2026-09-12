@@ -4,12 +4,16 @@ The state of play for George, kept current. **Every working session starts by
 reading this file.** It exists so a prompt can be one line without a fresh
 session having to re-derive where everything is.
 
-Four files, four jobs: **CLAUDE.md** holds the rules that do not change (1,493
+Five files, five jobs: **CLAUDE.md** holds the rules that do not change (1,493
 words since P0.2), **ops/STANDARD.md** holds the owner's own 26 features — the
 standard everything is measured against — **ops/DECISIONS.md** holds why the
-rules got there plus the archive CLAUDE.md used to carry, and **this** holds
-where we are right now. If this file disagrees with a memory or an old plan,
-this file wins.
+rules got there plus the archive CLAUDE.md used to carry,
+**ops/DOGFOOD_LOG.md** holds what is wrong with George right now in the
+owner's own words, and **this** holds where we are.
+
+If this file disagrees with a memory or an old plan, this file wins. **If
+DOGFOOD_LOG has anything under Open, it wins over the card list here** — a
+reported defect outranks every number in this file.
 
 ---
 
@@ -89,7 +93,10 @@ code.
 
 ## 3. The cards
 
-Do the first one not marked done. One per session.
+**Check `ops/DOGFOOD_LOG.md` first. Anything under Open comes before any card
+here** — that is where reported defects live, in the owner's own words, and no
+speed card is started while one is outstanding. If Open is empty, do the first
+card below that is not marked done. One per session either way.
 
 **Phase 0 — consolidate**
 
