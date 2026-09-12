@@ -2344,7 +2344,26 @@ async def run(
             # to move what it has into the activity disclosure, where the
             # model's own account of its work already lives, and to start the
             # answer again from nothing.
-            if tool_uses and "".join(text_parts).strip():
+            # ONLY A READ MAKES PROSE NARRATION (fixed 2026-09-12). This fired
+            # on ANY tool_use, and `compose` is a tool_use — so the sentence
+            # George had just written was pulled off the screen and folded into
+            # the activity disclosure every time he arranged the board. He
+            # composes two to four times in a typical answer, and `compose` is
+            # refused in 8 of the 12 eval questions, each refusal costing
+            # another call: the reader watched the answer appear and vanish,
+            # repeatedly, and when the last compose landed few blocks there was
+            # nothing left on screen at all. Reported by the owner against
+            # "how are we doing": "stuff came out but it just disappeared."
+            #
+            # The rule the reset was written for is unchanged: "Rockwell is
+            # down; let me look at the drivers" BEFORE a read is narration. A
+            # label call reads nothing and discovers nothing — it says what the
+            # person should SEE of work already done — so prose beside it is
+            # the answer, not a preamble to one. Same for a write.
+            reads_next = [b for b in tool_uses
+                          if b.name not in FINDING_TOOL_FUNCTIONS
+                          and b.name not in write_tools.WRITE_TOOL_FUNCTIONS]
+            if reads_next and "".join(text_parts).strip():
                 yield _reset_answer("interim_prose")
 
             # ---- no more tools: candidate answer -------------------------

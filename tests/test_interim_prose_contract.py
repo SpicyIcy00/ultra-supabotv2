@@ -106,3 +106,61 @@ def test_the_stored_answer_is_the_final_text_alone(monkeypatch):
     params = [p for p in conv[0] if isinstance(p, str)]
     assert FINAL in params
     assert not any(INTERIM in p for p in params)
+
+
+# ---------------------------------------------------------------------------
+# A LABEL CALL IS NOT A READ (2026-09-12)
+#
+# The reset fired on any tool_use, and `compose` is a tool_use. So the sentence
+# George had just written was pulled off the screen into the activity
+# disclosure every time he arranged the board — two to four times in a typical
+# answer, and more whenever a compose was refused. The owner saw it against
+# "how are we doing": "stuff came out but it just disappeared."
+#
+# The rule the reset was written for is untouched: prose BEFORE a read is a
+# preamble to work not yet done. A label call reads nothing and discovers
+# nothing, so prose beside it is the answer.
+# ---------------------------------------------------------------------------
+
+COMPOSE = {"blocks": [{"op": "put", "kind": "text", "key": "reading", "weight": "lead"}]}
+
+
+def test_prose_beside_a_label_call_is_the_answer_and_is_never_reset(monkeypatch):
+    frames = _drive(monkeypatch, [
+        [_ToolUse("tu-1", "get_sales", SALES)],
+        [_TextBlock(FINAL), _ToolUse("tu-2", "compose", COMPOSE)],
+        [],
+    ])
+    assert frames_of(frames, "answer_reset") == [], (
+        "composing the board does not make the answer narration"
+    )
+
+
+def test_repeated_compose_never_wipes_the_answer(monkeypatch):
+    """The shape that produced the report: compose refused, composed again."""
+    frames = _drive(monkeypatch, [
+        [_ToolUse("tu-1", "get_sales", SALES)],
+        [_TextBlock(FINAL), _ToolUse("tu-2", "compose", COMPOSE)],
+        [_ToolUse("tu-3", "compose", COMPOSE)],
+        [],
+    ])
+    assert frames_of(frames, "answer_reset") == []
+
+
+def test_a_read_after_prose_still_resets(monkeypatch):
+    """The original guarantee, unchanged: a read still makes prose narration."""
+    frames = _drive(monkeypatch, [
+        [_TextBlock(INTERIM), _ToolUse("tu-1", "get_sales", SALES)],
+        [_TextBlock(FINAL)],
+    ])
+    assert frames_of(frames, "answer_reset") == [{"reason": "interim_prose"}]
+
+
+def test_a_read_in_the_same_batch_as_a_label_still_resets(monkeypatch):
+    """One read in the batch is enough: what follows is work, so prose is a preamble."""
+    frames = _drive(monkeypatch, [
+        [_TextBlock(INTERIM), _ToolUse("tu-1", "compose", COMPOSE),
+         _ToolUse("tu-2", "get_sales", SALES)],
+        [_TextBlock(FINAL)],
+    ])
+    assert frames_of(frames, "answer_reset") == [{"reason": "interim_prose"}]

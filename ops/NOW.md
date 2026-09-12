@@ -120,8 +120,19 @@ Do the first one not marked done. One per session.
       reporting median and p90 turn time, calls, iterations and corrective
       turns per turn over 7 days. **Its first median is the Phase 1 baseline.**
 
-**Phase 1 — make the one surface fast.** No new features. Targets for the
-phase: **first visible change < 2 s, median answer < 10 s, navigation
+**Phase 1 — make it work, then make it fast. In that order.**
+
+*Reordered 2026-09-12, on the owner's report: "there are still a lot of
+problems, it doesn't even function right — I sent 'how are we doing', stuff
+came out but it just disappeared."* The plan as written measured speed and
+assumed correctness. That was the wrong way round, and the bug he hit was
+already sitting inside a card I had labelled a latency optimisation: prose was
+being wiped off the screen by `compose`. **A correctness complaint outranks
+every number in this file.** Speed targets stay, and no speed card is started
+while a reported defect is open.
+
+The daily dogfood log is what drives this phase, not the card order. Targets
+once it works: **first visible change < 2 s, median answer < 10 s, navigation
 fragments answered with no model call at all.** Every card reports against the
 baseline below and the twelve-question eval.
 
@@ -147,7 +158,9 @@ a card.** Half of all tool calls are George labelling his own work, and
 whole round trip. One question ("cannot") spent 8 iterations and 4 `compose`
 calls to answer "I can't see foot traffic".
 
-- [ ] **P1.a compose stops round-tripping** — the biggest single win.
+- [~] **P1.a compose stops round-tripping** — the biggest single win, and
+      **half correctness, not speed**. Part (c) is DONE (2026-09-12): the
+      answer no longer disappears when George composes. (a) and (b) remain.
       (a) Most refusals are structural, not about truth: a second block
       weighted `lead`, a `change` carrying a field it may not, a `change` that
       changes nothing. **Coerce those instead of refusing** — demote the second
@@ -156,10 +169,14 @@ calls to answer "I can't see foot traffic".
       that did not run, a failed read, a subject with no row, an object
       carrying a figure). `agent/compose.py` already has the precedent.
       (b) Fold `record_findings` into `compose`: one schema, one call.
-      (c) Prose written beside a LABEL call is the answer, not narration —
-      reset only when a READ is called (`agent/loop.py`, the `interim_prose`
-      branch fires on any `tool_uses` today).
-      Measure: rejections per turn, label share, iterations per turn.
+      (c) **DONE.** Prose written beside a LABEL call is the answer, not
+      narration: the `interim_prose` reset fired on any `tool_use`, including
+      `compose`, so the sentence George had just written was pulled off screen
+      into the activity disclosure every time he arranged the board — and again
+      on every refused compose. Held by four cases in
+      `tests/test_interim_prose_contract.py`.
+      Measure for (a) and (b): rejections per turn, label share, iterations per
+      turn.
 - [ ] **P1.b the board fills when data lands** — when reads land and no
       `compose` has arrived, compose a default server-side from `inferShape`;
       George's later `compose` replaces it in place by key. Measure: time to

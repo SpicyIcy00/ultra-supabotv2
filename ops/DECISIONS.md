@@ -2355,3 +2355,35 @@ a preview without staging config, and `routing.test.ts` covers both.
 `VERCEL_ENV_SETUP.md` and a comment in `useGeorgeStream.ts` say it is in
 `vercel.json`; those two are stale, and the claim I wrote from them was wrong.
 Railway itself is healthy: schema `v6w7x8y9z0a1`, code and database agreeing.
+
+## 2026-09-12 — The answer disappeared, and the plan had it filed under speed
+
+The owner, on the deployed build: *"it doesn't even function right — I sent
+'how are we doing', stuff came out but it just disappeared."*
+
+**Cause.** `agent/loop.py` emitted `answer_reset(interim_prose)` whenever an
+iteration produced text AND any `tool_use`. `compose` is a `tool_use`. The
+client's handler for that reason moves the written text into the activity
+disclosure and sets `t.text = ''` — deliberately, and without the `superseded`
+protection the other reset reasons get, because narration is not meant to
+reappear. So every time George arranged the board, the sentence he had just
+written was taken off the screen. He composes two to four times in a typical
+answer, and `compose` is refused in 8 of the 12 eval questions, each refusal
+costing another call. When the final compose landed few blocks, there was
+nothing left on screen at all — the board's empty-composition fallback only
+fires when NOTHING composed, not when little did.
+
+**Fix.** The reset now fires only when a READ is in the batch. The rule it was
+written for is untouched: "Rockwell is down; let me look at the drivers" before
+a read is a preamble to work not yet done. A label call reads nothing and
+discovers nothing, so prose beside it is the answer. Four cases hold it,
+including the exact shape reported (compose, refused, composed again) and the
+original guarantee.
+
+**What this says about the plan, which matters more than the bug.** This fix
+was already in the plan — as item (c) of a card called "compose stops
+round-tripping", filed under Phase 1, *make the one surface fast*. It was
+never a speed problem. The plan measured latency and assumed correctness, and
+the owner found the defect before the plan would have. Phase 1 is reordered:
+**make it work, then make it fast**, the daily dogfood log drives the order,
+and no speed card starts while a reported defect is open.
