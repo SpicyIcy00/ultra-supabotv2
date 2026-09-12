@@ -359,19 +359,6 @@ def test_emphasis_lights_one_row_and_hides_none():
         {"mark": "bar", "seq": 0, "field": "value", "emphasise": "Fairview"})
 
 
-def test_the_prompt_tells_him_the_shape_can_say_it():
-    """
-    The grammar existing is not the same as him using it. Half the point of
-    this work is the instruction to try the picture before the sentence.
-    """
-    from agent import loop as george_loop
-
-    assert "SAY IT WITH THE SHAPE" in george_loop.SYSTEM_PROMPT
-    assert "restates what is drawn" in george_loop.SYSTEM_PROMPT
-    # And what prose is still for, so this does not read as "stop explaining".
-    assert "WHAT PROSE IS STILL FOR" in george_loop.SYSTEM_PROMPT
-
-
 # ---------------------------------------------------------------------------
 # 7. The instruments — five marks that are a second reading, never a word
 # ---------------------------------------------------------------------------

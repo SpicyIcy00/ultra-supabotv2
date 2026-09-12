@@ -4,9 +4,12 @@ The state of play for George, kept current. **Every working session starts by
 reading this file.** It exists so a prompt can be one line without a fresh
 session having to re-derive where everything is.
 
-Three files, three jobs: **CLAUDE.md** holds the rules that do not change,
-**ops/DECISIONS.md** holds why they got there, and **this** holds where we are
-right now. If this file disagrees with a memory or an old plan, this file wins.
+Four files, four jobs: **CLAUDE.md** holds the rules that do not change (1,493
+words since P0.2), **ops/STANDARD.md** holds the owner's own 26 features — the
+standard everything is measured against — **ops/DECISIONS.md** holds why the
+rules got there plus the archive CLAUDE.md used to carry, and **this** holds
+where we are right now. If this file disagrees with a memory or an old plan,
+this file wins.
 
 ---
 
@@ -49,10 +52,10 @@ shippable. The full diagnosis is the report linked in section 6.
 | | |
 |---|---|
 | Product branch | `main` — `feature/workspace` merged into it 2026-09-12 |
-| Head | `5354ef6`, **unpushed**; 161 ahead of `origin/main`, 0 behind |
-| Last deploy | none since 2026-09-07 |
+| Head | `5354ef6` + P0.2 uncommitted, **unpushed**; 161 ahead of `origin/main`, 0 behind |
+| Last deploy | 2026-09-12, `cc90397` — crashlooped on a schema behind the code; DB migrated to `v6w7x8y9z0a1` by hand, **awaiting a Railway restart** |
 | Phase | 0, consolidating |
-| Next card | **P0.2, rulebook** |
+| Next card | **P0.3, clock** |
 
 The live surface is **the room** (`frontend/src/room/`, route `/`). The desk,
 the river pages, the shell chrome and the `/w2` renderer were deleted on
@@ -72,10 +75,22 @@ Do the first one not marked done. One per session.
       1,326 pure, 774 vitest (after `npm ci` — node_modules predated the
       branch), `tsc` and `build` clean. The twelve: 11 passed, 1 failed
       (`why`, strict `leads_with_reading`). Unpushed, awaiting the owner.
-- [ ] **P0.2 rulebook** — CLAUDE.md under 1,500 words; history moved to
-      `ops/DECISIONS.md`; AGENTS.md merged or deleted; delete the assertions
-      that hold exact system-prompt wording (15 files, ~33 assertions). The
-      twelve-question eval becomes the only voice gate.
+- [x] **P0.2 rulebook** — CLAUDE.md **1,493 words**, from 22,218, with every
+      rule kept. The owner's 26 features moved verbatim to `ops/STANDARD.md`;
+      the ~20,000 words of readings moved verbatim to the archive at the foot
+      of `ops/DECISIONS.md`; AGENTS.md is a pointer, not a second copy.
+      **91 prompt-wording assertions gone across exactly the 15 files predicted
+      (97 removed, 6 written back), taking 21 test functions** — the card said
+      ~33, so nearly three times as many were pinning wording as it thought.
+      Suites exact: 1,306 pure (was 1,326), 774 vitest, `tsc -b` and `build`
+      clean. The twelve were NOT re-run: the prompt is byte-identical, so
+      nothing about the model's behaviour changed. Unpushed.
+- [ ] **P0.4 the deploy migrates itself** — `AUTO_MIGRATE_ON_START` is false in
+      Railway, so 2026-09-12's deploy booted against a schema four migrations
+      behind and refused to serve; the next deploy does the same. Either set it
+      true or migrate as an explicit release step, and make `/health` say which
+      revision is live. A schema check that only runs at startup means the gap
+      is invisible until something restarts.
 - [ ] **P0.3 clock** — `duration_ms` per turn and per iteration on
       `george.conversations`; elapsed time in the room's Working line; a query
       reporting median and p90 turn time, calls, iterations and corrective

@@ -240,54 +240,17 @@ def _prompt() -> str:
     return SYSTEM_PROMPT
 
 
-def test_the_prompt_has_an_investigating_section_with_the_five_rungs_in_order():
-    p = _prompt()
-    assert "\nINVESTIGATING\n" in p
-    section = p.split("\nINVESTIGATING\n", 1)[1].split("\nVOICE\n", 1)[0]
-    # Unnumbered since 2026-09-12: a numbered rung reads as a rule, and the
-    # prompt's budget (voice.budget) counts rules. The order is what is held.
-    for rung in ("VERIFY", "DECOMPOSE", "LOCALIZE", "EXPLAIN", "STOP"):
-        assert rung in section, rung
-    order = [section.index(r) for r in ("VERIFY the primary fact", "DECOMPOSE —", "LOCALIZE only", "EXPLAIN,", "STOP when")]
-    assert order == sorted(order)
-
-
 def test_the_drivers_sentence_comes_from_the_yaml_not_from_typing():
     from agent.loop import _drivers_sentence
     sentence = _drivers_sentence(DEFS)
     d = METRICS["net_sales"]["drivers"]
     assert " and ".join(d["components"]) in sentence
     assert d["identity"] in sentence
-    assert sentence in _prompt()
 
 
-def test_the_prompt_locks_the_false_premise_and_forbids_attribution_shares():
-    section = _prompt().split("\nINVESTIGATING\n", 1)[1]
-    assert "premise does not hold" in section and "say so and stop" in section
-    assert "share of the change" in section
-    assert "82% of the decline" in section, "the forbidden sentence is named, not paraphrased"
-    assert "rank_by='biggest_drop'" in section and "never rank two lists yourself" in section
-
-
-def test_the_prompt_says_localization_is_not_cause_and_keeps_window_consistency():
-    section = _prompt().split("\nINVESTIGATING\n", 1)[1]
-    assert "localization is not cause" in section
-    assert "same window, filters and comparison" in section
-    assert "keeps the primary fact's window, baseline, store scope and filters" in section
-
-
-def test_the_prompt_treats_a_compared_pin_as_verified_evidence():
-    section = _prompt().split("\nINVESTIGATING\n", 1)[1]
-    assert "pin that already carries a comparison is a verified primary fact" in section
+def test_view_page_tells_the_model_a_compared_pin_is_verified_evidence():
     from agent.composite_tools import view_page
     assert "verified primary fact" in " ".join((view_page.__doc__ or "").split())
-
-
-def test_rule_14_exempts_the_limitation_statement_by_pointing_at_investigating():
-    p = _prompt()
-    # Found by what it says, not its number: renumbered in the 2026-09-12 rewrite.
-    rule = next(line for line in p.splitlines() if "Volunteer at most ONE" in line)
-    assert "NOT a volunteered fact" in rule and "INVESTIGATING" in rule
 
 
 def test_the_get_sales_description_names_the_drivers_and_the_product_route():

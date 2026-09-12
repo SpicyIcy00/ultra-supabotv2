@@ -84,7 +84,6 @@ def test_the_read_is_offered_to_the_model_with_silence_and_senses_in_its_descrip
 def test_the_morning_is_a_message_kind_the_scope_section_teaches():
     kinds = req(DEFS, "investigation.message_kinds.kinds")
     assert "morning" in kinds and "get_attention" in kinds["morning"]
-    assert "get_attention" in loop.SCOPE_SECTION
 
 
 # ---------------------------------------------------------------------------

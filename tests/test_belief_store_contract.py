@@ -161,13 +161,6 @@ def test_beliefs_reach_the_loop_as_a_question_block_not_a_tool():
     assert "belief_store" in params
 
 
-def test_the_prompt_tells_george_to_read_them_first_and_never_contradict_silently():
-    section = george_loop.JUDGMENT_SECTION
-    assert "KEEPING A VIEW" in section
-    assert "never contradict it silently" in section
-    assert "A STORED VIEW CARRIES NO" in section
-
-
 # ------------------------------------------------------- the wiring itself
 
 

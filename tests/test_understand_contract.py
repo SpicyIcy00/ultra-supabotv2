@@ -156,22 +156,8 @@ def test_the_desk_context_model_refuses_a_reason_nobody_declared():
 # 3. Scope decides breadth
 # ---------------------------------------------------------------------------
 
-def test_the_prompt_tells_george_to_investigate_a_broad_message_himself(defs):
-    section = george_loop.SCOPE_SECTION
-    assert "BROAD" in section and "FOCUSED" in section and "AMBIGUOUS" in section
-    assert "do not ask where to look" in section
-    assert "answered with one figure has not been answered" in section
-    # Grouped reads, never a call per shop.
-    assert "never one per store" in section
+def test_a_broad_message_is_investigated_with_grouped_reads(defs):
     assert req(defs, "investigation.scope.kinds.broad.grouped_not_fanned_out") is True
-
-
-def test_the_minimalism_rule_that_starved_broad_intent_is_gone():
-    # It read "THE SMALLEST SURFACE THAT COMPLETELY ANSWERS THE QUESTION" and
-    # it was the direct cause of a broad message coming back with one figure.
-    assert "SMALLEST SURFACE" not in george_loop.SYSTEM_PROMPT
-    assert "READ AS WIDELY AS THE INTENT IS WIDE" in george_loop.SYSTEM_PROMPT
-    assert "PRESENT NARROWLY" in george_loop.SYSTEM_PROMPT
 
 
 def test_a_group_total_must_be_read_and_never_summed_in_prose(defs):
@@ -185,15 +171,8 @@ def test_a_group_total_must_be_read_and_never_summed_in_prose(defs):
     assert broad["never_summed_in_prose"] is True
     assert broad["estate_total_read_with"] == "group_by: []"
 
-    section = george_loop.SCOPE_SECTION
-    assert "A GROUP TOTAL IS A READ, NOT A SUM" in section
-    assert "never figures you add up from the rows in front of you" in section
-    # And the way to read one is named, from the definitions rather than typed.
-    assert str(broad["estate_total_read_with"]) in section
-
 
 def test_a_focused_message_is_not_widened_because_it_could_be(defs):
-    assert "Do not widen it because you could" in george_loop.SCOPE_SECTION
     broad = int(req(defs, "investigation.scope.kinds.broad.max_reads"))
     focused = int(req(defs, "investigation.scope.kinds.focused.max_reads"))
     assert focused < broad <= george_loop.MAX_TOOL_CALLS
@@ -203,7 +182,6 @@ def test_clarification_is_not_the_default(defs):
     ambiguous = req(defs, "investigation.scope.kinds.ambiguous")
     assert ambiguous["clarification_is_not_the_default"] is True
     assert "resolve_from" in ambiguous and len(ambiguous["resolve_from"]) >= 3
-    assert "asking is not the default" in george_loop.SCOPE_SECTION
 
 
 def test_presentation_is_bounded_and_never_scored(defs):
@@ -211,15 +189,12 @@ def test_presentation_is_bounded_and_never_scored(defs):
     assert pres["findings_min"] == 2 and pres["findings_max"] == 4
     assert pres["never_manufactured_to_fill_the_range"] is True
     assert pres["no_synthetic_score"] is True
-    assert "never invent one to fill the range" in george_loop.SCOPE_SECTION
-    assert "no health score" in george_loop.SCOPE_SECTION
 
 
 def test_findings_come_from_one_primary_and_the_rule_is_untouched(defs):
     # A broad read produces several findings from the SAME grouped call. That
     # is why the one-primary rule can stay exactly as it was.
     assert req(defs, "investigation.scope.presentation.from_the_same_primary") is True
-    assert "still has one primary fact" in george_loop.SCOPE_SECTION
 
     # Two trusted reads of the same grouped call, as the loop records them.
     def _call(**args):
@@ -247,9 +222,6 @@ def test_the_five_things_that_are_not_questions_are_named(defs):
     kinds = req(defs, "investigation.message_kinds.kinds")
     for name in ("question", "intent", "instruction", "observation", "correction", "steering"):
         assert name in kinds
-        assert name.upper() in george_loop.SCOPE_SECTION
-    # An observation is a premise, and a premise is verified before it is used.
-    assert "VERIFY it first" in george_loop.SCOPE_SECTION
 
 
 # ---------------------------------------------------------------------------
@@ -261,7 +233,6 @@ def test_george_is_told_which_metrics_break_down_by_which_subject(defs):
     # the grouping is chosen, not in the prompt.
     prompt = next(s for s in george_loop.build_tool_schemas() if s["name"] == "get_sales")["description"]
     assert "NOT EVERY METRIC BREAKS DOWN BY EVERY SUBJECT" in prompt
-    assert "NOT EVERY METRIC" not in george_loop.SYSTEM_PROMPT
 
     metrics = req(defs, "metrics")
     line = prompt[prompt.index("NOT EVERY METRIC BREAKS DOWN"):]

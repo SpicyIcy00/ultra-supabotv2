@@ -41,7 +41,6 @@ _ROOT = Path(__file__).resolve().parents[1]
 _FRONT = _ROOT / "frontend" / "src"
 _ANCHOR_TS = _FRONT / "components" / "george" / "surfaceAnchor.ts"
 _MODEL_TS = _FRONT / "components" / "george" / "surfaceModel.ts"
-_CLAUDE = _ROOT / "CLAUDE.md"
 _ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "george.py"
 _WRITER = _ROOT / "backend" / "app" / "services" / "river_writer.py"
 _LOOP = _ROOT / "agent" / "loop.py"
@@ -148,14 +147,6 @@ def test_systems_is_a_word_and_settings_is_a_contract():
     for name, decl in (settings["declared"] or {}).items():
         missing = set(settings["declaration_requires"]) - set(decl)
         assert not missing, f"setting {name!r} omits {sorted(missing)}"
-
-
-def test_claude_md_records_the_reset():
-    text = _CLAUDE.read_text(encoding="utf-8")
-    assert "- **System** —" in text
-    assert "declared bounded" in text
-    assert "### The desk" in text
-    assert "no longer destinations" in text
 
 
 # ------------------------------------------------------ 2. the selection channel --
@@ -286,14 +277,6 @@ def test_the_request_model_accepts_a_bounded_desk():
         AskRequest(question="Why?", desk={"selection": too_many})
 
 
-def test_the_prompt_tells_george_how_to_treat_a_selection():
-    george_loop = _loop()
-    prompt = george_loop.SYSTEM_PROMPT
-    assert "THE DESK" in prompt
-    assert "without reading again" in prompt
-    assert "headline set" in prompt
-
-
 # ------------------------------------------------------------- 3. the replay --
 
 def test_replay_validates_like_a_pin_and_runs_like_a_tile(monkeypatch):
@@ -345,17 +328,6 @@ def test_replay_is_bounded_by_the_pins_own_limit_and_gated_by_georges_page():
     replay_src = src.split("async def replay(", 1)[1].split("\n\n\n", 1)[0]
     assert "Depends(_george_user)" in replay_src
     assert "run_pin(" in replay_src
-
-
-def test_the_prompt_tells_george_when_a_question_is_worth_more_than_a_guess():
-    george_loop = _loop()
-    prompt = george_loop.SYSTEM_PROMPT
-    assert "INITIATIVE" in prompt
-    # The three things, and the one that is his alone.
-    assert "recommend" in prompt.lower()
-    assert "ask" in prompt.lower()
-    # He does not ask when the reads can answer it.
-    assert "already answer" in prompt or "can answer" in prompt
 
 
 def test_the_desk_definitions_endpoint_mirrors_the_yaml():

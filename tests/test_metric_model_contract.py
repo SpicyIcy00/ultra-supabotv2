@@ -316,16 +316,3 @@ def test_a_pin_cannot_hold_a_comparison_the_definitions_do_not_support():
         }})
 
 
-def test_the_prompt_forbids_computing_what_a_tool_returns():
-    """
-    Rule 16. This is a PROMPT rule held by a test, and that is the extent of
-    the enforcement: nothing checks numerals in prose against rows
-    (metrics.yaml volunteering says so). The rule is in the words George is
-    given, the tools return the figures, and the tests keep both true.
-    """
-    prompt = _george_loop().SYSTEM_PROMPT
-    assert "A figure made from figures comes from a tool" in prompt
-    assert "average_transaction_value" in prompt
-    assert "compare_to='previous_period'" in prompt
-    assert "baseline_status" in prompt
-    assert "never from you" in prompt.lower() or "never derive" in prompt.lower()

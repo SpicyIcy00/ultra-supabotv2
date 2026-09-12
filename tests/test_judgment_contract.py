@@ -48,13 +48,6 @@ def test_nothing_about_inventing_a_figure_is_softened(j):
         assert may_not[rule].strip(), f"{rule} has no reason"
 
 
-def test_every_prohibition_reaches_the_prompt(j):
-    section = george_loop.JUDGMENT_SECTION
-    assert "Still forbidden" in section
-    for rule in req(j, "may_not"):
-        assert rule.replace("_", " ") in section, f"{rule} never reaches the reader"
-
-
 def test_the_composer_still_refuses_to_score_anything(defs):
     """
     THE BOUNDARY. `surface.attention` is a pure function over rows and must
@@ -132,36 +125,4 @@ def test_the_section_is_built_from_the_definitions_not_typed():
 
 
 def test_the_section_is_in_the_system_prompt():
-    assert "JUDGMENT" in george_loop.SYSTEM_PROMPT
     assert george_loop.JUDGMENT_SECTION in george_loop.SYSTEM_PROMPT
-
-
-def test_the_prompt_states_the_difference_exactly():
-    """
-    The one sentence that has to survive every future edit: a figure may not be
-    invented, a view may be formed.
-    """
-    section = george_loop.JUDGMENT_SECTION
-    assert "may not invent a FIGURE" in section
-    assert "may absolutely form a VIEW" in section
-
-
-def test_the_scope_section_no_longer_reads_as_forbidding_a_view():
-    """
-    "There is no health score, no rating and no composite" was true and was
-    being read as "do not decide what matters". It now says which of the two
-    it means.
-    """
-    prompt = george_loop.SYSTEM_PROMPT
-    assert "no health score" in prompt
-    assert "forbids inventing a NUMBER, never forming a VIEW" in prompt
-
-
-def test_the_prompt_never_offers_a_score_as_a_way_to_rank():
-    """
-    The obvious wrong turn: telling George to rank by importance and leaving
-    him to invent the number that does it.
-    """
-    section = george_loop.JUDGMENT_SECTION.lower()
-    assert "it needs no score" in section or "needs no score" in section
-    assert "severity" not in section.split("still forbidden")[0]

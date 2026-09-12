@@ -1005,20 +1005,6 @@ def test_convergence_cap_is_below_the_observed_worst_case():
     assert MAX_ITERATIONS > 1
 
 
-def test_system_prompt_tells_the_model_to_group_rather_than_enumerate():
-    """
-    top_n and group_by both existed and went unused: 0 of 14 logged calls
-    passed top_n. The schema alone did not change behaviour, so the principle
-    is stated in the prompt.
-    """
-    from agent.loop import SYSTEM_PROMPT
-    lowered = SYSTEM_PROMPT.lower()
-    assert "top_n" in lowered and "group_by" in lowered
-    assert "full_row_count" in lowered
-    for phrase in ("prefer one ranked or grouped query", "once per store"):
-        assert phrase in lowered, f"missing guidance: {phrase!r}"
-
-
 # ==========================================================================
 # COMPARISON EDGES — the rows that cannot be compared say so
 # ==========================================================================

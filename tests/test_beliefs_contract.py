@@ -266,23 +266,3 @@ def test_a_list_that_arrives_as_json_text_is_still_that_list():
     # Text that is not JSON is one refusal with a reason, not a refusal per character.
     accepted, rejected = beliefs.validate("not json at all", load_defs(), is_executed=lambda c: True)
     assert accepted == [] and len(rejected) == 1
-
-
-def test_the_prompt_tells_him_when_to_record_rather_than_when_not_to():
-    """
-    `beliefs held: 0` across an entire dogfood, with the plumbing correct.
-
-    The section said "a handful a week, not one an answer", and George read
-    that as never — the only rate he could be sure was under a handful a week
-    was zero. The tool was offered every turn, he formed a view in prose every
-    turn, and he never once called it. The fix is a test he can apply to his
-    own answer, not a quota he has to estimate against.
-    """
-    from agent import loop as george_loop
-    # Flattened: the section is hard-wrapped, and a sentence that spans a line
-    # break is still the sentence.
-    section = " ".join(george_loop.JUDGMENT_SECTION.split())
-    assert "a handful a week" not in section, "a rate he cannot measure reads as zero"
-    assert "would still say tomorrow" in section, "there must be a test he can apply"
-    # And the guardrail that makes a stored view safe is untouched.
-    assert "A STORED VIEW CARRIES NO FIGURE" in section

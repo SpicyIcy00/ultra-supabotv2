@@ -186,40 +186,6 @@ def test_a_clean_answer_raises_no_prose_warning(monkeypatch):
 
 # ------------------------------------------------------ prompt and definitions --
 
-def test_prompt_carries_the_surface_section_built_from_the_definitions():
-    george_loop = _loop()
-    prompt = george_loop.SYSTEM_PROMPT
-    assert "THE SURFACE" in prompt
-    # REPLACED 2026-09-09 (UNDERSTAND). "THE SMALLEST SURFACE THAT COMPLETELY
-    # ANSWERS THE QUESTION" governed every message, including "how are we
-    # doing?", and was the direct cause of a broad intent coming back with one
-    # figure. How much George READS is now decided by SCOPE; how much he SHOWS
-    # is still decided by what the figures establish, and that half is what
-    # this section keeps.
-    assert "SMALLEST SURFACE" not in prompt
-    assert "READ AS WIDELY AS THE INTENT IS WIDE" in prompt
-    assert "PRESENT NARROWLY" in prompt
-    assert "PROSE IS SECONDARY" in prompt
-    for term in ("rank_by", "change_pct", "baseline_status"):
-        assert f"`{term}`" in prompt
-    assert "unchanged from a moment ago" in prompt
-    for word in DEFS["surface"]["prose"]["transaction_synonyms_not_established"]:
-        assert word in prompt
-    assert str(DEFS["surface"]["prose"]["sentences_when_drawn"]) in prompt
-
-
-def test_prompt_examples_do_not_translate_transactions_into_traffic():
-    george_loop = _loop()
-    prompt = george_loop.SYSTEM_PROMPT
-    # The examples that used "traffic" for transactions are gone; the word may
-    # remain only in the list that forbids it.
-    forbidden_list = prompt[prompt.index("A transaction is a transaction"):]
-    body = prompt[:prompt.index("A transaction is a transaction")]
-    assert "traffic-led" not in body
-    assert "traffic or basket" not in body
-    assert "traffic" in forbidden_list
-
-
 def test_refinement_ops_agree_between_definitions_and_client():
     ops = DEFS["surface"]["refinements"]
     ts = _MODEL_TS.read_text(encoding="utf-8")

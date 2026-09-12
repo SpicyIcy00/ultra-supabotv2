@@ -278,13 +278,6 @@ def test_the_schema_has_no_field_for_anything_but_a_seq_and_a_role():
     assert items["properties"]["role"]["enum"] == list(findings.ROLES)
 
 
-def test_the_prompt_asks_for_the_roles_and_says_what_they_cannot_do():
-    section = george_loop.INVESTIGATING_SECTION
-    assert "record_findings" in section
-    assert "meta.call_seq" in section
-    assert "cannot compute, order or colour" in section
-
-
 # ---------------------------------------------------------------------------
 # 3. The frame, end to end
 # ---------------------------------------------------------------------------

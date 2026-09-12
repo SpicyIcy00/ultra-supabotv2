@@ -236,7 +236,6 @@ def test_the_page_tools_state_the_bounds_and_the_remove_wording():
     assert "kept in Ungrouped" in edit
     assert "never pick" in edit
     assert "does not change these rules" in create
-    assert "PAGES" not in george_loop.SYSTEM_PROMPT
 
 
 # ---------------------------------------------------------------------------
