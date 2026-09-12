@@ -40,7 +40,7 @@ export function RoomShell({ children }: { children: ReactNode }) {
   return (
     <div className="room">
       <Rail busy={george.busy} needsYou={approvals.data?.length}
-            onNew={() => navigate('/')} />
+            onNew={() => navigate('/george')} />
       <main className="r-main">
         <div className="r-column">{children}</div>
       </main>

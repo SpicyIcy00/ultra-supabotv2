@@ -118,12 +118,14 @@ function App() {
                 />
                 <Route path="/george/preview" element={<RiverPreview />} />
 
-                {/* The desk. "/" renders it for a person with George and sends
-                    everybody else to their own first page. */}
+                {/* "/" is a redirect to the first page a person may see, which
+                    is the dashboard. George is a page in the app, at its own
+                    path, so it can be left as well as reached (2026-09-12). */}
                 <Route path="/" element={<LandingRedirect />} />
+                <Route path="/george" element={george(<Room />)} />
                 <Route path="/w/:threadId" element={george(<Room />)} />
                 {/* The parallel board's addresses, kept so a link still lands. */}
-                <Route path="/w2" element={<Navigate to="/" replace />} />
+                <Route path="/w2" element={<Navigate to="/george" replace />} />
                 <Route path="/w2/:threadId" element={<WorkRedirect />} />
 
                 {/* The rooms, in George's chrome. */}
@@ -140,10 +142,9 @@ function App() {
                 </Route>
 
                 {/* Where George used to live. Every one of these still resolves. */}
-                <Route path="/ask" element={<Navigate to="/" replace />} />
+                <Route path="/ask" element={<Navigate to="/george" replace />} />
                 <Route path="/ask/:threadId" element={<WorkRedirect />} />
-                <Route path="/today" element={<Navigate to="/" replace />} />
-                <Route path="/george" element={<Navigate to="/" replace />} />
+                <Route path="/today" element={<Navigate to="/george" replace />} />
                 <Route path="/george/t/:threadId" element={<WorkRedirect />} />
 
                 <Route path="*" element={<ChromeRoutes />} />

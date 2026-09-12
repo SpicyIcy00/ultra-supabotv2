@@ -119,10 +119,12 @@ const navItems = [
   // this is the older one, and it is not removed because people may still be
   // using it and its route is somebody's bookmark.
   { to: '/ai-chat', page: 'ai_chat', icon: navIcons.chat, label: 'AI Chat (legacy)', match: (p: string) => p === '/ai-chat' },
-  // George's own shell. This link leaves the legacy chrome; the shell's
-  // Operations group is the way back. It carries the page it was clicked
-  // from, so a question asked next arrives with that page as context.
-  { to: '/', page: 'george', icon: navIcons.george, label: 'George', match: (p: string) => p === '/' || p.startsWith('/w/') },
+  // George: a page in this app like any other, at its own path since
+  // 2026-09-12. It opens its own full-bleed workspace rather than rendering
+  // in this chrome — the board is the width of the screen and its rail is
+  // fixed — so the room carries a link back to here. It carries the page it
+  // was clicked from, so a question asked next arrives with that context.
+  { to: '/george', page: 'george', icon: navIcons.george, label: 'George', match: (p: string) => p === '/george' || p.startsWith('/w/') },
   // Warehouse owns two tabs: Replenishment Reports and Barcode Generator
   { to: '/warehouse', page: 'warehouse', icon: navIcons.warehouse, label: 'Warehouse', match: (p: string) => p === '/warehouse' },
   { to: '/packing', page: 'packing', icon: navIcons.packing, label: 'Packing', match: (p: string) => p === '/packing' },

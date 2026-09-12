@@ -352,7 +352,7 @@ export default function Room() {
     setLocal((s) => Object.fromEntries(
       Object.entries(s).filter(([, v]) => v.kept)));
     setHistory([]);
-    navigate('/');
+    navigate('/george');
   }, [george, navigate, threadId, answers, board]);
 
   return (

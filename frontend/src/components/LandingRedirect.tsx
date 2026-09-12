@@ -1,29 +1,25 @@
 /**
  * Where a person lands.
  *
- * "/" IS THE DESK for a person with George — the business at rest, not a
- * redirect to it (2026-09-09, the Experience Reset). George is no longer one
- * of several destinations to be sent to; it is the environment, and it is
- * what "/" renders. Everyone else lands on their first allowed page, exactly
- * as before (constants/pages.ts decides the order), and no allowed page's own
- * path is "/", so this cannot loop.
+ * "/" is a redirect and nothing else. It sends everybody to the first page
+ * they are allowed to see, in the order `constants/pages.ts` declares, which
+ * puts the dashboard first — so a person lands in the BI app.
+ *
+ * FROM 2026-09-09 TO 2026-09-12 this rendered the room instead, on the reading
+ * that George is the environment rather than a destination. The cost was that
+ * the rest of Supabot BI — still routed, still allowed — was reachable from
+ * nowhere a person stood, because the room's rail links only to George's own
+ * screens. George is a page again, at `/george` (the owner's decision: "this
+ * is still supabot, just make george a page").
+ *
+ * No allowed page's path is "/", so this cannot loop.
  */
-import React, { Suspense } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { landingPathFor } from '../constants/pages';
 
-const Room = React.lazy(() => import('../room/Room'));
-
 export function LandingRedirect() {
   const user = useAuthStore((s) => s.user);
   if (!user) return null;
-  if (user.allowed_pages.includes('george')) {
-    return (
-      <Suspense fallback={<div style={{ minHeight: "100dvh", background: "#07080D" }} />}>
-        <Room />
-      </Suspense>
-    );
-  }
   return <Navigate to={landingPathFor(user.allowed_pages)} replace />;
 }

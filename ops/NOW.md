@@ -53,21 +53,37 @@ shippable. The full diagnosis is the report linked in section 6.
 |---|---|
 | Product branch | `main` — `feature/workspace` merged into it 2026-09-12 |
 | Head | `d743844` — **pushed**, `main` and `origin/main` identical, 0 ahead / 0 behind |
-| Last deploy | 2026-09-12, `cc90397` — crashlooped on a schema behind the code; DB migrated to `v6w7x8y9z0a1` by hand, **awaiting a Railway restart**. `d743844` has been pushed since, so Vercel has the new frontend while Railway may still be serving the last healthy build. **Verify before trusting what the live app shows.** |
+| Last deploy | Railway **healthy**, verified 2026-09-12: schema `v6w7x8y9z0a1`, code and database agreeing. The crashloop is resolved. |
 
-**Where the app actually is.** Frontend on **Vercel**, backend on **Railway**,
-both auto-deploying `origin/main`. The browser only ever talks to the Vercel
-origin: every client call is the relative `/api/v1`, and a Vercel rewrite
-forwards it to Railway. **That rewrite is NOT in `frontend/vercel.json`** — it
-exists only in the Vercel dashboard, though `useGeorgeStream.ts` and
-`VERCEL_ENV_SETUP.md` both say it is in the file. Invisible config: if the
-Vercel project is ever recreated, George breaks with no diff to explain it.
+**Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
+at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
+`origin/main`. The browser only ever talks to the Vercel origin: every client
+call is the relative `/api/v1`, and **`frontend/middleware.ts` rewrites those
+to Railway** — `frontend/routing/backend.ts` holds the origin and fails closed
+on a preview deployment without staging config. It is NOT in `vercel.json`,
+which is what `VERCEL_ENV_SETUP.md` and the comment in `useGeorgeStream.ts`
+both claim; they are stale, the middleware is real, and `routing.test.ts`
+covers it.
+
+Health, and the only honest way to know which build is live:
+`GET https://ultra-supabotv2-production.up.railway.app/health` returns the
+schema the code expects beside the schema the database is on.
 | Phase | 0, consolidating |
 | Next card | **P0.3, clock** |
 
-The live surface is **the room** (`frontend/src/room/`, route `/`). The desk,
-the river pages, the shell chrome and the `/w2` renderer were deleted on
-2026-09-12; if you find a reference to one, it is stale prose, not code.
+**The product is Supabot BI, and George is a page in it** (the owner,
+2026-09-12: *"this is still supabot, just make george a page"*). `/` redirects
+to the first page a person may see, which is the Dashboard; George is at
+`/george` in the same nav as Analytics, Warehouse and Packing, and the room's
+rail carries a link back. From 09-09 to 09-12 `/` RENDERED the room and the
+rest of the BI app, though still routed and still allowed, was reachable from
+nowhere a person stood. **A surface you cannot leave is not a page** — if a
+future change makes George the landing again, this is the reason not to.
+
+George's own surface is **the room** (`frontend/src/room/`, at `/george` and
+`/w/:threadId`). The desk, the river pages, the shell chrome and the `/w2`
+renderer were deleted on 2026-09-12; a reference to one is stale prose, not
+code.
 
 ---
 

@@ -4,16 +4,23 @@
  * page_key values must stay in sync with PAGE_KEYS in
  * backend/app/models/role_page_access.py.
  *
- * ORDER IS THE LANDING. `landingPathFor` takes the first allowed page, so
- * George comes first: a person with George lands in George, and everyone else
- * lands where they always did. The dashboard keeps its own real URL, so a
- * bookmark to it still resolves.
+ * ORDER IS THE LANDING. `landingPathFor` takes the first allowed page, so the
+ * dashboard comes first and a person lands in the BI app.
  *
- * "/" IS GEORGE'S OWN PATH SINCE 2026-09-09. It was nobody's, because George
- * was a place you were sent to; the Experience Reset makes the desk the
- * environment, so "/" renders it (LandingRedirect) rather than redirecting.
- * Nothing loops: a person without George is navigated away from "/" to their
- * own first page, and no other page's path is "/".
+ * GEORGE IS A PAGE AGAIN, AT `/george` (2026-09-12, the owner's decision).
+ *
+ * From 2026-09-09 to 2026-09-12 George had no path of its own: "/" RENDERED
+ * the room, on the reading that George is the environment rather than a
+ * destination. What that produced in practice was an app whose front door was
+ * George and whose other pages — Dashboard, Analytics, Warehouse, Packing —
+ * were still routed, still allowed, and reachable from nowhere a person
+ * actually stood. The room's rail offers George's own screens and nothing
+ * else, so landing there was a one-way door.
+ *
+ * The owner's words: "this is still supabot, just make george a page." The
+ * product is Supabot BI; George is one page in it, in the same nav as the
+ * rest, and "/" goes back to being a redirect to the first page a person is
+ * allowed to see.
  */
 export interface PageDef {
   key: string;
@@ -22,12 +29,10 @@ export interface PageDef {
 }
 
 export const PAGES: PageDef[] = [
-  // George is not a destination any more (2026-09-09, the Experience Reset):
-  // "/" IS the desk, and LandingRedirect renders it rather than navigating to
-  // it. The entry stays so `pathForPage('george')` answers, and so the legacy
-  // chrome's George link has somewhere to point.
-  { key: 'george', path: '/', label: 'George' },
+  // The dashboard leads, so "/" lands in the BI app. George sits beside it as
+  // a page with its own path, which is what makes it reachable AND leavable.
   { key: 'dashboard', path: '/dashboard', label: 'Dashboard' },
+  { key: 'george', path: '/george', label: 'George' },
   { key: 'analytics', path: '/analytics', label: 'Analytics' },
   { key: 'ai_chat', path: '/ai-chat', label: 'AI Chat' },
   { key: 'warehouse', path: '/warehouse', label: 'Warehouse' },

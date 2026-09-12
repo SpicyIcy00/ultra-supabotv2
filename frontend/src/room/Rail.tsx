@@ -35,12 +35,22 @@ export function Rail({ busy, needsYou, onNew }: RailProps) {
       <button
         type="button"
         className="r-rail-btn"
-        onClick={() => navigate('/')}
+        onClick={() => navigate('/george')}
         aria-label="George"
         style={{ marginTop: 2 }}
       >
         <span className={`r-mark ${busy ? 'r-mark--busy' : ''}`} />
       </button>
+
+      {/* THE WAY OUT. George is a page in Supabot BI, not the app, and until
+          2026-09-12 this rail offered only George's own screens — so a person
+          who landed here had no route back to the dashboard, the warehouse or
+          any other page, all of which were still routed and still allowed.
+          A surface you cannot leave is not a page. */}
+      <NavLink to="/dashboard" className="r-rail-btn" title="Back to Supabot"
+               aria-label="Back to Supabot BI">
+        <span aria-hidden="true">←</span>
+      </NavLink>
 
       <NavLink to="/inbox" className="r-rail-btn" title="Needs you"
                aria-label={needsYou ? `Needs you, ${needsYou} waiting` : 'Needs you'}>

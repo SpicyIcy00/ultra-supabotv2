@@ -2323,3 +2323,35 @@ thing will happen on the next deploy. Card P0.4.
 Four migrations were applied by hand from a local checkout, additive and in one
 transaction; the database is at `v6w7x8y9z0a1`, the revision the code expects.
 The service still needs a restart: its replica had spent all ten retries.
+
+## 2026-09-12 — George is a page in Supabot BI again
+
+The owner, looking at the deployed app: *"what happened to the other pages of
+my supabot bi? this is still supabot, just make george a page."*
+
+Nothing had been deleted. Dashboard, Analytics, AI Chat, Warehouse, Packing,
+Settings and Admin were all still routed, still in `role_page_access`, still
+rendered by the legacy chrome with their own nav. What had happened is that
+the Experience Reset (2026-09-09) made `/` RENDER the room rather than
+redirect, and George first in `PAGES` — so `landingPathFor` sent everyone with
+George into George, and the room's rail links only to George's own screens.
+Every other page was reachable from nowhere a person actually stood.
+
+So the reversal is narrow and it is the owner's call: `/` is a redirect again,
+Dashboard leads `PAGES`, George has its own path at `/george`, and the rail
+carries a link back to Supabot. The room keeps its full-bleed surface rather
+than rendering inside the legacy chrome — it is `100dvh` with a fixed rail, and
+nesting it would mean CSS surgery on the one surface that currently works.
+Being a page is about being reachable and leavable, not about being in a
+frame.
+
+**The rule this leaves behind: a surface you cannot leave is not a page.**
+If George is ever made the landing again, that is the reason not to.
+
+Also corrected here: the previous entry claimed the `/api/v1` rewrite existed
+only in the Vercel dashboard. It does not — `frontend/middleware.ts` performs
+it, `frontend/routing/backend.ts` holds the Railway origin and fails closed on
+a preview without staging config, and `routing.test.ts` covers both.
+`VERCEL_ENV_SETUP.md` and a comment in `useGeorgeStream.ts` say it is in
+`vercel.json`; those two are stale, and the claim I wrote from them was wrong.
+Railway itself is healthy: schema `v6w7x8y9z0a1`, code and database agreeing.
