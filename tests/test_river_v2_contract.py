@@ -44,18 +44,14 @@ _ROOT = Path(__file__).resolve().parents[1]
 _ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "george.py"
 # The workspace, since the Experience Reset (2026-09-09): the desk, and the
 # hook that wires it to persistence. Ask stopped being a page.
-_DESK_PAGE = _ROOT / "frontend" / "src" / "pages" / "DeskPage.tsx"
-_DESK = _ROOT / "frontend" / "src" / "components" / "desk" / "Desk.tsx"
-_USE_DESK = _ROOT / "frontend" / "src" / "components" / "desk" / "useDesk.ts"
-_ANSWER_TURN = _ROOT / "frontend" / "src" / "components" / "george" / "AnswerTurn.tsx"
 # The one renderer both a live turn and a stored post go through (Stage 1).
+_ROOM = _ROOT / "frontend" / "src" / "room" / "Room.tsx"
 _ENTRY = _ROOT / "frontend" / "src" / "components" / "george" / "RiverEntry.tsx"
 # The parts both renderers draw from since Generative Workspace V3 (2026-09-09):
 # an entry on its own, and a surface composed of several.
 _PARTS = _ROOT / "frontend" / "src" / "components" / "george" / "entryParts.tsx"
 _HOOK = _ROOT / "frontend" / "src" / "hooks" / "useGeorgeStream.ts"
 _THREAD_HOOK = _ROOT / "frontend" / "src" / "hooks" / "useThread.ts"
-_FOLLOW = _ROOT / "frontend" / "src" / "hooks" / "useAutoFollow.ts"
 
 
 def _source(path: Path) -> str:
@@ -189,60 +185,21 @@ def test_the_stream_exposes_the_thread_id_only_once_its_posts_exist():
     )
 
 
-def test_the_reader_is_sent_to_a_work_address_only_once_its_posts_exist():
-    # The rule is unchanged and its address is not: a question asked at rest
-    # moves to /w/:threadId, and it moves on the POST frame — `storedThreadId`,
-    # which the hook sets only when the frame says the posts were stored.
-    page = _source(_DESK_PAGE)
-    assert "storedThreadId" in page
-    assert "navigate(`/w/${desk.storedThreadId}`" in page
-    # Nothing follows the start frame, and nothing navigates on a question.
-    assert "threadId" in page
-    assert "navigate(`/ask/" not in page
-
-
-def test_the_work_is_rendered_where_it_was_asked():
-    # The desk reads persisted work and merges the live turn into it, so the
-    # answer transforms the workspace in place rather than arriving elsewhere.
-    hook = _source(_USE_DESK)
-    assert "useRiver('work')" in hook
-    assert "riverMerge(posts, george.turns)" in hook
-    assert "riverSurfaces(" in hook
-
-
-# ---------------------------------------------------------------------------
-# 3. Scrolling
-# ---------------------------------------------------------------------------
-
-
 def test_the_turn_list_no_longer_scrolls_anything():
-    for path in (_ANSWER_TURN, _ENTRY):
+    # AnswerTurn.tsx was the other file held to this and was deleted unused on
+    # 2026-09-12; RiverEntry.tsx is the one that ships.
+    for path in (_ENTRY,):
         source = _source(path)
         assert "scrollIntoView" not in source, f"{path.name} scrolls"
         assert "scrollTop" not in source, f"{path.name} scrolls"
 
 
 def test_nothing_in_the_workspace_asks_for_smooth_scrolling():
-    for path in (_ANSWER_TURN, _ENTRY, _DESK, _FOLLOW):
+    # Of the four files this held, three (AnswerTurn.tsx, the desk, the
+    # auto-follow hook) were deleted unused on 2026-09-12. The room is added
+    # in their place: it is the surface that actually grows under a reader.
+    for path in (_ENTRY, _ROOM):
         assert "smooth" not in _source(path), f"{path.name} animates the stream"
-
-
-def test_the_workspace_scrolls_nothing_by_itself():
-    # THE STAGE IS NOT A FEED (2026-09-09). The river's answer to "the content
-    # grew under me" was to follow it; the desk's is that the workspace does
-    # not grow — a question TRANSFORMS what is on screen, so there is nothing
-    # to chase and nothing to jump back to. Anything here that moved the
-    # viewport would be moving it for content the reader did not add.
-    for path in (_DESK, _DESK_PAGE):
-        source = _source(path)
-        assert "scrollIntoView" not in source, f"{path.name} scrolls"
-        assert "scrollTop" not in source, f"{path.name} scrolls"
-        assert "useAutoFollow" not in source, f"{path.name} follows a stream it does not have"
-
-
-# ---------------------------------------------------------------------------
-# 4. A rewrite supersedes
-# ---------------------------------------------------------------------------
 
 
 def test_a_rewrite_keeps_the_answer_it_replaces_on_screen():
@@ -306,14 +263,13 @@ def test_the_client_tells_a_404_apart_from_a_failed_lookup():
     )
 
 
-def test_the_workspace_draws_the_failed_lookup_as_its_own_state():
-    hook = _source(_USE_DESK)
-    assert "thread.failed" in hook
-    assert "thread.unavailable" in hook
-    assert "thread.refetch" in hook, "a retryable failure needs a way to retry"
-    desk = _source(_DESK)
-    # Four outcomes, four renderings, and none may borrow another's words.
-    assert "desk.loading" in desk
-    assert "desk.unavailable" in desk
-    assert "desk.failed" in desk
-    assert "Try again" in desk
+
+# Removed 2026-09-12 with the desk and the river hooks they scanned:
+#   test_the_reader_is_sent_to_a_work_address_only_once_its_posts_exist
+#   test_the_work_is_rendered_where_it_was_asked
+#   test_the_workspace_scrolls_nothing_by_itself
+#   test_the_workspace_draws_the_failed_lookup_as_its_own_state
+# Each was a property of a frontend file that no longer exists. The room
+# is the only surface now; equivalents for it are a decision, not a
+# rename, and are recorded in ops/DECISIONS.md.
+

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import type { ChatDetail } from '../../types/chats';
 import type { Post } from '../../types/river';
 import { toHistory } from '../../hooks/useGeorgeStream';
-import { riverMerge } from './riverMerge';
 import { threadHistory } from './threadHistory';
 
 const T = 'thread-1';
@@ -53,8 +52,9 @@ describe('a George post', () => {
   });
 
   it('names the post it came from, so it is never drawn twice', () => {
-    const turns = threadHistory([brief], null, T);
-    expect(riverMerge([brief], turns).pending).toEqual([]);
+    const [turn] = threadHistory([brief], null, T);
+    if (turn.role !== 'george') throw new Error('expected george');
+    expect(turn.post?.answer_post_id).toBe(brief.id);
   });
 });
 
@@ -73,7 +73,6 @@ describe('the caller’s own chat', () => {
   it('is not duplicated by the posts of the same exchange', () => {
     const turns = threadHistory([brief, q1, a1], chat, T);
     expect(turns).toHaveLength(3);
-    expect(riverMerge([brief, q1, a1], turns).pending).toEqual([]);
   });
 });
 
@@ -89,7 +88,6 @@ describe('somebody else’s shared exchange', () => {
     if (answer.role !== 'george') throw new Error('expected george');
     expect(answer.toolCalls).toEqual([]);
     expect(answer.post).toMatchObject({ question_post_id: 'q2', answer_post_id: 'a2' });
-    expect(riverMerge([brief, q2, a2], turns).pending).toEqual([]);
   });
 });
 

@@ -15,7 +15,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useGeorge } from '../hooks/useGeorge';
 import { useThread } from '../hooks/useThread';
 import { threadHistory } from '../components/george/threadHistory';
-import { restoreFromPosts } from '../workspace/composition';
+import { restoreFromPosts } from './restore';
 import { boardContext, buildBoard, dropped, inOrder, type Local, type BoardObject } from './board';
 import { keepLocal, restoreLocal } from './arrangement';
 import type { AnswerTurn, Dimension } from './data';

@@ -16,7 +16,6 @@ import { GeorgeStreamProvider } from './GeorgeStreamProvider';
 import { RiverEntries } from './RiverEntry';
 import { attentionLine } from './WorkSurface';
 import { riverItems } from './workUnit';
-import { leakedTerms, transactionSynonyms, coveredFigures } from './proseLeak';
 
 afterEach(cleanup);
 
@@ -151,14 +150,10 @@ describe('12–13. the surface puts no tool vocabulary on screen, and the prose 
     expect(container.textContent).not.toMatch(/get_sales|group_by|compare_to|change_pct|record_findings|rank_by|biggest_drop/);
   });
 
-  it('flags leaked vocabulary, unsupported transaction wording, and repeated covered figures', () => {
-    expect(leakedTerms("I ran get_sales with rank_by='biggest_drop'. Unchanged from a moment ago.")).toEqual(['get_sales', 'rank_by', 'biggest_drop', 'unchanged from a moment ago']);
-    expect(leakedTerms('Net sales were compared with the previous week.')).toEqual([]);
-    expect(transactionSynonyms('Transactions rose, so more customers came in.')).toEqual(['customers']);
-    expect(transactionSynonyms('Suppliers: people are slow.')).toEqual([]);
-    expect(coveredFigures('OPUS took ₱555,147, up 30.6%, on 1,041 transactions.', OPUS as never)).toEqual(['555,147', '30.6', '1,041']);
-    expect(coveredFigures('Basket value led it.', OPUS as never)).toEqual([]);
-  });
+  // The prose-lint cases that lived here went with `proseLeak.ts` on
+  // 2026-09-12: that module had no production caller, and the loop does its
+  // own leak scan server-side (`tool_vocabulary_leaked`). The assertion above
+  // — that no tool vocabulary reaches the screen — is the one that shipped.
 });
 
 describe('27. actions on the surface are semantic refinements', () => {

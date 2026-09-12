@@ -33,13 +33,6 @@ from fastapi import HTTPException                                      # noqa: E
 
 _ROOT = Path(__file__).resolve().parents[1]
 _ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "george.py"
-_DESK_PAGE = _ROOT / "frontend" / "src" / "pages" / "DeskPage.tsx"
-_DESK = _ROOT / "frontend" / "src" / "components" / "desk" / "Desk.tsx"
-_USE_DESK = _ROOT / "frontend" / "src" / "components" / "desk" / "useDesk.ts"
-_STATE = _ROOT / "frontend" / "src" / "components" / "desk" / "deskState.ts"
-_HISTORY = _ROOT / "frontend" / "src" / "components" / "desk" / "History.tsx"
-_HOME = _ROOT / "frontend" / "src" / "components" / "george" / "askHome.ts"
-_RIVER_HOOK = _ROOT / "frontend" / "src" / "hooks" / "useRiver.ts"
 
 
 def _source(path: Path) -> str:
@@ -117,94 +110,18 @@ def test_an_unknown_stream_is_refused():
 # Who reads which
 # ---------------------------------------------------------------------------
 
-def test_the_desk_reads_the_work_stream_from_persistence():
-    hook = _source(_USE_DESK)
-    assert "useRiver('work')" in hook
-    assert "riverSurfaces(" in hook
 
+# Removed 2026-09-12 with the desk and the river hooks they scanned:
+#   test_the_desk_reads_the_work_stream_from_persistence
+#   test_history_reads_the_whole_river_and_is_the_rivers_user_facing_role
+#   test_the_desk_at_rest_reads_the_definitions_not_a_feed
+#   test_the_desk_invents_no_judgement_of_its_own
+#   test_the_desk_has_no_new_chat_no_thread_picker_and_no_recent_list
+#   test_the_desk_keeps_no_client_side_source_of_truth
+#   test_the_focus_is_restored_from_the_server_and_never_from_the_client
+#   test_the_deep_link_folds_only_the_thread_read_in
+#   test_a_foreign_piece_of_work_stays_a_404_and_the_desk_still_stands
+# Each was a property of a frontend file that no longer exists. The room
+# is the only surface now; equivalents for it are a decision, not a
+# rename, and are recorded in ops/DECISIONS.md.
 
-def test_history_reads_the_whole_river_and_is_the_rivers_user_facing_role():
-    page = _source(_DESK_PAGE)
-    # Both streams — no argument means everything, work and attention alike.
-    assert "useRiver(undefined," in page, "History reads both streams"
-    # AND ONLY WHILE IT IS LOOKED AT. This read used to run on every desk
-    # visit whether or not the drawer was ever opened, so opening George cost
-    # two full river reads: the work stream's and this one's.
-    assert "useRiver(undefined, historyOpen)" in page
-    assert "<History" in page
-    history = _source(_HISTORY)
-    # Opening one restores a WORKSPACE, not a transcript.
-    assert "onOpen" in history
-    assert "RiverEntries" not in history
-    assert "AskComposer" not in history
-
-
-def test_the_desk_at_rest_reads_the_definitions_not_a_feed():
-    hook = _source(_USE_DESK)
-    # The business at rest is a deterministic replay of the definitions' own
-    # reading list — no model, and no second river to scroll.
-    assert "rest_reads" in hook
-    assert "restSurface(" in hook
-    assert "useRiver('attention')" not in hook
-
-
-def test_the_desk_invents_no_judgement_of_its_own():
-    """
-    A score, a severity, a health reading or an alert is the app deciding
-    something nobody measured, and none may appear.
-
-    "Recommend" WAS on this list, and came off on 2026-09-09 when George
-    gained initiative. The reason it was banned has not changed — a suggestion
-    with nothing behind it is a fabrication — but the guarantee moved from
-    "the word does not appear" to "every recommendation names the trusted fact
-    that produced it": `metrics.yaml surface.desk.initiative.recommend
-    .grounded_in` is a closed list, and test_desk_contract holds the client to
-    producing exactly those grounds and no others. A ban on the word would
-    now forbid the honest version along with the dishonest one.
-    """
-    for path in (_DESK, _USE_DESK):
-        source = _source(path)
-        for word in ("alert", "score", "severity", "health", "confidence", "importance"):
-            assert not re.search(rf"\b{word}", source, re.I), f"{path.name} mentions {word!r}"
-
-
-def test_the_desk_has_no_new_chat_no_thread_picker_and_no_recent_list():
-    for path in (_DESK_PAGE, _DESK):
-        source = _source(path)
-        for word in ("New chat", "New work", "Recent", "listChats", "thread picker"):
-            assert word not in source, f"{path.name} still offers {word!r}"
-
-
-def test_the_desk_keeps_no_client_side_source_of_truth():
-    for path in (_DESK_PAGE, _DESK, _USE_DESK, _STATE, _HOME, _RIVER_HOOK):
-        src = _source(path)
-        for forbidden in ("localStorage", "sessionStorage", "indexedDB"):
-            assert forbidden not in src, f"{path.name} keeps state in {forbidden}"
-
-
-def test_the_focus_is_restored_from_the_server_and_never_from_the_client():
-    # What a person was looking at comes back from what their newest QUESTION
-    # carried — the desk on its stored post — so a reload lands where they were
-    # without the client having remembered anything.
-    hook = _source(_USE_DESK)
-    assert "restoreDeskState(" in hook
-    state = _source(_STATE)
-    assert "export function restoreDeskState" in state
-    assert "intent?.desk?.selection" in state
-
-
-def test_the_deep_link_folds_only_the_thread_read_in():
-    # The thread read is filtered by the SAME visibility clause; folding its
-    # posts into the river exposes nothing the river read would not.
-    home = _source(_HOME)
-    assert "export function withFocus" in home
-    hook = _source(_USE_DESK)
-    assert "withFocus(river.posts, thread.posts)" in hook
-
-
-def test_a_foreign_piece_of_work_stays_a_404_and_the_desk_still_stands():
-    hook = _source(_USE_DESK)
-    assert "thread.unavailable" in hook
-    desk = _source(_DESK)
-    assert "That work isn’t available." in desk
-    assert "somebody else’s" in desk

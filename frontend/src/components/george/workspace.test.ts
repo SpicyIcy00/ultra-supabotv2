@@ -6,7 +6,6 @@ import { describe, expect, it } from 'vitest';
 import type { Post } from '../../types/river';
 import { actionsFor, subjectAction } from './actionShape';
 import { caveatPlans, unitCoverage } from './caveatShape';
-import { composerHint, CONTINUE_HINT, ROOT_HINT } from './composerHint';
 import { dedupeSources, factKeys } from './dedupe';
 import { coverageInvalidates, coverageLine, levelCaption, levelLayout, majorityDirection, performanceMembers } from './instrumentShape';
 import type { ComparisonRow } from './pinShape';
@@ -235,17 +234,6 @@ describe('continuity that cannot merge unrelated work', () => {
   });
 });
 
-describe('the composer invites work', () => {
-  it('asks what to work on at the root, and offers to go on once there is work', () => {
-    expect(composerHint(null, [])).toBe(ROOT_HINT);
-    const items = riverItems([{ ...({} as Post), id: 'a1', author: 'george', kind: 'answer', body: 'x', payload: null } as Post], []);
-    expect(composerHint(null, items)).toBe(CONTINUE_HINT);
-  });
-
-  it('names a known page or a known store, and never invents one', () => {
-    expect(composerHint({ page_id: 'p', title: 'AJI BARN Reorder' }, [])).toContain('AJI BARN Reorder');
-    const items = riverItems([{ id: 'a1', author: 'george', kind: 'answer', body: 'x', thread_id: 't', parent_id: null, author_user: null, visibility: 'private', owner_user: 'ice', mine: true, conversation_id: 'c', created_at: '', notices: [], receipts: null,
-      payload: { charted: [], calls: [{ seq: 1, tool: 'get_sales', arguments: ATOMS[0].arguments }] } } as unknown as Post], []);
-    expect(composerHint(null, items)).toContain('Rockwell');
-  });
-});
+// The composer-hint cases that lived here went with `composerHint.ts` on
+// 2026-09-12: the room writes its own placeholder and nothing in production
+// imported that module.

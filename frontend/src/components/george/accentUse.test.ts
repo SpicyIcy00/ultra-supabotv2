@@ -23,11 +23,6 @@ import { describe, expect, it } from 'vitest';
 const GEORGE_DIR = join(__dirname);
 const PAGES_DIR = join(__dirname, '..', '..', 'pages');
 const SHELL_DIR = join(__dirname, '..', 'shell');
-// The desk is scanned too (2026-09-09). It is the surface a person spends the
-// day on, and it draws the most colour in the app — exactly where a fifth use
-// of the approvals hue would go unnoticed.
-const DESK_DIR = join(__dirname, '..', 'desk');
-// THE ROOM IS SCANNED TOO (2026-09-11), and it should have been from the day
 // it became "/". It is now the surface a person spends the day on, it draws
 // more colour than anything else in the app, and it was outside this guard
 // entirely — which is how its needs-you badge came to be painted in `--down`,
@@ -52,13 +47,8 @@ const DATA_ALLOWED: Record<string, string> = {
   // already diverges from a drawn zero line with its signed figure printed
   // beside it; colour reinforces a direction the tool measured.
   'Instruments.tsx': 'diverging bars whose data declares direction',
-  // An object on a field, whose row declares `direction`. Its figure and its
-  // delta are printed beside it and the same rows are one control away as a
-  // list, so the hue reinforces and never carries (the desk, 2026-09-09).
-  'Field.tsx': 'field objects whose rows declare direction',
-  // The driver bars in an anatomy: the same diverging form as the split, from
-  // the same rows, with the signed figure beside each.
-  'Anatomy.tsx': 'driver bars whose data declares direction',
+  // Field.tsx and Anatomy.tsx left this list on 2026-09-12 with the desk they
+  // belonged to. The room draws the same diverging forms through Instruments.
 };
 
 /**
@@ -68,24 +58,12 @@ const DATA_ALLOWED: Record<string, string> = {
  * without a reason that survives being read out loud.
  */
 const ALLOWED: Record<string, string> = {
-  // The brand mark. The bounded exemption recorded in CLAUDE.md: it is static
-  // presence, it asks for nothing, and its error state changes the DRAWING and
-  // never the hue.
-  'ReactiveMark.tsx': 'the mark — CLAUDE.md UI rule 5, amended 2026-09-04',
   // The needs-you count above the river, shown only for a loaded, non-zero
   // count (UI rules 5 and 8).
   'StatusBand.tsx': 'the needs-you count on the status band',
-  // The same count beside "Inbox" in the shell's navigation — the badge
-  // beside the mark that the 2026-09-04 amendment describes.
-  'GeorgeShell.tsx': 'the needs-you count beside Inbox',
   // The approval queue itself, and Promote: the one accent-coloured ACTION
   // in the app, because this is what the colour is for.
   'InboxPage.tsx': 'the approval queue and its one decision — the reserved use',
-  // The desk's own sidebar carries the same needs-you count the shell's rail
-  // does, for a loaded and non-zero result only. It replaces GeorgeShell's
-  // use on the surface a person actually lives on, rather than adding a
-  // fifth: the shell keeps its own for the three rooms.
-  'Sidebar.tsx': 'the needs-you count on the desk',
   // The room's rail carries the same count, for a loaded and non-zero result
   // only. The room replaced the desk as "/" on 2026-09-11; this is the same
   // fact in the chrome people actually use, not a new meaning.
@@ -123,7 +101,6 @@ describe('UI rule 5 — one colour means "needs you"', () => {
       [GEORGE_DIR, sourceFiles(GEORGE_DIR)],
       [PAGES_DIR, sourceFiles(PAGES_DIR)],
       [SHELL_DIR, sourceFiles(SHELL_DIR)],
-      [DESK_DIR, sourceFiles(DESK_DIR)],
       [ROOM_DIR, sourceFiles(ROOM_DIR)],
     ] as [string, string[]][]) {
       for (const name of files) {
@@ -167,7 +144,6 @@ describe('UI rule 5 — one colour means "needs you"', () => {
       [GEORGE_DIR, sourceFiles(GEORGE_DIR)],
       [PAGES_DIR, sourceFiles(PAGES_DIR)],
       [SHELL_DIR, sourceFiles(SHELL_DIR)],
-      [DESK_DIR, sourceFiles(DESK_DIR)],
       [ROOM_DIR, sourceFiles(ROOM_DIR)],
     ] as [string, string[]][]) {
       for (const name of files) {
@@ -221,8 +197,13 @@ describe('UI rule 5 — one colour means "needs you"', () => {
     // invent a second approvals colour with a different value.
     //
     // This number goes DOWN as chromes are retired, never up for a new
-    // feeling. If somebody wants an eighth, the honest move is to ask whether
+    // feeling. If somebody wants one more, the honest move is to ask whether
     // the colour still means one thing.
-    expect(Object.keys(ALLOWED).length).toBeLessThanOrEqual(7);
+    //
+    // FOUR, from 2026-09-12. The desk and the shell were deleted as dead
+    // code, and the mark with them, so three entries left at once without a
+    // single decision being reversed: the room is the only chrome now, and
+    // the count it carries is the same fact the other three carried.
+    expect(Object.keys(ALLOWED).length).toBeLessThanOrEqual(4);
   });
 });
