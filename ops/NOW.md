@@ -52,8 +52,16 @@ shippable. The full diagnosis is the report linked in section 6.
 | | |
 |---|---|
 | Product branch | `main` — `feature/workspace` merged into it 2026-09-12 |
-| Head | `5354ef6` + P0.2 uncommitted, **unpushed**; 161 ahead of `origin/main`, 0 behind |
-| Last deploy | 2026-09-12, `cc90397` — crashlooped on a schema behind the code; DB migrated to `v6w7x8y9z0a1` by hand, **awaiting a Railway restart** |
+| Head | `d743844` — **pushed**, `main` and `origin/main` identical, 0 ahead / 0 behind |
+| Last deploy | 2026-09-12, `cc90397` — crashlooped on a schema behind the code; DB migrated to `v6w7x8y9z0a1` by hand, **awaiting a Railway restart**. `d743844` has been pushed since, so Vercel has the new frontend while Railway may still be serving the last healthy build. **Verify before trusting what the live app shows.** |
+
+**Where the app actually is.** Frontend on **Vercel**, backend on **Railway**,
+both auto-deploying `origin/main`. The browser only ever talks to the Vercel
+origin: every client call is the relative `/api/v1`, and a Vercel rewrite
+forwards it to Railway. **That rewrite is NOT in `frontend/vercel.json`** — it
+exists only in the Vercel dashboard, though `useGeorgeStream.ts` and
+`VERCEL_ENV_SETUP.md` both say it is in the file. Invisible config: if the
+Vercel project is ever recreated, George breaks with no diff to explain it.
 | Phase | 0, consolidating |
 | Next card | **P0.3, clock** |
 
