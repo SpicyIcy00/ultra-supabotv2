@@ -149,11 +149,33 @@ filing it**, and puts what is still live into the dogfood log.
     .venv\Scripts\python.exe ops/sweep_gaps.py --days 7
     .venv\Scripts\python.exe ops/cost_report.py --days 7
 
-`ops/cost_report.py` is the bill (P0.6), from the token counts the loop has
-always recorded. It reports spend per turn and the cache hit rate, and says so
-when the hit rate is below 60% — which means the prefix is being rebuilt
-rather than read. Cost is watched the same way turn time is: measured every
-week, never estimated.
+**`ops/cost_report.py` is NOT the bill**, and the weekly sweep must not treat
+it as one. It reads `george.conversations`, which holds only turns that
+reached `ConversationLog` — **no eval turn is in it**, because the harness
+stubs the log, and neither are retries or turns that died before writing.
+Measured 2026-09-13: the script saw 9.4M presented tokens over 30 days while
+the console showed **51.6M on the same key**. 18%. Two confident conclusions
+came out of that gap in one afternoon and both were wrong.
+
+**For the bill, read the Anthropic console** — filter by the `george` API key,
+group by *token type*, and read the day, not a rolling window. The token-type
+split is the part that matters and the script cannot produce it. One heavy day
+(2026-09-13, $18.20):
+
+| | | |
+|---|---|---|
+| cache WRITE | $8.03 | 44% |
+| cache READ | $5.90 | 32% |
+| output | $4.27 | 23% |
+| uncached input | ~$0.00 | 0% |
+
+**Caching is working and is not a lever: 9.5 read per write, saving 74%.** Do
+not reopen the TTL or chase the hit rate. What that day actually was: roughly
+six full eval runs and the turns sessions fired while building, against 193
+real turns in the whole month. **The bill is the building, not the product.**
+
+Use `cost_report.py` for what it is good for — comparing George's own turns
+with each other, across builds with `--since`.
 
 Checking first is not optional. The first run's loudest finding was 89
 refusals of `top_n must be an integer, got str.` — already fixed in `0ba0b4e`
@@ -645,11 +667,33 @@ Run from the repo root. The interpreter is `.venv\Scripts\python.exe`; a system
     .venv\Scripts\python.exe ops/sweep_gaps.py --days 7
     .venv\Scripts\python.exe ops/cost_report.py --days 7
 
-`ops/cost_report.py` is the bill (P0.6), from the token counts the loop has
-always recorded. It reports spend per turn and the cache hit rate, and says so
-when the hit rate is below 60% — which means the prefix is being rebuilt
-rather than read. Cost is watched the same way turn time is: measured every
-week, never estimated.        # the weekly sweep
+**`ops/cost_report.py` is NOT the bill**, and the weekly sweep must not treat
+it as one. It reads `george.conversations`, which holds only turns that
+reached `ConversationLog` — **no eval turn is in it**, because the harness
+stubs the log, and neither are retries or turns that died before writing.
+Measured 2026-09-13: the script saw 9.4M presented tokens over 30 days while
+the console showed **51.6M on the same key**. 18%. Two confident conclusions
+came out of that gap in one afternoon and both were wrong.
+
+**For the bill, read the Anthropic console** — filter by the `george` API key,
+group by *token type*, and read the day, not a rolling window. The token-type
+split is the part that matters and the script cannot produce it. One heavy day
+(2026-09-13, $18.20):
+
+| | | |
+|---|---|---|
+| cache WRITE | $8.03 | 44% |
+| cache READ | $5.90 | 32% |
+| output | $4.27 | 23% |
+| uncached input | ~$0.00 | 0% |
+
+**Caching is working and is not a lever: 9.5 read per write, saving 74%.** Do
+not reopen the TTL or chase the hit rate. What that day actually was: roughly
+six full eval runs and the turns sessions fired while building, against 193
+real turns in the whole month. **The bill is the building, not the product.**
+
+Use `cost_report.py` for what it is good for — comparing George's own turns
+with each other, across builds with `--since`.        # the weekly sweep
     .venv\Scripts\python.exe ops/turn_clock.py --days 7        # the clock (P0.3)
     .venv\Scripts\python.exe ops/turn_clock.py --days 30 --user-only
     cd frontend && npm ci                                       # after any merge

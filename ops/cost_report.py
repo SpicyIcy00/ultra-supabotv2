@@ -3,9 +3,29 @@
 WHY THIS EXISTS. Cost was invisible in exactly the way turn time was before
 `turn_clock.py`: every token count has been written to `george.conversations`
 since the first commit — `input_tokens`, `output_tokens`, `cache_read_tokens`,
-`cache_creation_tokens` — and nothing had ever read them. The first run, on
-2026-09-13 over 30 days, found 193 turns at **$0.23 each** with a **26.2% cache
-hit rate**, and 76% of the bill in uncached input. None of that was known.
+`cache_creation_tokens` — and nothing had ever read them.
+
+**IT IS NOT THE BILL, AND IT MUST NOT BE READ AS ONE.** It sees only turns
+that reached `ConversationLog`. Every eval turn is invisible to it, because
+`tests/evals/harness.py` stubs the log; so are retries, and so is any turn
+that died before it could be written. Measured on 2026-09-13: this script saw
+9.4M presented tokens over 30 days while the Anthropic console reported 51.6M
+on the same API key. **18%.**
+
+Two wrong conclusions came out of that gap on one afternoon, both stated
+confidently:
+
+  1. "The cache hit rate is 26.2%, raise the TTL." The window spanned
+     `e067ba7`, which added the message-tail breakpoint, so it averaged two
+     builds into a number describing neither. The live build was at 87.3%.
+  2. "76% of the bill is uncached input." The console's token-type breakdown
+     for a single heavy day put cache WRITES at 44% of spend, reads at 32%
+     and output at 23%, with uncached input at effectively zero.
+
+So: use this to compare George's own turns with each other — iterations,
+tokens per turn, one build against another with `--since`. **For what you are
+actually charged, read the console**, filtered by API key and grouped by token
+type. The console is the authority; this is a lens on one population inside it.
 
 WHAT IT DOES NOT DO. It does not estimate, model or project. It multiplies
 recorded tokens by a published rate and says what the rate was. A turn that
@@ -102,7 +122,15 @@ def report(row: dict, window: str, ttl: str) -> int:
     presented = tokens["input"] + tokens["cache_read"] + tokens["cache_write"]
 
     print(f"\n=== George, {window} — rates as of {RATES_AS_OF} ===")
-    print(f"turns: {turns}    mean iterations/turn: {row['iterations']}    "
+    print("THIS IS NOT THE BILL. It is the turns that reached ConversationLog:"
+          "\n  missing — every EVAL turn (the harness stubs the log), retries,"
+          "\n            and any turn that died before it could be written."
+          "\n  Measured 2026-09-13 over 30 days: this table showed 9.4M presented"
+          "\n            tokens while the console showed 51.6M on the same key —"
+          "\n            18%. Two conclusions were drawn from it and both were"
+          "\n            wrong. For the BILL, read the Anthropic console, filtered"
+          "\n            by API key and grouped by token type.")
+    print(f"\nturns: {turns}    mean iterations/turn: {row['iterations']}    "
           f"cache write priced at {ttl} TTL\n")
     print(f"{'':16}{'tokens':>14}{'$/MTok':>9}{'cost':>10}{'share':>8}")
     for key, label in (("input", "uncached input"), ("cache_read", "cache READ"),

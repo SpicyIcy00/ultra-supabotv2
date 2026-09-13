@@ -2747,3 +2747,38 @@ and failed on a contraction (`There's no` vs the definitions' `there is no`)
 and a verb `_LIMITATION` does not list. Fitting the measure to the result is
 what P0.2 deleted 91 assertions for; the phrase list is the owner's to move.
 
+
+## 2026-09-13 — The bill reconciled against the console, and two wrong calls
+
+The owner filtered the Anthropic console by the `george` API key: **51.6M
+tokens in over 30 days**, against the 9.4M `ops/cost_report.py` reports from
+`george.conversations`. **The script sees 18% of the traffic.** Every eval
+turn is missing, because `tests/evals/harness.py` stubs `ConversationLog`, and
+so are retries and turns that died before writing.
+
+**Two conclusions I drew from that 18% were wrong, both stated confidently.**
+
+  1. *"Cache hit rate is 26.2%, raise the TTL."* The window spanned `e067ba7`,
+     which added the message-tail breakpoint, so it averaged two builds into a
+     number describing neither. P0.6 split it: the live build was at 87.3% and
+     the target was met eight days earlier.
+  2. *"76% of the bill is uncached input."* The console's token-type breakdown
+     for 2026-09-13 ($18.20 in one day) is cache WRITES 44%, reads 32%, output
+     23%, uncached input **effectively zero**. The opposite of what I said.
+
+**What the console actually shows, and it closes caching as a topic.** 9.5
+cached tokens read per token written; the same day uncached would have been
+$69 instead of $18, a 74% saving. **Caching is working. Do not reopen the TTL
+or chase the hit rate.**
+
+**And the real finding: the bill is the building, not the product.** 13.2M
+tokens on 2026-09-13 — about six full eval runs plus the turns sessions fired
+while working — against **193 real turns in the entire month**. At that rate
+it is $546/month, and almost none of it is anyone using George. The levers, in
+order: run the twelve far less (2b), then P1.b and P1.c, which cut writes,
+reads and output together because every iteration writes a new tail and
+generates thinking.
+
+`cost_report.py` now says all of this in its own output. A report that reads
+like the whole truth while showing a fifth of it is worse than no report —
+that is how both wrong calls got made.
