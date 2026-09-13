@@ -214,6 +214,27 @@ skip a run that would have caught a trust failure. It does not appear in
 never reaches `george.conversations`, and the JSON's `spend` key is the only
 place the number comes from.
 
+**WHEN A CARD RUNS ANYTHING AT ALL — the rule, so it is not re-decided per
+card.** A live run happens only when a card **changes the trust machinery
+itself** (the prompt, the compose grammar and its roles, the figure gate, the
+notice path, effort per turn) **or at a phase close.** Everything else RIDES
+the close.
+
+Tightened 2026-09-13, after the owner asked whether so many cards needed one.
+**Six gates were dropped**, and the reason is not thrift: they sat on cards
+where a regression was speculative AND **the four gate scenarios could not
+have seen it.** A new comparison (`P2.i`, `P3.f`) is a capability no gate
+scenario asks for, so a run there proves nothing; `P2.c`, `P2.d` and `P2.f`
+are context and rendering; `P1.c` breaks or fixes compose refusals, which are
+its own numbers. **Seven eval events across the whole plan, ~$11.** The money
+saved is ~$3; the real gain is six sessions that do not stop to run something
+that could not inform them.
+
+**What this does NOT buy back: attribution.** A regression landing in a riding
+card surfaces at the close, with up to eight cards behind it. That is the
+accepted cost, accepted because those six runs could not have caught it
+anyway. If a close ever fails on a trust row, the bisect is the price.
+
 **THE TRUST GATE — four scenarios, ~$0.55, and it is what "subset" means.**
 Do not pick scenarios by feel. Across every recorded run the **trust rows are
 stable and the style checks flap**, so a run's value is almost entirely in
@@ -737,7 +758,10 @@ before believing it.
       `[object Object]` header. Subtraction, not a fallback tile.
       Done when: "how are we doing" and "any problems" both show George's
       words above whatever is drawn, on the live build; three of the twelve
-      re-run with prose on every turn. **Eval: subset** (the vocabulary is
+      re-run with prose on every turn. **No eval** — the vocabulary change
+      is model-facing, but the four gate scenarios cannot see it: what this
+      card breaks or fixes is COMPOSE refusals and where prose lands, both of
+      which are the card's own numbers. It rides P1.f's run.
       model-facing).
 - [ ] **P1.d the board transforms; it never accumulates** — the rule decided
       in the log: a question sharing no subject with the board CLEARS it; one
@@ -903,7 +927,7 @@ Answering mode reaches the screens in the Ideal UI (§6).
       Done when: tap OPUS, tap Rockwell, "compare these" → a dumbbell in
       < 2 s with no model call; typing "@Seik" offers the supplier, the page
       and the rule, distinguished; the resolved id reaches the tool argument;
-      tests on the resolution, not the wording. **Eval: subset.**
+      tests on the resolution, not the wording. **No eval** — rides P2.✓.
 - [ ] **P2.d actions that say why; grey text that finishes the question** —
       label actions gain a TARGET (a row's subject id) and a REASON (a
       characterisation, never a number — the annotation rule); the renderer
@@ -911,7 +935,7 @@ Answering mode reaches the screens in the Ideal UI (§6).
       label (replay · ~1s · a turn) is derived. Ghost completions built
       deterministically from the board (last read with one argument changed,
       subjects on screen, pages naming them); Tab accepts; none ever needs a
-      model call. **Eval: subset.**
+      model call. **No eval** — rides P2.✓.
 - [ ] **P2.e replay an investigation** — a finished ladder walked from the
       post's stored calls: each step's rows, receipts, time; a refusal shows
       as a refusal; no planner. No eval.
@@ -920,7 +944,8 @@ Answering mode reaches the screens in the Ideal UI (§6).
       what I meant" → `record_belief` and the next answer uses it. Beliefs
       are readings, never figures. Done when: "we means the shops" taught
       once changes the next "how are we doing"; Forget removes it after.
-      **Eval: subset.**
+      **No eval** — rides P2.✓, where the thread's "i value sales more" turn
+      is the scenario that exercises this.
 - [ ] **P2.g the estate switch** — shops · AJI BARN · AJI CMG as a scope on
       the next question, travelling as store scope, from `metrics.yaml`'s
       lists and nowhere else. Vending is READ (`get_vending`, the `_php`
@@ -949,8 +974,10 @@ Answering mode reaches the screens in the Ideal UI (§6).
       An excluded store is never silently dropped.
       Done when: "how did last December go against the year before" answers
       with the comparable set named; a store that opened mid-window is
-      excluded BY NAME in the receipts; the twelve's trust rows unchanged.
-      **Eval: subset.**
+      with the comparable set named; a store that opened mid-window is
+      excluded BY NAME in the receipts. **No eval** — a new comparison is a
+      new CAPABILITY, and no gate scenario asks for one, so a run here proves
+      nothing. Its contract tests are the check; it rides P2.✓.
       **TIMING:** at one card a day this lands ~mid-November, which is late
       for a Christmas run-up. If the owner wants it sooner it is the one card
       worth pulling ahead of the Phase 2 surface work — it changes what
@@ -1032,7 +1059,8 @@ objects; none recomposes on a question.
       metrics.yaml (same weekday over the last N closed weeks: low, high,
       middle band, computed in the tool), THEN the band mark with today's
       marker. George may not draw "usual" before the definition exists.
-      **Eval: subset.**
+      **No eval** — same reason as P2.i: no gate scenario asks for a usual
+      band. Contract tests are the check; it rides P3.✓.
 - [ ] **P3.✓ close: the Seikyo arc, timed** — end to end on the live build as
       the Ideal UI's build scenario draws it: morning finding → draft →
       revise in place → save → page → Monday question → backtest → promote →

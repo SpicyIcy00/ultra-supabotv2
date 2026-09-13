@@ -3255,3 +3255,34 @@ label. This is now stated in the card itself so the next session does not
 
 Plan totals: 29 open cards, Phase 1 eleven. Eval spend $14 for the whole
 plan, under $28 if every card needs a second run.
+
+## 2026-09-13 — Six eval gates dropped, because they could not have caught anything
+
+The owner asked whether so many cards really need a run and whether it could
+wait until the end. Both halves were right, for a reason better than thrift.
+
+**The rule now, stated once so it is not re-decided per card:** a live run
+happens only when a card **changes the trust machinery itself** — the prompt,
+the compose grammar and its roles, the figure gate, the notice path, effort
+per turn — **or at a phase close.** Everything else rides the close.
+
+**Six gates dropped, and not to save money: the four gate scenarios could not
+have seen those changes.** `P2.i` and `P3.f` add a new COMPARISON, and no gate
+question asks for one, so a run there proves nothing; their contract tests are
+the real check. `P2.c`, `P2.d` and `P2.f` are context and rendering. `P1.c`
+breaks or fixes compose refusals, which are its own reported numbers.
+
+**Seven runs across 29 cards, $9.10**, down from ~$14.90 — and after P1.m the
+suite is v2, so a full run is $1.15 rather than $1.65. What survives: P1.g
+(the gate, because it changes the figure gate), P1.f and P1.h (full, compose
+grammar and effort), P1.m (both suites, $2.80), and the three closes.
+
+**What this does not buy back is attribution**, and that is the accepted cost.
+A regression landing in a riding card surfaces at the close with up to eight
+cards behind it, and the bisect is then the price. Accepted because those six
+runs could not have caught it anyway.
+
+**The saving was never the point and the money was never the gates.** $5.80
+across ten weeks. The $18.20 day was six full runs in ONE day — a session
+iterating a live model against a failing check — which the two-runs-per-card
+cap already stopped.
