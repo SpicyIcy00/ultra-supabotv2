@@ -16,7 +16,7 @@ import os
 import threading
 import time
 from pathlib import Path
-from typing import Any, Optional, Sequence
+from typing import Any, Mapping, Optional, Sequence
 
 import psycopg
 import yaml
@@ -273,7 +273,37 @@ def store_catalog(defs: dict, scope_ids: Sequence[str]) -> dict[str, dict]:
     return catalog
 
 
-def resolve_store(store: Optional[str], catalog: dict[str, dict]) -> list[str]:
+# Every group in metrics.yaml that names real stores. Used only to tell "this
+# store does not exist" from "this store exists and this reading excludes it" —
+# never to widen a scope.
+_STORE_GROUPS = ("active_retail", "pending_retail", "warehouse", "closed",
+                 "non_trading")
+
+
+def _match(wanted: str, entry: Mapping[str, Any], sid: str) -> bool:
+    return wanted in (
+        sid.lower(),
+        str(entry.get("display_name", "")).lower(),
+        str(entry.get("name", "")).lower(),
+    )
+
+
+def estate(defs: dict) -> dict[str, tuple[dict, str]]:
+    """id -> (entry, which group it is in), across the whole estate."""
+    found: dict[str, tuple[dict, str]] = {}
+    for group in _STORE_GROUPS:
+        for entry in defs.get("stores", {}).get(group) or []:
+            if isinstance(entry, Mapping) and entry.get("id"):
+                found.setdefault(entry["id"], (dict(entry), group))
+    return found
+
+
+def resolve_store(
+    store: Optional[str],
+    catalog: dict[str, dict],
+    defs: Optional[dict] = None,
+    out_of_scope_reason: Optional[str] = None,
+) -> list[str]:
     """
     Resolve a store argument to ids using the catalog ONLY.
 
@@ -282,22 +312,50 @@ def resolve_store(store: Optional[str], catalog: dict[str, dict]) -> list[str]:
     name->id map came back empty, and the prompt rendered the literal SQL
     `t.store_id IN ()`. Resolving from definitions cannot fail that way, and an
     unknown name raises instead of quietly matching nothing.
+
+    A DELIBERATE EXCLUSION REFUSES IN ITS OWN WORDS. Ten tools scope their
+    catalog to a subset of the estate, and until 2026-09-13 every one of them
+    told a caller asking about an excluded store that it did not exist:
+    "Unknown store 'AJI BARN'. Valid stores: Fairview, ...". AJI BARN is the
+    warehouse. It was excluded on purpose, for a reason written down in
+    metrics.yaml, and the refusal said the opposite of that — so George could
+    not explain it and could only guess, three times, in the middle of the one
+    workflow the owner was actually building.
+
+    So when `defs` is given, a name that resolves anywhere in the estate is
+    refused as OUT OF SCOPE rather than as unknown, naming the group it is in
+    and the reason the caller declared. A name that resolves nowhere is still
+    unknown, which is a different mistake with a different fix.
     """
     if store is None:
         return list(catalog)
 
     wanted = str(store).strip().lower()
     for sid, entry in catalog.items():
-        if wanted in (
-            sid.lower(),
-            str(entry.get("display_name", "")).lower(),
-            str(entry.get("name", "")).lower(),
-        ):
+        if _match(wanted, entry, sid):
             return [sid]
 
-    valid = sorted(e.get("display_name") or e["name"] for e in catalog.values())
+    in_scope = sorted(e.get("display_name") or e["name"] for e in catalog.values())
+    if defs is not None:
+        for sid, (entry, group) in estate(defs).items():
+            if _match(wanted, entry, sid):
+                name = entry.get("display_name") or entry.get("name") or sid
+                where = group.replace("_", " ")
+                # Collapse whitespace before the full stop: a YAML scalar
+                # carries its trailing newline, and rstrip('.') alone left the
+                # stop on a line of its own. A caller that declared no reason
+                # gets no sentence — never the word "None".
+                note = (" ".join(str(out_of_scope_reason).split()).rstrip(".")
+                        if out_of_scope_reason else "")
+                reason = f" {note}." if note else ""
+                raise ValueError(
+                    f"{name} is not in scope for this reading. It is a real "
+                    f"store — it is in {where}.{reason} This reading covers: "
+                    f"{', '.join(in_scope)}."
+                )
+
     raise ValueError(
-        f"Unknown store {store!r}. Valid stores: {', '.join(valid)}. "
+        f"Unknown store {store!r}. Valid stores: {', '.join(in_scope)}. "
         f"(Names are resolved from definitions/metrics.yaml, not from the "
         f"stores table.)"
     )

@@ -225,6 +225,25 @@ a leak, which is what keeps the real hit in the same run reported.
 Held by 8 cases carrying both real sentences verbatim, and checked against all
 twelve recorded answers rather than against invented ones.
 
+## 2026-09-13 — the second dogfood fix: an exclusion refuses in its own words
+
+`resolve_store` had ONE refusal for TWO mistakes — a typo and a deliberate
+exclusion — so ten scoped tools told the owner that AJI BARN, the warehouse,
+was not a store. He hit it three times in the middle of the one workflow he was
+actually building, and George could only guess at why.
+
+A name that resolves anywhere in the estate is now out of scope, named by
+group and by the reason the calling tool declares; a name that resolves nowhere
+is still unknown. **Three tools exclude the warehouse for three different
+reasons** — dispatch counters, no transactions, ships-from-not-to — so each
+passes its own out of metrics.yaml. One shared sentence would have been wrong
+for two of them. `dead_stock.barn_excluded_reason` had been sitting in the yaml
+unread since the tool was written; the other two were written here.
+
+Scope note: the entry named dead_stock. Fixing only that would have left George
+explaining the warehouse for one reading and denying it exists for the next two,
+so sales and replenishment went with it — one call site each.
+
 
 ---
 

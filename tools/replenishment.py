@@ -201,7 +201,12 @@ def get_replenishment(
     defs = _load_defs()
     rep = _rep(defs)
     catalog = _store_catalog(defs)
-    store_ids = _resolve_store_in(store, catalog)
+    # The warehouse refuses in its own words: it is what a plan ships
+    # FROM, not a missing destination.
+    store_ids = _resolve_store_in(
+        store, catalog, defs,
+        out_of_scope_reason=_req(defs, "replenishment.warehouse_excluded_reason"),
+    )
     top_n = _validate_top_n(defs, top_n)
 
     views = _req(rep, "views")

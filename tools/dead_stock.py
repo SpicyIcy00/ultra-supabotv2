@@ -107,7 +107,13 @@ def get_dead_stock(
     top_n = _validate_top_n(defs, top_n)
 
     catalog = _scope(defs)
-    store_ids = _resolve_store_in(store, catalog)
+    # The exclusion refuses in its own words. AJI BARN is the warehouse, not a
+    # missing shop, and the reason it is out of this reading is declared in
+    # metrics.yaml rather than written here. See _common.resolve_store.
+    store_ids = _resolve_store_in(
+        store, catalog, defs,
+        out_of_scope_reason=_req(defs, "dead_stock.barn_excluded_reason"),
+    )
 
     # Window: reuse the sales tool's resolver so "last_30_days" means exactly
     # what it means everywhere else, rather than acquiring a second definition.

@@ -57,6 +57,25 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-13 · a failed save records only the name of the exception
+
+> The workflow could not be saved: ProgrammingError. The answer above is
+> unaffected; tell the user it did not save.
+
+Twice, 2026-09-03 23:47, both on "add top sellers by sales not units, i value
+sales more". The owner was told it did not save, which is correct behaviour —
+raw diagnostics must not reach an answer (UI rule 4).
+
+But the gap row records the same sanitised sentence, so **what actually failed
+is not recoverable from the log at all**. `routes/george.py:1714` formats
+`type(exc).__name__` and drops the exception. A defect feed that records that a
+write broke, and nothing about how, cannot be swept. The message to the model
+is right; the row written beside it should carry the cause.
+
+---
+
+## Fixed
+
 ### 2026-09-13 · get_dead_stock calls AJI BARN an unknown store
 
 > Unknown store 'AJI BARN'. Valid stores: Fairview, Greenhills, Magnolia,
@@ -76,24 +95,34 @@ cannot tell the owner *why* — he can only guess, in the middle of the one
 workflow the owner was actually building. A deliberate exclusion should refuse
 in its own words and name the reason the tool already documents.
 
-### 2026-09-13 · a failed save records only the name of the exception
+**Cause.** `_common.resolve_store` had one refusal for two different mistakes.
+A name it could not find in the scoped catalog was reported as not existing,
+whether it was a typo or a store deliberately left out — and ten tools scope a
+catalog, so every one of them told the owner the warehouse was not a store.
 
-> The workflow could not be saved: ProgrammingError. The answer above is
-> unaffected; tell the user it did not save.
+**Fixed** in `tools/_common.py`. A name that resolves anywhere in the estate is
+now refused as OUT OF SCOPE, naming the group it is in and the reason the
+calling tool declares; a name that resolves nowhere is still unknown, because
+that is a different mistake with a different fix.
 
-Twice, 2026-09-03 23:47, both on "add top sellers by sales not units, i value
-sales more". The owner was told it did not save, which is correct behaviour —
-raw diagnostics must not reach an answer (UI rule 4).
+**Three tools exclude the warehouse, for three different reasons**, and one
+shared sentence would have been wrong for two of them. Each now passes its own,
+read from `definitions/metrics.yaml` rather than written into the tool:
 
-But the gap row records the same sanitised sentence, so **what actually failed
-is not recoverable from the log at all**. `routes/george.py:1714` formats
-`type(exc).__name__` and drops the exception. A defect feed that records that a
-write broke, and nothing about how, cannot be swept. The message to the model
-is right; the row written beside it should carry the cause.
+    get_dead_stock     dispatch counters, not stock — a dead list would be noise
+    get_sales          records no transactions; the shops record the sales
+    get_replenishment  what a plan ships FROM, never a destination
 
----
+`dead_stock.barn_excluded_reason` already existed and nothing read it. The
+other two were written for this.
 
-## Fixed
+Non-trading rows — Aji Packing, AJI ONLINE, the vending locations — are named
+the same way rather than denied.
+
+Checked live against the real database: all three refuse in their own words,
+and an in-scope read is unchanged (7 stores, 3 dead-stock rows for Rockwell).
+17 cases in `tests/test_store_scope_contract.py`.
+
 
 ### 2026-09-13 · George is marked down for saying what he cannot see
 

@@ -61,7 +61,7 @@ shippable. The full diagnosis is the report linked in section 6.
 | Head | `a01706b` — **pushed and live 2026-09-13**, carrying `69b51bd`, the launcher hardening the outage below taught. |
 | Last deploy | `a01706b`, **live and healthy**, and the swap was clean — polled every 20 s across it, zero non-200s, old build to new in about a minute. It carried NO migration (the schema was already at head), so the launcher took its `already at head` branch and ran no alembic at all. That is evidence the outage below lives in the migration path specifically, not in the boot or the build — evidence, not the deploy log. Before it, `8b0325a`. `8b0325a` carried P0.3 and P0.4, and applying migration `w7x8y9z0a1b2` cost **~50 minutes of 502**: the first boots crashlooped, the migration did not apply, and nothing was readable from outside. It came up on a later retry. Root cause still unknown — the Railway deploy log for that build has not been read. `69b51bd` is the fix for the *invisibility*, not for the cause. |
 | Phase | 0, consolidating |
-| Next card | **The dogfood log's two remaining Open entries** — dead_stock/AJI BARN, then a save recording only an exception name. Open wins over every card. Phase 0 is otherwise complete; after those, Phase 1 opens at P1.a. |
+| Next card | **The dogfood log's last Open entry** — a failed save recording only an exception name. Open wins over every card. After it, Phase 0 closes and Phase 1 opens at P1.a. |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
@@ -409,7 +409,7 @@ Phase 1 is the only way they are ready when the interaction work lands.
 Run from the repo root. The interpreter is `.venv\Scripts\python.exe`; a system
 `python` cannot import the backend (pinned SQLAlchemy).
 
-    .venv\Scripts\python.exe ops/verify_integration.py pure     # 1,386 expected
+    .venv\Scripts\python.exe ops/verify_integration.py pure     # 1,401 expected
     .venv\Scripts\python.exe ops/sweep_gaps.py --days 7        # the weekly sweep
     .venv\Scripts\python.exe ops/turn_clock.py --days 7        # the clock (P0.3)
     .venv\Scripts\python.exe ops/turn_clock.py --days 30 --user-only

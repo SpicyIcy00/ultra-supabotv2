@@ -67,6 +67,14 @@ timezone:
 # =============================================================================
 # SALES DAY BOUNDARY
 # =============================================================================
+# Why a sales reading refuses the warehouse. It is not a missing shop: it
+# records no transactions at all, so any sales figure for it would be a
+# zero that means "wrong question" rather than "a bad week".
+sales_scope:
+  warehouse_excluded_reason: >-
+    AJI BARN records no transactions. It dispatches stock to the shops,
+    and the shops record the sales.
+
 sales_day:
   description: >
     A sales day is midnight-to-midnight Asia/Manila. There is no trading-day
@@ -1767,6 +1775,11 @@ replenishment:
   generated_by: backend/app/services/replenishment_service.py
   review_period_days: 7          # REVIEW_PERIOD_DAYS in the service
   warehouse_store_id: "667bde393126e50006c8058c"   # AJI BARN ships the stores
+  # Why asking for a plan FOR the warehouse is refused. A plan is written
+  # for a destination, and BARN is where the stock ships from.
+  warehouse_excluded_reason: >-
+    AJI BARN is the warehouse a replenishment plan ships FROM, never a
+    destination it is written for.
 
   # HOW A LINE IS SIZED, transcribed from the service so a tool never restates
   # it differently. season_adj_sales is the seasonality-adjusted daily rate and

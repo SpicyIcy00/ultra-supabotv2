@@ -621,7 +621,11 @@ def get_sales(
         )
 
     catalog = _active_retail_catalog(defs)
-    store_ids = _resolve_store_in(filters.get("store"), catalog)
+    # The warehouse refuses in its own words, not as a missing shop.
+    store_ids = _resolve_store_in(
+        filters.get("store"), catalog, defs,
+        out_of_scope_reason=_req(defs, "sales_scope.warehouse_excluded_reason"),
+    )
 
     # AJI BARN / AJI PINA are excluded by construction — the guard is a positive
     # allowlist of active retail, and neither appears in it. Assert it anyway:
