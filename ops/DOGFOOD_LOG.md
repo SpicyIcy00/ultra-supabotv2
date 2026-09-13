@@ -57,6 +57,27 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-13 · two trust failures the twelve caught, that George filed himself
+
+Found by the P1.b run of the twelve, not by a person — but an error the evals
+catch is a defect report like any other, and neither is explained away by the
+run being one draw. The run immediately before, on code differing only in when
+a default composition frame fires, had both at zero.
+
+1. **A figure in prose that no tool returned** (`why`). "…48 sold last week
+   with nothing in the week before (Aji Cuttlefish Japanese, Aji Golden Plum,
+   Aji Squid Hokkaido Slices **and 45 others**)". 48 minus the three he named.
+   The subtraction is his, the receipt behind it is not — and the figure gate
+   did not catch it because 45 is not a restatement of anything on the board.
+   This is the same class as the "800 grams-worth" defect closed the same day:
+   arithmetic in prose is the way past a gate that checks quoting.
+2. **A caveat had to be FORCED, and a table name reached the answer**
+   (`caveats`). `notice_forced: true` after two corrective turns, and
+   `warning_stock` — an internal column — printed in George's own words.
+   Forced has been 0 across every recorded run until this one.
+
+Report: `verification/p1b-final.json`, scenarios `why` and `caveats`.
+
 ### 2026-09-13 · George drew the board and never said anything
 
 > i asked how are doing like and those 4 widgets are all the poped up, and then

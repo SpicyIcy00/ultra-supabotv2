@@ -9,6 +9,27 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-13 — P1.b: the board was never empty, only shapeless
+
+The card said the board fills when George composes. It does not: `editsFor`
+has always drawn a quiet table per read while a turn is in flight, so time to
+first visible object is **7.0 s median before and after** — unmoved. What moved
+is the first COMPOSED object, 16.8 s → 8.2 s. **The 2 s target is missed 3.5x
+and this card cannot reach it**: both numbers are bounded below by the first
+model round trip plus the read, and the fastest object in the twelve is 4.3 s.
+Only P1.d, which skips the model, can go under 2 s.
+
+The default goes through `compose.validate`, not beside it, so it cannot say
+anything George could not; it is kept out of `_drawn_on_the_board`, because a
+caveat is discharged by a person choosing to draw the read that raised it.
+Superseded BY SEQ, not by key — he never sees the default's keys.
+
+Two runs of the twelve, byte-identical model input: 12/12 then 10/12 with a
+forced notice and an ungrounded figure. Both logged, neither explained away.
+The trust rows are not as stable as four runs had suggested.
+
+---
+
 ## 2026-09-12 — The cut (Phase 0, session 2)
 
 Deleted 100 files, 16,660 lines, from `feature/workspace`. What went: the desk

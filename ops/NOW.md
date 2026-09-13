@@ -613,10 +613,75 @@ calls to answer "I can't see foot traffic".
       repository while this card was in flight and swept the working tree in
       with its own change. Nothing was lost and no history was rewritten —
       but `f955306` is where P1.a is, not what it says.
-- [ ] **P1.b the board fills when data lands** — when reads land and no
-      `compose` has arrived, compose a default server-side from `inferShape`;
-      George's later `compose` replaces it in place by key. Measure: time to
-      first visible object. This is the card that has to hit 2 s.
+- [x] **P1.b the board fills when data lands** — done 2026-09-13, and **the
+      card's own measure did not move, because the thing it assumed was empty
+      was not.** Built as written: `agent/default_composition.py` composes a
+      default the moment reads land, through `compose.validate` — the same
+      gate, the same closed vocabulary, so a default block and one of George's
+      are the same object. It rides the `compose` frame saying `default: true`,
+      is stored on the answer post beside his, and his supersede it BY SEQ
+      (he never sees the default's keys, so he cannot name one).
+
+      | | P1.a, 09-13 | **P1.b, 09-13** | target |
+      |---|---|---|---|
+      | time to first visible object, median | 7.0 s · worst 15.0 | **7.0 s** · worst 15.0 | < 2 s |
+      | time to first COMPOSED object, median | 16.8 s · worst 27.8 | **8.2 s** · worst 14.8 | — |
+      | median answer, wall-clock | 24.5 s | 24.6 s · p90 36.7 · worst 43.6 | < 10 s |
+      | iterations per turn, median / max | 4.0 / 6 | 5.0 / 7 | ≤ 2.5 |
+
+      **The first number did not move at all, and the card's premise is why.**
+      The board was never empty when reads landed: `editsFor` in
+      `room/board.ts` has always drawn a quiet table per read while a turn is
+      in flight. What it was empty of was anything SHAPED — and that is the
+      row that moved, 16.8 s to 8.2 s median, on 8 of the 10 turns that
+      compose anything at all. The other two (`shop`, `product`) are unchanged
+      because George composed BEFORE their composable reads landed; nothing
+      here can beat him to it.
+
+      **2 s is missed 3.5x, and this card cannot reach it — say that rather
+      than the 8.2.** Both numbers are bounded below by the first model round
+      trip plus the read: the fastest first object in the twelve is 4.3 s and
+      the fastest composed one 4.7 s. **Nothing that waits for a read can be
+      under 2 s.** The only path to it is P1.d, which answers a navigation
+      fragment with no model call at all.
+
+      **The standing trust gate, and it is not whole — on a run whose input to
+      the model is byte-identical to the run before it.** The twelve scored
+      **10 of 12**: `why` put "and 45 others" in prose (48 uncompared products
+      minus the 3 he named — a figure no tool returned) and `caveats` leaked
+      `warning_stock` and had a notice FORCED after two corrections. Notices
+      surfaced 12 of 12, attribution shares 0. The run immediately before, on
+      code differing only in *when* the default frame fires, was 12 of 12 with
+      forced 0, ungrounded 0 and leaked 0 — and both scenarios got a default
+      in both runs, so the default is not the cause. Both are logged in
+      DOGFOOD_LOG rather than explained away.
+
+      **What it does NOT do, deliberately.** It never carries a note, an
+      emphasis or a finding — those are readings, and a reading is George's.
+      And it never reaches `_drawn_on_the_board`: a caveat is discharged by a
+      person deciding to draw the read that raised it, not by a default doing
+      it for him. Held by `tests/test_default_composition_contract.py` (22
+      cases).
+
+      **And it inherits the top Open defect on a path nobody chose.** With a
+      default on the board, `editsFor` no longer falls through to the reading
+      tile — so a turn George never composes text into is shapes and silence,
+      which is exactly complaint 1 above. **The floor was not built here**,
+      because the log forbids that shape of fix: the agreed change is to
+      remove `text` from the widget vocabulary entirely and draw the reading
+      as a region above the board, which closes this path and his together.
+
+      **Measurement built, and it is the half that was missing.** Nothing
+      recorded when the screen first had something on it — `duration_ms` says
+      how long a turn took, not when a person stopped looking at an empty
+      room. Every frame now carries milliseconds since the turn started
+      (`tests/evals/harness.py`), and `tests/evals/timing.py` replays them
+      through the room's own board rule, with `with_default=False` giving the
+      before off the same frames. One run, both numbers, none of the noise of
+      comparing two draws of a stochastic system.
+      Suites exact: **1,497 pure** (was 1,468), **791 vitest** (was 781),
+      `tsc -b` and `build` clean. Two live runs of the twelve, $1.59 and $1.71
+      — a fifth of the $5–7 this file estimates.
 - [ ] **P1.c cheaper turns** — effort per turn (low for a label-only or
       follow-up turn, medium for a fresh question, high for the investigation
       ladder) via the mid-conversation effort message so the cache survives;
