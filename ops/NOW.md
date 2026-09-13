@@ -34,6 +34,17 @@ shippable. The full diagnosis is the report linked in section 6.
   the card's number before and after, and what is not done. Report the
   shortfall, never the improvement. Then append ≤10 lines to
   `ops/DECISIONS.md` — never to CLAUDE.md.
+- **UPDATE BOTH COPIES OF THE PLAN, IN THE SAME COMMIT.** §3 is what a session
+  reads; **`ops/plan/plan.html` is what the OWNER reads**, published at the
+  link in §6. Closing a card, adding one, or changing what one costs changes
+  both. `tests/test_plan_alignment_contract.py` fails if they disagree — on
+  which cards are open, what each spends, the totals, the per-phase counts, or
+  two cards sharing a prompt — so this is enforced, not remembered. Then
+  republish: the Artifact tool, `url` set to the link in §6, `file_path` to
+  `ops/plan/plan.html`. **They drifted four times on 2026-09-13** and a person
+  caught every one; the page lived in a session's scratchpad, which is deleted
+  when that session ends, so no later session COULD have updated it. That is
+  why it is in the repo.
 - **Never push or deploy** without the owner saying so in that session.
 - **The owner's prompts are complaints, not designs.** "Tap Rockwell, say
   products: 30 s and a second tile" is the good shape. If a prompt arrives as a
@@ -232,7 +243,7 @@ where a regression was speculative AND **the four gate scenarios could not
 have seen it.** A new comparison (`P2.i`, `P3.f`) is a capability no gate
 scenario asks for, so a run there proves nothing; `P2.c`, `P2.d` and `P2.f`
 are context and rendering; `P1.c` breaks or fixes compose refusals, which are
-its own numbers. **Six live runs plus one gate across 27 open cards, ~$11.67** —
+its own numbers. **Six live runs plus one gate across 27 open cards, ~$11.68** —
 P1.e's tail, P1.f, P1.h and the three phase closes at ~$1.84 each on v2, plus
 P1.c's gate at $0.64. **P1.g is closed** (`c508965`), and its own gate run
 cost **$0.64 against the $0.63 this file estimated** — the first figure here
@@ -1312,10 +1323,22 @@ are in `ops/DECISIONS.md` under 2026-09-13.
 **The plan to build it: George, The Build Plan** —
 https://claude.ai/code/artifact/41329abe-5de8-4168-af7a-9817798877d5.
 The same cards as section 3, with every session's prompt, the phase gates,
-the six sources only the owner can supply, and the calendar. Section 3 is
-the source of truth; the page is the readable copy. The owner's two prompts
-are "Log this: …" and "Read ops/NOW.md. Do the next card." — nothing else is
-needed to run it.
+the sources only the owner can supply, and the calendar.
+
+**Its source is `ops/plan/plan.html`, in this repository** — it lived in a
+session's scratchpad until 2026-09-13, which is deleted when that session
+ends, so no later session could update it and it drifted from §3 four times in
+one day. To republish after editing: the **Artifact** tool with
+`url` = the link above and `file_path` = `ops/plan/plan.html`. Passing the
+`url` is what keeps the owner's link working; publishing without it makes a
+second artifact and leaves him reading the old one.
+
+**§3 is the source of truth and the page is the readable copy, but BOTH are
+updated in the same commit** (§1), and
+`tests/test_plan_alignment_contract.py` fails if they disagree.
+
+The owner's two prompts are "Log this: …" and "Read ops/NOW.md. Do the next
+card." — nothing else is needed to run it.
 
 **A phase ends when the owner says it feels right — and it may never end with a
 rebuild.** If it does not feel right, the answer is the next fix to the same

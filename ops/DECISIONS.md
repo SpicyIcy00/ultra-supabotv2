@@ -3573,3 +3573,39 @@ a vocabulary change.
 
 Totals: **27 open cards, ~$11.67.** The plan page had P1.g open while NOW.md
 had it closed, which is the concurrent-session drift the crosscheck exists for.
+
+## 2026-09-13 — The plan page is in the repo now, and a test holds the two together
+
+The owner asked that §3 and the published plan stay aligned, and that a session
+closing a card update both. The root cause was not discipline.
+
+**The page lived in a session's scratchpad, which is deleted when that session
+ends.** No later session *could* have updated it. It is now
+**`ops/plan/plan.html`**, in the repository, and §6 carries the artifact URL
+and says to republish with `url` set — publishing without it creates a second
+artifact and leaves the owner reading the old one.
+
+**`tests/test_plan_alignment_contract.py` (9 cases) fails if they disagree**
+about which cards are open, what each spends, the derived total, a phase's
+size, the headline count, or two cards sharing a prompt. It also guards the
+page structurally: balanced tags, one title, no skeleton, and no feature pill
+reading `#` followed by a word. Named `*_contract.py` because in this repo
+that suffix is what makes a test pure — anything else is treated as
+database-backed and would have skipped silently.
+
+**It found a real error on its first run**: the totals said $11.67, computed
+with the ESTIMATED $0.63 gate, when P1.g had measured $0.64. Both now say
+**$11.68**, derived rather than stated.
+
+**§1 gains the rule:** closing a card, adding one, or changing what one costs
+updates both files in the same commit, then republishes.
+
+**Why this is worth a test rather than a note.** The two drifted four times on
+2026-09-13 — 33 sessions against 28 cards; a card described as pending hours
+after it was built; P1.g open on the page while closed in §3 because a
+concurrent session finished it; and two different eval totals. A person caught
+every one. **A plan the owner's copy and the session's copy disagree about is
+worse than no plan**, because both readers are confident and they are reading
+different documents.
+
+Suites: 1,544 pure (was 1,535), 30 skipped, 0 failing.
