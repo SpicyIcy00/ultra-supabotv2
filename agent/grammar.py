@@ -26,6 +26,20 @@ FIVE THINGS ARE REFUSED, each because of what it would let onto the screen:
                                             renders as blank authority
   a read that never ran, or failed       — same rule the widget path has
   a tree past its bounds                 — a workspace is not a document
+
+AND ONE THING IS NOT (P1.a, 2026-09-13). A node whose DISCRIMINATOR is under
+another name — `type`, `kind`, `node`, or the layout's own word as the key —
+is renamed, not refused. The four recorded runs of the twelve are unanimous
+about what this cost: George wrote `{"type": "row", ...}`, was refused, wrote
+`{"kind": "row", ...}`, was refused, wrote `{"row": {...}}`, was refused, and
+landed on `{"layout": "row", ...}` on the fourth try — three round trips, in
+every run, to say a thing he had said correctly the first time. The VALUES
+were the grammar's own words throughout. Nothing about a rename can put a
+figure on screen, so nothing about it is the guarantee; refusing it was
+ceremony, and ceremony is what a round trip is spent on.
+
+Every rename is recorded and handed back on the result, because a coercion
+the model cannot see is a divergence it cannot describe.
 """
 
 from __future__ import annotations
@@ -57,6 +71,14 @@ EMPHASISE = "emphasise"
 # may NEVER introduce a number. So a note carries no digits at all — checked,
 # not asked for — and a spec may hold only a handful.
 NOTE = "note"
+
+
+# THE DISCRIMINATOR, UNDER EVERY NAME GEORGE HAS REACHED FOR. A node says
+# whether it is a layout or a mark; these are the words he used for that
+# instead, each observed in a real run of the twelve. The VALUE is what
+# decides which it becomes, so a synonym carrying a word that is neither a
+# layout nor a mark is left alone and refused as it always was.
+NODE_SYNONYMS = ("type", "kind", "node", "as")
 
 
 class Rejected(ValueError):
@@ -137,12 +159,73 @@ def _check_channel(name: str, value: Any, call: Optional[Mapping[str, Any]],
     return column
 
 
+def _normalise(item: Any, *, layouts: Mapping[str, Any], marks: Mapping[str, Any],
+               path: str, coerced: list[str]) -> Any:
+    """
+    The node George wrote, in the words the grammar uses.
+
+    Three shapes arrive meaning the same thing, and only the third is spelled
+    the way this file spells it:
+
+        {"type": "row",  "children": [...]}      a synonym for the discriminator
+        {"row": {"children": [...]}}             the discriminator as the key
+        {"layout": "row", "children": [...]}     what the grammar asks for
+
+    Each is renamed to the third. The rename cannot invent a layout or a mark
+    that does not exist — the VALUE is what selects, and it is checked against
+    the same closed sets the refusal checked — so what is gained is a round
+    trip and what is risked is nothing.
+
+    A key explicitly set to nothing (`heading: null`) is dropped for the same
+    reason: an optional field the model declined to fill is not a field it
+    filled wrongly.
+    """
+    if not isinstance(item, Mapping):
+        return item
+    out = dict(item)
+
+    if "layout" not in out and "mark" not in out:
+        # The discriminator as the key: {"stack": {...}}, {"value": {...}}.
+        wrappers = [k for k, v in out.items()
+                    if (k in layouts or k in marks) and isinstance(v, Mapping)]
+        if len(wrappers) == 1 and len(out) == 1:
+            word = wrappers[0]
+            which = "layout" if word in layouts else "mark"
+            out = dict(out[word])
+            out[which] = word
+            coerced.append(f"{path}: {word!r} as the key became {which}: {word!r}")
+
+    if "layout" not in out and "mark" not in out:
+        # The discriminator under another name: type, kind, node, as.
+        for synonym in NODE_SYNONYMS:
+            word = out.get(synonym)
+            if not isinstance(word, str):
+                continue
+            which = "layout" if word in layouts else "mark" if word in marks else None
+            if which is None:
+                continue
+            out.pop(synonym)
+            out[which] = word
+            coerced.append(f"{path}: {synonym}: {word!r} became {which}: {word!r}")
+            break
+
+    blank = sorted(k for k, v in out.items() if v is None)
+    for key in blank:
+        out.pop(key)
+    if blank:
+        coerced.append(f"{path}: dropped {blank} — set to nothing, so not set")
+    return out
+
+
 def _node(item: Any, *, calls: Mapping[int, Mapping[str, Any]],
           voc: Mapping[str, Any], depth: int, budget: list[int],
-          path: str, inherited: Optional[str] = None) -> dict:
+          path: str, inherited: Optional[str] = None,
+          coerced: Optional[list[str]] = None) -> dict:
     """One node of the tree, and everything under it."""
     layouts: Mapping[str, Any] = voc.get("layouts") or {}
     marks: Mapping[str, Any] = voc.get("marks") or {}
+    coerced = [] if coerced is None else coerced
+    item = _normalise(item, layouts=layouts, marks=marks, path=path, coerced=coerced)
     allowed = set(voc.get("allowed_fields") or [])
     max_depth = int(voc.get("max_depth") or 4)
     max_cols = int(voc.get("max_cols") or 6)
@@ -246,7 +329,7 @@ def _node(item: Any, *, calls: Mapping[int, Mapping[str, Any]],
             raise Rejected(f"{path}: a {layout} holds children")
         out["children"] = [
             _node(child, calls=calls, voc=voc, depth=depth + 1, budget=budget,
-                  path=f"{path}.{n}", inherited=subject)
+                  path=f"{path}.{n}", inherited=subject, coerced=coerced)
             for n, child in enumerate(children)
         ]
         if subject:
@@ -361,19 +444,26 @@ def annotation(name: str, value: Any, defs: Mapping[str, Any]) -> str:
 
 
 def validate_spec(spec: Any, *, calls: Mapping[int, Mapping[str, Any]],
-                  defs: Mapping[str, Any]) -> dict:
+                  defs: Mapping[str, Any],
+                  coerced: Optional[list[str]] = None) -> dict:
     """
     One composed shape, checked whole.
 
     Raises Rejected with a reason naming the node, so a refusal tells George
     which part of the tree was wrong rather than that the tree was.
+
+    `coerced` collects every rename made on the way down, for the caller to
+    hand back to the model: a shape that drew is worth knowing about, and a
+    shape that drew under a different spelling than the one submitted is worth
+    knowing about twice.
     """
     voc = vocabulary(defs)
     if not voc:
         raise Rejected("the grammar is not defined")
     notes = int(((voc.get("channels") or {}).get(NOTE) or {}).get("max_per_spec") or 4)
     budget = [int(voc.get("max_nodes") or 40), notes]
-    return _node(spec, calls=calls, voc=voc, depth=1, budget=budget, path="spec")
+    return _node(spec, calls=calls, voc=voc, depth=1, budget=budget, path="spec",
+                 coerced=coerced)
 
 
 def reads_in(spec: Mapping[str, Any]) -> list[int]:

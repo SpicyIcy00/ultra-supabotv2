@@ -126,7 +126,7 @@ def work_sentence(calls: Iterable[Mapping[str, Any]], defs: Mapping[str, Any]) -
         f"A short follow-up — why, compare, products, break it down — REFINES "
         f"this work ({ops}): keep its window, its filters and its comparison "
         f"unless asked otherwise, read only what the refinement needs, and "
-        f"call record_findings so the new reads take their place on the same "
+        f"call compose so the new reads take their place on the same "
         f"surface. A question about a different store, window or business is "
         f"new work.]"
     )

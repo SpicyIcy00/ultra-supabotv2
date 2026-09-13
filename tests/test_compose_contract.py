@@ -42,6 +42,16 @@ def only(blocks, defs):
     return compose.validate({"blocks": blocks}, CALLS, defs)
 
 
+def with_coercions(blocks, defs, calls=None):
+    """accepted, rejected, and what was adjusted rather than refused (P1.a)."""
+    coerced = []
+    accepted, rejected = compose.validate(
+        {"blocks": blocks}, calls if calls is not None else CALLS, defs,
+        coerced=coerced,
+    )
+    return accepted, rejected, coerced
+
+
 # ------------------------------------------------------------- choices
 
 
@@ -120,10 +130,35 @@ def test_a_block_over_a_read_that_never_ran_is_refused(defs):
 # ------------------------------------------------------------- weight
 
 
-def test_only_one_block_leads(defs):
-    accepted, rejected = only([
+def test_only_one_block_leads_and_the_second_is_demoted_not_refused(defs):
+    """
+    ONE LEAD IS STILL THE RULE; breaking it no longer costs a round trip.
+
+    Until P1.a the second block was refused and drew nothing, which is not
+    what George meant by weighting it: he meant this matters, and the object
+    already leading matters more by having arrived first. So it draws, one
+    rank down, and the adjustment is named — nothing about a weight can change
+    what a figure says.
+    """
+    accepted, rejected, coerced = with_coercions([
         {"kind": "figure", "key": "a", "seq": 1, "subject": "Rockwell", "weight": "lead"},
         {"kind": "figure", "key": "b", "seq": 1, "subject": "OPUS", "weight": "lead"},
+    ], defs)
+    assert rejected == []
+    assert [b["weight"] for b in accepted] == ["lead", "supporting"]
+    assert [b["key"] for b in accepted] == ["a", "b"]
+    assert any("only one block leads" in c and "'b'" in c for c in coerced)
+
+
+def test_a_second_hero_is_still_refused(defs):
+    """
+    The one weight that cannot be demoted, because demoting it draws the wrong
+    OBJECT: a hero is the big expressive tile and "a hero is the lead by
+    definition" is the widget's own rule, not a ranking.
+    """
+    accepted, rejected = only([
+        {"kind": "hero", "key": "a", "seq": 1, "subject": "Rockwell", "weight": "lead"},
+        {"kind": "hero", "key": "b", "seq": 1, "subject": "OPUS", "weight": "lead"},
     ], defs)
     assert len(accepted) == 1
     assert "only one block leads" in rejected[0]["reason"]
@@ -220,7 +255,7 @@ def test_put_is_what_an_edit_is_when_nothing_says_otherwise(defs):
     assert accepted[0]["op"] == "put"
 
 
-def test_quiet_and_drop_name_a_key_and_nothing_else(defs):
+def test_quiet_and_drop_name_a_key_and_anything_else_is_ignored(defs):
     accepted, rejected = only([
         {"op": "quiet", "key": "shops"},
         {"op": "drop", "key": "old-thing"},
@@ -229,8 +264,13 @@ def test_quiet_and_drop_name_a_key_and_nothing_else(defs):
     assert accepted[0] == {"op": "quiet", "key": "shops", "weight": "quiet"}
     assert accepted[1] == {"op": "drop", "key": "old-thing"}
 
-    _, rejected = only([{"op": "quiet", "key": "shops", "seq": 1}], defs)
-    assert "names a key and nothing else" in rejected[0]["reason"]
+    # A quiet that restates the seq it is quieting says the same thing twice.
+    # It used to be refused, and then nothing was quieted (P1.a).
+    accepted, rejected, coerced = with_coercions(
+        [{"op": "quiet", "key": "shops", "seq": 1}], defs)
+    assert rejected == []
+    assert accepted == [{"op": "quiet", "key": "shops", "weight": "quiet"}]
+    assert any("names a key and nothing else" in c for c in coerced)
 
 
 def test_a_change_may_move_prominence_alone(defs):
@@ -254,9 +294,16 @@ def test_a_change_of_subject_must_name_the_read_it_comes_from(defs):
     assert accepted == [] and "no row for" in rejected[0]["reason"]
 
 
-def test_a_change_has_to_change_something(defs):
-    accepted, rejected = only([{"op": "change", "key": "shops"}], defs)
-    assert accepted == [] and "change something" in rejected[0]["reason"]
+def test_a_change_that_changes_nothing_is_ignored_not_refused(defs):
+    """
+    The object stays exactly as it is either way, so the only thing the
+    refusal ever changed was the round-trip count (P1.a). It is reported, so
+    George does not describe an object as having moved.
+    """
+    accepted, rejected, coerced = with_coercions(
+        [{"op": "change", "key": "shops"}], defs)
+    assert accepted == [] and rejected == []
+    assert any("nothing to change" in c for c in coerced)
 
 
 def test_one_object_is_edited_once_per_turn(defs):
@@ -490,10 +537,14 @@ def test_the_new_fields_are_in_the_closed_set_and_a_drop_may_not_carry_them(defs
     assert {"action", "argument"} <= allowed
 
     calls = {0: {"tool": "get_sales", "is_read": True, "rows": [{"store": "Rockwell"}]}}
+    coerced = []
     ok, no = compose.validate({"blocks": [
         {"op": "drop", "key": "a", "action": "order"},
-    ]}, calls, defs)
-    assert not ok and "names a key and nothing else" in no[0]["reason"]
+    ]}, calls, defs, coerced=coerced)
+    # The action is ignored and the drop still drops (P1.a): a drop takes the
+    # object off the board, and no field on it could have said otherwise.
+    assert no == [] and ok == [{"op": "drop", "key": "a"}]
+    assert any("names a key and nothing else" in c for c in coerced)
 
 
 def test_a_system_is_drawn_over_the_read_that_returns_one(defs):

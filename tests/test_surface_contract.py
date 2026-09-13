@@ -308,10 +308,20 @@ def test_every_tool_george_can_call_has_words_on_the_room_surface():
              | set(write_tools.WRITE_TOOL_FUNCTIONS)
              | set(composite_tools.COMPOSITE_TOOL_FUNCTIONS))
 
+    # A tool George can no longer call, whose words a STORED turn still needs.
+    # record_findings was folded into compose on 2026-09-13 (P1.a); every
+    # conversation before that holds calls to it, and dropping the words would
+    # have made their work read "thinking…" on reload. Declared here so a
+    # retired name is a decision rather than a leftover.
+    retired = {loop.FINDING_TOOL}
+
     assert not (every - named), (
         f"these tools have no words on the room surface, so their work shows "
         f"as 'thinking…': {sorted(every - named)}"
     )
-    assert not (named - every), (
-        f"words for tools that do not exist: {sorted(named - every)}"
+    assert not (named - every - retired), (
+        f"words for tools that do not exist: {sorted(named - every - retired)}"
+    )
+    assert retired <= named, (
+        f"a retired tool still has stored turns to narrate: {sorted(retired - named)}"
     )

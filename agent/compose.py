@@ -39,6 +39,38 @@ already lives by:
     names a subject must name the read it comes from, or George could rename
     what an object is about while it still draws an older read's rows.
 
+WHAT IS COERCED RATHER THAN REFUSED (P1.a, 2026-09-13). The rules above are
+about TRUTH, and a refusal that is not about truth is a round trip spent on
+ceremony. Four recorded runs of the twelve carry 46 refusals between them and
+NONE of them would have put a wrong figure on screen — they are a
+discriminator under another name, a subject the read was already filtered to,
+a `quiet` that carried the seq it was quieting, a change that changed nothing.
+Each cost a whole model round trip, and George spent up to four composes on
+one answer finding the spelling.
+
+So: a block is coerced where the coercion cannot change what a figure SAYS,
+and refused where it can.
+
+  COERCED   a second block weighted `lead`      demoted to supporting
+            a change that changes nothing       ignored, not refused
+            a `quiet`/`drop` with extra fields  the extras dropped
+            a subject the read is FILTERED to   accepted: the read is about it
+            no subject on a one-row read        filled from that read's scope
+            a node named `type`/`kind`/`node`   renamed (agent/grammar.py)
+
+  REFUSED   a seq that never ran or failed      there is nothing to draw
+            a subject no row and no filter has  a label nobody read
+            a subject on a MANY-row read        choosing a row is a judgement
+            a note carrying a digit             that is a figure in prose
+            a figure, colour, size or title     the attempt this file exists
+                                                to stop, and the one coercion
+                                                that came back off the list
+
+The line is one sentence: **a coercion may change which WORD holds a value; it
+may never change which value is drawn, or introduce one.** Every coercion is
+recorded and returned on `meta.coerced`, because a coercion the model cannot
+see is a board it will describe wrongly.
+
 It opens no connection, holds nothing, and its result names no source table,
 for the reason findings.py gives: the loop keeps the last meta that describes
 real data as the answer's receipts, and this read nothing.
@@ -107,6 +139,68 @@ def _row_has(call: Mapping[str, Any], subject: str) -> bool:
     return False
 
 
+def _scope_values(call: Mapping[str, Any]) -> set[str]:
+    """
+    What the read is SCOPED to, as values — the filters the tool applied.
+
+    A read filtered to Rockwell is about Rockwell whether or not a column
+    survives the grouping. `get_sales(group_by=[], filters={"store":
+    "Rockwell"})` returns ONE row of totals with no store column in it, and
+    refusing `subject: "Rockwell"` over that row is what sent George round the
+    loop in the `cannot` scenario: hero with subject, refused; hero without,
+    refused; figure without, refused; then a whole extra read of the same
+    figure grouped by store so the word would appear in a cell. Four
+    iterations, for a label the read had already declared.
+
+    This is not the model introducing a subject. `filters_applied` is the
+    tool's own statement of scope, in `meta`, beside the snapshot timestamp —
+    the same place the receipts come from.
+    """
+    found: set[str] = set()
+    filters = call.get("filters")
+    if not isinstance(filters, Mapping):
+        return found
+    for value in filters.values():
+        for one in (value if isinstance(value, (list, tuple)) else [value]):
+            if isinstance(one, str) and one.strip():
+                found.add(one.strip().lower())
+    return found
+
+
+def _backs(call: Mapping[str, Any], subject: str) -> bool:
+    """Whether the read carries this subject — in a row, or in its own scope."""
+    return _row_has(call, subject) or subject.strip().lower() in _scope_values(call)
+
+
+def _implied_subject(call: Mapping[str, Any]) -> Optional[str]:
+    """
+    The subject a ONE-ROW read is already about, when the block named none.
+
+    Only from what the read declares, and only when there is no choice to
+    make. One row means the client draws that row whatever the subject says
+    (`rowFor(rows, subject) ?? rows[0]`, room/tiles.tsx), so the subject is a
+    caption here and not a selector — and the caption comes from the read's
+    own single scalar filter, never from anything inferred.
+
+    On a MANY-row read this returns None and the block is refused as before.
+    That refusal is real: picking which of seven shops a figure draws is a
+    judgement, and a judgement made by defaulting to row zero is the worst
+    kind. grammar.py says the same thing about a panel-per-shop.
+    """
+    if len(call.get("rows") or []) != 1:
+        return None
+    values = sorted(_scope_values(call))
+    if len(values) != 1:
+        return None
+    # The filter's own spelling, not the lowercased one it was matched on.
+    filters = call.get("filters")
+    for value in (filters or {}).values():
+        for one in (value if isinstance(value, (list, tuple)) else [value]):
+            if isinstance(one, str) and one.strip().lower() == values[0]:
+                return one.strip()
+    return None
+
+
 def read_identity(tool: Any, arguments: Any, subject: Any = None) -> str:
     """
     What a read IS for "this is that": tool, arguments, and the one subject
@@ -134,11 +228,30 @@ def _existing_reads(board: Any) -> dict[str, str]:
     return out
 
 
+def _demote(key: str, lead_key: str, weights: list, coerced: list[str]) -> str:
+    """
+    A second block asking to lead takes the next weight down.
+
+    ONE LEAD IS STILL THE RULE — what changes is what happens when George
+    breaks it. The composition he meant is legible: this block matters, and
+    the one already leading matters more by having arrived first. Refusing
+    the block drew nothing and cost a round trip; demoting it draws the
+    composition he meant, one rank down, and says so.
+    """
+    below = weights[1] if len(weights) > 1 else "supporting"
+    coerced.append(
+        f"{key!r}: only one block leads and {lead_key!r} already does, so this "
+        f"one is {below}"
+    )
+    return below
+
+
 def validate(
     submitted: Any,
     calls: Mapping[int, Mapping[str, Any]],
     defs: Mapping[str, Any],
     board: Any = None,
+    coerced: Optional[list[str]] = None,
 ) -> tuple[list[dict], list[dict]]:
     """
     Split a submitted composition into the blocks that may be drawn and those
@@ -149,6 +262,10 @@ def validate(
     there under a new key is REWRITTEN to a `change` of the existing key —
     not refused: the model meant "show this", and the board's rule is that
     one read is one object. The rewrite is named on the edit and in meta.
+
+    `coerced` collects every block that was adjusted rather than refused, in
+    words, for the caller to hand back. See the module docstring for where
+    the line between the two sits.
     """
     existing = _existing_reads(board)
     voc = vocabulary(defs)
@@ -175,6 +292,7 @@ def validate(
     rejected: list[dict] = []
     keys_seen: set[str] = set()
     lead_key: Optional[str] = None
+    coerced = [] if coerced is None else coerced
 
     blocks = submitted.get("blocks") if isinstance(submitted, Mapping) else submitted
     if blocks is None:
@@ -190,6 +308,17 @@ def validate(
             if not isinstance(item, Mapping):
                 raise Rejected("not a block")
 
+            # STILL A REFUSAL, AND DELIBERATELY SO (P1.a, 2026-09-13). This
+            # was the one coercion on the list that came off it. A block
+            # carrying `value: 412884`, `colour`, `width` or `title` is not a
+            # misspelling — it is the attempt this file exists to stop, and
+            # "dropped the field, drew the rest" teaches nothing while
+            # "refused, George composes and the system draws" teaches the
+            # rule. It costs nothing either: the tool schema is
+            # additionalProperties:false, so a well-formed call cannot carry
+            # one, and four recorded runs of the twelve contain zero of them.
+            # A coercion that buys no round trip and blunts a trust boundary
+            # is a bad trade in one direction only.
             extra = set(item.keys()) - allowed
             if extra:
                 raise Rejected(
@@ -211,10 +340,19 @@ def validate(
             # changes. Nothing here can name a figure, so a partial edit is as
             # safe as a whole one — with the one exception below.
             if op in ("drop", "quiet"):
-                for field in ("kind", "seq", "subject", "subjects", "form",
-                              "label", "action", "argument"):
-                    if field in item:
-                        raise Rejected(f"a {op} names a key and nothing else; drop {field!r}")
+                # NAMING THE KEY IS THE WHOLE EDIT, and anything else George
+                # restated alongside it is ignored rather than refused. A
+                # `quiet` that carries the seq it is quieting says the same
+                # thing twice; refusing it lost a round trip and quieted
+                # nothing.
+                said_too = sorted(f for f in ("kind", "seq", "subject", "subjects",
+                                              "form", "label", "action", "argument")
+                                  if f in item)
+                if said_too:
+                    coerced.append(
+                        f"{key!r}: a {op} names a key and nothing else, so "
+                        f"{said_too} was ignored"
+                    )
                 keys_seen.add(key)
                 edit = {"op": op, "key": key}
                 if op == "quiet":
@@ -250,7 +388,7 @@ def validate(
                 if weight is not None and weight not in weights:
                     raise Rejected(f"weight {weight!r} is not one of {', '.join(weights)}")
                 if weight == "lead" and voc.get("one_lead") and lead_key is not None:
-                    raise Rejected(f"only one block leads, and {lead_key!r} already does")
+                    weight = _demote(key, lead_key, weights, coerced)
                 edit = {"op": "change", "key": key}
                 if weight:
                     edit["weight"] = weight
@@ -264,10 +402,10 @@ def validate(
                                   "action", "argument"):
                         if field in item:
                             edit[field] = item[field]
-                    if isinstance(edit.get("subject"), str) and not _row_has(call, edit["subject"]):
+                    if isinstance(edit.get("subject"), str) and not _backs(call, edit["subject"]):
                         raise Rejected(f"read {item['seq']} has no row for {edit['subject']!r}")
                     for s in edit.get("subjects") or []:
-                        if not isinstance(s, str) or not _row_has(call, s):
+                        if not isinstance(s, str) or not _backs(call, s):
                             raise Rejected(f"read {item['seq']} has no row for {s!r}")
                 elif voc.get("change_subject_requires_seq") and ("subject" in item or "subjects" in item):
                     # Otherwise the object would claim to be about something the
@@ -276,7 +414,15 @@ def validate(
                         "to change what an object is about, name the read it comes from too"
                     )
                 if len(edit) == 2:
-                    raise Rejected("a change has to change something: a weight, or a read and subject")
+                    # A NO-OP IS NOT A MISTAKE, it is a restatement. The object
+                    # stays exactly as it is either way, so the only thing a
+                    # refusal changed was the round trip count.
+                    coerced.append(
+                        f"{key!r}: a change with nothing to change — the object "
+                        f"is as it was"
+                    )
+                    keys_seen.add(key)
+                    continue
                 keys_seen.add(key)
                 accepted.append(edit)
                 continue
@@ -297,9 +443,10 @@ def validate(
                 if weight not in weights:
                     raise Rejected(f"weight {weight!r} is not one of {', '.join(weights)}")
                 if weight == "lead" and voc.get("one_lead") and lead_key is not None:
-                    raise Rejected(f"only one block leads, and {lead_key!r} already does")
+                    weight = _demote(key, lead_key, weights, coerced)
                 try:
-                    spec = grammar.validate_spec(item["spec"], calls=calls, defs=defs)
+                    spec = grammar.validate_spec(item["spec"], calls=calls, defs=defs,
+                                                 coerced=coerced)
                 except grammar.Rejected as why:
                     raise Rejected(str(why)) from why
                 keys_seen.add(key)
@@ -322,7 +469,12 @@ def validate(
             if kind == "hero" and voc.get("hero_must_lead") and weight != "lead":
                 raise Rejected("a hero is the lead by definition; give it weight 'lead' or use 'subject'")
             if weight == "lead" and voc.get("one_lead") and lead_key is not None:
-                raise Rejected(f"only one block leads, and {lead_key!r} already does")
+                # A HERO THAT CANNOT LEAD IS NOT A HERO. Demoting it would
+                # draw the wrong OBJECT — the big expressive tile, second —
+                # so this one stays a refusal while every other kind demotes.
+                if kind == "hero":
+                    raise Rejected(f"only one block leads, and {lead_key!r} already does")
+                weight = _demote(key, lead_key, weights, coerced)
 
             needs = list(widgets[kind].get("needs") or [])
             block: dict[str, Any] = {"op": op, "kind": kind, "key": key, "weight": weight}
@@ -348,23 +500,71 @@ def validate(
 
             if "subject" in needs:
                 subject = item.get("subject")
-                if not isinstance(subject, str) or not subject.strip():
-                    raise Rejected(f"a {kind} names the subject it is about")
                 assert call is not None
-                if not _row_has(call, subject):
+                if not isinstance(subject, str) or not subject.strip():
+                    # WHEN THERE IS ONE ROW THERE IS NO CHOICE. The subject
+                    # selects a row; a read that returned one row has already
+                    # selected it, and the client draws that row whether the
+                    # block names it or not. So the block stands, captioned
+                    # from the read's own scope where it declares one and from
+                    # the row itself where it does not — never from anything
+                    # George supplied. On a many-row read this is still a
+                    # refusal, because there choosing IS the judgement.
+                    if len(call.get("rows") or []) != 1:
+                        raise Rejected(
+                            f"a {kind} names the subject it is about — read "
+                            f"{item.get('seq')} returned "
+                            f"{len(call.get('rows') or [])} rows, so which one "
+                            f"this draws is yours to say"
+                        )
+                    implied = _implied_subject(call)
+                    if implied:
+                        block["subject"] = implied
+                        coerced.append(
+                            f"{key!r}: a {kind} names a subject — read "
+                            f"{item.get('seq')} is filtered to {implied!r} and "
+                            f"returned one row, so that is what it is about"
+                        )
+                    else:
+                        coerced.append(
+                            f"{key!r}: a {kind} names a subject — read "
+                            f"{item.get('seq')} returned one row, so it draws "
+                            f"that row and takes its name from it"
+                        )
+                elif not _backs(call, subject):
                     raise Rejected(f"read {item['seq']} has no row for {subject!r}")
-                block["subject"] = subject.strip()
+                else:
+                    block["subject"] = subject.strip()
 
             if "subjects" in needs:
                 subjects = item.get("subjects")
                 if not isinstance(subjects, (list, tuple)) or not (2 <= len(subjects) <= MAX_SUBJECTS):
-                    raise Rejected(f"a {kind} names two to {MAX_SUBJECTS} subjects")
+                    # Naming what is there turns the refusal into the next
+                    # correct attempt, the way grammar._no_row does. Which two
+                    # to compare is George's to say; which two are AVAILABLE
+                    # is the read's, and he should not spend a round trip
+                    # finding out.
+                    assert call is not None
+                    available = sorted({
+                        v.strip() for row in (call.get("rows") or [])[:12]
+                        if isinstance(row, Mapping)
+                        for v in row.values()
+                        if isinstance(v, str) and 0 < len(v.strip()) < 40
+                    })[:6]
+                    raise Rejected(
+                        f"a {kind} names two to {MAX_SUBJECTS} subjects, from "
+                        f"the rows of ONE read"
+                        + (f" — read {item.get('seq')} carries: "
+                           f"{', '.join(available)}" if available else
+                           f" — read {item.get('seq')} carries no named rows to "
+                           f"compare, so this is a chart or a table")
+                    )
                 assert call is not None
                 cleaned: list[str] = []
                 for s in subjects:
                     if not isinstance(s, str) or not s.strip():
                         raise Rejected("a subject is a name")
-                    if not _row_has(call, s):
+                    if not _backs(call, s):
                         raise Rejected(f"read {item['seq']} has no row for {s!r}")
                     if s.strip() not in cleaned:
                         cleaned.append(s.strip())
@@ -444,35 +644,58 @@ def validate(
     return accepted, rejected
 
 
-def compose(blocks: Any, *, calls: Mapping[int, Mapping[str, Any]],
+def compose(blocks: Any, findings: Any = None, *,
+            calls: Mapping[int, Mapping[str, Any]],
             defs: Mapping[str, Any], board: Any = None) -> dict:
     """
-    Compose the workspace: say which of the results you read the person sees, as which kind of object, at what weight. Call it once, after your reads return and before you answer. Nothing here is a figure — every number is drawn from the read a block names.
+    Compose the workspace: say which of the results you read the person sees, as which kind of object, at what weight, and what each read MEANT. Call it once, after your reads return and before you answer. Nothing here is a figure — every number is drawn from the read a block names.
 
     Args:
         blocks: the blocks on screen, in order. Each names a kind, a short key, a weight, and the read (seq) and subject it draws from.
+        findings: what each read meant in this piece of work — {"seq": 3, "role": "driver", "of": 0}. Optional; an investigation says it, a single figure needs none.
 
     Returns:
         The tool body. Returns {rows, meta} like every other tool, and names no
-    source_table, for the reason record_findings names none.
+    source_table, for the reason agent/findings.py names none.
     """
-    accepted, rejected = validate(blocks, calls, defs, board=board)
+    coerced: list[str] = []
+    accepted, rejected = validate(blocks, calls, defs, board=board, coerced=coerced)
+    # ONE CALL, ONE SCHEMA (P1.a, 2026-09-13). Roles and blocks are two
+    # statements about the SAME set of calls, submitted at the same moment,
+    # validated against the same record, and neither reads anything. Splitting
+    # them across two tools bought nothing and cost a sequential round trip in
+    # every investigation the twelve contain. agent/findings.py still owns
+    # every rule — this is one door into it, not a second set of checks.
+    from agent import findings as _findings
+
+    roles, roles_rejected = ([], [])
+    if findings is not None:
+        roles, roles_rejected = _findings.validate(findings, calls, defs)
     return {
         "rows": accepted,
         "meta": {
             "accepted": len(accepted),
             "rejected": rejected,
+            "findings": roles,
+            "findings_rejected": roles_rejected,
+            # What was ADJUSTED rather than refused: a discriminator renamed, a
+            # second lead demoted, a subject taken from the read's own scope.
+            # Named because the model has to describe the board it actually
+            # got, and a coercion it cannot see is a board it describes wrongly.
+            "coerced": coerced,
             # A put of a read the board already drew became a change of that
             # object: one read is one object. Named so the model uses the key
             # it became from here on.
             "rewritten": [{"from": e["rewritten_from"], "to": e["key"]}
                           for e in accepted if e.get("rewritten_from")],
             "widgets": list(vocabulary(defs)["widgets"]),
+            "roles": list(_findings.ROLES),
             "note": (
                 "How the board changed, from reads that already ran. Nothing "
                 "was read, and nothing you did not name has moved. A refused "
                 "edit did not happen and the answer must not describe the "
-                "board as though it did."
+                "board as though it did. A COERCED edit did happen, in the "
+                "form named beside it — describe that one."
             ),
         },
     }

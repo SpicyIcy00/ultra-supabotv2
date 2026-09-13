@@ -102,7 +102,6 @@ export const WORDS: Record<string, [string, string]> = {
   run_workflow: ['running the saved rule', 'ran the saved rule'],
   // ---- what he says about what he read
   compose: ['arranging the workspace', 'arranged the workspace'],
-  record_findings: ['marking what matters', 'marked what matters'],
   record_belief: ['keeping what he now thinks', 'kept what he now thinks'],
   // ---- the writes
   pin_answer: ['pinning it', 'pinned it'],
@@ -111,6 +110,12 @@ export const WORDS: Record<string, [string, string]> = {
   edit_page: ['changing the page', 'changed the page'],
   set_standing_question: ['keeping the question', 'kept the question'],
   set_watch: ['setting the watch', 'set the watch'],
+  // ---- RETIRED, and still narrated. record_findings was folded into compose
+  // on 2026-09-13 (P1.a) and George cannot call it any more, but conversations
+  // recorded before that hold real calls to it, and a stored turn whose work
+  // reads "thinking…" has lost the thing this line exists to show. A name
+  // leaves this map when no stored turn can carry it, which is never.
+  record_findings: ['marking what matters', 'marked what matters'],
 };
 
 function rows(result: unknown): number | null {

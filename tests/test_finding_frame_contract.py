@@ -17,6 +17,14 @@ THREE THINGS UNDER TEST.
      kept OUT of what a pin or a workflow may hold, is never charted, never
      becomes the receipts, and its accepted labels are persisted beside the
      snapshot so a reload composes the answer the way it composed live.
+
+     THE TOOL IS `compose` SINCE 2026-09-13 (P1.a). `record_findings` was a
+     tool of its own until then, and the two were one statement split in half:
+     same moment, same record of calls, neither reading anything, and no way
+     for the model to make both at once — so every investigation paid a
+     sequential round trip to say the roles before it could say the screen.
+     The roles now ride `compose(findings=...)`. agent/findings.py is
+     unchanged and still owns every rule below; what moved is the door.
   3. The frame: driven end-to-end with the model and the log both stubbed,
      exactly as test_interim_prose_contract drives the loop.
 """
@@ -245,7 +253,27 @@ def test_the_identity_on_a_primary_is_the_definitions_and_only_for_a_metric_with
 
 def test_the_tool_is_offered_to_every_session():
     names = [t["name"] for t in george_loop.build_tool_schemas()]
-    assert george_loop.FINDING_TOOL in names
+    assert george_loop.COMPOSE_TOOL in names
+
+
+def test_the_roles_are_not_a_tool_of_their_own_any_more(monkeypatch):
+    """
+    ONE TOOL, ONE ROUND TRIP (P1.a). Two label tools could not be batched by
+    the model in practice — it wrote the roles, waited for a result that told
+    it nothing, then wrote the blocks. Folding them removes that trip.
+
+    The absence has to be enforced, not just documented: if `record_findings`
+    comes back into the schema, this loosens into two calls again quietly.
+    """
+    names = [t["name"] for t in george_loop.build_tool_schemas(include_write=True)]
+    assert george_loop.FINDING_TOOL not in names
+    assert george_loop.FINDING_TOOL not in george_loop.FINDING_TOOL_FUNCTIONS
+    schema = next(t for t in george_loop.build_tool_schemas()
+                  if t["name"] == george_loop.COMPOSE_TOOL)
+    assert set(schema["input_schema"]["properties"]) == {"blocks", "findings"}
+    # The roles are optional: a single figure needs none, and requiring them
+    # would put a label on every turn that has nothing to label.
+    assert schema["input_schema"]["required"] == ["blocks"]
 
 
 def test_the_tool_sits_inside_the_shared_prefix():
@@ -254,24 +282,23 @@ def test_the_tool_sits_inside_the_shared_prefix():
     bare = [t["name"] for t in george_loop.build_tool_schemas()]
     full = [t["name"] for t in george_loop.build_tool_schemas(include_write=True)]
     assert full[: len(bare)] == bare
-    # Reads sorted, then the label tools sorted (two since 2026-09-10: the
-    # roles and the composition). Both read nothing and both are offered to
-    # every session, so both sit inside the shared prefix.
+    # Reads sorted, then the label tool. It reads nothing and is offered to
+    # every session, so it sits inside the shared prefix.
     reads = sorted(george_loop.TOOL_FUNCTIONS)
     assert bare == reads + sorted(george_loop.FINDING_TOOL_FUNCTIONS)
-    assert george_loop.FINDING_TOOL in bare and george_loop.COMPOSE_TOOL in bare
+    assert george_loop.COMPOSE_TOOL in bare
 
 
 def test_a_pin_and_a_workflow_can_never_hold_a_label():
-    assert george_loop.FINDING_TOOL not in george_loop.TOOL_FUNCTIONS
+    assert george_loop.COMPOSE_TOOL not in george_loop.TOOL_FUNCTIONS
     from app.services.pin_runner import PinValidationError, validate_call
     with pytest.raises(PinValidationError):
-        validate_call({"tool": george_loop.FINDING_TOOL, "arguments": {"findings": []}})
+        validate_call({"tool": george_loop.COMPOSE_TOOL, "arguments": {"findings": []}})
 
 
 def test_the_schema_has_no_field_for_anything_but_a_seq_and_a_role():
     schema = next(t for t in george_loop.build_tool_schemas()
-                  if t["name"] == george_loop.FINDING_TOOL)
+                  if t["name"] == george_loop.COMPOSE_TOOL)
     items = schema["input_schema"]["properties"]["findings"]["items"]
     assert set(items["properties"]) == {"seq", "role", "of"}
     assert items["additionalProperties"] is False
@@ -334,7 +361,7 @@ def test_the_model_is_shown_each_call_s_seq(monkeypatch):
 def test_accepted_roles_become_a_frame_and_are_persisted(monkeypatch):
     frames, _ = _drive(monkeypatch, [
         [_ToolUse("tu-1", "get_sales", SALES), _ToolUse("tu-2", "get_sales", TX)],
-        [_ToolUse("tu-3", george_loop.FINDING_TOOL,
+        [_ToolUse("tu-3", george_loop.COMPOSE_TOOL,
                   {"findings": [{"seq": 0, "role": "primary"},
                                 {"seq": 1, "role": "driver", "of": 0}]})],
         [_TextBlock("Rockwell fell against the week before; transactions fell too.")],
@@ -356,7 +383,7 @@ def test_accepted_roles_become_a_frame_and_are_persisted(monkeypatch):
 def test_a_rejected_role_is_named_and_the_rest_stand(monkeypatch):
     frames, _ = _drive(monkeypatch, [
         [_ToolUse("tu-1", "get_sales", SALES)],
-        [_ToolUse("tu-2", george_loop.FINDING_TOOL,
+        [_ToolUse("tu-2", george_loop.COMPOSE_TOOL,
                   {"findings": [{"seq": 0, "role": "primary"},
                                 {"seq": 42, "role": "driver", "of": 0}]})],
         [_TextBlock("Rockwell fell against the week before.")],
@@ -372,12 +399,12 @@ def test_a_rejected_role_is_named_and_the_rest_stand(monkeypatch):
 def test_a_label_is_never_charted_never_pinnable_and_never_the_receipts(monkeypatch):
     frames, _ = _drive(monkeypatch, [
         [_ToolUse("tu-1", "get_sales", SALES)],
-        [_ToolUse("tu-2", george_loop.FINDING_TOOL,
+        [_ToolUse("tu-2", george_loop.COMPOSE_TOOL,
                   {"findings": [{"seq": 0, "role": "primary"}]})],
         [_TextBlock("Rockwell fell against the week before.")],
     ])
     results = _frames_of(frames, "tool_result")
-    label = next(r for r in results if r["tool"] == george_loop.FINDING_TOOL)
+    label = next(r for r in results if r["tool"] == george_loop.COMPOSE_TOOL)
     assert label["rows"] == [] and label["rows_complete"] is False
     assert label["pinnable"] is False
     # The receipts are the read's, not the label's.
@@ -394,9 +421,9 @@ def test_a_label_is_never_charted_never_pinnable_and_never_the_receipts(monkeypa
 def test_a_later_recording_replaces_an_earlier_one(monkeypatch):
     frames, _ = _drive(monkeypatch, [
         [_ToolUse("tu-1", "get_sales", SALES)],
-        [_ToolUse("tu-2", george_loop.FINDING_TOOL,
+        [_ToolUse("tu-2", george_loop.COMPOSE_TOOL,
                   {"findings": [{"seq": 0, "role": "context"}]})],
-        [_ToolUse("tu-3", george_loop.FINDING_TOOL,
+        [_ToolUse("tu-3", george_loop.COMPOSE_TOOL,
                   {"findings": [{"seq": 0, "role": "primary"}]})],
         [_TextBlock("Rockwell fell against the week before.")],
     ])

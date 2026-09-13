@@ -186,24 +186,31 @@ TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
     "get_object": objects.get_object,
 }
 
-# The one tool that reads nothing. It labels calls that already ran with the
-# role each played — primary, driver, breakdown, context — and the loop
-# validates every label against the executed set and metrics.yaml before any
-# of it reaches a client (agent/findings.py).
+# The one tool that reads nothing. It says what the person SEES — which reads,
+# as which kind of object, at what weight — and what each read MEANT — primary,
+# driver, breakdown, context — and the loop validates all of it against the
+# executed set and metrics.yaml before any of it reaches a client
+# (agent/compose.py, agent/findings.py).
+#
+# ONE TOOL, NOT TWO (P1.a, 2026-09-13). record_findings and compose were
+# separate tools until today, and they were two statements about the SAME set
+# of calls, made at the same moment, validated against the same record, each
+# reading nothing. The model could not batch them — it wrote the roles, waited
+# a whole round trip for a result that told it nothing it did not already
+# know, then wrote the blocks. Every investigation in the twelve paid for
+# that. The roles are now compose(findings=...); agent/findings.py is
+# untouched and still owns every rule.
 #
 # KEPT OUT OF TOOL_FUNCTIONS ON PURPOSE. That dict is what a pin and a workflow
 # step may contain (pin_runner.validate_call, workflow_runner), and a label is
-# not a figure: a tile that re-ran `record_findings` would re-run nothing. It
-# is always offered — no capability gates it — so every session's schema
-# carries it at the same position and the cached prefix holds.
+# not a figure: a tile that re-ran compose would re-run nothing. It is always
+# offered — no capability gates it — so every session's schema carries it at
+# the same position and the cached prefix holds.
+# The retired name. Kept because the room still has to narrate a conversation
+# recorded before 2026-09-13, whose turns hold real `record_findings` calls.
 FINDING_TOOL = "record_findings"
-# The second label tool (2026-09-10). `compose` says what the person SEES —
-# which reads, as which kind of object, at what weight — and is validated the
-# same way against the same record (agent/compose.py). Same exclusion from
-# TOOL_FUNCTIONS for the same reason: a composition re-run draws nothing.
 COMPOSE_TOOL = "compose"
 FINDING_TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
-    FINDING_TOOL: findings.record_findings,
     COMPOSE_TOOL: compose.compose,
 }
 
@@ -963,7 +970,7 @@ INVESTIGATING
 
 VERIFY the primary fact first — the metric over a closed window, compare_to='previous_period', scoped to the subject; if the premise does not hold, say so and stop. DECOMPOSE — {_drivers_sentence(defs)} Read the drivers in the same batch, same window, filters and comparison, and read change_pct off each row: the stronger driver moved more, close means both moved, and a share of the change is nobody's — "82% of the decline came from ATP" is a decomposition no tool computes. LOCALIZE only when the evidence points somewhere, one grouped or ranked call per dimension — by store, or product_revenue by product or category with rank_by='biggest_drop' or 'biggest_gain'; never rank two lists yourself. EXPLAIN, keeping the kinds apart: "down 12%" is measured, "basket value is the stronger driver" is your reading, and localization is not cause. STOP when the premise is false, one driver clearly dominates, the next step has no tool, or the evidence is mixed; then say what the data establishes, what it does not, and the one thing to check next.
 
-Every read in a round keeps the primary fact's window, baseline, store scope and filters; a pin that already carries a comparison is a verified primary fact. record_findings once, each read's role by meta.call_seq — a role cannot compute, order or colour anything.
+Every read in a round keeps the primary fact's window, baseline, store scope and filters; a pin that already carries a comparison is a verified primary fact. compose once, with `findings` carrying each read's role by meta.call_seq — a role cannot compute, order or colour anything.
 """
 
 INVESTIGATING_SECTION = _investigating_section(_load_defs())
@@ -2995,6 +3002,16 @@ async def run(
                     # The rows, so a composition's subject can be checked
                     # against what the read actually carried (agent/compose.py).
                     "rows": (result.get("rows") if isinstance(result, dict) else None) or [],
+                    # What the read is SCOPED to, as the tool declared it —
+                    # meta.filters_applied, implicit filters included. A read
+                    # filtered to one shop is ABOUT that shop even when the
+                    # grouping left no column carrying the name, and until
+                    # P1.a a composition over it was refused for saying so
+                    # (agent/compose._scope_values). The tool's statement,
+                    # never the model's argument.
+                    "filters": (((result.get("meta") or {}).get("filters_applied")
+                                 if isinstance(result, dict) else None)
+                                or (b.input or {}).get("filters") or {}),
                     # A read is something an object may be composed over. The
                     # self-reads are composites by injection but reads by
                     # shape — see composite_tools.COMPOSABLE_READS.
@@ -3017,29 +3034,31 @@ async def run(
             for gseq, b in labels:
                 started = time.perf_counter()
                 try:
-                    if b.name == COMPOSE_TOOL:
-                        result = compose.compose(
-                            (b.input or {}).get("blocks"),
-                            calls=calls_by_seq, defs=defs,
-                            board=(desk or {}).get("board"),
-                        )
-                    else:
-                        result = findings.record_findings(
-                            (b.input or {}).get("findings"),
-                            calls=calls_by_seq, defs=defs,
-                        )
+                    result = compose.compose(
+                        (b.input or {}).get("blocks"),
+                        (b.input or {}).get("findings"),
+                        calls=calls_by_seq, defs=defs,
+                        board=(desk or {}).get("board"),
+                    )
                     err = None
                 except (ValueError, KeyError, TypeError) as exc:
                     result, err = {"rows": [], "meta": {"error": str(exc)}}, str(exc)
                 ms = int((time.perf_counter() - started) * 1000)
                 done_calls.append(((gseq, b), (result, err, ms)))
-                if err is None and b.name == COMPOSE_TOOL:
-                    composition_recorded = list(result["rows"])
-                    yield _sse("compose", {
-                        "seq": gseq,
-                        "blocks": composition_recorded,
-                        "rejected": result["meta"].get("rejected") or [],
-                    })
+                if err is None:
+                    # A COMPOSE THAT NAMES NO BLOCKS MOVES NO OBJECT. The two
+                    # statements ride one call and are independent: naming
+                    # only roles leaves the board exactly as it was, the way
+                    # naming only some keys leaves the rest of it standing.
+                    # Without this, a roles-only call would overwrite the
+                    # composition with an empty list and clear the screen.
+                    if (b.input or {}).get("blocks") is not None:
+                        composition_recorded = list(result["rows"])
+                        yield _sse("compose", {
+                            "seq": gseq,
+                            "blocks": composition_recorded,
+                            "rejected": result["meta"].get("rejected") or [],
+                        })
                     if result["meta"].get("rejected"):
                         yield _sse("warning", {
                             "reason": "composition_rejected",
@@ -3049,19 +3068,27 @@ async def run(
                                 for r in result["meta"]["rejected"]
                             ),
                         })
-                elif err is None:
-                    findings_recorded = list(result["rows"])
-                    yield _sse("finding", {
-                        "seq": gseq,
-                        "findings": findings_recorded,
-                        "rejected": result["meta"].get("rejected") or [],
-                    })
-                    if result["meta"].get("rejected"):
+                    # THE ROLES RIDE THE SAME CALL AND KEEP THEIR OWN FRAME.
+                    # One tool for the model; two statements for the client,
+                    # which draws the spine from one and the board from the
+                    # other. A compose naming no findings leaves whatever an
+                    # earlier one recorded standing, exactly as a compose
+                    # naming no block leaves that object standing.
+                    roles = result["meta"].get("findings")
+                    roles_rejected = result["meta"].get("findings_rejected") or []
+                    if roles or roles_rejected:
+                        findings_recorded = list(roles or [])
+                        yield _sse("finding", {
+                            "seq": gseq,
+                            "findings": findings_recorded,
+                            "rejected": roles_rejected,
+                        })
+                    if roles_rejected:
                         yield _sse("warning", {
                             "reason": "findings_rejected",
                             "detail": "; ".join(
                                 f"call {r.get('seq')} as {r.get('role')}: {r.get('reason')}"
-                                for r in result["meta"]["rejected"]
+                                for r in roles_rejected
                             ),
                         })
 

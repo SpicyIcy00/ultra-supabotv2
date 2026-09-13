@@ -2673,3 +2673,37 @@ because it does not survive real use.
 - **The twelve are a sample.** 12/12, 11/12, 10/12, 11/12 over four runs; every
   non-trust failure is `leads_with_reading`, and the trust properties never
   moved. Do not report a style score off one run.
+
+## 2026-09-13 — How often the twelve actually need to run
+
+The owner: *"how many times do we really need to run the 12 question eval
+cause i have to pay for it using my api."*
+
+**A full run is ~$5–7** — 61–75 iterations at the production per-iteration
+rate — and seven runs were already on disk, comparable to a month of real
+traffic. **None of it appears in `ops/cost_report.py`**, because the harness
+stubs `ConversationLog` and an eval turn never reaches `george.conversations`.
+So the harness now keeps the `usage` the done frame was already carrying, and
+prints the run's cost on stdout. The report's top level changed from a bare
+list to `{"spend", "cases"}`; nothing in the repository parses it, and the
+seven older files are still lists.
+
+**The rule, in `NOW.md` 2b: the default is DON'T.** Docs, ops, tests,
+frontend, routing, deploys and anything to do with caching cannot move model
+behaviour, so a run buys nothing. Prompt text, tool descriptions, effort,
+iteration structure and `compose` validation can, so they need one. And when
+one is needed, run three or four that exercise the changed path while
+iterating, and the full twelve **once** at the gate.
+
+**A card may not ask for a run it does not need.** My own P0.6 draft said
+"report the standing trust gate", which would have spent $6 proving that a
+cache lifetime does not change an answer — it cannot, because the model gets
+the same bytes either way.
+
+**And a correction I owe this entry.** I recommended the TTL change off a
+26.2% hit rate measured over a rolling 30-day window. The window spanned
+`e067ba7`, which added the message-tail breakpoint on 09-05, so it averaged
+two different builds into a number describing neither. The P0.6 session split
+it: **87.3% on the current build**, target already met, and the TTL is worth
+cents or less. The lesson is the one `--since` now exists for — a rolling
+window across a behavioural change measures nothing.

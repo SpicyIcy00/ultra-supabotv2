@@ -157,7 +157,15 @@ def evidence_summary(turn: Turn, max_rows: int = 15) -> str:
 
 
 class Report:
-    """Per-scenario records, written as JSON at the end of the session when asked."""
+    """
+    Per-scenario records, written as JSON at the end of the session when asked.
+
+    SHAPE CHANGED 2026-09-13: the file is now `{"spend": {...}, "cases": [...]}`
+    where it used to be a bare list of cases. Nothing in the repository parses
+    these — they are read by people — so the change costs nothing, but the
+    seven reports written before that date are still bare lists and a script
+    comparing runs across it has to handle both.
+    """
 
     def __init__(self) -> None:
         self.records: list[dict[str, Any]] = []
@@ -181,18 +189,51 @@ class Report:
             # comes from — real model, real reads — and a measurement the
             # report does not keep is a measurement nobody can compare
             # against next time.
+            # `usage` is the four token counts the API returned, and it was on
+            # the done frame all along without being kept — so the cost of a
+            # run has never been in a report. It matters because an eval turn
+            # is NOT in `george.conversations`: ConversationLog is stubbed, so
+            # `ops/cost_report.py` cannot see a single one of these and eval
+            # spend was invisible in a way real traffic is not. Keeping it here
+            # is the only place the number can come from.
             "done": {k: turn.done.get(k) for k in ("iterations", "tool_calls", "executed_calls",
                                                     "duplicate_reads", "status", "notice_forced",
                                                     "duration_ms", "iteration_ms",
-                                                    "corrective_turns")},
+                                                    "corrective_turns", "usage")},
             "findings": findings,
             "judge": judge,
         })
+
+    def spend(self) -> dict[str, Any]:
+        """
+        What this run cost, from the tokens the API reported.
+
+        Same rates as `ops/cost_report.py` and the same reason for holding them
+        as a constant: a price that moves silently under a report keeps looking
+        authoritative while meaning something else. If one changes, change both.
+        """
+        rates = {"input": 5.00, "output": 25.00, "cache_read": 0.50,
+                 "cache_creation": 6.25}
+        totals = {k: 0 for k in rates}
+        for record in self.records:
+            usage = (record.get("done") or {}).get("usage") or {}
+            for key in totals:
+                totals[key] += int(usage.get(key) or 0)
+        cost = sum(totals[k] / 1e6 * rates[k] for k in totals)
+        return {"turns": len(self.records), "tokens": totals,
+                "usd": round(cost, 4), "rates_as_of": "2026-06-24"}
 
     def write(self) -> Optional[str]:
         path = os.environ.get("GEORGE_EVAL_REPORT")
         if not path:
             return None
+        spend = self.spend()
         with open(path, "w", encoding="utf-8") as fh:
-            json.dump(self.records, fh, indent=2, default=str)
+            json.dump({"spend": spend, "cases": self.records}, fh, indent=2, default=str)
+        # On stdout as well as in the file: a run that cost real money should
+        # say so where the person who started it is looking.
+        print(f"\n[eval] {spend['turns']} turns cost ${spend['usd']:.2f} "
+              f"({spend['tokens']['input']:,} uncached in, "
+              f"{spend['tokens']['cache_read']:,} cached, "
+              f"{spend['tokens']['output']:,} out)")
         return path

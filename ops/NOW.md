@@ -160,6 +160,39 @@ refusals of `top_n must be an integer, got str.` — already fixed in `0ba0b4e`
 the same day it stopped happening. A stale gap filed as a defect costs a whole
 session.
 
+### When to run the twelve — it costs real money, every time
+
+**A full run is roughly $5–7** (61–75 iterations at the production per-iteration
+rate). Seven runs are already on disk. That is comparable to a month of real
+traffic, and **it does not appear in `ops/cost_report.py`**: the harness stubs
+`ConversationLog`, so an eval turn never reaches `george.conversations`. The
+report now prints its own spend and keeps it under `spend` in the JSON, which
+is the only place that number can come from.
+
+**The default is DON'T.** Most cards cannot change what the model sees or how
+it thinks, and for those a run buys nothing at all:
+
+| Change | Run the twelve? |
+|---|---|
+| Docs, ops scripts, tests | **No** |
+| Frontend, routing, CSS | **No** |
+| Deploy, migration, health | **No** |
+| **Cache TTL / caching shape** | **No** — byte-identical input to the model |
+| Prompt or tool-description text | Yes |
+| Effort per turn | Yes |
+| Iteration structure (P1.a, P1.b) | Yes |
+| `compose` validation, findings roles | Yes |
+
+**When it IS needed, don't start with twelve.** Run three or four that exercise
+the path you changed, iterate on those, and run the full twelve **once** at the
+end to confirm. Cheap signal while working, the full set only at the gate.
+
+**A card's own text may not ask for a run it does not need.** P0.6's first
+draft said "report the standing trust gate", which would have cost $6 to prove
+that a cache lifetime does not change an answer — and it cannot, because the
+model receives the same bytes either way. The standing gate applies to cards
+that can move behaviour; for the others, say why no run was needed and move on.
+
 ### George already records his own failures, and nobody reads them
 
 `agent/loop.py` writes a row to `george.gaps` for **20 kinds** of trouble.
