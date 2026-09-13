@@ -2346,8 +2346,16 @@ async def run(
     # nobody having decided anything, so the notice gate is fed his blocks
     # alone and this list never reaches it.
     default_composition_recorded: list[dict] = []
-    # Emitted at most once a turn. A second default after more reads landed
-    # would move objects under a person mid-read for no decision anybody made.
+    # DRAWN AT MOST ONCE A TURN: a second default after more reads landed would
+    # move objects under a person mid-read for no decision anybody made.
+    #
+    # It latches on having DRAWN something, not on having tried. A first batch
+    # that is a write, or a read like get_object that returns sections rather
+    # than a figure, composes nothing — and a turn that spent its one chance on
+    # a batch with nothing in it would leave the board empty for every read
+    # that followed. Nothing was put on screen, so nothing moves when the next
+    # batch gets its turn. Measured on the twelve, 2026-09-13: `shop` and
+    # `product` both open on get_object.
     default_composed = False
 
     # What George read of the page, for the ANSWER POST and the UI: compact
@@ -3310,12 +3318,12 @@ async def run(
             # it. The model is not told this happened, which is why it moves no
             # iteration and no token.
             if not default_composed and not composition_recorded:
-                default_composed = True
                 default_composition_recorded = default_composition.compose_default(
                     calls_by_seq, defs=defs, board=(desk or {}).get("board"),
                     max_rows=MAX_ROWS_TO_CLIENT,
                 )
                 if default_composition_recorded:
+                    default_composed = True
                     yield _sse("compose", {
                         "seq": -1,
                         "blocks": default_composition_recorded,

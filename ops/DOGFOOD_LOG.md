@@ -129,13 +129,22 @@ caveats sit above the reading where they already belong.
 **Do NOT implement the floor as "draw a text tile when one is missing."** It
 would fix the silence and cement the thing that feels wrong.
 
-**3, the board accumulated — one DECISION is needed before the fix.** Those
-tiles are labelled "from earlier": the board knows they are old and keeps
-them deliberately. That is right for "compare with OPUS", which should add to
-what is there, and wrong for "look for problems", which is a new question.
-Nothing currently tells those apart. **Recommended default: a question that
-shares no subject with the board clears it**; the alternative is that stale
-objects simply leave faster. The owner decides; it is small either way.
+**3, the board accumulated — DECIDED 2026-09-13, and not by the owner.** He
+was asked to choose and answered that he cannot describe what he wants, which
+is fair and is the session's job anyway (see NOW.md 1). So, decided here with
+the reasoning, and reversible:
+
+**A question that shares no subject with the board clears it. A question that
+names a subject already on the board adds to it.**
+
+Why that way round: the only evidence we have is his complaint, and his
+complaint was that stale tiles STAYED. Defaulting to what he observed as
+wrong is the safer error. "Compare with OPUS" while looking at OPUS keeps the
+board because OPUS is on it; "look for problems" clears it because it shares
+nothing. The subject comparison already exists — `surfaceAnchor` relates
+subjects as same / expanded / narrowed / disjoint, and disjoint is the clear
+case. **If clearing turns out to feel abrupt, the fix is to let cleared
+objects fade rather than vanish, not to go back to keeping them.**
 
 **4, `[object Object]` in `ATTENTION · 16 ROWS · [object Object] · · NO`** —
 a value that is not a string is being interpolated into that header, and the

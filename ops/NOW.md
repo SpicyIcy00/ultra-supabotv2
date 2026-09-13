@@ -38,6 +38,26 @@ shippable. The full diagnosis is the report linked in section 6.
 - **The owner's prompts are complaints, not designs.** "Tap Rockwell, say
   products: 30 s and a second tile" is the good shape. If a prompt arrives as a
   design, restate it as the complaint it answers before building.
+- **DO NOT ASK THE OWNER DESIGN QUESTIONS.** Added 2026-09-13, after a session
+  spent asking him to choose between design options and he said: *"i cant
+  really answer your questions cause i dont really know what i want and how to
+  describe it, thats why i needed you to research cause everytime my ideas i
+  think theyll be good but arent."*
+
+  **His diagnosis has been right every time and his prescriptions have not.**
+  "Stuff came out but it just disappeared", "where did my other pages go",
+  "putting the text in a widget doesnt work", "i dont really know what im
+  looking at" — every one correct, and two of them led straight to a cause in
+  the code. But "make george a page" then "make it full screen with a back
+  button" was a design he had to revise the next day. That is the ordinary
+  shape of being the person who USES a thing, and asking him to design is
+  asking for the half he has already said he cannot do.
+
+  So: **he reports what is wrong; the session decides the fix and says why;
+  he reacts to the result.** A question like "should a new question clear the
+  board?" is the session's to answer. When a preference genuinely cannot be
+  derived — a real fork with no evidence either way — **build one, show it,
+  and let him point.** Never make him describe it in advance.
 - **The daily dogfood fix does not derail the phase.** Fix the top line if it
   is an hour or less. If it is bigger, write it as a card in section 3 and
   carry on with the current one — a queue of small fixes is how a phase dies.

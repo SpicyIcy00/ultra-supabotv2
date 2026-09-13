@@ -223,6 +223,22 @@ def test_the_frame_says_it_is_a_default():
     assert '"default": True,' in source
 
 
+def test_the_one_chance_is_spent_on_drawing_and_not_on_trying():
+    """
+    A turn whose first batch is a write, or a read like get_object that returns
+    sections rather than a figure, composes nothing. If that spent the turn's
+    one default, the board would stay empty for every read that followed — and
+    nothing was put on screen, so nothing moves when the next batch gets its
+    turn. Measured on the twelve, 2026-09-13: `shop` and `product` both open on
+    get_object.
+    """
+    source = open("agent/loop.py", encoding="utf-8").read()
+    body = source.split("if not default_composed and not composition_recorded:")[1][:900]
+    latch = body.index("default_composed = True")
+    emitted = body.index("if default_composition_recorded:")
+    assert emitted < latch, "the latch must sit inside the branch that drew something"
+
+
 def test_the_model_is_never_told_a_default_was_composed():
     """
     It reaches the client and the answer post. If it reached the messages, it
