@@ -141,6 +141,49 @@ objects simply leave faster. The owner decides; it is small either way.
 a value that is not a string is being interpolated into that header, and the
 doubled separator says the field beside it is empty too. No design in it.
 
+### 2026-09-13 · "i dont really know what im looking at"
+
+> with the widgets i dont really know what im looking at, what visual language
+> is better
+
+**Diagnosed, and it is a MODE, not a widget set.** Visualisation has a settled
+split: *exploratory* is for the analyst still looking — every series equal
+weight, colour for identity, no annotation — and *explanatory* is for a reader
+being told what was found: one thing emphasised, the rest receding, the point
+written on the mark. **George is explanatory by definition** (he has already
+done the analysis), and the board draws exploratory. So it hands back the
+look-for-yourself problem he was asked to solve. That is the whole of it.
+
+Five concrete failures in the screenshots, with the fixes:
+
+1. **Transactions rendered as `₱1,187` — a count labelled as money.** Cause
+   found: `room/data.ts` picks the unit from the COLUMN NAME
+   (`/sales|revenue|value|…/`), and a compared row names its number `value`,
+   which matches. Every metric's value is money to the formatter. The result
+   already carries `meta.metric_label`. **Take the unit from the metric.**
+2. **Seven shops, seven hues.** One series in seven colours, where the row
+   label already says which shop it is — so colour is spent on nothing and a
+   reader tries to decode it. Two named anti-patterns at once: "eight
+   categorical hues when the story is one number" (called the most common way
+   a chart misses its point) and a value-ramp on nominal categories. **Use
+   EMPHASIS** — the one that matters in accent, the rest grey. The reference
+   calls emphasis "the most underused form" and "often the honest answer to
+   'make this chart clearer'".
+3. **"the track is the period before · the fill is this one".** An encoding
+   that needs a sentence to decode is not working; the caption is the tell.
+   **A dumbbell** — two dots joined by a line — reads without explanation and
+   is the standard form for before→after per item.
+4. **`₱556.6 / ₱545.91`** — two numbers, a slash, no labels. **Direct labels.**
+5. **Four tiles at equal weight** for a question whose answer is one or two
+   facts. **The reading is the headline and the marks are its evidence** —
+   which is the fix already queued above.
+
+**None of this touches the binding.** The model still names a read and a field
+and can never author a figure. What changes is the MODE the marks are drawn
+in: the renderer and the vocabulary, never the guarantee.
+
+Full write-up with sources in the report linked from NOW.md section 6.
+
 **5, "widgets just feel like KPIs" — NOT a card, and deliberately not yet.**
 Six of the fourteen kinds (`figure`, `hero`, `comparison`, `table`, `chart`,
 `distribution`) are ways to show a measurement, so the catalogue skews toward
