@@ -3,6 +3,7 @@ import asyncio
 import ast
 import contextlib
 import importlib
+import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -170,13 +171,74 @@ def test_the_migration_runs_under_an_advisory_lock(monkeypatch):
     source = ROOT / 'backend' / 'app' / 'start.py'
     body = source.read_text(encoding='utf-8')
     lock = body.split('def _lock')[1].split('\ndef ')[0]
-    assert 'pg_advisory_lock' in lock and 'pg_advisory_unlock' in lock
+    assert 'pg_try_advisory_lock' in lock and 'pg_advisory_unlock' in lock
+    # TRY, never the blocking acquire. A launcher that waits forever is a
+    # container that never opens a port, and the platform reports that as a
+    # boot timeout rather than as a lock somebody is holding.
+    assert 'SELECT pg_advisory_lock' not in lock
+    assert 'LOCK_WAIT_SECONDS' in lock, 'the wait must be bounded'
     # Unlocked in a finally, so a dead alembic does not strand the lock and
     # block every future boot.
     assert 'finally:' in lock
     upgrade = body.split('def _upgrade')[1].split('\ndef ')[0]
-    assert 'with _lock():' in upgrade, 'the upgrade must run inside the lock'
-    assert 'check=True' in upgrade, 'a failed migration must fail the deploy'
+    assert 'with _lock() as mine:' in upgrade, 'the upgrade must run inside the lock'
+    assert 'check=True' in upgrade, 'a failed migration must be raised, not swallowed'
+
+
+def test_a_failed_migration_never_stops_the_server_starting(monkeypatch, capsys):
+    """
+    THE OUTAGE THIS FILE LEARNED FROM, 2026-09-13.
+
+    The first deploy carrying the self-migrating launcher went to 502 and
+    stayed there for over half an hour. Something in the migration path
+    raised, main() died before execv, the container exited, and Railway
+    crashlooped it. From outside all of that reads "Application failed to
+    respond" — no revisions, no error, nothing. The database was not migrated
+    either, so refusing to start bought nothing at all.
+
+    A migration failure must be LOUD and NOT FATAL. The app starts, its own
+    schema check refuses to serve, and /health answers 503 naming the
+    revision the database is on and the one this build wants.
+    """
+    from app import start
+    monkeypatch.setattr(settings, 'AUTO_MIGRATE_ON_START', True)
+    monkeypatch.setattr(start, 'expected_heads', lambda: ('head_rev',))
+    monkeypatch.setattr(start, 'read_current_sync', lambda url: ('behind_rev',))
+    monkeypatch.setattr(start, '_known_revisions', lambda: {'behind_rev', 'head_rev'})
+
+    def explode():
+        raise RuntimeError('SENTINEL postgresql://user:secret@host/db')
+
+    monkeypatch.setattr(start, '_upgrade', explode)
+    launch = Mock()
+    monkeypatch.setattr(start.os, 'execv', launch)
+    start.main()
+    launch.assert_called_once()
+    assert 'app.main:app' in launch.call_args.args[1], (
+        'the server must start even when the migration failed'
+    )
+    out = capsys.readouterr().out
+    assert 'MIGRATION FAILED' in out and 'RuntimeError' in out
+    assert '/health' in out, 'the log must say where the reason will be readable'
+    assert 'SENTINEL' not in out and 'secret' not in out and 'postgresql://' not in out
+
+
+def test_nothing_in_the_launcher_can_stop_execv(monkeypatch):
+    """
+    The general form, so a future addition before execv cannot reintroduce the
+    crashloop: whatever migrate_if_needed does, main() reaches the server.
+    """
+    from app import start
+    # Exception, not BaseException: a KeyboardInterrupt or a SystemExit SHOULD
+    # stop the process, and swallowing those would make the container
+    # unkillable. Everything a migration can realistically raise is here.
+    for boom in (RuntimeError, OSError, ValueError, subprocess.SubprocessError):
+        monkeypatch.setattr(start, 'migrate_if_needed',
+                            Mock(side_effect=boom('anything at all')))
+        launch = Mock()
+        monkeypatch.setattr(start.os, 'execv', launch)
+        start.main()
+        launch.assert_called_once()
 
 
 def test_every_launch_path_is_the_one_that_migrates():
@@ -218,7 +280,7 @@ def test_production_launcher_migrates_before_start(monkeypatch):
     # subprocess is patched, not _upgrade: this case holds the actual command
     # and that the migration finishes before the server is exec'd. The lock
     # needs a database, which this test does not have.
-    monkeypatch.setattr(start, '_lock', contextlib.nullcontext)
+    monkeypatch.setattr(start, '_lock', lambda: contextlib.nullcontext(True))
     monkeypatch.setattr(start.subprocess, 'run',
                         lambda command, **kw: order.append(('migration', command, kw)))
     monkeypatch.setattr(start.os, 'execv', lambda *args: order.append(('server', args)))

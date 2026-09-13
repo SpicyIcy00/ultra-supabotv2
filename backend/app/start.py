@@ -41,11 +41,26 @@ CONCURRENT BOOTS. The upgrade is taken under a postgres advisory lock held by
 this process for as long as the subprocess runs, so two replicas starting
 together serialise: the second waits, then finds head and does nothing.
 Without it both would race the same DDL. The lock is advisory, so it costs
-nothing and blocks nobody who is not also migrating.
+nothing and blocks nobody who is not also migrating. It is a TRY in a bounded
+loop and never the blocking acquire — forever inside a launcher is a container
+that never opens a port, which the platform reports as a boot timeout rather
+than as a lock.
+
+AND IT NEVER STOPS THE SERVER STARTING. Added the same day, after the first
+deploy carrying this file went to 502 and stayed there: something in the
+migration path raised, main() died before execv, and the container
+crashlooped. From outside that is "Application failed to respond" — no
+revisions, no error, and the database was not migrated either, so the crash
+bought nothing. `check=True fails the deploy where the deploy log is` was the
+wrong instinct, because a crashloop hides the deploy log from everyone not
+already looking at Railway. A failed migration is now loud and NOT fatal: the
+app starts, its own schema check refuses to serve, and /health answers 503
+naming both revisions. Same refusal, readable from outside.
 """
 import os
 import subprocess
 import sys
+import time
 from contextlib import contextmanager
 
 from app.core.config import settings
@@ -60,6 +75,11 @@ from app.core.schema_check import (
 # database queues on the same lock. Nothing else in the estate takes an
 # advisory lock; if something ever does, it must not reuse this number.
 MIGRATION_LOCK_KEY = 8_090_413_001_300_413
+
+# How long to wait for another booting process to finish migrating before
+# giving up and starting anyway. Long enough for a real migration, short
+# enough that it is never mistaken for a hung container.
+LOCK_WAIT_SECONDS = 120
 
 
 def _say(line: str) -> None:
@@ -92,11 +112,28 @@ def _lock():
                            connect_args={"connect_timeout": 15})
     try:
         with engine.connect() as conn:
-            conn.execute(text("SELECT pg_advisory_lock(:key)"),
-                         {"key": MIGRATION_LOCK_KEY})
+            # TRY, in a bounded loop — never the blocking pg_advisory_lock.
+            # A blocking acquire waits forever, and forever inside a launcher
+            # is a container that never opens a port: the platform sees a
+            # boot timeout, not a lock. Bounded, the worst case is that this
+            # process declines to migrate and starts, which the schema check
+            # then reports honestly.
+            deadline = time.monotonic() + LOCK_WAIT_SECONDS
+            while True:
+                got = conn.execute(text("SELECT pg_try_advisory_lock(:key)"),
+                                   {"key": MIGRATION_LOCK_KEY}).scalar()
+                if got:
+                    break
+                if time.monotonic() >= deadline:
+                    _say(f"Another process has held the migration lock for "
+                         f"{LOCK_WAIT_SECONDS}s. Not migrating here; starting, "
+                         f"and /health will say whether the schema is at head.")
+                    yield False
+                    return
+                time.sleep(1.0)
             _say("Migration lock held")
             try:
-                yield
+                yield True
             finally:
                 conn.execute(text("SELECT pg_advisory_unlock(:key)"),
                              {"key": MIGRATION_LOCK_KEY})
@@ -105,11 +142,12 @@ def _lock():
 
 
 def _upgrade() -> None:
-    """`alembic upgrade head`, under the lock, failing the deploy if it fails."""
-    with _lock():
+    """`alembic upgrade head`, under the lock. Raises if alembic does."""
+    with _lock() as mine:
+        if not mine:
+            # Somebody else is migrating, or was. Not ours to run.
+            return
         _say("Running alembic upgrade head")
-        # check=True: a migration that fails must fail the DEPLOY, where the
-        # deploy log is, rather than launching an app that cannot serve.
         subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"],
                        check=True)
 
@@ -182,7 +220,36 @@ def main():
     build = revision()
     _say(f"Starting build {build['short'] or 'unknown'} "
          f"(revision source: {build['source']})")
-    migrate_if_needed()
+    # ------------------------------------------------------------------
+    # THE LAUNCHER MAY NEVER STOP THE SERVER STARTING.
+    #
+    # Learned the hard way on 2026-09-13, an hour after this file was
+    # written. The first deploy carrying it went to 502 and stayed there:
+    # something in the migration path raised, main() died before execv, the
+    # container exited, and Railway crashlooped it. From outside, all of
+    # that looked like "Application failed to respond" — no revisions, no
+    # error, nothing to read. The database was never migrated either, so
+    # the crash bought nothing.
+    #
+    # The old version of this file could not do that, because on Railway
+    # the flag was off and it never ran alembic at all. Making the deploy
+    # migrate itself added a new way for every boot to fail, and `check=True
+    # fails the deploy where the deploy log is` was the wrong instinct: a
+    # crashloop hides the deploy log behind a 502 from anyone who is not
+    # already looking at Railway.
+    #
+    # So a migration failure is now LOUD and NOT FATAL. The app starts, its
+    # own schema check refuses to serve, and /health answers 503 naming the
+    # revision the database is on and the one this build wants. That is the
+    # same refusal, with the reason readable from outside.
+    # ------------------------------------------------------------------
+    try:
+        migrate_if_needed()
+    except Exception as exc:  # noqa: BLE001 - never fatal, never a credential
+        _say(f"MIGRATION FAILED ({type(exc).__name__}). Starting anyway so the "
+             f"schema check can refuse to serve with a readable reason: "
+             f"/health will name both revisions and return 503. Fix the "
+             f"migration, or run `alembic upgrade head` by hand.")
     os.execv(sys.executable, [sys.executable, "-m", "uvicorn", "app.main:app",
                             "--host", "0.0.0.0", "--port", os.environ.get("PORT", "8000")])
 
