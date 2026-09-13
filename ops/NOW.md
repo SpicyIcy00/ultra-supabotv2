@@ -82,7 +82,7 @@ shippable. The full diagnosis is the report linked in section 6.
 | Live | **`ee29fa5`**, confirmed from `/health`: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `844cb3d1`. **The swap took 21 s with zero non-200s** — the second clean one in a row, and the second that carried NO migration. Read `/health` rather than believing this row: `a01706b` sat here as live while three commits had landed since. |
 | Last deploy | `a01706b`, **live and healthy when recorded**, and the swap was clean — polled every 20 s across it, zero non-200s, old build to new in about a minute. It carried NO migration (the schema was already at head), so the launcher took its `already at head` branch and ran no alembic at all. That is evidence the outage below lives in the migration path specifically, not in the boot or the build — evidence, not the deploy log. Before it, `8b0325a`. `8b0325a` carried P0.3 and P0.4, and applying migration `w7x8y9z0a1b2` cost **~50 minutes of 502**: the first boots crashlooped, the migration did not apply, and nothing was readable from outside. It came up on a later retry. Root cause still unknown — the Railway deploy log for that build has not been read. `69b51bd` is the fix for the *invisibility*, not for the cause. |
 | Phase | 0, consolidating |
-| Next card | **Whatever is Open in `ops/DOGFOOD_LOG.md`, then P1.c.** The remaining cards were rewritten 2026-09-13 into the plan that reaches the Ideal UI: P1.c–P1.k, P2.a–P2.h, P3.a–P3.f, and Phase 4 sources. P1.c, P1.d, P1.e and P1.g ARE the Open items, in the log's own agreed fixes. P1.b closed 2026-09-13: first composed object 16.8 → 8.2 s, first visible object unmoved at 7.0 s (bounded by the first round trip; only replay, P1.i/P1.j, can reach 2 s). The bill is round trips, not cache misses. Read the note under the baseline table before reporting any Phase 1 number against the twelve. |
+| Next card | **Whatever is Open in `ops/DOGFOOD_LOG.md`, then P1.c.** The remaining cards were rewritten 2026-09-13 into the plan that reaches the Ideal UI: P1.c–P1.k, P2.a–P2.h, P3.a–P3.f, and Phase 4 sources. P1.c, P1.d and P1.e ARE the Open items, in the log's own agreed fixes. **P1.g closed 2026-09-13** (`c508965`), which is the log's two trust failures; the Open item it left behind — every gate answer citing no figure — is a decision P1.c has to make, not a card of its own. P1.b closed 2026-09-13: first composed object 16.8 → 8.2 s, first visible object unmoved at 7.0 s (bounded by the first round trip; only replay, P1.i/P1.j, can reach 2 s). The bill is round trips, not cache misses. Read the note under the baseline table before reporting any Phase 1 number against the twelve. |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
@@ -882,18 +882,49 @@ before believing it.
       Done when: rejections ≤ 1 question, label share not worse than 33%,
       trust rows unchanged, every answer has a claim and a next; style checks
       NOT widened. **Eval: full.**
-- [ ] **P1.g arithmetic in prose, and a column name in the answer** — the two
-      trust failures George filed himself ("and 45 others"; `warning_stock`;
-      a forced caveat). The figure gate learns that a numeral equal to a
-      simple sum or difference of two figures on the board is a calculation
-      and strikes it with the same one corrective turn; the leak list gains
-      the missing column; the forced caveat is traced through stored frames.
-      Done when: the new gate case is a contract test, and
-      `tests/evals/corpus.py` replays every recorded run clean — including
-      `p1b-final.json`, which today reports the `warning_stock` leak this card
-      fixes. **NO EVAL, $0.00.** This card changes CHECKS, and a check is a
-      pure function of (answer, results): recorded answers prove it without a
-      live turn. Only if the corrective BEHAVIOUR changes does it ride P1.h.
+- [x] **P1.g arithmetic in prose, and a column name in the answer** — done
+      2026-09-13, `c508965`. The two trust failures George filed himself
+      ("and 45 others"; `warning_stock`; a forced caveat). Pure suite
+      **1,497 → 1,535**, 30 skipped, 0 failing; frontend room 103. Gate run,
+      four live turns, **$0.64**: `ungrounded_numerals` `[]`,
+      `notice_forced` false and `internal_vocabulary` `[]` on all four.
+      Full write-up in `ops/DECISIONS.md` and the log's Fixed section.
+
+      **TWO DEVIATIONS FROM THIS CARD, both deliberate.**
+
+      **The gate fires on a CONSTRUCTION, not on sums of board figures.**
+      The card asked for "a numeral equal to a simple sum or difference of two
+      figures on the board". That was not built, for two reasons: with N drawn
+      figures there are ~N² sums and differences, so nearly any numeral
+      matches one and the gate would fire on coincidence; and it would not
+      reliably catch `45` anyway, which needs `3` — how many products George
+      CHOSE to name — to be a drawn figure, and it is not. What shipped fires
+      on the shape: a count beside "others"/"more"/"the other" is by
+      definition what is LEFT once the writer chose how many to name, so no
+      tool can have returned it. Rows are consulted only to excuse.
+      `voice.enumerated_remainder`, kind twenty-two, 31 contract cases.
+
+      **The replay criterion could not be met, because it asks the impossible.**
+      "`tests/evals/corpus.py` replays every recorded run clean — including
+      `p1b-final.json`" cannot happen: replay runs today's checks over a FIXED
+      recorded ANSWER, and that answer contains the leaked text. `p1b-final`
+      is the record OF the defect and will report it forever. What the fix can
+      be held to is the run after it, and
+      `verification/dogfood-remainder-caveats.json` replays clean of both.
+      **Worth keeping: a Done-when that asks a recording to change is not a
+      test of the fix, it is a test of the past.**
+
+      **The card's "NO EVAL, $0.00" was also wrong, and cost $0.64.** It is
+      true that a check is a pure function of (answer, results). But half of
+      this card was a FINGERPRINT and a notice MESSAGE — both model-facing —
+      so it changed what George sees, and the conftest's own rule (run `-m
+      gate` on anything model-facing) applied. The gate is what proved the
+      forced caveat gone.
+
+      **It left one thing behind**, filed at the top of the dogfood log: all
+      four gate answers now cite no figure any tool returned. Not caused by
+      this card — the new gate fired on none of the four turns — but v2's
+      first recorded live run, and it belongs to P1.c.
 - [ ] **P1.h cheaper turns** — effort per turn via the mid-conversation
       effort message (low: label-only or follow-up; medium: fresh question;
       high: the ladder) so the cache survives; the six corrective gates
