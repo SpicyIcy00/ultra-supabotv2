@@ -57,6 +57,29 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-13 · George put a weight in the answer that no tool returned
+
+> asked "What should I look at today?" — "nothing sells 800 grams-worth of one
+> line and then some"
+
+Not the owner's report: found by the twelve during P0.6's standing trust gate,
+and filed here rather than fixed, because it is not that card. **This is the
+one thing that must never happen** — a figure in prose that no read produced
+(CLAUDE.md rule 9). `800` appears nowhere in either call's payload; the turn
+made the same two calls as a clean run (`get_attention`, `compose`), surfaced
+its 3 notices and forced none.
+
+**It is intermittent, which is worse, not better.** Three runs of the same
+scenario within the hour: one invented the number, two did not. The P0.3 run
+this morning said "a full shelf ... below zero" and named nothing. So the
+guard-rail that catches this is the eval, and the eval only catches it on the
+runs where it happens.
+
+Nothing about the caching change can cause it — a cache hit and a miss present
+byte-identical input — and it was confirmed against the same build twice more.
+The interesting part is the shape: George was reaching for a vividness ("a full
+shelf") and reached for a quantity instead.
+
 ---
 
 ## Fixed

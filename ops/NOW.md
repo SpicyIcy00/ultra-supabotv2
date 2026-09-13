@@ -61,7 +61,7 @@ shippable. The full diagnosis is the report linked in section 6.
 | Head | `a01706b` — **pushed and live 2026-09-13**, carrying `69b51bd`, the launcher hardening the outage below taught. |
 | Last deploy | `a01706b`, **live and healthy**, and the swap was clean — polled every 20 s across it, zero non-200s, old build to new in about a minute. It carried NO migration (the schema was already at head), so the launcher took its `already at head` branch and ran no alembic at all. That is evidence the outage below lives in the migration path specifically, not in the boot or the build — evidence, not the deploy log. Before it, `8b0325a`. `8b0325a` carried P0.3 and P0.4, and applying migration `w7x8y9z0a1b2` cost **~50 minutes of 502**: the first boots crashlooped, the migration did not apply, and nothing was readable from outside. It came up on a later retry. Root cause still unknown — the Railway deploy log for that build has not been read. `69b51bd` is the fix for the *invisibility*, not for the cause. |
 | Phase | 0, consolidating |
-| Next card | **P0.6, the bill — then P1.a.** Open is EMPTY for the first time since the log was started. P0.6 goes first only because it is small and its first step is free: raising the cache TTL changes the bill and cannot change an answer. Doing it before P1.a also means P1.a's token numbers are measured against a cache that has stopped moving, instead of the two confounding each other. |
+| Next card | **The dogfood log, then P1.a.** P0.6 closed 2026-09-13 and put something in Open on its way out: the twelve caught George writing a weight into prose that no tool returned ("800 grams-worth"), intermittently — once in three runs of the same question. That is CLAUDE.md rule 9, it outranks every speed card, and no Phase 1 card starts until it is closed. P0.6 also moved the cost lever: **the bill is round trips, not cache misses**, so P1.a and P1.b are now the cost cards as well as the speed ones. |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
@@ -277,28 +277,61 @@ card below that is not marked done. One per session either way.
       startup refuses to serve — the 09-12 crashloop exactly. P0.4, or a
       deliberate `alembic upgrade head`, comes before this reaches Railway.
 
-- [ ] **P0.6 the bill** — cost was invisible the way turn time was before P0.3.
-      `ops/cost_report.py` now reads what the loop has always recorded and the
-      first run (2026-09-13, 30 days) says: **193 turns, $44.64, $0.23 a turn,
-      cache hit rate 26.2%**, with 76% of the bill in uncached input. At this
-      volume the money is nothing; **23 cents a question does not survive real
-      use**, which is the reason to act.
+- [x] **P0.6 the bill** — done 2026-09-13, and **the card's own premise did not
+      survive the measurement it asked for.** The three steps were done; step 2
+      is what broke it.
 
-      Do, in this order:
-      1. **Raise the cache TTL from 5m to 1h** on the two explicit breakpoints
-         in `agent/loop.py` (`ttl: "1h"`). The structure is already right —
-         tools, system, and a moving one on the message tail — and the comment
-         there says "Both TTLs are the default 5m". The prefix is ~9,200 tokens
-         and use is bursty, so it expires between sessions and is rebuilt at
-         full price. Writes go 1.25x → 2x, against $0.92 of writes today.
-      2. **Check the tools array is stable across sessions.** It is built per
-         session from injected capabilities and the marker sits on the LAST
-         tool, so two capability sets never share a prefix. Probably two or
-         three arrays; confirm rather than assume.
-      3. Re-run `cost_report.py --ttl 1h`. **Target: hit rate ≥ 60%.**
+      **The 26.2% was never a fact about this build.** The message-tail
+      breakpoint landed in `e067ba7` on 2026-09-05, and the 30-day window
+      mostly predates it — 90 of the 138 billed turns are one scripted
+      `coverage` sweep on 09-02, on a build with no tail breakpoint, and they
+      carry **5.80M of the 6.80M uncached tokens**. Split at that commit:
 
-      Then re-measure after P1.a and P1.b, which cut presented input by cutting
-      round trips.
+      | | turns | uncached input | hit rate |
+      |---|---|---|---|
+      | before `e067ba7`, scripted | 90 | 5,798,145 | 14.5% |
+      | before `e067ba7`, a person | 42 | 997,472 | 40.3% |
+      | **since `e067ba7`** (current) | **6** | **58** | **87.3%** |
+
+      **Fifty-eight tokens.** On the build that is live, uncached input is ~12
+      tokens a turn and the target was already met. Caching is not where the
+      money is; `e067ba7` closed it eight days ago and nobody had read the
+      number since.
+
+      1. **TTL raised** — `PREFIX_TTL = "1h"` on the tools and system markers
+         (`agent/loop.py`). The tail stays 5m deliberately: it is rewritten
+         every iteration, seconds apart, and is the *largest* block, so 2x
+         there would be a pure surcharge. Mixed TTLs are legal in exactly this
+         order — longer renders before shorter, and no explicit marker sits on
+         the last block (the documented 400). **9 cases in
+         `tests/test_cache_breakpoints_contract.py`; nothing had ever asserted
+         `cache_control` at all.**
+      2. **The tools array is NOT stable — four arrays, not "two or three".**
+         `/ask` varies on `GEORGE_ENABLE_WORKFLOW_WRITES` (process-level) and
+         on whether a page is in scope (**per question, same session**). The
+         read+label block — 17 tools — is byte-identical by construction, but
+         the marker sits on tool 26–28, so all four write separate entries and
+         the first divergence is at index 22. Moving the marker to the end of
+         the shared block is a real, free change; it is NOT done here.
+      3. **Re-ran, and the target cannot be met by re-running** — `--ttl`
+         reprices historical writes and cannot move a hit rate measured from
+         tokens the API already recorded. Said so in the report, and added
+         `--since <date>` so one build's bill can be read on its own.
+
+      **What the TTL is actually worth: cents, and possibly negative.** Every
+      inter-turn gap on the current build is either **under 5 minutes** (3 of 5
+      — the 5m TTL already covers it) or **over 7 hours** (2 of 5 — no TTL
+      covers it). The 5–60 minute band the 1h TTL exists for has **zero turns
+      in it.** Writes are 2.1% of the bill, so the whole lever moves under a
+      dollar a month either way. It is kept as insurance for when there is more
+      than one user and gaps land in that band; on today's evidence it is not a
+      fix, and one line reverts it.
+
+      **The bill's real shape, which is a Phase 1 finding, not a Phase 0 one.**
+      Per turn on the current build is **$0.39**, *higher* than the $0.23
+      headline, and mean iterations are **6.0** against 2.41 over the window.
+      Cost per turn is round trips, not cache misses — so **P1.a and P1.b are
+      the cost cards**, and the re-measure after them is the one that matters.
 
       **RISK, RANKED — and one lever is refused.** Nothing here can touch
       trustworthiness: figures still come from tools, notices still surface,

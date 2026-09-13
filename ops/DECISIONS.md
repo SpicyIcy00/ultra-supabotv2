@@ -2632,3 +2632,23 @@ and how hard he thinks. So:
 
 At 193 turns a month $45 is nothing. 23 cents a question is the problem,
 because it does not survive real use.
+
+## 2026-09-13 · P0.6 — the bill, and the number that measured a dead build
+
+- The 26.2% hit rate P0.6 was written on came from a 30-day window that mostly
+  predates `e067ba7` (2026-09-05, the message-tail breakpoint): 90 of 138
+  billed turns are one scripted sweep on a build that no longer exists, and
+  they carry 85% of the uncached tokens. Since `e067ba7`: 6 turns, **58**
+  uncached tokens, **87.3%**. The target was met before the card was written.
+- **Rule: a cost or latency number is read per build, not per window.** Added
+  `--since` to `ops/cost_report.py`, and said in the report that `--ttl`
+  reprices history and cannot move a measured hit rate.
+- TTL raised to 1h on the static prefix anyway, as insurance — but on the
+  evidence it is worth cents: every gap on this build is under 5 minutes or
+  over 7 hours, and the 5–60 minute band it covers has zero turns in it. The
+  tail stays 5m; mixed TTLs need longer-before-shorter. 9 cases hold it, where
+  nothing had ever asserted `cache_control`.
+- The tools array is four arrays, not one — `view_page` enters per QUESTION —
+  and the breakpoint sits past the 17-tool shared block. Free to fix, not done.
+- **Cost per turn is $0.39 on this build at 6.0 iterations, not the $0.23
+  headline. The bill is round trips.** P1.a/P1.b are the cost cards.

@@ -109,7 +109,18 @@ MAX_ITERATIONS = 15
 MAX_TOKENS = 64000
 EFFORT = "high"
 
+# How long the STATIC prefix — the tools array and the system prompt — is kept
+# alive after it is written. The moving breakpoint on the message tail keeps the
+# default 5m and deliberately does not read this; see the breakpoints in run().
+PREFIX_TTL = "1h"
+
 # Rows handed to the model per tool result. meta aggregates are NEVER truncated.
+#
+# NOT A COST LEVER, and it was refused as one on 2026-09-13 (P0.6). It decides
+# what George can SEE: cutting it turns readings into "this is a sample". The
+# truncation that does happen is honest — he is told it is a sample and told not
+# to total visible rows, and meta aggregates are never truncated — but that is
+# why it is safe, not a reason to make it smaller.
 MAX_ROWS_TO_MODEL = 200
 
 # Rows handed to the CLIENT per tool result, so an answer can draw the same
@@ -2332,8 +2343,22 @@ async def run(
             # result the ones before it produced, at full price. So the biggest
             # and most-repeated part of the request was the part with no
             # breakpoint on it.
+            #
+            # THE STATIC PREFIX IS WRITTEN FOR AN HOUR (P0.6, 2026-09-13).
+            # Measured over 30 days: a 26.2% hit rate with 76% of the bill in
+            # uncached input, on a prefix of ~9.2k tokens that does not change
+            # between sessions. Use is bursty — a person asks a few questions
+            # and leaves — so a 5-minute entry expires in the gap and the same
+            # unchanged bytes are bought again at full price. A 1-hour entry
+            # costs 2x to write instead of 1.25x and needs three reads to pay
+            # off rather than two; the gap this covers is the 5-to-60-minute
+            # one, which is what a working session looks like.
+            #
+            # This is the one lever that cannot touch the answer: a cache hit
+            # and a miss present BYTE-IDENTICAL input to the model. It changes
+            # the bill and nothing else.
             cached_tools = [dict(t) for t in tools_schema]
-            cached_tools[-1]["cache_control"] = {"type": "ephemeral"}
+            cached_tools[-1]["cache_control"] = {"type": "ephemeral", "ttl": PREFIX_TTL}
 
             # Retry the whole turn on a transient fault. A turn can only be
             # retried while nothing has been streamed: once deltas have reached
@@ -2355,10 +2380,24 @@ async def run(
                         # point of its own, which is what makes the first
                         # iteration of a turn cheap.
                         #
-                        # Both TTLs are the default 5m and both markers sit
-                        # before the last block, so this composes rather than
-                        # returning 400. Two explicit breakpoints plus this one
-                        # is 3 of the 4 allowed.
+                        # THIS ONE STAYS AT 5m, and the asymmetry is the point.
+                        # The tail is rewritten on every iteration, and the
+                        # iterations of a turn are seconds apart — it never has
+                        # to survive a gap, so the longer TTL would buy nothing
+                        # and would double the write price on the LARGEST and
+                        # most-rewritten block in the request (~17.1k tokens an
+                        # iteration, against ~9.2k for the whole static prefix).
+                        #
+                        # Mixed TTLs are legal in one request in exactly this
+                        # order: entries with the longer TTL must render BEFORE
+                        # shorter ones, and tools and system both render before
+                        # messages. Both explicit markers sit before the last
+                        # block, so the automatic breakpoint composes rather
+                        # than returning 400 — an explicit marker ON the last
+                        # block with a different TTL is the case that 400s, and
+                        # there is none. Two explicit breakpoints plus this one
+                        # is 3 of the 4 allowed. Held by
+                        # tests/test_cache_breakpoints_contract.py.
                         #
                         # Safe against the 20-position lookback: an iteration
                         # appends exactly two positions (one assistant message,
@@ -2369,7 +2408,7 @@ async def run(
                         system=[{
                             "type": "text",
                             "text": SYSTEM_PROMPT,
-                            "cache_control": {"type": "ephemeral"},
+                            "cache_control": {"type": "ephemeral", "ttl": PREFIX_TTL},
                         }],
                         tools=cached_tools,
                         thinking={"type": "adaptive", "display": "summarized"},

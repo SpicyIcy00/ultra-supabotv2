@@ -39,15 +39,30 @@ RATES = {"input": 5.00, "output": 25.00, "cache_read": 0.50, "cache_write": 6.25
 CACHE_WRITE_1H = 10.00
 RATES_AS_OF = "2026-06-24 (claude-api skill model table)"
 
-QUERY = """
-    SELECT count(*)                                      AS turns,
+TOTALS = """
+           count(*)                                      AS turns,
            sum(coalesce(input_tokens, 0))                AS input,
            sum(coalesce(output_tokens, 0))               AS output,
            sum(coalesce(cache_read_tokens, 0))           AS cache_read,
            sum(coalesce(cache_creation_tokens, 0))       AS cache_write,
            avg(coalesce(iterations, 0))::numeric(10, 2)  AS iterations
+"""
+
+QUERY = f"""
+    SELECT {TOTALS}
     FROM george.conversations
     WHERE asked_at >= now() - make_interval(days => %s)
+"""
+
+# The same totals from a fixed instant instead of a rolling window. This is how
+# the hit rate is read AFTER a change to the caching itself: the recorded tokens
+# are whatever the build that served the turn actually did, so a window spanning
+# the change averages two different behaviours into one number that describes
+# neither. `--since` is the date the build went live.
+QUERY_SINCE = f"""
+    SELECT {TOTALS}
+    FROM george.conversations
+    WHERE asked_at >= %s::timestamptz
 """
 
 
@@ -73,10 +88,10 @@ def connection_url(var: str) -> str:
     return url
 
 
-def report(row: dict, days: int, ttl: str) -> int:
+def report(row: dict, window: str, ttl: str) -> int:
     turns = int(row["turns"] or 0)
     if not turns:
-        print(f"\nNo turns recorded in the last {days} days.")
+        print(f"\nNo turns recorded {window}.")
         return 0
 
     write_rate = CACHE_WRITE_1H if ttl == "1h" else RATES["cache_write"]
@@ -86,7 +101,7 @@ def report(row: dict, days: int, ttl: str) -> int:
     total = sum(costs.values())
     presented = tokens["input"] + tokens["cache_read"] + tokens["cache_write"]
 
-    print(f"\n=== George, last {days} days — rates as of {RATES_AS_OF} ===")
+    print(f"\n=== George, {window} — rates as of {RATES_AS_OF} ===")
     print(f"turns: {turns}    mean iterations/turn: {row['iterations']}    "
           f"cache write priced at {ttl} TTL\n")
     print(f"{'':16}{'tokens':>14}{'$/MTok':>9}{'cost':>10}{'share':>8}")
@@ -102,7 +117,14 @@ def report(row: dict, days: int, ttl: str) -> int:
         # The counterfactual is what the SAME presented input would cost at the
         # full input rate — not a guess about a different conversation.
         naive = presented / 1e6 * RATES["input"] + costs["output"]
-        print(f"\ncache hit rate (read / all presented input): {hit:.1f}%")
+        # THE FLAG DOES NOT MOVE THIS NUMBER, and mistaking that for a result
+        # would be the easiest error this report could invite. The hit rate is
+        # measured from tokens the API already recorded, so it describes the
+        # build that served these turns. `--ttl` only reprices the writes. To
+        # read the hit rate AFTER a caching change, pass `--since <the date it
+        # went live>` and wait for real turns — there is nothing to backfill.
+        print(f"\ncache hit rate (read / all presented input): {hit:.1f}%"
+              f"    — measured; --ttl does not change it")
         print(f"the same traffic uncached would be ${naive:.2f} — "
               f"caching saves ${naive - total:.2f} ({(1 - total / naive) * 100:.0f}%)")
         if hit < 60:
@@ -115,8 +137,12 @@ def report(row: dict, days: int, ttl: str) -> int:
 def main(argv: Optional[Iterable[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--days", type=int, default=30)
+    parser.add_argument("--since", metavar="YYYY-MM-DD",
+                        help="measure from this date instead of a rolling window — "
+                             "use it to read the bill for one build only")
     parser.add_argument("--ttl", choices=("5m", "1h"), default="5m",
-                        help="price cache WRITES at this TTL's rate (1h writes at 2x)")
+                        help="price cache WRITES at this TTL's rate (1h writes at 2x). "
+                             "Repricing only: it does NOT change the measured hit rate")
     parser.add_argument("--url-env", default="DATABASE_URL",
                         help="NAME of the variable holding the connection string; "
                              "its value is never printed")
@@ -125,10 +151,17 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     import psycopg
     from psycopg.rows import dict_row
 
+    if args.since:
+        query, params = QUERY_SINCE, (args.since,)
+        window = f"since {args.since}"
+    else:
+        query, params = QUERY, (args.days,)
+        window = f"last {args.days} days"
+
     with psycopg.connect(connection_url(args.url_env), connect_timeout=20,
                          row_factory=dict_row) as conn:
-        row = conn.execute(QUERY, (args.days,)).fetchone()
-    return report(row, args.days, args.ttl)
+        row = conn.execute(query, params).fetchone()
+    return report(row, window, args.ttl)
 
 
 if __name__ == "__main__":
