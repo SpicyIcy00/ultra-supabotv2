@@ -807,9 +807,28 @@ before believing it.
       the dogfood log, done as the log's AGREED FIX says: `text` is REMOVED
       from the compose vocabulary; the reading is a permanent region above
       the board drawn from the turn's prose, never a tile; a turn with no
-      prose is recorded as a gap. Also the PESO match in `room/data.ts`
-      (a `value` column that is a count is not money) and the
-      `[object Object]` header. Subtraction, not a fallback tile.
+      prose is recorded as a gap. Subtraction, not a fallback tile.
+
+      **AND TWO BUGS THAT ARE BOTH IN ONE 20-LINE FUNCTION** — `fmt()` in
+      `room/data.ts`, not where the card used to say. Checked 2026-09-13
+      because the owner asked whether fixing his complaints is wasted when the
+      design is being replaced:
+      - **the peso sign on counts** is `PESO.test(key)` guessing money from a
+        COLUMN NAME, and `value` is in the pattern. The fix is not to edit the
+        regex — it is to read the unit the rows already carry (`tiles.tsx`
+        line ~535 already checks `r.unit === 'PHP'`), so formatting stops
+        guessing. A name-based guess will be wrong again on the next column.
+      - **`[object Object]`** is `fmt`'s last line, `return String(v)`, on a
+        value that is an object. It reached the caption through
+        `constant.push(fmt(k, rows[0][k]))`.
+
+      **Neither is wasted work, and that is why they stay.** `fmt` is imported
+      by SIX modules — ObjectPanel, Spec, tiles, render, Room, Working — and
+      P1.e replaces the widget KINDS in tiles/render, not the formatter. The
+      object panel in particular is untouched by the whole redesign and would
+      keep both bugs. **A shared helper survives a redesign of the thing that
+      calls it**, which is the test to apply before deciding a fix is
+      redundant.
       Done when: "how are we doing" and "any problems" both show George's
       words above whatever is drawn, on the live build; three of the twelve
       re-run with prose on every turn. **No eval** — the vocabulary change

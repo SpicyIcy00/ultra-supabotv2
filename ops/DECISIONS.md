@@ -3475,3 +3475,37 @@ slot for every card invites an invented value; and a card sized by importance
 rather than by hours becomes a session it does not need. All three make the
 plan look bigger and truer than it is. **When the owner repeats a question, the
 first answer was probably a defence of the artefact rather than an answer.**
+
+## 2026-09-13 — "Do we need to fix it if we're replacing it?" Checked, not assumed
+
+A good question with a real answer, and checking it found a misdiagnosis in
+the card.
+
+**The three complaint cards ARE the redesign, not patches before it.** P1.c
+removes `text` from the compose vocabulary and makes the reading a region;
+P1.d is the clear-or-transform rule; P1.e is the six-mark catalogue. The
+owner's complaints are fixed BY the new design. There is no fix-then-replace
+to skip.
+
+**The two small display bugs live in shared code the redesign does not
+touch.** Both are in `fmt()` in `room/data.ts`, twenty lines:
+`PESO.test(key)` guesses money from a COLUMN NAME (and `value` is in the
+pattern), and the last line `return String(v)` produces `[object Object]`.
+**`fmt` is imported by six modules** — ObjectPanel, Spec, tiles, render, Room,
+Working. P1.e replaces the widget KINDS in tiles/render; the formatter
+survives, and the object panel is untouched by the whole redesign and would
+keep both bugs.
+
+**The card pointed at the wrong file** — it said "the `[object Object]`
+header". The header is fine; `fmt` stringifies an object into it through
+`constant.push(fmt(k, rows[0][k]))`. Corrected in both documents, because a
+card that names the wrong file costs a session.
+
+**And the peso fix is not the obvious one.** Editing the regex to drop `value`
+leaves a name-based guess that will be wrong on the next column. The rows
+already carry a unit (`tiles.tsx` ~535 checks `r.unit === 'PHP'`), so the fix
+is to read it and stop guessing.
+
+**The test worth keeping: a shared helper survives a redesign of the things
+that call it.** Before writing off a fix as redundant, check whether the buggy
+code is in what is being replaced or in what the replacement will still call.
