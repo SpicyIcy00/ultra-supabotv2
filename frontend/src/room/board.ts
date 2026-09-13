@@ -177,7 +177,18 @@ function editsFor(turn: AnswerTurn, i: number): Block[] {
   const seeded = turn.defaultComposition?.blocks ?? [];
   if (composed?.length) {
     const his = drawnSeqs(composed);
-    return [...seeded.filter((b) => !(typeof b.seq === 'number' && his.has(b.seq))), ...composed];
+    return [
+      ...seeded
+        .filter((b) => !(typeof b.seq === 'number' && his.has(b.seq)))
+        // A DEFAULT NEVER OUTRANKS HIM. What survives is a read he did not
+        // mention, and weight is judgement made visible — so once he has
+        // composed, the machine's guess at what leads is quiet whatever it
+        // said. `oneLead` cannot settle this: both edits land in the same
+        // turn, so `touched` is equal and which one wins comes down to the
+        // order objects happen to sit in the array.
+        .map((b) => (b.weight === 'lead' ? { ...b, weight: 'quiet' as const } : b)),
+      ...composed,
+    ];
   }
   if (seeded.length) return seeded;
   const out: Block[] = turn.text

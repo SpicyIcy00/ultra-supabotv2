@@ -48,6 +48,23 @@ describe('a reopened thread', () => {
     expect(buildBoard([restored]).map((o) => o.key)).toEqual(['seikyo-order']);
   });
 
+  it('restores the default that stood beside his, so the reload draws what the room drew', () => {
+    // P1.b: the loop composes a default when reads land and stores it under
+    // `default_blocks`. A reopened thread applies both, exactly as the room
+    // did — his over the read he named, the loop's over the one he did not.
+    const [restored] = restoreFromPosts([stored()], [post({
+      charted: [{ seq: 2, tool: 'get_purchase_plan', arguments: { supplier: 'Seikyo SEK001' }, rows: ROWS, meta: META }],
+      composition: {
+        blocks: [{ op: 'put', kind: 'draft', key: 'seikyo-order', weight: 'lead', seq: 2 }],
+        default_blocks: [{ op: 'put', kind: 'table', key: 'read-9', weight: 'quiet', seq: 9 }],
+      },
+    })]);
+    if (restored.role !== 'george') throw new Error('expected george');
+
+    expect(restored.defaultComposition?.default).toBe(true);
+    expect(buildBoard([restored]).map((o) => o.key).sort()).toEqual(['read-9', 'seikyo-order']);
+  });
+
   it('leaves a turn whose post kept nothing exactly as it was', () => {
     const [bare] = restoreFromPosts([stored()], [post(null)]);
     if (bare.role !== 'george') throw new Error('expected george');

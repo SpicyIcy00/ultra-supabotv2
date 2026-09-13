@@ -105,7 +105,52 @@ whenever `turn.text` is non-empty and no composed block already carries it,
 at whatever weight George's own blocks leave free. Then a forgotten text block
 costs placement, never the answer.
 
-**3 (the board accumulated) and 4 (`[object Object]`) are still undiagnosed.**
+**AGREED FIX for 1, 2 and 6 — one change, and it is a SUBTRACTION.** The
+owner, on seeing the reading drawn as a tile: *"putting the text in a widget
+it just doesnt work."* He is right, and the code already agreed with him:
+`render.tsx` has a special case that drags the reading out of wherever George
+weighted it and pins it beside whatever leads, with a comment saying that
+otherwise "the sentence explaining it ends up three columns away from the
+thing it explains". That hack exists because prose is not a peer of a tile.
+
+A tile is something you look at; a reading is something you read, and it is
+ABOUT everything else on the board — a layer above the objects, not one of
+them. Boxed, it becomes a peer of the things it interprets, which is what
+makes the screen a dashboard with a caption.
+
+So: **remove `text` from the widget vocabulary.** The reading becomes a
+permanent region of the turn — one paragraph, top, reading type, no border,
+full measure — with the objects below it as its evidence. Then it cannot be
+forgotten (George no longer composes it), cannot be evicted (it is not an
+object competing for space or subject to expiry), and cannot be boxed. The
+renderer's special case and `TextTile` both delete themselves, and the turn's
+caveats sit above the reading where they already belong.
+
+**Do NOT implement the floor as "draw a text tile when one is missing."** It
+would fix the silence and cement the thing that feels wrong.
+
+**3, the board accumulated — one DECISION is needed before the fix.** Those
+tiles are labelled "from earlier": the board knows they are old and keeps
+them deliberately. That is right for "compare with OPUS", which should add to
+what is there, and wrong for "look for problems", which is a new question.
+Nothing currently tells those apart. **Recommended default: a question that
+shares no subject with the board clears it**; the alternative is that stale
+objects simply leave faster. The owner decides; it is small either way.
+
+**4, `[object Object]` in `ATTENTION · 16 ROWS · [object Object] · · NO`** —
+a value that is not a string is being interpolated into that header, and the
+doubled separator says the field beside it is empty too. No design in it.
+
+**5, "widgets just feel like KPIs" — NOT a card, and deliberately not yet.**
+Six of the fourteen kinds (`figure`, `hero`, `comparison`, `table`, `chart`,
+`distribution`) are ways to show a measurement, so the catalogue skews toward
+KPIs and George reaching for something finds one. That is real. But the board
+he judged it on had thrown the analysis away, and **a dashboard is what a
+reading looks like with the reading deleted.** Fix the silence, look again,
+and only then decide whether the vocabulary needs fewer measurements and more
+nouns. **The binding is not in question** — the model names a read and a
+field and can never author a figure; that is the guarantee, and a different
+look is not worth trading it for.
 
 ---
 

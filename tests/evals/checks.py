@@ -335,6 +335,10 @@ class Turn:
     # page_changed frames, in order: a page George created or changed, from
     # the committed result (Page Workshop V1).
     page_changes: list[dict] = field(default_factory=list)
+    # EVERY FRAME WITH THE CLOCK ON IT (P1.b, 2026-09-13): (event, data,
+    # milliseconds since the turn started). The turn's duration says how long
+    # it took; only this says when the screen first had something on it.
+    frames: list[tuple] = field(default_factory=list)
 
     @property
     def read_calls(self) -> list[dict]:

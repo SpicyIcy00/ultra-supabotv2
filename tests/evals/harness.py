@@ -14,11 +14,13 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import time
 from typing import Any, Callable, Optional
 
 import pytest
 
 from agent import loop as george_loop
+from tests.evals import timing
 from tests.evals.checks import Turn
 from tests.test_loop_correction_contract import StubLog
 
@@ -34,16 +36,24 @@ def required():
             pytest.skip(f"{k} is not set")
 
 
-def _parse(frames: list[str]) -> list[tuple[str, dict]]:
+def _parse(frames: list[tuple[str, float]]) -> list[tuple[str, dict, float]]:
+    """
+    Each frame with the milliseconds since the turn started beside it.
+
+    THE CLOCK IS ON THE FRAME because P1.b's measure is when the SCREEN first
+    had something on it, and the turn's `duration_ms` cannot answer that. One
+    monotonic clock, read as each frame leaves the generator — the same clock
+    discipline the loop already keeps for its own iterations (P0.3).
+    """
     out = []
-    for f in frames:
+    for f, at in frames:
         head, _, rest = f.partition("\n")
         event = head.removeprefix("event: ")
         try:
             data = json.loads(rest.partition("data: ")[2])
         except json.JSONDecodeError:
             data = {}
-        out.append((event, data))
+        out.append((event, data, at))
     return out
 
 
@@ -72,11 +82,15 @@ def run_turn(monkeypatch, question: str, *, history: Optional[list[dict]] = None
     StubLog.instances.clear()
 
     async def collect():
-        return [f async for f in george_loop.run(
+        started = time.perf_counter()
+        out = []
+        async for f in george_loop.run(
             question, history=history, page_reader=page_reader, page_scope=page_scope,
             page_writer=page_writer,
             page_references=page_references,
-        )]
+        ):
+            out.append((f, (time.perf_counter() - started) * 1000))
+        return out
 
     # Restore the dispatcher after each turn: a second turn must not append
     # its results into the first turn's captured evidence.
@@ -89,7 +103,8 @@ def run_turn(monkeypatch, question: str, *, history: Optional[list[dict]] = None
     text: list[str] = []
     narration: list[str] = []
     calls: dict[int, dict] = {}
-    for event, data in frames:
+    turn.frames = list(frames)
+    for event, data, _at in frames:
         if event == "text":
             text.append(str(data.get("delta", "")))
         elif event == "answer_reset":
@@ -210,6 +225,28 @@ class Report:
                                                     "duplicate_reads", "status", "notice_forced",
                                                     "duration_ms", "iteration_ms",
                                                     "corrective_turns", "usage")},
+            # TIME TO FIRST VISIBLE OBJECT (P1.b, 2026-09-13), replayed
+            # through the room's own board rule (tests/evals/timing.py). Two
+            # numbers, not one, because the card moves only the second:
+            #
+            #   board   when the board stopped being empty for good. The
+            #           client's fallback already drew a quiet table per read,
+            #           so this is the first read landing either way.
+            #   shaped  when the board first held an object somebody CHOSE the
+            #           shape of. `before` is George's own compose, a whole
+            #           round trip after the rows; `after` is the loop's
+            #           default, in the same iteration as the reads.
+            #
+            # `before` replays the same frames under the rule as it stood
+            # before P1.b, which is how one run yields both without paying for
+            # two — and with none of the noise of comparing two draws of a
+            # stochastic system.
+            "first_object_ms": {
+                "board_before": timing.first_object_ms(turn.frames, with_default=False),
+                "board_after": timing.first_object_ms(turn.frames, with_default=True),
+                "shaped_before": timing.first_composed_object_ms(turn.frames, with_default=False),
+                "shaped_after": timing.first_composed_object_ms(turn.frames, with_default=True),
+            },
             "findings": findings,
             "judge": judge,
         })
