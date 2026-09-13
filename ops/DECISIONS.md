@@ -2955,3 +2955,23 @@ length, Copilot completing anything.
 Adoption: the evidence block and the three text slots are P1 finding
 work; three new marks and the provisional frame are P2; targeted actions
 and ghost completions P2; the "usual" band waits on its definition.
+
+## 2026-09-13 — One page: George, Ideal UI
+
+https://claude.ai/code/artifact/7d69541a-ab54-4cfc-b622-77be5c7679c4
+
+The owner asked for one thing: the ideal UI and UX for all 26 functions,
+not more research. This mockup is it. It folds the 24 borrowings into the
+working screens and adds what the earlier renders lacked: an estate
+switch (23) that is honest about AJI CMG having no feed; a memory view
+(11) where every belief can be forgotten; a document scenario (24) where
+an invoice is read into a matched delivery, provisional until kept and
+labelled as needing a source; a "Send the order" frame (25) as the one
+veto point, with no channel connected; a mic in the composer (26);
+selection-as-context (7) by tapping a row; ghost completions built from
+rows. The "26" rail button is the coverage map: built / designed here /
+needs a source, per function, in the owner's order.
+
+Status by that map: 17 built, 6 designed here (4, 7, 16, 20, 21, 26),
+4 need a source (8 in part, 23, 24, 25). Nothing on the map is claimed
+built that the code does not do today.

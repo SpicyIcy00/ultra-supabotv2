@@ -842,22 +842,15 @@ The diagnosis behind this plan, the research, and the literal prompt for every
 card: **George, Eleven Days In** —
 https://claude.ai/code/artifact/90f62cb2-81f5-4ca1-b444-9ef3c92c858a
 
-The design, as it stands 2026-09-13, is two renders and one list:
-**George, Whole** (the screens, both modes) —
-https://claude.ai/code/artifact/40223696-68aa-4159-9b60-38789a4d3f25 — and
-**George, Borrowed** (ten patterns copied from Hex, ThoughtSpot, Perplexity,
-Manus, Canvas, Cursor, Linear, Things, Stripe, each mapped to a feature and a
-card) — https://claude.ai/code/artifact/bdf022de-6279-4e48-8422-d3c078d95810.
-**George, Assembled** (all ten borrowings built into one working mockup:
-the screens to copy from when a card touches the surface) —
-https://claude.ai/code/artifact/9ece0ca9-b96e-46cf-b0e3-a008f9e45af3.
-**George, Borrowed II** (fourteen more, for how data is drawn, text is
-written and suggestions appear: FT, Datawrapper, Oura, Google Maps, Stripe,
-Bloomberg, Hex, Apple Health, Axios, Perplexity, Gmail, Notion AI, Copilot,
-Netflix) — https://claude.ai/code/artifact/ed14bb98-11bc-4ffc-914b-9e342fa90ad8.
-Both Borrowed pages' "What this changes" lists are the queue of Phase 2 surface work;
-its items 3 and 4 (line above the claim, step list) cost nothing and may
-land in Phase 1. The reasoning is in `ops/DECISIONS.md` under the same date.
+**The design is one page: George, Ideal UI** —
+https://claude.ai/code/artifact/7d69541a-ab54-4cfc-b622-77be5c7679c4.
+A working mockup with all 26 functions in it, and a "26" button on its rail
+that maps each function to where it lives and whether it is built, designed
+there, or waiting on a source only the owner can supply. **When a card
+touches the surface, this is the screen to build toward.** It supersedes
+the four earlier renders (Whole, Borrowed, Borrowed II, Assembled), which
+stay only as the reasoning behind it; the borrowings and what was declined
+are in `ops/DECISIONS.md` under 2026-09-13.
 
 **A phase ends when the owner says it feels right — and it may never end with a
 rebuild.** If it does not feel right, the answer is the next fix to the same
