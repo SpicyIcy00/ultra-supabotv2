@@ -204,10 +204,16 @@ session.
 
 ### When to run the twelve — it costs real money, every time
 
-**A full run is ~$1.65, MEASURED — not the $5–7 this section claimed until
-2026-09-13.** The estimate was derived from an iteration count; the harness
-now prints its own spend, and P1.b's two live runs came in at **$1.59 and
-$1.71**. The old figure sat here while a close-out 500 lines below said it was
+**A full run of the FIRST TWELVE is $2.90. The figure here has now been wrong
+twice, in both directions, and this is the third statement of it.** It said
+$5–7 (an iteration estimate). It was corrected to $1.65 on the harness's own
+`spend`. **`spend()` was itself understating by 40%**: it summed only the
+SCORED scenarios, and four setup turns — "How is Rockwell doing?" re-asked for
+follow-up, correction and keep-page, plus the Seikyo draft for run-monday —
+never reached it. Measured from `verification/p1b-final.json`: $1.71 scored
+plus **$1.19 unscored = $2.90**.
+`harness.METER` now counts every turn at `run_turn`, and the report prints
+scored and setup separately, so this cannot happen a fourth time. The old figure sat here while a close-out 500 lines below said it was
 a fifth of that, and an inflated price is not a safe error: it makes a session
 skip a run that would have caught a trust failure. It does not appear in
 `ops/cost_report.py` — the harness stubs `ConversationLog`, so an eval turn
@@ -226,18 +232,20 @@ where a regression was speculative AND **the four gate scenarios could not
 have seen it.** A new comparison (`P2.i`, `P3.f`) is a capability no gate
 scenario asks for, so a run there proves nothing; `P2.c`, `P2.d` and `P2.f`
 are context and rendering; `P1.c` breaks or fixes compose refusals, which are
-its own numbers. **Seven runs across 29 cards, $9.10 in total** — P1.g the
-gate at $0.55; P1.f, P1.h and the three closes at $1.15 each (v2 is cheaper
-than v1); P1.m $2.80 for both suites — down from ~$14.90. The money
-saved is ~$3; the real gain is six sessions that do not stop to run something
-that could not inform them.
+its own numbers. **Seven runs across 29 cards, ~$11.67** — P1.g the gate at
+$0.63 measured; P1.f, P1.h, P1.m and the three closes at ~$1.84 each on v2.
+**The earlier $9.10 was wrong, because the meter was.** Against v1 at its true
+$2.90 the same seven runs would have been ~$18. The real gain from dropping
+the six gates is six sessions that do not stop to run something that could not
+inform them; the money is secondary and always was.
 
 **What this does NOT buy back: attribution.** A regression landing in a riding
 card surfaces at the close, with up to eight cards behind it. That is the
 accepted cost, accepted because those six runs could not have caught it
 anyway. If a close ever fails on a trust row, the bisect is the price.
 
-**THE TRUST GATE — four scenarios, ~$0.55, and it is what "subset" means.**
+**THE TRUST GATE — four scenarios, $0.63 MEASURED, and it is what "subset"
+means.**
 Do not pick scenarios by feel. Across every recorded run the **trust rows are
 stable and the style checks flap**, so a run's value is almost entirely in
 four scenarios:
@@ -249,8 +257,18 @@ four scenarios:
 | `cannot` | a refusal that stopped refusing |
 | `morning` | the volunteering cap, and the rounded-figure gate (the "801") |
 
-Run those four for any model-facing card. Run the full twelve **only at the
-three phase closes**, where the style flap is worth seeing across a whole set.
+Measured per scenario from `p1b-final.json`: `why` $0.24 (7 iterations, an
+investigation), `caveats` $0.16, `cannot` $0.12, `morning` $0.11.
+
+Run those four for any card that touches the trust machinery. Run the full
+suite **only at the three phase closes**.
+
+**The per-scenario table is also where to look for a cheaper run.** `shop`
+cost **$0.34 and 6 iterations** — the single most expensive scenario in the
+suite, dearer than the investigation — which is one reason it is not a scored
+scenario in v2. And P1.h (effort per turn) should cut every later run, because
+cost is round trips: it is not counted in the totals below, deliberately,
+because it has not been measured.
 
 **Two runs per card, maximum.** One to see the problem, one to confirm the
 fix. **A third failure means the card is wrong, not the code** — stop, write
@@ -821,13 +839,18 @@ before believing it.
         it is reported as a percentage and only asserts under
         `GEORGE_VOICE_STRICT=1`.
 
-      **What this card does:** run v1 and v2 once each, same build, same day;
-      report them side by side; confirm v2 catches everything v1 caught; then
+      **What this card does: run v2 ONCE. Do not re-run v1.** The comparison
+      that matters is already on disk — `verification/p1b-final.json` holds a
+      v1 run with every scenario's findings, and **the four gate scenarios are
+      byte-identical between the suites**, so v2's gate results compare
+      directly against v1's recorded ones. The other seven v1 scenarios are
+      the ones being deliberately replaced; re-running them to watch them be
+      replaced costs $2.90 and settles nothing. Confirm the gate agrees, then
       **delete `test_voice_evals.py`** and repoint §2b and the baseline table
-      at v2. If v2 misses something v1 caught, v2 is wrong — fix it and say so
-      rather than deleting the evidence. **Eval: full, once, BOTH suites** —
-      the only card allowed to run the twelve to check the twelve, ~$2.80 for
-      the pair, and the last time v1 ever costs anything.
+      at v2. If the gate DISAGREES, v2 is wrong — fix it and say so rather
+      than deleting the evidence. **Eval: full, once, v2 only (~$1.84)** —
+      and that estimate is from v1's per-scenario costs, so **this card's own
+      first job is to report what v2 actually cost from the new meter.**
 
 - [ ] **P1.f compose narrows to the catalogue; the text gets three slots** —
       the label grammar becomes the six marks plus a claim-title per block;

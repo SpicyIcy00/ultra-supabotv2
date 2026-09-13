@@ -130,6 +130,7 @@ def run_turn(monkeypatch, question: str, *, history: Optional[list[dict]] = None
     turn.answer = "".join(text).strip()
     turn.narration = "\n\n".join(n for n in narration if n)
     turn.calls = [calls[k] for k in sorted(calls)]
+    METER.add(turn)
     return turn
 
 
@@ -169,6 +170,51 @@ def evidence_summary(turn: Turn, max_rows: int = 15) -> str:
         if len(rows) > max_rows:
             lines.append(f"   ... {len(rows) - max_rows} more rows")
     return "\n".join(lines)
+
+
+RATES = {"input": 5.00, "output": 25.00, "cache_read": 0.50, "cache_creation": 6.25}
+RATES_AS_OF = "2026-06-24"
+
+
+class Meter:
+    """
+    What the session actually spent, counted at `run_turn`.
+
+    WHY THIS EXISTS, 2026-09-13. `Report.spend()` summed `self.records`, which
+    are the SCORED scenarios — so every setup turn a multi-turn scenario ran
+    first was invisible. In the first twelve that is four: "How is Rockwell
+    doing?" re-asked as the setup for follow-up, correction and keep-page, and
+    the Seikyo draft for run-monday. Measured against
+    `verification/p1b-final.json`, the recorded $1.71 was the scored twelve and
+    those four setups cost **another $1.19**. A full run was $2.90 while
+    NOW.md said $1.65 — after that figure had already been corrected once,
+    down from $5-7.
+
+    **Understating the meter by 40% is worse than any saving it could
+    suggest**, because it is the number every decision about what to run gets
+    made from. This counts a turn when the turn happens, so nothing can be
+    spent without being seen.
+    """
+
+    def __init__(self) -> None:
+        self.turns = 0
+        self.tokens = {k: 0 for k in RATES}
+
+    def add(self, turn) -> None:
+        usage = (turn.done or {}).get("usage") or {}
+        self.turns += 1
+        for key in self.tokens:
+            self.tokens[key] += int(usage.get(key) or 0)
+
+    def usd(self) -> float:
+        return sum(self.tokens[k] / 1e6 * RATES[k] for k in self.tokens)
+
+    def snapshot(self) -> dict:
+        return {"turns": self.turns, "tokens": dict(self.tokens),
+                "usd": round(self.usd(), 4), "rates_as_of": RATES_AS_OF}
+
+
+METER = Meter()
 
 
 class Report:
@@ -259,16 +305,22 @@ class Report:
         as a constant: a price that moves silently under a report keeps looking
         authoritative while meaning something else. If one changes, change both.
         """
-        rates = {"input": 5.00, "output": 25.00, "cache_read": 0.50,
-                 "cache_creation": 6.25}
-        totals = {k: 0 for k in rates}
+        totals = {k: 0 for k in RATES}
         for record in self.records:
             usage = (record.get("done") or {}).get("usage") or {}
             for key in totals:
                 totals[key] += int(usage.get(key) or 0)
-        cost = sum(totals[k] / 1e6 * rates[k] for k in totals)
-        return {"turns": len(self.records), "tokens": totals,
-                "usd": round(cost, 4), "rates_as_of": "2026-06-24"}
+        cost = sum(totals[k] / 1e6 * RATES[k] for k in totals)
+        scored = {"turns": len(self.records), "tokens": totals,
+                  "usd": round(cost, 4), "rates_as_of": RATES_AS_OF}
+        # THE BILL IS THE METER, NOT THIS. `scored` counts only scenarios that
+        # reached `add`; a setup turn never does. Both are reported, so the gap
+        # between them can never go unnoticed again.
+        run = METER.snapshot()
+        run["scored_only"] = scored
+        run["unscored_turns"] = run["turns"] - scored["turns"]
+        run["unscored_usd"] = round(run["usd"] - scored["usd"], 4)
+        return run
 
     def write(self) -> Optional[str]:
         path = os.environ.get("GEORGE_EVAL_REPORT")
@@ -279,8 +331,7 @@ class Report:
             json.dump({"spend": spend, "cases": self.records}, fh, indent=2, default=str)
         # On stdout as well as in the file: a run that cost real money should
         # say so where the person who started it is looking.
-        print(f"\n[eval] {spend['turns']} turns cost ${spend['usd']:.2f} "
-              f"({spend['tokens']['input']:,} uncached in, "
-              f"{spend['tokens']['cache_read']:,} cached, "
-              f"{spend['tokens']['output']:,} out)")
+        print(f"\n[eval] {spend['turns']} live turns cost ${spend['usd']:.2f} "
+              f"— {spend['scored_only']['turns']} scored (${spend['scored_only']['usd']:.2f}) "
+              f"+ {spend['unscored_turns']} setup (${spend['unscored_usd']:.2f})")
         return path

@@ -3286,3 +3286,45 @@ runs could not have caught it anyway.
 across ten weeks. The $18.20 day was six full runs in ONE day — a session
 iterating a live model against a failing check — which the two-runs-per-card
 cap already stopped.
+
+## 2026-09-13 — The eval meter was understating by 40%, and it is now fixed
+
+The owner refused a cost figure he had been given twice and asked for it to be
+verified before any run was spent. He was right, and the fault was in the
+instrument, not the estimate.
+
+**`Report.spend()` summed only the SCORED scenarios.** A setup turn never
+reaches `add`, and the first twelve run four of them: "How is Rockwell doing?"
+is re-asked as the setup for follow-up, correction and keep-page, and the
+Seikyo draft for run-monday. Measured from `verification/p1b-final.json`:
+
+| | |
+|---|---|
+| recorded (scored 12) | $1.71 |
+| four setup turns, never counted | **$1.19** |
+| **true cost of a v1 run** | **$2.90** |
+
+**So the stated price has now been wrong three times** — $5–7 (an iteration
+estimate), then $1.65 (the broken meter), now $2.90 (measured). Each
+correction was published as fact. `harness.METER` counts at `run_turn`, and
+the report prints scored and setup separately, so the gap cannot reopen.
+
+**Measured per-scenario, which is also where the cheap runs are.** The gate is
+**$0.63**, not the $0.55 asserted: `why` $0.24 (7 iterations), `caveats`
+$0.16, `cannot` $0.12, `morning` $0.11. And **`shop` cost $0.34 over 6
+iterations — the most expensive scenario in the suite, dearer than the
+investigation** — which is a second reason it is not scored in v2.
+
+**One run cut on the evidence, worth $2.90.** P1.m no longer re-runs v1. The
+four gate scenarios are byte-identical between suites, so v2's gate compares
+directly against v1's RECORDED gate in `p1b-final.json`; the other seven v1
+scenarios are the ones being replaced, and re-running them to watch them be
+replaced settles nothing.
+
+**Plan total: ~$11.67, not the $9.10 published an hour ago** — that figure
+inherited the broken meter. On v1 at its true price the same seven runs would
+be ~$18. v2 at ~$1.84 is still an ESTIMATE derived from v1's per-scenario
+costs; P1.m's first duty is to report what it actually cost from the new
+meter. P1.h (effort per turn) should cut every later run because cost is round
+trips, and it is deliberately NOT counted in the total, because it has not
+been measured.
