@@ -3185,3 +3185,55 @@ already exist). All three now say No eval, with the reason.
 7 trust gates at $0.55 plus 5 full runs at $1.65, and under $25 even if every
 one of those needs its second run. Over nine to eleven weeks. The bill is
 still build sessions, not the gates.
+
+## 2026-09-13 — Are the twelve good? Partly. Three real weaknesses, one serious
+
+The owner asked whether the twelve questions are a good test and why twelve.
+Read the suite (`tests/evals/test_voice_evals.py`) and compared it against the
+real questions in `george.conversations`.
+
+**Why twelve: it accreted.** They are `test_01` … `test_12` with no coverage
+argument written anywhere. As MODE coverage they are reasonable — proactive,
+investigation, entity, entity, build, follow-up, correction, refusal, notices,
+time-bucket, page write, schedule refusal — but `shop` and `product` are the
+same shape, and `by-hour` matches nothing anyone has ever asked.
+
+**1. SERIOUS: nothing checks that the answer is USEFUL.** Every assertion is
+about form and honesty — status ok, iterations capped, no forced notice, no
+ungrounded numeral, no internal vocabulary, and a refusal only where one is
+expected. **A George that replied "I can't establish that from what I can
+read" to all twelve would pass almost every assertion.** The suite cannot
+distinguish a useful colleague from a maximally cautious one, which is exactly
+the failure mode the trust machinery pushes toward. This is the gap that
+matters, because the owner's complaint was never "he lied", it was "it doesn't
+function right".
+
+**2. The register is wrong, and the real questions are on disk.** The evals
+ask well-formed, fully-specified questions. The owner writes fragments:
+
+| the evals ask | he actually asks |
+|---|---|
+| "How is Rockwell doing?" | "how about rockwell" · "lets focus on rockwell hows it doing?" |
+| "What should I look at today?" | "focus on the problems and what we can improve on" |
+| "Why was North Edsa up so much last week?" | "how are we doing?" |
+| "Keep that as a page called Rockwell weekly." | "pin that" · "can you make it a page?" |
+
+And whole real patterns are untested: a bare **"hi"**; assent (**"ok"**,
+**"yes go"**); a preference taught mid-stream (**"add top sellers by sales not
+units, i value sales more"** — that is a belief); a question about George
+himself (**"so how can i use it>"**); a scope shift that is not a question at
+all (**"lets focus on greenhills"**); and asking his opinion (**"what do you
+think?"**). **The twelve test an easier George than the one in production.**
+
+**3. One run is a sample, scored as a grade.** Four runs gave 12, 11, 10, 11
+with a different scenario failing each time, and `leads_with_reading` is every
+non-trust failure. A style check that passes ~90% of the time should be a
+REPORTED RATE across runs, not a gate that fails a build. The trust rows are
+the only ones meaningful from a single draw, which §2b already says.
+
+**Not changed here.** This is an assessment, not a rebuild; the owner decides.
+The shape proposed if he wants it: keep the four-scenario trust gate as is;
+rewrite the other eight in his own register drawn from the log; add the one
+missing assertion (for a question that asks for a figure, the answer must
+carry a figure a tool returned); demote the style checks to reported rates;
+and report each run against the previous one rather than as an absolute score.
