@@ -77,19 +77,6 @@ function ChromeRoutes() {
   return (
     <Layout>
       <Routes>
-        {/* GEORGE IS A PAGE HERE, like every other one (2026-09-13). It owns
-            tabs — Board, Needs you, Kept, Running — exactly as Dashboard owns
-            Stores and Vending: GeorgeTabs draws them, and each keeps its own
-            URL. Its fixed left rail went with the move, because a second
-            vertical rail beside this chrome's own is chrome inside chrome. */}
-        <Route path="/george" element={george(<Room />)} />
-        <Route path="/w/:threadId" element={george(<Room />)} />
-        <Route element={<RoomShellRoute />}>
-          <Route path="/inbox" element={george(<InboxPage />)} />
-          <Route path="/pages" element={george(<PagesPage />)} />
-          <Route path="/pages/:pageId" element={george(<PagesPage />)} />
-          <Route path="/workflows" element={george(<WorkflowsPage />)} />
-        </Route>
         {/* Dashboard owns two tabs: Stores (/dashboard) and Vending (/vending) */}
         <Route path="/dashboard" element={<RequirePage pageKey="dashboard"><Dashboard /></RequirePage>} />
         <Route path="/vending" element={<RequirePage pageKey="dashboard"><Dashboard /></RequirePage>} />
@@ -132,14 +119,27 @@ function App() {
                 <Route path="/george/preview" element={<RiverPreview />} />
 
                 {/* "/" is a redirect to the first page a person may see, which
-                    is the dashboard. George is a page IN Supabot BI, drawn
-                    inside the same chrome as every other page and owning tabs
-                    of its own the way Dashboard and Warehouse do — see
-                    ChromeRoutes below (2026-09-13). */}
+                    is the dashboard. George is a page in the app, at its own
+                    path, so it can be left as well as reached (2026-09-12). */}
                 <Route path="/" element={<LandingRedirect />} />
+                <Route path="/george" element={george(<Room />)} />
+                <Route path="/w/:threadId" element={george(<Room />)} />
                 {/* The parallel board's addresses, kept so a link still lands. */}
                 <Route path="/w2" element={<Navigate to="/george" replace />} />
                 <Route path="/w2/:threadId" element={<WorkRedirect />} />
+
+                {/* The rooms, in George's chrome. */}
+                {/* THE ROOM'S OWN CHROME, not the shell that came before it.
+                    These three are George's screens and they had been left in
+                    the previous surface — a wide rail of words, serif display
+                    headings, its own type scale — so following a link out of
+                    the board landed somewhere that looked like another app. */}
+                <Route element={<RoomShellRoute />}>
+                  <Route path="/inbox" element={george(<InboxPage />)} />
+                  <Route path="/pages" element={george(<PagesPage />)} />
+                  <Route path="/pages/:pageId" element={george(<PagesPage />)} />
+                  <Route path="/workflows" element={george(<WorkflowsPage />)} />
+                </Route>
 
                 {/* Where George used to live. Every one of these still resolves. */}
                 <Route path="/ask" element={<Navigate to="/george" replace />} />

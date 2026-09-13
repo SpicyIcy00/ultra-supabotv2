@@ -67,7 +67,7 @@ const ALLOWED: Record<string, string> = {
   // The room's rail carries the same count, for a loaded and non-zero result
   // only. The room replaced the desk as "/" on 2026-09-11; this is the same
   // fact in the chrome people actually use, not a new meaning.
-  'GeorgeTabs.tsx': 'the needs-you count on the George tab strip',
+  'Rail.tsx': 'the needs-you count on the room rail',
   // Where the room DEFINES the token. One value for the one meaning, so a
   // second chrome cannot quietly invent a second approvals colour.
   'room.css': 'the room defines the reserved token here',

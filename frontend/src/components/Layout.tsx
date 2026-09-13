@@ -119,14 +119,12 @@ const navItems = [
   // this is the older one, and it is not removed because people may still be
   // using it and its route is somebody's bookmark.
   { to: '/ai-chat', page: 'ai_chat', icon: navIcons.chat, label: 'AI Chat (legacy)', match: (p: string) => p === '/ai-chat' },
-  // George: a page in this chrome like any other since 2026-09-13, owning
-  // tabs of its own (Board, Needs you, Kept, Running) the way Dashboard and
-  // Warehouse do. The match covers those tabs so this stays lit on all of
-  // them. It carries the page it was clicked from, so a question asked next
-  // arrives with that context.
-  { to: '/george', page: 'george', icon: navIcons.george, label: 'George',
-    match: (p: string) => p === '/george' || p.startsWith('/w/') || p === '/inbox'
-      || p.startsWith('/pages') || p === '/workflows' },
+  // George: a page in this app like any other, at its own path since
+  // 2026-09-12. It opens its own full-bleed workspace rather than rendering
+  // in this chrome — the board is the width of the screen and its rail is
+  // fixed — so the room carries a link back to here. It carries the page it
+  // was clicked from, so a question asked next arrives with that context.
+  { to: '/george', page: 'george', icon: navIcons.george, label: 'George', match: (p: string) => p === '/george' || p.startsWith('/w/') },
   // Warehouse owns two tabs: Replenishment Reports and Barcode Generator
   { to: '/warehouse', page: 'warehouse', icon: navIcons.warehouse, label: 'Warehouse', match: (p: string) => p === '/warehouse' },
   { to: '/packing', page: 'packing', icon: navIcons.packing, label: 'Packing', match: (p: string) => p === '/packing' },
@@ -258,12 +256,7 @@ export function Layout({ children }: LayoutProps) {
       )}
 
       {/* Main Content — push right on desktop when sidebar open, full-width otherwise */}
-      {/* `chrome-sidebar-open` marks the same condition as `lg:ml-64` for CSS
-          that cannot read Tailwind state: George's composer is fixed to the
-          viewport, so it escapes this offset and has to be told about it
-          (room.css, `.r-line-wrap`). A descendant selector still reaches a
-          fixed child, which is what makes this work. */}
-      <div className={`transition-all duration-300 ${!isPhone && !isMobile && sidebarOpen ? 'lg:ml-64 chrome-sidebar-open' : 'ml-0'}`}>
+      <div className={`transition-all duration-300 ${!isPhone && !isMobile && sidebarOpen ? 'lg:ml-64' : 'ml-0'}`}>
         {/* Header */}
         <header className="sticky top-0 z-20 bg-gray-900/80 backdrop-blur-sm border-b border-gray-800">
           <div className="px-4 py-3 md:px-6 md:py-4">

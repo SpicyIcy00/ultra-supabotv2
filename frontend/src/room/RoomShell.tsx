@@ -23,7 +23,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useGeorge } from '../hooks/useGeorge';
 import { listApprovals } from '../services/workflowsApi';
-import { GeorgeTabs } from './GeorgeTabs';
+import { Rail } from './Rail';
 import './room.css';
 
 export function RoomShell({ children }: { children: ReactNode }) {
@@ -39,8 +39,8 @@ export function RoomShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="room">
-      <GeorgeTabs busy={george.busy} needsYou={approvals.data?.length}
-                  onNew={() => navigate('/george')} />
+      <Rail busy={george.busy} needsYou={approvals.data?.length}
+            onNew={() => navigate('/george')} />
       <main className="r-main">
         <div className="r-column">{children}</div>
       </main>

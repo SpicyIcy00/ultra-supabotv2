@@ -26,7 +26,7 @@ import { Noticed } from './Noticed';
 import { Working } from './Working';
 import { useQuery } from '@tanstack/react-query';
 import { listApprovals } from '../services/workflowsApi';
-import { GeorgeTabs } from './GeorgeTabs';
+import { Rail } from './Rail';
 import { dismissStanding, useStandingOpening } from './useStandingOpening';
 import { decisionFor, leftBehind } from './decisions';
 import { recordDecision, type Outcome } from '../services/decisionsApi';
@@ -357,7 +357,7 @@ export default function Room() {
 
   return (
     <div className="room">
-      <GeorgeTabs busy={busy} needsYou={approvals.data?.length} onNew={clear} />
+      <Rail busy={busy} needsYou={approvals.data?.length} onNew={clear} />
 
       <main className="r-main">
         {/* Above the board, always — what happened while you were away comes

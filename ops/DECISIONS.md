@@ -2418,3 +2418,32 @@ positioning context. The breakpoint in `room.css` mirrors `lg` exactly.
 
 The accent allowlist keeps its four entries; `Rail.tsx` is replaced in it by
 `GeorgeTabs.tsx`, carrying the same needs-you count for the same reason.
+
+## 2026-09-13 — George takes the whole screen, and the rail is the way back
+
+The owner, after using the tabbed version: *"when you open george in supabot
+tab it should cover the whole screen, no more supabot, but there should be a
+back button on sidebar."*
+
+So `d44249c` is reverted. George opens from the Supabot sidebar and then
+replaces it: full-bleed, its own rail, no chrome behind it. **What survives
+from the reverted commit is the part that was right** — Running joins the rail,
+because it was routed and reachable only from one link inside Inbox, so a
+person who had never opened an approval could not find it at all.
+
+**The back arrow is the rail's FIRST item.** Yesterday it sat second, under
+the mark, when the chrome was still drawn behind George and the arrow was a
+convenience. It is now the only way out of a surface that covers the screen,
+and it goes where a person looks for a way back.
+
+**Why the tabbed version was wrong, recorded so it is not retried by
+accident.** Putting George in the chrome meant two vertical rails side by
+side, and a board that wants the width of the screen squeezed into a content
+column. "A page in the app" and "a surface that owns the screen" are both
+legitimate, and the deciding fact is the board: it is the product, and it
+needs the room. The rule from 09-12 is unchanged and is what makes this safe
+— **a surface you cannot leave is not a page** — so the back arrow is not
+decoration, it is the condition on which full-screen is allowed.
+
+Kept from the tab work and now dead: nothing. `chrome-sidebar-open` went with
+the revert, since the composer no longer sits inside an offset chrome.
