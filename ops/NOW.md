@@ -58,8 +58,8 @@ shippable. The full diagnosis is the report linked in section 6.
 | | |
 |---|---|
 | Product branch | `main` — `feature/workspace` merged into it 2026-09-12 |
-| Head | `fd5b0fb` — **pushed 2026-09-13**, `main` and `origin/main` identical. That push also carried `47fb3c2`, a docs commit the previous session left behind. |
-| Last deploy | `fd5b0fb`, pushed 2026-09-13 — ops, tests and docs only. Before it, `d44249c`. **Unpushed since: P0.3 and P0.4.** P0.3 added migration `w7x8y9z0a1b2` and the live database is still on `v6w7x8y9z0a1`; **P0.4 is what makes that safe** — the next deploy migrates itself before launching, rather than booting behind and refusing to serve. The first deploy carrying P0.4 is the one that applies P0.3's migration, and it is also the first one that can be checked from outside: `/health` will name the commit. |
+| Head | `8b0325a` — **pushed and live 2026-09-13**. One commit behind it locally and unpushed: `69b51bd`, the launcher hardening the outage below taught. |
+| Last deploy | `8b0325a`, **live and healthy**. It carried P0.3 and P0.4, and applying migration `w7x8y9z0a1b2` cost **~50 minutes of 502**: the first boots crashlooped, the migration did not apply, and nothing was readable from outside. It came up on a later retry. Root cause still unknown — the Railway deploy log for that build has not been read. `69b51bd` is the fix for the *invisibility*, not for the cause. |
 | Phase | 0, consolidating |
 | Next card | **The dogfood log's three Open entries** — George marked down for saying what he cannot see (filed from the P0.3 eval run), dead_stock/AJI BARN, and a save recording only an exception name. Open wins over every card. Phase 0 is otherwise complete; after those, Phase 1 opens at P1.a. |
 
@@ -80,12 +80,13 @@ running** (`build.commit`, `build.short`, and `build.source` naming where the
 answer came from), and **whether the schema was read just now or at boot**
 (`schema_checked`: `live`, `cached`, or `startup`). 503 on a mismatch.
 
-`build.source` is `environment (RAILWAY_GIT_COMMIT_SHA)` on Railway, `git`
-locally. **If it ever reads `unknown`, believe it** — nothing is guessed, and
-the fix is to turn on Railway's git variables or write `backend/BUILD_REVISION`
-at build time, which `app/core/build.py` already reads. This is the one part of
-P0.4 that only the next deploy can confirm: no session here can see what
-Railway injects.
+**Confirmed in production 2026-09-13**, which is the answer to the one part of
+P0.4 no session could check from here: Railway does inject the sha, and the
+live readout is `"source": "environment (RAILWAY_GIT_COMMIT_SHA)"` with the
+branch, deployment id, service and environment beside it. `git` locally.
+**If it ever reads `unknown`, believe it** — nothing is guessed, and the fix is
+Railway's git variables or a `backend/BUILD_REVISION` stamp, which
+`app/core/build.py` already reads.
 
 **The product is Supabot BI, and George is a tab in it** (the owner,
 2026-09-12: *"this is still supabot, just make george a page"*, and 09-13:

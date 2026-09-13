@@ -179,6 +179,31 @@ test now holds all four. **One test was deleted for asserting the defect** —
 `test_launcher_does_not_migrate_when_disabled` pinned the behaviour that took
 production down.
 
+**And then it took production down itself.** The first deploy carrying P0.4
+went to 502 and stayed there ~50 minutes: the migration did not apply, the
+container crashlooped, and from outside there was nothing to read. It came up
+on a later Railway retry and is healthy on `8b0325a`. **The root cause is not
+known** — the deploy log for that build has not been read, and no session
+should claim to know without it.
+
+Two lessons, one recorded in code and one in how work is reported.
+
+**`check=True` fails the deploy where the deploy log is** was wrong. A
+crashloop hides the deploy log from everyone not already watching Railway, and
+refusing to start bought nothing: the migration had not run either. A failed
+migration is now loud and NOT fatal (`69b51bd`) — the app starts, the schema
+check refuses, and /health answers 503 naming both revisions. Same refusal,
+readable from outside. `pg_advisory_lock` became `pg_try_advisory_lock` in a
+bounded loop for the same reason: forever inside a launcher looks like a boot
+timeout, not a lock.
+
+**"Verified" was claimed for something only reasoned about.** The close-out
+said `main` is deployable again, on the strength of a dry run with `_upgrade()`
+STUBBED and a migration whose SQL was generated offline. The launcher had never
+once executed a migration against a real database. The rule this leaves:
+**naming what was exercised is not the same as exercising it — a stubbed dry
+run is evidence about a decision, never about the thing it decided to do.**
+
 
 ---
 
