@@ -3043,3 +3043,46 @@ SURFACE, not per-turn routing — unattended watches and standing questions run
 hours apart and pay a cold write anyway, so they forfeit no cache. Note even
 then that the morning standing question is the highest-judgment turn of the
 day and is the worst candidate on the list.
+
+## 2026-09-13 — A source that was never blocked, a tally that was wrong, two cards
+
+**AJI CMG was never blocked, and a session said twice that it was.** It listed
+"the vending feed" as S.3, a source the owner had to supply, in both the plan
+and the Ideal UI map. Then it checked: `tools/vending.py`, the `get_vending`
+tool, `v_vending_order_lines_php` / `v_vending_orders_php` /
+`v_vending_goods_php` and a full `vending:` domain in `definitions/metrics.yaml`
+all exist and are read today. **George already covers two businesses.**
+S.3 withdrawn; feature 23 is designed-not-built (P2.g), not source-blocked.
+Two constraints that ARE real and stay: `never_join_to_store_domain: true`
+(the domains sit side by side, never joined), and vending profit is computable
+but overstated on 72.7% of lines where cost was never entered, with a
+mandatory flag. Retail profit stays unsupported —
+`store_profit_do_not_reintroduce: true`, because `products.cost` is a single
+current scalar with no history and 636 of 3,678 products have none.
+
+**The 26-tally was wrong in the plan's favour.** It read 17 built · 6 designed
+· 3 source-blocked; the map's own rows say **16 · 7 · 3** and the old figure
+double-counted feature 8. Corrected in the plan page. The honest answer to
+"will everything be operational" is 16 of 26 as written, with feature 4
+dropped, four narrowed (1, 15, 16, 17), three source-blocked (8 in part, 24,
+25) and feature 12 closable only by living with it.
+
+**Two capability cards added (P2.i, P2.j).** Both change what George can SAY,
+not how it looks, and neither needs a new source:
+- **P2.i same-store year-over-year.** `same_period_last_year` is refused
+  because the estate is a different shape a year apart, and the refusal names
+  its own fix: define a same-store rule first. For a Chinese-candy retailer
+  in the Philippines, Christmas and Chinese New Year ARE the year, and
+  `previous_period` cannot see either. Seasonally time-boxed: at one card a
+  day it lands ~mid-November, so it is the one card worth pulling ahead.
+- **P2.j the watch fires before the stock-out.** Crossing zero reports a lost
+  sale. "Will cross zero before it can be restocked" is computable from the
+  replenishment and purchase-plan tools plus a units/week rate; lead time
+  arrives as a BOUNDED SETTING (architecture rule 6), not as the frozen PO
+  export, and a line with no lead time says so rather than defaulting.
+
+**Four candidates parked in NOW.md, not started:** negative stock as a
+data-integrity measure, transfers drawn as weighted flow (the one expressive
+form CLAUDE.md did NOT decline), delivering the morning brief to Telegram
+where `tools/brief.py` and BRIEF_TOKEN already exist, and basket affinity
+(lowest confidence, parked behind the rest).

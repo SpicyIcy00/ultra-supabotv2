@@ -847,10 +847,69 @@ Answering mode reaches the screens in the Ideal UI (§6).
       composer, carrying the same selection; hands-free reads the claim
       aloud, shows the one line, evidence a tap away, interruptible. No new
       surface. Absorbs the old P2.d. No eval.
+- [ ] **P2.i same-store year-over-year** — **the highest-value card in this
+      file, and it is seasonal.** `comparisons.not_supported.same_period_last_year`
+      refuses YoY because the estate is a different shape a year apart (5
+      stores traded Aug 2025, 7 traded Aug 2026) and it names its own fix:
+      *"Define that rule first, then add the comparison."* Aji Ichiban sells
+      Chinese candy in the Philippines — **Christmas and Chinese New Year are
+      the year**, and `previous_period` cannot see either: December against
+      November is not a comparison, December against last December is.
+      Today George structurally cannot answer the owner's two biggest
+      questions.
+      Build: a `same_store` rule in metrics.yaml (a store counts if it traded
+      in BOTH windows — the owner confirms the wording, it is a definition,
+      not a design question), `compare_to='same_period_last_year'` computed in
+      the tool over both windows in one statement like `previous_period`, and
+      `meta` naming which stores were counted and which were excluded and why.
+      An excluded store is never silently dropped.
+      Done when: "how did last December go against the year before" answers
+      with the comparable set named; a store that opened mid-window is
+      excluded BY NAME in the receipts; the twelve's trust rows unchanged.
+      **Eval: subset.**
+      **TIMING:** at one card a day this lands ~mid-November, which is late
+      for a Christmas run-up. If the owner wants it sooner it is the one card
+      worth pulling ahead of the Phase 2 surface work — it changes what
+      George can SAY, not how it looks.
+- [ ] **P2.j the stock watch fires before the stock-out, not after** — today
+      a watch fires when a line crosses zero, which reports a stock-out that
+      has already cost the sale. The useful condition is "will cross zero
+      before it can be restocked". The primitives exist: `tools/replenishment.py`,
+      `tools/purchase_plan.py` and a units/week rate over closed weeks.
+      The missing input is LEAD TIME, and it does NOT need the frozen PO
+      export (S.2): architecture rule 6 already allows a definition to declare
+      a **bounded setting** a person binds and every run records, so "Seikyo
+      takes 3 weeks" is a number typed once, with bounds, in metrics.yaml.
+      A line with no lead time set is reported as having none — never
+      defaulted to a guess, which would be a threshold nobody chose.
+      Done when: a watch on AJI BARN fires for a line still above zero whose
+      cover is under its supplier's lead time, naming both numbers; a line
+      with no lead time set says so instead of firing. **Eval: subset.**
 - [ ] **P2.✓ close** — walk the four board scenarios in the Ideal UI on the
       live build, report each against it, one full run. **Gate to Phase 3:**
       Open empty five days; the four scenarios work as drawn; median still
       under target.
+
+**Candidates, not cards — parked 2026-09-13 so they are neither lost nor
+started.** Each is grounded in data that already exists; none is scheduled,
+and none is begun without the owner saying so.
+
+- **Negative stock as a data-integrity measure.** Fuan Haw reached −14: the
+  book is wrong, and negative lines per store per month is a shrinkage /
+  receiving-accuracy signal computable from `inventory_levels` with no new
+  source. It answers a question that has never been askable.
+- **Transfers drawn as flow.** CLAUDE.md declined the map and the stock gauge
+  and explicitly did NOT decline weighted arrows, because
+  `movement.bases.transfer_records` sets `names_destination: true`. Barn → shop,
+  weighted by volume. It is the one expressive form with real data behind it,
+  and it returns part of feature 4 honestly.
+- **Deliver the morning where the owner already is.** `tools/brief.py` and
+  `BRIEF_TOKEN` exist and CLAUDE.md already calls Telegram a window onto the
+  same river. Feature 12 fails if being proactive requires remembering to open
+  a browser tab.
+- **Basket affinity** from `new_transaction_items` — real for an assortment
+  retailer, but it needs a definition and misleads easily. Lowest confidence
+  of the four; parked deliberately behind the others.
 
 **Phase 3 — operating mode.** Seven sessions. Stable surfaces of many
 objects; none recomposes on a question.
@@ -902,8 +961,18 @@ for it.`):
   against it; the field lands in metrics.yaml.
 - **S.2 arrivals and open orders** (8) — the frozen PO export unfrozen, or a
   dated weekly export; then cover accounts for lead time.
-- **S.3 AJI CMG's vending feed** (23) — where machine sales live and how
-  often they can be read; then the estate pill goes live.
+- ~~**S.3 AJI CMG's vending feed**~~ — **WITHDRAWN 2026-09-13, it was never
+  blocked.** A session listed it as a source the owner had to supply, twice,
+  and then checked: `tools/vending.py`, the `get_vending` tool, the
+  `v_vending_order_lines_php` / `v_vending_orders_php` / `v_vending_goods_php`
+  views and a whole `vending:` domain in `definitions/metrics.yaml` all exist
+  and are read today. **George already covers two businesses, not one.**
+  Feature 23 is designed-not-built (P2.g), not blocked. Two live constraints
+  that ARE real: `vending.never_join_to_store_domain: true`, so the two
+  domains are compared side by side and never joined; and vending profit is
+  computable but **overstated on 72.7% of lines** where cost was never
+  entered, which carries a mandatory flag. Retail profit stays unsupported
+  (`store_profit_do_not_reintroduce: true`) and that is unchanged.
 - **S.4 a document source** (24) — one mailbox or folder invoices arrive in
   that a service can read; then `read_document` returns `{rows, meta}`.
 - **S.5 a supplier channel** (25) — how an order goes to Seikyo today; then
