@@ -3086,3 +3086,32 @@ data-integrity measure, transfers drawn as weighted flow (the one expressive
 form CLAUDE.md did NOT decline), delivering the morning brief to Telegram
 where `tools/brief.py` and BRIEF_TOKEN already exist, and basket affinity
 (lowest confidence, parked behind the rest).
+
+## 2026-09-13 — Reviewing the two pages found four more errors, all mine
+
+Asked to check the artifacts were right. A checker over both pages
+(`scratchpad/review.py`: every data-screen, data-go, data-ref, data-pop and
+data-open target resolves; the map is 26 rows in order; tag and button
+balance; the page's card list against NOW.md §3) found no structural faults
+and four content ones:
+
+1. **Feature 8's map row still said "the vending feed" was a source** the
+   owner must supply — the same error withdrawn as S.3 an hour earlier, in a
+   second place. Now names supplier-per-product, arrivals, documents, people.
+2. **P2.g's done-when still said "AJI CMG says it has no feed"**, in the plan
+   page AND in NOW.md. Both now say vending is read and the switch is what is
+   missing, with the never-join rule and the overstated-profit flag beside it.
+3. **Every session count was wrong.** The headline said thirty-three (and
+   thirty-one before that) against **28** open cards; Phase 1 said eleven for
+   ten; Phase 2 said nine for eleven. Phase 3's seven was right. The calendar
+   bands were redrawn and the estimate moved from eight-to-ten weeks to
+   **nine to eleven**, which is what 28 cards at four a week plus one fix in
+   three actually comes to.
+4. **"3 open defects"** should be 3 open REPORTS holding ten defects between
+   them.
+
+`review.py` now FAILS on a wrong count rather than printing it, so the next
+edit cannot quietly desynchronise the page from §3. **The lesson worth
+keeping: every tally stated in prose in this project has been wrong at least
+once** — 17/6/3 double-counted a feature, three session counts, and a source
+that was never blocked. Derive a count or check it; never restate one.

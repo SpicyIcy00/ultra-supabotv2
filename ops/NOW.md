@@ -797,7 +797,7 @@ structural and cannot be bought away; *reasoning quality* is not, so a lever
 that only costs money is free and a lever that narrows what he reads is the
 product. That is why P0.6 refuses the row cap and accepts the TTL.
 
-**Phase 2 — the finding, to the Ideal UI.** Only after P1.✓. Nine sessions.
+**Phase 2 — the finding, to the Ideal UI.** Only after P1.✓. Eleven sessions.
 Answering mode reaches the screens in the Ideal UI (§6).
 
 - [ ] **P2.a a thread is already a page** — header with three views, Talk ·
@@ -841,8 +841,10 @@ Answering mode reaches the screens in the Ideal UI (§6).
       **Eval: subset.**
 - [ ] **P2.g the estate switch** — shops · AJI BARN · AJI CMG as a scope on
       the next question, travelling as store scope, from `metrics.yaml`'s
-      lists and nowhere else; AJI CMG reports no feed from a loaded result
-      and George says so. No eval.
+      lists and nowhere else. Vending is READ (`get_vending`, the `_php`
+      views); what is missing is the switch. The domains are compared side by
+      side and NEVER joined (`vending.never_join_to_store_domain: true`), and
+      any vending profit figure carries its overstated-on-72.7% flag. No eval.
 - [ ] **P2.h voice, and hands-free** — browser speech into the same
       composer, carrying the same selection; hands-free reads the claim
       aloud, shows the one line, evidence a tap away, interruptible. No new
@@ -982,7 +984,9 @@ for it.`):
   may see.
 
 **Calendar, honestly.** One card a day, Fridays for the sweep, one session in
-three a dogfood fix: eight to ten weeks to the Phase 3 gate. The sources
+three a dogfood fix: **28 open cards at four a week is seven weeks of cards,
+so nine to eleven weeks** to the Phase 3 gate. Phase 1 is ten cards, Phase 2
+eleven, Phase 3 seven. The sources
 decide whether 8, 23, 24 and 25 land inside that or after. The readable copy
 of this plan, with every card's prompt, is **George, The Build Plan** in §6.
 
