@@ -82,7 +82,7 @@ shippable. The full diagnosis is the report linked in section 6.
 | Live | **`ee29fa5`**, confirmed from `/health`: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `844cb3d1`. **The swap took 21 s with zero non-200s** — the second clean one in a row, and the second that carried NO migration. Read `/health` rather than believing this row: `a01706b` sat here as live while three commits had landed since. |
 | Last deploy | `a01706b`, **live and healthy when recorded**, and the swap was clean — polled every 20 s across it, zero non-200s, old build to new in about a minute. It carried NO migration (the schema was already at head), so the launcher took its `already at head` branch and ran no alembic at all. That is evidence the outage below lives in the migration path specifically, not in the boot or the build — evidence, not the deploy log. Before it, `8b0325a`. `8b0325a` carried P0.3 and P0.4, and applying migration `w7x8y9z0a1b2` cost **~50 minutes of 502**: the first boots crashlooped, the migration did not apply, and nothing was readable from outside. It came up on a later retry. Root cause still unknown — the Railway deploy log for that build has not been read. `69b51bd` is the fix for the *invisibility*, not for the cause. |
 | Phase | 0, consolidating |
-| Next card | **P1.b.** P1.a closed 2026-09-13: rejections per turn 0.75 → 0.33 (met), label share 50% → 33% (target 25%, **missed**), iterations 5.5 → 4.0 (target 2.5, **missed**), trust gate whole, 11 of 12 with `cannot` failing a wording-matched refusal check. The remaining label calls are one `compose` a turn, so the rest of both misses is READS, which is P1.c and P1.d. *(Superseded note, kept for the reason it gives: P1.a.)* Open is empty again: the "800 grams-worth" defect closed 2026-09-13 — George had rounded a drawn 801, and the gate that would have caught him quoting it EXACTLY was silent on the rounded one, so imprecision was the way past the guard. **Read the note under the baseline table before reporting any Phase 1 number against the twelve.** P0.6 also moved the cost lever: **the bill is round trips, not cache misses**, so P1.a and P1.b are the cost cards as well as the speed ones. |
+| Next card | **Whatever is Open in `ops/DOGFOOD_LOG.md`, then P1.c.** The remaining cards were rewritten 2026-09-13 into the plan that reaches the Ideal UI: P1.c–P1.k, P2.a–P2.h, P3.a–P3.f, and Phase 4 sources. P1.c, P1.d, P1.e and P1.g ARE the Open items, in the log's own agreed fixes. P1.b closed 2026-09-13: first composed object 16.8 → 8.2 s, first visible object unmoved at 7.0 s (bounded by the first round trip; only replay, P1.i/P1.j, can reach 2 s). The bill is round trips, not cache misses. Read the note under the baseline table before reporting any Phase 1 number against the twelve. |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
@@ -693,64 +693,218 @@ calls to answer "I can't see foot traffic".
       Suites exact: **1,497 pure** (was 1,468), **791 vitest** (was 781),
       `tsc -b` and `build` clean. Two live runs of the twelve, $1.59 and $1.71
       — a fifth of the $5–7 this file estimates.
-- [ ] **P1.c cheaper turns** — effort per turn (low for a label-only or
-      follow-up turn, medium for a fresh question, high for the investigation
-      ladder) via the mid-conversation effort message so the cache survives;
-      the six corrective gates become deterministic edits, keeping a model turn
-      only for a false write claim. Measure: median turn time, corrective turns
-      per turn, and every quality check on the twelve unchanged.
-- [ ] **P1.d fragments skip the model** — route through
-      `POST /george/replay`. **Two kinds, and they differ:** a NAVIGATION
-      fragment (the window control, a tapped subject, "last month") redraws
-      with no model call at all; an ANALYTICAL fragment ("products", "why?",
-      "compare these") draws instantly from the replay and George's reading
-      follows in the same turn. A reading is the point of an analytical
-      question and must not be dropped to win a latency number.
-      Measure: time to first visible change for each kind.
-- [ ] **P1.✓ close the phase** — every target reported against its number,
-      plus which cards actually paid.
+- [ ] **P1.c the reading leaves the widgets** — the top three Open items in
+      the dogfood log, done as the log's AGREED FIX says: `text` is REMOVED
+      from the compose vocabulary; the reading is a permanent region above
+      the board drawn from the turn's prose, never a tile; a turn with no
+      prose is recorded as a gap. Also the PESO match in `room/data.ts`
+      (a `value` column that is a count is not money) and the
+      `[object Object]` header. Subtraction, not a fallback tile.
+      Done when: "how are we doing" and "any problems" both show George's
+      words above whatever is drawn, on the live build; three of the twelve
+      re-run with prose on every turn. **Eval: subset** (the vocabulary is
+      model-facing).
+- [ ] **P1.d the board transforms; it never accumulates** — the rule decided
+      in the log: a question sharing no subject with the board CLEARS it; one
+      sharing a subject TRANSFORMS it in place; earlier turns fold to one
+      quiet tappable line above the finding. Absorbs the old P2.b. Done
+      when: "how are we doing" then "any problems" leaves one finding;
+      "why?" transforms the OPUS finding; a board test holds both. No eval.
+- [ ] **P1.e six marks, drawn one way each** — the renderer's fourteen
+      widget kinds become the catalogue in the Ideal UI: figure, dumbbell
+      (before/after), ranked (bars in cells), contributors (drivers), line
+      (baseline dotted when the tool returned one), table. Every block: a
+      claim-title, a subtitle derived from `meta` (metric, window, unit),
+      its own source line. Colour is direction only; digits mono and
+      tabular; direct labels, no legends. Existing compose blocks are MAPPED
+      onto the six so nothing George says stops rendering. Done when: every
+      block in four recorded runs renders as one of the six with a source
+      line; a palette test fails on a fifth data colour. No eval.
+- [ ] **P1.f compose narrows to the catalogue; the text gets three slots** —
+      the label grammar becomes the six marks plus a claim-title per block;
+      the findings roles become claim (one highlight) · caveat (whole, above
+      the figures) · next (one sentence, always last — the ladder's stop
+      sentence lands here). Coercion stays; what it validates gets smaller.
+      Done when: rejections ≤ 1 question, label share not worse than 33%,
+      trust rows unchanged, every answer has a claim and a next; style checks
+      NOT widened. **Eval: full.**
+- [ ] **P1.g arithmetic in prose, and a column name in the answer** — the two
+      trust failures George filed himself ("and 45 others"; `warning_stock`;
+      a forced caveat). The figure gate learns that a numeral equal to a
+      simple sum or difference of two figures on the board is a calculation
+      and strikes it with the same one corrective turn; the leak list gains
+      the missing column; the forced caveat is traced through stored frames.
+      Done when: `why` and `caveats` pass three runs each with ungrounded 0,
+      leaked 0, forced 0; the new gate case is a contract test. **Eval:
+      subset.**
+- [ ] **P1.h cheaper turns** — effort per turn via the mid-conversation
+      effort message (low: label-only or follow-up; medium: fresh question;
+      high: the ladder) so the cache survives; the six corrective gates
+      become deterministic edits, a model turn only for a false write claim.
+      `MAX_ROWS_TO_MODEL` stays 200. Done when: median turn time and
+      corrective turns per turn down, every quality row on the twelve
+      unchanged — any quality row moving fails the card. **Eval: full.**
+- [ ] **P1.i replay: the endpoint** — `POST /george/replay`: a stored call
+      with ONE argument changed among those the tool accepts (window, store,
+      group_by, rank_by, top_n), run as `george_ro`, returning `{rows, meta}`
+      and a board frame; no model; refusals in the tool's words; the changed
+      argument recorded on the post. Done when: "last week" → "August" on the
+      stored OPUS call returns in < 1.5 s with correct receipts; an
+      in-progress window is refused by name; contract tests hold both. No
+      eval.
+- [ ] **P1.j read-as tokens, and fragments that skip the model** — the
+      arguments the loop accepted drawn as tokens under every ask; a tap is a
+      replay. NAVIGATION fragments ("last month", a tapped shop, the window
+      control) redraw with no model call; ANALYTICAL fragments ("products",
+      "why?") draw from the replay and George's reading follows in the same
+      turn — never dropped for the number. "Not what I meant" is the one
+      token that costs a turn and records a belief. Done when: first visible
+      change for a navigation fragment < 2 s, for an analytical one < 2 s to
+      the figure, measured by `tests/evals/timing.py`. **Eval: subset.**
+- [ ] **P1.k visible work, for free** — from frames already carried: the line
+      above the claim (reads, tools, time, caveat count); the Working line as
+      a step list with a result and `duration_ms` per step, tappable;
+      "Behind it" as a view on the thread — reads with receipts, never code;
+      an underlined figure in a claim jumps to its read. Done when: "why is
+      Rockwell down" shows four steps with times and a finding after; nothing
+      model-written appears in a mono line. No eval.
+- [ ] **P1.✓ close the phase** — every target against its number, which
+      cards paid, what did not move and why; one full run of the twelve.
+      Then a Fable 5.1 review session reads the close-outs against the code
+      and names what Phase 2 should not trust. **Gate to Phase 2:** Open
+      empty five days running; median < 10 s or the shortfall named with its
+      cause; a navigation fragment redraws with no model call; trust rows
+      unchanged.
 
 **The standing gate on every Phase 1 card, and on P0.6.** This phase dismantles
-the machinery that enforces George's trust guarantees, so each card re-runs the
-twelve and reports, beside its own number: notices surfaced (must stay 100%),
-no figure in prose that no tool returned, refusals still refusing. A card that
-buys speed **or cheapness** by losing one of those has failed — say so rather
-than keeping the win.
+the machinery that enforces George's trust guarantees, so each card that is
+model-facing re-runs the twelve and reports, beside its own number: notices
+surfaced (must stay 100%), no figure in prose that no tool returned, refusals
+still refusing. A card that buys speed **or cheapness** by losing one of those
+has failed — say so rather than keeping the win. *Trustworthiness* is
+structural and cannot be bought away; *reasoning quality* is not, so a lever
+that only costs money is free and a lever that narrows what he reads is the
+product. That is why P0.6 refuses the row cap and accepts the TTL.
 
-**And the separation that gate rests on, because it decides which levers are
-even allowed.** *Trustworthiness* and *reasoning quality* are two different
-things. Trustworthiness is structural: figures come from tools, notices
-surface, refusals refuse, and no amount of caching, batching or budget work
-can make George invent a figure. Reasoning quality is not structural — it
-depends on what he can see and how hard he thinks, so anything that narrows
-context or lowers effort can dull him without tripping a single guarantee.
-**A lever that only costs money is free; a lever that narrows what he reads is
-the product.** That is why P0.6 refuses the row cap and accepts the TTL.
+**Phase 2 — the finding, to the Ideal UI.** Only after P1.✓. Nine sessions.
+Answering mode reaches the screens in the Ideal UI (§6).
 
-**Phase 2 — deepen the seven.** Only after P1.✓ meets its numbers.
+- [ ] **P2.a a thread is already a page** — header with three views, Talk ·
+      Behind it · Page, and an unkept state; "Keep as page" calls
+      `create_page` on the calls the loop marked pinnable and the header
+      turns to the page's name; the Page view lists what would be kept and
+      what is not pinnable and why. Done when: Keep as page → the page opens
+      in Kept re-running; a kept thread shows its page; a dom test holds it.
+      No eval.
+- [ ] **P2.b markers on figures, two voices, five colours** — the client
+      matches numerals in the claim to the turn's rows (as the eval does) and
+      draws the read's index after each; an unmatched numeral gets no marker
+      and the caveat colour. A scan test: model prose only in the serif,
+      frame-derived strings only in the mono. The accent scan extends to up,
+      down, george, quiet. No eval.
+- [ ] **P2.c a tap is context** — tapping a shop, product or driver adds its
+      ID FROM THE ROWS as a composer chip; short things resolve against the
+      board, not the transcript ("these two", "why?", "exclude the barn",
+      "last month"); selection travels as ids so "Rockwell" can never be
+      read as a product; two selected + "compare these" is a replay with two
+      subjects. Absorbs the old P2.a. Done when: tap OPUS, tap Rockwell,
+      "compare these" → a dumbbell in < 2 s with no model call; "why?" after
+      it is a turn scoped to both; tests on the resolution, not wording.
+      **Eval: subset.**
+- [ ] **P2.d actions that say why; grey text that finishes the question** —
+      label actions gain a TARGET (a row's subject id) and a REASON (a
+      characterisation, never a number — the annotation rule); the renderer
+      places a targeted action on its row, the rest at the foot; the cost
+      label (replay · ~1s · a turn) is derived. Ghost completions built
+      deterministically from the board (last read with one argument changed,
+      subjects on screen, pages naming them); Tab accepts; none ever needs a
+      model call. **Eval: subset.**
+- [ ] **P2.e replay an investigation** — a finished ladder walked from the
+      post's stored calls: each step's rows, receipts, time; a refusal shows
+      as a refusal; no planner. No eval.
+- [ ] **P2.f what do you remember?** — `view_memory` drawn as a finding:
+      every belief, when, from what, how often applied; Forget on each; "not
+      what I meant" → `record_belief` and the next answer uses it. Beliefs
+      are readings, never figures. Done when: "we means the shops" taught
+      once changes the next "how are we doing"; Forget removes it after.
+      **Eval: subset.**
+- [ ] **P2.g the estate switch** — shops · AJI BARN · AJI CMG as a scope on
+      the next question, travelling as store scope, from `metrics.yaml`'s
+      lists and nowhere else; AJI CMG reports no feed from a loaded result
+      and George says so. No eval.
+- [ ] **P2.h voice, and hands-free** — browser speech into the same
+      composer, carrying the same selection; hands-free reads the claim
+      aloud, shows the one line, evidence a tap away, interruptible. No new
+      surface. Absorbs the old P2.d. No eval.
+- [ ] **P2.✓ close** — walk the four board scenarios in the Ideal UI on the
+      live build, report each against it, one full run. **Gate to Phase 3:**
+      Open empty five days; the four scenarios work as drawn; median still
+      under target.
 
-- [ ] **P2.a** short things resolve against the board, not the transcript
-      ("these two", "why?", "exclude Air", "last month").
-- [ ] **P2.b** "Why?" and "and OPUS?" transform what is on the board instead of
-      adding beneath it.
-- [ ] **P2.c** one expressive form, through the grammar, for one real question
-      from the dogfood log that a conventional chart answered badly.
-- [ ] **P2.d** voice into the room's composer, carrying the same board
-      selection a typed question carries.
+**Phase 3 — operating mode.** Seven sessions. Stable surfaces of many
+objects; none recomposes on a question.
 
-After Phase 2: proactive investigation (already built — watches, standing
-questions and `get_attention` all work; what it needs is living with, not
-building), build-with-George beyond pages and workflows.
+- [ ] **P3.a Needs you as a queue** — one queue, per-kind verbs (Promote,
+      Switch on, Look into it), Later to tomorrow or Monday (a small per-user
+      snooze table — migration), keys j/k/e/l. Promote stays the only accent
+      action; a fired watch never wears it; empty and failed render without
+      it from a loaded result. No eval.
+- [ ] **P3.b Today is a list that ends** — three groups: what the morning
+      question found, what is due today (Needs you rows, watches dated
+      today), what you asked him to bring back ("ask me Thursday" is an item
+      on the snooze table); loading / failed / loaded are three renderings;
+      the end line only from a loaded empty result (UI rule 8). No eval.
+- [ ] **P3.c Kept: a page is a calm home** — a tile draws a sparkline and a
+      delta only when its call carried a series or a comparison, else a
+      figure and a time; under the pins the page's river from `page_events`
+      and posts naming it; tap a tile → the object in ~1 s. Never recomposed
+      by a question. No eval.
+- [ ] **P3.d the thing being built stays put** — consecutive turns sharing a
+      subject render as ONE pinned object with versions beside a narrower
+      finding, revised in place, version arrows back; every proposed write in
+      one PROVISIONAL frame (Keep · Discard · Try again · Not what I meant)
+      that turns solid only on the write's confirmation frame. The
+      acceptance arc, drawn as the Ideal UI draws it. **Eval: subset.**
+- [ ] **P3.e a change is a diff** — an edit to a rule, page or standing
+      question renders as before/after of its arguments over two versions,
+      never prose alone; Keep as version 2 makes an ungated version;
+      Backtest first queues one; the schedule still pins v1 and the
+      divergence notice says so; Running gains "see the diff". No eval.
+- [ ] **P3.f "usual" as a definition, then as a band** — `usual_weekday` in
+      metrics.yaml (same weekday over the last N closed weeks: low, high,
+      middle band, computed in the tool), THEN the band mark with today's
+      marker. George may not draw "usual" before the definition exists.
+      **Eval: subset.**
+- [ ] **P3.✓ close: the Seikyo arc, timed** — end to end on the live build as
+      the Ideal UI's build scenario draws it: morning finding → draft →
+      revise in place → save → page → Monday question → backtest → promote →
+      the v2 diff; every step timed; nothing described that is not shown.
 
-**Blocked on data, not on code — and these have lead time.** Four of the
-owner's 26 features cannot be started by any session here, because no source
-exists: **people and permissions** (feature 8/16), **documents and
-unstructured information** (24), **actions into the tools the business
-actually uses** (25), and **cross-business** (23 — the database holds one
-business; the FFR record in `metrics.yaml data_availability.ffr` lists what an
-authoritative source must provide). Building shapes with nothing behind them is
-forbidden. These are the owner's to source, and starting them in parallel with
-Phase 1 is the only way they are ready when the interaction work lands.
+**Phase 4 — sources. The owner's, and they start now.** Four of the 26
+cannot be built by any session because nothing is behind them; building a
+shape with nothing behind it is forbidden. Each becomes a card the day its
+source exists (`Log this: I have <the source> at <where>. Write the card
+for it.`):
+
+- **S.1 supplier per product** (feature 8, the purchasing arc) — a
+  product → supplier list, even rough; `ops/propose_supplier_map.py` runs
+  against it; the field lands in metrics.yaml.
+- **S.2 arrivals and open orders** (8) — the frozen PO export unfrozen, or a
+  dated weekly export; then cover accounts for lead time.
+- **S.3 AJI CMG's vending feed** (23) — where machine sales live and how
+  often they can be read; then the estate pill goes live.
+- **S.4 a document source** (24) — one mailbox or folder invoices arrive in
+  that a service can read; then `read_document` returns `{rows, meta}`.
+- **S.5 a supplier channel** (25) — how an order goes to Seikyo today; then
+  "Send" is the one action that leaves his hands, behind the provisional
+  frame, level five.
+- **S.6 people and permissions** (8) — who else uses George and what each
+  may see.
+
+**Calendar, honestly.** One card a day, Fridays for the sweep, one session in
+three a dogfood fix: eight to ten weeks to the Phase 3 gate. The sources
+decide whether 8, 23, 24 and 25 land inside that or after. The readable copy
+of this plan, with every card's prompt, is **George, The Build Plan** in §6.
 
 ---
 
@@ -851,6 +1005,14 @@ touches the surface, this is the screen to build toward.** It supersedes
 the four earlier renders (Whole, Borrowed, Borrowed II, Assembled), which
 stay only as the reasoning behind it; the borrowings and what was declined
 are in `ops/DECISIONS.md` under 2026-09-13.
+
+**The plan to build it: George, The Build Plan** —
+https://claude.ai/code/artifact/41329abe-5de8-4168-af7a-9817798877d5.
+The same cards as section 3, with every session's prompt, the phase gates,
+the six sources only the owner can supply, and the calendar. Section 3 is
+the source of truth; the page is the readable copy. The owner's two prompts
+are "Log this: …" and "Read ops/NOW.md. Do the next card." — nothing else is
+needed to run it.
 
 **A phase ends when the owner says it feels right — and it may never end with a
 rebuild.** If it does not feel right, the answer is the next fix to the same

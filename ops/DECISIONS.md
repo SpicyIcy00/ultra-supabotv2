@@ -2975,3 +2975,21 @@ needs a source, per function, in the owner's order.
 Status by that map: 17 built, 6 designed here (4, 7, 16, 20, 21, 26),
 4 need a source (8 in part, 23, 24, 25). Nothing on the map is claimed
 built that the code does not do today.
+
+## 2026-09-13 — The plan to the Ideal UI, session by session
+
+Artifact: George, The Build Plan (link in NOW.md §6). NOW.md §3 rewritten
+from P1.c onward: 31 sessions in four phases, one card each. Phase 1 (11)
+puts the three Open complaints first as cards P1.c/d/e/g, then speed (P1.h
+effort, P1.i replay endpoint, P1.j tokens and fragments), then visible work
+for free (P1.k). Phase 2 (9) brings answering mode to the Ideal UI: thread as
+page, markers, taps as context, targeted actions and ghost completions,
+investigation replay, memory view, estate switch, voice. Phase 3 (7) is
+operating mode: the queue, Today, Kept, the pinned object with versions and
+the provisional frame, diffs, the usual_weekday definition. Phase 4 is the
+six sources only the owner can supply, each a card the day it exists.
+Gates between phases are five days of empty Open plus the phase's numbers.
+Every prompt is "Read ops/NOW.md. Do the next card." — cold-session safe by
+construction. Honest calendar: eight to ten weeks to the Phase 3 gate.
+Old P2.a/b/d absorbed into P2.c, P1.d, P2.h; old P2.c (one expressive form)
+dropped with feature 4.
