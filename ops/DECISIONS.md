@@ -3425,3 +3425,28 @@ Circular.
 planning conversation leaves the plan describing it as pending. Any session
 that builds something a card covers must update the card in BOTH places in the
 same commit, and say in the close-out that it did.
+
+## 2026-09-13 — A label invented to fill a slot, and one rendered broken
+
+The owner queried P1.m's pill. Auditing every feature pill on the plan page
+against `ops/STANDARD.md` found two faults, both mine:
+
+1. **`#13 · #trust`** — a script that prefixed feature pills with `#` had
+   applied it to the word "trust" as well as to the numbers, producing a
+   reference to a feature that does not exist.
+2. **P1.m claimed `#10`, "judgment and prioritization".** It serves no feature
+   on the list; it fixes the eval suite. The number was chosen to fill a slot
+   the template expected, which is the failure mode a structural label is
+   supposed to prevent — a marker that encodes nothing true.
+
+**Fixed by admitting the exception rather than faking it.** Three cards serve
+the plan and not a feature, and now say so in their own words: **trust**
+(keeps George honest about figures), **speed** (shorter, cheaper turns), **the
+measure** (the suite every other number is reported through). The key on the
+page explains the exception, so the absence of a number is a statement rather
+than an omission.
+
+**Worth keeping, because it generalises past this page:** a template with a
+slot for every card invites a value for every card, and the invented ones look
+exactly like the real ones. When a card genuinely has no value for a slot,
+the honest output is the exception, not the nearest plausible number.
