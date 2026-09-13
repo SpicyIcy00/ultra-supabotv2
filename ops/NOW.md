@@ -226,7 +226,9 @@ where a regression was speculative AND **the four gate scenarios could not
 have seen it.** A new comparison (`P2.i`, `P3.f`) is a capability no gate
 scenario asks for, so a run there proves nothing; `P2.c`, `P2.d` and `P2.f`
 are context and rendering; `P1.c` breaks or fixes compose refusals, which are
-its own numbers. **Seven eval events across the whole plan, ~$11.** The money
+its own numbers. **Seven runs across 29 cards, $9.10 in total** — P1.g the
+gate at $0.55; P1.f, P1.h and the three closes at $1.15 each (v2 is cheaper
+than v1); P1.m $2.80 for both suites — down from ~$14.90. The money
 saved is ~$3; the real gain is six sessions that do not stop to run something
 that could not inform them.
 
