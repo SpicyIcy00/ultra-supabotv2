@@ -3371,3 +3371,31 @@ model-scoped and an eval must run what production runs. Cutting more
 scenarios: 28% of the cost between all of them.
 
 **Plan total ~$11.04, six live runs.**
+
+## 2026-09-13 — The plan page and NOW.md now check each other
+
+Asked whether both had actually been revised, a cross-check was written rather
+than an assurance given (`scratchpad/crosscheck.py`). It reads the eval tag off
+every card in BOTH documents, derives the plan's total from the cards, and
+compares it with the total each document quotes. It found two real faults:
+
+1. **`P3.✓` never said it ran anything**, while the plan's total counted a run
+   for it. The total was right and the card was silent — the final close now
+   states its one full run of v2, as the other two closes do.
+2. The page priced the gate as "63c" in prose and described the replay without
+   naming `tests/evals/corpus.py`, so neither was traceable from the page to
+   the repository. Both fixed.
+
+Two more were the checker's fault, not the documents': done Phase 0 cards
+exist only in NOW.md, and a retired figure quoted where the page EXPLAINS it
+was wrong is history rather than a stale claim.
+
+**The derived total and the quoted total now agree at $11.04** across six live
+runs (P1.f, P1.h, P1.m and the three closes at ~$1.84). **No card carries the
+gate any more** — P1.g became free through the corpus replay — so $0.63 is now
+what an unplanned prompt-touching change costs, which is a dogfood fix rather
+than a card, and the page says so.
+
+**Worth keeping:** every figure stated in prose in this project has been wrong
+at least once, and the two totals disagreeing by $1.84 was found by a script,
+not by reading. Derive a number or check it; never restate one.

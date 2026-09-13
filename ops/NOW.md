@@ -1126,6 +1126,11 @@ objects; none recomposes on a question.
       the Ideal UI's build scenario draws it: morning finding → draft →
       revise in place → save → page → Monday question → backtest → promote →
       the v2 diff; every step timed; nothing described that is not shown.
+      **One full run** of v2 beside it, as the other two closes do — this one
+      closes the plan, so the trust rows are reported against Phase 1's
+      baseline one last time. (Added 2026-09-13: this card said nothing about
+      a run while the plan's total counted one for it. The total was right and
+      the card was silent.)
 
 **Phase 4 — sources. The owner's, and they start now.** Four of the 26
 cannot be built by any session because nothing is behind them; building a
