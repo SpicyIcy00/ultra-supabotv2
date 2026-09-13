@@ -140,6 +140,23 @@ hundred on preamble. **A gap is not a defect until checked against today's
 code** — the loudest, 89 × `top_n must be an integer`, was fixed in `0ba0b4e`
 the same day it stopped. Two filed, both still live.
 
+## 2026-09-13 — P0.3, the clock (Phase 0, session 6)
+
+**Turn time looked derivable and is not.** `logged_at - asked_at` is the
+database's insert clock minus the web process's start clock: across 193 turns
+the api_error ones, which die in under a second, derive to a median of **minus
+1.68 s**, so the two machines are at least 1.82 s apart. `duration_ms`,
+`iteration_ms` and `corrective_turns` (alembic `w7x8y9z0a1b2`) come off one
+monotonic clock inside the turn instead. `ops/turn_clock.py` prints both and
+labels which is which; it works against an unmigrated database on purpose,
+because a report you cannot run until the deploy is fixed is a report nobody
+runs. **Corrective turns had never been logged at all** — six gates, six local
+variables, and P1.c is measured on them. The first measured median, from the
+twelve: **27.4 s against a target of 10**, with 5.5 round trips at 4.8 s each,
+which is where the card's own reading says the time is. **The card leaves a
+migration on `main` and P0.4 undone, so the next deploy crashloops** — said
+here and at the top of NOW.md rather than discovered on Railway.
+
 
 ---
 

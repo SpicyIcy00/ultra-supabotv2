@@ -176,8 +176,15 @@ class Report:
                       for c in turn.calls],
             "notices": [n.get("kind") for n in turn.notices],
             "warnings": [w.get("reason") for w in turn.warnings],
+            # duration_ms, iteration_ms and corrective_turns are the clock
+            # (P0.3). The twelve are where the Phase 1 wall-clock baseline
+            # comes from — real model, real reads — and a measurement the
+            # report does not keep is a measurement nobody can compare
+            # against next time.
             "done": {k: turn.done.get(k) for k in ("iterations", "tool_calls", "executed_calls",
-                                                    "duplicate_reads", "status", "notice_forced")},
+                                                    "duplicate_reads", "status", "notice_forced",
+                                                    "duration_ms", "iteration_ms",
+                                                    "corrective_turns")},
             "findings": findings,
             "judge": judge,
         })

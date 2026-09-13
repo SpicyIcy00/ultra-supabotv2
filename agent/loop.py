@@ -1650,13 +1650,21 @@ class ConversationLog:
         # notices are FULL objects ({kind, message, source}) and receipts is the
         # last tool meta: both are what a reopened chat needs to show the
         # caveat in words and the figure with its timestamp.
+        #
+        # THE CLOCK IS MEASURED, NOT DERIVED. duration_ms, iteration_ms and
+        # corrective_turns all come from one monotonic clock inside the turn.
+        # `logged_at - asked_at` looks like the same number and is not: those
+        # are the database's clock and the web process's, and on 2026-09-13
+        # they were ~1.8 s apart — enough to make every api_error turn appear
+        # to have finished before it started. See alembic w7x8y9z0a1b2.
         self._exec(
             "INSERT INTO george.conversations "
             "(id, thread_id, user_id, asked_at, question, final_answer, model, "
             " iterations, input_tokens, output_tokens, cache_read_tokens, "
             " cache_creation_tokens, notices, "
-            " notice_forced, status, receipts) "
-            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            " notice_forced, status, receipts, "
+            " duration_ms, iteration_ms, corrective_turns) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
             (
                 self.conversation_id, self.thread_id, kw.get("user_id"),
                 kw["asked_at"], kw["question"], kw.get("final_answer"), MODEL,
@@ -1665,6 +1673,10 @@ class ConversationLog:
                 json.dumps(_json_safe(kw.get("notices") or [])),
                 kw.get("notice_forced", False), kw["status"],
                 json.dumps(_json_safe(kw["receipts"])) if kw.get("receipts") else None,
+                kw.get("duration_ms"),
+                json.dumps(list(kw.get("iteration_ms") or []))
+                if kw.get("iteration_ms") else None,
+                kw.get("corrective_turns"),
             ),
         )
 
@@ -2071,6 +2083,25 @@ async def run(
     defs = _load_defs()
     log = ConversationLog(thread_id=thread_id)
     asked_at = datetime.now(timezone.utc)
+    # ------------------------------------------------------------------
+    # The clock (P0.3).
+    #
+    # ONE monotonic clock, read at the turn's edges and at each iteration
+    # boundary. Monotonic and not wall-clock because this measures an
+    # interval, and an NTP correction mid-turn would otherwise land in the
+    # figure; not `logged_at - asked_at` because those are two machines,
+    # and the database's clock ran ~1.8 s behind the web process's on the
+    # day this was written — enough to give a turn that died in under a
+    # second a negative duration. See alembic w7x8y9z0a1b2.
+    #
+    # `iteration_marks` holds the start of each iteration; the deltas
+    # between consecutive marks, plus the tail from the last mark to the
+    # end of the turn, ARE the per-iteration times. Recorded this way so
+    # there is exactly one insertion point, rather than one per path out
+    # of a loop body that can break, continue or raise.
+    # ------------------------------------------------------------------
+    turn_started = time.monotonic()
+    iteration_marks: list[float] = []
 
     # What the injected tools are allowed to act on: the writers and the runner,
     # the question as asked, and (filled below, as calls run) the record of what
@@ -2237,6 +2268,7 @@ async def run(
     try:
         while iterations < MAX_ITERATIONS:
             iterations += 1
+            iteration_marks.append(time.monotonic())
 
             # Cache breakpoints: tools render first, then system, then messages.
             # One breakpoint at the end of each stable region covers both. The
@@ -3102,6 +3134,26 @@ async def run(
         log.gap("unhandled", f"{type(exc).__name__}: {exc}"[:2000])
         yield _sse("error", {"message": f"{type(exc).__name__}: {exc}"})
 
+    # The clock, read once, after everything the person waited for.
+    #
+    # The tail is deliberate: the last iteration's time runs from its mark to
+    # HERE, which includes the corrective gates and the surface scans that ran
+    # after the model stopped talking. Those are part of the wait, so they are
+    # part of the measurement — an iteration figure that stopped at the last
+    # API response would flatter the turn by exactly the work Phase 1 is
+    # trying to remove.
+    ended = time.monotonic()
+    duration_ms = int(round((ended - turn_started) * 1000))
+    edges = [*iteration_marks, ended]
+    iteration_ms = [int(round((b - a) * 1000)) for a, b in zip(edges, edges[1:])]
+    # All six gates, as one number. Each is a whole extra model round trip
+    # asked for by deterministic code, and until now every one of them was
+    # counted in a local variable the log never saw — so "corrective turns per
+    # turn", which P1.c is measured on, could not be read back at all.
+    corrections_total = (corrective_turns + pin_corrections + save_corrections
+                         + page_corrections + volunteer_corrections
+                         + restate_corrections)
+
     log.conversation(
         user_id=user_id, asked_at=asked_at, question=question,
         final_answer=answer or None, iterations=iterations,
@@ -3111,6 +3163,8 @@ async def run(
         notices=pending,
         notice_forced=notice_forced, status=status,
         receipts=last_meta,
+        duration_ms=duration_ms, iteration_ms=iteration_ms,
+        corrective_turns=corrections_total,
     )
 
     # The same turn in the river. Alongside the log row, never instead of it:
@@ -3194,6 +3248,13 @@ async def run(
         "duplicate_reads": duplicate_reads,
         "status": status,
         "notice_forced": notice_forced,
+        # The same measured clock that goes to the log, so a client and an
+        # eval report the number the log holds rather than one of their own.
+        # The room times the wait itself while it waits (it has to — nothing
+        # has arrived yet); this is what the wait actually was.
+        "duration_ms": duration_ms,
+        "iteration_ms": iteration_ms,
+        "corrective_turns": corrections_total,
         "usage": usage,
         "cache_hit": usage["cache_read"] > 0,
         # Whether cache_hit means anything for this turn. A turn that never

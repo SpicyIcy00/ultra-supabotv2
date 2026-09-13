@@ -562,6 +562,15 @@
   font: 400 10.5px/1.2 var(--mono);
   color: var(--ink-3); opacity: 0.85;
 }
+/* How long he has been at it. Tabular so the digits do not shuffle the line
+   sideways once a second, and quiet — it is the wait, not the answer. It
+   never takes the accent: that colour means "needs you" and nothing else. */
+.r-work--clock { color: var(--ink-3); }
+.r-work-clock {
+  font: 400 10.5px/1.2 var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3); opacity: 0.7;
+}
 @media (prefers-reduced-motion: no-preference) {
   .r-work { animation: r-work-in 260ms ease-out both; }
 }

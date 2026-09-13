@@ -68,6 +68,15 @@ CREATE TABLE george.conversations (
     -- by the web process (alembic m7n8o9p0q1r2). The row stays for the gap log
     -- and pin provenance.
     hidden_at          timestamptz,
+    -- The clock, added 2026-09-13 (alembic w7x8y9z0a1b2). Read from ONE
+    -- monotonic clock in the loop, never from logged_at - asked_at: those are
+    -- two machines, and the database's ran ~1.8 s behind the web process's on
+    -- the day this was added. duration_ms is the whole turn, iteration_ms the
+    -- same clock per model round trip in order, corrective_turns how many of
+    -- the six gates made George write the answer again.
+    duration_ms        integer,
+    iteration_ms       jsonb,
+    corrective_turns   integer,
     logged_at          timestamptz NOT NULL DEFAULT now()
 );
 

@@ -663,6 +663,20 @@ export interface DoneFrame {
   tool_calls: number;
   status: string;
   notice_forced: boolean;
+  /**
+   * The wait, measured (P0.3): one monotonic clock inside the turn, the same
+   * figure written to george.conversations. Absent on turns from a build
+   * before the clock existed — which is not the same as zero, and is why this
+   * is optional rather than defaulted.
+   */
+  duration_ms?: number;
+  /** The same clock per model round trip, in order. */
+  iteration_ms?: number[];
+  /**
+   * How many times deterministic code made George write the answer again —
+   * the six gates as one number. Each is a whole extra round trip.
+   */
+  corrective_turns?: number;
   usage: {
     input: number;
     output: number;

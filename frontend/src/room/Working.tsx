@@ -22,7 +22,53 @@
  * between a read that found the business and one that found nothing, and it is
  * knowable from the frame rather than from the prose.
  */
+import { useEffect, useState } from 'react';
+
 import type { AnswerTurn } from './data';
+
+/**
+ * HOW LONG HE HAS BEEN AT IT (P0.3).
+ *
+ * The one number on this line that does not come from a frame, and it is
+ * allowed for the reason the rest are not: nothing has arrived yet. A person
+ * waiting has no way to tell a turn that is working from one that has stalled,
+ * and Phase 1's targets are seconds — first visible change under 2 s, median
+ * answer under 10 s — so the wait is the thing being worked on. Showing it is
+ * showing the subject.
+ *
+ * It is a measurement, not an estimate: the turn's own start time, which the
+ * client set when it asked, against the clock now. There is no progress bar,
+ * no predicted finish and no percentage — none of those is knowable, and
+ * inventing one is what the header of this file forbids.
+ *
+ * The server measures the same wait properly (`duration_ms` on the `done`
+ * frame and in george.conversations, off one monotonic clock inside the
+ * turn). That is the figure the clock report reads. This is what the person
+ * sees while it is still running.
+ */
+function useElapsed(startedAt: string | undefined, live: boolean): number | null {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!live) return;
+    // Re-read immediately so a turn that starts does not carry the stale
+    // `now` from whenever this component last rendered.
+    setNow(Date.now());
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [live, startedAt]);
+  const started = startedAt ? Date.parse(startedAt) : NaN;
+  if (!Number.isFinite(started)) return null;
+  // Never negative: a client clock nudged backwards mid-turn would otherwise
+  // count down, which reads as a bug in George rather than in the clock.
+  return Math.max(0, Math.round((now - started) / 1000));
+}
+
+/** Seconds as a person reads them: `8s`, then `1m 04s` once a minute is up. */
+export function elapsedWords(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  return `${m}m ${String(seconds - m * 60).padStart(2, '0')}s`;
+}
 
 /**
  * What each tool is, in words: what it looks like happening, and what it looks
@@ -85,13 +131,19 @@ function counts(tool: string): boolean {
 }
 
 export function Working({ turn, live }: { turn: AnswerTurn | null; live: boolean }) {
+  // Before the early return: a hook cannot be called conditionally, and the
+  // turn is the only thing it needs.
+  const elapsed = useElapsed(turn?.at, live);
   // The board is the result. While he is finished, this has nothing to add,
   // and a trail that lingered would be a second account of the same thing.
   if (!live || !turn) return null;
+  const clock = elapsed === null ? null : (
+    <span className="r-work-clock">{elapsedWords(elapsed)}</span>
+  );
   const calls = turn.toolCalls.filter((c) => c.duplicate_of === undefined);
   if (!calls.length) {
     // Real, and the only honest thing to say before the first call returns.
-    return <p className="r-work">thinking…</p>;
+    return <p className="r-work">thinking…{clock}</p>;
   }
 
   return (
@@ -114,6 +166,10 @@ export function Working({ turn, live }: { turn: AnswerTurn | null; live: boolean
           </p>
         );
       })}
+      {/* At the FOOT of the trail, not beside the running line: a call that
+          lands moves that line's words, and a number that jumped with it
+          would read as part of the call rather than as the wait. */}
+      {clock && <p className="r-work r-work--clock">{clock}</p>}
     </div>
   );
 }

@@ -59,9 +59,9 @@ shippable. The full diagnosis is the report linked in section 6.
 |---|---|
 | Product branch | `main` — `feature/workspace` merged into it 2026-09-12 |
 | Head | `fd5b0fb` — **pushed 2026-09-13**, `main` and `origin/main` identical. That push also carried `47fb3c2`, a docs commit the previous session left behind. |
-| Last deploy | `fd5b0fb`, pushed 2026-09-13 — ops, tests and docs only, so the build changes and the behaviour does not. Before it, `d44249c`. **No migration in either** — schema stays `v6w7x8y9z0a1`, which the live database already has, so the schema-behind crashloop of 09-12 cannot repeat here. Railway was healthy before the push and watched across it. |
+| Last deploy | `fd5b0fb`, pushed 2026-09-13 — ops, tests and docs only, so the build changes and the behaviour does not. Before it, `d44249c`. **No migration in either** — schema stayed `v6w7x8y9z0a1`, which the live database already has. **That is no longer true of `main`:** P0.3 added `w7x8y9z0a1b2` and did not apply it, so the next deploy IS the 09-12 crashloop unless P0.4 lands or somebody migrates first. Railway was healthy before the push and watched across it. |
 | Phase | 0, consolidating |
-| Next card | **P0.4, the deploy migrates itself** — but DOGFOOD_LOG has two Open entries from the P0.5 sweep, and Open wins |
+| Next card | **P0.4, the deploy migrates itself — now blocking, not merely next.** P0.3 left an unapplied migration (`w7x8y9z0a1b2`) on `main`, so the next deploy boots code expecting a schema the live database does not have and refuses to serve. DOGFOOD_LOG still has two Open entries from the P0.5 sweep and Open wins over the speed cards; P0.4 wins over both, because until it is done no fix reaches Railway at all. |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
@@ -215,10 +215,23 @@ card below that is not marked done. One per session either way.
       filed (dead_stock/AJI BARN, a save recording only an exception name);
       the loudest finding, 89 `top_n must be an integer`, was already fixed in
       `0ba0b4e` — which is why the prompt now says check before filing.
-- [ ] **P0.3 clock** — `duration_ms` per turn and per iteration on
-      `george.conversations`; elapsed time in the room's Working line; a query
-      reporting median and p90 turn time, calls, iterations and corrective
-      turns per turn over 7 days. **Its first median is the Phase 1 baseline.**
+- [x] **P0.3 clock** — `duration_ms`, `iteration_ms` and `corrective_turns` on
+      `george.conversations` (alembic `w7x8y9z0a1b2`), off ONE monotonic clock
+      inside the turn; elapsed seconds in the room's Working line; and
+      `ops/turn_clock.py`, which reports median, p90 and worst for turn time,
+      per round trip, iterations, calls and corrective turns over a window.
+      **The first median is 27.4 s** — the target is under 10, so the gap is
+      2.7x. Suites exact: 1,355 pure (was 1,331), 781 vitest (was 774),
+      `tsc -b` and `build` clean. The twelve were re-run for the wall-clock
+      number and **12 of 12 passed**, including the strict `why` that failed
+      at P0.1.
+      **Two things this card could not do.** The measured clock cannot be
+      backfilled — those turns never read a clock — so the production reading
+      below is derived, not measured, and it says so. And **this card adds a
+      migration while P0.4 is open**: deploying it as it stands boots code
+      expecting `w7x8y9z0a1b2` against a database on `v6w7x8y9z0a1`, and
+      startup refuses to serve — the 09-12 crashloop exactly. P0.4, or a
+      deliberate `alembic upgrade head`, comes before this reaches Railway.
 
 **Phase 1 — make it work, then make it fast. In that order.**
 
@@ -236,18 +249,40 @@ once it works: **first visible change < 2 s, median answer < 10 s, navigation
 fragments answered with no model call at all.** Every card reports against the
 baseline below and the twelve-question eval.
 
-**The measured baseline** (the twelve questions, 2026-09-12 — wall-clock is the
-one number missing and P0.3 adds it). `verification/` is **gitignored**, so this
-table is the record, not the JSON; P0.1's re-run is in brackets, and the spread
-between the two is what one real-model run costs a figure:
+**The measured baseline** (the twelve questions). `verification/` is
+**gitignored**, so this table is the record, not the JSON. Three real-model
+runs now: 09-12 is the original, P0.1's re-run is in brackets beside it, and
+**P0.3's run on 2026-09-13 is the one that carries the clock** — it is the
+column a Phase 1 card reports against.
 
-| | now | after Phase 1 |
-|---|---|---|
-| iterations per turn, median / max | **5.5 / 8** [6.0 / 10] | ≤ 2.5 |
-| calls per turn, median | 5 [5] | unchanged |
-| label calls as a share of all calls | **51%** (28 of 55) [52%, 33 of 63] | ≤ 25% |
-| questions where `compose` was rejected | **8 of 12** [6 of 12] | ≤ 1 |
-| median answer, wall-clock | unmeasured | < 10 s |
+| | 09-12 [P0.1] | **P0.3, 09-13** | after Phase 1 |
+|---|---|---|---|
+| **median answer, wall-clock** | unmeasured | **27.4 s** · p90 45.1 · worst 71.8 | **< 10 s** |
+| per model round trip, median | unmeasured | 4.8 s · p90 10.6 · worst 31.9 | — |
+| iterations per turn, median / max | **5.5 / 8** [6.0 / 10] | 5.5 / 8 | ≤ 2.5 |
+| calls per turn, median | 5 [5] | 5 | unchanged |
+| label calls as a share of all calls | **51%** (28 of 55) [52%, 33 of 63] | 50% (28 of 56) | ≤ 25% |
+| questions where `compose` was rejected | **8 of 12** [6 of 12] | 5 of 12, 9 rejections | ≤ 1 |
+| corrective turns per turn, median | unmeasured | 0 · 5 across the twelve, worst 2 | — |
+| notices surfaced · forced · invented figures | — | 12 · 0 · 0 | unchanged |
+
+**27.4 s is the number Phase 1 has to move, and the arithmetic says where
+from.** 5.5 round trips at a 4.8 s median is most of the turn; the reads
+inside them are already batched and already concurrent. Getting to 10 s means
+removing round trips, which is what P1.a, P1.c and P1.d each do — so the
+per-round-trip row is the one to watch for a card that made a turn cheaper
+without making it shorter.
+
+**And what real use looks like, which is not the twelve**
+(`ops/turn_clock.py --days 30`, read 2026-09-13). 193 turns, 133 answered, but
+145 of them are the one scripted `coverage` sweep; `--user-only` leaves 46
+answered turns by a person. Turn time there is **derived, not measured** —
+`logged_at - asked_at`, which is the database's insert clock minus the web
+process's start clock, and the two are 1.82 s apart at least, because some
+turn in that window derives to −1.82 s. Derived median 25.8 s over everything,
+20.4 s over people only; iterations per turn 3.0, calls 2.0. **No measured
+figure will exist until a build carrying `w7x8y9z0a1b2` serves real turns** —
+the column starts NULL and there is nothing to backfill it from.
 
 **Read this before planning any Phase 1 card.** An iteration is one sequential
 model round trip, and it is iterations — not database reads — that make a turn
@@ -337,8 +372,10 @@ Phase 1 is the only way they are ready when the interaction work lands.
 Run from the repo root. The interpreter is `.venv\Scripts\python.exe`; a system
 `python` cannot import the backend (pinned SQLAlchemy).
 
-    .venv\Scripts\python.exe ops/verify_integration.py pure     # 1,326 expected
+    .venv\Scripts\python.exe ops/verify_integration.py pure     # 1,355 expected
     .venv\Scripts\python.exe ops/sweep_gaps.py --days 7        # the weekly sweep
+    .venv\Scripts\python.exe ops/turn_clock.py --days 7        # the clock (P0.3)
+    .venv\Scripts\python.exe ops/turn_clock.py --days 30 --user-only
     cd frontend && npm ci                                       # after any merge
     cd frontend && npx vitest run                               # 774 expected
     cd frontend && npx tsc -b --noEmit
