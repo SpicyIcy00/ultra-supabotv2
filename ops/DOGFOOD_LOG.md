@@ -57,6 +57,10 @@ on compose frame" does.
 
 ## Open
 
+---
+
+## Fixed
+
 ### 2026-09-13 · a failed save records only the name of the exception
 
 > The workflow could not be saved: ProgrammingError. The answer above is
@@ -72,9 +76,35 @@ is not recoverable from the log at all**. `routes/george.py:1714` formats
 write broke, and nothing about how, cannot be swept. The message to the model
 is right; the row written beside it should carry the cause.
 
----
+**Cause.** Nothing was ever lost. Every failing route already raises
+`from exc` — 23 of them — so the real exception has been sitting on
+`__cause__` since the first commit and read by nobody. The loop turned the
+exception into one string, `str(exc)`, and that string was both what the model
+was told and what the gap row recorded.
 
-## Fixed
+**Fixed** in `agent/loop.py`. A refused or failed call now carries the cause
+out beside the sanitised sentence, and `run()` strips it before anything the
+model is sent is built. The gap row records the sentence FIRST — so a
+truncated row still says what the model was told — and the cause after it.
+
+**A credential in a cause is redacted.** A connection error carries the URL and
+the URL carries a password; the gap log is a row a person reads, so it gets the
+same rule as a shell probe.
+
+**Two things this nearly got wrong**, both caught by testing the fix rather
+than trusting it. `_truncate` returns the SAME dict when the rows fit, and a
+refusal has no rows — so the payload the model is sent IS the payload the
+diagnostic travels on, and only the strip separates them. The first version of
+the leak test asserted on the SSE frames instead, and **passed against a loop
+with the strip deliberately removed**; it now asserts on what the client
+recorded being sent, and a mutation check confirms it fails without the fix.
+The second was a sentinel collision: the tool schemas are part of every
+request and contain ordinary English, so searching them for "does not exist"
+matched a `get_sales` parameter description.
+
+9 cases in `tests/test_gap_diagnostic_contract.py`, including a guard on the
+guard.
+
 
 ### 2026-09-13 · get_dead_stock calls AJI BARN an unknown store
 

@@ -1251,6 +1251,48 @@ async def _injected_args(name: str, args: dict, ctx: Optional[WriteContext]) -> 
         return {**args, argument: {"error": f"{type(exc).__name__}: {exc}"[:300]}}
 
 
+# --------------------------------------------------------------------------
+# What actually broke, for the log and never for the model
+#
+# A write that fails is reported to the model in ONE sanitised sentence — "The
+# workflow could not be saved: ProgrammingError" — because raw diagnostics must
+# not reach an answer (UI rule 4). That sentence is right, and it was also the
+# only thing written to george.gaps, so the defect feed recorded THAT a write
+# broke and nothing about HOW. Two of those on 2026-09-03 are unrecoverable.
+#
+# Nothing was ever lost: every one of those routes raises `from exc`, so the
+# real exception is on __cause__ and has simply never been read. This carries
+# it beside the sanitised message on the payload, under a key that is stripped
+# in run() before anything the model sees is built.
+# --------------------------------------------------------------------------
+DIAGNOSTIC_KEY = "_diagnostic"
+
+# A connection error carries the URL, and the URL carries a password. The gap
+# log is a row a person reads, so it gets the same rule as a shell probe.
+_CREDENTIAL = re.compile(r"(?P<scheme>\w+://)[^:/@\s]+:[^@/\s]+@")
+
+
+def _cause_of(exc: BaseException, depth: int = 4) -> Optional[str]:
+    """The exception a sanitised message was raised FROM, as one line."""
+    chain: list[str] = []
+    cur = exc.__cause__
+    while cur is not None and len(chain) < depth:
+        chain.append(f"{type(cur).__name__}: {cur}")
+        cur = cur.__cause__
+    if not chain:
+        return None
+    return _CREDENTIAL.sub(r"\g<scheme>***:***@", " <- ".join(chain))[:1500]
+
+
+def _refusal(exc: BaseException, started: float) -> tuple[dict, str, int]:
+    """The (payload, error, ms) a refused or failed call returns."""
+    payload: dict = {"rows": [], "meta": {"error": str(exc)}}
+    cause = _cause_of(exc)
+    if cause:
+        payload[DIAGNOSTIC_KEY] = cause
+    return payload, str(exc), int((time.perf_counter() - started) * 1000)
+
+
 async def _call_tool(name: str, args: dict) -> tuple[dict, Optional[str], int]:
     """
     Run a tool off the event loop. Returns (payload, error_message, duration_ms).
@@ -1269,8 +1311,7 @@ async def _call_tool(name: str, args: dict) -> tuple[dict, Optional[str], int]:
     except (ValueError, KeyError, RuntimeError) as exc:
         # A refusal is a real answer — the tool declining to mislead. It goes
         # back to the model as an error result, never swallowed.
-        return ({"rows": [], "meta": {"error": str(exc)}}, str(exc),
-                int((time.perf_counter() - started) * 1000))
+        return _refusal(exc, started)
 
 
 async def _call_injected(registry: dict[str, Callable], name: str, args: dict,
@@ -1293,8 +1334,7 @@ async def _call_injected(registry: dict[str, Callable], name: str, args: dict,
         result = await fn(**args, ctx=ctx)
         return result, None, int((time.perf_counter() - started) * 1000)
     except (ValueError, KeyError, RuntimeError) as exc:
-        return ({"rows": [], "meta": {"error": str(exc)}}, str(exc),
-                int((time.perf_counter() - started) * 1000))
+        return _refusal(exc, started)
 
 
 async def _call_write_tool(name: str, args: dict,
@@ -2246,6 +2286,11 @@ async def run(
     # label can only ever name a call that already returned.
     calls_by_seq: dict[int, dict] = {}
 
+    # What actually broke, by seq, for the gap log only. Never reaches the
+    # model: the payload carries it out of the call and run() strips it before
+    # building anything the model is sent. See DIAGNOSTIC_KEY.
+    diagnostics: dict[int, str] = {}
+
     # The roles that stood, for the ANSWER POST and the UI. A later
     # record_findings call REPLACES this: the model refining its reading is
     # one reading, not two.
@@ -2860,6 +2905,11 @@ async def run(
             # is checked, so a label may name a read from this batch — and so
             # it can never name one that has not returned.
             for (gseq, b), (result, err, _ms) in done_calls:
+                # STRIPPED HERE, before anything the model sees is built from
+                # this payload. Every call in the batch passes through this
+                # loop exactly once, whichever of the three paths ran it.
+                if isinstance(result, dict) and DIAGNOSTIC_KEY in result:
+                    diagnostics[gseq] = result.pop(DIAGNOSTIC_KEY)
                 calls_by_seq[gseq] = {
                     "tool": b.name,
                     "arguments": dict(b.input),
@@ -2975,7 +3025,13 @@ async def run(
                 if is_duplicate:
                     pass                     # its gap was logged when it was decided
                 elif err:
-                    log.gap("tool_refused", err[:2000], b.name)
+                    # The sanitised sentence FIRST, so a truncated row still
+                    # says what the model was told, and the cause after it —
+                    # which is the half the defect feed was missing.
+                    cause = diagnostics.get(gseq)
+                    log.gap("tool_refused",
+                            (f"{err} | cause: {cause}" if cause else err)[:2000],
+                            b.name)
                 elif not (capped.get("rows") or []) and b.name not in FINDING_TOOL_FUNCTIONS:
                     log.gap("empty_result", json.dumps(_json_safe(b.input))[:2000], b.name)
 

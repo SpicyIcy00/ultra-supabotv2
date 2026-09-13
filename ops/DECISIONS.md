@@ -244,6 +244,27 @@ Scope note: the entry named dead_stock. Fixing only that would have left George
 explaining the warehouse for one reading and denying it exists for the next two,
 so sales and replenishment went with it — one call site each.
 
+## 2026-09-13 — the third dogfood fix, and Phase 0 closes
+
+A failed write recorded "ProgrammingError" and dropped the exception, so the
+defect feed said THAT a write broke and nothing about HOW. Nothing was ever
+lost: 23 routes raise `from exc` and `__cause__` had been unread since the
+first commit. The cause now travels beside the sanitised sentence and is
+stripped before anything the model is sent is built — the sentence stays the
+only thing the model sees (UI rule 4), the row gets both, credentials redacted.
+
+**The lesson is about the test, not the fix.** `_truncate` returns the SAME
+dict when rows fit, and a refusal has no rows, so the payload the model is sent
+IS the one the diagnostic travels on — only the strip separates them. The first
+leak test asserted on the SSE frames and **passed against a loop with the strip
+deliberately removed**. A mutation check found that; the rule it leaves is
+**delete the fix and watch the test fail before believing it**, which is the
+same lesson P0.4 taught about stubbed dry runs, arriving from the other
+direction.
+
+Open is empty for the first time since the dogfood log was started, and
+Phase 0 is closed. Phase 1 opens at P1.a against a measured median of 27.4 s.
+
 
 ---
 
