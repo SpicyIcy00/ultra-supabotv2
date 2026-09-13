@@ -61,7 +61,7 @@ shippable. The full diagnosis is the report linked in section 6.
 | Head | `fd5b0fb` — **pushed 2026-09-13**, `main` and `origin/main` identical. That push also carried `47fb3c2`, a docs commit the previous session left behind. |
 | Last deploy | `fd5b0fb`, pushed 2026-09-13 — ops, tests and docs only. Before it, `d44249c`. **Unpushed since: P0.3 and P0.4.** P0.3 added migration `w7x8y9z0a1b2` and the live database is still on `v6w7x8y9z0a1`; **P0.4 is what makes that safe** — the next deploy migrates itself before launching, rather than booting behind and refusing to serve. The first deploy carrying P0.4 is the one that applies P0.3's migration, and it is also the first one that can be checked from outside: `/health` will name the commit. |
 | Phase | 0, consolidating |
-| Next card | **The dogfood log's two Open entries** (dead_stock/AJI BARN, a save recording only an exception name) — Open wins over every card. Phase 0 is otherwise complete; after those, Phase 1 opens at P1.a. |
+| Next card | **The dogfood log's three Open entries** — George marked down for saying what he cannot see (filed from the P0.3 eval run), dead_stock/AJI BARN, and a save recording only an exception name. Open wins over every card. Phase 0 is otherwise complete; after those, Phase 1 opens at P1.a. |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying

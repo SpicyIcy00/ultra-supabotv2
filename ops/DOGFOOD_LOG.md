@@ -57,6 +57,43 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-13 · George is marked down for saying what he cannot see
+
+> I can't see foot traffic anywhere — nobody counts people through the door,
+> only tills. The closest thing is transactions, and Rockwell's were up on the
+> week to 6 September against the week before; that's sales made, not people
+> who walked in, so a busier shop that sold less would look identical.
+
+Filed from the P0.3 eval run, not by a person — twelve questions, real model,
+real reads, 2026-09-13. That answer is George at his best: asked for foot
+traffic, he refuses, names what the data is instead, and says what the
+substitute would hide. It is exactly what CLAUDE.md rule 10 asks for.
+
+He got a `transaction_wording` gap for it. `agent/surface.py
+transaction_synonyms` matches whole words from
+`surface.prose.transaction_synonyms_not_established` — customers, people,
+visits, visitors, traffic, footfall, shoppers — whenever the answer also says
+"transactions". It has **no notion of negation**, so "that's sales made, **not
+people** who walked in" trips the same wire as calling transactions footfall
+would. The check cannot tell a leak from a refusal that names the thing being
+refused, and the refusal is the behaviour we want most.
+
+Checked against today's code before filing, per the P0.5 rule: the scan is
+live and unchanged at `agent/surface.py:436`.
+
+**The other hit in the same run is probably real**, which is why this is worth
+separating rather than switching the check off: on "No — I meant last week",
+George wrote *"this was footfall through the till, not bigger purchases"* — and
+"footfall through the till" really does blur a transaction into a person. One
+false positive and one true one, from the same flat word list.
+
+**What the rest of that run's seven warnings were, so nobody files them twice.**
+Four `restated_figure` and one `volunteering_over_cap` were the gates working:
+every one fired mid-turn, George rewrote, and all twelve final answers ended
+with zero restated sentences. They are not defects — they are **five corrective
+round trips out of twelve questions**, which is cost, and it is P1.c's number
+rather than this log's.
+
 ### 2026-09-13 · get_dead_stock calls AJI BARN an unknown store
 
 > Unknown store 'AJI BARN'. Valid stores: Fairview, Greenhills, Magnolia,
