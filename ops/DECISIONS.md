@@ -3115,3 +3115,36 @@ edit cannot quietly desynchronise the page from §3. **The lesson worth
 keeping: every tally stated in prose in this project has been wrong at least
 once** — 17/6/3 double-counted a feature, three session counts, and a source
 that was never blocked. Derive a count or check it; never restate one.
+
+## 2026-09-13 — A borrowed pattern had no card, and the plan's labels were unreadable
+
+The owner asked what the pills on each card mean, asked to be told when to
+switch model, and asked whether the plan really covers the UI work discussed.
+Auditing the 24 borrowed patterns against the 28 cards found **one with no
+card at all**:
+
+**Borrowing 10, `@` names a thing (Hex's @ data source, Linear's @).** It is
+drawn in the Ideal UI's composer and no card had it. P2.c was tap-to-select
+and P2.d was ghost-text completion; neither is @-resolution. **Folded into
+P2.c** rather than given its own card, because it is one mechanism with two
+doors: a tap and an `@` both resolve a subject to an ID FROM THE ROWS,
+produce the same chip and travel in the same request field. An `@page` binds
+`page_scope`. The other 23 patterns all map to a card; so do the three open
+dogfood reports (P1.c, P1.d, P1.e, P1.g) and the hands-free mode discussed
+under the Jarvis question (P2.h).
+
+**The card labels were bare numbers with no key** — "2 · 6" next to
+"no eval" told the owner nothing. The plan page now carries a legend, and
+feature pills read "#2 · #6" so they read as references to his own 26 rather
+than as a date or a count.
+
+**Model switching is now stated, not implied.** Opus 5 builds every card;
+Fable 5.1 is for exactly two moments, and both are marked on the cards: after
+each phase closes (P1.✓, P2.✓, P3.✓ each carry a "switch to Fable after"
+pill and a review prompt), and any time a close-out surprises the owner.
+Never mid-card.
+
+**One rule kept, at a cost.** The switch-model pill was drawn in the accent
+first. Changed: this page is read beside the product, the accent means
+"needs you" and nothing else, and teaching a second association on a
+planning page is how the rule erodes. It is cream now.

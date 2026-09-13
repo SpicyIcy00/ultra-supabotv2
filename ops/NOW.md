@@ -813,15 +813,23 @@ Answering mode reaches the screens in the Ideal UI (§6).
       and the caveat colour. A scan test: model prose only in the serif,
       frame-derived strings only in the mono. The accent scan extends to up,
       down, george, quiet. No eval.
-- [ ] **P2.c a tap is context** — tapping a shop, product or driver adds its
-      ID FROM THE ROWS as a composer chip; short things resolve against the
+- [ ] **P2.c a subject becomes an id — by tap, and by `@`** — ONE mechanism
+      with two doors, which is why they are one card. **Tap:** a shop, product
+      or driver in the evidence adds its ID FROM THE ROWS as a composer chip.
+      **Type `@`:** completion over stores, suppliers, products and the
+      caller's own pages, resolved from the same reads `get_object` already
+      makes, landing as an id — so "@Rockwell" can never be read as a product
+      name, and an `@page` binds `page_scope`. Both produce the same chip and
+      travel in the same request field. Short things then resolve against the
       board, not the transcript ("these two", "why?", "exclude the barn",
-      "last month"); selection travels as ids so "Rockwell" can never be
-      read as a product; two selected + "compare these" is a replay with two
-      subjects. Absorbs the old P2.a. Done when: tap OPUS, tap Rockwell,
-      "compare these" → a dumbbell in < 2 s with no model call; "why?" after
-      it is a turn scoped to both; tests on the resolution, not wording.
-      **Eval: subset.**
+      "last month"); two subjects + "compare these" is a replay.
+      Absorbs the old P2.a. **The `@` half was missing from this plan until
+      2026-09-13** — it is borrowing 10 (Hex's `@` data source, Linear's `@`),
+      it is drawn in the Ideal UI's composer, and no card had it.
+      Done when: tap OPUS, tap Rockwell, "compare these" → a dumbbell in
+      < 2 s with no model call; typing "@Seik" offers the supplier, the page
+      and the rule, distinguished; the resolved id reaches the tool argument;
+      tests on the resolution, not the wording. **Eval: subset.**
 - [ ] **P2.d actions that say why; grey text that finishes the question** —
       label actions gain a TARGET (a row's subject id) and a REASON (a
       characterisation, never a number — the annotation rule); the renderer
