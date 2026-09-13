@@ -74,7 +74,10 @@
   --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
 
   color-scheme: dark;
-  min-height: 100dvh;
+  /* A PAGE, NOT THE VIEWPORT (2026-09-13). The room used to own the whole
+     screen and stood on a 100dvh floor; inside the Supabot chrome that
+     floor added a screen of empty ground below every short answer. */
+  min-height: 100%;
   background: var(--ground);
   color: var(--ink);
   font-family: var(--sans);
@@ -314,16 +317,42 @@
 
 /* ------------------------------------------------------------------ rail */
 
-.r-rail {
-  position: fixed;
-  left: 0; top: 0; bottom: 0;
-  width: 56px;
-  display: flex; flex-direction: column; align-items: center;
-  gap: 22px; padding: 18px 0;
-  border-right: 1px solid var(--edge);
+.r-tabs {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 18px; flex-wrap: wrap;
+  padding: 0 clamp(18px, 3vw, 40px);
+  border-bottom: 1px solid var(--edge);
   background: var(--card);
-  z-index: 20;
 }
+.r-tabs-list { display: flex; align-items: stretch; gap: 2px; min-width: 0; overflow-x: auto; }
+.r-tabs-acts { display: flex; align-items: center; gap: 2px; }
+
+/* A tab carries its own bottom edge when it is the one you are on — the same
+   way the app's other tabbed pages mark theirs. */
+.r-tab {
+  position: relative;
+  display: flex; align-items: center; gap: 8px;
+  padding: 13px 14px;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-3); text-decoration: none; white-space: nowrap;
+  font: 500 13.5px/1 var(--sans); letter-spacing: -0.01em;
+  transition: color 160ms var(--ease), border-color 160ms var(--ease);
+}
+.r-tab:hover, .r-tab:focus-visible { color: var(--ink-2); }
+.r-tab--on { color: var(--ink); border-bottom-color: rgb(var(--george)); }
+
+.r-tab-count {
+  min-width: 17px; height: 17px; padding: 0 5px; border-radius: 9px;
+  background: rgb(var(--accent)); color: #fff;
+  font: 600 10px/17px var(--sans); text-align: center;
+}
+
+.r-tab-btn {
+  width: 32px; height: 32px; display: grid; place-items: center;
+  border: 0; border-radius: 9px; background: transparent;
+  color: var(--ink-3); cursor: pointer; font-size: 13px;
+}
+.r-tab-btn:hover, .r-tab-btn:focus-visible { color: var(--ink); background: var(--sunk); }
 
 .r-mark {
   width: 11px; height: 11px; border-radius: 50%;
@@ -333,43 +362,24 @@
 }
 .r-mark--busy { animation: r-breathe 1500ms var(--ease) infinite; }
 
-.r-rail-btn {
-  position: relative;
-  width: 34px; height: 34px;
-  display: grid; place-items: center;
-  border: 0; border-radius: 11px; background: transparent;
-  color: var(--ink-3); cursor: pointer;
-  font: 400 10px/1 var(--mono); letter-spacing: 0.04em;
-  transition: color 180ms var(--ease), background 180ms var(--ease);
-}
-.r-rail-btn:hover, .r-rail-btn:focus-visible { color: var(--ink); background: var(--sunk); }
-.r-rail-btn[aria-current='true'] { color: var(--ink); background: var(--sunk); }
 
-.r-rail-count {
-  position: absolute; top: 2px; right: 2px;
-  min-width: 15px; height: 15px; padding: 0 4px;
-  border-radius: 8px;
-  background: rgb(var(--accent)); color: #fff;
-  font: 600 9px/15px var(--sans); text-align: center;
-}
 
-/* The one setting on the rail. A glyph, not a switch: it is the room's
-   light, and you reach for the light without reading a label. */
-.r-rail-btn--theme { font-size: 15px; }
 
+
+
+
+/* On a phone the strip scrolls sideways rather than wrapping: four tabs and
+   two controls on one line is narrower than it sounds, and a strip that wraps
+   pushes the board down a row for no gain. */
 @media (max-width: 720px) {
-  .r-rail {
-    top: auto; right: 0; width: auto; height: 54px;
-    flex-direction: row; justify-content: space-around; gap: 0;
-    padding: 0 12px; border-right: 0; border-top: 1px solid var(--edge);
-    padding-bottom: env(safe-area-inset-bottom, 0);
-  }
+  .r-tabs { padding: 0 14px; gap: 8px; }
+  .r-tab { padding: 12px 10px; font-size: 13px; }
 }
 
 /* ----------------------------------------------------------------- board */
 
-.r-main { padding: 26px clamp(18px, 3vw, 40px) 150px; margin-left: 56px; }
-@media (max-width: 720px) { .r-main { margin-left: 0; padding-bottom: 190px; } }
+.r-main { padding: 22px clamp(18px, 3vw, 40px) 150px; }
+@media (max-width: 720px) { .r-main { padding-bottom: 190px; } }
 
 /*
  * A BOARD PACKS. A twelve-column grid gave every row the height of its tallest
@@ -460,13 +470,29 @@
 
 /* ------------------------------------------------------------------ line */
 
+/*
+ * THE COMPOSER STAYS ON SCREEN, and it is the one thing in the room that is
+ * fixed to the VIEWPORT rather than laid out in the page — so when George
+ * moved inside the Supabot chrome (2026-09-13) it stopped lining up with the
+ * content: it escapes the chrome's `lg:ml-64`, and used to carry a 56px
+ * offset for a left rail that no longer exists.
+ *
+ * A fixed element cannot inherit that offset, so the chrome states it:
+ * Layout puts `chrome-sidebar-open` on the same div it puts `lg:ml-64` on,
+ * and a descendant selector reaches a fixed child regardless of positioning.
+ * The breakpoint below mirrors `lg` exactly; the sidebar is 16rem.
+ */
 .r-line-wrap {
-  position: fixed; left: 56px; right: 0; bottom: 0;
+  position: fixed; left: 0; right: 0; bottom: 0;
   padding: 0 clamp(18px, 3vw, 40px) 22px;
   background: linear-gradient(to top, var(--ground) 62%, transparent);
   pointer-events: none; z-index: 15;
 }
-@media (max-width: 720px) { .r-line-wrap { left: 0; bottom: 54px; } }
+@media (min-width: 1024px) {
+  .chrome-sidebar-open .r-line-wrap { left: 16rem; }
+}
+/* The chrome's own bottom nav owns the bottom of a phone screen. */
+@media (max-width: 720px) { .r-line-wrap { bottom: 64px; } }
 
 .r-line {
   display: flex; align-items: center; gap: 10px;

@@ -2387,3 +2387,34 @@ never a speed problem. The plan measured latency and assumed correctness, and
 the owner found the defect before the plan would have. Phase 1 is reordered:
 **make it work, then make it fast**, the daily dogfood log drives the order,
 and no speed card starts while a reported defect is open.
+
+## 2026-09-13 — George is a tab on the main page
+
+The owner: *"can you put george just in the tabs of the main page."* This
+finishes the reversal begun yesterday. Yesterday George got its own path and a
+link back, but still opened a full-bleed surface with its own fixed rail —
+reachable and leavable, yet plainly a second app. It is now drawn inside the
+Supabot chrome like Dashboard or Warehouse.
+
+**George owns tabs, which is the app's existing pattern.** Dashboard owns
+Stores and Vending; Warehouse owns Replenishment and Barcodes; George owns
+Board, Needs you, Kept and Running. Each keeps its own URL, so links,
+bookmarks and the back button work. `Rail.tsx` became `GeorgeTabs.tsx`: a
+horizontal strip, not a fixed left rail, because a second vertical rail beside
+the app's own sidebar is chrome inside chrome.
+
+**Running (`/workflows`) joins the strip.** It was routed but reachable only
+from a single link inside Inbox, which is not navigation.
+
+**Two layout facts the CSS could not say.** The room stood on a `100dvh`
+floor because it used to own the screen; inside a content area that added a
+blank screen under every short answer, so it is `min-height: 100%` now. And
+the composer is the one thing fixed to the VIEWPORT rather than laid out in
+the page — it escapes the chrome's `lg:ml-64` and carried a 56px offset for
+the rail that is gone. A fixed element cannot inherit that offset, so the
+chrome states it: Layout puts `chrome-sidebar-open` on the same div it puts
+`lg:ml-64` on, and a descendant selector reaches a fixed child regardless of
+positioning context. The breakpoint in `room.css` mirrors `lg` exactly.
+
+The accent allowlist keeps its four entries; `Rail.tsx` is replaced in it by
+`GeorgeTabs.tsx`, carrying the same needs-you count for the same reason.
