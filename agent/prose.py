@@ -21,12 +21,14 @@ WHAT THIS DOES NOT DO. It does not verify that a figure NOT on the board
 came from a tool — ungrounded_numerals in tests/evals/checks.py does that,
 as an eval only, and CLAUDE.md rule 9 still says production does not check
 prose numerals against rows. This is the opposite direction: a figure that
-IS on the board, said again.
+IS on the board, said again — exactly, rounded off, or with a few of its
+members named and the rest counted.
 """
 
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 from typing import Any, Iterable
 
 _NUMERAL = re.compile(
@@ -92,6 +94,24 @@ def sentences(answer: str) -> list[str]:
     return [s for s in _sentences(answer) if len(s.split()) >= 3]
 
 
+def _is_business_figure(n: float, decimals: int, is_percent: bool,
+                       presentation_max: int) -> bool:
+    """
+    Whether a numeral is a figure at all, rather than a day number, a small
+    count or a year.
+
+    Shared so that every gate in this module excuses the same things. A check
+    that fired on "and 3 others" while the eval called the same numeral
+    presentation would be the measure and the gate drifting apart, which is
+    the one thing this module exists to prevent.
+    """
+    if not is_percent and decimals == 0 and n == int(n) and 0 <= n <= presentation_max:
+        return False
+    if n in (2024.0, 2025.0, 2026.0, 2027.0):
+        return False
+    return True
+
+
 def figures(text: str, presentation_max: int = PRESENTATION_MAX) -> list[tuple[float, int]]:
     """(value, decimals) of every business figure in `text`, dates and small counts excused."""
     text = _DATE_PARTS.sub(" ", text)
@@ -104,9 +124,7 @@ def figures(text: str, presentation_max: int = PRESENTATION_MAX) -> list[tuple[f
         if suffix in ("k", "m"):
             n *= 1000 if suffix == "k" else 1_000_000
             decimals -= 3 if suffix == "k" else 6
-        if suffix != "%" and n == int(n) and 0 <= n <= presentation_max and decimals == 0:
-            continue
-        if n in (2024.0, 2025.0, 2026.0, 2027.0):
+        if not _is_business_figure(n, decimals, suffix == "%", presentation_max):
             continue
         out.append((n, decimals))
     return out
@@ -173,4 +191,74 @@ def misstated_figures(answer: str, results: Iterable[dict],
             drawn = _echo_of(n, allowed, min_significant)
             if drawn is not None:
                 out.append((s, n, drawn))
+    return out
+
+
+# ---------------------------------------------------------------------------
+# A REMAINDER WORKED OUT IN PROSE — "and 45 others"
+# ---------------------------------------------------------------------------
+
+@lru_cache(maxsize=8)
+def _remainder_re(tails: tuple[str, ...], leaders: tuple[str, ...]) -> re.Pattern:
+    """
+    The two shapes a stated remainder takes: a count before a word meaning
+    "the rest" ("45 others", "45 other lines"), or after one ("the other 45").
+
+    Built from the vocabulary rather than written out, so the words live in
+    metrics.yaml with every other definition and this file holds only the
+    grammar of them.
+    """
+    num = r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?"
+    tail = "|".join(re.escape(t) for t in sorted(tails, key=len, reverse=True))
+    lead = "|".join(re.escape(l) for l in sorted(leaders, key=len, reverse=True))
+    return re.compile(
+        rf"(?<![\w.])(?P<num>{num})\s+(?:{tail})\b"
+        rf"|\b(?:{lead})\s+(?P<lead_num>{num})(?![\w.])",
+        re.I,
+    )
+
+
+def enumerated_remainders(answer: str, results: Iterable[dict],
+                          tails: Iterable[str], leaders: Iterable[str],
+                          presentation_max: int = PRESENTATION_MAX,
+                          ) -> list[tuple[str, float, str]]:
+    """
+    (sentence, written, phrase) for every count in the prose that states what
+    is LEFT once George decided how many members to name.
+
+    WHY THIS EXISTS, and it is the third way a figure with no receipt reaches
+    the screen. Found by the twelve on 2026-09-13:
+
+        "48 sold last week with nothing in the week before (Aji Cuttlefish
+         Japanese, Aji Golden Plum, Aji Squid Hokkaido Slices and 45 others)"
+
+    48 is a returned figure. 45 is 48 minus the three he chose to name, and
+    the subtraction is his — no row, meta or notice holds it. Neither gate
+    above could see it: 45 restates nothing, and it is a rounding of nothing.
+
+    THE CONSTRUCTION IS THE PROOF, NOT THE BOARD. A count that follows "and"
+    and precedes "others" is by definition relative to a list the writer
+    chose, so no tool can ever have returned it. That is why this does not
+    become "production checks numerals against rows": an ordinary ungrounded
+    numeral still sails past, exactly as CLAUDE.md rule 9 says it does. What
+    fires here is a shape, and rows are consulted only to EXCUSE — a drawn
+    delta reading as "45 more" is the board's own figure and is left alone,
+    the same way `misstated_figures` excuses an exact match.
+
+    Day numbers, small counts, years and dates are excused as everywhere else
+    in this module.
+    """
+    allowed = allowed_numbers(results)
+    pattern = _remainder_re(tuple(tails), tuple(leaders))
+    out: list[tuple[str, float, str]] = []
+    for s in sentences(answer):
+        for m in pattern.finditer(_DATE_PARTS.sub(" ", s)):
+            raw = m.group("num") or m.group("lead_num")
+            n = float(raw.replace(",", ""))
+            decimals = len(raw.split(".")[1]) if "." in raw else 0
+            if not _is_business_figure(n, decimals, False, presentation_max):
+                continue
+            if _matches(n, decimals, allowed):
+                continue                          # the board holds it: not his
+            out.append((s, n, m.group(0).strip()))
     return out

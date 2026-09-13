@@ -959,7 +959,7 @@ metrics:
       Counting transactions that CONTAIN this product, not transactions OF this
       product. A basket holding three different products contributes 1 to each
       of the three rows, so these counts do not sum to the overall
-      transaction_count.
+      transaction count.
     # source: business_rules.yaml:313 (business_logic.transaction_count).
     #   COUNT(DISTINCT t.ref_id), not COUNT(*): ref_id is the transaction PK and
     #   a line-grain join multiplies header rows.
@@ -1625,7 +1625,18 @@ inventory:
       leaves the user believing the business has no stock levels at all.
 
   low_stock_operational: false
-  low_stock_blocked_reason: "inventory.warning_stock is NULL on 100% of rows"
+  # TWO AUDIENCES, AND UNTIL 2026-09-13 THERE WAS ONE. `reason` is interpolated
+  # into the low_stock_not_operational notice's `message`, which UI rule 4 puts
+  # above the figures a person reads — and which the loop appends VERBATIM when
+  # the caveat has to be forced into an answer. Its value that morning was
+  # "inventory.warning_stock is NULL on 100% of rows", and it reached an answer
+  # in exactly that way: a column name, in the reader's own caveat, for a
+  # person who has never heard of the table. So `reason` is the reader's
+  # sentence and names nothing internal; `detail` is the same fact in the
+  # schema's words and reaches the model as the notice's `guidance`, which is
+  # never rendered (notices.contract).
+  low_stock_blocked_reason: "the low-stock level has never been set on any product"
+  low_stock_blocked_detail: "inventory.warning_stock is NULL on 100% of rows"
 
   # Inventory questions use their own store scope — the warehouse holds stock.
   # source: the live store_filters table's inventory scope, plus filters.excluded_from_sales.
@@ -3938,9 +3949,23 @@ notices:
     source_is_provenance_not_caveat: true
     must_convey_checks_the_answer_not_the_message: true
 
+  # THE VOCABULARY IS THE READER'S, and on 2026-09-13 it was the column's.
+  # George wrote "the shop's low-stock warning level has never been set on a
+  # single product, so nothing can ever be flagged as low", which is the caveat
+  # said better than the notice says it — and group 1 did not contain the word
+  # he used. Two corrective turns, then the caveat was forced, and the forced
+  # text was the notice message with a column name in it. Both halves fixed:
+  # the group now holds the words a person uses, and `warning_stock` came OUT
+  # of it, because a fingerprint an answer can satisfy by naming an internal
+  # column rewards the leak the notice contract exists to prevent.
   low_stock_not_operational:
     must_convey:
-      - [threshold, thresholds, warning_stock]
+      # Kept specific on purpose. Group 2 is already loose ("no " matches most
+      # answers), so this group carries all of the fingerprint's precision: a
+      # bare "stock level" would let an answer that dropped the caveat pass,
+      # which the notice mechanism exists to prevent.
+      - [threshold, thresholds, "warning level", "low-stock level", "low stock level",
+         "reorder level", "reorder point", "alert level", "minimum stock level"]
       - [not set, unset, never, "no ", not configured]
   snapshot_coverage_gap:
     must_convey:
@@ -4185,7 +4210,12 @@ notices:
   # reasoning recorded with the version was written against an older one.
   definitions_drift:
     must_convey:
-      - [definition, definitions, "metrics.yaml"]
+      # "metrics.yaml" came out on 2026-09-13, with `warning_stock` and for the
+      # same reason: an alternative only the repository knows about makes the
+      # one wording that breaks UI rule 4 the cheapest way past the gate.
+      # "definition"/"definitions" is what a person says, and George saying
+      # "the definitions changed" satisfies it.
+      - [definition, definitions]
       - [changed, change, differ, drift, since, "no longer", updated, revised]
 
   # A backtest containing a step that cannot see the past. The figure is real
@@ -4876,6 +4906,40 @@ voice:
     min_significant_digits: 2
     warning_reason: misstated_figure
 
+  # A REMAINDER GEORGE WORKED OUT HIMSELF — the third way a figure with no
+  # receipt reaches the screen, and the third found by the twelve on
+  # 2026-09-13:
+  #
+  #   "48 sold last week with nothing in the week before (Aji Cuttlefish
+  #    Japanese, Aji Golden Plum, Aji Squid Hokkaido Slices and 45 others)"
+  #
+  # 48 came from a read. 45 is 48 minus the three he chose to name, so the
+  # subtraction is his and nothing holds a receipt for it. Neither gate above
+  # could see it — 45 restates nothing and is a rounding of nothing — which is
+  # the pattern of both earlier defects: arithmetic in prose is the way past a
+  # gate that checks quoting.
+  #
+  # WHAT FIRES IS THE SHAPE. A count sitting beside one of these words is by
+  # construction what is LEFT once the writer decided how many members to
+  # name, so no tool can ever have returned it. Rows are consulted only to
+  # EXCUSE — a drawn delta reading as "45 more" is the board's own figure —
+  # exactly as `misstatement` excuses an exact match. An ordinary ungrounded
+  # numeral still sails past: that is ungrounded_numerals, it is an eval, and
+  # CLAUDE.md rule 9 keeps it one.
+  #
+  # Never tolerated, so there is no max_sentences: one count with no receipt
+  # is the defect. Shares the restatement gate's corrective turn rather than
+  # adding a round trip.
+  enumerated_remainder:
+    introduced: "2026-09-13"
+    max_corrective_turns: 1
+    matched_on: digits
+    warning_reason: enumerated_remainder
+    #: A count immediately BEFORE one of these states a remainder.
+    trailing_words: [others, other, more, further, remaining, unnamed]
+    #: ...and a count immediately AFTER one of these does the same.
+    leading_phrases: ["the other", "another"]
+
 
 # =============================================================================
 # VOLUNTEERING — the second-order fact nobody asked for
@@ -5150,14 +5214,20 @@ objects:
 
   # WHY TWO KINDS ARE THIN, recorded rather than left to look like an oversight.
   thin_reasons:
+    # READER TEXT. It is interpolated into the object_view_thin notice's
+    # `message`, which is drawn above the figures and can be forced into an
+    # answer whole, so it names no table and no column — it said
+    # "purchase_orders and stock_transfers ... received_qty is sparse" until
+    # 2026-09-13, alongside the low-stock leak it shares a cause with.
     purchasing_sources_frozen: >
-      purchase_orders and stock_transfers were loaded once from CSV and are
-      ~64 days stale, received_qty is sparse and never reconciled to what was
-      ordered, and "Open" does not mean "not received" — 8 of 151 orders are
-      Open with notes saying the goods arrived. So a supplier or an order can
-      be shown as the record HAS it, with its age, and nothing more should be
-      inferred from it. A scheduled export with a per-line received quantity
-      and a date is what would make these as deep as a shop.
+      Purchase orders and stock transfers were loaded once from a spreadsheet
+      and are ~64 days stale, the received quantity is sparse and was never
+      reconciled against what was ordered, and "Open" does not mean "not
+      received" — 8 of 151 orders are Open with notes saying the goods
+      arrived. So a supplier or an order can be shown as the record HAS it,
+      with its age, and nothing more should be inferred from it. A scheduled
+      export with a per-line received quantity and a date is what would make
+      these as deep as a shop.
 
   # WHAT GEORGE THINKS ABOUT THIS OBJECT is deliberately NOT a section here.
   # Beliefs live in the `george` schema, which the read-only role cannot see at

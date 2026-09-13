@@ -156,6 +156,22 @@ def _group_expressions(defs: dict, group_by: Sequence[str]) -> tuple[list, list]
     return select_terms, group_terms
 
 
+def _denominator_label(defs: dict, mdef: dict) -> str:
+    """
+    A ratio's denominator in the reader's words.
+
+    The formula names another METRIC — `transaction_count` — and that key was
+    reaching a notice message, which is text a person reads above the figure it
+    qualifies (UI rule 4). The metric already carries a display name for
+    exactly this; the key is kept only when there is none, because a notice
+    that cannot name its denominator at all would be worse than one naming it
+    awkwardly.
+    """
+    key = str(_req(mdef, "formula.denominator"))
+    other = (_req(defs, "metrics") or {}).get(key) or {}
+    return str(other.get("display_name") or key).lower()
+
+
 def _reconcile(cur, defs: dict, metric: str, filters: dict, where_sql: str,
                params: dict, notices: list[dict], window_label: Optional[str]) -> dict:
     """
@@ -1235,10 +1251,14 @@ def get_sales(
         assert _req(mdef, "undefined_notice_kind") == "ratio_undefined"
         notices.append({
             "kind": "ratio_undefined",
+            # The denominator NAMED THE METRIC KEY until 2026-09-13 — a reader
+            # asking how a shop did was shown "the denominator
+            # (transaction_count) is zero". A notice message is the reader's,
+            # so it takes the denominator's display name.
             "message": (
                 f"{_req(mdef, 'display_name')} is undefined for this window: "
                 f"there were no qualifying transactions, so the denominator "
-                f"({_req(mdef, 'formula.denominator')}) is zero. The value is "
+                f"({_denominator_label(defs, mdef)}) is zero. The value is "
                 f"reported as null, not as zero — nothing was sold, and nothing "
                 f"was averaged."
             ),

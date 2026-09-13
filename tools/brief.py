@@ -469,11 +469,18 @@ def get_brief(as_of: Optional[date | str] = None) -> dict:
     if not _req(defs, "brief.stock_crossed_out.low_stock_available"):
         notices.append({
             "kind": "low_stock_not_operational",
+            # Reader first: this is drawn above the brief and can be forced
+            # into an answer whole, so the column lives in `guidance`.
             "message": (
-                "There is no 'newly low on stock' section. Low-stock thresholds "
-                "(inventory.warning_stock) have never been set — they are null on "
-                "100% of rows — so nothing can ever be low. Only the crossing into "
-                "out-of-stock is reported."
+                "There is no 'newly low on stock' section. The low-stock level "
+                "has never been set on any product, so nothing can ever be "
+                "flagged as low. Only the crossing into out-of-stock is "
+                "reported."
+            ),
+            "guidance": (
+                f"{_req(defs, 'inventory.low_stock_blocked_detail')}. There is "
+                "no threshold to cross, so an empty low-stock section is "
+                "missing configuration, not a quiet morning."
             ),
             "source": "metrics.yaml: inventory.low_stock_operational",
         })

@@ -210,19 +210,23 @@ def get_stock(
     # ----------------------------------------------------------------------
     if state == "low_stock" and not _req(defs, "inventory.low_stock_operational"):
         reason = _req(defs, "inventory.low_stock_blocked_reason")
+        detail = _req(defs, "inventory.low_stock_blocked_detail")
         notice = {
             "kind": "low_stock_not_operational",
             "state": "low_stock",
             "operational": False,
             "reason": reason,
+            # The reader's sentence. It is drawn above the figures, and the
+            # loop appends it verbatim when the caveat has to be forced, so
+            # the schema's version of the same fact stays in `guidance`.
             "message": (
-                "Low-stock thresholds are not set, so no product can qualify as "
-                f"low stock ({reason}). This is NOT an empty result meaning "
-                "nothing is low — the thresholds have never been configured."
+                f"No product can qualify as low stock, because {reason}. This "
+                "is NOT an empty result meaning nothing is low — the thresholds "
+                "have never been configured."
             ),
             "guidance": (
-                "Populate inventory.warning_stock, or agree a floor with the "
-                "business and set it in definitions/metrics.yaml "
+                f"{detail}. Populate inventory.warning_stock, or agree a floor "
+                "with the business and set it in definitions/metrics.yaml "
                 "(inventory.low_stock_threshold_default)."
             ),
             "source": "definitions/metrics.yaml: inventory.low_stock_blocked_reason",

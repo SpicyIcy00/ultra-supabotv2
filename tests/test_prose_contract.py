@@ -69,11 +69,19 @@ def _ts_source(path: Path) -> str:
 # ---------------------------------------------------------------------------
 
 # Words that only ever address the model: an instruction about what to say or
-# what not to compute, a tool argument, a result field, or a file path.
+# what not to compute, a tool argument, a result field, a column, or a file
+# path.
+#
+# The column names joined this on 2026-09-13. `warning_stock` reached an answer
+# whole, through the forced-caveat path — a person asking what was running low
+# at Greenhills was handed "inventory.warning_stock is NULL on 100% of rows" in
+# the caveat above the figures. A column is the same leak as a tool argument
+# and belongs in the same list.
 _MODEL_DIRECTED = re.compile(
     r"\b(say which|say so|say that|do not|don't|must not|"
     r"never (add|blend|compare|treat|report|fill|sum)|"
     r"change_pct|group_by|rank_by|top_n|compare_to|baseline_status|"
+    r"warning_stock|is_cancelled|"
     r"meta\.|row_count|metrics\.yaml|definitions/)",
     re.I,
 )
@@ -125,6 +133,133 @@ def test_no_notice_message_addresses_the_model():
         "reaches the model in the tool result and is never rendered "
         "(metrics.yaml notices.contract):\n  " + "\n  ".join(offenders)
     )
+
+
+# Every metrics.yaml value that a notice `message` interpolates. The AST scan
+# above reads string LITERALS, so none of these is visible to it — the text a
+# person actually reads is assembled at runtime from a literal and one of
+# these. Listed rather than discovered, because the interpolation goes through
+# a local variable and following that in the AST would be a worse test than a
+# list somebody has to extend when they add one.
+#
+# A `*` segment means every key at that level.
+_READER_TEXT_PATHS = (
+    "inventory.low_stock_blocked_reason",           # tools/inventory.py  low_stock_not_operational
+    "objects.thin_reasons.*",                       # tools/objects.py    object_view_thin
+    "metrics.*.redefinition_note",                  # tools/sales.py      metric_redefined
+)
+
+# Reader prose does not contain snake_case, and does not cite a file. Every
+# identifier that leaked into a message this way — warning_stock,
+# purchase_orders, stock_transfers, received_qty, transaction_count — is caught
+# by that one property, where a list of known column names would have to be
+# extended for each new leak.
+#
+# `_MODEL_DIRECTED` is deliberately NOT applied to these. It catches imperative
+# instructions ("do not", "say which"), which is right for a message written in
+# the file and wrong here: "these counts do not sum to the overall transaction
+# count" is a fact about baskets, in the reader's own English.
+_SNAKE_CASE = re.compile(r"\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b|\b\w+\.(?:yaml|yml|py|sql)\b")
+
+
+def _resolve(node, parts: tuple[str, ...], path: str = ""):
+    """Every (path, value) a dotted path with `*` segments reaches."""
+    if not parts:
+        yield path, node
+        return
+    head, rest = parts[0], parts[1:]
+    if not isinstance(node, dict):
+        return
+    for key in (node.keys() if head == "*" else [head]):
+        if key in node:
+            yield from _resolve(node[key], rest, f"{path}.{key}" if path else str(key))
+
+
+def test_no_yaml_value_a_notice_message_interpolates_names_a_column():
+    """
+    THE CLASS BEHIND THE 2026-09-13 LEAK, held as a class.
+
+    `_forced_caveats` appends a notice `message` to the answer VERBATIM, and
+    the room draws every message above the figure it qualifies. So a value
+    interpolated into a message is answer text whether or not George ever
+    writes it himself — and three of them named tables and columns:
+
+        inventory.low_stock_blocked_reason  "inventory.warning_stock is NULL…"
+        objects.thin_reasons.*              "purchase_orders and stock_transfers…"
+        metrics.*.redefinition_note         "…the overall transaction_count"
+
+    The first reached a real answer, through the forced-caveat path, on a
+    question about what was running low at Greenhills.
+    """
+    defs = _defs()
+    offenders = {}
+    for spec in _READER_TEXT_PATHS:
+        for path, value in _resolve(defs, tuple(spec.split("."))):
+            if not isinstance(value, str):
+                continue
+            hits = sorted(set(_SNAKE_CASE.findall(value)))
+            if hits:
+                offenders[path] = hits
+    assert not offenders, (
+        "These metrics.yaml values are interpolated into a notice `message`, "
+        "which a person reads above the figure and which the loop can append "
+        "to an answer whole. They name something only the schema knows "
+        f"about:\n  {offenders}"
+    )
+
+
+def test_that_scan_would_have_caught_the_leak_it_was_written_for():
+    # A guard on the guard: the property has to fire on the text that shipped.
+    assert _SNAKE_CASE.findall("inventory.warning_stock is NULL on 100% of rows") \
+        == ["warning_stock"]
+    assert _SNAKE_CASE.findall("purchase_orders and stock_transfers were loaded") \
+        == ["purchase_orders", "stock_transfers"]
+    # ...and stay silent on the sentences that replaced it.
+    assert not _SNAKE_CASE.findall(
+        "the low-stock level has never been set on any product")
+
+
+def test_a_value_a_notice_message_interpolates_is_reader_text_too():
+    """
+    THE HOLE THE SCAN ABOVE HAS, and the defect that found it (2026-09-13).
+
+    `_string_parts` reads string LITERALS out of the AST. The low-stock notice
+    does not write its reason; it interpolates one from metrics.yaml, so the
+    scan saw `"Low-stock thresholds are not set…"` and never saw the value that
+    lands in the middle of it. That value was
+    `inventory.warning_stock is NULL on 100% of rows`, and it reached an answer
+    verbatim: George's own wording missed the fingerprint, the caveat was
+    FORCED, and `_forced_caveats` appends a notice `message` unchanged.
+
+    So the yaml value is checked here directly. The schema's version of the
+    same fact is still recorded — as `detail`, which reaches the model through
+    `guidance` and is never rendered.
+    """
+    inventory = _defs()["inventory"]
+    reason = inventory["low_stock_blocked_reason"]
+    detail = inventory["low_stock_blocked_detail"]
+    assert not _MODEL_DIRECTED.search(reason), (
+        f"inventory.low_stock_blocked_reason is interpolated into a notice "
+        f"message a person reads, and into any caveat forced into an answer: "
+        f"{reason!r}"
+    )
+    assert _MODEL_DIRECTED.search(detail), (
+        "the technical form of the reason must still be recorded somewhere — "
+        "low_stock_blocked_detail is where it goes"
+    )
+
+
+def test_the_forced_caveat_carries_the_message_and_never_the_guidance():
+    """
+    The path that turned a notice into prose. It appends `message` — so a
+    message is answer text whether or not George ever writes it himself.
+    """
+    from agent.loop import _forced_caveats
+
+    out = _forced_caveats([{"kind": "k", "message": "The level was never set.",
+                            "guidance": "Populate inventory.warning_stock."}])
+    assert "The level was never set." in out
+    assert "warning_stock" not in out
 
 
 def test_the_notices_that_needed_guidance_have_it():

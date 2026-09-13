@@ -2285,6 +2285,12 @@ async def run(
     # spending a second round trip.
     misstate_min_digits = req(defs, "voice.misstatement.min_significant_digits")
     misstate_reason = str(req(defs, "voice.misstatement.warning_reason"))
+    # And its third half: a count of what is LEFT after naming a few — "and 45
+    # others" over a returned 48. The subtraction is the model's, so nothing
+    # holds a receipt for it. Shares the same correction again.
+    remainder_reason = str(req(defs, "voice.enumerated_remainder.warning_reason"))
+    remainder_tails = tuple(req(defs, "voice.enumerated_remainder.trailing_words"))
+    remainder_leaders = tuple(req(defs, "voice.enumerated_remainder.leading_phrases"))
     # cache_creation is the write side, and it was missing: without it a cache
     # change can be argued about but not measured. A read is 0.1x base input
     # and a write is 1.25x, so "reads went up" is not the same claim as "it got
@@ -2700,13 +2706,28 @@ async def run(
                 misstated = (_prose.misstated_figures(answer, charted,
                                                       misstate_min_digits)
                              if answer and charted else [])
-                if ((len(restated) > max_restated or misstated)
+                # A count of what is LEFT after naming a few — "and 45 others"
+                # where 48 was returned and three were named. Checked on the
+                # answer ALONE: the construction is what proves the arithmetic
+                # is the model's, and a remainder over no read at all is more
+                # ungrounded, not less.
+                remainders = (_prose.enumerated_remainders(
+                    answer, charted, remainder_tails, remainder_leaders)
+                    if answer else [])
+                if ((len(restated) > max_restated or misstated or remainders)
                         and restate_corrections < max_restate_corrections):
                     restate_corrections += 1
-                    # The wrong figure is the more serious of the two, so it
-                    # names the warning when both are present: the sweep should
-                    # sort a wrong number above a repeated one.
-                    reason = misstate_reason if misstated else restate_reason
+                    # Named by the most serious thing present, because the
+                    # sweep sorts on the kind: a count with NO receipt above a
+                    # drawn figure written wrong, and both above one merely
+                    # said twice.
+                    reason = (remainder_reason if remainders else
+                              misstate_reason if misstated else restate_reason)
+                    if remainders:
+                        log.gap(remainder_reason,
+                                f"{len(remainders)} counts are a remainder worked out in prose: "
+                                + " | ".join(f"wrote {n:g} in \"{phrase}\" — {sent}"
+                                             for sent, n, phrase in remainders)[:1800])
                     if misstated:
                         log.gap(misstate_reason,
                                 f"{len(misstated)} figures misstate a drawn one: "
@@ -2718,12 +2739,25 @@ async def run(
                                 + " | ".join(restated)[:1800])
                     yield _sse("warning", {
                         "reason": reason,
-                        "found": len(misstated) if misstated else len(restated),
-                        "limit": 0 if misstated else max_restated,
+                        "found": (len(remainders) if remainders else
+                                  len(misstated) if misstated else len(restated)),
+                        "limit": 0 if (remainders or misstated) else max_restated,
                     })
                     yield _reset_answer(reason)
                     answer = ""
                     parts: list[str] = []
+                    if remainders:
+                        left = "\n".join(f"- \"{phrase}\" — {sent}"
+                                         for sent, _n, phrase in remainders[:6])
+                        parts.append(
+                            f"{len(remainders)} counts in your answer are a "
+                            f"remainder you worked out yourself:\n{left}\n\n"
+                            "Naming a few of a group and then saying how many "
+                            "are left is your own subtraction. No result holds "
+                            "that number, so nothing on the board can back it "
+                            "up. Name the ones you named and stop — \"among "
+                            "them\", \"and others\" — or give the total the "
+                            "read returned, which does have a receipt.")
                     if misstated:
                         wrong = "\n".join(
                             f"- you wrote {w:g}; the figure is {d:g} — {s}"
@@ -2746,7 +2780,7 @@ async def run(
                     # before this gate existed, to the byte. The evals are
                     # noisy enough run to run without a reworded correction
                     # on a path that was not being fixed.
-                    named = "the figures" if misstated else "restated figures"
+                    named = "restated figures" if not (misstated or remainders) else "the figures"
                     parts.append(
                         "The figures are on the board; the reading is yours. "
                         "Rewrite the answer saying what those figures MEAN — "

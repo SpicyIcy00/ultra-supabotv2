@@ -275,6 +275,18 @@ PAIRS = {
         "Everything on the page looks healthy: stock at AJI BARN is 4,120 units as "
         "of Mon 7 Sep 2026.",
     ),
+    # HIS OWN SENTENCE, from the run that failed on 2026-09-13. It conveys the
+    # caveat completely and in better English than the notice does, and the
+    # fingerprint reported it unsurfaced because the word he reached for was
+    # "warning level" and the group held only "threshold". Two corrective turns
+    # and a forced caveat followed.
+    "low_stock_not_operational": (
+        "And I can't answer \"running low\" in the ordinary sense at all: the "
+        "shop's low-stock warning level has never been set on a single product, "
+        "so nothing can ever be flagged as low — that silence is missing "
+        "configuration, not a shelf in good order.",
+        "Nothing at Greenhills is running low right now.",
+    ),
     "page_context_truncated": (
         "This page has 12 pins and I read the newest 5; the other 7 are not "
         "inspected here.",
@@ -382,3 +394,42 @@ def test_a_composed_shape_surfaces_the_notices_of_every_read_it_draws():
     ]
     assert _drawn_on_the_board([{"key": "shape", "seqs": [0, 3]}], charted) == {
         "supplier_coverage", "comparison_incomplete"}
+
+
+def test_a_fingerprint_is_never_satisfied_by_naming_the_column():
+    """
+    A fingerprint is a check on the ANSWER, and the answer is read by a person.
+    Until 2026-09-13 `low_stock_not_operational` accepted the literal
+    `warning_stock` as proof the caveat had been conveyed — so the one wording
+    that breaks UI rule 4 was also the cheapest way to pass the gate.
+
+    Held as a class rather than for that kind alone: no fingerprint anywhere
+    may be satisfiable by a word only the schema uses.
+    """
+    from agent import loop as george_loop
+    from tools._common import load_defs
+
+    internal = ("warning_stock", "is_cancelled", "change_pct", "baseline_status",
+                "group_by", "rank_by", "top_n", "compare_to", "row_count",
+                "source_table", "metrics.yaml")
+    offenders = {}
+    for kind, spec in fingerprints().items():
+        if not isinstance(spec, dict) or "must_convey" not in spec:
+            continue
+        for group in spec["must_convey"]:
+            hits = [alt for alt in group
+                    if isinstance(alt, str) and alt.strip() in internal]
+            if hits:
+                offenders[kind] = hits
+    assert not offenders, (
+        "these fingerprints can be satisfied by naming something only the "
+        f"schema knows about: {offenders}"
+    )
+
+    # And the answer that does it is still reported as unsurfaced.
+    missing = george_loop._unsurfaced(
+        [{"kind": "low_stock_not_operational", "message": "..."}],
+        "inventory.warning_stock is null on 100% of rows, so nothing is flagged.",
+        load_defs(),
+    )
+    assert missing

@@ -3509,3 +3509,29 @@ is to read it and stop guessing.
 **The test worth keeping: a shared helper survives a redesign of the things
 that call it.** Before writing off a fix as redundant, check whether the buggy
 code is in what is being replaced or in what the replacement will still call.
+
+## 2026-09-13 — arithmetic in prose, twice, and the gate that is a shape
+
+**The enumerated remainder is kind twenty-two.** "and 45 others" over a
+returned 48 is the model's subtraction, and both figure gates were blind to it
+for the same reason: each asks whether a numeral relates to something ON the
+board, and this one relates to nothing. **What fires is the CONSTRUCTION** — a
+count beside "others"/"more"/"the other" is by definition what is left once the
+writer chose how many to name, so no tool can have returned it. Rows are
+consulted only to excuse. **CLAUDE.md rule 9 is not moved**: an ordinary
+ungrounded numeral still sails past, and `ungrounded_numerals` stays an eval.
+
+**A fingerprint must never be satisfiable by naming a column.**
+`low_stock_not_operational` accepted `warning_stock`, so the one wording that
+breaks UI rule 4 was also the cheapest way past the gate; `definitions_drift`
+accepted `metrics.yaml` the same way. Both alternatives removed, and the
+low-stock group now holds the words a person uses — George's own "warning
+level" failed it, which is what forced the caveat and appended a column name to
+the answer. **A notice `message` is answer text**: `_forced_caveats` appends it
+verbatim, so every yaml value interpolated into one is now checked on one
+property — reader prose contains no snake_case. Three leaks were live, not one.
+
+**Held by** `tests/test_enumerated_remainder_contract.py` (31), the new class
+tests in `test_prose_contract.py` and `test_notice_fingerprints.py`, and a gate
+run of four live turns ($0.64) with `ungrounded_numerals`, `notice_forced` and
+`internal_vocabulary` clean on all four.

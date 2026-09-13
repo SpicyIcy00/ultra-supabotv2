@@ -57,26 +57,38 @@ on compose frame" does.
 
 ## Open
 
-### 2026-09-13 · two trust failures the twelve caught, that George filed himself
+### 2026-09-13 · every gate answer now carries no figure at all
 
-Found by the P1.b run of the twelve, not by a person — but an error the evals
-catch is a defect report like any other, and neither is explained away by the
-run being one draw. The run immediately before, on code differing only in when
-a default composition frame fires, had both at zero.
+Found by the gate run that verified the fix above, not by a person — and it is
+a finding about the SUITE as much as about George.
 
-1. **A figure in prose that no tool returned** (`why`). "…48 sold last week
-   with nothing in the week before (Aji Cuttlefish Japanese, Aji Golden Plum,
-   Aji Squid Hokkaido Slices **and 45 others**)". 48 minus the three he named.
-   The subtraction is his, the receipt behind it is not — and the figure gate
-   did not catch it because 45 is not a restatement of anything on the board.
-   This is the same class as the "800 grams-worth" defect closed the same day:
-   arithmetic in prose is the way past a gate that checks quoting.
-2. **A caveat had to be FORCED, and a table name reached the answer**
-   (`caveats`). `notice_forced: true` after two corrective turns, and
-   `warning_stock` — an internal column — printed in George's own words.
-   Forced has been 0 across every recorded run until this one.
+All four gate scenarios (`caveats`, `why`, `cannot`, `morning`) passed every
+trust check and then failed one assertion: `grounded_numerals` is empty. Not
+one figure any tool returned appears in any of the four answers. The suite
+calls that "a shrug".
 
-Report: `verification/p1b-final.json`, scenarios `why` and `caveats`.
+**The mechanism is visible in the run and is not a mystery.**
+`voice.restatement.max_restated_sentences` is **0**, and everything a turn
+reads is drawn on the board — so any figure George could cite IS a drawn
+figure, and the restatement gate rewrites the answer to take it out.
+`restated_figure` fired on three of the four, and the standing answers carry
+zero numerals between them. **The two checks ask for opposite things**: say no
+figure the board draws, and say at least one figure a tool returned.
+
+This is v2's first recorded live run, so there is no earlier number saying it
+ever passed — `grounded_numerals` landed in `bfb168f` and no recorded report
+before `verification/dogfood-remainder-caveats.json` carries stored evidence to
+replay it against. Nothing here was caused by the fix above: the new gate
+(`enumerated_remainder`) fired on none of the four turns.
+
+**Not fixed here, because it is a decision, not a bug.** Either the board is
+allowed to be the only place a figure appears — and the assertion is wrong —
+or a reading is allowed to carry the one or two figures it is ABOUT, and
+`max_restated_sentences: 0` is wrong. That is the same question the widgets
+entry below is circling, and it should be answered once, for both.
+
+Report: `verification/dogfood-remainder-caveats.json`.
+
 
 ### 2026-09-13 · George drew the board and never said anything
 
@@ -228,6 +240,85 @@ look is not worth trading it for.
 ---
 
 ## Fixed
+
+### 2026-09-13 · two trust failures the twelve caught, that George filed himself — FIXED in 235d236..HEAD
+
+Found by the P1.b run of the twelve, not by a person — but an error the evals
+catch is a defect report like any other, and neither is explained away by the
+run being one draw. The run immediately before, on code differing only in when
+a default composition frame fires, had both at zero.
+
+1. **A figure in prose that no tool returned** (`why`). "…48 sold last week
+   with nothing in the week before (Aji Cuttlefish Japanese, Aji Golden Plum,
+   Aji Squid Hokkaido Slices **and 45 others**)". 48 minus the three he named.
+   The subtraction is his, the receipt behind it is not — and the figure gate
+   did not catch it because 45 is not a restatement of anything on the board.
+   This is the same class as the "800 grams-worth" defect closed the same day:
+   arithmetic in prose is the way past a gate that checks quoting.
+2. **A caveat had to be FORCED, and a table name reached the answer**
+   (`caveats`). `notice_forced: true` after two corrective turns, and
+   `warning_stock` — an internal column — printed in George's own words.
+   Forced has been 0 across every recorded run until this one.
+
+Report: `verification/p1b-final.json`, scenarios `why` and `caveats`.
+
+
+**BOTH FIXED, and the second report was wrong about where the leak was.**
+
+**1. The figure with no receipt — `enumerated_remainder`, the third gate.**
+"and 45 others" is 48 minus the three he named, and neither existing gate could
+see it: `restated_sentences` fires on a drawn figure said again, and 45 restates
+nothing; `misstated_figures` fires on a drawn figure rounded off, and 45 is a
+rounding of nothing. Both ask *what is on the board*, and this number is on the
+board nowhere.
+
+**What fires is the CONSTRUCTION, not a missing row.** A count that sits beside
+"others", "more" or "the other" is by definition what is LEFT once the writer
+chose how many members to name — no tool can ever have returned it, so the
+shape is the proof. Rows are consulted only to EXCUSE, exactly as the rounding
+gate excuses an exact match: a drawn delta reading as "45 more" is the board's
+own figure and is left alone. **An ordinary ungrounded numeral still sails
+past.** That is `ungrounded_numerals`, it is an eval, and CLAUDE.md rule 9
+keeps it one. Vocabulary in `voice.enumerated_remainder`, gate in
+`agent/prose.enumerated_remainders`, sharing the restatement gate's one
+corrective turn rather than buying a round trip. Kind twenty-two.
+
+**2. The forced caveat, and `warning_stock` — which was NOT in George's words.**
+The report said the column was "printed in George's own words". It was not. His
+prose read *"the shop's low-stock warning level has never been set on a single
+product, so nothing can ever be flagged as low"* — the caveat, said better than
+the notice says it. The column name is in the `**Caveats**` block the LOOP
+appended, which is the notice `message` verbatim.
+
+So one cause, two faces. The fingerprint's first group held
+`[threshold, thresholds, warning_stock]` and he wrote "warning level", so
+`_unsurfaced` reported the caveat missing, spent the corrective turns, and
+forced it — and the forced text was
+`"inventory.warning_stock is NULL on 100% of rows"`, interpolated into a
+reader-facing message from `inventory.low_stock_blocked_reason`.
+
+Both halves closed. The fingerprint now holds the words a person uses, and
+`warning_stock` came OUT of it — **a fingerprint an answer can satisfy by
+naming an internal column rewards the leak the notice contract exists to
+prevent** (`metrics.yaml` came out of `definitions_drift` for the same reason).
+The reason string is now the reader's sentence, with the schema's version of
+the same fact in `guidance`, which is never rendered.
+
+**Two more live leaks of the same class, found while checking and fixed with
+it**: `objects.thin_reasons` named `purchase_orders`, `stock_transfers` and
+`received_qty` in a notice message, and a ratio's undefined notice read "the
+denominator (transaction_count) is zero". The literal scan in
+`test_prose_contract` could see none of the three, because each is assembled at
+runtime from a literal and a yaml value. It now checks those values directly,
+on one property: **reader prose contains no snake_case**.
+
+**Numbers.** Pure suite 1,497 → 1,535 passing, 30 skipped, 0 failing (+38:
+`test_enumerated_remainder_contract.py` is 31 of them). Frontend room suite 103
+passing. Gate run, four live turns, $0.64: `ungrounded_numerals` [] on all four
+(was `["45"]` on `why`), `notice_forced` false on all four (was true on
+`caveats`), `internal_vocabulary` [] on all four (was `["warning_stock"]`). All
+four still fail one OTHER assertion, filed as its own entry above.
+
 
 ### 2026-09-13 · George put a weight in the answer that no tool returned — FIXED in cedd6b3..HEAD
 
