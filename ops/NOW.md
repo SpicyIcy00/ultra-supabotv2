@@ -56,8 +56,11 @@ shippable. The full diagnosis is the report linked in section 6.
 | | |
 |---|---|
 | Product branch | `main` — `feature/workspace` merged into it 2026-09-12 |
-| Head | `d743844` — **pushed**, `main` and `origin/main` identical, 0 ahead / 0 behind |
-| Last deploy | Railway **healthy**, verified 2026-09-12: schema `v6w7x8y9z0a1`, code and database agreeing. The crashloop is resolved. |
+| Head | `d44249c` — **pushed 2026-09-13**, `main` and `origin/main` identical |
+| Last deploy | `d44249c`, pushed 2026-09-13. **No migration in it** — schema stays `v6w7x8y9z0a1`, which the live database already has, so the schema-behind crashloop of 09-12 cannot repeat here. Railway was healthy before the push and watched across it. |
+
+| Phase | 0, consolidating |
+| Next card | **P0.4, the deploy migrates itself** |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
@@ -71,23 +74,27 @@ covers it.
 
 Health, and the only honest way to know which build is live:
 `GET https://ultra-supabotv2-production.up.railway.app/health` returns the
-schema the code expects beside the schema the database is on.
-| Phase | 0, consolidating |
-| Next card | **P0.3, clock** |
+schema the code expects beside the schema the database is on. It does NOT
+report which revision is running — that is part of card P0.4.
 
-**The product is Supabot BI, and George is a page in it** (the owner,
-2026-09-12: *"this is still supabot, just make george a page"*). `/` redirects
-to the first page a person may see, which is the Dashboard; George is at
-`/george` in the same nav as Analytics, Warehouse and Packing, and the room's
-rail carries a link back. From 09-09 to 09-12 `/` RENDERED the room and the
-rest of the BI app, though still routed and still allowed, was reachable from
-nowhere a person stood. **A surface you cannot leave is not a page** — if a
-future change makes George the landing again, this is the reason not to.
+**The product is Supabot BI, and George is a tab in it** (the owner,
+2026-09-12: *"this is still supabot, just make george a page"*, and 09-13:
+*"can you put george just in the tabs of the main page"*). `/` redirects to
+the first page a person may see, which is the Dashboard. George sits in the
+same sidebar as Analytics, Warehouse and Packing, renders **inside the same
+chrome**, and owns tabs of its own — Board, Needs you, Kept, Running — the
+way Dashboard owns Stores and Vending.
+
+From 09-09 to 09-12 `/` RENDERED George and the rest of the BI app, though
+still routed and still allowed, was reachable from nowhere a person stood.
+**A surface you cannot leave is not a page** — if a future change makes
+George the landing again, this is the reason not to.
 
 George's own surface is **the room** (`frontend/src/room/`, at `/george` and
-`/w/:threadId`). The desk, the river pages, the shell chrome and the `/w2`
-renderer were deleted on 2026-09-12; a reference to one is stale prose, not
-code.
+`/w/:threadId`, with its tabs at `/inbox`, `/pages` and `/workflows`). Its
+fixed left rail became `GeorgeTabs.tsx` on 09-13. The desk, the river pages,
+the shell chrome and the `/w2` renderer were deleted on 09-12; a reference to
+any of them is stale prose, not code.
 
 ---
 
