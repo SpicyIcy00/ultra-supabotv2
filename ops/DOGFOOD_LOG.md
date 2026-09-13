@@ -57,32 +57,50 @@ on compose frame" does.
 
 ## Open
 
-### 2026-09-13 · George put a weight in the answer that no tool returned
+---
+
+## Fixed
+
+### 2026-09-13 · George put a weight in the answer that no tool returned — FIXED in cedd6b3..HEAD
 
 > asked "What should I look at today?" — "nothing sells 800 grams-worth of one
 > line and then some"
 
-Not the owner's report: found by the twelve during P0.6's standing trust gate,
-and filed here rather than fixed, because it is not that card. **This is the
-one thing that must never happen** — a figure in prose that no read produced
-(CLAUDE.md rule 9). `800` appears nowhere in either call's payload; the turn
-made the same two calls as a clean run (`get_attention`, `compose`), surfaced
-its 3 notices and forced none.
+**The figure was 801.** `tools.attention` drew the sampaloc line as
+`was: 801.0, now: -211.0`; George wrote 800. Rounded to read better, which
+makes it a number the receipts behind it do not match.
 
-**It is intermittent, which is worse, not better.** Three runs of the same
-scenario within the hour: one invented the number, two did not. The P0.3 run
-this morning said "a full shelf ... below zero" and named nothing. So the
-guard-rail that catches this is the eval, and the eval only catches it on the
-runs where it happens.
+**Correcting my own report.** It said `800` appears nowhere in either call's
+payload. That checked the ARGUMENTS: `ops`-side eval reports store only
+`seq, tool, arguments, error, row_count`, never the returned rows. The
+conclusion held — the eval's own check reads the full results and is the
+authority — but the evidence quoted for it did not.
 
-Nothing about the caching change can cause it — a cache hit and a miss present
-byte-identical input — and it was confirmed against the same build twice more.
-The interesting part is the shape: George was reaching for a vividness ("a full
-shelf") and reached for a quantity instead.
+**The cause, and it is the interesting half.** The loop already gated figures
+in prose: `restated_sentences` fires when the answer quotes a figure the board
+draws, and the turn is rewritten. It matches at the precision written, so
 
----
+    "801 grams-worth"   gate fires   -> rewritten, figure comes off screen
+    "800 grams-worth"   gate SILENT  -> the wrong figure ships
 
-## Fixed
+**Imprecision was the way past the guard**, and the further off George was the
+safer he was from it. Nothing in production saw it; the eval caught it offline,
+on the one run in three where it happened.
+
+**The fix.** `agent/prose.py` gains `misstated_figures`: a prose numeral that is
+a drawn figure rounded off — deterministic, bounded by how many of the drawn
+figure's own digits survive (`voice.misstatement`, two), so 801 as 800 is caught
+and 801 as 1000 is a different number and left alone. It shares the restatement
+gate's one corrective turn rather than spending a round trip, records its own
+gap kind (`misstated_figure`, the twenty-first), and the correction names both
+numbers: "you wrote 48200; the figure is 48210".
+
+Still only about figures the board DRAWS — CLAUDE.md rule 9's line is intact,
+and nothing here asks whether a figure absent from the board came from a tool.
+
+20 cases in `tests/test_misstated_figure_contract.py`, seven of them driving the
+real loop. Four eval runs since: the ungrounded figure has not recurred.
+
 
 ### 2026-09-13 · a failed save records only the name of the exception
 

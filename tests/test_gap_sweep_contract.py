@@ -71,14 +71,42 @@ def test_the_loop_writes_more_kinds_than_the_thirteen_anyone_counted():
     assert len(_claim_kinds(source)) == 6
 
 
-def test_the_restatement_kind_comes_from_the_yaml_and_is_catalogued():
-    from tools._common import load_defs, req
+def _yaml_warning_reasons() -> dict[str, str]:
+    """Every `warning_reason` the voice section defines, by the gate it belongs to."""
+    from tools._common import load_defs
 
-    reason = str(req(load_defs(), "voice.restatement.warning_reason"))
-    assert reason in KINDS, (
-        f"voice.restatement.warning_reason is {reason!r}, which the sweep does not "
-        "name. The yaml is allowed to rename it; the catalogue has to follow."
+    voice = load_defs().get("voice") or {}
+    return {name: str(gate["warning_reason"])
+            for name, gate in voice.items()
+            if isinstance(gate, dict) and "warning_reason" in gate}
+
+
+def test_every_kind_the_yaml_names_is_catalogued():
+    # WAS ONE HAND-WRITTEN TEST PER GATE, which is why it needed rewriting:
+    # a kind sourced from the yaml reaches `log.gap` through a VARIABLE, so
+    # `_literal_kinds` cannot see it, and the call-site scan above does not
+    # hold it. `restated_figure` had a test of its own; `misstated_figure`
+    # (2026-09-13) would have had none, and NOW.md claims kind twenty-one
+    # cannot go unread. Now the class is held rather than each member.
+    reasons = _yaml_warning_reasons()
+    assert reasons, "the voice section defines no warning_reason at all"
+    missing = {gate: r for gate, r in reasons.items() if r not in KINDS}
+    assert not missing, (
+        f"these gates name a kind the sweep does not: {missing}. The yaml is "
+        "allowed to rename a kind; the catalogue has to follow, or the weekly "
+        "sweep prints a bare string with no meaning beside it."
     )
+
+
+def test_the_yaml_kinds_reach_the_loop_as_variables_not_literals():
+    # The reason the test above has to exist. If a gate's kind ever becomes a
+    # literal in the loop, `_literal_kinds` covers it and this can go.
+    source = _loop_source()
+    for gate, reason in _yaml_warning_reasons().items():
+        assert f'"{reason}"' not in source, (
+            f"{gate} now writes {reason!r} as a literal in agent/loop.py — the "
+            "kind is defined in metrics.yaml and should be read from it."
+        )
 
 
 def test_defects_are_a_subset_of_the_catalogue():

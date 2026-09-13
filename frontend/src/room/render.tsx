@@ -42,7 +42,8 @@ export interface BoardProps {
 }
 
 /** Warnings the loop raises about George's own edits — never a tool's notice. */
-const PROCESS = new Set(['composition_rejected', 'findings_rejected', 'restated_figure']);
+const PROCESS = new Set(['composition_rejected', 'findings_rejected', 'restated_figure',
+                         'misstated_figure']);
 
 export function Board(p: BoardProps) {
   const objects = inOrder(p.board, p.local, p.focused);

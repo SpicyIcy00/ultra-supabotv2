@@ -117,3 +117,60 @@ def restated_sentences(answer: str, results: Iterable[dict]) -> list[str]:
     allowed = allowed_numbers(results)
     return [s for s in sentences(answer)
             if any(_matches(n, d, allowed) for n, d in figures(s))]
+
+
+#: How much of a drawn figure a prose numeral must keep to count as that figure
+#: said badly rather than as a different number. 801 written as 800 keeps two
+#: of its own digits and is this defect; written as 1000 it keeps none of them,
+#: which is not a rounding of 801 in any useful sense and is left to the eval.
+MIN_ECHO_SIGNIFICANT_DIGITS = 2
+
+
+def _echo_of(n: float, allowed: set[float], min_significant: int) -> float | None:
+    """
+    The drawn figure `n` is a rounded-off copy of, or None.
+
+    Deterministic: `n` is an echo when some drawn figure, rounded at the tens,
+    hundreds or thousands — never so far that fewer than `min_significant`
+    digits survive — is exactly `n`. Callers pass only numerals that matched
+    nothing at the precision written, so an echo is by construction a figure
+    the board holds and the prose got wrong.
+    """
+    for v in sorted(allowed):                    # sorted: one answer, always
+        av = abs(v)
+        if av < 10:
+            continue
+        for k in range(1, len(str(int(av))) - min_significant + 1):
+            if round(av, -k) == n:
+                return v
+    return None
+
+
+def misstated_figures(answer: str, results: Iterable[dict],
+                      min_significant: int = MIN_ECHO_SIGNIFICANT_DIGITS,
+                      ) -> list[tuple[str, float, float]]:
+    """
+    (sentence, written, drawn) for every prose figure that is a drawn figure
+    rounded off — the board says 801 and the sentence says 800.
+
+    WHY THIS EXISTS, and it is the more interesting half of restatement.
+    `restated_sentences` fires when the prose quotes a drawn figure EXACTLY,
+    and the loop then asks for a rewrite. So on 2026-09-13 the two guards were
+    complementary in the wrong direction: writing 801 tripped the gate and was
+    corrected, and writing 800 tripped nothing and shipped. Imprecision was the
+    way PAST the guard, and the further off George was the safer he was from it.
+
+    Same direction as the rest of this module — a figure that IS on the board,
+    said again — so it stays inside CLAUDE.md rule 9's line: nothing here asks
+    whether a figure absent from the board came from a tool.
+    """
+    allowed = allowed_numbers(results)
+    out: list[tuple[str, float, float]] = []
+    for s in sentences(answer):
+        for n, d in figures(s):
+            if _matches(n, d, allowed):
+                continue                          # said exactly: restatement
+            drawn = _echo_of(n, allowed, min_significant)
+            if drawn is not None:
+                out.append((s, n, drawn))
+    return out

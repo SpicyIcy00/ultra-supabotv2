@@ -62,7 +62,7 @@ shippable. The full diagnosis is the report linked in section 6.
 | Live | **`ee29fa5`**, confirmed from `/health`: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `844cb3d1`. **The swap took 21 s with zero non-200s** — the second clean one in a row, and the second that carried NO migration. Read `/health` rather than believing this row: `a01706b` sat here as live while three commits had landed since. |
 | Last deploy | `a01706b`, **live and healthy when recorded**, and the swap was clean — polled every 20 s across it, zero non-200s, old build to new in about a minute. It carried NO migration (the schema was already at head), so the launcher took its `already at head` branch and ran no alembic at all. That is evidence the outage below lives in the migration path specifically, not in the boot or the build — evidence, not the deploy log. Before it, `8b0325a`. `8b0325a` carried P0.3 and P0.4, and applying migration `w7x8y9z0a1b2` cost **~50 minutes of 502**: the first boots crashlooped, the migration did not apply, and nothing was readable from outside. It came up on a later retry. Root cause still unknown — the Railway deploy log for that build has not been read. `69b51bd` is the fix for the *invisibility*, not for the cause. |
 | Phase | 0, consolidating |
-| Next card | **The dogfood log, then P1.a.** P0.6 closed 2026-09-13 and put something in Open on its way out: the twelve caught George writing a weight into prose that no tool returned ("800 grams-worth"), intermittently — once in three runs of the same question. That is CLAUDE.md rule 9, it outranks every speed card, and no Phase 1 card starts until it is closed. P0.6 also moved the cost lever: **the bill is round trips, not cache misses**, so P1.a and P1.b are now the cost cards as well as the speed ones. |
+| Next card | **P1.a.** Open is empty again: the "800 grams-worth" defect closed 2026-09-13 — George had rounded a drawn 801, and the gate that would have caught him quoting it EXACTLY was silent on the rounded one, so imprecision was the way past the guard. **Read the note under the baseline table before reporting any Phase 1 number against the twelve.** P0.6 also moved the cost lever: **the bill is round trips, not cache misses**, so P1.a and P1.b are the cost cards as well as the speed ones. |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
@@ -390,6 +390,27 @@ column a Phase 1 card reports against.
 | questions where `compose` was rejected | **8 of 12** [6 of 12] | 5 of 12, 9 rejections | ≤ 1 |
 | corrective turns per turn, median | unmeasured | 0 · 5 across the twelve, worst 2 | — |
 | notices surfaced · forced · invented figures | — | 12 · 0 · 0 | unchanged |
+
+**THE TWELVE ARE A SAMPLE, NOT A PASS/FAIL GATE — read this before quoting a
+score.** Four real-model runs now exist (2026-09-13): **12/12, 11/12, 10/12,
+11/12**, and a different scenario fails each time. Separate the two kinds of
+check, because they behave differently:
+
+- **The trust properties are stable.** Across all four runs: notices surfaced
+  100%, forced 0, tool vocabulary leaked 0, attribution shares claimed 0, and
+  **exactly one ungrounded figure ever** — `morning`'s "800", which was the
+  defect and is now gated. These are what the standing gate names, and they do
+  not flap.
+- **The style checks flap, and `leads_with_reading` is all of it.** It failed
+  on `morning`, then `product` and `follow-up`, then `order` — every non-trust
+  failure in four runs. The check is not broken: `order` genuinely opened with
+  "...for the whole 90 days". George simply leads with a figure some runs and
+  not others.
+
+So **one run is a sample of a stochastic system**, and "12 of 12" recorded at
+P0.3 was one draw, not a property. A Phase 1 card that reports a style score
+off a single run is reporting noise; the trust row is the one that means
+something from one run.
 
 **27.4 s is the number Phase 1 has to move, and the arithmetic says where
 from.** 5.5 round trips at a 4.8 s median is most of the turn; the reads

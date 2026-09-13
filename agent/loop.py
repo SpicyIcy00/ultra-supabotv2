@@ -2262,6 +2262,11 @@ async def run(
     max_restated = req(defs, "voice.restatement.max_restated_sentences")
     max_restate_corrections = req(defs, "voice.restatement.max_corrective_turns")
     restate_reason = str(req(defs, "voice.restatement.warning_reason"))
+    # The same gate's other half: a drawn figure said WRONG. No max_sentences —
+    # one is the defect — and it shares the correction above rather than
+    # spending a second round trip.
+    misstate_min_digits = req(defs, "voice.misstatement.min_significant_digits")
+    misstate_reason = str(req(defs, "voice.misstatement.warning_reason"))
     # cache_creation is the write side, and it was missing: without it a cache
     # change can be argued about but not measured. A read is 0.1x base input
     # and a write is 1.25x, so "reads went up" is not the same claim as "it got
@@ -2647,34 +2652,67 @@ async def run(
                 # corrective turn, then the answer stands — a gate, not a loop.
                 restated = (_prose.restated_sentences(answer, charted)
                             if answer and charted else [])
-                if (len(restated) > max_restated
+                # A drawn figure said WRONG — 800 over a row drawn as 801.
+                # Checked here and not as a gate of its own so a turn that does
+                # both is corrected once; see voice.misstatement.
+                misstated = (_prose.misstated_figures(answer, charted,
+                                                      misstate_min_digits)
+                             if answer and charted else [])
+                if ((len(restated) > max_restated or misstated)
                         and restate_corrections < max_restate_corrections):
                     restate_corrections += 1
-                    log.gap(restate_reason,
-                            f"{len(restated)} sentences restate a drawn figure: "
-                            + " | ".join(restated)[:1800])
+                    # The wrong figure is the more serious of the two, so it
+                    # names the warning when both are present: the sweep should
+                    # sort a wrong number above a repeated one.
+                    reason = misstate_reason if misstated else restate_reason
+                    if misstated:
+                        log.gap(misstate_reason,
+                                f"{len(misstated)} figures misstate a drawn one: "
+                                + " | ".join(f"wrote {w:g}, board draws {d:g} — {s}"
+                                             for s, w, d in misstated)[:1800])
+                    if len(restated) > max_restated:
+                        log.gap(restate_reason,
+                                f"{len(restated)} sentences restate a drawn figure: "
+                                + " | ".join(restated)[:1800])
                     yield _sse("warning", {
-                        "reason": restate_reason,
-                        "found": len(restated),
-                        "limit": max_restated,
+                        "reason": reason,
+                        "found": len(misstated) if misstated else len(restated),
+                        "limit": 0 if misstated else max_restated,
                     })
-                    yield _reset_answer(restate_reason)
+                    yield _reset_answer(reason)
                     answer = ""
-                    listed = "\n".join(f"- {s}" for s in restated[:6])
-                    messages.append({
-                        "role": "user",
-                        "content": (
+                    parts: list[str] = []
+                    if misstated:
+                        wrong = "\n".join(
+                            f"- you wrote {w:g}; the figure is {d:g} — {s}"
+                            for s, w, d in misstated[:6])
+                        parts.append(
+                            f"{len(misstated)} figures in your answer are a "
+                            f"figure on the board written wrong:\n{wrong}\n\n"
+                            "A figure rounded to read better is a different "
+                            "number, and the receipts behind it will not match "
+                            "it. Say it exactly as the result gives it, or — "
+                            "better, since the board already draws it — say "
+                            "what it MEANS and give no number at all.")
+                    if len(restated) > max_restated:
+                        listed = "\n".join(f"- {s}" for s in restated[:6])
+                        parts.append(
                             f"{len(restated)} of your sentences say a figure the "
-                            f"board already draws:\n{listed}\n\n"
-                            "The figures are on the board; the reading is yours. "
-                            "Rewrite the answer saying what those figures MEAN — "
-                            "which matters, what they do not settle, what to check "
-                            "next — and speak a figure only where no shape on the "
-                            "board holds it. Keep every caveat exactly as it was; "
-                            "the gate is on restated figures, never on what "
-                            "qualifies them."
-                        ),
-                    })
+                            f"board already draws:\n{listed}")
+                    # "restated figures" when that is all this is, so a turn
+                    # with no misstatement receives the message it received
+                    # before this gate existed, to the byte. The evals are
+                    # noisy enough run to run without a reworded correction
+                    # on a path that was not being fixed.
+                    named = "the figures" if misstated else "restated figures"
+                    parts.append(
+                        "The figures are on the board; the reading is yours. "
+                        "Rewrite the answer saying what those figures MEAN — "
+                        "which matters, what they do not settle, what to check "
+                        "next — and speak a figure only where no shape on the "
+                        "board holds it. Keep every caveat exactly as it was; "
+                        f"the gate is on {named}, never on what qualifies them.")
+                    messages.append({"role": "user", "content": "\n\n".join(parts)})
                     continue
 
                 missing = _unsurfaced(

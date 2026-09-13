@@ -4855,6 +4855,27 @@ voice:
     matched_on: digits
     warning_reason: restated_figure
 
+  # THE SAME FIGURE, SAID WRONG — and until 2026-09-13 it was the way past the
+  # gate above. Quoting a drawn figure exactly tripped `restatement` and was
+  # corrected; writing it rounded off tripped nothing and shipped, so the
+  # further off George was, the safer he was from the guard. Found by the
+  # twelve, on "nothing sells 800 grams-worth" over a row drawn as 801.
+  #
+  # Never tolerated, so there is no max_sentences here: one wrong figure on
+  # screen is the defect, where a restated figure is a matter of style. Shares
+  # the restatement gate's corrective turn rather than adding a round trip.
+  misstatement:
+    introduced: "2026-09-13"
+    max_corrective_turns: 1
+    matched_on: digits
+    #: A prose numeral is the drawn figure said wrong when rounding the drawn
+    #: one at the tens, hundreds or thousands lands exactly on it, and at least
+    #: this many of the drawn figure's own digits survive. 801 written as 800
+    #: keeps two and is this defect; written as 1000 it keeps none of them and
+    #: is a different number, left to the eval.
+    min_significant_digits: 2
+    warning_reason: misstated_figure
+
 
 # =============================================================================
 # VOLUNTEERING — the second-order fact nobody asked for

@@ -2652,3 +2652,24 @@ because it does not survive real use.
   and the breakpoint sits past the 17-tool shared block. Free to fix, not done.
 - **Cost per turn is $0.39 on this build at 6.0 iterations, not the $0.23
   headline. The bill is round trips.** P1.a/P1.b are the cost cards.
+
+## 2026-09-13 · the dogfood fix — imprecision was the way past the figure gate
+
+- "800 grams-worth" over a row drawn as 801. The loop already rewrote an answer
+  that quoted a drawn figure EXACTLY (`restated_sentences`, matched at the
+  precision written), so quoting it WRONG tripped nothing and shipped. The
+  further off George was, the safer he was from the guard.
+- `agent/prose.py` gains `misstated_figures`: a prose numeral that is a drawn
+  figure rounded off, bounded by how many of that figure's own digits survive
+  (`voice.misstatement.min_significant_digits`, 2). Shares the restatement
+  gate's single corrective turn — no new round trip — and records kind
+  twenty-one, `misstated_figure`. 20 cases, 7 through the real loop.
+- **Rule 9's line is intact**: it only ever asks about figures the board DRAWS.
+  Whether a figure absent from the board came from a tool stays an eval.
+- The catalogue guarantee was weaker than NOW.md claimed: the contract test
+  scanned string literals, and a yaml-sourced kind reaches `log.gap` as a
+  VARIABLE. `restated_figure` was held by a hand-written test of its own and
+  kind twenty-one would have had none. Now the class is held, not each member.
+- **The twelve are a sample.** 12/12, 11/12, 10/12, 11/12 over four runs; every
+  non-trust failure is `leads_with_reading`, and the trust properties never
+  moved. Do not report a style score off one run.
