@@ -3399,3 +3399,29 @@ than a card, and the page says so.
 **Worth keeping:** every figure stated in prose in this project has been wrong
 at least once, and the two totals disagreeing by $1.84 was found by a script,
 not by reading. Derive a number or check it; never restate one.
+
+## 2026-09-13 — A card described work that was already done
+
+The owner read P1.m on the plan page and asked whether it was still needed. It
+was describing four changes as work to do; all four had been built and
+committed during the conversation that produced the card. NOW.md had been
+updated and **the page had not**, so the two documents disagreed about what
+existed — a drift `crosscheck.py` does not catch, because it compares eval
+tags and totals, not card bodies.
+
+**P1.m is still needed, and it is now a tail rather than a session.** Built
+already: `grounded_numerals` and the `expects_figure` assertion, the eleven-turn
+v2 suite, the eight rewritten questions, the byte-identical gate, the demoted
+style checks, the `gate` marker, the corrected meter and `corpus.py`.
+Remaining: **run v2 once (~$1.84), confirm its gate agrees with the gate
+recorded in `p1b-final.json`, delete v1, repoint §2b and the baseline table.**
+Do not re-run v1.
+
+**It cannot fold into P1.f**, which was the obvious saving: P1.f reports its
+numbers THROUGH the suite, so the suite has to be trusted before P1.f runs.
+Circular.
+
+**The general fault, worth naming because it will recur.** Work done inside a
+planning conversation leaves the plan describing it as pending. Any session
+that builds something a card covers must update the card in BOTH places in the
+same commit, and say in the close-out that it did.

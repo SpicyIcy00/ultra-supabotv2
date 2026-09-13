@@ -50,8 +50,9 @@ MANILA = timezone(timedelta(hours=8))
 # Seven of these are built from a variable at the call site
 # (`pin_{claim}_not_made` and its two siblings, where claim is claimed or
 # promised; `restated_figure` comes from voice.restatement.warning_reason in
-# metrics.yaml, `misstated_figure` from voice.misstatement.warning_reason).
-# NOW.md said thirteen kinds; the loop writes twenty-one.
+# metrics.yaml, `misstated_figure` from voice.misstatement.warning_reason and
+# `enumerated_remainder` from voice.enumerated_remainder.warning_reason).
+# NOW.md said thirteen kinds; the loop writes twenty-two.
 #
 # tests/test_gap_sweep_contract.py holds this list against the call sites in
 # agent/loop.py, so a kind added to the loop and not to the catalogue fails
@@ -73,6 +74,7 @@ KINDS: dict[str, str] = {
     "transaction_wording":     "raw table wording reached the answer",
     "restated_figure":         "prose said again what the board already draws",
     "misstated_figure":        "prose wrote a drawn figure WRONG — 800 over a row of 801",
+    "enumerated_remainder":    "prose counted the rest itself — \"and 45 others\" after naming three",
     "pin_claimed_not_made":    "the answer said a pin was made; none was",
     "pin_promised_not_made":   "the answer promised a pin; none followed",
     "save_claimed_not_made":   "the answer said a workflow was saved; none was",
@@ -89,8 +91,9 @@ DEFECTS = {
     "api_error", "unhandled", "iteration_cap", "convergence_cap",
     "tool_vocabulary_leaked", "transaction_wording",
     "pin_claimed_not_made", "save_claimed_not_made", "page_claimed_not_made",
-    # A wrong number on screen is never operating noise.
-    "misstated_figure",
+    # A wrong number on screen is never operating noise, and neither is one
+    # with no receipt behind it at all.
+    "misstated_figure", "enumerated_remainder",
 }
 
 
