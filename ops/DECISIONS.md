@@ -3148,3 +3148,40 @@ Never mid-card.
 first. Changed: this page is read beside the product, the accent means
 "needs you" and nothing else, and teaching a second association on a
 planning page is how the rule erodes. It is cream now.
+
+## 2026-09-13 — "Do we always need to eval?" No, and the plan over-prescribed it
+
+The owner said evals have been costing a lot. Checking found a contradiction
+and three over-tagged cards.
+
+**The stated price was 3–4x the measured one.** §2b said a full run is
+"roughly $5–7", derived from an iteration count. The harness now prints its
+own spend and P1.b's two live runs came in at **$1.59 and $1.71**. The
+close-out saying so sat 500 lines below the estimate that contradicted it.
+Corrected to ~$1.65. **An inflated price is not a safe error** — it makes a
+session skip a run that would have caught a trust failure.
+
+**"Subset" was undefined and is now the TRUST GATE: four fixed scenarios,
+~$0.55.** Across every recorded run the trust rows are stable and the style
+checks flap, so the value is concentrated: `caveats` (a notice unsurfaced or
+forced), `why` (a figure no tool returned; attribution), `cannot` (a refusal
+that stopped refusing), `morning` (the volunteering cap and the rounded-figure
+gate). Picking scenarios by feel is what "subset" used to mean and it is
+replaced. The full twelve runs only at the three phase closes and on the two
+cards that rewrite the compose grammar or change effort.
+
+**Two runs per card, maximum — this is where the money actually went.** One
+to see the problem, one to confirm the fix; a third failure means the card is
+wrong, not the code. The $18.20 day was ~6 full runs and none of them was a
+gate: it was a live model iterated against a failing check.
+
+**Three cards were tagged for an eval that cannot see them.** P1.j (tokens
+render from arguments the loop already accepted, and a fragment SKIPS the
+model), P2.j (a scheduled watch makes no model call at all, rule 7), P3.d
+(the provisional frame and version arrows render over write proposals that
+already exist). All three now say No eval, with the reason.
+
+**The whole plan's eval spend, computed rather than estimated: $12.10** —
+7 trust gates at $0.55 plus 5 full runs at $1.65, and under $25 even if every
+one of those needs its second run. Over nine to eleven weeks. The bill is
+still build sessions, not the gates.

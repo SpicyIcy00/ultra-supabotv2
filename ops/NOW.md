@@ -204,12 +204,36 @@ session.
 
 ### When to run the twelve — it costs real money, every time
 
-**A full run is roughly $5–7** (61–75 iterations at the production per-iteration
-rate). Seven runs are already on disk. That is comparable to a month of real
-traffic, and **it does not appear in `ops/cost_report.py`**: the harness stubs
-`ConversationLog`, so an eval turn never reaches `george.conversations`. The
-report now prints its own spend and keeps it under `spend` in the JSON, which
-is the only place that number can come from.
+**A full run is ~$1.65, MEASURED — not the $5–7 this section claimed until
+2026-09-13.** The estimate was derived from an iteration count; the harness
+now prints its own spend, and P1.b's two live runs came in at **$1.59 and
+$1.71**. The old figure sat here while a close-out 500 lines below said it was
+a fifth of that, and an inflated price is not a safe error: it makes a session
+skip a run that would have caught a trust failure. It does not appear in
+`ops/cost_report.py` — the harness stubs `ConversationLog`, so an eval turn
+never reaches `george.conversations`, and the JSON's `spend` key is the only
+place the number comes from.
+
+**THE TRUST GATE — four scenarios, ~$0.55, and it is what "subset" means.**
+Do not pick scenarios by feel. Across every recorded run the **trust rows are
+stable and the style checks flap**, so a run's value is almost entirely in
+four scenarios:
+
+| scenario | what only it catches |
+|---|---|
+| `caveats` | a notice not surfaced, or FORCED after corrections |
+| `why` | a figure in prose no tool returned; attribution shares |
+| `cannot` | a refusal that stopped refusing |
+| `morning` | the volunteering cap, and the rounded-figure gate (the "801") |
+
+Run those four for any model-facing card. Run the full twelve **only at the
+three phase closes**, where the style flap is worth seeing across a whole set.
+
+**Two runs per card, maximum.** One to see the problem, one to confirm the
+fix. **A third failure means the card is wrong, not the code** — stop, write
+what happened in DECISIONS.md, and let the owner decide. Iterating a live
+model against a failing check is where eval money actually goes: the $18.20
+day was ~6 full runs, and none of them was a gate.
 
 **The default is DON'T.** Most cards cannot change what the model sees or how
 it thinks, and for those a run buys nothing at all:
@@ -771,7 +795,9 @@ before believing it.
       turn — never dropped for the number. "Not what I meant" is the one
       token that costs a turn and records a belief. Done when: first visible
       change for a navigation fragment < 2 s, for an analytical one < 2 s to
-      the figure, measured by `tests/evals/timing.py`. **Eval: subset.**
+      the figure, measured by `tests/evals/timing.py`. **No eval** — the
+      tokens are rendered from arguments the loop already accepted and a
+      fragment SKIPS the model, so nothing here changes what it sees.
 - [ ] **P1.k visible work, for free** — from frames already carried: the line
       above the claim (reads, tools, time, caveat count); the Working line as
       a step list with a result and `duration_ms` per step, tappable;
@@ -894,7 +920,9 @@ Answering mode reaches the screens in the Ideal UI (§6).
       defaulted to a guess, which would be a threshold nobody chose.
       Done when: a watch on AJI BARN fires for a line still above zero whose
       cover is under its supplier's lead time, naming both numbers; a line
-      with no lead time set says so instead of firing. **Eval: subset.**
+      with no lead time set says so instead of firing. **No eval** — a
+      scheduled watch makes no model call at all (rule 7), so the twelve
+      cannot see this card.
 - [ ] **P2.✓ close** — walk the four board scenarios in the Ideal UI on the
       live build, report each against it, one full run. **Gate to Phase 3:**
       Open empty five days; the four scenarios work as drawn; median still
@@ -944,7 +972,9 @@ objects; none recomposes on a question.
       finding, revised in place, version arrows back; every proposed write in
       one PROVISIONAL frame (Keep · Discard · Try again · Not what I meant)
       that turns solid only on the write's confirmation frame. The
-      acceptance arc, drawn as the Ideal UI draws it. **Eval: subset.**
+      acceptance arc, drawn as the Ideal UI draws it. **No eval** — the frame
+      and the version arrows are rendering over write proposals that already
+      exist; the model's schema is unchanged.
 - [ ] **P3.e a change is a diff** — an edit to a rule, page or standing
       question renders as before/after of its arguments over two versions,
       never prose alone; Keep as version 2 makes an ungated version;
