@@ -2707,3 +2707,43 @@ two different builds into a number describing neither. The P0.6 session split
 it: **87.3% on the current build**, target already met, and the TTL is worth
 cents or less. The lesson is the one `--since` now exists for — a rolling
 window across a behavioural change measures nothing.
+
+---
+
+## 2026-09-13 · P1.a — where a refusal earns its round trip
+
+**The card guessed wrong about what was being refused, and the measurement
+said so.** It named a second `lead`, a stray field on a `change` and a no-op
+`change`; four recorded runs of the twelve contain **one** of those between
+them. The real 46: a figure with no subject over a one-row read (15), a spec
+node spelling the discriminator `type`/`kind`/`node` while carrying the
+grammar's own words as the value (11), a comparison with no subjects (5).
+Build the card's list, but measure before believing its reasons.
+
+**The line, in one sentence, and it is the thing to hold:** a coercion may
+change which WORD holds a value; it may never change which value is drawn, or
+introduce one. A rename is a coercion. A demotion is a coercion. Choosing
+which of seven rows a figure draws is not, and is still refused.
+
+**`filters_applied` is evidence, not an argument.** A read scoped to Rockwell
+is about Rockwell even when the grouping left no column carrying the word.
+Refusing that sent George to re-read an identical figure grouped by store so
+the word would appear in a cell — four iterations for a label the tool had
+already declared in `meta`.
+
+**One coercion came back off the list**, and this is the precedent: dropping a
+block's stray `value`/`colour`/`title` and drawing the rest buys no round trip
+(the schema is `additionalProperties: false`; zero occurrences in four runs)
+and blunts the boundary the file exists for. A coercion that saves nothing and
+costs a guarantee is a bad trade in one direction only.
+
+**Two of three targets were missed and the card is still closed.** Label share
+33% against 25%, iterations 4.0 against 2.5. The residue is one `compose` a
+turn — so the rest is READS, which is P1.c and P1.d's work, not more
+squeezing here. Say the shortfall.
+
+**A failing check was not widened to pass.** `cannot` refused in plain English
+and failed on a contraction (`There's no` vs the definitions' `there is no`)
+and a verb `_LIMITATION` does not list. Fitting the measure to the result is
+what P0.2 deleted 91 assertions for; the phrase list is the owner's to move.
+

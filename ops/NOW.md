@@ -62,7 +62,7 @@ shippable. The full diagnosis is the report linked in section 6.
 | Live | **`ee29fa5`**, confirmed from `/health`: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `844cb3d1`. **The swap took 21 s with zero non-200s** — the second clean one in a row, and the second that carried NO migration. Read `/health` rather than believing this row: `a01706b` sat here as live while three commits had landed since. |
 | Last deploy | `a01706b`, **live and healthy when recorded**, and the swap was clean — polled every 20 s across it, zero non-200s, old build to new in about a minute. It carried NO migration (the schema was already at head), so the launcher took its `already at head` branch and ran no alembic at all. That is evidence the outage below lives in the migration path specifically, not in the boot or the build — evidence, not the deploy log. Before it, `8b0325a`. `8b0325a` carried P0.3 and P0.4, and applying migration `w7x8y9z0a1b2` cost **~50 minutes of 502**: the first boots crashlooped, the migration did not apply, and nothing was readable from outside. It came up on a later retry. Root cause still unknown — the Railway deploy log for that build has not been read. `69b51bd` is the fix for the *invisibility*, not for the cause. |
 | Phase | 0, consolidating |
-| Next card | **P1.a.** Open is empty again: the "800 grams-worth" defect closed 2026-09-13 — George had rounded a drawn 801, and the gate that would have caught him quoting it EXACTLY was silent on the rounded one, so imprecision was the way past the guard. **Read the note under the baseline table before reporting any Phase 1 number against the twelve.** P0.6 also moved the cost lever: **the bill is round trips, not cache misses**, so P1.a and P1.b are the cost cards as well as the speed ones. |
+| Next card | **P1.b.** P1.a closed 2026-09-13: rejections per turn 0.75 → 0.33 (met), label share 50% → 33% (target 25%, **missed**), iterations 5.5 → 4.0 (target 2.5, **missed**), trust gate whole, 11 of 12 with `cannot` failing a wording-matched refusal check. The remaining label calls are one `compose` a turn, so the rest of both misses is READS, which is P1.c and P1.d. *(Superseded note, kept for the reason it gives: P1.a.)* Open is empty again: the "800 grams-worth" defect closed 2026-09-13 — George had rounded a drawn 801, and the gate that would have caught him quoting it EXACTLY was silent on the rounded one, so imprecision was the way past the guard. **Read the note under the baseline table before reporting any Phase 1 number against the twelve.** P0.6 also moved the cost lever: **the bill is round trips, not cache misses**, so P1.a and P1.b are the cost cards as well as the speed ones. |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
@@ -472,25 +472,105 @@ a card.** Half of all tool calls are George labelling his own work, and
 whole round trip. One question ("cannot") spent 8 iterations and 4 `compose`
 calls to answer "I can't see foot traffic".
 
-- [~] **P1.a compose stops round-tripping** — the biggest single win, and
-      **half correctness, not speed**. Part (c) is DONE (2026-09-12): the
-      answer no longer disappears when George composes. (a) and (b) remain.
-      (a) Most refusals are structural, not about truth: a second block
-      weighted `lead`, a `change` carrying a field it may not, a `change` that
-      changes nothing. **Coerce those instead of refusing** — demote the second
-      lead, drop the stray field, ignore the no-op — and keep a refusal only
-      where drawing it would put a wrong or unbacked figure on screen (a seq
-      that did not run, a failed read, a subject with no row, an object
-      carrying a figure). `agent/compose.py` already has the precedent.
-      (b) Fold `record_findings` into `compose`: one schema, one call.
-      (c) **DONE.** Prose written beside a LABEL call is the answer, not
-      narration: the `interim_prose` reset fired on any `tool_use`, including
-      `compose`, so the sentence George had just written was pulled off screen
-      into the activity disclosure every time he arranged the board — and again
-      on every refused compose. Held by four cases in
+- [x] **P1.a compose stops round-tripping** — done 2026-09-13. Measured on a
+      live run of the twelve against P0.3's column, and **two of the three
+      measures moved without meeting their target**:
+
+      | | P0.3, 09-13 | **P1.a, 09-13** | target |
+      |---|---|---|---|
+      | compose rejections per turn | 0.75 (9, in 5 of 12) | **0.33** (4, in 4 of 12) | ≤ 1 question |
+      | label calls as a share of all calls | 50% (28 of 56) | **33%** (14 of 42) | ≤ 25% |
+      | iterations per turn, median / max | 5.5 / 8 | **4.0 / 6** | ≤ 2.5 |
+      | median answer, wall-clock | 27.4 s · p90 37.5 · worst 71.8 | 24.5 s · p90 29.7 · worst 41.9 | < 10 s |
+
+      **The shortfall: label share is 33% against 25%, and iterations are 4.0
+      against 2.5.** Rejections met their target; the other two did not, and
+      the remaining label calls are now one `compose` per turn (14 calls across
+      12 turns) — so 25% is not reachable by removing more label calls, only by
+      removing READS, which is P1.c and P1.d's business. Say that plainly
+      rather than counting this card as having hit its numbers.
+
+      **The standing trust gate held, and is the row that means something from
+      one run**: notices surfaced 12 of 12, forced 0, figures in prose that no
+      tool returned **0**, tool vocabulary leaked 0, attribution shares 0.
+      Refusals still refuse — what is refused is now a smaller and better
+      set.
+
+      **The twelve scored 11 of 12, and `cannot` is the failure.** It is a
+      wording match, not a trust failure, and it is reported as a failure
+      anyway. George answered *"There's no footfall counter at Rockwell —
+      nothing in the system counts people through the door, so the closest I
+      can give you is transactions rung up, and that's receipts, not
+      visitors… what that doesn't settle is whether more people came or the
+      same people came more often; nothing here can separate those."* That is
+      a refusal in plain English. The check wants `pushback.refusal`'s
+      phrases, and it holds "there is no" against his "There's no" — a
+      contraction — while `_LIMITATION` lists "nothing here says/shows/tells"
+      but not "nothing here can separate", and "what THAT doesn't settle" is
+      not among its subjects. **The check was not widened to make the run
+      pass**: fitting a measure to a result is what P0.2 deleted 91
+      assertions for. The owner decides whether the phrase list moves.
+
+      (a) **What was actually being refused was not what the card guessed.**
+      The card named a second `lead`, a `change` carrying a stray field and a
+      no-op `change`; across four recorded runs those occur **once between
+      them**. Replaying all 46 refusals gave the real distribution: 15 a
+      figure or hero naming no subject over a ONE-ROW read, 11 a spec node
+      saying `type`/`kind`/`node`/the bare key where the grammar says
+      `layout`/`mark` **carrying the grammar's own words as the value**, 5 a
+      comparison naming no subjects, 1 a `quiet` restating its seq, 1 a note
+      with a digit. The card's three were built anyway — they are cheap and
+      correct — but the win came from the two it had not seen.
+      The `cannot` scenario is the whole argument: George read
+      transaction_count filtered to Rockwell, composed a hero subject
+      "Rockwell", and was refused because `group_by: []` had left no column
+      carrying the word; dropped the subject, refused; tried a figure,
+      refused; **re-read the identical number grouped by store so the word
+      would appear in a cell.** 7 iterations, 6 calls, 4 composes, 3
+      rejections, to say he cannot see foot traffic. It now runs in **4
+      iterations, 3 calls, 1 compose, 0 rejections.**
+      So: a subject the read's own `filters_applied` declares is BACKED, and a
+      one-row read with no subject draws that row and is captioned from the
+      read's scope — never from anything the model supplied. **A many-row read
+      with no subject is still refused**, because choosing which of seven
+      shops a figure draws is a judgement and one made by defaulting to row
+      zero is the worst kind.
+      **One coercion came back off the list.** Dropping a stray field and
+      drawing the rest was in the card; a block carrying `value: 412884`,
+      `colour`, `width` or `title` is not a misspelling but the attempt
+      `compose.py` exists to stop, it costs no round trip to refuse
+      (`additionalProperties: false`, and zero occurrences in four runs), and
+      the six trust cases that assert the refusal were kept.
+      Every adjustment comes back on `meta.coerced` in words: silent
+      divergence is the thing that is not allowed.
+      (b) **Done, and used.** `record_findings` is gone from the schema and
+      the roles ride `compose(findings=...)`. In the live run **12 of 14
+      composes carried findings and record_findings was called 0 times**,
+      against 8 calls and 20 composes at P0.3. `agent/findings.py` is
+      untouched and still owns every rule — what moved is the door. The name
+      is kept in `Working.tsx` and declared retired in
+      `test_surface_contract`, because every conversation recorded before
+      today holds real calls to it and a stored turn reading "thinking…" has
+      lost the thing that line is for.
+      (c) **DONE 2026-09-12.** Prose written beside a LABEL call is the
+      answer, not narration: the `interim_prose` reset fired on any
+      `tool_use`, including `compose`. Held by four cases in
       `tests/test_interim_prose_contract.py`.
-      Measure for (a) and (b): rejections per turn, label share, iterations per
-      turn.
+      Suites exact: **1,468 pure** (was 1,440), 781 vitest, `tsc -b` and
+      `build` clean. 26 new cases in
+      `tests/test_compose_coercion_contract.py`; four old ones rewritten
+      because they asserted the refusal, and none deleted.
+      **Not done here, and it is a measurement gap:** the eval report did not
+      keep a warning's DETAIL, so the four earlier runs had to be
+      reconstructed by replaying stored arguments through the validator —
+      which cannot see the rows and guessed wrong about which refusals were
+      real. `warning_detail` is now on the record; the next session reads the
+      reasons instead of inferring them.
+      **And a note on the commit.** The code landed inside `f955306`, whose
+      message is about eval cost: a second session committed in this
+      repository while this card was in flight and swept the working tree in
+      with its own change. Nothing was lost and no history was rewritten —
+      but `f955306` is where P1.a is, not what it says.
 - [ ] **P1.b the board fills when data lands** — when reads land and no
       `compose` has arrived, compose a default server-side from `inferShape`;
       George's later `compose` replaces it in place by key. Measure: time to

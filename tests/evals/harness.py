@@ -184,6 +184,16 @@ class Report:
                       for c in turn.calls],
             "notices": [n.get("kind") for n in turn.notices],
             "warnings": [w.get("reason") for w in turn.warnings],
+            # AND WHAT THEY SAID. P1.a's measure is rejections per turn, and
+            # the reasons were not on the record: four runs of the twelve had
+            # to be reconstructed by replaying the stored arguments through
+            # the validator, which cannot see the rows and so guessed wrong
+            # about which refusals were real. A measurement whose reasons
+            # nobody can read is the gap log all over again.
+            "warning_detail": [
+                {"reason": w.get("reason"), "detail": w.get("detail")}
+                for w in turn.warnings if w.get("detail")
+            ],
             # duration_ms, iteration_ms and corrective_turns are the clock
             # (P0.3). The twelve are where the Phase 1 wall-clock baseline
             # comes from — real model, real reads — and a measurement the
