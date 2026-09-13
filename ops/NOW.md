@@ -842,6 +842,16 @@ The diagnosis behind this plan, the research, and the literal prompt for every
 card: **George, Eleven Days In** —
 https://claude.ai/code/artifact/90f62cb2-81f5-4ca1-b444-9ef3c92c858a
 
+The design, as it stands 2026-09-13, is two renders and one list:
+**George, Whole** (the screens, both modes) —
+https://claude.ai/code/artifact/40223696-68aa-4159-9b60-38789a4d3f25 — and
+**George, Borrowed** (ten patterns copied from Hex, ThoughtSpot, Perplexity,
+Manus, Canvas, Cursor, Linear, Things, Stripe, each mapped to a feature and a
+card) — https://claude.ai/code/artifact/bdf022de-6279-4e48-8422-d3c078d95810.
+Borrowed's "What this changes" list is the queue of Phase 2 surface work;
+its items 3 and 4 (line above the claim, step list) cost nothing and may
+land in Phase 1. The reasoning is in `ops/DECISIONS.md` under the same date.
+
 **A phase ends when the owner says it feels right — and it may never end with a
 rebuild.** If it does not feel right, the answer is the next fix to the same
 surface, measured against the same numbers.

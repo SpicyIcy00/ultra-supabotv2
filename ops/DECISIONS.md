@@ -2858,3 +2858,54 @@ part to protect as "build it" gets more capable.
 
 **Features 8, 23, 24, 25 are a third of the standard and are blocked on
 sources only the owner can supply.** Start them now, in parallel.
+
+## 2026-09-13 — Copy what works: ten patterns borrowed from named products
+
+Artifact: **George, Borrowed** —
+https://claude.ai/code/artifact/bdf022de-6279-4e48-8422-d3c078d95810
+
+The owner asked for the design to borrow directly from products that already
+solved parts of this, not to be derived from principle alone. Ten patterns,
+each drawn as it appears in its source and again in George, with the
+features it serves and the one build change it implies:
+
+1. Hex Threads (verified from docs): one object, three views (Agent /
+   Notebook / App), "Unlisted → Save as project", cell refs jump to the
+   logic. → a thread is already a page: Talk · Behind it · Page, "unkept →
+   Keep as page"; Behind it is reads with receipts, never code.
+2. ThoughtSpot: the interpreted question as editable tokens; coaching. →
+   "Read as" tokens under every ask; a token tap is a replay through
+   `POST /george/replay`, no model call. This is P1's 50%-no-model lever
+   with a face.
+3. Perplexity: sources above the answer, steps behind one plain line. →
+   one derived line above the claim: reads, tools, time, caveat count.
+4. Manus / Devin: a live step list with a result per step, replay when
+   done. → the Working line becomes the ladder's rungs as they happen, each
+   tappable, with duration_ms; no planner (rule 5); replay = stored calls
+   in order.
+5. Canvas / Artifacts / v0: the built thing stays pinned and each turn
+   revises it, with version arrows. → shared subject = one pinned object
+   with versions, finding column narrows; no shared subject = clear.
+6. Cursor / GitHub: a change is a diff you accept. → every proposed write
+   (save_workflow, edit_page, standing question) renders as before/after of
+   arguments; Keep makes a version; Promote stays in Needs you.
+7. Linear Triage: nothing enters until accepted; snooze; per-kind verbs;
+   keyboard. → Needs you gains Later and per-kind actions; j/k/e.
+8. Things 3 / Superhuman: Today is a list that ends. → three groups
+   (George found, Due today, You added) and an end line rendered only from
+   a loaded empty result (UI rule 8).
+9. Stripe / Mercury home: few figures, sparkline + delta, feed under, every
+   figure opens a detail. → a pin draws a sparkline only when the tool gave
+   a series; a page keeps its own river; tap = object in ~1s.
+10. Hex @ data source / Linear @: → composer @ resolves shops, suppliers,
+    products, pages to ids that land in tool arguments.
+
+**Six things deliberately not copied,** each against a rule already written:
+Liveboard/Power BI tile grids (the KPI feeling), Manus's second column
+(rule 7), Hex's SQL cells (rule 1), Devin's editable plan (rule 5),
+Perplexity's generic Related chips (cost), Cursor's accept-all (rule 7 on
+promotion).
+
+**Order of adoption:** 3 and 4 are free (frames already carry the data);
+2 is P1.b/replay wearing a face; 1, 5, 6, 7, 8, 9, 10 wait for Phase 2.
+None of it changes the two-modes split or the finding design.
