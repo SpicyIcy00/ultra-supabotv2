@@ -419,7 +419,7 @@ card below that is not marked done. One per session either way.
         diagnostic.
       - *Bounded, already gated.* Fewer iterations (P1.a/P1.b) removes round
         trips spent LABELLING, not database reads — George sees the same
-        evidence in fewer trips. Effort per turn (P1.c) genuinely could dull
+        evidence in fewer trips. Effort per turn (P1.h) genuinely could dull
         him, which is why that card already fails if any quality check on the
         twelve regresses.
       - **REFUSED: cutting `MAX_ROWS_TO_MODEL` from 200.** It was on the list
@@ -501,7 +501,7 @@ something from one run.
 **27.4 s is the number Phase 1 has to move, and the arithmetic says where
 from.** 5.5 round trips at a 4.8 s median is most of the turn; the reads
 inside them are already batched and already concurrent. Getting to 10 s means
-removing round trips, which is what P1.a, P1.c and P1.d each do — so the
+removing round trips, which is what P1.a, P1.h and P1.j each do — so the
 per-round-trip row is the one to watch for a card that made a turn cheaper
 without making it shorter.
 
@@ -540,7 +540,7 @@ calls to answer "I can't see foot traffic".
       against 2.5.** Rejections met their target; the other two did not, and
       the remaining label calls are now one `compose` per turn (14 calls across
       12 turns) — so 25% is not reachable by removing more label calls, only by
-      removing READS, which is P1.c and P1.d's business. Say that plainly
+      removing READS, which is P1.h and P1.j's business. Say that plainly
       rather than counting this card as having hit its numbers.
 
       **The standing trust gate held, and is the row that means something from
@@ -653,7 +653,7 @@ calls to answer "I can't see foot traffic".
       than the 8.2.** Both numbers are bounded below by the first model round
       trip plus the read: the fastest first object in the twelve is 4.3 s and
       the fastest composed one 4.7 s. **Nothing that waits for a read can be
-      under 2 s.** The only path to it is P1.d, which answers a navigation
+      under 2 s.** The only path to it is P1.j, which answers a navigation
       fragment with no model call at all.
 
       **The standing trust gate, and it is not whole — on a run whose input to
@@ -693,6 +693,17 @@ calls to answer "I can't see foot traffic".
       Suites exact: **1,497 pure** (was 1,468), **791 vitest** (was 781),
       `tsc -b` and `build` clean. Two live runs of the twelve, $1.59 and $1.71
       — a fifth of the $5–7 this file estimates.
+
+**The letters after P1.b were reassigned 2026-09-13, and a close-out above may
+still read oddly because of it.** The cards from here on were rewritten to
+reach the Ideal UI (§6). Two ids changed meaning: the old **P1.c "cheaper
+turns" is now P1.h**, and the old **P1.d "fragments skip the model" is now
+P1.j**. Four pointers inside P0.6's, P1.a's and P1.b's close-outs were
+repointed to the new ids so they still name the card they meant; **no finding,
+number or reasoning in any close-out was changed.** If a close-out names a card
+whose description does not match what it is claiming, this is why — check here
+before believing it.
+
 - [ ] **P1.c the reading leaves the widgets** — the top three Open items in
       the dogfood log, done as the log's AGREED FIX says: `text` is REMOVED
       from the compose vocabulary; the reading is a permanent region above
