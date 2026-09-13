@@ -3450,3 +3450,28 @@ than an omission.
 slot for every card invites a value for every card, and the invented ones look
 exactly like the real ones. When a card genuinely has no value for a slot,
 the honest output is the exception, not the nearest plausible number.
+
+## 2026-09-13 — P1.m was not a session, and asking twice was right
+
+The owner asked twice whether P1.m was still needed. The first answer — "yes,
+but smaller" — was wrong, and repeating the question is what exposed it. **A
+card that is thirty minutes plus one command is not a session**, and keeping
+it as one inflated the plan by a session and invited it to be skipped.
+
+**Folded into P1.e as its tail.** Not into P1.f, and the reason is the whole
+argument: P1.e is RENDERER-ONLY, so nothing model-facing is in flight and v2's
+first live run is clean — a gate failure means the suite. On P1.f a gate
+failure would be ambiguous between v2 being wrong and the compose rewrite
+breaking something, and an ambiguous first run of a new measure is worthless.
+
+**28 cards, not 29. The six live runs are unchanged at ~$11.04** — folding
+removed a SESSION, not a run. `P1.m` is retired as a letter and not reused;
+§3 says so, because a reused letter is what broke four cross-references
+earlier today.
+
+**The pattern behind three of today's faults.** Work done inside a planning
+conversation keeps its card alive as though it were pending; a template with a
+slot for every card invites an invented value; and a card sized by importance
+rather than by hours becomes a session it does not need. All three make the
+plan look bigger and truer than it is. **When the owner repeats a question, the
+first answer was probably a defence of the artefact rather than an answer.**

@@ -232,9 +232,10 @@ where a regression was speculative AND **the four gate scenarios could not
 have seen it.** A new comparison (`P2.i`, `P3.f`) is a capability no gate
 scenario asks for, so a run there proves nothing; `P2.c`, `P2.d` and `P2.f`
 are context and rendering; `P1.c` breaks or fixes compose refusals, which are
-its own numbers. **Six live runs across 29 cards, ~$11.04** — P1.f, P1.h,
-P1.m and the three phase closes at ~$1.84 each on v2; **P1.g is now $0.00**,
-replayed through `tests/evals/corpus.py`.
+its own numbers. **Six live runs across 28 cards, ~$11.04** — P1.e's tail,
+P1.f, P1.h and the three phase closes at ~$1.84 each on v2; **P1.g is $0.00**,
+replayed through `tests/evals/corpus.py`. Folding P1.m into P1.e removed a
+SESSION, not a run: the same six runs happen.
 **The earlier $9.10 was wrong, because the meter was.** Against v1 at its true
 $2.90 the same seven runs would have been ~$18. The real gain from dropping
 the six gates is six sessions that do not stop to run something that could not
@@ -831,60 +832,29 @@ before believing it.
       tabular; direct labels, no legends. Existing compose blocks are MAPPED
       onto the six so nothing George says stops rendering. Done when: every
       block in four recorded runs renders as one of the six with a source
-      line; a palette test fails on a fifth data colour. No eval.
-- [ ] **P1.m adopt the second cut of the voice evals** — **position, not
-      letter: after P1.e, before P1.f.** The letter is out of sequence on
-      purpose; renumbering broke four cross-references on 2026-09-13 and is
-      not being done again. Order in this list is order of work.
+      line; a palette test fails on a fifth data colour.
 
-      **Most of this card is already written and committed.**
-      `tests/evals/test_voice_evals_v2.py` exists, collects 11 tests, and the
-      1,497 pure tests still pass. `checks.grounded_numerals` is in and
-      verified on fixtures. The `gate` marker is registered. **Nothing live
-      has been run**, which is the whole of what is left.
+      **AND THE TAIL THAT WAS P1.m, ~30 minutes plus one run (~$1.84).** It
+      was a card until 2026-09-13, and it should not have been: the work is
+      already written and committed, and what is left is not a session.
+      **It rides HERE and nowhere else**, because this card is renderer-only —
+      no model-facing change is in flight, so v2's first run is clean and a
+      gate failure means v2, not something else. It cannot ride P1.f, where a
+      gate failure would be ambiguous between the suite being wrong and the
+      compose rewrite breaking something.
 
-      What changed and why (the review is in DECISIONS.md, 2026-09-13):
-      - **The assertion the first twelve did not have.** A useless George —
-        "I cannot establish that from these reads", no tool calls — passed
-        ALL SEVEN of the old suite's checks when fed to it directly. Every
-        assertion was about form and honesty. `expects_figure` now requires
-        at least one numeral a tool returned, via `grounded_numerals`, which
-        is `ungrounded_numerals` inverted and shares its every exclusion.
-      - **16 live turns became 11, for the same coverage.** The old suite
-        asked "How is Rockwell doing?" FOUR times — scored once, then re-run
-        as the setup for follow-up, correction and keep-page — and drafted the
-        Seikyo order twice. The setup turns are now shared in two module-scoped
-        fixtures. **~31% cheaper per full run**, and the thread is one
-        conversation rather than five cold starts, which also tests something
-        the old suite never did: whether George holds a thread.
-      - **The register is his.** Outside the gate every question is from
-        `george.conversations`: "how are we doing?", "how about rockwell",
-        "no i meant last week", "add top sellers by sales not units, i value
-        sales more" (a BELIEF mid-thread, which had no scenario), "can you
-        make it a page?", "lets brainstorm ideas for a po system".
-      - **Dropped:** `product` (same shape as `shop`) and `by-hour` (matches
-        nothing anyone has asked). `shop` survives as the thread's opener.
-      - **The gate's four are byte-identical** — `caveats`, `why`, `cannot`,
-        `morning`, wording included, so the one comparison that carries over
-        is not forfeited. Run them with `-m gate`.
-      - **Style checks are a RATE, not a gate.** `leads_with_reading` was
-        every non-trust failure across four runs and passes ~90% of the time;
-        it is reported as a percentage and only asserts under
-        `GEORGE_VOICE_STRICT=1`.
-
-      **What this card does: run v2 ONCE. Do not re-run v1.** The comparison
-      that matters is already on disk — `verification/p1b-final.json` holds a
-      v1 run with every scenario's findings, and **the four gate scenarios are
-      byte-identical between the suites**, so v2's gate results compare
-      directly against v1's recorded ones. The other seven v1 scenarios are
-      the ones being deliberately replaced; re-running them to watch them be
-      replaced costs $2.90 and settles nothing. Confirm the gate agrees, then
-      **delete `test_voice_evals.py`** and repoint §2b and the baseline table
-      at v2. If the gate DISAGREES, v2 is wrong — fix it and say so rather
-      than deleting the evidence. **Eval: full, once, v2 only (~$1.84)** —
-      and that estimate is from v1's per-scenario costs, so **this card's own
-      first job is to report what v2 actually cost from the new meter.**
-
+      Already built (`tests/evals/test_voice_evals_v2.py`, `checks.grounded_numerals`,
+      the `gate` marker, `harness.METER`, `tests/evals/corpus.py`); 11 tests
+      collect and the 1,497 pure tests pass. **Nothing live has been run.**
+      What is left: **run v2 once**; confirm its four gate scenarios agree
+      with the same four recorded in `verification/p1b-final.json` (they are
+      byte-identical between the suites, which is why the comparison holds);
+      **delete `tests/evals/test_voice_evals.py`**; repoint §2b and the
+      baseline table at v2. **Do not re-run v1** — $2.90 to watch seven
+      scenarios be replaced. If the gate DISAGREES, v2 is wrong: fix it and
+      say so rather than deleting the evidence that caught it.
+      **Eval: full, once, v2 only.** Report what it actually cost from the
+      new meter — ~$1.84 is an estimate derived from v1's per-scenario costs.
 - [ ] **P1.f compose narrows to the catalogue; the text gets three slots** —
       the label grammar becomes the six marks plus a claim-title per block;
       the findings roles become claim (one highlight) · caveat (whole, above
@@ -1164,9 +1134,10 @@ for it.`):
   may see.
 
 **Calendar, honestly.** One card a day, Fridays for the sweep, one session in
-three a dogfood fix: **29 open cards at four a week is seven weeks of cards,
-so nine to eleven weeks** to the Phase 3 gate. Phase 1 is eleven cards (P1.m
-sits between P1.e and P1.f), Phase 2 eleven, Phase 3 seven. The sources
+three a dogfood fix: **28 open cards at four a week is seven weeks of cards,
+so nine to eleven weeks** to the Phase 3 gate. Phase 1 is ten cards, Phase 2
+eleven, Phase 3 seven. (P1.m was a card until 2026-09-13 and is now the tail
+of P1.e: the letter is retired, not reused.) The sources
 decide whether 8, 23, 24 and 25 land inside that or after. The readable copy
 of this plan, with every card's prompt, is **George, The Build Plan** in §6.
 
