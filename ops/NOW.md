@@ -45,9 +45,11 @@ shippable. The full diagnosis is the report linked in section 6.
   part of the job. Phase 1 assumes latency is what makes George feel like a
   chatbot. That came from reading the code and the recorded evals, not from the
   owner using the room — which is two days old and has never been dogfooded.
-  **P0.1's deploy is the test.** If the first real complaint after deploying is
-  not about speed, Phase 1 is re-ordered around the complaint that arrives, and
-  that re-ordering is a decision to record, not a failure.
+  **The deploy was the test, and it answered on 2026-09-13.** The first two
+  complaints after deploying were not about speed: the BI pages were
+  unreachable behind George, and an answer vanished as it was written.
+  Phase 1 was re-ordered accordingly — correctness first — and that is a
+  decision recorded in DECISIONS.md, not a failure of the plan.
 
 ---
 
@@ -58,7 +60,6 @@ shippable. The full diagnosis is the report linked in section 6.
 | Product branch | `main` — `feature/workspace` merged into it 2026-09-12 |
 | Head | `d44249c` — **pushed 2026-09-13**, `main` and `origin/main` identical |
 | Last deploy | `d44249c`, pushed 2026-09-13. **No migration in it** — schema stays `v6w7x8y9z0a1`, which the live database already has, so the schema-behind crashloop of 09-12 cannot repeat here. Railway was healthy before the push and watched across it. |
-
 | Phase | 0, consolidating |
 | Next card | **P0.4, the deploy migrates itself** |
 
@@ -112,7 +113,7 @@ card below that is not marked done. One per session either way.
 - [x] **P0.1 merge** — fast-forward of 166 commits, `5354ef6`. Suites exact:
       1,326 pure, 774 vitest (after `npm ci` — node_modules predated the
       branch), `tsc` and `build` clean. The twelve: 11 passed, 1 failed
-      (`why`, strict `leads_with_reading`). Unpushed, awaiting the owner.
+      (`why`, strict `leads_with_reading`). Pushed 2026-09-13.
 - [x] **P0.2 rulebook** — CLAUDE.md **1,493 words**, from 22,218, with every
       rule kept. The owner's 26 features moved verbatim to `ops/STANDARD.md`;
       the ~20,000 words of readings moved verbatim to the archive at the foot
@@ -122,7 +123,7 @@ card below that is not marked done. One per session either way.
       ~33, so nearly three times as many were pinning wording as it thought.
       Suites exact: 1,306 pure (was 1,326), 774 vitest, `tsc -b` and `build`
       clean. The twelve were NOT re-run: the prompt is byte-identical, so
-      nothing about the model's behaviour changed. Unpushed.
+      nothing about the model's behaviour changed. Pushed 2026-09-13.
 - [ ] **P0.4 the deploy migrates itself** — `AUTO_MIGRATE_ON_START` is false in
       Railway, so 2026-09-12's deploy booted against a schema four migrations
       behind and refused to serve; the next deploy does the same. Either set it
