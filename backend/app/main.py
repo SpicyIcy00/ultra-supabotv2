@@ -136,17 +136,74 @@ app.include_router(storehub_imports.router, prefix=f"{settings.API_V1_PREFIX}/st
 def root():
     return {"message": "BI Dashboard API", "version": settings.VERSION}
 
-@app.get("/health")
-def health_check(response: Response):
+# How stale the schema readout on /health may be, in seconds.
+#
+# The schema check used to run ONCE, at startup, and /health replayed that
+# snapshot for the life of the process. So a database that drifted while the
+# app ran — a migration applied beside it, a restore, a rollback of the other
+# half of the deploy — was invisible until something restarted, which is the
+# defect card P0.4 names. /health now re-reads, and this bounds the cost: a
+# platform poller on a five-second interval hits the database twice a minute,
+# not twelve times.
+SCHEMA_RECHECK_SECONDS = 30.0
+
+
+async def _live_schema() -> tuple[dict, str]:
     """
-    Liveness plus schema state. 503 when the database is not at the migration
-    head this build ships — only reachable with SCHEMA_CHECK=warn, since the
-    default refuses to boot — so a platform health check fails instead of
-    routing traffic to a process that will 500.
+    The schema state as it is NOW, with how we know it.
+
+    Returns (schema, source) where source is `live` (just read), `cached` (read
+    within the window above), or `startup` (the live read failed and this is
+    the boot-time snapshot — said plainly, never passed off as current).
     """
-    schema = getattr(app.state, "schema", None) or {
+    import time
+
+    from app.core.schema_check import compare, expected_heads, read_current
+
+    snapshot = getattr(app.state, "schema", None) or {
         "ok": False, "current": [], "expected": [], "problem": "startup has not run",
     }
+    cached = getattr(app.state, "schema_live", None)
+    now = time.monotonic()
+    if cached and now - cached[0] < SCHEMA_RECHECK_SECONDS:
+        return cached[1], "cached"
+
+    try:
+        from app.core.database import engine
+        schema = compare(await read_current(engine), expected_heads()).as_dict()
+    except Exception as exc:  # noqa: BLE001 - health must not fail on a readout
+        # Never the exception's payload: a connection error carries the URL.
+        snapshot = dict(snapshot)
+        snapshot["recheck_error"] = type(exc).__name__
+        return snapshot, "startup"
+
+    app.state.schema_live = (now, schema)
+    return schema, "live"
+
+
+@app.get("/health")
+async def health_check(response: Response):
+    """
+    Liveness, which build is running, and the schema state as of now.
+
+    503 when the database is not at the migration head this build ships, so a
+    platform health check fails instead of routing traffic to a process that
+    will 500.
+
+    WHICH BUILD. A schema revision identifies the database and identified
+    nothing about the code, so "is the fix live yet" had no answer but trying
+    it. `build` is read from what the platform reported, and is
+    `{"commit": null, "source": "unknown"}` when nothing reported anything —
+    a guess here is a readout somebody would trust while debugging the wrong
+    code.
+
+    AS OF NOW, not as of boot. `schema_checked` says which: `live` or `cached`
+    is a reading of the database, `startup` means the re-read failed and this
+    is the boot snapshot.
+    """
+    from app.core.build import revision
+
+    schema, source = await _live_schema()
     # How many george_ro connections this process holds right now, against the
     # cap it enforces — the number to read when the pooler complains.
     try:
@@ -154,10 +211,16 @@ def health_check(response: Response):
         george_pool = connection_gate_status()
     except Exception as exc:  # noqa: BLE001 - health must not fail on a readout
         george_pool = {"error": f"{type(exc).__name__}: {exc}"}
+    body = {
+        "status": "healthy" if schema["ok"] else "schema_mismatch",
+        "build": revision(),
+        "schema": schema,
+        "schema_checked": source,
+        "george_pool": george_pool,
+    }
     if not schema["ok"]:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return {"status": "schema_mismatch", "schema": schema, "george_pool": george_pool}
-    return {"status": "healthy", "schema": schema, "george_pool": george_pool}
+    return body
 
 
 

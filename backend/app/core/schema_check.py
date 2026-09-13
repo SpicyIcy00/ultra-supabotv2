@@ -152,6 +152,48 @@ async def read_current(engine: AsyncEngine) -> tuple[str, ...]:
         return tuple(sorted(r[0] for r in rows))
 
 
+def sync_database_url(url: str) -> str:
+    """
+    The same URL with a SYNCHRONOUS driver on it.
+
+    The launcher runs before the event loop exists and alembic is synchronous,
+    so both need psycopg where the app uses asyncpg. The coercion is the one
+    alembic/env.py already does; it lives here so the two cannot drift and
+    then disagree about which database was migrated.
+    """
+    if "+asyncpg" in url:
+        return url.replace("+asyncpg", "+psycopg", 1)
+    if "+psycopg" in url:
+        return url
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return url
+
+
+def read_current_sync(url: str) -> tuple[str, ...]:
+    """
+    What alembic_version holds, read without an event loop.
+
+    Used by the launcher, which has to know whether the database is behind
+    BEFORE it decides whether to migrate — and which runs in the plain
+    interpreter, before uvicorn.
+    """
+    from sqlalchemy import create_engine
+
+    engine = create_engine(sync_database_url(url), pool_pre_ping=False,
+                           connect_args={"connect_timeout": 15})
+    try:
+        with engine.connect() as conn:
+            exists = conn.execute(
+                text("SELECT to_regclass('public.alembic_version')")).scalar_one()
+            if exists is None:
+                return ()
+            rows = conn.execute(text("SELECT version_num FROM alembic_version")).all()
+            return tuple(sorted(r[0] for r in rows))
+    finally:
+        engine.dispose()
+
+
 def mode() -> str:
     value = (os.environ.get("SCHEMA_CHECK") or "fail").strip().lower()
     return value if value in ("fail", "warn", "off") else "fail"

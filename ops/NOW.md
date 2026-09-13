@@ -59,9 +59,9 @@ shippable. The full diagnosis is the report linked in section 6.
 |---|---|
 | Product branch | `main` — `feature/workspace` merged into it 2026-09-12 |
 | Head | `fd5b0fb` — **pushed 2026-09-13**, `main` and `origin/main` identical. That push also carried `47fb3c2`, a docs commit the previous session left behind. |
-| Last deploy | `fd5b0fb`, pushed 2026-09-13 — ops, tests and docs only, so the build changes and the behaviour does not. Before it, `d44249c`. **No migration in either** — schema stayed `v6w7x8y9z0a1`, which the live database already has. **That is no longer true of `main`:** P0.3 added `w7x8y9z0a1b2` and did not apply it, so the next deploy IS the 09-12 crashloop unless P0.4 lands or somebody migrates first. Railway was healthy before the push and watched across it. |
+| Last deploy | `fd5b0fb`, pushed 2026-09-13 — ops, tests and docs only. Before it, `d44249c`. **Unpushed since: P0.3 and P0.4.** P0.3 added migration `w7x8y9z0a1b2` and the live database is still on `v6w7x8y9z0a1`; **P0.4 is what makes that safe** — the next deploy migrates itself before launching, rather than booting behind and refusing to serve. The first deploy carrying P0.4 is the one that applies P0.3's migration, and it is also the first one that can be checked from outside: `/health` will name the commit. |
 | Phase | 0, consolidating |
-| Next card | **P0.4, the deploy migrates itself — now blocking, not merely next.** P0.3 left an unapplied migration (`w7x8y9z0a1b2`) on `main`, so the next deploy boots code expecting a schema the live database does not have and refuses to serve. DOGFOOD_LOG still has two Open entries from the P0.5 sweep and Open wins over the speed cards; P0.4 wins over both, because until it is done no fix reaches Railway at all. |
+| Next card | **The dogfood log's two Open entries** (dead_stock/AJI BARN, a save recording only an exception name) — Open wins over every card. Phase 0 is otherwise complete; after those, Phase 1 opens at P1.a. |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
@@ -75,8 +75,17 @@ covers it.
 
 Health, and the only honest way to know which build is live:
 `GET https://ultra-supabotv2-production.up.railway.app/health` returns the
-schema the code expects beside the schema the database is on. It does NOT
-report which revision is running — that is part of card P0.4.
+schema the code expects beside the schema the database is on, **which build is
+running** (`build.commit`, `build.short`, and `build.source` naming where the
+answer came from), and **whether the schema was read just now or at boot**
+(`schema_checked`: `live`, `cached`, or `startup`). 503 on a mismatch.
+
+`build.source` is `environment (RAILWAY_GIT_COMMIT_SHA)` on Railway, `git`
+locally. **If it ever reads `unknown`, believe it** — nothing is guessed, and
+the fix is to turn on Railway's git variables or write `backend/BUILD_REVISION`
+at build time, which `app/core/build.py` already reads. This is the one part of
+P0.4 that only the next deploy can confirm: no session here can see what
+Railway injects.
 
 **The product is Supabot BI, and George is a tab in it** (the owner,
 2026-09-12: *"this is still supabot, just make george a page"*, and 09-13:
@@ -199,12 +208,39 @@ card below that is not marked done. One per session either way.
       Suites exact: 1,306 pure (was 1,326), 774 vitest, `tsc -b` and `build`
       clean. The twelve were NOT re-run: the prompt is byte-identical, so
       nothing about the model's behaviour changed. Pushed 2026-09-13.
-- [ ] **P0.4 the deploy migrates itself** — `AUTO_MIGRATE_ON_START` is false in
-      Railway, so 2026-09-12's deploy booted against a schema four migrations
-      behind and refused to serve; the next deploy does the same. Either set it
-      true or migrate as an explicit release step, and make `/health` say which
-      revision is live. A schema check that only runs at startup means the gap
-      is invisible until something restarts.
+- [x] **P0.4 the deploy migrates itself** — and `main` is deployable again.
+      `app/start.py` now reads the schema BEFORE launching and brings the
+      database to head when it is behind, **whatever `AUTO_MIGRATE_ON_START`
+      says**. That setting claimed an explicit release step migrates the
+      database; Railway has it off and has no release step, which is the whole
+      defect. It is now a checked claim: at head the launcher does nothing and
+      says the claim held, behind it migrates and says the claim did not, so
+      the deploy log names the missing release step instead of hiding it.
+      Ahead or branched it migrates nothing and says so — `upgrade head` cannot
+      fix a rollback, and a launcher that tried would spread one process's
+      outage across the estate. The upgrade runs under a postgres advisory
+      lock so two replicas booting together cannot race the same DDL, and
+      `check=True` fails the deploy where the deploy log is.
+      **`/health` reports the build** (`build.commit`, `short`, `source`) and
+      **re-reads the schema** rather than replaying the boot snapshot, with
+      `schema_checked` saying which and a 30 s cache so a poller does not
+      hammer the database. Nothing is guessed: no source, `"source":
+      "unknown"`.
+      `start.sh` ran uvicorn directly — a fallback that skipped the migration
+      entirely — and now goes through `app.start` like every other path; a
+      test holds all four.
+      Suites exact: **1,372 pure** (was 1,355), 781 vitest, `tsc -b` and
+      `build` clean. 17 new cases, and one old one **deleted because it
+      asserted the defect**: `test_launcher_does_not_migrate_when_disabled`
+      pinned the behaviour that took production down twice.
+      Verified against the live database without writing to it: the launcher
+      dry-run chose to migrate (flag off, database behind — Railway's exact
+      condition), `alembic upgrade ... --sql` generates four idempotent
+      statements and the version bump inside one transaction, and `/health`
+      answered 503 naming `v6w7x8y9z0a1` against `w7x8y9z0a1b2`.
+      **Not done here: the migration was NOT applied.** Applying it is the
+      deploy's job now, which is the point of the card, and deploying is the
+      owner's word to give.
 - [x] **P0.5 read the gaps** — `ops/sweep_gaps.py`, 25 cases in
       `tests/test_gap_sweep_contract.py`, wired into prompt 4 above. No table,
       no writer, four fixed statements, read-only. **20 kinds, not 13** — seven
@@ -372,7 +408,7 @@ Phase 1 is the only way they are ready when the interaction work lands.
 Run from the repo root. The interpreter is `.venv\Scripts\python.exe`; a system
 `python` cannot import the backend (pinned SQLAlchemy).
 
-    .venv\Scripts\python.exe ops/verify_integration.py pure     # 1,355 expected
+    .venv\Scripts\python.exe ops/verify_integration.py pure     # 1,372 expected
     .venv\Scripts\python.exe ops/sweep_gaps.py --days 7        # the weekly sweep
     .venv\Scripts\python.exe ops/turn_clock.py --days 7        # the clock (P0.3)
     .venv\Scripts\python.exe ops/turn_clock.py --days 30 --user-only

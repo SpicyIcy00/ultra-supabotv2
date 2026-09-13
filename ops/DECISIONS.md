@@ -157,6 +157,28 @@ which is where the card's own reading says the time is. **The card leaves a
 migration on `main` and P0.4 undone, so the next deploy crashloops** — said
 here and at the top of NOW.md rather than discovered on Railway.
 
+## 2026-09-13 — P0.4, the deploy migrates itself (Phase 0, session 7)
+
+**A setting promised something and nothing kept the promise.**
+`AUTO_MIGRATE_ON_START=false` was documented as "staging migrates as an
+explicit release step"; Railway had it off and the release step did not exist,
+so the else branch printed a sentence and launched a process that could not
+serve — on 09-12, and again waiting for P0.3's migration. The promise is gone:
+**the launcher brings the database to head before launching, whatever the
+setting says**, and the setting is now a CHECKED claim — at head it says the
+claim held, behind it migrates and names the missing release step. Not booting
+is never preferred to migrating. Ahead or branched it migrates nothing and says
+which: `upgrade head` cannot fix a rollback, and a launcher that tried would
+spread one process's outage across the estate. **`/health` now names the build
+and re-reads the schema** — the old check ran once at boot, so drift was
+invisible until a restart, which is the card's second half. Nothing about the
+build is guessed: no source means `"source": "unknown"`, because a plausible
+wrong sha is a readout somebody trusts while debugging code that is not
+running. `start.sh` was a fourth launch path that skipped migration entirely; a
+test now holds all four. **One test was deleted for asserting the defect** —
+`test_launcher_does_not_migrate_when_disabled` pinned the behaviour that took
+production down.
+
 
 ---
 

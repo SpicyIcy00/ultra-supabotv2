@@ -1,6 +1,7 @@
 """Deployment boundaries exercised without a database or model."""
 import asyncio
 import ast
+import contextlib
 import importlib
 from pathlib import Path
 from types import SimpleNamespace
@@ -54,16 +55,145 @@ def test_staging_startup_runs_no_bootstrap_and_logs_no_connection(monkeypatch, c
     assert 'Startup bootstrap disabled' in output and 'Schedulers disabled' in output
 
 
-def test_launcher_does_not_migrate_when_disabled(monkeypatch):
+def test_launcher_migrates_a_behind_database_even_when_the_setting_is_off(monkeypatch, capsys):
+    """
+    THIS TEST USED TO ASSERT THE OPPOSITE, and the opposite is what broke
+    production twice.
+
+    It held that AUTO_MIGRATE_ON_START=false means "run no migration", on the
+    strength of a docstring saying staging migrates "as an explicit release
+    step". Railway has the flag off and has no release step, so on 2026-09-12 a
+    deploy booted four migrations behind and refused every request, and on
+    09-13 the P0.3 migration put `main` in the same state.
+
+    The rule now: the setting claims somebody else migrates, the launcher
+    CHECKS the claim, and when the claim is false it migrates anyway — because
+    not booting is never better than migrating. See app/start.py.
+    """
     from app import start
     monkeypatch.setattr(settings, 'AUTO_MIGRATE_ON_START', False)
-    migrate = Mock(side_effect=AssertionError('no migration'))
+    monkeypatch.setattr(start, 'expected_heads', lambda: ('head_rev',))
+    monkeypatch.setattr(start, 'read_current_sync', lambda url: ('behind_rev',))
+    monkeypatch.setattr(start, '_known_revisions', lambda: {'behind_rev', 'head_rev'})
+    upgraded = Mock()
+    monkeypatch.setattr(start, '_upgrade', upgraded)
+    monkeypatch.setattr(start.os, 'execv', Mock())
+    start.main()
+    upgraded.assert_called_once()
+    out = capsys.readouterr().out
+    assert 'MIGRATING ANYWAY' in out
+    # And it names the missing release step, so the operator learns the
+    # setting is lying rather than just seeing a migration they did not expect.
+    assert 'it did not' in out
+
+
+def test_launcher_does_nothing_when_the_database_is_already_at_head(monkeypatch, capsys):
+    from app import start
+    monkeypatch.setattr(settings, 'AUTO_MIGRATE_ON_START', False)
+    monkeypatch.setattr(start, 'expected_heads', lambda: ('head_rev',))
+    monkeypatch.setattr(start, 'read_current_sync', lambda url: ('head_rev',))
+    upgraded = Mock(side_effect=AssertionError('nothing to migrate'))
+    monkeypatch.setattr(start, '_upgrade', upgraded)
     launch = Mock()
-    monkeypatch.setattr(start.subprocess, 'run', migrate)
     monkeypatch.setattr(start.os, 'execv', launch)
     start.main()
-    migrate.assert_not_called()
+    upgraded.assert_not_called()
+    assert 'the release step had already run' in capsys.readouterr().out
     assert 'app.main:app' in launch.call_args.args[1]
+
+
+def test_launcher_refuses_to_migrate_a_database_ahead_of_this_build(monkeypatch, capsys):
+    """
+    `alembic upgrade head` moves a database FORWARD. A database already ahead
+    of this build is a rollback or an older image, and upgrading is not the
+    fix — it would take an outage from one process to the whole estate. The
+    launcher says so and lets the app's schema check refuse to serve.
+    """
+    from app import start
+    monkeypatch.setattr(settings, 'AUTO_MIGRATE_ON_START', True)
+    monkeypatch.setattr(start, 'expected_heads', lambda: ('old_head',))
+    monkeypatch.setattr(start, 'read_current_sync', lambda url: ('a_future_rev',))
+    monkeypatch.setattr(start, '_known_revisions', lambda: {'old_head'})
+    upgraded = Mock(side_effect=AssertionError('must not migrate'))
+    monkeypatch.setattr(start, '_upgrade', upgraded)
+    launch = Mock()
+    monkeypatch.setattr(start.os, 'execv', launch)
+    start.main()
+    upgraded.assert_not_called()
+    assert 'NOT MIGRATING' in capsys.readouterr().out
+    # Still launched: the schema check is the gate, and /health is where the
+    # mismatch has to be readable.
+    assert 'app.main:app' in launch.call_args.args[1]
+
+
+def test_a_database_that_has_never_been_migrated_is_behind_not_ahead(monkeypatch):
+    from app import start
+    monkeypatch.setattr(settings, 'AUTO_MIGRATE_ON_START', True)
+    monkeypatch.setattr(start, 'expected_heads', lambda: ('head_rev',))
+    monkeypatch.setattr(start, 'read_current_sync', lambda url: ())
+    monkeypatch.setattr(start, '_known_revisions', lambda: {'head_rev'})
+    upgraded = Mock()
+    monkeypatch.setattr(start, '_upgrade', upgraded)
+    monkeypatch.setattr(start.os, 'execv', Mock())
+    start.main()
+    upgraded.assert_called_once()
+
+
+def test_an_unreadable_database_launches_rather_than_dying_in_the_launcher(monkeypatch, capsys):
+    from app import start
+
+    def boom(url):
+        raise RuntimeError('SENTINEL postgresql://user:secret@host/db')
+
+    monkeypatch.setattr(settings, 'AUTO_MIGRATE_ON_START', True)
+    monkeypatch.setattr(start, 'expected_heads', lambda: ('head_rev',))
+    monkeypatch.setattr(start, 'read_current_sync', boom)
+    upgraded = Mock(side_effect=AssertionError('cannot migrate what it cannot read'))
+    monkeypatch.setattr(start, '_upgrade', upgraded)
+    launch = Mock()
+    monkeypatch.setattr(start.os, 'execv', launch)
+    start.main()
+    upgraded.assert_not_called()
+    out = capsys.readouterr().out
+    assert 'unreadable' in out
+    # The launcher's output is a deploy log and the exception carries a URL.
+    assert 'SENTINEL' not in out and 'secret' not in out and 'postgresql://' not in out
+    assert 'app.main:app' in launch.call_args.args[1]
+
+
+def test_the_migration_runs_under_an_advisory_lock(monkeypatch):
+    """
+    Two replicas booting together must not race the same DDL. The lock is held
+    on the launcher's own connection for as long as alembic runs, so the
+    second process waits and then finds head.
+    """
+    source = ROOT / 'backend' / 'app' / 'start.py'
+    body = source.read_text(encoding='utf-8')
+    lock = body.split('def _lock')[1].split('\ndef ')[0]
+    assert 'pg_advisory_lock' in lock and 'pg_advisory_unlock' in lock
+    # Unlocked in a finally, so a dead alembic does not strand the lock and
+    # block every future boot.
+    assert 'finally:' in lock
+    upgrade = body.split('def _upgrade')[1].split('\ndef ')[0]
+    assert 'with _lock():' in upgrade, 'the upgrade must run inside the lock'
+    assert 'check=True' in upgrade, 'a failed migration must fail the deploy'
+
+
+def test_every_launch_path_is_the_one_that_migrates():
+    """
+    railway.json, nixpacks.toml, the Procfile and start.sh must all reach
+    app.start. start.sh ran uvicorn directly until 2026-09-13, so a deploy
+    falling back to it skipped the migration and nothing said so.
+    """
+    for name in ('railway.json', 'nixpacks.toml', 'Procfile', 'start.sh'):
+        body = (ROOT / name).read_text(encoding='utf-8')
+        assert 'app.start' in body, f'{name} does not launch through app.start'
+    # Comments may say the word; the script may not run it.
+    commands = [line for line in (ROOT / 'start.sh').read_text(encoding='utf-8').splitlines()
+                if line.strip() and not line.strip().startswith('#')]
+    assert not any('uvicorn' in line for line in commands), (
+        'start.sh must not have a second launch path of its own'
+    )
 
 
 def test_bootstrap_failures_never_print_exception_credentials(monkeypatch, capsys):
@@ -81,8 +211,16 @@ def test_bootstrap_failures_never_print_exception_credentials(monkeypatch, capsy
 def test_production_launcher_migrates_before_start(monkeypatch):
     from app import start
     monkeypatch.setattr(settings, 'AUTO_MIGRATE_ON_START', True)
+    monkeypatch.setattr(start, 'expected_heads', lambda: ('head_rev',))
+    monkeypatch.setattr(start, 'read_current_sync', lambda url: ('behind_rev',))
+    monkeypatch.setattr(start, '_known_revisions', lambda: {'behind_rev', 'head_rev'})
     order = []
-    monkeypatch.setattr(start.subprocess, 'run', lambda command, **kw: order.append(('migration', command, kw)))
+    # subprocess is patched, not _upgrade: this case holds the actual command
+    # and that the migration finishes before the server is exec'd. The lock
+    # needs a database, which this test does not have.
+    monkeypatch.setattr(start, '_lock', contextlib.nullcontext)
+    monkeypatch.setattr(start.subprocess, 'run',
+                        lambda command, **kw: order.append(('migration', command, kw)))
     monkeypatch.setattr(start.os, 'execv', lambda *args: order.append(('server', args)))
     start.main()
     assert [call[0] for call in order] == ['migration', 'server']
