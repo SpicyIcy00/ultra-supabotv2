@@ -8,9 +8,22 @@ before any card about making things faster.
 
 ## How to put something in it
 
-**Say it in chat. Claude writes it down here.** You should never have to edit
-markdown to report a bug — if reporting is work, it stops happening, and then
-the plan goes back to measuring speed and assuming everything works.
+**Say it in chat, the moment you see it. Claude writes it down here.** You
+should never have to edit markdown to report a bug — if reporting is work, it
+stops happening, and then the plan goes back to measuring speed and assuming
+everything works.
+
+**Reporting is not fixing.** Saying it costs one sentence and does not derail
+whatever session is in flight: Claude appends it here, confirms, and carries
+on with its card. Fixing is a separate session. That separation is the whole
+point — it is what lets you report immediately instead of saving things up
+until the detail has gone.
+
+    Log this: <what you did> — <what happened>          report, do not fix
+    Fix this now: <what you did> — <what happened>      jump the queue
+
+The four prompts, including the weekly sweep of the errors George records
+about himself, are in `ops/NOW.md` section 2b.
 
 Three lines is a complete report:
 

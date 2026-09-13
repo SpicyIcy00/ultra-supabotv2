@@ -99,6 +99,68 @@ any of them is stale prose, not code.
 
 ---
 
+## 2b. When something goes wrong
+
+**Reporting is not fixing, and they are separate acts.** Reporting costs one
+sentence and happens the moment you see it; fixing is a session. Keeping them
+apart is what lets you report without derailing whatever is in flight.
+
+**Report immediately, never in a batch.** Detail decays within the hour —
+"stuff came out but it just disappeared" was enough to find the cause because
+it was fresh. Saving defects up buys nothing, because an open defect already
+blocks every speed card.
+
+### The four prompts
+
+**1. Report it, any time, even mid-session.** Claude writes it into
+`ops/DOGFOOD_LOG.md` verbatim, confirms, and carries on with the card in
+flight. It does NOT start fixing.
+
+    Log this: asked "how are we doing" — stuff came out but it just disappeared
+
+**2. Fix the top one.** A session of its own.
+
+    Read ops/NOW.md. Fix the top item in the dogfood log.
+
+**3. Jump the queue**, for something that blocks you right now. Logged and
+fixed in the same session; the card in flight waits.
+
+    Fix this now: <what you did> — <what happened>
+
+**4. The weekly sweep, for errors nobody reported.** See below.
+
+    Read ops/NOW.md, then sweep george.gaps for the last 7 days. Group by
+    kind, tell me what George has been hitting that nobody reported, and put
+    anything that is a defect into the dogfood log.
+
+### George already records his own failures, and nobody reads them
+
+`agent/loop.py` writes a row to `george.gaps` for **13 kinds** of trouble:
+`api_error`, `api_retry`, `unhandled`, `tool_refused`, `convergence_cap`,
+`iteration_cap`, `no_tool_call`, `empty_result`, `duplicate_read`,
+`notice_forced`, `volunteering_over_cap`, `tool_vocabulary_leaked`,
+`transaction_wording`.
+
+**Exactly two of them are ever read back** — `api_error` and `unhandled`, and
+only when rebuilding a stored chat so a failed turn shows its error
+(`routes/george.py`). The other **eleven have been written since the first
+commit and read by nothing**. A turn that hit its iteration cap, refused a
+tool, or forced a caveat in has been recorded every time and seen by no one.
+
+That is a defect feed nobody is reading, which is why the weekly sweep exists
+and why P0.5 makes it routine. Rule: **an error George records is a defect
+report he filed himself** — it goes through the dogfood log like any other,
+rather than being fixed silently or ignored.
+
+### While Claude is working
+
+If a session finds a defect that is not its card, it **logs it and carries
+on** — it does not fix it inline. One session, one target. The exception is
+something trivially adjacent to the card being worked, and even then the fix
+is named in the close-out.
+
+---
+
 ## 3. The cards
 
 **Check `ops/DOGFOOD_LOG.md` first. Anything under Open comes before any card
@@ -130,6 +192,12 @@ card below that is not marked done. One per session either way.
       true or migrate as an explicit release step, and make `/health` say which
       revision is live. A schema check that only runs at startup means the gap
       is invisible until something restarts.
+- [ ] **P0.5 read the gaps** — `george.gaps` has 13 kinds of recorded failure
+      and 11 of them are read by nothing (see section 2b). Add a query that
+      groups the last 7 days by kind with a sample detail per kind, and make
+      it part of the weekly sweep. No new table, no new writer — the rows are
+      already there. Report what a week of real use actually contains; expect
+      it to name defects nobody thought to report.
 - [ ] **P0.3 clock** — `duration_ms` per turn and per iteration on
       `george.conversations`; elapsed time in the room's Working line; a query
       reporting median and p90 turn time, calls, iterations and corrective
