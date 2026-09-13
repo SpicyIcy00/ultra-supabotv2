@@ -36,6 +36,13 @@ def pytest_configure(config):
         "uses_real_log: this test genuinely needs GEORGE_LOG_DATABASE_URL. It "
         "will WRITE to that database. Skipped when the variable is unset.",
     )
+    config.addinivalue_line(
+        "markers",
+        "gate: one of the four voice scenarios that make up the TRUST GATE "
+        "(caveats, why, cannot, morning). Four live model turns, ~$0.55. Run "
+        "with -m gate on any card that can change what the model sees; the "
+        "full suite only at a phase close. See tests/evals/test_voice_evals_v2.py.",
+    )
 
 
 @pytest.fixture(autouse=True)

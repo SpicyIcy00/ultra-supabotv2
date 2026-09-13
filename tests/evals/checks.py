@@ -82,6 +82,47 @@ def ungrounded_numerals(answer: str, results: Iterable[dict],
     return found
 
 
+def grounded_numerals(answer: str, results: Iterable[dict],
+                      presentation_max: int = 31) -> list[NumeralFinding]:
+    """
+    Numerals in the prose that a tool result DOES account for.
+
+    The exact inverse of `ungrounded_numerals`, sharing its every exclusion so
+    the two can never disagree about what counts as a figure. It exists for the
+    opposite question. That check asks *did he invent one?*; this asks *did he
+    cite one at all?*
+
+    Why it had to be added (2026-09-13): every other assertion in the voice
+    suite is satisfied by an answer that says nothing. Fed "I cannot establish
+    that from these reads" with no tool calls, the suite passed it on all seven
+    checks — no ungrounded numerals, no internal vocabulary, leads with a
+    reading, inside the paragraph budget, nothing restated, no closing offer.
+    An eval that cannot tell a colleague from a shrug is not measuring the
+    product, and the trust machinery pushes George toward the shrug.
+
+    A scenario that asks for a figure asserts this is non-empty. One that
+    expects a refusal does not.
+    """
+    allowed = allowed_numbers(results)
+    text = _DATE_PARTS.sub(" ", answer)
+    found: list[NumeralFinding] = []
+    for m in _NUMERAL.finditer(text):
+        raw = m.group("num")
+        suffix = (m.group("suffix") or "").lower()
+        n = float(raw.replace(",", ""))
+        decimals = len(raw.split(".")[1]) if "." in raw else 0
+        if suffix in ("k", "m"):
+            n *= 1000 if suffix == "k" else 1_000_000
+            decimals -= 3 if suffix == "k" else 6
+        if suffix != "%" and n == int(n) and 0 <= n <= presentation_max and decimals == 0:
+            continue
+        if n in (2024.0, 2025.0, 2026.0, 2027.0):
+            continue
+        if _matches(n, decimals, allowed):
+            found.append(NumeralFinding(text=m.group(0).strip(), value=n))
+    return found
+
+
 # ---------------------------------------------------------------------------
 # Attribution math
 # ---------------------------------------------------------------------------

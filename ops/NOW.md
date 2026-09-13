@@ -755,45 +755,54 @@ before believing it.
       onto the six so nothing George says stops rendering. Done when: every
       block in four recorded runs renders as one of the six with a source
       line; a palette test fails on a fifth data colour. No eval.
-- [ ] **P1.m fix the measure before trusting it** — **position, not letter:
-      this runs after P1.e and before P1.f.** The letter is deliberately out
-      of sequence; renumbering broke four cross-references on 2026-09-13 and
-      is not being done again. Order in this list is order of work.
-      *Why here:* P1.f rewrites the voice and P1.✓ reports every Phase 1
-      number, and both read through a suite with three faults
-      (DECISIONS.md, 2026-09-13).
-      Four changes, and the first is the one that matters:
-      (a) **Add the missing assertion: did he ANSWER.** Every check today is
-      about form and honesty, so a George that says "I can't establish that"
-      to everything passes almost all of them. Each scenario declares
-      `expects_figure`; where it is true the answer must carry at least one
-      numeral that a tool returned — the exact inverse of the existing
-      `ungrounded_numerals`, deterministic, no judge. `cannot` and
-      `run-monday` declare it false.
-      (b) **Rewrite the eight non-gate scenarios in the owner's own register,
-      from `george.conversations`**, not invented. The evals ask "How is
-      Rockwell doing?"; he types "how about rockwell". Cover the patterns
-      that have never been tested and that he uses constantly: a bare "hi";
-      assent ("ok", "yes go"); a preference taught mid-stream ("add top
-      sellers by sales not units, i value sales more" — a belief); a question
-      about George himself ("so how can i use it>"); a scope shift that is
-      not a question ("lets focus on greenhills"); asking his opinion ("what
-      do you think?"). Drop `by-hour`, which matches nothing anyone has
-      asked, and merge `shop`/`product`, which are the same shape.
-      (c) **The four trust scenarios are UNCHANGED** — `caveats`, `why`,
-      `cannot`, `morning`. They are the gate, they are stable, and they are
-      the only rows meaningful from one run. Do not touch them in this card.
-      (d) **Demote the flapping style checks to reported rates.**
-      `leads_with_reading` is every non-trust failure across four runs and
-      passes ~90% of the time; it becomes a percentage tracked across runs,
-      not an assertion that fails a build. And the report prints **against
-      the previous run** rather than as an absolute score.
-      Done when: a run prints trust rows (pass/fail) separately from style
-      rates (a percentage and a delta on the last run); a deliberately
-      over-cautious answer FAILS the new assertion; the eight rewritten
-      scenarios are traceable to real logged questions. **Eval: full, once**
-      — this card is the only one that may re-run the twelve to check the
-      twelve, and the old and new suites are reported side by side.
+- [ ] **P1.m adopt the second cut of the voice evals** — **position, not
+      letter: after P1.e, before P1.f.** The letter is out of sequence on
+      purpose; renumbering broke four cross-references on 2026-09-13 and is
+      not being done again. Order in this list is order of work.
+
+      **Most of this card is already written and committed.**
+      `tests/evals/test_voice_evals_v2.py` exists, collects 11 tests, and the
+      1,497 pure tests still pass. `checks.grounded_numerals` is in and
+      verified on fixtures. The `gate` marker is registered. **Nothing live
+      has been run**, which is the whole of what is left.
+
+      What changed and why (the review is in DECISIONS.md, 2026-09-13):
+      - **The assertion the first twelve did not have.** A useless George —
+        "I cannot establish that from these reads", no tool calls — passed
+        ALL SEVEN of the old suite's checks when fed to it directly. Every
+        assertion was about form and honesty. `expects_figure` now requires
+        at least one numeral a tool returned, via `grounded_numerals`, which
+        is `ungrounded_numerals` inverted and shares its every exclusion.
+      - **16 live turns became 11, for the same coverage.** The old suite
+        asked "How is Rockwell doing?" FOUR times — scored once, then re-run
+        as the setup for follow-up, correction and keep-page — and drafted the
+        Seikyo order twice. The setup turns are now shared in two module-scoped
+        fixtures. **~31% cheaper per full run**, and the thread is one
+        conversation rather than five cold starts, which also tests something
+        the old suite never did: whether George holds a thread.
+      - **The register is his.** Outside the gate every question is from
+        `george.conversations`: "how are we doing?", "how about rockwell",
+        "no i meant last week", "add top sellers by sales not units, i value
+        sales more" (a BELIEF mid-thread, which had no scenario), "can you
+        make it a page?", "lets brainstorm ideas for a po system".
+      - **Dropped:** `product` (same shape as `shop`) and `by-hour` (matches
+        nothing anyone has asked). `shop` survives as the thread's opener.
+      - **The gate's four are byte-identical** — `caveats`, `why`, `cannot`,
+        `morning`, wording included, so the one comparison that carries over
+        is not forfeited. Run them with `-m gate`.
+      - **Style checks are a RATE, not a gate.** `leads_with_reading` was
+        every non-trust failure across four runs and passes ~90% of the time;
+        it is reported as a percentage and only asserts under
+        `GEORGE_VOICE_STRICT=1`.
+
+      **What this card does:** run v1 and v2 once each, same build, same day;
+      report them side by side; confirm v2 catches everything v1 caught; then
+      **delete `test_voice_evals.py`** and repoint §2b and the baseline table
+      at v2. If v2 misses something v1 caught, v2 is wrong — fix it and say so
+      rather than deleting the evidence. **Eval: full, once, BOTH suites** —
+      the only card allowed to run the twelve to check the twelve, ~$2.80 for
+      the pair, and the last time v1 ever costs anything.
+
 - [ ] **P1.f compose narrows to the catalogue; the text gets three slots** —
       the label grammar becomes the six marks plus a claim-title per block;
       the findings roles become claim (one highlight) · caveat (whole, above
