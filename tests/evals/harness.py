@@ -12,9 +12,13 @@ to george.* — conftest has already removed GEORGE_LOG_DATABASE_URL.
 from __future__ import annotations
 
 import asyncio
+import atexit
 import json
 import os
+import sys
 import time
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Callable, Optional
 
 import pytest
@@ -214,7 +218,41 @@ class Meter:
                 "usd": round(self.usd(), 4), "rates_as_of": RATES_AS_OF}
 
 
+    def record(self) -> None:
+        """
+        Append this process's spend to the ledger, ALWAYS.
+
+        WHY, 2026-09-13. `Report.write()` only wrote a file when
+        `GEORGE_EVAL_REPORT` was set, so **a run started without it left no
+        trace of any kind** — no tokens, no cost, no record that it happened.
+        Thirteen reports exist for 2026-09-13 and eight carry no usage at all;
+        their cost is unrecoverable, and runs with no env var are not even in
+        that thirteen. The owner watched an API balance fall by ~$6.70 against
+        a reported $0.64 and had no way to reconcile it, because most of the
+        day's spend was never written down.
+
+        This runs at interpreter exit, needs no environment variable, and
+        appends one line per process. It is the only complete record there is.
+        """
+        if not self.turns:
+            return
+        try:
+            path = Path(__file__).resolve().parents[2] / "verification" / "spend_ledger.jsonl"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            row = self.snapshot()
+            row["at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            row["argv"] = " ".join(sys.argv[1:])[:300]
+            row["report"] = os.environ.get("GEORGE_EVAL_REPORT") or None
+            with path.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(row) + "\n")
+            print(f"\n[spend] this process: {row['turns']} live turns, "
+                  f"${row['usd']:.2f} — appended to {path.name}")
+        except Exception as exc:            # never fail a run over bookkeeping
+            print(f"\n[spend] LEDGER WRITE FAILED: {exc!r}")
+
+
 METER = Meter()
+atexit.register(METER.record)
 
 
 class Report:

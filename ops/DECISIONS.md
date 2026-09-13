@@ -3609,3 +3609,53 @@ worse than no plan**, because both readers are confident and they are reading
 different documents.
 
 Suites: 1,544 pure (was 1,535), 30 skipped, 0 failing.
+
+## 2026-09-13 — FULL REVIEW: the $0.64 was true and it was not the day's cost
+
+The owner watched an API balance fall from ~$7 to ~$0.30 against a reported
+$0.64 and asked whether all calls can be accounted for. **They cannot.** What
+follows is what the logs do and do not contain.
+
+**The $0.64 was correct for the run it described** — `dogfood-remainder-caveats.json`,
+4 turns, 23:19. The error was letting one run's price stand as the day's.
+
+**Thirteen eval reports exist for 2026-09-13, 11:48 to 23:19.**
+
+| | |
+|---|---|
+| 5 reports carry a `spend` block | **$4.59**, 32 scored turns |
+| **8 reports carry NO usage at all** | **unrecoverable** |
+| estimated for those 8 (6 full runs at the measured $2.90, 2 singles) | **~$17.60** |
+| `george.conversations` today (production, not evals) | 7 turns, **$2.01** |
+| **floor for the day** | **~$24** |
+
+**And thirteen is a floor, not a count. A run without `GEORGE_EVAL_REPORT`
+set wrote NOTHING** — `Report.write()` returned `None` and the process exited
+silently. Any run started without that variable is invisible in every record
+we have. There are also four `.worktrees/` with their own copies of the
+harness.
+
+**What is NOT the cause, checked rather than assumed:** retries. Today's gaps
+are `restated_figure` 3 and `no_tool_call` 1 — **zero `api_retry`, zero
+`api_error`**. The loop accumulates usage with `+=` across iterations, so
+iteration count is not being undercounted either.
+
+**What I cannot see from here, and the owner must check:** whether Claude Code
+sessions bill the same credit. If they do, this conversation is also spending
+it and appears in none of the figures above. The Anthropic console, filtered
+by key and grouped by day, is the only authority. **`ops/cost_report.py` reads
+`george.conversations`, which no eval turn ever reaches.**
+
+**FIXED: `harness.Meter.record()` now appends to
+`verification/spend_ledger.jsonl` at interpreter exit, always, with no
+environment variable required.** One line per process: turns, tokens, USD,
+timestamp, argv, and which report it wrote if any. Verified by writing a row.
+It is the only complete record that will exist from here.
+
+**The honest summary. Three separate accounting faults, each found only when
+the owner pushed:** `spend()` counted scored turns and missed setup turns
+(40%); eight reports predate usage being recorded at all; and a run without an
+env var recorded nothing whatsoever. **Every one of them understated.** The
+lesson is not "estimate better" — it is that a meter nobody can fail to read
+must be the default, and every figure quoted before today's ledger existed
+should be treated as a floor.
