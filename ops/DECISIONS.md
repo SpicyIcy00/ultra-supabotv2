@@ -2993,3 +2993,53 @@ Every prompt is "Read ops/NOW.md. Do the next card." — cold-session safe by
 construction. Honest calendar: eight to ten weeks to the Phase 3 gate.
 Old P2.a/b/d absorbed into P2.c, P1.d, P2.h; old P2.c (one expressive form)
 dropped with feature 4.
+
+## 2026-09-13 — Model switching (Opus → Sonnet): still no, now with the arithmetic
+
+P0.6 recorded "do not cascade models" in one line. The question came back, so
+here is the measurement behind it. Read from `cost_report.py --since
+2026-09-05` (the current build, 10 real turns, $2.50 total):
+
+| per turn | tokens | share of turn |
+|---|---|---|
+| cache read | 138,590 | 27.7% |
+| cache write | 20,527 | 51.4% |
+| output | 2,084 | 20.9% |
+| uncached input | ~9 | 0% |
+
+Four reasons, in order of how much they decide it.
+
+1. **The premise.** Production is $0.25/turn and ~10 turns a week. One eval
+   run is $1.59–$1.71 and a heavy build day was $18.20. Zeroing the
+   production model bill entirely saves ~$10/month. It is 3% of the bill.
+2. **The cache is model-scoped, so the saving is smaller than the price
+   ratio and can invert.** The prefix is ~30k tokens (138,590 read over 4.6
+   iterations). A turn routed to a second model pays a full cold prefix
+   WRITE at that model's write rate, and cache write is already 51% of the
+   bill. At a 5x price gap routing still saves ~$0.16/turn; at a 1.7x gap it
+   costs ~$0.01/turn MORE. Exact Sonnet 5 rates were not pinned here, so the
+   sign of the answer is unknown — which is itself the reason not to build
+   on it.
+3. **The cheap turns are being DELETED, not routed.** P1.a cut label calls
+   50% → 33%; P1.f shrinks compose further; P1.i/P1.j answer navigation
+   fragments with **no model call at all**. A turn that costs $0 beats a
+   turn that costs 40% less. You cannot route a turn that no longer exists.
+4. **What survives that is judgment**, which is rule 9's "the model selects,
+   investigates, explains and interprets" — the product. NOW.md's own line
+   decides it: a lever that only costs money is free; a lever that narrows
+   what he reads or dulls how he thinks is the product. The TTL is the
+   first kind. Model choice is the second.
+
+**And it would break the measure.** The twelve measure George's behaviour.
+Mixed models make a run a blend, and a flapping style check unattributable.
+
+**Where model switching already happens, correctly:** across SESSIONS, not
+turns — Opus 5 builds, Fable 5.1 reviews. Whole task, own context, no shared
+cache to forfeit. That is in the working protocol and stays.
+
+**When to revisit, named so it is not re-litigated sooner:** when production
+turns exceed build turns in the bill. The design then is a fixed split by
+SURFACE, not per-turn routing — unattended watches and standing questions run
+hours apart and pay a cold write anyway, so they forfeit no cache. Note even
+then that the morning standing question is the highest-judgment turn of the
+day and is the worst candidate on the list.
