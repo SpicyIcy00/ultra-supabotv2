@@ -2815,7 +2815,7 @@ pay for; sixteen of those are built here. The category he named — an AI
 operating system for a business — is where the whole industry moved in 2026
 (Salesforce, ServiceNow, Make all repositioned onto "agentic OS"); he is
 building the version for a business his size, which none of them are. Full
-review: https://claude.ai/code/artifact/... "The 26, Reviewed".
+review: https://claude.ai/code/artifact/1cb5dffa-972c-4988-8f20-7f745be88bd8 ("The 26, Reviewed").
 
 **The finding that reorganises the plan: the 26 describe TWO kinds of screen,
 and one surface kept trying to be both.**
