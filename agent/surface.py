@@ -433,13 +433,71 @@ def leaked_terms(answer: str, defs: Mapping[str, Any]) -> list[str]:
     return _whole_words(req(defs, "surface.prose.leaks"), answer)
 
 
+# Where one clause stops and the next begins: punctuation, a spaced dash, or a
+# coordinating conjunction. A negation does not reach across one of these, and
+# that is what separates "nobody counts people" from "Rockwell didn't grow, but
+# customers were up" — same distance in words, different clause.
+_CLAUSE_BREAK = re.compile(
+    r"[.!?\n,;:]"
+    r"|\s[-–—]\s"
+    r"|\b(?:but|and|so|yet|while|whereas|though|although|because)\b",
+    re.IGNORECASE,
+)
+
+
+def _disclaimed(before: str, markers: set[str], window: int) -> bool:
+    """
+    Whether the words just before a term negate it.
+
+    The lookback is the CLAUSE the term sits in, not the sentence. A sentence
+    is too wide — "this was footfall through the till, not bigger purchases"
+    has a negator in it, and it belongs to the purchases — and a plain
+    distance in words is too blunt, because "didn't grow, but customers" puts
+    the negator exactly as close as "nobody counts people" does. What tells
+    them apart is the comma and the "but".
+
+    `window` is a bound on top of that, not the mechanism: it stops a very
+    long clause from being cleared by a negator at the far end of it.
+    """
+    clause = _CLAUSE_BREAK.split(before)[-1]
+    return any(token in markers
+               for token in re.findall(r"[\w']+", clause.lower())[-window:])
+
+
 def transaction_synonyms(answer: str, defs: Mapping[str, Any]) -> list[str]:
     """
     Words the definitions do not establish as meaning "transaction", when the
     answer is about transactions at all. An answer that never mentions
     transactions is not read for them: "people" in an answer about suppliers
     is a word, not a translation.
+
+    A USE THAT DENIES THE TRANSLATION IS NOT A LEAK. Asked for foot traffic,
+    George answered "I can't see foot traffic anywhere — nobody counts people
+    through the door, only tills… that's sales made, not people who walked
+    in", which is the trust rules working exactly as written — and he was
+    recorded as having leaked "people" and "traffic" for saying so. A check
+    that fires on the refusal it most wants trains the refusal out.
+
+    So a term is kept only when at least ONE of its uses stands undenied. Every
+    use disclaimed is an answer being careful; one bare use is still a leak,
+    which is what keeps "this was footfall through the till" — calling
+    transactions footfall — reported. See surface.prose.negation_markers.
     """
     if not re.search(r"\btransactions?\b", answer, re.IGNORECASE):
         return []
-    return _whole_words(req(defs, "surface.prose.transaction_synonyms_not_established"), answer)
+    markers = {str(m).lower()
+               for m in req(defs, "surface.prose.negation_markers")}
+    window = int(req(defs, "surface.prose.negation_window_words"))
+    low = answer.lower()
+
+    found: list[str] = []
+    for term in req(defs, "surface.prose.transaction_synonyms_not_established"):
+        if not isinstance(term, str) or not term:
+            continue
+        pattern = r"(?<![\w.])" + re.escape(term.lower()) + r"(?![\w])"
+        uses = list(re.finditer(pattern, low))
+        if uses and not all(
+            _disclaimed(answer[:use.start()], markers, window) for use in uses
+        ):
+            found.append(term)
+    return found

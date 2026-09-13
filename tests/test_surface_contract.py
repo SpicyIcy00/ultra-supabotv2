@@ -101,6 +101,77 @@ def test_transaction_synonyms_are_read_only_beside_transactions():
     assert surface.transaction_synonyms("Transactions rose 11.6% and basket value 2.0%.", DEFS) == []
 
 
+def test_denying_the_translation_is_not_leaking_it():
+    """
+    THE ANSWER THIS CHECK USED TO PUNISH, verbatim from the twelve on
+    2026-09-13. Asked for foot traffic, George refused, named what the data
+    actually is, and said what the substitute would hide — CLAUDE.md rule 10,
+    exactly. He was recorded as leaking "people" and "traffic" for saying so.
+
+    A check that fires on the refusal it most wants trains the refusal out.
+    """
+    refusal = (
+        "I can't see foot traffic anywhere - nobody counts people through the "
+        "door, only tills. The closest thing is transactions, and Rockwell's "
+        "were up on the week to 6 September against the week before; that's "
+        "sales made, not people who walked in, so a busier shop that sold "
+        "less would look identical."
+    )
+    assert surface.transaction_synonyms(refusal, DEFS) == []
+
+
+def test_a_real_translation_is_still_caught_in_the_same_breath_as_a_denial():
+    """
+    The other half of the same run, and the reason this is not just "ignore a
+    sentence containing 'not'": the "not" here negates the PURCHASES, not the
+    footfall, and calling transactions footfall really does dress a sale as a
+    person.
+    """
+    leak = (
+        "Rockwell was up sharply, and almost all of that is more transactions "
+        "- the basket barely moved, so this was footfall through the till, "
+        "not bigger purchases."
+    )
+    assert surface.transaction_synonyms(leak, DEFS) == ["footfall"]
+
+
+def test_one_bare_use_is_a_leak_however_carefully_it_is_denied_elsewhere():
+    """Every use disclaimed is care; one use standing undenied is a leak."""
+    both = ("Transactions are not customers. Still, customers were up 11% "
+            "last week.")
+    assert surface.transaction_synonyms(both, DEFS) == ["customers"]
+
+
+def test_a_denial_does_not_reach_across_a_sentence_boundary():
+    assert surface.transaction_synonyms(
+        "Transactions are not the same thing. Customers rose 11%.", DEFS
+    ) == ["customers"]
+
+
+def test_the_denial_window_does_not_stretch_to_another_clause():
+    """
+    "didn't" belongs to the growth, not to the customers, and it is four words
+    away — outside the window. The leak stands.
+    """
+    assert surface.transaction_synonyms(
+        "Transactions tell the story: Rockwell didn't grow, but customers were up.",
+        DEFS,
+    ) == ["customers"]
+
+
+@pytest.mark.parametrize("denial", [
+    "that is transactions, not people",
+    "transactions, never people",
+    "transactions rather than people",
+    "transactions instead of people",
+    "transactions: nobody counts people",
+    "transactions, and we cannot count people",
+    "transactions, so it doesn't count people",
+])
+def test_the_shapes_a_denial_actually_takes(denial):
+    assert surface.transaction_synonyms(denial, DEFS) == []
+
+
 # ------------------------------------------------------------------- the loop --
 
 def _loop():

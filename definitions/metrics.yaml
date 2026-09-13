@@ -5771,6 +5771,47 @@ surface:
       - traffic
       - footfall
       - shoppers
+    # Saying a word is not the same as using it as a translation.
+    #
+    # The scan above exists so George cannot quietly call transactions
+    # "customers" — a transaction is a sale, and dressing it as a person
+    # overstates what was counted. But the answer that DISCLAIMS the
+    # substitution has to say the word too: "that's sales made, not people who
+    # walked in" is the sentence the trust rules most want, and until
+    # 2026-09-13 it tripped exactly the same wire as the leak did.
+    #
+    # What separates them is the CLAUSE the negator sits in. In a disclaimer it
+    # shares a clause with the word — "can't see foot traffic", "nobody counts
+    # people", "not people who walked in". In a real leak it does not: "this
+    # was footfall through the till, not bigger purchases" has a "not" in the
+    # sentence, and it negates the purchases. Distance alone is not enough to
+    # tell them apart — "Rockwell didn't grow, but customers were up" puts the
+    # negator exactly as close as "nobody counts people" does, and the comma
+    # and the "but" are the whole difference.
+    negation_markers:
+      - not
+      - "no"
+      - nobody
+      - none
+      - never
+      - cannot
+      - can't
+      - isn't
+      - aren't
+      - wasn't
+      - weren't
+      - don't
+      - doesn't
+      - didn't
+      - without
+      - rather
+      - instead
+      - unlike
+      - nor
+    # A bound on the clause lookback, not the mechanism — the clause boundary
+    # above does the separating. This only stops a very long clause from being
+    # cleared by a negator at the far end of it.
+    negation_window_words: 6
     causal_words_to_avoid:
       - caused
       - because of

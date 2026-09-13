@@ -204,6 +204,27 @@ once executed a migration against a real database. The rule this leaves:
 **naming what was exercised is not the same as exercising it — a stubbed dry
 run is evidence about a decision, never about the thing it decided to do.**
 
+## 2026-09-13 — the first dogfood fix: denial is not a leak
+
+`transaction_synonyms` fired on the answer it most wanted. Asked for foot
+traffic George refused, named what the data is, and said what the substitute
+would hide — and was recorded as leaking "people" and "traffic" for saying so.
+**A check that fires on the refusal it exists to encourage trains the refusal
+out.**
+
+The fix turned on something narrower than it first looked. **Not distance:**
+"Rockwell didn't grow, but customers were up" puts the negator exactly as close
+to the word as "nobody counts people" does, and the first is a leak while the
+second is care. The first attempt used a three-word window and got that case
+wrong; the test caught it. What separates them is the comma and the "but", so
+the lookback is the **clause**, not the sentence (too wide — it would clear
+"footfall through the till, not bigger purchases") and not a word count (too
+blunt). A term is cleared only when EVERY use is denied; one bare use is still
+a leak, which is what keeps the real hit in the same run reported.
+
+Held by 8 cases carrying both real sentences verbatim, and checked against all
+twelve recorded answers rather than against invented ones.
+
 
 ---
 
