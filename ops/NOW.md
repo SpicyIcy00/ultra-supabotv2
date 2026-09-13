@@ -851,7 +851,11 @@ card) — https://claude.ai/code/artifact/bdf022de-6279-4e48-8422-d3c078d95810.
 **George, Assembled** (all ten borrowings built into one working mockup:
 the screens to copy from when a card touches the surface) —
 https://claude.ai/code/artifact/9ece0ca9-b96e-46cf-b0e3-a008f9e45af3.
-Borrowed's "What this changes" list is the queue of Phase 2 surface work;
+**George, Borrowed II** (fourteen more, for how data is drawn, text is
+written and suggestions appear: FT, Datawrapper, Oura, Google Maps, Stripe,
+Bloomberg, Hex, Apple Health, Axios, Perplexity, Gmail, Notion AI, Copilot,
+Netflix) — https://claude.ai/code/artifact/ed14bb98-11bc-4ffc-914b-9e342fa90ad8.
+Both Borrowed pages' "What this changes" lists are the queue of Phase 2 surface work;
 its items 3 and 4 (line above the claim, step list) cost nothing and may
 land in Phase 1. The reasoning is in `ops/DECISIONS.md` under the same date.
 

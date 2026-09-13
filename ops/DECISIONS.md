@@ -2909,3 +2909,49 @@ promotion).
 **Order of adoption:** 3 and 4 are free (frames already carry the data);
 2 is P1.b/replay wearing a face; 1, 5, 6, 7, 8, 9, 10 wait for Phase 2.
 None of it changes the two-modes split or the finding design.
+
+## 2026-09-13 — Borrowed II: how data is drawn, text written, suggestions offered
+
+Artifact: **George, Borrowed II** — see `ops/NOW.md` §6 for the link.
+
+Fourteen more borrowings, this time for the content inside the finding.
+The sources are news graphics desks, health apps and writing tools, not
+the AI chat products, which mostly get this wrong.
+
+Data (11–18): the chart's title is the claim and the subtitle is the
+measure (FT/Economist); a source line under every chart, not only under
+the finding (Datawrapper); drivers as contributor bars with no shares
+(Oura/Whoop); "usual" as a baseline, drawn as a band with today's marker
+(Google Maps popular times, Google Flights) — REQUIRES a `usual_weekday`
+comparison defined in metrics.yaml first; previous period as a dotted
+line on one axis (Stripe/Vercel); colour is direction only and digits
+are mono tabular (Bloomberg) — extend the accent scan to the four data
+colours; bars inside table cells for ranked results (Hex/Notion); one
+sentence + one small chart as the unit of evidence (Apple Health
+Highlights).
+
+Text (19–21): three fixed slots — claim, caveat, next — with "next" always
+one sentence and always last (Axios Smart Brevity); a read-index marker
+after every figure in prose, derived by matching numerals to rows, so an
+unmatched numeral is visibly marker-less (Perplexity citations); two
+voices told apart by type — serif is George's reading, mono is derived
+from frames or rows — as a tested rule, no sparkle badge ever (Gmail
+Smart Compose / GitHub Copilot labels, inverted).
+
+Suggestions (22–24): a provisional dashed frame with Keep / Discard /
+Try again / Not what I meant for every unkept thing (Notion AI); ghost
+text completing the question, built deterministically from the board's
+rows and offering only replays and object opens, Tab accepts (Copilot,
+Gmail); a suggestion carries its reason and sits on the row it's about
+(Netflix "Because you watched", Siri Suggestions) — the label tool's
+actions gain a target subject and a reason, the reason bound by the
+annotation rule.
+
+Not copied: ChatGPT headers/bullets, Apple Health rings (fullness needs a
+denominator — already declined), Oura's composite score (a definition
+nobody chose; rule 9), Robinhood whole-screen colour, Perplexity's answer
+length, Copilot completing anything.
+
+Adoption: the evidence block and the three text slots are P1 finding
+work; three new marks and the provisional frame are P2; targeted actions
+and ghost completions P2; the "usual" band waits on its definition.
