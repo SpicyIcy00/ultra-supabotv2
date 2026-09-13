@@ -3328,3 +3328,46 @@ costs; P1.m's first duty is to report what it actually cost from the new
 meter. P1.h (effort per turn) should cut every later run because cost is round
 trips, and it is deliberately NOT counted in the total, because it has not
 been measured.
+
+## 2026-09-13 — Where eval money actually goes, and the one lever that is free
+
+"Is there no way to make it cheaper?" Measured from `p1b-final.json` rather
+than guessed:
+
+| | | |
+|---|---|---|
+| cache WRITE | $0.70 | 41% |
+| cache READ | $0.54 | 32% |
+| output | $0.47 | 27% |
+| uncached input | $0.00 | 0% |
+
+**~72% of a run scales with ITERATIONS, not with how many questions are
+asked** — 2,231 cache-write tokens per iteration, 50 iterations in that run.
+Cutting scenarios is therefore the weakest lever available: the gate's four
+questions are $0.63 of a $2.90 run.
+
+**1. The free one, built today: `tests/evals/corpus.py`.** Every trust check
+is a pure function of `(answer, results)`, so a card that changes only a CHECK
+needs no live turn. Reports now store bounded evidence (30 rows per result)
+to make this work. **Proved on the day it was written**: replayed against
+`p1b-final.json` it found the `warning_stock` leak in `caveats` unaided, for
+$0.00. **P1.g becomes a no-eval card** and its $0.63 comes off the plan —
+it changes the figure gate, which is a check.
+
+**2. P1.h is the real discount and it is already a card.** Effort per turn
+cuts iterations; iterations are 72% of the bill. At its target (4.0 → 2.5) a
+run goes ~$1.84 → ~$1.25. It sits AFTER P1.f and P1.g, so only the three
+closes get the cheaper rate. **Moving it to just after P1.m would save ~$2.80**
+and put adjacent changes to effort and to the compose grammar in neighbouring
+cards, which makes a regression harder to attribute. NOT DONE — a real trade,
+and the owner's to make.
+
+**3. Keep a pair of runs inside the hour.** `PREFIX_TTL` is 1h, so the second
+run of the two-run cap re-reads the prefix rather than writing it. Free to
+obey.
+
+**Refused, so they are not re-proposed.** A cheaper model: caches are
+model-scoped and an eval must run what production runs. Cutting more
+scenarios: 28% of the cost between all of them.
+
+**Plan total ~$11.04, six live runs.**

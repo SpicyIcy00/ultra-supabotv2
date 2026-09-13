@@ -293,6 +293,25 @@ class Report:
                 "shaped_before": timing.first_composed_object_ms(turn.frames, with_default=False),
                 "shaped_after": timing.first_composed_object_ms(turn.frames, with_default=True),
             },
+            # THE EVIDENCE, BOUNDED — added 2026-09-13 so a recorded run can be
+            # REPLAYED through changed checks for free. Every trust check is a
+            # function of (answer, results): `ungrounded_numerals`,
+            # `grounded_numerals`, `restated_sentences`. Without the rows they
+            # could only be re-verified by paying for another live run, which
+            # is $2.90 to test a regex. With them, a card that changes only a
+            # CHECK costs nothing (`tests/evals/corpus.py`).
+            #
+            # Bounded at 30 rows per result: `allowed_numbers` needs the
+            # figures, not the whole table, and an unbounded report was 70 KB
+            # already.
+            "results": [
+                {"tool": r["tool"], "arguments": r["arguments"], "error": r["error"],
+                 "result": None if r["error"] else {
+                     "rows": (r["result"].get("rows") or [])[:30],
+                     "meta": r["result"].get("meta") or {},
+                 }}
+                for r in turn.results
+            ],
             "findings": findings,
             "judge": judge,
         })

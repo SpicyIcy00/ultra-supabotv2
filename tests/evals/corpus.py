@@ -1,0 +1,95 @@
+r"""
+Replay a recorded eval run through today's checks — for free.
+
+WHY. A full live run is $2.90 (measured 2026-09-13) and about 72% of that is
+cache writes and reads that scale with ITERATIONS, not with how many questions
+you ask. So paying for a live run to test a changed regex is the worst trade
+in the project.
+
+Every trust check is a pure function of `(answer, results)`:
+
+    ungrounded_numerals   did he state a figure no tool returned
+    grounded_numerals     did he state one at all
+    internal_vocabulary   did a column name reach the answer
+    attribution_claims    did he split a change between drivers
+    restated_sentences    did he read the board back
+
+None of them needs the model. So a card that changes only a CHECK — P1.g is
+exactly this — verifies against recorded runs at zero cost, and only a card
+that changes what the model SEES has to buy new turns.
+
+    .venv\Scripts\python.exe -m tests.evals.corpus verification/p1b-final.json
+
+WHAT IT CANNOT DO, stated so nobody mistakes it for a run: it cannot tell you
+whether George's BEHAVIOUR changed, because the answers are fixed. It tells
+you whether the checks, as they stand today, agree with what was recorded. A
+check that newly fires on a recorded answer is either a bug you just fixed or
+a false positive you just introduced, and the replay says which answer it was
+so you can read it.
+
+Reports written before 2026-09-13 carry no `results`, so only the two
+answer-only checks replay against them. The file says so rather than
+silently reporting fewer findings.
+"""
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+from tests.evals import checks
+
+
+def load(path: str) -> list[dict]:
+    d = json.loads(Path(path).read_text(encoding="utf-8"))
+    return d["cases"] if isinstance(d, dict) else d
+
+
+def replay(case: dict) -> dict:
+    """Today's checks against one recorded answer."""
+    answer = case.get("answer") or ""
+    stored = case.get("results")
+    out = {
+        "scenario": case.get("scenario"),
+        "internal_vocabulary": checks.internal_vocabulary(answer),
+        "attribution": checks.attribution_claims(answer),
+        "evidence": stored is not None,
+    }
+    if stored is None:
+        return out
+    results = [r["result"] for r in stored if not r.get("error") and r.get("result")]
+    out["ungrounded"] = [f.text for f in checks.ungrounded_numerals(answer, results)]
+    out["grounded"] = [f.text for f in checks.grounded_numerals(answer, results)]
+    return out
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) < 2:
+        print(__doc__)
+        return 2
+    rows = [replay(c) for c in load(argv[1])]
+    no_evidence = [r for r in rows if not r["evidence"]]
+    print(f"replayed {len(rows)} recorded answers through today's checks — $0.00\n")
+    bad = 0
+    for r in rows:
+        flags = []
+        if r["internal_vocabulary"]:
+            flags.append("LEAKED " + ", ".join(r["internal_vocabulary"]))
+        if r["attribution"]:
+            flags.append("ATTRIBUTION " + r["attribution"][0][:60])
+        if r.get("ungrounded"):
+            flags.append("UNGROUNDED " + ", ".join(r["ungrounded"]))
+        if r["evidence"] and not r.get("grounded"):
+            flags.append("cited no figure a tool returned")
+        if flags:
+            bad += 1
+        print(f"  {r['scenario']:<12} " + ("· ".join(flags) if flags else "clean"))
+    if no_evidence:
+        print(f"\n  {len(no_evidence)} case(s) carry no stored evidence (report predates "
+              f"2026-09-13): only the two answer-only checks ran on them.")
+    print(f"\n{bad} of {len(rows)} would fail today's checks.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

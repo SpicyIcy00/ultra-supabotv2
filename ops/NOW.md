@@ -232,8 +232,9 @@ where a regression was speculative AND **the four gate scenarios could not
 have seen it.** A new comparison (`P2.i`, `P3.f`) is a capability no gate
 scenario asks for, so a run there proves nothing; `P2.c`, `P2.d` and `P2.f`
 are context and rendering; `P1.c` breaks or fixes compose refusals, which are
-its own numbers. **Seven runs across 29 cards, ~$11.67** — P1.g the gate at
-$0.63 measured; P1.f, P1.h, P1.m and the three closes at ~$1.84 each on v2.
+its own numbers. **Six live runs across 29 cards, ~$11.04** — P1.f, P1.h,
+P1.m and the three phase closes at ~$1.84 each on v2; **P1.g is now $0.00**,
+replayed through `tests/evals/corpus.py`.
 **The earlier $9.10 was wrong, because the meter was.** Against v1 at its true
 $2.90 the same seven runs would have been ~$18. The real gain from dropping
 the six gates is six sessions that do not stop to run something that could not
@@ -243,6 +244,38 @@ inform them; the money is secondary and always was.
 card surfaces at the close, with up to eight cards behind it. That is the
 accepted cost, accepted because those six runs could not have caught it
 anyway. If a close ever fails on a trust row, the bisect is the price.
+
+**THREE WAYS TO SPEND LESS, and only one of them is "run fewer questions".**
+Measured from `p1b-final.json`: cache WRITE $0.70, cache READ $0.54, output
+$0.47, uncached input $0.00. **~72% of a run scales with ITERATIONS, not with
+how many questions you ask** (2,231 cache-write tokens per iteration, 50
+iterations in that run).
+
+1. **Replay recorded answers instead of buying new ones —
+   `tests/evals/corpus.py`, $0.00.** Every trust check is a pure function of
+   `(answer, results)`, so a card that changes only a CHECK never needs a live
+   turn. **P1.g is exactly that card**, and its $0.63 gate comes off the plan.
+   Proven on the day it was written: replayed against `p1b-final.json` it found
+   the `warning_stock` leak in `caveats` unaided, for nothing. Reports now
+   store bounded evidence (30 rows per result) so this works from here on;
+   the seven older reports carry no rows and only the two answer-only checks
+   replay against them, which the tool says rather than quietly reporting less.
+2. **P1.h is the real discount, and it is a card not a trick.** Effort per
+   turn cuts iterations, and iterations are 72% of the bill. At its target
+   (4.0 → 2.5) a run goes from ~$1.84 to ~$1.25. **It currently sits AFTER
+   P1.f and P1.g, so only the three phase closes get the discount.** Moving it
+   to just after P1.m would put every later run on the cheaper rate and save
+   roughly $2.80 — at the cost of changing effort and the compose grammar in
+   adjacent cards, which makes a regression harder to pin on either. Not done:
+   it is a real trade and the owner's to make.
+3. **Keep a pair of runs inside the hour.** `PREFIX_TTL` is 1h, so the second
+   run of the two-run cap re-reads the prefix instead of writing it. Runs on
+   different days pay the write twice. Costs nothing to obey.
+
+**What does NOT work, so it is not re-proposed:** a cheaper model (caches are
+model-scoped and the eval must run what production runs), and cutting
+scenarios (they are 28% of the cost between them — the gate's four are $0.63
+of a $2.90 run).
 
 **THE TRUST GATE — four scenarios, $0.63 MEASURED, and it is what "subset"
 means.**
@@ -866,9 +899,12 @@ before believing it.
       simple sum or difference of two figures on the board is a calculation
       and strikes it with the same one corrective turn; the leak list gains
       the missing column; the forced caveat is traced through stored frames.
-      Done when: `why` and `caveats` pass three runs each with ungrounded 0,
-      leaked 0, forced 0; the new gate case is a contract test. **Eval:
-      subset.**
+      Done when: the new gate case is a contract test, and
+      `tests/evals/corpus.py` replays every recorded run clean — including
+      `p1b-final.json`, which today reports the `warning_stock` leak this card
+      fixes. **NO EVAL, $0.00.** This card changes CHECKS, and a check is a
+      pure function of (answer, results): recorded answers prove it without a
+      live turn. Only if the corrective BEHAVIOUR changes does it ride P1.h.
 - [ ] **P1.h cheaper turns** — effort per turn via the mid-conversation
       effort message (low: label-only or follow-up; medium: fresh question;
       high: the ladder) so the cache survives; the six corrective gates
