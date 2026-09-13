@@ -232,10 +232,11 @@ where a regression was speculative AND **the four gate scenarios could not
 have seen it.** A new comparison (`P2.i`, `P3.f`) is a capability no gate
 scenario asks for, so a run there proves nothing; `P2.c`, `P2.d` and `P2.f`
 are context and rendering; `P1.c` breaks or fixes compose refusals, which are
-its own numbers. **Six live runs across 28 cards, ~$11.04** — P1.e's tail,
-P1.f, P1.h and the three phase closes at ~$1.84 each on v2; **P1.g is $0.00**,
-replayed through `tests/evals/corpus.py`. Folding P1.m into P1.e removed a
-SESSION, not a run: the same six runs happen.
+its own numbers. **Six live runs plus one gate across 27 open cards, ~$11.67** —
+P1.e's tail, P1.f, P1.h and the three phase closes at ~$1.84 each on v2, plus
+P1.c's gate at $0.64. **P1.g is closed** (`c508965`), and its own gate run
+cost **$0.64 against the $0.63 this file estimated** — the first figure here
+to survive contact with a live run.
 **The earlier $9.10 was wrong, because the meter was.** Against v1 at its true
 $2.90 the same seven runs would have been ~$18. The real gain from dropping
 the six gates is six sessions that do not stop to run something that could not
@@ -829,13 +830,30 @@ before believing it.
       keep both bugs. **A shared helper survives a redesign of the thing that
       calls it**, which is the test to apply before deciding a fix is
       redundant.
+
+      **AND THE DECISION THE LOG'S TOP ITEM ASKS FOR, because it is this
+      card's own question.** P1.g's gate run found all four scenarios passing
+      every trust check and then failing `grounded_numerals`: **not one figure
+      any tool returned appears in any of the four answers.** Two rules ask
+      for opposite things. `voice.restatement.max_restated_sentences: 0`
+      forbids a sentence restating a DRAWN figure; everything George reads IS
+      drawn; so every figure he could cite is corrected out, and an assertion
+      that he cite one can never pass.
+      **The answer is the one the Ideal UI already assumes: a reading may
+      carry the figure its claim is about.** Reciting the board is what needed
+      forbidding, and 0 forbids more than that. "OPUS added ₱130,016, more
+      than the next two together" is the claim; a second sentence walking the
+      rows is the recitation. So **`max_restated_sentences: 0 → 1`** in
+      metrics.yaml, with the reason recorded beside it. The log says this
+      "should be answered once, for both" — the other entry it points at is
+      the same question wearing widgets, which is P1.e.
       Done when: "how are we doing" and "any problems" both show George's
-      words above whatever is drawn, on the live build; three of the twelve
-      re-run with prose on every turn. **No eval** — the vocabulary change
-      is model-facing, but the four gate scenarios cannot see it: what this
-      card breaks or fixes is COMPOSE refusals and where prose lands, both of
-      which are the card's own numbers. It rides P1.f's run.
-      model-facing).
+      words above whatever is drawn, on the live build; **the four gate
+      scenarios carry a real figure without the restatement correction firing
+      on the claim, while a two-figure recitation still trips it**; the two
+      display bugs gone. **Eval: subset** — the gate, $0.64 measured at P1.g.
+      This card now changes a CORRECTION RULE, which the gate can see; it did
+      not when the card was only a vocabulary change.
 - [ ] **P1.d the board transforms; it never accumulates** — the rule decided
       in the log: a question sharing no subject with the board CLEARS it; one
       sharing a subject TRANSFORMS it in place; earlier turns fold to one

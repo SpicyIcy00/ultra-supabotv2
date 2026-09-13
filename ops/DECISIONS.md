@@ -3535,3 +3535,41 @@ property — reader prose contains no snake_case. Three leaks were live, not one
 tests in `test_prose_contract.py` and `test_notice_fingerprints.py`, and a gate
 run of four live turns ($0.64) with `ungrounded_numerals`, `notice_forced` and
 `internal_vocabulary` clean on all four.
+
+## 2026-09-13 — Two cards shared one prompt, and it pointed at neither
+
+The owner noticed P1.c and P1.d carrying the same prompt. Three cards did:
+`Read ops/NOW.md. Fix the top item in the dogfood log.` Two faults, and the
+second is worse than the duplication.
+
+1. **It cannot select between cards.** Three cards, one prompt.
+2. **It did not resolve to any of them.** The log's top item is now a finding
+   from P1.g's gate run, so the prompt would have sent a session to work that
+   is not on any of those three cards.
+
+**Fixed:** every card names itself (`Do card P1.c.`). The generic prompt moved
+to the how-to block, where it belongs — it is for a report that has NO card
+yet. Once a report has a card, name the card.
+
+**Found while checking: another session closed P1.g, ran the gate live, and
+pushed.** Everything is now on `origin/main`. Two things came back from it:
+
+- **The gate cost $0.64 against the $0.63 this file estimated.** The first
+  figure in this project to survive contact with a live run.
+- **A conflict the gate could only find by running.** All four scenarios
+  passed every trust check and then failed `grounded_numerals` — no figure any
+  tool returned appears in any of the four answers. `restatement.max_restated_
+  sentences: 0` forbids restating a DRAWN figure; everything George reads is
+  drawn; so every figure he could cite is corrected out, and the assertion
+  added in `bfb168f` can never pass.
+
+**Decided, into P1.c, because it is that card's own question.** A reading may
+carry the figure its claim is about. Reciting the board is what needed
+forbidding and `0` forbids more than that: "OPUS added ₱130,016, more than the
+next two together" is the claim, a second sentence walking the rows is the
+recitation. **`max_restated_sentences: 0 → 1`.** P1.c therefore gains the gate
+($0.64) — it now changes a correction rule, which it did not when it was only
+a vocabulary change.
+
+Totals: **27 open cards, ~$11.67.** The plan page had P1.g open while NOW.md
+had it closed, which is the concurrent-session drift the crosscheck exists for.
