@@ -2587,3 +2587,48 @@ decoration, it is the condition on which full-screen is allowed.
 
 Kept from the tab work and now dead: nothing. `chrome-sidebar-open` went with
 the revert, since the composer no longer sits inside an offset chrome.
+
+## 2026-09-13 — The bill, and the one optimisation that is refused
+
+The owner: *"is optimising api usage also part of the plan like caching etc?
+cause it costs a lot."* It was not, and the reason it was not is the same
+reason turn time was not: nobody had looked.
+
+`agent/loop.py` has written `input_tokens`, `output_tokens`,
+`cache_read_tokens` and `cache_creation_tokens` to `george.conversations`
+since the first commit. Nothing had ever read them. `ops/cost_report.py` now
+does, and the first run over 30 days says: **193 turns, $44.64, $0.2313 a
+turn, 26.2% cache hit rate**, with **76% of the bill in uncached input**.
+Caching exists and is saving 20%.
+
+**The likely cause is one word in a comment.** The three breakpoints are
+placed correctly — tools, system, and a moving one on the message tail — and
+the comment beside them reads "Both TTLs are the default 5m". The stable
+prefix is ~9,200 tokens and this usage is bursty, so it expires between
+sessions and is rebuilt at full price on most turns. A 1-hour TTL is a
+one-line change per breakpoint.
+
+**The distinction that decides which levers are allowed, and it is the real
+content of this entry.** *Trustworthiness* is structural: figures come from
+tools, notices surface, refusals refuse, held by the loop and the
+definitions. No amount of caching or batching can make George invent a
+figure. *Reasoning quality* is not structural — it depends on what he can see
+and how hard he thinks. So:
+
+- The TTL is **free**. A cache hit and a miss present byte-identical input;
+  it changes the bill and cannot change an answer.
+- Fewer iterations (P1.a/P1.b) removes round trips spent LABELLING, not
+  database reads. Same evidence, fewer trips.
+- Effort per turn could genuinely dull him, which is why P1.c already fails
+  if a quality check regresses.
+- **Cutting `MAX_ROWS_TO_MODEL` from 200 is REFUSED.** It was on my own list
+  and came off the same day. It is the only lever that reduces what George
+  can SEE, so more answers would land as "this is a sample" instead of a
+  reading. Truncation is honest and `meta` aggregates are never truncated —
+  that makes it safe, not worth doing. **A lever that only costs money is
+  free; a lever that narrows what he reads is the product.**
+- Model cascades are refused too: caches are model-scoped, so routing cheap
+  turns elsewhere forfeits cache reuse and usually costs more.
+
+At 193 turns a month $45 is nothing. 23 cents a question is the problem,
+because it does not survive real use.

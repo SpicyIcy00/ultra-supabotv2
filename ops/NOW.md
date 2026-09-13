@@ -61,7 +61,7 @@ shippable. The full diagnosis is the report linked in section 6.
 | Head | `a01706b` — **pushed and live 2026-09-13**, carrying `69b51bd`, the launcher hardening the outage below taught. |
 | Last deploy | `a01706b`, **live and healthy**, and the swap was clean — polled every 20 s across it, zero non-200s, old build to new in about a minute. It carried NO migration (the schema was already at head), so the launcher took its `already at head` branch and ran no alembic at all. That is evidence the outage below lives in the migration path specifically, not in the boot or the build — evidence, not the deploy log. Before it, `8b0325a`. `8b0325a` carried P0.3 and P0.4, and applying migration `w7x8y9z0a1b2` cost **~50 minutes of 502**: the first boots crashlooped, the migration did not apply, and nothing was readable from outside. It came up on a later retry. Root cause still unknown — the Railway deploy log for that build has not been read. `69b51bd` is the fix for the *invisibility*, not for the cause. |
 | Phase | 0, consolidating |
-| Next card | **P1.a, compose stops round-tripping.** Open is EMPTY for the first time since the log was started, and Phase 0 is closed. |
+| Next card | **P0.6, the bill — then P1.a.** Open is EMPTY for the first time since the log was started. P0.6 goes first only because it is small and its first step is free: raising the cache TTL changes the bill and cannot change an answer. Doing it before P1.a also means P1.a's token numbers are measured against a cache that has stopped moving, instead of the two confounding each other. |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
@@ -139,13 +139,20 @@ fixed in the same session; the card in flight waits.
 
 **4. The weekly sweep, for errors nobody reported.** See below.
 
-    Read ops/NOW.md, then run the weekly sweep.
+    Read ops/NOW.md, then run the weekly sweep and the cost report.
 
 `ops/sweep_gaps.py` is the sweep (P0.5). It reads, groups and samples; a
 session reads the output, **checks each finding against today's code before
 filing it**, and puts what is still live into the dogfood log.
 
     .venv\Scripts\python.exe ops/sweep_gaps.py --days 7
+    .venv\Scripts\python.exe ops/cost_report.py --days 7
+
+`ops/cost_report.py` is the bill (P0.6), from the token counts the loop has
+always recorded. It reports spend per turn and the cache hit rate, and says so
+when the hit rate is below 60% — which means the prefix is being rebuilt
+rather than read. Cost is watched the same way turn time is: measured every
+week, never estimated.
 
 Checking first is not optional. The first run's loudest finding was 89
 refusals of `top_n must be an integer, got str.` — already fixed in `0ba0b4e`
@@ -270,6 +277,53 @@ card below that is not marked done. One per session either way.
       startup refuses to serve — the 09-12 crashloop exactly. P0.4, or a
       deliberate `alembic upgrade head`, comes before this reaches Railway.
 
+- [ ] **P0.6 the bill** — cost was invisible the way turn time was before P0.3.
+      `ops/cost_report.py` now reads what the loop has always recorded and the
+      first run (2026-09-13, 30 days) says: **193 turns, $44.64, $0.23 a turn,
+      cache hit rate 26.2%**, with 76% of the bill in uncached input. At this
+      volume the money is nothing; **23 cents a question does not survive real
+      use**, which is the reason to act.
+
+      Do, in this order:
+      1. **Raise the cache TTL from 5m to 1h** on the two explicit breakpoints
+         in `agent/loop.py` (`ttl: "1h"`). The structure is already right —
+         tools, system, and a moving one on the message tail — and the comment
+         there says "Both TTLs are the default 5m". The prefix is ~9,200 tokens
+         and use is bursty, so it expires between sessions and is rebuilt at
+         full price. Writes go 1.25x → 2x, against $0.92 of writes today.
+      2. **Check the tools array is stable across sessions.** It is built per
+         session from injected capabilities and the marker sits on the LAST
+         tool, so two capability sets never share a prefix. Probably two or
+         three arrays; confirm rather than assume.
+      3. Re-run `cost_report.py --ttl 1h`. **Target: hit rate ≥ 60%.**
+
+      Then re-measure after P1.a and P1.b, which cut presented input by cutting
+      round trips.
+
+      **RISK, RANKED — and one lever is refused.** Nothing here can touch
+      trustworthiness: figures still come from tools, notices still surface,
+      refusals still refuse, and those are held by the loop and the
+      definitions, not by token count. What CAN degrade is reasoning quality,
+      and the levers differ:
+      - *Free.* The TTL. A cache hit and a miss present byte-identical input to
+        the model; it changes the bill and nothing else. The array check is
+        diagnostic.
+      - *Bounded, already gated.* Fewer iterations (P1.a/P1.b) removes round
+        trips spent LABELLING, not database reads — George sees the same
+        evidence in fewer trips. Effort per turn (P1.c) genuinely could dull
+        him, which is why that card already fails if any quality check on the
+        twelve regresses.
+      - **REFUSED: cutting `MAX_ROWS_TO_MODEL` from 200.** It was on the list
+        and came off on 2026-09-13. It is the one lever that makes George worse
+        at his job: it reduces what he can SEE, so more answers land as "this
+        is a sample" instead of a reading. Truncation is honest — he is told it
+        is a sample and told not to total visible rows, and `meta` aggregates
+        are never truncated — but that is a reason it is safe, not a reason to
+        do it. **Do not reopen this to save a few dollars.**
+      - **Do not cascade models.** Caches are model-scoped, so routing cheap
+        turns to a cheaper model forfeits cache reuse and usually costs more.
+        One model, varying effort.
+
 **Phase 1 — make it work, then make it fast. In that order.**
 
 *Reordered 2026-09-12, on the owner's report: "there are still a lot of
@@ -370,12 +424,22 @@ calls to answer "I can't see foot traffic".
 - [ ] **P1.✓ close the phase** — every target reported against its number,
       plus which cards actually paid.
 
-**The standing gate on every Phase 1 card.** This phase dismantles the
-machinery that enforces George's trust guarantees, so each card re-runs the
+**The standing gate on every Phase 1 card, and on P0.6.** This phase dismantles
+the machinery that enforces George's trust guarantees, so each card re-runs the
 twelve and reports, beside its own number: notices surfaced (must stay 100%),
 no figure in prose that no tool returned, refusals still refusing. A card that
-buys speed by losing one of those has failed — say so rather than keeping the
-speed.
+buys speed **or cheapness** by losing one of those has failed — say so rather
+than keeping the win.
+
+**And the separation that gate rests on, because it decides which levers are
+even allowed.** *Trustworthiness* and *reasoning quality* are two different
+things. Trustworthiness is structural: figures come from tools, notices
+surface, refusals refuse, and no amount of caching, batching or budget work
+can make George invent a figure. Reasoning quality is not structural — it
+depends on what he can see and how hard he thinks, so anything that narrows
+context or lowers effort can dull him without tripping a single guarantee.
+**A lever that only costs money is free; a lever that narrows what he reads is
+the product.** That is why P0.6 refuses the row cap and accepts the TTL.
 
 **Phase 2 — deepen the seven.** Only after P1.✓ meets its numbers.
 
@@ -410,7 +474,14 @@ Run from the repo root. The interpreter is `.venv\Scripts\python.exe`; a system
 `python` cannot import the backend (pinned SQLAlchemy).
 
     .venv\Scripts\python.exe ops/verify_integration.py pure     # 1,410 expected
-    .venv\Scripts\python.exe ops/sweep_gaps.py --days 7        # the weekly sweep
+    .venv\Scripts\python.exe ops/sweep_gaps.py --days 7
+    .venv\Scripts\python.exe ops/cost_report.py --days 7
+
+`ops/cost_report.py` is the bill (P0.6), from the token counts the loop has
+always recorded. It reports spend per turn and the cache hit rate, and says so
+when the hit rate is below 60% — which means the prefix is being rebuilt
+rather than read. Cost is watched the same way turn time is: measured every
+week, never estimated.        # the weekly sweep
     .venv\Scripts\python.exe ops/turn_clock.py --days 7        # the clock (P0.3)
     .venv\Scripts\python.exe ops/turn_clock.py --days 30 --user-only
     cd frontend && npm ci                                       # after any merge
