@@ -2803,3 +2803,58 @@ generates thinking.
 `cost_report.py` now says all of this in its own output. A report that reads
 like the whole truth while showing a fifth of it is worse than no report —
 that is how both wrong calls got made.
+
+## 2026-09-13 — The 26 reviewed against the market, and the split that explains five rebuilds
+
+The owner: *"is this what your research brought you was the best way to go
+for what i want? ... do a full research too on functions and basically
+everything cause i dont even know if my ideas are good."*
+
+**They are.** Twenty-one of the twenty-six are supported by products people
+pay for; sixteen of those are built here. The category he named — an AI
+operating system for a business — is where the whole industry moved in 2026
+(Salesforce, ServiceNow, Make all repositioned onto "agentic OS"); he is
+building the version for a business his size, which none of them are. Full
+review: https://claude.ai/code/artifact/... "The 26, Reviewed".
+
+**The finding that reorganises the plan: the 26 describe TWO kinds of screen,
+and one surface kept trying to be both.**
+
+  - *Answering* — "how are we doing", "why", "compare", "products". One
+    question, one finding, its evidence, what next. Transforms predictably.
+    Short-lived.
+  - *Operating* — a purchasing system, the approval queue, a kept page, a
+    thing George built. Many objects and controls, arranged and STABLE. Does
+    not recompose when you ask something. Long-lived.
+
+Hex is built exactly this way (Threads for conversation; Notebooks and Apps
+for the thing you operate; a bridge between). The generative-UI field's
+production lesson says the same from the other side: *"users need to
+understand why the interface changed; if it feels arbitrary, it feels
+broken."* A board that recomposes on every question is arbitrary by design.
+That sentence explains all five rebuilds.
+
+**So the finding redesign (13 Sep) was right for the complaint and incomplete
+for the vision.** It is the answering surface. It is the wrong shape for a
+purchasing system or a page, and the operating surface — pages, inbox,
+workflows, already half-built — is its own thing, not pinned answers. "Keep
+this" is the bridge.
+
+**Feature 4, expressive/tactile/spatial visualisation, is DROPPED.** It is the
+one feature the evidence contradicts: tactile-chart research is for blind and
+low-vision readers; spatial encodings add cognitive load for value lookup
+versus a table; and "i dont really know what im looking at" is what novelty
+costs. Explanatory visualisation wins by restraint.
+
+**Feature 1 is narrowed to what is validated:** a fixed catalogue of marks
+chosen by what the claim asserts, drawn one way. The binding stays; free
+arrangement goes.
+
+**Three warnings from the market, now standing rules:** proactive systems die
+of noise (3% of alerts warrant attention — silence-by-default is not to be
+loosened); an interface that changes for no visible reason reads as broken;
+built-by-AI systems rot without governance, and the promotion gate is the
+part to protect as "build it" gets more capable.
+
+**Features 8, 23, 24, 25 are a third of the standard and are blocked on
+sources only the owner can supply.** Start them now, in parallel.

@@ -433,6 +433,17 @@ card below that is not marked done. One per session either way.
         turns to a cheaper model forfeits cache reuse and usually costs more.
         One model, varying effort.
 
+**Read before any surface work (2026-09-13, from the review of the 26).** The
+standard describes TWO kinds of screen and one surface kept trying to be
+both — that is the five rebuilds. *Answering* (a question, one finding, its
+evidence, transforms predictably, short-lived) and *operating* (a page, a
+system, the queue: many objects, STABLE, does not recompose on a question,
+long-lived). The finding is the answering surface. Pages/inbox/workflows are
+the operating surface and are their own thing, not pinned answers. "Keep
+this" is the bridge. **Feature 4 (expressive visuals) is dropped; feature 1
+is narrowed to a fixed catalogue of marks chosen by what the claim asserts.**
+Reasoning in DECISIONS.md.
+
 **Phase 1 — make it work, then make it fast. In that order.**
 
 *Reordered 2026-09-12, on the owner's report: "there are still a lot of
