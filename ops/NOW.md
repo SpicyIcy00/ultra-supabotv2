@@ -58,8 +58,8 @@ shippable. The full diagnosis is the report linked in section 6.
 | | |
 |---|---|
 | Product branch | `main` — `feature/workspace` merged into it 2026-09-12 |
-| Head | `d44249c` — **pushed 2026-09-13**, `main` and `origin/main` identical |
-| Last deploy | `d44249c`, pushed 2026-09-13. **No migration in it** — schema stays `v6w7x8y9z0a1`, which the live database already has, so the schema-behind crashloop of 09-12 cannot repeat here. Railway was healthy before the push and watched across it. |
+| Head | `fd5b0fb` — **pushed 2026-09-13**, `main` and `origin/main` identical. That push also carried `47fb3c2`, a docs commit the previous session left behind. |
+| Last deploy | `fd5b0fb`, pushed 2026-09-13 — ops, tests and docs only, so the build changes and the behaviour does not. Before it, `d44249c`. **No migration in either** — schema stays `v6w7x8y9z0a1`, which the live database already has, so the schema-behind crashloop of 09-12 cannot repeat here. Railway was healthy before the push and watched across it. |
 | Phase | 0, consolidating |
 | Next card | **P0.4, the deploy migrates itself** — but DOGFOOD_LOG has two Open entries from the P0.5 sweep, and Open wins |
 
