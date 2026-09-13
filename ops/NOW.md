@@ -61,7 +61,7 @@ shippable. The full diagnosis is the report linked in section 6.
 | Head | `d44249c` — **pushed 2026-09-13**, `main` and `origin/main` identical |
 | Last deploy | `d44249c`, pushed 2026-09-13. **No migration in it** — schema stays `v6w7x8y9z0a1`, which the live database already has, so the schema-behind crashloop of 09-12 cannot repeat here. Railway was healthy before the push and watched across it. |
 | Phase | 0, consolidating |
-| Next card | **P0.4, the deploy migrates itself** |
+| Next card | **P0.4, the deploy migrates itself** — but DOGFOOD_LOG has two Open entries from the P0.5 sweep, and Open wins |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
@@ -129,17 +129,30 @@ fixed in the same session; the card in flight waits.
 
 **4. The weekly sweep, for errors nobody reported.** See below.
 
-    Read ops/NOW.md, then sweep george.gaps for the last 7 days. Group by
-    kind, tell me what George has been hitting that nobody reported, and put
-    anything that is a defect into the dogfood log.
+    Read ops/NOW.md, then run the weekly sweep.
+
+`ops/sweep_gaps.py` is the sweep (P0.5). It reads, groups and samples; a
+session reads the output, **checks each finding against today's code before
+filing it**, and puts what is still live into the dogfood log.
+
+    .venv\Scripts\python.exe ops/sweep_gaps.py --days 7
+
+Checking first is not optional. The first run's loudest finding was 89
+refusals of `top_n must be an integer, got str.` — already fixed in `0ba0b4e`
+the same day it stopped happening. A stale gap filed as a defect costs a whole
+session.
 
 ### George already records his own failures, and nobody reads them
 
-`agent/loop.py` writes a row to `george.gaps` for **13 kinds** of trouble:
-`api_error`, `api_retry`, `unhandled`, `tool_refused`, `convergence_cap`,
-`iteration_cap`, `no_tool_call`, `empty_result`, `duplicate_read`,
-`notice_forced`, `volunteering_over_cap`, `tool_vocabulary_leaked`,
-`transaction_wording`.
+`agent/loop.py` writes a row to `george.gaps` for **20 kinds** of trouble.
+Thirteen are literals — `api_error`, `api_retry`, `unhandled`, `tool_refused`,
+`convergence_cap`, `iteration_cap`, `no_tool_call`, `empty_result`,
+`duplicate_read`, `notice_forced`, `volunteering_over_cap`,
+`tool_vocabulary_leaked`, `transaction_wording` — and seven more are built at
+the call site and were missed every time anyone counted: `restated_figure`,
+and `{pin,save,page}_{claimed,promised}_not_made`. The catalogue in
+`ops/sweep_gaps.py` names all twenty, and a contract test holds it against the
+call sites so kind twenty-one cannot go unread the way eleven did.
 
 **Exactly two of them are ever read back** — `api_error` and `unhandled`, and
 only when rebuilding a stored chat so a failed turn shows its error
@@ -192,12 +205,16 @@ card below that is not marked done. One per session either way.
       true or migrate as an explicit release step, and make `/health` say which
       revision is live. A schema check that only runs at startup means the gap
       is invisible until something restarts.
-- [ ] **P0.5 read the gaps** — `george.gaps` has 13 kinds of recorded failure
-      and 11 of them are read by nothing (see section 2b). Add a query that
-      groups the last 7 days by kind with a sample detail per kind, and make
-      it part of the weekly sweep. No new table, no new writer — the rows are
-      already there. Report what a week of real use actually contains; expect
-      it to name defects nobody thought to report.
+- [x] **P0.5 read the gaps** — `ops/sweep_gaps.py`, 25 cases in
+      `tests/test_gap_sweep_contract.py`, wired into prompt 4 above. No table,
+      no writer, four fixed statements, read-only. **20 kinds, not 13** — seven
+      are built at the call site and had never been counted. What a week of
+      real use contains: **there has not been one.** 193 turns have ever been
+      logged; 145 are one scripted `coverage` user on 2026-09-02 and only 44
+      are a person. The last 7 days hold **4 turns and 2 gaps**. Two defects
+      filed (dead_stock/AJI BARN, a save recording only an exception name);
+      the loudest finding, 89 `top_n must be an integer`, was already fixed in
+      `0ba0b4e` — which is why the prompt now says check before filing.
 - [ ] **P0.3 clock** — `duration_ms` per turn and per iteration on
       `george.conversations`; elapsed time in the room's Working line; a query
       reporting median and p90 turn time, calls, iterations and corrective
@@ -321,6 +338,7 @@ Run from the repo root. The interpreter is `.venv\Scripts\python.exe`; a system
 `python` cannot import the backend (pinned SQLAlchemy).
 
     .venv\Scripts\python.exe ops/verify_integration.py pure     # 1,326 expected
+    .venv\Scripts\python.exe ops/sweep_gaps.py --days 7        # the weekly sweep
     cd frontend && npm ci                                       # after any merge
     cd frontend && npx vitest run                               # 774 expected
     cd frontend && npx tsc -b --noEmit

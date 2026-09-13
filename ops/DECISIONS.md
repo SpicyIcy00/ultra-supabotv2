@@ -126,6 +126,21 @@ count still cannot survive. One more went that the card did not name:
 `### The desk` section describing a surface P0.0 deleted.
 
 
+## 2026-09-13 — P0.5, reading the gaps (Phase 0, session 5)
+
+The card assumed a week of real use. **There has not been one**: of 193 turns
+ever logged, 145 are one scripted `coverage` user on 09-02 and 44 are a person;
+the last 7 days hold 4. The sweep header names who asked, because a window is
+not use because it has rows in it. The loop writes **20 kinds, not 13** — seven
+built at the call site, so a test parses the call sites and kind 21 cannot hide.
+One most-recent sample lies: `api_error`'s latest row was a malformed message
+history and 54 of 58 were a billing outage, so the commonest detail is shown
+beside it, keyed on 200 characters because a provider 400 spends its first
+hundred on preamble. **A gap is not a defect until checked against today's
+code** — the loudest, 89 × `top_n must be an integer`, was fixed in `0ba0b4e`
+the same day it stopped. Two filed, both still live.
+
+
 ---
 
 # Archive — the readings CLAUDE.md carried until 2026-09-12

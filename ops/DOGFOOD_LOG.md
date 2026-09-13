@@ -57,7 +57,39 @@ on compose frame" does.
 
 ## Open
 
-*Nothing open.*
+### 2026-09-13 · get_dead_stock calls AJI BARN an unknown store
+
+> Unknown store 'AJI BARN'. Valid stores: Fairview, Greenhills, Magnolia,
+> North Edsa, OPUS, Rockwell, Shang.
+
+Filed by the weekly sweep of `george.gaps`, not by a person — three turns,
+2026-09-03 18:46 to 2026-09-04 00:49, every one of them the owner trying to
+build the BARN reorder workflow ("Let's build a reorder workflow for AJI
+BARN. What's moving, what we're holding, what's already on order, and what's
+dead").
+
+The exclusion is deliberate and right: `tools/dead_stock.py` scopes to
+`stores.active_retail` because BARN's quantities are dispatch counters, not
+stock, so "held but not selling" means nothing there. The refusal is what is
+wrong. It says the warehouse does not exist and lists seven shops, so George
+cannot tell the owner *why* — he can only guess, in the middle of the one
+workflow the owner was actually building. A deliberate exclusion should refuse
+in its own words and name the reason the tool already documents.
+
+### 2026-09-13 · a failed save records only the name of the exception
+
+> The workflow could not be saved: ProgrammingError. The answer above is
+> unaffected; tell the user it did not save.
+
+Twice, 2026-09-03 23:47, both on "add top sellers by sales not units, i value
+sales more". The owner was told it did not save, which is correct behaviour —
+raw diagnostics must not reach an answer (UI rule 4).
+
+But the gap row records the same sanitised sentence, so **what actually failed
+is not recoverable from the log at all**. `routes/george.py:1714` formats
+`type(exc).__name__` and drops the exception. A defect feed that records that a
+write broke, and nothing about how, cannot be swept. The message to the model
+is right; the row written beside it should carry the cause.
 
 ---
 
