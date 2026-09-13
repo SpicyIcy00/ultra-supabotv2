@@ -132,6 +132,21 @@ export function readIdentity(answers: AnswerTurn[], turn: number, edit: {
 }
 
 /**
+ * The seqs a composition's blocks draw from.
+ *
+ * Both channels: `seq` on a named widget, `seqs` on a composed shape, which is
+ * every read its marks reach into.
+ */
+function drawnSeqs(blocks: readonly Block[]): Set<number> {
+  const out = new Set<number>();
+  for (const b of blocks) {
+    if (typeof b.seq === 'number') out.add(b.seq);
+    for (const s of b.seqs ?? []) if (typeof s === 'number') out.add(s);
+  }
+  return out;
+}
+
+/**
  * The edits a turn contributes.
  *
  * A turn George composed contributes his. A turn from before compose existed —
@@ -142,10 +157,29 @@ export function readIdentity(answers: AnswerTurn[], turn: number, edit: {
  * NO OBJECT FOR A THOUGHT HE HAS NOT HAD YET: while a turn is still running
  * there is no prose, and an empty text tile leading the board is a blank sheet
  * above the work.
+ *
+ * THE DEFAULT COMES FIRST, AND IS SUPERSEDED BY SEQ (P1.b, 2026-09-13). The
+ * loop composes a board the moment the reads land, so an object is on screen a
+ * round trip before George has said anything about it
+ * (agent/default_composition.py). When his composition arrives it is applied
+ * ON TOP of the default's edits rather than in place of them, so the board
+ * TRANSFORMS instead of being swapped out — and every default over a read he
+ * composed over drops out, because he has now said what that read is.
+ *
+ * BY SEQ, NOT BY KEY, and the difference is the whole of why this is written
+ * down. George never sees the default's keys, so he cannot compose the same
+ * one; what he does name is the READ, which is the identity the board already
+ * uses (readIdentity). A default over a read he did NOT mention stays, quiet,
+ * exactly as any object he does not mention stays.
  */
 function editsFor(turn: AnswerTurn, i: number): Block[] {
   const composed = turn.composition?.blocks;
-  if (composed?.length) return composed;
+  const seeded = turn.defaultComposition?.blocks ?? [];
+  if (composed?.length) {
+    const his = drawnSeqs(composed);
+    return [...seeded.filter((b) => !(typeof b.seq === 'number' && his.has(b.seq))), ...composed];
+  }
+  if (seeded.length) return seeded;
   const out: Block[] = turn.text
     ? [{ op: 'put', kind: 'text', key: `t${i}-reading`, weight: 'lead' }]
     : [];

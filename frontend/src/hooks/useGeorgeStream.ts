@@ -555,8 +555,21 @@ export function useGeorgeStream() {
                 // The screen George composed, already validated by the loop.
                 // Replaces rather than accumulates, like a finding. Nothing
                 // here is read from prose, and nothing here is a figure.
+                //
+                // TWO KINDS OF COMPOSITION ARRIVE ON THIS FRAME (P1.b). The
+                // loop composes a DEFAULT the moment the reads land so the
+                // board is not empty for the round trip it takes George to
+                // speak; it says `default: true` and is kept on its own field.
+                // His supersedes it — never the other way round, so a default
+                // arriving late (it cannot, but the client does not have to
+                // trust that) can never overwrite what he decided.
                 patchLast((t) => {
-                  t.composition = data as unknown as CompositionFrame;
+                  const frame = data as unknown as CompositionFrame;
+                  if (frame.default) {
+                    if (!t.composition) t.defaultComposition = frame;
+                  } else {
+                    t.composition = frame;
+                  }
                 });
                 break;
 

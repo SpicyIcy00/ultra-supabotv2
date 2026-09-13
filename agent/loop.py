@@ -54,7 +54,7 @@ from typing import Any, AsyncIterator, Callable, Optional
 import anthropic
 
 from agent import prose as _prose
-from agent import compose, composite_tools, findings, surface, write_tools
+from agent import compose, composite_tools, default_composition, findings, surface, write_tools
 from agent.write_tools import WriteContext, call_key
 from tools import (
     attention,
@@ -1582,7 +1582,8 @@ def _forced_caveats(missing: list[dict]) -> str:
 def _answer_payload(charted: Optional[list], calls: Optional[list],
                     page_context: Optional[dict] = None,
                     findings: Optional[list] = None,
-                    composition: Optional[list] = None) -> Optional[str]:
+                    composition: Optional[list] = None,
+                    default_composition: Optional[list] = None) -> Optional[str]:
     """
     The answer post's payload: the charted snapshot, the calls behind it, and
     the page George read to produce it.
@@ -1615,8 +1616,17 @@ def _answer_payload(charted: Optional[list], calls: Optional[list],
     # The composition that stood (2026-09-10): the validated blocks, so a
     # reopened thread draws the screen George composed, from the charted rows
     # beside it, and never a layout the client derived.
-    if composition:
-        payload["composition"] = {"blocks": composition}
+    if composition or default_composition:
+        payload["composition"] = {"blocks": composition or []}
+        # AND WHAT STOOD BEFORE HE SPOKE (P1.b, 2026-09-13). Stored beside his
+        # blocks rather than merged into them, because a reopened thread has to
+        # compose exactly as it composed live — and live, a default is
+        # superseded by the reads he composed over and kept for the ones he did
+        # not. Merging them here would make the machine's shapes indistinguish-
+        # able from his on reload, which is the one thing the frame's `default`
+        # flag exists to prevent.
+        if default_composition:
+            payload["composition"]["default_blocks"] = default_composition
     return json.dumps(payload) if payload else None
 
 
@@ -1843,7 +1853,8 @@ class ConversationLog:
                 # snapshot; the pin re-runs. Both are true of one answer.
                 _answer_payload(kw.get("charted"), kw.get("calls"),
                                 kw.get("page_context"), kw.get("findings"),
-                                kw.get("composition")),
+                                kw.get("composition"),
+                                kw.get("default_composition")),
                 json.dumps(_json_safe(kw["receipts"])) if kw.get("receipts") else None,
                 json.dumps(_json_safe(kw.get("notices") or [])),
                 self.conversation_id, datetime.now(timezone.utc),
@@ -2322,6 +2333,22 @@ async def run(
     # The blocks that stood, for the ANSWER POST and the UI. A later compose
     # call REPLACES this, for the same reason.
     composition_recorded: list[dict] = []
+
+    # THE BOARD BEFORE HE HAS SPOKEN (P1.b, 2026-09-13). What the reads that
+    # have landed would look like if nobody had composed them — validated by
+    # the same gate, sent as its own frame, and superseded by George's
+    # composition the moment it arrives.
+    #
+    # SEPARATE FROM composition_recorded ON PURPOSE, and it is a trust
+    # boundary rather than tidiness: `_drawn_on_the_board` exempts a caveat
+    # from prose because an object George composed draws the read that raised
+    # it. A default drawing that read would discharge the same check with
+    # nobody having decided anything, so the notice gate is fed his blocks
+    # alone and this list never reaches it.
+    default_composition_recorded: list[dict] = []
+    # Emitted at most once a turn. A second default after more reads landed
+    # would move objects under a person mid-read for no decision anybody made.
+    default_composed = False
 
     # What George read of the page, for the ANSWER POST and the UI: compact
     # evidence — which page, when, which pins with what status — never the
@@ -3271,6 +3298,35 @@ async def run(
                     **({"is_error": True} if err else {}),
                 })
 
+            # THE BOARD FILLS WHEN THE DATA LANDS (P1.b, 2026-09-13). The rows
+            # are in hand; the only thing missing is somebody saying what shape
+            # they are, and waiting for the model to say it costs a whole round
+            # trip with the screen empty. So the loop says it — through the
+            # same validator, in the same vocabulary — and George's own
+            # composition supersedes it when it arrives.
+            #
+            # Once a turn, and never after he has composed: a default that kept
+            # arriving would rearrange the board under a person while they read
+            # it. The model is not told this happened, which is why it moves no
+            # iteration and no token.
+            if not default_composed and not composition_recorded:
+                default_composed = True
+                default_composition_recorded = default_composition.compose_default(
+                    calls_by_seq, defs=defs, board=(desk or {}).get("board"),
+                    max_rows=MAX_ROWS_TO_CLIENT,
+                )
+                if default_composition_recorded:
+                    yield _sse("compose", {
+                        "seq": -1,
+                        "blocks": default_composition_recorded,
+                        "rejected": [],
+                        # WHICH KIND OF COMPOSITION THIS IS, said on the frame.
+                        # The client draws it the same way and supersedes it
+                        # when his arrives; a frame that did not say would be
+                        # the machine's judgement wearing his name.
+                        "default": True,
+                    })
+
             # All results go back in ONE user message — splitting them trains
             # the model out of parallel tool use.
             messages.append({"role": "user", "content": tool_results})
@@ -3335,7 +3391,8 @@ async def run(
         final_answer=answer or None, notices=pending, receipts=last_meta,
         charted=charted, calls=calls_made, parent_id=parent_id,
         page_context=page_evidence, findings=findings_recorded,
-        composition=composition_recorded, desk=desk,
+        composition=composition_recorded,
+        default_composition=default_composition_recorded, desk=desk,
     )
 
     # The ids of the two posts, so a client that is rendering the river can

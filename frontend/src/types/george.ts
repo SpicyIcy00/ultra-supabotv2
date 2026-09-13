@@ -444,6 +444,18 @@ export interface CompositionFrame {
   blocks: CompositionBlock[];
   /** What the model asked for and the loop refused, with the reason. */
   rejected: { block: unknown; reason: string }[];
+  /**
+   * TRUE WHEN NOBODY COMPOSED THIS (P1.b, 2026-09-13). The loop composed a
+   * default the moment the reads landed, so the board is not empty for the
+   * round trip it takes George to say what the rows are
+   * (agent/default_composition.py). Validated by the same gate as his, drawn
+   * the same way, and superseded by his blocks when they arrive.
+   *
+   * Said on the frame rather than inferred, because a default the client
+   * could not tell apart from a composition would be the machine's judgement
+   * wearing George's name.
+   */
+  default?: boolean;
 }
 
 export interface FindingFrame {
@@ -597,6 +609,14 @@ export type GeorgeTurn =
        * on a turn that never composed — which the workspace draws plainly.
        */
       composition?: CompositionFrame;
+      /**
+       * The board as it stood before George composed: one object per read
+       * that landed, shaped by the rule inferShape has always used, composed
+       * by the loop and validated exactly as his are. Kept beside his rather
+       * than merged into it — `editsFor` in room/board.ts applies both, and
+       * supersedes a default over any read he composed over himself.
+       */
+      defaultComposition?: CompositionFrame;
       /** meta of the last tool result — the receipts shown under the answer. */
       receipts?: ToolMeta;
       /**

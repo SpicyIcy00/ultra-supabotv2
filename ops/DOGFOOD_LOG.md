@@ -57,6 +57,56 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-13 · George drew the board and never said anything
+
+> i asked how are doing like and those 4 widgets are all the poped up, and then
+> i asked for problems and what we can fix and only this one widget popped up,
+> no text no george actually talking to me, and also when i ask to look for
+> problems all the rest of the widgets still stayed
+
+Four defects in one report, kept together because they came from one sitting
+and may share a cause. Screenshots with the owner.
+
+1. **No prose at all.** "How are we doing" drew four widgets — ATV, net sales,
+   transactions, an OPUS hero — and George said nothing. Not a short answer: no
+   text. The reading is the product; the widgets are the receipts for it.
+2. **Same again on the second question.** "Look for problems and what we can
+   fix" drew one attention widget and, again, no words.
+3. **The board accumulated instead of transforming.** The four widgets from the
+   first question were still there after the second. Feature 2 of the standard:
+   a follow-up transforms the workspace, it does not stack under it.
+4. **`[object Object]` in a widget header** — `ATTENTION · 16 ROWS ·
+   [object Object] · · NO`. Something is being stringified that is not a
+   string, and the double separator says a field beside it is empty too.
+
+**Cause of 1 and 2, found 2026-09-13 and NOT the first hypothesis.** It is
+not the figure gate — that is bounded, one corrective turn and the answer
+stands. It is `room/board.ts editsFor`:
+
+    if (composed?.length) return [...seeded…, ...composed];   // his blocks ONLY
+    if (seeded.length) return seeded;                          // the seed ONLY
+    const out = turn.text ? [ a text tile ] : [];               // fallback
+
+**George's prose reaches the board ONLY as a `text` block he composed.** The
+fallback that turns his answer into a reading tile fires only when NOTHING
+composed. So a turn that composes figures and omits a text block drops the
+answer on the floor: it is in the turn, the board has nowhere to put it, and
+the person sees shapes and silence. The screenshots show exactly that — ATV,
+net sales, transactions, an OPUS hero, and not one word.
+
+The server-side default composition (`defaultComposition`) has the same hole
+on a path nobody chose: if the seed carries no text block, the same silence
+happens without George having decided anything.
+
+**The fix is a floor, not a nudge.** A prompt line asking him to remember the
+text block is the same class of instruction the compose coercion work already
+rejected — the board should not be able to lose the answer. Draw the reading
+whenever `turn.text` is non-empty and no composed block already carries it,
+at whatever weight George's own blocks leave free. Then a forgotten text block
+costs placement, never the answer.
+
+**3 (the board accumulated) and 4 (`[object Object]`) are still undiagnosed.**
+
 ---
 
 ## Fixed

@@ -32,7 +32,8 @@ export function restoreFromPosts(turns: GeorgeTurn[], posts: Post[]): GeorgeTurn
   return turns.map((t) => {
     if (t.role !== 'george' || !t.post?.answer_post_id) return t;
     const payload = byId.get(t.post.answer_post_id)?.payload as
-      { charted?: unknown; composition?: { blocks?: unknown } } | null | undefined;
+      { charted?: unknown; composition?: { blocks?: unknown; default_blocks?: unknown } }
+      | null | undefined;
     if (!payload) return t;
     const charted = (Array.isArray(payload.charted) ? payload.charted : []) as Charted[];
     const toolCalls: ToolCall[] = t.toolCalls.map((c) => {
@@ -46,6 +47,18 @@ export function restoreFromPosts(turns: GeorgeTurn[], posts: Post[]): GeorgeTurn
     }
     toolCalls.sort((a, b) => a.seq - b.seq);
     const blocks = Array.isArray(payload.composition?.blocks) ? payload.composition!.blocks as Block[] : null;
-    return { ...t, toolCalls, composition: blocks?.length ? { seq: -1, blocks, rejected: [] } : t.composition };
+    // AND THE DEFAULT THAT STOOD BESIDE IT (P1.b). A reopened thread composes
+    // exactly as it composed live — his blocks over the reads he named, the
+    // loop's over the ones he did not — rather than the two reading one way
+    // in the room and another after a reload, which is the divergence the
+    // receipts contract exists to prevent.
+    const seeded = Array.isArray(payload.composition?.default_blocks)
+      ? payload.composition!.default_blocks as Block[] : null;
+    return {
+      ...t, toolCalls,
+      composition: blocks?.length ? { seq: -1, blocks, rejected: [] } : t.composition,
+      defaultComposition: seeded?.length
+        ? { seq: -1, blocks: seeded, rejected: [], default: true } : t.defaultComposition,
+    };
   });
 }
