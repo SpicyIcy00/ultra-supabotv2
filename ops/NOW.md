@@ -755,6 +755,45 @@ before believing it.
       onto the six so nothing George says stops rendering. Done when: every
       block in four recorded runs renders as one of the six with a source
       line; a palette test fails on a fifth data colour. No eval.
+- [ ] **P1.m fix the measure before trusting it** — **position, not letter:
+      this runs after P1.e and before P1.f.** The letter is deliberately out
+      of sequence; renumbering broke four cross-references on 2026-09-13 and
+      is not being done again. Order in this list is order of work.
+      *Why here:* P1.f rewrites the voice and P1.✓ reports every Phase 1
+      number, and both read through a suite with three faults
+      (DECISIONS.md, 2026-09-13).
+      Four changes, and the first is the one that matters:
+      (a) **Add the missing assertion: did he ANSWER.** Every check today is
+      about form and honesty, so a George that says "I can't establish that"
+      to everything passes almost all of them. Each scenario declares
+      `expects_figure`; where it is true the answer must carry at least one
+      numeral that a tool returned — the exact inverse of the existing
+      `ungrounded_numerals`, deterministic, no judge. `cannot` and
+      `run-monday` declare it false.
+      (b) **Rewrite the eight non-gate scenarios in the owner's own register,
+      from `george.conversations`**, not invented. The evals ask "How is
+      Rockwell doing?"; he types "how about rockwell". Cover the patterns
+      that have never been tested and that he uses constantly: a bare "hi";
+      assent ("ok", "yes go"); a preference taught mid-stream ("add top
+      sellers by sales not units, i value sales more" — a belief); a question
+      about George himself ("so how can i use it>"); a scope shift that is
+      not a question ("lets focus on greenhills"); asking his opinion ("what
+      do you think?"). Drop `by-hour`, which matches nothing anyone has
+      asked, and merge `shop`/`product`, which are the same shape.
+      (c) **The four trust scenarios are UNCHANGED** — `caveats`, `why`,
+      `cannot`, `morning`. They are the gate, they are stable, and they are
+      the only rows meaningful from one run. Do not touch them in this card.
+      (d) **Demote the flapping style checks to reported rates.**
+      `leads_with_reading` is every non-trust failure across four runs and
+      passes ~90% of the time; it becomes a percentage tracked across runs,
+      not an assertion that fails a build. And the report prints **against
+      the previous run** rather than as an absolute score.
+      Done when: a run prints trust rows (pass/fail) separately from style
+      rates (a percentage and a delta on the last run); a deliberately
+      over-cautious answer FAILS the new assertion; the eight rewritten
+      scenarios are traceable to real logged questions. **Eval: full, once**
+      — this card is the only one that may re-run the twelve to check the
+      twelve, and the old and new suites are reported side by side.
 - [ ] **P1.f compose narrows to the catalogue; the text gets three slots** —
       the label grammar becomes the six marks plus a claim-title per block;
       the findings roles become claim (one highlight) · caveat (whole, above
@@ -1022,9 +1061,9 @@ for it.`):
   may see.
 
 **Calendar, honestly.** One card a day, Fridays for the sweep, one session in
-three a dogfood fix: **28 open cards at four a week is seven weeks of cards,
-so nine to eleven weeks** to the Phase 3 gate. Phase 1 is ten cards, Phase 2
-eleven, Phase 3 seven. The sources
+three a dogfood fix: **29 open cards at four a week is seven weeks of cards,
+so nine to eleven weeks** to the Phase 3 gate. Phase 1 is eleven cards (P1.m
+sits between P1.e and P1.f), Phase 2 eleven, Phase 3 seven. The sources
 decide whether 8, 23, 24 and 25 land inside that or after. The readable copy
 of this plan, with every card's prompt, is **George, The Build Plan** in §6.
 

@@ -3237,3 +3237,21 @@ rewrite the other eight in his own register drawn from the log; add the one
 missing assertion (for a question that asks for a figure, the answer must
 carry a figure a tool returned); demote the style checks to reported rates;
 and report each run against the previous one rather than as an absolute score.
+
+## 2026-09-13 — P1.m: fix the measure, and where it sits
+
+The eval assessment above became a card rather than a rebuild. **P1.m runs
+after P1.e and before P1.f**, not first: the three open dogfood complaints
+(P1.c, P1.d, P1.e) are the owner's actual experience of the product being
+broken and outrank a measurement fix, and they report through the four trust
+scenarios, which this card does not touch. What needs the rewritten suite is
+P1.f (the voice rewrite) and P1.✓ (which reports every Phase 1 number).
+
+**The letter is out of sequence on purpose.** Renumbering on 2026-09-13 broke
+four cross-references inside closed close-outs. Order is POSITION in §3's
+list, which is what "do the next card" already reads; the letter is only a
+label. This is now stated in the card itself so the next session does not
+"tidy" it.
+
+Plan totals: 29 open cards, Phase 1 eleven. Eval spend $14 for the whole
+plan, under $28 if every card needs a second run.
