@@ -6411,3 +6411,126 @@ settings:
   versioned: true
   provenance: "the bound value is recorded on the version that used it and on every run's receipts"
   declared: {}
+
+
+# =============================================================================
+# EFFORT — HOW HARD GEORGE THINKS, PER TURN (P1.h, 2026-09-14)
+#
+# One knob, three settings, and it buys ROUND TRIPS. Cost per turn is round
+# trips (P0.6's finding), and effort is what decides how many the model takes
+# before it answers. A fresh question at the top setting spends the same
+# thinking on "how about rockwell" as on "why was North Edsa up" — which is
+# where the 27.4 s median comes from.
+#
+# WHAT THIS IS NOT. It is not a planner and it decides nothing about what
+# George reads, which tools he has, or what he may say. Every guarantee in
+# this file — figures from tools, notices surfaced, refusals refusing — is
+# held by the loop and the definitions and is untouched by how long he
+# thinks. The kinds below are ORDERED and matched on the question as typed;
+# the first that matches wins.
+#
+# CARRIED AS A MID-CONVERSATION SYSTEM MESSAGE, NEVER AS THE TOP-LEVEL VALUE.
+# A top-level effort change invalidates the messages cache and, on some
+# models, the tools and system caches with it — which is the ~9.2k-token
+# prefix that 139 of 141 turns read back. A `{"role": "system", "content":
+# [], "output_config": {"effort": ...}}` entry inside `messages` changes the
+# level without restarting any of that. It is behind an API beta; when the
+# beta is unavailable the marker is dropped and every turn runs at `default`,
+# which is exactly today's behaviour.
+# =============================================================================
+effort:
+  introduced: "2026-09-14"
+  # What a turn runs at when nothing below matches, and what the API does
+  # when no marker is sent at all. Pinning the default costs nothing.
+  default: high
+  levels: [low, medium, high]
+  beta: mid-conversation-output-config-2026-07-01
+
+  # A fragment is short. Longer than this and it is a question in its own
+  # right, whatever came before it — "add top sellers by sales not units, i
+  # value sales more" is a preference being taught, not a refinement.
+  follow_up_max_words: 8
+
+  kinds:
+    # ---- high ------------------------------------------------------------
+    ladder:
+      level: high
+      means: >
+        a causal question — why something moved, what drove it, what is
+        going on. This is the investigation ladder (investigation.ladder),
+        the most expensive and the least safe to hurry.
+      phrases:
+        - "why "
+        - "why?"
+        - "why is"
+        - "why was"
+        - "why are"
+        - "why did"
+        - "what caused"
+        - "what's causing"
+        - "whats causing"
+        - "what is causing"
+        - "what's driving"
+        - "whats driving"
+        - "what is driving"
+        - "what happened"
+        - "break it down"
+        - "break down"
+        - "explain "
+        - "what's going on"
+        - "whats going on"
+        - "how come"
+    broad:
+      level: high
+      means: >
+        the question names nothing and asks about the business as a whole
+        (investigation.scope.broad). It reads the widest and decides what is
+        worth saying, so it is the last turn to hurry.
+      phrases:
+        - "how are we doing"
+        - "how are we"
+        - "how's business"
+        - "hows business"
+        - "how is business"
+        - "what should i look at"
+        - "what should i know"
+        - "anything i should know"
+        - "what needs me"
+        - "what needs my attention"
+    # ---- low -------------------------------------------------------------
+    label_only:
+      level: low
+      means: >
+        the whole ask is a surface act over work already done — pin it, keep
+        it, name it, put it on a page. There is nothing to reason about: the
+        calls are already on the record.
+      phrases:
+        - "pin that"
+        - "pin it"
+        - "pin this"
+        - "keep that"
+        - "keep this"
+        - "save that"
+        - "save it"
+        - "save this"
+        - "make it a page"
+        - "make this a page"
+        - "add it to the page"
+        - "add that to the page"
+        - "put it on"
+        - "put that on"
+        - "call it "
+        - "rename"
+    follow_up:
+      level: low
+      means: >
+        a short message inside a thread that refines the work on screen —
+        "how about rockwell", "no i meant last week". The reading is already
+        done; this moves its scope.
+      requires_history: true
+      max_words: 8
+    # ---- medium ----------------------------------------------------------
+    fresh:
+      level: medium
+      means: a question in its own right, which is everything else
+      default_kind: true

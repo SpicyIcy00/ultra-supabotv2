@@ -107,8 +107,8 @@ shippable. The full diagnosis is the report linked in section 6.
 | Head | **`8ba0080` — pushed and live 2026-09-14.** Three commits, all P1.f: the compose vocabulary and the reading's three slots (`6fd8c00`), the close-out in both copies of the plan (`83e0116`), and the accidental second eval run named rather than left out (`8ba0080`). **No migration** — the agent, the definitions, the room and the notes. Before it, `91dec69`; before that, `b0ccfba`; before that, `fb303ba` on 2026-09-14 with five commits (P1.c `cf5806e`, the plan page moving into the repo with its contract test, two eval fixes); and `a3003ef` on 2026-09-13, which carried 32 commits that had sat unpushed: P1.b's default composition, the v2 voice suite (`bfb168f`), the $0 replay (`235d236`) and P1.g (`c508965`). |
 | Live | **`8ba0080`**, confirmed from `/health`: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `aadbd00b`, **no migration**. Polled every 20 s across the swap, 33 polls: **one 502, at 17:40:59**, with the new build answering 200 twenty seconds later and on every poll after. That is the same signature as `91dec69` — one blip at the moment of the swap, one request — so **two swaps running now have cost exactly one request each**, and the row should say that rather than calling either clean. No migration ran in either. **Poll `/health` with `curl`, not Python**: this machine's Python CA bundle carries an expired root, so `urllib` reports `CERTIFICATE_VERIFY_FAILED` against a host that is serving 200s — a first attempt here read that as a dead backend. Read `/health` rather than believing this row: `a01706b` sat here as live while three commits had landed since. |
 | Last deploy | `ee29fa5`, live and healthy when recorded; the swap before it, `a01706b`, **live and healthy when recorded**, and the swap was clean — polled every 20 s across it, zero non-200s, old build to new in about a minute. It carried NO migration (the schema was already at head), so the launcher took its `already at head` branch and ran no alembic at all. That is evidence the outage below lives in the migration path specifically, not in the boot or the build — evidence, not the deploy log. Before it, `8b0325a`. `8b0325a` carried P0.3 and P0.4, and applying migration `w7x8y9z0a1b2` cost **~50 minutes of 502**: the first boots crashlooped, the migration did not apply, and nothing was readable from outside. It came up on a later retry. Root cause still unknown — the Railway deploy log for that build has not been read. `69b51bd` is the fix for the *invisibility*, not for the cause. |
-| Phase | 1 — P1.c, P1.d, P1.e, P1.f closed; P1.h next |
-| Next card | **Whatever is Open in `ops/DOGFOOD_LOG.md`, then P1.h.** **P1.f closed 2026-09-14** (`6fd8c00`, unpushed): the compose vocabulary is the six marks the renderer draws plus the four kinds that are not readings, every block takes a `claim`, and the reading has three slots — claim, caveat, next. Compose was refused in **0 of 11** questions and label calls are **29%** of all calls; every trust row is where it was. **The shortfall: claim 9 of 11 and next 7 of 11**, and four of those losses are the no-digits rule refusing what he wrote — the digits question is left open, with the refused text now on the record so the next run can decide it with evidence. It also found a CHECK that was wrong: `prose.allowed_numbers` could not see a Decimal, so a purchase-plan quantity quoted exactly read as a figure no tool returned. **Nothing is Open as of 2026-09-14** — *"i dont really know what im looking at"* closed with P1.e, which is the first time the log has been empty since it was started. **The next thing he says about the board is the most valuable thing in the project**, because five of his five reported failures have now been answered and nobody has looked at the result. **P1.e closed 2026-09-14**: fourteen widget shapes became six marks, every block framed the same way round (title, subtitle off `meta`, mark, source line), colour is direction and not identity, and the caption that decoded the old bars is gone with the bars. Eight recorded runs replayed through the real renderer, 13 blocks, all six-or-fewer with a source line. It carried the eval swap: **v2 ran once for $1.51 against a $1.84 estimate, every trust row clean on all eleven scenarios, and `test_voice_evals.py` is deleted.** The one disagreement was `grounded_numerals` calling a good answer a shrug because its figures were small — fixed in the check, verified by replay for $0.00. **P1.d closed 2026-09-14**: a question sharing no subject with the board clears it, one sharing a subject transforms it, and everything the newest turn did not touch folds to one line above the reading. The case to watch when he next uses it: "and OPUS?" while looking at Rockwell now CLEARS. **P1.c closed 2026-09-14**: the reading is a region above the board, `text` and `prose` are out of the vocabulary, the two `fmt` bugs are gone, and `max_restated_sentences: 0 → 1` took the gate's cited figures from 0/4 to 4/4. The remaining cards were rewritten 2026-09-13 into the plan that reaches the Ideal UI: P1.f–P1.k, P2.a–P2.j, P3.a–P3.f, and Phase 4 sources. **P1.g closed 2026-09-13** (`c508965`), which is the log's two trust failures. P1.b closed 2026-09-13: first composed object 16.8 → 8.2 s, first visible object unmoved at 7.0 s (bounded by the first round trip; only replay, P1.i/P1.j, can reach 2 s). The bill is round trips, not cache misses. Read the note under the baseline table before reporting any Phase 1 number — the twelve it was measured on are deleted. |
+| Phase | 1 — P1.c, P1.d, P1.e, P1.f, P1.h closed; P1.i next |
+| Next card | **Whatever is Open in `ops/DOGFOOD_LOG.md`, then P1.i.** **P1.h closed 2026-09-14** (unpushed): effort is per turn and rides a mid-conversation system message so the prefix cache survives; the volunteering and restatement gates delete the offending sentences instead of buying a second answer. **Median answer 27.4 → 19.0 s and corrective turns 7 → 1 across eleven questions, every trust row where it was.** The shortfall is the board: compose refused in 3 of 11 against 0, and label share 29% → 35% — a row that has read 5, 0 and 3 across three runs, so one draw does not settle it. The notice gate kept its model turn against the card's own wording, because making it deterministic forces a caveat in and that row has been clean every run; the trade is the owner's. **P1.f closed 2026-09-14** (`6fd8c00`, unpushed): the compose vocabulary is the six marks the renderer draws plus the four kinds that are not readings, every block takes a `claim`, and the reading has three slots — claim, caveat, next. Compose was refused in **0 of 11** questions and label calls are **29%** of all calls; every trust row is where it was. **The shortfall: claim 9 of 11 and next 7 of 11**, and four of those losses are the no-digits rule refusing what he wrote — the digits question is left open, with the refused text now on the record so the next run can decide it with evidence. It also found a CHECK that was wrong: `prose.allowed_numbers` could not see a Decimal, so a purchase-plan quantity quoted exactly read as a figure no tool returned. **Nothing is Open as of 2026-09-14** — *"i dont really know what im looking at"* closed with P1.e, which is the first time the log has been empty since it was started. **The next thing he says about the board is the most valuable thing in the project**, because five of his five reported failures have now been answered and nobody has looked at the result. **P1.e closed 2026-09-14**: fourteen widget shapes became six marks, every block framed the same way round (title, subtitle off `meta`, mark, source line), colour is direction and not identity, and the caption that decoded the old bars is gone with the bars. Eight recorded runs replayed through the real renderer, 13 blocks, all six-or-fewer with a source line. It carried the eval swap: **v2 ran once for $1.51 against a $1.84 estimate, every trust row clean on all eleven scenarios, and `test_voice_evals.py` is deleted.** The one disagreement was `grounded_numerals` calling a good answer a shrug because its figures were small — fixed in the check, verified by replay for $0.00. **P1.d closed 2026-09-14**: a question sharing no subject with the board clears it, one sharing a subject transforms it, and everything the newest turn did not touch folds to one line above the reading. The case to watch when he next uses it: "and OPUS?" while looking at Rockwell now CLEARS. **P1.c closed 2026-09-14**: the reading is a region above the board, `text` and `prose` are out of the vocabulary, the two `fmt` bugs are gone, and `max_restated_sentences: 0 → 1` took the gate's cited figures from 0/4 to 4/4. The remaining cards were rewritten 2026-09-13 into the plan that reaches the Ideal UI: P1.f–P1.k, P2.a–P2.j, P3.a–P3.f, and Phase 4 sources. **P1.g closed 2026-09-13** (`c508965`), which is the log's two trust failures. P1.b closed 2026-09-13: first composed object 16.8 → 8.2 s, first visible object unmoved at 7.0 s (bounded by the first round trip; only replay, P1.i/P1.j, can reach 2 s). The bill is round trips, not cache misses. Read the note under the baseline table before reporting any Phase 1 number — the twelve it was measured on are deleted. |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
@@ -267,12 +267,13 @@ where a regression was speculative AND **the four gate scenarios could not
 have seen it.** A new comparison (`P2.i`, `P3.f`) is a capability no gate
 scenario asks for, so a run there proves nothing; `P2.c`, `P2.d` and `P2.f`
 are context and rendering; `P1.c` breaks or fixes compose refusals, which are
-its own numbers. **Four live runs across 23 open cards, $6.04** — P1.h and
-the three phase closes at $1.51 each on v2, the measured price.
+its own numbers. **Three live runs across 22 open cards, $4.53** — the three
+phase closes at $1.51 each on v2, the measured price.
 Every remaining gate was dropped or absorbed, so four FULL runs is the whole
 of it.
-**P1.g, P1.c, P1.e and P1.f are closed**, and their runs cost **$0.64, $0.75,
-$1.51 and $1.62 against $0.63, $0.63, $1.84 and $1.51**: P1.g's was the first
+**P1.g, P1.c, P1.e, P1.f and P1.h are closed**, and their runs cost **$0.64,
+$0.75, $1.51, $1.62 and $1.62 against $0.63, $0.63, $1.84, $1.51 and $1.51**
+— P1.h went over by the same 7% and for the same reason P1.f did: P1.g's was the first
 figure here to survive contact with a live
 run, and P1.c's overspend was a first run made with `-x`, which stops on the
 first scenario and pays for it twice. **P1.f went over by 7%, and the reason
@@ -307,14 +308,15 @@ iterations in that run).
    store bounded evidence (30 rows per result) so this works from here on;
    the seven older reports carry no rows and only the two answer-only checks
    replay against them, which the tool says rather than quietly reporting less.
-2. **P1.h is the real discount, and it is a card not a trick.** Effort per
-   turn cuts iterations, and iterations are 72% of the bill. At its target
-   (4.0 → 2.5) a run goes from ~$1.84 to ~$1.25. **It currently sits AFTER
-   P1.f and P1.g, so only the three phase closes get the discount.** Moving it
-   to just after P1.m would put every later run on the cheaper rate and save
-   roughly $2.80 — at the cost of changing effort and the compose grammar in
-   adjacent cards, which makes a regression harder to pin on either. Not done:
-   it is a real trade and the owner's to make.
+2. **P1.h was supposed to be the real discount and was not, measured.**
+   Effort per turn cuts iterations — 4.0 → 3.0 median, and corrective round
+   trips 7 → 1 — and iterations are 72% of the bill. The run still cost
+   **$1.62, the same as P1.f's.** Fewer, deeper turns is not fewer tokens:
+   output fell 19,183 → 13,889 and cache WRITES rose 121,040 → 144,093, which
+   is the thinking that used to be spread over a rewrite arriving in one
+   iteration instead. **$1.51 stays the estimate for a phase close.** The
+   saving this card bought is WALL-CLOCK, not money, and saying otherwise
+   would be the third wrong eval figure in this file.
 3. **NEVER run the gate with `-x`, and the ledger proved why.** P1.c's two
    runs, from `verification/spend_ledger.jsonl`: the first stopped on scenario
    one after **1 turn for $0.25**; the second did all four for **$0.50**. So
@@ -354,9 +356,10 @@ suite **only at the three phase closes**.
 **The per-scenario table is also where to look for a cheaper run.** `shop`
 cost **$0.34 and 6 iterations** — the single most expensive scenario in the
 suite, dearer than the investigation — which is one reason it is not a scored
-scenario in v2. And P1.h (effort per turn) should cut every later run, because
-cost is round trips: it is not counted in the totals below, deliberately,
-because it has not been measured.
+scenario in v2. And P1.h (effort per turn) was expected to cut every later
+run, because cost is round trips. **Measured 2026-09-14, it did not**: the
+same eleven questions cost $1.62 with a third fewer round trips. It is
+correctly absent from the totals below.
 
 **Two runs per card, maximum.** One to see the problem, one to confirm the
 fix. **A third failure means the card is wrong, not the code** — stop, write
@@ -1312,13 +1315,82 @@ before believing it.
       four gate answers now cite no figure any tool returned. Not caused by
       this card — the new gate fired on none of the four turns — but v2's
       first recorded live run, and it belongs to P1.c.
-- [ ] **P1.h cheaper turns** — effort per turn via the mid-conversation
-      effort message (low: label-only or follow-up; medium: fresh question;
-      high: the ladder) so the cache survives; the six corrective gates
-      become deterministic edits, a model turn only for a false write claim.
-      `MAX_ROWS_TO_MODEL` stays 200. Done when: median turn time and
-      corrective turns per turn down, every quality row on the twelve
-      unchanged — any quality row moving fails the card. **Eval: full.**
+- [x] **P1.h cheaper turns** — **CLOSED 2026-09-14.** Effort per turn rides a
+      mid-conversation system message (`{"role": "system", "content": [],
+      "output_config": {"effort": ...}}`, beta
+      `mid-conversation-output-config-2026-07-01`, probed against the live API
+      before anything was spent) so the cached prefix survives — a top-level
+      `effort` change invalidates the messages cache and, on some models, the
+      tools and system caches with it, which is the ~9.2k tokens 139 of 141
+      turns read back. The kinds, phrases and levels are in
+      `definitions/metrics.yaml` `effort`, matched in yaml order:
+      **ladder and broad high, fresh medium, follow-up and label-only low.**
+      `MAX_ROWS_TO_MODEL` stays 200.
+
+      **The run — one full v2 run, $1.62, `verification/p1h-v2.json`, 11 of 11
+      passing.** Against P1.f's run (`verification/p1f-v2.json`), the same
+      eleven questions:
+
+      | | P1.f, 09-14 | **P1.h, 09-14** | target |
+      |---|---|---|---|
+      | median answer, wall-clock | 27.4 s · p90 37.9 · worst 65.8 | **19.0 s** · p90 34.7 · worst 49.0 | < 10 s |
+      | corrective turns, total / median | 7 / 1 | **1 / 0** | down |
+      | iterations per turn, median / max | 4.0 / 5 | **3.0 / 5** | ≤ 2.5 |
+      | questions where `compose` was rejected | 0 of 11 | **3 of 11** | ≤ 1 |
+      | label calls as a share of all calls | 29% (10 of 34) | **35% (13 of 37)** | ≤ 25% |
+      | notices · forced · invented figures | 15 · 0 · 1 | **11 · 0 · 0** | unchanged |
+      | cited a figure a tool returned | 10 of 11 | **10 of 11** | unchanged |
+
+      **The card's own two numbers moved and the trust rows held.** Notices
+      forced 0, figures in prose no tool returned **0** (P1.f's run had one),
+      attribution shares 0, refusals still refusing (`cannot` and `run-monday`
+      both pass), and the figure-citing row is where it was. Median is still
+      1.9x the < 10 s target and iterations are 3.0 against 2.5; only P1.i and
+      P1.j, which answer without a model call at all, can reach those.
+
+      **THE SHORTFALL, and it is the board rows.** `compose` was rejected in
+      **3 of 11 against P1.f's 0**, and label share went **29% → 35%**, both
+      the wrong way. Reported as a regression rather than explained away — and
+      two things are true beside it. That row has now read **5, 0 and 3 across
+      the last three runs**, which is what NOW.md's own "a run is a sample"
+      note is about; and **five of the eight `reading_rejected` refusals are
+      the no-digits rule**, which is the question P1.f left open on the record,
+      not something this card introduced. The three `composition_rejected` are
+      three different things (a subject absent from the rows, a `get_object`
+      composed over, a claim over its length), none of them concentrated at the
+      low level. **A second run was not bought**: there is no fix to confirm,
+      and $1.62 to resample a flapping row is the spend the two-run rule exists
+      to stop.
+
+      **TWO OF THE SIX GATES BECAME DETERMINISTIC, NOT THREE, AND THE CARD SAID
+      THREE.** Volunteering and restatement/misstatement/remainder now DELETE
+      the offending sentences instead of buying a second answer — that gate
+      alone was 6, 7 and 6 of the 8, 7 and 7 corrective round trips in the
+      three most recent recorded runs, which is where the 7 → 1 comes from.
+      **The notice gate kept its model turn**, against the card's "a model turn
+      only for a false write claim". `unsurfaced_notice` fired in 2 of the last
+      3 recorded runs and the model's rewrite fixed it both times, leaving
+      `notice_forced` at 0; a deterministic version forces the caveat in by
+      construction, every time it fires, and the same card fails if any quality
+      row moves. The Done-when was taken over the method. **That is the owner's
+      trade to make, and it is the one open question this card leaves.**
+
+      **The edit refuses two things**, and both are held by tests: it never
+      empties an answer, and it never removes a sentence whose loss would
+      unsurface a notice. When neither deletion can be applied — a remainder in
+      the only sentence there is — **the old rewrite still happens, word for
+      word**, so no guarantee is traded for the speed. `corrective_turns` now
+      counts only round trips actually spent and `deterministic_edits` counts
+      what was done without one; both are on the `done` frame and in the eval
+      report, which is why the comparison above exists at all.
+
+      **The beta can be taken away without taking the turn.** A 400 naming
+      per-turn effort drops the marker for the life of the process and the turn
+      runs at the default level — which is what every turn did before this
+      card. Held by `tests/test_effort_per_turn_contract.py` (23 cases).
+
+      Suites exact: **1,569 pure** (was 1,542), **903 vitest**, `tsc -b` and
+      `build` clean. No frontend file was touched.
 - [ ] **P1.i replay: the endpoint** — `POST /george/replay`: a stored call
       with ONE argument changed among those the tool accepts (window, store,
       group_by, rank_by, top_n), run as `george_ro`, returning `{rows, meta}`
@@ -1585,7 +1657,7 @@ of this plan, with every card's prompt, is **George, The Build Plan** in §6.
 Run from the repo root. The interpreter is `.venv\Scripts\python.exe`; a system
 `python` cannot import the backend (pinned SQLAlchemy).
 
-    .venv\Scripts\python.exe ops/verify_integration.py pure     # 1,551 expected
+    .venv\Scripts\python.exe ops/verify_integration.py pure     # 1,569 expected
     .venv\Scripts\python.exe ops/sweep_gaps.py --days 7
     .venv\Scripts\python.exe ops/cost_report.py --days 7
 
@@ -1619,7 +1691,7 @@ with each other, across builds with `--since`.        # the weekly sweep
     .venv\Scripts\python.exe ops/turn_clock.py --days 7        # the clock (P0.3)
     .venv\Scripts\python.exe ops/turn_clock.py --days 30 --user-only
     cd frontend && npm ci                                       # after any merge
-    cd frontend && npx vitest run                               # 880 expected
+    cd frontend && npx vitest run                               # 903 expected
     cd frontend && npx tsc -b --noEmit
     cd frontend && npm run build
 

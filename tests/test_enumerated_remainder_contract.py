@@ -242,12 +242,22 @@ def test_a_count_with_no_receipt_outranks_a_figure_merely_said_again(monkeypatch
     assert "enumerated_remainder" in kinds and "restated_figure" in kinds
 
 
-def test_one_correction_covers_both_rather_than_two_round_trips(monkeypatch):
+def test_one_pass_covers_both_and_since_p1h_costs_no_round_trip(monkeypatch):
+    """
+    A turn that recites AND states a remainder is corrected once — and since
+    P1.h that correction is a deletion, so the turn is read + answer and
+    nothing more. It was read + answer + rewrite.
+    """
     both = RECITING + " " + REMAINDER
-    frames, requests = _drive_drawn(monkeypatch, [both, READING])
+    frames, requests = _drive_drawn(monkeypatch, [both])
     assert len(frames_of(frames, "answer_reset")) == 1
-    # read + first answer + the one rewrite
-    assert len(requests) == 3
+    assert len(requests) == 2
+    warnings = [w for w in frames_of(frames, "warning")
+                if w["reason"] == "enumerated_remainder"]
+    assert len(warnings) == 1 and warnings[0]["corrected"] == "deterministic"
+    standing = _standing_answer(frames)
+    assert "45 others" not in standing, "the count with no receipt went"
+    assert "48,210" in standing, "the figure the claim rests on stayed"
 
 
 def test_the_correction_is_capped(monkeypatch):

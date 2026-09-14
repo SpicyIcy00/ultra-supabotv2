@@ -1535,6 +1535,176 @@ def _volunteered(answer: str, defs: dict) -> list[str]:
     return found
 
 
+# --------------------------------------------------------------------------
+# EFFORT PER TURN (P1.h, 2026-09-14)
+#
+# Cost and wall-clock per turn are ROUND TRIPS (P0.6's finding, measured), and
+# effort is what decides how many the model takes before it answers. Until now
+# every turn ran at `high`: "how about rockwell" bought the same thinking as
+# "why was North Edsa up so much last week".
+#
+# The kinds, the phrases and the levels are in metrics.yaml `effort`; this
+# holds only the grammar of matching them. ORDERED — the first kind that
+# matches wins, and the yaml's order is the match order, which is why it is
+# read as a mapping and not as a set.
+#
+# NOT A PLANNER (CLAUDE.md rule 5). It chooses one request parameter. It does
+# not decide what George reads, which tools he holds or what he may say, and
+# every trust guarantee in this system is held by the loop, the definitions and
+# the tools, none of which can see this value.
+# --------------------------------------------------------------------------
+
+#: Cleared for the life of the process the first time the API says the
+#: per-turn-effort beta is not available to this organisation. Every turn then
+#: runs at `effort.default`, which is exactly the behaviour before this card.
+_EFFORT_BETA_OK = True
+
+
+def turn_effort(question: str, history: Optional[list], defs: dict) -> tuple[str, str]:
+    """
+    (level, kind) for this turn, read from metrics.yaml `effort`.
+
+    A kind matches on `phrases` (any one, as a substring of the question
+    lowercased), or on `max_words` when it has no phrases, and a kind marked
+    `requires_history` is skipped on the first turn of a thread. The kind
+    marked `default_kind` ends the walk and is what everything else is.
+    """
+    default = req(defs, "effort.default")
+    low = " ".join((question or "").lower().split())
+    words = len(low.split())
+    has_history = bool(history)
+    for name, spec in req(defs, "effort.kinds").items():
+        if not isinstance(spec, dict):
+            continue
+        level = spec.get("level", default)
+        if spec.get("default_kind"):
+            return level, name
+        if spec.get("requires_history") and not has_history:
+            continue
+        phrases = spec.get("phrases")
+        if phrases:
+            if any(isinstance(p, str) and p.lower() in low for p in phrases):
+                return level, name
+            continue
+        max_words = spec.get("max_words")
+        if max_words is not None and words <= max_words:
+            return level, name
+    return default, "default"
+
+
+def effort_marker(level: str) -> dict:
+    """
+    The mid-conversation system message that sets effort for the turn.
+
+    EMPTY CONTENT, AND THAT IS THE WHOLE MECHANISM. Changing the TOP-LEVEL
+    effort between requests restarts the messages cache and, on some models,
+    the tools and system caches with it — and that prefix is ~9.2k tokens that
+    139 of 141 measured turns read back. A `role: "system"` entry inside
+    `messages` carrying only `output_config` changes the level from the next
+    user turn on and leaves every cache entry matching.
+
+    It is appended AFTER the replayed history and BEFORE this turn's question,
+    so the bytes of every earlier message are unchanged and the marker itself
+    is never in the part of the prefix a later turn has to reproduce.
+    """
+    return {"role": "system", "content": [], "output_config": {"effort": level}}
+
+
+def _effort_unsupported(exc: BaseException) -> bool:
+    """
+    Whether an API error is the per-turn-effort beta being unavailable.
+
+    Narrow on purpose: a 400 that does not name the feature is a real error and
+    must surface. The beta is documented as possibly allowlisted, so the loop
+    has to be able to lose it without losing the turn.
+    """
+    if not isinstance(exc, anthropic.BadRequestError):
+        return False
+    text = str(getattr(exc, "message", "") or exc).lower()
+    return ("output_config" in text or "per-turn effort" in text
+            or "mid-conversation-output-config" in text
+            or ("beta" in text and "effort" in text))
+
+
+# --------------------------------------------------------------------------
+# DETERMINISTIC EDITS — the gates that no longer cost a round trip (P1.h)
+#
+# Three of the six gates asked the model to REWRITE THE WHOLE ANSWER. Measured
+# across the last three recorded runs, the restatement gate alone is 6, 7 and 6
+# of the 8, 7 and 7 corrective turns — so nearly every corrective round trip in
+# this system is a rewrite of an answer that was already right except for
+# sentences reciting figures the board draws.
+#
+# A sentence that recites a drawn figure is removed by DELETING IT. Deletion is
+# exact, costs nothing, and cannot introduce anything: no numeral, no caveat
+# and no claim can appear that George did not write. What it can do is take
+# something away, so both guards below are about what must survive.
+# --------------------------------------------------------------------------
+
+def _without_sentences(answer: str, drop) -> str:
+    """
+    `answer` with each sentence in `drop` removed, and nothing else changed.
+
+    The sentences come from agent/prose, which splits on sentence boundaries
+    and strips — so each is a contiguous substring of the answer and is found
+    rather than re-derived. Whitespace left behind is tidied; no word is added.
+    """
+    out = answer
+    for s in drop:
+        if not s:
+            continue
+        at = out.find(s)
+        if at == -1:
+            continue
+        end = at + len(s)
+        while end < len(out) and out[end] in " \t":
+            end += 1
+        out = out[:at] + out[end:]
+    out = re.sub(r"[ \t]+\n", "\n", out)
+    out = re.sub(r"\n{3,}", "\n\n", out)
+    out = re.sub(r"[ \t]{2,}", " ", out)
+    return out.strip()
+
+
+def _drop_safely(answer: str, drop, still_surfaces) -> tuple[str, list[str]]:
+    """
+    Drop what can be dropped, one sentence at a time, and say what went.
+
+    TWO THINGS THE EDIT MAY NEVER DO, and they are why this is not a list
+    comprehension. It may never empty the answer — an answer deleted down to
+    nothing is a worse failure than the recitation it removed, and it is the
+    failure the restatement gate has already caused once (P1.c's note). And it
+    may never take away a caveat: a sentence that both recites a figure and
+    surfaces a notice STAYS, because notices surfaced is a floor and a
+    stylistic gate does not get to lower it.
+    """
+    out = answer
+    dropped: list[str] = []
+    for s in drop:
+        candidate = _without_sentences(out, [s])
+        if not candidate.strip():
+            continue
+        if not still_surfaces(candidate):
+            continue
+        out = candidate
+        dropped.append(s)
+    return out, dropped
+
+
+def _volunteered_sentences(answer: str, defs: dict) -> list[str]:
+    """
+    The sentences that ANNOUNCE themselves as volunteered, in order.
+
+    The markers are _volunteered's, so the gate and the edit read the same
+    vocabulary; this returns the sentences carrying them, because a sentence is
+    what can be removed.
+    """
+    markers = [m.lower() for m in req(defs, "volunteering.markers")
+               if isinstance(m, str)]
+    return [s for s in _prose.sentences(answer)
+            if any(m in s.lower() for m in markers)]
+
+
 def _claim(answer: str, spec: dict) -> Optional[str]:
     """
     Whether an answer asserts a write happened ("claimed") or will ("promised").
@@ -2231,6 +2401,19 @@ async def run(
     # Prior turns first, and the calls behind them recorded as already run —
     # "pin that" refers to something that happened in an earlier request.
     messages: list[dict] = _seed_history(history, write_ctx.executed)
+    # HOW HARD HE THINKS THIS TURN (P1.h). Read from metrics.yaml `effort`,
+    # decided from the question and whether there is a thread behind it, and
+    # carried as a mid-conversation system message so the ~9.2k-token static
+    # prefix and the growing tail both stay cached — a top-level effort change
+    # would restart them. At the default level no marker is sent and the
+    # request is byte-identical to the one before this card.
+    effort_level, effort_kind = turn_effort(question, history, defs)
+    marker = None
+    if effort_level != EFFORT and _EFFORT_BETA_OK:
+        marker = effort_marker(effort_level)
+        messages.append(marker)
+    else:
+        effort_level = EFFORT
     messages.append({"role": "user", "content": opening})
     pending: list[dict] = []
     seq = 0
@@ -2267,15 +2450,21 @@ async def run(
     committed_page_operations: set[str] = set()
     page_corrections = 0
     max_page_corrections = req(defs, "pages.claim_check.max_corrective_turns")
+    # EDITS, NOT TURNS, SINCE P1.h. Both budgets below still come from the
+    # yaml keys that bounded the round trips they replace — one pass per turn,
+    # the same allowance, spent on a deletion instead of on another answer.
+    deterministic_edits = 0
     # The volunteering cap. Counted, not judged — see _volunteered.
+    volunteer_edits = 0
     volunteer_corrections = 0
     max_volunteered = req(defs, "volunteering.max_per_answer")
-    max_volunteer_corrections = req(defs, "volunteering.max_corrective_turns")
+    max_volunteer_edits = req(defs, "volunteering.max_corrective_turns")
     # The restatement gate: a sentence carrying a figure the board already
     # draws. Matched on digits by agent/prose — the evals' own measure.
+    restate_edits = 0
     restate_corrections = 0
     max_restated = req(defs, "voice.restatement.max_restated_sentences")
-    max_restate_corrections = req(defs, "voice.restatement.max_corrective_turns")
+    max_restate_edits = req(defs, "voice.restatement.max_corrective_turns")
     restate_reason = str(req(defs, "voice.restatement.warning_reason"))
     # The same gate's other half: a drawn figure said WRONG. No max_sentences —
     # one is the defect — and it shares the correction above rather than
@@ -2419,7 +2608,13 @@ async def run(
                 text_parts: list[str] = []
                 streamed = False
                 try:
-                    async with client.messages.stream(
+                    # ONE REQUEST SHAPE, ONE DOOR, AND A HEADER. Per-turn
+                    # effort is a beta on this same endpoint, so it arrives as
+                    # `anthropic-beta` rather than through the SDK's beta
+                    # namespace: that keeps ONE call path for every turn — the
+                    # default level sends no header and no marker and is byte
+                    # for byte the request this loop made before P1.h.
+                    stream_kwargs = dict(
                         model=MODEL,
                         max_tokens=MAX_TOKENS,
                         # The growing tail: one automatic breakpoint that moves
@@ -2464,7 +2659,12 @@ async def run(
                         thinking={"type": "adaptive", "display": "summarized"},
                         output_config={"effort": EFFORT},
                         messages=messages,
-                    ) as stream:
+                    )
+                    if marker is not None:
+                        stream_kwargs["extra_headers"] = {
+                            "anthropic-beta": req(defs, "effort.beta"),
+                        }
+                    async with client.messages.stream(**stream_kwargs) as stream:
                         async for event in stream:
                             if event.type == "content_block_delta":
                                 d = event.delta
@@ -2478,6 +2678,23 @@ async def run(
                         final = await stream.get_final_message()
                     break
                 except Exception as exc:  # noqa: BLE001 - re-raised unless transient
+                    # THE BETA MAY NOT BE OURS TO USE, and losing it must not
+                    # lose the turn. Per-turn effort is documented as possibly
+                    # allowlisted, so the first 400 that names it drops the
+                    # marker for the life of the process and the turn runs at
+                    # the default level — which is what every turn did before
+                    # this card. Not counted as a retry attempt: nothing was
+                    # wrong with the request except a feature we then stopped
+                    # asking for.
+                    if marker is not None and not streamed and _effort_unsupported(exc):
+                        globals()["_EFFORT_BETA_OK"] = False
+                        messages[:] = [m for m in messages if m is not marker]
+                        marker = None
+                        effort_level = EFFORT
+                        log.gap("api_retry",
+                                "per-turn effort is not available here; "
+                                "the turn runs at the default level")
+                        continue
                     if not _is_transient(exc) or streamed or attempt >= MAX_TURN_RETRIES - 1:
                         raise
                     attempt += 1
@@ -2655,55 +2872,112 @@ async def run(
                     })
                     continue
 
+                # ---- THE DETERMINISTIC GATES (P1.h, 2026-09-14) ------
+                # WHAT CHANGED HERE, AND WHY IT IS THE WHOLE CARD. These two
+                # gates used to throw the answer away and buy another one.
+                # Measured across the three most recent recorded runs, the
+                # restatement gate alone is 6, 7 and 6 of the 8, 7 and 7
+                # corrective round trips - so nearly every corrective turn in
+                # this system was a rewrite of an answer that was right except
+                # for sentences reciting figures already drawn beside it.
+                #
+                # A recited sentence is now REMOVED rather than rewritten.
+                # Deletion is exact and one-way: it cannot introduce a numeral,
+                # a caveat or a claim George did not write. What it can do is
+                # take something away, so the two guards below are entirely
+                # about what has to survive it - a caveat, and a figure.
+                #
+                # THE NOTICE GATE BELOW KEEPS ITS MODEL TURN, against the
+                # card's own wording. Said plainly rather than quietly: the
+                # card asks for a model turn "only for a false write claim".
+                # But `unsurfaced_notice` fired in 2 of the last 3 recorded
+                # runs and the model's rewrite fixed it both times, leaving
+                # `notice_forced` at 0 - and the same card fails if any quality
+                # row moves. Making that one deterministic would move it by
+                # construction, every time it fires. The Done-when wins over
+                # the method; the owner decides whether to take the trade.
+                on_screen_now = _drawn_on_the_board(composition_recorded, charted)
+                unsurfaced_now = len(_unsurfaced(
+                    pending, reading.said_this_turn(answer, reading_recorded),
+                    defs, on_screen=on_screen_now))
+
+                def _still_surfaces(text: str) -> bool:
+                    """Whether an edit has taken a caveat off the screen."""
+                    return len(_unsurfaced(
+                        pending, reading.said_this_turn(text, reading_recorded),
+                        defs, on_screen=on_screen_now)) <= unsurfaced_now
+
                 # More volunteered lines than the cap allows. Checked before
-                # the notices below because the remedy is a rewrite, and the
-                # rewritten answer has to face the notice gate afterwards
-                # rather than instead.
+                # the notices below because it removes text, and what is left
+                # has to face the notice gate rather than instead of it.
                 #
                 # Deliberately NOT checked when the answer is empty: a turn
                 # that produced no prose has volunteered nothing, and the
                 # write-claim branches above may have just cleared it.
                 extra = _volunteered(answer, defs) if answer else []
                 if (len(extra) > max_volunteered
-                        and volunteer_corrections < max_volunteer_corrections):
-                    volunteer_corrections += 1
+                        and volunteer_edits < max_volunteer_edits):
+                    volunteer_edits += 1
+                    # THE CAP IS ON WHAT HE ADDED, so the FIRST volunteered
+                    # line - the one the cap allows - stays exactly as he
+                    # wrote it and the ones after it go.
+                    edited, dropped = _drop_safely(
+                        answer,
+                        _volunteered_sentences(answer, defs)[max_volunteered:],
+                        _still_surfaces)
                     log.gap("volunteering_over_cap",
-                            f"{len(extra)} volunteered lines: {', '.join(extra)}"[:2000])
+                            f"{len(extra)} volunteered lines: {', '.join(extra)}"
+                            f" - {len(dropped)} removed"[:2000])
                     yield _sse("warning", {
                         "reason": "volunteering_over_cap",
                         "found": len(extra),
                         "limit": max_volunteered,
+                        "corrected": "deterministic",
+                        "removed": len(dropped),
                     })
-                    yield _reset_answer("volunteering_over_cap")
-                    answer = ""
-                    messages.append({
-                        "role": "user",
-                        "content": (
-                            f"You volunteered {len(extra)} extra facts "
-                            f"({', '.join(extra)}). The limit is "
-                            f"{max_volunteered}.\n\n"
-                            "Rewrite the answer keeping the single most useful "
-                            "one and dropping the rest. Keep every caveat and "
-                            "every figure's window exactly as they were — the "
-                            "cap is on what you added, never on what qualifies "
-                            "what you were asked."
-                        ),
-                    })
-                    continue
+                    if dropped:
+                        answer = edited
+                        deterministic_edits += 1
+                        yield _reset_answer("volunteering_over_cap")
+                        yield _sse("text", {"delta": answer})
+                    else:
+                        # NOTHING COULD GO, SO THE MODEL IS ASKED AFTER ALL.
+                        # Deletion refuses two things — emptying the answer,
+                        # and taking a caveat off the screen — and an answer
+                        # that is ONE volunteered line over the cap hits the
+                        # first of them. The round trip is not removed in that
+                        # case; it is moved to the case that needs it, which is
+                        # the only honest version of "deterministic".
+                        volunteer_corrections += 1
+                        yield _reset_answer("volunteering_over_cap")
+                        answer = ""
+                        messages.append({
+                            "role": "user",
+                            "content": (
+                                f"You volunteered {len(extra)} extra facts "
+                                f"({', '.join(extra)}). The limit is "
+                                f"{max_volunteered}.\n\n"
+                                "Rewrite the answer keeping the single most useful "
+                                "one and dropping the rest. Keep every caveat and "
+                                "every figure's window exactly as they were — the "
+                                "cap is on what you added, never on what qualifies "
+                                "what you were asked."
+                            ),
+                        })
+                        continue
 
                 # Sentences that restate a figure the board already draws.
                 # Checked only when something IS drawn (charted): an answer
-                # over no result has nothing on screen to say again. One
-                # corrective turn, then the answer stands — a gate, not a loop.
+                # over no result has nothing on screen to say again.
                 restated = (_prose.restated_sentences(answer, charted)
                             if answer and charted else [])
-                # A drawn figure said WRONG — 800 over a row drawn as 801.
+                # A drawn figure said WRONG - 800 over a row drawn as 801.
                 # Checked here and not as a gate of its own so a turn that does
                 # both is corrected once; see voice.misstatement.
                 misstated = (_prose.misstated_figures(answer, charted,
                                                       misstate_min_digits)
                              if answer and charted else [])
-                # A count of what is LEFT after naming a few — "and 45 others"
+                # A count of what is LEFT after naming a few - "and 45 others"
                 # where 48 was returned and three were named. Checked on the
                 # answer ALONE: the construction is what proves the arithmetic
                 # is the model's, and a remainder over no read at all is more
@@ -2712,8 +2986,8 @@ async def run(
                     answer, charted, remainder_tails, remainder_leaders)
                     if answer else [])
                 if ((len(restated) > max_restated or misstated or remainders)
-                        and restate_corrections < max_restate_corrections):
-                    restate_corrections += 1
+                        and restate_edits < max_restate_edits):
+                    restate_edits += 1
                     # Named by the most serious thing present, because the
                     # sweep sorts on the kind: a count with NO receipt above a
                     # drawn figure written wrong, and both above one merely
@@ -2723,77 +2997,121 @@ async def run(
                     if remainders:
                         log.gap(remainder_reason,
                                 f"{len(remainders)} counts are a remainder worked out in prose: "
-                                + " | ".join(f"wrote {n:g} in \"{phrase}\" — {sent}"
+                                + " | ".join(f"wrote {n:g} in \"{phrase}\" - {sent}"
                                              for sent, n, phrase in remainders)[:1800])
                     if misstated:
                         log.gap(misstate_reason,
                                 f"{len(misstated)} figures misstate a drawn one: "
-                                + " | ".join(f"wrote {w:g}, board draws {d:g} — {s}"
+                                + " | ".join(f"wrote {w:g}, board draws {d:g} - {s}"
                                              for s, w, d in misstated)[:1800])
                     if len(restated) > max_restated:
                         log.gap(restate_reason,
                                 f"{len(restated)} sentences restate a drawn figure: "
                                 + " | ".join(restated)[:1800])
+
+                    # A SENTENCE WITH NO RECEIPT GOES FIRST, AND WHOLE. A
+                    # remainder and a misstated figure are not recitation -
+                    # they are a number nothing backs - so the sentence
+                    # carrying one is removed rather than kept under any
+                    # allowance.
+                    no_receipt: list[str] = []
+                    for sent, _n, _phrase in remainders:
+                        if sent not in no_receipt:
+                            no_receipt.append(sent)
+                    for sent, _written, _drawn in misstated:
+                        if sent not in no_receipt:
+                            no_receipt.append(sent)
+                    # AND THE ALLOWANCE IS WHAT KEEPS A FIGURE ON SCREEN.
+                    # voice.restatement.max_restated_sentences went 0 -> 1 at
+                    # P1.c precisely because a reading with no figure in it is
+                    # its own failure, and the gate was causing it. The first
+                    # restating sentence - the one the claim rests on - is
+                    # kept exactly as written; the recitation after it goes.
+                    keepable = [s for s in restated if s not in no_receipt]
+                    edited, dropped = _drop_safely(
+                        answer, no_receipt + keepable[max_restated:],
+                        _still_surfaces)
                     yield _sse("warning", {
                         "reason": reason,
                         "found": (len(remainders) if remainders else
                                   len(misstated) if misstated else len(restated)),
                         "limit": 0 if (remainders or misstated) else max_restated,
+                        "corrected": "deterministic",
+                        "removed": len(dropped),
                     })
-                    yield _reset_answer(reason)
-                    answer = ""
-                    parts: list[str] = []
-                    if remainders:
-                        left = "\n".join(f"- \"{phrase}\" — {sent}"
-                                         for sent, _n, phrase in remainders[:6])
+                    if dropped:
+                        answer = edited
+                        deterministic_edits += 1
+                        yield _reset_answer(reason)
+                        yield _sse("text", {"delta": answer})
+                    else:
+                        # NOTHING COULD GO. A remainder or a misstated figure
+                        # in the ONLY sentence there is cannot be deleted —
+                        # the answer would be nothing — and a number with no
+                        # receipt is not something to ship because the cheap
+                        # remedy did not fit. The old round trip is kept for
+                        # exactly this case, word for word, so the guarantee
+                        # is unchanged where the edit cannot reach.
+                        restate_corrections += 1
+                        yield _reset_answer(reason)
+                        answer = ""
+                        parts: list[str] = []
+                        if remainders:
+                            left = "\n".join(f"- \"{phrase}\" — {sent}"
+                                             for sent, _n, phrase in remainders[:6])
+                            parts.append(
+                                f"{len(remainders)} counts in your answer are a "
+                                f"remainder you worked out yourself:\n{left}\n\n"
+                                "Naming a few of a group and then saying how many "
+                                "are left is your own subtraction. No result holds "
+                                "that number, so nothing on the board can back it "
+                                "up. Name the ones you named and stop — \"among "
+                                "them\", \"and others\" — or give the total the "
+                                "read returned, which does have a receipt.")
+                        if misstated:
+                            wrong = "\n".join(
+                                f"- you wrote {w:g}; the figure is {d:g} — {s}"
+                                for s, w, d in misstated[:6])
+                            parts.append(
+                                f"{len(misstated)} figures in your answer are a "
+                                f"figure on the board written wrong:\n{wrong}\n\n"
+                                "A figure rounded to read better is a different "
+                                "number, and the receipts behind it will not match "
+                                "it. Say it exactly as the result gives it, or — "
+                                "better, since the board already draws it — say "
+                                "what it MEANS and give no number at all.")
+                        if len(restated) > max_restated:
+                            listed = "\n".join(f"- {s}" for s in restated[:6])
+                            parts.append(
+                                f"{len(restated)} of your sentences say a figure the "
+                                f"board already draws, and {max_restated} may:"
+                                f"\n{listed}")
+                        # "restated figures" when that is all this is, so a turn
+                        # with no misstatement receives the message it received
+                        # before this gate existed, to the byte. The evals are
+                        # noisy enough run to run without a reworded correction
+                        # on a path that was not being fixed.
+                        named = "restated figures" if not (misstated or remainders) else "the figures"
                         parts.append(
-                            f"{len(remainders)} counts in your answer are a "
-                            f"remainder you worked out yourself:\n{left}\n\n"
-                            "Naming a few of a group and then saying how many "
-                            "are left is your own subtraction. No result holds "
-                            "that number, so nothing on the board can back it "
-                            "up. Name the ones you named and stop — \"among "
-                            "them\", \"and others\" — or give the total the "
-                            "read returned, which does have a receipt.")
-                    if misstated:
-                        wrong = "\n".join(
-                            f"- you wrote {w:g}; the figure is {d:g} — {s}"
-                            for s, w, d in misstated[:6])
-                        parts.append(
-                            f"{len(misstated)} figures in your answer are a "
-                            f"figure on the board written wrong:\n{wrong}\n\n"
-                            "A figure rounded to read better is a different "
-                            "number, and the receipts behind it will not match "
-                            "it. Say it exactly as the result gives it, or — "
-                            "better, since the board already draws it — say "
-                            "what it MEANS and give no number at all.")
-                    if len(restated) > max_restated:
-                        listed = "\n".join(f"- {s}" for s in restated[:6])
-                        parts.append(
-                            f"{len(restated)} of your sentences say a figure the "
-                            f"board already draws, and {max_restated} may:"
-                            f"\n{listed}")
-                    # "restated figures" when that is all this is, so a turn
-                    # with no misstatement receives the message it received
-                    # before this gate existed, to the byte. The evals are
-                    # noisy enough run to run without a reworded correction
-                    # on a path that was not being fixed.
-                    named = "restated figures" if not (misstated or remainders) else "the figures"
-                    parts.append(
-                        "The figures are on the board; the reading is yours. "
-                        "Rewrite the answer saying what those figures MEAN — "
-                        "which matters, what they do not settle, what to check "
-                        f"next. THE REWRITE STILL CARRIES {max_restated} FIGURE: "
-                        "the one your main claim rests on, said exactly as the "
-                        "result gives it. NONE IS NOT THE SAFE ANSWER — a reading "
-                        "with no figure in it is a different failure, and it is "
-                        "the one this gate has been causing. What comes out is "
-                        "the RECITATION: the other sentences, the ones that walk "
-                        "rows the board already draws. "
-                        "Keep every caveat exactly as it was; "
-                        f"the gate is on {named}, never on what qualifies them.")
-                    messages.append({"role": "user", "content": "\n\n".join(parts)})
-                    continue
+                            "The figures are on the board; the reading is yours. "
+                            "Rewrite the answer saying what those figures MEAN — "
+                            "which matters, what they do not settle, what to check "
+                            f"next. THE REWRITE STILL CARRIES {max_restated} FIGURE: "
+                            "the one your main claim rests on, said exactly as the "
+                            "result gives it. NONE IS NOT THE SAFE ANSWER — a reading "
+                            "with no figure in it is a different failure, and it is "
+                            "the one this gate has been causing. What comes out is "
+                            "the RECITATION: the other sentences, the ones that walk "
+                            "rows the board already draws. "
+                            "Keep every caveat exactly as it was; "
+                            f"the gate is on {named}, never on what qualifies them.")
+                        messages.append({"role": "user", "content": "\n\n".join(parts)})
+                        continue
+                # NO `continue` HERE, AND THAT IS THE POINT. The edit happened;
+                # what falls through to the notice gate below is the answer as
+                # edited, so a caveat this removed - it cannot, but a guard is
+                # not the only thing that has ever been wrong - is caught in
+                # the same pass instead of on a second one.
 
                 # WHAT HE SAID THIS TURN, WHEREVER IT LANDS ON THE PAGE. A
                 # caveat moved out of the paragraph and into its own slot is
@@ -3442,10 +3760,16 @@ async def run(
     duration_ms = int(round((ended - turn_started) * 1000))
     edges = [*iteration_marks, ended]
     iteration_ms = [int(round((b - a) * 1000)) for a, b in zip(edges, edges[1:])]
-    # All six gates, as one number. Each is a whole extra model round trip
-    # asked for by deterministic code, and until now every one of them was
-    # counted in a local variable the log never saw — so "corrective turns per
-    # turn", which P1.c is measured on, could not be read back at all.
+    # THE ROUND TRIPS THE GATES ACTUALLY SPENT, as one number, and it is the
+    # number this card moves. Since P1.h the volunteering and restatement gates
+    # normally spend none — they delete the offending sentences — and appear
+    # here ONLY on the turns where deletion could not be applied without
+    # emptying the answer or taking a caveat off the screen, which is when the
+    # old rewrite is still asked for, word for word. The three write claims
+    # keep theirs because the remedy may be to CALL the tool, and the notice
+    # gate keeps its own below because that round trip is the reason
+    # `notice_forced` has been 0. What was done WITHOUT a round trip is
+    # `deterministic_edits`, reported beside this.
     corrections_total = (corrective_turns + pin_corrections + save_corrections
                          + page_corrections + volunteer_corrections
                          + restate_corrections)
@@ -3552,6 +3876,12 @@ async def run(
         "duration_ms": duration_ms,
         "iteration_ms": iteration_ms,
         "corrective_turns": corrections_total,
+        # What the gates did WITHOUT a round trip (P1.h), and how hard he
+        # thought. Both are on the frame because both are what this card is
+        # measured on, and neither could be read back from anywhere else.
+        "deterministic_edits": deterministic_edits,
+        "effort": effort_level,
+        "effort_kind": effort_kind,
         "usage": usage,
         "cache_hit": usage["cache_read"] > 0,
         # Whether cache_hit means anything for this turn. A turn that never

@@ -106,17 +106,18 @@ def test_no_volunteered_line_is_left_alone(monkeypatch) -> None:
     assert "volunteering_over_cap" not in [w["reason"] for w in frames_of(frames, "warning")]
 
 
-def test_two_volunteered_lines_are_corrected(monkeypatch) -> None:
+def test_two_volunteered_lines_are_trimmed_without_a_round_trip(monkeypatch) -> None:
     """
-    Over the cap, the loop rewrites rather than trimming the text itself.
+    Over the cap, the extra line is DELETED (P1.h) — no second answer is bought.
 
-    A rewrite, because dropping a sentence mechanically could take a caveat
-    with it — the correction says so, and the model is the only thing that can
-    tell which line was the useful one.
+    Until 2026-09-14 this cost a whole model round trip: the answer was thrown
+    away and rewritten. Deletion is exact and one-way — it cannot introduce a
+    figure, a claim or a caveat George did not write — and the cap is on what
+    he ADDED, so the first volunteered line stays exactly as he wrote it.
     """
     frames, requests = drive(
         monkeypatch,
-        [_with_markers(2), _with_markers(1)],
+        [_with_markers(2)],
         question="how did Rockwell do?",
     )
     warnings = [w for w in frames_of(frames, "warning")
@@ -124,34 +125,59 @@ def test_two_volunteered_lines_are_corrected(monkeypatch) -> None:
     assert len(warnings) == 1
     assert warnings[0]["limit"] == MAX_VOLUNTEERED
     assert warnings[0]["found"] == 2
+    assert warnings[0]["corrected"] == "deterministic"
+    assert warnings[0]["removed"] == 1
 
-    # The draft is discarded, or the rewrite lands under the text it replaces.
+    # The draft on screen is replaced by the edit, not added to.
     assert [r["reason"] for r in frames_of(frames, "answer_reset")] == [
         "volunteering_over_cap"
     ]
+    standing = _standing_answer(frames)
+    assert MARKERS[0] in standing, "the line the cap allows was kept"
+    assert MARKERS[1] not in standing, "the line over the cap was not"
+    assert "Rockwell took P48,210" in standing, "the answer itself is untouched"
 
-    # And the instruction protects the things the cap is NOT about.
+    # AND NOTHING WAS PUT TO THE MODEL. One request answered this turn.
+    assert len(requests) == 1
     sent = [m["content"] for req_ in requests for m in req_["messages"]
             if m["role"] == "user" and isinstance(m["content"], str)]
-    correction = [c for c in sent if "volunteered" in c]
-    assert correction, "no corrective message was sent"
-    assert "caveat" in correction[0].lower()
+    assert not [c for c in sent if "You volunteered" in c]
 
 
-def test_the_volunteering_correction_is_capped(monkeypatch) -> None:
+def test_a_single_volunteered_line_over_the_cap_still_costs_the_rewrite(monkeypatch) -> None:
     """
-    One corrective turn, then the answer stands.
+    THE EDIT REFUSES TO EMPTY AN ANSWER, and then the model is asked after all.
 
-    The same shape as the notice and pin corrections: a gate, not a loop. A
-    model that keeps volunteering must not cost an unbounded number of turns.
+    An answer that is nothing but volunteered lines cannot be trimmed to
+    nothing — so the round trip P1.h removes is not removed here, it is moved
+    to the case that needs it. Said out loud because "deterministic" would
+    otherwise read as "always".
+    """
+    only_extras = f"{MARKERS[0]}: one. {MARKERS[1]}: two."
+    frames, requests = drive(monkeypatch, [only_extras, _with_markers(1)],
+                             question="how did Rockwell do?")
+    warnings = [w for w in frames_of(frames, "warning")
+                if w["reason"] == "volunteering_over_cap"]
+    assert len(warnings) == 1 and warnings[0]["corrected"] == "deterministic"
+    assert warnings[0]["removed"] == 1, "one of the two went; emptying it is refused"
+    assert _standing_answer(frames).startswith(MARKERS[0])
+
+
+def test_the_volunteering_gate_runs_once_and_costs_nothing(monkeypatch) -> None:
+    """
+    One pass, then the answer stands — and since P1.h the pass is free.
+
+    The same shape as the notice and pin corrections: a gate, not a loop. The
+    budget is the same yaml key that bounded the round trip it replaces.
     """
     over = _with_markers(3)
-    frames, _ = drive(monkeypatch, [over, over, over], question="how did Rockwell do?")
+    frames, requests = drive(monkeypatch, [over], question="how did Rockwell do?")
     warnings = [w for w in frames_of(frames, "warning")
                 if w["reason"] == "volunteering_over_cap"]
     assert len(warnings) == req(DEFS, "volunteering.max_corrective_turns") == 1
-    # It gave up and kept the answer rather than spinning.
-    assert answer_of(frames)
+    assert warnings[0]["removed"] == 2, "the two over the cap went, the first stayed"
+    assert len(requests) == 1, "the gate bought no second answer"
+    assert _standing_answer(frames)
 
 
 def test_the_cap_does_not_claim_to_verify_sourcing() -> None:
@@ -312,20 +338,30 @@ def test_the_gate_is_a_definition_and_the_evals_measure_with_the_same_function()
     assert prose.restated_sentences(READING, [{"rows": ROWS, "meta": META}]) == []
 
 
-def test_a_recitation_of_the_board_costs_one_rewrite(monkeypatch) -> None:
-    frames, requests = _drive_drawn(monkeypatch, [RECITING, READING])
+def test_a_recitation_of_the_board_costs_nothing_now(monkeypatch) -> None:
+    """
+    THE CARD'S WHOLE NUMBER (P1.h). This gate was 6, 7 and 6 of the 8, 7 and 7
+    corrective round trips in the three most recent recorded runs. The recited
+    sentence is deleted instead, and the answer is not bought twice.
+    """
+    frames, requests = _drive_drawn(monkeypatch, [RECITING])
     warnings = [w for w in frames_of(frames, "warning") if w["reason"] == "restated_figure"]
     assert len(warnings) == 1 and warnings[0]["found"] == 2 and warnings[0]["limit"] == 1
+    assert warnings[0]["corrected"] == "deterministic" and warnings[0]["removed"] == 1
     assert [r["reason"] for r in frames_of(frames, "answer_reset")] == ["restated_figure"]
-    assert _standing_answer(frames) == READING
+    standing = _standing_answer(frames)
+    # THE ALLOWANCE IS WHAT KEEPS A FIGURE ON SCREEN. P1.c raised it 0 -> 1
+    # because a reading with no figure in it is its own failure; the edit keeps
+    # the first restating sentence for the same reason and drops the recitation.
+    assert "48,210" in standing, "the figure the claim rests on survived"
+    assert "61,500.50" not in standing, "the sentence that walked the board did not"
+    assert "Rockwell is the one to watch." in standing, "the reading is untouched"
+    assert len(prose.restated_sentences(standing, [{"rows": ROWS, "meta": META}])) == 1
+    # And nothing was put to the model: the read and the answer, nothing more.
+    assert len(requests) == 2
     sent = [m["content"] for req_ in requests for m in req_["messages"]
             if m["role"] == "user" and isinstance(m["content"], str)]
-    correction = [c for c in sent if "board already draws" in c]
-    assert correction and "caveat" in correction[0].lower() and "48,210" in correction[0]
-    # AND IT ASKS FOR A FIGURE TO SURVIVE. A correction that reads as "take the
-    # numbers out" is how every gate answer came back carrying none of them.
-    assert "THE REWRITE STILL CARRIES 1 FIGURE" in correction[0]
-    assert "NONE IS NOT THE SAFE ANSWER" in correction[0]
+    assert not [c for c in sent if "board already draws" in c]
 
 
 def test_the_figure_a_claim_is_about_is_not_corrected(monkeypatch) -> None:
@@ -347,11 +383,39 @@ def test_a_reading_over_drawn_figures_is_left_alone(monkeypatch) -> None:
     assert answer_of(frames) == READING
 
 
-def test_the_restatement_correction_is_capped(monkeypatch) -> None:
-    frames, _ = _drive_drawn(monkeypatch, [RECITING, RECITING, RECITING])
+def test_the_restatement_gate_runs_once_per_turn(monkeypatch) -> None:
+    frames, requests = _drive_drawn(monkeypatch, [RECITING])
     warnings = [w for w in frames_of(frames, "warning") if w["reason"] == "restated_figure"]
     assert len(warnings) == req(DEFS, "voice.restatement.max_corrective_turns") == 1
-    assert _standing_answer(frames) == RECITING, "it gave up and kept the answer rather than spinning"
+    assert len(requests) == 2, (
+        "the read and the answer; the gate is a pass over the text, not a round trip")
+
+
+def test_the_edit_never_takes_a_caveat_off_the_screen(monkeypatch) -> None:
+    """
+    THE GUARD THAT MATTERS. A sentence can both recite a drawn figure AND be
+    the only place a notice is surfaced; deleting it would trade a caveat for
+    a style rule, and notices surfaced is a floor. So it stays, and the gate
+    reports that nothing could go.
+    """
+    from agent import loop as _loop
+    # "C." is the only place the caveat is surfaced, so it stays whatever
+    # else goes: the guard refuses the drop rather than reporting it.
+    kept = _loop._drop_safely("A. B. C.", ["B.", "C."], lambda text: "C." in text)
+    assert kept == ("A. C.", ["B."])
+
+
+def test_the_edit_never_empties_the_answer() -> None:
+    from agent import loop as _loop
+    assert _loop._drop_safely("Only this.", ["Only this."], lambda _t: True) == (
+        "Only this.", [])
+
+
+def test_a_deleted_sentence_leaves_the_rest_byte_for_byte() -> None:
+    from agent import loop as _loop
+    text = "First one. Second one. Third one."
+    out = _loop._without_sentences(text, ["Second one."])
+    assert out == "First one. Third one."
 
 
 def test_a_figure_with_nothing_drawn_is_not_gated(monkeypatch) -> None:

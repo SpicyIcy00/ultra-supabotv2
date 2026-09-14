@@ -317,10 +317,16 @@ class Report:
             # `ops/cost_report.py` cannot see a single one of these and eval
             # spend was invisible in a way real traffic is not. Keeping it here
             # is the only place the number can come from.
+            # `deterministic_edits`, `effort` and `effort_kind` are P1.h's own
+            # numbers: what the gates did WITHOUT a round trip, and how hard
+            # the turn was told to think. Neither can be recovered from
+            # anywhere else afterwards, and a run that does not record them
+            # cannot be compared with the run before it.
             "done": {k: turn.done.get(k) for k in ("iterations", "tool_calls", "executed_calls",
                                                     "duplicate_reads", "status", "notice_forced",
                                                     "duration_ms", "iteration_ms",
-                                                    "corrective_turns", "usage")},
+                                                    "corrective_turns", "deterministic_edits",
+                                                    "effort", "effort_kind", "usage")},
             # TIME TO FIRST VISIBLE OBJECT (P1.b, 2026-09-13), replayed
             # through the room's own board rule (tests/evals/timing.py). Two
             # numbers, not one, because the card moves only the second:

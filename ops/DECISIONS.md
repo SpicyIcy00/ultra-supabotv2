@@ -9,6 +9,30 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-14 — P1.h: a gate that deletes, and the one gate that must not
+
+Effort belongs to the turn, not to the process, but it cannot ride the request:
+a top-level `effort` change invalidates the messages cache and, on some models,
+the prefix cache with it — the 9.2k tokens that 139 of 141 turns read back. It
+rides a mid-conversation system message instead, so the level moves and every
+cache entry keeps matching. The classifier is a branch over the question and
+whether a thread is behind it; it chooses one request parameter and can see
+nothing George reads, says or is allowed to do, which is why it is a knob and
+not the planner rule 5 forbids.
+
+A recited sentence does not need a model to remove it. Deleting is one-way — it
+cannot introduce a figure, a claim or a caveat he did not write — so two of the
+six gates stopped buying a second answer, and that is where 7 corrective round
+trips became 1. It refuses twice: never empty the answer, never take away a
+caveat, and where neither deletion fits, the old rewrite still happens.
+
+**The notice gate kept its round trip against the card's own wording, and this
+is the decision.** "A model turn only for a false write claim" and "any quality
+row moving fails the card" cannot both hold here: `unsurfaced_notice` fired in
+2 of the last 3 runs and the model's rewrite fixed it both times, so a
+deterministic version forces the caveat in by construction. The Done-when won.
+Trading `notice_forced` for a round trip is the owner's call, not a session's.
+
 ## 2026-09-14 — P1.f: a menu wider than what it draws, and prose with a shape
 
 Fourteen widget names for six drawings is not a richer vocabulary, it is a

@@ -194,9 +194,13 @@ def test_the_model_is_shown_the_post_being_replied_to(monkeypatch):
     sent = requests[0]["messages"]
     assert sent[0] == {"role": "user", "content": george_loop.THREAD_OPENER}
     assert sent[1] == {"role": "assistant", "content": BRIEF}
-    # Then the person's actual question, as the next user turn.
-    assert sent[2]["role"] == "user"
-    assert "and for Rockwell?" in sent[2]["content"]
+    # Then the person's actual question, as the LAST user turn — since P1.h an
+    # effort marker can sit between the history and the question, and what
+    # matters is that the replayed post precedes it and it is still his words.
+    after = sent[2:]
+    at = next(i for i, m in enumerate(after) if m["role"] == "user")
+    assert all(m["role"] == "system" for m in after[:at])
+    assert "and for Rockwell?" in after[at]["content"]
 
 
 def test_the_opener_is_a_statement_and_not_a_question():

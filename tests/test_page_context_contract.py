@@ -467,8 +467,11 @@ def test_the_preamble_names_the_page_as_readable_and_unread(monkeypatch):
     _, requests = _drive(monkeypatch, [[_TextBlock("Hi.")]], captured,
                          reader=FakeReader(), page_scope={"name": "AJI BARN Reorder"},
                          page_context="Pages / AJI BARN Reorder")
-    # The first user message; the list is the loop's own and grows after.
-    opening = requests[0]["messages"][0]["content"]
+    # The question as asked, which is the LAST user message of the first
+    # request — an effort marker may sit in front of it (P1.h) and the list is
+    # the loop's own and grows after.
+    opening = [m for m in requests[0]["messages"]
+               if m["role"] == "user"][-1]["content"]
     assert "their page 'AJI BARN Reorder'" in opening
     assert "You have not read it yet" in opening
     assert PAGE_CONTEXT_TOOL in opening

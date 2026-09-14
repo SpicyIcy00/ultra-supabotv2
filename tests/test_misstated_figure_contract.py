@@ -182,13 +182,20 @@ def test_a_wrong_figure_outranks_a_repeated_one_when_both_are_present(monkeypatc
     assert "misstated_figure" in kinds and "restated_figure" in kinds
 
 
-def test_one_correction_covers_both_rather_than_two_round_trips(monkeypatch):
+def test_one_pass_covers_both_and_since_p1h_costs_no_round_trip(monkeypatch):
+    """
+    A turn that recites AND misstates is corrected once — and since P1.h that
+    correction deletes both sentences rather than buying a second answer. It
+    was read + answer + rewrite; it is read + answer.
+    """
     both = RECITING + " " + MISSTATING
-    frames, requests = _drive_drawn(monkeypatch, [both, READING])
+    frames, requests = _drive_drawn(monkeypatch, [both])
     assert len(frames_of(frames, "answer_reset")) == 1
-    # read + first answer + the one rewrite
-    assert len(requests) == 3
-
+    assert len(requests) == 2
+    warnings = [w for w in frames_of(frames, "warning")
+                if w["reason"] == "misstated_figure"]
+    assert len(warnings) == 1 and warnings[0]["corrected"] == "deterministic"
+    assert "48,200" not in _standing_answer(frames), "the figure written wrong went"
 
 def test_a_clean_reading_is_still_left_alone(monkeypatch):
     frames, _ = _drive_drawn(monkeypatch, [READING])
