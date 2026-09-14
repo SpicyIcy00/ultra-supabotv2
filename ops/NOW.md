@@ -1482,6 +1482,15 @@ second artifact and leaves him reading the old one.
 updated in the same commit** (§1), and
 `tests/test_plan_alignment_contract.py` fails if they disagree.
 
+**THE TEST DOES NOT REACH THE PUBLISHED PAGE, and on 2026-09-14 that showed.**
+It compares §3 with `ops/plan/plan.html` — two files in the repo — so a
+session that edits both and does not republish leaves the owner reading a
+stale page with a green suite behind it. P1.c's close was committed on
+2026-09-14 and never published, so the link was **two cards behind** the repo
+until P1.d republished it. Nothing can check this from here: publishing is a
+tool call, not a file. **Republish as the last act of the card**, and say in
+the close-out that you did.
+
 The owner's two prompts are "Log this: …" and "Read ops/NOW.md. Do the next
 card." — nothing else is needed to run it.
 
