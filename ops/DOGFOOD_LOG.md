@@ -86,6 +86,8 @@ wins on specificity rather than on file order.
   the row count, which gave a bare `0` something to lean on. The frame took
   those, so the values are named now: `store OPUS · on order 0`.
 
+**CONFIRMED ON HIS SCREEN, same day: "ok fixed".**
+
 ### 2026-09-14 · the table is cut off, and the page sits left
 
 > should i be able to scroll down on this? and at 100% size theres lots of
@@ -115,8 +117,13 @@ and the other two go back to the room's first layout.
 
 **Held by `frontend/src/room/layout.test.ts`**, which reads the stylesheet
 rather than the screen — jsdom does no layout, so a dom test could only prove
-the attributes are there. **Not checked by eye**: there is no browser driver
-in this repo, so the rules are verified and the result is not.
+the attributes are there. There is no browser driver in this repo, so nothing
+here was checked by eye from this side.
+
+**CONFIRMED ON HIS SCREEN, same day: "ok fixed".** That covers the scrolling,
+the centring and the columns. **It also covers the measure moving with the
+board** — a page that resizes between questions was a judgement made without
+him, flagged as such, and left alone.
 
 ### 2026-09-14 · "i dont really know what im looking at"
 
