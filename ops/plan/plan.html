@@ -260,7 +260,7 @@
 <div class="key">
   <div><span class="tag feat">#2 · #6</span><p>Which of <b>your own 26 features</b> this card serves, by their number in your list. #2 is the transforming workspace, #6 is contextual conversation. The full list is <span style="font-family:var(--mono);font-size:11.5px">ops/STANDARD.md</span>, and the Ideal UI's "26" button maps every one.</p></div>
   <div><span class="tag feat">trust</span><p><b>Three cards serve no feature on your list</b>, and say so rather than borrowing a number they do not serve. They serve the plan itself: <b>trust</b> keeps George honest about figures, <b>speed</b> makes turns cheaper and shorter, <b>the measure</b> fixes the suite every other number is reported through.</p></div>
-  <div><span class="tag free">no eval</span><p><b>Costs nothing extra.</b> The card cannot change what the model sees or how it thinks, so there is no reason to run the twelve questions. Most cards are this.</p></div>
+  <div><span class="tag free">no eval</span><p><b>Costs nothing extra.</b> The card cannot change what the model sees or how it thinks, so there is no reason to run the questions at all. Most cards are this.</p></div>
   <div><span class="tag free">no eval</span><p><b>Rides the phase close.</b> Either the card cannot change what the model sees, or the gate scenarios could not see the change even if it did. A new comparison is a capability no gate question asks about, so running one there proves nothing.</p></div>
   <div><span class="tag eval">eval · subset</span><p><b>The trust gate: four fixed questions, $0.63 measured.</b> No card in the plan carries this any more, since the one that did became free. It is what you run for an unplanned change that touches the prompt, which is usually a dogfood fix rather than a card. Not questions picked by feel. They are the ones that catch an unsurfaced caveat, an invented figure, a refusal that stopped refusing, and the rounded-number bug. Only one card runs this: the one that changes the figure gate itself.</p></div>
   <div><span class="tag eval">eval · full</span><p><b>A live run, $1.51.</b> Measured on 14 September on the new suite — eleven questions, eleven live turns, nothing unscored. It replaces an estimate of $1.84, which replaced $2.90 for the old suite. Happens on five cards: the two that change the trust machinery and the three phase closes. <b>Two runs per card maximum</b> — one to see the problem, one to confirm the fix. A third failure means the card is wrong, not the code.</p></div>
@@ -269,7 +269,7 @@
 
 <div class="rules" style="margin-top:14px">
   <div><b>Models</b>Opus 5 builds every card. Fable 5.1 reviews when a card's close-out surprises you, or at each phase gate. One model per session; a session never switches mid-card.</div>
-  <div><b>Cost</b>Only cards tagged <span style="font-family:var(--mono);color:rgb(var(--down))">eval</span> touch what the model sees and need the twelve: three or four scenarios while working, the full set once at the end, about $2 a run now. Everything else needs no run, and a card that asks for one anyway is wrong.</div>
+  <div><b>Cost</b>Only cards tagged <span style="font-family:var(--mono);color:rgb(var(--down))">eval</span> touch what the model sees and need a run: four gate scenarios while working, the full eleven once at the end, $1.51 a run measured. Everything else needs no run, and a card that asks for one anyway is wrong.</div>
   <div><b>What you never do</b>Describe a design. Answer a design question. Ask for a rebuild. Push without reading the close-out. Start two cards in one session.</div>
   <div><b>What a session never does</b>Start the next card. Ask you to choose between options. Widen a check so a run passes. Push. Touch a source that isn't there.</div>
 </div>
@@ -279,10 +279,10 @@
   <div><b>24.6 s</b><span>median answer</span><small>target &lt; 10 s</small></div>
   <div><b>5.0</b><span>model round trips per turn</span><small>target ≤ 2.5</small></div>
   <div><b>7.0 s</b><span>first visible object</span><small>target &lt; 2 s · only replay can reach it</small></div>
-  <div><b>10–12 / 12</b><span>the twelve, per run</span><small>trust rows stable · style flaps</small></div>
+  <div><b>11 / 11</b><span>trust rows, the new suite</span><small>measured 14 Sep · style is reported as a rate, not asserted</small></div>
   <div><b>16 · 7 · 3</b><span>of the 26: built · designed · need a source</span><small>corrected 13 Sep: the tally said 17 · 6 · 3 and double-counted feature 8</small></div>
-  <div><b>3</b><span>open reports, in your words</span><small>ten defects between them · they come before any card</small></div>
-  <div><b>$2.90</b><span>what a full run really costs today</span><small>the file said $1.65 · the meter was only counting scored questions and missing four setup turns · fixed 13 Sep</small></div>
+  <div><b>0</b><span>open reports, in your words</span><small>first time since the log started · all ten defects closed · the next thing you say is the most valuable thing here</small></div>
+  <div><b>$1.51</b><span>what a full run really costs today</span><small>measured 14 Sep on the new suite · the old twelve cost $2.90 and are deleted · the first eval price here to come in under its estimate</small></div>
   <div><b>$7.55</b><span>eval spend, the rest of the plan</span><small>5 full runs at $1.51, the price measured on 14 Sep · the two gates that ran cost 64c and 75c against a 63c estimate</small></div>
 </div>
 
@@ -302,14 +302,14 @@
 
     <div class="card"><div class="ch"><span class="id">P1.f</span><h3>Compose narrows to the catalogue, and the text gets three slots</h3><span class="tags"><span class="tag feat">#1 · #10</span><span class="tag eval">eval · full</span></span></div>
     <p class="does">The label tool's grammar becomes the six marks plus a claim-title per block, and the findings roles become three slots: <b>claim</b> (one highlight), <b>caveat</b> (whole, above the figures), <b>next</b> (one sentence, always last). The prompt's INVESTIGATING stop-sentence lands in <span style="font-family:var(--mono);font-size:11px">next</span>. The compose coercion work stays; what it validates gets smaller.</p>
-    <p class="done-when"><b>Done when:</b> the twelve run with rejections ≤ 1 question, label share not worse than 33%, and the trust rows unchanged; every answer has a claim and a next; the log's style checks are not widened.</p>
+    <p class="done-when"><b>Done when:</b> a full run has rejections ≤ 1 question, label share not worse than 33%, and the trust rows unchanged; every answer has a claim and a next; the log's style checks are not widened.</p>
     <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card P1.f.</div></div>
 
   <div class="card done"><div class="ch"><span class="id">P1.g</span><h3>Done: arithmetic in prose, and a column name in the answer</h3><span class="tags"><span class="tag">done 13 Sep</span></span></div><p class="does">Both trust failures George filed himself are closed. The gate ran live for <b>$0.64</b>, against the 63c this page estimated. It also turned up the conflict now sitting at the top of your log, which the first card absorbs.</p></div>
 
   <div class="card"><div class="ch"><span class="id">P1.h</span><h3>Cheaper turns</h3><span class="tags"><span class="tag feat">speed</span><span class="tag eval">eval · full</span></span></div>
     <p class="does">Effort per turn through the mid-conversation effort message so the cache survives: low for a label-only or follow-up turn, medium for a fresh question, high for the ladder. The six corrective gates become deterministic edits; a model turn stays only for a false write claim. The row cap stays at 200; it is the refused lever.</p>
-    <p class="done-when"><b>Done when:</b> median turn time and corrective turns per turn both down, every quality row on the twelve unchanged. If any quality row moves, the card fails and says so.</p>
+    <p class="done-when"><b>Done when:</b> median turn time and corrective turns per turn both down, every quality row unchanged. If any quality row moves, the card fails and says so.</p>
     <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card P1.h.</div></div>
 
   <div class="card"><div class="ch"><span class="id">P1.i</span><h3>Replay: the endpoint</h3><span class="tags"><span class="tag feat">#6 · #7</span><span class="tag free">no eval</span></span></div>
@@ -393,7 +393,7 @@
     <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card P2.j.</div></div>
 
   <div class="card"><div class="ch"><span class="id">P2.✓</span><h3>Close the phase</h3><span class="tags"><span class="tag fable">switch to Fable after</span><span class="tag eval">eval · full, once</span></span></div>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Close Phase 2: walk the four board scenarios on the live build, report each against the Ideal UI, and re-run the twelve once.</div></div>
+    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Close Phase 2: walk the four board scenarios on the live build, report each against the Ideal UI, and re-run the suite once.</div></div>
 </section>
 
 <!-- ================= PHASE 3 ================= -->
@@ -429,7 +429,7 @@
 
   <div class="card"><div class="ch"><span class="id">P3.f</span><h3>"Usual" as a definition, then as a band</h3><span class="tags"><span class="tag feat">#8 · #10</span><span class="tag free">no eval</span></span></div>
     <p class="does">A <span style="font-family:var(--mono);font-size:11px">usual_weekday</span> comparison in metrics.yaml: the same weekday over the last N closed weeks, returning low, high and the middle band, computed in the tool. Then the band mark with today's marker. George may not draw "usual" before the definition exists; after it, "soft for a Thursday" has evidence.</p>
-    <p class="done-when"><b>Done when:</b> the morning finding's "every shop held" block draws the band from the tool's rows; a contract test holds the definition; the twelve's trust rows unchanged.</p>
+    <p class="done-when"><b>Done when:</b> the morning finding's "every shop held" block draws the band from the tool's rows; a contract test holds the definition; the trust rows unchanged.</p>
     <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card P3.f.</div></div>
 
   <div class="card"><div class="ch"><span class="id">P3.✓</span><h3>Close the phase: the Seikyo arc, timed</h3><span class="tags"><span class="tag fable">switch to Fable after</span><span class="tag eval">eval · full, once</span></span></div>
@@ -470,7 +470,7 @@
     <div><b>A card's number doesn't move</b>It says so in the close-out and names the cause. P1.b did exactly this. The next card is not started until the cause is written down; the answer is never "try harder".</div>
     <div><b>A session wants to rebuild</b>The protocol says stop and ask; the default is no. If it happens twice on one card, that card is wrong and a Fable review session rewrites it.</div>
     <div><b>Two sessions in one tree</b>It has happened. Every card commits before it ends; a session checks git log against its start; a swept commit is named in the close-out, not rewritten.</div>
-    <div><b>The twelve flap</b>Style checks flap and trust rows do not. A card reports trust rows from one run and style from three, or says it ran once.</div>
+    <div><b>Runs flap</b>Style checks flap and trust rows do not — <b>leading with a reading</b> was every non-trust failure across four runs of the old suite. The new one reports style as a rate and only asserts it behind a flag, which a card should not set.</div>
     <div><b>A deploy takes production down</b>P0.4 made the deploy migrate itself and /health tell the truth. A card with a migration is pushed in the morning, watched five minutes, and the close-out says so.</div>
     <div><b>You stop dogfooding</b>Then the plan is measuring itself. Five minutes a morning is the whole cost; the log's Open list is the only thing that reorders the cards.</div>
   </div>
