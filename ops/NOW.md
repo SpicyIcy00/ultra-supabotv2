@@ -34,6 +34,21 @@ shippable. The full diagnosis is the report linked in section 6.
   the card's number before and after, and what is not done. Report the
   shortfall, never the improvement. Then append ≤10 lines to
   `ops/DECISIONS.md` — never to CLAUDE.md.
+- **THE LAST THING ON SCREEN IS WHAT THE OWNER HAS TO DO. Short, plain, and
+  numbered.** Added 2026-09-14, when he read a full close-out and asked *"so
+  what do i need to do?"* — which is the question a close-out has to answer
+  and had not.
+
+  The close-out above it stays: it is the record, and the next session reads
+  it. What changes is that it is not the END. After it, **three lines at most,
+  a numbered list, no numbers in them**, saying only what is HIS to do:
+  usually push or not, then what to look at and what to say if it is wrong.
+  Nothing he cannot act on goes in it — a shortfall belongs in the close-out,
+  not in his list, unless it is a thing he decides.
+
+  **If there is nothing for him to do, say that in one line.** "Nothing —
+  I'll carry on with the next card" is a complete answer and is better than
+  inventing a task.
 - **UPDATE BOTH COPIES OF THE PLAN, IN THE SAME COMMIT.** §3 is what a session
   reads; **`ops/plan/plan.html` is what the OWNER reads**, published at the
   link in §6. Closing a card, adding one, or changing what one costs changes

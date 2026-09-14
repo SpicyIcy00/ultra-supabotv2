@@ -3773,3 +3773,10 @@ naming a product and the 1 unit left on it. Verified by replay at $0.00:
 price in this project to come in under its estimate. `GEORGE_VOICE_STRICT=1`
 is §4's old recipe and is wrong for v2, where style is a rate by design — the
 run set it and reported 8 style failures over 11 clean trust rows.
+
+**A close-out now ends with what the OWNER has to do, short and numbered.**
+2026-09-14: he read P1.e's full close-out and asked *"so what do i need to
+do?"* — which is the one question it had not answered. The close-out stays as
+the record; it is no longer the last thing on screen. Three lines at most, no
+figures, only what is his to decide. "Nothing" is a complete answer. In
+NOW.md §1 and on the plan page, both in the same commit.
