@@ -284,7 +284,15 @@ iterations in that run).
    roughly $2.80 — at the cost of changing effort and the compose grammar in
    adjacent cards, which makes a regression harder to pin on either. Not done:
    it is a real trade and the owner's to make.
-3. **Keep a pair of runs inside the hour.** `PREFIX_TTL` is 1h, so the second
+3. **NEVER run the gate with `-x`, and the ledger proved why.** P1.c's two
+   runs, from `verification/spend_ledger.jsonl`: the first stopped on scenario
+   one after **1 turn for $0.25**; the second did all four for **$0.50**. So
+   **the first turn of a run costs about three times a later one** — it pays
+   the cold prefix write, and turns 2–4 averaged $0.083. Stopping early and
+   rerunning pays that write twice: $0.75 where $0.50 was the price, a 50%
+   surcharge for a flag. Let the gate finish and read all four failures at
+   once.
+4. **Keep a pair of runs inside the hour.** `PREFIX_TTL` is 1h, so the second
    run of the two-run cap re-reads the prefix instead of writing it. Runs on
    different days pay the write twice. Costs nothing to obey.
 

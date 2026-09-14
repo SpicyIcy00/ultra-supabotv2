@@ -3683,3 +3683,34 @@ env var recorded nothing whatsoever. **Every one of them understated.** The
 lesson is not "estimate better" — it is that a meter nobody can fail to read
 must be the default, and every figure quoted before today's ledger existed
 should be treated as a floor.
+
+## 2026-09-14 — The ledger's first night, and a trust check that cannot see evidence
+
+**The ledger works.** P1.c's close-out reported $0.75 for two gate runs and
+`verification/spend_ledger.jsonl` recorded both without anyone setting
+anything: 1 turn/$0.25 at 04:22, 4 turns/$0.50 at 04:26. **First time a run's
+cost was written down by default rather than by remembering.**
+
+**And it priced something nobody had measured: the first turn of a run costs
+~3x a later one.** $0.25 alone against $0.083 each for turns 2–4 — the cold
+prefix write. So a gate stopped by `-x` and rerun pays that write twice:
+$0.75 where $0.50 is the price. **Never `-x` the gate**; let it finish and read
+all four failures at once. Recorded in §2b as lever 3.
+
+**The plan-alignment test held on its first real use.** P1.c closed and both
+§3 and `ops/plan/plan.html` were updated in the same commit; 9 cases pass, 26
+open cards, totals derived.
+
+**A TRUST row is failing on a false positive, and it is structural.**
+Reproduced: `attribution_claims("Four lines account for 75% of the units the
+plan requests.")` fires, and that sentence is `get_replenishment`'s own notice
+QUOTED. **Every other trust check takes `(answer, results)`;
+`attribution_claims` takes `answer` alone**, so it cannot tell a share George
+invented from one a tool handed him. Same class as the hole `grounded_numerals`
+filled — a check that cannot see the evidence.
+
+**The fix must not be to stop George quoting notices** — UI rule 4 requires
+them surfaced, and a check that punishes compliance is worse than no check.
+It should excuse a match appearing verbatim in a returned `meta.notice`,
+exactly as `ungrounded_numerals` excuses a figure the tools returned. Filed
+in the log by the session that found it; not fixed here, because it is a card.
