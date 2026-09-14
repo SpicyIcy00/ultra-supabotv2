@@ -57,6 +57,73 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-13 · "i dont really know what im looking at"
+
+> with the widgets i dont really know what im looking at, what visual language
+> is better
+
+**Diagnosed, and it is a MODE, not a widget set.** Visualisation has a settled
+split: *exploratory* is for the analyst still looking — every series equal
+weight, colour for identity, no annotation — and *explanatory* is for a reader
+being told what was found: one thing emphasised, the rest receding, the point
+written on the mark. **George is explanatory by definition** (he has already
+done the analysis), and the board draws exploratory. So it hands back the
+look-for-yourself problem he was asked to solve. That is the whole of it.
+
+Five concrete failures in the screenshots, with the fixes:
+
+1. **Transactions rendered as `₱1,187` — a count labelled as money.** Cause
+   found: `room/data.ts` picks the unit from the COLUMN NAME
+   (`/sales|revenue|value|…/`), and a compared row names its number `value`,
+   which matches. Every metric's value is money to the formatter. The result
+   already carries `meta.metric_label`. **Take the unit from the metric.**
+   **FIXED in P1.c** — from the UNIT rather than the metric's name: every
+   compared row carries `unit` and every metric read carries
+   `meta.metric_unit`, so `fmt` takes the currency from those and the column
+   name is consulted only where the name itself says money (`net_sales`,
+   `unit_cost`). `value`, `total` and `amount` left the pattern; a percentage
+   column is read as a percentage first, so `change_pct` beside a peso figure
+   is not `₱13.8`. Six modules call `fmt`, the object panel among them, and
+   the panel is untouched by the redesign — so this is not work P1.e throws
+   away. **2 to 5 are P1.e and this entry stays open for them.**
+2. **Seven shops, seven hues.** One series in seven colours, where the row
+   label already says which shop it is — so colour is spent on nothing and a
+   reader tries to decode it. Two named anti-patterns at once: "eight
+   categorical hues when the story is one number" (called the most common way
+   a chart misses its point) and a value-ramp on nominal categories. **Use
+   EMPHASIS** — the one that matters in accent, the rest grey. The reference
+   calls emphasis "the most underused form" and "often the honest answer to
+   'make this chart clearer'".
+3. **"the track is the period before · the fill is this one".** An encoding
+   that needs a sentence to decode is not working; the caption is the tell.
+   **A dumbbell** — two dots joined by a line — reads without explanation and
+   is the standard form for before→after per item.
+4. **`₱556.6 / ₱545.91`** — two numbers, a slash, no labels. **Direct labels.**
+5. **Four tiles at equal weight** for a question whose answer is one or two
+   facts. **The reading is the headline and the marks are its evidence** —
+   which is the fix already queued above.
+
+**None of this touches the binding.** The model still names a read and a field
+and can never author a figure. What changes is the MODE the marks are drawn
+in: the renderer and the vocabulary, never the guarantee.
+
+Full write-up with sources in the report linked from NOW.md section 6.
+
+**5, "widgets just feel like KPIs" — NOT a card, and deliberately not yet.**
+Six of the fourteen kinds (`figure`, `hero`, `comparison`, `table`, `chart`,
+`distribution`) are ways to show a measurement, so the catalogue skews toward
+KPIs and George reaching for something finds one. That is real. But the board
+he judged it on had thrown the analysis away, and **a dashboard is what a
+reading looks like with the reading deleted.** Fix the silence, look again,
+and only then decide whether the vocabulary needs fewer measurements and more
+nouns. **The binding is not in question** — the model names a read and a
+field and can never author a figure; that is the guarantee, and a different
+look is not worth trading it for.
+
+---
+
+## Fixed
+
 ### 2026-09-14 · a shape George composed is invisible to his next question
 
 Found by a session reading the code during P1.c, not by a person, and checked
@@ -75,8 +142,13 @@ The shape is the thing being looked at and the line does not mention it, so
 object beside the one meant. Reproduced with two objects, one `spec` and one
 `table`; the `spec` never appears.
 
-Not fixed here: it is a different card's area (the board's travel with the
-question), and P1.c is the reading.
+**FIXED in P1.d, 2026-09-14**, which is the card that owns the board's travel
+with the question. The kind is declared — `composition.composed_kind` — and
+`board_sentence` allows it beside the widgets, so a shape George composed is
+named on the line like anything else and a leading one is what "why?" resolves
+against. A made-up kind is still ignored: the word comes from the definitions,
+not from the block. Held by `test_the_board_line_names_a_shape_george_composed`
+beside the test that still refuses an `iframe`.
 
 ### 2026-09-14 · the gate fails on a share the TOOL computed
 
@@ -97,6 +169,22 @@ being read. The fix is in `tests/evals/checks.attribution_claims`, not in
 George: excuse a share the results account for, the way `grounded_numerals`
 already does.
 
+**FIXED 2026-09-14, in the check, and it cost nothing to verify.** Each
+pattern now carries whether a receipt could ever excuse it. "Accounts for N%"
+is a share of whatever follows — which may be a total the read stated — so it
+is excused when N is a figure the results carried, off the same
+`allowed_numbers` `grounded_numerals` uses. Nothing else is: a share of a
+CHANGE is arithmetic no tool performs, so no row can carry one and a numeral
+that happens to match is a coincidence, not a receipt. "82% of the decline
+came from ATP" still fails with 82 in the rows. The two are told apart by
+which pattern fired, never by reading the figure.
+
+Verified by replaying the recorded run rather than buying another
+(`tests/evals/corpus.py`, $0.00): `verification/p1c-gate-2.json` went from
+**1 of 4 would fail** — `caveats · ATTRIBUTION account for 75%` — to **0 of
+4**, and nothing newly fired on `p1b-final.json`. Held by
+`test_a_share_the_read_itself_stated_is_not_attribution_math`.
+
 ### 2026-09-13 · George drew the board and never said anything
 
 > i asked how are doing like and those 4 widgets are all the poped up, and then
@@ -107,10 +195,9 @@ already does.
 Four defects in one report, kept together because they came from one sitting
 and may share a cause. Screenshots with the owner.
 
-**1, 2 and 4 ARE FIXED (P1.c, 2026-09-14); 3 IS NOT, and this entry stays open
-for it.** The silence and the `[object Object]` are closed in the commit named
-under each below. 3 — the board accumulating — is the next card (`P1.d`), and
-the rule it will follow is already decided further down this entry.
+**ALL FOUR ARE FIXED** — 1, 2 and 4 in P1.c (2026-09-14), and 3 in P1.d the
+same day, which is what closed this entry. Each is marked under its own
+paragraph below.
 
 1. **No prose at all.** "How are we doing" drew four widgets — ATV, net sales,
    transactions, an OPUS hero — and George said nothing. Not a short answer: no
@@ -120,6 +207,8 @@ the rule it will follow is already decided further down this entry.
 3. **The board accumulated instead of transforming.** The four widgets from the
    first question were still there after the second. Feature 2 of the standard:
    a follow-up transforms the workspace, it does not stack under it.
+   **FIXED in P1.d** — see the decision and what was built at the foot of this
+   entry.
 4. **`[object Object]` in a widget header** — `ATTENTION · 16 ROWS ·
    [object Object] · · NO`. Something is being stringified that is not a
    string, and the double separator says a field beside it is empty too.
@@ -191,6 +280,28 @@ subjects as same / expanded / narrowed / disjoint, and disjoint is the clear
 case. **If clearing turns out to feel abrupt, the fix is to let cleared
 objects fade rather than vanish, not to go back to keeping them.**
 
+**BUILT IN P1.d, 2026-09-14, and in two halves because the complaint has
+two.** `board.ts travel` compares what the question is about with what the
+board is about — the subjects a block named, and the scope its read was
+filtered to — and clears when they share nothing. Where NEITHER side names a
+subject both are about the whole estate, so the business decides instead:
+widening from a shop to the estate is one piece of work, and "look for
+problems" after "how are we doing" is not. What the person KEPT survives the
+clear, as it survives expiry.
+
+The other half is that a question which DOES share a subject rightly keeps
+what was there, and four turns in the finding is one tile among nine. So
+`folded` takes everything the newest turn did not touch out of the drawing and
+`Earlier.tsx` draws it as one quiet line above the reading, which opens. The
+BOARD still holds every object — this folds the screen — so the next question
+still travels with all of them. Held by `board.travel.test.ts` (both Done-when
+cases, and the four-shop stack) and `Earlier.dom.test.tsx`.
+
+The case to watch when you next use it: **"and OPUS?" while looking at
+Rockwell now clears the board**, because two shops that share nothing are two
+questions by this rule. If that feels wrong, say so — the fix is to fold
+rather than clear, and it is one line.
+
 **4, `[object Object]` in `ATTENTION · 16 ROWS · [object Object] · · NO`** —
 a value that is not a string is being interpolated into that header, and the
 doubled separator says the field beside it is empty too. No design in it.
@@ -210,73 +321,6 @@ cannot forget it, and cannot box it. `TextTile`, the renderer's special case
 and the grammar's `prose` mark all deleted themselves. A turn that says
 nothing is now a gap the loop records (`answer_without_prose`) rather than a
 silence only the owner could report. Held by `Reading.dom.test.tsx`.
-
-### 2026-09-13 · "i dont really know what im looking at"
-
-> with the widgets i dont really know what im looking at, what visual language
-> is better
-
-**Diagnosed, and it is a MODE, not a widget set.** Visualisation has a settled
-split: *exploratory* is for the analyst still looking — every series equal
-weight, colour for identity, no annotation — and *explanatory* is for a reader
-being told what was found: one thing emphasised, the rest receding, the point
-written on the mark. **George is explanatory by definition** (he has already
-done the analysis), and the board draws exploratory. So it hands back the
-look-for-yourself problem he was asked to solve. That is the whole of it.
-
-Five concrete failures in the screenshots, with the fixes:
-
-1. **Transactions rendered as `₱1,187` — a count labelled as money.** Cause
-   found: `room/data.ts` picks the unit from the COLUMN NAME
-   (`/sales|revenue|value|…/`), and a compared row names its number `value`,
-   which matches. Every metric's value is money to the formatter. The result
-   already carries `meta.metric_label`. **Take the unit from the metric.**
-   **FIXED in P1.c** — from the UNIT rather than the metric's name: every
-   compared row carries `unit` and every metric read carries
-   `meta.metric_unit`, so `fmt` takes the currency from those and the column
-   name is consulted only where the name itself says money (`net_sales`,
-   `unit_cost`). `value`, `total` and `amount` left the pattern; a percentage
-   column is read as a percentage first, so `change_pct` beside a peso figure
-   is not `₱13.8`. Six modules call `fmt`, the object panel among them, and
-   the panel is untouched by the redesign — so this is not work P1.e throws
-   away. **2 to 5 are P1.e and this entry stays open for them.**
-2. **Seven shops, seven hues.** One series in seven colours, where the row
-   label already says which shop it is — so colour is spent on nothing and a
-   reader tries to decode it. Two named anti-patterns at once: "eight
-   categorical hues when the story is one number" (called the most common way
-   a chart misses its point) and a value-ramp on nominal categories. **Use
-   EMPHASIS** — the one that matters in accent, the rest grey. The reference
-   calls emphasis "the most underused form" and "often the honest answer to
-   'make this chart clearer'".
-3. **"the track is the period before · the fill is this one".** An encoding
-   that needs a sentence to decode is not working; the caption is the tell.
-   **A dumbbell** — two dots joined by a line — reads without explanation and
-   is the standard form for before→after per item.
-4. **`₱556.6 / ₱545.91`** — two numbers, a slash, no labels. **Direct labels.**
-5. **Four tiles at equal weight** for a question whose answer is one or two
-   facts. **The reading is the headline and the marks are its evidence** —
-   which is the fix already queued above.
-
-**None of this touches the binding.** The model still names a read and a field
-and can never author a figure. What changes is the MODE the marks are drawn
-in: the renderer and the vocabulary, never the guarantee.
-
-Full write-up with sources in the report linked from NOW.md section 6.
-
-**5, "widgets just feel like KPIs" — NOT a card, and deliberately not yet.**
-Six of the fourteen kinds (`figure`, `hero`, `comparison`, `table`, `chart`,
-`distribution`) are ways to show a measurement, so the catalogue skews toward
-KPIs and George reaching for something finds one. That is real. But the board
-he judged it on had thrown the analysis away, and **a dashboard is what a
-reading looks like with the reading deleted.** Fix the silence, look again,
-and only then decide whether the vocabulary needs fewer measurements and more
-nouns. **The binding is not in question** — the model names a read and a
-field and can never author a figure; that is the guarantee, and a different
-look is not worth trading it for.
-
----
-
-## Fixed
 
 ### 2026-09-13 · every gate answer now carries no figure at all
 

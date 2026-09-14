@@ -5764,6 +5764,15 @@ composition:
   # its own read time. He adds, changes, pushes aside and removes; he never
   # redraws what he has not touched.
   # ---------------------------------------------------------------------------
+  # THE KIND A COMPOSED SHAPE CARRIES ON THE BOARD. A block with a `spec`
+  # names no widget, so the board records it under this kind instead — and
+  # everything that reads the board by kind has to know the word. Until
+  # 2026-09-14 the line that travels with the question skipped every kind that
+  # was not a widget, so a board whose LEADING object was a shape George
+  # composed said nothing at all about it, and "why?" resolved against
+  # whatever quiet table happened to be beside it.
+  composed_kind: spec
+
   ops:
     put:
       about: "put an object on the board, or replace the one under this key"
@@ -5788,6 +5797,39 @@ composition:
   # maintains a picture, it does not accumulate answers. Mirrored in
   # frontend/src/room/board.ts EXPIRE_AFTER_TURNS.
   expire_after_turns: 6
+
+  # ---------------------------------------------------------------------------
+  # HOW THE BOARD TRAVELS WITH THE QUESTION. Decided 2026-09-13 in the dogfood
+  # log, built 2026-09-14 (P1.d). The owner: "when i ask to look for problems
+  # all the rest of the widgets still stayed."
+  #
+  # A question that shares a subject with the board TRANSFORMS it. A question
+  # that shares nothing CLEARS it. That way round because the only evidence is
+  # his complaint, and his complaint was that stale objects STAYED — so
+  # defaulting to what he observed as wrong is the safer error. If clearing
+  # turns out to feel abrupt, the fix is to let cleared objects fade rather
+  # than vanish, never to go back to keeping them.
+  #
+  # A SUBJECT IS WHAT AN OBJECT IS ABOUT — a name a row carried, or the scope
+  # its read was filtered to. Where NEITHER side names one, both are about the
+  # whole estate, and the business decides instead: widening from one shop to
+  # the estate is the same work; a different business is not.
+  #
+  # Mirrored in frontend/src/room/board.ts `travel`.
+  # ---------------------------------------------------------------------------
+  board_travel:
+    clears_when: no_shared_subject
+    # An argument that names WHICH thing a read is about, rather than
+    # narrowing the population it measures over. The list agent/surface.py
+    # holds as _SUBJECT_FILTERS, plus the supplier a draft order is about.
+    subject_filters: [store, product, product_id, sku, category, supplier]
+    # Clearing is for the conversation, never for what the person decided to
+    # hold on to — the same exemption keeping already has from expiry.
+    kept_survives: true
+    # AND EARLIER TURNS FOLD; THEY DO NOT STACK. An object the newest turn did
+    # not touch is drawn as one quiet line above the finding, tappable. The
+    # board still holds it — this is what the screen spends a column on.
+    fold_untouched: true
 
   # A CHANGE THAT NAMES A SUBJECT MUST NAME ITS READ. Without this, George
   # could rename what an object is about while it still draws an older read's

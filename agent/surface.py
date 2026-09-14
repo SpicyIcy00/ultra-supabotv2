@@ -287,7 +287,8 @@ def board_sentence(board: Optional[Any], defs: Mapping[str, Any]) -> Optional[st
     So the board travels with the question, as names and closed vocabulary:
 
       key       the object's own key, which George chose when he composed it
-      kind      one of composition.widgets
+      kind      one of composition.widgets, or composition.composed_kind
+                for a shape he composed himself
       weight    one of composition.weights — which of them is LEADING
       about     the subject it is drawn for, a value off a row of its read
       measure   the metric's display name, from the definitions
@@ -306,7 +307,12 @@ def board_sentence(board: Optional[Any], defs: Mapping[str, Any]) -> Optional[st
         return None
 
     voc = req(defs, "composition")
-    kinds = set(req(voc, "widgets"))
+    # A COMPOSED SHAPE IS ON THE BOARD TOO. Its kind is `composed_kind`, which
+    # is not a widget — and until 2026-09-14 this line skipped it, so a board
+    # whose LEADING object was a shape George composed said nothing about the
+    # thing being looked at and "why?" landed on a quiet table beside it. The
+    # kind still comes from the definitions, so a made-up one is still ignored.
+    kinds = set(req(voc, "widgets")) | {str(req(voc, "composed_kind"))}
     weights = set(req(voc, "weights"))
     limit = int(req(voc, "max_objects"))
 

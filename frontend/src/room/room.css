@@ -828,6 +828,24 @@ body.r-dragging-on .r-tile { transition: none; }
 /* since you last looked — one line, above what lands */
 .r-since { margin: 0 0 14px; color: rgb(var(--george)); }
 
+/* WHAT CAME BEFORE THIS FINDING — one quiet line above the reading
+   (Earlier.tsx). Quiet on purpose: it is the board remembering, not the board
+   asking for anything, so it takes no accent and no weight. It sits above the
+   reading because the finding is what this turn is, and the line is what came
+   before it. */
+.r-earlier { margin: 0 0 12px; }
+.r-earlier-line {
+  font: inherit;
+  color: var(--ink-3);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+.r-earlier-line:hover, .r-earlier-line:focus-visible { color: var(--ink-2); }
+
 /* ------------------------------------------------------- how to read it
    One quiet line under an instrument saying what the drawing means — the
    track, the fill, the mark. Never a figure of George's; the only numbers

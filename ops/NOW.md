@@ -93,7 +93,7 @@ shippable. The full diagnosis is the report linked in section 6.
 | Live | **`fb303ba`**, confirmed from `/health`: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `005cbe8c`, **no migration** (the schema did not move). The FOURTH clean swap in a row. One caveat on the evidence: the first poll after the push already showed the new build, so this says the swap was quick and says nothing about the seconds inside it — the 2026-09-13 swap is still the only one polled across. Read `/health` rather than believing this row: `a01706b` sat here as live while three commits had landed since. |
 | Last deploy | `ee29fa5`, live and healthy when recorded; the swap before it, `a01706b`, **live and healthy when recorded**, and the swap was clean — polled every 20 s across it, zero non-200s, old build to new in about a minute. It carried NO migration (the schema was already at head), so the launcher took its `already at head` branch and ran no alembic at all. That is evidence the outage below lives in the migration path specifically, not in the boot or the build — evidence, not the deploy log. Before it, `8b0325a`. `8b0325a` carried P0.3 and P0.4, and applying migration `w7x8y9z0a1b2` cost **~50 minutes of 502**: the first boots crashlooped, the migration did not apply, and nothing was readable from outside. It came up on a later retry. Root cause still unknown — the Railway deploy log for that build has not been read. `69b51bd` is the fix for the *invisibility*, not for the cause. |
 | Phase | 0, consolidating |
-| Next card | **Whatever is Open in `ops/DOGFOOD_LOG.md`, then P1.d.** Two things are Open as of 2026-09-14 and BOTH were found by a session rather than by the owner — a composed shape missing from the board line, and the gate failing on a share the tool itself computed — so read them before assuming the queue is his. **P1.c closed 2026-09-14**: the reading is a region above the board, `text` and `prose` are out of the vocabulary, the two `fmt` bugs are gone, and `max_restated_sentences: 0 → 1` took the gate's cited figures from 0/4 to 4/4. The remaining cards were rewritten 2026-09-13 into the plan that reaches the Ideal UI: P1.c–P1.k, P2.a–P2.h, P3.a–P3.f, and Phase 4 sources. P1.d and P1.e carry what is left of the Open items, in the log's own agreed fixes. **P1.g closed 2026-09-13** (`c508965`), which is the log's two trust failures; the Open item it left behind — every gate answer citing no figure — is a decision P1.c has to make, not a card of its own. P1.b closed 2026-09-13: first composed object 16.8 → 8.2 s, first visible object unmoved at 7.0 s (bounded by the first round trip; only replay, P1.i/P1.j, can reach 2 s). The bill is round trips, not cache misses. Read the note under the baseline table before reporting any Phase 1 number against the twelve. |
+| Next card | **Whatever is Open in `ops/DOGFOOD_LOG.md`, then P1.e.** One thing is Open as of 2026-09-14 — *"i dont really know what im looking at"*, items 2 to 5 — and **it is P1.e's, so the next card and the top of the log are the same work.** **P1.d closed 2026-09-14**: a question sharing no subject with the board clears it, one sharing a subject transforms it, and everything the newest turn did not touch folds to one line above the reading. It took the log's other two Open items with it — the composed shape missing from the board line, and the gate failing on a share the tool itself computed (1 of 4 → 0 of 4 on the recorded run, replayed for $0.00). The case to watch when he next uses it: "and OPUS?" while looking at Rockwell now CLEARS. **P1.c closed 2026-09-14**: the reading is a region above the board, `text` and `prose` are out of the vocabulary, the two `fmt` bugs are gone, and `max_restated_sentences: 0 → 1` took the gate's cited figures from 0/4 to 4/4. The remaining cards were rewritten 2026-09-13 into the plan that reaches the Ideal UI: P1.c–P1.k, P2.a–P2.h, P3.a–P3.f, and Phase 4 sources. P1.d and P1.e carry what is left of the Open items, in the log's own agreed fixes. **P1.g closed 2026-09-13** (`c508965`), which is the log's two trust failures; the Open item it left behind — every gate answer citing no figure — is a decision P1.c has to make, not a card of its own. P1.b closed 2026-09-13: first composed object 16.8 → 8.2 s, first visible object unmoved at 7.0 s (bounded by the first round trip; only replay, P1.i/P1.j, can reach 2 s). The bill is round trips, not cache misses. Read the note under the baseline table before reporting any Phase 1 number against the twelve. |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
@@ -243,7 +243,7 @@ where a regression was speculative AND **the four gate scenarios could not
 have seen it.** A new comparison (`P2.i`, `P3.f`) is a capability no gate
 scenario asks for, so a run there proves nothing; `P2.c`, `P2.d` and `P2.f`
 are context and rendering; `P1.c` breaks or fixes compose refusals, which are
-its own numbers. **Six live runs across 26 open cards, ~$11.04** — P1.e's
+its own numbers. **Six live runs across 25 open cards, ~$11.04** — P1.e's
 tail, P1.f, P1.h and the three phase closes at ~$1.84 each on v2. **P1.g and
 P1.c are closed**, and their gate runs cost **$0.64 and $0.75 against a $0.63
 estimate**: P1.g's was the first figure here to survive contact with a live
@@ -947,12 +947,75 @@ before believing it.
          reads the phrase, not the receipt. Filed in the dogfood log; the fix
          is in `checks.attribution_claims`, not in George. The other two are
          the style row above.
-- [ ] **P1.d the board transforms; it never accumulates** — the rule decided
+- [x] **P1.d the board transforms; it never accumulates** — the rule decided
       in the log: a question sharing no subject with the board CLEARS it; one
       sharing a subject TRANSFORMS it in place; earlier turns fold to one
       quiet tappable line above the finding. Absorbs the old P2.b. Done
       when: "how are we doing" then "any problems" leaves one finding;
       "why?" transforms the OPUS finding; a board test holds both. No eval.
+
+      **CLOSED 2026-09-14. Suites exact: 1,551 pure (was 1,546), 822 vitest
+      (was 805), `tsc -b` and `build` clean. No live run — the card asks for
+      none, and the one eval number below came from replaying a recorded run
+      for $0.00.**
+
+      **THE RULE IS `travel` IN `room/board.ts`, AND IT IS ABOUT WHAT A
+      QUESTION IS FOR.** What the turn is about — the subjects its blocks
+      named, and the scope its reads were filtered to — against what the board
+      is about. Share a subject and the board transforms; share nothing and it
+      clears, with what the person KEPT spared, as it is spared from expiry.
+      Where NEITHER side names a subject both are about the whole estate and
+      there is no intersection to take, so the BUSINESS decides: widening from
+      one shop to the estate is one piece of work, and `get_attention` after
+      `get_sales` is not. That last clause is what actually closes his
+      complaint, because "how are we doing" is estate-wide and names nobody.
+
+      **THREE THINGS THAT WOULD HAVE MADE IT WRONG, all found by the suite.**
+      A default composition keys its first read `read-0` every turn, so a key
+      match counted for anything but HIS blocks means nothing ever clears —
+      the key clause reads `turn.composition` only. An edit that only names
+      keys (`quiet this`, `drop that`) reads nothing and names nobody, so it
+      has no topic to share and would have cleared the board it was editing —
+      a turn about nothing new is not a new question. And the read identity
+      the board already uses is checked first, so the same read run again is
+      the same object however it is keyed.
+
+      **THE FOLD IS THE OTHER HALF, and the complaint has two.** A question
+      that DOES share a subject rightly keeps what was there, and four turns
+      in the finding is one tile among nine. `folded` takes everything the
+      newest turn did not touch out of the drawing; `Earlier.tsx` draws it as
+      one quiet line above the reading, which opens and folds again on the
+      next answer. **The BOARD still holds every object** — this folds the
+      screen — so `boardContext` is unchanged and the next question still
+      travels with all of them. What was kept and what is being looked at
+      never fold; what was set aside is not counted, because that row says it
+      once already.
+
+      **AND THE LOG'S TOP TWO OPEN ITEMS, both of which this card owns.**
+      The composed shape invisible to the next question was
+      `board_sentence` skipping every kind that is not a widget: the kind is
+      now declared (`composition.composed_kind`) and allowed beside them, so a
+      leading shape is what "why?" resolves against, and a made-up kind is
+      still ignored. The gate failing on a share the TOOL computed was
+      `checks.attribution_claims` reading the phrase and not the receipt —
+      each pattern now says whether a receipt could excuse it, "accounts for
+      N%" is excused when N is a figure the results carried, and a share of a
+      CHANGE never is. **Verified by replay, not by a run**
+      (`tests/evals/corpus.py`): `verification/p1c-gate-2.json` went from 1 of
+      4 would fail to **0 of 4**, and nothing newly fired on `p1b-final.json`.
+
+      **TWO SHORTFALLS.**
+      1. **Nothing was run against a live build.** The Done-when is a board
+         test and that is what holds it — but the four-widget board he
+         actually reported has never been rebuilt here, so the evidence is the
+         fixtures' shape, taken from the recorded runs, and not his screen.
+      2. **"And OPUS?" while looking at Rockwell now CLEARS the board.** Two
+         shops that share nothing are two questions under this rule, and the
+         old P1.d absorbed is the card that wanted that pair to transform. It
+         is left as the rule says rather than special-cased, because the log
+         decided this way round deliberately and the reversal is written
+         down — fold instead of clear, one line. It is in the log as the case
+         to watch.
 - [ ] **P1.e six marks, drawn one way each** — the renderer's fourteen
       widget kinds become the catalogue in the Ideal UI: figure, dumbbell
       (before/after), ranked (bars in cells), contributors (drivers), line
@@ -1295,9 +1358,9 @@ for it.`):
   may see.
 
 **Calendar, honestly.** One card a day, Fridays for the sweep, one session in
-three a dogfood fix: **28 open cards at four a week is seven weeks of cards,
-so nine to eleven weeks** to the Phase 3 gate. Phase 1 is ten cards, Phase 2
-eleven, Phase 3 seven. (P1.m was a card until 2026-09-13 and is now the tail
+three a dogfood fix: **25 open cards at four a week is six to seven weeks of
+cards, so nine to eleven weeks** to the Phase 3 gate. Phase 1 is seven cards,
+Phase 2 eleven, Phase 3 seven. (P1.m was a card until 2026-09-13 and is now the tail
 of P1.e: the letter is retired, not reused.) The sources
 decide whether 8, 23, 24 and 25 land inside that or after. The readable copy
 of this plan, with every card's prompt, is **George, The Build Plan** in §6.

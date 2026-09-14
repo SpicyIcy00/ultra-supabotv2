@@ -8,6 +8,13 @@
  * he has not touched. Ask about a supplier, then about a shop, and the draft
  * order is still there.
  *
+ * THAT HOLDS WITHIN ONE PIECE OF WORK, AND NOT ACROSS TWO (P1.d, 2026-09-14).
+ * Persisting is what makes this a room; persisting FOREVER is what made the
+ * owner ask for problems and get four answers to the question before it. So a
+ * question that shares nothing with the board clears it (`travel`), and one
+ * that shares a subject transforms it while everything the newest turn did not
+ * touch folds to a line (`folded`). Between them: nothing stacks.
+ *
  * THE BOARD IS DERIVED, NEVER STORED SEPARATELY. It is a fold over the turns,
  * so restoring the turns restores the board and there is no second copy of the
  * truth to drift. Each object remembers WHICH TURN it draws from, so an object
@@ -210,6 +217,203 @@ function editsFor(turn: AnswerTurn, i: number): Block[] {
   return out;
 }
 
+/* ---------------------------------------------- how the board travels */
+
+/**
+ * metrics.yaml composition.board_travel.subject_filters. An argument that
+ * names WHICH thing a read is about, rather than narrowing the population it
+ * measures over: `store: "OPUS"` says the read is about OPUS; `state:
+ * "low_stock"` says it is about less of everything.
+ */
+const SUBJECT_FILTERS = ['store', 'product', 'product_id', 'sku', 'category',
+                         'supplier'] as const;
+
+/**
+ * WHAT SOMETHING IS ABOUT — the two facts the travel rule compares.
+ *
+ * `subjects` are names: off a block George composed, or off the scope its read
+ * was filtered to. Lowercased, because "OPUS" and "Opus" are one shop.
+ * `businesses` is what the read belongs to — the metric's own domain where it
+ * declares one, and otherwise the tool, which names the business by
+ * construction (a vending read is vending; there is no other table it could
+ * have read). Two tools over one business — `get_stock` and `get_dead_stock`
+ * — therefore read as two, and two estate-wide questions across them clear
+ * rather than transform. Deliberate while it is only a fallback: erring
+ * toward clearing is the safer error the log names, and a tool-to-business
+ * map is a definition, which is where it would have to live.
+ *
+ * NOTHING HERE IS A FIGURE. Every value is a name off an argument, a label a
+ * block carried, or a word the definitions declared.
+ */
+export interface Topic {
+  subjects: Set<string>;
+  businesses: Set<string>;
+}
+
+function scopeSubjects(args: unknown, into: Set<string>): void {
+  if (!args || typeof args !== 'object' || Array.isArray(args)) return;
+  const bag = args as Record<string, unknown>;
+  for (const k of SUBJECT_FILTERS) {
+    const v = bag[k];
+    for (const one of Array.isArray(v) ? v : [v]) {
+      if (typeof one === 'string' && one.trim()) into.add(one.trim().toLowerCase());
+    }
+  }
+  scopeSubjects(bag.filters, into);
+}
+
+function topicOf(
+  answers: AnswerTurn[],
+  turn: number,
+  seqs: Iterable<number>,
+  named: Iterable<string | undefined>,
+): Topic {
+  const subjects = new Set<string>();
+  const businesses = new Set<string>();
+  for (const s of named) if (s && s.trim()) subjects.add(s.trim().toLowerCase());
+  for (const seq of seqs) {
+    const call = answers[turn]?.toolCalls.find((c) => c.seq === seq);
+    if (!call) continue;
+    scopeSubjects(call.arguments, subjects);
+    const domain = call.result?.meta?.metric_domain;
+    businesses.add(typeof domain === 'string' && domain ? domain : call.tool);
+  }
+  return { subjects, businesses };
+}
+
+/** What the board as a whole is about — every object, each from its own turn. */
+export function boardTopic(answers: AnswerTurn[], board: readonly BoardObject[]): Topic {
+  const subjects = new Set<string>();
+  const businesses = new Set<string>();
+  for (const o of board) {
+    const seqs = [...(o.seq === undefined ? [] : [o.seq]), ...(o.seqs ?? [])];
+    const one = topicOf(answers, o.turn, seqs, [o.subject, ...(o.subjects ?? [])]);
+    one.subjects.forEach((s) => subjects.add(s));
+    one.businesses.forEach((b) => businesses.add(b));
+  }
+  return { subjects, businesses };
+}
+
+function editsTopic(answers: AnswerTurn[], turn: number, edits: readonly Block[]): Topic {
+  const named: (string | undefined)[] = [];
+  for (const e of edits) {
+    named.push(e.subject);
+    for (const s of e.subjects ?? []) named.push(s);
+  }
+  return topicOf(answers, turn, drawnSeqs(edits), named);
+}
+
+function meet(a: Set<string>, b: Set<string>): boolean {
+  for (const x of a) if (b.has(x)) return true;
+  return false;
+}
+
+/**
+ * WHAT A NEW QUESTION DOES TO THE BOARD — the rule the dogfood log decided on
+ * 2026-09-13, and this is the whole of it.
+ *
+ *   "i asked how are we doing ... and then i asked for problems ... and also
+ *    when i ask to look for problems all the rest of the widgets still stayed"
+ *
+ * A question that shares a subject with the board TRANSFORMS it; a question
+ * that shares nothing CLEARS it. That way round, and not the other, because
+ * the only evidence anyone has is his complaint and his complaint was that
+ * stale objects STAYED — so defaulting to what he observed as wrong is the
+ * safer error. If clearing turns out to feel abrupt, the fix is to let cleared
+ * objects fade rather than vanish, never to go back to keeping them.
+ *
+ * FOUR WAYS TO BE ABOUT WHAT IS ALREADY THERE, in the order they are cheapest
+ * to be sure of:
+ *
+ *   HE NAMED IT      an edit HE composed under a key the board already holds
+ *                    is him transforming that object by name, which is what
+ *                    the keys are for. Only his: a default's keys are
+ *                    positional (`read-0`), so every turn's default would
+ *                    collide with the one before it and nothing would ever
+ *                    clear.
+ *   IT IS THAT       a put of a read the board already draws, by the identity
+ *                    the board already uses (readIdentity) — the same read run
+ *                    again is the same object.
+ *   SHARED SUBJECT   the names intersect. "Compare with OPUS" while looking at
+ *                    OPUS keeps the board; swapping OPUS for Magnolia does
+ *                    not, because that is a different question about a
+ *                    different shop.
+ *   THE WHOLE ESTATE where one side names no subject at all it is about
+ *                    everything, and there is no intersection to take — so the
+ *                    BUSINESS decides. Widening from one shop to the estate on
+ *                    the same measure is one piece of work; "look for problems"
+ *                    after "how are we doing" is not, and that is the pair he
+ *                    reported.
+ *
+ * A turn contributing no edits changes nothing, and an empty board has nothing
+ * to clear: both stand still rather than guessing.
+ */
+export function travel(
+  answers: AnswerTurn[],
+  board: readonly BoardObject[],
+  turn: number,
+  edits: readonly Block[],
+  hisKeys: ReadonlySet<string>,
+): 'transforms' | 'clears' {
+  if (!board.length || !edits.length) return 'transforms';
+
+  const keys = new Set(board.map((o) => o.key));
+  const identities = new Set(
+    board.map((o) => readIdentity(answers, o.turn, o)).filter((x): x is string => Boolean(x)),
+  );
+  for (const e of edits) {
+    if (hisKeys.has(e.key) && keys.has(e.key)) return 'transforms';
+    const id = readIdentity(answers, turn, e);
+    if (id && identities.has(id)) return 'transforms';
+  }
+
+  const was = boardTopic(answers, board);
+  const now = editsTopic(answers, turn, edits);
+  // A TURN THAT IS ABOUT NOTHING NEW IS NOT A NEW QUESTION. Edits that only
+  // name keys — quiet this, drop that, lead with the other — read nothing and
+  // name no subject, so there is nothing to compare and nothing to clear:
+  // they ARE the board being transformed.
+  if (now.subjects.size === 0 && now.businesses.size === 0) return 'transforms';
+  if (was.subjects.size > 0 && now.subjects.size > 0) {
+    return meet(was.subjects, now.subjects) ? 'transforms' : 'clears';
+  }
+  return meet(was.businesses, now.businesses) ? 'transforms' : 'clears';
+}
+
+/**
+ * EARLIER TURNS FOLD; THEY DO NOT STACK.
+ *
+ * Clearing handles the question that shares nothing. This is the other half of
+ * the same complaint: a question that DOES share a subject keeps what came
+ * before it, and four turns in the finding is one tile among nine.
+ *
+ * So what the newest turn did not touch is not drawn — it is one quiet line
+ * above the finding, which opens. The board still HOLDS it: this folds the
+ * SCREEN, not the board, so "why?" three turns later still resolves against
+ * everything (boardContext is taken from the whole board) and nothing George
+ * put down has been thrown away.
+ *
+ * TWO THINGS NEVER FOLD. What the person KEPT — keeping is them saying "this
+ * stays", and it outranks a turn count exactly as it outranks expiry — and
+ * what they are looking at right now. What they set aside is not here at all:
+ * it is in the set-aside row already.
+ */
+export function folded(
+  board: readonly BoardObject[],
+  newest: number,
+  local: Record<string, Local>,
+  focused: string | null,
+): { shown: BoardObject[]; earlier: BoardObject[] } {
+  const shown: BoardObject[] = [];
+  const earlier: BoardObject[] = [];
+  for (const o of board) {
+    const mine = local[o.key];
+    if (o.touched < newest && !mine?.kept && !mine?.closed && o.key !== focused) earlier.push(o);
+    else shown.push(o);
+  }
+  return { shown, earlier };
+}
+
 /** One lead, and it is the one most recently made lead. */
 function oneLead(board: BoardObject[]): BoardObject[] {
   const leads = board.filter((o) => o.weight === 'lead');
@@ -239,7 +443,22 @@ export function buildBoard(answers: AnswerTurn[], kept: ReadonlySet<string> = ne
   // replaced — so his later edits under the new name land on the old object.
   const aliases = new Map<string, string>();
   answers.forEach((turn, i) => {
-    for (const edit of editsFor(turn, i)) {
+    const edits = editsFor(turn, i);
+
+    // THE BOARD TRANSFORMS; IT NEVER ACCUMULATES (P1.d, 2026-09-14). A
+    // question that shares nothing with what is on the board clears it, and
+    // what the person KEPT is the one thing that survives — the same
+    // exemption keeping has from expiry, for the same reason. The aliases go
+    // with the objects they pointed at: a name for something that is no
+    // longer there would land his next edit on nothing.
+    if (travel(answers, board, i, edits,
+               new Set((turn.composition?.blocks ?? []).map((b) => b.key))) === 'clears') {
+      board = board.filter((o) => kept.has(o.key));
+      const left = new Set(board.map((o) => o.key));
+      for (const [from, to] of [...aliases]) if (!left.has(to)) aliases.delete(from);
+    }
+
+    for (const edit of edits) {
       const key = aliases.get(edit.key) ?? edit.key;
       let at = board.findIndex((o) => o.key === key);
       const op = edit.op ?? 'put';

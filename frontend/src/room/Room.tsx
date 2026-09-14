@@ -16,11 +16,12 @@ import { useGeorge } from '../hooks/useGeorge';
 import { useThread } from '../hooks/useThread';
 import { threadHistory } from '../components/george/threadHistory';
 import { restoreFromPosts } from './restore';
-import { boardContext, buildBoard, dropped, inOrder, type Local, type BoardObject } from './board';
+import { boardContext, buildBoard, dropped, folded, inOrder, type Local, type BoardObject } from './board';
 import { keepLocal, restoreLocal } from './arrangement';
 import type { AnswerTurn, Dimension } from './data';
 import { Board, turnNotices } from './render';
 import { Reading } from './Reading';
+import { Earlier } from './Earlier';
 import { replayCalls } from '../services/deskApi';
 import type { ToolCall } from '../types/george';
 import { Noticed } from './Noticed';
@@ -102,11 +103,26 @@ export default function Room() {
   const board = useMemo(() => buildBoard(answers, keptKeys), [answers, keptKeys]);
   const busy = george.busy;
   const latest = answers[answers.length - 1] ?? null;
+  // WHAT CAME BEFORE THIS FINDING FOLDS TO A LINE (P1.d). Clearing handles a
+  // question that shares nothing with the board; this handles the one that
+  // does, so a fourth follow-up is still one finding and not nine tiles. The
+  // board keeps every object — only the screen folds — so the next question
+  // still travels with all of them.
+  const { shown, earlier } = useMemo(
+    () => folded(board, answers.length - 1, local, focused),
+    [board, answers.length, local, focused],
+  );
+  const [unfolded, setUnfolded] = useState(false);
+  // A new answer folds again. The fold is about the newest finding, and
+  // leaving it open would put the accumulation straight back.
+  useEffect(() => { setUnfolded(false); }, [answers.length]);
+  const drawn = unfolded ? board : shown;
   // The turn's caveats, minus the ones its objects already carry — computed
-  // over the board, drawn above the reading (UI rule 4).
+  // over what is DRAWN, because a caveat carried by a tile nobody can see has
+  // not been said (UI rule 4).
   const notices = useMemo(
-    () => turnNotices({ answers, board, local, focused }),
-    [answers, board, local, focused],
+    () => turnNotices({ answers, board: drawn, local, focused }),
+    [answers, drawn, local, focused],
   );
   // AN EMPTY ROOM IS THE ONE WITH NOTHING IN IT AT ALL, which is no longer
   // the same question as an empty board: a turn that read nothing and said
@@ -397,10 +413,14 @@ export default function Room() {
                 object and cannot be forgotten into one: whatever he says
                 this turn is drawn here, with the turn's caveats above it,
                 and the objects below are its evidence. See Reading.tsx. */}
+            {/* WHAT CAME BEFORE IT, folded to one quiet line — above the
+                finding, because that is the order they happened in. */}
+            <Earlier count={earlier.length} open={unfolded}
+                     onToggle={() => setUnfolded((o) => !o)} />
             <Reading text={latest?.text} notices={notices} />
             <Board
               answers={answers}
-              board={board}
+              board={drawn}
               local={local}
               focused={focused}
               selection={selection.map((s) => s.label)}

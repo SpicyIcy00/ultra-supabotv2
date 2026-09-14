@@ -113,7 +113,7 @@ def _voice(name: str, turn: checks.Turn, *, extra_results: list | None = None,
     f["grounded_numerals"] = [x.text for x in checks.grounded_numerals(turn.answer, results)]
     f["internal_vocabulary"] = checks.internal_vocabulary(turn.answer)
     f["limitation"] = checks.limitation_statement(turn.answer)
-    f["attribution"] = checks.attribution_claims(turn.answer)
+    f["attribution"] = checks.attribution_claims(turn.answer, results)
     f["refused_calls"] = [c.get("tool") for c in turn.calls if c.get("error")]
     report.add(name, turn, f, None, passed=False)
 

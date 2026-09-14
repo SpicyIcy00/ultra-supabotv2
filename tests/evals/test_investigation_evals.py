@@ -88,7 +88,7 @@ def _common(name: str, turn: Turn, *, expect_compare: bool = True, max_calls: in
     findings["duplicate_reads"] = turn.done.get("duplicate_reads")
     findings["compared_windows"] = sorted(checks.compared_windows(turn.calls))
     findings["enumeration"] = checks.enumeration(turn.read_calls)
-    findings["attribution_claims"] = checks.attribution_claims(turn.answer)
+    findings["attribution_claims"] = checks.attribution_claims(turn.answer, results)
     findings["ungrounded_numerals"] = [f.text for f in checks.ungrounded_numerals(turn.answer, results)]
     # Prompt rule 17: the reader does not know the tools exist. Every scenario
     # here asks a BUSINESS question, so rule 17's exception — somebody asking

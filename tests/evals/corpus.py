@@ -49,15 +49,20 @@ def replay(case: dict) -> dict:
     """Today's checks against one recorded answer."""
     answer = case.get("answer") or ""
     stored = case.get("results")
+    # A share the READ stated is excused, so attribution reads the evidence
+    # too. Without it, a report that predates the stored results is judged by
+    # a stricter rule than a live run — which is the drift this file exists to
+    # prevent, and `evidence` is already how that is said out loud.
+    results = ([] if stored is None
+               else [r["result"] for r in stored if not r.get("error") and r.get("result")])
     out = {
         "scenario": case.get("scenario"),
         "internal_vocabulary": checks.internal_vocabulary(answer),
-        "attribution": checks.attribution_claims(answer),
+        "attribution": checks.attribution_claims(answer, results),
         "evidence": stored is not None,
     }
     if stored is None:
         return out
-    results = [r["result"] for r in stored if not r.get("error") and r.get("result")]
     out["ungrounded"] = [f.text for f in checks.ungrounded_numerals(answer, results)]
     out["grounded"] = [f.text for f in checks.grounded_numerals(answer, results)]
     return out

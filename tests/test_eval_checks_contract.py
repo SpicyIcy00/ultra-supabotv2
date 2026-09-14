@@ -73,6 +73,34 @@ def test_attribution_shares_are_caught_and_qualitative_readings_are_not():
     ) == []
 
 
+def test_a_share_the_read_itself_stated_is_not_attribution_math():
+    """
+    THE GATE FAILURE THIS CLOSES (dogfood log, 2026-09-14). P1.c's `caveats`
+    scenario passed every other trust check and failed here on a sentence
+    quoting `get_replenishment`'s own notice — "those account for 75% of the
+    units the plan requests", against a notice reading "those lines account
+    for 4,764 of the 6,344 units requested, 75% of the plan". A share of a
+    TOTAL the read states is a figure with a receipt; a share of a CHANGE is
+    the thing that has none, and no result can excuse one.
+    """
+    plan = [{"rows": [], "meta": {"notice": {
+        "kind": "partial_plan",
+        "message": "those lines account for 4,764 of the 6,344 units requested, "
+                   "75% of the plan",
+    }}}]
+    quoted = "Twelve lines carry it — those account for 75% of the units the plan requests."
+    assert attribution_claims(quoted), "without the receipt the phrase is still caught"
+    assert attribution_claims(quoted, plan) == []
+    # A figure that is not the one quoted does not excuse it either.
+    other = [{"rows": [{"store": "OPUS", "value": 12.0}], "meta": {}}]
+    assert attribution_claims(quoted, other)
+    # A share of a CHANGE is arithmetic no tool performs, so the rows cannot
+    # excuse it — not even when the same numeral is a figure they returned.
+    invented = [{"rows": [{"store": "OPUS", "change_pct": 82.0}], "meta": {}}]
+    assert attribution_claims("82% of the decline came from ATP.", invented)
+    assert attribution_claims("ATP explains 82% of it.", invented)
+
+
 # ---------------------------------------------------------------------------
 # Driver naming
 # ---------------------------------------------------------------------------

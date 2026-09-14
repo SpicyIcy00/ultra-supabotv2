@@ -243,7 +243,7 @@
 <header>
   <p class="kick">plan · <b>from the code as it is, to the Ideal UI</b> · 13 Sep 2026</p>
   <h1>The build plan, session by session</h1>
-  <p class="lede">Twenty-six sessions in four phases, one card each, every prompt the same shape so a cold session can't go wrong. <em>The plan lives in ops/NOW.md; this page is the readable copy.</em> Nothing here is a rebuild. Every card is the next fix to the surface that exists, measured against a number.</p>
+  <p class="lede">Twenty-five sessions in four phases, one card each, every prompt the same shape so a cold session can't go wrong. <em>The plan lives in ops/NOW.md; this page is the readable copy.</em> Nothing here is a rebuild. Every card is the next fix to the surface that exists, measured against a number.</p>
 </header>
 
 <h2 style="font-family:var(--serif);font-size:22px;font-weight:600;margin:0 0 14px">How you run it. Two prompts and a habit.</h2>
@@ -289,18 +289,14 @@
 <!-- ================= PHASE 1 ================= -->
 <section class="phase">
   <h2>Phase 1 · Make it work, then make it fast</h2>
-  <p class="ph">Eight sessions. The open complaints first, then the speed cards, then the free visible-work wins. This is where "it doesn't even function right" is answered.</p>
+  <p class="ph">Seven sessions. The open complaints first, then the speed cards, then the free visible-work wins. This is where "it doesn't even function right" is answered.</p>
   <p class="gate"><b>Gate to Phase 2:</b> the dogfood log's Open is empty for five days running; median answer under 10 s or the shortfall named with its cause; a navigation fragment redraws with no model call; the trust rows on the twelve unchanged (notices 100%, forced 0, ungrounded figures 0, refusals refuse).</p>
 
   <div class="card done"><div class="ch"><span class="id">P1.a · P1.b</span><h3>Done: compose stops round-tripping · the board fills when data lands</h3><span class="tags"><span class="tag">done 13 Sep</span></span></div><p class="does">Rejections 0.75 → 0.33 per turn, first composed object 16.8 → 8.2 s. Iterations and label share missed their targets and said so.</p></div>
 
   <div class="card done"><div class="ch"><span class="id">P1.c</span><h3>Done: the reading leaves the widgets</h3><span class="tags"><span class="tag">done 14 Sep</span></span></div><p class="does">Your words are no longer a widget he can forget: <span style="font-family:var(--mono);font-size:11px">text</span> is out of the vocabulary and the reading is a region above the board, drawn from whatever he says. The peso sign on counts and the <span style="font-family:var(--mono);font-size:11px">[object Object]</span> header are both gone, from the one function. And the decision: a reading may carry the figure its claim is about. On the four gate questions that took <b>citing a real figure from 0/4 to 4/4</b>, each answer carrying exactly the one its claim rests on. Two things it cost, both said in NOW.md: leading with a reading fell 4/4 → 2/4, because the claim sentence now holds the figure; and the gate still fails <span style="font-family:var(--mono);font-size:11px">caveats</span> on a share the TOOL computed, which is a defect in the check and is in your log. Not checked on a running build — that needs the model flag nobody passes unasked. Two runs, $0.75.</p></div>
 
-  <div class="card"><div class="ch"><span class="id">P1.d</span><h3>The board transforms; it never accumulates</h3><span class="tags"><span class="tag feat">#2 · #6</span><span class="tag free">no eval</span></span></div>
-    <p class="why">Answers <q>when I asked to look for problems all the rest of the widgets still stayed</q>.</p>
-    <p class="does">The rule decided in the log: a question sharing no subject with the board <b>clears</b> it; one sharing a subject <b>transforms</b> it in place. Earlier turns fold to one quiet line above the finding, tappable. Nothing stacks. This is the old P2.b, pulled forward because it is a correctness complaint.</p>
-    <p class="done-when"><b>Done when:</b> "how are we doing" then "any problems" leaves one finding on screen; "why?" transforms the OPUS finding rather than adding under it; held by a board test with both cases.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card P1.d.</div></div>
+  <div class="card done"><div class="ch"><span class="id">P1.d</span><h3>Done: the board transforms; it never accumulates</h3><span class="tags"><span class="tag">done 14 Sep</span></span></div><p class="does">A question that shares no subject with the board now <b>clears</b> it, and one that shares a subject <b>transforms</b> it — so "any problems" after "how are we doing" leaves one finding, which is what you reported. What the newest answer did not touch folds to <b>one quiet line above the reading</b>, which opens; the board still holds it, so your next question still travels with everything. What you kept never folds and never clears. It took two more things off your log: a shape George composed was invisible to his own next question, and the gate was failing on a share the tool itself computed — that one went from <b>1 of 4 would fail to 0 of 4</b>, checked by replaying the run you already paid for, $0.00. <b>The case to watch:</b> "and OPUS?" while looking at Rockwell now clears the board, because two shops that share nothing are two questions by this rule. If that feels wrong, say so — the fix is to fold rather than clear, and it is one line. No live build was driven; the rule is held by tests.</p></div>
 
   <div class="card"><div class="ch"><span class="id">P1.e</span><h3>Six marks, drawn one way each — and the eval swap</h3><span class="tags"><span class="tag feat">#1 · #4</span><span class="tag eval">eval · full, once</span></span></div>
     <p class="why">Answers <q>I don't really know what I'm looking at</q> and <q>widgets just feel like KPIs</q>.</p>
@@ -462,9 +458,9 @@
 <!-- ================= CALENDAR ================= -->
 <section class="phase">
   <h2>What it looks like on a calendar</h2>
-  <p class="ph">One card a day, five days a week, Fridays for the sweep. Dogfood fixes are counted in: expect one in three sessions to be a fix, not a card. Twenty-eight cards at four a week is seven weeks of cards, and one session in three is a fix rather than a card. Honest reading: <b>nine to eleven weeks</b> to the Phase 3 gate, and the sources decide whether the last four features arrive inside that or after.</p>
+  <p class="ph">One card a day, five days a week, Fridays for the sweep. Dogfood fixes are counted in: expect one in three sessions to be a fix, not a card. Twenty-five cards at four a week is six to seven weeks of cards, and one session in three is a fix rather than a card. Honest reading: <b>nine to eleven weeks</b> to the Phase 3 gate, and the sources decide whether the last four features arrive inside that or after.</p>
   <div class="week">
-    <div><b>weeks 1–2</b>P1.d → P1.f, three cards. The three complaints and the two trust failures. You feel this one.</div>
+    <div><b>weeks 1–2</b>P1.e → P1.f, two cards. What the widgets look like, and the compose vocabulary behind them. You feel these.</div>
     <div><b>week 3</b>P1.h → P1.✓, five cards. Speed, replay, visible work. The first sub-10 s answers.</div>
     <div><b>weeks 4–6</b>P2.a → P2.✓, eleven cards. Keep as page, markers, taps, memory, voice, and the two capability cards.</div>
     <div><b>weeks 7–9</b>P3.a → P3.✓, seven cards. Needs you, Today, Kept, building, diffs.</div>

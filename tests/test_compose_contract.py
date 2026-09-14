@@ -381,6 +381,27 @@ def test_the_board_line_carries_no_figure(defs):
         assert leak not in line, f"{leak!r} is a figure and reached the prompt"
 
 
+def test_the_board_line_names_a_shape_george_composed(defs):
+    """
+    THE DEFECT THIS HOLDS (dogfood log, 2026-09-14; fixed in P1.d). The line
+    skipped every kind that was not a widget, and a composed shape's kind is
+    `spec` — so a board whose LEADING object was a shape George composed said
+    nothing at all about it. "Why?" then resolved against whatever quiet table
+    was beside it, and a follow-up could only put a second object next to the
+    one meant.
+    """
+    from agent import surface
+    kind = req(defs, "composition.composed_kind")
+    line = surface.board_sentence(
+        [{"key": "hours", "kind": kind, "weight": "lead", "about": "Rockwell"},
+         {"key": "shops", "kind": "table", "weight": "quiet"}],
+        defs,
+    )
+    assert "hours" in line
+    assert line.index("hours") < line.index("shops"), "the leading object is the one it is about"
+    assert "LEADING" in line
+
+
 def test_the_board_line_ignores_what_is_not_a_widget(defs):
     from agent import surface
     line = surface.board_sentence([{"key": "x", "kind": "iframe", "weight": "lead"}], defs)
@@ -688,3 +709,50 @@ def test_every_widget_has_a_case_in_the_renderer_and_nothing_else_does(defs):
     assert declared - drawn == set(), f"declared and never drawn: {sorted(declared - drawn)}"
     assert drawn - declared == set(), f"drawn and no longer declared: {sorted(drawn - declared)}"
     assert "text" not in drawn, "the reading is a region (Reading.tsx), never a tile"
+
+
+# ---------------------------------------------------------------------------
+# HOW THE BOARD TRAVELS WITH THE QUESTION (P1.d, 2026-09-14)
+#
+# The rule is a convention about what a question is ABOUT, so it belongs in the
+# definitions; the board that applies it is the client's. These hold the two
+# ends together — the same way expire_after_turns is held — because a rule
+# written in one place and lived in another is a rule that drifts.
+# ---------------------------------------------------------------------------
+
+def _board_ts():
+    from pathlib import Path
+    return (Path(__file__).resolve().parents[1]
+            / "frontend" / "src" / "room" / "board.ts").read_text(encoding="utf-8")
+
+
+def test_the_travel_rule_is_declared_before_it_is_applied(defs):
+    travel = req(defs, "composition.board_travel")
+    assert travel["clears_when"] == "no_shared_subject"
+    assert travel["kept_survives"] is True
+    assert travel["fold_untouched"] is True
+
+
+def test_the_board_mirrors_the_subject_filters_the_definitions_declare(defs):
+    import re
+
+    declared = list(req(defs, "composition.board_travel.subject_filters"))
+    src = _board_ts()
+    block = re.search(r"const SUBJECT_FILTERS = \[(.*?)\] as const;", src, re.S)
+    assert block, "board.ts no longer names the subject filters"
+    mirrored = re.findall(r"'([a-z_]+)'", block.group(1))
+    assert mirrored == declared, (
+        f"board.ts holds {mirrored}, the definitions declare {declared}")
+
+
+def test_the_board_clears_and_folds_rather_than_accumulating():
+    """
+    THE COMPLAINT THIS HOLDS: "when i ask to look for problems all the rest of
+    the widgets still stayed". Both halves are the client's, and both are
+    exercised by board.travel.test.ts; this only asserts they still exist,
+    because a deleted rule and a passing suite is how it came back last time.
+    """
+    src = _board_ts()
+    assert "export function travel(" in src
+    assert "export function folded(" in src
+    assert "=== 'clears'" in src, "buildBoard no longer acts on the rule"

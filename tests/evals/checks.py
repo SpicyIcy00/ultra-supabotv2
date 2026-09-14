@@ -127,17 +127,63 @@ def grounded_numerals(answer: str, results: Iterable[dict],
 # Attribution math
 # ---------------------------------------------------------------------------
 
+# Each pattern with whether a RECEIPT could ever excuse it. A share of a
+# CHANGE is arithmetic no tool performs (CLAUDE.md 10), so no row can carry
+# one and a numeral that happens to match is coincidence — those stay
+# forbidden however the results read. "Accounts for N%" is the ambiguous one:
+# it is a share of whatever follows, and what follows may be a total the read
+# itself stated.
 _ATTRIBUTION = [
-    re.compile(r"\d+(?:\.\d+)?\s*%\s+of\s+(?:the\s+|that\s+|this\s+)?(?:decline|drop|fall|change|decrease|shortfall|gap|loss|increase|rise|growth|movement|difference)", re.I),
-    re.compile(r"(?:accounts?|accounted|accounting)\s+for\s+(?:about\s+|roughly\s+|around\s+)?\d+(?:\.\d+)?\s*%", re.I),
-    re.compile(r"(?:explains?|explained|contribut\w+)\s+(?:about\s+|roughly\s+|around\s+)?\d+(?:\.\d+)?\s*%", re.I),
-    re.compile(r"\b(?:most|half|two[- ]thirds|three[- ]quarters|a third|a quarter)\s+of\s+(?:the\s+)?(?:decline|drop|fall|change|decrease|shortfall|loss)\s+(?:came from|was|is|comes from|due to|caused by)", re.I),
+    (re.compile(r"\d+(?:\.\d+)?\s*%\s+of\s+(?:the\s+|that\s+|this\s+)?(?:decline|drop|fall|change|decrease|shortfall|gap|loss|increase|rise|growth|movement|difference)", re.I), False),
+    (re.compile(r"(?:accounts?|accounted|accounting)\s+for\s+(?:about\s+|roughly\s+|around\s+)?\d+(?:\.\d+)?\s*%", re.I), True),
+    (re.compile(r"(?:explains?|explained|contribut\w+)\s+(?:about\s+|roughly\s+|around\s+)?\d+(?:\.\d+)?\s*%", re.I), False),
+    (re.compile(r"\b(?:most|half|two[- ]thirds|three[- ]quarters|a third|a quarter)\s+of\s+(?:the\s+)?(?:decline|drop|fall|change|decrease|shortfall|loss)\s+(?:came from|was|is|comes from|due to|caused by)", re.I), False),
 ]
 
 
-def attribution_claims(answer: str) -> list[str]:
-    """Sentences that put a share of the change on a driver — arithmetic no tool computed."""
-    return [m.group(0) for rx in _ATTRIBUTION for m in rx.finditer(answer)]
+def attribution_claims(answer: str, results: Iterable[dict] = ()) -> list[str]:
+    """
+    Sentences that put a share of the change on a driver — arithmetic no tool
+    computed (CLAUDE.md 10: attribution shares are unsupported).
+
+    A SHARE THE READ ITSELF STATES IS NOT ONE, and that distinction cost a gate
+    run. P1.c's `caveats` scenario passed every other trust check and failed
+    here on "those account for 75% of the units the plan requests" — which is
+    `get_replenishment`'s own notice, quoted back in its own words: *"those
+    lines account for 4,764 of the 6,344 units requested, 75% of the plan."*
+    George had a receipt; the check read the phrase and not the receipt, and a
+    gate that fails the same true sentence on every run is a gate people stop
+    reading.
+
+    So "accounts for N%" — a share of whatever follows it, which may be a
+    total — is excused when N is a figure the results carried, exactly as
+    `grounded_numerals` excuses a numeral, off the same `allowed_numbers`.
+
+    NOTHING ELSE IS. A share of a CHANGE is arithmetic no tool performs, so no
+    row can carry one and a numeral that happens to match is a coincidence, not
+    a receipt: "82% of the decline came from ATP" fails whatever the rows say.
+    The two are told apart by which pattern fired, not by reading the figure.
+    """
+    allowed = allowed_numbers(results)
+    kept: list[str] = []
+    for rx, receiptable in _ATTRIBUTION:
+        for m in rx.finditer(answer):
+            claim = m.group(0)
+            if receiptable and allowed and _quoted_share(claim, allowed):
+                continue
+            kept.append(claim)
+    return kept
+
+
+def _quoted_share(claim: str, allowed: set) -> bool:
+    """Whether every percentage in the claim is a figure the results carried."""
+    shares = [m.group("num") for m in _NUMERAL.finditer(claim)
+              if (m.group("suffix") or "") == "%"]
+    if not shares:
+        return False
+    return all(_matches(float(s.replace(",", "")), len(s.split(".")[1]) if "." in s else 0,
+                        allowed)
+               for s in shares)
 
 
 # ---------------------------------------------------------------------------

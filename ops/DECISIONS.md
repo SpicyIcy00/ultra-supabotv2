@@ -9,6 +9,26 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-14 — P1.d: persisting is what makes it a room, forever is what broke it
+
+A board that never clears is a workspace; a board that never clears is also
+four answers to the question before. `travel` compares what the question is
+about with what the board is about and clears when they share nothing — and
+the clause that actually closes his complaint is the one for the whole estate:
+where neither side names a subject there is no intersection to take, so the
+BUSINESS decides. Three things would have made it wrong, all caught by the
+suite: a default's keys are positional and would have held the board forever;
+an edit that only names keys has no topic and would have cleared the board it
+was editing; the read identity must be checked before any of it. The fold is
+the other half — the board keeps every object, the SCREEN keeps one finding.
+"And OPUS?" after Rockwell now clears, which the old P2.b wanted to transform;
+left as the log decided, with the reversal written down.
+
+A share of a TOTAL the read states has a receipt; a share of a CHANGE cannot.
+The gate could not tell them apart, so it failed a true sentence every run —
+which is how a gate stops being read. Told apart by which pattern fired, never
+by reading the figure, and verified by replaying a run already paid for.
+
 ## 2026-09-14 — P1.c: a reading is not a peer of the things it explains
 
 The reading left the widget vocabulary, and the `prose` MARK went with it —
