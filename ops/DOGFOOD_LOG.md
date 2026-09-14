@@ -57,38 +57,45 @@ on compose frame" does.
 
 ## Open
 
-### 2026-09-13 · every gate answer now carries no figure at all
+### 2026-09-14 · a shape George composed is invisible to his next question
 
-Found by the gate run that verified the fix above, not by a person — and it is
-a finding about the SUITE as much as about George.
+Found by a session reading the code during P1.c, not by a person, and checked
+against today's code before filing (`agent/surface.board_sentence`).
 
-All four gate scenarios (`caveats`, `why`, `cannot`, `morning`) passed every
-trust check and then failed one assertion: `grounded_numerals` is empty. Not
-one figure any tool returned appears in any of the four answers. The suite
-calls that "a shrug".
+The board line names every object by `kind`, and it skips any object whose kind
+is not in `composition.widgets`. A composed shape's kind is `spec`, which is
+not a widget — so a board whose LEADING object is a shape George composed says
+nothing about it:
 
-**The mechanism is visible in the run and is not a mystery.**
-`voice.restatement.max_restated_sentences` is **0**, and everything a turn
-reads is drawn on the board — so any figure George could cite IS a drawn
-figure, and the restatement gate rewrites the answer to take it out.
-`restated_figure` fired on three of the four, and the standing answers carry
-zero numerals between them. **The two checks ask for opposite things**: say no
-figure the board draws, and say at least one figure a tool returned.
+    [On the board: shops (table, quiet). … resolve it against the LEADING
+    object …]
 
-This is v2's first recorded live run, so there is no earlier number saying it
-ever passed — `grounded_numerals` landed in `bfb168f` and no recorded report
-before `verification/dogfood-remainder-caveats.json` carries stored evidence to
-replay it against. Nothing here was caused by the fix above: the new gate
-(`enumerated_remainder`) fired on none of the four turns.
+The shape is the thing being looked at and the line does not mention it, so
+"why?" resolves against a quiet table and a follow-up can only put a second
+object beside the one meant. Reproduced with two objects, one `spec` and one
+`table`; the `spec` never appears.
 
-**Not fixed here, because it is a decision, not a bug.** Either the board is
-allowed to be the only place a figure appears — and the assertion is wrong —
-or a reading is allowed to carry the one or two figures it is ABOUT, and
-`max_restated_sentences: 0` is wrong. That is the same question the widgets
-entry below is circling, and it should be answered once, for both.
+Not fixed here: it is a different card's area (the board's travel with the
+question), and P1.c is the reading.
 
-Report: `verification/dogfood-remainder-caveats.json`.
+### 2026-09-14 · the gate fails on a share the TOOL computed
 
+Found by P1.c's gate run. `caveats` passed every other trust check and failed
+`attribution`, on this sentence:
+
+> "…those account for 75% of the units the plan requests"
+
+`get_replenishment`'s own notice says *"those lines account for 4,764 of the
+6,344 units requested, 75% of the plan"*. George quoted the tool, in the
+tool's words, and the check read the phrase "account for 75%" as an
+attribution share he had worked out.
+
+**A share of a CHANGE is what is forbidden** (CLAUDE.md 10) — a share of a
+total the read itself states is a figure with a receipt. As it stands the
+check will fail this scenario on every future run, which is how a gate stops
+being read. The fix is in `tests/evals/checks.attribution_claims`, not in
+George: excuse a share the results account for, the way `grounded_numerals`
+already does.
 
 ### 2026-09-13 · George drew the board and never said anything
 
@@ -99,6 +106,11 @@ Report: `verification/dogfood-remainder-caveats.json`.
 
 Four defects in one report, kept together because they came from one sitting
 and may share a cause. Screenshots with the owner.
+
+**1, 2 and 4 ARE FIXED (P1.c, 2026-09-14); 3 IS NOT, and this entry stays open
+for it.** The silence and the `[object Object]` are closed in the commit named
+under each below. 3 — the board accumulating — is the next card (`P1.d`), and
+the rule it will follow is already decided further down this entry.
 
 1. **No prose at all.** "How are we doing" drew four widgets — ATV, net sales,
    transactions, an OPUS hero — and George said nothing. Not a short answer: no
@@ -183,6 +195,22 @@ objects fade rather than vanish, not to go back to keeping them.**
 a value that is not a string is being interpolated into that header, and the
 doubled separator says the field beside it is empty too. No design in it.
 
+**FIXED in P1.c, and it was two lines of one function.** `fmt`'s last line was
+`return String(v)`, and a brief row carries two objects — `receipts` and
+`threshold_applied`. `String({})` is "[object Object]"; `String([])` is the
+empty string, which is the doubled separator beside it. A value a person
+cannot read is now drawn as one that has none (`—`), a list of plain values
+reads as a list, and a tile's caption no longer offers a column it has nothing
+to say about. Held by `format.test.ts` and by a tile test over attention rows.
+
+**1 AND 2 FIXED in P1.c, as the agreed fix says: `text` is gone from the
+vocabulary.** The reading is a region above the board drawn from the turn's
+own words (`frontend/src/room/Reading.tsx`), so George no longer composes it,
+cannot forget it, and cannot box it. `TextTile`, the renderer's special case
+and the grammar's `prose` mark all deleted themselves. A turn that says
+nothing is now a gap the loop records (`answer_without_prose`) rather than a
+silence only the owner could report. Held by `Reading.dom.test.tsx`.
+
 ### 2026-09-13 · "i dont really know what im looking at"
 
 > with the widgets i dont really know what im looking at, what visual language
@@ -203,6 +231,15 @@ Five concrete failures in the screenshots, with the fixes:
    (`/sales|revenue|value|…/`), and a compared row names its number `value`,
    which matches. Every metric's value is money to the formatter. The result
    already carries `meta.metric_label`. **Take the unit from the metric.**
+   **FIXED in P1.c** — from the UNIT rather than the metric's name: every
+   compared row carries `unit` and every metric read carries
+   `meta.metric_unit`, so `fmt` takes the currency from those and the column
+   name is consulted only where the name itself says money (`net_sales`,
+   `unit_cost`). `value`, `total` and `amount` left the pattern; a percentage
+   column is read as a percentage first, so `change_pct` beside a peso figure
+   is not `₱13.8`. Six modules call `fmt`, the object panel among them, and
+   the panel is untouched by the redesign — so this is not work P1.e throws
+   away. **2 to 5 are P1.e and this entry stays open for them.**
 2. **Seven shops, seven hues.** One series in seven colours, where the row
    label already says which shop it is — so colour is spent on nothing and a
    reader tries to decode it. Two named anti-patterns at once: "eight
@@ -240,6 +277,65 @@ look is not worth trading it for.
 ---
 
 ## Fixed
+
+### 2026-09-13 · every gate answer now carries no figure at all
+
+Found by the gate run that verified the fix above, not by a person — and it is
+a finding about the SUITE as much as about George.
+
+All four gate scenarios (`caveats`, `why`, `cannot`, `morning`) passed every
+trust check and then failed one assertion: `grounded_numerals` is empty. Not
+one figure any tool returned appears in any of the four answers. The suite
+calls that "a shrug".
+
+**The mechanism is visible in the run and is not a mystery.**
+`voice.restatement.max_restated_sentences` is **0**, and everything a turn
+reads is drawn on the board — so any figure George could cite IS a drawn
+figure, and the restatement gate rewrites the answer to take it out.
+`restated_figure` fired on three of the four, and the standing answers carry
+zero numerals between them. **The two checks ask for opposite things**: say no
+figure the board draws, and say at least one figure a tool returned.
+
+This is v2's first recorded live run, so there is no earlier number saying it
+ever passed — `grounded_numerals` landed in `bfb168f` and no recorded report
+before `verification/dogfood-remainder-caveats.json` carries stored evidence to
+replay it against. Nothing here was caused by the fix above: the new gate
+(`enumerated_remainder`) fired on none of the four turns.
+
+**Not fixed here, because it is a decision, not a bug.** Either the board is
+allowed to be the only place a figure appears — and the assertion is wrong —
+or a reading is allowed to carry the one or two figures it is ABOUT, and
+`max_restated_sentences: 0` is wrong. That is the same question the widgets
+entry below is circling, and it should be answered once, for both.
+
+Report: `verification/dogfood-remainder-caveats.json`.
+
+**FIXED in P1.c, 2026-09-14 — by deciding it, which is what this entry asked
+for.** `voice.restatement.max_restated_sentences: 0 → 1`. A reading may carry
+the figure its claim is about; a second sentence walking the rows is the
+recitation, and that still costs a rewrite. The prompt says the same thing in
+the same direction ("name the figure your point rests on").
+
+Measured on the same four scenarios, one draw each, against
+`verification/dogfood-remainder-caveats.json`:
+
+| | before | after |
+|---|---|---|
+| cited a figure a tool returned | 0/4 | **4/4** |
+| restated sentences in the standing answer | 0,0,0,0 | 1,1,1,1 |
+| led with a reading (STYLE, flaps) | 4/4 | 2/4 |
+
+The middle row is the point: every standing answer now carries exactly the one
+figure its claim rests on, which is the allowance and not an accident. The
+correction still fires on the first draft in three of four — as it did in
+three of four before — and what it takes out now is the recitation rather than
+every figure in the answer. Report: `verification/p1c-gate-2.json`.
+
+**What it cost, said plainly: `leads_with_reading` went 4/4 to 2/4.** "It
+wasn't up — North Edsa fell 2.8% last week" is a reading whose first sentence
+carries the figure it is about, and that check is "the first sentence carries
+no figure". The two now pull against each other by design. It is a STYLE rate,
+not a gate, and it is left standing rather than quietly relaxed.
 
 ### 2026-09-13 · two trust failures the twelve caught, that George filed himself — FIXED in 235d236..HEAD
 

@@ -1131,8 +1131,9 @@ def _board_addendum(defs: dict) -> str:
         f"the picture answers what the number leaves open, never for decoration. A "
         f"shape carries no figure of yours: you choose the row, the value is the "
         f"row's, and an edit carrying a figure, a colour, a size or a title is "
-        f"refused. Your prose is an object too — one text block under one key, "
-        f"changed each turn rather than piled up."
+        f"refused. YOUR WORDS ARE NOT AN OBJECT: the reading is drawn above the "
+        f"board from what you say this turn, always — so compose the evidence, "
+        f"and never a block to hold your prose."
     )
 
 
@@ -1158,7 +1159,7 @@ You have read everything — every sale, every shelf, every order — which is w
 
 Warm, precise, occasionally dry — never sycophantic, corporate, breathless or apologetic. No manners for an opening: "Great question", "I'd be happy to", "Certainly", "Absolutely", "Let me help you with that" say nothing.
 
-You lead with what it means: the figures are on the board, so you say what they add up to, what they do not settle, and what to look at next. The same voice for good news and bad; dry only when it costs nothing. WIT NEVER SOFTENS A CAVEAT: a caveat is a clause in the same breath, in the plainest words.
+You lead with what it means: name the figure your point rests on, say what it settles, what it does not, and what to look at next. The same voice for good news and bad; dry only when it costs nothing. WIT NEVER SOFTENS A CAVEAT: a caveat is a clause in the same breath, in the plainest words.
 
 You would rather say "I can't tell from this" than guess, and say what would let you tell. You hold views as views, with what would change your mind, and say so when a read contradicts one. Unsure what was meant, you ask one question rather than answer two.
 
@@ -1170,7 +1171,7 @@ VOICE — THE SHAPE OF AN ANSWER
 
 One paragraph. The reading first: what it means, in a sentence or two. Then each caveat as a clause, once — the full notice is already on the board. Then what the figures do not establish, if it matters. Then one offer, if there is a next thing. "How did the shops do?" is one compared read and one reading of it; the morning is one line per thing that changed.
 
-Speak a figure only when it is the point and no shape on the board holds it — at most two in a paragraph — with its date or window from the result. No preamble, no restating the question, no summary at the end. SAY IT WITH THE SHAPE: a sentence that restates what is drawn is read twice and believed once. WHAT PROSE IS STILL FOR: what the figures mean together, what they do not establish, what is absent from the data, what you would check next.
+SAY THE FIGURE YOUR CLAIM IS ABOUT, with its date or window from the result — at most two in a paragraph. The board drawing it is no reason to leave it out; reciting the rest is — a sentence walking rows already drawn is read twice and believed once. No preamble, no restating the question, no summary at the end. WHAT PROSE IS STILL FOR: what the figures mean together, what they do not establish, what is absent from the data, what you would check next.
 
 THE RULES — held by the system as well as by you
 
@@ -2774,7 +2775,8 @@ async def run(
                         listed = "\n".join(f"- {s}" for s in restated[:6])
                         parts.append(
                             f"{len(restated)} of your sentences say a figure the "
-                            f"board already draws:\n{listed}")
+                            f"board already draws, and {max_restated} may:"
+                            f"\n{listed}")
                     # "restated figures" when that is all this is, so a turn
                     # with no misstatement receives the message it received
                     # before this gate existed, to the byte. The evals are
@@ -2785,8 +2787,14 @@ async def run(
                         "The figures are on the board; the reading is yours. "
                         "Rewrite the answer saying what those figures MEAN — "
                         "which matters, what they do not settle, what to check "
-                        "next — and speak a figure only where no shape on the "
-                        "board holds it. Keep every caveat exactly as it was; "
+                        f"next. THE REWRITE STILL CARRIES {max_restated} FIGURE: "
+                        "the one your main claim rests on, said exactly as the "
+                        "result gives it. NONE IS NOT THE SAFE ANSWER — a reading "
+                        "with no figure in it is a different failure, and it is "
+                        "the one this gate has been causing. What comes out is "
+                        "the RECITATION: the other sentences, the ones that walk "
+                        "rows the board already draws. "
+                        "Keep every caveat exactly as it was; "
                         f"the gate is on {named}, never on what qualifies them.")
                     messages.append({"role": "user", "content": "\n\n".join(parts)})
                     continue
@@ -3382,6 +3390,16 @@ async def run(
         if status == "ok" and seq == 0:
             # George answering with no tool call is itself a smell worth logging.
             log.gap("no_tool_call", question[:2000])
+
+        # A TURN THAT SAID NOTHING (P1.c, 2026-09-14). The reading is the
+        # product; the objects are its receipts. Until now his prose reached
+        # the board only as a block he remembered to compose, so a turn that
+        # drew four widgets and said nothing looked, to every counter in this
+        # file, like a turn that went well — and the only report of it was the
+        # owner's. The reading no longer depends on him composing anything, so
+        # silence here means he wrote none: a gap, recorded like any other.
+        if status == "ok" and not answer.strip():
+            log.gap("answer_without_prose", question[:2000])
 
     except anthropic.APIError as exc:
         status = "api_error"

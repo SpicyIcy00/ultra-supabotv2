@@ -120,10 +120,17 @@ def test_a_mark_cannot_draw_a_write():
     assert "not a read" in str(caught.value)
 
 
-def test_prose_names_no_read_because_it_came_from_no_read():
-    """George's words are his. Naming a read would imply they came out of it."""
-    assert valid({"mark": "prose"})["mark"] == "prose"
-    assert "draws no read" in refused({"mark": "prose", "seq": 0})
+def test_a_shape_cannot_draw_his_words():
+    """
+    THE `prose` MARK IS GONE (P1.c, 2026-09-14), with the `text` widget and
+    for the same reason: the reading is a region above the board, drawn from
+    the turn's own words. A mark that could draw it would draw the answer a
+    second time, inside a box, which is the thing the owner said does not
+    work. Every mark left names a read and a column.
+    """
+    assert "prose" not in GRAMMAR["marks"]
+    assert "not a mark" in refused({"mark": "prose"})
+    assert all("seq" in (spec or {}).get("needs", []) for spec in GRAMMAR["marks"].values())
 
 
 def test_a_panel_heading_is_a_column_too():
@@ -132,11 +139,11 @@ def test_a_panel_heading_is_a_column_too():
     for the same reason a mark does.
     """
     ok = valid({"layout": "panel", "heading": {"seq": 0, "field": "store"},
-                "children": [{"mark": "prose"}]})
+                "children": [{"mark": "value", "seq": 0, "field": "value"}]})
     assert ok["heading"] == {"seq": 0, "field": "store"}
     assert "no column" in refused(
         {"layout": "panel", "heading": {"seq": 0, "field": "My Title"},
-         "children": [{"mark": "prose"}]})
+         "children": [{"mark": "value", "seq": 0, "field": "value"}]})
 
 
 # ---------------------------------------------------------------------------
@@ -159,17 +166,18 @@ def test_a_workspace_is_not_a_document():
     Bounds so a composition stays something a person can take in, and so a
     runaway tree cannot become the answer.
     """
-    deep = {"mark": "prose"}
+    deep = {"mark": "value", "seq": 0, "field": "value"}
     for _ in range(int(GRAMMAR["max_depth"]) + 2):
         deep = {"layout": "stack", "children": [deep]}
     assert "nested deeper" in refused(deep)
 
     wide = {"layout": "stack",
-            "children": [{"mark": "prose"} for _ in range(int(GRAMMAR["max_nodes"]) + 5)]}
+            "children": [{"mark": "value", "seq": 0, "field": "value"}
+                         for _ in range(int(GRAMMAR["max_nodes"]) + 5)]}
     assert "more than" in refused(wide)
 
     assert "cols is a whole number" in refused(
-        {"layout": "grid", "cols": 99, "children": [{"mark": "prose"}]})
+        {"layout": "grid", "cols": 99, "children": [{"mark": "value", "seq": 0, "field": "value"}]})
 
 
 def test_a_composed_shape_reports_every_read_it_draws():
@@ -191,7 +199,8 @@ def test_a_composed_shape_reports_every_read_it_draws():
 
 def test_a_block_carries_a_kind_or_a_spec_never_both():
     ok, no = compose.validate({"blocks": [
-        {"key": "a", "kind": "table", "seq": 0, "spec": {"mark": "prose"}},
+        {"key": "a", "kind": "table", "seq": 0,
+         "spec": {"mark": "value", "seq": 0, "field": "value"}},
     ]}, CALLS, DEFS)
     assert not ok and "never both" in no[0]["reason"]
 
@@ -215,7 +224,7 @@ def test_the_refusal_names_the_node_that_was_wrong():
     """
     ok, no = compose.validate({"blocks": [
         {"key": "shaped", "spec": {"layout": "row", "children": [
-            {"mark": "prose"},
+            {"mark": "value", "seq": 0, "field": "value"},
             {"mark": "value", "seq": 0, "field": "nope"}]}},
     ]}, CALLS, DEFS)
     assert not ok
@@ -241,11 +250,13 @@ def test_the_grammar_is_offered_to_the_model():
 
 def test_the_named_widgets_survive():
     """
-    The fourteen are shorthand, not deprecated: most answers want an ordinary
-    shape, and they are proven. The grammar is for when nothing named fits.
+    The named widgets are shorthand, not deprecated: most answers want an
+    ordinary shape, and they are proven. The grammar is for when nothing named
+    fits. Fourteen until P1.c took `text` out — the reading is not a shape —
+    so the floor is thirteen, and every one of them draws a READ.
     """
     widgets = req(DEFS, "composition.widgets")
-    assert len(widgets) >= 14
+    assert len(widgets) >= 13
     ok, no = compose.validate({"blocks": [
         {"key": "plain", "kind": "table", "seq": 0},
     ]}, CALLS, DEFS)

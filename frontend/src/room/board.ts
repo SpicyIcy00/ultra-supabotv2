@@ -36,7 +36,8 @@ export interface BoardObject {
    * a block with only a `spec` fell through `edit.kind ?? 'text'` and the
    * board took George's leading shape for his prose — which is why the
    * turn's caveats were drawn on every text tile on the board, including
-   * three from earlier turns, the moment a spec led.
+   * three from earlier turns, the moment a spec led. `text` has since left
+   * the vocabulary entirely (P1.c); it survives in the type for stored turns.
    */
   kind: NonNullable<Block['kind']> | 'spec';
   weight: NonNullable<Block['weight']>;
@@ -173,8 +174,14 @@ function drawnSeqs(blocks: readonly Block[]): Set<number> {
  * exactly as any object he does not mention stays.
  */
 function editsFor(turn: AnswerTurn, i: number): Block[] {
-  const composed = turn.composition?.blocks;
-  const seeded = turn.defaultComposition?.blocks ?? [];
+  // THE READING IS NOT AN OBJECT (P1.c, 2026-09-14). It is drawn above the
+  // board from the turn's own words, so a `text` block is nothing the board
+  // can hold — and one can only reach here from a turn stored before the
+  // vocabulary lost the kind. Dropping it is what keeps an old thread
+  // readable without drawing the answer twice.
+  const kept = (blocks: readonly Block[]) => blocks.filter((b) => b.kind !== 'text');
+  const composed = kept(turn.composition?.blocks ?? []);
+  const seeded = kept(turn.defaultComposition?.blocks ?? []);
   if (composed?.length) {
     const his = drawnSeqs(composed);
     return [
@@ -191,9 +198,10 @@ function editsFor(turn: AnswerTurn, i: number): Block[] {
     ];
   }
   if (seeded.length) return seeded;
-  const out: Block[] = turn.text
-    ? [{ op: 'put', kind: 'text', key: `t${i}-reading`, weight: 'lead' }]
-    : [];
+  // No fallback tile for his prose: there is nowhere for it to go and nowhere
+  // it needs to. A turn that composed nothing contributes its reads, quiet,
+  // and the reading above them is drawn whether anything was composed or not.
+  const out: Block[] = [];
   for (const c of turn.toolCalls) {
     if (!c.result || c.result.error || !c.result.rows?.length || c.duplicate_of !== undefined) continue;
     if (c.tool.startsWith('record_') || c.tool === 'compose') continue;
@@ -275,7 +283,11 @@ export function buildBoard(answers: AnswerTurn[], kept: ReadonlySet<string> = ne
 
       const object: BoardObject = {
         key: at >= 0 ? board[at].key : edit.key,
-        kind: edit.kind ?? (edit.spec ? 'spec' : 'text'),
+        // A validated block carries a kind or a spec and never neither, so
+        // the fallback is the shape, not his prose — which is no longer a
+        // kind at all. An object that ends up here with no spec either draws
+        // nothing, which is the truth about it.
+        kind: edit.kind ?? 'spec',
         weight: edit.weight ?? 'supporting',
         ...carried(edit),
         turn: i,

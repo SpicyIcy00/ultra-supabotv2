@@ -19,7 +19,8 @@ import { restoreFromPosts } from './restore';
 import { boardContext, buildBoard, dropped, inOrder, type Local, type BoardObject } from './board';
 import { keepLocal, restoreLocal } from './arrangement';
 import type { AnswerTurn, Dimension } from './data';
-import { Board } from './render';
+import { Board, turnNotices } from './render';
+import { Reading } from './Reading';
 import { replayCalls } from '../services/deskApi';
 import type { ToolCall } from '../types/george';
 import { Noticed } from './Noticed';
@@ -101,6 +102,18 @@ export default function Room() {
   const board = useMemo(() => buildBoard(answers, keptKeys), [answers, keptKeys]);
   const busy = george.busy;
   const latest = answers[answers.length - 1] ?? null;
+  // The turn's caveats, minus the ones its objects already carry — computed
+  // over the board, drawn above the reading (UI rule 4).
+  const notices = useMemo(
+    () => turnNotices({ answers, board, local, focused }),
+    [answers, board, local, focused],
+  );
+  // AN EMPTY ROOM IS THE ONE WITH NOTHING IN IT AT ALL, which is no longer
+  // the same question as an empty board: a turn that read nothing and said
+  // something — a refusal, an answer off what he already knows — has a
+  // reading and no objects, and used to land on the greeting with his words
+  // thrown away.
+  const empty = board.length === 0 && !(latest?.text ?? '').trim() && notices.length === 0;
 
   // THE COLD OPEN. Arriving with nothing in hand, the room opens on the
   // newest answer George gave to a question he was asked to keep asking —
@@ -366,7 +379,7 @@ export default function Room() {
           state: { ask: 'what happened here? look into it.' },
         })} />
 
-        {board.length === 0 ? (
+        {empty ? (
           <Opening loading={Boolean(threadId) && thread.loading} />
         ) : (
           <>
@@ -380,6 +393,11 @@ export default function Room() {
                 since you last looked · {arrived} {arrived === 1 ? 'answer' : 'answers'} arrived
               </p>
             )}
+            {/* THE READING, ABOVE THE BOARD, ALWAYS. His words are not an
+                object and cannot be forgotten into one: whatever he says
+                this turn is drawn here, with the turn's caveats above it,
+                and the objects below are its evidence. See Reading.tsx. */}
+            <Reading text={latest?.text} notices={notices} />
             <Board
               answers={answers}
               board={board}

@@ -4878,9 +4878,21 @@ voice:
   # measure with — matched on digits, dates and small counts excused.
   # Enforced ONLY when something is drawn: an answer over no charted result
   # has nothing on screen to restate.
+  #
+  # 0 → 1, DECIDED 2026-09-14 (P1.c), because 0 and `grounded_numerals` asked
+  # for opposite things and George could satisfy only one. Everything a turn
+  # reads is drawn, so every figure he could cite IS a drawn figure; at 0 the
+  # gate rewrote each one out, and the P1.g gate run found all four scenarios
+  # passing every trust check with not one figure between them. An answer that
+  # cites nothing is a shrug, and the suite was right to call it one.
+  #
+  # What needed forbidding was RECITING THE BOARD, and 0 forbids more than
+  # that. A reading may carry the figure its claim is about — "OPUS added
+  # ₱130,016, more than the next two together" is the claim — and a second
+  # sentence walking the rows is the recitation this still catches.
   restatement:
     introduced: "2026-09-12"
-    max_restated_sentences: 0
+    max_restated_sentences: 1
     max_corrective_turns: 1
     matched_on: digits
     warning_reason: restated_figure
@@ -5448,10 +5460,19 @@ composition:
 
   # THE VOCABULARY. Closed. `needs` says what a block must carry to be drawn;
   # `about` is the one-line meaning George is taught.
+  #
+  # THERE IS NO `text` WIDGET, AND THAT IS THE POINT (P1.c, 2026-09-14). The
+  # reading used to be one of these — a block George composed like any other,
+  # which meant he could forget it (four widgets and not one word, the dogfood
+  # log's top report) and that when he did compose it, his words were drawn as
+  # a peer of the things they interpret. The owner, on seeing it: "putting the
+  # text in a widget it just doesnt work." A tile is something you look at; a
+  # reading is something you read, and it is ABOUT everything else on the
+  # board. So it is not in this vocabulary at all: the surface draws the
+  # turn's own words as a permanent region above the objects, which means it
+  # cannot be forgotten, cannot be evicted and cannot be boxed. The grammar's
+  # `prose` mark went the same way and for the same reason.
   widgets:
-    text:
-      about: "your own words — the reading, the caveat, the next thing"
-      needs: []
     figure:
       about: "one number from one row, large, on its own"
       needs: [seq, subject]
@@ -5563,10 +5584,6 @@ composition:
       label:
         about: "a field of a row as a caption — a name, a state, a date"
         needs: [seq, field]
-      prose:
-        about: "your own words: the reading, the caveat, the next thing"
-        needs: []
-
       # THE INSTRUMENTS — added 2026-09-12, from the design board. Each is a
       # second reading of a figure, not a decoration of it: a range says WHERE
       # on its own history, a bullet says HOW MUCH OF a whole, a ring says how

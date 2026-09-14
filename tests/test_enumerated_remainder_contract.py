@@ -193,7 +193,7 @@ def test_the_small_count_excuse_is_the_same_one_the_evals_use():
 # ---------------------------------------------------------------------------
 
 from tests.test_voice_contract import (                                # noqa: E402
-    _drive_drawn, _standing_answer, ROWS, RESTATING, READING,
+    _drive_drawn, _standing_answer, ROWS, RECITING, READING,
 )
 from tests.test_loop_correction_contract import StubLog, frames_of      # noqa: E402
 
@@ -235,7 +235,7 @@ def test_the_gap_is_recorded_under_its_own_kind(monkeypatch):
 def test_a_count_with_no_receipt_outranks_a_figure_merely_said_again(monkeypatch):
     # The sweep sorts on the kind, so the warning takes the most serious name
     # present — and both gaps are still recorded.
-    both = RESTATING + " " + REMAINDER
+    both = RECITING + " " + REMAINDER
     frames, _ = _drive_drawn(monkeypatch, [both, READING])
     assert [r["reason"] for r in frames_of(frames, "answer_reset")] == ["enumerated_remainder"]
     kinds = _gap_kinds()
@@ -243,7 +243,7 @@ def test_a_count_with_no_receipt_outranks_a_figure_merely_said_again(monkeypatch
 
 
 def test_one_correction_covers_both_rather_than_two_round_trips(monkeypatch):
-    both = RESTATING + " " + REMAINDER
+    both = RECITING + " " + REMAINDER
     frames, requests = _drive_drawn(monkeypatch, [both, READING])
     assert len(frames_of(frames, "answer_reset")) == 1
     # read + first answer + the one rewrite

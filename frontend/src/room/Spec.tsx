@@ -24,7 +24,7 @@
 import type { CSSProperties } from 'react';
 import type { SpecNode, ToolCall } from '../types/george';
 import type { AnswerTurn } from './data';
-import { callOf, changeOf, fmt, rowsOf, sorted } from './data';
+import { callOf, changeOf, fmt, rowsOf, sorted, unitOf } from './data';
 import { directionRgb, hueFor, NEUTRAL } from './identity';
 
 export interface SpecProps {
@@ -150,24 +150,27 @@ function Mark(p: SpecProps) {
   const rows = rowsFor({ ...node, subject: node.subject ?? p.subject }, call);
   const first = rows[0];
 
-  switch (node.mark) {
-    case 'prose':
-      // His words, from the turn — never from the spec, which cannot carry any.
-      return <p className="r-note">{p.turn.text}</p>;
+  // WHAT THE FIGURES ARE IN. The row's own unit, or the read's, so a mark
+  // never takes its currency from the name of a column (P1.c). `prose` is
+  // gone from this switch and from the grammar with it: the reading is a
+  // region above the board, not a mark inside a shape, and a spec that could
+  // draw it would draw the answer twice.
+  const u = (row?: Record<string, unknown>) => unitOf(row) ?? unitOf(call?.result?.meta);
 
+  switch (node.mark) {
     case 'value': {
       if (!first || !node.field) return null;
       const size = node.weight === 'lead' ? 40 : node.weight === 'quiet' ? 18 : 26;
       return (
         <span className="r-num" style={{ '--size': `${size}px` } as CSSProperties}>
-          {fmt(node.field, first[node.field])}
+          {fmt(node.field, first[node.field], u(first))}
         </span>
       );
     }
 
     case 'label':
       if (!first || !node.field) return null;
-      return <p className="r-label">{fmt(node.field, first[node.field])}</p>;
+      return <p className="r-label">{fmt(node.field, first[node.field], u(first))}</p>;
 
     case 'delta': {
       if (!first || !node.field) return null;
@@ -197,7 +200,7 @@ function Mark(p: SpecProps) {
                             background: `rgb(${paint(node, row)})`,
                             opacity: litness(node, row) }} />
               </span>
-              <span className="r-spec-bar-figure">{fmt(node.field!, row[node.field!])}</span>
+              <span className="r-spec-bar-figure">{fmt(node.field!, row[node.field!], u(row))}</span>
               {/* The note sits on the row it is about, not under the chart. */}
               {node.note && litness(node, row) === 1 && node.emphasise && (
                 <span className="r-spec-note">{node.note}</span>
@@ -242,7 +245,7 @@ function Mark(p: SpecProps) {
                 {node.mark === 'line' && rows.length > 2 && (n === iHi || n === iLo) && (
                   <b className={`r-spec-extreme ${n === iHi ? 'r-spec-extreme--hi' : 'r-spec-extreme--lo'}`}
                      style={{ bottom: `calc(${at(values[n])}% ${n === iHi ? '+' : '-'} 14px)` }}>
-                    {fmt(node.field!, row[node.field!])}
+                    {fmt(node.field!, row[node.field!], u(row))}
                   </b>
                 )}
                 <em>{nameOf(node, row)}</em>
@@ -263,7 +266,7 @@ function Mark(p: SpecProps) {
             <span key={n} className="r-spec-cell"
                   style={{ background: `rgba(${paint(node, row)}, ${(0.12 + (Math.abs(values[n]) / high) * 0.7) * litness(node, row)})` }}>
               <em>{nameOf(node, row)}</em>
-              <b>{fmt(node.field!, row[node.field!])}</b>
+              <b>{fmt(node.field!, row[node.field!], u(row))}</b>
             </span>
           ))}
         </div>
@@ -287,7 +290,7 @@ function Mark(p: SpecProps) {
               {rows.slice(0, 12).map((row, n) => (
                 <tr key={n}>{cols.map((c) => (
                   <td key={c} className={typeof row[c] === 'number' ? 'n' : ''}>
-                    {fmt(c, row[c])}
+                    {fmt(c, row[c], u(row))}
                   </td>))}
                 </tr>
               ))}
@@ -319,7 +322,7 @@ function Mark(p: SpecProps) {
           {mark && (
             <div className="r-spec-range-head">
               <span className="r-num" style={{ '--size': '28px' } as CSSProperties}>
-                {fmt(node.field, mark[node.field])}
+                {fmt(node.field, mark[node.field], u(mark))}
               </span>
               <span className="r-spec-range-when">{niceDate(nameOf(node, mark))}</span>
             </div>
@@ -328,13 +331,13 @@ function Mark(p: SpecProps) {
                style={node.colour && mark ? { '--hue': hueOf(node, mark) } as CSSProperties : undefined}>
             {rows.map((row, n) => (
               <i key={n} className="r-spec-range-dot" style={{ left: `${x(values[n]).toFixed(1)}%` }}
-                 title={`${nameOf(node, row)} · ${fmt(node.field!, row[node.field!])}`} />
+                 title={`${nameOf(node, row)} · ${fmt(node.field!, row[node.field!], u(row))}`} />
             ))}
             {mark && <b className="r-spec-range-mark" style={{ left: `${x(values[iMark]).toFixed(1)}%` }} />}
           </div>
           <div className="r-spec-range-ends">
-            <span>{fmt(node.field, lo)} · low</span>
-            <span>high · {fmt(node.field, hi)}</span>
+            <span>{fmt(node.field, lo, u(rows[0]))} · low</span>
+            <span>high · {fmt(node.field, hi, u(rows[0]))}</span>
           </div>
           <p className="r-spec-how">every row is a dot on the range · the line is the one named</p>
         </div>
@@ -362,8 +365,8 @@ function Mark(p: SpecProps) {
                 </span>
               </span>
               <span className="r-spec-bar-figure">
-                {fmt(node.field!, row[node.field!])}
-                <small> / {fmt(node.against!, row[node.against!])}</small>
+                {fmt(node.field!, row[node.field!], u(row))}
+                <small> / {fmt(node.against!, row[node.against!], u(row))}</small>
               </span>
             </div>
           ))}
@@ -394,7 +397,7 @@ function Mark(p: SpecProps) {
               <line key={i} x1={x1.toFixed(1)} y1={y1.toFixed(1)} x2={x2.toFixed(1)} y2={y2.toFixed(1)}
                     stroke={`rgb(${paint(node, row)})`} strokeWidth={n > 60 ? 2 : 3} strokeLinecap="round"
                     opacity={(values[i] === 0 ? 0.35 : 0.95) * litness(node, row)}>
-                <title>{nameOf(node, row)} · {fmt(node.field!, row[node.field!])}</title>
+                <title>{nameOf(node, row)} · {fmt(node.field!, row[node.field!], u(row))}</title>
               </line>
             );
           })}
@@ -418,7 +421,7 @@ function Mark(p: SpecProps) {
             const d = values[i] ? 6 + Math.sqrt(values[i] / most) * 22 : 0;
             return (
               <span key={i} className="r-spec-dot"
-                    title={`${nameOf(node, row)} · ${fmt(node.field!, row[node.field!])}`}>
+                    title={`${nameOf(node, row)} · ${fmt(node.field!, row[node.field!], u(row))}`}>
                 <i style={{ width: d, height: d, background: `rgb(${paint(node, row)})`,
                             opacity: (0.35 + 0.65 * (values[i] / most)) * litness(node, row) }} />
                 <em>{nameOf(node, row)}</em>
@@ -453,7 +456,7 @@ function Mark(p: SpecProps) {
           {Array.from({ length: lead }, (_, i) => <span key={`pad${i}`} />)}
           {dated.map((d, i) => (
             <span key={i} className="r-spec-cal-day"
-                  title={`${fmt(node.by!, d.row[node.by!])} · ${fmt(node.field!, d.row[node.field!])}`}
+                  title={`${fmt(node.by!, d.row[node.by!])} · ${fmt(node.field!, d.row[node.field!], u(d.row))}`}
                   style={{ background: `rgba(${paint(node, d.row)}, ${((0.08 + (d.v / most) * 0.85) * litness(node, d.row)).toFixed(3)})` }}>
               {d.at.getDate()}
             </span>

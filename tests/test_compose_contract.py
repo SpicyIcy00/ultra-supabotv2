@@ -58,11 +58,11 @@ def with_coercions(blocks, defs, calls=None):
 def test_a_well_formed_composition_is_accepted(defs):
     accepted, rejected = only([
         {"kind": "hero", "key": "rockwell", "seq": 1, "subject": "Rockwell", "weight": "lead"},
-        {"kind": "text", "key": "reading", "weight": "supporting"},
+        {"kind": "subject", "key": "opus", "seq": 1, "subject": "OPUS", "weight": "supporting"},
         {"kind": "table", "key": "shops", "seq": 1, "weight": "quiet"},
     ], defs)
     assert rejected == []
-    assert [b["kind"] for b in accepted] == ["hero", "text", "table"]
+    assert [b["kind"] for b in accepted] == ["hero", "subject", "table"]
     assert accepted[0]["subject"] == "Rockwell"
     assert accepted[0]["tool"] == "get_sales"
 
@@ -238,7 +238,14 @@ def test_the_vocabulary_is_the_definitions(defs):
     for kind, spec in voc["widgets"].items():
         assert spec["about"], f"{kind} has no meaning"
         assert isinstance(spec["needs"], list)
-    assert "hero" in voc["widgets"] and "draft" in voc["widgets"] and "text" in voc["widgets"]
+    assert "hero" in voc["widgets"] and "draft" in voc["widgets"]
+    # AND HIS PROSE IS NOT ONE OF THEM (P1.c, 2026-09-14). The reading is a
+    # region above the board, drawn from the turn's own words, so there is no
+    # block for it to be forgotten as and none for it to be boxed in. The
+    # grammar's `prose` mark went with it, or the same answer could be drawn
+    # twice — once as the region and once inside a composed shape.
+    assert "text" not in voc["widgets"], "the reading is not a widget"
+    assert "prose" not in req(voc, "grammar")["marks"], "nor is it a mark"
 
 
 # ---------------------------------------------------------------------------
@@ -659,3 +666,25 @@ def test_a_different_read_is_a_different_object(defs):
     ok, _ = compose.validate({"blocks": [{"key": "shops-week", "kind": "table", "seq": 1}]},
                              CALLS, defs, board=board)
     assert ok[0]["op"] == "put" and ok[0]["key"] == "shops-week"
+
+
+# ---------------------------------------------------------------------------
+# THE RENDERER DRAWS WHAT THE VOCABULARY PROMISES (P1.c, 2026-09-14)
+#
+# A widget the model may compose and the client cannot draw is a promise the
+# model keeps and the screen does not — and the reverse, a kind the renderer
+# still draws after it left the definitions, is how the reading would have
+# gone on being a tile on one path while being a region on another.
+# ---------------------------------------------------------------------------
+
+def test_every_widget_has_a_case_in_the_renderer_and_nothing_else_does(defs):
+    from pathlib import Path
+    import re
+
+    src = (Path(__file__).resolve().parents[1]
+           / "frontend" / "src" / "room" / "render.tsx").read_text(encoding="utf-8")
+    drawn = set(re.findall(r"case '([a-z]+)': return", src))
+    declared = set(req(defs, "composition.widgets"))
+    assert declared - drawn == set(), f"declared and never drawn: {sorted(declared - drawn)}"
+    assert drawn - declared == set(), f"drawn and no longer declared: {sorted(drawn - declared)}"
+    assert "text" not in drawn, "the reading is a region (Reading.tsx), never a tile"

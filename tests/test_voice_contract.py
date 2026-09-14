@@ -288,32 +288,57 @@ def _standing_answer(frames) -> str:
     return "".join(out)
 
 
-RESTATING = "Rockwell took ₱48,210 last week, and OPUS ₱61,500.50. Rockwell is the one to watch."
+# ONE SENTENCE CARRYING THE FIGURE ITS CLAIM IS ABOUT. Allowed since P1.c
+# (2026-09-14): everything George reads is drawn, so at 0 every figure he could
+# cite was corrected out and the standing answers carried none at all.
+CLAIM = "OPUS took ₱61,500.50 last week, and that is the week — Rockwell never got close."
+# TWO, WHICH IS THE RECITATION THE GATE IS ACTUALLY FOR: the second sentence
+# walks the rows the board already draws.
+RECITING = ("Rockwell took ₱48,210 last week. OPUS took ₱61,500.50. "
+            "Rockwell is the one to watch.")
 READING = "OPUS carried the week and Rockwell did not; the split is on the board. Worth a look at OPUS's products?"
 
 
 def test_the_gate_is_a_definition_and_the_evals_measure_with_the_same_function() -> None:
     r = req(DEFS, "voice.restatement")
-    assert r["max_restated_sentences"] == 0 and r["max_corrective_turns"] == 1
+    assert r["max_restated_sentences"] == 1 and r["max_corrective_turns"] == 1
     assert r["warning_reason"] == "restated_figure"
     from tests.evals import checks, voice_checks
     assert checks.allowed_numbers is prose.allowed_numbers
-    assert voice_checks.restated_sentences(RESTATING, [{"rows": ROWS, "meta": META}]) == \
-        prose.restated_sentences(RESTATING, [{"rows": ROWS, "meta": META}])
-    assert len(prose.restated_sentences(RESTATING, [{"rows": ROWS, "meta": META}])) == 1
+    assert voice_checks.restated_sentences(RECITING, [{"rows": ROWS, "meta": META}]) == \
+        prose.restated_sentences(RECITING, [{"rows": ROWS, "meta": META}])
+    assert len(prose.restated_sentences(RECITING, [{"rows": ROWS, "meta": META}])) == 2
+    assert len(prose.restated_sentences(CLAIM, [{"rows": ROWS, "meta": META}])) == 1
     assert prose.restated_sentences(READING, [{"rows": ROWS, "meta": META}]) == []
 
 
-def test_a_sentence_restating_a_drawn_figure_costs_one_rewrite(monkeypatch) -> None:
-    frames, requests = _drive_drawn(monkeypatch, [RESTATING, READING])
+def test_a_recitation_of_the_board_costs_one_rewrite(monkeypatch) -> None:
+    frames, requests = _drive_drawn(monkeypatch, [RECITING, READING])
     warnings = [w for w in frames_of(frames, "warning") if w["reason"] == "restated_figure"]
-    assert len(warnings) == 1 and warnings[0]["found"] == 1 and warnings[0]["limit"] == 0
+    assert len(warnings) == 1 and warnings[0]["found"] == 2 and warnings[0]["limit"] == 1
     assert [r["reason"] for r in frames_of(frames, "answer_reset")] == ["restated_figure"]
     assert _standing_answer(frames) == READING
     sent = [m["content"] for req_ in requests for m in req_["messages"]
             if m["role"] == "user" and isinstance(m["content"], str)]
     correction = [c for c in sent if "board already draws" in c]
     assert correction and "caveat" in correction[0].lower() and "48,210" in correction[0]
+    # AND IT ASKS FOR A FIGURE TO SURVIVE. A correction that reads as "take the
+    # numbers out" is how every gate answer came back carrying none of them.
+    assert "THE REWRITE STILL CARRIES 1 FIGURE" in correction[0]
+    assert "NONE IS NOT THE SAFE ANSWER" in correction[0]
+
+
+def test_the_figure_a_claim_is_about_is_not_corrected(monkeypatch) -> None:
+    """
+    THE DECISION P1.c MADE, held here. A reading may carry the figure its claim
+    is about; reciting the board may not. At 0 those were the same thing — the
+    gate rewrote every cited figure out, and the P1.g gate run found all four
+    scenarios answering with no figure at all, which the suite calls a shrug.
+    """
+    frames, _ = _drive_drawn(monkeypatch, [CLAIM])
+    assert "restated_figure" not in [w["reason"] for w in frames_of(frames, "warning")]
+    assert answer_of(frames) == CLAIM
+    assert "61,500.50" in answer_of(frames), "the answer kept the figure it is about"
 
 
 def test_a_reading_over_drawn_figures_is_left_alone(monkeypatch) -> None:
@@ -323,10 +348,10 @@ def test_a_reading_over_drawn_figures_is_left_alone(monkeypatch) -> None:
 
 
 def test_the_restatement_correction_is_capped(monkeypatch) -> None:
-    frames, _ = _drive_drawn(monkeypatch, [RESTATING, RESTATING, RESTATING])
+    frames, _ = _drive_drawn(monkeypatch, [RECITING, RECITING, RECITING])
     warnings = [w for w in frames_of(frames, "warning") if w["reason"] == "restated_figure"]
     assert len(warnings) == req(DEFS, "voice.restatement.max_corrective_turns") == 1
-    assert _standing_answer(frames) == RESTATING, "it gave up and kept the answer rather than spinning"
+    assert _standing_answer(frames) == RECITING, "it gave up and kept the answer rather than spinning"
 
 
 def test_a_figure_with_nothing_drawn_is_not_gated(monkeypatch) -> None:

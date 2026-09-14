@@ -354,8 +354,10 @@ def _node(item: Any, *, calls: Mapping[int, Mapping[str, Any]],
         out["seq"] = item["seq"]
         out["tool"] = call.get("tool")
     elif "seq" in item:
-        # `prose` needs no read; naming one anyway would imply the words came
-        # out of it.
+        # A mark that declares no read may not name one: doing so would imply
+        # what it draws came out of it. `prose` was the only such mark and it
+        # left with the reading (P1.c), so this guards the next one rather
+        # than anything in the vocabulary today.
         raise Rejected(f"{path}: a {mark} draws no read, so it names none")
 
     for channel in CHANNELS:

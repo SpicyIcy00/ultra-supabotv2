@@ -52,7 +52,7 @@ MANILA = timezone(timedelta(hours=8))
 # promised; `restated_figure` comes from voice.restatement.warning_reason in
 # metrics.yaml, `misstated_figure` from voice.misstatement.warning_reason and
 # `enumerated_remainder` from voice.enumerated_remainder.warning_reason).
-# NOW.md said thirteen kinds; the loop writes twenty-two.
+# NOW.md said thirteen kinds; the loop writes twenty-three.
 #
 # tests/test_gap_sweep_contract.py holds this list against the call sites in
 # agent/loop.py, so a kind added to the loop and not to the catalogue fails
@@ -68,6 +68,7 @@ KINDS: dict[str, str] = {
     "convergence_cap":         "the answer was rewritten until the cap stopped it",
     "iteration_cap":           "the turn ran out of iterations without finishing",
     "no_tool_call":            "George answered without reading anything",
+    "answer_without_prose":    "the turn drew objects and said nothing — shapes and silence",
     "notice_forced":           "a caveat had to be forced into the answer",
     "volunteering_over_cap":   "more unasked-for figures than the cap allows",
     "tool_vocabulary_leaked":  "tool names reached the answer",
@@ -94,6 +95,9 @@ DEFECTS = {
     # A wrong number on screen is never operating noise, and neither is one
     # with no receipt behind it at all.
     "misstated_figure", "enumerated_remainder",
+    # Nor is a turn that drew the board and said nothing: the reading is the
+    # product, and the owner had to report this one himself (P1.c).
+    "answer_without_prose",
 }
 
 

@@ -23,7 +23,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { openObject, type ObjectSection, type ObjectView } from '../services/objectApi';
 import type { AnswerTurn, Dimension } from './data';
-import { fmt, receiptsDetail, receiptsLine } from './data';
+import { fmt, receiptsDetail, receiptsLine, unitOf } from './data';
 import type { ToolMeta } from '../types/george';
 import { Spec } from './Spec';
 
@@ -75,7 +75,10 @@ function Rows({ rows }: { rows: Record<string, unknown>[] }) {
             <tr key={n}>
               {cols.map((c) => (
                 <td key={c} className={typeof row[c] === 'number' ? 'n' : ''}>
-                  {fmt(c, row[c])}
+                  {/* The row's own unit decides the currency, not the name of
+                      the column (P1.c) — this panel is untouched by the
+                      board's redesign and would otherwise keep the bug. */}
+                  {fmt(c, row[c], unitOf(row))}
                 </td>
               ))}
             </tr>

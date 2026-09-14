@@ -363,6 +363,13 @@ export interface CompositionBlock {
    */
   op?: 'put' | 'change' | 'quiet' | 'drop';
   kind?:
+    /**
+     * HISTORICAL ONLY (P1.c, 2026-09-14). `text` left the vocabulary — the
+     * reading is drawn above the board from the turn's own words and is not
+     * an object — but turns stored before that carry blocks that say it, and
+     * a restored thread must still be readable. The board drops them
+     * (`editsFor`); nothing composes one.
+     */
     | 'text' | 'figure' | 'hero' | 'subject' | 'comparison' | 'table'
     | 'chart' | 'distribution' | 'draft' | 'state'
     // Added 2026-09-11 to close the gap against the owner's feature 1, which

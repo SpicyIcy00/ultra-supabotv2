@@ -18,7 +18,7 @@ import type { BoardObject, Local } from './board';
 import type { ToolCall } from '../types/george';
 import {
   callOf, changeOf, dimensionOf, fmt, intensity, measureOf, pct, receiptsDetail, receiptsLine,
-  rowFor, rowsOf, sorted, splitCaveat, subjectOf, tone, valueOf,
+  rowFor, rowsOf, sorted, splitCaveat, subjectOf, tone, unitOf, valueOf,
   type AnswerTurn, type Change, type Dimension,
 } from './data';
 import { directionRgb, hueFor, NEUTRAL as NEUTRAL_RGB, type Rgb } from './identity';
@@ -169,6 +169,8 @@ function Receipts({ meta }: { meta: Parameters<typeof receiptsLine>[0] }) {
  * a definition, so the one word — "above the noise floor" — may be said.
  */
 export function Against({ row, keyName }: { row: Record<string, unknown>; keyName: string }) {
+  // The unit the ROW declares, so a count is not drawn in pesos (P1.c).
+  const u = unitOf(row);
   const value = Number(row[keyName]);
   const baseline = Number(row.baseline);
   if (!Number.isFinite(value) || !Number.isFinite(baseline) || baseline <= 0) return null;
@@ -178,7 +180,7 @@ export function Against({ row, keyName }: { row: Record<string, unknown>; keyNam
   const x = (n: number) => `${Math.min(100, Math.max(0, (n / top) * 100)).toFixed(1)}%`;
   return (
     <div className="r-against" role="img"
-         aria-label={`${fmt(keyName, value)} against ${fmt(keyName, baseline)} before`}>
+         aria-label={`${fmt(keyName, value, u)} against ${fmt(keyName, baseline, u)} before`}>
       <div className="r-against-track">
         {band > 0 && (
           <i className="r-against-band"
@@ -190,8 +192,8 @@ export function Against({ row, keyName }: { row: Record<string, unknown>; keyNam
       </div>
       <p className="r-spec-how">
         {t
-          ? `the mark is the same weekday before, ${fmt(keyName, baseline)} · the band is the noise floor, ${t.pct_threshold}% or ${fmt(keyName, t.absolute_floor)}`
-          : `the mark is the period before, ${fmt(keyName, baseline)}`}
+          ? `the mark is the same weekday before, ${fmt(keyName, baseline, u)} · the band is the noise floor, ${t.pct_threshold}% or ${fmt(keyName, t.absolute_floor, u)}`
+          : `the mark is the period before, ${fmt(keyName, baseline, u)}`}
       </p>
     </div>
   );
@@ -364,6 +366,9 @@ export function SubjectTile(p: TileProps & { size?: 'lead' | 'normal' | 'small' 
 
   const change = changeOf(row);
   const v = valueOf(row);
+  // WHAT THE FIGURE IS IN, from the row or the read — never from the name of
+  // the column it came out of (P1.c).
+  const u = unitOf(row) ?? unitOf(call?.result?.meta);
   const label = p.o.subject ?? subjectOf(row) ?? '';
   const dimension = dimensionOf(rows, label);
   const size = p.size ?? (p.o.weight === 'lead' ? 'lead' : p.o.weight === 'quiet' ? 'small' : 'normal');
@@ -391,7 +396,7 @@ export function SubjectTile(p: TileProps & { size?: 'lead' | 'normal' | 'small' 
       <p className="r-label">{label}{p.earlier ? ' · from earlier' : ''}</p>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
         <span className="r-num" style={{ '--size': `${figure}px` } as CSSProperties}>
-          {v ? fmt(v.key, v.value) : '—'}
+          {v ? fmt(v.key, v.value, u) : '—'}
         </span>
         <Delta change={change} />
       </div>
@@ -439,6 +444,7 @@ export function ComparisonTile(p: TileProps) {
           const row = rowFor(rows, s);
           const change = row ? changeOf(row) : { pct: null, direction: null } as Change;
           const v = row ? valueOf(row) : null;
+          const u = unitOf(row) ?? unitOf(call?.result?.meta);
           const dimension = dimensionOf(rows, s);
           return (
             <Shell key={s} hue={hueFor(s, dimension, 'subject')} change={change} solid
@@ -448,7 +454,7 @@ export function ComparisonTile(p: TileProps) {
               <p className="r-label">{s}</p>
               <div style={{ marginTop: 9 }}>
                 <span className="r-num" style={{ '--size': '26px' } as CSSProperties}>
-                  {v ? fmt(v.key, v.value) : '—'}
+                  {v ? fmt(v.key, v.value, u) : '—'}
                 </span>
               </div>
               <div style={{ marginTop: 9 }}><Delta change={change} /></div>
@@ -462,50 +468,14 @@ export function ComparisonTile(p: TileProps) {
   );
 }
 
-/**
- * George's own words. Warm white, dim, never a performance colour.
- *
- * CLAMPED, AND THAT IS THE POINT. He writes at length, and the board keeps
- * every turn's reading — so two turns of unclamped prose is two essays, which
- * is exactly what the last three builds looked like. What is on screen is the
- * top of the thought; the rest is one word away. A reading from an earlier
- * turn clamps harder still: it is context now, not the answer.
+/*
+ * GEORGE'S OWN WORDS ARE NOT A TILE (P1.c, 2026-09-14). `TextTile` stood
+ * here, clamped to four or six lines, boxed like a figure. The owner:
+ * "putting the text in a widget it just doesnt work." The reading is now a
+ * region above the board — frontend/src/room/Reading.tsx — drawn from the
+ * turn's own words whether or not anything was composed, which is also what
+ * closes the turn that drew four widgets and said nothing.
  */
-export function TextTile(p: TileProps) {
-  const [open, setOpen] = useState(false);
-  const lines = p.earlier ? 2 : p.o.weight === 'lead' ? 6 : 4;
-  const text = p.turn.text ?? '';
-  // Only offer the toggle when there is genuinely more — roughly the
-  // characters that fit, not a character count anyone reads.
-  const long = text.length > lines * 62;
-  return (
-    <Shell george landing={p.landing} delay={p.delay}>
-      {p.notices && p.notices.length > 0 && (
-        <div style={{ marginBottom: 15 }}><Caveats notices={p.notices} /></div>
-      )}
-      <p
-        className={`r-say ${p.o.weight === 'lead' && !p.earlier ? 'r-say--lead' : ''}`}
-        style={{
-          whiteSpace: 'pre-wrap',
-          ...(open || !long ? {} : {
-            display: '-webkit-box',
-            WebkitLineClamp: lines,
-            WebkitBoxOrient: 'vertical' as const,
-            overflow: 'hidden',
-          }),
-        }}
-      >
-        {text}
-      </p>
-      {long && (
-        <button type="button" className="r-act" style={{ marginTop: 10 }}
-                onClick={() => setOpen((v) => !v)}>
-          {open ? 'less' : 'read the rest'}
-        </button>
-      )}
-    </Shell>
-  );
-}
 
 export function TableTile(p: TileProps) {
   const call = callFor(p);
@@ -518,23 +488,33 @@ export function TableTile(p: TileProps) {
 
   // A column with one value on every row is a fact about the TABLE, not a
   // column. Said once, above it, it is the scope.
+  //
+  // ONLY WHERE THAT VALUE READS AS SOMETHING. A row can carry a nested object
+  // — a brief row's `receipts`, its `threshold_applied` — and one of those in
+  // the caption is where `ATTENTION · 16 ROWS · [object Object] · · NO` came
+  // from, the empty field beside it being an empty list. A column with no
+  // reading for a person is not a fact about the table; it is a column the
+  // caption has nothing to say about.
   const keys = Object.keys(rows[0]).filter(
     (k) => !k.endsWith('_id') && !['seq', 'call_seq', 'direction', 'baseline_status'].includes(k));
+  const readable = (v: unknown) => v === null || v === undefined || typeof v !== 'object';
   const constant: string[] = [];
   const cols: string[] = [];
   for (const k of keys) {
     const distinct = new Set(rows.map((r) => String(r[k] ?? '')));
     if (rows.length >= 3 && distinct.size === 1 && String(rows[0][k] ?? '').length <= 24
+        && readable(rows[0][k])
         && !/sales|revenue|value|total|cost|price/i.test(k)) {
-      constant.push(fmt(k, rows[0][k]));
+      constant.push(fmt(k, rows[0][k], unitOf(rows[0]) ?? unitOf(meta)));
     } else {
       cols.push(k);
     }
   }
-  const money = /sales|revenue|price|cost|peso/i.test(String(meta?.metric_label ?? ''))
-    || rows.some((r) => String(r.unit ?? '').toUpperCase() === 'PHP');
-  const cell = (c: string, row: Record<string, unknown>) =>
-    (money && (c === 'change' || c === 'baseline') ? fmt('net_sales', row[c]) : fmt(c, row[c]));
+  // THE UNIT, FROM THE ROWS AND THE READ, never from the metric's NAME. Every
+  // cell of a figure column is formatted with it, which is what stopped a
+  // count of transactions being drawn as `₱1,187`.
+  const unit = (row: Record<string, unknown>) => unitOf(row) ?? unitOf(meta);
+  const cell = (c: string, row: Record<string, unknown>) => fmt(c, row[c], unit(row));
 
   // WHAT THE ROW IS ABOUT, WHAT IT IS, AND WHICH WAY IT WENT — in that order,
   // and at most five. A board packs tiles into columns, so a table that keeps
@@ -692,8 +672,8 @@ export function ChartTile(p: TileProps) {
                   </span>
                 )}
                 <span className="r-spec-bar-figure">
-                  {fmt(key, row[key])}
-                  {compared && <small> / {fmt(key, row.baseline)}</small>}
+                  {fmt(key, row[key], unitOf(row) ?? unitOf(call?.result?.meta))}
+                  {compared && <small> / {fmt(key, row.baseline, unitOf(row) ?? unitOf(call?.result?.meta))}</small>}
                 </span>
               </div>
             );
@@ -734,7 +714,7 @@ export function ChartTile(p: TileProps) {
             <text x={x(i)} y={i === iHi ? y(values[i]) - 8 : y(values[i]) + 16}
                   textAnchor={x(i) > W * 0.8 ? 'end' : x(i) < W * 0.2 ? 'start' : 'middle'}
                   style={{ font: '500 10px var(--mono)', fill: 'var(--ink)' }}>
-              {fmt(key, rows[i][key])}
+              {fmt(key, rows[i][key], unitOf(rows[i]) ?? unitOf(call?.result?.meta))}
             </text>
           </g>
         ))}
@@ -960,7 +940,7 @@ export function TimelineTile(p: TileProps) {
               {(label(point.row) || figure) && (
                 <span className="r-time-what">
                   {label(point.row)}
-                  {figure ? ` · ${fmt(figure.key, figure.value)}` : ''}
+                  {figure ? ` · ${fmt(figure.key, figure.value, unitOf(point.row) ?? unitOf(call?.result?.meta))}` : ''}
                 </span>
               )}
             </div>
@@ -1001,7 +981,7 @@ export function RecommendationTile(p: TileProps) {
       <p className="r-label">{ACTS[p.o.action ?? ''] ?? 'Consider'}</p>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
         <span className="r-num" style={{ '--size': '30px' } as CSSProperties}>
-          {figure ? fmt(figure.key, figure.value) : subject}
+          {figure ? fmt(figure.key, figure.value, unitOf(row) ?? unitOf(call?.result?.meta)) : subject}
         </span>
         {figure && <span className="r-label">{subject}</span>}
       </div>

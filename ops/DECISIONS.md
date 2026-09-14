@@ -9,6 +9,30 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-14 — P1.c: a reading is not a peer of the things it explains
+
+The reading left the widget vocabulary, and the `prose` MARK went with it —
+the grammar would otherwise have drawn the same answer a second time inside a
+box, which is the shape the owner said does not work. A `text` block stored
+before today is dropped by the board rather than drawn, so old threads read
+once. The room's empty test was `board.length === 0`, so a turn that read
+nothing and only spoke threw the answer away; it is now "no objects, no words,
+no caveats".
+
+`max_restated_sentences: 0 → 1` took cited figures on the gate from 0/4 to
+4/4, each answer carrying exactly the one its claim rests on. The lever was
+not the number: it was telling the correction what must SURVIVE the rewrite.
+Cost: `leads_with_reading` 4/4 → 2/4, because the claim sentence now holds the
+figure — the two checks pull against each other by design, and the style one
+is left standing rather than relaxed to make the card look clean.
+
+`fmt` guessed money from a column name and `value` was in the pattern. Units
+are data the rows already carry; the name is now consulted only where it names
+money itself. A gate run made with `-x` costs a third of the price for a fifth
+of the signal — four scenarios is the unit.
+
+---
+
 ## 2026-09-13 — P1.b: the board was never empty, only shapeless
 
 The card said the board fills when George composes. It does not: `editsFor`

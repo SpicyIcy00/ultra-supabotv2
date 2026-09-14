@@ -85,8 +85,11 @@ describe('the room draws what it claims to draw', () => {
   // EVERY KIND, INCLUDING THE FOUR ADDED FOR FEATURE 1. A widget declared in
   // metrics.yaml that the renderer cannot draw is a promise the model will
   // keep and the screen will not.
+  //
+  // `text` IS NOT AMONG THEM ANY MORE (P1.c): the reading is a region above
+  // the board, not a widget, and there is nothing left for the renderer to
+  // draw under that name. Reading.dom.test.tsx holds the region itself.
   const KINDS: [string, Partial<BoardObject>][] = [
-    ['text', {}],
     ['figure', { subject: 'Rockwell' }],
     ['hero', { subject: 'Rockwell', weight: 'lead' }],
     ['subject', { subject: 'Rockwell' }],
@@ -175,7 +178,6 @@ describe('a shape George composed', () => {
         { mark: 'cell' as const, seq: 0, field: 'value', by: 'store', colour: 'store' },
         { mark: 'rows' as const, seq: 0 },
       ] },
-      { mark: 'prose' as const },
     ],
   };
 
@@ -188,12 +190,14 @@ describe('a shape George composed', () => {
 
   it('resolves every value from the rows, never from the spec', () => {
     draw([object('spec', { spec: SPEC, seqs: [0] })]);
-    // The heading is a column's VALUE, the figure is a row's, the prose is
-    // the turn's. None of the three appears anywhere in the spec itself.
+    // The heading is a column's VALUE and the figure is a row's; neither
+    // appears anywhere in the spec itself. His WORDS are not in it either,
+    // and since P1.c there is no mark that could draw them — the reading is
+    // a region above the board, drawn from the turn.
     expect(screen.getAllByText(/Rockwell/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/203,717/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Both shops are up/)).toBeTruthy();
-    expect(JSON.stringify(SPEC)).not.toMatch(/203,?717|Both shops/);
+    expect(screen.queryByText(/Both shops are up/)).toBeNull();
+    expect(JSON.stringify(SPEC)).not.toMatch(/203,?717|Both shops|prose/);
   });
 });
 
@@ -491,9 +495,9 @@ describe('the board maintains, not accumulates', () => {
 
   it('lets a quiet object nobody touched for six turns leave — unless it was kept', async () => {
     const { buildBoard, EXPIRE_AFTER_TURNS } = await import('./board');
-    const first = turnWith([{ op: 'put', key: 'old', kind: 'text', weight: 'quiet' }]);
+    const first = turnWith([{ op: 'put', key: 'old', kind: 'table', seq: 0, weight: 'quiet' }]);
     const later = Array.from({ length: EXPIRE_AFTER_TURNS }, (_, n) =>
-      turnWith([{ op: 'put', key: `t${n}`, kind: 'text', weight: 'supporting' }]));
+      turnWith([{ op: 'put', key: `t${n}`, kind: 'state', label: 'waiting', weight: 'supporting' }]));
     expect(buildBoard([first, ...later]).some((o) => o.key === 'old')).toBe(false);
     expect(buildBoard([first, ...later.slice(0, -1)]).some((o) => o.key === 'old')).toBe(true);
     expect(buildBoard([first, ...later], new Set(['old'])).some((o) => o.key === 'old')).toBe(true);
@@ -505,5 +509,57 @@ describe('the board maintains, not accumulates', () => {
     const ctx = boardContext([t1], buildBoard([t1]), {}, null);
     expect(ctx[0].read?.tool).toBe('get_sales');
     expect(ctx[0].read?.arguments).toEqual({ group_by: ['store'], date_range: 'last_week' });
+  });
+});
+
+/**
+ * THE TWO DISPLAY DEFECTS, AS THE OWNER SAW THEM (P1.c, 2026-09-14). Both
+ * came out of `fmt` in data.ts; these hold them where a person met them,
+ * which is a tile.
+ */
+describe('a tile draws what the rows actually say', () => {
+  const ATTENTION = Array.from({ length: 4 }, (_, n) => ({
+    section: 'sales_vs_same_weekday',
+    subject: `Shop ${n}`,
+    value: 1187 + n,
+    unit: 'transactions',
+    silent: false,
+    // Both of these are objects on every brief row, and both reached the
+    // caption: one as "[object Object]", the empty list as nothing at all.
+    receipts: { source_table: 'new_transactions' },
+    filters_applied: [],
+  }));
+
+  const COUNTED = {
+    ...TURN,
+    toolCalls: [{
+      seq: 0, tool: 'get_attention', arguments: {},
+      result: { rows: ATTENTION, meta: { source_table: 'new_transactions',
+                                         metric_label: 'Transactions',
+                                         snapshot_timestamp: '2026-09-14T08:00:00Z',
+                                         filters_applied: [] } },
+    }],
+  } as unknown as AnswerTurn;
+
+  function drawCounted() {
+    return render(
+      <Board answers={[COUNTED]} board={[{ key: 'k', kind: 'table', weight: 'supporting',
+                                           seq: 0, tool: 'get_attention', turn: 0, touched: 0 } as BoardObject]}
+             local={{}} focused={null} selection={[]} live={false} retuned={{}} on={ACTIONS()} />,
+    );
+  }
+
+  it('never writes "object Object", and never leaves the field beside it empty', () => {
+    const { container } = drawCounted();
+    const caption = container.querySelector('.r-label')?.textContent ?? '';
+    expect(caption).not.toContain('object Object');
+    expect(caption).not.toMatch(/ · · /);
+  });
+
+  it('draws a count as a count — the unit says transactions, so no peso sign', () => {
+    const { container } = drawCounted();
+    const text = container.textContent ?? '';
+    expect(text).toContain('1,187');
+    expect(text).not.toContain('₱1,187');
   });
 });

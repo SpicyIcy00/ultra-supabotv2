@@ -127,6 +127,23 @@
 }
 .r-say--lead { font-size: 20px; line-height: 1.55; }
 
+/* THE READING — the region above the board, not a tile in it (Reading.tsx).
+   No border, no ground of its own, full measure: it is the page speaking. It
+   reads one step larger than prose inside an object because it is the answer
+   and they are its evidence, and it wraps at a measure a person reads rather
+   than at the width of a column. */
+.r-reading { margin: 0 0 22px; max-width: 66ch; }
+.r-say--reading {
+  font-size: 19px;
+  line-height: 1.62;
+  max-width: 66ch;
+  white-space: pre-wrap;
+}
+/* Above the reading, always, with room between: a caveat qualifies the
+   answer, so it is read first (UI rule 4) and never wears the accent. */
+.r-reading-caveats { margin-bottom: 14px; }
+@media (max-width: 640px) { .r-say--reading { font-size: 17px; } }
+
 .r-note { font: 400 13px/1.6 var(--sans); color: var(--ink-2); max-width: 62ch; margin: 0; }
 
 /* Receipts and machine facts. Findable, never read first. */

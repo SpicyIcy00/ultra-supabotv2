@@ -7,7 +7,9 @@
  * drawing the read it has always drawn, from the turn it came from.
  *
  * Notices belong to a TURN, not to the board: they qualify the figures that
- * just arrived, so they sit above everything from the newest turn only.
+ * just arrived, so they sit above everything from the newest turn only —
+ * which since P1.c means above the READING, one region further up the page.
+ * `turnNotices` is which ones still have to be said; the drawing is there.
  */
 import { useMemo } from 'react';
 import type { BoardObject, Local } from './board';
@@ -16,10 +18,11 @@ import { useDrag } from './drag';
 import { callOf, dimensionOf, rowsOf, type AnswerTurn, type Dimension } from './data';
 import type { ToolCall } from '../types/george';
 import {
-  Acts, Caveats, ChartTile, ComparisonTile, ControlTile, DistributionTile, DraftTile,
-  RecommendationTile, SpecTile, StateTile, SubjectTile, SystemTile, TableTile, TextTile,
+  Acts, ChartTile, ComparisonTile, ControlTile, DistributionTile, DraftTile,
+  RecommendationTile, SpecTile, StateTile, SubjectTile, SystemTile, TableTile,
   TimelineTile, ownNotices, type TileActions, type TileProps,
 } from './tiles';
+import type { GeorgeNotice } from '../types/george';
 
 export interface BoardProps {
   /** Every answer turn, oldest first. An object names its own by index. */
@@ -45,6 +48,38 @@ export interface BoardProps {
 const PROCESS = new Set(['composition_rejected', 'findings_rejected', 'restated_figure',
                          'misstated_figure', 'enumerated_remainder']);
 
+/**
+ * THE CAVEATS THIS TURN STILL HAS TO SAY — computed here because it is a
+ * question about the BOARD (which notices are already drawn on an object),
+ * and drawn above the reading, because a caveat comes before the answer it
+ * qualifies and before every figure that answer is about (UI rule 4).
+ *
+ * Two are taken out. A notice an object already carries: a caveat shown twice
+ * is a caveat people learn to skip, and this one is meant for what has no
+ * object of its own. And the loop's own warnings about his edits —
+ * "rockwell-hours: a block carries a kind or a spec, never both" is process,
+ * not a caveat on a figure. The refusal is already enforced and already
+ * conveyed to him; drawing it above the answer made three readings wear a
+ * sentence about a shape he learnt to compose on the third try. A tool's
+ * notice still surfaces, always; this is not one.
+ */
+export function turnNotices(p: {
+  answers: AnswerTurn[];
+  board: BoardObject[];
+  local: Record<string, Local>;
+  focused: string | null;
+}): GeorgeNotice[] {
+  const newest = p.answers.length - 1;
+  const all = (p.answers[newest]?.notices ?? []).filter((n) => !PROCESS.has(n.kind));
+  const onObjects = new Set(
+    inOrder(p.board, p.local, p.focused).flatMap((o) => (
+      o.seq === undefined ? []
+        : ownNotices(p.answers[o.turn]?.toolCalls.find((c) => c.seq === o.seq)?.result?.meta)
+    )).map((n) => n.kind),
+  );
+  return all.filter((n) => !onObjects.has(n.kind));
+}
+
 export function Board(p: BoardProps) {
   const objects = inOrder(p.board, p.local, p.focused);
   // THE DRAG LIVES HERE, not in a tile and not in the page. A tile cannot
@@ -54,39 +89,17 @@ export function Board(p: BoardProps) {
   const { dragging, grip, body } = useDrag(p.on);
   const on = useMemo(() => ({ ...p.on, grip }), [p.on, grip]);
   const newest = p.answers.length - 1;
-  // THE TURN'S notices, minus the ones now drawn on the objects they belong
-  // to. A caveat shown twice is a caveat people learn to skip, and the one
-  // above the board is meant for what has no object of its own.
-  //
-  // AND MINUS THE LOOP'S OWN WARNINGS ABOUT HIS EDITS. "rockwell-hours: a
-  // block carries a kind or a spec, never both" is the loop telling George
-  // an edit was refused — process, not a caveat on a figure. The refusal is
-  // already enforced (the edit did not happen) and already conveyed to him;
-  // drawing it above his old readings made three text tiles wear a sentence
-  // about a shape he learnt to compose on the third try. A tool's notice
-  // still surfaces, always (UI rule 4); this is not one.
-  const all = (p.answers[newest]?.notices ?? []).filter((n) => !PROCESS.has(n.kind));
-  const onObjects = new Set(
-    inOrder(p.board, p.local, p.focused).flatMap((o) => (
-      o.seq === undefined ? []
-        : ownNotices(p.answers[o.turn]?.toolCalls.find((c) => c.seq === o.seq)?.result?.meta)
-    )).map((n) => n.kind),
-  );
-  const notices = all.filter((n) => !onObjects.has(n.kind));
-  const textLeads = objects[0]?.kind === 'text';
   // While he is still reading, what has landed is evidence — he has not said
   // where any of it goes yet. It is drawn as it arrives, which is the whole of
   // "you can feel him working".
   const settling = p.live && !p.answers[newest]?.composition;
 
-  // What leads sits in its own row at the top, in George's order — AND HIS
-  // READING GOES WITH IT, wherever he weighted it. A lead subject carries one
-  // figure; on its own it stretches across the whole board for a single
-  // number, and the sentence explaining it ends up three columns away from
-  // the thing it explains. They belong together.
-  const leading = objects.filter((o) => o.weight === 'lead' || p.focused === o.key);
-  const reading = objects.find((o) => o.kind === 'text' && !leading.includes(o));
-  const lead = reading ? [...leading, reading] : leading;
+  // What leads sits in its own row at the top, in George's order. IT NO
+  // LONGER CARRIES HIS READING WITH IT: the reading is a region above this
+  // board (Reading.tsx), so the special case that dragged a text tile up
+  // beside whatever led — because "the sentence explaining it ends up three
+  // columns away from the thing it explains" — has nothing left to fix.
+  const lead = objects.filter((o) => o.weight === 'lead' || p.focused === o.key);
   const rest = objects.filter((o) => !lead.includes(o));
 
   const draw = (o: (typeof objects)[number], n: number) => (
@@ -112,7 +125,6 @@ export function Board(p: BoardProps) {
         earlier={o.touched < newest}
         retuned={o.seq === undefined ? null : p.retuned[o.seq] ?? null}
         on={on}
-        notices={textLeads && o.kind === 'text' ? notices : undefined}
       />
       {/* WHAT YOU CAN DO TO IT — under every object, whatever shape it is.
           It is quiet until the pointer is on the object or something inside
@@ -130,12 +142,10 @@ export function Board(p: BoardProps) {
 
   return (
     <div className="r-board" data-board={objects.length}>
-      {/* Caveats are the turn's, not the board's: above everything, always,
-          and never inside a column where they could scroll away from the
-          figures they qualify. */}
-      {!textLeads && notices.length > 0 && (
-        <div style={{ marginBottom: 18 }} key="__notices"><Caveats notices={notices} /></div>
-      )}
+      {/* THE CAVEATS ARE NOT DRAWN HERE any more. They belong to the turn,
+          not to the board, and they go above the reading — which is above
+          this (Room.tsx, `turnNotices`). A board that drew them too would
+          show each one twice. */}
       {lead.length > 0 && <div className="r-board-lead">{lead.map(draw)}</div>}
       {rest.length > 0 && <div className="r-board-rest">{rest.map((o, n) => draw(o, n + lead.length))}</div>}
     </div>
@@ -160,7 +170,6 @@ function Piece(props: TileProps) {
   // A composed shape has no `kind` — it carries its own tree instead.
   if (props.o.spec) return <SpecTile {...props} />;
   switch (props.o.kind) {
-    case 'text': return <TextTile {...props} />;
     case 'hero': return <SubjectTile {...props} size="lead" />;
     case 'figure': return <SubjectTile {...props} size="normal" />;
     case 'subject': return <SubjectTile {...props} />;

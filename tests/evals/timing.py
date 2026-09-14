@@ -13,15 +13,18 @@ card. What the room draws, in the order it prefers:
 
     his composition            → the board is what he composed
     else the loop's default    → the board is what the reads are (P1.b)
-    else his prose, and one    → the fallback, for a turn stored before
-    quiet table per read         compose existed, or one where every edit
-                                 was refused
+    else one quiet table per   → the fallback, for a turn stored before
+    read, and the reading        compose existed, or one where every edit
+    above it                     was refused
 
-AND IT HAS TO STAY. `answer_reset` wipes the prose, so a board whose only
-object was a text tile goes back to the greeting — which is what "stuff came
-out but it just disappeared" looks like from the board's side. So the number
-reported is the first moment after which the board is never empty again, not
-the first moment it flickers into existence.
+THE READING IS NO LONGER A TILE (P1.c): it is a region above the board, drawn
+from the turn's own words. That does not change what is MEASURED here — prose
+on screen is still something on screen — and the wiping still counts.
+`answer_reset` empties the reading, so a screen whose only content was his
+prose goes back to the greeting, which is what "stuff came out but it just
+disappeared" looks like. So the number reported is the first moment after
+which the screen is never empty again, not the first moment it flickers into
+existence.
 
 `with_default=False` replays the same frames under the rule as it stood before
 P1.b, which is how one run yields both the before and the after without paying

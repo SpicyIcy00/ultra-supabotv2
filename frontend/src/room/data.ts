@@ -16,7 +16,18 @@ export type Dimension = 'store' | 'product' | 'category';
 
 /* ----------------------------------------------------------------- figures */
 
-const PESO = /sales|revenue|value|subtotal|total|cost|price|amount|_php$|peso/i;
+/**
+ * A COLUMN NAME THAT SAYS MONEY ITSELF — and nothing that merely could be.
+ *
+ * This used to carry `value`, `total` and `amount`, and that is how a count of
+ * transactions was drawn as `₱1,187`: every compared row names its number
+ * `value`, so every metric's figure was money to the formatter. The unit is a
+ * fact the rows and the read already carry (`unit`, `meta.metric_unit`), so
+ * `unitOf` is what decides, and this is only the last resort for a figure that
+ * arrives with no unit beside it. A generic magnitude word is not evidence of
+ * a currency; `net_sales` and `unit_cost` name one.
+ */
+const PESO = /sales|revenue|subtotal|cost|price|_php$|peso/i;
 
 /** A peso figure in the hundreds of thousands does not need centavos. */
 function digits(n: number): number {
@@ -24,17 +35,59 @@ function digits(n: number): number {
   return Math.abs(n) >= 1000 ? 0 : 2;
 }
 
-export function fmt(key: string, v: unknown): string {
+/**
+ * THE UNIT A FIGURE IS IN, READ RATHER THAN GUESSED.
+ *
+ * Every compared row carries `unit` (tools/sales.py) and every metric read
+ * carries `meta.metric_unit`, so a formatter has no business inferring the
+ * currency from a column name. Pass whichever is to hand: the row, the meta,
+ * or a bare unit string.
+ */
+export function unitOf(
+  from: Record<string, unknown> | ToolMeta | null | undefined,
+): string | null {
+  if (!from) return null;
+  const row = from as Record<string, unknown>;
+  const unit = row.unit ?? (from as ToolMeta).metric_unit;
+  return typeof unit === 'string' && unit.trim() ? unit.trim() : null;
+}
+
+/**
+ * A value, as a person reads it.
+ *
+ * `unit` is the measure the rows or the read declared — pass it wherever it
+ * exists, and the formatting stops guessing. Absent, the column name decides,
+ * and only where the name itself names money.
+ */
+export function fmt(key: string, v: unknown, unit?: string | null): string {
   if (v === null || v === undefined || v === '') return '—';
   if (typeof v === 'number' || (typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v))) {
     const n = Number(v);
-    if (PESO.test(key)) return `₱${n.toLocaleString('en-PH', { maximumFractionDigits: digits(n) })}`;
+    // A PERCENTAGE IS NOT IN THE METRIC'S UNIT, and it is asked first for
+    // that reason: `change_pct` beside a peso figure is still a percentage,
+    // and a read's unit says what the VALUE is measured in, never the change
+    // against it. This much is read from the column name because the column
+    // is what carries the dimension — every tool names these the same way.
     if (/pct|percent|share/i.test(key)) return `${n > 0 ? '+' : ''}${n.toFixed(1)}%`;
+    const money = unit ? unit.toUpperCase() === 'PHP' : PESO.test(key);
+    if (money) return `₱${n.toLocaleString('en-PH', { maximumFractionDigits: digits(n) })}`;
     return n.toLocaleString('en-PH', { maximumFractionDigits: digits(n) });
   }
   if (typeof v === 'boolean') return v ? 'yes' : 'no';
   if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10);
-  return String(v);
+  if (typeof v === 'string') return v;
+  // A list of plain values still reads as one. `String([])` was '', which is
+  // the empty field in `ATTENTION · 16 ROWS · [object Object] · · NO`.
+  if (Array.isArray(v)) {
+    const parts = v.filter((x) => x !== null && typeof x !== 'object').map(String);
+    return parts.length ? parts.join(', ') : '—';
+  }
+  // NOT `String(v)`, which is where `[object Object]` came from — it reached a
+  // table's caption through a column whose value was a nested object (a row's
+  // `receipts`, its `threshold_applied`), and a reader was shown the words
+  // "object Object" as though they were data. A value with no reading for a
+  // person is drawn as one that has none.
+  return '—';
 }
 
 export function pct(n: number): string {

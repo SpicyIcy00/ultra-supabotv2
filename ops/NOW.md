@@ -93,7 +93,7 @@ shippable. The full diagnosis is the report linked in section 6.
 | Live | **`a3003ef`**, confirmed from `/health`: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `ba066c55`. **The swap took about a minute with zero non-200s** — polled every 20 s across it — and it is the THIRD clean one in a row and the third carrying NO migration. Read `/health` rather than believing this row: `a01706b` sat here as live while three commits had landed since. |
 | Last deploy | `ee29fa5`, live and healthy when recorded; the swap before it, `a01706b`, **live and healthy when recorded**, and the swap was clean — polled every 20 s across it, zero non-200s, old build to new in about a minute. It carried NO migration (the schema was already at head), so the launcher took its `already at head` branch and ran no alembic at all. That is evidence the outage below lives in the migration path specifically, not in the boot or the build — evidence, not the deploy log. Before it, `8b0325a`. `8b0325a` carried P0.3 and P0.4, and applying migration `w7x8y9z0a1b2` cost **~50 minutes of 502**: the first boots crashlooped, the migration did not apply, and nothing was readable from outside. It came up on a later retry. Root cause still unknown — the Railway deploy log for that build has not been read. `69b51bd` is the fix for the *invisibility*, not for the cause. |
 | Phase | 0, consolidating |
-| Next card | **Whatever is Open in `ops/DOGFOOD_LOG.md`, then P1.c.** The remaining cards were rewritten 2026-09-13 into the plan that reaches the Ideal UI: P1.c–P1.k, P2.a–P2.h, P3.a–P3.f, and Phase 4 sources. P1.c, P1.d and P1.e ARE the Open items, in the log's own agreed fixes. **P1.g closed 2026-09-13** (`c508965`), which is the log's two trust failures; the Open item it left behind — every gate answer citing no figure — is a decision P1.c has to make, not a card of its own. P1.b closed 2026-09-13: first composed object 16.8 → 8.2 s, first visible object unmoved at 7.0 s (bounded by the first round trip; only replay, P1.i/P1.j, can reach 2 s). The bill is round trips, not cache misses. Read the note under the baseline table before reporting any Phase 1 number against the twelve. |
+| Next card | **Whatever is Open in `ops/DOGFOOD_LOG.md`, then P1.d.** Two things are Open as of 2026-09-14 and BOTH were found by a session rather than by the owner — a composed shape missing from the board line, and the gate failing on a share the tool itself computed — so read them before assuming the queue is his. **P1.c closed 2026-09-14**: the reading is a region above the board, `text` and `prose` are out of the vocabulary, the two `fmt` bugs are gone, and `max_restated_sentences: 0 → 1` took the gate's cited figures from 0/4 to 4/4. The remaining cards were rewritten 2026-09-13 into the plan that reaches the Ideal UI: P1.c–P1.k, P2.a–P2.h, P3.a–P3.f, and Phase 4 sources. P1.d and P1.e carry what is left of the Open items, in the log's own agreed fixes. **P1.g closed 2026-09-13** (`c508965`), which is the log's two trust failures; the Open item it left behind — every gate answer citing no figure — is a decision P1.c has to make, not a card of its own. P1.b closed 2026-09-13: first composed object 16.8 → 8.2 s, first visible object unmoved at 7.0 s (bounded by the first round trip; only replay, P1.i/P1.j, can reach 2 s). The bill is round trips, not cache misses. Read the note under the baseline table before reporting any Phase 1 number against the twelve. |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
@@ -243,11 +243,14 @@ where a regression was speculative AND **the four gate scenarios could not
 have seen it.** A new comparison (`P2.i`, `P3.f`) is a capability no gate
 scenario asks for, so a run there proves nothing; `P2.c`, `P2.d` and `P2.f`
 are context and rendering; `P1.c` breaks or fixes compose refusals, which are
-its own numbers. **Six live runs plus one gate across 27 open cards, ~$11.68** —
-P1.e's tail, P1.f, P1.h and the three phase closes at ~$1.84 each on v2, plus
-P1.c's gate at $0.64. **P1.g is closed** (`c508965`), and its own gate run
-cost **$0.64 against the $0.63 this file estimated** — the first figure here
-to survive contact with a live run.
+its own numbers. **Six live runs across 26 open cards, ~$11.04** — P1.e's
+tail, P1.f, P1.h and the three phase closes at ~$1.84 each on v2. **P1.g and
+P1.c are closed**, and their gate runs cost **$0.64 and $0.75 against a $0.63
+estimate**: P1.g's was the first figure here to survive contact with a live
+run, and P1.c's overspend was a first run made with `-x`, which stops on the
+first scenario and pays for it twice. **Drop `-x` on a gate run**; four
+scenarios is the unit, and a partial one buys a fifth of the signal for a
+third of the price.
 **The earlier $9.10 was wrong, because the meter was.** Against v1 at its true
 $2.90 the same seven runs would have been ~$18. The real gain from dropping
 the six gates is six sessions that do not stop to run something that could not
@@ -348,15 +351,18 @@ that can move behaviour; for the others, say why no run was needed and move on.
 
 ### George already records his own failures, and nobody reads them
 
-`agent/loop.py` writes a row to `george.gaps` for **20 kinds** of trouble.
-Thirteen are literals — `api_error`, `api_retry`, `unhandled`, `tool_refused`,
+`agent/loop.py` writes a row to `george.gaps` for **23 kinds** of trouble.
+Fourteen are literals — `api_error`, `api_retry`, `unhandled`, `tool_refused`,
 `convergence_cap`, `iteration_cap`, `no_tool_call`, `empty_result`,
 `duplicate_read`, `notice_forced`, `volunteering_over_cap`,
-`tool_vocabulary_leaked`, `transaction_wording` — and seven more are built at
-the call site and were missed every time anyone counted: `restated_figure`,
-and `{pin,save,page}_{claimed,promised}_not_made`. The catalogue in
-`ops/sweep_gaps.py` names all twenty, and a contract test holds it against the
-call sites so kind twenty-one cannot go unread the way eleven did.
+`tool_vocabulary_leaked`, `transaction_wording`, and `answer_without_prose`
+(P1.c: a turn that drew the board and said nothing) — and nine more are built
+at the call site and were missed every time anyone counted: `restated_figure`,
+`misstated_figure`, `enumerated_remainder`, and
+`{pin,save,page}_{claimed,promised}_not_made`. The catalogue in
+`ops/sweep_gaps.py` names all twenty-three, and a contract test holds it
+against the call sites so kind twenty-four cannot go unread the way eleven
+did.
 
 **Exactly two of them are ever read back** — `api_error` and `unhandled`, and
 only when rebuilding a stored chat so a failed turn shows its error
@@ -815,7 +821,7 @@ number or reasoning in any close-out was changed.** If a close-out names a card
 whose description does not match what it is claiming, this is why — check here
 before believing it.
 
-- [ ] **P1.c the reading leaves the widgets** — the top three Open items in
+- [x] **P1.c the reading leaves the widgets** — the top three Open items in
       the dogfood log, done as the log's AGREED FIX says: `text` is REMOVED
       from the compose vocabulary; the reading is a permanent region above
       the board drawn from the turn's prose, never a tile; a turn with no
@@ -865,6 +871,74 @@ before believing it.
       display bugs gone. **Eval: subset** — the gate, $0.64 measured at P1.g.
       This card now changes a CORRECTION RULE, which the gate can see; it did
       not when the card was only a vocabulary change.
+
+      **CLOSED 2026-09-14. Suites exact: 1,546 pure (was 1,544), 805 vitest
+      (was 791), `tsc -b` and `build` clean. Two gate runs, $0.25 + $0.50 =
+      $0.75 against the $0.64 estimate** — the first was `-x` and stopped on
+      the first scenario, which is the whole of the overspend.
+
+      **THE SUBTRACTION HAPPENED.** `text` is out of `composition.widgets` and
+      `prose` is out of the grammar's marks — both, because a `prose` mark is
+      the same thing wearing a spec and would have drawn the answer a second
+      time inside a box. `TextTile`, `editsFor`'s fallback tile and the
+      renderer's special case (the one whose own comment said the sentence
+      "ends up three columns away from the thing it explains") all deleted
+      themselves. The reading is `frontend/src/room/Reading.tsx`: a region
+      above the board, drawn from `turn.text`, with the turn's caveats above
+      it. A stored `text` block from before today is DROPPED by the board
+      rather than drawn, so an old thread reads correctly instead of twice.
+      A turn that says nothing is now `answer_without_prose` in the gap log —
+      the 23rd kind, and the first time that silence is recorded anywhere but
+      in the owner's own words.
+
+      **AND THE ROOM IS NO LONGER EMPTY WHEN HE ONLY TALKS.** `board.length
+      === 0` was the test for the greeting, so a turn that read nothing and
+      said something threw the answer away. It is now "no objects, no words
+      and no caveats".
+
+      **THE DECISION, AND WHAT IT MOVED.** `max_restated_sentences: 0 → 1`,
+      with the reason in the yaml beside it, and the prompt turned the same
+      way ("name the figure your point rests on"; "the board drawing it is no
+      reason to leave it out; reciting the rest is"). The correction message
+      now says what must SURVIVE a rewrite, which it never did: *the rewrite
+      still carries 1 figure … none is not the safe answer.* Measured on the
+      four gate scenarios, one draw each, against the P1.g run on the same
+      four (`verification/dogfood-remainder-caveats.json` →
+      `verification/p1c-gate-2.json`):
+
+      | | before | after |
+      |---|---|---|
+      | cited a figure a tool returned | 0/4 | **4/4** |
+      | restated sentences in the standing answer | 0,0,0,0 | 1,1,1,1 |
+      | led with a reading (STYLE) | 4/4 | 2/4 |
+
+      Every standing answer carries exactly its allowance — the one figure the
+      claim rests on — and the correction still fires on the first draft in
+      three of four, as it did in three of four before. What it takes out now
+      is the recitation rather than every figure in the answer.
+
+      **THREE SHORTFALLS, and the first is the one that matters.**
+      1. **The live-build half of Done-when was not done.** "how are we doing"
+         and "any problems" on a running build needs
+         `ops/local_dogfood_serve.py --allow-model`, and that flag is never
+         passed unasked. What stands in its place is DOM evidence, not the
+         same thing: `Reading.dom.test.tsx` drives the exact composition from
+         the report — four figures, no text block — and asserts his words are
+         on screen and no tile holds them.
+      2. **`leads_with_reading` fell 4/4 → 2/4.** "It wasn't up — North Edsa
+         fell 2.8% last week" is a reading whose first sentence carries the
+         figure it is about, and that check is "the first sentence carries no
+         figure". The two now pull against each other by design. It is a
+         STYLE rate, not a gate (NOW.md 2b), and it is left standing rather
+         than quietly relaxed to make this card look clean.
+      3. **The gate is still 3 failed / 1 passed under `GEORGE_VOICE_STRICT`,
+         and one of those is a TRUST row.** `caveats` failed `attribution` on
+         "those account for 75% of the units the plan requests" — which is
+         `get_replenishment`'s own notice, quoted: *"those lines account for
+         4,764 of the 6,344 units requested, 75% of the plan."* The check
+         reads the phrase, not the receipt. Filed in the dogfood log; the fix
+         is in `checks.attribution_claims`, not in George. The other two are
+         the style row above.
 - [ ] **P1.d the board transforms; it never accumulates** — the rule decided
       in the log: a question sharing no subject with the board CLEARS it; one
       sharing a subject TRANSFORMS it in place; earlier turns fold to one

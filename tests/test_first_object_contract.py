@@ -42,10 +42,10 @@ def test_a_read_landing_fills_the_board_with_or_without_a_default():
 
 
 def test_prose_that_is_wiped_does_not_count_as_the_first_object():
-    # "stuff came out but it just disappeared": the fallback's text tile is the
-    # only object, the loop resets the answer, and the room is back to the
-    # greeting. The reported moment is when the board stopped being empty for
-    # good, which is the read.
+    # "stuff came out but it just disappeared": his prose is the only thing on
+    # screen, the loop resets the answer, and the room is back to the greeting.
+    # The reported moment is when the screen stopped being empty for good,
+    # which is the read.
     frames = [f("start", 0), f("text", 400, delta="Let me look."),
               f("answer_reset", 800, reason="interim_prose"),
               f("tool_call", 900, seq=0), f("tool_result", 2600, **READ), f("done", 9000)]

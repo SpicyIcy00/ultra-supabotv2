@@ -13,7 +13,8 @@ import { cleanup, render } from '@testing-library/react';
 import type { AnswerTurn } from './data';
 import type { BoardObject } from './board';
 import type { TileActions } from './tiles';
-import { Board } from './render';
+import { Board, turnNotices } from './render';
+import { Reading } from './Reading';
 
 vi.mock('./ObjectPanel', () => ({ ObjectPanel: () => null, kindOf: () => null }));
 afterEach(cleanup);
@@ -141,7 +142,12 @@ describe('a composed shape is an object of its own kind', () => {
   // THE BUG THIS HOLDS. A block with only a spec fell through `kind ?? 'text'`,
   // so a leading shape counted as leading prose and the turn's caveats were
   // drawn on every text tile on the board — three of them from earlier turns.
-  it('is `spec`, not text, on the board', async () => {
+  //
+  // AND THE READING IS NO LONGER AN OBJECT AT ALL (P1.c). A `text` block can
+  // now only come from a turn stored before the vocabulary lost the kind, and
+  // the board drops it rather than drawing the answer twice — once in a tile
+  // and once in the region above.
+  it('is `spec`, and a stored text block is no object at all', async () => {
     const { buildBoard } = await import('./board');
     const turn = { ...TURN, composition: { blocks: [
       { op: 'put', key: 'hours', weight: 'lead', seqs: [2],
@@ -150,7 +156,7 @@ describe('a composed shape is an object of its own kind', () => {
     ] } } as unknown as AnswerTurn;
     const board = buildBoard([turn]);
     expect(board.find((o) => o.key === 'hours')?.kind).toBe('spec');
-    expect(board.find((o) => o.key === 'reading')?.kind).toBe('text');
+    expect(board.find((o) => o.key === 'reading')).toBeUndefined();
   });
 
   it('names itself from the read: the measure, and the shop it was filtered to', () => {
@@ -165,7 +171,7 @@ describe('a composed shape is an object of its own kind', () => {
     expect(container.querySelector('.r-label')?.textContent).toBe('Rockwell · Net sales');
   });
 
-  it('never draws the loop\'s warning about a refused edit as a caveat', () => {
+  it("never surfaces the loop's warning about a refused edit as a caveat", () => {
     const turn = { ...TURN, notices: [
       { kind: 'composition_rejected', message: 'hours: a block carries a kind or a spec, never both', source: 'loop' },
       { kind: 'dead_stock_share', message: '1802 of 3397 products recorded no sale', source: 'tool' },
@@ -173,11 +179,11 @@ describe('a composed shape is an object of its own kind', () => {
     const objects = [
       { key: 'hours', kind: 'spec', weight: 'lead', turn: 0, touched: 0, seqs: [2],
         spec: { mark: 'dots', seq: 2, field: 'value', by: 'hour' } },
-      { key: 'reading', kind: 'text', weight: 'supporting', turn: 0, touched: 0 },
     ] as BoardObject[];
-    const { container } = render(
-      <Board answers={[turn]} board={objects} local={{}} focused={null} selection={[]} live={false} retuned={{}} on={on} />,
-    );
+    // The caveats belong to the turn and are drawn above the READING now, so
+    // this is a question about `turnNotices` and that region, not the board.
+    const notices = turnNotices({ answers: [turn], board: objects, local: {}, focused: null });
+    const { container } = render(<Reading text={turn.text} notices={notices} />);
     const text = container.textContent ?? '';
     expect(text).not.toContain('never both');
     // A tool's notice still surfaces, always.

@@ -128,7 +128,7 @@ def test_nothing_here_asks_whether_a_figure_is_grounded():
 # ---------------------------------------------------------------------------
 
 from tests.test_voice_contract import (                                # noqa: E402
-    _drive_drawn, _standing_answer, ROWS, META, RESTATING, READING,
+    _drive_drawn, _standing_answer, ROWS, META, RECITING, READING,
 )
 from tests.test_loop_correction_contract import StubLog, frames_of      # noqa: E402
 
@@ -175,7 +175,7 @@ def test_the_gap_is_recorded_under_its_own_kind(monkeypatch):
 def test_a_wrong_figure_outranks_a_repeated_one_when_both_are_present(monkeypatch):
     # The sweep should sort a wrong number above a said-twice one, so the
     # warning takes the more serious name — and BOTH gaps are still recorded.
-    both = RESTATING + " " + MISSTATING
+    both = RECITING + " " + MISSTATING
     frames, _ = _drive_drawn(monkeypatch, [both, READING])
     assert [r["reason"] for r in frames_of(frames, "answer_reset")] == ["misstated_figure"]
     kinds = _gap_kinds()
@@ -183,7 +183,7 @@ def test_a_wrong_figure_outranks_a_repeated_one_when_both_are_present(monkeypatc
 
 
 def test_one_correction_covers_both_rather_than_two_round_trips(monkeypatch):
-    both = RESTATING + " " + MISSTATING
+    both = RECITING + " " + MISSTATING
     frames, requests = _drive_drawn(monkeypatch, [both, READING])
     assert len(frames_of(frames, "answer_reset")) == 1
     # read + first answer + the one rewrite
