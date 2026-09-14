@@ -68,6 +68,11 @@
   --accent: 210, 105, 30;
 
   --radius: 22px;
+  /* THE MEASURE — how wide the page's one column is, and the composer's with
+     it. Narrowed by how much is on the board; see "the measure" below. The
+     default is the wide one, so a browser without `:has()` is still centred,
+     which is the half of the report that matters. */
+  --measure: 1320px;
 
   --sans: 'Schibsted Grotesk', ui-sans-serif, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
@@ -204,7 +209,12 @@
     radial-gradient(70% 60% at 100% 110%,
       rgba(var(--hue), calc(var(--bloom) * 0.35)), transparent 60%);
 }
-.r-tile > * { position: relative; min-width: 0; }
+/* `min-height: 0` is what lets a flex child SHRINK below its content, which
+   is what a scrolling body inside a capped tile depends on. Without it the
+   body keeps its full height, the tile's `overflow: hidden` clips it, and a
+   sixteen-row table simply ends mid-row with nothing to scroll — reported
+   2026-09-14, "should i be able to scroll down on this?". */
+.r-tile > * { position: relative; min-width: 0; min-height: 0; }
 
 /*
  * A SOLID TILE — the reference, and the whole of what it was for.
@@ -265,8 +275,10 @@
 
 /* Long bodies scroll inside rather than making the tile define the page. */
 .r-scroll { overflow-y: auto; min-height: 0; }
-.r-scroll::-webkit-scrollbar { width: 8px; }
-.r-scroll::-webkit-scrollbar-thumb { background: var(--edge-strong); border-radius: 4px; }
+.r-scroll::-webkit-scrollbar, .r-mk-body::-webkit-scrollbar { width: 8px; height: 8px; }
+.r-scroll::-webkit-scrollbar-thumb, .r-mk-body::-webkit-scrollbar-thumb {
+  background: var(--edge-strong); border-radius: 4px;
+}
 
 /* Quiet: on the paper rather than on a card of its own. */
 /* Cooled: on the paper, keeping its hue as an edge so it is still findable.
@@ -385,8 +397,47 @@
 
 /* ----------------------------------------------------------------- board */
 
-.r-main { padding: 26px clamp(18px, 3vw, 40px) 150px; margin-left: 56px; }
-@media (max-width: 720px) { .r-main { margin-left: 0; padding-bottom: 190px; } }
+/*
+ * THE MEASURE — one column, centred, and it is the same one the composer uses.
+ *
+ * Reported 2026-09-14, on the first sitting with the six marks: "at 100% size
+ * theres lots of empty space on the right and its not centered". Both halves
+ * were true and they were two faults. `.r-board` capped itself at 1320px and
+ * never centred, while `.r-line` capped at the same width and DID — so on a
+ * wide window the answer sat hard left under a centred composer. And the
+ * column region always reserved three columns however little was in it, so a
+ * board of three things filled two of them and left the third empty inside an
+ * already left-hugging page.
+ *
+ * So the measure is ONE variable on `.room`, set from how many objects are
+ * packed below the lead, and read by the page and the composer both. It moves
+ * with the board because the board is the content — the same reason the board
+ * clears and transforms rather than accumulating.
+ *
+ * `:has()` is the mechanism and the default is the wide one, so a browser
+ * without it gets today's 1320 and is centred, which is the half that matters.
+ */
+.room:has(.r-board[data-rest="0"]),
+.room:has(.r-board[data-rest="1"]) { --measure: 680px; }
+.room:has(.r-board[data-rest="2"]) { --measure: 940px; }
+.room:has(.r-board[data-rest="3"]) { --measure: 1040px; }
+
+.r-main {
+  padding: 26px clamp(18px, 3vw, 40px) 150px;
+  /* The rail is 56px of fixed chrome on the left, so it is padding here and
+     the column centres in what is left — exactly what the composer does. A
+     margin could not be centred around, which is why it used to be one. */
+  padding-left: calc(56px + clamp(18px, 3vw, 40px));
+}
+
+/* THE COLUMN ITSELF, and it is a wrapper rather than a rule on every child
+   because the reading has a measure of its own — 66ch, because it is prose —
+   and the page's would run his words the whole width of the board. The page
+   and the composer both use it, so they cannot drift onto different axes. */
+.r-measure { max-width: var(--measure); margin-inline: auto; }
+@media (max-width: 720px) {
+  .r-main { padding-left: clamp(18px, 3vw, 40px); padding-bottom: 190px; }
+}
 
 /*
  * A BOARD PACKS. A twelve-column grid gave every row the height of its tallest
@@ -394,16 +445,27 @@
  * pixels of nothing. What LEADS takes its own row at the top, in George's
  * order; everything after it flows into columns and packs tight.
  */
-.r-board { max-width: 1320px; }
+/* The board fills the measure; the measure is what was narrowed. */
+.r-board { max-width: 100%; }
 
 .r-board-lead { display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 14px; }
 @media (min-width: 1100px) {
   .r-board-lead { grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); }
 }
 
+/*
+ * NEVER MORE COLUMNS THAN THERE ARE THINGS. Multi-column balances by HEIGHT,
+ * so three columns holding one tall table and two short figures puts the table
+ * in the first, both figures in the second, and leaves the third empty — which
+ * is what the report was looking at. The count is capped by the object count,
+ * and the measure above shrinks with it, so the region is full at every size.
+ */
 .r-board-rest { columns: 3 340px; column-gap: 14px; }
+.r-board[data-rest="1"] .r-board-rest { columns: 1; }
+.r-board[data-rest="2"] .r-board-rest,
+.r-board[data-rest="3"] .r-board-rest { columns: 2 340px; }
 @media (max-width: 900px) { .r-board-rest { columns: 2 280px; } }
-@media (max-width: 640px) { .r-board-rest { columns: 1; } }
+@media (max-width: 640px) { .r-board-rest, .r-board[data-rest] .r-board-rest { columns: 1; } }
 .r-board-rest > * {
   break-inside: avoid;
   -webkit-column-break-inside: avoid;
@@ -487,7 +549,8 @@
 
 .r-line {
   display: flex; align-items: center; gap: 10px;
-  max-width: 1320px; margin: 0 auto;
+  /* The same measure as the page, so the two never sit on different axes. */
+  max-width: var(--measure); margin: 0 auto;
   background: var(--card);
   border: 1px solid var(--edge);
   border-radius: 999px;
@@ -888,6 +951,15 @@ body.r-dragging-on .r-tile { transition: none; }
 }
 .r-tile--solid .r-mk-title { color: var(--on-colour); }
 .r-tile--solid .r-mk-sub { color: var(--on-colour-2); }
+
+/*
+ * THE MARK'S BODY IS WHAT SCROLLS, and the title, the subtitle and the source
+ * line never do — a figure whose receipts scrolled out of sight would be a
+ * number with no time on it (UI rule 6). The tile caps at 560px; this is the
+ * one child allowed to give way.
+ */
+.r-mk-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.r-mk-title, .r-mk-sub, .r-tile > .r-src { flex: 0 0 auto; }
 
 .r-mk { display: grid; gap: 2px; }
 

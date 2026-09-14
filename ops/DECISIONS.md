@@ -3780,3 +3780,20 @@ do?"* — which is the one question it had not answered. The close-out stays as
 the record; it is no longer the last thing on screen. Three lines at most, no
 figures, only what is his to decide. "Nothing" is a complete answer. In
 NOW.md §1 and on the plan page, both in the same commit.
+
+**The page and the composer sit in one wrapper, on one measure.** 2026-09-14,
+from *"theres lots of empty space on the right and its not centered"*: the
+board capped itself at 1320px without centring while the composer capped at
+the same width and did. `.r-measure` is now the only thing that caps either,
+and `--measure` narrows with how many objects are packed below the lead —
+680 / 940 / 1040 / 1320 — because three reserved columns holding two things
+was most of the empty space. A wrapper rather than a rule on every child: the
+reading has a measure of its own, 66ch, because it is prose.
+
+**A tile's body is the one child allowed to give way.** The same report's
+other half — a sixteen-row table ending mid-row. `overflow: hidden` and a
+560px cap were doing their job; nothing between them and the table had
+`min-height: 0`, so no flex child could shrink and nothing could scroll. The
+title, subtitle and source line stay put: receipts that scroll out of sight
+are UI rule 6 broken. Held by `layout.test.ts`, which reads the stylesheet,
+because jsdom does no layout and a dom test could only prove the attributes.

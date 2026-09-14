@@ -57,15 +57,43 @@ on compose frame" does.
 
 ## Open
 
-**Nothing.** First time since this log was started — 2026-09-14, when P1.e
-closed the last of the five failures in the entry below.
-
-**The next thing you say about the board is the most valuable thing in the
-project.** All five have been answered and nobody has looked at the result.
+**Nothing.**
 
 ---
 
 ## Fixed
+
+### 2026-09-14 · the table is cut off, and the page sits left
+
+> should i be able to scroll down on this? and at 100% size theres lots of
+> empty space on the right and its not centered
+
+The first sitting on the six marks (`91dec69`, live). **Three faults, all
+fixed the same day**, none of them introduced by P1.e — the first predates it
+and the other two go back to the room's first layout.
+
+1. **No, you should not have to, and you could not.** A tile caps at 560px and
+   hides what overflows; the body inside it never had `min-height: 0`, so it
+   kept its full height and was simply clipped — a sixteen-row table ending
+   mid-row with nothing to scroll. The mark's body is now the one child
+   allowed to give way, and it scrolls. The title, the subtitle and the source
+   line never do: a figure whose receipts scroll out of sight is a number with
+   no time on it.
+2. **The page was not centred and the composer was.** `.r-board` capped itself
+   at 1320px with no auto margin; `.r-line` capped at the same width and
+   centred. On a wide window that put the answer hard left under a centred
+   composer. Both now sit in ONE wrapper, `.r-measure`, so they cannot drift
+   onto different axes again.
+3. **The board reserved three columns however little was in it.** Multi-column
+   balances by height, so one tall table and two short figures fill the first
+   two and leave the third empty — which is most of the space you were looking
+   at. The count is capped by the object count now, and the measure narrows
+   with it: 680px for one thing, 940 for two, 1040 for three, 1320 from four.
+
+**Held by `frontend/src/room/layout.test.ts`**, which reads the stylesheet
+rather than the screen — jsdom does no layout, so a dom test could only prove
+the attributes are there. **Not checked by eye**: there is no browser driver
+in this repo, so the rules are verified and the result is not.
 
 ### 2026-09-14 · "i dont really know what im looking at"
 

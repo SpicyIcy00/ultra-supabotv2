@@ -389,6 +389,13 @@ export default function Room() {
       <Rail busy={busy} needsYou={approvals.data?.length} onNew={clear} />
 
       <main className="r-main">
+        {/* ONE COLUMN, CENTRED, AND IT IS THE MEASURE THE COMPOSER USES.
+            A wrapper rather than a rule on every child: the reading has its
+            own measure (66ch, because it is prose) and forcing the page's
+            onto it would run his words the full width of the board. Reported
+            2026-09-14 — "at 100% size theres lots of empty space on the right
+            and its not centered". See `--measure` in room.css. */}
+        <div className="r-measure">
         {/* Above the board, always — what happened while you were away comes
             before this morning's figures, the same way a caveat does. */}
         <Noticed onLookInto={(item) => navigate(`/w/${item.thread_id}`, {
@@ -457,10 +464,11 @@ export default function Room() {
             ))}
           </div>
         )}
+        </div>
       </main>
 
       <div className="r-line-wrap">
-        <div style={{ maxWidth: 1320, margin: '0 auto' }}>
+        <div className="r-measure">
           {selection.length > 0 && (
             <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
               {selection.map((s) => (

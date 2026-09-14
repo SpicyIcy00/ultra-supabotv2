@@ -141,7 +141,11 @@ export function Board(p: BoardProps) {
   );
 
   return (
-    <div className="r-board" data-board={objects.length}>
+    // `data-rest` is how many objects are packed into columns below the lead,
+    // and the page's whole measure is set from it (room.css, `--measure`). A
+    // board of two things in a column built for six is the "lots of empty
+    // space on the right" the owner reported on 2026-09-14.
+    <div className="r-board" data-board={objects.length} data-rest={rest.length}>
       {/* THE CAVEATS ARE NOT DRAWN HERE any more. They belong to the turn,
           not to the board, and they go above the reading — which is above
           this (Room.tsx, `turnNotices`). A board that drew them too would
