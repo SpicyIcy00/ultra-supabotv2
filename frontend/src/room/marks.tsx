@@ -325,7 +325,11 @@ function Rows({ rows: all, meta, o, p }: { rows: Row[]; meta: Meta; o: TileProps
     if (rows.length >= 3 && distinct.size === 1 && String(rows[0][k] ?? '').length <= 24
         && readable(rows[0][k])
         && !/sales|revenue|value|total|cost|price/i.test(k)) {
-      constant.push(fmt(k, rows[0][k], unitOf(rows[0]) ?? unitOf(meta)));
+      // NAMED, because the caption now stands on its own. It used to be
+      // joined to the title and the row count, which gave a bare `0` or `7`
+      // something to lean on; since the frame took those it read as a row of
+      // loose digits.
+      constant.push(`${k.replace(/_/g, ' ')} ${fmt(k, rows[0][k], unitOf(rows[0]) ?? unitOf(meta))}`);
     } else {
       cols.push(k);
     }

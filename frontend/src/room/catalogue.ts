@@ -187,8 +187,11 @@ export function subtitleFor(meta: ToolMeta | null | undefined, rows: Row[]): str
   const parts: (string | null)[] = [];
   if (meta?.metric_label) parts.push(meta.metric_label);
   parts.push(windowLabel(meta));
+  // WHAT IT WAS MEASURED AGAINST, in the definitions' own words — and they
+  // already start with "vs" (`comparisons.*.display_name`), so prefixing one
+  // here produced "vs vs previous period". Say it as the yaml says it.
   const against = meta?.comparison?.display_name ?? null;
-  if (against) parts.push(`vs ${against}`);
+  if (against) parts.push(against);
   const unit = unitOf(rows[0]) ?? unitOf(meta);
   if (unit) parts.push(unit.toUpperCase() === 'PHP' ? '₱' : unit);
   if (rows.length > 1) parts.push(`${rows.length} rows`);

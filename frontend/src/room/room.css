@@ -209,12 +209,19 @@
     radial-gradient(70% 60% at 100% 110%,
       rgba(var(--hue), calc(var(--bloom) * 0.35)), transparent 60%);
 }
-/* `min-height: 0` is what lets a flex child SHRINK below its content, which
-   is what a scrolling body inside a capped tile depends on. Without it the
-   body keeps its full height, the tile's `overflow: hidden` clips it, and a
-   sixteen-row table simply ends mid-row with nothing to scroll — reported
-   2026-09-14, "should i be able to scroll down on this?". */
-.r-tile > * { position: relative; min-width: 0; min-height: 0; }
+/*
+ * EVERY CHILD HOLDS ITS SIZE; exactly one is allowed to give way, and it says
+ * so itself (`.r-tile > .r-mk-body`).
+ *
+ * `min-height: 0` is what lets a flex child shrink below its content, and it
+ * is what a scrolling body inside a capped tile depends on — without it the
+ * body keeps its full height and the tile's `overflow: hidden` clips it, which
+ * is the table that ended mid-row. It was put HERE first, on every child, and
+ * that was wrong: a caveat is a block of text with nowhere to scroll, so
+ * shrinking it did not hide anything, it just let the words run over the title
+ * underneath. Reported within the hour — "theres also some text overlap".
+ */
+.r-tile > * { position: relative; min-width: 0; flex: 0 0 auto; }
 
 /*
  * A SOLID TILE — the reference, and the whole of what it was for.
@@ -958,8 +965,9 @@ body.r-dragging-on .r-tile { transition: none; }
  * number with no time on it (UI rule 6). The tile caps at 560px; this is the
  * one child allowed to give way.
  */
-.r-mk-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
-.r-mk-title, .r-mk-sub, .r-tile > .r-src { flex: 0 0 auto; }
+.r-tile > .r-mk-body {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+}
 
 .r-mk { display: grid; gap: 2px; }
 

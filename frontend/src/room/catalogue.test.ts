@@ -159,12 +159,16 @@ describe('the frame a block is drawn in', () => {
   it('says metric, window and unit in the subtitle, all three off meta', () => {
     const sub = subtitleFor(
       { metric_label: 'Net sales', metric_unit: 'PHP', window: { name: 'last_week' },
-        comparison: { display_name: 'the week before' } } as never,
+        comparison: { display_name: 'vs the week before' } } as never,
       [{ value: 1 }, { value: 2 }],
     );
     expect(sub).toContain('Net sales');
     expect(sub).toContain('last week');
+    // The definitions' own words, not a "vs" prefixed on top of theirs —
+    // every `comparisons.*.display_name` already starts with one, which is
+    // how "vs vs previous period" reached the screen.
     expect(sub).toContain('vs the week before');
+    expect(sub).not.toContain('vs vs');
     expect(sub).toContain('₱');
     expect(sub).toContain('2 rows');
   });

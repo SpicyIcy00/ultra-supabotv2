@@ -63,6 +63,29 @@ on compose frame" does.
 
 ## Fixed
 
+### 2026-09-14 · text overlapping text
+
+> theres also some text overlap but the rest are fixed
+
+**MINE, AND AN HOUR OLD.** The fix above needed `min-height: 0` so the mark's
+body could shrink and scroll inside a capped tile — and it was put on EVERY
+child of the tile rather than on the one that scrolls. A caveat is a block of
+text with nowhere to scroll to, so shrinking it hid nothing; it just let the
+words run over the title underneath. Every child holds its size now and the
+body says otherwise itself (`.r-tile > .r-mk-body`), named with the tile so it
+wins on specificity rather than on file order.
+
+**Two more in the same screenshots, both read rather than reported.**
+
+- **"vs vs previous period"** in a subtitle. Every
+  `comparisons.*.display_name` in the definitions already starts with "vs",
+  and P1.e prefixed another. Say it as the yaml says it.
+- **A table's caption as a row of loose digits** — `OPUS · 0 · 2026-09-13 · 7
+  · 2026-09-07 · 7 · 7 · 7`. A column with one value on every row is a fact
+  about the table, said once above it; it used to be joined to the title and
+  the row count, which gave a bare `0` something to lean on. The frame took
+  those, so the values are named now: `store OPUS · on order 0`.
+
 ### 2026-09-14 · the table is cut off, and the page sits left
 
 > should i be able to scroll down on this? and at 100% size theres lots of

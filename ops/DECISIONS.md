@@ -3797,3 +3797,12 @@ other half — a sixteen-row table ending mid-row. `overflow: hidden` and a
 title, subtitle and source line stay put: receipts that scroll out of sight
 are UI rule 6 broken. Held by `layout.test.ts`, which reads the stylesheet,
 because jsdom does no layout and a dom test could only prove the attributes.
+
+**`min-height: 0` went on every tile child and should have gone on one.**
+2026-09-14, an hour after the fix that needed it: a caveat is text with
+nowhere to scroll, so letting it shrink hid nothing and ran its words over
+the title. Every child holds its size; `.r-tile > .r-mk-body` says otherwise
+itself, named with the tile so it wins on specificity rather than file order.
+Two more read out of the same screenshots: `comparisons.*.display_name`
+already starts with "vs" and P1.e prefixed another, and a table's constant
+columns now name themselves, because the frame took the title they leant on.

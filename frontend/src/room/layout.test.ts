@@ -83,22 +83,26 @@ describe('the page is centred on one measure', () => {
 });
 
 describe('a long body scrolls inside its tile', () => {
-  it('lets a flex child shrink, which is what makes the scroll possible', () => {
-    // Without `min-height: 0` the body keeps its full height, the tile's
-    // `overflow: hidden` clips it, and a sixteen-row table ends mid-row.
-    expect(rule('.r-tile > *')).toContain('min-height: 0');
+  it('lets exactly ONE child shrink, and it is the mark body', () => {
+    // THE BUG THIS HOLDS, and it lasted an hour. `min-height: 0` is what lets
+    // a flex child shrink below its content, and the scrolling body needs it.
+    // It was put on EVERY child of the tile, so a caveat — a block of text
+    // with nowhere to scroll — shrank too, and its words ran over the title
+    // underneath. Every child holds its size; the body says otherwise itself.
+    expect(rule('.r-tile > *')).toContain('flex: 0 0 auto');
+    expect(rule('.r-tile > *')).not.toContain('min-height: 0');
     expect(rule('.r-tile')).toContain('overflow: hidden');
     expect(rule('.r-tile')).toContain('max-height: 560px');
   });
 
   it('scrolls the mark and never the title, the subtitle or the source line', () => {
-    const body = rule('.r-mk-body');
+    const body = rule('.r-tile > .r-mk-body');
     expect(body).toContain('overflow-y: auto');
     expect(body).toContain('min-height: 0');
     expect(body).toContain('flex: 1 1 auto');
-    // A figure whose receipts scrolled out of sight is a number with no time
-    // on it (UI rule 6).
-    expect(rule('.r-mk-title, .r-mk-sub, .r-tile > .r-src')).toContain('flex: 0 0 auto');
+    // Named with the tile so it beats `.r-tile > *` on specificity rather than
+    // on which of them happens to come later in the file.
+    expect(CSS.indexOf('.r-tile > .r-mk-body')).toBeGreaterThan(-1);
   });
 
   it('draws a scrollbar you can see on the body as well as on a table', () => {
