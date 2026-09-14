@@ -1257,9 +1257,18 @@ before believing it.
       held by `tests/test_eval_checks_contract.py`, and verified by replay for
       **$0.00**: `p1f-v2.json` replays clean on `order`.
 
-      **ONE SHORTFALL BEYOND THE NUMBERS.** Nothing was rebuilt in front of
+      **TWO SHORTFALLS BEYOND THE NUMBERS.** Nothing was rebuilt in front of
       the owner — the third card running. The evidence is the recorded run,
       the replay and the suites, not his screen.
+
+      **And a live suite was started a second time BY ACCIDENT**, to re-read a
+      summary that was already sitting in `verification/p1f-v2.json`. It was
+      killed inside a minute, which is why there is no second line in
+      `spend_ledger.jsonl` — the meter writes at interpreter exit and the
+      process never reached one — so an unknown amount, one or two turns'
+      worth, was spent and is not in the ledger. **A recorded run is read from
+      its report, never by running it again**; the report holds every number
+      the summary printed and `tests/evals/corpus.py` replays it for $0.00.
 - [x] **P1.g arithmetic in prose, and a column name in the answer** — done
       2026-09-13, `c508965`. The two trust failures George filed himself
       ("and 45 others"; `warning_stock`; a forced caveat). Pure suite
