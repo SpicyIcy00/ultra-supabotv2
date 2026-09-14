@@ -100,12 +100,12 @@ from app.services.page_reader import (
     read_page,
 )
 from app.services.pin_writer import (
-    MAX_TOOL_CALLS_PER_PIN,
     PinQuotaError,
     SimilarPageError,
     create_pin,
 )
-from app.services.pin_runner import PinValidationError, run_pin, validate_calls
+from app.services.pin_runner import PinValidationError
+from app.services import replay as replay_service
 from app.services.thread_access import parent_in_thread, thread_continuable
 from app.services.workflow_runner import (
     WorkflowValidationError,
@@ -2490,42 +2490,85 @@ async def ask(
 # ---------------------------------------------------------------------------
 
 class ReplayRequest(BaseModel):
-    calls: List[HistoryCall] = Field(..., min_length=1, max_length=MAX_TOOL_CALLS_PER_PIN)
+    """
+    One stored call, one changed argument.
+
+    The call is named, not sent: `post` and `seq` address a call the loop
+    recorded, and the arguments come off that record. There is nowhere in this
+    body to put a tool name or an argument list, which is the point — the
+    endpoint used to take a whole call list from the client and run it.
+    """
+
+    post: uuid.UUID
+    seq: int = Field(..., ge=0)
+    argument: str = Field(..., min_length=1, max_length=32)
+    #: A word, a number, a list of words, or null to take the argument off.
+    #: Shape-bounded in the service against `surface.desk.replay`.
+    value: Any = None
 
 
 class ReplayOut(BaseModel):
+    """
+    The read, its receipts, and the object the board draws for it.
+
+    `status` is the pin runner's — ok, refused, unrunnable, failed — and
+    `refusal` carries the tool's own words whenever it is not ok. `recorded`
+    is the UPDATE's own answer, never an assumption: a turn whose post was
+    never written records nothing and this says so (UI rule 8).
+    """
+
     status: str
-    results: List[dict[str, Any]]
+    tool: str
+    seq: int
+    argument: str
+    #: What the stored call had, so the change itself has a receipt.
+    was: Any = None
+    value: Any = None
+    #: The arguments that actually ran, whole.
+    arguments: dict[str, Any]
+    rows: List[dict[str, Any]]
+    meta: dict[str, Any]
     notices: List[dict[str, Any]]
+    refusal: Optional[str] = None
+    #: The board frame — validated blocks from agent/default_composition, which
+    #: names a shape for rows and never says a word about them. Empty for a
+    #: refusal, for no rows, and for more rows than a screen is sent.
+    blocks: List[dict[str, Any]]
+    duration_ms: int
+    recorded: bool
     ran_at: datetime
 
 
 @router.post("/replay", response_model=ReplayOut)
 async def replay(
     request: ReplayRequest,
+    db: AsyncSession = Depends(get_db),
     user: AppUser = Depends(_george_user),
 ) -> ReplayOut:
     """
-    Re-run calls already on the workspace, over another window.
+    Re-run one stored read with ONE scope argument changed. No model.
 
     Validated exactly as a pin is before anything runs: a write, a composite,
     an unknown tool or an argument the definitions no longer accept is a 422
-    with the runner's own words. A refusal from a tool at run time — a
-    comparison over a window still in progress — is a 200 with that status on
-    the call, because the tool declining to mislead is a real answer the
-    workspace has to draw.
+    with the runner's own words, and so is an argument a replay may not change
+    at all. A post that is not the caller's, or a call that answer never kept,
+    is a 404 — not found and not yours are one answer.
+
+    A refusal from the tool at run time — a comparison over a window still in
+    progress — is a **200** carrying that status and the tool's own sentence,
+    because the tool declining to mislead is a real answer the workspace has to
+    draw rather than an error to swallow.
     """
     try:
-        calls = validate_calls([c.model_dump() for c in request.calls])
-    except PinValidationError as exc:
+        outcome = await replay_service.replay(
+            db, username=user.username, post_id=request.post, seq=request.seq,
+            argument=request.argument, value=request.value,
+        )
+    except replay_service.ReplayNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except replay_service.ReplayRefused as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    outcome = await run_pin(calls)
-    return ReplayOut(
-        status=outcome["status"],
-        results=outcome["results"],
-        notices=outcome["notices"],
-        ran_at=datetime.now(timezone.utc),
-    )
+    return ReplayOut(**outcome)
 
 
 class DeskWindowDef(BaseModel):

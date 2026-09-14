@@ -6221,19 +6221,77 @@ surface:
       never_a_figure: true
       stored_on: question_post_payload
 
-    # A replay re-runs calls already recorded, with one scope argument changed
-    # (the window), through the same validation a pin passes and the same
-    # runner a tile uses. No model. Its figures carry their own receipts and
-    # read time. It is TRANSIENT: the record of a window change is the next
-    # thing George is asked about it, which carries the window in `desk.window`
-    # and is stored like any other turn. A comparison needs a closed window,
-    # so the ribbon offers a partial preset only where the work is uncompared.
+    # A replay re-runs ONE call already recorded, with ONE scope argument
+    # changed, through the same validation a pin passes and the same runner a
+    # tile uses. No model. Its figures carry their own receipts and read time.
+    # A comparison needs a closed window, so the ribbon offers a partial preset
+    # only where the work is uncompared.
+    #
+    # THE CALL IS THE STORED ONE, NOT A CALL THE CLIENT SENDS (P1.i,
+    # 2026-09-14). A replay names an answer post and a seq; the arguments come
+    # off `payload.calls`, which the loop wrote from `dict(b.input)` — the
+    # arguments the tool accepted and answered. Everything but the one named
+    # argument is therefore the record's, and a browser holding a stale or
+    # edited copy of a call cannot put it back on screen under a receipts line.
     replay:
       model_consulted: false
       max_calls: 8
       validated_as: pin
       compared_windows_must_be_closed: true
-      recorded: transient_until_next_turn
+
+      # AND IT IS RECORDED, WHICH IT WAS NOT (P1.i). This said
+      # `transient_until_next_turn`: the window a person moved to lived in the
+      # browser and nowhere else, so a reload drew the stored window under the
+      # figures they had just changed, and nothing anywhere said the change had
+      # happened. Each replay is appended to the answer post's payload —
+      # `replays: [{seq, argument, was, value, status, at}]` — which is the
+      # same record the charted rows and the composition already live in, so a
+      # replayed figure has a receipt of its own rather than George's.
+      #
+      # APPENDED, NEVER REWRITTEN, and never on top of what he said: no key the
+      # answer already carries is touched. A post that was never written — a
+      # turn logged with logging off — simply records nothing, and the endpoint
+      # says so rather than claiming it did.
+      recorded: answer_post_payload
+      max_recorded_per_post: 40
+
+      # THE ONE ARGUMENT A REPLAY MAY CHANGE, and one per replay. Each names
+      # SCOPE — which window, which shop, how the rows are cut, how they are
+      # ordered, how many there are. None of them names a threshold, for the
+      # same reason `composition.control_arguments` does not and a workflow
+      # parameter may not: a threshold is a definition and lives in this file
+      # where it was measured.
+      #
+      # `per_tool` reads the tool's own name for its window from the map the
+      # backtest already keeps, so a tool whose window is called `lookback_days`
+      # is replayed through that and not through a `date_range` it has never
+      # had. A tool absent from that map has no window to change, and the
+      # replay is refused by name rather than inventing an argument for it.
+      arguments:
+        window:   {per_tool: workflows.backtest.window_arguments}
+        store:    {path: [filters, store]}
+        group_by: {path: [group_by]}
+        rank_by:  {path: [rank_by]}
+        top_n:    {path: [top_n]}
+
+      # A CONTROL NAMES THE TOOL'S ARGUMENT; A REPLAY NAMES THE SCOPE. A drawn
+      # control is replayed by tapping it, and `composition.control_arguments`
+      # is the vocabulary George composes one in — `date_range`, the tool's own
+      # argument. This says which replay argument each of those IS, so the
+      # translation lives here rather than in a component quietly holding its
+      # own copy of both lists. Every control argument must appear.
+      from_control:
+        date_range: window
+        top_n: top_n
+
+      # What a replayed value may BE, structurally. Not a vocabulary — the
+      # closed vocabularies are the tool schemas', and the values are the
+      # tools' own business (pin_runner: "value-level validation stays INSIDE
+      # the tools"). This is only the bound that stops a client posting
+      # something no argument could be.
+      value_shapes: [string, integer, list_of_strings, "null"]
+      max_value_length: 120
+      max_list_values: 12
 
     # What the business looks like BEFORE anything is asked: one grouped read
     # per resting field, replayed deterministically when the desk opens. A

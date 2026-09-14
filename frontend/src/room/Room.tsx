@@ -22,7 +22,7 @@ import type { AnswerTurn, Dimension } from './data';
 import { Board, turnNotices } from './render';
 import { Reading, ReadingNext } from './Reading';
 import { Earlier } from './Earlier';
-import { replayCalls } from '../services/deskApi';
+import { replayStoredCall } from '../services/deskApi';
 import type { ToolCall } from '../types/george';
 import { Noticed } from './Noticed';
 import { Working } from './Working';
@@ -55,10 +55,15 @@ export default function Room() {
   // rearranging safe to try.
   const [history, setHistory] = useState<Record<string, Local>[]>([]);
   const [focused, setFocused] = useState<string | null>(null);
-  // Reads re-run because somebody moved a control, by seq. TRANSIENT and
-  // deliberately not sent back to George as though he had decided it: the
-  // record of the change is the next question, which carries the window on
-  // the desk (metrics.yaml surface.desk.replay).
+  // Reads re-run because somebody moved a control, by seq. Deliberately not
+  // sent back to George as though he had decided it: what he is told is the
+  // window on the desk, on the next question (metrics.yaml surface.desk.replay).
+  //
+  // ON SCREEN THIS IS STILL PER-SESSION, and the record is not (P1.i). The
+  // server now appends each change to the answer post, so a replayed figure
+  // has a receipt; nothing reads that back onto the board yet, so a reload
+  // still draws the stored window. Restoring from it is P1.j's, where a
+  // replay becomes the ordinary way the board moves.
   const [retuned, setRetuned] = useState<Record<number, ToolCall>>({});
 
   // WHAT NEEDS A DECISION. Read, never assumed: the rail draws a count only
@@ -237,28 +242,40 @@ export default function Room() {
   // names with one scope argument changed, on the pin runner's path, and every
   // object drawn from that read follows — which is what makes it one change
   // rather than a screen full of them.
+  //
+  // THE CALL IS NAMED, NOT SENT (P1.i). The request carries the answer post
+  // and the call's seq; the server reads the arguments off what the loop
+  // recorded. This used to post the whole call — tool and arguments — from
+  // the browser's own copy, which meant a figure could reach the screen under
+  // a receipts line without any record that it was ever read that way.
   const retune = useCallback(async (key: string, argument: string,
                                     value: string | number) => {
     const object = board.find((o) => o.key === key);
-    const call = object?.seq === undefined ? null
-      : answers[object.turn]?.toolCalls.find((c) => c.seq === object.seq) ?? null;
-    if (!object || !call) return;
+    const turn = object?.turn === undefined ? null : answers[object.turn] ?? null;
+    const call = object?.seq === undefined || !turn ? null
+      : turn.toolCalls.find((c) => c.seq === object.seq) ?? null;
+    const post = turn?.post?.answer_post_id ?? null;
+    // No post means the turn was never logged, so there is no stored call to
+    // run again. The control does not move rather than running the browser's
+    // copy of it.
+    if (!object || !call || !post) return;
     try {
-      const out = await replayCalls([{
-        tool: call.tool,
-        arguments: { ...call.arguments, [argument]: value },
-      }]);
-      const first = out.results?.[0];
-      // `status`, not `state` — PinCallResult's field. Written wrong, this
-      // was always truthy-unequal to 'ok', so every control click returned
-      // here and the chips did nothing at all.
-      if (!first || first.status !== 'ok') return;
+      // The control's own name for its argument travels as it is: the two
+      // vocabularies meet in metrics.yaml (surface.desk.replay.from_control),
+      // never in a component holding a copy of both lists.
+      const out = await replayStoredCall(post, object.seq as number, argument, value);
+      // `status`, not `state` — the runner's field. Written wrong, this was
+      // always truthy-unequal to 'ok', so every control click returned here
+      // and the chips did nothing at all.
+      if (out.status !== 'ok') return;
       setRetuned((s) => ({
         ...s,
         [object.seq as number]: {
           ...call,
-          arguments: { ...call.arguments, [argument]: value },
-          result: { rows: first.rows ?? [], meta: first.meta ?? {} },
+          // The arguments that RAN, as the server resolved them — not the
+          // ones this component thought it was asking for.
+          arguments: out.arguments,
+          result: { rows: out.rows ?? [], meta: out.meta ?? {} },
         } as ToolCall,
       }));
     } catch {

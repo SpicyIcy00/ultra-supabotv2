@@ -3871,3 +3871,14 @@ tells the model the rule — it never did. Replayed on `p1h-v2.json`: 7 of 8
 stand, and "the other 87 products" stays refused, because 87 is arithmetic.
 A block's `claim` is untouched: that one is an annotation on a mark.
 
+
+**A replay names a stored call; it does not carry one.** 2026-09-14, P1.i.
+`POST /george/replay` took a whole call list from the request body and ran it,
+so a figure could land under a receipts line with no record it was read that
+way. It now takes `{post, seq, argument, value}` and reads the arguments off
+`payload.calls`. The five scope arguments and where each lands are in
+`surface.desk.replay`; `recorded` moved from `transient_until_next_turn` to
+`answer_post_payload`, because a window change that lives only in a browser is
+a figure with somebody else's receipt. It found `pin_runner._enum_for` taking
+the first `oneOf` enum whatever the value's shape was, which made every pin
+over an explicit `date_range` unrunnable — the card's own "August".

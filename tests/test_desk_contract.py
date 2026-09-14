@@ -14,10 +14,10 @@ FOUR THINGS UNDER TEST.
      The question post keeps the desk in its payload, so a reload restores
      the same focus from the same record.
 
-  3. The replay. `POST /george/replay` runs calls a person already has on
-     screen through the validation a pin passes and the runner a tile uses:
-     read tools only, at most the pin's own limit, no model, behind George's
-     own page gate.
+  3. The replay. `POST /george/replay` runs ONE call a person already has on
+     screen, with ONE scope argument changed, through the validation a pin
+     passes and the runner a tile uses: no model, behind George's own page
+     gate, and the call read off the record rather than taken from the body.
 
   4. Immutability. Nothing in the routes, the writer or the loop updates or
      deletes a post; the one UPDATE is the share, which changes visibility
@@ -102,14 +102,23 @@ def test_the_field_encodes_only_what_rows_carry():
     assert field["list_equivalent_required"] is True
 
 
-def test_the_replay_is_deterministic_bounded_and_transient():
+def test_the_replay_is_deterministic_bounded_and_recorded():
     replay = DESK["replay"]
     assert replay["model_consulted"] is False
     assert replay["validated_as"] == "pin"
     assert replay["compared_windows_must_be_closed"] is True
-    assert replay["recorded"] == "transient_until_next_turn"
+    # P1.i: it was `transient_until_next_turn`, which meant the window a person
+    # moved to lived in the browser and nowhere else — so a reload drew the
+    # stored window under figures they had just changed, and nothing said so.
+    assert replay["recorded"] == "answer_post_payload"
+    assert int(replay["max_recorded_per_post"]) > 0
     from app.services.pin_writer import MAX_TOOL_CALLS_PER_PIN
     assert replay["max_calls"] == MAX_TOOL_CALLS_PER_PIN
+    # Scope, never a threshold — and every control George can compose has one
+    # of these behind it, or it would draw a chip refused on every click.
+    assert set(replay["arguments"]) == {"window", "store", "group_by", "rank_by", "top_n"}
+    for control in DEFS["composition"]["control_arguments"]:
+        assert replay["from_control"][control] in replay["arguments"], control
 
 
 def test_the_rest_reads_are_calls_a_pin_could_hold():
@@ -279,55 +288,75 @@ def test_the_request_model_accepts_a_bounded_desk():
 
 # ------------------------------------------------------------- 3. the replay --
 
-def test_replay_validates_like_a_pin_and_runs_like_a_tile(monkeypatch):
+def test_replay_runs_the_stored_call_and_carries_the_service_s_refusals(monkeypatch):
     pytest.importorskip("fastapi")
+    import uuid
     from fastapi import HTTPException
     from app.api.v1.routes import george as route
 
-    ran: list = []
+    asked: list = []
 
-    async def fake_run_pin(calls):
-        ran.append(calls)
-        return {"status": "ok", "results": [{"tool": c["tool"], "arguments": c["arguments"],
-                                              "status": "ok", "duration_ms": 1, "rows": [],
-                                              "meta": {}, "notices": []} for c in calls],
-                "notices": []}
+    async def fake(db, **kw):
+        asked.append(kw)
+        return {"status": "ok", "tool": "get_sales", "seq": kw["seq"],
+                "argument": "window", "was": "last_week", "value": kw["value"],
+                "arguments": {"date_range": kw["value"]}, "rows": [], "meta": {},
+                "notices": [], "refusal": None, "blocks": [], "duration_ms": 1,
+                "recorded": True, "ran_at": __import__("datetime").datetime.now()}
 
-    monkeypatch.setattr(route, "run_pin", fake_run_pin)
-    monkeypatch.setattr(route, "validate_calls", lambda calls: [
-        {"tool": c["tool"], "arguments": c.get("arguments") or {}} for c in calls])
+    monkeypatch.setattr(route.replay_service, "replay", fake)
 
     class _User:
         username = "ice"
 
-    body = route.ReplayRequest(calls=[{"tool": "get_sales", "arguments": {
-        "group_by": ["store"], "date_range": "last_month", "compare_to": "previous_period"}}])
-    out = asyncio.run(route.replay(body, user=_User()))
-    assert out.status == "ok" and len(out.results) == 1 and out.ran_at
-    assert ran and ran[0][0]["tool"] == "get_sales"
+    post = uuid.uuid4()
+    body = route.ReplayRequest(post=post, seq=3, argument="window", value="last_month")
+    out = asyncio.run(route.replay(body, db=None, user=_User()))
+    assert out.status == "ok" and out.recorded is True and out.ran_at
+    # THE BODY NAMES A CALL; IT DOES NOT CARRY ONE. The username is the
+    # token's, and nothing in the request can influence it.
+    assert asked == [{"username": "ice", "post_id": post, "seq": 3,
+                      "argument": "window", "value": "last_month"}]
 
-    def refuse(calls):
-        from app.services.pin_runner import PinValidationError
-        raise PinValidationError("'pin_answer' is no longer one of George's tools.")
+    async def not_found(db, **kw):
+        raise route.replay_service.ReplayNotFound("No post of yours with that id.")
 
-    monkeypatch.setattr(route, "validate_calls", refuse)
+    monkeypatch.setattr(route.replay_service, "replay", not_found)
     with pytest.raises(HTTPException) as raised:
-        asyncio.run(route.replay(route.ReplayRequest(calls=[{"tool": "pin_answer", "arguments": {}}]),
-                                 user=_User()))
+        asyncio.run(route.replay(body, db=None, user=_User()))
+    assert raised.value.status_code == 404
+
+    async def refused(db, **kw):
+        raise route.replay_service.ReplayRefused("'metric' is not something a replay may change.")
+
+    monkeypatch.setattr(route.replay_service, "replay", refused)
+    with pytest.raises(HTTPException) as raised:
+        asyncio.run(route.replay(body, db=None, user=_User()))
     assert raised.value.status_code == 422
 
 
-def test_replay_is_bounded_by_the_pins_own_limit_and_gated_by_georges_page():
+def test_replay_takes_one_call_and_one_argument_and_is_gated_by_georges_page():
     pytest.importorskip("fastapi")
     from pydantic import ValidationError
     from app.api.v1.routes import george as route
-    from app.services.pin_writer import MAX_TOOL_CALLS_PER_PIN
+
+    # There is nowhere in the body to put a tool, an argument list, or a
+    # second call. That is the bound now: one stored call, one changed
+    # argument, both named rather than supplied.
+    fields = set(route.ReplayRequest.model_fields)
+    assert fields == {"post", "seq", "argument", "value"}
     with pytest.raises(ValidationError):
-        route.ReplayRequest(calls=[{"tool": "get_sales", "arguments": {}}] * (MAX_TOOL_CALLS_PER_PIN + 1))
+        route.ReplayRequest(post="not-a-post", seq=0, argument="window", value=None)
+    with pytest.raises(ValidationError):
+        route.ReplayRequest(post="11111111-1111-1111-1111-111111111111",
+                            seq=-1, argument="window", value=None)
+
     src = _ROUTE.read_text(encoding="utf-8")
-    replay_src = src.split("async def replay(", 1)[1].split("\n\n\n", 1)[0]
+    replay_src = src.split("async def replay(", 1)[1].split(chr(10) * 3, 1)[0]
     assert "Depends(_george_user)" in replay_src
-    assert "run_pin(" in replay_src
+    assert "replay_service.replay(" in replay_src
+    # The model is not consulted, and there is no path from here to it.
+    assert "anthropic" not in replay_src
 
 
 def test_the_desk_definitions_endpoint_mirrors_the_yaml():

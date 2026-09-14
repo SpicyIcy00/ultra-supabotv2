@@ -107,8 +107,8 @@ shippable. The full diagnosis is the report linked in section 6.
 | Head | **`ab01579` — pushed and live 2026-09-14.** Three commits: **the dogfood fix** — `caveat` and `next` carry any figure one of the turn's reads returned and no other (`0daa0d6`) — and the log and this file recording it (`3c9fe7c`, `ab01579`). **No migration.** Before it, `69d1fbf`; before that, `1edf8fb`, `079359f` and `8ba0080`. |
 | Live | **`ab01579`**, confirmed from `/health`: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `d2f3142f`, **no migration**. **THE SWAP WAS OBSERVED THIS TIME, AND IT COST ONE REQUEST.** The poll was started BEFORE the push, which is the thing the last row said to do: `curl` every ~4 s from 11:20:39 UTC, the push at 11:21:19, and then 200 on `69d1fbff` until **11:22:09, one 502, and 11:22:13 200 on `ab015794`** — one poll wide, 200s either side, and clean on every poll after. **Four swaps running now carry the same signature and none of them carried a migration**, so this is the plain build-swap path rather than the one the 50-minute outage on `8b0325a` lives in. That outage was migration `w7x8y9z0a1b2` applied on `8b0325a`: the first boots crashlooped, the migration did not apply, nothing was readable from outside, and it came up on a later retry. Root cause still unknown — the Railway deploy log for that build has not been read. `69b51bd` is the fix for the *invisibility*, not for the cause. Read `/health` rather than believing this row. |
 | Last deploy | `ab01579`, and before it `69d1fbf`, `1edf8fb`, `079359f` and `8ba0080` — every one live and healthy when recorded, and **four consecutive swaps have now cost one 502 each** at the moment of the swap with 200s either side. `ab01579` is the first of them where the poll was running BEFORE the push, so it is the first that is observed rather than inferred from the two on each side. The row that ended the run of five clean swaps is `91dec69`. None carried a migration, so it is not the migration path they live in — which is the one thing the 50-minute outage on `8b0325a` IS known to live in. |
-| Phase | 1 — P1.c, P1.d, P1.e, P1.f, P1.h closed; P1.i next |
-| Next card | **P1.i — the dogfood log is empty again.** **The caveat's no-digits rule was relaxed 2026-09-14**, which is the log's one Open item: `caveat` and `next` now carry any figure one of the turn's reads returned and no other (`voice.reading.slots`, `figures: returned`), checked with the matcher the answer's own gates use. Replayed against `verification/p1h-v2.json`: **7 of that run's 8 digit refusals now stand**, and the one still refused is the remainder he worked out himself — "the other 87 products". No eval was run: the replay is deterministic and the model decides nothing here. The two LENGTH refusals in the same run are untouched, and their recorded text is truncated at 200 characters, so the 320-character bound cannot be judged from the report. **P1.h closed 2026-09-14** (`5d6c250`, pushed and live): effort is per turn and rides a mid-conversation system message so the prefix cache survives; the volunteering and restatement gates delete the offending sentences instead of buying a second answer. **Median answer 27.4 → 19.0 s and corrective turns 7 → 1 across eleven questions, every trust row where it was.** The shortfall is the board: compose refused in 3 of 11 against 0, and label share 29% → 35% — a row that has read 5, 0 and 3 across three runs, so one draw does not settle it. The notice gate kept its model turn against the card's own wording, because making it deterministic forces a caveat in and that row has been clean every run; the trade is the owner's. **P1.f closed 2026-09-14** (`6fd8c00`, pushed and live since `8ba0080`): the compose vocabulary is the six marks the renderer draws plus the four kinds that are not readings, every block takes a `claim`, and the reading has three slots — claim, caveat, next. Compose was refused in **0 of 11** questions and label calls are **29%** of all calls; every trust row is where it was. **The shortfall: claim 9 of 11 and next 7 of 11**, and four of those losses are the no-digits rule refusing what he wrote — the digits question is left open, with the refused text now on the record so the next run can decide it with evidence. It also found a CHECK that was wrong: `prose.allowed_numbers` could not see a Decimal, so a purchase-plan quantity quoted exactly read as a figure no tool returned. **Nothing is Open as of 2026-09-14** — *"i dont really know what im looking at"* closed with P1.e, which is the first time the log has been empty since it was started. **The next thing he says about the board is the most valuable thing in the project**, because five of his five reported failures have now been answered and nobody has looked at the result. **P1.e closed 2026-09-14**: fourteen widget shapes became six marks, every block framed the same way round (title, subtitle off `meta`, mark, source line), colour is direction and not identity, and the caption that decoded the old bars is gone with the bars. Eight recorded runs replayed through the real renderer, 13 blocks, all six-or-fewer with a source line. It carried the eval swap: **v2 ran once for $1.51 against a $1.84 estimate, every trust row clean on all eleven scenarios, and `test_voice_evals.py` is deleted.** The one disagreement was `grounded_numerals` calling a good answer a shrug because its figures were small — fixed in the check, verified by replay for $0.00. **P1.d closed 2026-09-14**: a question sharing no subject with the board clears it, one sharing a subject transforms it, and everything the newest turn did not touch folds to one line above the reading. The case to watch when he next uses it: "and OPUS?" while looking at Rockwell now CLEARS. **P1.c closed 2026-09-14**: the reading is a region above the board, `text` and `prose` are out of the vocabulary, the two `fmt` bugs are gone, and `max_restated_sentences: 0 → 1` took the gate's cited figures from 0/4 to 4/4. The remaining cards were rewritten 2026-09-13 into the plan that reaches the Ideal UI: P1.f–P1.k, P2.a–P2.j, P3.a–P3.f, and Phase 4 sources. **P1.g closed 2026-09-13** (`c508965`), which is the log's two trust failures. P1.b closed 2026-09-13: first composed object 16.8 → 8.2 s, first visible object unmoved at 7.0 s (bounded by the first round trip; only replay, P1.i/P1.j, can reach 2 s). The bill is round trips, not cache misses. Read the note under the baseline table before reporting any Phase 1 number — the twelve it was measured on are deleted. |
+| Phase | 1 — P1.c, P1.d, P1.e, P1.f, P1.h, P1.i closed; P1.j next |
+| Next card | **P1.j — read-as tokens, and fragments that skip the model.** **P1.i closed 2026-09-14**: `POST /george/replay` now takes a stored call NAMED — `{post, seq, argument, value}` — and reads its arguments off `payload.calls`, so the one thing a client can change is the one argument it asked to change; it used to take a whole call list from the body and run it. **"last week" → "August" on the stored OPUS call is 0.46 s median against a 1.5 s budget**, receipts carrying the new window and the shop; a window still in progress is refused in **0.00 s**, before a connection opens, in the tool's own sentence naming `this_month` and `last_month`. The changed argument is appended to the answer post (`surface.desk.replay.recorded` went from `transient_until_next_turn` to `answer_post_payload`), capped and ordered, touching no key the answer carries. **It found a live bug**: `pin_runner._enum_for` took the first `oneOf` branch carrying an enum whatever the value's shape was, so an explicit `date_range` pair — which is what "August" is — was refused as an invalid preset, and every pin over an explicit window was unrunnable. **The shortfall: nothing reads the record back**, so a reload still draws the stored window, and the `blocks` the endpoint returns are used by nothing — both are P1.j. No eval, $0.00: the only definitions touched are under `surface.desk.replay`, which the prompt does not read, and `SYSTEM_PROMPT` is unchanged at 1,798 words. **P1.i — the dogfood log is empty again.** **The caveat's no-digits rule was relaxed 2026-09-14**, which is the log's one Open item: `caveat` and `next` now carry any figure one of the turn's reads returned and no other (`voice.reading.slots`, `figures: returned`), checked with the matcher the answer's own gates use. Replayed against `verification/p1h-v2.json`: **7 of that run's 8 digit refusals now stand**, and the one still refused is the remainder he worked out himself — "the other 87 products". No eval was run: the replay is deterministic and the model decides nothing here. The two LENGTH refusals in the same run are untouched, and their recorded text is truncated at 200 characters, so the 320-character bound cannot be judged from the report. **P1.h closed 2026-09-14** (`5d6c250`, pushed and live): effort is per turn and rides a mid-conversation system message so the prefix cache survives; the volunteering and restatement gates delete the offending sentences instead of buying a second answer. **Median answer 27.4 → 19.0 s and corrective turns 7 → 1 across eleven questions, every trust row where it was.** The shortfall is the board: compose refused in 3 of 11 against 0, and label share 29% → 35% — a row that has read 5, 0 and 3 across three runs, so one draw does not settle it. The notice gate kept its model turn against the card's own wording, because making it deterministic forces a caveat in and that row has been clean every run; the trade is the owner's. **P1.f closed 2026-09-14** (`6fd8c00`, pushed and live since `8ba0080`): the compose vocabulary is the six marks the renderer draws plus the four kinds that are not readings, every block takes a `claim`, and the reading has three slots — claim, caveat, next. Compose was refused in **0 of 11** questions and label calls are **29%** of all calls; every trust row is where it was. **The shortfall: claim 9 of 11 and next 7 of 11**, and four of those losses are the no-digits rule refusing what he wrote — the digits question is left open, with the refused text now on the record so the next run can decide it with evidence. It also found a CHECK that was wrong: `prose.allowed_numbers` could not see a Decimal, so a purchase-plan quantity quoted exactly read as a figure no tool returned. **Nothing is Open as of 2026-09-14** — *"i dont really know what im looking at"* closed with P1.e, which is the first time the log has been empty since it was started. **The next thing he says about the board is the most valuable thing in the project**, because five of his five reported failures have now been answered and nobody has looked at the result. **P1.e closed 2026-09-14**: fourteen widget shapes became six marks, every block framed the same way round (title, subtitle off `meta`, mark, source line), colour is direction and not identity, and the caption that decoded the old bars is gone with the bars. Eight recorded runs replayed through the real renderer, 13 blocks, all six-or-fewer with a source line. It carried the eval swap: **v2 ran once for $1.51 against a $1.84 estimate, every trust row clean on all eleven scenarios, and `test_voice_evals.py` is deleted.** The one disagreement was `grounded_numerals` calling a good answer a shrug because its figures were small — fixed in the check, verified by replay for $0.00. **P1.d closed 2026-09-14**: a question sharing no subject with the board clears it, one sharing a subject transforms it, and everything the newest turn did not touch folds to one line above the reading. The case to watch when he next uses it: "and OPUS?" while looking at Rockwell now CLEARS. **P1.c closed 2026-09-14**: the reading is a region above the board, `text` and `prose` are out of the vocabulary, the two `fmt` bugs are gone, and `max_restated_sentences: 0 → 1` took the gate's cited figures from 0/4 to 4/4. The remaining cards were rewritten 2026-09-13 into the plan that reaches the Ideal UI: P1.f–P1.k, P2.a–P2.j, P3.a–P3.f, and Phase 4 sources. **P1.g closed 2026-09-13** (`c508965`), which is the log's two trust failures. P1.b closed 2026-09-13: first composed object 16.8 → 8.2 s, first visible object unmoved at 7.0 s (bounded by the first round trip; only replay, P1.i/P1.j, can reach 2 s). The bill is round trips, not cache misses. Read the note under the baseline table before reporting any Phase 1 number — the twelve it was measured on are deleted. |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
@@ -1391,14 +1391,68 @@ before believing it.
 
       Suites exact: **1,569 pure** (was 1,542), **903 vitest**, `tsc -b` and
       `build` clean. No frontend file was touched.
-- [ ] **P1.i replay: the endpoint** — `POST /george/replay`: a stored call
-      with ONE argument changed among those the tool accepts (window, store,
-      group_by, rank_by, top_n), run as `george_ro`, returning `{rows, meta}`
-      and a board frame; no model; refusals in the tool's words; the changed
-      argument recorded on the post. Done when: "last week" → "August" on the
-      stored OPUS call returns in < 1.5 s with correct receipts; an
-      in-progress window is refused by name; contract tests hold both. No
-      eval.
+- [x] **P1.i replay: the endpoint** — **CLOSED 2026-09-14.**
+      `POST /george/replay` takes a stored call NAMED, not sent: `{post, seq,
+      argument, value}`. The arguments come off `payload.calls` — what the
+      loop recorded from `dict(b.input)` — so the only thing a client can
+      change is the one argument it asked to change. **It used to take a whole
+      call list from the request body and run it**, which meant a figure could
+      reach the screen under a receipts line with no record that it was ever
+      read that way.
+
+      **The five are `surface.desk.replay.arguments` and say where each
+      lands**: `window` through the per-tool map the backtest already keeps
+      (`get_dead_stock` is `window`, `get_purchase_plan` is `lookback_days`),
+      `store` into `filters.store`, the other three by their own names. `null`
+      takes an argument OFF rather than passing a null into a tool that never
+      asked for one, and an empty `filters` goes with it. A control's own name
+      resolves through `from_control` before anything runs, so the two
+      vocabularies meet in the yaml and not in a component.
+
+      **THE NUMBERS, live against real data** (`tests/test_replay_live.py`,
+      13 tests): "last week" → "August" on the stored OPUS call is **0.46 s
+      median against the 1.5 s budget** (0.44–0.49 across four argument kinds),
+      with `2026-08-01`/`2026-09-01` in `filters_applied`, `last_week` gone
+      from it, OPUS still on it, and a snapshot timestamp. A window still in
+      progress is refused in **0.00 s** — before a connection is opened — in
+      the tool's own sentence naming `this_month` AND `last_month`. The
+      endpoint adds two application-database statements around the read,
+      measured at **33 ms each** from here.
+
+      **IT FOUND A LIVE BUG AND THE CARD COULD NOT HAVE PASSED WITHOUT IT.**
+      `pin_runner._enum_for` took the FIRST `oneOf` branch carrying an enum
+      whatever the value's shape was, so `date_range: ["2026-08-01",
+      "2026-09-01"]` — the explicit half-open window the tool documents — was
+      refused as `'2026-08-01' is no longer a valid value`. Every pin over an
+      explicit window was unrunnable too. The branch is now chosen by the
+      value's shape.
+
+      **The record is `answer_post_payload`, not `transient_until_next_turn`**:
+      each replay appends `{seq, tool, argument, was, value, status, at}` to
+      the post, capped at 40, ordered, touching no key the answer carries —
+      proved against Postgres over literals, which is the half a stubbed
+      session cannot check. `recorded` is the UPDATE's own rowcount, so a turn
+      whose post was never written says false rather than claiming otherwise
+      (UI rule 8).
+
+      **THE SHORTFALL: nothing reads the record back.** A reload still draws
+      the stored window, because restoring a replay onto the board is P1.j,
+      where a tap becomes the ordinary way the board moves. The `blocks` the
+      endpoint returns — `default_composition` over the replayed rows, `key`
+      `read-{seq}`, no claim and no emphasis — are on the response and used by
+      nothing yet, for the same reason.
+
+      **No eval, $0.00, and the reason rather than the assertion**: the only
+      definitions changed are under `surface.desk.replay`, which
+      `_desk_section` does not read (it reads `direct_manipulation` and
+      `selection.dimensions`); `SYSTEM_PROMPT` is byte-identical at 1,798
+      words and contains no occurrence of "replay"; no tool schema, tool
+      docstring or compose vocabulary moved.
+
+      Suites exact: **1,623 pure** (was 1,575), **903 vitest** (unchanged —
+      no frontend test covered the replay call and the two that changed are
+      Python), `tsc -b` and `build` clean, **13 live** in
+      `tests/test_replay_live.py`.
 - [ ] **P1.j read-as tokens, and fragments that skip the model** — the
       arguments the loop accepted drawn as tokens under every ask; a tap is a
       replay. NAVIGATION fragments ("last month", a tapped shop, the window
@@ -1657,7 +1711,7 @@ of this plan, with every card's prompt, is **George, The Build Plan** in §6.
 Run from the repo root. The interpreter is `.venv\Scripts\python.exe`; a system
 `python` cannot import the backend (pinned SQLAlchemy).
 
-    .venv\Scripts\python.exe ops/verify_integration.py pure     # 1,575 expected
+    .venv\Scripts\python.exe ops/verify_integration.py pure     # 1,623 expected
     .venv\Scripts\python.exe ops/sweep_gaps.py --days 7
     .venv\Scripts\python.exe ops/cost_report.py --days 7
 

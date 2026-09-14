@@ -1,14 +1,14 @@
 /**
  * The desk's two reads that are not George: the definitions it is drawn
- * from, and a replay of calls already on screen.
+ * from, and a replay of one call already on screen.
  *
  * Bare axios, matching pinsApi and riverApi. Both routes sit behind George's
  * own page gate. Neither consults a model: the definitions are metrics.yaml
- * served, and a replay is the pin runner over calls a pin could hold.
+ * served, and a replay is the pin runner over a call the loop recorded.
  */
 import axios from 'axios';
-import type { DeskDimension, GeorgeNotice } from '../types/george';
-import type { PinCallResult, PinToolCall } from '../types/pins';
+import type { CompositionBlock, DeskDimension, GeorgeNotice, ToolMeta } from '../types/george';
+import type { PinStatus, PinToolCall } from '../types/pins';
 
 const API_BASE = '/api/v1/george';
 
@@ -50,19 +50,45 @@ export const readDeskDefinitions = async (): Promise<DeskDefinitions> => {
   return data;
 };
 
-/** Mirrors ReplayOut. The same per-call shape a pin run returns. */
+/** Mirrors ReplayOut in backend/app/api/v1/routes/george.py. */
 export interface ReplayOut {
-  status: string;
-  results: PinCallResult[];
+  status: PinStatus;
+  tool: string;
+  seq: number;
+  argument: string;
+  /** What the stored call had, so the change itself has a receipt. */
+  was: unknown;
+  value: unknown;
+  arguments: Record<string, unknown>;
+  rows: Record<string, unknown>[];
+  meta: ToolMeta;
   notices: GeorgeNotice[];
+  /** The tool's own words when it refused. Never rephrased here. */
+  refusal: string | null;
+  /**
+   * The board frame: validated blocks from the same default composer the loop
+   * uses, which names a shape for rows and never a word about them. Empty for
+   * a refusal, for no rows, and for more rows than a screen is sent.
+   */
+  blocks: CompositionBlock[];
+  duration_ms: number;
+  /** Whether the change reached the post. False is a real outcome, not a failure. */
+  recorded: boolean;
   ran_at: string;
 }
 
 /**
- * Re-run calls already on the workspace. Validated as a pin is; a tool's
- * refusal comes back as a status on the call, never as a failed request.
+ * Run ONE stored read again with ONE scope argument changed. No model.
+ *
+ * The call is NAMED, not sent: `post` and `seq` address a call the loop
+ * recorded, and every argument but the changed one comes off that record. A
+ * tool's refusal comes back as a status and its own sentence, never as a
+ * failed request.
  */
-export const replayCalls = async (calls: PinToolCall[]): Promise<ReplayOut> => {
-  const { data } = await axios.post<ReplayOut>(`${API_BASE}/replay`, { calls });
+export const replayStoredCall = async (
+  post: string, seq: number, argument: string, value: unknown,
+): Promise<ReplayOut> => {
+  const { data } = await axios.post<ReplayOut>(
+    `${API_BASE}/replay`, { post, seq, argument, value });
   return data;
 };

@@ -154,7 +154,7 @@ def validate_call(call: Any) -> tuple[str, dict]:
     # automatically rather than failing later inside the tool.
     schema = _schema_for(name)
     for arg, value in args.items():
-        allowed = _enum_for(schema, arg)
+        allowed = _enum_for(schema, arg, value)
         if allowed is None or value is None:
             continue
         offered = value if isinstance(value, list) else [value]
@@ -186,20 +186,43 @@ def _schema_for(name: str) -> dict:
     return {}
 
 
-def _enum_for(schema: dict, arg: str) -> Optional[list]:
-    """The closed vocabulary for one parameter, if it has one."""
+def _enum_for(schema: dict, arg: str, value: Any) -> Optional[list]:
+    """
+    The closed vocabulary THIS VALUE is measured against, if there is one.
+
+    A `oneOf` parameter has one vocabulary per branch and a value belongs to
+    exactly one of them, so the branch is chosen by the value's SHAPE — a list
+    against the array branch, anything else against the scalar one. None means
+    the branch the value is in has no closed vocabulary, and the tool validates
+    it (the rule at the top of this module).
+
+    CORRECTED P1.i, 2026-09-14, and the bug was live. This took the FIRST
+    branch carrying an enum whatever the value looked like, so `date_range`
+    was always measured against the preset names — and `date_range:
+    ["2026-08-01", "2026-09-01"]`, the explicit half-open window the tool
+    documents and accepts, was refused as `'2026-08-01' is no longer a valid
+    value`. A pin over an explicit window was unrunnable, and so was a replay
+    to a named month, which is this card's own Done-when.
+    """
     prop = (schema.get("input_schema", {}).get("properties", {}) or {}).get(arg)
     if not isinstance(prop, dict):
         return None
     if "enum" in prop:
         return prop["enum"]
-    # group_by and date_range are oneOf; take the string branch's enum.
-    for branch in prop.get("oneOf", []):
-        if isinstance(branch, dict) and "enum" in branch:
-            return branch["enum"]
-        items = (branch or {}).get("items")
-        if isinstance(items, dict) and "enum" in items:
-            return items["enum"]
+    branches = [b for b in prop.get("oneOf", []) or [] if isinstance(b, dict)]
+    if not branches:
+        return None
+    wants_array = isinstance(value, list)
+    for branch in branches:
+        is_array = branch.get("type") == "array" or "items" in branch
+        if is_array != wants_array:
+            continue
+        if is_array:
+            items = branch.get("items")
+            return items.get("enum") if isinstance(items, dict) else None
+        return branch.get("enum")
+    # No branch has this value's shape. Not this function's refusal to make —
+    # the tool says what it accepts, in its own words.
     return None
 
 
