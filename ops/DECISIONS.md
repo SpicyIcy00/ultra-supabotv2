@@ -9,6 +9,26 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-14 — P1.✓: three of eight, and a measure that stopped measuring
+
+Phase 1 met three targets and missed five, and four of the five misses are one
+fact: a question reaches the model, the model reads, then it thinks about what
+came back. 17.1 s and 3.0 round trips are what that costs. **No card left in
+this plan can reach < 10 s on a question**, and the honest reading of the
+phase's central assumption is that latency was worth attacking — 27.4 → 17.1
+— and was never the whole complaint.
+
+**Label share is retired as a target in that form.** It read 36% today against
+29% at P1.f while the label calls FELL 13 → 10; total calls fell faster. A
+ratio whose denominator is reads goes the wrong way when George reads less,
+which is the behaviour the phase was buying. Count it per turn or not at all.
+
+**A report that cannot say whether it passed is not a record.** `passed` is
+written `False` before the assertions run, so every v2 report on disk claims
+eleven failures over runs pytest scored 11/11 — and "read a recorded eval,
+never re-run it" rests on the file being readable. Left as a card, because
+changing it changes what four existing reports mean.
+
 ## 2026-09-14 — P1.j: the vocabulary is what is on screen
 
 A typed fragment resolves ONLY against the tokens drawn, and that is the whole

@@ -39,7 +39,8 @@ GATE_USD = 0.64      # measured at P1.g, 2026-09-13
 FULL_USD = 1.51      # MEASURED at P1.e, 2026-09-14 — verification/p1e-v2.json,
                      # 11 turns, nothing unscored. Was 1.84, an estimate.
 
-WORDS = {1: "One", 2: "Two", 3: "Three", 4: "Four", 5: "Five", 6: "Six", 7: "Seven",
+WORDS = {0: "No",        # a phase with nothing left open, first needed at P1.✓
+         1: "One", 2: "Two", 3: "Three", 4: "Four", 5: "Five", 6: "Six", 7: "Seven",
          8: "Eight", 9: "Nine", 10: "Ten", 11: "Eleven", 12: "Twelve",
          13: "Thirteen", 14: "Fourteen", 15: "Fifteen", 16: "Sixteen",
          17: "Seventeen", 18: "Eighteen", 19: "Nineteen",

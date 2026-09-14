@@ -107,8 +107,8 @@ shippable. The full diagnosis is the report linked in section 6.
 | Head | **`1267b52` — pushed and live 2026-09-14.** One commit: P1.k (`1267b52`). **No migration.** Before it, `41762a0`, a docs-only record of the previous deploy. A docs commit recording this deploy sits above this row and is docs-only. |
 | Live | **`1267b521`**, confirmed from `/health`: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `ee4a3514`, `schema_checked: cached`, `george_pool` cap 8 with nothing in use, **no migration**. **THE SWAP COST FOUR CONSECUTIVE 502s — the worst of the eight watched, and worse again than the last one.** One poll was running before the push and reads to the second: 200 on `41762a05` through 13:36:41 UTC, the push at 13:35:57, **502 at 13:36:43, 13:36:46, 13:36:48 and 13:36:51**, and **200 on `1267b521` at 13:36:53** — 56 s from push to swap, exactly `e1ceb5e`'s 56 s, so the swap is not slower; the window in which it answers 502 is longer. **~12 s of observed outage against ~9 s on `e1ceb5e` and ~3 s on the four before it**, and nothing in this card touches the deploy path or the backend at all — it is frontend, definitions and tests. Two deploys in a row getting worse is now a trend worth a card rather than a note, and the 50-minute outage on `8b0325a` remains the migration path and is still unexplained. Read `/health` rather than believing this row. |
 | Last deploy | `1267b52`, and before it `e1ceb5e`, `9261c2e`, `ab01579`, `69d1fbf`, `1edf8fb`, `079359f` and `8ba0080`. **The 502 count per swap now reads 1, 1, 1, 1, 0, 2, 4 in order** — one poll each for the four oldest watched, none on `9261c2e`, two on `e1ceb5e`, four on this one. None of the eight carried a migration, so none of them is the path the 50-minute outage on `8b0325a` lives in. |
-| Phase | 1 — P1.c, P1.d, P1.e, P1.f, P1.h, P1.i, P1.j, P1.k closed; **P1.✓ next, and it is the last card of the phase** |
-| Next card | **P1.✓ — close the phase.** **P1.k closed 2026-09-14**: the work outlives the turn. One line above the claim carries four counts off the turn's own frames — reads that landed, calls made, the turn's clock, caveats raised — and the steps unfold under it, each with its own `duration_ms` off its own `tool_result` frame, each opening on its own receipts. Until today the trail vanished the instant the answer landed. **Behind it** is a view on the THREAD: every read with its source, its filters and the moment it was read, and **16 of 16 reads in the eight recorded runs draw all three**. **75 of the 79 filters carry the definition that applied them** — drawn as "stores active retail" with the predicate beneath — and the other four are lines the tools wrote as words with no `#` at all, drawn whole; the split is on the `#` the tools write and never on a guess about which half reads as English. **A figure in the claim that some read returned is underlined and jumps to that read**, matched by the server's own rule ported to the client (`figures.ts` from `agent/prose.py`, constants compared by value in the contract test); **a numeral no read holds gets no underline**, because an underline is a promise there is something behind it. **"Nothing model-written in a mono line" is a scan**: the test reads `room.css` for every class whose rule sets `var(--mono)` and fails if one carries a word of his that appears nowhere in the turn's frames. **The shortfall: a declined read has no receipts and cannot** — the 16 of 16 is over reads that LANDED; a refused one is drawn as refused in the tool's own sentence and claims nothing. **And the per-call clock is not in a recorded run**, so the durations are held by the frame type and a fixture rather than by the replay. No eval, $0.00: `SYSTEM_PROMPT` is byte-identical at 1,798 words and the 16 tool schemas hash the same before and after. **P1.j closed 2026-09-14**: the scope the work is on is drawn between the reading and the board — window, shop, cut, how many — read off `payload.calls`; tapping a token and typing one of the same words are the same act through the same path, and neither costs a model turn. **A navigation fragment over two reads is 727 ms median against a 2 s budget** (529 ms over one), and an analytical one has its figure in **614 ms**, measured live through `tests/evals/timing.py fragment_change_ms` — the slowest of the batch, because a board half on August and half on last week has not changed, it has broken. **A fragment resolves only against the tokens ON SCREEN** and the words each answers to are served (`tokens.spoken`): no stemmer, no fuzzy match, and an ambiguity goes to George, so the failure mode of the feature is a model turn. **It found three bugs.** `net_sales` declines a product grouping — it is transaction grain, and the ladder localizes by product through a different METRIC, which a replay cannot reach — so a `group_by` token offers only what the call's own metric permits and **"products" on a sales board is still George's question**. **The replay endpoint was sending rows the loop would have withheld**: over `MAX_ROWS_TO_CLIENT` the loop sends none, and this sent 200 whole, so moving a window on a day-grouped read over a year put 365 rows into a mark drawn over twelve. And `retuned` was keyed by `seq` alone, which restarts every turn, so a replay on turn three redrew turn one's object with turn three's rows. **P1.i's two shortfalls are closed**: the record is read back on opening — run again, never from a copy, because a number wears the time it was read — and the endpoint's `blocks` redraw an object whose rows changed shape. **The shortfall: "why?" is not under 2 s and cannot be** — it names no scope, the ladder answers it from the metric's declared drivers, and that is a different call; and a tapped shop in the rows is still a selection. No eval, $0.00: `SYSTEM_PROMPT` is byte-identical at 1,798 words and the tool schemas hash the same before and after. **P1.i closed 2026-09-14**: `POST /george/replay` now takes a stored call NAMED — `{post, seq, argument, value}` — and reads its arguments off `payload.calls`, so the one thing a client can change is the one argument it asked to change; it used to take a whole call list from the body and run it. **"last week" → "August" on the stored OPUS call is 0.46 s median against a 1.5 s budget**, receipts carrying the new window and the shop; a window still in progress is refused in **0.00 s**, before a connection opens, in the tool's own sentence naming `this_month` and `last_month`. The changed argument is appended to the answer post (`surface.desk.replay.recorded` went from `transient_until_next_turn` to `answer_post_payload`), capped and ordered, touching no key the answer carries. **It found a live bug**: `pin_runner._enum_for` took the first `oneOf` branch carrying an enum whatever the value's shape was, so an explicit `date_range` pair — which is what "August" is — was refused as an invalid preset, and every pin over an explicit window was unrunnable. **The shortfall: nothing reads the record back**, so a reload still draws the stored window, and the `blocks` the endpoint returns are used by nothing — both are P1.j. No eval, $0.00: the only definitions touched are under `surface.desk.replay`, which the prompt does not read, and `SYSTEM_PROMPT` is unchanged at 1,798 words. **P1.i — the dogfood log is empty again.** **The caveat's no-digits rule was relaxed 2026-09-14**, which is the log's one Open item: `caveat` and `next` now carry any figure one of the turn's reads returned and no other (`voice.reading.slots`, `figures: returned`), checked with the matcher the answer's own gates use. Replayed against `verification/p1h-v2.json`: **7 of that run's 8 digit refusals now stand**, and the one still refused is the remainder he worked out himself — "the other 87 products". No eval was run: the replay is deterministic and the model decides nothing here. The two LENGTH refusals in the same run are untouched, and their recorded text is truncated at 200 characters, so the 320-character bound cannot be judged from the report. **P1.h closed 2026-09-14** (`5d6c250`, pushed and live): effort is per turn and rides a mid-conversation system message so the prefix cache survives; the volunteering and restatement gates delete the offending sentences instead of buying a second answer. **Median answer 27.4 → 19.0 s and corrective turns 7 → 1 across eleven questions, every trust row where it was.** The shortfall is the board: compose refused in 3 of 11 against 0, and label share 29% → 35% — a row that has read 5, 0 and 3 across three runs, so one draw does not settle it. The notice gate kept its model turn against the card's own wording, because making it deterministic forces a caveat in and that row has been clean every run; the trade is the owner's. **P1.f closed 2026-09-14** (`6fd8c00`, pushed and live since `8ba0080`): the compose vocabulary is the six marks the renderer draws plus the four kinds that are not readings, every block takes a `claim`, and the reading has three slots — claim, caveat, next. Compose was refused in **0 of 11** questions and label calls are **29%** of all calls; every trust row is where it was. **The shortfall: claim 9 of 11 and next 7 of 11**, and four of those losses are the no-digits rule refusing what he wrote — the digits question is left open, with the refused text now on the record so the next run can decide it with evidence. It also found a CHECK that was wrong: `prose.allowed_numbers` could not see a Decimal, so a purchase-plan quantity quoted exactly read as a figure no tool returned. **Nothing is Open as of 2026-09-14** — *"i dont really know what im looking at"* closed with P1.e, which is the first time the log has been empty since it was started. **The next thing he says about the board is the most valuable thing in the project**, because five of his five reported failures have now been answered and nobody has looked at the result. **P1.e closed 2026-09-14**: fourteen widget shapes became six marks, every block framed the same way round (title, subtitle off `meta`, mark, source line), colour is direction and not identity, and the caption that decoded the old bars is gone with the bars. Eight recorded runs replayed through the real renderer, 13 blocks, all six-or-fewer with a source line. It carried the eval swap: **v2 ran once for $1.51 against a $1.84 estimate, every trust row clean on all eleven scenarios, and `test_voice_evals.py` is deleted.** The one disagreement was `grounded_numerals` calling a good answer a shrug because its figures were small — fixed in the check, verified by replay for $0.00. **P1.d closed 2026-09-14**: a question sharing no subject with the board clears it, one sharing a subject transforms it, and everything the newest turn did not touch folds to one line above the reading. The case to watch when he next uses it: "and OPUS?" while looking at Rockwell now CLEARS. **P1.c closed 2026-09-14**: the reading is a region above the board, `text` and `prose` are out of the vocabulary, the two `fmt` bugs are gone, and `max_restated_sentences: 0 → 1` took the gate's cited figures from 0/4 to 4/4. The remaining cards were rewritten 2026-09-13 into the plan that reaches the Ideal UI: P1.f–P1.k, P2.a–P2.j, P3.a–P3.f, and Phase 4 sources. **P1.g closed 2026-09-13** (`c508965`), which is the log's two trust failures. P1.b closed 2026-09-13: first composed object 16.8 → 8.2 s, first visible object unmoved at 7.0 s (bounded by the first round trip; only replay, P1.i/P1.j, can reach 2 s). The bill is round trips, not cache misses. Read the note under the baseline table before reporting any Phase 1 number — the twelve it was measured on are deleted. |
+| Phase | **1 is CLOSED — P1.a through P1.k and P1.✓, every card of it.** **Phase 2 is not started, and its gate is not met**: the log's Open must be empty **five days running** and today is day one of the five (the last item closed 2026-09-14). The other three gate conditions are met or named — median 17.1 s against < 10 s with its cause on the card, a navigation fragment redraws with no model call at 760 ms, trust rows unchanged. **The Fable 5.1 review of Phase 1 has not happened**; its prompt is on the plan page and it is the owner's next act, not a session's. |
+| Next card | **P2.0 — a report says whether it passed.** It is a new card, written by this close: it costs no model spend, it does not touch the surface, and it is the right card for a session that cannot start Phase 2 yet (the gate needs four more days of an empty log; see the Phase row). **P2.a is the first Phase 2 card proper.** **P1.✓ closed 2026-09-14, and Phase 1 with it**: one full v2 run, `verification/p1close-v2.json`, **11 of 11 for $1.23 against the $1.51 estimate** — 28 calls where P1.h's run made 37. **Three of the eight Phase 1 targets were met and five were not.** Met: `compose` refused in **1 of 11** against ≤ 1, a navigation fragment redrawing with **no model call** (760 ms median over two reads, 518 ms over one, 602 ms for an analytical figure, all against a 2 s budget, measured again today), and the trust rows — **10 of 10 notices surfaced, 0 forced, 0 figures no tool returned, 0 column names, 0 attribution shares**. Missed: **median 17.1 s against < 10 s** (p90 28.3, worst 45.2 — the v2 chain is 24.1 → 27.4 → 19.0 → 17.1), **first visible change 7.3 s against < 2 s** on a model turn and 0.76 s only where there is no model, **iterations 3.0 / 4 against ≤ 2.5**, and **label share 36% against ≤ 25%** — which went the wrong way from P1.f's 29% while the label calls themselves FELL 13 → 10, because total calls fell faster, 37 → 28. **The ratio is now reporting fewer reads, not more labelling, and it should stop being a target in that form.** **The phase's own two findings are record-keeping, not behaviour.** `deterministic_edits` was never in a report: P1.h's close-out said it was, and `p1h-v2.json` was written at 18:12 against a harness that learned to keep it at 18:17 — today is the first run to carry it, **6 edits across 11 turns with 0 corrective round trips**, which is P1.h's claim finally observed. And **every report's `passed` key is a hardcoded `False`** (`tests/evals/test_voice_evals_v2.py:163`, written before the assertions run), so no recorded run can tell a reader whether it passed — the score exists only in the pytest line, which nothing stores. That directly undercuts "read a recorded eval, never re-run it". **The relaxed caveat rule is confirmed live**: digit refusals of a slot fell **8 → 2**, and the two survivors are the two the record predicted — the remainder George worked out himself ("the other 87 products") and the 320-character bound on `order`'s caveat. **The model-facing input was byte-identical to P1.h's run** (prompt 1,798 words sha `28efc756`, 16 tool schemas sha `9099fea1`), so the median moving 19.0 → 17.1 is a resample and is not claimed as an effect; what the run was actually gating is the 118 lines of `agent/` changed since. **P1.k closed 2026-09-14**: the work outlives the turn. One line above the claim carries four counts off the turn's own frames — reads that landed, calls made, the turn's clock, caveats raised — and the steps unfold under it, each with its own `duration_ms` off its own `tool_result` frame, each opening on its own receipts. Until today the trail vanished the instant the answer landed. **Behind it** is a view on the THREAD: every read with its source, its filters and the moment it was read, and **16 of 16 reads in the eight recorded runs draw all three**. **75 of the 79 filters carry the definition that applied them** — drawn as "stores active retail" with the predicate beneath — and the other four are lines the tools wrote as words with no `#` at all, drawn whole; the split is on the `#` the tools write and never on a guess about which half reads as English. **A figure in the claim that some read returned is underlined and jumps to that read**, matched by the server's own rule ported to the client (`figures.ts` from `agent/prose.py`, constants compared by value in the contract test); **a numeral no read holds gets no underline**, because an underline is a promise there is something behind it. **"Nothing model-written in a mono line" is a scan**: the test reads `room.css` for every class whose rule sets `var(--mono)` and fails if one carries a word of his that appears nowhere in the turn's frames. **The shortfall: a declined read has no receipts and cannot** — the 16 of 16 is over reads that LANDED; a refused one is drawn as refused in the tool's own sentence and claims nothing. **And the per-call clock is not in a recorded run**, so the durations are held by the frame type and a fixture rather than by the replay. No eval, $0.00: `SYSTEM_PROMPT` is byte-identical at 1,798 words and the 16 tool schemas hash the same before and after. **P1.j closed 2026-09-14**: the scope the work is on is drawn between the reading and the board — window, shop, cut, how many — read off `payload.calls`; tapping a token and typing one of the same words are the same act through the same path, and neither costs a model turn. **A navigation fragment over two reads is 727 ms median against a 2 s budget** (529 ms over one), and an analytical one has its figure in **614 ms**, measured live through `tests/evals/timing.py fragment_change_ms` — the slowest of the batch, because a board half on August and half on last week has not changed, it has broken. **A fragment resolves only against the tokens ON SCREEN** and the words each answers to are served (`tokens.spoken`): no stemmer, no fuzzy match, and an ambiguity goes to George, so the failure mode of the feature is a model turn. **It found three bugs.** `net_sales` declines a product grouping — it is transaction grain, and the ladder localizes by product through a different METRIC, which a replay cannot reach — so a `group_by` token offers only what the call's own metric permits and **"products" on a sales board is still George's question**. **The replay endpoint was sending rows the loop would have withheld**: over `MAX_ROWS_TO_CLIENT` the loop sends none, and this sent 200 whole, so moving a window on a day-grouped read over a year put 365 rows into a mark drawn over twelve. And `retuned` was keyed by `seq` alone, which restarts every turn, so a replay on turn three redrew turn one's object with turn three's rows. **P1.i's two shortfalls are closed**: the record is read back on opening — run again, never from a copy, because a number wears the time it was read — and the endpoint's `blocks` redraw an object whose rows changed shape. **The shortfall: "why?" is not under 2 s and cannot be** — it names no scope, the ladder answers it from the metric's declared drivers, and that is a different call; and a tapped shop in the rows is still a selection. No eval, $0.00: `SYSTEM_PROMPT` is byte-identical at 1,798 words and the tool schemas hash the same before and after. **P1.i closed 2026-09-14**: `POST /george/replay` now takes a stored call NAMED — `{post, seq, argument, value}` — and reads its arguments off `payload.calls`, so the one thing a client can change is the one argument it asked to change; it used to take a whole call list from the body and run it. **"last week" → "August" on the stored OPUS call is 0.46 s median against a 1.5 s budget**, receipts carrying the new window and the shop; a window still in progress is refused in **0.00 s**, before a connection opens, in the tool's own sentence naming `this_month` and `last_month`. The changed argument is appended to the answer post (`surface.desk.replay.recorded` went from `transient_until_next_turn` to `answer_post_payload`), capped and ordered, touching no key the answer carries. **It found a live bug**: `pin_runner._enum_for` took the first `oneOf` branch carrying an enum whatever the value's shape was, so an explicit `date_range` pair — which is what "August" is — was refused as an invalid preset, and every pin over an explicit window was unrunnable. **The shortfall: nothing reads the record back**, so a reload still draws the stored window, and the `blocks` the endpoint returns are used by nothing — both are P1.j. No eval, $0.00: the only definitions touched are under `surface.desk.replay`, which the prompt does not read, and `SYSTEM_PROMPT` is unchanged at 1,798 words. **P1.i — the dogfood log is empty again.** **The caveat's no-digits rule was relaxed 2026-09-14**, which is the log's one Open item: `caveat` and `next` now carry any figure one of the turn's reads returned and no other (`voice.reading.slots`, `figures: returned`), checked with the matcher the answer's own gates use. Replayed against `verification/p1h-v2.json`: **7 of that run's 8 digit refusals now stand**, and the one still refused is the remainder he worked out himself — "the other 87 products". No eval was run: the replay is deterministic and the model decides nothing here. The two LENGTH refusals in the same run are untouched, and their recorded text is truncated at 200 characters, so the 320-character bound cannot be judged from the report. **P1.h closed 2026-09-14** (`5d6c250`, pushed and live): effort is per turn and rides a mid-conversation system message so the prefix cache survives; the volunteering and restatement gates delete the offending sentences instead of buying a second answer. **Median answer 27.4 → 19.0 s and corrective turns 7 → 1 across eleven questions, every trust row where it was.** The shortfall is the board: compose refused in 3 of 11 against 0, and label share 29% → 35% — a row that has read 5, 0 and 3 across three runs, so one draw does not settle it. The notice gate kept its model turn against the card's own wording, because making it deterministic forces a caveat in and that row has been clean every run; the trade is the owner's. **P1.f closed 2026-09-14** (`6fd8c00`, pushed and live since `8ba0080`): the compose vocabulary is the six marks the renderer draws plus the four kinds that are not readings, every block takes a `claim`, and the reading has three slots — claim, caveat, next. Compose was refused in **0 of 11** questions and label calls are **29%** of all calls; every trust row is where it was. **The shortfall: claim 9 of 11 and next 7 of 11**, and four of those losses are the no-digits rule refusing what he wrote — the digits question is left open, with the refused text now on the record so the next run can decide it with evidence. It also found a CHECK that was wrong: `prose.allowed_numbers` could not see a Decimal, so a purchase-plan quantity quoted exactly read as a figure no tool returned. **Nothing is Open as of 2026-09-14** — *"i dont really know what im looking at"* closed with P1.e, which is the first time the log has been empty since it was started. **The next thing he says about the board is the most valuable thing in the project**, because five of his five reported failures have now been answered and nobody has looked at the result. **P1.e closed 2026-09-14**: fourteen widget shapes became six marks, every block framed the same way round (title, subtitle off `meta`, mark, source line), colour is direction and not identity, and the caption that decoded the old bars is gone with the bars. Eight recorded runs replayed through the real renderer, 13 blocks, all six-or-fewer with a source line. It carried the eval swap: **v2 ran once for $1.51 against a $1.84 estimate, every trust row clean on all eleven scenarios, and `test_voice_evals.py` is deleted.** The one disagreement was `grounded_numerals` calling a good answer a shrug because its figures were small — fixed in the check, verified by replay for $0.00. **P1.d closed 2026-09-14**: a question sharing no subject with the board clears it, one sharing a subject transforms it, and everything the newest turn did not touch folds to one line above the reading. The case to watch when he next uses it: "and OPUS?" while looking at Rockwell now CLEARS. **P1.c closed 2026-09-14**: the reading is a region above the board, `text` and `prose` are out of the vocabulary, the two `fmt` bugs are gone, and `max_restated_sentences: 0 → 1` took the gate's cited figures from 0/4 to 4/4. The remaining cards were rewritten 2026-09-13 into the plan that reaches the Ideal UI: P1.f–P1.k, P2.a–P2.j, P3.a–P3.f, and Phase 4 sources. **P1.g closed 2026-09-13** (`c508965`), which is the log's two trust failures. P1.b closed 2026-09-13: first composed object 16.8 → 8.2 s, first visible object unmoved at 7.0 s (bounded by the first round trip; only replay, P1.i/P1.j, can reach 2 s). The bill is round trips, not cache misses. Read the note under the baseline table before reporting any Phase 1 number — the twelve it was measured on are deleted. |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
@@ -267,16 +267,18 @@ where a regression was speculative AND **the four gate scenarios could not
 have seen it.** A new comparison (`P2.i`, `P3.f`) is a capability no gate
 scenario asks for, so a run there proves nothing; `P2.c`, `P2.d` and `P2.f`
 are context and rendering; `P1.c` breaks or fixes compose refusals, which are
-its own numbers. **Three live runs across 22 open cards, $4.53** — the three
-phase closes at $1.51 each on v2, the measured price.
-Every remaining gate was dropped or absorbed, so four FULL runs is the whole
+its own numbers. **Two live runs across 18 open cards, $3.02** — the two
+phase closes still to come, at $1.51 each on v2, the measured price.
+Every remaining gate was dropped or absorbed, so two FULL runs is the whole
 of it.
-**P1.g, P1.c, P1.e, P1.f and P1.h are closed**, and their runs cost **$0.64,
-$0.75, $1.51, $1.62 and $1.62 against $0.63, $0.63, $1.84, $1.51 and $1.51**
-— P1.h went over by the same 7% and for the same reason P1.f did: P1.g's was the first
-figure here to survive contact with a live
-run, and P1.c's overspend was a first run made with `-x`, which stops on the
-first scenario and pays for it twice. **P1.f went over by 7%, and the reason
+**P1.g, P1.c, P1.e, P1.f, P1.h and P1.✓ are closed**, and their runs cost
+**$0.64, $0.75, $1.51, $1.62, $1.62 and $1.23 against $0.63, $0.63, $1.84,
+$1.51, $1.51 and $1.51** — **P1.✓ is the second to come in UNDER**, by 19%,
+on a turn that made 28 calls where P1.h's made 37.
+P1.h went over by the same 7% and for the same reason P1.f did. P1.g's was the
+first figure here to survive contact with a live run, and P1.c's overspend was
+a first run made with `-x`, which stops on the first scenario and pays for it
+twice. **P1.f went over by 7%, and the reason
 is the card**: every turn now writes three slots as well as an answer, so
 output tokens rose. $1.51 is still the right estimate for a run that changes
 nothing about what George says. **Drop `-x` on a gate run**; four
@@ -635,6 +637,26 @@ column a Phase 1 card reports against.
 | questions where `compose` was rejected | **8 of 12** [6 of 12] | 5 of 12, 9 rejections | ≤ 1 |
 | corrective turns per turn, median | unmeasured | 0 · 5 across the twelve, worst 2 | — |
 | notices surfaced · forced · invented figures | — | 12 · 0 · 0 | unchanged |
+
+**AND WHAT THE PHASE ACTUALLY REACHED, measured at P1.✓ on 2026-09-14**
+(`verification/p1close-v2.json`, the eleven — so the last column of the table
+above is a target the twelve set and the eleven answered):
+
+| | target | **at the close** |
+|---|---|---|
+| median answer, wall-clock | < 10 s | **17.1 s** · p90 28.3 · worst 45.2 |
+| first visible change | < 2 s | **7.3 s** on a model turn · **0.76 s** on a fragment |
+| iterations per turn, median / max | ≤ 2.5 | **3.0 / 4** |
+| calls per turn, median | unchanged | **2** |
+| label calls as a share of all calls | ≤ 25% | **36%** (10 of 28) |
+| questions where `compose` was rejected | ≤ 1 | **1 of 11** |
+| notices surfaced · forced · invented figures | unchanged | **10 of 10 · 0 · 0** |
+| a navigation fragment, no model call | the third target | **760 ms** median |
+
+**Three of eight met.** The reasoning for each miss is on the P1.✓ card and is
+not repeated here; the short version is that every latency target left is
+bounded below by the first model round trip, and the label-share row now falls
+when READS fall, which is not what it was built to watch.
 
 **THE TWELVE ARE DELETED, AND THE TABLE ABOVE IS STILL THE BASELINE.** P1.e
 removed `tests/evals/test_voice_evals.py` and the suite is
@@ -1589,13 +1611,138 @@ before believing it.
 
       Suites exact: **1,657 pure** (was 1,642), **974 vitest** (was 938),
       `tsc -b` and `build` clean.
-- [ ] **P1.✓ close the phase** — every target against its number, which
-      cards paid, what did not move and why; one full run of the twelve.
-      Then a Fable 5.1 review session reads the close-outs against the code
-      and names what Phase 2 should not trust. **Gate to Phase 2:** Open
-      empty five days running; median < 10 s or the shortfall named with its
-      cause; a navigation fragment redraws with no model call; trust rows
-      unchanged.
+- [x] **P1.✓ close the phase** — **CLOSED 2026-09-14.** One full v2 run,
+      `verification/p1close-v2.json`, **11 of 11 for $1.23 against the $1.51
+      estimate** — the second eval figure in this file to come in under its
+      estimate, and the reason is two cards back: 28 calls where P1.h's run
+      made 37, and 9,870 output tokens where it wrote 13,889.
+
+      **EVERY PHASE 1 TARGET AGAINST ITS NUMBER. Three met, five not.** The
+      left column is P0.3's run of the twelve, which is deleted and cannot be
+      re-measured; the right is today's eleven. A latency figure compared
+      across two question sets is not a measurement, so the v2 chain is given
+      under the table and is the honest one.
+
+      | target | P0.3, the twelve | **today, the eleven** | met |
+      |---|---|---|---|
+      | median answer, wall-clock | 27.4 s · p90 45.1 · worst 71.8 | **17.1 s** · p90 28.3 · worst 45.2 | **no — 1.7x the < 10 s target** |
+      | first visible change | 7.0 s (P1.b) | **7.3 s** on a model turn · **0.76 s** on a fragment | **no on the turn** · yes where there is no model |
+      | iterations per turn, median / max | 5.5 / 8 | **3.0 / 4** | **no — against ≤ 2.5** |
+      | label calls as a share of all calls | 50% (28 of 56) | **36% (10 of 28)** | **no — against ≤ 25%** |
+      | questions where `compose` was refused | 5 of 12, 9 refusals | **1 of 11** | **yes — ≤ 1** |
+      | calls per turn, median | 5 | **2** | moved down; the target was "unchanged" |
+      | notices surfaced · forced · figures no tool returned | 12 · 0 · 0 | **10 of 10 · 0 · 0** | **held** |
+      | a navigation fragment answered with no model call | did not exist | **760 ms** median over two reads | **yes** |
+
+      **The v2 median chain, the same eleven questions each time: 24.1 (P1.e)
+      → 27.4 (P1.f) → 19.0 (P1.h) → 17.1 (today).** Against the twelve's
+      27.4 s the fall is 38%, and the target is still missed by 7.1 s.
+
+      **WHAT DID NOT MOVE, AND WHY — the five.**
+
+      1. **Median 17.1 s against < 10 s.** A turn is still three model round
+         trips at 4–8 s each, and nothing in this phase removed the first
+         one. P1.a took iterations 5.5 → 4.0, P1.h 4.0 → 3.0, and 3.0 is
+         where a turn that must read, then think about rows, then write,
+         sits. The cause is named rather than the number excused: **only a
+         path with no model in it gets under 10 s, and that path is
+         P1.i/P1.j, which answers a different question** — a change of scope,
+         not a question.
+      2. **First visible change 7.3 s against < 2 s**, which is P1.b's
+         finding unchanged: the board and the shaped object are both bounded
+         below by the first round trip plus the read. Today's worst is 24.1 s
+         (`order`, a purchase plan over a supplier). The 0.76 s is real and is
+         a **different act** — a fragment on work already on screen.
+      3. **Iterations 3.0 / 4 against ≤ 2.5.** Same cause as 1.
+      4. **Label share 36% against ≤ 25%, and it went the wrong way from
+         P1.f's 29% while the label calls themselves FELL 13 → 10.** Total
+         calls fell faster, 37 → 28. **The measure is now reporting fewer
+         reads rather than more labelling**, which is the opposite of what it
+         was built to watch; per TURN it is 0.9 label calls today against 1.2
+         at P1.f. Phase 2 should not read this row as a regression, and the
+         row should be counted per turn or dropped.
+      5. **The gate's own first condition: Open empty five days running.**
+         Today is **day one of five** — the last item closed 2026-09-14, hours
+         before this card. Nothing a session can do moves that.
+
+      **WHICH CARDS PAID, from `verification/spend_ledger.jsonl` and the
+      reports themselves.** P1.a's run is **unmetered** — a legacy report with
+      no `spend` key at all — and `p1b-after` is **scored-only**, so it omits
+      its setup turns the way `p1b-final` did before the meter was fixed.
+      Everything else is measured:
+
+      | card | live spend | what it bought |
+      |---|---|---|
+      | P1.a | **not recorded** | compose rejections 0.75 → 0.33 a turn |
+      | P1.b | $0.23 + $0.43 + $1.59* + **$2.90** | first COMPOSED object 16.8 → 8.2 s |
+      | P1.c | $0.25 + $0.50 | the reading left the widgets; cited figures 0/4 → 4/4 |
+      | P1.d | $0.00 | the board transforms; it never accumulates |
+      | P1.e | $1.51 | six marks; the twelve deleted for the eleven |
+      | P1.f | $1.62 | `compose` refused 0 of 11; the three slots |
+      | P1.g | $0.64 | arithmetic in prose, and a column name in the answer |
+      | P1.h | $1.62 | median 27.4 → 19.0 s; corrective turns 7 → 1 |
+      | P1.i · P1.j · P1.k | $0.00 each | replay, tokens, visible work |
+      | P1.✓ | $1.23 | this run |
+
+      **$12.52 is what the phase is RECORDED as having spent**, and the true
+      figure is higher by P1.a's whole run and by `p1b-after`'s setup turns.
+      *Starred figures are scored-only and understate. **The three $0.00 cards
+      are the phase's best trade**: each proved the model could not see its
+      change by hashing the prompt and the tool schemas, instead of buying a
+      run to discover the same thing.
+
+      **TWO FINDINGS, AND BOTH ARE RECORD-KEEPING RATHER THAN BEHAVIOUR.**
+
+      **`deterministic_edits` was never once recorded.** P1.h's close-out says
+      the number is "on the `done` frame and in the eval report";
+      `p1h-v2.json` was written at 18:12 and the harness learned to keep that
+      key at 18:17, in P1.h's own commit. The claim was true of the code and
+      false of every artifact. **Today is the first run to carry it: 6
+      deterministic edits across 11 turns, with 0 corrective round trips** —
+      P1.h's mechanism observed rather than inferred from a round-trip count.
+
+      **Every report's `passed` key is a hardcoded `False`.**
+      `tests/evals/test_voice_evals_v2.py:163` calls `report.add(...,
+      passed=False)` before the assertions run and never revises it, so all
+      four v2 reports say every scenario failed while pytest said 11 passed.
+      **A recorded run cannot tell a later reader whether it passed**, which
+      is exactly what "read a recorded eval, never re-run it" depends on. Not
+      fixed here — it changes what a report means, so it is a card and not an
+      adjacent one-liner.
+
+      **THE RELAXED CAVEAT RULE, CONFIRMED LIVE.** Slot refusals fell **8 →
+      2** against P1.h's run, and the two survivors are the two the dogfood
+      entry predicted: the remainder George worked out himself ("the other 87
+      products") and the 320-character bound, which `order`'s caveat still
+      overruns. The replay said 7 of that run's 8 would stand; live, on
+      different sentences, 6 of the 8 never arose at all.
+
+      **THE RUN'S INPUT WAS BYTE-IDENTICAL TO P1.h's** — `SYSTEM_PROMPT`
+      1,798 words, sha `28efc756`, and the 16 tool schemas sha `9099fea1`,
+      computed before the run. **So the median moving 19.0 → 17.1 is a
+      resample and is not claimed as an effect.** What the run actually gated
+      is the 118 changed lines of `agent/` since P1.h — `reading.py` (82),
+      `prose.py` (17), `loop.py` (12), `compose.py` (7) — which is the
+      riding-cards trade §2b describes, paid once, here.
+
+      **THE GATE TO PHASE 2: three of four.** Median under 10 s — **no, and
+      the shortfall is named with its cause above**, which is what the gate
+      asks for. A navigation fragment with no model call — **yes**,
+      re-measured today at 760 ms over two reads, 518 ms over one and 602 ms
+      for an analytical figure, all against a 2 s budget
+      (`tests/test_fragment_live.py`, `tests/test_replay_live.py`, **19 live
+      tests passing**). Trust rows unchanged — **yes**. Open empty five days
+      running — **day one of five.**
+
+      **THE FABLE 5.1 REVIEW HAS NOT HAPPENED.** The card's second half is a
+      separate session and a different model; its prompt is on the plan page
+      and in §6. This close-out is what it reads.
+
+      Suites exact: **1,657 pure**, **974 vitest**, `tsc -b` and `build`
+      clean, **19 live**. No production file was changed by this card: the
+      edits are `ops/NOW.md`, `ops/plan/plan.html`, `ops/DECISIONS.md` and the
+      one line of `tests/test_plan_alignment_contract.py` that could not count
+      a phase with no cards left in it.
 
 **The standing gate on every Phase 1 card, and on P0.6.** This phase dismantles
 the machinery that enforces George's trust guarantees, so each card that is
@@ -1609,6 +1756,24 @@ product. That is why P0.6 refuses the row cap and accepts the TTL.
 
 **Phase 2 — the finding, to the Ideal UI.** Only after P1.✓. Eleven sessions.
 Answering mode reaches the screens in the Ideal UI (§6).
+
+- [ ] **P2.0 a report says whether it passed** — found at P1.✓, and it is
+      the cheapest card in the plan. `tests/evals/test_voice_evals_v2.py:163`
+      writes `passed=False` before a single assertion runs and never revises
+      it, so **all four v2 reports claim eleven failures over runs pytest
+      scored 11 of 11**; the score exists only in a terminal line nothing
+      keeps. Every rule in §2b about reading a recorded run instead of buying
+      a new one rests on the file being readable, and this is the one fact it
+      cannot carry. Record the outcome per scenario at the end of the turn
+      — pass, or the assertion that failed — and say in the file when a report
+      predates the fix, because the four that exist cannot be re-scored.
+      Beside it, the second half of the same finding: `deterministic_edits`
+      landed in the harness five minutes after the run that was supposed to
+      demonstrate it, so **a close-out claimed a number no artifact held**.
+      A report's key list and the `done` frame's should be checked against
+      each other by a test, not by a session noticing. **Eval: none** — no
+      model input changes, and `tests/evals/corpus.py` replays the four
+      reports for $0.00.
 
 - [ ] **P2.a a thread is already a page** — header with three views, Talk ·
       Behind it · Page, and an unkept state; "Keep as page" calls
