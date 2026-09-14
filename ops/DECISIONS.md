@@ -3734,3 +3734,42 @@ them surfaced, and a check that punishes compliance is worse than no check.
 It should excuse a match appearing verbatim in a returned `meta.notice`,
 exactly as `ungrounded_numerals` excuses a figure the tools returned. Filed
 in the log by the session that found it; not fixed here, because it is a card.
+
+---
+
+## 2026-09-14 · P1.e — six marks, and the eval swap
+
+**Fourteen widget kinds became six marks, and the vocabulary did not move.**
+`composition.widgets` is untouched; `catalogue.ts` maps what George already
+says onto figure, dumbbell, ranked, contributors, line, table, and the ROWS
+decide the form inside the family he named. Renderer-only was the point: v2's
+first run had nothing model-facing in flight to be ambiguous about.
+
+**Four kinds are not marks and keep their tiles** — draft, control, state,
+system. A mark draws what a read RETURNED; those are objects you act on, and
+mapping the draft onto `table` would have deleted the editable quantities the
+purchase arc turns on. `NOT_A_MARK` names them with reasons, held against
+`render.tsx` in both directions by the compose contract.
+
+**Colour is direction, which reverses a shipped test.** "Paints each shop in
+its own colour" is now "paints by direction, not by which shop it is". The
+owner's second failure was seven hues over seven row labels; identity still
+earns its hue on the tile's edge and in the object panel, where it is the
+point. Four data colours, `palette.test.ts` reads the source.
+
+**The claim-title is `note` or the read's own name, never a new field.** A
+title field in the grammar would be a sentence with no receipt. A
+recommendation is the exception and leads with George's verb, the one word a
+read has not got.
+
+**`grounded_numerals` does not share `presentation_max` with
+`ungrounded_numerals`, and the docstring promising it did was wrong.** For
+"did he INVENT a figure" a bare 4 must be excused; for "did he CITE one" a 4
+the rows account for is a citation. Found because v2 failed a 120-word answer
+naming a product and the 1 unit left on it. Verified by replay at $0.00:
+`dogfood-remainder-caveats` 4 of 4 → 2 of 4, `p1c-gate-2` 0 of 4 → 0 of 4.
+
+**A full run is $1.51, measured, and the twelve are deleted.** First eval
+price in this project to come in under its estimate. `GEORGE_VOICE_STRICT=1`
+is §4's old recipe and is wrong for v2, where style is a rate by design — the
+run set it and reported 8 style failures over 11 clean trust rows.

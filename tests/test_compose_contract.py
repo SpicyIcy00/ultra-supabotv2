@@ -698,17 +698,45 @@ def test_a_different_read_is_a_different_object(defs):
 # gone on being a tile on one path while being a region on another.
 # ---------------------------------------------------------------------------
 
-def test_every_widget_has_a_case_in_the_renderer_and_nothing_else_does(defs):
+def test_every_widget_is_drawn_by_the_renderer_and_nothing_else_is(defs):
+    """
+    P1.e SPLIT THE RENDERER IN TWO AND THIS FOLLOWED IT.
+
+    There used to be one `case` per widget, fourteen of them, and this asserted
+    the two lists matched. Since P1.e the renderer keeps a case only for the
+    four kinds that are OBJECTS you do something to — a draft you edit, a
+    control you move, something that runs — and every other kind is a READING,
+    which falls to the default arm and is drawn as one of six marks by
+    `catalogue.ts`.
+
+    So the pairing is still exact, in both directions: a kind with a case must
+    be one the catalogue excuses from being a mark, and a kind with neither a
+    case nor an excuse would be drawn as a mark over rows it has not got. The
+    TypeScript half of the same rule is `catalogue.test.ts`, which reads this
+    same yaml and walks every kind through `markFor`.
+    """
     from pathlib import Path
     import re
 
-    src = (Path(__file__).resolve().parents[1]
-           / "frontend" / "src" / "room" / "render.tsx").read_text(encoding="utf-8")
-    drawn = set(re.findall(r"case '([a-z]+)': return", src))
+    room = Path(__file__).resolve().parents[1] / "frontend" / "src" / "room"
+    render = (room / "render.tsx").read_text(encoding="utf-8")
+    catalogue = (room / "catalogue.ts").read_text(encoding="utf-8")
+
+    cased = set(re.findall(r"case '([a-z_]+)': return", render))
+    block = re.search(r"export const NOT_A_MARK: Record<string, string> = \{(.*?)\n\};",
+                      catalogue, re.S)
+    assert block, "catalogue.ts no longer names the kinds that are not marks"
+    excused = set(re.findall(r"^  ([a-z_]+):", block.group(1), re.M))
     declared = set(req(defs, "composition.widgets"))
-    assert declared - drawn == set(), f"declared and never drawn: {sorted(declared - drawn)}"
-    assert drawn - declared == set(), f"drawn and no longer declared: {sorted(drawn - declared)}"
-    assert "text" not in drawn, "the reading is a region (Reading.tsx), never a tile"
+
+    assert cased == excused, (
+        f"the renderer draws {sorted(cased)} as objects and the catalogue "
+        f"excuses {sorted(excused)}")
+    assert cased <= declared, f"drawn and no longer declared: {sorted(cased - declared)}"
+    assert "default: return <MarkBlock {...props} />;" in render, (
+        "no default arm: a declared widget with no case would draw nothing")
+    assert "text" not in cased and "text" not in declared, (
+        "the reading is a region (Reading.tsx), never a tile")
 
 
 # ---------------------------------------------------------------------------

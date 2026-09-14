@@ -87,10 +87,13 @@ def grounded_numerals(answer: str, results: Iterable[dict],
     """
     Numerals in the prose that a tool result DOES account for.
 
-    The exact inverse of `ungrounded_numerals`, sharing its every exclusion so
-    the two can never disagree about what counts as a figure. It exists for the
-    opposite question. That check asks *did he invent one?*; this asks *did he
+    The inverse of `ungrounded_numerals`, over the same numerals and the same
+    `allowed_numbers`. That check asks *did he invent one?*; this asks *did he
     cite one at all?*
+
+    IT SHARES EVERY EXCLUSION BUT ONE, and the exception is `presentation_max`:
+    see the comment on it below. The parameter is kept in the signature so the
+    two read as a pair and a caller cannot pass one where it means the other.
 
     Why it had to be added (2026-09-13): every other assertion in the voice
     suite is satisfied by an answer that says nothing. Fed "I cannot establish
@@ -114,8 +117,24 @@ def grounded_numerals(answer: str, results: Iterable[dict],
         if suffix in ("k", "m"):
             n *= 1000 if suffix == "k" else 1_000_000
             decimals -= 3 if suffix == "k" else 6
-        if suffix != "%" and n == int(n) and 0 <= n <= presentation_max and decimals == 0:
-            continue
+        # THE ONE EXCLUSION THIS DOES NOT SHARE WITH `ungrounded_numerals`, and
+        # the docstring above used to promise it shared every one. That promise
+        # was wrong, and P1.e's v2 run is where it showed: George answered "what
+        # is running low at Greenhills?" by naming the product that empties
+        # today and the 1 unit left on it — both figures `get_replenishment`
+        # returned — and this reported that he had cited none, so the gate
+        # failed a good answer.
+        #
+        # The two checks ask opposite questions and the small-integer exclusion
+        # belongs to only one of them. For "did he INVENT a figure", a bare 4
+        # has to be excused: it is far more likely a count of things he named
+        # than a figure he made up, and a suite that fired there would fire on
+        # every answer. For "did he CITE one at all", a 4 the results account
+        # for is a citation with a receipt, and refusing to see it is how a
+        # 120-word answer over two reads gets called a shrug.
+        #
+        # `ungrounded_numerals` is untouched: excusing something there is safe
+        # in the direction that matters, and this is the loosening of the two.
         if n in (2024.0, 2025.0, 2026.0, 2027.0):
             continue
         if _matches(n, decimals, allowed):

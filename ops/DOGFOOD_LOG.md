@@ -57,72 +57,65 @@ on compose frame" does.
 
 ## Open
 
-### 2026-09-13 · "i dont really know what im looking at"
+**Nothing.** First time since this log was started — 2026-09-14, when P1.e
+closed the last of the five failures in the entry below.
 
-> with the widgets i dont really know what im looking at, what visual language
-> is better
-
-**Diagnosed, and it is a MODE, not a widget set.** Visualisation has a settled
-split: *exploratory* is for the analyst still looking — every series equal
-weight, colour for identity, no annotation — and *explanatory* is for a reader
-being told what was found: one thing emphasised, the rest receding, the point
-written on the mark. **George is explanatory by definition** (he has already
-done the analysis), and the board draws exploratory. So it hands back the
-look-for-yourself problem he was asked to solve. That is the whole of it.
-
-Five concrete failures in the screenshots, with the fixes:
-
-1. **Transactions rendered as `₱1,187` — a count labelled as money.** Cause
-   found: `room/data.ts` picks the unit from the COLUMN NAME
-   (`/sales|revenue|value|…/`), and a compared row names its number `value`,
-   which matches. Every metric's value is money to the formatter. The result
-   already carries `meta.metric_label`. **Take the unit from the metric.**
-   **FIXED in P1.c** — from the UNIT rather than the metric's name: every
-   compared row carries `unit` and every metric read carries
-   `meta.metric_unit`, so `fmt` takes the currency from those and the column
-   name is consulted only where the name itself says money (`net_sales`,
-   `unit_cost`). `value`, `total` and `amount` left the pattern; a percentage
-   column is read as a percentage first, so `change_pct` beside a peso figure
-   is not `₱13.8`. Six modules call `fmt`, the object panel among them, and
-   the panel is untouched by the redesign — so this is not work P1.e throws
-   away. **2 to 5 are P1.e and this entry stays open for them.**
-2. **Seven shops, seven hues.** One series in seven colours, where the row
-   label already says which shop it is — so colour is spent on nothing and a
-   reader tries to decode it. Two named anti-patterns at once: "eight
-   categorical hues when the story is one number" (called the most common way
-   a chart misses its point) and a value-ramp on nominal categories. **Use
-   EMPHASIS** — the one that matters in accent, the rest grey. The reference
-   calls emphasis "the most underused form" and "often the honest answer to
-   'make this chart clearer'".
-3. **"the track is the period before · the fill is this one".** An encoding
-   that needs a sentence to decode is not working; the caption is the tell.
-   **A dumbbell** — two dots joined by a line — reads without explanation and
-   is the standard form for before→after per item.
-4. **`₱556.6 / ₱545.91`** — two numbers, a slash, no labels. **Direct labels.**
-5. **Four tiles at equal weight** for a question whose answer is one or two
-   facts. **The reading is the headline and the marks are its evidence** —
-   which is the fix already queued above.
-
-**None of this touches the binding.** The model still names a read and a field
-and can never author a figure. What changes is the MODE the marks are drawn
-in: the renderer and the vocabulary, never the guarantee.
-
-Full write-up with sources in the report linked from NOW.md section 6.
-
-**5, "widgets just feel like KPIs" — NOT a card, and deliberately not yet.**
-Six of the fourteen kinds (`figure`, `hero`, `comparison`, `table`, `chart`,
-`distribution`) are ways to show a measurement, so the catalogue skews toward
-KPIs and George reaching for something finds one. That is real. But the board
-he judged it on had thrown the analysis away, and **a dashboard is what a
-reading looks like with the reading deleted.** Fix the silence, look again,
-and only then decide whether the vocabulary needs fewer measurements and more
-nouns. **The binding is not in question** — the model names a read and a
-field and can never author a figure; that is the guarantee, and a different
-look is not worth trading it for.
+**The next thing you say about the board is the most valuable thing in the
+project.** All five have been answered and nobody has looked at the result.
 
 ---
 
 ## Fixed
+
+### 2026-09-14 · "i dont really know what im looking at"
+
+> with the widgets i dont really know what im looking at, what visual language
+> is better
+
+**ALL FIVE ARE FIXED** — 1 in P1.c on 2026-09-14, and 2 to 5 in P1.e the same
+day. The diagnosis stands and is worth keeping: the board was drawing
+EXPLORATORY — every series equal weight, colour for identity, nothing
+annotated — while George is explanatory by definition, because he has already
+done the analysis. So it handed back the look-for-yourself problem he was asked
+to solve.
+
+1. **Transactions rendered as `₱1,187`** — a count labelled as money.
+   **FIXED in P1.c**, from the UNIT the rows and the read carry rather than
+   from the column's name. Six modules call `fmt`, the object panel among
+   them, so it was not work the redesign threw away.
+2. **Seven shops, seven hues.** **FIXED in P1.e.** Inside a mark colour is
+   DIRECTION — four data colours, `up`, `down`, `flat`, and `george` for the
+   emphasised row of a read that declared none — and the one that matters is
+   lit while the rest cool. Identity keeps its hue where identity is the
+   point: the tile's edge and wash, the object panel. `palette.test.ts` reads
+   the source and fails on a fifth, proved both ways round.
+3. **"the track is the period before · the fill is this one".** **FIXED in
+   P1.e**, by deleting the encoding rather than the caption. A **dumbbell** —
+   a hollow dot where it was, a filled dot where it is, a line between —
+   reads without a sentence under it. `Against`, the bullet that needed one,
+   is gone.
+4. **`₱556.6 / ₱545.91`** — two numbers, a slash, no labels. **FIXED in
+   P1.e.** Every block now carries a title and a line under it saying what was
+   measured, over which days, against what, and in what unit — all four off
+   `meta`, none of them a figure — and the marks label their own ends. No
+   legends anywhere.
+5. **Four tiles at equal weight** for a question whose answer is one or two
+   facts. **FIXED across P1.c and P1.e.** The reading is a region above the
+   board (P1.c) and the marks are its evidence, each framed the same way round
+   (P1.e).
+
+**And the sixth thing, which was deliberately not a card: "widgets just feel
+like KPIs."** Six of the fourteen kinds were ways to show a measurement, so
+George reaching for something found one. The decision then was to fix the
+silence, look again, and only decide afterwards whether the vocabulary needs
+fewer measurements and more nouns. **Both have now happened** — the silence in
+P1.c, and fourteen shapes down to six in P1.e — so this is the thing to look
+at next. **The binding never changed**: the model names a read and a field and
+can never author a figure.
+
+**NOT CHECKED ON YOUR SCREEN.** The evidence is eight recorded runs rendered
+by the real renderer, not a build you looked at. Full write-up with sources in
+the report linked from NOW.md section 6.
 
 ### 2026-09-14 · a shape George composed is invisible to his next question
 

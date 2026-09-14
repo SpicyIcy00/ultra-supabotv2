@@ -270,8 +270,20 @@ class Report:
         self.records: list[dict[str, Any]] = []
 
     def add(self, name: str, turn: Turn, findings: dict[str, Any], judge: Optional[dict],
-            passed: Optional[bool] = None) -> None:
-        """Upsert by scenario, so a failing scenario is still on the record."""
+            passed: Optional[bool] = None,
+            extra_results: Optional[list[dict[str, Any]]] = None) -> None:
+        """
+        Upsert by scenario, so a failing scenario is still on the record.
+
+        `extra_results` IS WHAT THE TURN COULD SEE BUT DID NOT READ — the rows
+        an earlier turn of the same thread carried forward. The checks are
+        given them at run time, so a report that left them out was judged by
+        the replay under less evidence than the run had: P1.e's v2 run passed
+        `correction` with no ungrounded numerals and `corpus.py` then reported
+        three, every one of them a figure the turn before had returned. A
+        verification tool that disagrees with the run it is verifying is worse
+        than no tool.
+        """
         self.records = [r for r in self.records if r["scenario"] != name]
         self.records.append({
             "passed": passed,
@@ -349,6 +361,10 @@ class Report:
                      "meta": r["result"].get("meta") or {},
                  }}
                 for r in turn.results
+            ] + [
+                {"tool": "(carried from an earlier turn)", "arguments": {}, "error": None,
+                 "result": {"rows": (r.get("rows") or [])[:30], "meta": r.get("meta") or {}}}
+                for r in (extra_results or [])
             ],
             "findings": findings,
             "judge": judge,

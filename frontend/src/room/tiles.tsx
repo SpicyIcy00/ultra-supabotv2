@@ -17,13 +17,11 @@ import type { GeorgeNotice, ToolMeta } from '../types/george';
 import type { BoardObject, Local } from './board';
 import type { ToolCall } from '../types/george';
 import {
-  callOf, changeOf, dimensionOf, fmt, intensity, measureOf, pct, receiptsDetail, receiptsLine,
-  rowFor, rowsOf, sorted, splitCaveat, subjectOf, tone, unitOf, valueOf,
+  callOf, fmt, intensity, pct, receiptsDetail, receiptsLine, rowFor, rowsOf, splitCaveat, tone,
   type AnswerTurn, type Change, type Dimension,
 } from './data';
-import { directionRgb, hueFor, NEUTRAL as NEUTRAL_RGB, type Rgb } from './identity';
+import { directionRgb, hueFor, type Rgb } from './identity';
 import type { Region } from './drag';
-import { ObjectPanel, kindOf } from './ObjectPanel';
 import { Spec } from './Spec';
 
 export interface TileActions {
@@ -93,7 +91,7 @@ export interface TileProps {
  * `change` only sets how brightly that hue burns. The two never trade places,
  * which is what lets a shop keep its colour through a bad week.
  */
-function Shell({ hue, change, quiet, solid, george, landing, delay, picked, children, onOpen }: {
+export function Shell({ hue, change, quiet, solid, george, landing, delay, picked, children, onOpen }: {
   hue?: Rgb;
   change?: Change | null;
   quiet?: boolean;
@@ -133,7 +131,7 @@ function Shell({ hue, change, quiet, solid, george, landing, delay, picked, chil
   );
 }
 
-function Delta({ change }: { change: Change }) {
+export function Delta({ change }: { change: Change }) {
   if (change.status && change.status !== 'ok') {
     const word = change.status === 'no_baseline' ? 'new'
       : change.status === 'no_current' ? 'none now' : 'was zero';
@@ -152,51 +150,24 @@ function Delta({ change }: { change: Change }) {
   );
 }
 
-function Receipts({ meta }: { meta: Parameters<typeof receiptsLine>[0] }) {
-  const line = receiptsLine(meta);
-  if (!line) return null;
-  // The line says what and when; the source and the filters are one hover
-  // away, on the same element — inspectable, not hidden (UI rule 3).
-  return <p className="r-src" style={{ marginTop: 12 }} title={receiptsDetail(meta)}>{line}</p>;
-}
-
 /**
- * HOW MUCH OF — a compared row's value against its own baseline, as a bullet.
- * Both figures are the tool's, on the same row; nothing is divided here.
+ * THE SOURCE LINE. It says what was measured, how it was cut, over which days
+ * and when it was read; the table and every filter are one hover away on the
+ * same element — inspectable, not hidden (UI rule 3).
  *
- * And for a row from the brief, which carries the noise floor it was judged
- * against, the band is drawn too: the one threshold in this system that IS
- * a definition, so the one word — "above the noise floor" — may be said.
+ * IT IS NOT OPTIONAL WHERE A BLOCK IS DRAWN (P1.e). A read whose meta carries
+ * none of those still names itself — the tool, or the table the rows came out
+ * of — because a figure with no line under it is a figure a reader cannot
+ * place, and the last-resort version of that line is still true.
  */
-export function Against({ row, keyName }: { row: Record<string, unknown>; keyName: string }) {
-  // The unit the ROW declares, so a count is not drawn in pesos (P1.c).
-  const u = unitOf(row);
-  const value = Number(row[keyName]);
-  const baseline = Number(row.baseline);
-  if (!Number.isFinite(value) || !Number.isFinite(baseline) || baseline <= 0) return null;
-  const t = row.threshold_applied as { pct_threshold?: number; absolute_floor?: number } | undefined;
-  const band = t ? Math.max(baseline * (Number(t.pct_threshold) || 0) / 100, Number(t.absolute_floor) || 0) : 0;
-  const top = Math.max(value, baseline + band) * 1.08 || 1;
-  const x = (n: number) => `${Math.min(100, Math.max(0, (n / top) * 100)).toFixed(1)}%`;
-  return (
-    <div className="r-against" role="img"
-         aria-label={`${fmt(keyName, value, u)} against ${fmt(keyName, baseline, u)} before`}>
-      <div className="r-against-track">
-        {band > 0 && (
-          <i className="r-against-band"
-             style={{ left: x(Math.max(0, baseline - band)),
-                      width: `calc(${x(baseline + band)} - ${x(Math.max(0, baseline - band))})` }} />
-        )}
-        <i className="r-against-fill" style={{ width: x(value) }} />
-        <b className="r-against-base" style={{ left: x(baseline) }} />
-      </div>
-      <p className="r-spec-how">
-        {t
-          ? `the mark is the same weekday before, ${fmt(keyName, baseline, u)} · the band is the noise floor, ${t.pct_threshold}% or ${fmt(keyName, t.absolute_floor, u)}`
-          : `the mark is the period before, ${fmt(keyName, baseline, u)}`}
-      </p>
-    </div>
-  );
+export function Receipts({ meta, tool }: {
+  meta: Parameters<typeof receiptsLine>[0]; tool?: string | null;
+}) {
+  const line = receiptsLine(meta)
+    || [tool?.replace(/^get_/, '').replace(/_/g, ' ') ?? null,
+        meta?.source_table ?? null].filter(Boolean).join(' · ');
+  if (!line) return null;
+  return <p className="r-src" style={{ marginTop: 12 }} title={receiptsDetail(meta)}>{line}</p>;
 }
 
 /**
@@ -270,7 +241,7 @@ export function Acts({ subject, dimension, o, on, local }: {
   );
 }
 
-function Missing({ what }: { what: string }) {
+export function Missing({ what }: { what: string }) {
   return (
     <div className="r-tile r-tile--quiet">
       <p className="r-note">George composed this from {what}, which this read does not carry.</p>
@@ -288,7 +259,7 @@ function Missing({ what }: { what: string }) {
  * turn's own. One function so no tile can disagree with another about which
  * figures are on screen.
  */
-function callFor(p: TileProps): ToolCall | null {
+export function callFor(p: TileProps): ToolCall | null {
   return p.retuned ?? callOf(p.turn, p.o.seq);
 }
 
@@ -314,7 +285,7 @@ export function ownNotices(meta?: ToolMeta | null): GeorgeNotice[] {
   return notice.kind === 'multiple' ? notice.items ?? [] : [notice];
 }
 
-function OwnCaveat({ meta }: { meta?: ToolMeta | null }) {
+export function OwnCaveat({ meta }: { meta?: ToolMeta | null }) {
   const notices = ownNotices(meta);
   if (!notices.length) return null;
   return <Caveats notices={notices} />;
@@ -328,7 +299,7 @@ function OwnCaveat({ meta }: { meta?: ToolMeta | null }) {
  * same whichever widget is showing it — and so a sentence naming it becomes
  * unnecessary rather than merely redundant.
  */
-function isLit(o: BoardObject, row: Record<string, unknown>): boolean {
+export function isLit(o: BoardObject, row: Record<string, unknown>): boolean {
   if (!o.emphasise) return true;
   const want = o.emphasise.trim().toLowerCase();
   return Object.values(row).some(
@@ -342,391 +313,13 @@ function Note({ o }: { o: BoardObject }) {
 }
 
 
-function kindOfRead(tool?: string | null): string {
+export function kindOfRead(tool?: string | null): string {
   if (!tool) return 'product';
   if (tool.includes('purchas')) return 'supplier';
   if (tool.includes('replenish') || tool.includes('movement')) return 'delivery';
   if (tool.includes('stock') || tool.includes('dead')) return 'stock';
   if (tool.includes('product') || tool.includes('cost')) return 'product';
   return 'category';
-}
-
-/* ------------------------------------------------------------- the objects */
-
-/**
- * A SUBJECT — a shop, a product, a supplier. The workhorse of the board, and
- * the thing the owner said he wants first: is it up or down, and by how much.
- * `hero` and `figure` are this tile at different sizes.
- */
-export function SubjectTile(p: TileProps & { size?: 'lead' | 'normal' | 'small' }) {
-  const call = callFor(p);
-  const rows = rowsOf(call);
-  const row = p.o.subject ? rowFor(rows, p.o.subject) : rows[0] ?? null;
-  if (!row) return <Missing what={p.o.subject ?? 'a row'} />;
-
-  const change = changeOf(row);
-  const v = valueOf(row);
-  // WHAT THE FIGURE IS IN, from the row or the read — never from the name of
-  // the column it came out of (P1.c).
-  const u = unitOf(row) ?? unitOf(call?.result?.meta);
-  const label = p.o.subject ?? subjectOf(row) ?? '';
-  const dimension = dimensionOf(rows, label);
-  const size = p.size ?? (p.o.weight === 'lead' ? 'lead' : p.o.weight === 'quiet' ? 'small' : 'normal');
-  const figure = size === 'lead' ? 46 : size === 'small' ? 24 : 32;
-  /*
-   * COLOUR FOLLOWS ATTENTION. A board keeps objects across turns, so putting
-   * every subject on a saturated field means six questions in you are looking
-   * at a fruit salad. What is live and leading burns; what has gone quiet or
-   * came from an earlier turn cools to paper and keeps its hue only on the
-   * edge — still findable, no longer shouting.
-   *
-   * Seven shops asked about at once are all live, so "how are we doing" still
-   * lights the whole board. Ask about a supplier next and they cool while the
-   * draft lights up.
-   */
-  const lit = !p.earlier && p.o.weight !== 'quiet';
-
-  return (
-    <>
-    <Shell hue={hueFor(label, dimension, p.o.kind)} change={change}
-           solid={lit} quiet={!lit}
-           landing={p.landing} delay={p.delay} picked={p.focused || p.selected}
-           onOpen={() => p.on.open(p.o.key)}>
-      <OwnCaveat meta={call?.result?.meta} />
-      <p className="r-label">{label}{p.earlier ? ' · from earlier' : ''}</p>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
-        <span className="r-num" style={{ '--size': `${figure}px` } as CSSProperties}>
-          {v ? fmt(v.key, v.value, u) : '—'}
-        </span>
-        <Delta change={change} />
-      </div>
-      {v && <p className="r-label" style={{ marginTop: 9 }}>{measureOf(call?.result?.meta, v.key)}</p>}
-      {v && <Against row={row} keyName={v.key} />}
-      <Receipts meta={call?.result?.meta} />
-    </Shell>
-    {/* OPENED — BELOW THE TILE, NOT INSIDE IT. Focusing a subject no longer
-        just makes it bigger; it loads the object. The panel sits outside the
-        Shell for two reasons that are both bugs otherwise: a tile clips its
-        content (overflow:hidden, which the bloom needs), so an inside panel
-        was cut off mid-table; and a lit tile is a solid colour, so body text
-        and receipts inside it fought the fill. On the ground it reads. */}
-    {p.focused && label && kindOf(dimension) && (
-      <div onClick={(e) => e.stopPropagation()}
-           style={{ '--hue': hueFor(label, dimension, p.o.kind) } as CSSProperties}>
-        <ObjectPanel kind={kindOf(dimension) as string} name={label} />
-      </div>
-    )}
-    </>
-  );
-}
-
-/** Two to four subjects from one read, each lit by its own figure. */
-export function ComparisonTile(p: TileProps) {
-  const call = callFor(p);
-  const rows = rowsOf(call);
-  const subjects = p.o.subjects ?? [];
-  if (!subjects.length) return <Missing what="the subjects" />;
-
-  return (
-    <div className={`r-tile r-tile--quiet r-tile--bare ${p.landing ? 'r-landing' : ''}`}
-         style={{ '--d': `${p.delay}ms`, padding: 0, border: 0, background: 'transparent' } as CSSProperties}>
-      {/* THE TILE HAS NO PADDING so the subject cards can run edge to edge —
-          but its own label and receipts then sat flush against the boundary
-          while every other tile on the board inset its text by 22px. Against a
-          neighbour's rounded corner that reads as a clipped first letter, which
-          is exactly how it was reported. The text is inset to match; the cards
-          still are not. */}
-      <p className="r-label" style={{ marginBottom: 10, paddingLeft: 22 }}>
-        {call?.result?.meta?.metric_label ?? 'compared'}{p.earlier ? ' · from earlier' : ''}
-      </p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-        {subjects.map((s, n) => {
-          const row = rowFor(rows, s);
-          const change = row ? changeOf(row) : { pct: null, direction: null } as Change;
-          const v = row ? valueOf(row) : null;
-          const u = unitOf(row) ?? unitOf(call?.result?.meta);
-          const dimension = dimensionOf(rows, s);
-          return (
-            <Shell key={s} hue={hueFor(s, dimension, 'subject')} change={change} solid
-                   landing={p.landing} delay={p.delay + n * 90}
-                   picked={p.selection?.includes(s)}
-                   onOpen={() => p.on.pick(s, dimension)}>
-              <p className="r-label">{s}</p>
-              <div style={{ marginTop: 9 }}>
-                <span className="r-num" style={{ '--size': '26px' } as CSSProperties}>
-                  {v ? fmt(v.key, v.value, u) : '—'}
-                </span>
-              </div>
-              <div style={{ marginTop: 9 }}><Delta change={change} /></div>
-              {row && v && <Against row={row} keyName={v.key} />}
-            </Shell>
-          );
-        })}
-      </div>
-      <div style={{ paddingLeft: 22 }}><Receipts meta={call?.result?.meta} /></div>
-    </div>
-  );
-}
-
-/*
- * GEORGE'S OWN WORDS ARE NOT A TILE (P1.c, 2026-09-14). `TextTile` stood
- * here, clamped to four or six lines, boxed like a figure. The owner:
- * "putting the text in a widget it just doesnt work." The reading is now a
- * region above the board — frontend/src/room/Reading.tsx — drawn from the
- * turn's own words whether or not anything was composed, which is also what
- * closes the turn that drew four widgets and said nothing.
- */
-
-export function TableTile(p: TileProps) {
-  const call = callFor(p);
-  const all = rowsOf(call);
-  const sort = p.local.sort;
-  const rows = sorted(all, sort).slice(0, 40);
-  const open = p.local.open ?? (p.o.weight !== 'quiet' || all.length <= 8);
-  if (!rows.length) return <Missing what="rows" />;
-  const meta = call?.result?.meta;
-
-  // A column with one value on every row is a fact about the TABLE, not a
-  // column. Said once, above it, it is the scope.
-  //
-  // ONLY WHERE THAT VALUE READS AS SOMETHING. A row can carry a nested object
-  // — a brief row's `receipts`, its `threshold_applied` — and one of those in
-  // the caption is where `ATTENTION · 16 ROWS · [object Object] · · NO` came
-  // from, the empty field beside it being an empty list. A column with no
-  // reading for a person is not a fact about the table; it is a column the
-  // caption has nothing to say about.
-  const keys = Object.keys(rows[0]).filter(
-    (k) => !k.endsWith('_id') && !['seq', 'call_seq', 'direction', 'baseline_status'].includes(k));
-  const readable = (v: unknown) => v === null || v === undefined || typeof v !== 'object';
-  const constant: string[] = [];
-  const cols: string[] = [];
-  for (const k of keys) {
-    const distinct = new Set(rows.map((r) => String(r[k] ?? '')));
-    if (rows.length >= 3 && distinct.size === 1 && String(rows[0][k] ?? '').length <= 24
-        && readable(rows[0][k])
-        && !/sales|revenue|value|total|cost|price/i.test(k)) {
-      constant.push(fmt(k, rows[0][k], unitOf(rows[0]) ?? unitOf(meta)));
-    } else {
-      cols.push(k);
-    }
-  }
-  // THE UNIT, FROM THE ROWS AND THE READ, never from the metric's NAME. Every
-  // cell of a figure column is formatted with it, which is what stopped a
-  // count of transactions being drawn as `₱1,187`.
-  const unit = (row: Record<string, unknown>) => unitOf(row) ?? unitOf(meta);
-  const cell = (c: string, row: Record<string, unknown>) => fmt(c, row[c], unit(row));
-
-  // WHAT THE ROW IS ABOUT, WHAT IT IS, AND WHICH WAY IT WENT — in that order,
-  // and at most five. A board packs tiles into columns, so a table that keeps
-  // all seven columns wraps product names over three lines and cuts the last
-  // figure in half. Baseline and absolute change are the first to go: the
-  // value and the percentage already carry the movement, and the full set is
-  // one tap away in the read's own receipts.
-  const RANK: Record<string, number> = {
-    product: 0, store: 0, category: 0, name: 0, supplier: 0, label: 0, day: 0, week: 0, month: 0,
-    sku: 1, value: 2, change_pct: 3, change: 6, baseline: 7,
-  };
-  const shown = cols
-    .slice()
-    .sort((a, b) => (RANK[a] ?? 4) - (RANK[b] ?? 4) || cols.indexOf(a) - cols.indexOf(b))
-    .slice(0, 5);
-  const title = meta?.metric_label ?? p.o.tool?.replace(/^get_/, '').replace(/_/g, ' ') ?? 'rows';
-
-  return (
-    <Shell quiet hue={hueFor(null, null, kindOfRead(p.o.tool))} landing={p.landing} delay={p.delay}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
-        <p className="r-label">
-          {[title, `${all.length} rows`, ...constant].join(' · ')}{p.earlier ? ' · from earlier' : ''}
-        </p>
-        {all.length > 8 && (
-          <button type="button" className="r-act" onClick={() => p.on.patch(p.o.key, { open: !open })}>
-            {open ? 'less' : 'show'}
-          </button>
-        )}
-      </div>
-      <Note o={p.o} />
-      {open && (
-        <div className="r-scroll" style={{ overflowX: 'auto', marginTop: 12 }}>
-          <table className="r-rows">
-            <thead>
-              <tr>
-                {shown.map((c) => (
-                  <th key={c} className={typeof rows[0][c] === 'number' ? 'n' : ''}
-                      style={{ cursor: 'pointer' }}
-                      aria-sort={sort?.column === c ? (sort.desc ? 'descending' : 'ascending') : 'none'}
-                      onClick={() => p.on.patch(p.o.key,
-                        { sort: { column: c, desc: sort?.column === c ? !sort.desc : true } })}>
-                    {c.replace(/_/g, ' ')}{sort?.column === c ? (sort.desc ? ' ▾' : ' ▴') : ''}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, n) => (
-                <tr key={n} style={{ opacity: isLit(p.o, row) ? 1 : 0.4 }}>
-                  {shown.map((c) => (
-                    <td key={c} className={typeof row[c] === 'number' ? 'n' : ''}>
-                      {c === 'change_pct' ? <Delta change={changeOf(row)} /> : cell(c, row)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <Receipts meta={meta} />
-    </Shell>
-  );
-}
-
-/** A series or a ranked set, read as shape. Each dot lit by its own move. */
-export function DistributionTile(p: TileProps) {
-  const call = callFor(p);
-  const rows = rowsOf(call);
-  if (!rows.length) return <Missing what="the series" />;
-  const changes = rows.map(changeOf);
-  const values = rows.map((r, n) => changes[n].pct ?? valueOf(r)?.value ?? 0);
-  const peak = Math.max(1, ...values.map(Math.abs));
-
-  return (
-    <Shell quiet hue={hueFor(null, null, kindOfRead(p.o.tool))} landing={p.landing} delay={p.delay}>
-      <p className="r-label">
-        {call?.result?.meta?.metric_label ?? 'over time'}{p.earlier ? ' · from earlier' : ''}
-      </p>
-      <div className="r-dots" style={{ marginTop: 12 }}>
-        {rows.map((row, n) => {
-          const v = values[n];
-          const t = tone(changes[n]);
-          return (
-            <i key={n} title={`${subjectOf(row) ?? ''}: ${pct(v)}`}
-               style={{
-                 '--d': `${7 + (Math.abs(v) / peak) * 11}px`,
-                 '--c': `var(--${t})`,
-                 '--y': `${-(v / peak) * 11}px`,
-               } as CSSProperties} />
-          );
-        })}
-      </div>
-      <p className="r-label" style={{ marginTop: 8 }}>
-        {subjectOf(rows[0]) ?? ''} → {subjectOf(rows[rows.length - 1]) ?? ''}
-      </p>
-      <Receipts meta={call?.result?.meta} />
-    </Shell>
-  );
-}
-
-export function ChartTile(p: TileProps) {
-  const call = callFor(p);
-  const rows = rowsOf(call).slice(0, 60);
-  if (!rows.length) return <Missing what="the series" />;
-  const values = rows.map((r) => valueOf(r)?.value ?? 0);
-  const max = Math.max(1, ...values);
-  const hue = hueFor(p.o.subject, null, kindOfRead(p.o.tool));
-  const label = call?.result?.meta?.metric_label ?? 'series';
-
-  /*
-   * A BAR CHART NAMES ITS BARS. The bar form used to be seven unlabelled
-   * rectangles in one colour over a caption reading "OPUS → Rockwell" — a
-   * ranking with nothing to say which bar was which shop or what any of
-   * them measured. That is a shape asserting an order and hiding the
-   * figures, which is the opposite of what the board is for. A bar is a row:
-   * its name, its length, its figure, and its own colour when it is a thing
-   * the palette knows. The named widget draws exactly what the grammar's
-   * `bar` mark draws, so a ranking looks the same whichever way George asked
-   * for it.
-   */
-  if (p.o.form === 'bar') {
-    const key = valueOf(rows[0])?.key ?? 'value';
-    // COMPARED ROWS ARE BULLETS. When every row carries the tool's baseline,
-    // a plain bar throws that figure away; the track is the period before
-    // and the fill is now — how much of, not just how much.
-    const compared = rows.every((r) => Number.isFinite(Number(r.baseline)) && Number(r.baseline) > 0);
-    const wholes = compared ? rows.map((r) => Number(r.baseline)) : values;
-    const most = Math.max(1, ...values, ...wholes);
-    return (
-      <Shell quiet hue={hue} landing={p.landing} delay={p.delay}>
-        <p className="r-label">{label}{p.earlier ? ' · from earlier' : ''}</p>
-        <div className="r-spec-bars" style={{ marginTop: 12 }}>
-          {rows.map((row, n) => {
-            const name = subjectOf(row) ?? String(row.day ?? row.week ?? row.month ?? row.hour ?? n + 1);
-            const dim = dimensionOf(rows, name);
-            const own = hueFor(name, dim, 'subject');
-            const lit = isLit(p.o, row);
-            return (
-              <div key={n} className={`r-spec-bar ${compared ? 'r-spec-bullet' : ''}`}>
-                <span className="r-spec-bar-name">{name}</span>
-                {compared ? (
-                  <span className="r-spec-bullet-area">
-                    <span className="r-spec-bullet-whole" style={{ width: `${(wholes[n] / most) * 100}%` }}>
-                      <i style={{ width: `${Math.min(values[n] / (wholes[n] || 1), 1) * 100}%`,
-                                  background: `rgb(${own === NEUTRAL_RGB ? hue : own})`,
-                                  opacity: lit ? 1 : 0.28 }} />
-                    </span>
-                  </span>
-                ) : (
-                  <span className="r-spec-bar-track">
-                    <i style={{ width: `${(values[n] / most) * 100}%`,
-                                background: `rgb(${own === NEUTRAL_RGB ? hue : own})`,
-                                opacity: lit ? 1 : 0.28 }} />
-                  </span>
-                )}
-                <span className="r-spec-bar-figure">
-                  {fmt(key, row[key], unitOf(row) ?? unitOf(call?.result?.meta))}
-                  {compared && <small> / {fmt(key, row.baseline, unitOf(row) ?? unitOf(call?.result?.meta))}</small>}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-        {compared && <p className="r-spec-how">the track is the period before · the fill is this one</p>}
-        <Receipts meta={call?.result?.meta} />
-      </Shell>
-    );
-  }
-
-  const W = 560, H = 130, pad = 8;
-  const x = (n: number) => pad + (n / Math.max(1, rows.length - 1)) * (W - pad * 2);
-  const y = (v: number) => H - pad - (v / max) * (H - pad * 2);
-  const line = values.map((v, n) => `${x(n)},${y(v)}`).join(' ');
-  const iHi = values.indexOf(Math.max(...values));
-  const iLo = values.indexOf(Math.min(...values));
-  const key = valueOf(rows[0])?.key ?? 'value';
-
-  return (
-    <Shell quiet hue={hue} landing={p.landing} delay={p.delay}>
-      <p className="r-label">{label}{p.earlier ? ' · from earlier' : ''}</p>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ marginTop: 10, display: 'block', overflow: 'visible' }}
-           role="img" aria-label={label}>
-        <defs>
-          <linearGradient id={`fill-${p.o.key}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={`rgb(${hue})`} stopOpacity="0.30" />
-            <stop offset="100%" stopColor={`rgb(${hue})`} stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <polygon fill={`url(#fill-${p.o.key})`}
-                 points={`${pad},${H - pad} ${line} ${x(rows.length - 1)},${H - pad}`} />
-        <polyline fill="none" stroke={`rgb(${hue})`} strokeWidth={1.6} points={line} />
-        {/* The high and the low, named — both rows the read returned. */}
-        {rows.length > 2 && [iHi, iLo].map((i) => (
-          <g key={i}>
-            <circle cx={x(i)} cy={y(values[i])} r={3.5} fill={`rgb(${hue})`} stroke="var(--card)" strokeWidth={1.5} />
-            <text x={x(i)} y={i === iHi ? y(values[i]) - 8 : y(values[i]) + 16}
-                  textAnchor={x(i) > W * 0.8 ? 'end' : x(i) < W * 0.2 ? 'start' : 'middle'}
-                  style={{ font: '500 10px var(--mono)', fill: 'var(--ink)' }}>
-              {fmt(key, rows[i][key], unitOf(rows[i]) ?? unitOf(call?.result?.meta))}
-            </text>
-          </g>
-        ))}
-      </svg>
-      <p className="r-label" style={{ marginTop: 6 }}>
-        {subjectOf(rows[0]) ?? fmt('day', rows[0].day ?? rows[0].week ?? rows[0].month ?? '')}
-        {' → '}
-        {subjectOf(rows[rows.length - 1]) ?? fmt('day', rows[rows.length - 1].day ?? rows[rows.length - 1].week ?? rows[rows.length - 1].month ?? '')}
-      </p>
-      <Receipts meta={call?.result?.meta} />
-    </Shell>
-  );
 }
 
 /**
@@ -874,120 +467,6 @@ export function Caveats({ notices }: { notices?: GeorgeNotice[] }) {
     <div className="r-caveats" data-caveats={notices.length}>
       {notices.map((n, i) => <Caveat key={`${n.kind}-${i}`} notice={n} />)}
     </div>
-  );
-}
-
-/* ---------------------------------------------------------------- timeline
- *
- * WHEN something happened, in order. A chart is for the shape of a series and
- * a table for precision; this is for a sequence — eight weeks of a shop, an
- * order history, the day stock crossed to zero.
- *
- * IT DRAWS ONLY WHAT THE READ CARRIES. The date column is found in the rows,
- * never assumed, and a read with no date at all says so rather than inventing
- * an order for things that have none.
- */
-const DATEISH = /(date|day|week|month|_at$|when|period|sold|created)/i;
-
-function timeOf(row: Record<string, unknown>, column: string): number | null {
-  const raw = row[column];
-  if (raw == null) return null;
-  const at = new Date(String(raw)).getTime();
-  return Number.isFinite(at) ? at : null;
-}
-
-export function TimelineTile(p: TileProps) {
-  const call = callFor(p);
-  const rows = rowsOf(call);
-  if (!rows.length) return <Missing what="rows" />;
-
-  const column = Object.keys(rows[0]).find(
-    (k) => DATEISH.test(k) && timeOf(rows[0], k) !== null,
-  );
-  if (!column) return <Missing what="a date to lay out in time" />;
-
-  const points = rows
-    .map((row) => ({ row, at: timeOf(row, column) }))
-    .filter((point): point is { row: Record<string, unknown>; at: number } => point.at !== null)
-    .sort((a, b) => a.at - b.at);
-  if (!points.length) return <Missing what="a date to lay out in time" />;
-
-  const first = points[0].at;
-  const last = points[points.length - 1].at;
-  const span = Math.max(1, last - first);
-  const label = (row: Record<string, unknown>) =>
-    String(row.product ?? row.store ?? row.subject ?? row.what ?? row.name ?? row.basis ?? '');
-  const v = (row: Record<string, unknown>) => valueOf(row);
-
-  return (
-    <Shell quiet hue={hueFor(null, null, kindOfRead(p.o.tool))}
-           landing={p.landing} delay={p.delay}>
-      <p className="r-label">
-        {call?.result?.meta?.metric_label ?? 'in time'} · {points.length} points
-        {p.earlier ? ' · from earlier' : ''}
-      </p>
-      <div className="r-time">
-        <div className="r-time-axis" />
-        {points.map((point, n) => {
-          const at = ((point.at - first) / span) * 100;
-          const figure = v(point.row);
-          return (
-            <div key={n} className="r-time-point" style={{ left: `${at}%` }}>
-              <i />
-              <span className="r-time-when">
-                {new Date(point.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-              </span>
-              {(label(point.row) || figure) && (
-                <span className="r-time-what">
-                  {label(point.row)}
-                  {figure ? ` · ${fmt(figure.key, figure.value, unitOf(point.row) ?? unitOf(call?.result?.meta))}` : ''}
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      <Receipts meta={call?.result?.meta} />
-    </Shell>
-  );
-}
-
-/* ---------------------------------------------------------- recommendation
- *
- * ONE thing George thinks should be done, over the read that makes the case.
- *
- * THE VERB IS HIS AND THE NUMBER IS THE TOOL'S, and the block has no field for
- * a figure, so it cannot be otherwise. "Order 806 units" is get_purchase_plan's
- * quantity beside George's chosen word; "order about 800" is unrepresentable.
- */
-const ACTS: Record<string, string> = {
-  order: 'Order', investigate: 'Look into', check: 'Check',
-  hold: 'Hold off on', switch_on: 'Switch on', leave_it: 'Leave',
-};
-
-export function RecommendationTile(p: TileProps) {
-  const call = callFor(p);
-  const rows = rowsOf(call);
-  const subject = p.o.subject ?? '';
-  const row = rowFor(rows, subject);
-  const figure = row ? valueOf(row) : null;
-  const dimension = dimensionOf(rows, subject);
-  const lit = !p.earlier && p.o.weight !== 'quiet';
-
-  return (
-    <Shell hue={hueFor(subject, dimension, 'subject')} solid={lit} quiet={!lit}
-           landing={p.landing} delay={p.delay} picked={p.focused || p.selected}
-           onOpen={() => p.on.open(p.o.key)}>
-      <p className="r-label">{ACTS[p.o.action ?? ''] ?? 'Consider'}</p>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
-        <span className="r-num" style={{ '--size': '30px' } as CSSProperties}>
-          {figure ? fmt(figure.key, figure.value, unitOf(row) ?? unitOf(call?.result?.meta)) : subject}
-        </span>
-        {figure && <span className="r-label">{subject}</span>}
-      </div>
-      {figure && <p className="r-label" style={{ marginTop: 9 }}>{measureOf(call?.result?.meta, figure.key)}</p>}
-      <Receipts meta={call?.result?.meta} />
-    </Shell>
   );
 }
 

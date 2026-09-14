@@ -18,10 +18,10 @@ import { useDrag } from './drag';
 import { callOf, dimensionOf, rowsOf, type AnswerTurn, type Dimension } from './data';
 import type { ToolCall } from '../types/george';
 import {
-  Acts, ChartTile, ComparisonTile, ControlTile, DistributionTile, DraftTile,
-  RecommendationTile, SpecTile, StateTile, SubjectTile, SystemTile, TableTile,
-  TimelineTile, ownNotices, type TileActions, type TileProps,
+  Acts, ControlTile, DraftTile, SpecTile, StateTile, SystemTile,
+  ownNotices, type TileActions, type TileProps,
 } from './tiles';
+import { MarkBlock } from './marks';
 import type { GeorgeNotice } from '../types/george';
 
 export interface BoardProps {
@@ -165,25 +165,28 @@ function dimensionFor(p: BoardProps, o: BoardObject): Dimension | null {
   return dimensionOf(rowsOf(call), o.subject);
 }
 
+/**
+ * WHAT DRAWS A BLOCK.
+ *
+ * Since P1.e there are three answers, not fourteen. A composed shape draws its
+ * own tree. FOUR kinds are objects you do something to rather than readings of
+ * a read, and they keep their tiles — `catalogue.NOT_A_MARK` says which and
+ * why, and `catalogue.test.ts` holds this switch to that list so a kind cannot
+ * quietly fall out of both. Everything else is a READING, and every reading is
+ * one of the six marks: `MarkBlock` asks the catalogue which, and draws it
+ * inside the one frame — claim-title, subtitle off `meta`, the mark, its
+ * source line.
+ */
 function Piece(props: TileProps) {
   if (!props.turn) return null;
   // A composed shape has no `kind` — it carries its own tree instead.
   if (props.o.spec) return <SpecTile {...props} />;
   switch (props.o.kind) {
-    case 'hero': return <SubjectTile {...props} size="lead" />;
-    case 'figure': return <SubjectTile {...props} size="normal" />;
-    case 'subject': return <SubjectTile {...props} />;
-    case 'comparison': return <ComparisonTile {...props} />;
-    case 'table': return <TableTile {...props} />;
-    case 'chart': return <ChartTile {...props} />;
-    case 'distribution': return <DistributionTile {...props} />;
     case 'draft': return <DraftTile {...props} />;
     case 'state': return <StateTile {...props} />;
-    case 'timeline': return <TimelineTile {...props} />;
-    case 'recommendation': return <RecommendationTile {...props} />;
     case 'control': return <ControlTile {...props} />;
     case 'system': return <SystemTile {...props} />;
-    default: return null;
+    default: return <MarkBlock {...props} />;
   }
 }
 

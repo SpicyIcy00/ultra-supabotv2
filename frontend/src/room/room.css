@@ -857,17 +857,134 @@ body.r-dragging-on .r-tile { transition: none; }
 .r-spec-dots { margin-bottom: 4px; }
 .r-tile--solid .r-spec-how { color: var(--on-colour-2); }
 
-/* against: one row's value against its own baseline, with the noise floor
-   where the row carries one */
-.r-against { margin-top: 12px; }
-.r-against-track { position: relative; height: 8px; border-radius: 4px; background: var(--track); }
-.r-against-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: rgb(var(--hue)); }
-.r-against-band { position: absolute; top: -4px; bottom: -4px; border-radius: 6px; background: rgba(var(--hue), 0.18); }
-.r-against-base {
-  position: absolute; top: -6px; bottom: -6px; width: 2px; border-radius: 1px;
-  transform: translateX(-50%); background: var(--ink-2);
+
+
+/* ---------------------------------------------------------------- the six
+ *
+ * SIX MARKS, DRAWN ONE WAY EACH (P1.e). The frame is the same every time —
+ * claim-title, subtitle off `meta`, the mark, its source line — so a reader
+ * learns one layout and reads every block with it.
+ *
+ * COLOUR IS DIRECTION. Four data colours and no more: `--up`, `--down`,
+ * `--flat`, and `--george` for the row that matters where the read declared
+ * no direction. `palette.test.ts` fails on a fifth. The tile's own `--hue` is
+ * IDENTITY and stays on the edge and the wash, never inside a drawing — seven
+ * shops in seven hues over seven row labels was colour spent on nothing.
+ *
+ * DIGITS ARE MONO AND TABULAR wherever a column of them can form, so figures
+ * line up down the block instead of drifting with their glyph widths.
+ */
+.r-mk-title {
+  font: 600 15px/1.35 var(--sans);
+  letter-spacing: -0.008em;
+  color: var(--ink);
+  margin: 0 0 2px;
+  max-width: 46ch;
 }
-.r-tile--solid .r-against-track { background: rgba(0, 0, 0, 0.22); }
-.r-tile--solid .r-against-fill { background: var(--on-colour); }
-.r-tile--solid .r-against-band { background: rgba(255, 253, 249, 0.22); }
-.r-tile--solid .r-against-base { background: var(--on-colour); }
+.r-mk-sub {
+  font: 400 10px/1.5 var(--mono);
+  color: var(--ink-3);
+  margin: 0 0 12px;
+}
+.r-tile--solid .r-mk-title { color: var(--on-colour); }
+.r-tile--solid .r-mk-sub { color: var(--on-colour-2); }
+
+.r-mk { display: grid; gap: 2px; }
+
+/* One row of any mark: the name, the drawing, the figure. Three columns, the
+   same three everywhere, so the eye finds the figure in the same place. */
+.r-mk-row {
+  display: grid;
+  grid-template-columns: minmax(6ch, 13ch) 1fr minmax(9ch, auto);
+  gap: 10px;
+  align-items: center;
+  padding: 4px 0;
+}
+.r-mk-name {
+  font: 400 11.5px/1.3 var(--sans);
+  color: var(--ink-2);
+  text-align: right;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.r-mk-name--left { text-align: left; }
+.r-mk-row[data-lit="yes"] .r-mk-name { color: var(--ink); font-weight: 500; }
+.r-mk-fig {
+  font: 400 11.5px/1.35 var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  text-align: right;
+  white-space: nowrap;
+}
+.r-mk-fig b { font-weight: 500; color: var(--ink); display: block; }
+.r-mk-fig small { font-size: 0.86em; color: var(--ink-3); display: block; }
+.r-tile--solid .r-mk-name,
+.r-tile--solid .r-mk-fig { color: var(--on-colour-2); }
+.r-tile--solid .r-mk-fig b { color: var(--on-colour); }
+
+/* figure — one number, at the size its weight implies */
+.r-mk-figure { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.r-mk-num { font-family: var(--mono); letter-spacing: -0.02em; }
+.r-mk-measure { font: 400 11px/1.4 var(--sans); color: var(--ink-3); margin: 8px 0 0; }
+.r-tile--solid .r-mk-measure { color: var(--on-colour-2); }
+
+/* dumbbell — where it was, where it is, and the line between */
+.r-mk-track { position: relative; height: 18px; }
+.r-mk-track::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%;
+  height: 1px; background: var(--track);
+}
+.r-mk-band {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  height: 10px; border-radius: 5px; background: rgba(var(--flat), 0.22);
+}
+.r-mk-seg {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  height: 2px; border-radius: 2px; min-width: 1px;
+}
+.r-mk-dot {
+  position: absolute; top: 50%; width: 9px; height: 9px; border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.r-mk-dot--was { background: var(--card); border: 2px solid rgb(var(--flat)); }
+.r-mk-dot--now { width: 11px; height: 11px; }
+.r-mk-scale {
+  display: grid;
+  grid-template-columns: minmax(6ch, 13ch) 1fr minmax(9ch, auto);
+  gap: 10px;
+  font: 400 9.5px/1.4 var(--mono);
+  color: var(--ink-3);
+  margin-top: 4px;
+}
+.r-mk-scale span:nth-child(2) { display: flex; justify-content: space-between; }
+.r-mk-scale span:last-child { text-align: right; }
+
+/* ranked — bars in cells, one row each */
+.r-mk-bar { height: 9px; border-radius: 2px; background: var(--track); position: relative; }
+.r-mk-bar i { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 2px; }
+/* contributors — the same bar, diverging from a drawn zero */
+.r-mk-bar--split::before {
+  content: ''; position: absolute; left: 50%; top: -3px; bottom: -3px;
+  width: 1px; background: var(--edge-strong);
+}
+.r-mk-bar--split i { left: auto; }
+
+/* line — a series, its baseline dotted where the tool returned one */
+.r-mk-line svg { margin-top: 4px; }
+.r-mk-point { font: 500 10px var(--mono); fill: var(--ink); }
+.r-mk-ends {
+  display: flex; justify-content: space-between; gap: 10px;
+  font: 400 9.5px/1.4 var(--mono); color: var(--ink-3); margin-top: 8px;
+}
+.r-mk-key { color: var(--ink-3); }
+
+/* table — the rows, when precision beats shape */
+.r-mk-tablehead {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  font: 400 10px/1.5 var(--mono); color: var(--ink-3); margin-bottom: 6px;
+}
+
+@media (max-width: 640px) {
+  .r-mk-row, .r-mk-scale { grid-template-columns: minmax(5ch, 9ch) 1fr minmax(8ch, auto); gap: 7px; }
+  .r-mk-name { font-size: 11px; }
+  .r-mk-fig { font-size: 10.5px; }
+}

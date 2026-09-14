@@ -30,6 +30,16 @@ so you can read it.
 Reports written before 2026-09-13 carry no `results`, so only the two
 answer-only checks replay against them. The file says so rather than
 silently reporting fewer findings.
+
+AND ONE MORE BOUND, FOUND IN P1.e. A THREADED scenario's later turns cite
+figures an EARLIER turn read — "no i meant last week" is answered over rows
+"how are we doing?" brought back — and the run gives the checks both. Reports
+written before 2026-09-14 stored only each turn's own results, so replaying
+one of those flags ungrounded numerals the run itself passed:
+`verification/p1e-v2.json` replays with three on `correction`, and all three
+are in the turn before it. `harness.Report.add` now records the carried rows
+as `(carried from an earlier turn)`, so reports written from here on replay
+faithfully; an older threaded report is read with this paragraph beside it.
 """
 from __future__ import annotations
 
@@ -72,6 +82,12 @@ def main(argv: list[str]) -> int:
     if len(argv) < 2:
         print(__doc__)
         return 2
+    # A FLAG QUOTES GEORGE, AND GEORGE WRITES IN PESOS. Windows hands a piped
+    # stdout cp1252, which cannot encode ₱ — so this crashed halfway down the
+    # list, after printing the clean rows and before printing the count, which
+    # is the worst place for a verification tool to stop. Found in P1.e.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     rows = [replay(c) for c in load(argv[1])]
     no_evidence = [r for r in rows if not r["evidence"]]
     print(f"replayed {len(rows)} recorded answers through today's checks — $0.00\n")

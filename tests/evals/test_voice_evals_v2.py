@@ -115,7 +115,10 @@ def _voice(name: str, turn: checks.Turn, *, extra_results: list | None = None,
     f["limitation"] = checks.limitation_statement(turn.answer)
     f["attribution"] = checks.attribution_claims(turn.answer, results)
     f["refused_calls"] = [c.get("tool") for c in turn.calls if c.get("error")]
-    report.add(name, turn, f, None, passed=False)
+    # The carried rows go ON THE RECORD, not just into the checks: a thread's
+    # later turn cites figures its earlier turns read, and a report without
+    # them makes `corpus.py` report ungrounded numerals the run did not.
+    report.add(name, turn, f, None, passed=False, extra_results=list(extra_results or []))
 
     # --- TRUST. These are the rows that mean something from one run. --------
     assert turn.done.get("status") == "ok", (turn.warnings, turn.answer[:300])

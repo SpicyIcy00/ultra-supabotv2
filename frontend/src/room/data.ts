@@ -69,8 +69,13 @@ export function fmt(key: string, v: unknown, unit?: string | null): string {
     // against it. This much is read from the column name because the column
     // is what carries the dimension — every tool names these the same way.
     if (/pct|percent|share/i.test(key)) return `${n > 0 ? '+' : ''}${n.toFixed(1)}%`;
-    const money = unit ? unit.toUpperCase() === 'PHP' : PESO.test(key);
-    if (money) return `₱${n.toLocaleString('en-PH', { maximumFractionDigits: digits(n) })}`;
+    // THE SIGN GOES OUTSIDE THE SYMBOL. `₱-18,400` is what came out before,
+    // because the minus rode along inside `toLocaleString` — readable, but not
+    // how anybody writes money, and a contributors mark is a column of them.
+    if (unit ? unit.toUpperCase() === 'PHP' : PESO.test(key)) {
+      const amount = Math.abs(n).toLocaleString('en-PH', { maximumFractionDigits: digits(n) });
+      return `${n < 0 ? '-' : ''}₱${amount}`;
+    }
     return n.toLocaleString('en-PH', { maximumFractionDigits: digits(n) });
   }
   if (typeof v === 'boolean') return v ? 'yes' : 'no';

@@ -153,8 +153,9 @@ describe('a control hands back the right intent', () => {
 describe('a recommendation shows the verb and the read’s figure', () => {
   it('never invents a number of its own', () => {
     draw([object('recommendation', { subject: 'Rockwell', action: 'order' })]);
-    // The verb is George's, from the closed list.
-    expect(screen.getByText('Order')).toBeTruthy();
+    // The verb is George's, from the closed list. Since P1.e it LEADS the
+    // block as its title, because it is the one word the read has not got.
+    expect(screen.getByText('Order Rockwell')).toBeTruthy();
     // The figure is the read's, rendered by the system.
     expect(screen.getByText(/203,717/)).toBeTruthy();
   });
@@ -319,7 +320,7 @@ describe('the picture points, so the sentence does not have to', () => {
     const { container } = draw([object('table', { emphasise: 'OPUS' })]);
     const rows = [...container.querySelectorAll('tbody tr')] as HTMLElement[];
     const lit = rows.filter((r) => r.style.opacity === '1');
-    const cooled = rows.filter((r) => r.style.opacity === '0.4');
+    const cooled = rows.filter((r) => r.style.opacity === '0.5');
     expect(lit).toHaveLength(1);
     expect(cooled).toHaveLength(1);
     expect(lit[0].textContent).toMatch(/OPUS/);
@@ -344,10 +345,11 @@ describe('a bar chart names its bars', () => {
   // THE BUG THIS HOLDS. The bar form drew seven unlabelled rectangles in one
   // colour over "OPUS → Rockwell": a ranking with nothing to say which bar
   // was which shop or what any of them measured. A bar is a row — its name,
-  // its length, its figure.
+  // its length, its figure. Since P1.e the bar form IS the `ranked` mark and
+  // the rows are `.r-mk-row`; what is asserted is unchanged.
   it('draws every row as a named bar with its figure', () => {
     const { container } = draw([object('chart', { form: 'bar' })]);
-    const bars = [...container.querySelectorAll('.r-spec-bar')];
+    const bars = [...container.querySelectorAll('.r-mk-ranked .r-mk-row')];
     expect(bars).toHaveLength(2);
     expect(bars[0].textContent).toContain('Rockwell');
     expect(bars[0].textContent).toContain('203,717');
@@ -355,17 +357,29 @@ describe('a bar chart names its bars', () => {
     expect(container.textContent).not.toContain('→');
   });
 
-  it('paints each shop in its own colour', () => {
+  // THE OPPOSITE OF WHAT THIS ASSERTED UNTIL P1.e, and deliberately. It used
+  // to require a hue per shop; the owner then reported that he did not know
+  // what he was looking at, and "seven shops, seven hues" is the second of the
+  // five failures in that report — colour spent on identity a row label
+  // already gives, over rows that all measure one thing. Inside a mark colour
+  // is DIRECTION now. Identity keeps its hue on the tile's own edge and wash,
+  // which is where it still does work.
+  it('paints by direction, not by which shop it is', () => {
     const { container } = draw([object('chart', { form: 'bar' })]);
-    const fills = [...container.querySelectorAll('.r-spec-bar-track i')].map((i) => (i as HTMLElement).style.background);
-    expect(fills[0]).not.toBe(fills[1]);
+    const fills = [...container.querySelectorAll('.r-mk-bar i')].map(
+      (i) => (i as HTMLElement).style.background);
+    // Both shops are up, so both bars are the up colour and no shop hue is
+    // anywhere inside the drawing.
+    expect(fills[0]).toBe('rgb(var(--up))');
+    expect(fills[1]).toBe('rgb(var(--up))');
   });
 
   it('cools the rows George did not point at', () => {
     const { container } = draw([object('chart', { form: 'bar', emphasise: 'OPUS' })]);
-    const fills = [...container.querySelectorAll('.r-spec-bar-track i')] as HTMLElement[];
-    expect(fills[0].style.opacity).toBe('0.28');
-    expect(fills[1].style.opacity).toBe('1');
+    const rows = [...container.querySelectorAll('.r-mk-ranked .r-mk-row')] as HTMLElement[];
+    expect(rows.map((r) => r.getAttribute('data-lit'))).toEqual(['no', 'yes']);
+    expect(rows[0].style.opacity).toBe('0.5');
+    expect(rows[1].style.opacity).toBe('1');
   });
 });
 
@@ -412,11 +426,17 @@ describe('a comparison is drawn as an instrument, not only a pill', () => {
            selection={[]} live={false} retuned={{}} on={ACTIONS()} />,
   );
 
+  // SINCE P1.e THE INSTRUMENT IS THE DUMBBELL. It was a bullet — a fill on a
+  // track — under a sentence saying what the track and the fill were, and an
+  // encoding that needs a sentence to decode is the third of the owner's five
+  // failures. Two dots and a line say it without the sentence. What is
+  // asserted is the same: both figures are the tool's, on the same row.
   it('puts a subject\'s value against its own baseline under the figure', () => {
     const { container } = drawWith(object('subject', { subject: 'Rockwell' }));
-    expect(container.querySelector('.r-against')).toBeTruthy();
-    expect(container.querySelector('.r-against-band')).toBeNull();
-    expect(container.querySelector('.r-spec-how')?.textContent).toContain('179,000');
+    expect(container.querySelector('.r-mk-dot--was')).toBeTruthy();
+    expect(container.querySelector('.r-mk-band')).toBeNull();
+    expect(container.querySelector('.r-mk-fig small')?.textContent).toContain('179,000');
+    expect(container.textContent).not.toContain('the mark is the period before');
   });
 
   it('draws the noise floor when the row carries the definition it was judged by', () => {
@@ -429,15 +449,19 @@ describe('a comparison is drawn as an instrument, not only a pill', () => {
       <Board answers={[turn]} board={[object('hero', { subject: 'North Edsa', weight: 'lead' })]} local={{}}
              focused={null} selection={[]} live={false} retuned={{}} on={ACTIONS()} />,
     );
-    expect(container.querySelector('.r-against-band')).toBeTruthy();
-    expect(container.querySelector('.r-spec-how')?.textContent).toContain('noise floor');
+    expect(container.querySelector('.r-mk-band')).toBeTruthy();
+    // The band is still only ever the tool's own floor: both of its numbers
+    // are on the row, and nothing draws one where the row carries none.
+    expect(container.querySelector('.r-mk-track')?.getAttribute('aria-label'))
+      .toContain('13,069');
   });
 
-  it('draws a bar chart of compared rows as bullets — the track is the period before', () => {
+  it('draws a bar chart of compared rows as dumbbells — a dot where it was, a dot where it is', () => {
     const { container } = drawWith(object('chart', { form: 'bar' }));
-    expect(container.querySelectorAll('.r-spec-bullet')).toHaveLength(2);
+    expect(container.querySelectorAll('.r-mk-dumbbells .r-mk-row')).toHaveLength(2);
     expect(container.textContent).toContain('425,000');
-    expect(container.querySelector('.r-spec-how')?.textContent).toContain('period before');
+    // No caption decoding the encoding — that was the thing being fixed.
+    expect(container.querySelector('.r-spec-how')).toBeNull();
   });
 
   it('says what and when at the foot, never which table', () => {

@@ -92,8 +92,8 @@ shippable. The full diagnosis is the report linked in section 6.
 | Head | `fb303ba` — **pushed and live 2026-09-14**, five commits: P1.c (`cf5806e`), the plan page moving into the repo with its contract test, and two eval fixes. Before it, `a3003ef` on 2026-09-13 carried 32 commits that had sat unpushed: P1.b's default composition, the v2 voice suite (`bfb168f`), the $0 replay (`235d236`) and P1.g (`c508965`). |
 | Live | **`b0ccfba`**, confirmed from `/health`: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `d6a3d101`, **no migration** (only `metrics.yaml` moved, which is read at runtime). The FIFTH clean swap in a row, and **the second ever polled ACROSS it**: 18 polls at 20 s over six minutes, **zero non-200s**, old build at 15:07:49 and new at 15:08:09 — so the swap fits inside one 20 s window and nothing was unreadable from outside. That is the evidence the 09-14 row could not give, because its first poll already showed the new build. Read `/health` rather than believing this row: `a01706b` sat here as live while three commits had landed since. |
 | Last deploy | `ee29fa5`, live and healthy when recorded; the swap before it, `a01706b`, **live and healthy when recorded**, and the swap was clean — polled every 20 s across it, zero non-200s, old build to new in about a minute. It carried NO migration (the schema was already at head), so the launcher took its `already at head` branch and ran no alembic at all. That is evidence the outage below lives in the migration path specifically, not in the boot or the build — evidence, not the deploy log. Before it, `8b0325a`. `8b0325a` carried P0.3 and P0.4, and applying migration `w7x8y9z0a1b2` cost **~50 minutes of 502**: the first boots crashlooped, the migration did not apply, and nothing was readable from outside. It came up on a later retry. Root cause still unknown — the Railway deploy log for that build has not been read. `69b51bd` is the fix for the *invisibility*, not for the cause. |
-| Phase | 0, consolidating |
-| Next card | **Whatever is Open in `ops/DOGFOOD_LOG.md`, then P1.e.** One thing is Open as of 2026-09-14 — *"i dont really know what im looking at"*, items 2 to 5 — and **it is P1.e's, so the next card and the top of the log are the same work.** **P1.d closed 2026-09-14**: a question sharing no subject with the board clears it, one sharing a subject transforms it, and everything the newest turn did not touch folds to one line above the reading. It took the log's other two Open items with it — the composed shape missing from the board line, and the gate failing on a share the tool itself computed (1 of 4 → 0 of 4 on the recorded run, replayed for $0.00). The case to watch when he next uses it: "and OPUS?" while looking at Rockwell now CLEARS. **P1.c closed 2026-09-14**: the reading is a region above the board, `text` and `prose` are out of the vocabulary, the two `fmt` bugs are gone, and `max_restated_sentences: 0 → 1` took the gate's cited figures from 0/4 to 4/4. The remaining cards were rewritten 2026-09-13 into the plan that reaches the Ideal UI: P1.c–P1.k, P2.a–P2.h, P3.a–P3.f, and Phase 4 sources. P1.d and P1.e carry what is left of the Open items, in the log's own agreed fixes. **P1.g closed 2026-09-13** (`c508965`), which is the log's two trust failures; the Open item it left behind — every gate answer citing no figure — is a decision P1.c has to make, not a card of its own. P1.b closed 2026-09-13: first composed object 16.8 → 8.2 s, first visible object unmoved at 7.0 s (bounded by the first round trip; only replay, P1.i/P1.j, can reach 2 s). The bill is round trips, not cache misses. Read the note under the baseline table before reporting any Phase 1 number against the twelve. |
+| Phase | 1 — P1.c, P1.d, P1.e closed; P1.f next |
+| Next card | **Whatever is Open in `ops/DOGFOOD_LOG.md`, then P1.f.** **Nothing is Open as of 2026-09-14** — *"i dont really know what im looking at"* closed with P1.e, which is the first time the log has been empty since it was started. **The next thing he says about the board is the most valuable thing in the project**, because five of his five reported failures have now been answered and nobody has looked at the result. **P1.e closed 2026-09-14**: fourteen widget shapes became six marks, every block framed the same way round (title, subtitle off `meta`, mark, source line), colour is direction and not identity, and the caption that decoded the old bars is gone with the bars. Eight recorded runs replayed through the real renderer, 13 blocks, all six-or-fewer with a source line. It carried the eval swap: **v2 ran once for $1.51 against a $1.84 estimate, every trust row clean on all eleven scenarios, and `test_voice_evals.py` is deleted.** The one disagreement was `grounded_numerals` calling a good answer a shrug because its figures were small — fixed in the check, verified by replay for $0.00. **P1.d closed 2026-09-14**: a question sharing no subject with the board clears it, one sharing a subject transforms it, and everything the newest turn did not touch folds to one line above the reading. The case to watch when he next uses it: "and OPUS?" while looking at Rockwell now CLEARS. **P1.c closed 2026-09-14**: the reading is a region above the board, `text` and `prose` are out of the vocabulary, the two `fmt` bugs are gone, and `max_restated_sentences: 0 → 1` took the gate's cited figures from 0/4 to 4/4. The remaining cards were rewritten 2026-09-13 into the plan that reaches the Ideal UI: P1.f–P1.k, P2.a–P2.j, P3.a–P3.f, and Phase 4 sources. **P1.g closed 2026-09-13** (`c508965`), which is the log's two trust failures. P1.b closed 2026-09-13: first composed object 16.8 → 8.2 s, first visible object unmoved at 7.0 s (bounded by the first round trip; only replay, P1.i/P1.j, can reach 2 s). The bill is round trips, not cache misses. Read the note under the baseline table before reporting any Phase 1 number — the twelve it was measured on are deleted. |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
@@ -215,8 +215,17 @@ session.
 
 ### When to run the twelve — it costs real money, every time
 
-**A full run of the FIRST TWELVE is $2.90. The figure here has now been wrong
-twice, in both directions, and this is the third statement of it.** It said
+**A FULL RUN IS v2 AND COSTS $1.51, MEASURED at P1.e, 2026-09-14** — eleven
+scenarios, eleven live turns, nothing unscored, from `harness.METER` and
+recorded in `verification/p1e-v2.json` and `spend_ledger.jsonl`. It is the
+first eval figure in this file to come in UNDER its estimate ($1.84), and the
+estimate was derived from v1's per-scenario costs rather than guessed. **The
+gate alone is four turns**, measured at $0.64 (P1.g) and $0.75 (P1.c).
+
+**The history below is v1's and is kept because the errors are the lesson.**
+A full run of the FIRST TWELVE was $2.90 — deleted in P1.e, so that number
+can no longer be spent, only compared against. **The figure was wrong twice,
+in both directions, and this is the third statement of it.** It said
 $5–7 (an iteration estimate). It was corrected to $1.65 on the harness's own
 `spend`. **`spend()` was itself understating by 40%**: it summed only the
 SCORED scenarios, and four setup turns — "How is Rockwell doing?" re-asked for
@@ -243,16 +252,19 @@ where a regression was speculative AND **the four gate scenarios could not
 have seen it.** A new comparison (`P2.i`, `P3.f`) is a capability no gate
 scenario asks for, so a run there proves nothing; `P2.c`, `P2.d` and `P2.f`
 are context and rendering; `P1.c` breaks or fixes compose refusals, which are
-its own numbers. **Six live runs across 25 open cards, ~$11.04** — P1.e's
-tail, P1.f, P1.h and the three phase closes at ~$1.84 each on v2. **P1.g and
-P1.c are closed**, and their gate runs cost **$0.64 and $0.75 against a $0.63
-estimate**: P1.g's was the first figure here to survive contact with a live
+its own numbers. **Five live runs across 24 open cards, $7.55** — P1.f,
+P1.h and the three phase closes at $1.51 each on v2, the measured price.
+Every remaining gate was dropped or absorbed, so five FULL runs is the whole
+of it.
+**P1.g, P1.c and P1.e are closed**, and their runs cost **$0.64, $0.75 and
+$1.51 against $0.63, $0.63 and $1.84**: P1.g's was the first figure here to survive contact with a live
 run, and P1.c's overspend was a first run made with `-x`, which stops on the
 first scenario and pays for it twice. **Drop `-x` on a gate run**; four
 scenarios is the unit, and a partial one buys a fifth of the signal for a
 third of the price.
-**The earlier $9.10 was wrong, because the meter was.** Against v1 at its true
-$2.90 the same seven runs would have been ~$18. The real gain from dropping
+**The earlier $9.10 and $11.04 were both wrong, because the meter was and then
+the price was.** Against v1 at its true $2.90 the same runs would have been
+~$18; v2 at its measured $1.51 is a little under half that. The real gain from dropping
 the six gates is six sessions that do not stop to run something that could not
 inform them; the money is secondary and always was.
 
@@ -602,9 +614,20 @@ column a Phase 1 card reports against.
 | corrective turns per turn, median | unmeasured | 0 · 5 across the twelve, worst 2 | — |
 | notices surfaced · forced · invented figures | — | 12 · 0 · 0 | unchanged |
 
-**THE TWELVE ARE A SAMPLE, NOT A PASS/FAIL GATE — read this before quoting a
-score.** Four real-model runs now exist (2026-09-13): **12/12, 11/12, 10/12,
-11/12**, and a different scenario fails each time. Separate the two kinds of
+**THE TWELVE ARE DELETED, AND THE TABLE ABOVE IS STILL THE BASELINE.** P1.e
+removed `tests/evals/test_voice_evals.py` and the suite is
+`test_voice_evals_v2.py` — **eleven scenarios, five of them one thread, $1.51 a
+full run.** The column above cannot be re-measured, because the questions that
+produced it no longer exist; it stays because the numbers Phase 1 has to move
+are wall-clock and round trips, and those are properties of the loop and not of
+which twelve questions were asked. **A Phase 1 card reports its latency against
+that column and its trust rows against v2**, and says which is which.
+Where the two overlap — label share, compose rejections, iterations — v2's
+first run is the new zero: `verification/p1e-v2.json`, 2026-09-14.
+
+**A RUN IS A SAMPLE, NOT A PASS/FAIL GATE — read this before quoting a
+score.** Four real-model runs of the twelve exist (2026-09-13): **12/12,
+11/12, 10/12, 11/12**, and a different scenario fails each time. Separate the two kinds of
 check, because they behave differently:
 
 - **The trust properties are stable.** Across all four runs: notices surfaced
@@ -616,7 +639,10 @@ check, because they behave differently:
   on `morning`, then `product` and `follow-up`, then `order` — every non-trust
   failure in four runs. The check is not broken: `order` genuinely opened with
   "...for the whole 90 days". George simply leads with a figure some runs and
-  not others.
+  not others. **v2 acts on this**: style is reported as a rate and asserted
+  only under `GEORGE_VOICE_STRICT=1`, which is why §4 now says not to set it.
+  P1.e's run set it and got 8 "failures" of which 7 were this one row, over a
+  run whose every trust check was clean.
 
 So **one run is a sample of a stochastic system**, and "12 of 12" recorded at
 P0.3 was one draw, not a property. A Phase 1 card that reports a style score
@@ -1016,7 +1042,7 @@ before believing it.
          decided this way round deliberately and the reversal is written
          down — fold instead of clear, one line. It is in the log as the case
          to watch.
-- [ ] **P1.e six marks, drawn one way each** — the renderer's fourteen
+- [x] **P1.e six marks, drawn one way each** — the renderer's fourteen
       widget kinds become the catalogue in the Ideal UI: figure, dumbbell
       (before/after), ranked (bars in cells), contributors (drivers), line
       (baseline dotted when the tool returned one), table. Every block: a
@@ -1048,6 +1074,108 @@ before believing it.
       say so rather than deleting the evidence that caught it.
       **Eval: full, once, v2 only.** Report what it actually cost from the
       new meter — ~$1.84 is an estimate derived from v1's per-scenario costs.
+
+      **CLOSED 2026-09-14. Suites exact: 1,551 pure (unchanged — this card is
+      renderer-only and the one contract test it touched was rewritten, not
+      added to), 880 vitest (was 822), `tsc -b` and `build` clean. One full v2
+      run, `verification/p1e-v2.json`, $1.51 measured against the $1.84
+      estimate** — the first eval figure in this file to come in UNDER what it
+      said, and the meter counted every turn, so there is no unscored half
+      hiding behind it.
+
+      **THE CATALOGUE IS `frontend/src/room/catalogue.ts` AND THE DRAWINGS ARE
+      `marks.tsx`.** Seven tile components are gone — subject, comparison,
+      table, chart, distribution, timeline, recommendation — and with them
+      `Against`, whose caption ("the track is the period before · the fill is
+      this one") was the owner's third failure in his own words. `render.tsx`
+      went from fourteen `case` arms to four and a default. Every block is
+      framed the same way round now: claim-title, subtitle off `meta`
+      (metric · window · comparison · unit · rows), the mark, its source line.
+
+      **TWO DEVIATIONS, BOTH DELIBERATE.**
+
+      **1. Four kinds keep their tiles and are not marks.** `draft`, `control`,
+      `state`, `system`. A mark is a way of drawing what a read RETURNED;
+      those four are objects you do something to — a draft whose quantities
+      you edit and whose total follows them is the gesture the whole purchase
+      arc turns on, and mapping it onto `table` would have deleted it. The
+      list is `catalogue.NOT_A_MARK`, each with its reason, and
+      `test_every_widget_is_drawn_by_the_renderer_and_nothing_else_is` holds
+      it to `render.tsx`'s four cases in both directions, so a kind cannot
+      quietly fall out of both. Every OTHER declared widget is a reading and
+      draws as one of the six.
+
+      **2. The claim-title is George's `note`, or the read's own name.** The
+      grammar has no field for a title and must not get one — a claim typed
+      into a block is a sentence with no receipt. `note` is what he already
+      has: a characterisation, validated to carry no digits. A recommendation
+      is the one exception and leads with his VERB ("Order Aji Mix"), because
+      that is the one word a read has not got.
+
+      **COLOUR IS DIRECTION, WHICH REVERSES A TEST.** Four data colours —
+      `up`, `down`, `flat`, and `george` for the emphasised row of a read that
+      declared no direction — held by `palette.test.ts`, which reads the
+      source: one `paint()` producing every colour, no literal hex or rgb
+      anywhere, `--accent` refused, and identity's `--hue` allowed exactly
+      once, on the object panel's wrapper, outside every drawing. Proven to
+      fail both ways round: a fifth token in a mark, and a fifth entry in
+      `DATA_COLOURS`. `room.dom.test.tsx`'s "paints each shop in its own
+      colour" is now "paints by direction, not by which shop it is" — the
+      reversal is the owner's second failure, and it is written down where the
+      old assertion stood.
+
+      **THE DONE-WHEN'S RECORDED RUNS, AND WHAT THEY DO NOT COVER.**
+      `ops/recorded_board.py` rebuilds the board each recorded run held —
+      rows and `meta` lifted whole out of the eval report, blocks through
+      `agent/default_composition` — into
+      `frontend/src/room/__fixtures__/recorded-runs.json`, and
+      `marks.dom.test.tsx` renders every one for real. **Eight runs, 13
+      blocks, all six-or-fewer marks, all with a source line.** The bound: an
+      eval report does NOT record the blocks George composed, only that he
+      composed some, so these are the loaded default — a real board state, and
+      not his. It reaches figure, dumbbell, ranked and table; contributors and
+      line are held by row-shape tests instead, and by `catalogue.test.ts`,
+      which walks every kind in the yaml's own `composition.widgets`.
+
+      **THE TAIL RAN AND THE GATE AGREED — EXCEPT ONCE, WHICH IS THE FINDING.**
+      The four gate questions are byte-identical to `p1b-final.json`'s, and on
+      every check both suites share (`status`, `notice_forced`,
+      `ungrounded_numerals`, `internal_vocabulary`, `attribution`) all eleven
+      v2 scenarios are clean — where p1b-final recorded two failures, which are
+      the two P1.g closed. `tests/evals/test_voice_evals.py` is deleted.
+
+      **The disagreement was v2's own new assertion, and it was the check.**
+      `caveats` failed "he cited no figure any tool returned" on an answer that
+      names the product emptying today and the 1 unit left on it — both
+      `get_replenishment` figures. `grounded_numerals` was excusing them as
+      presentation integers, an exclusion it inherited from
+      `ungrounded_numerals` on the stated principle that the two share every
+      one. **That principle is wrong**: for "did he INVENT one" a bare 4 must
+      be excused; for "did he CITE one" a 4 the rows account for is a citation.
+      Fixed there, and **verified by replay for $0.00**
+      (`tests/evals/corpus.py`): `dogfood-remainder-caveats.json` goes from
+      **4 of 4 "cited no figure" to 2 of 4**, `p1c-gate-2.json` stays at
+      **0 of 4**, and nothing newly fires anywhere. The loosening is one-way —
+      it can only add a citation, never remove a forbidden numeral.
+
+      **THREE SHORTFALLS.**
+      1. **The run was made with `GEORGE_VOICE_STRICT=1`**, which is §4's
+         recipe for the OLD twelve and wrong for v2, where style is a rate and
+         not a gate by design. So 8 of 11 "failed" on style — 7 on
+         `leads_with_reading`, which is the flapping row v2 exists to stop
+         asserting. Nothing was re-run: the trust rows are all in the report
+         and they are what matters. §4's command is repointed and the flag is
+         gone with it.
+      2. **`corpus.py` disagreed with the run it was verifying, on threads.**
+         A later turn cites rows an earlier one read; the report stored only
+         each turn's own, so `correction` replays with three ungrounded
+         numerals the run passed. `harness.Report.add` now records the carried
+         rows; `p1e-v2.json` predates that and is read with corpus.py's own
+         paragraph beside it. It also crashed on `₱` under Windows cp1252,
+         mid-list — fixed.
+      3. **Nothing was rebuilt in front of the owner.** Same shortfall P1.d
+         closed with: the evidence is recorded rows rendered by the real
+         renderer, not his screen.
 - [ ] **P1.f compose narrows to the catalogue; the text gets three slots** —
       the label grammar becomes the six marks plus a claim-title per block;
       the findings roles become claim (one highlight) · caveat (whole, above
@@ -1372,7 +1500,7 @@ of this plan, with every card's prompt, is **George, The Build Plan** in §6.
 Run from the repo root. The interpreter is `.venv\Scripts\python.exe`; a system
 `python` cannot import the backend (pinned SQLAlchemy).
 
-    .venv\Scripts\python.exe ops/verify_integration.py pure     # 1,410 expected
+    .venv\Scripts\python.exe ops/verify_integration.py pure     # 1,551 expected
     .venv\Scripts\python.exe ops/sweep_gaps.py --days 7
     .venv\Scripts\python.exe ops/cost_report.py --days 7
 
@@ -1406,16 +1534,34 @@ with each other, across builds with `--since`.        # the weekly sweep
     .venv\Scripts\python.exe ops/turn_clock.py --days 7        # the clock (P0.3)
     .venv\Scripts\python.exe ops/turn_clock.py --days 30 --user-only
     cd frontend && npm ci                                       # after any merge
-    cd frontend && npx vitest run                               # 774 expected
+    cd frontend && npx vitest run                               # 880 expected
     cd frontend && npx tsc -b --noEmit
     cd frontend && npm run build
 
-The twelve-question eval — real model, real reads, nothing written, opt-in:
+The voice eval — real model, real reads, nothing written, opt-in. **It is v2
+and only v2 since P1.e**: `test_voice_evals.py`, the first twelve, is deleted,
+and every number in this file that came from it is marked as such.
 
     set GEORGE_EVALS=1
-    set GEORGE_VOICE_STRICT=1
     set GEORGE_EVAL_REPORT=verification/<name>.json
-    .venv\Scripts\python.exe -m pytest tests/evals/test_voice_evals.py -q
+    .venv\Scripts\python.exe -m pytest tests/evals/test_voice_evals_v2.py -q          # full, 11 turns, $1.51
+    .venv\Scripts\python.exe -m pytest tests/evals/test_voice_evals_v2.py -q -m gate  # the gate, 4 turns
+
+**DO NOT SET `GEORGE_VOICE_STRICT=1`.** It belonged to the twelve. In v2 style
+is a rate and not a gate — deliberately, because `leads_with_reading` was every
+non-trust failure across four recorded runs — and the flag turns those rates
+back into assertions. P1.e's run set it and reported 8 of 11 "failed" on style
+with every trust row clean, which is the first thing it will do to you too.
+
+The environment comes from `backend/.env` and the run needs
+`GEORGE_DATABASE_URL` and `ANTHROPIC_API_KEY` in it. Load it with
+`dotenv.load_dotenv("backend/.env")` in a wrapper rather than echoing anything:
+a probe prints the NAME and whether it is set, never the value.
+
+Replaying a recorded run through today's checks costs **$0.00** and is how a
+card that changes only a CHECK is verified:
+
+    .venv\Scripts\python.exe -m tests.evals.corpus verification/<name>.json
 
 Local dogfood backend (omits the model key unless `--allow-model`, which is a
 structural gate — never pass it unasked):
