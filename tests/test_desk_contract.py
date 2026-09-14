@@ -300,7 +300,8 @@ def test_replay_runs_the_stored_call_and_carries_the_service_s_refusals(monkeypa
         asked.append(kw)
         return {"status": "ok", "tool": "get_sales", "seq": kw["seq"],
                 "argument": "window", "was": "last_week", "value": kw["value"],
-                "arguments": {"date_range": kw["value"]}, "rows": [], "meta": {},
+                "arguments": {"date_range": kw["value"]}, "rows": [],
+                "rows_complete": True, "meta": {},
                 "notices": [], "refusal": None, "blocks": [], "duration_ms": 1,
                 "recorded": True, "ran_at": __import__("datetime").datetime.now()}
 

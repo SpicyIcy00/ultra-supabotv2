@@ -407,13 +407,27 @@ def test_the_block_never_characterises_the_rows(monkeypatch):
         assert said not in block
 
 
-def test_more_rows_than_a_screen_is_sent_draws_nothing(monkeypatch):
+def test_more_rows_than_a_screen_is_sent_sends_none_of_them(monkeypatch):
+    """
+    ALL OF THEM OR NONE — the loop's own rule (`MAX_ROWS_TO_CLIENT`), which
+    this endpoint was not applying until P1.j. It sent the rows whole and only
+    withheld the SHAPE, so a person moving a window on a day-grouped read over
+    a year put 365 rows into a mark drawn over twelve. A mark over the first
+    120 of 365 is not a smaller mark, it is a different and wrong one.
+    """
     many = [{"store": f"s{i}", "value": float(i)}
             for i in range(george_loop.MAX_ROWS_TO_CLIENT + 1)]
     a_tool(monkeypatch, rows=many)
     out = run(FakeSession(payload=ANSWER))
-    assert out["status"] == "ok" and out["rows"] == many
+    assert out["status"] == "ok"
+    assert out["rows"] == [] and out["rows_complete"] is False
     assert out["blocks"] == [], "an object over a prefix draws a different chart"
+
+
+def test_rows_a_screen_can_hold_arrive_whole_and_say_so(monkeypatch):
+    a_tool(monkeypatch)
+    out = run(FakeSession(payload=ANSWER))
+    assert out["rows"] == ROWS and out["rows_complete"] is True
 
 
 def test_a_read_that_returned_nothing_draws_nothing(monkeypatch):

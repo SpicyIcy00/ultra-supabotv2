@@ -386,6 +386,14 @@ async def replay(db: AsyncSession, *, username: str, post_id: uuid.UUID, seq: in
         raise ReplayRefused(str(exc)) from exc
 
     ran = await run_call(call)
+    # ALL OF THE ROWS OR NONE, the rule the loop applies to every result it
+    # sends (`MAX_ROWS_TO_CLIENT`) and this endpoint was not applying. A mark
+    # over the first 120 of 365 is not a smaller mark, it is a different and
+    # wrong one — so a result the loop would have withheld is withheld here
+    # too, and `rows_complete` says which happened rather than leaving a
+    # client to infer it from a length it cannot compare to anything.
+    rows = ran["rows"] or []
+    rows_complete = len(rows) <= MAX_ROWS_TO_CLIENT
     at = datetime.now(timezone.utc)
     recorded = await record(
         db, username=username, post_id=post_id, defs=defs,
@@ -401,7 +409,8 @@ async def replay(db: AsyncSession, *, username: str, post_id: uuid.UUID, seq: in
         "was": was,
         "value": value,
         "arguments": args,
-        "rows": ran["rows"],
+        "rows": rows if rows_complete else [],
+        "rows_complete": rows_complete,
         "meta": ran["meta"],
         "notices": ran["notices"],
         # THE TOOL'S OWN WORDS, never rephrased. A window still in progress is

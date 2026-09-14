@@ -26,6 +26,42 @@ export interface DeskLocation {
   kind: 'retail' | 'warehouse';
 }
 
+/** One value a token may be moved to, with what a person may type for it. */
+export interface DeskAlternative {
+  value: unknown;
+  label: string;
+  /**
+   * What resolves to this alternative when TYPED. Served, so matching is a
+   * lookup in a list the definitions own — no stemming, no fuzzy match, no
+   * "did you mean" anywhere on the client (metrics.yaml
+   * surface.desk.tokens.spoken).
+   */
+  spellings: string[];
+  /**
+   * The word `permitted_by` names this alternative by, for a token whose
+   * alternatives depend on something the call carries. Null for one whose
+   * alternatives are the same on every call.
+   */
+  permit_key?: string | null;
+}
+
+/** One argument the loop accepted, as a thing a person can move. */
+export interface DeskToken {
+  argument: string;
+  /** What moving it costs: `navigation` skips the model, `analytical` does not. */
+  kind: 'navigation' | 'analytical';
+  label: string;
+  alternatives: DeskAlternative[];
+  /**
+   * Which alternatives a call actually permits, and what decides it. A
+   * `group_by` token offering a cut the tool will refuse is worse than no
+   * token: `net_sales` is transaction grain and declines a product grouping
+   * in its own sentence. Served, so what a call permits is the metric's own
+   * list and never a rule worked out here.
+   */
+  permitted_by?: { argument: string; permits: Record<string, string[]> } | null;
+}
+
 /** Mirrors DeskDefinitions in backend/app/api/v1/routes/george.py. */
 export interface DeskDefinitions {
   business: { name: string; short: string };
@@ -43,6 +79,28 @@ export interface DeskDefinitions {
    * Served, so the client never decides what the definitions permit.
    */
   breakdown_dimensions: DeskDimension[];
+  /** The tokens a drawn read may carry, alternatives already resolved. */
+  tokens: DeskToken[];
+  /**
+   * `surface.desk.replay`, as the definitions state it. Where each argument
+   * lands in a call's own arguments (a `path`, or a `per_tool` pointer
+   * resolved through `window_arguments`), which argument a composed control
+   * names, which changes change the shape of the rows, and how much of the
+   * record is read back on opening. Never keep a copy of any of it.
+   */
+  replay: {
+    arguments: Record<string, { path?: string[]; per_tool?: string }>;
+    from_control: Record<string, string>;
+    changes_shape: string[];
+    max_restored_per_open: number;
+    [key: string]: unknown;
+  };
+  /** How short a fragment may be, and the one token that costs a turn. */
+  fragments: {
+    max_words: number;
+    correction: { token: string; asks: string };
+    [key: string]: unknown;
+  };
 }
 
 export const readDeskDefinitions = async (): Promise<DeskDefinitions> => {
@@ -61,6 +119,13 @@ export interface ReplayOut {
   value: unknown;
   arguments: Record<string, unknown>;
   rows: Record<string, unknown>[];
+  /**
+   * False when the read returned more rows than a screen is sent, in which
+   * case `rows` is empty: all of them or none, never a prefix. The board does
+   * not move, and the room says so in the definitions' own sentence
+   * (`replay.rows_incomplete_says`).
+   */
+  rows_complete: boolean;
   meta: ToolMeta;
   notices: GeorgeNotice[];
   /** The tool's own words when it refused. Never rephrased here. */

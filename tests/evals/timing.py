@@ -105,3 +105,52 @@ def first_composed_object_ms(frames: Sequence[Frame], *, with_default: bool) -> 
             continue
         return at
     return None
+
+
+# ---------------------------------------------------------------------------
+# A fragment, which has no frames at all (P1.j)
+# ---------------------------------------------------------------------------
+#
+# Everything above replays MODEL frames, because everything above is about a
+# turn. A fragment is the case where there is no turn: "last month" typed into
+# the composer resolves against the tokens on screen and runs as a replay, and
+# the model is never asked. So there is nothing to replay here and the rule is
+# the one thing this module can still own — WHAT COUNTS AS THE CHANGE.
+#
+# THE CHANGE IS THE SLOWEST OF THE BATCH, NOT THE FIRST. A token moves every
+# drawn read on that argument, and they run concurrently: a board that is half
+# on August and half on last week has not changed, it has broken. So the
+# number a person waits for is when the LAST of them lands.
+#
+# WHAT IS NOT IN IT. The resolve is a lookup in a served list and costs no
+# request; the render is a React commit over rows already in memory. Both are
+# under the resolution of anything that can be measured from a test, and
+# neither opens a connection. The measured part is the reads, which is the
+# part that costs anything — the same honesty `test_replay_live` states about
+# the two application-database statements around one.
+
+def fragment_change_ms(replays: Sequence[float]) -> Optional[float]:
+    """
+    When the board first changed after a fragment, in milliseconds.
+
+    `replays` are the durations of the replays one fragment fired, in seconds
+    — one per drawn read on that argument. None for a fragment that fired
+    none, which is a fragment that did not resolve and went to George instead.
+    """
+    if not replays:
+        return None
+    return max(replays) * 1000.0
+
+
+def analytical_figure_ms(replays: Sequence[float]) -> Optional[float]:
+    """
+    When the FIGURE landed for an analytical fragment — the same number.
+
+    It is named separately because the card's two budgets are separate and one
+    of them is easy to report dishonestly: an analytical fragment also costs a
+    model turn, and the reading arrives whole turns later. That is not a
+    failure of this measure, it is the point of `analytical_asks_anyway` — the
+    figure is fast and the reading is never dropped to keep it that way. A
+    report that quoted the turn here would be reporting the wrong thing.
+    """
+    return fragment_change_ms(replays)

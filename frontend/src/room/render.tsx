@@ -14,6 +14,7 @@
 import { useMemo } from 'react';
 import type { BoardObject, Local } from './board';
 import { inOrder } from './board';
+import { retunedKey } from './tokenShape';
 import { useDrag } from './drag';
 import { callOf, dimensionOf, rowsOf, type AnswerTurn, type Dimension } from './data';
 import type { ToolCall } from '../types/george';
@@ -33,8 +34,16 @@ export interface BoardProps {
   selection: string[];
   /** True while George is still working — drives the landing sequence. */
   live: boolean;
-  /** Reads re-run by a control, by seq. Every object on that read follows. */
-  retuned: Record<number, ToolCall>;
+  /**
+   * Reads re-run by a token or a control, keyed `turn:seq` (`retunedKey`).
+   * Every object drawn from that read follows.
+   *
+   * KEYED BY THE TURN AS WELL AS THE SEQ since P1.j. `seq` restarts at 0 on
+   * every turn, so a bare seq meant a replay on turn three's first read
+   * redrew turn one's object with turn three's rows — a figure under somebody
+   * else's label, which is the one thing the board may not do.
+   */
+  retuned: Record<string, ToolCall>;
   on: TileActions;
   /**
    * The index of the first answer the person has not seen (history.ts).
@@ -123,7 +132,7 @@ export function Board(p: BoardProps) {
         selected={Boolean(o.subject && p.selection.includes(o.subject))}
         selection={p.selection}
         earlier={o.touched < newest}
-        retuned={o.seq === undefined ? null : p.retuned[o.seq] ?? null}
+        retuned={o.seq === undefined ? null : p.retuned[retunedKey(o.turn, o.seq)] ?? null}
         on={on}
       />
       {/* WHAT YOU CAN DO TO IT — under every object, whatever shape it is.
@@ -165,7 +174,7 @@ export function Board(p: BoardProps) {
  */
 function dimensionFor(p: BoardProps, o: BoardObject): Dimension | null {
   if (!o.subject || o.seq === undefined) return null;
-  const call = p.retuned[o.seq] ?? callOf(p.answers[o.turn], o.seq);
+  const call = p.retuned[retunedKey(o.turn, o.seq)] ?? callOf(p.answers[o.turn], o.seq);
   return dimensionOf(rowsOf(call), o.subject);
 }
 

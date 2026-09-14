@@ -71,3 +71,60 @@ export function restoreFromPosts(turns: GeorgeTurn[], posts: Post[]): GeorgeTurn
     };
   });
 }
+
+/** One replay the record kept, as this module reads it back. */
+export interface RecordedReplay {
+  post: string;
+  /** The answer turn the call belongs to, so the redraw lands on its object. */
+  turn: number;
+  seq: number;
+  argument: string;
+  value: unknown;
+}
+
+/**
+ * THE REPLAYS A REOPENED THREAD HAS TO RUN AGAIN (P1.j).
+ *
+ * P1.i appended every change to the answer post and nothing read it back, so
+ * a reload drew the STORED window under figures a person had moved — which is
+ * the exact divergence `recorded` was added to prevent, built half way. This
+ * is the other half.
+ *
+ * THE NEWEST CHANGE PER CALL, AND ONLY ON THE NEWEST ANSWER. The record is
+ * append-only and ordered, so the last entry for a seq is where the person
+ * left it; the earlier ones are the road there and running them would be
+ * watching the board walk backwards. Only the newest answer's, because that is
+ * the one the room draws — an older turn is folded to a line and a read nobody
+ * can see is not worth a read.
+ *
+ * RUN AGAIN, NEVER RESTORED FROM A COPY. The record keeps the change and not
+ * the rows: a figure drawn from a stored copy would wear the read time of the
+ * original read, and a number on this screen wears the time it was read (UI
+ * rule 6). A refusal that has appeared since comes back as a refusal, which is
+ * the truth about that window today.
+ */
+export function replaysToRestore(
+  turns: GeorgeTurn[], posts: Post[], max: number,
+): RecordedReplay[] {
+  let newest = -1;
+  for (let i = 0; i < turns.length; i += 1) {
+    if (turns[i].role === 'george') newest += 1;
+  }
+  // The index of the newest answer among ANSWERS, which is how the board
+  // names a turn — and the turn itself, which is how its post is found.
+  const answer = [...turns].reverse().find((t) => t.role === 'george');
+  const post = answer && answer.role === 'george' ? answer.post?.answer_post_id : null;
+  if (!post || newest < 0) return [];
+  const payload = posts.find((p) => p.id === post)?.payload as
+    { replays?: unknown } | null | undefined;
+  const kept = Array.isArray(payload?.replays) ? payload!.replays : [];
+
+  const bySeq = new Map<number, RecordedReplay>();
+  for (const entry of kept) {
+    if (!entry || typeof entry !== 'object') continue;
+    const e = entry as Record<string, unknown>;
+    if (e.status !== 'ok' || typeof e.seq !== 'number' || typeof e.argument !== 'string') continue;
+    bySeq.set(e.seq, { post, turn: newest, seq: e.seq, argument: e.argument, value: e.value });
+  }
+  return [...bySeq.values()].slice(0, Math.max(0, max));
+}

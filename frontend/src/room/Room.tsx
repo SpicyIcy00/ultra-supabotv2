@@ -15,14 +15,17 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useGeorge } from '../hooks/useGeorge';
 import { useThread } from '../hooks/useThread';
 import { threadHistory } from '../components/george/threadHistory';
-import { restoreFromPosts } from './restore';
-import { boardContext, buildBoard, dropped, folded, inOrder, type Local, type BoardObject } from './board';
+import { replaysToRestore, restoreFromPosts } from './restore';
+import { boardContext, buildBoard, dropped, folded, inOrder, shapedByReplay,
+         type Local, type BoardObject } from './board';
 import { keepLocal, restoreLocal } from './arrangement';
-import type { AnswerTurn, Dimension } from './data';
+import { callOf, type AnswerTurn, type Block, type Dimension } from './data';
 import { Board, turnNotices } from './render';
 import { Reading, ReadingNext } from './Reading';
 import { Earlier } from './Earlier';
-import { replayStoredCall } from '../services/deskApi';
+import { readDeskDefinitions, replayStoredCall, type DeskAlternative } from '../services/deskApi';
+import { Tokens } from './Tokens';
+import { resolveFragment, retunedKey, tokensFor, type DrawnToken } from './tokenShape';
 import type { ToolCall } from '../types/george';
 import { Noticed } from './Noticed';
 import { Working } from './Working';
@@ -55,16 +58,35 @@ export default function Room() {
   // rearranging safe to try.
   const [history, setHistory] = useState<Record<string, Local>[]>([]);
   const [focused, setFocused] = useState<string | null>(null);
-  // Reads re-run because somebody moved a control, by seq. Deliberately not
-  // sent back to George as though he had decided it: what he is told is the
-  // window on the desk, on the next question (metrics.yaml surface.desk.replay).
+  // Reads re-run because somebody moved a token or a control, keyed
+  // `turn:seq`. Deliberately not sent back to George as though he had decided
+  // it: what he is told is the window on the desk, on the next question
+  // (metrics.yaml surface.desk.replay).
   //
-  // ON SCREEN THIS IS STILL PER-SESSION, and the record is not (P1.i). The
-  // server now appends each change to the answer post, so a replayed figure
-  // has a receipt; nothing reads that back onto the board yet, so a reload
-  // still draws the stored window. Restoring from it is P1.j's, where a
-  // replay becomes the ordinary way the board moves.
-  const [retuned, setRetuned] = useState<Record<number, ToolCall>>({});
+  // AND IT SURVIVES A RELOAD SINCE P1.j. Each change is appended to the
+  // answer post by the endpoint (P1.i) and read back on opening — the newest
+  // per call, run again rather than restored from a copy, so a restored
+  // figure wears the time it was read and not the time the first one was.
+  const [retuned, setRetuned] = useState<Record<string, ToolCall>>({});
+  // The board frame a replay returned for a change that reshaped the rows.
+  // Only for those: a window keeps the object it had (`replay.changes_shape`).
+  const [shapes, setShapes] = useState<Record<string, Block[]>>({});
+  // A replay in flight, and the tool's own words when one was refused. Both
+  // are drawn — a control that silently did nothing is the worst of the three
+  // states it could be in.
+  const [moving, setMoving] = useState(0);
+  const [refusal, setRefusal] = useState<string | null>(null);
+
+  // THE DEFINITIONS THE TOKENS ARE DRAWN FROM — metrics.yaml, served. Which
+  // arguments are movable, what each may be moved to, the words each answers
+  // to when typed. Nothing here is a figure and nothing here is George's, so
+  // it is read once and never again.
+  const desk = useQuery({
+    queryKey: ['desk-definitions'],
+    queryFn: readDeskDefinitions,
+    staleTime: Infinity,
+    retry: false,
+  });
 
   // WHAT NEEDS A DECISION. Read, never assumed: the rail draws a count only
   // when a result says so, because "nothing needs you" is a claim about the
@@ -220,7 +242,9 @@ export default function Room() {
     });
   }, [answers.length, board]);
 
-  const ask = useCallback((text: string, subjects = selection) => {
+  // WHAT A QUESTION TRAVELS WITH. Named apart from `ask` because a fragment
+  // never reaches it: this is the one path that costs a model turn.
+  const askGeorge = useCallback((text: string, subjects = selection) => {
     const q = text.trim();
     if (!q) return;
     setDraft('');
@@ -238,52 +262,157 @@ export default function Room() {
     void george.ask(q, Object.keys(desk).length ? { desk } : {});
   }, [george, selection, answers, board, local, focused]);
 
-  // MOVING A CONTROL COSTS NO MODEL TURN. It re-runs the read the control
-  // names with one scope argument changed, on the pin runner's path, and every
-  // object drawn from that read follows — which is what makes it one change
-  // rather than a screen full of them.
-  //
-  // THE CALL IS NAMED, NOT SENT (P1.i). The request carries the answer post
-  // and the call's seq; the server reads the arguments off what the loop
-  // recorded. This used to post the whole call — tool and arguments — from
-  // the browser's own copy, which meant a figure could reach the screen under
-  // a receipts line without any record that it was ever read that way.
-  const retune = useCallback(async (key: string, argument: string,
-                                    value: string | number) => {
-    const object = board.find((o) => o.key === key);
-    const turn = object?.turn === undefined ? null : answers[object.turn] ?? null;
-    const call = object?.seq === undefined || !turn ? null
-      : turn.toolCalls.find((c) => c.seq === object.seq) ?? null;
-    const post = turn?.post?.answer_post_id ?? null;
-    // No post means the turn was never logged, so there is no stored call to
-    // run again. The control does not move rather than running the browser's
-    // copy of it.
-    if (!object || !call || !post) return;
+  /**
+   * ONE REPLAY PATH, FOR EVERY DOOR INTO IT (P1.j).
+   *
+   * A tapped token, a typed fragment and a control George composed are three
+   * gestures and one act: run reads already on screen again with one scope
+   * argument changed. No model. The call is NAMED, not sent (P1.i) — the
+   * request carries the answer post and the call's seq, and the server reads
+   * the arguments off what the loop recorded.
+   *
+   * EVERY READ ON THAT ARGUMENT MOVES TOGETHER, because half a board on
+   * August and half on last week is a screen that cannot be read at all.
+   *
+   * AND A REFUSAL IS SAID. A tool declining to compare a window still in
+   * progress answers in its own sentence; swallowing it would leave the old
+   * figures sitting under the label of a window nobody is looking at.
+   */
+  const runReplay = useCallback(async (
+    targets: { post: string; turn: number; seq: number }[],
+    argument: string, value: unknown,
+  ) => {
+    if (!targets.length) return false;
+    const reshapes = (desk.data?.replay?.changes_shape ?? []).includes(argument);
+    setMoving((n) => n + 1);
+    setRefusal(null);
     try {
-      // The control's own name for its argument travels as it is: the two
-      // vocabularies meet in metrics.yaml (surface.desk.replay.from_control),
-      // never in a component holding a copy of both lists.
-      const out = await replayStoredCall(post, object.seq as number, argument, value);
-      // `status`, not `state` — the runner's field. Written wrong, this was
-      // always truthy-unequal to 'ok', so every control click returned here
-      // and the chips did nothing at all.
-      if (out.status !== 'ok') return;
-      setRetuned((s) => ({
-        ...s,
-        [object.seq as number]: {
-          ...call,
+      const outs = await Promise.all(targets.map((t) => (
+        replayStoredCall(t.post, t.seq, argument, value)
+          .then((out) => ({ t, out }))
+          .catch(() => null)
+      )));
+      const calls: Record<string, ToolCall> = {};
+      const frames: Record<string, Block[]> = {};
+      let refused: string | null = null;
+      for (const got of outs) {
+        if (!got) continue;
+        const { t, out } = got;
+        const key = retunedKey(t.turn, t.seq);
+        if (out.status !== 'ok') { refused = refused ?? out.refusal ?? null; continue; }
+        // ALL OF THE ROWS OR NONE. A read the loop would not have sent whole
+        // does not move the board either: a mark over the first 120 of 365 is
+        // a different and wrong mark. The sentence is the definitions', not
+        // this component's.
+        if (!out.rows_complete) {
+          refused = refused ?? String(desk.data?.replay?.rows_incomplete_says ?? '');
+          continue;
+        }
+        const before = retuned[key] ?? callOf(answers[t.turn], t.seq);
+        calls[key] = {
+          ...(before ?? { seq: t.seq, tool: out.tool }),
           // The arguments that RAN, as the server resolved them — not the
           // ones this component thought it was asking for.
           arguments: out.arguments,
           result: { rows: out.rows ?? [], meta: out.meta ?? {} },
-        } as ToolCall,
-      }));
-    } catch {
-      // A replay that failed leaves the figures that are on screen alone.
-      // Showing nothing, or showing the old window under the new label, are
-      // both worse than the control simply not having moved.
+        } as ToolCall;
+        if (reshapes && out.blocks?.length) frames[key] = out.blocks as Block[];
+      }
+      if (Object.keys(calls).length) setRetuned((s) => ({ ...s, ...calls }));
+      if (Object.keys(frames).length) setShapes((s) => ({ ...s, ...frames }));
+      setRefusal(refused);
+      return Object.keys(calls).length > 0;
+    } finally {
+      setMoving((n) => n - 1);
     }
-  }, [board, answers]);
+  }, [desk.data, answers, retuned]);
+
+  /**
+   * MOVING A TOKEN, which is what every gesture in this feature comes down to.
+   *
+   * A NAVIGATION change is answered by the replay alone: the figures carry
+   * their own receipts and their own read time, and there is nothing left to
+   * interpret that they do not say. An ANALYTICAL one draws the figure first
+   * and then asks George to read it — `fragments.analytical_asks_anyway`,
+   * because the number is not the answer and a reading is not a thing to drop
+   * in order to win a stopwatch.
+   */
+  const move = useCallback(async (
+    token: DrawnToken, alternative: DeskAlternative, said?: string,
+  ) => {
+    const ran = await runReplay(token.targets, token.argument, alternative.value);
+    if (ran && token.kind === 'analytical') askGeorge(said ?? alternative.label);
+  }, [runReplay, askGeorge]);
+
+  // A control George composed, through the same path. Its own name for its
+  // argument travels as it is: the two vocabularies meet in metrics.yaml
+  // (surface.desk.replay.from_control), never in a component holding a copy
+  // of both lists.
+  const retune = useCallback(async (key: string, argument: string,
+                                    value: string | number) => {
+    const object = board.find((o) => o.key === key);
+    const turn = object?.turn === undefined ? null : answers[object.turn] ?? null;
+    const post = turn?.post?.answer_post_id ?? null;
+    // No post means the turn was never logged, so there is no stored call to
+    // run again. The control does not move rather than running the browser's
+    // copy of it.
+    if (!object || object.seq === undefined || !post) return;
+    await runReplay([{ post, turn: object.turn, seq: object.seq }], argument, value);
+  }, [board, answers, runReplay]);
+
+  /**
+   * THE RECORD, READ BACK (P1.j) — the other half of P1.i.
+   *
+   * Every change was appended to the answer post and nothing read it, so a
+   * reload drew the STORED window under figures somebody had moved. Opening a
+   * thread now runs the newest change per call again. Again, not from a copy:
+   * the record keeps the change and not the rows, and a number on this screen
+   * wears the time it was read (UI rule 6).
+   */
+  const restored = useRef<string | null>(null);
+  useEffect(() => {
+    if (!threadId || !thread.ready || !desk.data) return;
+    if (restored.current === threadId || !george.turns.length) return;
+    restored.current = threadId;
+    const max = Number(desk.data.replay?.max_restored_per_open ?? 0);
+    for (const r of replaysToRestore(george.turns, thread.posts, max)) {
+      void runReplay([{ post: r.post, turn: r.turn, seq: r.seq }], r.argument, r.value);
+    }
+  }, [threadId, thread.ready, thread.posts, desk.data, george.turns, runReplay]);
+
+  // THE ARGUMENTS THE LOOP ACCEPTED, over what is DRAWN — a token for a read
+  // nobody can see would offer to move something that is not on the screen.
+  const tokens = useMemo(
+    () => tokensFor({ defs: desk.data, answers, board: drawn, retuned }),
+    [desk.data, answers, drawn, retuned],
+  );
+
+  /**
+   * SAYING SOMETHING — which is not always asking something (P1.j).
+   *
+   * "last month" is not a question. Sending it to the model costs a round
+   * trip, a model turn and the risk that he reads it as something else, to
+   * arrive at a call the record already holds with one argument different. So
+   * a short thing that names one of the alternatives ON SCREEN is run as a
+   * replay instead.
+   *
+   * ANYTHING THAT DOES NOT RESOLVE IS A QUESTION, unchanged. There is no
+   * fuzzy match and no "did you mean": the failure mode of this whole feature
+   * is a model turn, which is what would have happened anyway.
+   */
+  const ask = useCallback((text: string, subjects = selection) => {
+    const q = text.trim();
+    if (!q) return;
+    const fragment = subjects.length ? null : resolveFragment(q, tokens, desk.data);
+    if (!fragment) { askGeorge(q, subjects); return; }
+    setDraft('');
+    // The one token that costs a turn on purpose. What is asked of him is a
+    // definition (`fragments.correction.asks`) rather than a string somebody
+    // typed into a button — and whether a belief is recorded is HIS act: the
+    // room holds no writer and may not (architecture rule 4).
+    if (fragment.kind === 'correction') { askGeorge(fragment.asks, subjects); return; }
+    void move(fragment.token, fragment.alternative, q);
+  }, [askGeorge, move, tokens, desk.data, selection]);
 
   // A GESTURE ON AN AGENDA ROW IS A DECISION, and George learns from it: what
   // you keep, set aside, open, ask about or leave decides where it ranks next
@@ -391,7 +520,7 @@ export default function Room() {
     // Leaving on purpose: "/" must not walk straight back in.
     forgetLast();
     george.reset(); setSelection([]); setFocused(null);
-    setRetuned({});
+    setRetuned({}); setShapes({}); setRefusal(null);
     // WHAT YOU KEPT SURVIVES. Clearing is for the conversation, not for the
     // things you decided to hold on to — losing those to a button meant for
     // starting fresh is the reason people stop using a keep.
@@ -442,9 +571,25 @@ export default function Room() {
             <Earlier count={earlier.length} open={unfolded}
                      onToggle={() => setUnfolded((o) => !o)} />
             <Reading text={latest?.text} notices={notices} reading={latest?.reading} />
+            {/* WHAT THESE FIGURES ARE OF, AND HOW TO MOVE IT (P1.j). The
+                arguments the loop accepted, drawn between his reading and the
+                evidence it is about — which is where they are read, and where
+                what they change is directly below them. Tapping one is a
+                replay; typing one of the same words is the same act. */}
+            <Tokens
+              tokens={tokens}
+              correction={desk.data?.fragments?.correction?.token}
+              moving={moving > 0}
+              refusal={refusal}
+              onMove={(token, alternative) => { void move(token, alternative); }}
+              onCorrect={() => {
+                const asks = desk.data?.fragments?.correction?.asks;
+                if (asks) askGeorge(asks);
+              }}
+            />
             <Board
               answers={answers}
-              board={drawn}
+              board={shapedByReplay(drawn, shapes)}
               local={local}
               focused={focused}
               selection={selection.map((s) => s.label)}

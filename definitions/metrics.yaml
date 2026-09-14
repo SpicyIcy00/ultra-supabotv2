@@ -6293,6 +6293,155 @@ surface:
       max_value_length: 120
       max_list_values: 12
 
+      # AND IT IS READ BACK (P1.j). P1.i wrote the record and nothing read it,
+      # so a reload drew the STORED window under figures a person had moved —
+      # the exact divergence `recorded` was added to prevent, half-built. On
+      # opening a thread the newest recorded change per call is run again, so
+      # the board comes back on the window it was left on.
+      #
+      # RUN AGAIN, NEVER REPLAYED FROM A CACHE. The record keeps the change
+      # and not the rows: a figure restored from a stored copy would carry the
+      # read time of the original read, and UI rule 6 says a number wears the
+      # time it was read. So the restore is the same call, now, with its own
+      # snapshot timestamp — and a read that has since been refused comes back
+      # refused, which is the truth about that window today.
+      restore_on_open: newest_per_seq
+      max_restored_per_open: 4
+
+      # ALL OF THE ROWS OR NONE — the loop's own rule, which the endpoint was
+      # not applying (found 2026-09-14, building P1.j). A read the loop would
+      # have sent `rows_complete: false` and no rows for was being sent whole
+      # by a replay, so a person moving a window on a day-grouped read over a
+      # year put 365 rows into a mark that had been drawn over twelve. A mark
+      # over the first 120 of 365 is not a smaller mark, it is a different and
+      # wrong one (loop.py MAX_ROWS_TO_CLIENT).
+      #
+      # So the board does not move, and this is what is said instead. A
+      # statement about the SCREEN, never about the business, and the only
+      # sentence in this feature the room speaks in its own voice — which is
+      # why it is here and not in a component.
+      rows_incomplete_says: >-
+        That returns more rows than this draws at once. Narrow it, or ask
+        George to rank them.
+
+      # WHICH CHANGES CAN CHANGE THE SHAPE OF THE ROWS, and therefore need the
+      # board frame the endpoint already returns rather than the object that
+      # was drawn over the old ones. A window moves the figures inside the
+      # same columns; a grouping changes what a row IS, and a mark drawn over
+      # stores does not draw products. Everything else keeps its object.
+      changes_shape: [group_by]
+
+    # THE ARGUMENTS THE LOOP ACCEPTED, DRAWN (P1.j, 2026-09-14).
+    #
+    # A replay has existed since P1.i and there was no way to ask for one
+    # unless George happened to compose a control. So the scope the work is
+    # ALREADY on is drawn under the reading as tokens — the window, the shop,
+    # the cut, how many rows — taken from `payload.calls`, which is what the
+    # tools accepted and answered. Tapping one offers its alternatives, and
+    # choosing one is a replay: no model, no new question, the same call.
+    #
+    # NOTHING HERE IS A FIGURE and nothing here is George's account of
+    # anything. A token is an argument's own value, and its alternatives come
+    # from the definitions that already bound that argument — the date presets,
+    # the store list, the subject dimensions. A client never invents one.
+    tokens:
+      from: accepted_call_arguments
+      # The four that have a knowable list of alternatives. `rank_by` is
+      # replayable and has no token: its values are each tool's own, and a
+      # token that cannot offer the alternatives is a label pretending to be
+      # a control.
+      arguments: [window, store, group_by, top_n]
+      alternatives_from:
+        window: sales_day.presets
+        store: stores
+        # THE METRIC'S OWN LIST, NOT THE DESK'S (2026-09-14). A token offering
+        # a cut the tool refuses is worse than no token: `net_sales` is
+        # transaction grain and declines a product grouping in its own
+        # sentence, so "products" on a sales read is George's question and not
+        # a replay. Which groupings a call permits therefore depends on the
+        # metric the call carries, and `permitted_by` is how that reaches the
+        # screen.
+        group_by: metrics.<metric>.valid_group_by
+        top_n: surface.desk.tokens.counts
+      counts: [5, 10, 25]
+      max_tokens: 6
+
+      # WHAT A PERSON CALLS A DIMENSION WHEN THEY TYPE IT. "products" is the
+      # fragment and `product` is the argument, and the distance between them
+      # is not a rule — it is three words. Declared here so that resolving a
+      # typed fragment is a lookup in a list the definitions own, and never a
+      # stemmer, a fuzzy match or a "did you mean" living in a component.
+      spoken:
+        store: [store, stores, shop, shops]
+        product: [product, products]
+        category: [category, categories]
+        hour: [hour, hours, hourly]
+        day: [day, days, daily]
+        week: [week, weeks, weekly]
+        month: [month, months, monthly]
+      never_a_figure: true
+      # A control George composed already carries that argument for that call.
+      # Drawing a token beside it would put two window pickers on one screen
+      # disagreeing about which is the control.
+      not_when_a_control_carries_it: true
+
+    # A FRAGMENT — a short thing said into the composer that moves work
+    # ALREADY ON SCREEN rather than asking for new work (P1.j).
+    #
+    # "last month" is not a question. Sending it to the model costs a round
+    # trip, a model turn and the risk that he reads it as something else, to
+    # arrive at a call the record already holds with one argument different.
+    # So a fragment is resolved against the TOKENS ON SCREEN and run as a
+    # replay. The vocabulary is therefore not a keyword list somebody wrote:
+    # it is exactly the alternatives the person can see, which is why typing
+    # one and tapping one are the same act through the same path.
+    #
+    # ANYTHING THAT DOES NOT RESOLVE IS A QUESTION. There is no fuzzy match,
+    # no stemming and no "did you mean": a fragment that is not on screen goes
+    # to George exactly as it always has. The failure mode of this feature is
+    # a model turn, which is what would have happened anyway.
+    fragments:
+      max_words: 4
+      resolves_against: drawn_tokens
+      kinds: [navigation, analytical, correction]
+
+      # NAVIGATION changes WHERE you are looking. The replay answers it
+      # whole — the figures carry their own receipts and their own read time,
+      # and there is nothing left to interpret that they do not say.
+      #
+      # ANALYTICAL changes WHAT you are looking at. A grouping by product
+      # where there was a grouping by shop is a different set of subjects, and
+      # somebody has to read it. The replay draws FIRST, so the figure is on
+      # screen in the time a read takes; the question still goes to George in
+      # the same turn and his reading lands under it.
+      kind_by_argument:
+        window: navigation
+        store: navigation
+        top_n: navigation
+        rank_by: navigation
+        group_by: analytical
+
+      # THE READING IS NEVER DROPPED TO WIN THE NUMBER. An analytical fragment
+      # that drew its figure in half a second still costs the model turn it
+      # would have cost, because the number is not the answer.
+      analytical_asks_anyway: true
+
+      # THE ONE TOKEN THAT COSTS A TURN ON PURPOSE. Everything else here
+      # avoids the model; this one exists because the model got it wrong, and
+      # the only thing worth doing with that is telling him so and having him
+      # keep it. The sentence is here rather than in a component so that what
+      # is asked of him is a definition and not a string somebody typed into
+      # a button.
+      #
+      # WHETHER A BELIEF IS RECORDED IS HIS ACT, not this file's. The sentence
+      # asks for one by name; the client holds no writer and may not (rule 4).
+      correction:
+        token: "not what I meant"
+        asks: >-
+          That is not what I meant. Say what you understood me to be asking,
+          record what I actually meant as a belief against it, and answer
+          that instead.
+
     # What the business looks like BEFORE anything is asked: one grouped read
     # per resting field, replayed deterministically when the desk opens. A
     # closed window against the period before it, so every store has a

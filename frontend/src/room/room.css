@@ -191,6 +191,37 @@
   margin-bottom: 3px;
 }
 
+/* THE TOKENS (P1.j) — the arguments the loop accepted, between his reading
+   and the evidence it is about. Quiet by construction: they are what the
+   figures are OF, so they must not compete with the figures. Two lines in a
+   pill — the argument in the label type, its value in reading type — so the
+   row can be scanned for "what am I looking at" without reading it.
+
+   NO COLOUR ANYWHERE IN HERE, including on the one that costs a turn: the
+   accent means "needs you" and nothing else (UI rule 5). */
+.r-tokens { margin: 0 0 20px; }
+.r-token-row { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+.r-token {
+  display: inline-flex; flex-direction: column; gap: 2px; align-items: flex-start;
+  border: 1px solid var(--edge); background: var(--card);
+  border-radius: 10px; padding: 5px 11px; cursor: pointer; text-align: left;
+  transition: border-color 160ms var(--ease);
+}
+.r-token:hover, .r-token[aria-pressed='true'] { border-color: var(--edge-strong); }
+.r-token-what {
+  font: 600 9.5px/1.4 var(--sans); letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.r-token-is { font: 400 13px/1.35 var(--sans); color: var(--ink); }
+.r-token--ask { justify-content: center; }
+.r-token--ask .r-token-is { color: var(--ink-2); }
+.r-token-open { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
+.r-token-open .r-chip:disabled { border-color: var(--edge-strong); color: var(--ink); cursor: default; }
+.r-token-busy { color: var(--ink-3); }
+/* The tool's own sentence when it refused, above the figures it is about —
+   like every other caveat on this page, and in the same quiet. */
+.r-token-refusal { margin-top: 12px; }
+
 .r-note { font: 400 13px/1.6 var(--sans); color: var(--ink-2); max-width: 62ch; margin: 0; }
 
 /* Receipts and machine facts. Findable, never read first. */

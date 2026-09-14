@@ -51,7 +51,7 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, AsyncIterator, List, Literal, Optional
+from typing import Any, AsyncIterator, List, Literal, Mapping, Optional
 
 from app.core.config import settings
 
@@ -2527,6 +2527,11 @@ class ReplayOut(BaseModel):
     #: The arguments that actually ran, whole.
     arguments: dict[str, Any]
     rows: List[dict[str, Any]]
+    #: False when the read returned more rows than a screen is sent, in which
+    #: case `rows` is empty: all of them or none, never a prefix (loop.py
+    #: MAX_ROWS_TO_CLIENT). The board does not move, and the room says so in
+    #: the definitions' own sentence (`replay.rows_incomplete_says`).
+    rows_complete: bool
     meta: dict[str, Any]
     notices: List[dict[str, Any]]
     refusal: Optional[str] = None
@@ -2588,6 +2593,65 @@ class DeskLocation(BaseModel):
     kind: Literal["retail", "warehouse"]
 
 
+class DeskAlternative(BaseModel):
+    """
+    One value a token may be moved to, the word for it, and what it answers to.
+
+    `spellings` is what a person may TYPE to mean this alternative, resolved
+    here from the definitions (`surface.desk.tokens.spoken` and the names the
+    presets and the store list already carry). It is a list and not a rule:
+    the client matches a fragment against it exactly, so there is no stemmer
+    and no fuzzy match anywhere, and what resolves is only ever what the
+    definitions say resolves.
+    """
+
+    value: Any
+    label: str
+    spellings: List[str]
+    #: The word `permitted_by` names this alternative by, for a token whose
+    #: alternatives depend on something the call carries. None for one whose
+    #: alternatives are the same on every call.
+    permit_key: Optional[str] = None
+
+
+class DeskPermit(BaseModel):
+    """
+    Which alternatives a call actually permits, and what decides it.
+
+    A `group_by` token offering a cut the tool will refuse is worse than no
+    token: `net_sales` is transaction grain and declines a product grouping in
+    its own sentence. What a call permits therefore depends on the METRIC it
+    carries, and this is that dependency said once, here, from
+    `metrics.<metric>.valid_group_by` — not a rule a client works out.
+    """
+
+    #: The argument on the stored call whose value decides. `metric`, today.
+    argument: str
+    #: Each value of it, to the `permit_key`s it allows.
+    permits: dict[str, List[str]]
+
+
+class DeskToken(BaseModel):
+    """
+    One argument the loop accepted, as a thing a person can move.
+
+    `kind` is the fragment kind that moving it IS
+    (`surface.desk.fragments.kind_by_argument`): a navigation change is
+    answered by the replay alone, an analytical one draws the replay and still
+    asks George to read it. The alternatives are resolved here, from the
+    definitions that bound the argument, so no client holds a list of windows,
+    shops or dimensions of its own.
+    """
+
+    argument: str
+    kind: str
+    label: str
+    alternatives: List[DeskAlternative]
+    #: Present when the alternatives depend on what the call carries; the
+    #: client keeps only the ones every read it would move permits.
+    permitted_by: Optional[DeskPermit] = None
+
+
 class DeskDefinitions(BaseModel):
     """
     Everything the workspace reads from the definitions, in one read.
@@ -2615,6 +2679,100 @@ class DeskDefinitions(BaseModel):
     #: DEFINITIONS, answered here rather than guessed by a client that
     #: cannot see them.
     breakdown_dimensions: List[str]
+    #: The tokens a drawn read may carry, in the order the definitions list
+    #: them, with every alternative resolved (metrics.yaml
+    #: surface.desk.tokens). A client draws what it is given.
+    tokens: List[DeskToken]
+    #: `surface.desk.replay`, verbatim. Where each argument LANDS in a call's
+    #: own arguments, which argument a composed control names, which changes
+    #: can change the shape of the rows, and how much of the record is read
+    #: back on opening. A client reads a token's current value and decides
+    #: what to redraw from this rather than keeping a copy of any of it.
+    replay: dict[str, Any]
+    #: The bounds and words a fragment is resolved by (surface.desk.fragments):
+    #: how short a fragment may be, and the one token that costs a turn.
+    fragments: dict[str, Any]
+
+
+def _desk_tokens(
+    desk: Mapping[str, Any],
+    metrics: Mapping[str, Any],
+    windows: List[DeskWindowDef],
+    locations: List[DeskLocation],
+    dimensions: List[str],
+) -> List[DeskToken]:
+    """
+    The tokens a read may carry, with every alternative resolved here.
+
+    THE ALTERNATIVES ARE THE DEFINITIONS', NOT A CLIENT'S. Each list below is
+    the one this endpoint already serves — the date presets, the store list,
+    the dimensions some metric permits a grouping by — so a token can only
+    offer a scope the definitions already bound. `counts` is the one list that
+    exists nowhere else and it is in the yaml
+    (`surface.desk.tokens.counts`), not here.
+
+    An argument with no alternatives is not a token. `rank_by` is the case:
+    its values are each tool's own, and a control that cannot show what it
+    could be moved to is a label wearing a button's clothes.
+    """
+    spec = _req(desk, "tokens")
+    kinds = _req(desk, "fragments.kind_by_argument")
+    counts = [int(n) for n in _req(desk, "tokens.counts")]
+    # group_by is a LIST argument on every tool that takes one, so a token's
+    # value is the list the tool would have received — never the bare word.
+    spoken = _req(desk, "tokens.spoken")
+    # WHICH GROUPINGS EACH METRIC PERMITS, from the metrics themselves. The
+    # union is what a token could ever offer; `permitted_by` is what any one
+    # call may actually be moved to. A grouping absent from every metric is
+    # not a thing that exists, and a dimension with no word for it (the
+    # definitions' `spoken`) has no way to be typed and so is not offered.
+    permits = {
+        name: [g for g in (metric.get("valid_group_by") or []) if g in spoken]
+        for name, metric in metrics.items()
+        if isinstance(metric, dict) and metric.get("valid_group_by")
+    }
+    groupings = [d for d in dimensions if any(d in p for p in permits.values())]
+    groupings += [g for g in dict.fromkeys(
+        g for allowed in permits.values() for g in allowed) if g not in groupings]
+    choices: dict[str, List[DeskAlternative]] = {
+        "window": [
+            DeskAlternative(value=w.name, label=w.name.replace("_", " "),
+                            spellings=[w.name, w.name.replace("_", " ")])
+            for w in windows
+        ],
+        "store": [
+            DeskAlternative(value=loc.id, label=loc.display_name,
+                            spellings=[loc.display_name])
+            for loc in locations
+        ],
+        "group_by": [
+            DeskAlternative(value=[d], label=f"by {d}", permit_key=d,
+                            spellings=[f"by {d}", *[str(w) for w in spoken.get(d, [d])]])
+            for d in groupings
+        ],
+        "top_n": [
+            DeskAlternative(value=n, label=f"top {n}", spellings=[f"top {n}", str(n)])
+            for n in counts
+        ],
+    }
+    labels = {"window": "window", "store": "shop", "group_by": "grouped",
+              "top_n": "how many"}
+    out: List[DeskToken] = []
+    for argument in _req(desk, "tokens.arguments"):
+        alternatives = choices.get(str(argument)) or []
+        if not alternatives:
+            continue
+        for alternative in alternatives:
+            alternative.spellings = list(dict.fromkeys(alternative.spellings))
+        out.append(DeskToken(
+            argument=str(argument),
+            kind=str(kinds[str(argument)]),
+            label=labels.get(str(argument), str(argument)),
+            alternatives=alternatives,
+            permitted_by=(DeskPermit(argument="metric", permits=permits)
+                          if str(argument) == "group_by" else None),
+        ))
+    return out[: int(spec["max_tokens"])]
 
 
 @router.get("/definitions/desk", response_model=DeskDefinitions)
@@ -2650,6 +2808,10 @@ async def desk_definitions(user: AppUser = Depends(_george_user)) -> DeskDefinit
     return DeskDefinitions(
         business=dict(_req(desk, "business")),
         breakdown_dimensions=[d for d in dimensions if d in groupable],
+        tokens=_desk_tokens(desk, _req(defs, "metrics"), windows, locations,
+                            [d for d in dimensions if d in groupable]),
+        replay=dict(_req(desk, "replay")),
+        fragments=dict(_req(desk, "fragments")),
         windows=windows,
         window_arguments=dict(_req(defs, "workflows.backtest.window_arguments")),
         rest_reads=[dict(r) for r in _req(desk, "rest.reads")],

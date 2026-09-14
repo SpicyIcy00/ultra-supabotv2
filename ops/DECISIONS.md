@@ -9,6 +9,22 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-14 — P1.j: the vocabulary is what is on screen
+
+A typed fragment resolves ONLY against the tokens drawn, and that is the whole
+safety argument. The alternative was a keyword list, which would be a client
+deciding not to consult the model on words nobody can see; this way the
+vocabulary is exactly what a person is looking at, typing and tapping are one
+mechanism with two doors, and the failure mode is a model turn — what would
+have happened anyway. Ambiguity is a question: two tokens answering to one word
+goes to George rather than being settled here.
+
+A token may not offer what the call will refuse. `net_sales` declines a product
+grouping, so `group_by` alternatives are the METRIC's own `valid_group_by`,
+intersected across every read the token moves. "Products" on a sales board
+stays George's question — the ladder localizes through a different metric, and
+a replay changes one argument of one call and never the measure.
+
 ## 2026-09-14 — P1.h: a gate that deletes, and the one gate that must not
 
 Effort belongs to the turn, not to the process, but it cannot ride the request:

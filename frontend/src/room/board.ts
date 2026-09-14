@@ -669,3 +669,45 @@ export function dropped(
   next.forEach((o, n) => { out[o.key] = n; });
   return out;
 }
+
+/* ------------------------------------------------- a replay that reshapes */
+
+/**
+ * THE BOARD AFTER A REPLAY THAT CHANGED THE SHAPE OF THE ROWS (P1.j).
+ *
+ * Moving a window moves the figures inside the same columns, and the object
+ * that drew them still draws them. Moving a GROUPING does not: a mark drawn
+ * over shops has no business drawing products under the same title, and the
+ * claim above it was made about the old rows. So for those changes
+ * (`surface.desk.replay.changes_shape`) the endpoint's own board frame is
+ * used — `default_composition`, the one composer that names a shape for rows
+ * and never a word about them, validated exactly as George's blocks are.
+ *
+ * THE OBJECT KEEPS ITS PLACE AND LOSES HIS WORDS. The key, the turn and the
+ * arrangement the person made survive, because it is the same read in the
+ * same spot; the claim, the note and the emphasis do not, because those were
+ * said about rows that are no longer there. What replaces them is a shape and
+ * nothing else — nobody has looked at these rows.
+ */
+export function shapedByReplay(
+  board: BoardObject[],
+  shapes: Record<string, Block[]>,
+): BoardObject[] {
+  if (!Object.keys(shapes).length) return board;
+  const SAID = ['claim', 'note', 'emphasise', 'label', 'form', 'action', 'argument'] as const;
+  return board.map((o) => {
+    if (o.seq === undefined) return o;
+    const blocks = shapes[`${o.turn}:${o.seq}`];
+    const block = blocks?.[0];
+    if (!block) return o;
+    const next = { ...o, kind: block.kind ?? 'spec' } as unknown as Record<string, unknown>;
+    for (const field of SAID) delete next[field];
+    for (const [field, value] of Object.entries(carried(block))) {
+      if (field === 'seq' || value === undefined) continue;
+      next[field] = value;
+    }
+    // A frame that names no shape leaves no spec behind from the old one.
+    if (block.spec === undefined) delete next.spec;
+    return next as unknown as BoardObject;
+  });
+}
