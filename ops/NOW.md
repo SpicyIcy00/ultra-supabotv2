@@ -107,8 +107,8 @@ shippable. The full diagnosis is the report linked in section 6.
 | Head | **`91dec69` — pushed and live 2026-09-14.** Four commits: P1.e's six marks (`369d0e8`), both copies of the plan (`e16573f`), the Head row (`1dbb4e2`) and the close-out rule (`91dec69`). **No migration** — the renderer, the eval suite and the notes. Before it, `b0ccfba`; before that, `fb303ba` on 2026-09-14 with five commits (P1.c `cf5806e`, the plan page moving into the repo with its contract test, two eval fixes); and `a3003ef` on 2026-09-13, which carried 32 commits that had sat unpushed: P1.b's default composition, the v2 voice suite (`bfb168f`), the $0 replay (`235d236`) and P1.g (`c508965`). |
 | Live | **`91dec69`**, confirmed from `/health`: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `568b11c5`, **no migration** (only the renderer, the eval suite and the notes moved). **THE SWAP WAS NOT CLEAN, AND IT IS THE FIRST THAT WAS NOT IN SIX.** Polled every 20 s across it, 22 polls: **one 502, at 16:04:05**, about forty seconds after the deploy started, with 200s either side. One blip is not an outage and this one cost a single request, but the run of five clean swaps ends here and the row should not say otherwise. No migration ran, so it is not the migration path that produced it — which is the one thing the 50-minute outage on `8b0325a` IS known to live in. Read `/health` rather than believing this row: `a01706b` sat here as live while three commits had landed since. |
 | Last deploy | `ee29fa5`, live and healthy when recorded; the swap before it, `a01706b`, **live and healthy when recorded**, and the swap was clean — polled every 20 s across it, zero non-200s, old build to new in about a minute. It carried NO migration (the schema was already at head), so the launcher took its `already at head` branch and ran no alembic at all. That is evidence the outage below lives in the migration path specifically, not in the boot or the build — evidence, not the deploy log. Before it, `8b0325a`. `8b0325a` carried P0.3 and P0.4, and applying migration `w7x8y9z0a1b2` cost **~50 minutes of 502**: the first boots crashlooped, the migration did not apply, and nothing was readable from outside. It came up on a later retry. Root cause still unknown — the Railway deploy log for that build has not been read. `69b51bd` is the fix for the *invisibility*, not for the cause. |
-| Phase | 1 — P1.c, P1.d, P1.e closed; P1.f next |
-| Next card | **Whatever is Open in `ops/DOGFOOD_LOG.md`, then P1.f.** **Nothing is Open as of 2026-09-14** — *"i dont really know what im looking at"* closed with P1.e, which is the first time the log has been empty since it was started. **The next thing he says about the board is the most valuable thing in the project**, because five of his five reported failures have now been answered and nobody has looked at the result. **P1.e closed 2026-09-14**: fourteen widget shapes became six marks, every block framed the same way round (title, subtitle off `meta`, mark, source line), colour is direction and not identity, and the caption that decoded the old bars is gone with the bars. Eight recorded runs replayed through the real renderer, 13 blocks, all six-or-fewer with a source line. It carried the eval swap: **v2 ran once for $1.51 against a $1.84 estimate, every trust row clean on all eleven scenarios, and `test_voice_evals.py` is deleted.** The one disagreement was `grounded_numerals` calling a good answer a shrug because its figures were small — fixed in the check, verified by replay for $0.00. **P1.d closed 2026-09-14**: a question sharing no subject with the board clears it, one sharing a subject transforms it, and everything the newest turn did not touch folds to one line above the reading. The case to watch when he next uses it: "and OPUS?" while looking at Rockwell now CLEARS. **P1.c closed 2026-09-14**: the reading is a region above the board, `text` and `prose` are out of the vocabulary, the two `fmt` bugs are gone, and `max_restated_sentences: 0 → 1` took the gate's cited figures from 0/4 to 4/4. The remaining cards were rewritten 2026-09-13 into the plan that reaches the Ideal UI: P1.f–P1.k, P2.a–P2.j, P3.a–P3.f, and Phase 4 sources. **P1.g closed 2026-09-13** (`c508965`), which is the log's two trust failures. P1.b closed 2026-09-13: first composed object 16.8 → 8.2 s, first visible object unmoved at 7.0 s (bounded by the first round trip; only replay, P1.i/P1.j, can reach 2 s). The bill is round trips, not cache misses. Read the note under the baseline table before reporting any Phase 1 number — the twelve it was measured on are deleted. |
+| Phase | 1 — P1.c, P1.d, P1.e, P1.f closed; P1.h next |
+| Next card | **Whatever is Open in `ops/DOGFOOD_LOG.md`, then P1.h.** **P1.f closed 2026-09-14** (`6fd8c00`, unpushed): the compose vocabulary is the six marks the renderer draws plus the four kinds that are not readings, every block takes a `claim`, and the reading has three slots — claim, caveat, next. Compose was refused in **0 of 11** questions and label calls are **29%** of all calls; every trust row is where it was. **The shortfall: claim 9 of 11 and next 7 of 11**, and four of those losses are the no-digits rule refusing what he wrote — the digits question is left open, with the refused text now on the record so the next run can decide it with evidence. It also found a CHECK that was wrong: `prose.allowed_numbers` could not see a Decimal, so a purchase-plan quantity quoted exactly read as a figure no tool returned. **Nothing is Open as of 2026-09-14** — *"i dont really know what im looking at"* closed with P1.e, which is the first time the log has been empty since it was started. **The next thing he says about the board is the most valuable thing in the project**, because five of his five reported failures have now been answered and nobody has looked at the result. **P1.e closed 2026-09-14**: fourteen widget shapes became six marks, every block framed the same way round (title, subtitle off `meta`, mark, source line), colour is direction and not identity, and the caption that decoded the old bars is gone with the bars. Eight recorded runs replayed through the real renderer, 13 blocks, all six-or-fewer with a source line. It carried the eval swap: **v2 ran once for $1.51 against a $1.84 estimate, every trust row clean on all eleven scenarios, and `test_voice_evals.py` is deleted.** The one disagreement was `grounded_numerals` calling a good answer a shrug because its figures were small — fixed in the check, verified by replay for $0.00. **P1.d closed 2026-09-14**: a question sharing no subject with the board clears it, one sharing a subject transforms it, and everything the newest turn did not touch folds to one line above the reading. The case to watch when he next uses it: "and OPUS?" while looking at Rockwell now CLEARS. **P1.c closed 2026-09-14**: the reading is a region above the board, `text` and `prose` are out of the vocabulary, the two `fmt` bugs are gone, and `max_restated_sentences: 0 → 1` took the gate's cited figures from 0/4 to 4/4. The remaining cards were rewritten 2026-09-13 into the plan that reaches the Ideal UI: P1.f–P1.k, P2.a–P2.j, P3.a–P3.f, and Phase 4 sources. **P1.g closed 2026-09-13** (`c508965`), which is the log's two trust failures. P1.b closed 2026-09-13: first composed object 16.8 → 8.2 s, first visible object unmoved at 7.0 s (bounded by the first round trip; only replay, P1.i/P1.j, can reach 2 s). The bill is round trips, not cache misses. Read the note under the baseline table before reporting any Phase 1 number — the twelve it was measured on are deleted. |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
@@ -267,14 +267,18 @@ where a regression was speculative AND **the four gate scenarios could not
 have seen it.** A new comparison (`P2.i`, `P3.f`) is a capability no gate
 scenario asks for, so a run there proves nothing; `P2.c`, `P2.d` and `P2.f`
 are context and rendering; `P1.c` breaks or fixes compose refusals, which are
-its own numbers. **Five live runs across 24 open cards, $7.55** — P1.f,
-P1.h and the three phase closes at $1.51 each on v2, the measured price.
-Every remaining gate was dropped or absorbed, so five FULL runs is the whole
+its own numbers. **Four live runs across 23 open cards, $6.04** — P1.h and
+the three phase closes at $1.51 each on v2, the measured price.
+Every remaining gate was dropped or absorbed, so four FULL runs is the whole
 of it.
-**P1.g, P1.c and P1.e are closed**, and their runs cost **$0.64, $0.75 and
-$1.51 against $0.63, $0.63 and $1.84**: P1.g's was the first figure here to survive contact with a live
+**P1.g, P1.c, P1.e and P1.f are closed**, and their runs cost **$0.64, $0.75,
+$1.51 and $1.62 against $0.63, $0.63, $1.84 and $1.51**: P1.g's was the first
+figure here to survive contact with a live
 run, and P1.c's overspend was a first run made with `-x`, which stops on the
-first scenario and pays for it twice. **Drop `-x` on a gate run**; four
+first scenario and pays for it twice. **P1.f went over by 7%, and the reason
+is the card**: every turn now writes three slots as well as an answer, so
+output tokens rose. $1.51 is still the right estimate for a run that changes
+nothing about what George says. **Drop `-x` on a gate run**; four
 scenarios is the unit, and a partial one buys a fifth of the signal for a
 third of the price.
 **The earlier $9.10 and $11.04 were both wrong, because the meter was and then
@@ -1191,7 +1195,7 @@ before believing it.
       3. **Nothing was rebuilt in front of the owner.** Same shortfall P1.d
          closed with: the evidence is recorded rows rendered by the real
          renderer, not his screen.
-- [ ] **P1.f compose narrows to the catalogue; the text gets three slots** —
+- [x] **P1.f compose narrows to the catalogue; the text gets three slots** —
       the label grammar becomes the six marks plus a claim-title per block;
       the findings roles become claim (one highlight) · caveat (whole, above
       the figures) · next (one sentence, always last — the ladder's stop
@@ -1199,6 +1203,63 @@ before believing it.
       Done when: rejections ≤ 1 question, label share not worse than 33%,
       trust rows unchanged, every answer has a claim and a next; style checks
       NOT widened. **Eval: full.**
+
+      **CLOSED 2026-09-14, `6fd8c00`. Suites exact: 1,542 pure (was 1,551 —
+      27 finding-frame tests deleted with the roles, 28 reading-frame tests
+      added, one for the Decimal), 903 vitest (was 880), `tsc -b` and `build`
+      clean. One full v2 run, `verification/p1f-v2.json`, $1.62 against the
+      $1.51 P1.e measured** — over, and the extra is output tokens, because
+      every turn now writes three slots as well as the answer.
+
+      | | P1.e run, 09-14 | **P1.f, 09-14** | this card's target |
+      |---|---|---|---|
+      | questions where `compose` was refused | 0 of 11 | **0 of 11** | ≤ 1 |
+      | label calls as a share of all calls | 33% (P1.a's twelve) | **29%** (10 of 34) | not worse than 33% |
+      | notices surfaced · forced · figures no tool returned | 15 · 0 · 0 | **15 · 0 · 0** | unchanged |
+      | tool vocabulary leaked · attribution shares | 0 · 0 | **0 · 0** | unchanged |
+      | iterations median / max | 4 / 5 | **4 / 5** | — |
+
+      **THE SHORTFALL IS THE DONE-WHEN'S LAST CLAUSE: not every answer has a
+      claim and a next.** Claim 9 of 11, next 7 of 11. Two of the eleven said
+      nothing in any slot — `pin` (a page confirmation) and `run-monday` (a
+      capability refusal), where there is arguably nothing to claim. The other
+      four losses are **my own no-digits rule refusing what he wrote**: five
+      slots across four turns, three caveats and two nexts, plus one caveat
+      refused for length. So the number to report is not "George did not say
+      it" — it is "he said it and the validator dropped it".
+
+      **THE CLAIM IS THE PART THAT WORKED: 9 of 9 landed.** Every claim he
+      submitted appears word for word in the answer he then wrote, so every
+      one was lit. That is the whole safety argument for a text channel, and
+      it held on the first live run without a single `claim_not_said`.
+
+      **TWO FIXES CAME OUT OF THE RUN, both cheap.** `caveat` goes 240 → 320
+      characters: the bound refused the `caveats` scenario outright, and the
+      Ideal UI's own morning caveat is 243 characters — a bound the design it
+      is built toward cannot fit is a bound on saying the second thing. And a
+      refused slot now records WHAT WAS SAID, not only why: "next carries no
+      digits" over "order 806 units" is the rule working and over "check the
+      8-week window" is the rule costing a slot, and the reason alone cannot
+      tell them apart. **The digits question is left open on purpose** —
+      loosening it blind would be the one change that could let a figure onto
+      the screen through prose that the answer's own gates never see.
+
+      **AND THE RUN FOUND A CHECK THAT WAS WRONG, NOT AN ANSWER.**
+      `order` was reported as citing a figure no tool returned — "729 units" —
+      and the row behind it says `suggested_order_qty` 729.
+      `prose.allowed_numbers` could not see a **Decimal**, which is what
+      Postgres `numeric` arrives as, so every quantity `get_purchase_plan`
+      returns was invisible to every check in that module. Replaying the same
+      answer against the same recorded rows was clean, because a report is
+      serialized and a raw row is not — a check that disagrees with its own
+      evidence depending on which side of `json` it is read from is worse than
+      no check. Fixed one-way (it can only add a number the tools DID return),
+      held by `tests/test_eval_checks_contract.py`, and verified by replay for
+      **$0.00**: `p1f-v2.json` replays clean on `order`.
+
+      **ONE SHORTFALL BEYOND THE NUMBERS.** Nothing was rebuilt in front of
+      the owner — the third card running. The evidence is the recorded run,
+      the replay and the suites, not his screen.
 - [x] **P1.g arithmetic in prose, and a column name in the answer** — done
       2026-09-13, `c508965`. The two trust failures George filed himself
       ("and 45 others"; `warning_stock`; a forced caveat). Pure suite

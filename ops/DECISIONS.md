@@ -9,6 +9,34 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-14 — P1.f: a menu wider than what it draws, and prose with a shape
+
+Fourteen widget names for six drawings is not a richer vocabulary, it is a
+choice at every compose that the renderer then discards. The names are now the
+drawings; `subjects`, `form`, `action` and the block-level `note` left with the
+widgets they served, and `hero` — the last kind that could not be demoted —
+took the last refusal on that path with it. A board outlives a deploy, so
+`retired_kinds` keeps the old names drawable and describable while nothing may
+compose one.
+
+THE CLAIM IS A HIGHLIGHT, AND THAT IS THE WHOLE SAFETY ARGUMENT. A text slot
+that drew a sentence of its own could put words on screen the answer never
+carried; one that lights a span of what he actually wrote cannot. So the model
+names the few words that are the point, the surface finds them in the answer,
+and a claim he did not say draws nothing and is recorded as `claim_not_said`.
+Nine of nine landed on the first live run.
+
+THE ROLES WENT BECAUSE NOTHING DREW THEM. primary/driver/breakdown/context
+were validated exhaustively on every compose and rendered by no surface the
+owner can reach. A channel the screen has stopped speaking is a tax on every
+turn, not a guarantee.
+
+And a check that reads its evidence differently on either side of `json` is
+worse than no check: `allowed_numbers` could not see a Decimal, so a quantity
+quoted exactly read as invented live and clean on replay. Fixed one-way.
+
+---
+
 ## 2026-09-14 — P1.d: persisting is what makes it a room, forever is what broke it
 
 A board that never clears is a workspace; a board that never clears is also
