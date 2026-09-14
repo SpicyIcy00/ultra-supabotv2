@@ -57,6 +57,46 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-14 · the caveat is forbidden a number, and George keeps trying
+
+Found by reading `verification/p1h-v2.json`'s `warning_detail`, not by a
+person. **Not a new fault — P1.h's close-out named it ("the no-digits rule
+P1.f already left open"). What was not visible is the SIZE**, because the
+close-out's table reports `composition_rejected` and this is
+`reading_rejected`, a different row that no table carries.
+
+Across the three recorded v2 runs: **0 → 6 → 8**, and it is now the largest
+single warning kind in a run. Total warnings are flat (15, 16, 16), so nothing
+regressed — this was always there and is only now countable.
+
+**Six of the eight are one rule**, from `voice.reading.slots`:
+
+    5x  why      caveat carries no digits — it characterises the figures,
+                 it never states one
+    1x  morning  next carries no digits — same rule
+
+Seven of eleven scenarios trip it: caveats, follow-up, morning, order, taught,
+vague, why.
+
+**It is the same question already decided for the claim, asked again one slot
+over.** On 2026-09-13 `max_restated_sentences` went 0 → 1 because "a reading
+may carry the figure its claim is about" — reciting the board was what needed
+forbidding, not citing one figure. The caveat slot still forbids digits
+outright, so George cannot write *"19 products had no figure on one side"* —
+a count `meta.comparison.not_ranked` returned — and must reach for "roughly
+half" instead. **The rule makes him vaguer than his evidence.**
+
+**Not decided here.** Either a caveat may carry the figure it is about, as the
+claim may — in which case the slot rule relaxes the same way and for the same
+reason — or caveats stay figure-free deliberately, in which case the prompt
+should stop asking George for something the validator will refuse eight times
+a run. Both are defensible; being refused eight times is not.
+
+Report: `verification/p1h-v2.json`, `warning_detail` where
+`reason = reading_rejected`.
+
+
+
 **Nothing.**
 
 ---
