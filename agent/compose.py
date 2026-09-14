@@ -20,14 +20,15 @@ already lives by:
   - A BLOCK NAMES A READ THAT RAN. `seq` must be a successful read in this
     conversation. A widget over a call that failed, or that never happened, is
     a picture of nothing.
-  - A SUBJECT IS A ROW. "Rockwell" on a hero is admissible only if a row of
+  - A SUBJECT IS A ROW. "Rockwell" on a figure is admissible only if a row of
     that read carries it. George may choose which row leads; he may not
     introduce one.
   - NO FIELD BUT THE ALLOWED ONES. A colour, a width, a value, a title — any
     key outside metrics.yaml composition.allowed_fields refuses the block. This
     is the line between composing and drawing.
   - ONE LEAD. Weight is judgment made visible, and a composition where
-    everything leads has not been composed. A hero is the lead by definition.
+    everything leads has not been composed; a second one is demoted, not
+    refused.
   - KEYS TRANSFORM. A key is a short slug; a later composition that uses the
     same key is the same object changing, which is what keeps the workspace
     from stacking.
@@ -71,9 +72,22 @@ may never change which value is drawn, or introduce one.** Every coercion is
 recorded and returned on `meta.coerced`, because a coercion the model cannot
 see is a board it will describe wrongly.
 
-It opens no connection, holds nothing, and its result names no source table,
-for the reason findings.py gives: the loop keeps the last meta that describes
-real data as the answer's receipts, and this read nothing.
+WHAT IT VALIDATES GOT SMALLER (P1.f, 2026-09-14), and that is the card. The
+vocabulary is now the catalogue the renderer draws — six marks and the four
+kinds that are not marks — so seven widget names went, and with them the three
+fields that served only those: `subjects` (a comparison), `form` (a chart) and
+`action` (a recommendation). The block-level `note` became `claim` under its
+own name: the few words that title the block, checked for digits exactly as a
+note is, because a title carrying a figure is a figure with no receipt.
+
+The second statement this call carries changed with it. It was ROLES on reads
+— primary, driver, breakdown, context — validated exhaustively and drawn
+nowhere since the room replaced the old surface. It is now the READING's three
+slots (agent/reading.py): claim, caveat, next.
+
+It opens no connection, holds nothing, and its result names no source table:
+the loop keeps the last meta that describes real data as the answer's receipts,
+and this read nothing.
 """
 
 from __future__ import annotations
@@ -83,8 +97,6 @@ import re
 from typing import Any, Iterable, Mapping, Optional
 
 from agent import grammar
-
-MAX_SUBJECTS = 4
 
 
 class Rejected(ValueError):
@@ -147,8 +159,8 @@ def _scope_values(call: Mapping[str, Any]) -> set[str]:
     survives the grouping. `get_sales(group_by=[], filters={"store":
     "Rockwell"})` returns ONE row of totals with no store column in it, and
     refusing `subject: "Rockwell"` over that row is what sent George round the
-    loop in the `cannot` scenario: hero with subject, refused; hero without,
-    refused; figure without, refused; then a whole extra read of the same
+    loop in the `cannot` scenario: a figure with a subject, refused; without
+    one, refused; then a whole extra read of the same
     figure grouped by store so the word would appear in a cell. Four
     iterations, for a label the read had already declared.
 
@@ -204,10 +216,9 @@ def _implied_subject(call: Mapping[str, Any]) -> Optional[str]:
 def read_identity(tool: Any, arguments: Any, subject: Any = None) -> str:
     """
     What a read IS for "this is that": tool, arguments, and the one subject
-    the object is scoped to, if any. A comparison's `subjects` are a VIEW of
-    the read, not a scope, and are deliberately not part of it. The same
-    identity the client applies in board.ts, so the stored composition and
-    the screen agree about which object a repeat became.
+    the object is scoped to, if any. The same identity the client applies in
+    board.ts, so the stored composition and the screen agree about which
+    object a repeat became.
     """
     args = json.dumps(arguments or {}, sort_keys=True, default=str)
     return f"{tool}|{args}|{subject if isinstance(subject, str) else ''}"
@@ -246,6 +257,34 @@ def _demote(key: str, lead_key: str, weights: list, coerced: list[str]) -> str:
     return below
 
 
+def _claim(text: Any, voc: Mapping[str, Any]) -> str:
+    """
+    THE FEW WORDS OVER A BLOCK, and the one thing on it George writes.
+
+    Held to the same rule a note is held to, and for the same reason: an
+    annotation may point at what is drawn and characterise it, and may never
+    name a number (CLAUDE.md). The figure is already under the title, with the
+    read that returned it and the time it was read — a digit up here would be
+    a figure with no receipt of its own, stated above one that has.
+    """
+    spec = voc.get("claim") or {}
+    if not isinstance(text, str) or not text.strip():
+        raise Rejected("a claim is a few words saying what this block says")
+    said = " ".join(text.split())
+    longest = int(spec.get("max_length") or 80)
+    if spec.get("no_digits", True) and any(ch.isdigit() for ch in said):
+        raise Rejected(
+            "a claim carries no digits — the figure is drawn under it, with "
+            "its own receipts (metrics.yaml composition.claim)"
+        )
+    if len(said) > longest:
+        raise Rejected(
+            f"a claim is at most {longest} characters — it is a title on a "
+            f"block, not the reading"
+        )
+    return said
+
+
 def validate(
     submitted: Any,
     calls: Mapping[int, Mapping[str, Any]],
@@ -274,9 +313,7 @@ def validate(
     allowed = set(voc["allowed_fields"])
     key_re = re.compile(voc["key_pattern"])
     max_blocks = int(voc["max_blocks"])
-    chart_forms = set(voc.get("chart_forms", []))
     state_labels = set(voc.get("state_labels", []))
-    actions = set(voc.get("recommendation_actions", []))
     arguments = set(voc.get("control_arguments", []))
     # Which argument carries a window, per tool. One map, already declared for
     # backtesting (workflows.backtest.window_arguments), so a control and a
@@ -345,8 +382,8 @@ def validate(
                 # `quiet` that carries the seq it is quieting says the same
                 # thing twice; refusing it lost a round trip and quieted
                 # nothing.
-                said_too = sorted(f for f in ("kind", "seq", "subject", "subjects",
-                                              "form", "label", "action", "argument")
+                said_too = sorted(f for f in ("kind", "seq", "subject", "claim",
+                                              "label", "argument")
                                   if f in item)
                 if said_too:
                     coerced.append(
@@ -394,20 +431,21 @@ def validate(
                     edit["weight"] = weight
                     if weight == "lead":
                         lead_key = key
+                # RETITLING IS NOT RENAMING WHAT AN OBJECT IS ABOUT. A claim
+                # says what the block SAYS; it names no row and carries no
+                # figure, so it changes on its own exactly as a weight does.
+                if "claim" in item:
+                    edit["claim"] = _claim(item["claim"], voc)
                 if "seq" in item:
                     call = _read(calls, item.get("seq"))
                     edit["seq"] = item["seq"]
                     edit["tool"] = call.get("tool")
-                    for field in ("subject", "subjects", "form", "label",
-                                  "action", "argument"):
+                    for field in ("subject", "label", "argument"):
                         if field in item:
                             edit[field] = item[field]
                     if isinstance(edit.get("subject"), str) and not _backs(call, edit["subject"]):
                         raise Rejected(f"read {item['seq']} has no row for {edit['subject']!r}")
-                    for s in edit.get("subjects") or []:
-                        if not isinstance(s, str) or not _backs(call, s):
-                            raise Rejected(f"read {item['seq']} has no row for {s!r}")
-                elif voc.get("change_subject_requires_seq") and ("subject" in item or "subjects" in item):
+                elif voc.get("change_subject_requires_seq") and "subject" in item:
                     # Otherwise the object would claim to be about something the
                     # rows it still draws never carried.
                     raise Rejected(
@@ -466,30 +504,29 @@ def validate(
             weight = item.get("weight", "supporting")
             if weight not in weights:
                 raise Rejected(f"weight {weight!r} is not one of {', '.join(weights)}")
-            if kind == "hero" and voc.get("hero_must_lead") and weight != "lead":
-                raise Rejected("a hero is the lead by definition; give it weight 'lead' or use 'subject'")
             if weight == "lead" and voc.get("one_lead") and lead_key is not None:
-                # A HERO THAT CANNOT LEAD IS NOT A HERO. Demoting it would
-                # draw the wrong OBJECT — the big expressive tile, second —
-                # so this one stays a refusal while every other kind demotes.
-                if kind == "hero":
-                    raise Rejected(f"only one block leads, and {lead_key!r} already does")
+                # EVERY KIND DEMOTES NOW (P1.f). The one that did not was
+                # `hero`, whose whole point was the expressive tile at the top;
+                # it is gone with the rest of the names the renderer did not
+                # draw, and a second block asking to lead is a composition
+                # worth drawing one rank down.
                 weight = _demote(key, lead_key, weights, coerced)
 
             needs = list(widgets[kind].get("needs") or [])
             block: dict[str, Any] = {"op": op, "kind": kind, "key": key, "weight": weight}
 
-            # POINTING IS NOT A SHAPE. A note and an emphasis annotate whatever
-            # is drawn, so they belong on a named widget as much as on a
-            # composed one — held to the grammar's rules, which is where the
-            # "no digits in a note" guarantee lives.
-            for annotation in ("note", "emphasise"):
-                if annotation in item:
-                    try:
-                        checked = grammar.annotation(annotation, item[annotation], defs)
-                    except grammar.Rejected as why:
-                        raise Rejected(str(why)) from why
-                    block[annotation] = checked
+            # POINTING IS NOT A SHAPE. A claim and an emphasis annotate
+            # whatever is drawn, so they belong on a named widget as much as on
+            # a composed one — held to the same "no digits" rule, which is the
+            # whole of what makes a few words over a figure safe.
+            if "claim" in item:
+                block["claim"] = _claim(item["claim"], voc)
+            if "emphasise" in item:
+                try:
+                    block["emphasise"] = grammar.annotation(
+                        "emphasise", item["emphasise"], defs)
+                except grammar.Rejected as why:
+                    raise Rejected(str(why)) from why
 
             if "seq" in needs:
                 call = _read(calls, item.get("seq"))
@@ -536,55 +573,6 @@ def validate(
                 else:
                     block["subject"] = subject.strip()
 
-            if "subjects" in needs:
-                subjects = item.get("subjects")
-                if not isinstance(subjects, (list, tuple)) or not (2 <= len(subjects) <= MAX_SUBJECTS):
-                    # Naming what is there turns the refusal into the next
-                    # correct attempt, the way grammar._no_row does. Which two
-                    # to compare is George's to say; which two are AVAILABLE
-                    # is the read's, and he should not spend a round trip
-                    # finding out.
-                    assert call is not None
-                    available = sorted({
-                        v.strip() for row in (call.get("rows") or [])[:12]
-                        if isinstance(row, Mapping)
-                        for v in row.values()
-                        if isinstance(v, str) and 0 < len(v.strip()) < 40
-                    })[:6]
-                    raise Rejected(
-                        f"a {kind} names two to {MAX_SUBJECTS} subjects, from "
-                        f"the rows of ONE read"
-                        + (f" — read {item.get('seq')} carries: "
-                           f"{', '.join(available)}" if available else
-                           f" — read {item.get('seq')} carries no named rows to "
-                           f"compare, so this is a chart or a table")
-                    )
-                assert call is not None
-                cleaned: list[str] = []
-                for s in subjects:
-                    if not isinstance(s, str) or not s.strip():
-                        raise Rejected("a subject is a name")
-                    if not _backs(call, s):
-                        raise Rejected(f"read {item['seq']} has no row for {s!r}")
-                    if s.strip() not in cleaned:
-                        cleaned.append(s.strip())
-                if len(cleaned) < 2:
-                    raise Rejected("a comparison needs two different subjects")
-                block["subjects"] = cleaned
-
-            if "action" in needs:
-                # WHICH action, never a new one, and never the figure behind
-                # it: the block has no field for a number, so "order 806
-                # units" is the read's quantity beside George's verb.
-                action = item.get("action")
-                if action not in actions:
-                    raise Rejected(
-                        f"a recommendation's action is one of "
-                        f"{', '.join(sorted(actions))} "
-                        f"(metrics.yaml composition.recommendation_actions)"
-                    )
-                block["action"] = action
-
             if "argument" in needs:
                 # SCOPE ONLY. A control re-runs a read with one scope argument
                 # changed; a threshold is a definition and has no control.
@@ -613,12 +601,6 @@ def validate(
                         )
                 block["argument"] = argument
 
-            if "form" in needs:
-                form = item.get("form")
-                if form not in chart_forms:
-                    raise Rejected(f"chart form must be one of {', '.join(sorted(chart_forms))}")
-                block["form"] = form
-
             if "label" in needs:
                 label = item.get("label")
                 if label not in state_labels:
@@ -644,40 +626,41 @@ def validate(
     return accepted, rejected
 
 
-def compose(blocks: Any, findings: Any = None, *,
+def compose(blocks: Any, reading: Any = None, *,
             calls: Mapping[int, Mapping[str, Any]],
             defs: Mapping[str, Any], board: Any = None) -> dict:
     """
-    Compose the workspace: say which of the results you read the person sees, as which kind of object, at what weight, and what each read MEANT. Call it once, after your reads return and before you answer. Nothing here is a figure — every number is drawn from the read a block names.
+    Compose the workspace: say which of the results you read the person sees, as which kind of object, at what weight — and say the reading in its three slots. Call it once, after your reads return and before you answer. Nothing here is a figure: every number is drawn from the read a block names.
 
     Args:
-        blocks: the blocks on screen, in order. Each names a kind, a short key, a weight, and the read (seq) and subject it draws from.
-        findings: what each read meant in this piece of work — {"seq": 3, "role": "driver", "of": 0}. Optional; an investigation says it, a single figure needs none.
+        blocks: the blocks on screen, in order. Each names a kind, a short key, a weight, the read (seq) it draws, and a claim — the few words saying what it says.
+        reading: what you are about to say, in three slots — {"claim": the few words that ARE the point, said again word for word in your answer; "caveat": what qualifies these figures, drawn whole above them; "next": one sentence, the one thing to do or check, drawn last}. Optional; a confirmation needs none.
 
     Returns:
         The tool body. Returns {rows, meta} like every other tool, and names no
-    source_table, for the reason agent/findings.py names none.
+    source_table: the loop keeps the last meta that describes real data as the
+    answer's receipts, and this read nothing.
     """
     coerced: list[str] = []
     accepted, rejected = validate(blocks, calls, defs, board=board, coerced=coerced)
-    # ONE CALL, ONE SCHEMA (P1.a, 2026-09-13). Roles and blocks are two
-    # statements about the SAME set of calls, submitted at the same moment,
-    # validated against the same record, and neither reads anything. Splitting
-    # them across two tools bought nothing and cost a sequential round trip in
-    # every investigation the twelve contain. agent/findings.py still owns
-    # every rule — this is one door into it, not a second set of checks.
-    from agent import findings as _findings
+    # ONE CALL, TWO STATEMENTS (P1.a, 2026-09-13; the second one swapped in
+    # P1.f). The board and the reading are said at the same moment, about the
+    # same turn, and neither reads anything. Splitting them across two tools
+    # bought nothing and cost a sequential round trip in every investigation
+    # the twelve contained. agent/reading.py owns every rule about the slots —
+    # this is one door into it, not a second set of checks.
+    from agent import reading as _reading
 
-    roles, roles_rejected = ([], [])
-    if findings is not None:
-        roles, roles_rejected = _findings.validate(findings, calls, defs)
+    said, said_rejected = ({}, [])
+    if reading is not None:
+        said, said_rejected = _reading.validate(reading, defs)
     return {
         "rows": accepted,
         "meta": {
             "accepted": len(accepted),
             "rejected": rejected,
-            "findings": roles,
-            "findings_rejected": roles_rejected,
+            "reading": said,
+            "rejected_slots": said_rejected,
             # What was ADJUSTED rather than refused: a discriminator renamed, a
             # second lead demoted, a subject taken from the read's own scope.
             # Named because the model has to describe the board it actually
@@ -689,13 +672,14 @@ def compose(blocks: Any, findings: Any = None, *,
             "rewritten": [{"from": e["rewritten_from"], "to": e["key"]}
                           for e in accepted if e.get("rewritten_from")],
             "widgets": list(vocabulary(defs)["widgets"]),
-            "roles": list(_findings.ROLES),
+            "slots": list(_reading.SLOTS),
             "note": (
                 "How the board changed, from reads that already ran. Nothing "
                 "was read, and nothing you did not name has moved. A refused "
                 "edit did not happen and the answer must not describe the "
                 "board as though it did. A COERCED edit did happen, in the "
-                "form named beside it — describe that one."
+                "form named beside it — describe that one. A claim you gave "
+                "here is lit where you say it in your answer, so say it there."
             ),
         },
     }

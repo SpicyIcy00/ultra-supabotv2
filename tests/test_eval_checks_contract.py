@@ -37,6 +37,30 @@ def test_a_returned_figure_is_grounded_however_it_is_formatted():
     assert ungrounded_numerals(answer, [r["result"] for r in ROWS]) == []
 
 
+def test_a_decimal_is_a_returned_figure(defs=None):
+    """
+    THE BLIND SPOT P1.f's RUN FOUND, 2026-09-14. Postgres `numeric` arrives as
+    a Decimal through psycopg, so every quantity `get_purchase_plan` returns
+    is one — and `_walk_numbers` knew about int, float and str and not about
+    Decimal. The `order` scenario cited "729 units" off a row whose
+    suggested_order_qty was Decimal('729') and the suite called it a figure no
+    tool returned. Replaying the SAME answer against the SAME recorded rows was
+    clean, because a report is serialized and a raw row is not — a check that
+    disagrees with its own evidence depending on which side of json it is read
+    from is worse than no check.
+    """
+    from decimal import Decimal
+
+    rows = [{"product": "Aji Assorted JP candy", "suggested_order_qty": Decimal("729"),
+             "units_per_day": Decimal("14.700")}]
+    result = [{"rows": rows, "meta": {}}]
+    assert ungrounded_numerals("729 units, at 14.7 a day, is most of the order.", result) == []
+    # And a figure nobody returned is still caught beside it.
+    assert [f.value for f in ungrounded_numerals("730 units.", result)] == [730.0]
+    # A Decimal that is not a number matches nothing and breaks nothing.
+    assert ungrounded_numerals("729 units.", [{"rows": [{"q": Decimal("NaN")}], "meta": {}}])
+
+
 def test_an_invented_figure_is_caught():
     answer = "Net sales were ₱1,489,195, and ATP was ₱435.82, so 82% of the fall is basket."
     found = ungrounded_numerals(answer, [r["result"] for r in ROWS])

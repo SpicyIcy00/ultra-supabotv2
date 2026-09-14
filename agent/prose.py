@@ -27,7 +27,9 @@ members named and the rest counted.
 
 from __future__ import annotations
 
+import math
 import re
+from decimal import Decimal
 from functools import lru_cache
 from typing import Any, Iterable
 
@@ -44,8 +46,26 @@ PRESENTATION_MAX = 31
 def _walk_numbers(obj: Any, out: set[float]) -> None:
     if isinstance(obj, bool):
         return
-    if isinstance(obj, (int, float)):
-        out.add(float(obj))
+    # A DECIMAL IS A NUMBER, AND UNTIL 2026-09-14 THIS COULD NOT SEE ONE.
+    # Postgres `numeric` arrives as Decimal through psycopg, so every quantity
+    # get_purchase_plan returns — `suggested_order_qty`, `units_per_day` — was
+    # invisible to every check in this module: a figure George read off a row
+    # and quoted exactly was reported as a figure no tool returned. P1.f's run
+    # found it, on `order`: "729 units", where the row says
+    # suggested_order_qty 729. The loop's own frames are json-safe by then
+    # (`_json_safe`) and so is a recorded report, which is why replaying the
+    # same answer through the same check said it was clean — the run was
+    # reading raw rows and the replay was reading serialized ones.
+    #
+    # One-way, like every other loosening here: it can only add a number the
+    # tools DID return, never remove one.
+    if isinstance(obj, (int, float, Decimal)):
+        try:
+            value = float(obj)
+        except (ValueError, OverflowError):
+            return
+        if math.isfinite(value):                 # a NaN matches nothing anyway
+            out.add(value)
     elif isinstance(obj, str):
         # Dates and iso timestamps contribute their parts; numeric strings —
         # including a notice's "12,340.00 PHP" — contribute their value.

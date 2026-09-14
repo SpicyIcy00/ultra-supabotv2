@@ -52,6 +52,8 @@ export interface BoardObject {
   tool?: string;
   subject?: string;
   subjects?: string[];
+  /** The few words titling it — George's claim about what it says. */
+  claim?: Block['claim'];
   form?: Block['form'];
   label?: Block['label'];
   action?: Block['action'];
@@ -97,7 +99,7 @@ export interface Local {
 }
 
 const FIELDS = ['kind', 'weight', 'seq', 'tool', 'subject', 'subjects', 'form',
-                'label', 'action', 'argument', 'spec', 'seqs',
+                'label', 'action', 'argument', 'spec', 'seqs', 'claim',
                 'emphasise', 'note'] as const;
 
 function carried(edit: Block): Partial<BoardObject> {

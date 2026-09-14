@@ -81,32 +81,43 @@ def test_a_declared_delta_over_one_row_is_still_a_figure():
     assert block["kind"] == "figure"
 
 
-def test_two_to_four_compared_rows_are_a_comparison():
+def test_compared_named_rows_are_ranked_however_many_there_are():
+    # P1.f: `comparison` capped at four subjects and everything wider fell to a
+    # table, so seven shops — the commonest read there is — drew as rows of
+    # digits. A ranking holds any number of them and lights the one that
+    # matters, which is what the renderer was already doing with a comparison.
     block = default_composition.shape_for(read(rows=COMPARED_THREE), 1, "read-1", "quiet")
-    assert block["kind"] == "comparison"
-    assert block["subjects"] == ["Rockwell", "OPUS", "Fairview"]
-
-
-def test_more_compared_rows_than_a_comparison_holds_fall_to_a_table():
+    assert block["kind"] == "ranked"
     rows = COMPARED_THREE + [
         {"store": "North Edsa", "value": 91000.0, "change_pct": 1.0},
         {"store": "Katipunan", "value": 70000.0, "change_pct": -3.0},
     ]
-    assert default_composition.shape_for(read(rows=rows), 0, "read-0", "lead")["kind"] == "table"
+    assert default_composition.shape_for(read(rows=rows), 0, "read-0", "lead")["kind"] == "ranked"
 
 
-def test_a_series_is_a_chart_and_the_mark_is_the_row_count():
-    short = default_composition.shape_for(read(rows=BY_DAY), 0, "read-0", "lead")
-    assert (short["kind"], short["form"]) == ("chart", "bar")
-    long = default_composition.shape_for(read(rows=BY_DAY_LONG), 0, "read-0", "lead")
-    assert (long["kind"], long["form"]) == ("chart", "line")
+def test_a_baseline_on_every_row_is_a_dumbbell_and_a_change_is_contributors():
+    # THE SAME RULE catalogue.ranking applies on the client, from the same
+    # columns: a before on every row has two ends; a signed change with no
+    # before is a decomposition of one.
+    with_baseline = [{**r, "baseline": r["value"] * 1.1} for r in COMPARED_THREE]
+    assert default_composition.shape_for(
+        read(rows=with_baseline), 0, "read-0", "lead")["kind"] == "dumbbell"
+    with_change = [{**r, "change": -100.0} for r in COMPARED_THREE]
+    assert default_composition.shape_for(
+        read(rows=with_change), 0, "read-0", "lead")["kind"] == "contributors"
+
+
+def test_a_series_over_time_is_a_line_whatever_its_length():
+    # The bar/line split went with `form`: a series is a line, and eight days
+    # drawn as bars was a second shape for the same fact.
+    for rows in (BY_DAY, BY_DAY_LONG):
+        assert default_composition.shape_for(read(rows=rows), 0, "read-0", "lead")["kind"] == "line"
 
 
 def test_a_categorical_series_is_never_a_line():
     rows = [{"store": s, "value": v} for s, v in
             [("Rockwell", 4.0), ("OPUS", 2.0), ("Fairview", 3.0)]]
-    block = default_composition.shape_for(read(rows=rows), 0, "read-0", "lead")
-    assert (block["kind"], block["form"]) == ("chart", "bar")
+    assert default_composition.shape_for(read(rows=rows), 0, "read-0", "lead")["kind"] == "ranked"
 
 
 def test_a_ragged_result_is_a_table_not_a_chart():

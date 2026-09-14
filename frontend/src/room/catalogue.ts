@@ -18,14 +18,16 @@
  *   line          a series over an ordered field, its baseline dotted
  *   table         the rows, when precision beats shape
  *
- * THE VOCABULARY GEORGE SPEAKS DID NOT CHANGE, AND DELIBERATELY SO. This card
- * is renderer-only: `composition.widgets` still holds the fourteen, the model
- * still names them, the validator still refuses what it always refused. What
- * changed is how many SHAPES those fourteen can arrive as. `markFor` is the
- * whole of the mapping, and a kind that draws a read maps by what the ROWS
- * are — a comparison of seven shops with a baseline each is a dumbbell, the
- * same comparison without one is a ranking — because the rows are what a
- * reader is actually looking at.
+ * AND SINCE P1.f THE VOCABULARY IS THIS LIST. `composition.widgets` held
+ * fourteen names for these six drawings until 2026-09-14, which was a choice
+ * at every compose that bought nothing on screen; it now holds the six, plus
+ * the four below. `markFor` still maps the retired names — `hero`,
+ * `comparison`, `chart`, `distribution`, `timeline`, `recommendation`,
+ * `subject` — because a board persists between turns and across a deploy, and
+ * a thread stored before the change still has to draw. A kind that draws a
+ * read maps by what the ROWS are: a compared set of shops with a baseline
+ * each is a dumbbell, the same set without one is a ranking, because the rows
+ * are what a reader is actually looking at.
  *
  * FOUR KINDS ARE NOT READINGS AND KEEP THEIR OWN TILES: `draft` (an order you
  * edit, with a total that follows your edits), `control` (a handle on a read),
@@ -98,9 +100,24 @@ export function hasChange(rows: Row[]): boolean {
 export function markFor(o: Pick<BoardObject, 'kind' | 'form' | 'subject' | 'subjects'>,
                         rows: Row[]): Mark {
   switch (o.kind) {
+    // ---- the six, said by name (P1.f) -----------------------------------
     // ONE NUMBER. Its change and what it is in sit with it; more rows than one
     // do not make it a series, because he asked for a figure.
-    case 'hero': case 'figure': case 'subject': case 'recommendation':
+    case 'figure':
+      return 'figure';
+    case 'dumbbell':
+      return hasBaseline(rows) ? 'dumbbell' : ranking(rows);
+    case 'contributors':
+      return hasChange(rows) ? 'contributors' : ranking(rows);
+    case 'ranked':
+      return 'ranked';
+    case 'line':
+      return 'line';
+    case 'table':
+      return 'table';
+
+    // ---- retired names a stored board still carries ----------------------
+    case 'hero': case 'subject': case 'recommendation':
       return 'figure';
     // WHEN is the point, so the order is the axis.
     case 'timeline':
@@ -111,8 +128,6 @@ export function markFor(o: Pick<BoardObject, 'kind' | 'form' | 'subject' | 'subj
       return timeKeyOf(rows) ? 'line' : ranking(rows);
     case 'comparison':
       return rows.length === 1 ? 'figure' : ranking(rows);
-    case 'table':
-      return 'table';
     default:
       // A shape George composed, or a kind this renderer does not draw as a
       // mark. `Piece` never asks about those; a caller that does gets the
@@ -149,23 +164,25 @@ const ACTIONS: Record<string, string> = {
 };
 
 /**
- * THE TITLE OVER A BLOCK — George's few words where he gave them, the read's
- * own where he did not.
+ * THE CLAIM-TITLE OVER A BLOCK — George's few words where he gave them, the
+ * read's own where he did not.
  *
- * The grammar has NO FIELD FOR A TITLE, on purpose: a heading is a column or
- * it is nothing, so a claim typed into a block would be a sentence with no
- * receipt. What George does have is `note` — a characterisation of what is
- * drawn, validated to carry no digits, sixty characters, four to a shape. So
- * the claim-title is his note when there is one, and otherwise the read
- * naming itself: what was measured, and of what.
+ * P1.e drew it from `note`, a characterisation borrowed for a job it was not
+ * named for, on the reasoning that "the grammar has no field for a title and
+ * must not get one — a claim typed into a block is a sentence with no
+ * receipt". P1.f gave it its own name and kept the guarantee where it
+ * belongs: the receipt is the block, whose source line, window and read time
+ * are drawn under the title, and a `claim` carries NO DIGITS at all, checked
+ * server-side exactly as a note is. So the title may say what the block says
+ * and may never say a number.
  */
-export function titleFor(o: Pick<BoardObject, 'note' | 'subject' | 'subjects' | 'tool' | 'action'>,
+export function titleFor(o: Pick<BoardObject, 'claim' | 'note' | 'subject' | 'subjects' | 'tool' | 'action'>,
                          meta: ToolMeta | null | undefined): string {
-  // A RECOMMENDATION'S VERB IS THE TITLE. It is George's word off a closed
-  // list and the one thing his block carries that no read does, so it leads;
-  // the figure under it is still the tool's, because the block has no field
-  // for one. Losing it to the mark's own title was the alternative, and that
-  // would have made "Order Aji Mix" indistinguishable from a figure.
+  if (o.claim && o.claim.trim()) return o.claim.trim();
+  // A STORED RECOMMENDATION'S VERB, from before P1.f. It was George's word
+  // off a closed list and the one thing the block carried that no read did;
+  // a board composed today says the same thing in the `next` slot, where
+  // every answer has one.
   if (o.action && ACTIONS[o.action]) {
     return [ACTIONS[o.action], o.subject].filter(Boolean).join(' ');
   }

@@ -51,6 +51,7 @@ import type {
   DoneFrame,
   CompositionFrame,
   FindingFrame,
+  ReadingFrame,
   GeorgeNotice,
   GeorgeState,
   GeorgeTurn,
@@ -542,12 +543,32 @@ export function useGeorgeStream() {
                 break;
 
               case 'finding':
-                // The roles that stood, already validated by the loop. Replaces
-                // rather than accumulates: a later recording is the model
-                // refining one reading, not adding a second. Nothing here is
-                // read from prose, and nothing here is a figure.
+                // HISTORICAL. The loop stopped emitting this with P1.f — the
+                // roles it carried were drawn by nothing the room renders —
+                // and the case stays because a thread recorded before then
+                // replays its frames through here.
                 patchLast((t) => {
                   t.findings = ((data as unknown as FindingFrame).findings ?? []).slice();
+                });
+                break;
+
+              case 'reading':
+                // WHAT HE SAID, IN ITS THREE SLOTS, already validated by the
+                // loop. Replaces rather than accumulates: a later compose is
+                // the model refining one reading, not adding a second.
+                //
+                // The claim is a HIGHLIGHT of the answer, not a line of its
+                // own — `splitClaim` finds those words in what he actually
+                // said and lights them there, and draws nothing where he did
+                // not say them. So nothing here can put text on screen that
+                // the answer does not already carry.
+                patchLast((t) => {
+                  const frame = data as unknown as ReadingFrame;
+                  t.reading = {
+                    ...(typeof frame.claim === 'string' ? { claim: frame.claim } : {}),
+                    ...(typeof frame.caveat === 'string' ? { caveat: frame.caveat } : {}),
+                    ...(typeof frame.next === 'string' ? { next: frame.next } : {}),
+                  };
                 });
                 break;
 

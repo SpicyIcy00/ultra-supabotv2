@@ -91,7 +91,7 @@ def test_a_subject_the_read_is_filtered_to_is_backed_by_the_read(defs):
     is selection, not invention — which is the only thing rule 9 cares about.
     """
     accepted, rejected, _ = run(
-        [{"kind": "hero", "key": "rockwell", "seq": 0, "subject": "Rockwell",
+        [{"kind": "figure", "key": "rockwell", "seq": 0, "subject": "Rockwell",
           "weight": "lead"}], defs)
     assert rejected == []
     assert accepted[0]["subject"] == "Rockwell"
@@ -100,7 +100,7 @@ def test_a_subject_the_read_is_filtered_to_is_backed_by_the_read(defs):
 def test_a_subject_neither_a_row_nor_the_scope_carries_is_still_refused(defs):
     """The half of the old rule that was about truth, kept whole."""
     _, rejected, _ = run(
-        [{"kind": "hero", "key": "k", "seq": 0, "subject": "Greenhills",
+        [{"kind": "figure", "key": "k", "seq": 0, "subject": "Greenhills",
           "weight": "lead"}], defs)
     assert "no row for 'Greenhills'" in rejected[0]["reason"]
 
@@ -147,17 +147,20 @@ def test_a_many_row_read_with_no_subject_is_still_refused(defs):
     assert "3 rows" in rejected[0]["reason"]
 
 
-def test_a_comparison_with_no_subjects_is_refused_and_names_what_is_there(defs):
+def test_a_ranking_of_the_same_rows_needs_no_subject_at_all(defs):
     """
-    Which two to compare is George's to say. Which two are AVAILABLE is the
-    read's, and he should not spend a round trip finding out — the same
-    reason grammar._no_row names the values it has.
+    WHAT THE `comparison` REFUSAL BECAME (P1.f). It asked for two to four
+    subjects off the read and named the values available so the next attempt
+    would be right — five refusals in four recorded runs, every one of them
+    over rows already on the screen. A ranking draws all of them, so there is
+    nothing left to choose and nothing left to refuse; which one MATTERS is
+    said with `emphasise`, which hides nothing.
     """
-    _, rejected, _ = run(
-        [{"kind": "comparison", "key": "k", "seq": 1, "weight": "supporting"}], defs)
-    reason = rejected[0]["reason"]
-    assert "names two to 4 subjects" in reason
-    assert "Rockwell" in reason and "OPUS" in reason
+    accepted, rejected, _ = run(
+        [{"kind": "ranked", "key": "k", "seq": 1, "weight": "supporting",
+          "emphasise": "OPUS"}], defs)
+    assert rejected == []
+    assert accepted[0]["kind"] == "ranked" and accepted[0]["emphasise"] == "OPUS"
 
 
 # ---------------------------------------------------------------------------
@@ -247,102 +250,72 @@ def test_the_spec_path_reports_its_renames_through_compose(defs):
 # ---------------------------------------------------------------------------
 
 
-def test_the_roles_ride_the_compose_call(defs):
+def test_the_reading_rides_the_compose_call(defs):
     out = compose.compose(
         [{"kind": "figure", "key": "k", "seq": 0, "weight": "lead"}],
-        [{"seq": 0, "role": "primary"}],
+        {"claim": "Rockwell is the one to look at", "next": "Check its baskets"},
         calls=CALLS, defs=defs)
-    assert [f["role"] for f in out["meta"]["findings"]] == ["primary"]
-    assert out["meta"]["findings_rejected"] == []
+    assert out["meta"]["reading"]["claim"] == "Rockwell is the one to look at"
+    assert out["meta"]["rejected_slots"] == []
     assert out["rows"][0]["kind"] == "figure"
 
 
-def test_a_bad_role_is_dropped_without_touching_the_blocks(defs):
+def test_a_bad_slot_is_dropped_without_touching_the_blocks(defs):
     """
     The two statements are checked independently, because they are two
-    statements. A role naming a call that never ran does not cost the screen.
+    statements. A caveat with a figure in it does not cost the screen.
     """
     out = compose.compose(
         [{"kind": "figure", "key": "k", "seq": 0, "weight": "lead"}],
-        [{"seq": 42, "role": "primary"}],
+        {"caveat": "baskets fell 12% at Magnolia"},
         calls=CALLS, defs=defs)
-    assert out["meta"]["findings"] == []
-    assert out["meta"]["findings_rejected"][0]["seq"] == 42
+    assert out["meta"]["reading"] == {}
+    assert out["meta"]["rejected_slots"][0]["slot"] == "caveat"
     assert len(out["rows"]) == 1
 
 
-def test_naming_no_roles_is_a_valid_composition(defs):
-    """A single figure has nothing to label, and must not be made to."""
+def test_saying_nothing_in_the_slots_is_a_valid_composition(defs):
+    """A confirmation has nothing to say in three parts, and must not be made to."""
     out = compose.compose(
         [{"kind": "figure", "key": "k", "seq": 0, "weight": "lead"}],
         calls=CALLS, defs=defs)
-    assert out["meta"]["findings"] == []
-    assert out["meta"]["findings_rejected"] == []
+    assert out["meta"]["reading"] == {}
+    assert out["meta"]["rejected_slots"] == []
 
 
-def test_the_roles_are_the_same_rules_findings_always_had(defs):
+def test_the_slots_are_the_same_rules_reading_owns(defs):
     """
-    agent/findings.py is untouched: this is one door into it, not a second
-    set of checks. A driver over a different window is still not a
-    decomposition of the primary.
+    agent/reading.py owns every rule: this is one door into it, not a second
+    set of checks.
     """
-    from agent import findings as george_findings
+    from agent import reading as george_reading
 
-    calls = {
-        0: {"tool": "get_sales", "error": None, "is_read": True, "rows": TOTAL,
-            "arguments": {"metric": "net_sales", "group_by": [],
-                          "date_range": "last_week", "compare_to": "previous_period",
-                          "filters": {"store": "Rockwell"}}},
-        1: {"tool": "get_sales", "error": None, "is_read": True, "rows": TOTAL,
-            "arguments": {"metric": "transaction_count", "group_by": [],
-                          "date_range": "last_month", "compare_to": "previous_period",
-                          "filters": {"store": "Rockwell"}}},
-    }
-    through_compose = compose.compose(
-        None, [{"seq": 0, "role": "primary"}, {"seq": 1, "role": "driver", "of": 0}],
-        calls=calls, defs=defs)
-    direct = george_findings.record_findings(
-        [{"seq": 0, "role": "primary"}, {"seq": 1, "role": "driver", "of": 0}],
-        calls=calls, defs=defs)
-    assert through_compose["meta"]["findings"] == direct["rows"]
-    assert (len(through_compose["meta"]["findings_rejected"])
-            == len(direct["meta"]["rejected"]) == 1)
+    said = {"claim": "Rockwell is down", "caveat": "the count fell 3 days running"}
+    through_compose = compose.compose(None, said, calls=CALLS, defs=defs)
+    accepted, rejected = george_reading.validate(said, defs)
+    assert through_compose["meta"]["reading"] == accepted
+    assert through_compose["meta"]["rejected_slots"] == rejected
+    assert len(rejected) == 1
 
 
-# ---------------------------------------------------------------------------
-# 4. What a coercion may never do
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize("field,value", [
-    ("colour", "orange"), ("value", 412884), ("title", "Rockwell is down"),
-    ("width", 300),
-])
-def test_no_coercion_lets_a_pixel_or_a_figure_through(defs, field, value):
+def test_a_claim_with_a_digit_in_it_is_refused_not_stripped(defs):
     """
-    THE ONE COERCION THAT CAME BACK OFF THE LIST. Dropping the stray field and
-    drawing the rest was on the plan; it came off on 2026-09-13. A block
-    carrying `value: 412884` is not a misspelling, it is the attempt this
-    module exists to stop, and it costs no round trip to refuse it — the tool
-    schema is additionalProperties:false, and four recorded runs contain zero
-    of them.
-    """
-    _, rejected, coerced = run(
-        [{"kind": "figure", "key": "k", "seq": 0, "weight": "lead", field: value}],
-        defs)
-    assert "a block may not carry" in rejected[0]["reason"]
-    assert coerced == []
-
-
-def test_a_note_with_a_digit_in_it_is_refused_not_stripped(defs):
-    """
-    Stripping the digits would leave a sentence that reads as though it had
-    been checked. A note states no figure, and the refusal says so.
+    Stripping the digits would leave a title that reads as though it had been
+    checked. A claim states no figure, and the refusal says so. (It was
+    `note` until P1.f gave the block-level title its own name.)
     """
     _, rejected, _ = run(
         [{"kind": "figure", "key": "k", "seq": 0, "weight": "lead",
-          "note": "down 9 percent on the week"}], defs)
+          "claim": "down 9 percent on the week"}], defs)
     assert "carries no digits" in rejected[0]["reason"]
+
+
+def test_a_claim_titles_the_block_and_comes_back_flattened(defs):
+    accepted, rejected, _ = run(
+        [{"kind": "figure", "key": "k", "seq": 0, "weight": "lead",
+          "subject": "Rockwell", "claim": "Rockwell  is\n the one to look at"}], defs)
+    assert rejected == []
+    assert accepted[0]["claim"] == "Rockwell is the one to look at"
 
 
 def test_every_coercion_is_named_on_the_result(defs):

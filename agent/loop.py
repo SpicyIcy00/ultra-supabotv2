@@ -54,7 +54,7 @@ from typing import Any, AsyncIterator, Callable, Optional
 import anthropic
 
 from agent import prose as _prose
-from agent import compose, composite_tools, default_composition, findings, surface, write_tools
+from agent import compose, composite_tools, default_composition, reading, surface, write_tools
 from agent.write_tools import WriteContext, call_key
 from tools import (
     attention,
@@ -187,19 +187,21 @@ TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
 }
 
 # The one tool that reads nothing. It says what the person SEES — which reads,
-# as which kind of object, at what weight — and what each read MEANT — primary,
-# driver, breakdown, context — and the loop validates all of it against the
-# executed set and metrics.yaml before any of it reaches a client
-# (agent/compose.py, agent/findings.py).
+# as which kind of object, at what weight — and what George is about to SAY,
+# in the reading's three slots: claim, caveat, next. The loop validates all of
+# it against the executed set and metrics.yaml before any of it reaches a
+# client (agent/compose.py, agent/reading.py).
 #
 # ONE TOOL, NOT TWO (P1.a, 2026-09-13). record_findings and compose were
-# separate tools until today, and they were two statements about the SAME set
+# separate tools until then, and they were two statements about the SAME set
 # of calls, made at the same moment, validated against the same record, each
 # reading nothing. The model could not batch them — it wrote the roles, waited
 # a whole round trip for a result that told it nothing it did not already
-# know, then wrote the blocks. Every investigation in the twelve paid for
-# that. The roles are now compose(findings=...); agent/findings.py is
-# untouched and still owns every rule.
+# know, then wrote the blocks.
+#
+# AND THE SECOND STATEMENT CHANGED (P1.f, 2026-09-14). It was ROLES on reads,
+# and the room drew none of them; it is now the reading's three slots, which
+# the room draws every turn. agent/findings.py went with the roles.
 #
 # KEPT OUT OF TOOL_FUNCTIONS ON PURPOSE. That dict is what a pin and a workflow
 # step may contain (pin_runner.validate_call, workflow_runner), and a label is
@@ -454,27 +456,23 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
             },
         }
 
-    if pname == "findings":
-        # The whole of what the model may say about composition: a call it
-        # already made, and a word from a closed list. No field exists for a
-        # figure, a label, a colour, a component, a layout, a threshold or an
-        # order, so none can arrive (agent/findings.py).
+    if pname == "reading":
+        # THE WHOLE OF WHAT THE MODEL MAY SAY ABOUT ITS OWN WORDS: three short
+        # strings, bounded and checked (agent/reading.py). The claim is a
+        # HIGHLIGHT — the surface lights it where he says it in the answer, and
+        # drops it where he does not — so this channel cannot put a character
+        # on screen the answer does not already carry; the other two carry no
+        # digits at all.
+        spec = req(_load_defs(), "voice.reading.slots")
         return {
-            "type": "array",
-            "minItems": 1,
-            "maxItems": 12,
-            "items": {
-                "type": "object",
-                "properties": {
-                    "seq": {"type": "integer",
-                            "description": "meta.call_seq of a read that returned this turn"},
-                    "role": {"type": "string", "enum": list(findings.ROLES)},
-                    "of": {"type": "integer",
-                           "description": "for driver and breakdown: the seq of the primary"},
-                },
-                "required": ["seq", "role"],
-                "additionalProperties": False,
+            "type": "object",
+            "properties": {
+                name: {"type": "string",
+                       "maxLength": int(spec[name].get("max_length") or 160),
+                       "description": " ".join(str(spec[name]["about"]).split())}
+                for name in reading.SLOTS if name in spec
             },
+            "additionalProperties": False,
         }
 
     if pname == "beliefs":
@@ -543,15 +541,11 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
                     "subject": {"type": "string",
                                 "description": "a value a row of that read carries: a shop, "
                                                "product or supplier name"},
-                    "subjects": {"type": "array", "items": {"type": "string"},
-                                 "minItems": 2, "maxItems": compose.MAX_SUBJECTS},
-                    "form": {"type": "string", "enum": list(voc["chart_forms"])},
                     "label": {"type": "string", "enum": list(voc["state_labels"])},
-                    # A recommendation's verb and a control's handle. DECLARED
-                    # HERE OR THEY DO NOT EXIST: the vocabulary and the
-                    # validator knew about these before the schema did, so the
-                    # model reached for `label` on a recommendation — the only
-                    # nearby word it could see — and was refused for it.
+                    # A control's handle. DECLARED HERE OR IT DOES NOT EXIST:
+                    # the vocabulary and the validator knew about these before
+                    # the schema did, so the model reached for the only nearby
+                    # word it could see and was refused for it.
                     # A COMPOSED SHAPE, when nothing named fits. Loose here
                     # and strict in agent/grammar.py: the tree is recursive,
                     # which a tool schema expresses badly, and the validator
@@ -588,17 +582,16 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
                             "dominates'. Works on a named widget as well as a spec."
                         ),
                     },
-                    "note": {
+                    "claim": {
                         "type": "string",
+                        "maxLength": int((voc.get("claim") or {}).get("max_length") or 80),
                         "description": (
-                            "a few words ON what is drawn — 'carries the whole order', "
-                            "'off the shelf all window'. NO DIGITS: the figure is already "
-                            "drawn beside it, and a note with a number in it is refused."
+                            "the few words titling this block — what it SAYS, not what it "
+                            "is: 'OPUS added more than the next two shops together'. The "
+                            "metric, window and unit are already drawn under it. NO DIGITS: "
+                            "the figure is drawn below with its own receipts."
                         ),
                     },
-                    "action": {"type": "string",
-                               "enum": list(voc["recommendation_actions"]),
-                               "description": "for a recommendation: which action, never a new one"},
                     "argument": {"type": "string",
                                  "enum": list(voc["control_arguments"]),
                                  "description": "for a control: which scope argument it changes"},
@@ -924,7 +917,8 @@ def _grouping_sentence(defs: dict) -> str:
     refused for it. The investigation ladder localizes by product, so the one
     move it is built around looked unavailable until a call had already
     failed. This states the matrix once, from `metrics.<m>.valid_group_by`,
-    which is the same entry agent/findings.py validates a breakdown against.
+    which is the same entry metrics.yaml uses to say what a metric may be
+    broken down by.
 
     Time buckets are deliberately not described here: a lag series is recorded
     as not built, and the tool refuses one with its own words.
@@ -968,9 +962,9 @@ INVESTIGATING
 
 "Why" is an investigation: rounds, each deciding the next, stopping when the evidence is sufficient.
 
-VERIFY the primary fact first — the metric over a closed window, compare_to='previous_period', scoped to the subject; if the premise does not hold, say so and stop. DECOMPOSE — {_drivers_sentence(defs)} Read the drivers in the same batch, same window, filters and comparison, and read change_pct off each row: the stronger driver moved more, close means both moved, and a share of the change is nobody's — "82% of the decline came from ATP" is a decomposition no tool computes. LOCALIZE only when the evidence points somewhere, one grouped or ranked call per dimension — by store, or product_revenue by product or category with rank_by='biggest_drop' or 'biggest_gain'; never rank two lists yourself. EXPLAIN, keeping the kinds apart: "down 12%" is measured, "basket value is the stronger driver" is your reading, and localization is not cause. STOP when the premise is false, one driver clearly dominates, the next step has no tool, or the evidence is mixed; then say what the data establishes, what it does not, and the one thing to check next.
+VERIFY the primary fact first — the metric over a closed window, compare_to='previous_period', scoped to the subject; if the premise does not hold, say so and stop. DECOMPOSE — {_drivers_sentence(defs)} Read the drivers in the same batch, same window, filters and comparison, and read change_pct off each row: the stronger driver moved more, close means both moved, and a share of the change is nobody's — "82% of the decline came from ATP" is a decomposition no tool computes. LOCALIZE only when the evidence points somewhere, one grouped or ranked call per dimension — by store, or product_revenue by product or category with rank_by='biggest_drop' or 'biggest_gain'; never rank two lists yourself. EXPLAIN, keeping the kinds apart: "down 12%" is measured, "basket value is the stronger driver" is your reading, and localization is not cause. STOP when the premise is false, one driver clearly dominates, the next step has no tool, or the evidence is mixed; then say what the data establishes and what it does not, and the one thing to check next, which goes in `next`.
 
-Every read in a round keeps the primary fact's window, baseline, store scope and filters; a pin that already carries a comparison is a verified primary fact. compose once, with `findings` carrying each read's role by meta.call_seq — a role cannot compute, order or colour anything.
+Every read in a round keeps the primary fact's window, baseline, store scope and filters; a pin that already carries a comparison is a verified primary fact. compose once, the reading on the same call.
 """
 
 INVESTIGATING_SECTION = _investigating_section(_load_defs())
@@ -1052,7 +1046,7 @@ WHAT A MESSAGE IS — answer the one that was sent:
 
 HOW WIDE TO READ. BROAD — no subject, metric or dimension named, or the business as a whole: do not ask where to look — {headline} grouped by store over a closed window, compared, at most {req(broad, 'max_reads')} reads, never one per store; a broad message answered with one figure has not been answered. FOCUSED — a subject, metric, dimension or window named: {req(focused, 'reads')}, at most {req(focused, 'max_reads')}. Do not widen it because you could. AMBIGUOUS — "why?", "products", "is that bad?": resolve it from the desk, the board and this conversation; ask only when that cannot settle it and the two readings would read differently — asking is not the default.
 
-A GROUP TOTAL IS A READ, NOT A SUM: "across the estate" is read with {req(broad, 'estate_total_read_with')}, never figures you add up from the rows in front of you. {req(pres, 'findings_min')} to {req(pres, 'findings_max')} findings when the figures establish that many — never invent one to fill the range — each from the same grouped read, so a broad investigation still has one primary fact. There is no health score and no composite: that forbids inventing a NUMBER, never forming a VIEW.
+A GROUP TOTAL IS A READ, NOT A SUM: "across the estate" is read with {req(broad, 'estate_total_read_with')}, never figures you add up from the rows in front of you. {req(pres, 'findings_min')} to {req(pres, 'findings_max')} things worth saying when the figures establish that many — never invent one to fill the range — each off the same grouped read, so a broad answer still rests on one verified fact. There is no health score and no composite: that forbids inventing a NUMBER, never forming a VIEW.
 """
 
 SCOPE_SECTION = _scope_section(_load_defs())
@@ -1125,15 +1119,16 @@ def _board_addendum(defs: dict) -> str:
         f"follow-up is almost always one `change`. Weight is {weights}: exactly one "
         f"object leads, and a board where everything weighs the same has not been "
         f"composed. Choose the form, not just the fact — one figure that answers "
-        f"outright is a figure, seven shops ranked is a comparison of the two that "
-        f"matter with the table quiet behind it, a question of what to DO is a "
-        f"recommendation, a thing that RUNS is a system; reach for an instrument when "
-        f"the picture answers what the number leaves open, never for decoration. A "
-        f"shape carries no figure of yours: you choose the row, the value is the "
-        f"row's, and an edit carrying a figure, a colour, a size or a title is "
-        f"refused. YOUR WORDS ARE NOT AN OBJECT: the reading is drawn above the "
-        f"board from what you say this turn, always — so compose the evidence, "
-        f"and never a block to hold your prose."
+        f"outright is a figure, a compared set of shops is a dumbbell, what MOVED "
+        f"a thing is contributors, a series over time is a line, and a table is "
+        f"for when there is nothing to see in the shape. Every block takes a "
+        f"`claim`: the few words saying what it says, with no digits in them, "
+        f"because the figure is drawn under it with its own receipts. A shape "
+        f"carries no figure of yours: you choose the row, the value is the row's, "
+        f"and an edit carrying a figure, a colour or a size is refused. YOUR "
+        f"WORDS ARE NOT AN OBJECT: the reading is drawn above the board from what "
+        f"you say this turn, always — so compose the evidence, name its three "
+        f"slots here, and never a block to hold your prose."
     )
 
 
@@ -1169,15 +1164,15 @@ You act on nothing alone: you draft, you propose, you ask "shall I?"
 
 VOICE — THE SHAPE OF AN ANSWER
 
-One paragraph. The reading first: what it means, in a sentence or two. Then each caveat as a clause, once — the full notice is already on the board. Then what the figures do not establish, if it matters. Then one offer, if there is a next thing. "How did the shops do?" is one compared read and one reading of it; the morning is one line per thing that changed.
+One paragraph, in THREE SLOTS you name on `compose`: the CLAIM, what it means in a sentence or two — with the few words that ARE the point repeated in `claim`, exactly as you write them, so they can be lit where you said them; the CAVEAT, what qualifies the figures, whole, drawn above them; the NEXT, one sentence, the one thing to do or check, drawn last. "How did the shops do?" is one compared read and one reading of it; the morning is one line per thing that changed.
 
-SAY THE FIGURE YOUR CLAIM IS ABOUT, with its date or window from the result — at most two in a paragraph. The board drawing it is no reason to leave it out; reciting the rest is — a sentence walking rows already drawn is read twice and believed once. No preamble, no restating the question, no summary at the end. WHAT PROSE IS STILL FOR: what the figures mean together, what they do not establish, what is absent from the data, what you would check next.
+SAY THE FIGURE YOUR CLAIM IS ABOUT, with its date or window from the result — at most two in a paragraph. The board drawing it is no reason to leave it out; reciting the rest is — a sentence walking rows already drawn is read twice and believed once. No preamble, no restating the question, no summary. WHAT PROSE IS FOR: what the figures mean together, what they do not establish, what is absent.
 
 THE RULES — held by the system as well as by you
 
 1. Every number you state comes from a tool result in this conversation. If no tool can answer, say so and name what would be needed.
 2. Read `meta` before `rows`: source, filters, window, read time. Results on different filters or windows are not compared; `meta.truncated_for_model` means a sample.
-3. Every notice a result carries reaches the answer, as a clause, beside the figure it qualifies. The number without the notice is the worst thing you can do.
+3. Every notice a result carries reaches the answer, in the `caveat` slot or beside the figure it qualifies. The number without the notice is the worst thing you can do.
 4. A tool that refuses is declining to mislead: follow the route it names, or say why the question cannot be answered as asked.
 5. Prefer one ranked or grouped query — `group_by`, `top_n`, `rank_by`, `meta.full_row_count` — to reading once per store.
 6. A figure made from figures comes from a tool, never from you: `average_transaction_value` is a metric, and `compare_to='previous_period'` puts `baseline`, `change`, `change_pct` and `baseline_status` on every row — read them, and say why when `baseline_status` is not ok.
@@ -1582,7 +1577,7 @@ def _forced_caveats(missing: list[dict]) -> str:
 
 def _answer_payload(charted: Optional[list], calls: Optional[list],
                     page_context: Optional[dict] = None,
-                    findings: Optional[list] = None,
+                    reading: Optional[dict] = None,
                     composition: Optional[list] = None,
                     default_composition: Optional[list] = None) -> Optional[str]:
     """
@@ -1609,11 +1604,12 @@ def _answer_payload(charted: Optional[list], calls: Optional[list],
         payload["calls"] = calls
     if page_context:
         payload["page_context"] = page_context
-    # The roles that stood (2026-09-08). Stored with the snapshot so a reload
-    # composes the answer exactly as it composed live — and only ever the
-    # validated list, never what the model submitted.
-    if findings:
-        payload["findings"] = findings
+    # The reading's slots that stood (P1.f, 2026-09-14). Stored with the
+    # snapshot so a reopened thread draws the answer the way it was drawn live
+    # — the caveat above the figures, the next sentence last — and only ever
+    # the validated slots, never what the model submitted.
+    if reading:
+        payload["reading"] = reading
     # The composition that stood (2026-09-10): the validated blocks, so a
     # reopened thread draws the screen George composed, from the charted rows
     # beside it, and never a layout the client derived.
@@ -1853,7 +1849,7 @@ class ConversationLog:
                 # the post can be PINNED after a reload. The chart is a
                 # snapshot; the pin re-runs. Both are true of one answer.
                 _answer_payload(kw.get("charted"), kw.get("calls"),
-                                kw.get("page_context"), kw.get("findings"),
+                                kw.get("page_context"), kw.get("reading"),
                                 kw.get("composition"),
                                 kw.get("default_composition")),
                 json.dumps(_json_safe(kw["receipts"])) if kw.get("receipts") else None,
@@ -2332,10 +2328,10 @@ async def run(
     # building anything the model is sent. See DIAGNOSTIC_KEY.
     diagnostics: dict[int, str] = {}
 
-    # The roles that stood, for the ANSWER POST and the UI. A later
-    # record_findings call REPLACES this: the model refining its reading is
-    # one reading, not two.
-    findings_recorded: list[dict] = []
+    # The reading's slots that stood, for the ANSWER POST and the UI. A later
+    # compose REPLACES this: the model refining its reading is one reading,
+    # not two.
+    reading_recorded: dict[str, str] = {}
 
     # The blocks that stood, for the ANSWER POST and the UI. A later compose
     # call REPLACES this, for the same reason.
@@ -2799,8 +2795,13 @@ async def run(
                     messages.append({"role": "user", "content": "\n\n".join(parts)})
                     continue
 
+                # WHAT HE SAID THIS TURN, WHEREVER IT LANDS ON THE PAGE. A
+                # caveat moved out of the paragraph and into its own slot is
+                # drawn whole, above the figures — more surfaced than it was,
+                # not less — and a gate reading the paragraph alone would call
+                # it missing and force a duplicate underneath it.
                 missing = _unsurfaced(
-                    pending, answer, defs,
+                    pending, reading.said_this_turn(answer, reading_recorded), defs,
                     on_screen=_drawn_on_the_board(composition_recorded, charted),
                 )
 
@@ -2838,6 +2839,17 @@ async def run(
                         "reason": "notice_forced",
                         "kinds": ", ".join(n.get("kind", "?") for n in missing),
                     })
+
+                # A CLAIM THAT WAS NEVER SAID LIGHTS NOTHING, and the rate is
+                # worth knowing rather than guessing. The surface finds the
+                # claim in the answer and draws the span; where the words are
+                # not there it draws the reading whole, which is what it did
+                # before this slot existed. Recorded, never corrected: a round
+                # trip spent on an emphasis would be ceremony (P1.a's line).
+                claimed = reading_recorded.get("claim")
+                if claimed and not reading.was_said(answer, claimed):
+                    log.gap(req(defs, "voice.reading.unsaid_claim_is"),
+                            claimed[:2000], None)
                 break
 
             # ---- convergence cap -----------------------------------------
@@ -3105,7 +3117,7 @@ async def run(
 
             # Labels last: a statement about calls that already happened, which
             # reads nothing and can therefore run after everything that does.
-            # Validation is the whole of the work (agent/findings.py); the
+            # Validation is the whole of the work (agent/compose.py); the
             # frame carries only what survived it, and a warning names what did
             # not so a refused role is visible rather than silently absent.
             for gseq, b in labels:
@@ -3113,7 +3125,7 @@ async def run(
                 try:
                     result = compose.compose(
                         (b.input or {}).get("blocks"),
-                        (b.input or {}).get("findings"),
+                        (b.input or {}).get("reading"),
                         calls=calls_by_seq, defs=defs,
                         board=(desk or {}).get("board"),
                     )
@@ -3145,28 +3157,36 @@ async def run(
                                 for r in result["meta"]["rejected"]
                             ),
                         })
-                    # THE ROLES RIDE THE SAME CALL AND KEEP THEIR OWN FRAME.
+                    # THE READING RIDES THE SAME CALL AND KEEPS ITS OWN FRAME.
                     # One tool for the model; two statements for the client,
-                    # which draws the spine from one and the board from the
-                    # other. A compose naming no findings leaves whatever an
+                    # which draws the reading from one and the board from the
+                    # other. A compose naming no slots leaves whatever an
                     # earlier one recorded standing, exactly as a compose
                     # naming no block leaves that object standing.
-                    roles = result["meta"].get("findings")
-                    roles_rejected = result["meta"].get("findings_rejected") or []
-                    if roles or roles_rejected:
-                        findings_recorded = list(roles or [])
-                        yield _sse("finding", {
+                    said = result["meta"].get("reading") or {}
+                    said_rejected = result["meta"].get("rejected_slots") or []
+                    if said or said_rejected:
+                        reading_recorded = dict(said)
+                        yield _sse("reading", {
                             "seq": gseq,
-                            "findings": findings_recorded,
-                            "rejected": roles_rejected,
+                            **reading_recorded,
+                            "rejected": said_rejected,
                         })
-                    if roles_rejected:
+                    if said_rejected:
+                        detail = "; ".join(
+                            f"{r.get('slot')}: {r.get('reason')}"
+                            + (f" — said: {r['said']!r}" if r.get("said") else "")
+                            for r in said_rejected)
+                        # Recorded as well as warned. A refused slot is a thing
+                        # George tried to say and could not, and the weekly
+                        # sweep is where a pattern of them would show up —
+                        # a caveat he keeps putting a figure into is a prompt
+                        # problem, and nothing here would otherwise say so.
+                        log.gap(req(defs, "voice.reading.warning_reason"),
+                                detail[:2000], COMPOSE_TOOL)
                         yield _sse("warning", {
-                            "reason": "findings_rejected",
-                            "detail": "; ".join(
-                                f"call {r.get('seq')} as {r.get('role')}: {r.get('reason')}"
-                                for r in roles_rejected
-                            ),
+                            "reason": req(defs, "voice.reading.warning_reason"),
+                            "detail": detail,
                         })
 
             tool_results = []
@@ -3450,7 +3470,7 @@ async def run(
         user_id=user_id, asked_at=asked_at, question=question,
         final_answer=answer or None, notices=pending, receipts=last_meta,
         charted=charted, calls=calls_made, parent_id=parent_id,
-        page_context=page_evidence, findings=findings_recorded,
+        page_context=page_evidence, reading=reading_recorded,
         composition=composition_recorded,
         default_composition=default_composition_recorded, desk=desk,
     )

@@ -312,7 +312,12 @@ def board_sentence(board: Optional[Any], defs: Mapping[str, Any]) -> Optional[st
     # whose LEADING object was a shape George composed said nothing about the
     # thing being looked at and "why?" landed on a quiet table beside it. The
     # kind still comes from the definitions, so a made-up one is still ignored.
-    kinds = set(req(voc, "widgets")) | {str(req(voc, "composed_kind"))}
+    # AND A KIND THE BOARD STILL CARRIES FROM BEFORE P1.f. The vocabulary
+    # narrowed to the six marks; a board composed before that still holds
+    # `hero` and `comparison`, and a board George cannot describe is a board
+    # "why?" lands on the wrong object of.
+    kinds = (set(req(voc, "widgets")) | {str(req(voc, "composed_kind"))}
+             | set(voc.get("retired_kinds") or []))
     weights = set(req(voc, "weights"))
     limit = int(req(voc, "max_objects"))
 

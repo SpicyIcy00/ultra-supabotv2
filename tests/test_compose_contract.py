@@ -57,26 +57,29 @@ def with_coercions(blocks, defs, calls=None):
 
 def test_a_well_formed_composition_is_accepted(defs):
     accepted, rejected = only([
-        {"kind": "hero", "key": "rockwell", "seq": 1, "subject": "Rockwell", "weight": "lead"},
-        {"kind": "subject", "key": "opus", "seq": 1, "subject": "OPUS", "weight": "supporting"},
+        {"kind": "figure", "key": "rockwell", "seq": 1, "subject": "Rockwell", "weight": "lead"},
+        {"kind": "dumbbell", "key": "opus", "seq": 1, "weight": "supporting"},
         {"kind": "table", "key": "shops", "seq": 1, "weight": "quiet"},
     ], defs)
     assert rejected == []
-    assert [b["kind"] for b in accepted] == ["hero", "subject", "table"]
+    assert [b["kind"] for b in accepted] == ["figure", "dumbbell", "table"]
     assert accepted[0]["subject"] == "Rockwell"
     assert accepted[0]["tool"] == "get_sales"
 
 
-def test_a_comparison_names_rows_of_the_read(defs):
+def test_a_ranking_lights_a_row_of_the_read(defs):
+    # WHAT `comparison` BECAME (P1.f). It named two to four subjects and drew
+    # only those; a ranking draws them all and lights the one that matters,
+    # which hides nothing and needs no list.
     accepted, rejected = only([
-        {"kind": "comparison", "key": "two", "seq": 1, "subjects": ["Rockwell", "OPUS"]},
+        {"kind": "ranked", "key": "two", "seq": 1, "emphasise": "Rockwell"},
     ], defs)
     assert rejected == []
-    assert accepted[0]["subjects"] == ["Rockwell", "OPUS"]
+    assert accepted[0]["emphasise"] == "Rockwell"
 
 
 def test_subject_match_is_case_insensitive(defs):
-    accepted, _ = only([{"kind": "subject", "key": "r", "seq": 1, "subject": "rockwell"}], defs)
+    accepted, _ = only([{"kind": "figure", "key": "r", "seq": 1, "subject": "rockwell"}], defs)
     assert accepted and accepted[0]["subject"] == "rockwell"
 
 
@@ -103,7 +106,7 @@ def test_anything_that_is_a_pixel_or_a_figure_is_refused(defs, field, value):
 def test_a_subject_that_is_not_a_row_is_refused(defs):
     """George may choose which row leads; he may not introduce one."""
     accepted, rejected = only([
-        {"kind": "hero", "key": "x", "seq": 1, "subject": "Shangri-La", "weight": "lead"},
+        {"kind": "figure", "key": "x", "seq": 1, "subject": "Shangri-La", "weight": "lead"},
     ], defs)
     assert accepted == []
     assert "no row for 'Shangri-La'" in rejected[0]["reason"]
@@ -150,26 +153,20 @@ def test_only_one_block_leads_and_the_second_is_demoted_not_refused(defs):
     assert any("only one block leads" in c and "'b'" in c for c in coerced)
 
 
-def test_a_second_hero_is_still_refused(defs):
+def test_every_second_lead_is_now_demoted_and_none_is_refused(defs):
     """
-    The one weight that cannot be demoted, because demoting it draws the wrong
-    OBJECT: a hero is the big expressive tile and "a hero is the lead by
-    definition" is the widget's own rule, not a ranking.
+    The one kind that could not be demoted was `hero`, because demoting it drew
+    the wrong OBJECT — the big expressive tile, second. It left with the names
+    the renderer did not draw (P1.f), so the last refusal on this path is gone
+    and a second block asking to lead is drawn one rank down.
     """
-    accepted, rejected = only([
-        {"kind": "hero", "key": "a", "seq": 1, "subject": "Rockwell", "weight": "lead"},
-        {"kind": "hero", "key": "b", "seq": 1, "subject": "OPUS", "weight": "lead"},
+    accepted, rejected, coerced = with_coercions([
+        {"kind": "figure", "key": "a", "seq": 1, "subject": "Rockwell", "weight": "lead"},
+        {"kind": "figure", "key": "b", "seq": 1, "subject": "OPUS", "weight": "lead"},
     ], defs)
-    assert len(accepted) == 1
-    assert "only one block leads" in rejected[0]["reason"]
-
-
-def test_a_hero_must_lead(defs):
-    accepted, rejected = only([
-        {"kind": "hero", "key": "r", "seq": 1, "subject": "Rockwell", "weight": "quiet"},
-    ], defs)
-    assert accepted == []
-    assert "lead by definition" in rejected[0]["reason"]
+    assert rejected == []
+    assert [b["weight"] for b in accepted] == ["lead", "supporting"]
+    assert any("only one block leads" in c for c in coerced)
 
 
 def test_weight_defaults_to_supporting(defs):
@@ -207,9 +204,12 @@ def test_a_composition_is_bounded(defs):
     assert any("not a report" in r["reason"] for r in rejected)
 
 
-def test_a_chart_needs_a_known_form(defs):
+def test_a_kind_the_renderer_does_not_draw_is_refused(defs):
+    # `chart` and its `form` went with the narrowing: a line is a mark and a
+    # bar chart of named rows is a ranking, so there is no form left to choose
+    # and no third shape for the same rows.
     _, rejected = only([{"kind": "chart", "key": "c", "seq": 1, "form": "pie"}], defs)
-    assert "chart form" in rejected[0]["reason"]
+    assert "is not a widget" in rejected[0]["reason"] or "may not carry" in rejected[0]["reason"]
 
 
 def test_a_state_needs_a_known_label(defs):
@@ -238,7 +238,7 @@ def test_the_vocabulary_is_the_definitions(defs):
     for kind, spec in voc["widgets"].items():
         assert spec["about"], f"{kind} has no meaning"
         assert isinstance(spec["needs"], list)
-    assert "hero" in voc["widgets"] and "draft" in voc["widgets"]
+    assert "figure" in voc["widgets"] and "draft" in voc["widgets"]
     # AND HIS PROSE IS NOT ONE OF THEM (P1.c, 2026-09-14). The reading is a
     # region above the board, drawn from the turn's own words, so there is no
     # block for it to be forgotten as and none for it to be boxed in. The
@@ -489,53 +489,49 @@ def test_the_loop_agrees_with_the_declaration():
 # The four widgets added 2026-09-11, against the owner's feature 1
 # ---------------------------------------------------------------------------
 
-def test_the_widget_vocabulary_covers_what_feature_one_names(defs):
+def test_what_feature_one_names_is_still_composable(defs):
     """
     The owner's feature 1 names what the workspace composes: widgets,
     visualizations, tables, comparisons, TIMELINES, documents, CONTROLS,
-    BUSINESS OBJECTS, RECOMMENDATIONS and status objects. Four of those had no
-    widget, so the interface could not change into them however the work went.
+    BUSINESS OBJECTS, RECOMMENDATIONS and status objects.
+
+    P1.f NARROWED THE NAMES AND NOT THE CAPABILITY, and this is where that
+    claim is held. A timeline is a `line` — the mark for a measure over an
+    ordered field, which is what a timeline is; a comparison is a `dumbbell`
+    when the tool returned a before and a `ranked` otherwise, which is what
+    the renderer drew either of them as anyway. A RECOMMENDATION is the one
+    that left the board entirely, and it has a better place: `reading.next`,
+    one sentence, drawn last, that every answer has.
 
     `document` is still absent and that is recorded rather than forgotten: no
     document source exists, and a widget with nothing behind it is the failure
     the declined visuals describe.
     """
     widgets = set(req(defs, "composition.widgets"))
-    for named in ("timeline", "recommendation", "control", "system"):
+    for named in ("line", "control", "system", "table", "dumbbell", "ranked"):
         assert named in widgets
     assert "document" not in widgets
     assert req(defs, "composition.documents_not_a_widget_because")
+    # And the recommendation is a slot of the reading, not a missing feature.
+    assert "next" in req(defs, "voice.reading.slots")
 
 
-def test_a_recommendation_names_an_action_and_never_a_figure(defs):
+def test_a_recommendation_is_a_sentence_now_and_still_carries_no_figure(defs):
     """
-    George picks the VERB; the number comes off the read. A block has no field
-    for a figure, so "order 806 units" is the tool's quantity beside his word
-    and "order about 800" is unrepresentable.
+    George picks the words; the number is not his to write. The `next` slot
+    carries no digits at all, so "order 806 units" is unrepresentable there —
+    the quantity stays on the draft the block draws, with its receipts.
     """
-    actions = req(defs, "composition.recommendation_actions")
-    calls = {0: {"tool": "get_purchase_plan", "is_read": True,
-                 "rows": [{"product": "Aji Mix", "order_qty": 806}]}}
+    from agent import reading as george_reading
 
-    ok, no = compose.validate({"blocks": [
-        {"kind": "recommendation", "key": "a", "seq": 0,
-         "subject": "Aji Mix", "action": actions[0]},
-    ]}, calls, defs)
-    assert len(ok) == 1 and ok[0]["action"] == actions[0]
+    ok, no = george_reading.validate({"next": "Send the Seikyo order as it stands"}, defs)
+    assert ok["next"] and no == []
+    ok, no = george_reading.validate({"next": "Order 806 units of Aji Mix"}, defs)
+    assert ok == {} and "no digits" in no[0]["reason"]
 
-    ok, no = compose.validate({"blocks": [
-        {"kind": "recommendation", "key": "b", "seq": 0,
-         "subject": "Aji Mix", "action": "buy_a_lot"},
-    ]}, calls, defs)
-    assert not ok and "recommendation_actions" in no[0]["reason"]
-
-
-def test_a_recommendation_can_say_do_nothing(defs):
-    """
-    A vocabulary with no way to say "leave it" only ever recommends action,
-    which makes every recommendation worth less.
-    """
-    assert "leave_it" in req(defs, "composition.recommendation_actions")
+    # And the verb is no longer a closed list, because it is a sentence a
+    # person reads rather than a token a tile draws.
+    assert "recommendation_actions" not in req(defs, "composition")
 
 
 def test_a_control_changes_scope_and_can_never_change_a_threshold(defs):
@@ -562,14 +558,14 @@ def test_a_control_changes_scope_and_can_never_change_a_threshold(defs):
 
 def test_the_new_fields_are_in_the_closed_set_and_a_drop_may_not_carry_them(defs):
     allowed = set(req(defs, "composition.allowed_fields"))
-    assert {"action", "argument"} <= allowed
+    assert {"claim", "argument"} <= allowed
 
     calls = {0: {"tool": "get_sales", "is_read": True, "rows": [{"store": "Rockwell"}]}}
     coerced = []
     ok, no = compose.validate({"blocks": [
-        {"op": "drop", "key": "a", "action": "order"},
+        {"op": "drop", "key": "a", "claim": "this one is finished"},
     ]}, calls, defs, coerced=coerced)
-    # The action is ignored and the drop still drops (P1.a): a drop takes the
+    # The claim is ignored and the drop still drops (P1.a): a drop takes the
     # object off the board, and no field on it could have said otherwise.
     assert no == [] and ok == [{"op": "drop", "key": "a"}]
     assert any("names a key and nothing else" in c for c in coerced)

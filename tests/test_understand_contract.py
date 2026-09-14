@@ -27,7 +27,6 @@ import pytest
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from agent import findings as george_findings                          # noqa: E402
 from agent import loop as george_loop                                  # noqa: E402
 from agent import surface                                              # noqa: E402
 from tools._common import load_defs, req                               # noqa: E402
@@ -191,27 +190,23 @@ def test_presentation_is_bounded_and_never_scored(defs):
     assert pres["no_synthetic_score"] is True
 
 
-def test_findings_come_from_one_primary_and_the_rule_is_untouched(defs):
-    # A broad read produces several findings from the SAME grouped call. That
-    # is why the one-primary rule can stay exactly as it was.
+def test_several_things_worth_saying_come_from_one_grouped_read(defs):
+    # A broad read produces several things worth saying from the SAME grouped
+    # call — that is what keeps a broad answer resting on one verified fact,
+    # and it is what the prompt is built to say.
     assert req(defs, "investigation.scope.presentation.from_the_same_primary") is True
+    pres = req(defs, "investigation.scope.presentation")
+    scope = george_loop.SCOPE_SECTION
+    assert f"{pres['findings_min']} to {pres['findings_max']} things worth saying" in scope
+    assert "off the same grouped read" in scope
 
-    # Two trusted reads of the same grouped call, as the loop records them.
-    def _call(**args):
-        return {
-            "tool": "get_sales", "error": None, "duplicate": False, "is_read": True,
-            "arguments": {"date_range": "last_week", "filters": {}, "compare_to": "previous_period", **args},
-        }
-
-    calls = {1: _call(metric="net_sales", group_by=["store"]),
-             2: _call(metric="net_sales", group_by=["store"])}
-    out = george_findings.record_findings(
-        [{"seq": 1, "role": "primary", "of": None}, {"seq": 2, "role": "primary", "of": None}],
-        calls=calls,
-        defs=defs,
-    )
-    reasons = " ".join(str(r.get("reason", "")) for r in out["meta"]["rejected"])
-    assert "one primary" in reasons
+    # THE ROLES THAT USED TO ENFORCE THIS ARE GONE (P1.f, 2026-09-14) and the
+    # rule is not. primary/driver/breakdown/context were validated on every
+    # compose and drawn by nothing the room renders; what replaced the channel
+    # is the reading's three slots. The ladder still says one primary fact —
+    # in metrics.yaml and in the prompt, where a person can read it.
+    assert "one verified fact" in scope
+    assert {"verify", "decompose", "localize"} <= set(req(defs, "investigation.ladder"))
 
 
 # ---------------------------------------------------------------------------
@@ -247,10 +242,10 @@ def test_george_is_told_which_metrics_break_down_by_which_subject(defs):
     assert "localize with a metric that allows the grouping" in prompt
 
 
-def test_the_matrix_agrees_with_what_the_finding_validator_enforces(defs):
-    # findings.py rejects a breakdown the metric refuses, reading the same
-    # entry this sentence is built from. If they ever disagree, George is
-    # being told one thing and held to another.
+def test_the_matrix_agrees_with_the_definitions_behind_it(defs):
+    # get_sales refuses a grouping the metric refuses, reading the same entry
+    # the sentence above is built from. If they ever disagree, George is being
+    # told one thing and held to another.
     metrics = req(defs, "metrics")
     for name, m in metrics.items():
         allowed = set(m.get("valid_group_by") or [])

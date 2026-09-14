@@ -248,15 +248,22 @@ def test_the_grammar_is_offered_to_the_model():
         assert channel in described
 
 
-def test_the_named_widgets_survive():
+def test_the_named_widgets_survive_and_are_the_catalogue():
     """
     The named widgets are shorthand, not deprecated: most answers want an
     ordinary shape, and they are proven. The grammar is for when nothing named
-    fits. Fourteen until P1.c took `text` out — the reading is not a shape —
-    so the floor is thirteen, and every one of them draws a READ.
+    fits.
+
+    THE LIST IS NOW THE CATALOGUE THE RENDERER DRAWS (P1.f): the six marks,
+    plus the four kinds that are not readings of a read and keep their own
+    tiles. Fourteen names for six drawings was a choice at every compose that
+    bought nothing on screen. Held here so a seventh mark cannot be added to
+    the yaml without the renderer growing one — the frontend half is
+    catalogue.test.ts, which holds the same list against render.tsx.
     """
     widgets = req(DEFS, "composition.widgets")
-    assert len(widgets) >= 13
+    assert set(widgets) == {"figure", "dumbbell", "ranked", "contributors",
+                            "line", "table", "draft", "state", "control", "system"}
     ok, no = compose.validate({"blocks": [
         {"key": "plain", "kind": "table", "seq": 0},
     ]}, CALLS, DEFS)

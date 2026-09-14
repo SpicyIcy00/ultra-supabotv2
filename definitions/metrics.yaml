@@ -4855,6 +4855,79 @@ voice:
     - "Absolutely"
     - "Let me help you with that"
   caveat_is_never_softened: true
+
+  # ===========================================================================
+  # THE READING HAS THREE SLOTS — claim, caveat, next (P1.f, 2026-09-14).
+  #
+  # P1.c took the reading out of the widgets and made it a REGION above the
+  # board, drawn from the turn's own words. That fixed where it sits. What it
+  # left was one undifferentiated paragraph doing three jobs at once: the
+  # point, what qualifies the point, and what to do about it — so the caveat
+  # was a clause in the middle of a sentence the eye slides past, and the next
+  # step was wherever the sentence ended, if it was there at all.
+  #
+  # The three are not three paragraphs of the same thing. They are read at
+  # different moments, they belong in different places on the page, and two of
+  # them have a rule the third has not:
+  #
+  #   claim   the point, in his own words — the answer itself. ONE HIGHLIGHT:
+  #           he names the few words that ARE the point and the surface lights
+  #           them where he said them. It can only ever emphasise text he
+  #           wrote, so it cannot put anything on screen; a phrase that does
+  #           not appear in what he said is dropped, not drawn.
+  #   caveat  what qualifies the figures, whole, ABOVE them (UI rule 4). Not a
+  #           clause buried mid-paragraph, and never in the accent colour —
+  #           prominence comes from position.
+  #   next    ONE sentence, always last, under the evidence: the one thing to
+  #           do or check. The INVESTIGATING ladder's stop sentence lands here
+  #           ("the one thing to check next"), and so does what used to be the
+  #           `recommendation` widget's verb.
+  #
+  # NO DIGITS IN `caveat` OR `next`, checked. They are characterisations, held
+  # to CLAUDE.md's bound on an annotation; the claim is the one that may carry
+  # a figure, because it IS the answer and `restatement` above is what governs
+  # figures in the answer.
+  #
+  # They ride the `compose` call that already happens, so none of this is a
+  # round trip: agent/reading.py validates, agent/loop.py records.
+  # ===========================================================================
+  reading:
+    introduced: "2026-09-14"
+    slots:
+      claim:
+        about: >
+          the few words in what you are about to say that ARE the point —
+          "OPUS added more than the next two shops together". Said again in
+          your answer, word for word, where they belong; the surface lights
+          them there. Not a summary of the answer and not a second copy of it.
+        max_length: 120
+      caveat:
+        about: >
+          the one thing that qualifies these figures, in plain words, whole —
+          it is drawn above them, so it does not have to be squeezed into a
+          clause. Nothing technical: a caveat that sounded like a column name
+          is rewritten, never dropped.
+        no_digits: true
+        # 240 → 320, measured 2026-09-14 on P1.f's own run. The bound refused
+        # the `caveats` scenario's caveat outright, and the Ideal UI's own
+        # morning caveat — two blind spots, named and explained — is 243
+        # characters. A bound that the design it is built toward cannot fit
+        # is not a bound on verbosity, it is a bound on saying the second
+        # thing. Two blind spots is the common case; three is a paragraph.
+        max_length: 320
+      next:
+        about: >
+          ONE sentence: the one thing you would do or check next, drawn last,
+          under the evidence. Where an investigation stopped, this is where it
+          says what to look at. Leave it out only when there is genuinely
+          nothing to do next.
+        no_digits: true
+        max_length: 160
+    # A claim nobody said is not drawn, and the loop records that it was not:
+    # the gap log's own word for it, so the rate is measurable rather than
+    # asserted.
+    unsaid_claim_is: claim_not_said
+    warning_reason: reading_rejected
   # THE BUDGET. Added 2026-09-12, from the voice plan and the research it
   # rests on: AgentIF's 707 real agent prompts average 1,723 words and 11.9
   # constraints, and models "generally perform poorly" at that length; the
@@ -5461,6 +5534,24 @@ composition:
   # THE VOCABULARY. Closed. `needs` says what a block must carry to be drawn;
   # `about` is the one-line meaning George is taught.
   #
+  # IT IS THE CATALOGUE THE RENDERER DRAWS, AND NOTHING ELSE (P1.f,
+  # 2026-09-14). Until now this list held fourteen names and the renderer drew
+  # six shapes, so seven of the words George could say were synonyms he had to
+  # choose between and a reader had to decode: `hero`, `subject`,
+  # `comparison`, `chart`, `distribution` and `timeline` all arrived as one of
+  # the six, decided by the rows. A menu that is wider than what it draws
+  # costs a choice at every compose and buys nothing on screen, so the words
+  # are now the drawings: SIX MARKS, one way each
+  # (frontend/src/room/catalogue.ts), and the rows still decide nothing they
+  # did not decide before — they decide what a mark LOOKS like inside its own
+  # family, not which family it is.
+  #
+  # FOUR KINDS ARE NOT MARKS and keep their own tiles, for the reason P1.e
+  # recorded: a mark is a way of drawing what a read RETURNED, and these are
+  # objects you do something to. `draft` has quantities you edit and a total
+  # that follows them; `control` is a handle; `state` and `system` say where
+  # something stands.
+  #
   # THERE IS NO `text` WIDGET, AND THAT IS THE POINT (P1.c, 2026-09-14). The
   # reading used to be one of these — a block George composed like any other,
   # which meant he could forget it (four widgets and not one word, the dogfood
@@ -5473,47 +5564,64 @@ composition:
   # cannot be forgotten, cannot be evicted and cannot be boxed. The grammar's
   # `prose` mark went the same way and for the same reason.
   widgets:
+    # ---- the six marks: ways of drawing what a read returned ---------------
     figure:
-      about: "one number from one row, large, on its own"
+      about: "ONE number from one row, large, with its change and what it is in. A read that answers outright. More rows than one do not make it a series — name the subject whose row it draws"
       needs: [seq, subject]
-    hero:
-      about: "the ONE thing that matters most: a subject's figure, its change and its scale, on an expressive field — at most one, and it must lead"
-      needs: [seq, subject]
-    subject:
-      about: "a business object — a shop, product or supplier — with its headline figure and drivers where the read has them"
-      needs: [seq, subject]
-    comparison:
-      about: "two to four subjects from one read, side by side across a seam"
-      needs: [seq, subjects]
+    dumbbell:
+      about: "before → after, one row each: a hollow dot where it was, a filled dot where it is, a line between. The shape for a compared read — seven shops against the week before. It needs no caption"
+      needs: [seq]
+    ranked:
+      about: "the rows in order, a bar in each cell and the figure beside it — a ranking, a split, biggest first. Use `emphasise` to light the one that matters"
+      needs: [seq]
+    contributors:
+      about: "what MOVED the thing that moved: a signed change per row, in the metric's own unit, so the amounts that went missing are the picture. For a read whose rows carry a change"
+      needs: [seq]
+    line:
+      about: "a measure over an ordered field — eight weeks, the days of a month — with the period before dotted where the tool returned one. Use it when WHEN is the point"
+      needs: [seq]
     table:
-      about: "the rows of a read, when precision beats shape"
+      about: "the rows, when precision beats shape and there is nothing to see in their shape"
       needs: [seq]
-    chart:
-      about: "a conventional line or bar chart of one read, when a shape says it faster than rows"
-      needs: [seq, form]
-    distribution:
-      about: "a series or ranked set as dots along an axis — eight weeks, seven shops"
-      needs: [seq]
+    # ---- the four that are not readings, and keep their own tiles ----------
     draft:
       about: "an order or document you have produced, with editable rows and a total — the purchase plan"
       needs: [seq]
     state:
       about: "where a process stands: pending, running, waiting, and what happens next"
       needs: [label]
-    timeline:
-      about: "events or a measure in time order — a stock line over eight weeks, an order history, when things crossed. Use it when WHEN is the point; a chart is for the shape of a series and a table for precision"
-      needs: [seq]
-    recommendation:
-      about: "ONE thing you think should be done about a subject, over the read that makes the case. You choose the subject and the action from the list; the figures are the read's and you supply none of them"
-      needs: [seq, subject, action]
     control:
       about: "a handle on a read already on the board: the person changes the window and every object drawn from that read re-runs, with no model turn and nothing read they did not ask for"
       needs: [seq, argument]
     system:
       about: "something that RUNS — a saved rule, a standing question, a watch — with where it stands and what it did last. Drawn over a read that returned it, which is view_automations"
       needs: [seq, subject]
-  chart_forms: [line, bar]
   state_labels: [pending, running, waiting, done, blocked]
+
+  # THE CLAIM-TITLE — the few words over a block, and the one thing on it
+  # George writes rather than binds.
+  #
+  # P1.e drew this title from `note`, a characterisation borrowed for a job it
+  # was not named for, and said the grammar "has no field for a title and must
+  # not get one — a claim typed into a block is a sentence with no receipt".
+  # The receipt is the block: a claim titles the read directly under it, whose
+  # source line, window and read time are drawn with it. What must never
+  # happen is a FIGURE in it, and that is checked here exactly as it is
+  # checked on a note — no digits at all, which is also CLAUDE.md's bound on
+  # an annotation: it may point at rows and characterise them, never name a
+  # number.
+  #
+  # ONE WORD, ONE MEANING. A block carries a `claim`; a mark inside a composed
+  # `spec` carries a `note`. The block-level `note` is gone rather than
+  # kept beside `claim` as a synonym for it.
+  claim:
+    about: >
+      What this block SAYS, in George's own few words: "OPUS added more than
+      the next two shops together". Not what it is — the subtitle already says
+      the metric, the window and the unit off `meta`. Where he gives none, the
+      block titles itself from the read.
+    no_digits: true
+    max_length: 80
 
 
   # ===========================================================================
@@ -5705,16 +5813,16 @@ composition:
       number or a free string in a value position, and the fields above are the
       only ones a node may carry at all.
 
-  # WHAT A RECOMMENDATION MAY RECOMMEND. Closed, like every other vocabulary
-  # here, and for the same reason: George chooses WHICH action, never invents
-  # one, and never supplies the figure that justifies it — that comes off the
-  # read the block names. "Order 806 units" is the tool's number and George's
-  # verb; "order about 800" would be George's number and is impossible here,
-  # because a block has no field to put one in.
-  #
-  # "leave_it" is deliberately in the list. A recommendation vocabulary with no
-  # way to say "nothing" only ever recommends action.
-  recommendation_actions: [order, investigate, check, hold, switch_on, leave_it]
+  # THERE IS NO `recommendation` WIDGET ANY MORE, AND THE RECOMMENDATION DID
+  # NOT GO WITH IT (P1.f, 2026-09-14). It was a figure with George's verb
+  # above it, chosen from a closed list — order, investigate, check, hold,
+  # switch_on, leave_it — and the renderer drew it as a figure. What it said
+  # that a figure does not is "here is the one thing I would do", and that
+  # now has a place of its own that every answer has and no board object
+  # competes with: `reading.next`, one sentence, always last. Level four is
+  # unmoved — he recommends one course, the owner decides — and it is now
+  # said where the person is already reading rather than in a tile they have
+  # to find.
 
   # WHAT A CONTROL MAY CHANGE. A control re-runs a read that is already on the
   # board with ONE scope argument changed — the same path the desk replay takes
@@ -5741,7 +5849,6 @@ composition:
   # composed.
   weights: [lead, supporting, quiet]
   one_lead: true
-  hero_must_lead: true
   max_blocks: 8
 
   # KEYS ARE HOW THE WORKSPACE TRANSFORMS INSTEAD OF STACKING. Every block has
@@ -5772,6 +5879,17 @@ composition:
   # composed said nothing at all about it, and "why?" resolved against
   # whatever quiet table happened to be beside it.
   composed_kind: spec
+
+  # KINDS A BOARD MAY STILL CARRY AND GEORGE MAY NO LONGER COMPOSE (P1.f).
+  # The board persists between turns and across a deploy: a browser that had
+  # `hero` and `comparison` on screen when this shipped still has them. They
+  # are not in `widgets`, so composing one is refused — and they ARE named
+  # here, so the line that travels with the question still says what is being
+  # looked at, and the renderer still maps them onto the six marks
+  # (frontend/src/room/catalogue.ts). A board George cannot describe is a
+  # board "why?" lands on the wrong object of.
+  retired_kinds: [hero, subject, comparison, chart, distribution, timeline,
+                  recommendation, text]
 
   ops:
     put:
@@ -5839,12 +5957,16 @@ composition:
 
   # Anything not in this list on a block is refused with the block. This is
   # the list that keeps a choice from becoming a value.
-  # `emphasise` and `note` are ANNOTATIONS, not shapes, so a named widget
-  # takes them as readily as a composed one. Without that, pointing at the
-  # row that matters was only possible by abandoning the widget that was
-  # right for the job — and George kept writing the sentence instead.
-  allowed_fields: [op, kind, key, weight, seq, subject, subjects, form, label,
-                   action, argument, spec, emphasise, note]
+  # `emphasise` is an ANNOTATION, not a shape, so a named widget takes it as
+  # readily as a composed one. Without that, pointing at the row that matters
+  # was only possible by abandoning the widget that was right for the job —
+  # and George kept writing the sentence instead.
+  #
+  # FOUR LEFT WITH THE WIDGETS THEY SERVED (P1.f): `subjects` (a comparison),
+  # `form` (a chart), `action` (a recommendation), and the block-level `note`,
+  # which `claim` now does under its own name.
+  allowed_fields: [op, kind, key, weight, seq, subject, label,
+                   argument, spec, emphasise, claim]
 
 surface:
   introduced: "2026-09-09"

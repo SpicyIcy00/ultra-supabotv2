@@ -20,7 +20,7 @@ import { boardContext, buildBoard, dropped, folded, inOrder, type Local, type Bo
 import { keepLocal, restoreLocal } from './arrangement';
 import type { AnswerTurn, Dimension } from './data';
 import { Board, turnNotices } from './render';
-import { Reading } from './Reading';
+import { Reading, ReadingNext } from './Reading';
 import { Earlier } from './Earlier';
 import { replayCalls } from '../services/deskApi';
 import type { ToolCall } from '../types/george';
@@ -424,7 +424,7 @@ export default function Room() {
                 finding, because that is the order they happened in. */}
             <Earlier count={earlier.length} open={unfolded}
                      onToggle={() => setUnfolded((o) => !o)} />
-            <Reading text={latest?.text} notices={notices} />
+            <Reading text={latest?.text} notices={notices} reading={latest?.reading} />
             <Board
               answers={answers}
               board={drawn}
@@ -436,6 +436,10 @@ export default function Room() {
               on={on}
               seenUpTo={firstUnseen(answers, sinceAt)}
             />
+            {/* ONE SENTENCE, ALWAYS LAST. It is the third slot of the reading
+                and it is drawn here rather than up there, because it is read
+                after the evidence: the figures, then what to do about them. */}
+            <ReadingNext reading={latest?.reading} />
           </>
         )}
 

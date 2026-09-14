@@ -52,7 +52,7 @@ MANILA = timezone(timedelta(hours=8))
 # promised; `restated_figure` comes from voice.restatement.warning_reason in
 # metrics.yaml, `misstated_figure` from voice.misstatement.warning_reason and
 # `enumerated_remainder` from voice.enumerated_remainder.warning_reason).
-# NOW.md said thirteen kinds; the loop writes twenty-three.
+# NOW.md said thirteen kinds; the loop writes twenty-five.
 #
 # tests/test_gap_sweep_contract.py holds this list against the call sites in
 # agent/loop.py, so a kind added to the loop and not to the catalogue fails
@@ -70,6 +70,8 @@ KINDS: dict[str, str] = {
     "no_tool_call":            "George answered without reading anything",
     "answer_without_prose":    "the turn drew objects and said nothing — shapes and silence",
     "notice_forced":           "a caveat had to be forced into the answer",
+    "claim_not_said":          "the claim he asked to be lit is not in what he said, so nothing was lit",
+    "reading_rejected":        "a slot of the reading was refused — a figure in a caveat, or a slot past its bound",
     "volunteering_over_cap":   "more unasked-for figures than the cap allows",
     "tool_vocabulary_leaked":  "tool names reached the answer",
     "transaction_wording":     "raw table wording reached the answer",

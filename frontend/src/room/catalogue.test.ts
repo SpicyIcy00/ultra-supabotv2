@@ -53,13 +53,28 @@ const rowsFor = (kind: string): Record<string, unknown>[] => (
 
 describe('the catalogue covers the vocabulary', () => {
   it('reads the closed list of widgets out of the definitions', () => {
+    // SINCE P1.f THE VOCABULARY IS THE CATALOGUE: the six marks the renderer
+    // draws, plus the four kinds that are not readings and keep their tiles.
+    // Fourteen names for six drawings was a choice at every compose that
+    // bought nothing on screen.
     const kinds = widgetKinds();
-    expect(kinds).toContain('figure');
-    expect(kinds).toContain('hero');
-    expect(kinds).toContain('system');
-    expect(kinds.length).toBeGreaterThanOrEqual(13);
+    expect(kinds.slice().sort()).toEqual([...MARKS, ...Object.keys(NOT_A_MARK)].sort());
     // `text` left the vocabulary in P1.c and must not come back through here.
     expect(kinds).not.toContain('text');
+    // Nor may the names P1.f retired: they are drawable, not composable.
+    for (const gone of ['hero', 'subject', 'comparison', 'chart', 'distribution',
+                        'timeline', 'recommendation']) {
+      expect(kinds, `${gone} is retired`).not.toContain(gone);
+    }
+  });
+
+  it('still draws every retired kind, because a board outlives a deploy', () => {
+    // A browser that had `hero` and `comparison` on screen when this shipped
+    // still has them, and a stored thread still carries them.
+    for (const gone of ['hero', 'subject', 'comparison', 'chart', 'distribution',
+                        'timeline', 'recommendation']) {
+      expect(MARKS, gone).toContain(markFor({ kind: gone } as BoardObject, rowsFor(gone)));
+    }
   });
 
   it('gives every kind either a mark or a reason for not being one', () => {

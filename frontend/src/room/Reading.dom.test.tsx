@@ -14,7 +14,7 @@
  */
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { Reading } from './Reading';
+import { Reading, ReadingNext } from './Reading';
 import { buildBoard } from './board';
 import type { AnswerTurn } from './data';
 import type { GeorgeNotice } from '../types/george';
@@ -79,6 +79,47 @@ describe('the reading is drawn from the turn, not composed', () => {
     const text = container.textContent ?? '';
     expect(text.indexOf('recorded no sale')).toBeLessThan(text.indexOf('OPUS carried'));
     expect(container.querySelector('.r-caveats')).toBeTruthy();
+  });
+
+  it('lights the claim where he said it, and changes not one character', () => {
+    const claim = 'OPUS carried the week';
+    const { container } = render(
+      <Reading text={TURN.text} reading={{ claim }} />);
+    const lit = container.querySelector('.r-claim');
+    expect(lit?.textContent).toBe(claim);
+    // The sentence is still the sentence: the highlight is a span inside it.
+    expect(container.querySelector('.r-say--reading')?.textContent).toBe(TURN.text);
+  });
+
+  it('lights nothing when the claim is not in what he said', () => {
+    // The one guarantee that makes a text slot safe: it can only ever
+    // emphasise words the answer already carries, so a claim he did not say
+    // draws nothing rather than drawing itself.
+    const { container } = render(
+      <Reading text={TURN.text} reading={{ claim: 'Rockwell is in trouble' }} />);
+    expect(container.querySelector('.r-claim')).toBeNull();
+    expect(container.querySelector('.r-say--reading')?.textContent).toBe(TURN.text);
+  });
+
+  it('puts his caveat whole above the reading, and never in the accent', () => {
+    const caveat = 'Purchase orders are a frozen export, so replenishment already sent is invisible';
+    const { container } = render(
+      <Reading text={TURN.text} reading={{ caveat }} />);
+    const text = container.textContent ?? '';
+    expect(text.indexOf('frozen export')).toBeLessThan(text.indexOf('OPUS carried'));
+    const el = container.querySelector('.r-caveat');
+    expect(el?.textContent).toBe(caveat);
+    // UI rule 5: one colour means "needs you", and a caveat is not that.
+    expect(el?.className).not.toContain('accent');
+  });
+
+  it('draws the next sentence as its own line, and nothing when there is none', () => {
+    const next = 'Draft the Seikyo order before the cut-off';
+    const { container } = render(<ReadingNext reading={{ next }} />);
+    expect(container.querySelector('.r-next')?.textContent).toContain(next);
+    cleanup();
+    const empty = render(<ReadingNext reading={{ claim: 'anything' }} />);
+    expect(empty.container.firstChild).toBeNull();
   });
 
   it('drops a text block stored before the vocabulary lost the kind', () => {

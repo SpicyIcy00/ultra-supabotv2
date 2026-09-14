@@ -53,6 +53,7 @@ from tools._common import load_defs, req
 DEFS = load_defs()
 
 from agent import loop as george_loop
+from agent import reading as george_reading
 
 MAX_ITERATIONS = george_loop.MAX_ITERATIONS
 MAX_CALLS = 12
@@ -74,9 +75,21 @@ def _write_report():
     n = max(len(report.records), 1)
     lead = sum(int(r["findings"]["leads_with_reading"]) for r in report.records)
     cited = sum(int(bool(r["findings"].get("grounded_numerals"))) for r in report.records)
+    rate = lambda key: sum(int(bool(r["findings"].get(key))) for r in report.records)
+    calls = sum(len(r.get("calls") or []) for r in report.records)
+    labels = sum(int(r["findings"].get("label_calls") or 0) for r in report.records)
+    refused = sum(int(bool(r["findings"].get("compose_rejected"))) for r in report.records)
     print(f"  scenarios {n} · live turns {LIVE_TURNS['n']}")
     print(f"  TRUST (pass/fail, meaningful from one run):")
     print(f"    every scenario that asked for a figure cited one: see failures above")
+    print(f"  THE BOARD (P1.f's own numbers):")
+    print(f"    questions where compose was refused  {refused}/{n}   target ≤ 1")
+    print(f"    label calls as a share of all calls  {labels}/{calls} "
+          f"({100 * labels / max(calls, 1):.0f}%)   target not worse than 33%")
+    print(f"  THE READING (a rate, not a gate):")
+    print(f"    said a claim          {rate('has_claim')}/{n}")
+    print(f"    the claim was lit     {rate('claim_lit')}/{n}")
+    print(f"    said what is next     {rate('has_next')}/{n}")
     print(f"  STYLE (a rate, not a gate — compare with the last run):")
     print(f"    leads with a reading  {lead}/{n} ({100 * lead / n:.0f}%)")
     print(f"    cited a real figure   {cited}/{n} ({100 * cited / n:.0f}%)")
@@ -105,10 +118,39 @@ def _turn(monkeypatch, question, **kw):
     return run_turn(monkeypatch, question, **kw)
 
 
+def _reading_of(turn: checks.Turn) -> dict:
+    """
+    The three slots this turn said, off the `reading` frames (P1.f).
+
+    The LAST one wins, exactly as the client's does: a later compose is the
+    model refining one reading, not adding a second.
+    """
+    said: dict = {}
+    for event, data, _at in turn.frames:
+        if event == "reading":
+            said = {k: v for k, v in data.items()
+                    if k in ("claim", "caveat", "next") and isinstance(v, str)}
+    return said
+
+
 def _voice(name: str, turn: checks.Turn, *, extra_results: list | None = None,
            expect_refusal: bool = False, expects_figure: bool = True) -> dict:
     results = [r["result"] for r in turn.results if not r["error"]] + list(extra_results or [])
     f = voice.voice_findings(turn.answer, results, notices=len(turn.notices))
+    # WHETHER THE READING HAS ITS THREE PARTS (P1.f). A rate and not a gate,
+    # for v2's stated reason: what George chooses to say flaps run to run, and
+    # a single draw of it is noise. `claim_lit` is the one that matters most —
+    # a claim he did not say lights nothing, and the surface draws the reading
+    # whole instead.
+    said = _reading_of(turn)
+    f["reading"] = said
+    f["has_claim"] = bool(said.get("claim"))
+    f["has_next"] = bool(said.get("next"))
+    f["claim_lit"] = george_reading.was_said(turn.answer, said.get("claim"))
+    f["compose_rejected"] = [w.get("detail") for w in turn.warnings
+                             if w.get("reason") == "composition_rejected"]
+    f["label_calls"] = len([c for c in turn.calls
+                            if c.get("tool") == george_loop.COMPOSE_TOOL])
     f["ungrounded_numerals"] = [x.text for x in checks.ungrounded_numerals(turn.answer, results)]
     f["grounded_numerals"] = [x.text for x in checks.grounded_numerals(turn.answer, results)]
     f["internal_vocabulary"] = checks.internal_vocabulary(turn.answer)

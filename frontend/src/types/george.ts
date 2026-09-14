@@ -364,20 +364,24 @@ export interface CompositionBlock {
   op?: 'put' | 'change' | 'quiet' | 'drop';
   kind?:
     /**
-     * HISTORICAL ONLY (P1.c, 2026-09-14). `text` left the vocabulary — the
-     * reading is drawn above the board from the turn's own words and is not
-     * an object — but turns stored before that carry blocks that say it, and
-     * a restored thread must still be readable. The board drops them
-     * (`editsFor`); nothing composes one.
+     * THE CATALOGUE (P1.f, 2026-09-14): the six marks the renderer draws,
+     * plus the four kinds that are not readings of a read and keep their own
+     * tiles. `composition.widgets` in metrics.yaml is this list, and George
+     * may compose nothing else.
      */
-    | 'text' | 'figure' | 'hero' | 'subject' | 'comparison' | 'table'
-    | 'chart' | 'distribution' | 'draft' | 'state'
-    // Added 2026-09-11 to close the gap against the owner's feature 1, which
-    // names timelines, controls, business objects and recommendations among
-    // the things the workspace composes. `document` is deliberately absent:
-    // nothing in this system holds one yet (metrics.yaml
-    // composition.documents_not_a_widget_because).
-    | 'timeline' | 'recommendation' | 'control' | 'system';
+    | 'figure' | 'dumbbell' | 'ranked' | 'contributors' | 'line' | 'table'
+    | 'draft' | 'state' | 'control' | 'system'
+    /**
+     * HISTORICAL ONLY. A board persists between turns and across a deploy, so
+     * a browser that had these on screen still has them and a stored thread
+     * still carries them: `text` left with P1.c (the reading is not an
+     * object, and the board drops those in `editsFor`), and the other seven
+     * with P1.f, where fourteen names for six drawings became six.
+     * `catalogue.markFor` still maps every one of them onto a mark;
+     * `composition.retired_kinds` is the same list on the server.
+     */
+    | 'text' | 'hero' | 'subject' | 'comparison'
+    | 'chart' | 'distribution' | 'timeline' | 'recommendation';
   /** George's key for the object. The same key in a later turn is the same object, changed. */
   key: string;
   /** Absent on a `change` that only re-points the object at another read. */
@@ -386,10 +390,11 @@ export interface CompositionBlock {
   seq?: number;
   tool?: string;
   subject?: string;
+  label?: 'pending' | 'running' | 'waiting' | 'done' | 'blocked';
+  /** HISTORICAL ONLY, like the kinds above: a stored comparison, chart or
+   *  recommendation still carries these, and nothing composes one now. */
   subjects?: string[];
   form?: 'line' | 'bar';
-  label?: 'pending' | 'running' | 'waiting' | 'done' | 'blocked';
-  /** A recommendation's verb. George picks WHICH; he never invents one. */
   action?: 'order' | 'investigate' | 'check' | 'hold' | 'switch_on' | 'leave_it';
   /** What a control changes: scope only, never a threshold. */
   argument?: 'date_range' | 'top_n';
@@ -406,7 +411,13 @@ export interface CompositionBlock {
   seqs?: number[];
   /** Which row stays lit while the rest cool. An annotation, not a shape. */
   emphasise?: string;
-  /** A few words about what is drawn. Never a digit — that is enforced. */
+  /**
+   * THE CLAIM-TITLE: the few words saying what this block SAYS, in George's
+   * own words. Never a digit — that is enforced server-side, because a figure
+   * up here would be one with no receipt over one that has. It was `note`
+   * until P1.f gave the title its own name; a stored block still says `note`.
+   */
+  claim?: string;
   note?: string;
 }
 
@@ -463,6 +474,19 @@ export interface CompositionFrame {
    * wearing George's name.
    */
   default?: boolean;
+}
+
+/**
+ * The reading's three slots, as the loop validated them (agent/reading.py).
+ * Every one is optional: a confirmation has nothing to say in three parts.
+ */
+export interface ReadingFrame {
+  /** The few words of the answer that ARE the point. A highlight, not a line. */
+  claim?: string;
+  /** What qualifies the figures, whole, above them. Never carries a digit. */
+  caveat?: string;
+  /** One sentence: the one thing to do or check. Never carries a digit. */
+  next?: string;
 }
 
 export interface FindingFrame {
@@ -606,11 +630,21 @@ export type GeorgeTurn =
       /** Pages created or changed during this turn, in order, from the frame. */
       pageChanges: PageChangedFrame[];
       /**
-       * The roles that stood, from the newest `finding` frame. Absent until
-       * one arrives, and absent for good on a turn that never recorded any —
-       * which composes as adjacency, exactly as before.
+       * The roles that stood, from the newest `finding` frame. HISTORICAL
+       * since P1.f: the loop no longer emits one — the channel is now the
+       * reading below — and a stored turn from before it still carries them
+       * for the preview surface at /george/preview.
        */
       findings?: Finding[];
+      /**
+       * WHAT GEORGE SAID, IN ITS THREE SLOTS, from the newest `reading` frame
+       * (P1.f). `claim` is a HIGHLIGHT — the few words of the answer that are
+       * the point, lit where he said them and drawn nowhere if he did not;
+       * `caveat` is drawn whole above the figures; `next` is one sentence,
+       * last, under them. Absent on a turn that said none of it, which draws
+       * exactly as it drew before this existed.
+       */
+      reading?: ReadingFrame;
       /**
        * The screen George composed, from the newest `compose` frame. Absent
        * on a turn that never composed — which the workspace draws plainly.

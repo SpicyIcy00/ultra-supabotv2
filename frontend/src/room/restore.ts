@@ -5,7 +5,7 @@
  * `/w2` renderer was deleted: this was the only function in that module the
  * room still used, and everything else it exported is in `room/data.ts`.
  */
-import type { CompositionBlock as Block, GeorgeTurn, ToolCall, ToolMeta } from '../types/george';
+import type { CompositionBlock as Block, GeorgeTurn, ReadingFrame, ToolCall, ToolMeta } from '../types/george';
 import type { Post } from '../types/river';
 
 /** A result an answer post kept, as the loop stores it (`payload.charted`). */
@@ -32,7 +32,8 @@ export function restoreFromPosts(turns: GeorgeTurn[], posts: Post[]): GeorgeTurn
   return turns.map((t) => {
     if (t.role !== 'george' || !t.post?.answer_post_id) return t;
     const payload = byId.get(t.post.answer_post_id)?.payload as
-      { charted?: unknown; composition?: { blocks?: unknown; default_blocks?: unknown } }
+      { charted?: unknown; reading?: unknown;
+        composition?: { blocks?: unknown; default_blocks?: unknown } }
       | null | undefined;
     if (!payload) return t;
     const charted = (Array.isArray(payload.charted) ? payload.charted : []) as Charted[];
@@ -54,11 +55,19 @@ export function restoreFromPosts(turns: GeorgeTurn[], posts: Post[]): GeorgeTurn
     // receipts contract exists to prevent.
     const seeded = Array.isArray(payload.composition?.default_blocks)
       ? payload.composition!.default_blocks as Block[] : null;
+    // AND WHAT HE SAID, IN ITS THREE SLOTS (P1.f). Stored with the snapshot,
+    // so a reopened thread draws the caveat above the figures and the next
+    // sentence under them exactly as they were drawn live — rather than one
+    // undifferentiated paragraph where the live turn had three parts.
+    const said = payload.reading;
+    const reading = said && typeof said === 'object' && !Array.isArray(said)
+      ? said as ReadingFrame : null;
     return {
       ...t, toolCalls,
       composition: blocks?.length ? { seq: -1, blocks, rejected: [] } : t.composition,
       defaultComposition: seeded?.length
         ? { seq: -1, blocks: seeded, rejected: [], default: true } : t.defaultComposition,
+      reading: reading ?? t.reading,
     };
   });
 }

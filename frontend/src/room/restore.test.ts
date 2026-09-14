@@ -65,10 +65,26 @@ describe('a reopened thread', () => {
     expect(buildBoard([restored]).map((o) => o.key).sort()).toEqual(['read-9', 'seikyo-order']);
   });
 
+  it('restores the three slots, so the caveat is above the figures on a reload too', () => {
+    // P1.f. Stored with the snapshot; without this a reopened thread drew one
+    // paragraph where the live turn had a caveat above and a next sentence
+    // under — the same divergence `default_blocks` exists to prevent.
+    const [restored] = restoreFromPosts([stored()], [post({
+      charted: [{ seq: 2, tool: 'get_purchase_plan', arguments: { supplier: 'Seikyo SEK001' }, rows: ROWS, meta: META }],
+      reading: { claim: 'Seikyo is the one to order from',
+                 caveat: 'Purchase orders are a frozen export',
+                 next: 'Send it before the cut-off' },
+    })]);
+    if (restored.role !== 'george') throw new Error('expected george');
+    expect(restored.reading?.claim).toBe('Seikyo is the one to order from');
+    expect(restored.reading?.next).toBe('Send it before the cut-off');
+  });
+
   it('leaves a turn whose post kept nothing exactly as it was', () => {
     const [bare] = restoreFromPosts([stored()], [post(null)]);
     if (bare.role !== 'george') throw new Error('expected george');
     expect(bare.composition).toBeUndefined();
+    expect(bare.reading).toBeUndefined();
     expect(bare.toolCalls[0].result).toBeUndefined();
   });
 });

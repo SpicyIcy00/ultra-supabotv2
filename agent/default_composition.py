@@ -16,18 +16,25 @@ at all that the validator would not accept from him. A block it produced and a
 block he produced are indistinguishable downstream, which is the point: there
 is one gate and one grammar, and this is a caller of them.
 
-WHAT IT DECIDES, AND WHY THAT IS SAFE. Only WHICH SHAPE a read is, by the rule
-`inferShape` has always used in the client (frontend/.../pinShape.ts) — one row
-is a figure, a declared delta over two to four named rows is a comparison, a
-homogeneous series is a chart, everything else is a table. That rule reads the
-rows and nothing else: no threshold, no formula, no grouping convention, no
+WHAT IT DECIDES, AND WHY THAT IS SAFE. Only WHICH SHAPE a read is, from the
+rows and nothing else — no threshold, no formula, no grouping convention, no
 figure. It chooses a NOUN for data that already exists.
+
+AND IT IS THE CATALOGUE'S OWN RULE (P1.f, 2026-09-14). The vocabulary is now
+the six marks the renderer draws, so this file and
+frontend/src/room/catalogue.ts `markFor` decide the same way from the same
+columns: one row is a `figure`; a baseline on every row is a `dumbbell`; a
+signed change on every row is `contributors`; an ordered series is a `line`; a
+set of named rows is `ranked`; everything else is a `table`. Two implementations
+of one rule, in the two places a board can be composed, and
+tests/test_default_composition_contract.py is what keeps them saying the same
+thing.
 
 WHAT IT DELIBERATELY DOES NOT DO:
 
-  - It never carries a note, an emphasis, a finding or a recommendation.
-    Those are readings, and a reading is George's — a machine that annotated
-    a chart would be characterising rows nobody looked at.
+  - It never carries a claim, an emphasis or a word of the reading. Those are
+    readings, and a reading is George's — a machine that titled a block would
+    be characterising rows nobody looked at.
   - It never exempts a notice from prose. `_drawn_on_the_board` in the loop is
     fed George's composition only: a caveat is discharged by a person deciding
     to draw the read that raised it, not by a default doing it for him.
@@ -58,7 +65,6 @@ from agent import compose
 TIME_KEYS = ("day", "week", "month", "bucket", "date", "snapshot_date")
 SUBJECT_KEYS = ("subject", "store", "product", "category", "name", "label")
 MIN_CHART_ROWS = 3
-LINE_OVER_BAR_ROWS = 12
 _CATEGORICAL_SKIP = frozenset({"value", "unit", "measure", "section", "direction"})
 
 # A default is a holding shape, not a report. Well under composition.max_blocks
@@ -127,41 +133,43 @@ def shape_for(call: Mapping[str, Any], seq: int, key: str, weight: str) -> Optio
     """
     One read as one block, or None when no honest default exists.
 
-    The order of the tests is `inferShape`'s order and the reasons are its
-    reasons: a declared delta is the most specific thing a result can be, so it
-    is read first; a one-row figure next; a series only when it is homogeneous
-    and long enough to have a shape; a table for everything else, because a
-    wrong chart misleads in a way a boring table does not.
+    One row is a figure whatever else is true of it; a compared set of named
+    rows is the movement the tool measured; a homogeneous series is a line only
+    when it is long enough to have a shape; and everything else is a table,
+    because a wrong chart misleads in a way a boring table does not.
     """
     rows = _rows(call)
     if not rows:
         return None
     block: dict[str, Any] = {"op": "put", "key": key, "seq": seq, "weight": weight}
 
-    if _comparable(rows):
-        if len(rows) == 1:
-            # A figure with its delta. `subject` is omitted deliberately: on a
-            # one-row read the validator fills it from the read's own scope, or
-            # says the block draws that row and takes its name from it. Either
-            # way the caption comes from the read, never from here.
+    if len(rows) == 1:
+        # ONE ROW IS A FIGURE, whether or not it was compared. `subject` is
+        # omitted deliberately: on a one-row read the validator fills it from
+        # the read's own scope, or says the block draws that row and takes its
+        # name from it. Either way the caption comes from the read, never here.
+        if _comparable(rows) or _is_number(rows[0].get("value")):
             return {**block, "kind": "figure"}
-        names = _subjects(rows)
-        if 2 <= len(names) <= compose.MAX_SUBJECTS:
-            return {**block, "kind": "comparison", "subjects": names}
         return {**block, "kind": "table"}
 
-    if len(rows) == 1 and _is_number(rows[0].get("value")):
-        return {**block, "kind": "figure"}
+    if _comparable(rows) and _subjects(rows):
+        # WHAT THE TOOL MEASURED ABOUT THESE ROWS DECIDES THE MARK, exactly as
+        # catalogue.ranking does on the client: a before on every row has two
+        # ends and is drawn as a movement; a signed change with no before is a
+        # decomposition of one.
+        if all(_is_number(r.get("baseline")) for r in rows):
+            return {**block, "kind": "dumbbell"}
+        if all(_is_number(r.get("change")) for r in rows):
+            return {**block, "kind": "contributors"}
+        return {**block, "kind": "ranked"}
 
     if len(rows) >= MIN_CHART_ROWS and _homogeneous(rows):
-        time_key = next((k for k in TIME_KEYS if k in rows[0]), None)
-        if time_key:
-            form = "line" if len(rows) > LINE_OVER_BAR_ROWS else "bar"
-            return {**block, "kind": "chart", "form": form}
+        if any(k in rows[0] for k in TIME_KEYS):
+            return {**block, "kind": "line"}
         if _categorical(rows):
             # No order of its own, so a line would assert a progression that
             # does not exist.
-            return {**block, "kind": "chart", "form": "bar"}
+            return {**block, "kind": "ranked"}
 
     return {**block, "kind": "table"}
 
