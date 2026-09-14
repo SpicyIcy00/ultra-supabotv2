@@ -128,7 +128,7 @@ A block's `claim` is unchanged and still carries no digit at all: that one IS
 an annotation on a mark that draws the figure underneath it, which is what
 CLAUDE.md bounds. The reading is not an annotation — it is what George says.
 
-Closed by `98323b0`. Verified by replay of `verification/p1h-v2.json`, not
+Closed by `0daa0d6`. Verified by replay of `verification/p1h-v2.json`, not
 by a new run: the eval costs $1.51 and nothing here needs the model to decide
 it. The next recorded run is what says whether the rate falls.
 
