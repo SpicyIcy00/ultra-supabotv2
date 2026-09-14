@@ -426,5 +426,7 @@ def test_a_figure_with_nothing_drawn_is_not_gated(monkeypatch) -> None:
 
 def test_the_client_treats_the_warning_as_process_not_caveat() -> None:
     from pathlib import Path
-    src = Path(__file__).resolve().parents[1].joinpath("frontend/src/room/render.tsx").read_text(encoding="utf-8")
+    # PROCESS moved to room/data.ts with P1.k: the count of caveats on the
+    # work line has to leave out exactly what the region above the board does.
+    src = Path(__file__).resolve().parents[1].joinpath("frontend/src/room/data.ts").read_text(encoding="utf-8")
     assert "'restated_figure'" in src.split("const PROCESS")[1].split(";")[0]

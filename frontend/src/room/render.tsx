@@ -16,7 +16,7 @@ import type { BoardObject, Local } from './board';
 import { inOrder } from './board';
 import { retunedKey } from './tokenShape';
 import { useDrag } from './drag';
-import { callOf, dimensionOf, rowsOf, type AnswerTurn, type Dimension } from './data';
+import { PROCESS, callOf, dimensionOf, rowsOf, type AnswerTurn, type Dimension } from './data';
 import type { ToolCall } from '../types/george';
 import {
   Acts, ControlTile, DraftTile, SpecTile, StateTile, SystemTile,
@@ -53,9 +53,6 @@ export interface BoardProps {
   seenUpTo?: number;
 }
 
-/** Warnings the loop raises about George's own edits — never a tool's notice. */
-const PROCESS = new Set(['composition_rejected', 'findings_rejected', 'restated_figure',
-                         'misstated_figure', 'enumerated_remainder']);
 
 /**
  * THE CAVEATS THIS TURN STILL HAS TO SAY — computed here because it is a

@@ -11,20 +11,25 @@
  *   for a step, and no reasoning text. If George is doing nothing, this shows
  *   nothing.
  *
- *   IT IS IN WORDS, NOT IN TOOL NAMES. `get_sales {"group_by":["store"]}` is
- *   implementation detail dressed as progress; "reading sales" is what he is
- *   doing. The shell learned this in 2026-09-07 and the room had a thinner
- *   version of the same idea that had stopped keeping up: thirteen tools —
- *   every one added in the last week, and every write — had no words at all,
- *   so opening a shop or saving a rule both appeared as "thinking…".
+ *   IT IS IN WORDS, NOT IN TOOL NAMES. "reading sales", never
+ *   `get_sales {"group_by":["store"]}`. The words are in work.ts, where the
+ *   line above the claim and the Behind it view read the same ones.
  *
- * A LANDED READ SAYS HOW MUCH IT BROUGHT BACK, because that is the difference
- * between a read that found the business and one that found nothing, and it is
- * knowable from the frame rather than from the prose.
+ * A LANDED READ SAYS HOW MUCH IT BROUGHT BACK AND HOW LONG IT TOOK, because
+ * both are the difference between a read that found the business and one that
+ * found nothing, and both are knowable from the frame rather than from the
+ * prose.
+ *
+ * AND THE WORK OUTLIVES THE TURN (P1.k). The trail used to vanish the moment
+ * the answer landed: the person had watched four reads go by and then had a
+ * paragraph with nothing behind it. `WorkLine` is what is left — one derived
+ * line above the claim, and the same steps under it when you want them.
  */
 import { useEffect, useState } from 'react';
 
 import type { AnswerTurn } from './data';
+import { receiptsLine } from './data';
+import { durationWords, stepsOf, summaryOf, summaryWords, type Step } from './work';
 
 /**
  * HOW LONG HE HAS BEEN AT IT (P0.3).
@@ -43,8 +48,8 @@ import type { AnswerTurn } from './data';
  *
  * The server measures the same wait properly (`duration_ms` on the `done`
  * frame and in george.conversations, off one monotonic clock inside the
- * turn). That is the figure the clock report reads. This is what the person
- * sees while it is still running.
+ * turn). That is the figure the clock report reads, and the one the work line
+ * shows once the turn is over. This is what the person sees while it runs.
  */
 function useElapsed(startedAt: string | undefined, live: boolean): number | null {
   const [now, setNow] = useState(() => Date.now());
@@ -71,110 +76,139 @@ export function elapsedWords(seconds: number): string {
 }
 
 /**
- * What each tool is, in words: what it looks like happening, and what it looks
- * like having happened.
+ * ONE RUNG, AND WHAT IS UNDER IT.
  *
- * EVERY TOOL GEORGE CAN CALL HAS AN ENTRY, and a contract test fails when one
- * does not — a tool with no words is a tool whose work is invisible, and the
- * screen says "thinking…" while something quite specific is going on.
- */
-export const WORDS: Record<string, [string, string]> = {
-  // ---- the reads
-  get_sales: ['reading sales', 'read sales'],
-  get_stock: ['counting stock', 'counted stock'],
-  get_stock_history: ['reading stock over time', 'read stock over time'],
-  get_product: ['looking up a product', 'looked up a product'],
-  get_object: ['opening it up', 'opened it up'],
-  get_movement: ['reading transfers', 'read transfers'],
-  get_vending: ['reading vending', 'read vending'],
-  get_vending_stock: ['reading vending stock', 'read vending stock'],
-  get_dead_stock: ['finding dead stock', 'found dead stock'],
-  get_purchasing: ['reading purchase orders', 'read purchase orders'],
-  get_replenishment: ['reading the replenishment plan', 'read the replenishment plan'],
-  get_purchase_plan: ['drafting the order', 'drafted the order'],
-  get_cost_history: ['reading costs', 'read costs'],
-  get_brief: ['reading the morning brief', 'read the morning brief'],
-  get_attention: ['looking at what deserves attention', 'looked at what deserves attention'],
-  // ---- the things only he can see
-  view_page: ['reading the page', 'read the page'],
-  view_memory: ['checking what he thinks', 'checked what he thinks'],
-  view_automations: ['checking what is running', 'checked what is running'],
-  run_workflow: ['running the saved rule', 'ran the saved rule'],
-  // ---- what he says about what he read
-  compose: ['arranging the workspace', 'arranged the workspace'],
-  record_belief: ['keeping what he now thinks', 'kept what he now thinks'],
-  // ---- the writes
-  pin_answer: ['pinning it', 'pinned it'],
-  save_workflow: ['saving the rule', 'saved the rule'],
-  create_page: ['building the page', 'built the page'],
-  edit_page: ['changing the page', 'changed the page'],
-  set_standing_question: ['keeping the question', 'kept the question'],
-  set_watch: ['setting the watch', 'set the watch'],
-  // ---- RETIRED, and still narrated. record_findings was folded into compose
-  // on 2026-09-13 (P1.a) and George cannot call it any more, but conversations
-  // recorded before that hold real calls to it, and a stored turn whose work
-  // reads "thinking…" has lost the thing this line exists to show. A name
-  // leaves this map when no stored turn can carry it, which is never.
-  record_findings: ['marking what matters', 'marked what matters'],
-};
-
-function rows(result: unknown): number | null {
-  const r = (result as { rows?: unknown[] } | null | undefined)?.rows;
-  return Array.isArray(r) ? r.length : null;
-}
-
-/**
- * A row count belongs to a READ and to nothing else.
+ * Tapping a step opens the receipts of the read it was — what was measured,
+ * how it was cut, which days, when it was read. That is UI rule 3 where the
+ * work is: the figures on the board open in the panel, and the steps that
+ * fetched them open here, with no new route and no modal.
  *
- * compose and record_findings return no rows because they read nothing — they
- * are statements about calls that already happened — so "arranged the
- * workspace · 0 rows" reported an emptiness that was never a finding. A count
- * of nothing looks like a failure when it is a category error.
+ * A STEP WITH NOTHING BEHIND IT DOES NOT PRETEND TO OPEN. A call still running
+ * and a compose have no receipts, and a control that does nothing teaches you
+ * that none of them do.
  */
-function counts(tool: string): boolean {
-  return tool.startsWith('get_') || tool.startsWith('view_') || tool === 'run_workflow';
+function StepLine({ step, open, onToggle }: {
+  step: Step;
+  open: boolean;
+  onToggle: (() => void) | null;
+}) {
+  const line = step.meta ? receiptsLine(step.meta) : '';
+  const openable = Boolean(onToggle && (line || step.declined));
+  const body = (
+    <>
+      {step.state === 'running' ? `${step.words}…` : step.words}
+      {step.state === 'declined' && <span className="r-work-n">declined</span>}
+      {step.rows !== null && (
+        <span className="r-work-n">{step.rows === 1 ? '1 row' : `${step.rows} rows`}</span>
+      )}
+      {step.ms !== null && <span className="r-work-n">{durationWords(step.ms)}</span>}
+    </>
+  );
+  return (
+    <>
+      {openable ? (
+        <button type="button" aria-expanded={open}
+                className={`r-work r-work--step${step.state === 'running' ? '' : ' r-work--done'}`}
+                onClick={onToggle ?? undefined}>
+          {body}
+        </button>
+      ) : (
+        <p className={`r-work${step.state === 'running' ? '' : ' r-work--done'}`}>{body}</p>
+      )}
+      {open && (
+        <div className="r-work-receipts">
+          {/* THE TOOL'S OWN SENTENCE when it declined, which is written to be
+              read — never an exception, and never the client's paraphrase. */}
+          {step.declined && <p className="r-work-declined">{step.declined}</p>}
+          {line && <p className="r-src">{line}</p>}
+          {step.meta?.source_table && <p className="r-src">from {step.meta.source_table}</p>}
+        </div>
+      )}
+    </>
+  );
 }
 
 export function Working({ turn, live }: { turn: AnswerTurn | null; live: boolean }) {
   // Before the early return: a hook cannot be called conditionally, and the
   // turn is the only thing it needs.
   const elapsed = useElapsed(turn?.at, live);
+  const [open, setOpen] = useState<string | null>(null);
   // The board is the result. While he is finished, this has nothing to add,
-  // and a trail that lingered would be a second account of the same thing.
+  // and a trail that lingered would be a second account of the same thing —
+  // the work line below is what stands in its place.
   if (!live || !turn) return null;
   const clock = elapsed === null ? null : (
     <span className="r-work-clock">{elapsedWords(elapsed)}</span>
   );
-  const calls = turn.toolCalls.filter((c) => c.duplicate_of === undefined);
-  if (!calls.length) {
+  const steps = stepsOf(turn);
+  if (!steps.length) {
     // Real, and the only honest thing to say before the first call returns.
     return <p className="r-work">thinking…{clock}</p>;
   }
 
   return (
     <div className="r-work-trail">
-      {calls.map((call) => {
-        const words = WORDS[call.tool];
-        // A tool with no entry is named plainly rather than hidden: silence
-        // would be the bug pretending to be quiet.
-        const [doing, done] = words ?? [call.tool, call.tool];
-        const result = call.result as { error?: unknown } | null | undefined;
-        const landed = Boolean(result) && !result?.error;
-        const refused = Boolean(result?.error);
-        const n = landed ? rows(call.result) : null;
-        return (
-          <p key={call.seq} className={`r-work${landed || refused ? ' r-work--done' : ''}`}>
-            {refused ? `${done} — declined` : landed ? done : `${doing}…`}
-            {landed && counts(call.tool) && n !== null && (
-              <span className="r-work-n">{n === 1 ? '1 row' : `${n} rows`}</span>
-            )}
-          </p>
-        );
-      })}
+      {steps.map((step) => (
+        <StepLine key={step.key} step={step} open={open === step.key}
+                  onToggle={() => setOpen(open === step.key ? null : step.key)} />
+      ))}
       {/* At the FOOT of the trail, not beside the running line: a call that
           lands moves that line's words, and a number that jumped with it
           would read as part of the call rather than as the wait. */}
       {clock && <p className="r-work r-work--clock">{clock}</p>}
+    </div>
+  );
+}
+
+/**
+ * WHAT THE TURN COST, ONE LINE, ABOVE THE CLAIM.
+ *
+ * Perplexity's shape: sources above the answer, steps behind one plain line.
+ * Four counts off frames that already arrived — reads that landed, calls made,
+ * the turn's own clock, caveats raised — and the steps themselves one tap
+ * away. It is the only account of the work that survives the turn, which is
+ * the point: an answer whose evidence is a paragraph of prose is an answer you
+ * have to take on trust.
+ *
+ * NOT AN ACCENT, NOT A BADGE, NOT A SCORE. Four counts is not a rating of the
+ * work and nothing here is coloured: the one colour means "needs you" (UI
+ * rule 5), and a turn that read four things is not better than one that read
+ * one.
+ */
+export function WorkLine({ turn, onBehind }: {
+  turn: AnswerTurn | null;
+  /** Opens the whole thread's reads. Absent where there is nowhere to go. */
+  onBehind?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [step, setStep] = useState<string | null>(null);
+  if (!turn) return null;
+  const steps = stepsOf(turn);
+  // A TURN THAT CALLED NOTHING HAS NO WORK TO SHOW. He answered from what he
+  // already had, and "0 reads · 0 tools" would be a line about an absence.
+  if (!steps.length) return null;
+  const words = summaryWords(summaryOf(turn));
+  return (
+    <div className="r-workline">
+      <p className="r-workline-row">
+        <button type="button" className="r-workline-line" aria-expanded={open}
+                onClick={() => setOpen(!open)}>
+          {words.join(' · ')}
+        </button>
+        {onBehind && (
+          <button type="button" className="r-workline-behind" onClick={onBehind}>
+            behind it
+          </button>
+        )}
+      </p>
+      {open && (
+        <div className="r-work-trail r-work-trail--settled">
+          {steps.map((s) => (
+            <StepLine key={s.key} step={s} open={step === s.key}
+                      onToggle={() => setStep(step === s.key ? null : s.key)} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

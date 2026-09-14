@@ -278,8 +278,10 @@ def test_a_clean_reading_is_still_left_alone(monkeypatch):
 def test_the_client_treats_the_warning_as_process_not_caveat():
     from pathlib import Path
 
+    # PROCESS moved to room/data.ts with P1.k, where the work line reads the
+    # same list the region above the board reads.
     src = (Path(__file__).resolve().parents[1]
-           / "frontend/src/room/render.tsx").read_text(encoding="utf-8")
+           / "frontend/src/room/data.ts").read_text(encoding="utf-8")
     assert "'enumerated_remainder'" in src.split("const PROCESS")[1].split(";")[0]
 
 

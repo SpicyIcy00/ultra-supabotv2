@@ -3898,3 +3898,18 @@ way. It now takes `{post, seq, argument, value}` and reads the arguments off
 a figure with somebody else's receipt. It found `pin_runner._enum_for` taking
 the first `oneOf` enum whatever the value's shape was, which made every pin
 over an explicit `date_range` unrunnable — the card's own "August".
+
+
+**The work outlives the turn, and a receipt is not code.** 2026-09-14, P1.k.
+The step trail vanished when the answer landed; one derived line above the
+claim now carries four counts off the turn's own frames and unfolds the steps,
+each with its own `duration_ms`. **Behind it** is a view on the thread, and
+its rule is the one thing it may never be: a list of calls with their
+arguments. A filter is split on the `#` the tools write — the definition on
+the line, the predicate under it, never a guess about which half reads as
+English — and 75 of the 79 filters in the eight recorded runs carry one. The
+figure link ports `agent/prose`'s matcher to the client (`figures.ts`) rather
+than inventing a looser one; the constants are compared by value in
+`test_visible_work_contract.py`, and a numeral no read holds gets no
+underline. Everything is under `surface.desk.work`, which the prompt does not
+read: 1,798 words and the same tool-schema hash before and after.

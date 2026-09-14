@@ -739,6 +739,82 @@
   to { opacity: 1; transform: none; }
 }
 
+/* A STEP THAT OPENS (P1.k). Same line, now a button, because the read behind
+   it has receipts and UI rule 3 says a figure's receipts open where the
+   figure is. Nothing about it looks like a control until you are on it: a
+   trail of buttons reads as a menu, and this is an account of what happened.*/
+.r-work--step {
+  font: inherit; color: inherit; background: none; border: 0; padding: 0;
+  text-align: left; cursor: pointer;
+}
+.r-work--step:hover, .r-work--step:focus-visible { color: var(--ink-2); }
+.r-work-receipts {
+  margin: 2px 0 6px 0; padding-left: 13px;
+  border-left: 1px solid var(--edge); display: grid; gap: 3px;
+}
+/* The tool's own sentence when it declined — its words, not a paraphrase, and
+   never the accent: a refusal is not a thing that needs you (UI rule 5). */
+.r-work-declined {
+  margin: 0; font: 400 12px/1.55 var(--sans); color: var(--ink-2); max-width: 62ch;
+}
+
+/* ------------------------------------------------------------- the work line
+   What the turn cost, once it is over: reads, tools, time, caveats — four
+   counts off frames that already arrived, above the claim, where Perplexity
+   puts its sources. Never coloured and never a score. */
+.r-workline { margin: 0 0 14px; }
+.r-workline-row {
+  margin: 0; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+}
+.r-workline-line, .r-workline-behind {
+  font: 400 10.5px/1.5 var(--mono);
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
+  background: none; border: 0; padding: 0; cursor: pointer;
+}
+.r-workline-line:hover, .r-workline-line:focus-visible,
+.r-workline-behind:hover, .r-workline-behind:focus-visible { color: var(--ink-2); }
+.r-workline-behind { text-decoration: underline; text-underline-offset: 3px; }
+.r-work-trail--settled { margin: 8px 0 0; }
+
+/* A FIGURE IN THE CLAIM WITH A READ BEHIND IT. Underlined, in his own words,
+   in his own sentence — the underline is the only thing that changes, so the
+   reading is still a sentence and not a row of links. */
+.r-figure {
+  font: inherit; color: inherit; background: none; border: 0; padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+.r-figure:hover, .r-figure:focus-visible { text-decoration-style: solid; }
+
+/* ---------------------------------------------------------------- behind it
+   Every read of the thread with its receipts (BehindIt.tsx). A list, not a
+   board: nothing here is drawn, because the drawings are on the board and
+   this is the account of where they came from. */
+.r-behind { margin: 0 0 26px; }
+.r-behind-head {
+  margin: 0 0 14px; display: flex; align-items: baseline; gap: 14px;
+  padding-bottom: 10px; border-bottom: 1px solid var(--edge);
+}
+.r-behind-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px; }
+.r-behind-read { padding-left: 13px; border-left: 2px solid var(--edge); }
+/* WHERE A TAPPED FIGURE LANDED. A brighter edge and nothing else — no accent,
+   which means "needs you", and no fill, which would make one read look like a
+   different kind of read. */
+.r-behind-read--here { border-left-color: rgba(var(--george), 0.55); }
+.r-behind-what {
+  margin: 0 0 5px; font: 400 12.5px/1.6 var(--sans); color: var(--ink);
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+}
+.r-behind-declined {
+  margin: 0 0 5px; font: 400 12px/1.55 var(--sans); color: var(--ink-2); max-width: 62ch;
+}
+.r-behind-filters { list-style: none; margin: 5px 0 0; padding: 0; display: grid; gap: 3px; }
+.r-behind-filters li { display: grid; gap: 1px; }
+.r-behind-filter { font: 400 11px/1.5 var(--sans); color: var(--ink-2); }
+
 /* --------------------------------------------------------- composed shapes
    The marks of the grammar (Spec.tsx). Every colour here comes from a --hue
    the renderer resolved out of a row: there is no palette choice in this

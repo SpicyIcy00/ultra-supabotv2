@@ -28,7 +28,8 @@ import { Tokens } from './Tokens';
 import { resolveFragment, retunedKey, tokensFor, type DrawnToken } from './tokenShape';
 import type { ToolCall } from '../types/george';
 import { Noticed } from './Noticed';
-import { Working } from './Working';
+import { WorkLine, Working } from './Working';
+import { BehindIt } from './BehindIt';
 import { useQuery } from '@tanstack/react-query';
 import { listApprovals } from '../services/workflowsApi';
 import { Rail } from './Rail';
@@ -101,6 +102,11 @@ export default function Room() {
     retry: false,
   });
   const [draft, setDraft] = useState('');
+  // WHERE THE FIGURES CAME FROM, AS A VIEW ON THE THREAD (P1.k). Null is the
+  // conversation; open is every read this thread stands on, with its receipts.
+  // `focus` is the read a tapped figure asked for, keyed `turn:seq` — the same
+  // key the board uses, because seq restarts every turn.
+  const [behind, setBehind] = useState<{ focus: string | null } | null>(null);
   const opened = useRef<string | null>(null);
 
   // A stored thread opens once, with its rows and compositions restored from
@@ -143,6 +149,11 @@ export default function Room() {
   // A new answer folds again. The fold is about the newest finding, and
   // leaving it open would put the accumulation straight back.
   useEffect(() => { setUnfolded(false); }, [answers.length]);
+  // AND ASKING CLOSES THE EVIDENCE (P1.k). Behind it is a view on what has
+  // already been read; a question is a request for something new, and an
+  // answer arriving behind a list nobody is looking at is the "stuff came out
+  // but it just disappeared" shape all over again.
+  useEffect(() => { if (busy) setBehind(null); }, [busy]);
   const drawn = unfolded ? board : shown;
   // The turn's caveats, minus the ones its objects already carry — computed
   // over what is DRAWN, because a caveat carried by a tile nobody can see has
@@ -519,7 +530,7 @@ export default function Room() {
     }
     // Leaving on purpose: "/" must not walk straight back in.
     forgetLast();
-    george.reset(); setSelection([]); setFocused(null);
+    george.reset(); setSelection([]); setFocused(null); setBehind(null);
     setRetuned({}); setShapes({}); setRefusal(null);
     // WHAT YOU KEPT SURVIVES. Clearing is for the conversation, not for the
     // things you decided to hold on to — losing those to a button meant for
@@ -553,6 +564,14 @@ export default function Room() {
         ) : (
           <>
             <Working turn={latest} live={busy} />
+            {/* WHAT THE WORK WAS, ONCE IT IS OVER (P1.k). The trail above is
+                live and goes when the turn does; this is what is left of it —
+                four counts off the turn's own frames, the steps one tap
+                below, and the whole thread's reads one tap sideways. */}
+            {!busy && (
+              <WorkLine turn={latest}
+                        onBehind={behind ? undefined : () => setBehind({ focus: null })} />
+            )}
             {/* SINCE YOU LAST LOOKED. A count of answers with a time after
                 the mark this browser kept — derived, never guessed (UI rule
                 8) — and only when there is one. What it counts is what
@@ -562,46 +581,59 @@ export default function Room() {
                 since you last looked · {arrived} {arrived === 1 ? 'answer' : 'answers'} arrived
               </p>
             )}
-            {/* THE READING, ABOVE THE BOARD, ALWAYS. His words are not an
-                object and cannot be forgotten into one: whatever he says
-                this turn is drawn here, with the turn's caveats above it,
-                and the objects below are its evidence. See Reading.tsx. */}
-            {/* WHAT CAME BEFORE IT, folded to one quiet line — above the
-                finding, because that is the order they happened in. */}
-            <Earlier count={earlier.length} open={unfolded}
-                     onToggle={() => setUnfolded((o) => !o)} />
-            <Reading text={latest?.text} notices={notices} reading={latest?.reading} />
-            {/* WHAT THESE FIGURES ARE OF, AND HOW TO MOVE IT (P1.j). The
-                arguments the loop accepted, drawn between his reading and the
-                evidence it is about — which is where they are read, and where
-                what they change is directly below them. Tapping one is a
-                replay; typing one of the same words is the same act. */}
-            <Tokens
-              tokens={tokens}
-              correction={desk.data?.fragments?.correction?.token}
-              moving={moving > 0}
-              refusal={refusal}
-              onMove={(token, alternative) => { void move(token, alternative); }}
-              onCorrect={() => {
-                const asks = desk.data?.fragments?.correction?.asks;
-                if (asks) askGeorge(asks);
-              }}
-            />
-            <Board
-              answers={answers}
-              board={shapedByReplay(drawn, shapes)}
-              local={local}
-              focused={focused}
-              selection={selection.map((s) => s.label)}
-              live={busy}
-              retuned={retuned}
-              on={on}
-              seenUpTo={firstUnseen(answers, sinceAt)}
-            />
-            {/* ONE SENTENCE, ALWAYS LAST. It is the third slot of the reading
-                and it is drawn here rather than up there, because it is read
-                after the evidence: the figures, then what to do about them. */}
-            <ReadingNext reading={latest?.reading} />
+            {behind ? (
+              // A VIEW, NOT A PANEL. The evidence replaces the conversation
+              // rather than sitting under it: a list of every read in the
+              // thread beneath the answer it belongs to would be a page you
+              // scroll past, and P2.a names this one of three views.
+              <BehindIt answers={answers} focus={behind.focus}
+                        onBack={() => setBehind(null)} />
+            ) : (
+            <>
+              {/* THE READING, ABOVE THE BOARD, ALWAYS. His words are not an
+                  object and cannot be forgotten into one: whatever he says
+                  this turn is drawn here, with the turn's caveats above it,
+                  and the objects below are its evidence. See Reading.tsx. */}
+              {/* WHAT CAME BEFORE IT, folded to one quiet line — above the
+                  finding, because that is the order they happened in. */}
+              <Earlier count={earlier.length} open={unfolded}
+                       onToggle={() => setUnfolded((o) => !o)} />
+              <Reading text={latest?.text} notices={notices} reading={latest?.reading}
+                       calls={latest?.toolCalls}
+                       onFigure={(seq) => setBehind({ focus: `${answers.length - 1}:${seq}` })} />
+              {/* WHAT THESE FIGURES ARE OF, AND HOW TO MOVE IT (P1.j). The
+                  arguments the loop accepted, drawn between his reading and the
+                  evidence it is about — which is where they are read, and where
+                  what they change is directly below them. Tapping one is a
+                  replay; typing one of the same words is the same act. */}
+              <Tokens
+                tokens={tokens}
+                correction={desk.data?.fragments?.correction?.token}
+                moving={moving > 0}
+                refusal={refusal}
+                onMove={(token, alternative) => { void move(token, alternative); }}
+                onCorrect={() => {
+                  const asks = desk.data?.fragments?.correction?.asks;
+                  if (asks) askGeorge(asks);
+                }}
+              />
+              <Board
+                answers={answers}
+                board={shapedByReplay(drawn, shapes)}
+                local={local}
+                focused={focused}
+                selection={selection.map((s) => s.label)}
+                live={busy}
+                retuned={retuned}
+                on={on}
+                seenUpTo={firstUnseen(answers, sinceAt)}
+              />
+              {/* ONE SENTENCE, ALWAYS LAST. It is the third slot of the reading
+                  and it is drawn here rather than up there, because it is read
+                  after the evidence: the figures, then what to do about them. */}
+              <ReadingNext reading={latest?.reading} />
+            </>
+            )}
           </>
         )}
 

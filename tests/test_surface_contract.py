@@ -298,8 +298,11 @@ def test_every_tool_george_can_call_has_words_on_the_room_surface():
 
     from agent import composite_tools, loop, write_tools
 
+    # The words moved to work.ts with P1.k, where the live trail, the line
+    # above the claim and the Behind it view all read the same ones. One map,
+    # three surfaces — two copies would be two answers to "what is he doing".
     source = (Path(__file__).resolve().parents[1]
-              / "frontend" / "src" / "room" / "Working.tsx").read_text(encoding="utf-8")
+              / "frontend" / "src" / "room" / "work.ts").read_text(encoding="utf-8")
     block = source[source.index("export const WORDS"):source.index("function rows(")]
     named = set(re.findall(r"^\s{2}(\w+):\s*\[", block, re.M))
 

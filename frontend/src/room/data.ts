@@ -335,3 +335,20 @@ export function callOf(turn: AnswerTurn, seq: number | undefined): ToolCall | nu
 export function rowsOf(call: ToolCall | null): Record<string, unknown>[] {
   return call?.result?.rows ?? [];
 }
+
+/**
+ * WARNINGS THE LOOP RAISES ABOUT GEORGE'S OWN EDITS — never a tool's notice.
+ *
+ * "rockwell-hours: a block carries a kind or a spec, never both" is process,
+ * not a caveat on a figure: the refusal is already enforced and already
+ * conveyed to him, and drawing it above the answer made three readings wear a
+ * sentence about a shape he learnt to compose on the third try.
+ *
+ * Here rather than beside its first reader since P1.k, because the count of
+ * caveats on the work line has to leave out exactly the same ones the region
+ * above the board leaves out — two lists would be two answers to "how many
+ * caveats does this turn carry".
+ */
+export const PROCESS = new Set(['composition_rejected', 'findings_rejected',
+                                'restated_figure', 'misstated_figure',
+                                'enumerated_remainder']);

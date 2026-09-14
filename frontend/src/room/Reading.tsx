@@ -37,17 +37,55 @@
  * nothing is a defect, and it is recorded as one by the loop
  * (`answer_without_prose`), not narrated to the person by the screen.
  */
-import type { GeorgeNotice, ReadingFrame } from '../types/george';
+import type { GeorgeNotice, ReadingFrame, ToolCall } from '../types/george';
 import { Caveats } from './tiles';
 import { splitClaim } from './claim';
+import { placeFigures } from './figures';
 
-export function Reading({ text, notices, reading }: {
+/**
+ * A FIGURE IN THE CLAIM, UNDERLINED, GOING SOMEWHERE (P1.k).
+ *
+ * Hex lets you click a number and land on the logic behind it. Here the logic
+ * is a read: the numeral is matched against the numbers the turn's calls
+ * actually returned — by the same rule the server matches them (figures.ts) —
+ * and where one holds it, the span becomes a link to that read's receipts.
+ *
+ * A NUMERAL NO READ HOLDS IS DRAWN AS HE WROTE IT. No underline, no marker,
+ * no warning: this is not a check on his arithmetic (CLAUDE.md rule 9 leaves
+ * that to the evals), it is a door for the figures that have one. P2.b is
+ * where an unmatched numeral gets a mark of its own.
+ */
+function Lit({ text, calls, onFigure }: {
+  text: string;
+  calls: ToolCall[];
+  onFigure?: (seq: number) => void;
+}) {
+  if (!onFigure || !calls.length) return <em className="r-claim">{text}</em>;
+  return (
+    <em className="r-claim">
+      {placeFigures(text, calls).map((piece, n) => (
+        piece.seq === undefined ? <span key={n}>{piece.text}</span> : (
+          <button key={n} type="button" className="r-figure"
+                  onClick={() => onFigure(piece.seq as number)}>
+            {piece.text}
+          </button>
+        )
+      ))}
+    </em>
+  );
+}
+
+export function Reading({ text, notices, reading, calls, onFigure }: {
   /** The turn's own words. Streaming, so it fills as he speaks. */
   text: string | null | undefined;
   /** The turn's caveats, already filtered to the ones no object carries. */
   notices?: GeorgeNotice[];
   /** The three slots, as the loop validated them. */
   reading?: ReadingFrame;
+  /** The turn's calls, so a figure in the claim can find the read behind it. */
+  calls?: ToolCall[];
+  /** Where a tapped figure goes. Absent leaves the claim plain. */
+  onFigure?: (seq: number) => void;
 }) {
   const said = (text ?? '').trim();
   const caveat = reading?.caveat?.trim();
@@ -68,7 +106,13 @@ export function Reading({ text, notices, reading }: {
           thing on the page. */}
       {said && (
         <p className="r-say r-say--reading">
-          {lit ? (<>{lit.before}<em className="r-claim">{lit.hit}</em>{lit.after}</>) : said}
+          {lit ? (
+            <>
+              {lit.before}
+              <Lit text={lit.hit} calls={calls ?? []} onFigure={onFigure} />
+              {lit.after}
+            </>
+          ) : said}
         </p>
       )}
     </section>
