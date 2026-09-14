@@ -24,7 +24,8 @@ THREE THINGS UNDER TEST, the same three that file tested.
 AND THE ONE GUARANTEE THAT MAKES A TEXT CHANNEL SAFE: the claim is a
 HIGHLIGHT. It is drawn only where the answer already carries those words, so
 it cannot put a character on screen the answer does not have — and `caveat`
-and `next` carry no digits at all.
+and `next` carry only a figure one of this turn's reads returned
+(`figures: returned`, 2026-09-14; they carried no digit at all before it).
 """
 
 from __future__ import annotations
@@ -54,8 +55,13 @@ CAVEAT = "Basket value fell at Magnolia and North Edsa even as their takings ros
 NEXT = "Draft the Seikyo order, since three of the five lines are theirs"
 
 
-def _validate(submitted):
-    return reading.validate(submitted, _DEFS)
+#: What "the reads returned" is, for the validator's own cases. The loop builds
+#: this from the calls themselves (agent/compose.py).
+RETURNED = {130016.0, 44.0, 118.0, 12.0, 1828.0, 11.5}
+
+
+def _validate(submitted, returned=RETURNED):
+    return reading.validate(submitted, _DEFS, returned)
 
 
 # ---------------------------------------------------------------------------
@@ -84,17 +90,52 @@ def test_each_slot_stands_on_its_own():
         assert accepted == {slot: text} and rejected == []
 
 
-def test_a_caveat_carrying_a_figure_is_refused():
-    # It is a characterisation drawn above the figures, not a figure — the
-    # same bound a note on a mark is held to (CLAUDE.md).
-    accepted, rejected = _validate({"caveat": "Basket value fell 12% at Magnolia"})
+def test_a_caveat_may_carry_a_figure_a_read_returned():
+    # THE FIX, 2026-09-14. The rule was "no digits", and it made George vaguer
+    # than his evidence: a count the tool itself put on `meta` could not be
+    # said. What qualifies these figures may name one of them.
+    accepted, rejected = _validate(
+        {"caveat": "44 of 118 products have no figure on one side, so they carry no change"})
+    assert rejected == [] and "44 of 118" in accepted["caveat"]
+
+
+def test_a_caveat_carrying_a_figure_no_read_returned_is_still_refused():
+    # 87 is 97 less the ten he chose to name, and no tool computed it. This is
+    # the half of the old rule that was protecting something.
+    accepted, rejected = _validate({"caveat": "The other 87 products are outside this list"})
     assert accepted == {}
-    assert "no digits" in rejected[0]["reason"] and rejected[0]["slot"] == "caveat"
+    assert rejected[0]["slot"] == "caveat"
+    assert "no read returned" in rejected[0]["reason"] and "87" in rejected[0]["reason"]
 
 
-def test_a_next_carrying_a_figure_is_refused():
+def test_a_next_may_carry_the_figure_that_is_the_reason_to_act():
+    accepted, rejected = _validate(
+        {"next": "Ask OPUS to recount — a shelf cannot hold minus 1,828 of anything"})
+    assert rejected == [] and accepted["next"].endswith("of anything")
+
+
+def test_a_next_carrying_a_figure_no_read_returned_is_refused():
     accepted, rejected = _validate({"next": "Order 806 units from Seikyo"})
     assert accepted == {} and rejected[0]["slot"] == "next"
+    assert "no read returned" in rejected[0]["reason"]
+
+
+def test_a_turn_that_read_nothing_may_say_no_figure_at_all():
+    # Not a stricter rule: with no read behind it, every figure is invented.
+    accepted, rejected = _validate({"caveat": "Basket value fell 12% at Magnolia"},
+                                   returned=set())
+    assert accepted == {} and rejected[0]["slot"] == "caveat"
+
+
+def test_a_date_a_day_number_and_a_small_count_were_never_figures():
+    # Four of the eight refusals in the recorded run were these: the window the
+    # comparison covers, said plainly. The matcher is agent/prose's, so a slot
+    # and the gate on the answer excuse exactly the same things.
+    accepted, rejected = _validate(
+        {"caveat": "This is last week, 7 to 13 September, against the seven days before it",
+         "next": "Tell me whether 8 weeks should count from delivery"},
+        returned=set())
+    assert rejected == [] and len(accepted) == 2
 
 
 def test_a_claim_may_carry_its_figure_because_it_is_the_answer_s_own_words():
@@ -136,8 +177,24 @@ def test_whitespace_is_flattened_so_a_wrapped_claim_still_matches():
 def test_the_bounds_are_the_definitions_and_not_this_file():
     spec = _DEFS["voice"]["reading"]["slots"]
     assert set(spec) == set(reading.SLOTS)
-    assert spec["caveat"]["no_digits"] is True and spec["next"]["no_digits"] is True
-    assert "no_digits" not in spec["claim"]
+    assert (spec["caveat"]["figures"] == spec["next"]["figures"]
+            == reading.FIGURES_RETURNED)
+    # The claim declares no rule at all: it is a span of the answer, governed
+    # by voice.restatement like every other figure the answer carries.
+    assert "figures" not in spec["claim"] and "no_digits" not in spec["claim"]
+    # A rule nobody implemented raises rather than quietly allowing anything.
+    bent = {"voice": {"reading": {"slots": {"caveat": {"figures": "anything"}}}}}
+    with pytest.raises(ValueError):
+        reading.validate({"caveat": "a caveat"}, bent)
+
+
+def test_what_is_not_a_figure_is_one_number_in_one_place():
+    # Declared in the definitions and shared with the gate on the answer's
+    # prose; two rules disagreeing about what a figure is would be the measure
+    # and the gate drifting apart.
+    from agent import prose
+
+    assert reading.presentation_max(_DEFS) == prose.PRESENTATION_MAX
 
 
 # ---------------------------------------------------------------------------
@@ -286,7 +343,8 @@ def test_a_refused_slot_is_named_and_the_rest_stand(monkeypatch):
     frames, _ = _drive(monkeypatch, [
         [_ToolUse("tu-1", "get_sales", SALES)],
         [_ToolUse("tu-2", george_loop.COMPOSE_TOOL,
-                  {"reading": {"claim": "Rockwell fell", "next": "Check the 3 lines"}})],
+                  {"reading": {"claim": "Rockwell fell",
+                               "next": "Check the 4,120 lines behind it"}})],
         [_TextBlock("Rockwell fell against the week before.")],
     ])
     (frame,) = _frames_of(frames, "reading")

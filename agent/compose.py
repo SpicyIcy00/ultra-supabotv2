@@ -653,7 +653,12 @@ def compose(blocks: Any, reading: Any = None, *,
 
     said, said_rejected = ({}, [])
     if reading is not None:
-        said, said_rejected = _reading.validate(reading, defs)
+        # THE FIGURES THIS TURN ACTUALLY READ, so `caveat` and `next` may say
+        # one and may not invent one (voice.reading.slots, `figures: returned`).
+        # Taken from the calls this composition is already validated against —
+        # the same rows, the same meta, no second source of truth.
+        said, said_rejected = _reading.validate(
+            reading, defs, _reading.returned_numbers(calls.values()))
     return {
         "rows": accepted,
         "meta": {

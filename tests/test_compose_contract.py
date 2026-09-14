@@ -516,10 +516,11 @@ def test_what_feature_one_names_is_still_composable(defs):
     assert "next" in req(defs, "voice.reading.slots")
 
 
-def test_a_recommendation_is_a_sentence_now_and_still_carries_no_figure(defs):
+def test_a_recommendation_is_a_sentence_now_and_still_carries_no_figure_of_his_own(defs):
     """
     George picks the words; the number is not his to write. The `next` slot
-    carries no digits at all, so "order 806 units" is unrepresentable there —
+    carries only a figure one of this turn's reads returned, so "order 806
+    units" over reads that returned no such number is unrepresentable there —
     the quantity stays on the draft the block draws, with its receipts.
     """
     from agent import reading as george_reading
@@ -527,7 +528,10 @@ def test_a_recommendation_is_a_sentence_now_and_still_carries_no_figure(defs):
     ok, no = george_reading.validate({"next": "Send the Seikyo order as it stands"}, defs)
     assert ok["next"] and no == []
     ok, no = george_reading.validate({"next": "Order 806 units of Aji Mix"}, defs)
-    assert ok == {} and "no digits" in no[0]["reason"]
+    assert ok == {} and "no read returned" in no[0]["reason"]
+    # And where the plan itself returned 806, saying it is the reason to act.
+    ok, no = george_reading.validate({"next": "Order 806 units of Aji Mix"}, defs, {806.0})
+    assert no == [] and ok["next"].startswith("Order 806")
 
     # And the verb is no longer a closed list, because it is a sentence a
     # person reads rather than a token a tile draws.

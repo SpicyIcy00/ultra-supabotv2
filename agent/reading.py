@@ -26,11 +26,20 @@ WHY THIS IS NOT A HOLE IN RULE 9. A figure is still bound, never authored:
   everything that has always governed it (voice.restatement, the notice gates,
   the remainder gate).
 
-  `caveat` AND `next` CARRY NO DIGITS AT ALL, checked here. They are
-  characterisations, and CLAUDE.md's bound on an annotation is exactly this: it
-  may point at rows and characterise them, and may never name a number. A
-  caveat's figures are on the notice it paraphrases and on the objects below
-  it; a next step is a sentence about what to do, not about how much.
+  `caveat` AND `next` CARRY ONLY A FIGURE A READ RETURNED, checked here
+  (`figures: returned`, 2026-09-14). They carried no digits at all until then,
+  and the rule made George vaguer than his evidence: "44 of 118 products have
+  no figure on one side" — a count `meta.comparison.not_ranked` returned — was
+  refused, and "roughly half" was what fitted. Three recorded runs refused 0, 6
+  and 8 slots for it, every one of them a true qualification of the figures
+  below it. What is still refused is the thing worth refusing: a number no read
+  returned, which is George doing arithmetic on the board. Dates and small
+  counts are not figures and never were.
+
+  A BLOCK'S `claim` IS UNCHANGED and still carries no digits at all
+  (agent/compose.py). That one IS an annotation — it titles a mark that draws
+  the figure underneath it — and CLAUDE.md's bound on an annotation holds
+  exactly there. The reading is not an annotation; it is what George says.
 
 Every slot is bounded by metrics.yaml `voice.reading.slots`, and a slot that
 fails is DROPPED with a reason, the rest standing — the same way a block that
@@ -42,21 +51,43 @@ would change a figure.
 from __future__ import annotations
 
 import re
-from typing import Any, Mapping, Optional
+from typing import Any, Iterable, Mapping, Optional
+
+from agent import prose as _prose
 
 #: The order they are read in, and the order they are drawn in.
 SLOTS = ("claim", "caveat", "next")
+
+#: The only value `figures` takes: a figure this turn's reads returned, and no
+#: other. A slot declaring anything else is a definition nobody implemented,
+#: and it raises rather than silently allowing everything.
+FIGURES_RETURNED = "returned"
 
 
 class Rejected(ValueError):
     """One slot refused, with a reason a person could act on."""
 
 
+def _reading(defs: Mapping[str, Any]) -> Mapping[str, Any]:
+    return ((defs.get("voice") or {}).get("reading") or {})
+
+
 def slots(defs: Mapping[str, Any]) -> Mapping[str, Any]:
-    return ((defs.get("voice") or {}).get("reading") or {}).get("slots") or {}
+    return _reading(defs).get("slots") or {}
 
 
-def _check(name: str, value: Any, spec: Mapping[str, Any]) -> str:
+def presentation_max(defs: Mapping[str, Any]) -> int:
+    """What is not a figure here, read from the definitions rather than fixed."""
+    return int(_reading(defs).get("presentation_max") or _prose.PRESENTATION_MAX)
+
+
+def returned_numbers(results: Iterable[Mapping[str, Any]]) -> set[float]:
+    """Every number the turn's reads returned, rows and meta alike."""
+    return _prose.allowed_numbers([dict(r) for r in results])
+
+
+def _check(name: str, value: Any, spec: Mapping[str, Any],
+           returned: set[float], presentation: int) -> str:
     if not isinstance(value, str) or not value.strip():
         raise Rejected(f"{name} is a few words, or it is left out")
     text = " ".join(value.split())
@@ -66,16 +97,29 @@ def _check(name: str, value: Any, spec: Mapping[str, Any]) -> str:
             f"{name} is at most {longest} characters — it is one thing said "
             f"once (voice.reading.slots.{name})"
         )
-    if spec.get("no_digits") and any(ch.isdigit() for ch in text):
-        raise Rejected(
-            f"{name} carries no digits — it characterises the figures, it "
-            f"never states one; the number is already drawn below it "
-            f"(voice.reading.slots.{name})"
+    rule = spec.get("figures")
+    if rule == FIGURES_RETURNED:
+        # A FIGURE, NOT A DIGIT. The matcher is the one the answer's own gates
+        # use (agent/prose), so a caveat and a sentence excuse the same dates,
+        # day numbers and small counts — two rules that disagreed about what a
+        # figure is would be the measure and the gate drifting apart again.
+        unbacked = _prose.unreturned_figures(text, returned, presentation)
+        if unbacked:
+            wrote = ", ".join(f"{n:g}" for n in unbacked[:3])
+            raise Rejected(
+                f"{name} carries a figure no read returned ({wrote}) — it may "
+                f"say a number this turn read, never one worked out from them "
+                f"(voice.reading.slots.{name})"
+            )
+    elif rule is not None:
+        raise ValueError(
+            f"voice.reading.slots.{name}.figures: {rule!r} is not a rule"
         )
     return text
 
 
-def validate(submitted: Any, defs: Mapping[str, Any]) -> tuple[dict, list[dict]]:
+def validate(submitted: Any, defs: Mapping[str, Any],
+             returned: Optional[set[float]] = None) -> tuple[dict, list[dict]]:
     """
     Which slots stand, and why the others do not.
 
@@ -83,10 +127,17 @@ def validate(submitted: Any, defs: Mapping[str, Any]) -> tuple[dict, list[dict]]
     the order they are drawn; `rejected` carries a reason per entry, which the
     loop surfaces as a warning — a slot that was refused is a thing the model
     tried to say and could not.
+
+    `returned` is every number this turn's reads returned. A turn that read
+    nothing passes nothing, and then a slot under `figures: returned` may carry
+    no figure at all — which is the same rule, not a stricter one: with no read
+    behind it, every figure is one George made up.
     """
     spec = slots(defs)
     if not spec:
         raise ValueError("metrics.yaml voice.reading.slots is not defined")
+    returned = set(returned or ())
+    presentation = presentation_max(defs)
     accepted: dict[str, str] = {}
     rejected: list[dict] = []
     if submitted is None:
@@ -105,7 +156,8 @@ def validate(submitted: Any, defs: Mapping[str, Any]) -> tuple[dict, list[dict]]
         if name not in submitted:
             continue
         try:
-            accepted[name] = _check(name, submitted[name], spec[name])
+            accepted[name] = _check(name, submitted[name], spec[name],
+                                    returned, presentation)
         except Rejected as why:
             # WHAT WAS REFUSED, NOT ONLY WHY. P1.f's run refused five slots
             # across eleven turns, every one of them for a digit or a length,

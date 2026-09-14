@@ -157,6 +157,23 @@ def restated_sentences(answer: str, results: Iterable[dict]) -> list[str]:
             if any(_matches(n, d, allowed) for n, d in figures(s))]
 
 
+def unreturned_figures(text: str, allowed: set[float],
+                       presentation_max: int = PRESENTATION_MAX) -> list[float]:
+    """
+    Figures in `text` that no returned number matches — dates, years and small
+    counts excused as everywhere else in this module.
+
+    THE ONE CALLER IS A SLOT, NOT THE PROSE (agent/reading.py, 2026-09-14).
+    `caveat` and `next` carried no digits at all until today; this is what they
+    carry instead, and it is strictly fewer refusals over exactly the same text.
+    Nothing here is pointed at the answer's paragraph — CLAUDE.md rule 9's
+    "production does not check numerals in prose against rows" is a statement
+    about that paragraph and it stays true.
+    """
+    return [n for n, d in figures(text, presentation_max)
+            if not _matches(n, d, allowed)]
+
+
 #: How much of a drawn figure a prose numeral must keep to count as that figure
 #: said badly rather than as a different number. 801 written as 800 keeps two
 #: of its own digits and is this defect; written as 1000 it keeps none of them,

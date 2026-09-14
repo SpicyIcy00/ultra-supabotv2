@@ -461,8 +461,8 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
         # strings, bounded and checked (agent/reading.py). The claim is a
         # HIGHLIGHT — the surface lights it where he says it in the answer, and
         # drops it where he does not — so this channel cannot put a character
-        # on screen the answer does not already carry; the other two carry no
-        # digits at all.
+        # on screen the answer does not already carry; the other two carry only
+        # a figure one of this turn's reads returned.
         spec = req(_load_defs(), "voice.reading.slots")
         return {
             "type": "object",
@@ -3409,6 +3409,14 @@ async def run(
                     # The rows, so a composition's subject can be checked
                     # against what the read actually carried (agent/compose.py).
                     "rows": (result.get("rows") if isinstance(result, dict) else None) or [],
+                    # And the meta, because a caveat's figure is usually IN it:
+                    # how many rows a comparison could not rank, how many the
+                    # grouping actually held. Without this the reading's
+                    # `figures: returned` rule would refuse "44 of 118 products
+                    # have no figure on one side" — which is the count the tool
+                    # itself put on meta.comparison (agent/reading.py).
+                    "meta": ((result.get("meta") if isinstance(result, dict) else None)
+                             or {}),
                     # What the read is SCOPED to, as the tool declared it —
                     # meta.filters_applied, implicit filters included. A read
                     # filtered to one shop is ABOUT that shop even when the

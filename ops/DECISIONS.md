@@ -3858,3 +3858,16 @@ itself, named with the tile so it wins on specificity rather than file order.
 Two more read out of the same screenshots: `comparisons.*.display_name`
 already starts with "vs" and P1.e prefixed another, and a table's constant
 columns now name themselves, because the frame took the title they leant on.
+
+**A caveat may carry a figure a read returned, and no other.** 2026-09-14,
+the dogfood log's one Open item: `caveat` and `next` carried no digit at all,
+which refused "44 of 118 products have no figure on one side" — a count the
+tool put on `meta` — eight times in one recorded run. It is the question
+`max_restated_sentences: 0 → 1` answered a day earlier one slot over: citing a
+figure is not reciting the board. `voice.reading.slots` now declares
+`figures: returned`, checked with `agent/prose`'s matcher so a slot and a
+sentence excuse the same dates and small counts, and the slot's description
+tells the model the rule — it never did. Replayed on `p1h-v2.json`: 7 of 8
+stand, and "the other 87 products" stays refused, because 87 is arithmetic.
+A block's `claim` is untouched: that one is an annotation on a mark.
+

@@ -4883,10 +4883,32 @@ voice:
   #           ("the one thing to check next"), and so does what used to be the
   #           `recommendation` widget's verb.
   #
-  # NO DIGITS IN `caveat` OR `next`, checked. They are characterisations, held
-  # to CLAUDE.md's bound on an annotation; the claim is the one that may carry
-  # a figure, because it IS the answer and `restatement` above is what governs
-  # figures in the answer.
+  # A FIGURE A READ RETURNED, AND NO OTHER (`figures: returned`, 2026-09-14).
+  # Until this afternoon `caveat` and `next` carried no digits at all, and the
+  # rule made George vaguer than his evidence: he could not write "44 of 118
+  # products have no figure on one side" — a count `meta.comparison.not_ranked`
+  # returned — and reached for "roughly half" instead. Three recorded runs
+  # refused 0, then 6, then 8 slots for it, six of the eight one rule, and
+  # every refused sentence was a true qualification of the figures below it.
+  #
+  # It is the question already decided one slot over. `restatement` went 0 → 1
+  # on 2026-09-13 because a reading may carry the figure its claim is about;
+  # what needed forbidding was RECITING the board, not citing it once. The same
+  # answer, for the same reason, applies here.
+  #
+  # WHAT IS STILL REFUSED, and it is the part that matters: a figure no read
+  # returned. Dates, day numbers and counts to voice.reading.presentation_max
+  # are not figures and never were; everything else must match a number in the
+  # rows or meta the turn read, which is agent/prose's own matcher — so "the
+  # other 87 products" stays refused, because 87 is 97 less the ten he chose to
+  # name and no tool computed it. This is a LOOSENING of a deterministic check
+  # on a structured slot, not a new check on prose: CLAUDE.md rule 9's
+  # "production does not check numerals in prose against rows" is about the
+  # answer's paragraph, which is untouched.
+  #
+  # A block's `claim` is unchanged and still carries no digits: it titles a
+  # mark that draws the figure underneath it, which is CLAUDE.md's bound on an
+  # annotation. The reading is not an annotation — it is what George says.
   #
   # They ride the `compose` call that already happens, so none of this is a
   # round trip: agent/reading.py validates, agent/loop.py records.
@@ -4906,8 +4928,10 @@ voice:
           the one thing that qualifies these figures, in plain words, whole —
           it is drawn above them, so it does not have to be squeezed into a
           clause. Nothing technical: a caveat that sounded like a column name
-          is rewritten, never dropped.
-        no_digits: true
+          is rewritten, never dropped. A figure belongs here when a read
+          returned it — say how many rows a comparison could not rank — and
+          never one you worked out yourself.
+        figures: returned
         # 240 → 320, measured 2026-09-14 on P1.f's own run. The bound refused
         # the `caveats` scenario's caveat outright, and the Ideal UI's own
         # morning caveat — two blind spots, named and explained — is 243
@@ -4919,10 +4943,19 @@ voice:
         about: >
           ONE sentence: the one thing you would do or check next, drawn last,
           under the evidence. Where an investigation stopped, this is where it
-          says what to look at. Leave it out only when there is genuinely
+          says what to look at. A figure belongs here only when a read returned
+          it — the reason to act is often a number on the board — and never one
+          you worked out yourself. Leave it out only when there is genuinely
           nothing to do next.
-        no_digits: true
+        figures: returned
         max_length: 160
+    # WHAT IS NOT A FIGURE, wherever `figures: returned` is declared. A whole
+    # number to here, with no decimals and no per-cent sign, is a day number or
+    # a small count — "3 of 7 shops", "the 12th", "8 weeks from delivery" — and
+    # is excused, as are dates and years. It is agent/prose.PRESENTATION_MAX,
+    # named here so the two cannot drift: the gate on the answer's prose and
+    # the rule on these slots excuse the same things.
+    presentation_max: 31
     # A claim nobody said is not drawn, and the loop records that it was not:
     # the gap log's own word for it, so the rate is measurable rather than
     # asserted.

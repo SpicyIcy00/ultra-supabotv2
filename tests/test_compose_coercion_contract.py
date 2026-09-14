@@ -290,12 +290,26 @@ def test_the_slots_are_the_same_rules_reading_owns(defs):
     """
     from agent import reading as george_reading
 
-    said = {"claim": "Rockwell is down", "caveat": "the count fell 3 days running"}
+    said = {"claim": "Rockwell is down", "caveat": "the count fell 412,999 short"}
+    returned = george_reading.returned_numbers(CALLS.values())
     through_compose = compose.compose(None, said, calls=CALLS, defs=defs)
-    accepted, rejected = george_reading.validate(said, defs)
+    accepted, rejected = george_reading.validate(said, defs, returned)
     assert through_compose["meta"]["reading"] == accepted
     assert through_compose["meta"]["rejected_slots"] == rejected
     assert len(rejected) == 1
+
+
+def test_the_figures_the_slots_may_carry_are_the_calls_own(defs):
+    """
+    THE DOOR CARRIES THE NUMBERS THROUGH (2026-09-14). `caveat` and `next` may
+    say a figure one of this turn's reads returned, so compose has to hand the
+    validator the calls it is already validating against — not a second source
+    of truth, and not nothing, which would refuse every figure.
+    """
+    said = {"caveat": "Rockwell is 412,884 against the week before, and it is the only one"}
+    out = compose.compose(None, said, calls=CALLS, defs=defs)
+    assert out["meta"]["rejected_slots"] == []
+    assert out["meta"]["reading"]["caveat"].startswith("Rockwell is 412,884")
 
 
 def test_a_claim_with_a_digit_in_it_is_refused_not_stripped(defs):

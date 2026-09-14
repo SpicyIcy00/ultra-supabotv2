@@ -71,7 +71,7 @@ KINDS: dict[str, str] = {
     "answer_without_prose":    "the turn drew objects and said nothing — shapes and silence",
     "notice_forced":           "a caveat had to be forced into the answer",
     "claim_not_said":          "the claim he asked to be lit is not in what he said, so nothing was lit",
-    "reading_rejected":        "a slot of the reading was refused — a figure in a caveat, or a slot past its bound",
+    "reading_rejected":        "a slot of the reading was refused — a figure no read returned, or a slot past its bound",
     "volunteering_over_cap":   "more unasked-for figures than the cap allows",
     "tool_vocabulary_leaked":  "tool names reached the answer",
     "transaction_wording":     "raw table wording reached the answer",

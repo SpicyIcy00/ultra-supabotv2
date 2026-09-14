@@ -57,6 +57,12 @@ on compose frame" does.
 
 ## Open
 
+**Nothing.**
+
+---
+
+## Fixed
+
 ### 2026-09-14 · the caveat is forbidden a number, and George keeps trying
 
 Found by reading `verification/p1h-v2.json`'s `warning_detail`, not by a
@@ -95,13 +101,36 @@ a run. Both are defensible; being refused eight times is not.
 Report: `verification/p1h-v2.json`, `warning_detail` where
 `reason = reading_rejected`.
 
+**DECIDED: a caveat may carry a figure a read returned, and no other.**
+The first of the two readings above, for the reason the second slot was
+already decided on 2026-09-13 — `max_restated_sentences` went 0 → 1 because a
+reading may carry the figure its claim is about, and what needed forbidding
+was RECITING the board rather than citing it once. The caveat sits above the
+figures it qualifies; refusing it the count the tool itself returned made
+George vaguer than his evidence, which is the one thing a caveat cannot afford
+to be.
 
+The slot rule is now `figures: returned` (metrics.yaml `voice.reading.slots`),
+checked with the matcher the answer's own gates use (`agent/prose`), so a slot
+and a sentence excuse the same dates, day numbers and counts to 31. The model
+is TOLD the rule in the slot's own description, which it never was — that is
+half of why it kept trying.
 
-**Nothing.**
+**What is still refused is the half that was protecting something.** Replayed
+through the new rule, the run's own refusals: **7 of the 8 now stand, and the
+one still refused is "the other 87 products that sold are outside this list"**
+— 87 is 97 less the ten he named, the remainder arithmetic `prose` catches in
+the answer, and no tool computed it. Two further refusals in the same run were
+LENGTH, not digits; they are untouched, and the recorded text is truncated at
+200 characters so they cannot be re-judged from the report.
 
----
+A block's `claim` is unchanged and still carries no digit at all: that one IS
+an annotation on a mark that draws the figure underneath it, which is what
+CLAUDE.md bounds. The reading is not an annotation — it is what George says.
 
-## Fixed
+Closed by `98323b0`. Verified by replay of `verification/p1h-v2.json`, not
+by a new run: the eval costs $1.51 and nothing here needs the model to decide
+it. The next recorded run is what says whether the rate falls.
 
 ### 2026-09-14 · text overlapping text
 
