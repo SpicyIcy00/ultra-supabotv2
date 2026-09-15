@@ -9,6 +9,19 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-14 — Fable review of P1.✓: every number holds; the gate's evidence is thinner
+
+Recomputed from `p1close-v2.json`, the ledger, the prompt and schema hashes, the `agent/`
+diff and both suites: nothing in the close-out is wrong. Do not trust: **760 ms** is `run_call` timed in-process from a
+laptop — no HTTP, no browser, no render, never seen on the live build — so the gate's third
+condition is met by a unit timer. **19.0 → 17.1** includes `correction` reading NOTHING at
+low effort (0 calls, 5.3 s; was 4 calls, 16.9 s), and low is most turns in a one-thread UI
+(≤ 8 words with history). **Effort is unobservable in production**: not persisted, and a
+revoked beta pins the process to high under `api_retry`. **Five empty days are vacuous if he
+does not use the room.** **Opening a thread appends to the post record** (restore runs
+through `/replay`, which records) while the route comment says "transient". Not filed in
+the log: none is in his words, and an Open item resets the gate clock.
+
 ## 2026-09-14 — P1.✓: three of eight, and a measure that stopped measuring
 
 Phase 1 met three targets and missed five, and four of the five misses are one
