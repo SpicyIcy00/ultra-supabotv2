@@ -201,10 +201,28 @@ describe('a figure in the claim', () => {
     expect(pieces.find((p) => p.seq === 0)?.text).toContain('203,717');
   });
 
-  it('leaves a numeral no read returned exactly as he wrote it', () => {
+  it('hands back a numeral no read returned as a piece of its own', () => {
+    // It used to be folded into the prose and drawn identically to the words
+    // around it, so nothing on screen told the two kinds apart (P2.b). It is
+    // his text either way — the piece carries no `seq`, so there is still no
+    // door on it and no underline.
     const pieces = placeFigures('Rockwell did ₱999,999 last week.', [LANDED]);
-    expect(pieces).toHaveLength(1);
-    expect(pieces[0].seq).toBeUndefined();
+    expect(pieces.map((p) => p.text)).toEqual(['Rockwell did ', '₱999,999', ' last week.']);
+    expect(pieces[1].unplaced).toBe(true);
+    expect(pieces[1].seq).toBeUndefined();
+    expect(pieces[1].index).toBeUndefined();
+  });
+
+  it('numbers a placed figure by which read of the turn it was', () => {
+    const pieces = placeFigures('Rockwell did ₱203,717 last week.', [LANDED]);
+    const figure = pieces.find((p) => p.seq === 0);
+    expect(figure?.index).toBe(1);
+    expect(figure?.unplaced).toBeUndefined();
+  });
+
+  it('leaves a sentence with no figure in it whole', () => {
+    expect(placeFigures('Nothing here needs you today.', [LANDED]))
+      .toEqual([{ text: 'Nothing here needs you today.' }]);
   });
 
   it('matches a figure rounded to the precision written', () => {

@@ -9,6 +9,24 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-15 — P2.b: a marker is a promise, and so is drawing nothing
+
+An underline already meant "there is something behind this". Nothing meant
+either "nothing behind it" or "I have not looked", and the screen chose the
+same drawing for both — so a person had to tap a figure to learn whether it
+was tappable. A quieter ink for an unplaced figure is not a verdict on his
+arithmetic (rule 9 leaves that to the evals); it is the one fact the client
+holds. The index after a placed one comes from `readIndexes`, ONE definition
+read by the markers and by the trail, because a footnote that counted
+differently from the steps would point at the wrong evidence.
+**Both scans excuse things they compute, never things on a list**: his words
+are excused where they appear in the frames, a machine string where it appears
+inside a tool's error sentence. A list would have become the review the scan
+replaces. The card's "quiet" is the room's `--flat`; renaming the token would
+have been a word changing, not a meaning, so it was read and said, not done.
+
+---
+
 ## 2026-09-15 — a costume is not the same app, and he said so
 
 *"it doesnt feel like its from the same app and its beacause its not, so make

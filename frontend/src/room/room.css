@@ -800,6 +800,15 @@
   font: 400 10.5px/1.2 var(--mono);
   color: var(--ink-3); opacity: 0.85;
 }
+/* WHICH READ THIS RUNG IS (P2.b) — the number the markers in the claim point
+   at. Same face, same ink and the same size as the counts beside it: it is
+   another thing the frames already knew, not a rank. */
+.r-work-i {
+  font: 400 10.5px/1.2 var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3); opacity: 0.85;
+  min-width: 1ch;
+}
 /* How long he has been at it. Tabular so the digits do not shuffle the line
    sideways once a second, and quiet — it is the wait, not the answer. It
    never takes the accent: that colour means "needs you" and nothing else. */
@@ -866,6 +875,29 @@
   text-underline-offset: 3px;
 }
 .r-figure:hover, .r-figure:focus-visible { text-decoration-style: solid; }
+
+/* WHICH READ IT CAME OUT OF (P2.b). Perplexity's marker: a small number after
+   the figure, the same number the read wears in the trail above the claim. It
+   is a count off the turn's own calls, so it takes the receipt face and the
+   quietest ink in the room — it is a reference, and a reference that competed
+   with the figure would be the wrong way round. Never coloured: the one colour
+   means "needs you" (UI rule 5), and a footnote is not an approval. */
+.r-figure-n {
+  font: 400 9.5px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+  margin-left: 1px;
+  vertical-align: super;
+  line-height: 0;
+}
+
+/* A FIGURE WITH NO READ BEHIND IT (P2.b). The caveat's own ink and nothing
+   else: no underline, because an underline is a promise there is something to
+   open, and no marker, because there is no read to name. It says one thing and
+   it is the only thing the surface knows — this one you cannot open. It is NOT
+   a verdict on his arithmetic: a difference he worked out is a real number,
+   and CLAUDE.md rule 9 leaves checking prose numerals to the evals. */
+.r-figure-bare { color: var(--ink-2); }
 
 /* ------------------------------------------------------------ the thread
    ITS HEADER AND ITS THIRD VIEW (P2.a). A thread is already a page, so it has

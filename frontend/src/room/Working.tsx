@@ -96,6 +96,11 @@ function StepLine({ step, open, onToggle }: {
   const openable = Boolean(onToggle && (line || step.declined));
   const body = (
     <>
+      {/* WHICH READ THIS IS (P2.b). The same number a figure in the claim
+          wears, so "₱203,717²" and this line are visibly one thing. Only a
+          read that landed has one — a label call and a refusal are not
+          evidence a figure can have come out of. */}
+      {step.index !== null && <span className="r-work-i">{step.index}</span>}
       {step.state === 'running' ? `${step.words}…` : step.words}
       {step.state === 'declined' && <span className="r-work-n">declined</span>}
       {step.rows !== null && (

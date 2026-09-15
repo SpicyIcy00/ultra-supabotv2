@@ -43,34 +43,70 @@ import { splitClaim } from './claim';
 import { placeFigures } from './figures';
 
 /**
- * A FIGURE IN THE CLAIM, UNDERLINED, GOING SOMEWHERE (P1.k).
+ * EVERY FIGURE IN WHAT HE SAID, MARKED OR VISIBLY UNMARKED (P1.k, P2.b).
  *
  * Hex lets you click a number and land on the logic behind it. Here the logic
  * is a read: the numeral is matched against the numbers the turn's calls
  * actually returned — by the same rule the server matches them (figures.ts) —
- * and where one holds it, the span becomes a link to that read's receipts.
+ * and where one holds it, the span becomes a link to that read's receipts,
+ * with a small marker after it saying WHICH read. Two figures out of the same
+ * read wear the same number, and so does that read's line in the work trail,
+ * so the evidence a figure came out of can be seen without tapping anything.
  *
- * A NUMERAL NO READ HOLDS IS DRAWN AS HE WROTE IT. No underline, no marker,
- * no warning: this is not a check on his arithmetic (CLAUDE.md rule 9 leaves
- * that to the evals), it is a door for the figures that have one. P2.b is
- * where an unmatched numeral gets a mark of its own.
+ * A NUMERAL NO READ HOLDS IS DRAWN QUIETLY — the caveat's own ink, no
+ * underline, no marker. That is not a verdict on his arithmetic (CLAUDE.md
+ * rule 9 leaves checking prose numerals to the evals, and George works out
+ * differences and remainders himself all the time). It is the one thing the
+ * surface does know: there is nothing here to open. Before P2.b the two kinds
+ * looked identical, so the screen said a number was openable by saying
+ * nothing, and a person had to tap to find out.
+ *
+ * WITH NO CALLS, NOTHING IS MARKED EITHER WAY. A restored turn whose calls the
+ * record did not keep has read nothing HERE, and drawing its every figure as
+ * unplaced would report an absence of evidence that is an absence of RECORD
+ * (UI rule 8).
  */
+function Figures({ text, calls, onFigure }: {
+  text: string;
+  calls: ToolCall[];
+  onFigure?: (seq: number) => void;
+}) {
+  if (!onFigure || !calls.length) return <>{text}</>;
+  return (
+    <>
+      {placeFigures(text, calls).map((piece, n) => {
+        if (piece.unplaced) {
+          return <span key={n} className="r-figure-bare">{piece.text}</span>;
+        }
+        if (piece.seq === undefined) return <span key={n}>{piece.text}</span>;
+        return (
+          <span key={n}>
+            <button type="button" className="r-figure"
+                    onClick={() => onFigure(piece.seq as number)}>
+              {piece.text}
+            </button>
+            {/* THE MARKER, OUTSIDE THE DOOR. The figure is what you tap; this
+                says which read it came out of. It is a count off the turn's
+                own calls, so it wears the receipt face, not his. */}
+            {piece.index !== undefined && (
+              <sup className="r-figure-n">{piece.index}</sup>
+            )}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+/** The claim's span, lit where he said it, with its figures marked inside. */
 function Lit({ text, calls, onFigure }: {
   text: string;
   calls: ToolCall[];
   onFigure?: (seq: number) => void;
 }) {
-  if (!onFigure || !calls.length) return <em className="r-claim">{text}</em>;
   return (
     <em className="r-claim">
-      {placeFigures(text, calls).map((piece, n) => (
-        piece.seq === undefined ? <span key={n}>{piece.text}</span> : (
-          <button key={n} type="button" className="r-figure"
-                  onClick={() => onFigure(piece.seq as number)}>
-            {piece.text}
-          </button>
-        )
-      ))}
+      <Figures text={text} calls={calls} onFigure={onFigure} />
     </em>
   );
 }
@@ -107,12 +143,18 @@ export function Reading({ text, notices, reading, calls, onFigure }: {
       {said && (
         <p className="r-say r-say--reading">
           {lit ? (
+            // THE FIGURES ARE SCANNED ACROSS THE WHOLE ANSWER, not only inside
+            // the lit span (P2.b). A claim slot is the few words that ARE the
+            // point; the figures that qualify them are usually in the sentence
+            // after it, and until today every one of those was drawn as plain
+            // prose — so whether a figure could be opened depended on where in
+            // his paragraph he happened to put it.
             <>
-              {lit.before}
+              <Figures text={lit.before} calls={calls ?? []} onFigure={onFigure} />
               <Lit text={lit.hit} calls={calls ?? []} onFigure={onFigure} />
-              {lit.after}
+              <Figures text={lit.after} calls={calls ?? []} onFigure={onFigure} />
             </>
-          ) : said}
+          ) : <Figures text={said} calls={calls ?? []} onFigure={onFigure} />}
         </p>
       )}
     </section>

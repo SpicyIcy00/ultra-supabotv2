@@ -15,6 +15,15 @@
  * A review will not catch the fourth. This test will: any file that references
  * the accent token has to be listed below, with a reason, and adding one is a
  * visible edit in a diff rather than a class name nobody looked twice at.
+ *
+ * FIVE COLOURS, FROM 2026-09-15 (P2.b). The same scan now runs over the four
+ * that say something about a VALUE — `--up`, `--down`, `--flat` and
+ * `--george` — because they had the same hole the accent had before the room
+ * was added to this file: `palette.test.ts` bounds what a mark may paint with,
+ * and nothing bounded what everything else may. The reasoning for each is with
+ * `COLOUR_ALLOWED` below. The accent's rule and this one are not the same
+ * rule: the accent means "needs you" and has exactly one use; a data colour
+ * means what a tool measured and may be used wherever a tool measured it.
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -72,6 +81,66 @@ const ALLOWED: Record<string, string> = {
   // second chrome cannot quietly invent a second approvals colour.
   'room.css': 'the room defines the reserved token here',
 };
+
+/* ---------------------------------------------- the other four (P2.b) ----
+ *
+ * FIVE COLOURS MEAN SOMETHING IN THIS APP, and until today the scan guarded
+ * one of them. `palette.test.ts` holds the other four from the INSIDE — a mark
+ * may paint with these and nothing else — and nothing at all held them from
+ * the outside, so any file in the room could paint a figure green and no test
+ * would have an opinion. That is how the room's needs-you badge came to wear
+ * `--down`, which is the mistake this whole file exists to catch, one family
+ * over.
+ *
+ *   --up / --down   a direction a tool MEASURED. Only a mark measures one.
+ *   --flat          the absence of one: a row nobody emphasised, a baseline.
+ *                   The card calls this one "quiet", which is the room's word
+ *                   for the weight rather than for the colour; the token is
+ *                   `--flat` and it was not renamed, because three files and
+ *                   `palette.test.ts` read that name by value and a rename
+ *                   would be a word changing, not a meaning.
+ *   --george        his mark — "orange for George" (CLAUDE.md), the one hue
+ *                   that is an identity rather than a measurement, and the one
+ *                   with two jobs: the chrome he speaks through, and the
+ *                   emphasised row of a read that declared no direction.
+ *
+ * The scan reads `var(--x)` and no other form, because that is the only way a
+ * file outside `marks.tsx` can reach one: the marks themselves go through
+ * `paint()`, which the compiler and `palette.test.ts` already bound.
+ */
+const DATA_TOKENS = ['up', 'down', 'flat', 'george'] as const;
+
+const COLOUR_ALLOWED: Record<(typeof DATA_TOKENS)[number], Record<string, string>> = {
+  // NOTHING may name them. A direction is measured inside a drawing or it is
+  // decoration, and the drawing reaches the colour through `paint()`.
+  up: {},
+  down: {},
+  flat: {
+    'marks.tsx': 'the zero line a diverging mark is read against',
+    'room.css': 'defines it, and draws the spec bar and the dot that "was"',
+  },
+  george: {
+    'room.css': 'defines it, and the chrome he speaks through — links, focus, the caveat rule',
+    'Noticed.tsx': 'the label on what he noticed unasked: his voice, not a measurement',
+    'ObjectPanel.tsx': 'the one line of his in an opened object',
+    'Room.tsx': 'the edge of the composer he is answering into',
+  },
+};
+
+/** Comments out, so a token NAMED in a docstring is not a token USED. */
+function noComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, '');
+}
+
+/** The four directories this file guards, each with its source files. */
+function DIRS(): [string, string[]][] {
+  return [
+    [GEORGE_DIR, sourceFiles(GEORGE_DIR)],
+    [PAGES_DIR, sourceFiles(PAGES_DIR)],
+    [SHELL_DIR, sourceFiles(SHELL_DIR)],
+    [ROOM_DIR, sourceFiles(ROOM_DIR)],
+  ];
+}
 
 /**
  * Every source file in a directory — components and modules, never tests.
@@ -173,6 +242,36 @@ describe('UI rule 5 — one colour means "needs you"', () => {
   it('never lets the accent onto an instrument or the spine', () => {
     expect(ACCENT.test(readFileSync(join(GEORGE_DIR, 'Instruments.tsx'), 'utf8'))).toBe(false);
     expect(ACCENT.test(readFileSync(join(GEORGE_DIR, 'WorkSpine.tsx'), 'utf8'))).toBe(false);
+  });
+
+  it('keeps the four data colours where a value chose them', () => {
+    const offenders: string[] = [];
+    for (const [dir, files] of DIRS()) {
+      for (const name of files) {
+        const source = noComments(readFileSync(join(dir, name), 'utf8'));
+        for (const token of DATA_TOKENS) {
+          if (!new RegExp(`var\\(\\s*--${token}\\s*\\)`).test(source)) continue;
+          if (!(name in COLOUR_ALLOWED[token])) offenders.push(`${token}: ${name}`);
+        }
+      }
+    }
+    expect(
+      offenders,
+      `These files name a data colour with no recorded reason. --up and --down ` +
+        `are a direction a tool MEASURED, --flat is the absence of one, and ` +
+        `--george is his mark. A file that paints with one is saying something ` +
+        `about a value; if the value did not say it, the colour is a decoration.`,
+    ).toEqual([]);
+  });
+
+  it('lets no drawing colour reach a surface that draws no data', () => {
+    // The narrow claim, stated as itself: --up and --down exist to say which
+    // way a measured number went, and a mark is the only thing that measures
+    // one. `marks.tsx` reaches them through `paint()`, never by name, which is
+    // what `palette.test.ts` holds from the inside; from out here, NOTHING
+    // names them at all.
+    expect(Object.keys(COLOUR_ALLOWED.up)).toEqual([]);
+    expect(Object.keys(COLOUR_ALLOWED.down)).toEqual([]);
   });
 
   it('keeps the exemption list short enough to read', () => {

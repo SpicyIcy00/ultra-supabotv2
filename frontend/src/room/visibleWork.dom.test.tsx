@@ -8,17 +8,12 @@
  *   every read in Behind it has source, filters and time;
  *   nothing model-written appears in a mono line.
  *
- * THE LAST ONE IS A SCAN, not a review. It reads room.css for every class
- * whose rule sets `var(--mono)`, renders the work surfaces over a turn whose
- * prose is distinctive, and fails if one of George's own strings lands inside
- * one of them. The mono face is where frame-derived strings live — a source
- * table, a duration, a filter the definitions applied — and a sentence he
- * wrote wearing it is a claim borrowing the authority of a receipt. P2.b
- * extends the same scan to the other direction.
+ * THE LAST ONE IS A SCAN, not a review — and it left this file on 2026-09-15
+ * (P2.b) for `voices.dom.test.tsx`, where it sits beside its mirror: nothing
+ * model-written in a receipt line, nothing frame-derived in a prose line. The
+ * claim is unchanged and still enforced; what changed is that there are two
+ * of them now and they are read together.
  */
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
 import { cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -274,52 +269,10 @@ describe('behind it, over the runs that actually happened', () => {
 
 /* ------------------------------------------------------------- the scan */
 
-/** Every class whose rule sets the mono face, read out of room.css. */
-function monoClasses(): string[] {
-  const css = readFileSync(join(__dirname, 'room.css'), 'utf-8');
-  const out = new Set<string>();
-  for (const m of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
-    if (!/var\(--mono\)/.test(m[2])) continue;
-    for (const cls of m[1].matchAll(/\.([\w-]+)/g)) out.add(cls[1]);
-  }
-  return [...out];
-}
-
-describe('nothing model-written appears in a mono line', () => {
-  it('finds the mono classes in the stylesheet rather than being told them', () => {
-    const classes = monoClasses();
-    expect(classes).toContain('r-src');
-    expect(classes).toContain('r-work-n');
-    expect(classes).toContain('r-workline-line');
-  });
-
-  it('holds for every work surface, over a turn whose prose is unmistakable', () => {
-    const classes = monoClasses();
-    const said = 'Rockwell is down ₱18,400 on last week, and it is basket size rather than footfall.';
-    const { container } = render(
-      <>
-        <WorkLine turn={WHY} onBehind={() => {}} />
-        <BehindIt answers={[WHY]} onBack={() => {}} />
-        <Reading text={said} reading={WHY.reading} calls={WHY.toolCalls} onFigure={() => {}} />
-      </>,
-    );
-    // Open the steps, so what the fold hides is scanned too.
-    fireEvent.click(container.querySelector('.r-workline-line') as HTMLElement);
-    // WORDS THAT ARE HIS AND NOT THE DATA'S. A shop is named in the rows, in
-    // the filters and in his sentence, and a receipt printing "Rockwell" is
-    // printing what the tool returned — the scan is for his PROSE, so a word
-    // that appears anywhere in the turn's frames is not evidence of it.
-    const frames = JSON.stringify(WHY.toolCalls).toLowerCase();
-    const words = said.split(/\s+/)
-      .filter((w) => w.length > 4 && !frames.includes(w.toLowerCase()));
-    expect(words.length).toBeGreaterThan(4);
-    for (const cls of classes) {
-      for (const el of Array.from(container.querySelectorAll(`.${cls}`))) {
-        const text = el.textContent ?? '';
-        for (const word of words) {
-          expect(text.includes(word), `${cls} carries his words: ${text}`).toBe(false);
-        }
-      }
-    }
-  });
-});
+/**
+ * THE SCAN MOVED, AND IT GREW A MIRROR. "Nothing model-written in a mono line"
+ * is P1.k's and is still enforced; it lives in `voices.dom.test.tsx` now,
+ * beside the other direction P2.b added — nothing frame-derived in a prose
+ * line. One file, two faces, both scanned off room.css, because the pair only
+ * makes sense read together.
+ */

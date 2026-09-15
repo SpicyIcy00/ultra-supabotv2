@@ -21,15 +21,30 @@
  * nowhere is worse than no link. CLAUDE.md rule 9 stands: production does not
  * check the answer's numerals against the rows, and this does not either. It
  * answers a different question — which read holds this one — and a numeral it
- * cannot place is drawn exactly as George wrote it.
+ * cannot place carries George's own words and nothing else.
+ *
+ * AND IT NOW SAYS WHICH READ, NOT JUST THAT THERE IS ONE (P2.b). A placed
+ * figure carries the read's index, so two figures out of the same read wear
+ * the same number and the trail above the claim wears it too. An unplaced one
+ * is returned as a piece of its own rather than folded back into the prose,
+ * so the reading can draw it quietly instead of identically.
  */
 import type { ToolCall } from '../types/george';
+import { readIndexes } from './work';
 
 /**
  * A numeral, with the currency and the magnitude suffix it may wear.
  * The lookbehind keeps `v2` and `1.2.3` out of it, as the Python does.
+ *
+ * THE SPACE BEFORE THE SUFFIX SITS INSIDE THE SUFFIX'S OWN GROUP, which is the
+ * one place this differs from `agent/prose.py` and is not a difference in the
+ * RULE. The Python reads the groups and never the span, so a loose trailing
+ * `\s?` costs it nothing when no suffix follows; here the span is the text cut
+ * out of his sentence, and "₱18,400 more" was taking the space with it, so the
+ * word after a figure lost its gap. Same numerals, same values, same matches —
+ * the ends of the span are simply true now (P2.b).
  */
-const NUMERAL = /(?<![\w.])[₱$]?\s?(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)\s?([kKmM]\b|%)?/g;
+const NUMERAL = /(?<![\w.])[₱$]?\s?(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)(?:\s?([kKmM]\b|%))?/g;
 
 /** Dates and iso timestamps are struck out before the scan, never matched. */
 const DATE_PARTS = new RegExp(
@@ -148,27 +163,51 @@ export function readBehind(figure: Numeral, calls: ToolCall[]): ToolCall | null 
   return null;
 }
 
-/** One piece of a claim: plain text, or a figure with the read behind it. */
+/**
+ * One piece of a claim: plain text, a figure with the read behind it, or a
+ * figure with none.
+ *
+ * THE THIRD KIND IS THE POINT OF P2.b. Until today an unplaced figure was
+ * dropped back into the prose and drawn exactly like the words around it, so
+ * the screen said nothing at all about the difference between a number you can
+ * open and a number you cannot. Now every business figure in the reading is
+ * one of two things and looks like it.
+ */
 export interface ClaimPiece {
   text: string;
+  /** The call this figure came out of. Absent on prose and on an unplaced one. */
   seq?: number;
+  /** Which read of the turn that was, 1-based — the marker drawn after it. */
+  index?: number;
+  /** A figure no read of this turn returned. Never set beside `seq`. */
+  unplaced?: boolean;
 }
 
 /**
- * A claim cut into pieces, the placeable figures separated out.
+ * A claim cut into pieces, every business figure separated out.
  *
- * Returns one piece when nothing is placeable, so a caller can draw the string
- * it was given without asking whether anything was found.
+ * Returns one piece when the text holds no figure at all, so a caller can draw
+ * the string it was given without asking whether anything was found.
+ *
+ * AN UNPLACED FIGURE IS NOT AN ACCUSATION. It says there is nothing here to
+ * open, and no more than that: George works out differences and remainders in
+ * his own head and is allowed to, CLAUDE.md rule 9 leaves checking prose
+ * numerals to the evals, and this module cannot see the arithmetic. What the
+ * surface owes a person is the honest difference between a figure with a read
+ * behind it and a figure without one.
  */
 export function placeFigures(text: string, calls: ToolCall[]): ClaimPiece[] {
   if (!text) return [{ text }];
+  const numbered = readIndexes(calls);
   const pieces: ClaimPiece[] = [];
   let at = 0;
   for (const figure of figuresIn(text)) {
     const call = readBehind(figure, calls);
-    if (!call) continue;
     if (figure.start > at) pieces.push({ text: text.slice(at, figure.start) });
-    pieces.push({ text: text.slice(figure.start, figure.end), seq: call.seq });
+    const span = text.slice(figure.start, figure.end);
+    pieces.push(call
+      ? { text: span, seq: call.seq, index: numbered.get(call.seq) }
+      : { text: span, unplaced: true });
     at = figure.end;
   }
   if (!pieces.length) return [{ text }];

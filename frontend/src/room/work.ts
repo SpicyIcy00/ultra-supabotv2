@@ -109,6 +109,17 @@ export interface Step {
   turn: number;
   seq: number;
   tool: string;
+  /**
+   * WHICH READ THIS IS, 1-BASED, over the reads of this turn that LANDED.
+   *
+   * It is what a marker in the claim points at (P2.b): a figure wearing a
+   * small `2` and the second step wearing the same `2` are the same read, and
+   * a person can see which evidence a number came out of without tapping
+   * anything. Null for a label call, for a call still running and for a read
+   * that was refused — none of those is a read a figure can have come from,
+   * and numbering them would make the markers count something else.
+   */
+  index: number | null;
   /** What it IS, in words. Never the tool name unless the map has no entry. */
   words: string;
   state: StepState;
@@ -121,7 +132,32 @@ export interface Step {
   declined: string | null;
 }
 
-function stepOf(call: ToolCall, turn: number): Step {
+/**
+ * THE READS OF ONE TURN, NUMBERED, seq → 1-based index.
+ *
+ * One definition of "which read is this", read by the steps, by Behind it and
+ * by the markers on the figures. A second one would drift, and a marker that
+ * counted differently from the trail would be a number pointing at the wrong
+ * evidence — worse than no number.
+ *
+ * A read that LANDED, only. A duplicate is served out of the turn's own
+ * record and is not work anybody did; a label call read nothing; a refusal
+ * returned no rows, so no figure can have come out of it.
+ */
+export function readIndexes(calls: ToolCall[]): Map<number, number> {
+  const out = new Map<number, number>();
+  let n = 0;
+  for (const call of calls) {
+    if (call.duplicate_of !== undefined) continue;
+    if (!counts(call.tool)) continue;
+    if (!call.result || call.result.error) continue;
+    n += 1;
+    out.set(call.seq, n);
+  }
+  return out;
+}
+
+function stepOf(call: ToolCall, turn: number, index: number | null): Step {
   const [doing, done] = WORDS[call.tool] ?? [call.tool, call.tool];
   const result = call.result;
   const failed = Boolean(result?.error);
@@ -131,6 +167,7 @@ function stepOf(call: ToolCall, turn: number): Step {
     turn,
     seq: call.seq,
     tool: call.tool,
+    index,
     words: landed || failed ? done : doing,
     state: failed ? 'declined' : landed ? 'landed' : 'running',
     rows: landed && counts(call.tool) ? rows(result) : null,
@@ -153,9 +190,10 @@ function stepOf(call: ToolCall, turn: number): Step {
  */
 export function stepsOf(turn: AnswerTurn | null | undefined, index = 0): Step[] {
   if (!turn) return [];
+  const numbered = readIndexes(turn.toolCalls);
   return turn.toolCalls
     .filter((c) => c.duplicate_of === undefined)
-    .map((c) => stepOf(c, index));
+    .map((c) => stepOf(c, index, numbered.get(c.seq) ?? null));
 }
 
 /* ------------------------------------------------------------------- line */

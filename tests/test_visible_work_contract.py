@@ -189,14 +189,30 @@ def test_the_client_matcher_mirrors_the_server_matcher():
 
 def test_a_figure_with_no_read_behind_it_gets_no_underline():
     """
-    An underline is a promise that there is something behind it. `placeFigures`
-    skips a numeral no call holds, and the claim draws it exactly as written —
-    which is also CLAUDE.md rule 9 kept: production does not check the answer's
-    numerals against the rows, and this does not either.
+    An underline is a promise that there is something behind it, and it is
+    still only made for a figure a read holds — CLAUDE.md rule 9 kept:
+    production does not check the answer's numerals against the rows, and this
+    does not either.
+
+    WHAT CHANGED ON 2026-09-15 (P2.b): a numeral no call holds used to be
+    dropped back into the prose and drawn identically to the words around it,
+    so the screen said nothing at all about the difference between a figure you
+    can open and one you cannot. It now comes back as a piece of its own,
+    marked `unplaced`, never carrying a `seq` — so the reading can draw it
+    quietly instead of invisibly, and the door is still only on the placed one.
     """
     figures = _FIGURES_TS.read_text(encoding="utf-8")
     block = figures[figures.index("export function placeFigures"):]
-    assert "if (!call) continue;" in block
+    assert "{ text: span, unplaced: true }" in block
+    # The two are alternatives of one expression: nothing can be both.
+    assert "? { text: span, seq: call.seq, index: numbered.get(call.seq) }" in block
+    reading = (_ROOM / "Reading.tsx").read_text(encoding="utf-8")
+    # The door, and only the door, is a button.
+    assert 'className="r-figure"' in reading
+    assert 'className="r-figure-bare"' in reading
+    css = (_ROOM / "room.css").read_text(encoding="utf-8")
+    bare = css[css.index(".r-figure-bare"):css.index(".r-figure-bare") + 120]
+    assert "text-decoration" not in bare
 
 
 # ------------------------------------------------------ 4. no code on screen
