@@ -560,6 +560,26 @@
 .room:has(.r-board[data-rest="2"]) { --measure: 940px; }
 .room:has(.r-board[data-rest="3"]) { --measure: 1040px; }
 
+/* NO BOARD AT ALL IS NOT A SMALL BOARD — reported 2026-09-15: the list screens
+   were widened and *"it didnt change for the [t]alking page"*.
+
+   The rule above sizes the page from what is packed below the lead, which is
+   right while there IS a board: a column built for six holding two is the
+   empty space he reported on 09-14. But `data-rest="0"` is true of two very
+   different pages — one lead tile and nothing under it, and NOTHING AT ALL —
+   and only the first is a board being sized. A turn that read nothing (he was
+   looking at "Saved as Estate Week", `0 reads · 1 tool`) got the narrowest
+   page in the room: a 680px strip of chrome, reading and composer in a 1900px
+   window.
+
+   `data-board` is the precise signal and it is already on the element. With no
+   board, the page is sized like the room's other non-board screens rather than
+   by a grid that is not there — one width when George is just talking. The
+   reading inside it does not move: it is prose, and 66ch is its own measure.
+
+   After the rules above on purpose: same specificity, so source order decides. */
+.room:has(.r-board[data-board="0"]) { --measure: var(--measure-list); }
+
 .r-main {
   padding: 26px clamp(18px, 3vw, 40px) 150px;
   /* The rail is 56px of fixed chrome on the left, so it is padding here and

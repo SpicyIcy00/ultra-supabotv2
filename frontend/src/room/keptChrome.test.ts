@@ -58,6 +58,17 @@ const CONFIG = readFileSync(join(ROOT, 'tailwind.config.js'), 'utf8');
 const ROOM = postcss.parse(readFileSync(join(__dirname, 'room.css'), 'utf8'));
 const INDEX = postcss.parse(readFileSync(join(ROOT, 'src', 'index.css'), 'utf8'));
 
+/** The declarations of the rule with this exact selector, or null if there is none. */
+function ruleFor(root: postcss.Root, selector: string): Record<string, string> | null {
+  let found: Record<string, string> | null = null;
+  root.walkRules((rule) => {
+    if (rule.selector.trim() !== selector) return;
+    found = {};
+    rule.walkDecls((decl) => { found![decl.prop] = decl.value.trim(); });
+  });
+  return found;
+}
+
 /** Every declaration a rule with EXACTLY this selector makes, custom or not. */
 function declsOn(root: postcss.Root, selector: string): Record<string, string> {
   const out: Record<string, string> = {};
@@ -193,6 +204,27 @@ describe('the six chrome tokens the old components paint with', () => {
     // And prose keeps its own, here and in the reading. Running an answer the
     // full width of a 1900px screen is what a measure exists to prevent.
     expect(declsOn(ROOM, '.r-note')['max-width']).toBe('62ch');
+    expect(declsOn(ROOM, '.r-say--reading')['max-width']).toBe('66ch');
+  });
+
+  it('does not size a page with no board as though it had a small one', () => {
+    // "it didnt change for the [t]alking page" — 2026-09-15. `data-rest="0"`
+    // is true both of a lead tile with nothing under it and of no board at
+    // all, and only the first is a board being sized. A turn that read nothing
+    // was getting the narrowest page in the room.
+    const empty = ruleFor(ROOM, '.room:has(.r-board[data-board="0"])');
+    expect(empty, 'a boardless page has no measure of its own').toBeTruthy();
+    expect(empty!['--measure']).toBe('var(--measure-list)');
+    // And it has to come AFTER the data-rest rules, which have the same
+    // specificity: source order is what decides between them.
+    const at = (sel: string) => ROOM.index(
+      ROOM.nodes.find((n) => n.type === 'rule' && (n as postcss.Rule).selector.includes(sel))!);
+    expect(at('data-board="0"')).toBeGreaterThan(at('data-rest="3"'));
+  });
+
+  it('leaves the reading on its own measure whatever the page does', () => {
+    // The page got wider; his words did not. 66ch is prose, decided in P1.c,
+    // and no page width may run an answer across a 1900px screen.
     expect(declsOn(ROOM, '.r-say--reading')['max-width']).toBe('66ch');
   });
 

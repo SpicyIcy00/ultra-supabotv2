@@ -152,8 +152,28 @@ BARN Reorder". It has its own class now. Prose keeps its measure here and in
 the reading, because running an answer the full width of a 1900px screen is the
 thing a measure exists to prevent.
 
-`frontend/src/room/keptChrome.test.ts`, 25 cases — and every new assertion was
-checked by reintroducing its own defect, six for six.
+**And a fifth, because the first widening missed a screen:**
+
+> it didnt change for the laking page
+
+It hadn't. The talking page is not `.r-column` — it is `.r-measure`, which the
+room sizes from **how many objects sit below the lead** (`data-rest`), a rule
+added 09-14 answering his own "lots of empty space on the right". That rule is
+right while there IS a board. But `data-rest="0"` is true of two different
+pages — one lead tile with nothing under it, and **nothing at all** — and only
+the first is a board being sized. A turn that read nothing (he was looking at
+"Saved as Estate Week", `0 reads · 1 tool`) therefore got the narrowest page in
+the room: a 680px strip of chrome, reading and composer in a 1900px window.
+
+`data-board` is the precise signal and was already on the element. With no
+board the page is now sized like the room's other non-board screens — one
+width when George is just talking — and the reading inside it does not move,
+because 66ch is prose and that was decided in P1.c.
+
+`frontend/src/room/keptChrome.test.ts`, 27 cases — and every new assertion was
+checked by reintroducing its own defect, nine for nine. One of them checks the
+SOURCE ORDER of the new rule, because it has the same specificity as the ones
+it has to beat.
 
 
 ### 2026-09-14 · the caveat is forbidden a number, and George keeps trying
