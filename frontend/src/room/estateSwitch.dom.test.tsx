@@ -23,14 +23,17 @@ const defs = {
     label: 'estate',
     default: 'all',
     parts: [
-      { key: 'all', label: 'All', says: null, count_places: false,
+      { key: 'all', label: 'All', says: null,
         places: ['Rockwell', 'AJI BARN', 'AJI CMG'] },
-      { key: 'shops', label: 'shops', says: 'retail', count_places: true,
-        places: ['Rockwell', 'Fairview', 'Greenhills'] },
-      { key: 'barn', label: 'AJI BARN', says: 'warehouse', count_places: false,
-        places: ['AJI BARN'] },
+      // ONE BUSINESS, ONE PILL. The shops and both warehouses, because a
+      // warehouse is a place inside a business and a place is the selection's
+      // job — `@AJI BARN` binds one, a tap on a row binds one.
+      { key: 'aji_ichiban', label: 'Aji Ichiban', says: 'shops and warehouses',
+        places: ['Rockwell', 'AJI BARN', 'AJI CMG'] },
+      // THE OTHER BUSINESS, and the only part with no places: vending's are
+      // machines, which live in Weimi and not in the definitions.
       { key: 'vending', label: 'vending', says: 'the machines · own domain',
-        count_places: false, places: [] },
+        places: [] },
     ],
   },
 } as unknown as DeskDefinitions;
@@ -42,15 +45,15 @@ describe('the estate switch', () => {
     render(<EstateSwitch defs={defs} picked={null} onPick={vi.fn()} />);
     const pills = screen.getAllByRole('button');
     expect(pills.map((b) => b.textContent)).toEqual(
-      ['All', '3 shopsretail', 'AJI BARNwarehouse', 'vendingthe machines · own domain']);
+      ['All', 'Aji Ichibanshops and warehouses', 'vendingthe machines · own domain']);
   });
 
   it('marks the part that is on, and only that one', () => {
-    render(<EstateSwitch defs={defs} picked="barn" onPick={vi.fn()} />);
+    render(<EstateSwitch defs={defs} picked="aji_ichiban" onPick={vi.fn()} />);
     const on = screen.getAllByRole('button').filter(
       (b) => b.getAttribute('aria-pressed') === 'true');
     expect(on).toHaveLength(1);
-    expect(on[0].textContent).toContain('AJI BARN');
+    expect(on[0].textContent).toContain('Aji Ichiban');
   });
 
   it('hands back the part key that was pressed, and nothing else', () => {
@@ -62,12 +65,12 @@ describe('the estate switch', () => {
 
   it('wears no colour: the part that is on is border and weight', () => {
     const { container } = render(
-      <EstateSwitch defs={defs} picked="shops" onPick={vi.fn()} />);
+      <EstateSwitch defs={defs} picked="aji_ichiban" onPick={vi.fn()} />);
     // UI rule 5 — the accent is approvals and nothing else. Held here as well
     // as in accentUse.test.ts, because this is a new control and every new
     // control is where that rule gets broken.
     expect(container.innerHTML).not.toMatch(/accent/i);
-    expect(container.querySelector('.r-est--on')?.textContent).toContain('shops');
+    expect(container.querySelector('.r-est--on')?.textContent).toContain('Aji Ichiban');
   });
 
   it('draws nothing at all before the definitions arrive', () => {
@@ -100,9 +103,9 @@ describe('what the question carries', () => {
   );
 
   it('draws the business above the line, where the rest of what travels is', () => {
-    composer({ estate: { key: 'barn', label: 'AJI BARN' } });
+    composer({ estate: { key: 'aji_ichiban', label: 'Aji Ichiban' } });
     expect(screen.getByTitle('the part of the estate this question is about')
-      .textContent).toContain('AJI BARN');
+      .textContent).toContain('Aji Ichiban');
   });
 
   it('draws no chip on the default, because nothing is travelling', () => {

@@ -56,10 +56,22 @@ from tools._common import load_defs, req  # noqa: E402
 from tools.products import get_product  # noqa: E402
 from tools.purchasing import get_purchasing  # noqa: E402
 
-# The two groups of the estate a person can mean by name. The same pair
-# tools/objects.py opens a shop from, and the same pair the desk serves as
-# `locations` — never a third list.
-_STORE_GROUPS = ("active_retail", "warehouse")
+def _store_groups(defs: Mapping[str, Any]) -> tuple[str, ...]:
+    """
+    The groups of the estate a person can mean by name, from the definitions.
+
+    THIS WAS A TUPLE OF TWO HERE, and it was the second copy of the store
+    groups in Python. Both had drifted the same way — neither knew about
+    `vending_stock_location` — so `@AJI CMG` completed to nothing about a real
+    place with 3,534 inventory rows behind it.
+
+    It began to matter on 2026-09-15, when the estate switch stopped giving
+    the warehouses their own pills at the owner's word: typing a name is the
+    door to one place now, and a door that does not open is a place nobody can
+    reach. See `surface.desk.selection.mentions.kinds.store.groups`, which also
+    says which groups are deliberately NOT offered and why.
+    """
+    return tuple(str(g) for g in req(spec(defs), "kinds.store.groups"))
 
 
 def spec(defs: Optional[Mapping[str, Any]] = None) -> Mapping[str, Any]:
@@ -125,7 +137,7 @@ def _take(rows: list[tuple[int, dict]], cap: int) -> list[dict]:
 def stores(query: str, defs: Mapping[str, Any], cap: int) -> list[dict]:
     """The estate, by name, from the store list and nowhere else."""
     found: list[tuple[int, dict]] = []
-    for group in _STORE_GROUPS:
+    for group in _store_groups(defs):
         for entry in req(defs, f"stores.{group}") or []:
             if not isinstance(entry, Mapping):
                 continue

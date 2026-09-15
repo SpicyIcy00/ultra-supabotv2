@@ -167,6 +167,54 @@ once changes the next answer. That is the card's own done-when.
 
 ## Fixed
 
+### 2026-09-15 — the switch was a list of two different kinds of thing
+
+> *"vending can be different but barn and cmg are warehouses so they should be
+> builit into aji ichiban all stores so they dont need their own pill — aji
+> ichiban is the pill with all stores and warehouses, vending is a pill for
+> vending machine buisness of aji ichiban but its diferrent products and
+> everything so thats why its a different pill"*
+
+**His third report on the same card in one evening, and this one is the
+design.** It shipped as four pills — shops, AJI BARN, AJI CMG, vending — and
+that row mixed BUSINESSES with PLACES. Two of the four were single rows of
+`stores`.
+
+**The switch is for businesses.** A place inside one is what the SELECTION is
+for and has been since P2.c: `@AJI BARN` binds it, a tap on a row binds it,
+and both travel as ids with a chip you can see. Giving one a pill of its own
+put the same job in two places with different rules.
+
+**Three pills now: All · Aji Ichiban · vending.** Aji Ichiban covers the seven
+shops and both warehouses; vending is the machines. His reason for the split
+is the one the definitions already gave — *"its diferrent products and
+everything"* is `vending.never_join_to_store_domain`, and `get_vending` has no
+store argument at all.
+
+**WHAT FOLDING THEM IN COST, CHECKED RATHER THAN ASSUMED.** There is no
+one-press way to scope to the barn now. `@AJI BARN` was the answer and already
+worked — **`@AJI CMG` did not**. The mentions service kept its OWN tuple of
+store groups, missing `vending_stock_location`, exactly as `tools/_common`'s
+had. **Removing the pill without noticing that would have left AJI CMG
+reachable by no gesture at all.** Both lists read `metrics.yaml` now.
+
+**And the warehouses keep their behaviour without keeping their pill.** One
+scope over seven shops that sell and two warehouses that do not has to say
+which is which, so the sentence names them from the lists: *"AJI BARN and AJI
+CMG are warehouses and in no sales figure, so what they hold and what moves
+through them is the answer for those"*.
+
+**One thing was deleted rather than kept.** `count_places` drew "7 shops" on
+the one pill that was a plural common noun. That pill is gone, so the field is
+gone — a channel nothing sets is one whose absence nobody can see, which is the
+lesson P2.l is named after.
+
+**The business is named once.** The Aji Ichiban pill reads
+`surface.desk.business.name` rather than typing the name a second time.
+
+**NOT SEEN IN A BROWSER**, and the live build has none of this.
+
+
 ### 2026-09-15 — a warehouse filed as retail, where nobody could see it
 
 > *"aji barn is also a warehouse"*

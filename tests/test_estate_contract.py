@@ -90,51 +90,49 @@ def test_every_part_is_places_out_of_the_store_lists_and_nothing_else():
             assert not re.search(r"\d", value), f"{part['key']}.{field} carries a number"
 
 
-def test_two_warehouses_and_one_other_business_and_they_are_told_apart():
+def test_the_switch_is_businesses_and_a_warehouse_is_a_place_inside_one():
     """
-    THE OWNER'S OWN CORRECTION, 2026-09-15: *"aji barn and aji cmg are our
-    warehouses, but if in the future it can be a whole new buisness then ok"*.
+    THE OWNER DREW THIS, 2026-09-15, after correcting it twice:
 
-    The card shipped with ONE pill reading "AJI CMG · vending", scoped to
-    `stores.vending_stock_location` and answered by `get_vending`. That is the
-    join this file forbids, twice over: the row is a stock location that takes
-    no transactions and is explicitly "NOT the vending business", and
-    `get_vending` has no store argument at all — only `machine`. So the pill
-    handed George a store id the reads it named cannot take.
+      *"vending can be different but barn and cmg are warehouses so they should
+      be builit into aji ichiban all stores so they dont need their own pill \u2014
+      aji ichiban is the pill with all stores and warehouses, vending is a pill
+      for vending machine buisness of aji ichiban but its diferrent products
+      and everything so thats why its a different pill"*
 
-    They are two parts now. Both warehouses are read like warehouses; the
-    vending BUSINESS carries no store scope, which is the shape a genuinely
-    separate business takes here and the thing he said would make the switch
-    worth having.
+    It shipped as four pills \u2014 shops, AJI BARN, AJI CMG, vending \u2014 which made
+    the row a list of two different kinds of thing: businesses beside places.
+    THE SWITCH IS FOR BUSINESSES. A place inside one is what the SELECTION is
+    for, and has been since P2.c: `@AJI BARN` binds it, a tap on a row binds
+    it, and both travel as ids.
+
+    So: Aji Ichiban (its shops and its warehouses) and vending. Two.
     """
     by_key = {p["key"]: p for p in ESTATE["parts"]}
-    assert set(by_key) >= {"shops", "barn", "cmg", "vending"}
+    assert set(by_key) == {"all", "aji_ichiban", "vending"}
 
-    assert by_key["shops"]["places_from"] == ["stores.active_retail"]
-    assert by_key["shops"]["domain"] == "store"
+    # THE BUSINESS IS NAMED ONCE IN THE FILE. Typing it on the part would be a
+    # second copy of `business.name` that a rename could not reach.
+    aji = by_key["aji_ichiban"]
+    assert "label" not in aji, "the business name is typed on the part"
+    assert aji["label_from"] == "surface.desk.business.name"
+    assert req(DEFS, aji["label_from"]), "the name it points at does not exist"
 
-    # BOTH WAREHOUSES ARE WAREHOUSES: same domain, same exclusion, read the
-    # same way. Neither is in sales, and each names the definition that says so
-    # rather than restating the reason — the tool's own refusal carries it.
-    for key, path in (("barn", "stores.warehouse"),
-                      ("cmg", "stores.vending_stock_location")):
-        part = by_key[key]
-        assert part["places_from"] == [path]
-        assert part["domain"] == "store", f"{key} is not a separate business"
-        assert part["not_in"] == "sales"
-        assert req(DEFS, part["not_in_because"]), "the exclusion it cites does not exist"
-        assert "get_stock" in part["answers_with"]
-        assert "get_vending" not in part["answers_with"], (
-            f"{key} is a stores row; the Weimi reads are not about it")
+    # IT COVERS THE SHOPS AND BOTH WAREHOUSES \u2014 every store the estate trades
+    # or holds stock in, and by list rather than by name.
+    assert aji["places_from"] == ["stores.active_retail", "stores.warehouse",
+                                  "stores.vending_stock_location"]
+    assert aji["domain"] == "store"
 
-    assert req(DEFS, "stores.warehouse")[0]["id"] in req(
-        DEFS, "filters.excluded_from_sales.excluded_store_ids")
-    # AJI CMG IS NOT IN THAT LIST, and that is not an oversight to fix here: it
-    # takes no transactions at all, so no sales metric can reach it in the first
-    # place, and every sales catalogue is scoped to active retail.
-    assert req(DEFS, "stores.vending_stock_location")[0]["takes_transactions"] is False
+    # AND IT SAYS WHICH OF ITS PLACES CARRY NO SALES. One pill over shops AND
+    # warehouses has to, or "how are we doing" over it reads as if nine places
+    # sold something.
+    assert aji["warehouses_from"] == ["stores.warehouse",
+                                      "stores.vending_stock_location"]
+    assert aji["warehouses_not_in"] == "sales"
+    assert req(DEFS, aji["not_in_because"]), "the exclusion it cites does not exist"
 
-    # VENDING IS A BUSINESS, AND IT HAS NO STORE SCOPE.
+    # VENDING IS THE OTHER BUSINESS, AND IT HAS NO STORE SCOPE.
     vending = by_key["vending"]
     assert vending["places_from"] == []
     assert vending["has_no_store_scope"] is True
@@ -142,6 +140,50 @@ def test_two_warehouses_and_one_other_business_and_they_are_told_apart():
     assert vending["not_joined_to"] == "store"
     assert req(DEFS, vending["not_joined_because"]) is True
     assert set(vending["answers_with"]) == {"get_vending", "get_vending_stock"}
+
+
+def test_no_part_is_a_single_place():
+    """
+    The rule the owner's correction IS, held rather than remembered. A part
+    covering exactly one row of `stores` is a place wearing a business's
+    clothes \u2014 which is what AJI BARN and AJI CMG were as pills.
+    """
+    for part in ESTATE["parts"]:
+        places = [row for path in (part["places_from"] or [])
+                  for row in req(DEFS, path)]
+        assert len(places) != 1, (
+            f"{part['key']} is one place, and a place is the selection's job: "
+            f"@-name it or tap it, do not give it a pill")
+
+
+def test_a_warehouse_folded_in_is_still_reachable_by_name():
+    """
+    WHAT FOLDING THEM IN COST, CHECKED RATHER THAN ASSUMED. The warehouses lost
+    their pills, so typing the name is the way to scope to one. `@AJI BARN`
+    already worked; **`@AJI CMG` did not**, because the mentions service kept
+    its own tuple of store groups and it had drifted exactly as
+    `tools/_common`'s had. Removing the pill without this would have made AJI
+    CMG unreachable by any gesture at all.
+    """
+    pytest.importorskip("fastapi")
+    import sys
+    from pathlib import Path
+
+    backend = str(Path(__file__).resolve().parents[1] / "backend")
+    if backend not in sys.path:
+        sys.path.insert(0, backend)
+    from app.services import mentions as mentions_service
+
+    groups = req(DEFS, "surface.desk.selection.mentions.kinds.store.groups")
+    assert "vending_stock_location" in groups
+    assert "warehouse" in groups
+    # Deliberately NOT offered, and the yaml says why: two of these rows are
+    # test data in the production table.
+    assert "non_trading" not in groups
+
+    for name in ("AJI BARN", "AJI CMG", "Rockwell"):
+        found = [c["label"] for c in mentions_service.stores(name, DEFS, 8)]
+        assert name in found, f"@{name} completes to nothing"
 
 
 def test_a_warehouse_is_never_filed_as_retail():
@@ -237,31 +279,24 @@ def test_a_part_the_definitions_do_not_declare_says_nothing():
         assert surface._estate_words(hostile, DEFS) is None
 
 
-def test_the_shops_are_named_from_the_store_list():
-    said = surface._estate_words("shops", DEFS)
-    for shop in req(DEFS, "stores.active_retail"):
-        assert shop["display_name"] in said
+def test_the_business_is_named_and_so_is_every_place_in_it():
+    said = surface._estate_words("aji_ichiban", DEFS)
+    assert req(DEFS, "surface.desk.business.name") in said
+    for group in ("active_retail", "warehouse", "vending_stock_location"):
+        for row in req(DEFS, f"stores.{group}"):
+            assert (row.get("display_name") or row["name"]) in said
     assert "get_sales" in said
 
 
-def test_the_barn_says_it_is_in_no_sales_figure():
-    """The card's own done-when: scoped to the barn, the answer is stock, not sales."""
-    said = surface._estate_words("barn", DEFS)
-    assert "AJI BARN" in said
-    assert "warehouse" in said
-    assert "no sales figure" in said
-    assert "get_stock" in said
-    assert "get_sales" not in said
-
-
-def test_the_cmg_warehouse_is_read_like_a_warehouse_and_not_like_vending():
-    said = surface._estate_words("cmg", DEFS)
-    assert "AJI CMG" in said
-    assert "no sales figure" in said
-    assert "get_stock" in said
-    # The correction, asserted: the warehouse pill may not send George to the
-    # Weimi reads. That row is not that business.
-    assert "get_vending" not in said
+def test_the_warehouses_inside_the_business_still_say_they_carry_no_sales():
+    """
+    THE DONE-WHEN THAT SURVIVED LOSING ITS PILL. "How are we doing" over Aji
+    Ichiban covers seven shops that sell and two warehouses that do not, so the
+    sentence names which are which \u2014 from the lists, never by typing a name.
+    """
+    said = surface._estate_words("aji_ichiban", DEFS)
+    assert "AJI BARN and AJI CMG are warehouses and in no sales figure" in said
+    assert "what they hold and what moves through them" in said
 
 
 def test_vending_says_its_own_domain_with_no_store_scope_at_all():
@@ -271,9 +306,9 @@ def test_vending_says_its_own_domain_with_no_store_scope_at_all():
     assert "never joined" in said
     assert "no store scope" in said
     assert "machines" in said
-    # AND IT NAMES NO PLACE IN `stores`. Naming the AJI CMG row here is exactly
-    # the join `vending.never_join_to_store_domain` forbids, written as a
-    # sentence — which is what this card shipped and the owner caught.
+    # AND IT NAMES NO PLACE IN `stores`. Naming a store row here is exactly the
+    # join `vending.never_join_to_store_domain` forbids, written as a sentence
+    # \u2014 which is what this card shipped and the owner caught.
     for group in req(DEFS, "stores.groups"):
         for row in req(DEFS, f"stores.{group}"):
             name = row.get("display_name") or row.get("name")
@@ -286,7 +321,7 @@ def test_the_sentence_carries_no_figure():
     closed vocabulary. A part naming one place says its name once and never a
     count; the shops are listed, which is names, and no digit reaches the line.
     """
-    for key in ("shops", "barn", "vending"):
+    for key in ("aji_ichiban", "vending"):
         said = surface._estate_words(key, DEFS)
         assert not re.search(r"\d", said), f"{key} put a number in the sentence"
         assert not re.search(r"[₱%]", said)
@@ -302,8 +337,8 @@ def test_the_sentence_moves_when_the_definitions_do():
     grown["stores"]["active_retail"] = list(grown["stores"]["active_retail"]) + [
         {"id": "sentinel", "name": "SENTINEL SHOP", "display_name": "SENTINEL SHOP"},
     ]
-    before = surface._estate_words("shops", DEFS)
-    after = surface._estate_words("shops", grown)
+    before = surface._estate_words("aji_ichiban", DEFS)
+    after = surface._estate_words("aji_ichiban", grown)
     assert "SENTINEL SHOP" in after and "SENTINEL SHOP" not in before
 
 
@@ -314,11 +349,12 @@ def test_the_estate_is_the_widest_clause_on_the_desk_line():
     about the thing above it.
     """
     line = surface.desk_sentence({
-        "estate": "barn",
+        "estate": "aji_ichiban",
         "selection": {"dimension": "store",
                       "subjects": [{"id": "x", "label": "North Edsa"}]},
     }, DEFS)
-    assert line.index("scoped to AJI BARN") < line.index("North Edsa")
+    assert line.index("scoped to Aji Ichiban") < line.index(
+        "the user has selected")
 
 
 # ------------------------------------------------- it rides the question only
@@ -348,13 +384,13 @@ def _drive(monkeypatch, question, desk):
 
 
 def test_the_estate_reaches_george_on_the_question_and_not_in_the_prompt(monkeypatch):
-    requests = _drive(monkeypatch, "how are we doing?", {"estate": "barn"})
+    requests = _drive(monkeypatch, "how are we doing?", {"estate": "vending"})
     last_user = [m for m in requests[-1]["messages"] if m["role"] == "user"][-1]
-    assert "scoped to AJI BARN" in last_user["content"]
+    assert "scoped to the vending business" in last_user["content"]
     assert last_user["content"].rstrip().endswith("how are we doing?")
     system = requests[-1]["system"]
     text = system if isinstance(system, str) else "".join(b.get("text", "") for b in system)
-    assert "scoped to AJI BARN" not in text
+    assert "scoped to the vending business" not in text
 
 
 def test_the_default_leaves_the_question_exactly_as_it_was(monkeypatch):
@@ -407,25 +443,23 @@ def test_the_endpoint_serves_the_pills_with_their_places_resolved():
     assert out.estate.default == ESTATE["default"]
     assert [p.key for p in out.estate.parts] == [p["key"] for p in ESTATE["parts"]]
     served = {p.key: p for p in out.estate.parts}
-    assert served["shops"].places == [s["display_name"]
-                                      for s in req(DEFS, "stores.active_retail")]
-    assert served["barn"].places == ["AJI BARN"]
-    assert served["cmg"].places == ["AJI CMG"]
+    # THE BUSINESS'S NAME IS RESOLVED HERE, from `business.name`, so the pill
+    # cannot drift from the one place this file names the business.
+    assert served["aji_ichiban"].label == req(DEFS, "surface.desk.business.name")
+    assert served["aji_ichiban"].places == (
+        [s["display_name"] for s in req(DEFS, "stores.active_retail")]
+        + ["AJI BARN", "AJI CMG"])
     # A BUSINESS WITH NO STORE SCOPE SERVES NO PLACES, and the pill draws
     # nothing rather than borrowing a shop's name to have something to show.
     assert served["vending"].places == []
-    # Only the plural common noun counts its places; "1 AJI BARN" is nonsense.
-    assert served["shops"].count_places is True
-    assert all(not served[k].count_places
-               for k in ("all", "barn", "cmg", "vending"))
     # WHAT A PART MEANS IS NOT SERVED. Which domain answers for it and what it
     # is excluded from are George's to be told on the question; a client
     # drawing a pill has no use for either, and serving them would invite one
     # to act on a business rule it cannot read the reasoning for.
     fields = set(out.estate.parts[0].model_dump())
-    assert fields == {"key", "label", "says", "count_places", "places"}
-    assert not fields & {"domain", "answers_with", "not_in", "not_joined_to",
-                         "noun", "places_from"}
+    assert fields == {"key", "label", "says", "places"}
+    assert not fields & {"domain", "answers_with", "warehouses_not_in",
+                         "not_joined_to", "noun", "places_from", "count_places"}
 
 
 # ------------------------------- the enforcement the switch stands in front of

@@ -59,18 +59,19 @@ export function partOn(defs: DeskDefinitions | null | undefined,
 /**
  * THE PILLS, drawn from what was served and from nothing else.
  *
- * `count_places` is the definitions' own call on whether the number of places
- * belongs in front of the label: "7 shops" says something, "1 AJI BARN" does
- * not, and which is which is declared rather than guessed from the word.
+ * A pill draws a part's own words. It used to be able to put a COUNT in front
+ * of one — "7 shops" — and that went with the pill it was for: the owner
+ * folded the warehouses into the business they belong to, so the row is
+ * businesses now and no part is a plural common noun. A field nothing sets is
+ * a channel whose absence nobody can see, so it was deleted rather than kept
+ * against a pill that might come back.
  */
 export function pillsFor(defs: DeskDefinitions | null | undefined,
                          picked: string | null): Pill[] {
   const current = partOn(defs, picked);
   return partsOf(defs).map((part) => ({
     key: part.key,
-    label: part.count_places && part.places.length > 1
-      ? `${part.places.length} ${part.label}`
-      : part.label,
+    label: part.label,
     says: part.says ?? null,
     on: part.key === current?.key,
   }));

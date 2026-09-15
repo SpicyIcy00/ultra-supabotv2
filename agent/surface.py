@@ -214,6 +214,19 @@ def _places(defs: Mapping[str, Any], paths: Iterable[Any]) -> list[str]:
     return out
 
 
+def _from_path(path: Any, defs: Mapping[str, Any]) -> Optional[str]:
+    """A value the definitions already hold, named by its path. Never typed twice."""
+    if not isinstance(path, str) or not path:
+        return None
+    value = req(defs, path)
+    return str(value) if value else None
+
+
+def _label_of(part: Mapping[str, Any], defs: Mapping[str, Any], key: str) -> str:
+    """What a part is called: its own word, or the one the definitions hold."""
+    return _clean_label(part.get("label") or _from_path(part.get("label_from"), defs) or key)
+
+
 def _estate_words(part_key: Any, defs: Mapping[str, Any]) -> Optional[str]:
     """
     WHICH BUSINESS THE QUESTION IS ABOUT (P2.g, 2026-09-15).
@@ -249,8 +262,15 @@ def _estate_words(part_key: Any, defs: Mapping[str, Any]) -> Optional[str]:
     if part is None:
         return None
 
-    label = _clean_label(part.get("label") or key)
-    said = "the question is scoped to " + _clean_label(part.get("noun") or label)
+    label = _label_of(part, defs, key)
+    noun = _clean_label(part.get("noun") or "")
+    if not noun:
+        # A part may take its name from the business itself rather than typing
+        # it a second time in the same file (`noun_from`), with a few words
+        # after it saying which part of that business this is.
+        base = _from_path(part.get("noun_from"), defs) or label
+        noun = _clean_label(base + str(part.get("noun_suffix") or ""))
+    said = "the question is scoped to " + noun
 
     # The places, named — unless the part IS one place already wearing its own
     # name, where saying it twice is noise rather than precision.
@@ -258,7 +278,7 @@ def _estate_words(part_key: Any, defs: Mapping[str, Any]) -> Optional[str]:
     if places and not (len(places) == 1 and places[0] == label):
         said += f": {_names(places)}"
 
-    # A BUSINESS WITH NO STORE SCOPE says so (2026-09-15). Vending is the first
+    # A BUSINESS WITH NO STORE SCOPE says so (2026-09-15). Vending is the only
     # part that names no `stores` list: its places are machines, `get_vending`
     # takes `machine` and has no store argument, and a store id offered here
     # would be the join `vending.never_join_to_store_domain` forbids.
@@ -269,12 +289,19 @@ def _estate_words(part_key: Any, defs: Mapping[str, Any]) -> Optional[str]:
     if reads:
         said += f" — read with {_names(reads)}"
 
-    # WHAT THE PART IS NOT, from the definitions' own two exclusions. Neither
-    # restates the reason — the tool that refuses carries that, in its own
-    # sentence — this only says the shape of the answer to expect.
-    if part.get("not_in") == "sales":
-        said += ("; it is in no sales figure, so what it holds and what moves "
-                 "through it is the answer there")
+    # WHICH OF ITS PLACES CARRY NO SALES (2026-09-15), by name and from the
+    # definitions' own lists. One pill covering the shops AND the warehouses
+    # has to say which is which, or "how are we doing" over this scope reads
+    # as if every place in it sold something. The warehouses lost their own
+    # pills at the owner's word — "they dont need their own pill" — and this
+    # clause is what keeps their behaviour said without one.
+    if part.get("warehouses_not_in") == "sales":
+        houses = _places(defs, part.get("warehouses_from") or [])
+        if houses:
+            is_are = "is a warehouse" if len(houses) == 1 else "are warehouses"
+            said += (f"; {_names(houses)} {is_are} and in no sales figure, so "
+                     f"what they hold and what moves through them is the "
+                     f"answer for those")
     if part.get("not_joined_to"):
         said += ("; its own domain, never joined to or totalled with the "
                  "shops' figures")

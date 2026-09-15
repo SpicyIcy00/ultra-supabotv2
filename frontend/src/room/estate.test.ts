@@ -20,18 +20,17 @@ const defs = {
     label: 'estate',
     default: 'all',
     parts: [
-      { key: 'all', label: 'All', says: null, count_places: false,
+      { key: 'all', label: 'All', says: null,
         places: [...SHOPS, 'AJI BARN', 'AJI CMG'] },
-      { key: 'shops', label: 'shops', says: 'retail', count_places: true,
-        places: SHOPS },
-      { key: 'barn', label: 'AJI BARN', says: 'warehouse', count_places: false,
-        places: ['AJI BARN'] },
-      { key: 'cmg', label: 'AJI CMG', says: 'warehouse', count_places: false,
-        places: ['AJI CMG'] },
-      // A BUSINESS WITH NO STORE SCOPE. Its places are machines, which live in
-      // Weimi and not in the definitions, so it is served with none.
+      // ONE BUSINESS, ONE PILL. The shops and both warehouses, because a
+      // warehouse is a place inside a business and a place is the selection's
+      // job — `@AJI BARN` binds one, a tap on a row binds one.
+      { key: 'aji_ichiban', label: 'Aji Ichiban', says: 'shops and warehouses',
+        places: [...SHOPS, 'AJI BARN', 'AJI CMG'] },
+      // THE OTHER BUSINESS, and the only part with no places: vending's are
+      // machines, which live in Weimi and not in the definitions.
       { key: 'vending', label: 'vending', says: 'the machines · own domain',
-        count_places: false, places: [] },
+        places: [] },
     ],
   },
 } as unknown as DeskDefinitions;
@@ -49,28 +48,22 @@ describe('the estate switch', () => {
   });
 
   it('travels as the part key once a business is picked', () => {
-    expect(estateFor(defs, 'barn')).toBe('barn');
+    expect(estateFor(defs, 'aji_ichiban')).toBe('aji_ichiban');
     expect(scopeChip(defs, 'vending')).toEqual({ key: 'vending', label: 'vending' });
   });
 
-  it('draws how many places only where the definitions say to', () => {
-    const pills = pillsFor(defs, 'shops');
-    expect(pills.map((p) => p.label)).toEqual(
-      ['All', '7 shops', 'AJI BARN', 'AJI CMG', 'vending']);
-    expect(pills.find((p) => p.key === 'shops')?.on).toBe(true);
+  it('draws one pill per business, in the served words', () => {
+    const pills = pillsFor(defs, 'aji_ichiban');
+    expect(pills.map((p) => p.label)).toEqual(['All', 'Aji Ichiban', 'vending']);
+    expect(pills.find((p) => p.key === 'aji_ichiban')?.on).toBe(true);
     expect(pills.filter((p) => p.on)).toHaveLength(1);
   });
 
-  it('counts the places it was served and never a shop it knows about', () => {
-    const fewer = {
-      estate: {
-        ...defs.estate,
-        parts: defs.estate.parts.map((p) => (
-          p.key === 'shops' ? { ...p, places: SHOPS.slice(0, 3) } : p)),
-      },
-    } as unknown as DeskDefinitions;
-    expect(pillsFor(fewer, null).map((p) => p.label))
-      .toContain('3 shops');
+  it('never puts a count in front of a business name', () => {
+    // A pill drew "7 shops" until the warehouses were folded in and the row
+    // became businesses. "9 Aji Ichiban" is not a thing, so the count went
+    // with the pill it was for rather than being kept against a maybe.
+    expect(pillsFor(defs, null).map((p) => p.label).join(' ')).not.toMatch(/\d/);
   });
 
   it('drops a picked part this build no longer declares rather than lighting it', () => {
@@ -82,9 +75,9 @@ describe('the estate switch', () => {
   });
 
   it('is nothing at all until the definitions arrive', () => {
-    expect(pillsFor(null, 'barn')).toEqual([]);
-    expect(partOn(undefined, 'barn')).toBeNull();
-    expect(estateFor(null, 'barn')).toBeUndefined();
-    expect(scopeChip(undefined, 'barn')).toBeNull();
+    expect(pillsFor(null, 'vending')).toEqual([]);
+    expect(partOn(undefined, 'vending')).toBeNull();
+    expect(estateFor(null, 'vending')).toBeUndefined();
+    expect(scopeChip(undefined, 'vending')).toBeNull();
   });
 });

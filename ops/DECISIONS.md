@@ -4306,3 +4306,16 @@ reads before writing code. `surface.desk.estate.domains` is declared now and a
 part saying `warehouse` must be filed `store`. Twice in one evening he
 corrected the same category error at a different depth; both times the yaml
 already contained the right distinction in a comment.
+
+**The estate switch is BUSINESSES; a place inside one is the selection's job.**
+2026-09-15, his third report on P2.g in one evening and the one that is a
+design: "barn and cmg are warehouses so they should be builit into aji ichiban
+all stores so they dont need their own pill". Four pills mixed businesses with
+places — two were single rows of `stores` — so one job (scope to one place)
+lived in two mechanisms with different rules. Three pills now: All · Aji
+Ichiban · vending. **The cost was checkable and had to be checked**: with no
+pill, `@` is the only door to a warehouse, and `@AJI CMG` completed to nothing
+because `mentions.py` held a THIRD copy of the store groups, stale the same
+way. Removing the pill first would have made a real place unreachable. Three
+copies of one list in three files, all found by one evening of him reading the
+screen. `count_places` was deleted with the pill it served.

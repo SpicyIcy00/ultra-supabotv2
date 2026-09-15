@@ -2767,14 +2767,20 @@ class DeskEstatePart(BaseModel):
     one. What a part MEANS — which domain answers for it, what it is excluded
     from — is not served: that is George's to be told on the question, and a
     client drawing a pill has no use for it.
+
+    `count_places` LIVED HERE AND IS GONE (2026-09-15). It drew "7 shops" on
+    the one pill that was a plural common noun, and that pill went when the
+    owner folded the warehouses into the business they belong to. A field no
+    part sets is a channel whose absence nobody can see, which is the lesson
+    P2.l is named after — so it is deleted rather than kept for a pill that
+    might come back.
     """
 
     key: str
     label: str
     says: Optional[str] = None
-    #: Whether the pill draws how many places it covers in front of its label.
-    count_places: bool = False
-    #: The display names of the places this part covers, from `stores`.
+    #: The display names of the places this part covers, from `stores`. Empty
+    #: for a business whose places are not shops — vending's are machines.
     places: List[str]
 
 
@@ -2934,11 +2940,14 @@ def _desk_estate(defs: Mapping[str, Any]) -> DeskEstate:
                 name = entry.get("display_name") or entry.get("name")
                 if name and name not in places:
                     places.append(str(name))
+        # A PART MAY TAKE ITS NAME FROM THE DEFINITIONS rather than typing it
+        # again: the business is named once, in `surface.desk.business.name`,
+        # and a rename there has to reach the pill.
+        label = part.get("label") or _req(defs, str(part["label_from"]))
         parts.append(DeskEstatePart(
             key=str(part["key"]),
-            label=str(part["label"]),
+            label=str(label),
             says=(str(part["says"]) if part.get("says") else None),
-            count_places=bool(part.get("count_places")),
             places=places,
         ))
     return DeskEstate(label=str(_req(estate, "label")),

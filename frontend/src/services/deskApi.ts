@@ -54,8 +54,10 @@ export interface DeskEstatePart {
   key: string;
   label: string;
   says: string | null;
-  /** Whether the pill draws how many places it covers in front of its label. */
-  count_places: boolean;
+  /**
+   * The places this part covers, by display name. Empty for a business whose
+   * places are not shops — vending's are machines, which live in Weimi.
+   */
   places: string[];
 }
 

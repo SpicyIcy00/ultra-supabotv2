@@ -6329,84 +6329,71 @@ surface:
       parts:
         - key: all
           label: "All"
-          # The three lists together, which is what the tools already default
-          # to; named so `all` is a part like the others and not an absence
-          # with a pill drawn over it.
+          # Every place, and the machines beside them. The default: what a
+          # question has meant since before this switch existed.
           places_from: [stores.active_retail, stores.warehouse,
                         stores.vending_stock_location]
           domain: both
           answers_with: []
 
-        - key: shops
-          label: "shops"
-          says: "retail"
-          # THE PILL SAYS HOW MANY. "shops" is a common noun and the number of
-          # them is the useful half of it — the Ideal UI's own pill reads
-          # "7 shops". "1 AJI BARN" is nonsense, so the other parts do not,
-          # and which is which is declared rather than worked out from the
-          # label. The count itself is `places` and comes from the store list.
-          count_places: true
-          # WHAT THE SENTENCE CALLS IT, beside what the pill calls it. "shops"
-          # is a common noun and "AJI BARN" is a proper one, and a rule that
-          # worked out which was which from the label would be a grammar engine
-          # in a component. Two words in the definitions instead.
-          noun: "the shops"
-          places_from: [stores.active_retail]
-          domain: store
-          answers_with: [get_sales, get_stock, get_product, get_movement]
-
-        - key: barn
-          label: "AJI BARN"
-          says: "warehouse"
-          noun: "AJI BARN, the warehouse"
-          places_from: [stores.warehouse]
-          domain: store
-          # WHAT A GENERAL QUESTION ABOUT THE BARN IS ABOUT. It takes no retail
-          # transactions at all, so "how are we doing" there is a question about
-          # what is on the shelves and what is moving off them.
-          answers_with: [get_stock, get_movement, get_purchasing]
-          not_in: sales
-          not_in_because: filters.excluded_from_sales
-
         # -------------------------------------------------------------------
-        # AJI CMG IS A WAREHOUSE, AND THE OWNER SAID SO (2026-09-15).
+        # ONE BUSINESS, ONE PILL — AND THE OWNER DREW IT (2026-09-15).
         #
-        # This part shipped as one pill reading "AJI CMG · vending", scoped to
-        # `stores.vending_stock_location` and answered by `get_vending`. He
-        # read it and said: *"aji barn and aji cmg are our warehouses, but if
-        # in the future it can be a whole new buisness then ok"* — and he was
-        # right, in the one way that breaks something.
+        # This shipped as four pills: shops, AJI BARN, AJI CMG, vending. He
+        # corrected it twice in an evening and then gave the shape:
         #
-        # The pill JOINED THE TWO THINGS THIS FILE SAYS MUST NEVER BE JOINED.
-        # The `stores` row called AJI CMG holds store-side stock and takes no
-        # transactions; the note above it says it is "NOT retail, NOT the
-        # warehouse, and NOT the vending business". The vending business is
-        # Weimi — its own tables, its own metric registry, its own tool — and
-        # `get_vending` has no store argument at all, only `machine`. So the
-        # old part handed George a store id that the reads it named cannot
-        # take, under a word for a business that row is not.
+        #   *"vending can be different but barn and cmg are warehouses so they
+        #   should be builit into aji ichiban all stores so they dont need
+        #   their own pill — aji ichiban is the pill with all stores and
+        #   warehouses, vending is a pill for vending machine buisness of aji
+        #   ichiban but its diferrent products and everything so thats why its
+        #   a different pill"*
         #
-        # So they are two parts, which is what they are. AJI CMG is a
-        # warehouse, like the barn and read like the barn; vending is a
-        # BUSINESS, and its places are machines rather than shops.
+        # THE SWITCH IS FOR BUSINESSES. A warehouse is a PLACE inside one, and
+        # a place is what the selection is for — `@AJI BARN` and a tap on a
+        # row both bind one, and have since P2.c. Giving a place a pill of its
+        # own made the row of them a list of two different kinds of thing, and
+        # the switch stopped meaning anything in particular.
+        #
+        # WHAT THAT COST, SAID PLAINLY: there is no longer a one-press way to
+        # scope a question to the barn. `@AJI BARN` is the way, `@AJI CMG` was
+        # NOT until this same edit (the mentions service had its own stale
+        # list), and the sentence below still tells George the warehouses in
+        # this scope carry no sales — so "what is at the barn" keeps its answer
+        # without keeping its pill.
         # -------------------------------------------------------------------
-        - key: cmg
-          label: "AJI CMG"
-          says: "warehouse"
-          noun: "AJI CMG, the warehouse the machines are stocked from"
-          places_from: [stores.vending_stock_location]
+        - key: aji_ichiban
+          # THE BUSINESS IS NAMED ONCE IN THIS FILE. Typing "Aji Ichiban" here
+          # would be a second copy of `business.name` a rename could not reach.
+          label_from: surface.desk.business.name
+          says: "shops and warehouses"
+          noun_from: surface.desk.business.name
+          noun_suffix: ", the shops and the warehouses"
+          places_from: [stores.active_retail, stores.warehouse,
+                        stores.vending_stock_location]
           domain: store
-          answers_with: [get_stock, get_movement]
-          not_in: sales
+          answers_with: [get_sales, get_stock, get_product, get_movement,
+                         get_purchasing]
+          # WHICH OF ITS PLACES CARRY NO SALES, as lists rather than as names.
+          # The shops are in every sales figure and the warehouses are in none,
+          # and one pill covering both has to say which is which or "how are we
+          # doing" over this scope reads as if nine places sold something.
+          warehouses_from: [stores.warehouse, stores.vending_stock_location]
+          warehouses_not_in: sales
           not_in_because: filters.excluded_from_sales
 
         - key: vending
           label: "vending"
           says: "the machines · own domain"
           noun: "the vending business"
+          # HIS REASON, NOT A SESSION'S: *"its diferrent products and
+          # everything so thats why its a different pill"*. Which is what this
+          # file has said all along in `never_join_to_store_domain`, and what
+          # the tools enforce: `get_vending` has no store argument at all.
+          #
           # NO STORE SCOPE, AND THAT IS THE POINT. A part may name no `stores`
-          # list at all — this is the first that does not, and it is the shape
-          # a genuinely separate business takes here. Its places are machines,
+          # list — this is the only one that does not, and it is the shape a
+          # genuinely separate business takes here. Its places are machines,
           # which live in Weimi and not in this file, so nothing below names
           # one: the tools take `machine` and George asks them.
           places_from: []
@@ -6528,6 +6515,25 @@ surface:
             binds: selection
             dimension: store
             says: shop
+            # WHICH PLACES A PERSON MAY NAME, and it is a definition now
+            # (2026-09-15). This was a tuple of two in
+            # `backend/app/services/mentions.py` — the SECOND copy of the
+            # store groups in Python, after the one in `tools/_common.py`,
+            # and it had drifted the same way: no `vending_stock_location`,
+            # so `@AJI CMG` completed to nothing.
+            #
+            # That mattered the moment the estate switch stopped giving the
+            # warehouses their own pills: typing the name is the door to one
+            # place now, and a door that does not open for AJI CMG is a place
+            # nobody can reach.
+            #
+            # NOT every group. `non_trading` holds two rows of test data in
+            # the production table, and a menu offering "Test stoee" is worse
+            # than one that does not. `closed` is deliberately out too: a
+            # closed shop resolves for a HISTORICAL question through the
+            # tools, and offering it in a completion invites a current-state
+            # question about a place that no longer trades.
+            groups: [active_retail, warehouse, vending_stock_location]
           product:
             from: tools/products.py get_product(name=)
             reads: catalog
