@@ -167,6 +167,30 @@ once changes the next answer. That is the card's own done-when.
 
 ## Fixed
 
+### 2026-09-15 — a warehouse filed as retail, where nobody could see it
+
+> *"aji barn is also a warehouse"*
+
+**The pills were already right.** AJI BARN has read **AJI BARN · warehouse**
+since the first commit of P2.g, and AJI CMG had just been corrected to match.
+So on screen there was nothing to fix, and saying only that would have been a
+true answer to the wrong question.
+
+**One layer down it was still wrong.** Both warehouse parts carried
+`domain: retail` in `metrics.yaml`, where "retail" was standing in for "the
+store side, not vending" — the same category error, in the field a person
+never sees. **Nothing reads it at runtime**, which is exactly how a wrong word
+survives in it: it is not what the code does, it is what the next person
+reads before writing code.
+
+**Fixed in the file's own words.** The two data worlds here are the **store**
+domain (StoreHub: `stores`, transactions, inventory) and the **vending**
+domain (Weimi) — the pair `vending.never_join_to_store_domain` already names.
+`surface.desk.estate.domains` declares them, every part is checked against
+them, and **a part that says `warehouse` and is filed anywhere but `store`
+fails a test**. The shops are still retail, and say so on the pill, which is a
+word for a person rather than a data world.
+
 ### 2026-09-15 — the estate switch called two warehouses a business
 
 > *"push  but does that make sense? aji barn and aji cmg are our warehouses,

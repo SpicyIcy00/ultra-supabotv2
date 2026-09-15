@@ -6312,6 +6312,18 @@ surface:
       # answer that was already right.
       default: all
       travels_as: store_scope
+      # WHICH DATA WORLD A PART LIVES IN, and there are two: the STORE domain
+      # (StoreHub — `stores`, transactions, inventory) and the VENDING domain
+      # (Weimi). The file's own phrase for the pair is
+      # `vending.never_join_to_store_domain`, so those are the words.
+      #
+      # IT SAID `retail` UNTIL 2026-09-15, and both warehouses carried it. A
+      # warehouse is not retail — the owner said so twice in one evening — and
+      # the word was doing the job of "the store side, not vending". The shops
+      # are retail; the domain they share with the warehouses is the store one.
+      # Nothing reads this field at runtime, which is exactly why a wrong word
+      # could sit in it: it is what the next person reads.
+      domains: [store, vending]
       stored_on: question_post_payload
       never_a_figure: true
       parts:
@@ -6340,7 +6352,7 @@ surface:
           # in a component. Two words in the definitions instead.
           noun: "the shops"
           places_from: [stores.active_retail]
-          domain: retail
+          domain: store
           answers_with: [get_sales, get_stock, get_product, get_movement]
 
         - key: barn
@@ -6348,7 +6360,7 @@ surface:
           says: "warehouse"
           noun: "AJI BARN, the warehouse"
           places_from: [stores.warehouse]
-          domain: retail
+          domain: store
           # WHAT A GENERAL QUESTION ABOUT THE BARN IS ABOUT. It takes no retail
           # transactions at all, so "how are we doing" there is a question about
           # what is on the shelves and what is moving off them.
@@ -6383,7 +6395,7 @@ surface:
           says: "warehouse"
           noun: "AJI CMG, the warehouse the machines are stocked from"
           places_from: [stores.vending_stock_location]
-          domain: retail
+          domain: store
           answers_with: [get_stock, get_movement]
           not_in: sales
           not_in_because: filters.excluded_from_sales
@@ -6401,7 +6413,7 @@ surface:
           has_no_store_scope: true
           domain: vending
           answers_with: [get_vending, get_vending_stock]
-          not_joined_to: retail
+          not_joined_to: store
           not_joined_because: vending.never_join_to_store_domain
 
     # The interaction grammars the workspace may be in. A CLOSED set, derived

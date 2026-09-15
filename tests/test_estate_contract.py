@@ -111,7 +111,7 @@ def test_two_warehouses_and_one_other_business_and_they_are_told_apart():
     assert set(by_key) >= {"shops", "barn", "cmg", "vending"}
 
     assert by_key["shops"]["places_from"] == ["stores.active_retail"]
-    assert by_key["shops"]["domain"] == "retail"
+    assert by_key["shops"]["domain"] == "store"
 
     # BOTH WAREHOUSES ARE WAREHOUSES: same domain, same exclusion, read the
     # same way. Neither is in sales, and each names the definition that says so
@@ -120,7 +120,7 @@ def test_two_warehouses_and_one_other_business_and_they_are_told_apart():
                       ("cmg", "stores.vending_stock_location")):
         part = by_key[key]
         assert part["places_from"] == [path]
-        assert part["domain"] == "retail", f"{key} is not a separate business"
+        assert part["domain"] == "store", f"{key} is not a separate business"
         assert part["not_in"] == "sales"
         assert req(DEFS, part["not_in_because"]), "the exclusion it cites does not exist"
         assert "get_stock" in part["answers_with"]
@@ -139,9 +139,37 @@ def test_two_warehouses_and_one_other_business_and_they_are_told_apart():
     assert vending["places_from"] == []
     assert vending["has_no_store_scope"] is True
     assert vending["domain"] == "vending"
-    assert vending["not_joined_to"] == "retail"
+    assert vending["not_joined_to"] == "store"
     assert req(DEFS, vending["not_joined_because"]) is True
     assert set(vending["answers_with"]) == {"get_vending", "get_vending_stock"}
+
+
+def test_a_warehouse_is_never_filed_as_retail():
+    """
+    HIS WORDS, TWICE IN ONE EVENING: *"aji barn and aji cmg are our
+    warehouses"*, then *"aji barn is also a warehouse"*.
+
+    The pills had said warehouse all along. The DEFINITIONS had not: both
+    warehouse parts carried `domain: retail`, where "retail" was standing in
+    for "the store side, not vending". Nothing reads that field at runtime,
+    which is exactly why a wrong word could sit in it — it is what the next
+    person reads, and the next person writes code from it.
+
+    The vocabulary is the file's own (`vending.never_join_to_store_domain`),
+    it is declared, and a part may not invent a third word.
+    """
+    vocabulary = set(ESTATE["domains"])
+    assert vocabulary == {"store", "vending"}
+    for part in ESTATE["parts"]:
+        domain = str(part["domain"])
+        assert domain in vocabulary | {"both"}, f"{part['key']} invents a domain"
+        if part.get("says") == "warehouse":
+            assert domain == "store", f"{part['key']} is a warehouse filed as {domain}"
+            assert "retail" not in domain
+
+    # And no part anywhere calls itself retail: the SHOPS are retail and say so
+    # on the pill, which is a word for a person, not a data world.
+    assert not any(str(p["domain"]) == "retail" for p in ESTATE["parts"])
 
 
 def test_the_vending_tool_has_no_store_argument_which_is_why_the_part_has_none():

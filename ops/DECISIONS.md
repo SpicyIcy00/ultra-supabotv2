@@ -4295,3 +4295,14 @@ shape a new business takes here**, which is what he was asking when he said
 a yaml comment saying "these must never be conflated" is not a guard, and the
 session that wrote the conflation had read the comment and quoted it while
 doing it.
+
+**A word nothing reads is still a word.** 2026-09-15. He said "aji barn is
+also a warehouse" of a pill that had said `AJI BARN · warehouse` since the
+first commit. Nothing on screen was wrong; `domain: retail` on both warehouse
+parts was, in a yaml field no code reads at runtime. **That is precisely why
+it was wrong for two commits** — a field with no behaviour behind it is never
+caught by a test unless somebody writes one, and it is what the next session
+reads before writing code. `surface.desk.estate.domains` is declared now and a
+part saying `warehouse` must be filed `store`. Twice in one evening he
+corrected the same category error at a different depth; both times the yaml
+already contained the right distinction in a comment.
