@@ -153,6 +153,29 @@ describe('the data palette', () => {
       .toEqual([]);
   });
 
+  it('gives every tile the same black', () => {
+    // HIS REPORT, twice on 2026-09-15: "why are there 2 different colors of
+    // black here? a navy ish and a more greyish?", and then "look its still
+    // different shades of black". A cooled tile drew on `--paper` — white at
+    // 3% over the ground, `#121218` — beside a read tile's `#14141C`, so two
+    // tiles in one row were two blacks. Near black, two units of 255 is a
+    // tenth of the luminance; it is not a rounding error.
+    //
+    // A tile's ground is not a channel: cooled is said by no shadow and a
+    // rule down the left. So every background any tile rule sets is `--card`,
+    // and there is exactly one of them.
+    const grounds: string[] = [];
+    SHEET.walkRules((rule) => {
+      if (!/\.r-tile\b/.test(rule.selector)) return;
+      rule.walkDecls((decl) => {
+        if (decl.prop === 'background' || decl.prop === 'background-color') {
+          grounds.push(`${rule.selector.trim()} { ${decl.value.trim()} }`);
+        }
+      });
+    });
+    expect(grounds).toEqual(['.r-tile { var(--card) }']);
+  });
+
   it('leaves no magnitude channel anywhere — it was dead before it was removed', () => {
     // `--i` was |change| against a 30% cap, drawn as a brightness with no
     // direction in it. P1.e deleted the last tile that passed a `change` to

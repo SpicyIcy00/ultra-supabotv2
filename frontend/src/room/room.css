@@ -363,13 +363,18 @@
   background: var(--edge-strong); border-radius: 4px;
 }
 
-/* COOLED: on the paper rather than on a card of its own, with a left rule so
-   it is still a thing on the page. The rule used to be the shop's colour —
-   "what a shop looks like once it is no longer the point" — and a cooled tile
-   is exactly where identity was least worth a hue, since it is the one nobody
-   is reading. It is the board's own edge now. */
+/* COOLED — AND ON THE SAME BLACK AS EVERY OTHER TILE (2026-09-15).
+   *"why are there 2 different colors of black here? a navy ish and a more
+   greyish?"*, then, of the next build: *"look its still different shades of
+   black"*. He was right and my first measurement was wrong about what it
+   means. A cooled tile drew on `--paper`, which is white at 3% over the
+   ground: `#121218` against the read tile's `#14141C`. Two units of 255 —
+   which I called too small to see — but at that end of the scale it is a
+   tenth of the tile's whole luminance, and two tiles side by side in one row
+   were visibly two different blacks.
+   A tile is ONE black now. Cooled is said by what it does not have: no
+   shadow, and a rule down its left side. Ground is not a channel. */
 .r-tile--quiet {
-  background: var(--paper);
   border-color: var(--edge);
   border-left: 3px solid var(--edge-strong);
   box-shadow: none;
