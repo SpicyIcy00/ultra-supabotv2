@@ -48,6 +48,33 @@ const CSS = readFileSync(join(__dirname, 'room.css'), 'utf8');
 const SHEET = postcss.parse(CSS);
 
 /**
+ * One rule's declarations, by selector, from the parsed stylesheet.
+ *
+ * Parsed rather than searched, for the reason the header gives: a comment
+ * closed twice once swallowed a selector and a string search could not tell
+ * that apart from a rule that works. The LAST matching rule wins, as the
+ * cascade does, so a media query's override is what a caller sees when it
+ * asks for one.
+ */
+function rule(selector: string): Record<string, string> | null {
+  let found: Record<string, string> | null = null;
+  SHEET.walkRules((r) => {
+    // THE FIRST MATCH, WHICH IS THE BASE RULE — not the last, and not the
+    // cascade folded together. A first draft of this merged every matching
+    // rule, so `.r-mk-row` resolved to the phone override inside a media query
+    // and the assertion passed against the very defect it was written for.
+    // The base rule is the one that draws the screen he was looking at.
+    if (found === null && r.selectors.includes(selector)) {
+      const decls: Record<string, string> = {};
+      r.walkDecls((d) => { decls[d.prop] = d.value; });
+      found = decls;
+    }
+  });
+  return found;
+}
+
+
+/**
  * Tokens that carry no data meaning: the ground a mark sits on, its ink, its
  * type. A drawing needs somewhere to be drawn; none of these says anything
  * about a value.
@@ -227,5 +254,55 @@ describe('the data palette', () => {
     // in one, and a caveat takes prominence from position, never from hue.
     expect(tokens(MARKS)).not.toContain('accent');
     expect(tokens(markCss())).not.toContain('accent');
+  });
+});
+
+/**
+ * THE ROW LABEL COLUMN, HELD AGAINST THE LABELS IT ACTUALLY DRAWS.
+ *
+ * His report, 2026-09-15: *"the product name are cut"*. The column was
+ * `minmax(6ch, 13ch)`, and 13ch was measured — correctly — against the nine
+ * SHOPS, the longest of which is "Greenhills" at 10ch. Then the same grid met
+ * the catalogue, where the median name is 22 characters and **13ch fits 6.8%
+ * of 3,728 products**.
+ *
+ * This is the second bound in one evening that was reasoned against the wrong
+ * population (the `@` menu refused a space, and 99.8% of product names have
+ * one). So the rule is held here rather than remembered: the column may not go
+ * back to a fixed character cap, because a fixed one is always right for one
+ * population and wrong for the next.
+ */
+describe('the row label column', () => {
+  const ROW = rule('.r-mk-row');
+  const SCALE = rule('.r-mk-scale');
+
+  it('sizes itself to the label rather than to a fixed number of characters', () => {
+    const tracks = ROW?.['grid-template-columns'] ?? '';
+    expect(tracks).toContain('fit-content');
+    // A FIXED CAP IS THE DEFECT, by name. `minmax(6ch, 13ch)` fitted nine
+    // shops and cut 3,473 of 3,728 products.
+    expect(tracks).not.toMatch(/minmax\(\s*\d+ch\s*,\s*\d+ch\s*\)/);
+  });
+
+  it('keeps the figure column fixed, because a figure is read in one place', () => {
+    // Only the NAME gives way. The track stays `1fr` and the figure stays a
+    // fixed minimum, so the eye finds the number in the same place on every
+    // mark. Asserted as a SHAPE rather than as exact widths, because the
+    // phone rule tightens both and `rule()` folds the cascade the way a
+    // browser does.
+    expect(ROW?.['grid-template-columns'] ?? '')
+      .toMatch(/^fit-content\(\d+%\)\s+1fr\s+minmax\(\s*\d+ch\s*,\s*auto\s*\)$/);
+  });
+
+  it('draws the scale on the very same track list as the rows', () => {
+    // A scale whose ends do not sit under the track's ends is a ruler
+    // measuring something else.
+    expect(SCALE?.['grid-template-columns']).toBe(ROW?.['grid-template-columns']);
+  });
+
+  it('still ellipses, because a label longer than the picture is a third thing', () => {
+    const name = rule('.r-mk-name');
+    expect(name?.['text-overflow']).toBe('ellipsis');
+    expect(name?.['white-space']).toBe('nowrap');
   });
 });

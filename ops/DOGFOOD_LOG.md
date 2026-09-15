@@ -80,7 +80,21 @@ the rule is wrong rather than that it misfired**, and it is a design change to
 the one variable every surface in the room reads — the board, the composer, the
 list screens — so it is a card, not a midnight edit.
 
-**THE MISSING CHART IS NOT ESTABLISHED AND IS NOT GUESSED AT HERE.** The block
+**HALF OF IT ANSWERED ITSELF, 2026-09-16.** He scrolled and sent the charts:
+**they render.** "Product revenue" and "Units sold", ten rows each, dumbbells
+drawn, figures beside them. **Nothing was missing — they were below the fold,
+under the composer.** The second candidate below was the right one and the
+first is closed: no `Missing` line, no rowless block.
+
+**WHAT HE SAW INSTEAD, AND IT IS WORSE:** *"the product name are cut and they
+arent even beside each other when theres space"*. The cut names are their own
+entry under Fixed and are done. **The side-by-side half is still this entry**,
+and it is now evidenced rather than inferred — two tiles of ~460px stacked
+vertically inside a page with room for both, beside a "Needs you" screen that
+fills its width. Same `--measure` question, and the same card.
+
+**WHAT WAS WRITTEN HERE BEFORE HE SCROLLED, kept because the reasoning was
+wrong in an instructive way:** The block
 in the screenshot is cut off by the bottom of the window with its caveat and
 its title (*"Units sold"*) drawn and the mark below the fold, so the picture
 cannot tell *"the chart is under the composer"* from *"the chart did not
@@ -242,6 +256,47 @@ once changes the next answer. That is the card's own done-when.
 ---
 
 ## Fixed
+
+### 2026-09-16 — every product name in a chart was cut at 13 characters
+
+> *"look at the difference between the other pages and look at these charts the
+> product name are cut and they arent even beside each other when theres
+> space"*
+
+**THE COLUMN WAS `minmax(6ch, 13ch)`, AND 13ch WAS MEASURED AGAINST THE WRONG
+POPULATION.** It was written when every mark drew SHOPS. Measured against
+production 2026-09-16:
+
+| what a row can be | how many | longest | fits 13ch |
+|---|---|---|---|
+| shops | 9 | 10ch ("Greenhills") | **100%** |
+| categories | 17 | 14ch ("Store supplies") | the longest is cut |
+| products | **3,728** | 61ch, median 22ch | **6.8%** |
+
+**3,473 of 3,728 product names could not fit.** On his screen "Aji Kiamoy
+Stri…" and "Aji Kiamoy Wh…" are two different products and the chart could not
+tell them apart.
+
+**THIS IS THE SECOND BOUND IN TWO DAYS REASONED AGAINST THE WRONG POPULATION.**
+The `@` menu refused a query containing a space; 99.8% of product names have
+one. Both were sound reasoning about a population nobody counted, and both were
+right for shops and wrong for the catalogue.
+
+**Fixed with `fit-content(40%)`** — the column takes what the longest label
+needs and no more than 40% of the tile. A chart of shops is unchanged (10ch is
+far under the cap, and the track keeps its width); categories stop being cut at
+all; products get roughly twice the characters in the same tile and more in a
+wider one. On a phone it tightens to 33%, because there the picture is the
+scarce thing. The scale below a mark uses the same track list, deliberately:
+its ends sit under the track's ends.
+
+**AND THE TEST FOR IT WAS VACUOUS ON THE FIRST TRY, WHICH IS WORTH RECORDING.**
+The helper it uses folded every matching rule together, so `.r-mk-row`
+resolved to the phone override inside a media query and the assertion passed
+against the exact defect it was written for. It reads the FIRST match now — the
+base rule, which is the one that drew his screen — and was checked in both
+directions: it fails against `minmax(6ch, 13ch)` and passes against the fix.
+
 
 ### 2026-09-15 — clicking a chart of seven shops opened Greenhills
 

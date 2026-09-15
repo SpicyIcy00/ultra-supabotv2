@@ -4358,3 +4358,14 @@ block about a SET, correctly. So the surface invented a subject from the sort
 and opened its whole page. The rule that a subject is an id a row carried and
 never a label anything inferred was being broken by a `??` in a renderer, not
 by the model. One row is its own subject; many rows open nothing.
+
+**Two bounds in two days, both reasoned against the wrong population.** The `@`
+menu refused a query containing a space ("a name with a space is ambiguous with
+the next word") — 99.8% of 3,728 product names contain one. The chart's row
+label was capped at 13ch — right for the nine shops it was written against,
+and it fits 6.8% of products. Both were sound reasoning about a population
+nobody had counted, and both shipped with tests that did not know the
+population existed. **The rule now: a bound about the DATA is measured against
+the data, in the commit that introduces it, and the number goes in the comment.**
+Both fixes are shaped so the bound adapts — `max_words` from the definitions,
+`fit-content(40%)` from the tile — rather than being a better guess.

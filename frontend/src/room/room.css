@@ -1407,9 +1407,37 @@ body.r-dragging-on .r-tile { transition: none; }
 
 /* One row of any mark: the name, the drawing, the figure. Three columns, the
    same three everywhere, so the eye finds the figure in the same place. */
+/* THE NAME COLUMN GROWS TO THE NAME (2026-09-15). His report, with the chart
+   in front of him: *"the product name are cut"*.
+
+   IT WAS `minmax(6ch, 13ch)`, AND 13ch WAS MEASURED AGAINST THE WRONG
+   POPULATION. It was written when every mark drew SHOPS — nine of them, the
+   longest "Greenhills" at 10ch — so 13ch fitted all nine with room to spare.
+   Then the same grid met the catalogue:
+
+     shops       9 labels, longest 10ch  → 13ch fits 100%
+     categories 17 labels, longest 14ch  → "Store supplies" is already cut
+     products 3,728 labels, median 22ch, 90th 34ch, longest 61ch
+                                         → 13ch fits 6.8%. 3,473 are cut.
+
+   Measured against production 2026-09-15, not estimated. "Aji Kiamoy Stri…"
+   and "Aji Kiamoy Wh…" are two different products and the chart could not tell
+   them apart.
+
+   `fit-content(40%)` is the fix and it is one function: the column takes what
+   the longest label needs, and no more than 40% of the tile. So a chart of
+   shops is unchanged — 10ch of content is far under the cap, and the track
+   keeps the width it had — a chart of categories stops being cut at all, and a
+   chart of products gets roughly twice the characters in the same tile and
+   more in a wider one. Past that it still ellipses, because a label longer
+   than the picture is a different problem from a label cut at 13.
+
+   THE SCALE BELOW A MARK USES THE SAME TRACK LIST, and must: its two ends sit
+   under the two ends of the track, and a scale on a different grid is a ruler
+   measuring something else. */
 .r-mk-row {
   display: grid;
-  grid-template-columns: minmax(6ch, 13ch) 1fr minmax(9ch, auto);
+  grid-template-columns: fit-content(40%) 1fr minmax(9ch, auto);
   gap: 10px;
   align-items: center;
   padding: 4px 0;
@@ -1542,7 +1570,10 @@ button.r-mk-name[aria-pressed="true"], .r-mk-cellname[aria-pressed="true"] {
 .r-mk-dot--now { width: 11px; height: 11px; }
 .r-mk-scale {
   display: grid;
-  grid-template-columns: minmax(6ch, 13ch) 1fr minmax(9ch, auto);
+  /* The same track list as `.r-mk-row`, deliberately: the scale's two ends sit
+     under the track's two ends, and a scale on its own grid is a ruler
+     measuring something else. */
+  grid-template-columns: fit-content(40%) 1fr minmax(9ch, auto);
   gap: 10px;
   font: 400 9.5px/1.4 var(--mono);
   color: var(--ink-3);
@@ -1665,7 +1696,12 @@ button.r-mk-name[aria-pressed="true"], .r-mk-cellname[aria-pressed="true"] {
 .r-belief[data-forgotten] .r-belief-gone { text-decoration: none; }
 
 @media (max-width: 640px) {
-  .r-mk-row, .r-mk-scale { grid-template-columns: minmax(5ch, 9ch) 1fr minmax(8ch, auto); gap: 7px; }
+  /* On a phone the picture is the scarce thing, not the label: a 40% name
+     column on a 360px screen leaves a track too short to read a movement in.
+     So the cap tightens to a third and the ellipsis does more work — which is
+     the right trade at this width and the wrong one at 940px, which is how the
+     13ch above came to be applied everywhere. */
+  .r-mk-row, .r-mk-scale { grid-template-columns: fit-content(33%) 1fr minmax(8ch, auto); gap: 7px; }
   .r-mk-name { font-size: 11px; }
   .r-mk-fig { font-size: 10.5px; }
 }
