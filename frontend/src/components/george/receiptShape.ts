@@ -54,7 +54,13 @@ export function scopeLine(meta: ToolMeta): string {
   // against another period covers two windows, and saying so is the difference
   // between "up 12%" meaning something and meaning nothing.
   if (meta.comparison?.baseline) {
-    parts.push(`vs ${meta.comparison.display_name ?? 'the previous period'}`);
+    // THE DEFINITIONS' OWN WORDS, NOT A "vs" PREFIXED ON TOP OF THEIRS. Every
+    // `comparisons.*.display_name` already begins with one, which is how "vs vs
+    // previous period" reached a kept page — reported 2026-09-15 and visible in
+    // his own screenshot. The room fixed this in `room/catalogue.ts` on 09-14
+    // and this copy did not hear about it. Only the fallback, which is this
+    // module's own sentence, carries the word.
+    parts.push(meta.comparison.display_name ?? 'vs the previous period');
   }
 
   return parts.length ? parts.join(' · ') : SCOPE_UNKNOWN;

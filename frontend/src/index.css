@@ -2,6 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------------------------------------------------------------------------
+   THE SIX CHROME TOKENS `george-*` IS BUILT FROM.
+
+   They were six fixed hexes in tailwind.config.js describing ONE surface: a
+   cream page with navy text. Every component under src/components/george reads
+   them, and three of those — PinnedPage, PinTile and what they draw — are what
+   `/pages/:id` renders. That route moved inside the room's chrome on
+   2026-09-12, the room's own default is DARK, and a fixed navy on a near-black
+   ground is the "saved pages look really weird" of 2026-09-15: headings and
+   figures at a contrast nobody can read, and raised surfaces as white blocks.
+
+   The three LIST screens (Kept, Needs you, Running) were converted to room
+   classes then; the page a person opens from Kept was not, and nothing said so.
+
+   So the tokens follow the theme instead. Defined here as RGB channels, which
+   is what Tailwind's `rgb(var(--x) / <alpha-value>)` needs for `bg-george-line/40`
+   to keep working; overridden inside `.room` per theme in room/room.css.
+   Outside the room these keep their exact original values, so a surface that
+   is still on cream is untouched.
+
+   This makes the old components READABLE. It does not make them the room —
+   they are still the pre-P1.e widgets, drawn the pre-P1.e way. See the card in
+   ops/NOW.md §3.
+   --------------------------------------------------------------------------- */
+:root {
+  --g-cream: 251 247 239;   /* #FBF7EF  page surface */
+  --g-paper: 255 253 248;   /* #FFFDF8  raised: cards, receipts, input */
+  --g-line:  228 220 203;   /* #E4DCCB  hairline */
+  --g-navy:   18  35  63;   /* #12233F  primary text */
+  --g-slate:  74  93 120;   /* #4A5D78  secondary text */
+  --g-muted: 132 150 172;   /* #8496AC  tertiary */
+}
+
 * {
   margin: 0;
   padding: 0;

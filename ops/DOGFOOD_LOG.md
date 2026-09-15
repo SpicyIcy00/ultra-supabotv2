@@ -63,6 +63,47 @@ on compose frame" does.
 
 ## Fixed
 
+### 2026-09-15 · saved pages look really weird
+
+> saved pages look really weird i think theyre broken using old ui elemets
+
+Reported with a screenshot of a kept page, **Estate Week**, opened from Kept on
+the live build: headings and figures in a dark blue that all but vanished into
+the ground, and the receipts lines drawn as white blocks.
+
+**He was right about the cause.** `/pages/:id` renders `PinnedPage` and the tree
+under it — `PinTile`, `ResultBlocks`, `Instruments`, `ReceiptsBlock` — and every
+colour in that tree comes from **six `george-*` chrome tokens** that were six
+fixed hexes describing one surface: a cream page with navy text. The three LIST
+screens (Kept, Needs you, Running) were converted to room classes on 2026-09-12
+and `RoomShell`'s own docstring says "every class in the three screens is a room
+class". True of the lists. **The page you open FROM Kept was never converted** —
+164 old-palette class uses, 0 room classes — and nothing said so. The room's
+default theme is dark, so navy (`#12233F`) landed on near-black and
+`george-paper` (`#FFFDF8`) landed as white pills.
+
+**P2.a made this visible by making Kept a destination.** Keep as page sends you
+there; before that, almost nothing did.
+
+**Fixed by the six tokens, not by 164 class names.** They are CSS variables now
+(`src/index.css`, as RGB channels so `bg-george-line/40` keeps working),
+redefined inside `.room` per theme in `room/room.css`. No class in any component
+changed, so nothing on a surface still on cream can have moved, and the light
+room is left on the exact hexes it always had — it was never the broken one.
+
+**And the doubled word in the screenshot.** "vs vs previous period": every
+`comparisons.*.display_name` already begins with "vs", and `receiptShape.ts`
+prefixed another. `room/catalogue.ts` fixed this on 09-14 and this older copy
+never heard; both are now checked by the same test.
+
+**What this does NOT do**, and it is the honest half: legibility is not the
+redesign. Those are still the pre-P1.e widgets — fourteen shapes where the room
+draws six, framed the pre-P1.e way. Drawing a kept page with the room's own
+marks is **P3.c**, and this report is the reason to consider pulling it forward.
+
+`frontend/src/room/keptChrome.test.ts`, 18 cases.
+
+
 ### 2026-09-14 · the caveat is forbidden a number, and George keeps trying
 
 Found by reading `verification/p1h-v2.json`'s `warning_detail`, not by a

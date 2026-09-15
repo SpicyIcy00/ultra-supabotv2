@@ -87,6 +87,48 @@
   transition: background 240ms var(--ease), color 240ms var(--ease);
 }
 
+/* THE OLD COMPONENTS, LIT FOR THIS ROOM (2026-09-15).
+
+   `/pages/:id` renders PinnedPage and everything under it — PinTile,
+   ResultBlocks, Instruments, ReceiptsBlock — and every colour in that tree
+   comes from six `george-*` chrome tokens describing a cream page with navy
+   text. Inside this chrome, on the dark ground, that is navy on near-black and
+   white receipt pills: the "saved pages look really weird" of 2026-09-15.
+
+   The six are CSS variables now (src/index.css), so they are redefined here to
+   this room's own ground and ink rather than 164 class names being rewritten.
+   Same six meanings, this room's values, and NO class in those components
+   changed — which is why this cannot move anything on a surface still on cream.
+
+   It buys legibility and nothing else. Those components are still the pre-P1.e
+   widgets: fourteen shapes where the room draws six, and the receipts line that
+   still says "vs vs previous period". Drawing a kept page with the room's own
+   marks is a card, not a token swap. */
+   ONLY THE DARK ROOM CHANGES. The light room is left on the exact hexes it has
+   always had: it was never the broken one, and a "fix" nobody reported that
+   also moves the theme he was not looking at is two changes in one commit. */
+.room {
+  --g-cream: 11 11 17;      /* --ground   the page they sit on */
+  --g-paper: 20 20 28;      /* --card     raised, for things you READ */
+  /* A HAIRLINE AT FULL ALPHA, not white. `border-george-line` is written bare
+     far more often than as `/40`, so this channel has to read as a line on its
+     own — `--edge` is white at 0.07, which lands here, and the `/NN` forms then
+     fall away from it rather than up to pure white. */
+  --g-line: 30 30 38;
+  --g-navy: 241 240 246;    /* --ink      primary text and headings */
+  --g-slate: 166 165 179;   /* --ink-2    secondary */
+  --g-muted: 110 109 123;   /* --ink-3    tertiary */
+}
+
+:root[data-room-theme="light"] .room {
+  --g-cream: 251 247 239;   /* #FBF7EF, unchanged */
+  --g-paper: 255 253 248;   /* #FFFDF8, unchanged */
+  --g-line: 228 220 203;    /* #E4DCCB, unchanged */
+  --g-navy: 18 35 63;       /* #12233F, unchanged */
+  --g-slate: 74 93 120;     /* #4A5D78, unchanged */
+  --g-muted: 132 150 172;   /* #8496AC, unchanged */
+}
+
 /* LIGHT — the cream room, complete. Warm and deliberately not white: a cool
    grey ground made the coloured tiles look like stickers on an office wall.
    Every token above is redefined here, so nothing has a colour that only

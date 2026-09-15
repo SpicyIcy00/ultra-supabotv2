@@ -27,12 +27,19 @@ export default {
         // `primary`, so it namespaces instead. Only components under
         // src/components/george and GeorgePage use `george-*`.
         george: {
-          cream: '#FBF7EF',   // page surface
-          paper: '#FFFDF8',   // raised surface: cards, receipts, input
-          line: '#E4DCCB',    // hairline borders on cream
-          navy: '#12233F',    // primary text and headings
-          slate: '#4A5D78',   // secondary text, metadata
-          muted: '#8496AC',   // tertiary: timestamps, citations
+          // THE SIX CHROME TOKENS FOLLOW THE ROOM'S THEME (2026-09-15).
+          // They were these exact hexes and still are outside the room; the
+          // values now live in src/index.css as RGB channels and are
+          // overridden inside `.room` per theme in room/room.css. The channel
+          // form is what keeps `bg-george-line/40` working. The reason is at
+          // the top of index.css: /pages/:id renders these components inside
+          // the room's dark chrome, where a fixed navy is unreadable.
+          cream: 'rgb(var(--g-cream) / <alpha-value>)',   // page surface
+          paper: 'rgb(var(--g-paper) / <alpha-value>)',   // raised: cards, receipts, input
+          line: 'rgb(var(--g-line) / <alpha-value>)',     // hairline borders
+          navy: 'rgb(var(--g-navy) / <alpha-value>)',     // primary text and headings
+          slate: 'rgb(var(--g-slate) / <alpha-value>)',   // secondary text, metadata
+          muted: 'rgb(var(--g-muted) / <alpha-value>)',   // tertiary: timestamps, citations
           // RESERVED: "needs you" only — notices and approvals (UI rule 5).
           // Never use for errors, warnings or emphasis.
           accent: '#D2691E',

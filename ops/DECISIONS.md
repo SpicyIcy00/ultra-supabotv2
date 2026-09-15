@@ -9,6 +9,30 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-15 — the kept page: six tokens, not a hundred and sixty-four classes
+
+*"saved pages look really weird i think theyre broken using old ui elemets"* — and
+the cause is that `/pages/:id` was never converted. The three LIST screens became
+room classes on 09-12 and `RoomShell` says so in its docstring; the page you open
+FROM one of them is `PinnedPage` and its tree, 164 old-palette class uses and 0
+room classes, rendering fixed navy-on-cream inside a dark chrome. **P2.a made it
+visible by making Kept a destination.**
+
+Every colour in that tree comes from **six** `george-*` chrome tokens and there
+is not one hardcoded white in it, so the tokens are the lever: CSS variables in
+RGB-channel form (which `bg-george-line/40` needs), overridden inside `.room`
+per theme. **No component changed**, so a surface still on cream cannot have
+moved, and the light room keeps its exact hexes — fixing the theme he was not
+looking at would be a second change in one commit.
+
+**`--g-line` is deliberately not `--edge`.** `border-george-line` is written
+bare far more often than as `/40`, and white-at-0.07 as a bare channel is pure
+white; the value is the hairline that alpha lands on instead.
+
+**This buys legibility and claims nothing else.** They are still the pre-P1.e
+widgets. Drawing a kept page with the room's marks is P3.c, and this is the
+argument for pulling it forward.
+
 ## 2026-09-15 — a green suite on one laptop is not a green suite
 
 P2.0's `test_there_are_recorded_v2_reports_to_reason_about` asserted that
