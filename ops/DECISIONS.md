@@ -4201,8 +4201,15 @@ there is no local Postgres here, no Docker, and `ops/local_postgres.py` wants
 PostgreSQL binaries the checkout does not carry. It ran — `/health` reports it
 current and expected — and the swap cost two 502s over **66 s, measured rather
 than bounded**, because the poller started before the push for the first time.
-Twelve earlier watched swaps carried no migration; this one is the only data
-point on that path and it does not explain the 50-minute outage on `8b0325a`.
+Thirteen earlier watched swaps carried no migration. **And the log caught its
+own control**: the docs-only `183a3aa` deployed 116 s later and cost the same
+two 502s, on a commit with no Python, no schema and no frontend in it. Two
+swaps two minutes apart, one carrying five columns of DDL and one carrying a
+markdown file, cost the same — so the 502s are the platform's restart and
+`alembic upgrade head` added nothing measurable. Neither explains the 50-minute
+outage on `8b0325a`. **The lesson for the next watched swap is to keep polling
+after it lands**: the first monitor stopped the moment the new sha answered and
+would have reported "two 502s, done", which was true and half the reading.
 Until a rehearsal environment exists, a migration is additive only and any
 CHECK over existing rows is `NOT VALID`, so a legacy row cannot fail an upgrade
 that nobody has watched succeed.
