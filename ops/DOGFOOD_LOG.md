@@ -101,7 +101,18 @@ redesign. Those are still the pre-P1.e widgets — fourteen shapes where the roo
 draws six, framed the pre-P1.e way. Drawing a kept page with the room's own
 marks is **P3.c**, and this report is the reason to consider pulling it forward.
 
-`frontend/src/room/keptChrome.test.ts`, 18 cases.
+**It took two goes, and the first one shipped dead.** The comment above the new
+block was closed twice, so three lines of prose became part of the selector —
+`body reported that ... in one commit. */ .room`, which matches nothing. The
+declarations were in the file, in the bundle, and inert, and the page looked
+exactly as it had. He asked *"are you sure you fixed it?"* and the answer was
+no. **The test is why it got through**: it searched `room.css` for the text
+`--g-navy:` and found it. It parses the stylesheet now and asserts the six apply
+on a rule whose selector is exactly `.room`, with a general guard that no
+selector anywhere has swallowed a comment — both checked by putting the defect
+back (7 failures, six naming the dark room).
+
+`frontend/src/room/keptChrome.test.ts`, 20 cases.
 
 
 ### 2026-09-14 · the caveat is forbidden a number, and George keeps trying

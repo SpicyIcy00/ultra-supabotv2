@@ -9,6 +9,27 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-15 — a test that reads CSS as text cannot see whether it applies
+
+The token fix above shipped **dead**. The comment above the block was closed twice,
+so three lines of prose ending in a second close marker were parsed as part of
+the SELECTOR — `body reported that ... in one commit. */ .room` — which matches
+nothing. The declarations were in the file, in the bundle, and inert; the room
+looked exactly as it had. The owner asked *"are you sure you fixed it?"* and the
+answer was no.
+
+**The test is why it got through.** It asserted `room.css` CONTAINS
+`--g-navy:`, and it did. A string search cannot tell a live rule from prose the
+parser threw away. It now parses with postcss and asserts the six apply **on a
+rule whose selector is exactly `.room`**, plus a general guard that no selector
+anywhere in the stylesheet has swallowed a comment. Both were verified by
+reintroducing the defect: 7 failures, six of them naming the dark room.
+
+**The rule this is an instance of:** a check on a FILE is not a check on
+BEHAVIOUR. `accentUse.test.ts` and `palette.test.ts` read source as text too —
+they are scans for a forbidden token, where presence is the whole question, and
+that is sound. This one was asserting that something WORKS.
+
 ## 2026-09-15 — the kept page: six tokens, not a hundred and sixty-four classes
 
 *"saved pages look really weird i think theyre broken using old ui elemets"* — and

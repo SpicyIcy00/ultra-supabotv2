@@ -13,7 +13,7 @@
  *
  * Two things are held here, and neither is a look:
  *
- *   1. THE SIX ARE VARIABLES, AND EVERY ONE EXISTS IN EVERY THEME. A token
+ *   1. THE SIX ARE VARIABLES, AND EVERY ONE APPLIES IN EVERY THEME. A token
  *      defined in one theme and not the other is the failure room.css already
  *      names for its own palette; these now live under the same rule. A hex
  *      written back into the config is a token that cannot follow a theme
@@ -31,6 +31,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import postcss from 'postcss';
 import { describe, expect, it } from 'vitest';
 
 import { subtitleFor } from './catalogue';
@@ -39,8 +40,38 @@ import type { ToolMeta } from '../types/george';
 
 const ROOT = join(__dirname, '..', '..');
 const CONFIG = readFileSync(join(ROOT, 'tailwind.config.js'), 'utf8');
-const INDEX_CSS = readFileSync(join(ROOT, 'src', 'index.css'), 'utf8');
-const ROOM_CSS = readFileSync(join(__dirname, 'room.css'), 'utf8');
+
+/**
+ * THE STYLESHEET AS A BROWSER READS IT, NEVER AS TEXT — and this is the lesson
+ * of 2026-09-15 rather than a preference.
+ *
+ * The first version of this file asserted `ROOM_CSS.toContain('--g-navy:')`. It
+ * passed, and the room was still unreadable: the comment above the block had
+ * been closed twice, so three lines of prose ending in a second close marker
+ * were parsed as part of the SELECTOR — `body reported that ... in one commit.
+ * <close> .room` — which matches nothing. The declarations were in the file, in
+ * the bundle, and dead. A string search cannot tell that apart from a rule that
+ * works; a parser only ever sees what actually applies.
+ *
+ * He asked "are you sure you fixed it?" and the honest answer was no.
+ */
+const ROOM = postcss.parse(readFileSync(join(__dirname, 'room.css'), 'utf8'));
+const INDEX = postcss.parse(readFileSync(join(ROOT, 'src', 'index.css'), 'utf8'));
+
+/** Every `--g-*` a rule with EXACTLY this selector declares, and its value. */
+function valuesOn(root: postcss.Root, selector: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  root.walkRules((rule) => {
+    if (rule.selector.trim() !== selector) return;
+    rule.walkDecls((decl) => {
+      if (decl.prop.startsWith('--g-')) out[decl.prop] = decl.value.trim();
+    });
+  });
+  return out;
+}
+
+const DARK = '.room';
+const LIGHT = ':root[data-room-theme="light"] .room';
 
 /** The chrome tokens every `george-*` component paints with. Not the accent. */
 const CHROME = ['cream', 'paper', 'line', 'navy', 'slate', 'muted'] as const;
@@ -49,36 +80,56 @@ describe('the six chrome tokens the old components paint with', () => {
   it.each(CHROME)('%s is a variable in the config, never a hex', (name) => {
     const declared = new RegExp(`\\b${name}:\\s*'([^']+)'`).exec(CONFIG);
     expect(declared, `george.${name} is not declared in tailwind.config.js`).toBeTruthy();
-    const value = declared![1];
     // The alpha form matters as much as the variable: `bg-george-line/40` is
     // written in these components, and a bare `var(--x)` silently drops the
     // modifier rather than failing.
-    expect(value).toBe(`rgb(var(--g-${name}) / <alpha-value>)`);
+    expect(declared![1]).toBe(`rgb(var(--g-${name}) / <alpha-value>)`);
   });
 
-  it.each(CHROME)('%s has a value outside the room, and one in each theme inside it', (name) => {
-    const token = `--g-${name}:`;
+  it.each(CHROME)('%s applies outside the room, and in each theme inside it', (name) => {
+    const token = `--g-${name}`;
     // Outside the room — a surface still on cream keeps the hexes it had.
-    expect(INDEX_CSS, `${token} is not defined globally`).toContain(token);
-    // Inside it, dark and light both. Read off the two blocks by name so a
-    // token added to one and forgotten in the other fails here rather than on
-    // a screen nobody is looking at.
-    const dark = ROOM_CSS.slice(ROOM_CSS.indexOf('\n.room {'), ROOM_CSS.indexOf('[data-room-theme="light"] .room'));
-    const light = ROOM_CSS.slice(ROOM_CSS.indexOf('[data-room-theme="light"] .room'));
-    expect(dark, `${token} is missing from the dark room`).toContain(token);
-    expect(light, `${token} is missing from the light room`).toContain(token);
+    expect(Object.keys(valuesOn(INDEX, ':root')), `${token} does not apply globally`)
+      .toContain(token);
+    // Inside it, dark and light both.
+    expect(Object.keys(valuesOn(ROOM, DARK)), `${token} does not apply in the dark room`)
+      .toContain(token);
+    expect(Object.keys(valuesOn(ROOM, LIGHT)), `${token} does not apply in the light room`)
+      .toContain(token);
   });
 
   it('leaves the light room on the exact values it always had', () => {
     // The light room was never the broken one. Changing it in the same edit
     // would be a second change nobody reported and nobody has seen.
-    const light = ROOM_CSS.slice(ROOM_CSS.indexOf('[data-room-theme="light"] .room'));
-    for (const [name, channels] of [
-      ['cream', '251 247 239'], ['paper', '255 253 248'], ['line', '228 220 203'],
-      ['navy', '18 35 63'], ['slate', '74 93 120'], ['muted', '132 150 172'],
-    ] as const) {
-      expect(light).toContain(`--g-${name}: ${channels};`);
+    expect(valuesOn(ROOM, LIGHT)).toMatchObject({
+      '--g-cream': '251 247 239', '--g-paper': '255 253 248', '--g-line': '228 220 203',
+      '--g-navy': '18 35 63', '--g-slate': '74 93 120', '--g-muted': '132 150 172',
+    });
+  });
+
+  it('gives the dark room its own ink, because they are two grounds', () => {
+    // The whole report in one assertion: navy on near-black is what "weird"
+    // was, and it is what a dark room sharing the light room's ink would be.
+    const dark = valuesOn(ROOM, DARK);
+    const light = valuesOn(ROOM, LIGHT);
+    for (const name of CHROME) {
+      expect(dark[`--g-${name}`],
+             `--g-${name} is the same in both rooms, so one of them is unreadable`)
+        .not.toBe(light[`--g-${name}`]);
     }
+  });
+
+  it('has no rule anywhere whose selector swallowed a comment', () => {
+    // The 2026-09-15 defect in general form, over the whole stylesheet: a
+    // comment closed twice leaves prose at the top level, and everything up to
+    // the next brace becomes the selector of the rule after it.
+    const swallowed: string[] = [];
+    ROOM.walkRules((rule) => {
+      if (rule.selector.includes('*/') || /[.:#[\w-]*\s{2,}\w/.test(rule.selector)) {
+        swallowed.push(rule.selector.slice(0, 90));
+      }
+    });
+    expect(swallowed, 'these selectors have prose in them and match nothing').toEqual([]);
   });
 
   it('keeps the reserved colour out of this entirely', () => {
@@ -109,7 +160,7 @@ describe('what a figure was measured against, said once', () => {
     expect(line).not.toContain('vs vs');
   });
 
-  it('still says the word where the sentence is its own, not the yaml\'s', () => {
+  it("still says the word where the sentence is its own, not the yaml's", () => {
     // No display_name: the fallback is this module's own wording and has to
     // carry the "vs" the definitions would have supplied.
     const line = scopeLine({
