@@ -159,6 +159,13 @@ export default function Room() {
     if (!threadId && george.storedThreadId) navigate(`/w/${george.storedThreadId}`, { replace: true });
   }, [threadId, george.storedThreadId, navigate]);
 
+  // ANOTHER THREAD IS ANOTHER THREAD (P2.a). The view and the page just kept
+  // both belong to the conversation that was open: carrying them across would
+  // put one thread's page name in another thread's header, which is the exact
+  // claim UI rule 8 exists to stop. The query is keyed by thread and answers
+  // for itself; this clears what was held locally.
+  useEffect(() => { setView('talk'); setFocus(null); setJustKept(null); }, [threadId]);
+
   const answers = useMemo(
     () => george.turns.filter((t): t is AnswerTurn => t.role === 'george'),
     [george.turns],
