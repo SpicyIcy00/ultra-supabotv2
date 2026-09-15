@@ -107,8 +107,10 @@ export default function PagesPage() {
 
               {p.purpose && <p className="r-note" style={{ marginTop: 6 }}>{p.purpose}</p>}
 
-              {/* What the page is for, quoted rather than described. */}
-              <p className="r-note" style={{ marginTop: 8 }}>
+              {/* What the page is for, quoted rather than described. A LIST of
+                  question names, so it is not on a prose measure: `.r-note`
+                  capped it at 62ch and broke it mid-item. */}
+              <p className="r-item-of" style={{ marginTop: 8 }}>
                 {p.pins.length === 0 ? (
                   <span style={{ color: 'var(--ink-3)' }}>Nothing here yet.</span>
                 ) : (

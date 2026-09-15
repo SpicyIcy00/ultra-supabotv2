@@ -165,9 +165,35 @@ describe('the six chrome tokens the old components paint with', () => {
     // "its not centered" — 2026-09-15. `.r-measure` has carried this since the
     // room existed; `.r-column`, which Kept, Needs you and Running are drawn
     // in, never did, so all three sat against the left edge.
-    const column = declsOn(ROOM, '.r-column');
-    expect(column['max-width']).toBe('820px');
-    expect(column['margin-inline'], 'the column is not centred').toBe('auto');
+    // The WIDTH is the next test's subject; this one is only about whether the
+    // column is in the middle of the screen or against its left edge.
+    expect(declsOn(ROOM, '.r-column')['margin-inline'], 'the column is not centred')
+      .toBe('auto');
+  });
+
+  it('gives the list screens a measure of their own, wider than 820px', () => {
+    // "dont you think the center is too small?" — 2026-09-15. Its own token
+    // rather than the board's, because a grid of tiles and a list of rows are
+    // two kinds of content; both named in room.css so neither is a number
+    // somebody once typed into a rule.
+    expect(declsOn(ROOM, '.r-column')['max-width']).toBe('var(--measure-list)');
+    const measure = declsOn(ROOM, '.room')['--measure-list'];
+    expect(measure, '--measure-list is not defined on the room').toBeTruthy();
+    expect(parseInt(measure, 10)).toBeGreaterThan(820);
+  });
+
+  it('does not put a list of question names on a prose measure', () => {
+    // Widening the column alone would have done nothing visible: every
+    // paragraph on these screens is `.r-note`, capped at 62ch, so a wider
+    // column moves prose left rather than stretching it. The one line that is
+    // a LIST and not a sentence is what uses the width.
+    const kept = readFileSync(join(ROOT, 'src', 'pages', 'PagesPage.tsx'), 'utf8');
+    expect(kept).toContain('className="r-item-of"');
+    expect(Object.keys(declsOn(ROOM, '.r-item-of'))).not.toContain('max-width');
+    // And prose keeps its own, here and in the reading. Running an answer the
+    // full width of a 1900px screen is what a measure exists to prevent.
+    expect(declsOn(ROOM, '.r-note')['max-width']).toBe('62ch');
+    expect(declsOn(ROOM, '.r-say--reading')['max-width']).toBe('66ch');
   });
 
   it('keeps the reserved colour out of this entirely', () => {

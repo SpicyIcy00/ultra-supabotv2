@@ -73,6 +73,10 @@
      default is the wide one, so a browser without `:has()` is still centred,
      which is the half of the report that matters. */
   --measure: 1320px;
+  /* And the list screens' own, narrower: rows rather than a grid of tiles.
+     Two kinds of content, two measures, both named here so neither is a
+     number somebody once typed into a rule. */
+  --measure-list: 1120px;
 
   --sans: 'Schibsted Grotesk', ui-sans-serif, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
@@ -1034,12 +1038,34 @@ body.r-dragging-on .r-tile { transition: none; }
    boards — so a column rather than a packing grid, and the room's own type
    rather than the serif display the shell before this one used. */
 
-/* CENTRED, like the board's own measure. `.r-measure` has carried
+/* THE COLUMN THE THREE LIST SCREENS ARE DRAWN IN.
+
+   CENTRED, like the board's own measure. `.r-measure` has carried
    `margin-inline: auto` since the room existed and this column never did, so
    Kept, Needs you and Running all sat against the left edge with the rest of
-   the screen empty — "its not centered", 2026-09-15, and the same complaint
-   the board got on 09-14. One declaration, three screens. */
-.r-column { max-width: 820px; margin-inline: auto; }
+   the screen empty — "its not centered", 2026-09-15.
+
+   AND WIDER THAN 820px, reported the same day: *"dont you think the center is
+   too small? like it should occupy more on the center?"* It is its own measure
+   rather than the board's, because these are two kinds of content: the board
+   is a grid of tiles and wants `--measure`; a list is rows, and a row's widest
+   line is the questions a page holds, joined with `·`. This is the width at
+   which such a line reads as one or two clean lines rather than breaking
+   mid-item, which is what 820px was doing to "AJI BARN Reorder".
+
+   WIDENING THE COLUMN ALONE WOULD HAVE DONE NOTHING VISIBLE, and that is worth
+   saying: every paragraph in these screens is `.r-note`, capped at 62ch. A
+   wider column moves prose left; it does not stretch it. What uses the new
+   width is `.r-item-of` below — the one line that is a LIST rather than a
+   sentence. Prose keeps its measure, here and in the reading, because running
+   an answer the full width of a 1900px screen is the thing a measure exists to
+   prevent. */
+.r-column { max-width: var(--measure-list); margin-inline: auto; }
+
+/* WHAT A KEPT PAGE HOLDS, quoted rather than described — a list of question
+   names, not a sentence. A reading measure is for prose: applied to a
+   `·`-joined list it breaks it mid-item for no reader's benefit. */
+.r-item-of { font: 400 13px/1.6 var(--sans); color: var(--ink-2); margin: 0; }
 
 .r-head { padding-bottom: 18px; border-bottom: 1px solid var(--edge); margin-bottom: 4px; }
 .r-head-row { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; }

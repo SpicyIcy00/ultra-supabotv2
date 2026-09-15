@@ -133,8 +133,27 @@ a bar is a mark, not a word, so it has its own token now.
 lines from before the board learned its six marks. **P2.k** is that, and it
 deletes a renderer rather than adding one.
 
-`frontend/src/room/keptChrome.test.ts`, 23 cases — and every new assertion was
-checked by reintroducing its own defect.
+**And a fourth, once it was centred:**
+
+> ok its good now but dont you think the center is too small? like it should
+> occupy more on the center?
+
+820px in a ~1900px window. Widened to its own token, `--measure-list: 1120px`,
+beside the board's `--measure: 1320px` — two measures because a grid of tiles
+and a list of rows are two kinds of content, and both named so neither is a
+number somebody typed into a rule.
+
+**Widening the column alone would have changed almost nothing visible**, which
+is the part worth keeping: every paragraph on those screens is `.r-note`, capped
+at 62ch, so a wider column moves prose LEFT rather than stretching it. What uses
+the width is the one line that is a list and not a sentence — the questions a
+kept page holds, joined with `·`, which at 820px was breaking mid-item on "AJI
+BARN Reorder". It has its own class now. Prose keeps its measure here and in
+the reading, because running an answer the full width of a 1900px screen is the
+thing a measure exists to prevent.
+
+`frontend/src/room/keptChrome.test.ts`, 25 cases — and every new assertion was
+checked by reintroducing its own defect, six for six.
 
 
 ### 2026-09-14 · the caveat is forbidden a number, and George keeps trying
