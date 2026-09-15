@@ -57,6 +57,42 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-15 · two different colours of black
+
+> and why are there 2 different colors of black here? a navy ish and a more
+> greyish?
+
+Asked of `f8762a4`, the board an hour after P2.l, with a screenshot of the
+lead tile's tail, the two ranked tiles and the two figure tiles.
+
+**What the room actually declares, measured rather than eyeballed:**
+
+| surface | value | what it is | hue |
+|---|---|---|---|
+| `--ground` | `#0B0B11` | the page | blue over red by 6 |
+| `--card` | `#14141C` | a tile you READ | blue over red by 8 |
+| `--paper` over the ground | `#121218` | a COOLED tile (`.r-tile--quiet`) | blue over red by 6 |
+| `--sunk` | `#1B1B26` | rail buttons, the send button, a mention menu | blue over red by 11 |
+
+**So the room's own two tile blacks are not it.** A read tile and a cooled tile
+are `#14141C` and `#121218` — two units of lightness apart, the same hue. That
+is a difference you can measure and not one anybody would call navy against
+grey.
+
+**The likelier answer is that there are TWO PALETTES in this app.** The
+pre-room BI components carry their own dark family — `#1c1e26`, `#252833`,
+`#2e303d` (`components/analytics/*`), which is a cool GREY — against the room's
+`#0B0B11`/`#14141C`, which is violet. Navy against greyish is exactly that
+pair. It is the same root as *"it doesnt feel like its from the same app and
+its beacause its not"*, already carded as **P2.k**.
+
+**NOT YET DECIDED, because the screenshot cannot settle which two surfaces he
+means** — everything visible in it is the room, so either it is the room's own
+two-unit step reading larger on his display than in the numbers, or it is the
+chrome around the room. **The next session asks him to point at the two areas
+before changing a token**, and does not guess: a colour nobody can name the
+source of is the thing this week has been about.
+
 ### 2026-09-15 · a claim about Greenhills over Rockwell's number
 
 Found while answering the colour report below, in the same screenshot, and it
