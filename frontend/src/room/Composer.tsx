@@ -39,8 +39,18 @@ export interface ComposerProps {
   scope: { id: string; title: string } | null;
   /** What was named and binds nothing — a rule. */
   named: NamedReference[];
+  /**
+   * WHICH BUSINESS THE QUESTION IS SCOPED TO (P2.g), or null on the estate's
+   * own default — where nothing is travelling and a chip would be about
+   * nothing. The switch itself lives at the top of the column; this is it
+   * drawn where the rest of what travels is drawn, because a full board
+   * scrolls the top away and what a question carries has to be visible at the
+   * moment it is sent.
+   */
+  estate?: { key: string; label: string } | null;
   onUnpick(subject: Subject): void;
   onUnscope(): void;
+  onUnestate?(): void;
   onUnname(reference: NamedReference): void;
   onBind(bound: Bound): void;
   onSend(): void;
@@ -179,8 +189,15 @@ export function Composer(p: ComposerProps) {
   return (
     <div className="r-line-wrap">
       <div className="r-measure">
-        {(p.subjects.length > 0 || p.scope || p.named.length > 0) && (
+        {(p.subjects.length > 0 || p.scope || p.named.length > 0 || p.estate) && (
           <div className="r-chips">
+            {p.estate && (
+              <button type="button" className="r-chip r-chip--scope"
+                      title="the part of the estate this question is about"
+                      onClick={() => p.onUnestate?.()}>
+                {p.estate.label} ×
+              </button>
+            )}
             {p.subjects.map((s) => (
               <button key={`${s.dimension}:${s.id}`} type="button" className="r-chip r-chip--subject"
                       title={`${s.dimension} · ${s.id}`}

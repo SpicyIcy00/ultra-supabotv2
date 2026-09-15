@@ -273,11 +273,22 @@ def store_catalog(defs: dict, scope_ids: Sequence[str]) -> dict[str, dict]:
     return catalog
 
 
-# Every group in metrics.yaml that names real stores. Used only to tell "this
-# store does not exist" from "this store exists and this reading excludes it" —
-# never to widen a scope.
-_STORE_GROUPS = ("active_retail", "pending_retail", "warehouse", "closed",
-                 "non_trading")
+def _store_groups(defs: dict) -> list[str]:
+    """
+    Every group in metrics.yaml that names real stores. Used only to tell "this
+    store does not exist" from "this store exists and this reading excludes it"
+    — never to widen a scope.
+
+    READ FROM THE DEFINITIONS SINCE P2.g (2026-09-15).
+
+    This was a tuple here and it had drifted: `vending_stock_location` was
+    added to metrics.yaml and never to the tuple, so AJI CMG — a real row, with
+    3,534 inventory rows behind it — resolved as "Unknown store". That is the
+    sentence the warehouse fix exists to prevent, arriving through the one
+    group nobody updated. The store list lives in metrics.yaml and nowhere
+    else, and so does the list of its groups.
+    """
+    return [str(g) for g in req(defs, "stores.groups")]
 
 
 def _match(wanted: str, entry: Mapping[str, Any], sid: str) -> bool:
@@ -291,7 +302,7 @@ def _match(wanted: str, entry: Mapping[str, Any], sid: str) -> bool:
 def estate(defs: dict) -> dict[str, tuple[dict, str]]:
     """id -> (entry, which group it is in), across the whole estate."""
     found: dict[str, tuple[dict, str]] = {}
-    for group in _STORE_GROUPS:
+    for group in _store_groups(defs):
         for entry in defs.get("stores", {}).get(group) or []:
             if isinstance(entry, Mapping) and entry.get("id"):
                 found.setdefault(entry["id"], (dict(entry), group))

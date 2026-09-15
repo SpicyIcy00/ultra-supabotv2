@@ -45,6 +45,28 @@ export interface DeskAlternative {
   permit_key?: string | null;
 }
 
+/**
+ * One part of the estate a question may be scoped to (P2.g) — a business, its
+ * words, and the places it covers resolved to their display names on the
+ * server. The client never holds a shop's name or counts one.
+ */
+export interface DeskEstatePart {
+  key: string;
+  label: string;
+  says: string | null;
+  /** Whether the pill draws how many places it covers in front of its label. */
+  count_places: boolean;
+  places: string[];
+}
+
+/** The switch: what it is called, what a question means untouched, its parts. */
+export interface DeskEstate {
+  label: string;
+  /** The part a question is on before anybody presses anything. Never sent. */
+  default: string;
+  parts: DeskEstatePart[];
+}
+
 /** One argument the loop accepted, as a thing a person can move. */
 export interface DeskToken {
   argument: string;
@@ -102,6 +124,12 @@ export interface DeskDefinitions {
    * Served, so the client never decides what the definitions permit.
    */
   breakdown_dimensions: DeskDimension[];
+  /**
+   * Which businesses a question may be scoped to, and the places each covers
+   * (metrics.yaml surface.desk.estate). The pills are drawn from this and
+   * from nothing else.
+   */
+  estate: DeskEstate;
   /** The tokens a drawn read may carry, alternatives already resolved. */
   tokens: DeskToken[];
   /**

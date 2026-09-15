@@ -26,6 +26,8 @@ import { FootOffers } from './FootOffers';
 import { offersOf, placement } from './actions';
 import { usePagesForGhosts } from './ghosts';
 import { Earlier } from './Earlier';
+import { EstateSwitch } from './EstateSwitch';
+import { estateFor, scopeChip } from './estate';
 import { readDeskDefinitions, replayStoredCall, type DeskAlternative } from '../services/deskApi';
 import { Tokens } from './Tokens';
 import { Composer, type NamedReference } from './Composer';
@@ -106,6 +108,12 @@ export default function Room() {
   // states it could be in.
   const [moving, setMoving] = useState(0);
   const [refusal, setRefusal] = useState<string | null>(null);
+  // WHICH BUSINESS THE NEXT QUESTION IS ABOUT (P2.g). Null is the
+  // definitions' own default, which is what every question has meant until
+  // now — so it travels as nothing and can only narrow. It is scope on the
+  // NEXT question and not a view over what is drawn, which is why moving it
+  // redraws nothing and costs no turn.
+  const [estate, setEstate] = useState<string | null>(null);
 
   // THE DEFINITIONS THE TOKENS ARE DRAWN FROM — metrics.yaml, served. Which
   // arguments are movable, what each may be moved to, the words each answers
@@ -351,6 +359,15 @@ export default function Room() {
     });
   }, [answers.length, board]);
 
+  // THE PART OF THE ESTATE THE NEXT QUESTION CARRIES (P2.g) — the key, or
+  // undefined on the definitions' default. Resolved against what was served,
+  // so a key this build no longer declares travels as nothing rather than as
+  // a scope the server would refuse.
+  const scoped = useMemo(() => estateFor(desk.data, estate), [desk.data, estate]);
+  // The same thing, drawn above the line. Null on the default, because nothing
+  // is travelling and a chip saying "All" would be a chip about nothing.
+  const estateChip = useMemo(() => scopeChip(desk.data, estate), [desk.data, estate]);
+
   // WHAT A QUESTION TRAVELS WITH. Named apart from `ask` because a fragment
   // never reaches it: this is the one path that costs a model turn.
   const askGeorge = useCallback((text: string, subjects = selection) => {
@@ -370,6 +387,10 @@ export default function Room() {
     // `{id: label}`, so every subject reached George as a word.
     const picked = asSelection(subjects);
     const desk = {
+      // WHICH BUSINESS (P2.g). The key, or nothing on the default — the
+      // guarantee that a switch nobody touched changes no answer that was
+      // already right.
+      ...(scoped ? { estate: scoped } : {}),
       ...(picked ? { selection: picked } : {}),
       ...(named.length ? { references: named } : {}),
       ...(board.length ? { board: boardContext(answers, board, local, focused) } : {}),
@@ -381,7 +402,7 @@ export default function Room() {
       // his schema at all (architecture rule 4).
       ...(scope ? { pageScope: pageScopeFor(scope.id, scope.title) } : {}),
     });
-  }, [george, selection, named, scope, answers, board, local, focused]);
+  }, [george, selection, named, scope, scoped, answers, board, local, focused]);
 
   /**
    * ONE REPLAY PATH, FOR EVERY DOOR INTO IT (P1.j).
@@ -739,6 +760,10 @@ export default function Room() {
     // Leaving on purpose: "/" must not walk straight back in.
     forgetLast();
     george.reset(); setSelection([]); setScope(null); setNamed([]); setFocused(null);
+    // Starting fresh is the whole estate again: the switch is a scope you put
+    // on, and carrying it into a new board would be the room deciding what the
+    // next question is about (P2.g).
+    setEstate(null);
     setView('talk'); setFocus(null); setJustKept(null);
     setRetuned({}); setShapes({}); setRefusal(null);
     // WHAT YOU KEPT SURVIVES. Clearing is for the conversation, not for the
@@ -762,6 +787,12 @@ export default function Room() {
             2026-09-14 — "at 100% size theres lots of empty space on the right
             and its not centered". See `--measure` in room.css. */}
         <div className="r-measure">
+        {/* WHICH BUSINESS (P2.g). Above everything, including the thread's own
+            header, because it is set BEFORE the question rather than read
+            after the answer — and unlike everything below it, it is about the
+            NEXT thing said and not about what is drawn. */}
+        <EstateSwitch defs={desk.data} picked={estate} failed={desk.isError}
+                      onPick={(key) => setEstate(key)} />
         {/* THE THREAD'S OWN HEADER (P2.a), and the first thing on the column
             because it says what you are looking at before it says anything
             about the world. Not drawn on an empty room: there is no thread to
@@ -920,6 +951,13 @@ export default function Room() {
         subjects={selection}
         scope={scope}
         named={named}
+        // WHICH BUSINESS, WHERE THE REST OF WHAT TRAVELS IS DRAWN (P2.g). The
+        // switch itself is at the top of the column, which scrolls away on a
+        // full board — and what the question carries has to be visible at the
+        // moment it is sent. Removing it here is the same gesture as pressing
+        // the default pill up there.
+        estate={estateChip}
+        onUnestate={() => setEstate(null)}
         defs={desk.data}
         busy={busy}
         // WHAT THE GREY COMPLETION IS BUILT FROM (P2.d) — all of it already on

@@ -57,7 +57,7 @@ from app.core.config import settings
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -207,6 +207,10 @@ _DESK_DIMENSIONS = tuple(str(d) for d in _req(_DESK, "selection.dimensions"))
 # bound the definitions state and neither side keeps its own copy.
 _DESK_MAX_DRAWN = int(_req(_DESK, "context.max_drawn_subjects"))
 _DESK_MAX_ATTENTION = int(_req(_DESK, "context.max_attention"))
+# WHICH BUSINESS A QUESTION MAY BE SCOPED TO (P2.g). The keys the definitions
+# declare and nothing else — a part the yaml does not name is refused here
+# rather than reaching the loop and being dropped there in silence.
+_DESK_ESTATE = tuple(str(p["key"]) for p in _req(_DESK, "estate.parts"))
 # The board's bound is the board's own, from metrics.yaml composition, so the
 # number the client folds to is the number the route refuses past.
 _BOARD_MAX = int(_req(_load_defs(), "composition.max_objects"))
@@ -330,6 +334,11 @@ class DeskContext(BaseModel):
     surface.desk.context).
     """
 
+    # WHICH BUSINESS THE QUESTION IS ABOUT (P2.g) — one key from
+    # `surface.desk.estate.parts`, which the loop turns into the places it
+    # covers and what answers for them. Absent means the default, which is
+    # what every question meant before this existed.
+    estate: Optional[str] = Field(None, max_length=32)
     selection: Optional[DeskSelection] = None
     window: Optional[DeskWindow] = None
     drawn: Optional[DeskDrawn] = None
@@ -341,6 +350,24 @@ class DeskContext(BaseModel):
     # What an `@` resolved to that binds nothing (P2.c) — a rule, by name and
     # id. Bounded by the same number the drawn subjects are.
     references: List[DeskReference] = Field(default_factory=list, max_length=_DESK_MAX_DRAWN)
+
+    @field_validator("estate")
+    @classmethod
+    def _estate_is_a_declared_part(cls, value: Optional[str]) -> Optional[str]:
+        """
+        A part the definitions do not declare is refused, not ignored.
+
+        The rest of the desk is bounded by `Literal`s; this one is a list read
+        out of metrics.yaml at import, so it cannot be spelled as a type. The
+        check has to exist somewhere and this is the edge — a bad key dropped
+        silently in the loop would mean a person switching to something the
+        server does not know gets the whole estate back, with a pill lit saying
+        otherwise.
+        """
+        if value is None or value in _DESK_ESTATE:
+            return value
+        raise ValueError(f"unknown estate part {value!r}; "
+                         f"expected one of {', '.join(_DESK_ESTATE)}")
 
 
 class AskRequest(BaseModel):
@@ -2730,6 +2757,37 @@ class DeskToken(BaseModel):
     permitted_by: Optional[DeskPermit] = None
 
 
+class DeskEstatePart(BaseModel):
+    """
+    One part of the estate a question may be scoped to (P2.g).
+
+    The pill's own words and the places behind them, both out of metrics.yaml:
+    `label` and `says` are what it reads, `places` is the store list it covers
+    resolved to display names here, so no client holds a shop's name or counts
+    one. What a part MEANS — which domain answers for it, what it is excluded
+    from — is not served: that is George's to be told on the question, and a
+    client drawing a pill has no use for it.
+    """
+
+    key: str
+    label: str
+    says: Optional[str] = None
+    #: Whether the pill draws how many places it covers in front of its label.
+    count_places: bool = False
+    #: The display names of the places this part covers, from `stores`.
+    places: List[str]
+
+
+class DeskEstate(BaseModel):
+    """The switch itself: what it is called, what it does when untouched, its parts."""
+
+    label: str
+    #: The part a question is on before anybody presses anything. It narrows
+    #: nothing and is not sent.
+    default: str
+    parts: List[DeskEstatePart]
+
+
 class DeskDefinitions(BaseModel):
     """
     Everything the workspace reads from the definitions, in one read.
@@ -2757,6 +2815,10 @@ class DeskDefinitions(BaseModel):
     #: DEFINITIONS, answered here rather than guessed by a client that
     #: cannot see them.
     breakdown_dimensions: List[str]
+    #: Which businesses a question may be scoped to, and the places each
+    #: covers (metrics.yaml surface.desk.estate). The pills are drawn from
+    #: this and from nothing else.
+    estate: DeskEstate
     #: The tokens a drawn read may carry, in the order the definitions list
     #: them, with every alternative resolved (metrics.yaml
     #: surface.desk.tokens). A client draws what it is given.
@@ -2853,6 +2915,36 @@ def _desk_tokens(
     return out[: int(spec["max_tokens"])]
 
 
+def _desk_estate(defs: Mapping[str, Any]) -> DeskEstate:
+    """
+    The estate switch, with every part's places resolved from `stores` (P2.g).
+
+    A part names the LISTS it covers and never the shops in them, so opening a
+    shop moves the pill, the sentence George is told and the ids behind them in
+    one edit. The resolution happens here, once, rather than in a client that
+    would then be holding a copy of the store list — the thing CLAUDE.md says
+    lives in metrics.yaml and nowhere else.
+    """
+    estate = _req(defs, "surface.desk.estate")
+    parts: List[DeskEstatePart] = []
+    for part in _req(estate, "parts"):
+        places: List[str] = []
+        for path in part.get("places_from") or []:
+            for entry in _req(defs, str(path)) or []:
+                name = entry.get("display_name") or entry.get("name")
+                if name and name not in places:
+                    places.append(str(name))
+        parts.append(DeskEstatePart(
+            key=str(part["key"]),
+            label=str(part["label"]),
+            says=(str(part["says"]) if part.get("says") else None),
+            count_places=bool(part.get("count_places")),
+            places=places,
+        ))
+    return DeskEstate(label=str(_req(estate, "label")),
+                      default=str(_req(estate, "default")), parts=parts)
+
+
 @router.get("/definitions/desk", response_model=DeskDefinitions)
 async def desk_definitions(user: AppUser = Depends(_george_user)) -> DeskDefinitions:
     defs = _load_defs()
@@ -2885,6 +2977,7 @@ async def desk_definitions(user: AppUser = Depends(_george_user)) -> DeskDefinit
 
     return DeskDefinitions(
         business=dict(_req(desk, "business")),
+        estate=_desk_estate(defs),
         breakdown_dimensions=[d for d in dimensions if d in groupable],
         tokens=_desk_tokens(desk, _req(defs, "metrics"), windows, locations,
                             [d for d in dimensions if d in groupable]),

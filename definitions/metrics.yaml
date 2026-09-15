@@ -320,6 +320,21 @@ stores:
   # ---------------------------------------------------------------------------
   total_rows_in_stores_table: 22
 
+  # THE GROUPS, NAMED RATHER THAN LISTED IN A COMMENT (P2.g, 2026-09-15).
+  #
+  # `tools/_common.estate()` sweeps these to answer "is this a real place?", and
+  # it held its own tuple of six names — which had drifted to five. AJI CMG was
+  # missing from it, so `resolve_store("AJI CMG")` answered "Unknown store",
+  # which is the exact sentence the warehouse fix of 2026-09-13 exists to
+  # prevent: a real row in `stores`, deliberately out of one reading's scope,
+  # told it does not exist. A group added below is now swept without a second
+  # edit in Python.
+  #
+  # ORDER MATTERS ONLY FOR A DUPLICATE: the first group naming an id wins, and
+  # no id may be in two (the count above).
+  groups: [active_retail, pending_retail, warehouse, closed,
+           vending_stock_location, non_trading]
+
   active_retail:
     - id: "6639efd54694700008d7ccc6"
       name: "(1) Aji Ichiban Food Products"
@@ -6255,11 +6270,106 @@ surface:
     introduced: "2026-09-09"
     executes_nothing: true
 
-    # The business the desk lays out. One at a time; FFR arrives only with an
-    # authoritative source (data_availability.ffr) and is not placeholdered.
+    # The business the desk lays out. FFR arrives only with an authoritative
+    # source (data_availability.ffr) and is not placeholdered. Which PART of
+    # it a question is about is `estate`, below.
     business:
       name: "Aji Ichiban"
       short: "AJI"
+
+    # -------------------------------------------------------------------------
+    # THE ESTATE SWITCH (P2.g, 2026-09-15). The owner's feature 23: "George
+    # works across all my businesses and understands which business/store/system
+    # I'm referring to."
+    #
+    # BOTH BUSINESSES HAVE BEEN READ SINCE BEFORE THIS CARD. `get_vending` and
+    # the `_php` views are live, vending has its own metric registry
+    # (`metric_model.registries`), and the warehouse has been a place in
+    # `stores` all along. What was missing was the SWITCH: a person had no way
+    # to say which of them "how are we doing" was about, so it always meant the
+    # shops, and the other two businesses were reachable only by naming them in
+    # a sentence and hoping.
+    #
+    # IT IS SCOPE ON THE NEXT QUESTION, AND NOTHING ELSE. A part travels the
+    # way a selection travels (`selection.stored_on`) — named to George on the
+    # question, kept on the question post, never in the cached prefix and never
+    # a figure. It does not rewrite a call, does not narrow a tool schema and
+    # does not filter rows: the TOOLS decide what a scope means, and they
+    # already do. `get_sales` at the warehouse refuses in its own words
+    # (`filters.excluded_from_sales`, `sales_scope.warehouse_excluded_reason`)
+    # and `get_stock` answers, which is the whole of "the barn reads stock, not
+    # sales" — enforced where it was already enforced, not restated here.
+    #
+    # THE PLACES COME FROM THE STORE LISTS AND NOWHERE ELSE. `places_from` is a
+    # path into `stores`, so opening a shop or closing the barn moves the pills,
+    # the ids and the sentence together. Nothing below carries a name or a count
+    # of its own.
+    # -------------------------------------------------------------------------
+    estate:
+      label: estate
+      # A part is a NARROWING. Nothing chosen is the whole estate, which is
+      # what every question has meant until today, so the default changes no
+      # answer that was already right.
+      default: all
+      travels_as: store_scope
+      stored_on: question_post_payload
+      never_a_figure: true
+      parts:
+        - key: all
+          label: "All"
+          # The three lists together, which is what the tools already default
+          # to; named so `all` is a part like the others and not an absence
+          # with a pill drawn over it.
+          places_from: [stores.active_retail, stores.warehouse,
+                        stores.vending_stock_location]
+          domain: both
+          answers_with: []
+
+        - key: shops
+          label: "shops"
+          says: "retail"
+          # THE PILL SAYS HOW MANY. "shops" is a common noun and the number of
+          # them is the useful half of it — the Ideal UI's own pill reads
+          # "7 shops". "1 AJI BARN" is nonsense, so the other parts do not,
+          # and which is which is declared rather than worked out from the
+          # label. The count itself is `places` and comes from the store list.
+          count_places: true
+          # WHAT THE SENTENCE CALLS IT, beside what the pill calls it. "shops"
+          # is a common noun and "AJI BARN" is a proper one, and a rule that
+          # worked out which was which from the label would be a grammar engine
+          # in a component. Two words in the definitions instead.
+          noun: "the shops"
+          places_from: [stores.active_retail]
+          domain: retail
+          answers_with: [get_sales, get_stock, get_product, get_movement]
+
+        - key: barn
+          label: "AJI BARN"
+          says: "warehouse"
+          noun: "AJI BARN, the warehouse"
+          places_from: [stores.warehouse]
+          domain: retail
+          # WHAT A GENERAL QUESTION ABOUT THE BARN IS ABOUT. It takes no retail
+          # transactions at all, so "how are we doing" there is a question about
+          # what is on the shelves and what is moving off them.
+          answers_with: [get_stock, get_movement, get_purchasing]
+          not_in: sales
+          not_in_because: filters.excluded_from_sales
+
+        - key: vending
+          label: "AJI CMG"
+          says: "vending · own domain"
+          noun: "AJI CMG, the vending business"
+          # THE STORES ROW, NOT THE WEIMI DOMAIN — and the two must never be
+          # conflated, which is why `stores.vending_stock_location` says so in
+          # its own comment. The row is where the scope TRAVELS (a real place,
+          # with store-side stock); `domain: vending` is what ANSWERS, through
+          # the `_php` views. A vending figure is never a store figure.
+          places_from: [stores.vending_stock_location]
+          domain: vending
+          answers_with: [get_vending, get_vending_stock]
+          not_joined_to: retail
+          not_joined_because: vending.never_join_to_store_domain
 
     # The interaction grammars the workspace may be in. A CLOSED set, derived
     # from the state of the work and never chosen by the model. Only the first

@@ -938,6 +938,14 @@ def _scope_sentence(defs: dict) -> str:
     active = len(req(defs, "stores.active_retail"))
     pending = len(req(defs, "stores.pending_retail"))
     warehouses = [s.get("display_name") or s["name"] for s in req(defs, "stores.warehouse")]
+    # THE THIRD BUSINESS WAS TYPED HERE (P2.g, 2026-09-15). "AJI CMG" was a
+    # literal in this sentence while the other two were counted and named from
+    # the yaml — the one name in the prompt that a change to metrics.yaml could
+    # not move. It is the same row `surface.desk.estate`'s vending part scopes
+    # to, so it is read from the same place. The bytes are unchanged, which is
+    # the point: nothing about the prompt moved except where the word came from.
+    vending = [s.get("display_name") or s["name"]
+               for s in req(defs, "stores.vending_stock_location")]
     pending_part = (
         f" {pending} more storefronts exist but have never transacted, so they are "
         f"not in any figure unless you say otherwise."
@@ -946,7 +954,7 @@ def _scope_sentence(defs: dict) -> str:
     return (
         f"You are George. You work for Aji Ichiban — {active} active retail candy "
         f"stores in the Philippines, the {', '.join(warehouses)} "
-        f"warehouse, and the AJI CMG vending machines.{pending_part}"
+        f"warehouse, and the {', '.join(vending)} vending machines.{pending_part}"
     )
 
 
@@ -2381,8 +2389,12 @@ async def run(
             role, closed over the owner and the page in scope. Without it
             neither tool is in the schema. See agent/write_tools.py.
         desk: what the person has selected on the workspace and the window
-            they moved it to — {"selection": {dimension, subjects: [{id,
-            label}]}, "window": {...}} — validated and bounded by the route.
+            they moved it to — {"estate": part, "selection": {dimension,
+            subjects: [{id, label}]}, "window": {...}} — validated and
+            bounded by the route. `estate` (P2.g) is which BUSINESS the
+            question is about, one key from `surface.desk.estate.parts`;
+            absent, or the default, it says nothing and the question means
+            what it has always meant.
             Named to the model on the QUESTION beside the work sentence
             (agent/surface.py desk_sentence), never in the cached prefix, and
             kept on the question post's payload so a reload restores the same

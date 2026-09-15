@@ -4271,3 +4271,15 @@ stops being an optional source. *"calenders, mail in the future but our main
 goal is to make how it works with the buisnesses top"* — the standard stays a
 business operating system; the personal scope is recorded as direction and
 does not reorder the 26.
+
+**P2.g: a switch, not an enforcement.** 2026-09-15. The estate switch tells
+George which business a question is about; it rewrites no call and narrows no
+tool schema. Considered and rejected: bounding the store enum per part, which
+would enforce it — tool schemas are the 1h-cached block, so every press would
+buy a cache write, and rule 5 puts depth in the tools. The enforcement is
+already there and older: `get_sales` refuses the warehouse in its own words.
+The default travels as NOTHING, so the switch can only narrow and a question
+asked without it is byte-identical to yesterday's. **And a list in Python
+drifted from the yaml**: `_STORE_GROUPS` lacked `vending_stock_location`, so
+AJI CMG — the pill this card draws — answered "Unknown store". `stores.groups`
+now.

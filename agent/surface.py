@@ -201,6 +201,79 @@ _ATTENTION_WORDS = {
 }
 
 
+def _places(defs: Mapping[str, Any], paths: Iterable[Any]) -> list[str]:
+    """The names in one or more `stores` lists, in the definitions' own order."""
+    out: list[str] = []
+    for path in paths or []:
+        for entry in req(defs, str(path)) or []:
+            if not isinstance(entry, Mapping):
+                continue
+            name = _clean_label(entry.get("display_name") or entry.get("name") or "")
+            if name and name not in out:
+                out.append(name)
+    return out
+
+
+def _estate_words(part_key: Any, defs: Mapping[str, Any]) -> Optional[str]:
+    """
+    WHICH BUSINESS THE QUESTION IS ABOUT (P2.g, 2026-09-15).
+
+    The owner's feature 23 — "George works across all my businesses and
+    understands which business/store/system I'm referring to". Both businesses
+    have been readable since long before this card; what a person had no way to
+    say was WHICH ONE "how are we doing" meant, so it always meant the shops.
+
+    A part is a name and a scope, never a figure and never an instruction the
+    client wrote: the key is matched against `surface.desk.estate.parts` and
+    anything else is dropped, exactly as a representation or an attention
+    reason is. The places come from the `stores` lists the part names and from
+    nowhere else, so opening a shop moves this sentence with it.
+
+    THE DEFAULT SAYS NOTHING. `all` is what every question has meant until
+    today, so a question asked with nothing switched is byte-identical to one
+    asked before this card existed — the switch can only narrow.
+
+    WHAT IT DOES NOT DO. It rewrites no call and filters no row. Scoping to the
+    warehouse and asking for sales is refused by the sales tool in its own
+    words, because the warehouse is excluded there and always has been
+    (`filters.excluded_from_sales`); this line is what lets George read the
+    refusal as the answer rather than as a surprise, and reach for stock
+    instead. The enforcement stays where it already was.
+    """
+    spec = req(defs, "surface.desk.estate")
+    key = " ".join(str(part_key or "").split())
+    if not key or key == str(spec.get("default")):
+        return None
+    part = next((p for p in req(spec, "parts")
+                 if isinstance(p, Mapping) and str(p.get("key")) == key), None)
+    if part is None:
+        return None
+
+    label = _clean_label(part.get("label") or key)
+    said = "the question is scoped to " + _clean_label(part.get("noun") or label)
+
+    # The places, named — unless the part IS one place already wearing its own
+    # name, where saying it twice is noise rather than precision.
+    places = _places(defs, part.get("places_from") or [])
+    if places and not (len(places) == 1 and places[0] == label):
+        said += f": {_names(places)}"
+
+    reads = [str(t) for t in (part.get("answers_with") or []) if t]
+    if reads:
+        said += f" — read with {_names(reads)}"
+
+    # WHAT THE PART IS NOT, from the definitions' own two exclusions. Neither
+    # restates the reason — the tool that refuses carries that, in its own
+    # sentence — this only says the shape of the answer to expect.
+    if part.get("not_in") == "sales":
+        said += ("; it is in no sales figure, so what it holds and what moves "
+                 "through it is the answer there")
+    if part.get("not_joined_to"):
+        said += ("; its own domain, never joined to or totalled with the "
+                 "shops' figures")
+    return said
+
+
 def _reference_words(refs: list[Any], defs: Mapping[str, Any]) -> Optional[str]:
     """
     Something the person NAMED that is not a subject and not a scope (P2.c).
@@ -402,9 +475,10 @@ def desk_sentence(desk: Optional[Mapping[str, Any]], defs: Mapping[str, Any]) ->
     screen. Short steers refer to the WORKSPACE — "show me", "is that
     actually bad?", "what would you do?" — and they had no referent at all.
 
-    Four things now travel, and every one of them is a name, a count or a word
+    Five things now travel, and every one of them is a name, a count or a word
     from a vocabulary declared in metrics.yaml (surface.desk.context):
 
+      estate          which business the question is about (P2.g)
       drawn           the representation, the metric, the subjects on screen
       selection       what the person has clicked, ids off rows
       attention       what the tools' own rows singled out, by trusted reason
@@ -418,6 +492,14 @@ def desk_sentence(desk: Optional[Mapping[str, Any]], defs: Mapping[str, Any]) ->
         return None
     dims = list(req(defs, "surface.desk.selection.dimensions"))
     parts: list[str] = []
+
+    # WIDEST FIRST. Which business the question is about frames everything
+    # under it: a subject, a window and a board all sit inside one estate, and
+    # a clause saying so after them reads as an afterthought.
+    if desk.get("estate"):
+        words = _estate_words(desk.get("estate"), defs)
+        if words:
+            parts.append(words)
 
     drawn = desk.get("drawn")
     if isinstance(drawn, Mapping):
