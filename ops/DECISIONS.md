@@ -4338,3 +4338,15 @@ READ the set, so `get_product_categories()` was added rather than a list typed
 into a client. It is NOT in `TOOL_FUNCTIONS`: a completion list is a person's
 menu, and a tool in the schema rewrites the 1h-cached prefix for every request
 in the deploy.
+
+**A probe that writes with one toolchain and reads with another.** 2026-09-15.
+Two deploy watches reported "200" on every poll and named no build, and the
+first close-out blamed "the system python, not the venv's". **Wrong cause.**
+`curl` under Git Bash writes `/tmp/h.json` — Git Bash maps that to a real
+Windows path — and the venv's Python is a native Windows interpreter, where
+`/tmp` is `C:\tmp` and does not exist. Either interpreter fails identically.
+The fix is a path both agree on (`$TEMP`). Recorded because the wrong cause was
+already written into NOW.md and a later session would have swapped
+interpreters and watched it fail again — and because `fe60ce3`'s push-to-live
+stays bounded and unmeasured as a result, which is a number the log has now
+lost for good.
