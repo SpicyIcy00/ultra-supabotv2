@@ -4250,3 +4250,24 @@ lightness, and a single-hue ramp would make an existing meaning legible
 without reopening identity-colour. Offered as a decision with the test that
 would hold it; **he said "just fix the panel"**. Written down as taken and
 taken against, so it is not rediscovered as an open question.
+
+**The one feature marked built that had never run.** 2026-09-15, asked which
+of four Jarvis axes mattered, the owner said *"Initiative is needed"*. Read
+from production the same minute: **0 standing questions, 0 watches, 0
+schedules**, none ever run or fired, against 359 posts and 6 beliefs held.
+Feature 12 is `built` on the Ideal UI's map, the scheduler starts
+`standing_tick` and `watch_tick` on every boot, and both have ticked over an
+empty table for weeks. Nothing is broken; **nobody ever created one**, because
+the only door is asking George in conversation and no surface offers it.
+A capability with no way in is not a capability, and a map that calls it built
+is measuring the code rather than the business. The lesson generalises past
+this feature: **before building more of something, read whether the thing that
+exists has ever been used.** Two counts and one query would have said so any
+day in the last three weeks.
+
+**The Jarvis direction, in his words and bounded by him.** *"me and my family
+run these buisnesses"* — multi-user is real, and S.6 (people and permissions)
+stops being an optional source. *"calenders, mail in the future but our main
+goal is to make how it works with the buisnesses top"* — the standard stays a
+business operating system; the personal scope is recorded as direction and
+does not reorder the 26.
