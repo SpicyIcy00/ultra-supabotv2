@@ -12,7 +12,7 @@ import type { CompositionBlock, GeorgeTurn, ToolCall, ToolMeta } from '../types/
 export type Block = CompositionBlock;
 export type AnswerTurn = Extract<GeorgeTurn, { role: 'george' }>;
 export type Direction = 'up' | 'down' | 'flat';
-export type Dimension = 'store' | 'product' | 'category';
+export type Dimension = 'store' | 'product' | 'category' | 'supplier';
 
 /* ----------------------------------------------------------------- figures */
 
@@ -121,6 +121,7 @@ export function dimensionOf(rows: Record<string, unknown>[], subject: string): D
   const want = subject.trim().toLowerCase();
   const columns: [string, Dimension][] = [
     ['store', 'store'], ['product', 'product'], ['sku', 'product'], ['category', 'category'],
+    ['supplier', 'supplier'],
   ];
   for (const row of rows) {
     for (const [column, dimension] of columns) {

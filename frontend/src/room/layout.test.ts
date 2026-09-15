@@ -45,9 +45,17 @@ describe('the page is centred on one measure', () => {
   it('wraps the page and the composer in the SAME element, not two rules', () => {
     // Both used to cap themselves, one of them centred, and that divergence
     // is what the report was looking at.
+    //
+    // TWO FILES SINCE P2.c, one claim. The composer became a component of its
+    // own when the `@` menu needed a test to mount, so the page's wrapper is
+    // in Room.tsx and the composer's is in Composer.tsx — the same class,
+    // which is what the rule was ever about. Counted across both, because
+    // counting one would say the composer had stopped sharing the axis.
     const room = readFileSync(join(__dirname, 'Room.tsx'), 'utf8');
-    expect(room.match(/className="r-measure"/g) ?? []).toHaveLength(2);
+    const composer = readFileSync(join(__dirname, 'Composer.tsx'), 'utf8');
+    expect((room + composer).match(/className="r-measure"/g) ?? []).toHaveLength(2);
     expect(room).not.toContain('maxWidth: 1320');
+    expect(composer).not.toContain('maxWidth: 1320');
   });
 
   it('puts the composer on the same measure, so the two share an axis', () => {

@@ -4078,3 +4078,21 @@ than inventing a looser one; the constants are compared by value in
 `test_visible_work_contract.py`, and a numeral no read holds gets no
 underline. Everything is under `surface.desk.work`, which the prompt does not
 read: 1,798 words and the same tool-schema hash before and after.
+
+
+**A subject is an id, and `@` is the second door onto the same chip.**
+2026-09-15, P2.c. The room sent `{id: label, label}`, so every subject reached
+George as a word while the rows had carried `store_id` two columns away.
+`room/subjects.ts` now reads the identity column the definitions DECLARE
+(`selection.identity`, plus a new `label_columns` saying where the name lives),
+and the subject records where its id came from — `rows`, `mention`, or `label`
+where the identity IS the name, which a category and a supplier both are. A
+supplier became a subject dimension, which is the one model-facing change:
+`SYSTEM_PROMPT` 1,798 → 1,799 words, sha `28efc756` → `fa166e19`, one word
+inside `voice.budget.max_words` 1,800. `GET /george/mentions` resolves five
+kinds off the reads that already define them, with no SQL and no model, and
+`selection.mentions.kinds[*].binds` — not a component — decides whether one
+becomes a subject, a `page_scope` or a name on the question. "Compare these"
+is a replay rather than a question, which needed `resolve_store` to accept a
+list: the predicate was always `store_id IN (...)`, so one shop was never a
+different query, only a shorter list.

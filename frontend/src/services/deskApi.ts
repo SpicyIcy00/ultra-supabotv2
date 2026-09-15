@@ -69,7 +69,30 @@ export interface DeskDefinitions {
   /** Which argument carries a window, per tool (workflows.backtest.window_arguments). */
   window_arguments: Record<string, string>;
   rest_reads: PinToolCall[];
-  selection: { dimensions: DeskDimension[]; max_subjects: number; identity: Record<string, string> };
+  /**
+   * The selection's own definitions, whole (`surface.desk.selection`). Which
+   * column of a row IS the subject's id, which columns carry its label, the
+   * words that turn two picked subjects into a replay, and the kinds an `@`
+   * resolves over. Served, so no client holds a copy of any of it.
+   */
+  selection: {
+    dimensions: DeskDimension[];
+    max_subjects: number;
+    identity: Record<string, string>;
+    label_columns?: Record<string, string[]>;
+    comparison?: {
+      spoken: string[];
+      min_subjects: number;
+      replays_by_dimension: Record<string, string>;
+    };
+    mentions?: {
+      trigger: string;
+      min_prefix: number;
+      max_per_kind: number;
+      max_results: number;
+      kinds: Record<string, { binds: string; says: string; dimension?: string }>;
+    };
+  };
   direct_manipulation: string[];
   locations: DeskLocation[];
   /**

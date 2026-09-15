@@ -6189,14 +6189,114 @@ surface:
     # question, beside the work sentence. The question post keeps it in its
     # payload so a reload restores the same focus from the same record.
     selection:
-      dimensions: [store, product, category]
+      # A SUPPLIER IS A SUBJECT (P2.c, 2026-09-15). `@Seikyo` had nowhere to
+      # travel: a mention resolved to a supplier and the only channel to
+      # George was a dimension list that did not hold one, so it would have
+      # arrived as a word in the question — which is exactly the "a label the
+      # model inferred" this block exists to refuse.
+      dimensions: [store, product, category, supplier]
+      # WHICH COLUMN OF THE ROWS IS THE IDENTITY. A tap reads this column out
+      # of the row it tapped; the id it finds is what travels, never the name
+      # beside it. Where the identity IS the name the column says so rather
+      # than the client deciding a name will do: a category has no id, and
+      # there is no supplier master at all
+      # (suppliers.purchase_orders.supplier_master_exists), so the exact name
+      # is the key every purchasing read already takes.
       identity:
         store: store_id
         product: product_id
         category: category
+        supplier: supplier
       max_subjects: 12
       ids_from_rows: true
       stored_on: question_post_payload
+
+      # WHAT A ROW CALLS ITS SUBJECT, per dimension, in the order to look.
+      # The tools name the same thing two ways — a product row carries `sku`
+      # and `product`, a stock row carries `product` where a sales row carries
+      # it too — so which column holds the LABEL is a fact about the tools and
+      # belongs here beside the column that holds the id.
+      label_columns:
+        store: [store, location]
+        product: [product, name, sku]
+        category: [category]
+        supplier: [supplier, supplier_name]
+
+      # TWO SUBJECTS AND A WORD ARE A REPLAY, NOT A QUESTION (P2.c).
+      #
+      # "Compare these" with two shops picked is a read already on screen
+      # scoped to two ids — the same act as tapping the shop token, with a
+      # list where that has one value. It is here and not in a component for
+      # the reason every other fragment is: what a person may type is a
+      # definition, and a client that held its own copy of these words would
+      # be a second vocabulary nobody could see.
+      #
+      # ONLY WHERE THE DIMENSION IS A SCOPE A REPLAY MAY CHANGE. `store` is
+      # `surface.desk.replay.arguments.store`; a product, a category and a
+      # supplier are not replay arguments, so two products and "compare
+      # these" is George's question and says so by being absent here.
+      comparison:
+        spoken: ["compare these", "compare them", "these two", "compare"]
+        min_subjects: 2
+        replays_by_dimension:
+          store: store
+
+      # THE `@` DOOR (P2.c, 2026-09-15). The same chip, typed instead of
+      # tapped. Completion is over things that EXIST — every kind below is a
+      # read somebody already vetted — so "@Rockwell" lands as a store id and
+      # can never be read as a product name, which is the whole point of the
+      # mechanism.
+      #
+      # NOTHING HERE IS A FIGURE and no kind is resolved by a model. Each
+      # names the read it comes out of, and `get_object` makes the same reads
+      # when it opens one of these things — one definition of what a product
+      # is, shared by the completion and the object view.
+      mentions:
+        trigger: "@"
+        # Below this many characters the list is every kind's first few, which
+        # is a menu; at or above it the prefix filters. Two, because "AJ" is
+        # a real prefix in this estate.
+        min_prefix: 0
+        max_per_kind: 5
+        max_results: 12
+        # Matched as a case-insensitive PREFIX on the label, then a substring —
+        # never fuzzy, never stemmed, exactly as a typed fragment is matched
+        # (`tokens.spoken`). A tie is left as a tie: the list shows both.
+        match: prefix_then_substring
+        kinds:
+          store:
+            from: stores
+            reads: definitions
+            binds: selection
+            dimension: store
+            says: shop
+          product:
+            from: tools/products.py get_product(name=)
+            reads: catalog
+            binds: selection
+            dimension: product
+            says: product
+          supplier:
+            from: tools/purchasing.py get_purchasing(group_by=supplier)
+            reads: purchase_orders
+            binds: selection
+            dimension: supplier
+            says: supplier
+          page:
+            from: george.pages
+            reads: the caller's own pages
+            binds: page_scope
+            says: page
+          rule:
+            from: george.workflows
+            reads: the company's saved workflows
+            # A RULE IS NAMED, NOT SCOPED. There is no request field a
+            # workflow binds — `page_scope` is a page's and a selection is a
+            # subject's — so a mentioned rule travels as what it is: George is
+            # told its name and its id on the question, and running or editing
+            # it is his tool call and his decision to make (level four).
+            binds: named_on_question
+            says: rule
 
     # WHAT THE WORKSPACE TELLS GEORGE ABOUT ITSELF (2026-09-09, UNDERSTAND).
     #
@@ -6375,6 +6475,11 @@ surface:
         store: [store, stores, shop, shops]
         product: [product, products]
         category: [category, categories]
+        # A supplier became a subject dimension with P2.c. It is a real
+        # grouping — `get_purchasing(group_by=supplier)` — and every subject
+        # dimension needs a word a person can type for it, whether or not a
+        # metric on the board permits that cut today.
+        supplier: [supplier, suppliers]
         hour: [hour, hours, hourly]
         day: [day, days, daily]
         week: [week, weeks, weekly]

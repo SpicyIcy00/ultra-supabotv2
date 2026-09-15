@@ -31,6 +31,10 @@ import { Spec } from './Spec';
 export function kindOf(dimension: Dimension | null | undefined): string | null {
   if (dimension === 'store') return 'shop';
   if (dimension === 'product') return 'product';
+  // A supplier became a subject with P2.c, and `get_object` has opened one all
+  // along — it is the orders section, which is what a supplier IS in this
+  // record. A category still cannot be opened: there is no object for one.
+  if (dimension === 'supplier') return 'supplier';
   return null;
 }
 

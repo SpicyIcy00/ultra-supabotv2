@@ -123,7 +123,10 @@ const COLOUR_ALLOWED: Record<(typeof DATA_TOKENS)[number], Record<string, string
     'room.css': 'defines it, and the chrome he speaks through — links, focus, the caveat rule',
     'Noticed.tsx': 'the label on what he noticed unasked: his voice, not a measurement',
     'ObjectPanel.tsx': 'the one line of his in an opened object',
-    'Room.tsx': 'the edge of the composer he is answering into',
+    // Room.tsx left this list on 2026-09-15 (P2.c): the composer became a
+    // component of its own and the edge it wore went with the stylesheet
+    // rule that draws it. One fewer file naming a colour, which is the
+    // direction this list is supposed to move in.
   },
 };
 

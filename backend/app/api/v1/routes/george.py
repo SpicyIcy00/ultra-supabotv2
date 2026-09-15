@@ -105,6 +105,7 @@ from app.services.pin_writer import (
     create_pin,
 )
 from app.services.pin_runner import PinValidationError
+from app.services import mentions as mentions_service
 from app.services import replay as replay_service
 from app.services.thread_access import parent_in_thread, thread_continuable
 from app.services.workflow_runner import (
@@ -228,7 +229,7 @@ class DeskSelection(BaseModel):
     dimension is one of the definitions' subject dimensions and nothing else.
     """
 
-    dimension: Literal["store", "product", "category"]
+    dimension: Literal["store", "product", "category", "supplier"]
     subjects: List[DeskSubject] = Field(default_factory=list, max_length=_DESK_MAX_SUBJECTS)
 
 
@@ -305,6 +306,22 @@ class BoardObject(BaseModel):
     window: Optional[str] = Field(None, max_length=60)
 
 
+class DeskReference(BaseModel):
+    """
+    Something the person NAMED with `@` that is neither a subject nor a scope.
+
+    A rule, today, and only a rule: a store, product and supplier are subjects
+    and travel in `selection`; a page binds `page_scope`. A workflow has no
+    request field of its own, so it travels here as what it is — a name and an
+    id George is told about — and running or editing it stays his tool call
+    and the owner's decision (level four).
+    """
+
+    kind: str = Field(..., min_length=1, max_length=20)
+    id: str = Field(..., min_length=1, max_length=64)
+    label: str = Field(..., min_length=1, max_length=200)
+
+
 class DeskContext(BaseModel):
     """
     The desk as the question was asked from it. Bounded here, named to the
@@ -321,6 +338,9 @@ class DeskContext(BaseModel):
     board: List[BoardObject] = Field(default_factory=list, max_length=_BOARD_MAX)
     attention: List[DeskAttention] = Field(default_factory=list, max_length=_DESK_MAX_ATTENTION)
     recommendation: Optional[DeskRecommendation] = None
+    # What an `@` resolved to that binds nothing (P2.c) — a rule, by name and
+    # id. Bounded by the same number the drawn subjects are.
+    references: List[DeskReference] = Field(default_factory=list, max_length=_DESK_MAX_DRAWN)
 
 
 class AskRequest(BaseModel):
@@ -2818,6 +2838,80 @@ async def desk_definitions(user: AppUser = Depends(_george_user)) -> DeskDefinit
         selection=dict(_req(desk, "selection")),
         direct_manipulation=[str(op) for op in _req(desk, "direct_manipulation")],
         locations=locations,
+    )
+
+
+# ---------------------------------------------------------------------------
+# `@` — a name resolved to an id before the question is sent (P2.c)
+#
+# The second door onto the selection. A subject tapped on a row carries the id
+# that row held; a subject TYPED had nothing, so "Rockwell" reached George as a
+# word with two meanings in this estate. Completion is over things that exist,
+# each from the read that already defines it, and what each kind binds is the
+# definitions' to say (surface.desk.selection.mentions).
+#
+# NO MODEL, NO WRITE, AND NOTHING HERE IS A FIGURE. The only numbers that reach
+# this response are a count of purchase orders beside a supplier's name, which
+# is the same kind of thing the work line is allowed to say: a count of rows,
+# opening nothing.
+# ---------------------------------------------------------------------------
+
+_MENTION_MAX_QUERY = 60
+
+
+class MentionCandidate(BaseModel):
+    """One thing an `@` could mean, and what picking it would do."""
+
+    kind: str
+    #: What travels. A store id, a product id, the supplier's exact name (there
+    #: is no supplier master), a page id, a workflow id.
+    id: str
+    label: str
+    #: The one word that tells three things of the same name apart.
+    says: str
+    #: `selection`, `page_scope` or `named_on_question` — the definitions'.
+    binds: str
+    #: The subject dimension a selected mention travels as, or null.
+    dimension: Optional[str] = None
+    #: What distinguishes two of a kind: a SKU, a purpose, a status. Never a figure.
+    hint: Optional[str] = None
+
+
+class MentionsOut(BaseModel):
+    """
+    What answers to what has been typed, and which sources could not be read.
+
+    `unavailable` is not an error channel dressed up: a kind that failed and a
+    kind with nothing in it render differently, because "no supplier by that
+    name" and "the purchasing read did not come back" are different facts
+    (UI rule 8).
+    """
+
+    query: str
+    candidates: List[MentionCandidate]
+    unavailable: dict[str, str] = Field(default_factory=dict)
+
+
+@router.get("/mentions", response_model=MentionsOut)
+async def mentions(
+    q: str = Query("", max_length=_MENTION_MAX_QUERY),
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_george_user),
+) -> MentionsOut:
+    """
+    Everything a typed `@` could mean: shops, products, suppliers, the
+    caller's own pages and the company's saved rules.
+
+    The two catalogue reads run on George's read-only role in worker threads —
+    the tools are synchronous and blocking, and holding the event loop while
+    somebody types would stall every other request in this process. The pages
+    and rules are read in the caller's own session, as their own routes do.
+    """
+    found = await mentions_service.resolve(db, username=user.username, query=q)
+    return MentionsOut(
+        query=found["query"],
+        candidates=[MentionCandidate(**c) for c in found["candidates"]],
+        unavailable=found["unavailable"],
     )
 
 

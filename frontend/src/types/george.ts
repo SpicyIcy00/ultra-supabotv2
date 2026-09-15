@@ -508,7 +508,7 @@ export interface FindingFrame {
  * and the question post keeps it in its payload so a reload restores the
  * same focus from the same record. Nothing in it is a figure.
  */
-export type DeskDimension = 'store' | 'product' | 'category';
+export type DeskDimension = 'store' | 'product' | 'category' | 'supplier';
 
 export interface DeskSubject {
   id: string;
@@ -556,8 +556,20 @@ export interface DeskRecommendationRef {
   question?: string | null;
 }
 
+/**
+ * Something the person NAMED with `@` that binds neither a selection nor a
+ * scope — a rule (P2.c). George is told its name and its id; running or
+ * editing it is his tool call and the owner's decision.
+ */
+export interface DeskReference {
+  kind: string;
+  id: string;
+  label: string;
+}
+
 export interface DeskContext {
   selection?: DeskSelection | null;
+  references?: DeskReference[];
   /**
    * What is on the board, so a fragment resolves against what is being looked
    * at rather than against the transcript (2026-09-10). Keys, kinds, weights

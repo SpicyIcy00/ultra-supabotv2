@@ -41,6 +41,8 @@ _ROOT = Path(__file__).resolve().parents[1]
 _FRONT = _ROOT / "frontend" / "src"
 _ANCHOR_TS = _FRONT / "components" / "george" / "surfaceAnchor.ts"
 _MODEL_TS = _FRONT / "components" / "george" / "surfaceModel.ts"
+_DATA_TS = _FRONT / "room" / "data.ts"
+_SUBJECTS_TS = _FRONT / "room" / "subjects.ts"
 _ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "george.py"
 _WRITER = _ROOT / "backend" / "app" / "services" / "river_writer.py"
 _LOOP = _ROOT / "agent" / "loop.py"
@@ -74,14 +76,28 @@ def test_selection_is_ids_from_rows_and_agrees_with_the_client():
     assert sel["stored_on"] == "question_post_payload"
     assert sel["max_subjects"] >= 3
     assert sorted(sel["dimensions"]) == sorted(sel["identity"])
-    anchor = _ANCHOR_TS.read_text(encoding="utf-8")
-    for dim in sel["dimensions"]:
-        assert f"'{dim}'" in anchor
-    # The identity-key half of this check read `components/desk/subject.ts`,
-    # which went with the desk on 2026-09-12. It is not repointed at the room:
-    # the room identifies a subject by the COLUMN its name came from, never by
-    # `store_id`/`product_id`, so the assertion would be a new claim rather
-    # than the same one at a new address.
+    # Every dimension has somewhere for its label to live, too (P2.c): a tap
+    # matches on the label columns and reads the id column beside them, and a
+    # dimension with no label column could never be tapped at all.
+    assert sorted(sel["dimensions"]) == sorted(sel["label_columns"])
+    for dim, columns in sel["label_columns"].items():
+        assert columns, f"{dim} has nowhere to carry its own name"
+    # THE CLIENT AGREES ON THE DIMENSIONS, and it is `Dimension` in the room
+    # that has to — the union every tap, chip and mention is typed against.
+    dims = _DATA_TS.read_text(encoding="utf-8")
+    m = re.search(r"export type Dimension = ([^;]+);", dims)
+    assert m
+    assert sorted(re.findall(r"'([a-z_]+)'", m.group(1))) == sorted(sel["dimensions"])
+    # THE IDENTITY-KEY HALF IS BACK, from 2026-09-15 (P2.c). It read
+    # `components/desk/subject.ts` until the desk went on 2026-09-12, and the
+    # note here said the room could not carry it because the room identified a
+    # subject by the COLUMN its name came from and never by `store_id`. That
+    # is the bug P2.c closed: `room/subjects.ts` now reads the declared
+    # identity column out of the row, so the claim has an address again — and
+    # it is the SERVED map that is read, never a copy.
+    subjects = _SUBJECTS_TS.read_text(encoding="utf-8")
+    assert "selection?.identity?.[dimension]" in subjects
+    assert "selection?.label_columns?.[dimension]" in subjects
 
 
 def test_the_refinement_ops_carry_the_selection_aware_pair_on_both_sides():

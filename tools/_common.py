@@ -299,13 +299,23 @@ def estate(defs: dict) -> dict[str, tuple[dict, str]]:
 
 
 def resolve_store(
-    store: Optional[str],
+    store: Optional[Any],
     catalog: dict[str, dict],
     defs: Optional[dict] = None,
     out_of_scope_reason: Optional[str] = None,
 ) -> list[str]:
     """
     Resolve a store argument to ids using the catalog ONLY.
+
+    SEVERAL SHOPS ARE ONE SCOPE (P2.c, 2026-09-15). A list resolves to the
+    union of what each name resolves to, in the order given and without
+    repeats, because the predicate this feeds has always been `store_id IN
+    (...)` — one shop was never a different shape of query, only a shorter
+    list. Picking two shops on the surface and asking to compare them is
+    therefore the ordinary scope change it looks like, and not a new question.
+    Each name is resolved separately, so one unknown name in a list refuses by
+    name rather than the whole list refusing as one unrecognisable string —
+    which is what `str(["OPUS", "Rockwell"])` did before this.
 
     Never looks the name up in the stores table. That lookup is exactly what
     broke the old resolver: stores.name was renamed to the "(N) ..." form, the
@@ -329,6 +339,23 @@ def resolve_store(
     """
     if store is None:
         return list(catalog)
+
+    if isinstance(store, (list, tuple, set)):
+        # An empty list is not "no filter": somebody asked for a scope and
+        # named nothing in it, and answering with the whole estate would put
+        # every shop's figures under a label saying two.
+        names = [s for s in store]
+        if not names:
+            raise ValueError(
+                "An empty list of stores is not a scope. Name at least one "
+                "store, or omit the filter for all of them."
+            )
+        out: list[str] = []
+        for name in names:
+            for sid in resolve_store(name, catalog, defs, out_of_scope_reason):
+                if sid not in out:
+                    out.append(sid)
+        return out
 
     wanted = str(store).strip().lower()
     for sid, entry in catalog.items():

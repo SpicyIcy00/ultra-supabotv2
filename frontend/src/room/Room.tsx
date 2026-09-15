@@ -19,13 +19,18 @@ import { replaysToRestore, restoreFromPosts } from './restore';
 import { boardContext, buildBoard, dropped, folded, inOrder, shapedByReplay,
          type Local, type BoardObject } from './board';
 import { keepLocal, restoreLocal } from './arrangement';
-import { callOf, type AnswerTurn, type Block, type Dimension } from './data';
+import { callOf, type AnswerTurn, type Block } from './data';
 import { Board, turnNotices } from './render';
 import { Reading, ReadingNext } from './Reading';
 import { Earlier } from './Earlier';
 import { readDeskDefinitions, replayStoredCall, type DeskAlternative } from '../services/deskApi';
 import { Tokens } from './Tokens';
-import { resolveFragment, retunedKey, tokensFor, type DrawnToken } from './tokenShape';
+import { Composer, type NamedReference } from './Composer';
+import { pageScopeFor } from '../components/george/pageScope';
+import type { Bound } from './mentions';
+import { asSelection, comparisonReplay, maxSubjects, subjectOnBoard,
+         toggleSubject, type Subject } from './subjects';
+import { pathFor, resolveFragment, retunedKey, tokensFor, type DrawnToken } from './tokenShape';
 import type { ToolCall } from '../types/george';
 import { Noticed } from './Noticed';
 import { WorkLine, Working } from './Working';
@@ -51,7 +56,22 @@ export default function Room() {
   const george = useGeorge();
   const thread = useThread(threadId ?? '');
 
-  const [selection, setSelection] = useState<{ label: string; dimension: Dimension }[]>([]);
+  /**
+   * WHAT THE QUESTION IS ABOUT — ids, not words (P2.c).
+   *
+   * A tap resolves the id out of the row it tapped; an `@` resolves it out of
+   * a vetted read. Both land here, both travel in `desk.selection`, and the
+   * id is what travels: "Rockwell" is a shop and also every product sold in
+   * one, and until this card George had to decide which.
+   */
+  const [selection, setSelection] = useState<Subject[]>([]);
+  // The page an `@page` bound, which is `page_scope` on the question — the
+  // field that injects a reader bound to this caller and this page. A page
+  // MENTIONED is a page in scope; nothing here writes one.
+  const [scope, setScope] = useState<{ id: string; title: string } | null>(null);
+  // What was named and binds nothing: a rule, today. George is told its name
+  // and its id, and what to do about it stays his tool call.
+  const [named, setNamed] = useState<NamedReference[]>([]);
   // WHAT YOU HAVE DONE TO THE BOARD — where things sit, how big they are,
   // what you are holding on to. Restored per thread, because an arrangement
   // you made is worth more than the trouble of remembering it, and lost on a
@@ -301,19 +321,24 @@ export default function Room() {
     const q = text.trim();
     if (!q) return;
     setDraft('');
+    // IDS, NOT LABELS (P2.c). `asSelection` reads the ids the rows carried —
+    // or the ones a completion resolved — and keeps the one dimension that
+    // travels, which is `DeskSelection`'s own shape. It used to send
+    // `{id: label}`, so every subject reached George as a word.
+    const picked = asSelection(subjects);
     const desk = {
-      ...(subjects.length ? {
-        selection: {
-          dimension: subjects[0].dimension,
-          subjects: subjects
-            .filter((s) => s.dimension === subjects[0].dimension)
-            .map((s) => ({ id: s.label, label: s.label })),
-        },
-      } : {}),
+      ...(picked ? { selection: picked } : {}),
+      ...(named.length ? { references: named } : {}),
       ...(board.length ? { board: boardContext(answers, board, local, focused) } : {}),
     };
-    void george.ask(q, Object.keys(desk).length ? { desk } : {});
-  }, [george, selection, answers, board, local, focused]);
+    void george.ask(q, {
+      ...(Object.keys(desk).length ? { desk } : {}),
+      // An `@page` is the page this is asked FROM: the route injects a reader
+      // bound to this caller and this page, and without it the tool is not in
+      // his schema at all (architecture rule 4).
+      ...(scope ? { pageScope: pageScopeFor(scope.id, scope.title) } : {}),
+    });
+  }, [george, selection, named, scope, answers, board, local, focused]);
 
   /**
    * ONE REPLAY PATH, FOR EVERY DOOR INTO IT (P1.j).
@@ -441,6 +466,35 @@ export default function Room() {
   );
 
   /**
+   * EVERY DRAWN READ THAT COULD TAKE A SCOPE ARGUMENT — which is not the same
+   * list as a token's targets (P2.c).
+   *
+   * A token is drawn only where the argument is already ON the call, because
+   * a token is a value you can see and move. "Compare these" is the opposite
+   * case: the board is grouped by shop with no shop filter at all, so there is
+   * no shop token, and the change to make is to ADD the argument. The reads it
+   * applies to are therefore every drawn read whose tool has somewhere to put
+   * it, read off the same served map the token uses.
+   */
+  const targetsFor = useCallback((argument: string) => {
+    if (!desk.data) return [];
+    const out: { post: string; turn: number; seq: number }[] = [];
+    const seen = new Set<string>();
+    for (const o of drawn) {
+      if (o.seq === undefined) continue;
+      const turn = answers[o.turn];
+      const post = turn?.post?.answer_post_id ?? null;
+      const call = retuned[retunedKey(o.turn, o.seq)] ?? callOf(turn, o.seq);
+      if (!post || !call || !pathFor(desk.data, call.tool, argument)) continue;
+      const key = retunedKey(o.turn, o.seq);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ post, turn: o.turn, seq: o.seq });
+    }
+    return out;
+  }, [desk.data, drawn, answers, retuned]);
+
+  /**
    * SAYING SOMETHING — which is not always asking something (P1.j).
    *
    * "last month" is not a question. Sending it to the model costs a round
@@ -456,6 +510,21 @@ export default function Room() {
   const ask = useCallback((text: string, subjects = selection) => {
     const q = text.trim();
     if (!q) return;
+    // TWO SUBJECTS AND A WORD ARE A REPLAY (P2.c). "Compare these" with two
+    // shops picked names no new fact: it is a read already on screen scoped
+    // to two ids instead of all of them, which is what the shop token does
+    // with one. So it goes down the same path, and costs no model turn. The
+    // words and the dimensions this is true of are the definitions'.
+    const compare = comparisonReplay(q, subjects, desk.data);
+    if (compare) {
+      const on = tokens.find((t) => t.argument === compare.argument);
+      const targets = on?.targets?.length ? on.targets : targetsFor(compare.argument);
+      if (targets.length) {
+        setDraft('');
+        void runReplay(targets, compare.argument, compare.value);
+        return;
+      }
+    }
     const fragment = subjects.length ? null : resolveFragment(q, tokens, desk.data);
     if (!fragment) { askGeorge(q, subjects); return; }
     setDraft('');
@@ -465,7 +534,36 @@ export default function Room() {
     // room holds no writer and may not (architecture rule 4).
     if (fragment.kind === 'correction') { askGeorge(fragment.asks, subjects); return; }
     void move(fragment.token, fragment.alternative, q);
-  }, [askGeorge, move, tokens, desk.data, selection]);
+  }, [askGeorge, move, tokens, desk.data, selection, runReplay, targetsFor]);
+
+  /**
+   * WHAT AN `@` PICKED, PUT WHERE IT BELONGS (P2.c).
+   *
+   * Three destinations, because three things are being named. A shop, a
+   * product or a supplier is a SUBJECT and joins the selection, which is the
+   * same place a tap puts one — one mechanism, two doors. A page binds the
+   * SCOPE, which is what injects a reader bound to this caller and that page.
+   * A rule binds neither and is named on the question: there is no request
+   * field for a workflow, and running one is George's tool call and the
+   * owner's decision.
+   *
+   * WHICH IS WHICH IS THE DEFINITIONS' TO SAY, read in `mentions.bind` off
+   * `selection.mentions.kinds`. A kind this room does not recognise binds
+   * nothing at all rather than being assumed to be a subject.
+   */
+  const bound = useCallback((b: Bound) => {
+    if (b.binds === 'selection') {
+      setSelection((held) => toggleSubject(held, b.subject, maxSubjects(desk.data)));
+      return;
+    }
+    if (b.binds === 'page_scope') {
+      setScope({ id: b.pageId, title: b.title });
+      return;
+    }
+    setNamed((held) => (held.some((x) => x.id === b.id)
+      ? held
+      : [...held, { kind: b.kind, id: b.id, label: b.label }]));
+  }, [desk.data]);
 
   // A GESTURE ON AN AGENDA ROW IS A DECISION, and George learns from it: what
   // you keep, set aside, open, ask about or leave decides where it ranks next
@@ -486,14 +584,19 @@ export default function Room() {
       if (focused !== key) decide(board.find((o) => o.key === key), 'opened');
       setFocused((f) => (f === key ? null : key));
     },
-    pick: (label, dimension) => setSelection((s) => (
-      s.some((x) => x.label === label)
-        ? s.filter((x) => x.label !== label)
-        : [...s, { label, dimension: dimension ?? 'store' }]
+    // A TAP RESOLVES AN ID (P2.c). The label came off a row and so does the
+    // id beside it, at the column the definitions declare for this dimension —
+    // and where no row carries one, the subject says the label is all there
+    // was rather than passing a name off as a key.
+    pick: (label, dimension) => setSelection((s) => toggleSubject(
+      s, subjectOnBoard({ answers, board: drawn, retuned, defs: desk.data },
+                         label, dimension ?? 'store'),
+      maxSubjects(desk.data),
     )),
     why: (label, dimension) => {
       decide(board.find((o) => o.subject === label), 'asked');
-      ask('why?', [{ label, dimension: dimension ?? 'store' }]);
+      ask('why?', [subjectOnBoard({ answers, board: drawn, retuned, defs: desk.data },
+                                  label, dimension ?? 'store')]);
     },
     aside: (key) => {
       decide(board.find((o) => o.key === key), 'dismissed');
@@ -551,7 +654,7 @@ export default function Room() {
       if (kept) decide(board.find((o) => o.key === key), 'kept');
       patch(key, { kept });
     },
-  }), [ask, patch, retune, board, local, focused, decide]);
+  }), [ask, patch, retune, board, drawn, answers, retuned, desk.data, local, focused, decide]);
 
   useEffect(() => { keepLocal(threadId, local); }, [threadId, local]);
 
@@ -572,7 +675,7 @@ export default function Room() {
     }
     // Leaving on purpose: "/" must not walk straight back in.
     forgetLast();
-    george.reset(); setSelection([]); setFocused(null);
+    george.reset(); setSelection([]); setScope(null); setNamed([]); setFocused(null);
     setView('talk'); setFocus(null); setJustKept(null);
     setRetuned({}); setShapes({}); setRefusal(null);
     // WHAT YOU KEPT SURVIVES. Clearing is for the conversation, not for the
@@ -727,45 +830,28 @@ export default function Room() {
         </div>
       </main>
 
-      <div className="r-line-wrap">
-        <div className="r-measure">
-          {selection.length > 0 && (
-            <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-              {selection.map((s) => (
-                <button key={s.label} type="button" className="r-chip"
-                        style={{ pointerEvents: 'auto', borderColor: 'rgba(var(--george), 0.45)' }}
-                        onClick={() => on.pick(s.label, s.dimension)}>
-                  {s.label} ×
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="r-line">
-            <input
-              value={draft}
-              placeholder={
-                selection.length ? 'say what to do with these'
-                  : busy ? 'you can redirect while he reads'
-                  : 'say something, or touch something above'
-              }
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') ask(draft);
-                if (e.key === 'Escape') { setDraft(''); setSelection([]); }
-              }}
-              aria-label="Say something to George"
-            />
-            {busy ? (
-              <button type="button" className="r-send" onClick={() => george.cancel()}
-                      title="Stop" aria-label="Stop"
-                      style={{ background: 'var(--sunk)', color: 'var(--ink)' }}>■</button>
-            ) : (
-              <button type="button" className="r-send" onClick={() => ask(draft)}
-                      disabled={!draft.trim()} title="Send" aria-label="Send">↑</button>
-            )}
-          </div>
-        </div>
-      </div>
+      {/* THE LINE YOU TALK ON, AND THE TWO DOORS ONTO A SUBJECT (P2.c).
+          It is a component now because the `@` menu has to be held by a test
+          and Room.tsx is rendered by none. What sits above it is what the
+          question will travel with: subjects as ids, the page in scope, and
+          anything named that binds neither. */}
+      <Composer
+        draft={draft}
+        onDraft={setDraft}
+        subjects={selection}
+        scope={scope}
+        named={named}
+        defs={desk.data}
+        busy={busy}
+        onUnpick={(subject) => setSelection(
+          (held) => toggleSubject(held, subject, maxSubjects(desk.data)))}
+        onUnscope={() => setScope(null)}
+        onUnname={(r) => setNamed((held) => held.filter((x) => x.id !== r.id))}
+        onBind={bound}
+        onSend={() => ask(draft)}
+        onStop={() => george.cancel()}
+        onClear={() => { setDraft(''); setSelection([]); setScope(null); setNamed([]); }}
+      />
     </div>
   );
 }

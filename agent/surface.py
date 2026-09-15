@@ -143,7 +143,8 @@ def work_sentence(calls: Iterable[Mapping[str, Any]], defs: Mapping[str, Any]) -
 # ---------------------------------------------------------------------------
 
 _LABEL_MAX = 80
-_NOUN = {"store": "store", "product": "product", "category": "category"}
+_NOUN = {"store": "store", "product": "product", "category": "category",
+         "supplier": "supplier"}
 
 
 def _clean_label(value: Any) -> str:
@@ -160,7 +161,9 @@ def _subject_words(dimension: str, subjects: list[Mapping[str, Any]]) -> str:
             continue
         ident = " ".join(str(s.get("id") or "").split())[:64]
         # A store is named to the tools by its display name; a product's name
-        # may be three products, so its id travels with it.
+        # may be three products, so its id travels with it. A supplier's name
+        # IS its id — there is no supplier master — so saying it twice would
+        # be noise.
         if dimension == "product" and ident:
             parts.append(f"'{label}' (product_id {ident})")
         else:
@@ -196,6 +199,41 @@ _ATTENTION_WORDS = {
     "against_the_majority": "moved against the way the rest moved",
     "ranked_first": "is the largest measured change",
 }
+
+
+def _reference_words(refs: list[Any], defs: Mapping[str, Any]) -> Optional[str]:
+    """
+    Something the person NAMED that is not a subject and not a scope (P2.c).
+
+    A mention resolves to one of five kinds. Three are subjects and travel in
+    the selection; a page binds `page_scope`, which injects a reader. A rule
+    binds neither, because there is no request field for a workflow — so it is
+    said here, by name and by id, and what to do about it is George's call and
+    his tool. A kind the definitions do not declare as `named_on_question` is
+    dropped rather than repeated: this is client-supplied text on the same
+    channel as the question.
+    """
+    kinds = req(defs, "surface.desk.selection.mentions.kinds")
+    named = {k for k, spec in kinds.items()
+             if isinstance(spec, Mapping) and spec.get("binds") == "named_on_question"}
+    cap = int(req(defs, "surface.desk.context.max_drawn_subjects"))
+    said: list[str] = []
+    for ref in refs[:cap]:
+        if not isinstance(ref, Mapping):
+            continue
+        kind = str(ref.get("kind") or "")
+        if kind not in named:
+            continue
+        label = _clean_label(ref.get("label"))
+        if not label:
+            continue
+        ident = " ".join(str(ref.get("id") or "").split())[:64]
+        noun = str(kinds[kind].get("says") or kind)
+        said.append(f"the {noun} '{label}'" + (f" ({kind}_id {ident})" if ident else ""))
+    if not said:
+        return None
+    joined = said[0] if len(said) == 1 else ", ".join(said[:-1]) + " and " + said[-1]
+    return f"the user named {joined}"
 
 
 def _drawn_words(drawn: Mapping[str, Any], defs: Mapping[str, Any]) -> Optional[str]:
@@ -407,6 +445,12 @@ def desk_sentence(desk: Optional[Mapping[str, Any]], defs: Mapping[str, Any]) ->
     rec = desk.get("recommendation")
     if isinstance(rec, Mapping):
         words = _recommendation_words(rec, defs)
+        if words:
+            parts.append(words)
+
+    refs = desk.get("references")
+    if isinstance(refs, list):
+        words = _reference_words(refs, defs)
         if words:
             parts.append(words)
 
