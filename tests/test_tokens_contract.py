@@ -132,8 +132,15 @@ def test_the_alternatives_are_the_definitions_own_lists():
     by_argument = {t.argument: t for t in served.tokens}
     windows = {w.name for w in served.windows}
     assert {a.value for a in by_argument["window"].alternatives} == windows
-    assert ({a.value for a in by_argument["store"].alternatives}
-            == {loc.id for loc in served.locations})
+    # THE SHOP TOKEN LEFT ON 2026-09-15, at the owner's word: *"it just puts
+    # it here which i dont need so remove it"*. It was the token "compare
+    # these" wrote into; a shop is chosen by tapping it in the evidence or
+    # typing `@`, both of which put it in the SELECTION where it is a chip he
+    # can see and remove. The locations are still SERVED — the selection and
+    # the estate switch read them — so what is asserted is that no TOKEN
+    # offers a shop.
+    assert "store" not in by_argument, "the shop token came back"
+    assert served.locations, "the shops are still served; only the token went"
     # A grouping is a LIST on every tool that takes one — never a bare word,
     # and every one of them is a grouping some metric declares.
     grouping = by_argument["group_by"]

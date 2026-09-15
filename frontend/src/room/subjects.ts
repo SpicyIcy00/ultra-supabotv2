@@ -168,35 +168,3 @@ export function asSelection(held: Subject[]):
 
 /* -------------------------------------------------------------- comparison */
 
-/**
- * TWO SUBJECTS AND A WORD ARE A REPLAY (P2.c).
- *
- * "Compare these" with two shops picked names no new fact: it is a read
- * already on screen, scoped to two ids instead of all of them — which is
- * exactly what the `store` token does with one. So it is answered the way
- * every other scope change is answered, by running the stored call again, and
- * it costs no model turn.
- *
- * ONLY WHERE THE DIMENSION IS A SCOPE A REPLAY MAY CHANGE. The definitions say
- * which (`selection.comparison.replays_by_dimension`), and a dimension absent
- * from that map returns null here — two products and "compare these" is
- * George's question, because a replay has no argument to put them in.
- *
- * The words are the definitions' too. A client holding its own list of them
- * would be a second vocabulary nobody could see.
- */
-export function comparisonReplay(
-  text: string, held: Subject[], defs: Defs,
-): { argument: string; value: string[] } | null {
-  const spec = defs?.selection?.comparison;
-  if (!spec) return null;
-  const typed = text.trim().toLowerCase().replace(/\s+/g, ' ').replace(/[?.!,]+$/, '');
-  const spoken = (spec.spoken ?? []).map((s) => String(s).toLowerCase());
-  if (!spoken.includes(typed)) return null;
-
-  const mine = travelling(held);
-  if (mine.length < Number(spec.min_subjects ?? 2)) return null;
-  const argument = spec.replays_by_dimension?.[mine[0].dimension];
-  if (!argument) return null;
-  return { argument: String(argument), value: mine.map((s) => s.id) };
-}

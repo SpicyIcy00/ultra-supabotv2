@@ -31,7 +31,7 @@ import { Tokens } from './Tokens';
 import { Composer, type NamedReference } from './Composer';
 import { pageScopeFor } from '../components/george/pageScope';
 import type { Bound } from './mentions';
-import { asSelection, comparisonReplay, maxSubjects, subjectOnBoard,
+import { asSelection, maxSubjects, subjectOnBoard,
          toggleSubject, type Subject } from './subjects';
 import { pathFor, refusalForPerson, resolveFragment, retunedKey, tokensFor,
          type DrawnToken } from './tokenShape';
@@ -553,21 +553,20 @@ export default function Room() {
   const ask = useCallback((text: string, subjects = selection) => {
     const q = text.trim();
     if (!q) return;
-    // TWO SUBJECTS AND A WORD ARE A REPLAY (P2.c). "Compare these" with two
-    // shops picked names no new fact: it is a read already on screen scoped
-    // to two ids instead of all of them, which is what the shop token does
-    // with one. So it goes down the same path, and costs no model turn. The
-    // words and the dimensions this is true of are the definitions'.
-    const compare = comparisonReplay(q, subjects, desk.data);
-    if (compare) {
-      const on = tokens.find((t) => t.argument === compare.argument);
-      const targets = on?.targets?.length ? on.targets : targetsFor(compare.argument);
-      if (targets.length) {
-        setDraft('');
-        void runReplay(targets, compare.argument, compare.value);
-        return;
-      }
-    }
+    // "COMPARE THESE" IS A QUESTION, AND THERE IS NO CODE FOR IT (2026-09-15).
+    //
+    // It used to be a replay: two shops picked scoped the read on screen to
+    // their two ids, no model turn, 528 ms. The owner reported it as not
+    // working twice — the second time after the token had been fixed to read
+    // their NAMES rather than their ids, which is how it became clear the
+    // label was never the whole of it. A narrowed chart says nothing ABOUT
+    // two shops, and "compare" asks for something said.
+    //
+    // So the shortcut is gone and nothing replaced it: with subjects picked,
+    // `fragment` is already null and the line below sends the words to George
+    // with the selection attached, exactly as every other short instruction
+    // goes. The behaviour is the absence, which is why there is no branch
+    // here to read.
     const fragment = subjects.length ? null : resolveFragment(q, tokens, desk.data);
     if (!fragment) { askGeorge(q, subjects); return; }
     setDraft('');

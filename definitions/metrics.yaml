@@ -6311,24 +6311,25 @@ surface:
         category: [category]
         supplier: [supplier, supplier_name]
 
-      # TWO SUBJECTS AND A WORD ARE A REPLAY, NOT A QUESTION (P2.c).
+      # "COMPARE THESE" IS A QUESTION, NOT A REPLAY (2026-09-15).
       #
-      # "Compare these" with two shops picked is a read already on screen
-      # scoped to two ids — the same act as tapping the shop token, with a
-      # list where that has one value. It is here and not in a component for
-      # the reason every other fragment is: what a person may type is a
-      # definition, and a client that held its own copy of these words would
-      # be a second vocabulary nobody could see.
+      # It WAS a replay: two shops picked set `filters.store` to their two
+      # ids and the read on screen narrowed, costing no model turn, measured
+      # at 528 ms. The owner reported it as not working twice — *"it just
+      # puts them in the store filterer"*, and again after the label was
+      # fixed so it read their names: *"compare still doesnt work, it just
+      # puts it here which i dont need"*.
       #
-      # ONLY WHERE THE DIMENSION IS A SCOPE A REPLAY MAY CHANGE. `store` is
-      # `surface.desk.replay.arguments.store`; a product, a category and a
-      # supplier are not replay arguments, so two products and "compare
-      # these" is George's question and says so by being absent here.
-      comparison:
-        spoken: ["compare these", "compare them", "these two", "compare"]
-        min_subjects: 2
-        replays_by_dimension:
-          store: store
+      # He was right, and the speed was the trap. A narrowed chart says
+      # nothing ABOUT the two shops — no claim, no reading, nothing that
+      # answers the word "compare". The standard's feature 7 is "Select two
+      # stores → Compare these", and what it asks for is an ANSWER, which is
+      # a turn.
+      #
+      # So there is no entry here any more, and the absence IS the behaviour:
+      # a short instruction with subjects picked goes to George with them
+      # attached, exactly as every other short instruction does. Speed that
+      # communicates nothing is not a feature.
 
       # THE `@` DOOR (P2.c, 2026-09-15). The same chip, typed instead of
       # tapped. Completion is over things that EXIST — every kind below is a
@@ -6564,11 +6565,20 @@ surface:
     # the store list, the subject dimensions. A client never invents one.
     tokens:
       from: accepted_call_arguments
-      # The four that have a knowable list of alternatives. `rank_by` is
+      # The ones with a knowable list of alternatives. `rank_by` is
       # replayable and has no token: its values are each tool's own, and a
       # token that cannot offer the alternatives is a label pretending to be
       # a control.
-      arguments: [window, store, group_by, top_n]
+      #
+      # `store` LEFT ON 2026-09-15, at the owner's word: *"it just puts it
+      # here which i dont need so remove it"*. It was the token "compare
+      # these" wrote into, and a shop is already chosen by tapping it in the
+      # evidence or typing `@` — both of which put it in the SELECTION, where
+      # it is visible as a chip he can remove. A second place that also
+      # scoped the read, silently and without saying anything about the
+      # shops, is what made the gesture unreadable. Window, grouping and
+      # count stay: each is scope nothing else expresses.
+      arguments: [window, group_by, top_n]
       alternatives_from:
         window: sales_day.presets
         store: stores

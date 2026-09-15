@@ -57,6 +57,41 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-15 — "compare" still did not compare, so the shortcut was removed
+
+> *"compare still doesnt work, it just puts it here which i dont need so
+> remove it and make sure next push it can actually can compare"*
+
+Said of the build where the token had just been fixed to draw the two shops'
+NAMES — `Greenhills, Magnolia` — rather than their ids. **That is what settles
+it: the label was never the whole of it.** The gesture worked and still said
+nothing, because narrowing a chart to two shops makes no claim ABOUT them,
+and "compare" asks for something said. The standard's feature 7 is *"Select
+two stores → Compare these"*, and what it asks for is an answer.
+
+**Removed, both halves, at his word.** `selection.comparison` is gone from
+the definitions and the branch is gone from `Room.tsx`; the shop token is
+gone from `surface.desk.tokens.arguments`. Nothing replaced either — with
+subjects picked, a short instruction already falls through to George with
+them attached, so **the absence is the behaviour**. Three contract tests that
+held the old rule now hold that it stays gone, and the room's own assertion
+reads the shipped yaml rather than a fixture, because a fixture asserting
+about itself would pass while the real definitions grew it back.
+
+**The trade, stated rather than hidden:** it was 528 ms and no model turn; it
+is now an ordinary turn, ~17 s. Speed that communicates nothing is not a
+feature, but the seconds are real and this is where they went.
+
+**Window, grouping and count tokens stay.** He pointed at the shop one, which
+is the one "compare these" wrote into. If the other three should go too it is
+one line, and it is his call, not a session's.
+
+**NOT VERIFIED BY ANYBODY.** No session has seen two shops picked and
+"compare" asked on a live build, and the suites cannot see it: what George
+says about two shops is behaviour, and behaviour is held by the evals. This
+is the second time this feature has been reported fixed — it is not fixed
+until he says so.
+
 ### 2026-09-15 — a tile explaining itself to the reader
 
 Not reported by the owner; seen in his screenshot and logged because the

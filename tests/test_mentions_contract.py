@@ -60,20 +60,27 @@ def test_the_identity_of_every_dimension_is_declared():
     assert DEFS["suppliers"]["purchase_orders"]["supplier_master_exists"] is False
 
 
-def test_a_comparison_replays_only_a_scope_a_replay_may_change():
-    comparison = SEL["comparison"]
-    assert comparison["min_subjects"] >= 2
-    assert comparison["spoken"], "a comparison nobody can say is not a feature"
-    replayable = DEFS["surface"]["desk"]["replay"]["arguments"]
-    for dimension, argument in comparison["replays_by_dimension"].items():
-        assert dimension in SEL["dimensions"]
-        # THE POINT OF THE CHECK. Offering "compare these" for a dimension no
-        # replay argument accepts would be a control that silently did
-        # nothing — two products would sit there and the read would not move.
-        assert argument in replayable, (
-            f"{dimension} is offered as a comparison and {argument!r} is not "
-            f"something a replay may change"
-        )
+def test_compare_these_is_a_question_and_no_definition_makes_it_a_replay():
+    """
+    IT WAS A REPLAY UNTIL 2026-09-15 and this test held the rule that it could
+    only replay a scope a replay may change. The owner reported the feature as
+    not working twice — the second time after the token had been fixed to draw
+    the two shops' NAMES rather than their ids, which is what established that
+    the label had never been the whole of it. A narrowed chart says nothing
+    ABOUT two shops, and "compare" asks for something said (the standard,
+    feature 7: "Select two stores → Compare these").
+
+    The definition is gone and its ABSENCE is the behaviour: a short
+    instruction with subjects picked goes to George with them attached, the
+    way every other one does. This asserts it stays gone, because a shortcut
+    that grew back silently would take the report with it.
+    """
+    assert "comparison" not in SEL, (
+        "selection.comparison came back; 'compare these' is a question and the "
+        "room has no branch for it"
+    )
+    # The half that did work and must stay true: a subject travels as an id.
+    assert SEL["identity"], "a subject with no identity column travels as a word"
 
 
 def test_every_mention_kind_names_a_read_and_says_what_it_binds():
@@ -327,6 +334,10 @@ def test_a_replayed_list_of_ids_is_within_the_shape_a_replay_permits():
 
     replay_service.check_value(["s-one", "s-two"], DEFS)
     cap = int(DEFS["surface"]["desk"]["replay"]["max_list_values"])
-    assert cap >= int(SEL["comparison"]["min_subjects"])
+    # TWO IS THE FLOOR, and it is no longer read off `comparison` — that left
+    # with the compare shortcut. A list still reaches `filters.store` (the @
+    # door, a stored scope), so the shape a replay permits is still live, and
+    # a cap below two would refuse the smallest list anybody can make.
+    assert cap >= 2
     with pytest.raises(replay_service.ReplayRefused):
         replay_service.check_value(["x"] * (cap + 1), DEFS)

@@ -10,12 +10,15 @@
  * serves it — which is the point: no list of columns lives on the client, so a
  * test that invented its own would be testing a thing that does not exist.
  */
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { DeskDefinitions } from '../services/deskApi';
 import {
-  asSelection, comparisonReplay, identityColumn, maxSubjects, subjectInRow,
+  asSelection, identityColumn, maxSubjects, subjectInRow,
   subjectInRows, subjectOnBoard, toggleSubject, travelling, type Subject,
 } from './subjects';
+import { resolveFragment } from './tokenShape';
 import type { AnswerTurn } from './data';
 import type { BoardObject } from './board';
 
@@ -33,11 +36,6 @@ const DEFS = {
       product: ['product', 'name', 'sku'],
       category: ['category'],
       supplier: ['supplier', 'supplier_name'],
-    },
-    comparison: {
-      spoken: ['compare these', 'compare them', 'these two', 'compare'],
-      min_subjects: 2,
-      replays_by_dimension: { store: 'store' },
     },
   },
 } as unknown as DeskDefinitions;
@@ -189,35 +187,48 @@ describe('what travels with the question', () => {
   });
 });
 
-describe('two subjects and a word are a replay', () => {
-  const opus: Subject = { dimension: 'store', id: 's-opus', label: 'OPUS', from: 'rows' };
-  const rock: Subject = { dimension: 'store', id: 's-rock', label: 'Rockwell', from: 'rows' };
-  const mix: Subject = { dimension: 'product', id: 'p-mix', label: 'Aji Mix', from: 'rows' };
-
-  it('scopes the stored read to the ids, never to the labels', () => {
-    expect(comparisonReplay('compare these', [opus, rock], DEFS))
-      .toEqual({ argument: 'store', value: ['s-opus', 's-rock'] });
+describe('"compare these" is a question, not a replay', () => {
+  /**
+   * IT WAS A REPLAY UNTIL 2026-09-15 and these tests held it: two shops
+   * picked scoped the read on screen to their two ids, no model turn, 528 ms.
+   * The owner reported it as not working twice — the second time after the
+   * token had been fixed to show their NAMES rather than their ids, which is
+   * what made it clear the label had never been the whole of it. A narrowed
+   * chart says nothing ABOUT two shops, and "compare" asks for something
+   * said.
+   *
+   * So the function is gone and nothing replaced it. What holds the behaviour
+   * now is its ABSENCE, in two places — the definitions carry no
+   * `selection.comparison`, and the room has no branch for it — so a short
+   * instruction with subjects picked goes to George with them attached, the
+   * way every other short instruction does. These assert the absence, because
+   * a shortcut that grew back silently would take the report with it.
+   */
+  it('has no definition a client could act on', () => {
+    // READ OFF THE SHIPPED YAML, not off the fixture above. A fixture that
+    // asserts about itself would pass while the real definitions grew the
+    // shortcut back, which is the only way this could return unnoticed.
+    const yaml = readFileSync(
+      join(__dirname, '..', '..', '..', 'definitions', 'metrics.yaml'), 'utf8');
+    expect(yaml, 'the comparison replay came back').not.toContain('replays_by_dimension');
   });
 
-  it('answers to every word the definitions list, and to no other', () => {
-    for (const said of ['compare these', 'Compare them?', 'THESE TWO', 'compare']) {
-      expect(comparisonReplay(said, [opus, rock], DEFS)).not.toBeNull();
+  it('is not resolved as a fragment, so it cannot be answered without George', () => {
+    // `resolveFragment` is the other door a typed word could take. It answers
+    // against the tokens on screen, and no token offers a shop any more.
+    for (const said of ['compare these', 'compare them', 'these two', 'compare']) {
+      expect(resolveFragment(said, [], DEFS), `${said} resolved to a fragment`).toBeNull();
     }
-    expect(comparisonReplay('compare these two shops please', [opus, rock], DEFS)).toBeNull();
-    expect(comparisonReplay('why?', [opus, rock], DEFS)).toBeNull();
   });
 
-  it('needs the minimum the definitions state', () => {
-    expect(comparisonReplay('compare these', [opus], DEFS)).toBeNull();
-  });
-
-  it('refuses a dimension a replay has no argument for', () => {
-    // A product is not a replay argument — `filters.sku` is not one of the
-    // five scopes — so two products and "compare these" is George's question.
-    expect(comparisonReplay('compare these', [mix, { ...mix, id: 'p-two' }], DEFS)).toBeNull();
-  });
-
-  it('is nothing at all without the definitions', () => {
-    expect(comparisonReplay('compare these', [opus, rock], null)).toBeNull();
+  it('leaves the subjects to travel as ids on the question', () => {
+    // The half that did work and still does: what reaches George is ids with
+    // the labels the rows carried, never a word the model has to guess at.
+    const opus: Subject = { dimension: 'store', id: 's-opus', label: 'OPUS', from: 'rows' };
+    const rock: Subject = { dimension: 'store', id: 's-rock', label: 'Rockwell', from: 'rows' };
+    expect(asSelection([opus, rock])).toEqual({
+      dimension: 'store',
+      subjects: [{ id: 's-opus', label: 'OPUS' }, { id: 's-rock', label: 'Rockwell' }],
+    });
   });
 });
