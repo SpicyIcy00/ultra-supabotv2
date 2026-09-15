@@ -4194,3 +4194,15 @@ drawing — the same reason `draft` kept its editable quantities.
 `default_composition` draws `view_memory` as one by the TOOL and not by the
 columns, which is its only such branch: by columns alone a register of beliefs
 is a table, and a table draws no Forget.
+
+**The deploy was the migration's first rehearsal, and that is now the standing
+shape.** `x8y9z0a1b2c3` shipped in `c87fda5` having been run on no machine:
+there is no local Postgres here, no Docker, and `ops/local_postgres.py` wants
+PostgreSQL binaries the checkout does not carry. It ran — `/health` reports it
+current and expected — and the swap cost two 502s over **66 s, measured rather
+than bounded**, because the poller started before the push for the first time.
+Twelve earlier watched swaps carried no migration; this one is the only data
+point on that path and it does not explain the 50-minute outage on `8b0325a`.
+Until a rehearsal environment exists, a migration is additive only and any
+CHECK over existing rows is `NOT VALID`, so a legacy row cannot fail an upgrade
+that nobody has watched succeed.
