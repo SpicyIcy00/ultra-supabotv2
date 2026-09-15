@@ -28,17 +28,26 @@ export interface TokensProps {
   /** True while a replay is in flight — the row says so rather than freezing. */
   moving?: boolean;
   /**
-   * The tool's own sentence when a replay was refused, whole. A window still
-   * in progress is refused by name, and a refusal that says nothing would
-   * leave the old figures under a new label (UI rule 4).
+   * WHAT A REFUSED REPLAY SAYS — already reduced for a person.
+   *
+   * It used to be the tool's own sentence, whole, on the reasoning that a
+   * refusal saying nothing would leave the old figures under a new label. The
+   * first half of that is still true and this still says it. The second half
+   * was wrong: a tool's refusal is written for the model and names the
+   * argument and the yaml key, and UI rule 4 forbids that reaching a person.
+   * `refusalForPerson` decides, off `surface.prose.leaks`; a refusal that
+   * leaks nothing arrives here whole, as before.
    */
-  refusal?: string | null;
+  refusal?: { head: string; detail: string | null } | null;
+  /** The word the tool's own sentence sits behind, from the definitions. */
+  detailWord?: string;
   onMove(token: DrawnToken, alternative: DeskAlternative): void;
   onCorrect(): void;
 }
 
 export function Tokens(p: TokensProps) {
   const [open, setOpen] = useState<string | null>(null);
+  const [detail, setDetail] = useState(false);
   if (!p.tokens.length && !p.correction) return null;
   const chosen = p.tokens.find((t) => t.argument === open) ?? null;
 
@@ -87,9 +96,26 @@ export function Tokens(p: TokensProps) {
         </div>
       )}
 
-      {/* The tool's own words, unrephrased. It sits above the figures it is
-          about, like every other caveat on this page. */}
-      {p.refusal && <p className="r-caveat r-token-refusal">{p.refusal}</p>}
+      {/* It sits above the figures it is about, like every other caveat on
+          this page. What it SAYS is decided before it gets here: the tool's
+          own words where they are readable, and one line with them on tap
+          where they are not. */}
+      {p.refusal && (
+        <p className="r-caveat r-token-refusal">
+          {p.refusal.head}
+          {p.refusal.detail && (
+            <>
+              {' '}
+              <button type="button" className="r-act"
+                      aria-expanded={detail}
+                      onClick={() => setDetail((d) => !d)}>
+                {p.detailWord ?? 'why'}
+              </button>
+              {detail && <span className="r-token-refusal-detail">{p.refusal.detail}</span>}
+            </>
+          )}
+        </p>
+      )}
     </div>
   );
 }

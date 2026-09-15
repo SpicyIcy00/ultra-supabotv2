@@ -462,3 +462,76 @@ describe('an offer on its row', () => {
     expect(button.className).toBe('r-offer');
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * A TAP ON A ROW'S NAME (the dogfood log, 2026-09-15)
+ *
+ * THIS IS THE TEST WHOSE ABSENCE SHIPPED P2.c HALF-BUILT. `subjects.ts`
+ * resolved the id off the row, `subjectOnBoard` was tested, the composer drew
+ * the chip — and no mark ever called `pick`, so there was no tap to resolve
+ * anything from. Every piece was covered and the gesture joining them was not.
+ * The owner, on the live build: *"i cant click any store cause theres no
+ * tap."*
+ *
+ * So these drive the ROW, through the whole board, in each mark that has
+ * named rows. A unit test of `pick` would have passed the whole time.
+ * ------------------------------------------------------------------------ */
+
+import { fireEvent, screen } from '@testing-library/react';   // eslint-disable-line
+
+const NAMED = [
+  { store: 'Rockwell', value: 412884, baseline: 455000, change: -42116, change_pct: -9.4 },
+  { store: 'OPUS', value: 121451, baseline: 93000, change: 28451, change_pct: 30.6 },
+];
+
+describe('tapping a row', () => {
+  for (const kind of ['dumbbell', 'ranked', 'contributors'] as const) {
+    it(`puts the row's own subject in the selection from a ${kind}`, () => {
+      (on.pick as ReturnType<typeof vi.fn>).mockClear();
+      draw({ kind }, NAMED);
+      fireEvent.click(screen.getByRole('button', { name: 'OPUS' }));
+      expect(on.pick).toHaveBeenCalledWith('OPUS', 'store');
+    });
+
+    it(`does not also open the object when a ${kind} row is tapped`, () => {
+      /**
+       * THE OTHER HALF OF THE REPORT, and the reason it read as *"it just
+       * moves or expands the widget"* rather than *"nothing happens"*: the
+       * tile is role=button with an onClick over the whole of it, so without
+       * stopPropagation the tap would select the row AND open the tile.
+       */
+      (on.open as ReturnType<typeof vi.fn>).mockClear();
+      draw({ kind }, NAMED);
+      fireEvent.click(screen.getByRole('button', { name: 'Rockwell' }));
+      expect(on.open).not.toHaveBeenCalled();
+    });
+  }
+
+  it('taps the subject cell of a table and no other cell', () => {
+    (on.pick as ReturnType<typeof vi.fn>).mockClear();
+    draw({ kind: 'table' }, NAMED);
+    // The figure is not a subject and never becomes one.
+    expect(screen.queryByRole('button', { name: '412,884' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Rockwell' }));
+    expect(on.pick).toHaveBeenCalledWith('Rockwell', 'store');
+  });
+
+  it('says which rows are already picked', () => {
+    const turn = {
+      role: 'george', text: 'A reading.', thinking: '', at: '2026-09-11T08:00:00Z',
+      toolCalls: [{ seq: 1, tool: 'get_sales', arguments: {}, result: { rows: NAMED, meta: META } }],
+    } as unknown as AnswerTurn;
+    const object = { key: 'k', kind: 'ranked', weight: 'lead', seq: 1, tool: 'get_sales',
+                     turn: 0, touched: 0 } as BoardObject;
+    render(<Board answers={[turn]} board={[object]} local={{}} focused={null}
+                  selection={['OPUS']} live={false} retuned={{}} on={on} />);
+    expect(screen.getByRole('button', { name: 'OPUS' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Rockwell' }).getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('draws a plain label where the row names nothing to ask about', () => {
+    /** A button that selects nothing is worse than a label. */
+    draw({ kind: 'ranked' }, [{ hour: 10, value: 9732 }, { hour: 15, value: 114928 }]);
+    expect(screen.queryByRole('button', { name: '1' })).toBeNull();
+  });
+});

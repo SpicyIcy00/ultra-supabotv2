@@ -240,3 +240,59 @@ describe('a fragment resolves against the tokens on screen, or it is a question'
       .toEqual({ kind: 'correction', asks: 'Say what you understood.' });
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * WHAT A REFUSAL SAYS TO A PERSON (the dogfood log, 2026-09-15)
+ *
+ * The tool's sentence names the argument and the yaml key, because the model
+ * reading it has to fix its own call. It was also on the owner's screen.
+ * ------------------------------------------------------------------------ */
+
+import { refusalForPerson } from './tokenShape';       // eslint-disable-line
+
+const REPLAY = {
+  leaks: ['group_by', 'compare_to', 'metrics.yaml', 'get_sales', 'change_pct'],
+  refused_leaks_says: 'That change cannot be made to this read. The figures have not moved.',
+};
+
+const LEAKED = "compare_to='previous_period' cannot be grouped by hour: each bucket "
+  + 'against its own predecessor is a lag series, which is not built (metrics.yaml '
+  + 'comparisons.not_supported.per_bucket_lag). Group by category, product, store.';
+
+describe('a refusal a person may see', () => {
+  it('shows a readable refusal whole, exactly as before', () => {
+    const said = 'this_month is still in progress; last_month is the closed one.';
+    expect(refusalForPerson(said, REPLAY)).toEqual({ head: said, detail: null });
+  });
+
+  it('keeps every leaked word out of the line that is drawn', () => {
+    const out = refusalForPerson(LEAKED, REPLAY)!;
+    for (const word of REPLAY.leaks) {
+      expect(out.head.toLowerCase(), `${word} reached the reader`).not.toContain(word);
+    }
+    expect(out.head).toBe(REPLAY.refused_leaks_says);
+  });
+
+  it('does not throw the tool\'s words away — they go behind the tap', () => {
+    expect(refusalForPerson(LEAKED, REPLAY)!.detail).toBe(LEAKED);
+  });
+
+  it('withholds the machinery even when the definitions supplied no sentence', () => {
+    // No sentence to replace it with is not a licence to show the raw one.
+    const out = refusalForPerson(LEAKED, { leaks: REPLAY.leaks })!;
+    expect(out.head).not.toContain('metrics.yaml');
+    expect(out.detail).toBe(LEAKED);
+  });
+
+  it('is nothing at all when nothing was refused', () => {
+    expect(refusalForPerson(null, REPLAY)).toBeNull();
+    expect(refusalForPerson('   ', REPLAY)).toBeNull();
+  });
+
+  it('reads the list it is given and keeps no copy of its own', () => {
+    // A word that is a leak only because the definitions say so.
+    expect(refusalForPerson('rank_by is not accepted here', { leaks: ['rank_by'] })!.detail)
+      .toBe('rank_by is not accepted here');
+    expect(refusalForPerson('rank_by is not accepted here', { leaks: [] })!.detail).toBeNull();
+  });
+});

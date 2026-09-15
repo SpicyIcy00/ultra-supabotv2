@@ -122,7 +122,7 @@ function Figure(p: TileProps & { rows: Row[]; meta: Meta }) {
  * be drawn — labelled "usual", never "healthy", because a range is where a
  * thing sits and not whether that is good.
  */
-function Dumbbell({ rows, meta, o, offers, seq, onTake }:
+function Dumbbell({ rows, meta, o, offers, seq, onTake, onPick, picked }:
                   { rows: Row[]; meta: Meta; o: TileProps['o'] } & Offering) {
   const at = (r: Row) => Number(valueOf(r)?.value ?? 0);
   const before = (r: Row) => Number(r.baseline);
@@ -149,7 +149,9 @@ function Dumbbell({ rows, meta, o, offers, seq, onTake }:
         return (
           <div key={n} className="r-mk-row" data-lit={lit ? 'yes' : 'no'}
                style={{ opacity: lit ? 1 : COOL }}>
-            <span className="r-mk-name">{name}</span>
+            <RowName name={name} className="r-mk-name"
+                     pickable={Boolean(subjectOf(r))} onPick={onPick}
+                     picked={picked?.includes(name)} />
             <span className="r-mk-track" role="img"
                   aria-label={`${name}: ${fmt(key, a, unit)} before, ${fmt(key, b, unit)} now`}>
               {band > 0 && (
@@ -213,14 +215,63 @@ function RowOffers({ offers, seq, subject, onTake }: {
 type Take = (offer: ActionOffer) => void;
 
 /** What every row mark needs to draw an offer, and nothing else. */
-interface Offering { offers?: ActionOffer[]; seq?: number; onTake?: Take }
+interface Offering {
+  offers?: ActionOffer[];
+  seq?: number;
+  onTake?: Take;
+  /**
+   * A TAP ON A ROW'S NAME PUTS IT IN THE SELECTION (the log, 2026-09-15).
+   *
+   * It was missing. `subjects.ts` resolved the id, the composer drew the
+   * chip, `subjectOnBoard` was tested — and no mark ever called `pick`, so
+   * the only way an id could reach George was by typing `@`. The owner, on
+   * the live build: *"i cant click any store cause theres no tap."* He was
+   * describing the code exactly.
+   */
+  onPick?(subject: string): void;
+  /** The subjects already picked, so a row can say it is one of them. */
+  picked?: string[];
+}
 
 const NO_TAKE: Take = () => {};
+
+/**
+ * A ROW'S NAME, TAPPABLE WHERE THE ROW HAS ONE.
+ *
+ * THE `stopPropagation` IS THE OTHER HALF OF THE BUG. The tile is
+ * `role="button"` with an `onClick` over the whole of it, so a click on a row
+ * reached the tile's open handler and nothing else — which is why the report
+ * is *"tapping doesnt work it just moves or expands the widget"* rather than
+ * "nothing happens". Both halves had to go or the tap would have opened the
+ * object and selected the row at once.
+ *
+ * A row with no subject of its own is drawn as it always was: a plain label
+ * is honest about there being nothing to pick.
+ */
+function RowName({ name, pickable, onPick, picked, className }: {
+  name: string;
+  pickable: boolean;
+  onPick?(subject: string): void;
+  picked?: boolean;
+  className: string;
+}) {
+  if (!pickable || !onPick) return <span className={className}>{name}</span>;
+  return (
+    <button
+      type="button"
+      className={`${className} r-mk-name--tap`}
+      aria-pressed={picked ?? false}
+      onClick={(e) => { e.stopPropagation(); onPick(name); }}
+    >
+      {name}
+    </button>
+  );
+}
 
 /* ------------------------------------------------------------------ ranked */
 
 /** BARS IN CELLS — a row, its length, its figure. No axis, no legend. */
-function Ranked({ rows, meta, o, offers, seq, onTake }:
+function Ranked({ rows, meta, o, offers, seq, onTake, onPick, picked }:
                 { rows: Row[]; meta: Meta; o: TileProps['o'] } & Offering) {
   const key = valueOf(rows[0])?.key ?? 'value';
   const unit = unitOf(rows[0]) ?? unitOf(meta);
@@ -235,7 +286,9 @@ function Ranked({ rows, meta, o, offers, seq, onTake }:
         return (
           <div key={n} className="r-mk-row" data-lit={lit ? 'yes' : 'no'}
                style={{ opacity: lit ? 1 : COOL }}>
-            <span className="r-mk-name r-mk-name--left">{name}</span>
+            <RowName name={name} className="r-mk-name r-mk-name--left"
+                     pickable={Boolean(subjectOf(r))} onPick={onPick}
+                     picked={picked?.includes(name)} />
             <span className="r-mk-bar" role="img"
                   aria-label={`${name}: ${fmt(key, valueOf(r)?.value, unit)}`}>
               <i style={{ width: `${(values[n] / most) * 100}%`, background: paint(c) }} />
@@ -267,7 +320,7 @@ function Ranked({ rows, meta, o, offers, seq, onTake }:
  * movement, because an attribution share is exactly what CLAUDE.md 10 refuses
  * and no tool computes one.
  */
-function Contributors({ rows, meta, o, offers, seq, onTake }:
+function Contributors({ rows, meta, o, offers, seq, onTake, onPick, picked }:
                       { rows: Row[]; meta: Meta; o: TileProps['o'] } & Offering) {
   const signed = (r: Row) => {
     const n = typeof r.change === 'number' ? r.change : Number(r.change_pct);
@@ -287,7 +340,9 @@ function Contributors({ rows, meta, o, offers, seq, onTake }:
         return (
           <div key={n} className="r-mk-row" data-lit={lit ? 'yes' : 'no'}
                style={{ opacity: lit ? 1 : COOL }}>
-            <span className="r-mk-name r-mk-name--left">{name}</span>
+            <RowName name={name} className="r-mk-name r-mk-name--left"
+                     pickable={Boolean(subjectOf(r))} onPick={onPick}
+                     picked={picked?.includes(name)} />
             <span className="r-mk-bar r-mk-bar--split" role="img"
                   aria-label={`${name}: ${fmt(key, v, unit)}`}>
               <i style={{ width: `${(Math.abs(v) / most) * 50}%`,
@@ -416,11 +471,24 @@ function Rows({ rows: all, meta, o, p }: { rows: Row[]; meta: Meta; o: TileProps
             <tbody>
               {rows.map((row, n) => (
                 <tr key={n} style={{ opacity: isLit(o, row) ? 1 : COOL }}>
-                  {shown.map((c) => (
-                    <td key={c} className={typeof row[c] === 'number' ? 'n' : ''}>
-                      {c === 'change_pct' ? <Delta change={changeOf(row)} /> : fmt(c, row[c], unit(row))}
-                    </td>
-                  ))}
+                  {shown.map((c) => {
+                    // THE CELL THAT HOLDS THE ROW'S SUBJECT IS TAPPABLE, and
+                    // only that one: a table of a shop's products has one
+                    // column that names something George can be asked about
+                    // and several that are measurements of it.
+                    const subject = subjectOf(row);
+                    const isSubject = typeof subject === 'string' && row[c] === subject;
+                    return (
+                      <td key={c} className={typeof row[c] === 'number' ? 'n' : ''}>
+                        {c === 'change_pct' ? <Delta change={changeOf(row)} />
+                          : isSubject ? (
+                            <RowName name={subject} className="r-mk-cellname" pickable
+                                     onPick={(x) => p.on.pick(x, dimensionOf(all, x))}
+                                     picked={p.selection?.includes(subject)} />
+                          ) : fmt(c, row[c], unit(row))}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
@@ -469,6 +537,11 @@ export function MarkBlock(p: TileProps) {
   const offering = {
     offers: p.offers,
     seq: p.o.seq,
+    picked: p.selection,
+    // THE DIMENSION IS THE ROW'S OWN, not the tile's. `why` already resolves
+    // it this way, off the row that was tapped, which is what lets a tap on a
+    // product inside a shop's board travel as a product.
+    onPick: (subject: string) => p.on.pick(subject, dimensionOf(rows, subject)),
     onTake: (a: ActionOffer) => {
       if (!a.target) return;
       if (a.act === 'why') p.on.why(a.target, dimensionOf(rows, a.target));

@@ -2888,7 +2888,15 @@ async def desk_definitions(user: AppUser = Depends(_george_user)) -> DeskDefinit
         breakdown_dimensions=[d for d in dimensions if d in groupable],
         tokens=_desk_tokens(desk, _req(defs, "metrics"), windows, locations,
                             [d for d in dimensions if d in groupable]),
-        replay=dict(_req(desk, "replay")),
+        replay={
+            **dict(_req(desk, "replay")),
+            # THE WORDS A READER MUST NEVER SEE, served with the sentence that
+            # replaces them (the dogfood log, 2026-09-15). One definition, in
+            # `voice.prose.leaks`, already used to scan the ANSWER; the token
+            # row now checks a tool's refusal against the same list rather
+            # than a component keeping a second copy of it.
+            "leaks": [str(w) for w in _req(defs, "surface.prose.leaks")],
+        },
         fragments=dict(_req(desk, "fragments")),
         windows=windows,
         window_arguments=dict(_req(defs, "workflows.backtest.window_arguments")),

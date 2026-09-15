@@ -116,6 +116,14 @@ export interface DeskDefinitions {
     from_control: Record<string, string>;
     changes_shape: string[];
     max_restored_per_open: number;
+    /**
+     * The words a reader must never see (`surface.prose.leaks`, the same list
+     * the loop scans an answer with) and the line that replaces a refusal
+     * carrying one. Served here so no component keeps a second copy.
+     */
+    leaks?: string[];
+    refused_leaks_says?: string;
+    refused_detail_word?: string;
     [key: string]: unknown;
   };
   /** How short a fragment may be, and the one token that costs a turn. */

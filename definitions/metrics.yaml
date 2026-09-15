@@ -6519,6 +6519,29 @@ surface:
         That returns more rows than this draws at once. Narrow it, or ask
         George to rank them.
 
+      # A REFUSAL WRITTEN FOR GEORGE IS NOT SHOWN TO A PERSON (the dogfood
+      # log, 2026-09-15).
+      #
+      # A tool that declines names the yaml key and the argument, because the
+      # model reading it has to fix its own call: *"compare_to='previous_period'
+      # cannot be grouped by hour ... (metrics.yaml
+      # comparisons.not_supported.per_bucket_lag)"*. That sentence is right
+      # and it is right where it is. It was also on the owner's screen, under
+      # his figures, because the token row drew the tool's words unrephrased —
+      # which UI rule 4 forbids in those words: raw diagnostics never reach
+      # the answer.
+      #
+      # The room checks the refusal against `surface.prose.leaks` — the list the
+      # answer is already scanned with, so there is ONE definition of a word
+      # a reader must never see — and where it leaks, says this instead and
+      # keeps the tool's own sentence behind a tap. Reduced to one line naming
+      # it, explanation on tap, which is exactly what rule 4 allows. A refusal
+      # that leaks nothing is shown whole, as it always was.
+      refused_leaks_says: >-
+        That change cannot be made to this read. The figures have not moved.
+      # The word the tool's own sentence sits behind.
+      refused_detail_word: why
+
       # WHICH CHANGES CAN CHANGE THE SHAPE OF THE ROWS, and therefore need the
       # board frame the endpoint already returns rather than the object that
       # was drawn over the old ones. A window moves the figures inside the

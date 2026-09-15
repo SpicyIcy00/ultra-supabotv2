@@ -57,6 +57,36 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-15 — the Page view does not say what it is for
+
+> *"this is page i dont really know what its supposed to do"*
+
+P2.a. It draws WHAT WOULD BE KEPT and WHAT WOULD NOT BE, AND WHY — correctly,
+by the look of it — and never says that this is a preview of a page it has not
+written yet, or what pressing anything would do. A screen whose first job is
+to be understood before you commit to it is failing at exactly that.
+
+*Found by the session underneath:* the not-kept list repeats "how are all
+stores doing?" three times and "how are we doing?" twice, each with a
+different reason, which reads as a bug before it reads as a list of turns.
+
+### 2026-09-15 — what do you remember only half works
+
+> *"what do you remember kinda works i guess"*
+
+The memory draws: six views, each with its stance, *learned 9/13/2026 · from
+get_sales · carried into 2 questions · unconfirmed since new data landed*, and
+a FORGET on every one. What "kinda" covers is not established and the session
+did not ask him to be more specific in the moment. **The half that is known
+not to be tested is the other one**: whether telling him "we means the shops"
+once changes the next answer. That is the card's own done-when.
+
+---
+
+## Fixed
+
+### 2026-09-15 — a tap on a store did nothing but move the widget
+
 ### 2026-09-15 — a tap on a store does nothing but move the widget
 
 > *"this is how are doing looks like, but tapping doesnt work it just moves or
@@ -82,18 +112,24 @@ arguments the tools accepted, and they do not change anything when pressed.
 Same shape of failure as the tap above and possibly the same cause, which is
 a reason to look at them together and not a reason to assume it.
 
-### 2026-09-15 — the Page view does not say what it is for
+**Fixed.** There was no tap. `r-mk-name` was a plain `<span>` in every mark
+and nothing anywhere called `pick` except the `compare` button under a tile —
+so P2.c shipped with `subjects.ts` resolving ids, `subjectOnBoard` tested, the
+composer drawing chips, and no gesture joining them. Every piece was covered
+and the thing between them was not. A row's name is a button now, in the
+dumbbell, the ranked and the contributors marks and in the subject cell of a
+table; it takes the row's OWN dimension, the way `why` already did.
 
-> *"this is page i dont really know what its supposed to do"*
+The second half of his sentence was the second half of the bug: the tile is
+`role="button"` with an `onClick` over the whole of it, so the click reached
+the tile and opened it. `stopPropagation` on the name. Both halves had to go
+or the tap would have selected the row and opened the object at once.
 
-P2.a. It draws WHAT WOULD BE KEPT and WHAT WOULD NOT BE, AND WHY — correctly,
-by the look of it — and never says that this is a preview of a page it has not
-written yet, or what pressing anything would do. A screen whose first job is
-to be understood before you commit to it is failing at exactly that.
+**Held by eight tests that fail without it** (`marks.dom.test.tsx`), driven
+through the whole board rather than against `pick` — a unit test of `pick`
+would have passed the entire time this was broken.
 
-*Found by the session underneath:* the not-kept list repeats "how are all
-stores doing?" three times and "how are we doing?" twice, each with a
-different reason, which reads as a bug before it reads as a list of turns.
+### 2026-09-15 — the three changers "did not work", and a raw diagnostic was sitting in the answer
 
 ### 2026-09-15 — a raw diagnostic is sitting in the answer
 
@@ -109,20 +145,30 @@ Under the tokens on the `@Rockwell lost last month` turn:
 It names a yaml key and a file path. That sentence is written for George, and
 it is on the owner's screen.
 
-### 2026-09-15 — what do you remember only half works
+**One defect, not two, and this is what the session found.** The changers
+fired. He moved GROUPED to hour on the `@Rockwell lost last month` turn, the
+replay was refused — correctly, a lag series is not built — and what he was
+shown was the refusal `tools/sales.py` writes **for the model**, naming the
+argument and the yaml key so George can fix his own call. From his side a
+changer did nothing and said something unreadable, which is exactly the report
+he gave.
 
-> *"what do you remember kinda works i guess"*
+**Fixed at the surface, not at the tool.** The tool's sentence is right where
+it is and George still gets it whole. `refusalForPerson` in `tokenShape.ts`
+checks it against `surface.prose.leaks` — the SAME list the loop already scans
+an answer with, now served with the replay definitions so no component keeps a
+second copy — and where it leaks, draws `replay.refused_leaks_says` with the
+tool's own words behind `why`. That is UI rule 4 exactly: reduced to one line
+naming it, explanation on tap. A refusal that leaks nothing is shown whole, as
+before. **No sentence in the definitions is not a licence to show the raw
+one**: it still withholds the machinery and says only that it was refused.
 
-The memory draws: six views, each with its stance, *learned 9/13/2026 · from
-get_sales · carried into 2 questions · unconfirmed since new data landed*, and
-a FORGET on every one. What "kinda" covers is not established and the session
-did not ask him to be more specific in the moment. **The half that is known
-not to be tested is the other one**: whether telling him "we means the shops"
-once changes the next answer. That is the card's own done-when.
+**Not verified in a browser by anybody.** The changers may still be wrong in
+some way this did not touch — what is established is that they fire, that a
+refusal is what he saw, and that the refusal no longer leaks. If they are
+still dead after this, that is a new report and a different cause.
 
 ---
-
-## Fixed
 
 ### 2026-09-15 · a claim about Greenhills over Rockwell's number
 

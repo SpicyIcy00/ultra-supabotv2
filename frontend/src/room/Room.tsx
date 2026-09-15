@@ -33,7 +33,8 @@ import { pageScopeFor } from '../components/george/pageScope';
 import type { Bound } from './mentions';
 import { asSelection, comparisonReplay, maxSubjects, subjectOnBoard,
          toggleSubject, type Subject } from './subjects';
-import { pathFor, resolveFragment, retunedKey, tokensFor, type DrawnToken } from './tokenShape';
+import { pathFor, refusalForPerson, resolveFragment, retunedKey, tokensFor,
+         type DrawnToken } from './tokenShape';
 import type { ToolCall } from '../types/george';
 import { Noticed } from './Noticed';
 import { WorkLine, Working } from './Working';
@@ -838,7 +839,8 @@ export default function Room() {
                 tokens={tokens}
                 correction={desk.data?.fragments?.correction?.token}
                 moving={moving > 0}
-                refusal={refusal}
+                refusal={refusalForPerson(refusal, desk.data?.replay)}
+                detailWord={String(desk.data?.replay?.refused_detail_word ?? 'why')}
                 onMove={(token, alternative) => { void move(token, alternative); }}
                 onCorrect={() => {
                   const asks = desk.data?.fragments?.correction?.asks;

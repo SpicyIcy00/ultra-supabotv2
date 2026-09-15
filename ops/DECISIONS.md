@@ -4213,3 +4213,24 @@ would have reported "two 502s, done", which was true and half the reading.
 Until a rehearsal environment exists, a migration is additive only and any
 CHECK over existing rows is `NOT VALID`, so a legacy row cannot fail an upgrade
 that nobody has watched succeed.
+
+**Every piece was tested and the gesture between them was not.** The dogfood
+log, 2026-09-15: *"i cant click any store cause theres no tap."* He was
+describing the code. `subjects.ts` resolved a row's id, `subjectOnBoard` had
+its own tests, the composer drew the chip — and `r-mk-name` was a plain span
+in all six marks, with `pick` called only by the `compare` button under a
+tile. P2.c shipped half-built with every unit green. **The tests that hold it
+now drive the ROW through the whole board**, and eight of them fail without
+the fix; a unit test of `pick` would have passed for the entire life of the
+bug. The second half of the report — *"it just moves or expands the widget"*
+— was the tile's own `role="button"` swallowing the click.
+
+**A refusal written for the model is not shown to a person.** Same pass: the
+three scope changers "did not work", and the reason was that one of them was
+refused and the refusal was `tools/sales.py`'s sentence naming `compare_to`
+and a `metrics.yaml` key. That sentence is right where it is — George has to
+fix his own call. UI rule 4 is what it broke on the way to the screen.
+`refusalForPerson` checks it against `surface.prose.leaks`, the SAME list the
+loop already scans an answer with, and reduces it to one line with the tool's
+words behind a tap. Two reports, one defect; and the fix is at the surface,
+never by softening what the tool says.

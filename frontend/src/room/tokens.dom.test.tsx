@@ -85,10 +85,30 @@ describe('the token row', () => {
     expect(screen.getByText('reading…')).toBeTruthy();
   });
 
-  it('says the tool\'s own words when a move was refused, unrephrased', () => {
+  it('says the tool\'s own words when a move was refused and they are readable', () => {
     const said = 'this_month is still in progress; last_month is the closed one.';
-    draw({ refusal: said });
+    draw({ refusal: { head: said, detail: null } });
     expect(screen.getByText(said)).toBeTruthy();
+    // Nothing to put behind a word, so no word.
+    expect(screen.queryByRole('button', { name: 'why' })).toBeNull();
+  });
+
+  it('reduces a refusal written for George to one line, with his words on tap', () => {
+    /**
+     * The dogfood log, 2026-09-15. The tool names the argument and the yaml
+     * key because the model has to fix its own call; that sentence was on the
+     * owner's screen under his figures. UI rule 4: raw diagnostics never
+     * reach the answer, and a caveat may be reduced to one line naming it
+     * with the explanation on tap.
+     */
+    const raw = 'compare_to=\'previous_period\' cannot be grouped by hour '
+      + '(metrics.yaml comparisons.not_supported.per_bucket_lag).';
+    draw({ refusal: { head: 'That change cannot be made to this read.', detail: raw },
+           detailWord: 'why' });
+    expect(screen.getByText(/That change cannot be made/)).toBeTruthy();
+    expect(screen.queryByText(/metrics\.yaml/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'why' }));
+    expect(screen.getByText(/per_bucket_lag/)).toBeTruthy();
   });
 
   it('draws the one token that costs a turn, and it wears no colour', () => {

@@ -244,3 +244,41 @@ export function resolveFragment(
   }
   return hits.length === 1 ? hits[0] : null;
 }
+
+/**
+ * A REFUSAL, AS A PERSON MAY SEE IT (the dogfood log, 2026-09-15).
+ *
+ * A tool that declines names the argument and the yaml key, because the model
+ * reading it has to fix its own call. That sentence is right where it is, and
+ * it was also on the owner's screen under his figures:
+ *
+ *   compare_to='previous_period' cannot be grouped by hour: each bucket
+ *   against its own predecessor is a lag series, which is not built
+ *   (metrics.yaml comparisons.not_supported.per_bucket_lag). ...
+ *
+ * UI rule 4 forbids that in its own words — raw diagnostics never reach the
+ * answer — and allows exactly what this does instead: reduce it to one line
+ * naming it, explanation on tap.
+ *
+ * THE LIST IS NOT THIS FUNCTION'S. `surface.prose.leaks` is the same list the
+ * loop already scans an ANSWER with, served with the replay definitions, so
+ * there is one definition of a word a reader must never see. A refusal that
+ * leaks nothing is shown whole, exactly as it always was.
+ */
+export function refusalForPerson(
+  refusal: string | null | undefined,
+  replay: { leaks?: unknown; refused_leaks_says?: unknown } | null | undefined,
+): { head: string; detail: string | null } | null {
+  const said = String(refusal ?? '').trim();
+  if (!said) return null;
+  const leaks = Array.isArray(replay?.leaks) ? replay.leaks.map(String) : [];
+  const low = said.toLowerCase();
+  const leaked = leaks.some((w) => w && low.includes(w.toLowerCase()));
+  if (!leaked) return { head: said, detail: null };
+  const says = String(replay?.refused_leaks_says ?? '').trim();
+  // NO SENTENCE TO REPLACE IT WITH IS NOT A LICENCE TO SHOW THE RAW ONE. The
+  // definitions are served on every open; if this is ever empty the honest
+  // thing is still to withhold the machinery and say only that it was
+  // refused.
+  return { head: says || 'That change cannot be made to this read.', detail: said };
+}
