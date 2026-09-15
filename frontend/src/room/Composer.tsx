@@ -109,12 +109,33 @@ export function Composer(p: ComposerProps) {
     () => (asking ? offered(found.data?.candidates ?? [], p.defs) : []),
     [asking, found.data, p.defs],
   );
+
+  // A MULTI-WORD MENTION THAT MATCHES NOTHING IS A SENTENCE (2026-09-15).
+  //
+  // Allowing spaces in a mention is what makes `@Kiamoy strips` work, and it
+  // also means the menu would otherwise follow a person into an ordinary
+  // sentence saying "Nothing by that name" at every word. So the RESULT closes
+  // it: once a query with a space has come back empty, there is nothing to
+  // offer and this stops being a mention.
+  //
+  // A ONE-WORD MISS STILL SPEAKS, because right after `@` that is useful
+  // feedback rather than noise, and because a kind that could not be READ is a
+  // different fact that must still be said (UI rule 8).
+  const sentence = Boolean(
+    open && /\s/.test(open.query) && !found.isPending
+    && !list.length && !Object.keys(found.data?.unavailable ?? {}).length,
+  );
   useEffect(() => { setCursor(0); }, [open?.query]);
 
   const take = useCallback((candidate: MentionCandidate) => {
     if (!open) return;
     const bound = bind(candidate, p.defs);
     const next = accept(p.draft, open, candidate, p.defs);
+    // ACCEPTING ONE CLOSES THE MENU. `accept` leaves `@Aji Kiamoy Curl Sour`
+    // in the line, and a query that may now contain spaces matches that
+    // perfectly — so without this the menu reopens offering the thing that was
+    // just chosen. Typing anything opens it again.
+    setShut(true);
     p.onDraft(next.text);
     if (bound) p.onBind(bound);
     // The caret goes after the word just accepted, so typing carries on where
@@ -135,7 +156,7 @@ export function Composer(p: ComposerProps) {
   // request, no model, no debounce. It is suppressed while the `@` menu is up:
   // two completions on one line, both taking Tab, is one too many.
   const ghost: Ghost | null = useMemo(
-    () => (asking ? null : ghostFor({
+    () => (asking && !sentence ? null : ghostFor({
       draft: p.draft,
       tokens: p.tokens ?? [],
       // Every name on the screen: what the board drew, what was picked off
@@ -146,7 +167,7 @@ export function Composer(p: ComposerProps) {
         .concat(p.named.map((n) => n.label)),
       pages: p.pages ?? [],
     })),
-    [asking, p.draft, p.tokens, p.drawn, p.subjects, p.named, p.pages],
+    [asking, sentence, p.draft, p.tokens, p.drawn, p.subjects, p.named, p.pages],
   );
 
   const takeGhost = useCallback((g: Ghost) => {
@@ -159,7 +180,7 @@ export function Composer(p: ComposerProps) {
   }, [p]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (list.length) {
+    if (list.length && !sentence) {
       if (e.key === 'ArrowDown') {
         e.preventDefault(); setCursor((n) => (n + 1) % list.length); return;
       }
@@ -184,7 +205,8 @@ export function Composer(p: ComposerProps) {
     });
   };
 
-  const unavailable = asking ? Object.entries(found.data?.unavailable ?? {}) : [];
+  const unavailable = asking && !sentence
+    ? Object.entries(found.data?.unavailable ?? {}) : [];
 
   return (
     <div className="r-line-wrap">
@@ -222,7 +244,7 @@ export function Composer(p: ComposerProps) {
           </div>
         )}
 
-        {asking && (
+        {asking && !sentence && (
           <div className="r-mentions" role="listbox" aria-label="What that could mean">
             {found.isPending && <p className="r-label">Looking…</p>}
             {!found.isPending && !list.length && !unavailable.length && (

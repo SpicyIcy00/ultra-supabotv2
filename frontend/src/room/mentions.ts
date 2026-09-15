@@ -62,7 +62,26 @@ export function openMention(
   const before = at === 0 ? '' : draft[at - 1];
   if (before && !/\s/.test(before)) return null;
   const query = head.slice(at + mark.length);
-  if (/\s/.test(query)) return null;
+  // A NAME MAY CONTAIN SPACES, AND UNTIL 2026-09-15 IT COULD NOT.
+  //
+  // His report: *"when you search with spaces it doesnt show anything example:
+  // 'Kiamoy strips' nothing"*. This line was `if (/\s/.test(query)) return
+  // null` — the mention closed at the first space, so `@Kiamoy strips` stopped
+  // being a mention the moment the space was typed. Nothing was wrong with the
+  // matching: the server finds four products for that exact phrase. The menu
+  // simply never asked.
+  //
+  // MEASURED, NOT GUESSED: 3,719 of 3,728 named products contain a space —
+  // 99.8% — so the rule made `@product` work for nine of them. The bound is
+  // the definitions' (`mentions.max_words`, set to 8, which covers 99.4% of
+  // real names), and it exists only to stop a whole paragraph being sent as a
+  // query. What actually closes a long mention is the RESULT: a multi-word
+  // query that matches nothing is a sentence, and the composer stops drawing
+  // the menu for it.
+  const max = Number(defs?.selection?.mentions?.max_words ?? 1);
+  if (query.split(/\s+/).filter(Boolean).length > (Number.isFinite(max) ? max : 1)) {
+    return null;
+  }
   return { at, caret: end, query };
 }
 

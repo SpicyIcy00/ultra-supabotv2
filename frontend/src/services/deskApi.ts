@@ -114,6 +114,12 @@ export interface DeskDefinitions {
       min_prefix: number;
       max_per_kind: number;
       max_results: number;
+      /**
+       * How many words a mention's query may span. Names here nearly always
+       * contain a space — 99.8% of the catalogue — so a one-word rule made
+       * `@product` useless. Served, never assumed.
+       */
+      max_words?: number;
       kinds: Record<string, { binds: string; says: string; dimension?: string }>;
     };
   };

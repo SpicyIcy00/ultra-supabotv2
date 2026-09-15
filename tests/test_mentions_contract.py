@@ -85,7 +85,10 @@ def test_compare_these_is_a_question_and_no_definition_makes_it_a_replay():
 
 def test_every_mention_kind_names_a_read_and_says_what_it_binds():
     kinds = MENTIONS["kinds"]
-    assert set(kinds) == {"store", "product", "supplier", "page", "rule"}
+    # SIX SINCE 2026-09-15, when `category` joined them at the owner's ask.
+    # A closed set, held here so a seventh is a decision rather than an
+    # addition: every kind costs a read on every keystroke.
+    assert set(kinds) == {"store", "product", "category", "supplier", "page", "rule"}
     binds = {"selection", "page_scope", "named_on_question"}
     for name, spec in kinds.items():
         assert spec["from"], f"{name} does not say where it comes from"
@@ -341,3 +344,86 @@ def test_a_replayed_list_of_ids_is_within_the_shape_a_replay_permits():
     assert cap >= 2
     with pytest.raises(replay_service.ReplayRefused):
         replay_service.check_value(["x"] * (cap + 1), DEFS)
+
+
+# ---------------------------------------------------------------------------
+# A CATEGORY IS A SUBJECT, AND UNTIL 2026-09-15 IT HAD NO DOOR
+#
+# His ask, in the same breath as the spaces defect: "there should also be
+# product categories". `category` has been a selection dimension since the desk
+# existed and its identity IS its name, so a tapped row could already bind one
+# — typing one could not, because nothing READ the set. `get_product(category=)`
+# filters by one exact category; `get_sales(group_by=category)` groups sales by
+# it. Neither returns the list.
+# ---------------------------------------------------------------------------
+
+
+def test_category_is_a_declared_mention_kind_that_binds_a_subject():
+    kinds = MENTIONS["kinds"]
+    assert "category" in kinds, "a category cannot be typed"
+    declared = kinds["category"]
+    assert declared["binds"] == "selection"
+    assert declared["dimension"] == "category"
+    assert declared["says"] == "category"
+    # The dimension it binds has to be one the selection actually carries, or
+    # the chip would travel in a field the tools do not read.
+    assert declared["dimension"] in SEL["dimensions"]
+    # And its name IS its id: there is no category table, which is exactly why
+    # `selection.identity.category` says `category`.
+    assert SEL["identity"]["category"] == "category"
+
+
+def test_the_read_behind_the_category_kind_exists_and_is_not_freehand():
+    """
+    The kind names a read, and the read is a real vetted function rather than
+    a list a client types. Architecture rule 1 in the one place a new source
+    was added this session.
+    """
+    from tools import products
+
+    assert hasattr(products, "get_product_categories")
+    declared = MENTIONS["kinds"]["category"]["from"]
+    assert "get_product_categories" in declared
+
+    source = Path(products.__file__).read_text(encoding="utf-8")
+    # The category expression is the definitions', not typed into the tool.
+    assert "products.category_normalization.sql" in source
+    assert "COALESCE(NULLIF(p.category" not in source.split("category_normalization")[0]
+
+
+def test_the_category_read_is_not_in_the_models_schema():
+    """
+    DELIBERATE, and worth a test because the obvious next edit is to add it.
+    This is a person's completion list, not a question George is asked — he
+    reaches for `get_product(category=)` when a category is named. A tool
+    added to the schema rewrites the 1h-cached prefix for every request in the
+    deploy, to serve a menu.
+    """
+    pytest.importorskip("psycopg", reason="agent.loop imports the tools")
+    pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
+    from agent.loop import TOOL_FUNCTIONS
+
+    assert "get_product_categories" not in TOOL_FUNCTIONS
+    assert "get_product" in TOOL_FUNCTIONS, "the model still has the catalogue read"
+
+
+def test_a_mention_query_may_span_a_name_with_spaces_in_it():
+    """
+    HIS REPORT: *"when you search with spaces it doesnt show anything example:
+    'Kiamoy strips' nothing"*.
+
+    THE SERVER WAS NEVER THE PROBLEM — `get_product(name=)` is a substring
+    match across name and nickname and finds that phrase. The client closed
+    the mention at the first space, so the query was never sent. The bound
+    lives here, and it was measured rather than guessed: of 3,728 named
+    products, 3,719 contain a space.
+    """
+    bounds = MENTIONS
+    assert bounds["max_words"] >= 6, (
+        "names here run to 11 words and 95% need 6; a smaller bound puts the "
+        "defect back for most of the catalogue"
+    )
+    # The client must READ it rather than hold its own idea of it.
+    ts = (_ROOT / "frontend" / "src" / "room" / "mentions.ts").read_text(encoding="utf-8")
+    assert "mentions?.max_words" in ts
+    assert "if (/\\s/.test(query)) return null" not in ts, "the one-word rule is back"

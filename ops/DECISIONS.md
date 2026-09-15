@@ -4319,3 +4319,22 @@ because `mentions.py` held a THIRD copy of the store groups, stale the same
 way. Removing the pill first would have made a real place unreachable. Three
 copies of one list in three files, all found by one evening of him reading the
 screen. `count_places` was deleted with the pill it served.
+
+**A client rule that had never been measured.** 2026-09-15. `@` refused a query
+containing a space, on the reasoning written above it: "a name with a space in
+it is ambiguous with the next word and this never guesses where a name ends".
+Sound, and wrong here — **99.8% of 3,728 product names contain a space**, so
+the rule made the product door work for nine of them, and nobody measured that
+before or after shipping it. The server had always matched the phrase. The
+lesson is not "allow spaces": it is that a bound about the DATA (how long a
+name is, how ambiguous a prefix is) is a thing to measure against the data, and
+this one was reasoned from first principles in a component. The new bound is 8
+words because the 99th percentile is 8.
+
+**A sixth `@` kind, and a read that did not exist.** Categories were asked for
+in the same message. `category` was already a selection dimension whose
+identity is its own name, so the door was the only missing half — but nothing
+READ the set, so `get_product_categories()` was added rather than a list typed
+into a client. It is NOT in `TOOL_FUNCTIONS`: a completion list is a person's
+menu, and a tool in the schema rewrites the 1h-cached prefix for every request
+in the deploy.

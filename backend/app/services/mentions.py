@@ -53,7 +53,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from tools._common import load_defs, req  # noqa: E402
-from tools.products import get_product  # noqa: E402
+from tools.products import get_product, get_product_categories  # noqa: E402
 from tools.purchasing import get_purchasing  # noqa: E402
 
 def _store_groups(defs: Mapping[str, Any]) -> dict[str, Any]:
@@ -180,6 +180,35 @@ def products(query: str, defs: Mapping[str, Any], cap: int) -> list[dict]:
         found.append((at, _candidate(
             "product", str(row.get("id")), label,
             str(row.get("sku")) if row.get("sku") else None, defs)))
+    return _take(found, cap)
+
+
+def categories(query: str, defs: Mapping[str, Any], cap: int) -> list[dict]:
+    """
+    The catalogue's categories, through the read that lists them.
+
+    A CATEGORY'S NAME IS ITS IDENTITY — there is no category table and no id
+    (`selection.identity.category` says `category`), so the label is what
+    travels, exactly as a supplier's name does.
+
+    Unlike the products above, a BLANK query returns the first few rather than
+    nothing: there are 17 of these and the read is one grouped query, so a bare
+    `@` can afford to show what the kinds are. 3,728 products cannot.
+    """
+    result = get_product_categories()
+    found: list[tuple[int, dict]] = []
+    for row in result.get("rows") or []:
+        label = str(row.get("category") or "")
+        if not label:
+            continue
+        at = rank(label, query) if query.strip() else 0
+        if at is None:
+            continue
+        # NO COUNT BESIDE IT. `products` is a count of catalogue rows and the
+        # read says so, but a figure on this surface carries the time it was
+        # read and a completion list has nowhere to put one — the same refusal
+        # the supplier kind makes about its order count.
+        found.append((at, _candidate("category", label, label, None, defs)))
     return _take(found, cap)
 
 
@@ -329,6 +358,7 @@ async def resolve(db: AsyncSession, *, username: str, query: str,
 
     got = await asyncio.gather(
         _tool("product", products, query, defs, per_kind),
+        _tool("category", categories, query, defs, per_kind),
         _tool("supplier", suppliers, query, defs, per_kind),
         _row("page", pages(db, username, query, defs, per_kind)),
         _row("rule", rules(db, query, defs, per_kind)),
@@ -339,9 +369,10 @@ async def resolve(db: AsyncSession, *, username: str, query: str,
     by_kind: dict[str, list[dict]] = {
         "store": stores(query, defs, per_kind),
         "product": got[0],
-        "supplier": got[1],
-        "page": got[2],
-        "rule": got[3],
+        "category": got[1],
+        "supplier": got[2],
+        "page": got[3],
+        "rule": got[4],
     }
 
     out: list[dict] = []

@@ -167,6 +167,64 @@ once changes the next answer. That is the card's own done-when.
 
 ## Fixed
 
+### 2026-09-15 — a name with a space in it matched nothing
+
+> *"and when you search with spaces it doesnt show anything example: 'Kiamoy
+> strips' nothing"*
+
+**THE SERVER WAS NEVER THE PROBLEM.** `get_product(name=)` is a substring match
+across name and nickname and finds *four* products for that exact phrase —
+`kiamoy strips 1 gram`, `kiamoy strips 3kg`, `Kiamoy strips 3kg`,
+`Kiamoy strips freetst 1g`. **The client closed the mention at the first
+space**, so the query was never sent. One line: `if (/\s/.test(query)) return
+null`.
+
+**MEASURED, RATHER THAN ESTIMATED, THE SAME HOUR.** Of 3,728 products with a
+name, **3,719 contain a space — 99.8%**. So `@product` has worked for **nine
+products** since it was built. Names run to 11 words; 6 covers 95.2% and 8
+covers 99.4%, and 8 is where the bound is set.
+
+**Fixed, and the bound is the definitions'** (`mentions.max_words`), read by
+the client rather than assumed — served nothing, it falls back to the old
+one-word behaviour rather than widening a query the server never agreed to.
+**What actually closes a long mention is the RESULT**: once a query with a
+space comes back empty there is nothing to offer, so it stops being a mention
+and becomes a sentence. A one-word miss still says *"nothing by that name"*,
+because right after `@` that is feedback rather than noise — and a kind that
+could not be READ still says so, which is a different fact (UI rule 8).
+Accepting a completion now closes the menu, or the thing just picked would be
+re-offered under the caret.
+
+### 2026-09-15 — there was no way to type a category
+
+> *"there should also be product categories"*
+
+**A category has been a subject since the desk existed** — it is in
+`selection.dimensions`, and `selection.identity.category` says its name IS its
+id — so tapping a row could already bind one. **Typing one could not, because
+nothing read the SET.** `get_product(category=)` filters by one exact category;
+`get_sales(group_by=category)` groups sales by it. Neither returns the list, so
+a menu of categories could only have been a list typed into a client — the
+thing CLAUDE.md forbids about the store list, for the same reason.
+
+**`tools/products.get_product_categories()` is that read**: one SELECT, the
+category expression taken from `products.category_normalization`, `{rows,
+meta}` like every other tool. Verified against production the same hour —
+**17 categories over 3,728 products**, the largest 968 and the smallest 1, so
+the whole set fits a menu.
+
+**Deliberately NOT in George's schema.** This is a person's completion list,
+not a question he is asked; he reaches for `get_product(category=)` when a
+category is named. Adding a tool would rewrite the 1-hour cached prefix on
+every request in the deploy to serve a menu. A test holds that.
+
+**And no count beside it.** Each category knows how many catalogue rows carry
+it, and the read says in as many words that this is a count of rows and not a
+quantity sold, held or ordered — but a figure on this surface carries the time
+it was read, and a completion list has nowhere to put one. Same refusal the
+supplier kind already makes about its order count.
+
+
 ### 2026-09-15 — a warehouse in the @ menu with nothing saying it was one
 
 > *"what can you @?"*

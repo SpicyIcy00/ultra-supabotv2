@@ -39,6 +39,7 @@ const DEFS = {
     identity: { store: 'store_id', product: 'product_id', supplier: 'supplier' },
     mentions: {
       trigger: '@', min_prefix: 0, max_per_kind: 5, max_results: 12,
+      max_words: 8,
       kinds: {
         store: { binds: 'selection', dimension: 'store', says: 'shop' },
         product: { binds: 'selection', dimension: 'product', says: 'product' },

@@ -6504,6 +6504,24 @@ surface:
         min_prefix: 0
         max_per_kind: 5
         max_results: 12
+        # -------------------------------------------------------------------
+        # A NAME MAY CONTAIN SPACES (2026-09-15), and until today it could not.
+        #
+        # His report: *"when you search with spaces it doesnt show anything
+        # example: 'Kiamoy strips' nothing"*. The client closed the mention at
+        # the first space, so `@Kiamoy strips` was not a mention at all.
+        #
+        # MEASURED AGAINST THE CATALOGUE THE SAME HOUR, not guessed: of 3,728
+        # products with a name, **3,719 contain a space — 99.8%**. So this rule
+        # made `@product` work for nine of them. Names run to 11 words; 6 words
+        # covers 95.2% and 8 covers 99.4%, which is where this is set.
+        #
+        # A LONGER QUERY DOES NOT MEAN A LONGER MENU. A multi-word mention that
+        # matches nothing is a sentence, and the room stops drawing it — the
+        # menu is closed by the RESULT rather than by a word count. This bound
+        # only stops a whole paragraph being sent as a query.
+        max_words: 8
+        # -------------------------------------------------------------------
         # Matched as a case-insensitive PREFIX on the label, then a substring —
         # never fuzzy, never stemmed, exactly as a typed fragment is matched
         # (`tokens.spoken`). A tie is left as a tie: the list shows both.
@@ -6560,6 +6578,27 @@ surface:
             binds: selection
             dimension: supplier
             says: supplier
+          # A CATEGORY IS A SUBJECT AND HAD NO DOOR (2026-09-15, his ask).
+          #
+          # `category` has been a selection dimension since the desk existed
+          # and its identity IS its name (`selection.identity.category`), so a
+          # tapped row could already bind one. Typing one could not, because
+          # nothing read the SET: `get_product(category=)` filters by one
+          # exact category and `get_sales(group_by=category)` groups sales by
+          # it. `tools/products.get_product_categories()` is that read, added
+          # with this kind rather than a list typed into a client.
+          #
+          # There are 17 of them, measured 2026-09-15, so the whole set fits a
+          # menu. The count beside each is a count of CATALOGUE ROWS and the
+          # read says so in as many words; it is not offered as a hint here,
+          # because a figure on this screen carries the time it was read and a
+          # completion list has nowhere to put one.
+          category:
+            from: tools/products.py get_product_categories()
+            reads: catalog
+            binds: selection
+            dimension: category
+            says: category
           page:
             from: george.pages
             reads: the caller's own pages

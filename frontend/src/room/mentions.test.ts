@@ -138,3 +138,41 @@ describe('what is offered', () => {
     expect(offered(many, null)).toHaveLength(9);
   });
 });
+
+describe('a name with a space in it', () => {
+  // HIS REPORT, 2026-09-15: "when you search with spaces it doesnt show
+  // anything example: 'Kiamoy strips' nothing". The mention closed at the
+  // first space, so it was never sent. Measured the same hour: 3,719 of 3,728
+  // named products contain a space, so the rule worked for nine of them.
+  const withWords = (max: number) => ({
+    selection: { mentions: { trigger: '@', min_prefix: 0, max_words: max } },
+  } as unknown as DeskDefinitions);
+
+  it('stays open across a space, which is what the report was about', () => {
+    const draft = '@Kiamoy strips';
+    const open = openMention(draft, draft.length, withWords(8));
+    expect(open).not.toBeNull();
+    expect(open?.query).toBe('Kiamoy strips');
+  });
+
+  it('spans as many words as the definitions allow, and no more', () => {
+    const six = '@Cai Da Bai Hokkaido Raw Matcha';
+    expect(openMention(six, six.length, withWords(8))?.query)
+      .toBe('Cai Da Bai Hokkaido Raw Matcha');
+    // Past the bound it stops being a mention rather than sending a paragraph.
+    const nine = '@one two three four five six seven eight nine';
+    expect(openMention(nine, nine.length, withWords(8))).toBeNull();
+  });
+
+  it('takes the bound from the definitions and never assumes one', () => {
+    // Served nothing, the old one-word behaviour is what is left: a client
+    // that guessed 8 here would widen a query the server never agreed to.
+    const draft = '@Kiamoy strips';
+    expect(openMention(draft, draft.length, {} as unknown as DeskDefinitions)).toBeNull();
+  });
+
+  it('still refuses a trigger that is not at a word boundary', () => {
+    const mail = 'write to ice@example.com';
+    expect(openMention(mail, mail.length, withWords(8))).toBeNull();
+  });
+});

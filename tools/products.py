@@ -1,7 +1,7 @@
 """
 George — product catalog tool.
 
-One public function: get_product().
+Two public functions: get_product() and get_product_categories().
 
 Architecture rules this module is built to (see CLAUDE.md):
   - No freehand SQL. One SELECT template with an explicit column list; every
@@ -313,3 +313,70 @@ def get_product(
         }
 
     return {"rows": rows, "meta": meta}
+
+
+def get_product_categories() -> dict:
+    """
+    Every category in the catalogue, with how many products carry it.
+
+    WHY THIS EXISTS (2026-09-15). The owner asked for categories in the `@`
+    menu and there was no read that could answer it. `get_product(category=)`
+    FILTERS by one exact category and `get_sales(group_by='category')` groups
+    sales by it; nothing returned the SET, so a menu of categories could only
+    have been a list typed into a client — the thing CLAUDE.md forbids about
+    the store list, for the same reason.
+
+    NOT IN THE MODEL'S SCHEMA, deliberately. This is a person's menu, not a
+    question George is asked: he reaches for `get_product(category=)` when a
+    category is named, and adding a tool would rewrite the cached prefix for
+    every request to serve a completion list. `TOOL_FUNCTIONS` is what a pin
+    or a workflow step may hold, and nothing here is pinnable — it returns no
+    figure about the business, only how many rows carry a label.
+
+    The count is a count of CATALOGUE ROWS, not of anything sold or held, and
+    it says so in meta. Measured 2026-09-15: 17 categories over 3,728
+    products, the largest 968 and the smallest 1.
+    """
+    defs = _load_defs()
+    cat_sql = _req(defs, "products.category_normalization.sql")
+    uncat = _req(defs, "products.category_normalization.uncategorized_label")
+
+    # One SELECT template, no predicate the caller can reach: the whole
+    # catalogue, grouped by the normalized category the definitions declare.
+    sql = (
+        f"SELECT {cat_sql} AS category,\n"
+        f"       COUNT(*) AS products\n"
+        f"FROM products p\n"
+        f"GROUP BY 1\n"
+        f"ORDER BY 2 DESC, 1 ASC"
+    )
+    with _connect() as conn, conn.cursor(row_factory=DICT_ROW) as cur:
+        cur.execute("SELECT now() AT TIME ZONE 'Asia/Manila' AS snapshot")
+        snapshot = cur.fetchone()["snapshot"]
+        cur.execute(sql)
+        rows = [{"category": r["category"], "products": int(r["products"])}
+                for r in cur.fetchall()]
+
+    return {
+        "rows": rows,
+        "meta": {
+            "source_table": "products",
+            "filters_applied": [
+                f"{cat_sql} AS category   # metrics.yaml: "
+                f"products.category_normalization",
+            ],
+            "snapshot_timestamp": snapshot.isoformat() if snapshot else None,
+            "definitions_path": str(_DEFS_PATH),
+            "row_count": len(rows),
+            "uncategorized_label": uncat,
+            # SAID PLAINLY, because "968" beside a category invites reading it
+            # as sales. It is how many catalogue rows wear the label.
+            "products_is": "a count of catalogue rows carrying the category, "
+                           "not a quantity sold, held or ordered",
+            "reconciliation": {
+                "applicable": False,
+                "reason": ("get_product_categories aggregates no money measure; "
+                           "it counts catalog rows per label."),
+            },
+        },
+    }
