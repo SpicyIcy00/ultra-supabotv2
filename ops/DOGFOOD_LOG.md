@@ -57,34 +57,34 @@ on compose frame" does.
 
 ## Open
 
-### 2026-09-15 — "compare" does nothing
+### 2026-09-15 — "compare" puts two shops in the shop filter, and the filter shows raw ids
 
-> *"nothing happens when i say compare but clicking the stores works"*
+> *"when i click 2 stores and say compare it just puts them in the store
+> filterer i dont know we really need any those i think we might have to
+> remove it, it doesnt fit the build."*
 
-**The tap is fixed** — his word for it, on the live build, and the first
-confirmation that gesture has ever had.
+**THE TOKEN IS DRAWING DATABASE IDS AT THE OWNER.** His screenshot:
 
-**HALF THE CAUSE IS FIXED AND IT IS NOT ESTABLISHED THAT IT WAS THE HALF THAT
-MATTERED.** The refusal under his figures was STALE: `refusal` was Room-level
-state cleared only when the next replay STARTED, never when a question was
-asked, so one refused move left its sentence under every board after it. His
-two screenshots show the same caveat under two different turns with different
-tokens above them, which on its own makes every later gesture look like it
-failed. Asking a question clears it now (`fb6c4f5`+).
+> SHOP · `67612230a740d90007464e26 → 668a43f60fa9990007cfa158`
 
-**What is still not known is whether "compare these" itself works.** The path
-is there — `comparisonReplay` resolves the two ids, the store token carries
-the targets, `resolve_store` takes a list — and nobody has watched it run. If
-it is still dead after the stale caveat stops appearing, the next thing to
-read is whether the replay is being REFUSED, and that needs the item below.
+That is the shop token's moved state — was, then now — with both values
+rendered as the id rather than the name the row carried. P2.c's whole point
+was that a subject travels as an id and is SHOWN as a label; the showing half
+is missing here. It is also why the feature "doesn't fit the build": the
+Ideal UI's own token reads `last week · 31 Aug – 6 Sep` and `7 shops · active
+retail`, in words.
 
-**AND THE FIX SHIPPED THIS MORNING MADE THAT HARDER TO SEE.** Reducing a
-leaking refusal to one line was right; the line it reduces to says nothing
-about WHAT was refused, and `why` is a small grey word. Before today the tool
-named the argument. A reduction that removes the diagnosis along with the
-machinery has traded a loud failure for a quiet one, and the honest fix is a
-person's sentence per refusal reason in the definitions — which is a piece of
-work, not a patch, and is why it is written here rather than done badly now.
+**AND THE READ DID NOT NARROW.** The board under it still draws seven shops
+(`7 rows`, `read Sep 15, 8:13 PM`), so whatever the replay did, it did not
+scope the read to the two picked. The chips stay in the composer afterwards,
+which is the third thing that makes it read as "nothing happened".
+
+*The session's own reading of the removal question, for the record rather
+than as a decision:* the Ideal UI keeps the tokens (feature 6, "Contextual
+conversation", marked built, with the pop-out and "not what I meant"). What
+it does not have is an id where a name should be. That is an argument for
+fixing the label, not for removing the row — but it is the owner's call and
+it is written here so it is made once rather than drifted into.
 
 ### 2026-09-15 — a tile explaining itself to the reader
 
