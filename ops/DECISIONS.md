@@ -4350,3 +4350,11 @@ already written into NOW.md and a later session would have swapped
 interpreters and watched it fail again — and because `fe60ce3`'s push-to-live
 stays bounded and unmeasured as a result, which is a number the log has now
 lost for good.
+
+**A subject chosen by the ORDER BY.** 2026-09-15. Clicking a chart of seven
+shops opened Greenhills, because a block's subject fell back to
+`subjectOf(rows[0])` when George declared none — and he declares none for a
+block about a SET, correctly. So the surface invented a subject from the sort
+and opened its whole page. The rule that a subject is an id a row carried and
+never a label anything inferred was being broken by a `??` in a renderer, not
+by the model. One row is its own subject; many rows open nothing.

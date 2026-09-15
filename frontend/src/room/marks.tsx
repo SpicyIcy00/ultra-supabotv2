@@ -526,7 +526,21 @@ export function MarkBlock(p: TileProps) {
   // was then seven hues over rows whose labels already said the names. The
   // label is still read here — an opened object is where identity is still the
   // point, and `why` needs to know what it is asking about.
-  const label = p.o.subject ?? subjectOf(rows[0] ?? {}) ?? null;
+  // A BLOCK ABOUT MANY ROWS HAS NO SUBJECT, AND MAY NOT BORROW ONE (his
+  // report, 2026-09-15): *"why when click on a chart made for 'analyze
+  // tradsanx per store' it opens greenhills for some reason"*.
+  //
+  // This was `p.o.subject ?? subjectOf(rows[0])`, so a chart of seven shops
+  // with no declared subject fell back to **whichever row sorted first** and
+  // clicking the tile opened that shop's object. Greenhills was row one. The
+  // subject was not chosen by him, by George, or by the read — it was chosen
+  // by the sort, which is the "a label the model inferred" this whole surface
+  // refuses, arriving through a `??`.
+  //
+  // One row IS its own subject and still opens. Many rows open nothing: a row
+  // is opened by tapping the ROW, which `pick`, `why` and an `open` offer all
+  // already do, each carrying the row's own name.
+  const label = p.o.subject ?? (rows.length === 1 ? subjectOf(rows[0] ?? {}) : null) ?? null;
   const dimension = label ? dimensionOf(rows, label) : null;
 
   // TAKING AN OFFER IS THE SAME ACT AS DOING IT BY HAND, through the same
