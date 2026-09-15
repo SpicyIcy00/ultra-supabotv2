@@ -51,11 +51,17 @@ def _write_report():
     print("\n\n== investigation evals ==")
     for r in report.records:
         d = r["done"]
-        print(f"  {'PASS' if r.get('passed') else 'FAIL'} {r['scenario']:<30} calls={d.get('tool_calls')} exec={d.get('executed_calls')} "
+        print(f"  {_outcome(r):<4} {r['scenario']:<30} calls={d.get('tool_calls')} exec={d.get('executed_calls')} "
               f"dup={d.get('duplicate_reads')} iters={d.get('iterations')} "
               f"notices={','.join(r['notices']) or '-'} judge={_judge_line(r['judge'])}")
     if path:
         print(f"  report: {path}")
+
+
+def _outcome(record) -> str:
+    """PASS, FAIL, or `----` for a scenario the run never scored (P2.0)."""
+    passed = record.get("passed")
+    return "----" if passed is None else ("PASS" if passed else "FAIL")
 
 
 def _judge_line(j) -> str:
@@ -94,7 +100,7 @@ def _common(name: str, turn: Turn, *, expect_compare: bool = True, max_calls: in
     # here asks a BUSINESS question, so rule 17's exception — somebody asking
     # how a figure was produced — cannot be claimed for any of them.
     findings["internal_vocabulary"] = checks.internal_vocabulary(turn.answer)
-    report.add(name, turn, findings, None, passed=False)
+    report.add(name, turn, findings, None)
 
     assert turn.done.get("status") == "ok", (turn.warnings, turn.answer[:300])
     assert turn.answer, "no answer"
@@ -118,7 +124,7 @@ def _common(name: str, turn: Turn, *, expect_compare: bool = True, max_calls: in
 
 
 def _record(name: str, turn: Turn, findings: dict) -> None:
-    report.add(name, turn, findings, judge(turn.question, turn.answer, evidence_summary(turn)), passed=True)
+    report.add(name, turn, findings, judge(turn.question, turn.answer, evidence_summary(turn)))
 
 
 def _drivers_read(turn: Turn, store: str) -> tuple[dict, dict, dict]:

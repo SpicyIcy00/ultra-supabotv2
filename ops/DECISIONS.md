@@ -9,6 +9,19 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-15 — P2.0: a verdict is written by the runner, never handed to the recorder
+
+`Report.add` loses its `passed` argument entirely rather than gaining a "write it
+later" rule. A record is still written before the first assertion — a failing
+scenario is the one worth reading — but at that moment nobody knows the outcome,
+so nothing may claim one: `tests/evals/conftest.py` writes it off
+`pytest_runtest_makereport` when the test body ends. Three-valued, because a run
+that stopped early did not fail what it never ran. **The four v2 reports are not
+rewritten**; the score was never recorded, so absence of the new `scoring` block
+is the marker and `corpus.py` prints it. The `done`-frame key list is now a
+declaration held by AST against `agent/loop.py`, which caught `cache_hit` and
+`cache_measured` being dropped by every report so far.
+
 ## 2026-09-14 — Fable review of P1.✓: every number holds; the gate's evidence is thinner
 
 Recomputed from `p1close-v2.json`, the ledger, the prompt and schema hashes, the `agent/`

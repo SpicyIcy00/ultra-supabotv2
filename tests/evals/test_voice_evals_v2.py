@@ -79,7 +79,13 @@ def _write_report():
     calls = sum(len(r.get("calls") or []) for r in report.records)
     labels = sum(int(r["findings"].get("label_calls") or 0) for r in report.records)
     refused = sum(int(bool(r["findings"].get("compose_rejected"))) for r in report.records)
+    out = report.outcome()
     print(f"  scenarios {n} · live turns {LIVE_TURNS['n']}")
+    # WHETHER IT PASSED, first, because it is the question (P2.0). Every
+    # number below is a rate that means nothing if a scenario blew up.
+    print(f"  OUTCOME  {out['passed']}/{out['scenarios']} scenarios passed"
+          + (f" · failed {', '.join(out['failed'])}" if out["failed"] else "")
+          + (f" · unscored {', '.join(out['unscored'])}" if out["unscored"] else ""))
     print(f"  TRUST (pass/fail, meaningful from one run):")
     print(f"    every scenario that asked for a figure cited one: see failures above")
     print(f"  THE BOARD (P1.f's own numbers):")
@@ -160,7 +166,7 @@ def _voice(name: str, turn: checks.Turn, *, extra_results: list | None = None,
     # The carried rows go ON THE RECORD, not just into the checks: a thread's
     # later turn cites figures its earlier turns read, and a report without
     # them makes `corpus.py` report ungrounded numerals the run did not.
-    report.add(name, turn, f, None, passed=False, extra_results=list(extra_results or []))
+    report.add(name, turn, f, None, extra_results=list(extra_results or []))
 
     # --- TRUST. These are the rows that mean something from one run. --------
     assert turn.done.get("status") == "ok", (turn.warnings, turn.answer[:300])

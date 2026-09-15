@@ -255,6 +255,94 @@ METER = Meter()
 atexit.register(METER.record)
 
 
+# ---------------------------------------------------------------------------
+# WHAT A REPORT KEEPS OFF THE `done` FRAME — declared here, held by a test.
+#
+# WHY IT IS A DECLARATION, 2026-09-15 (P2.0). `deterministic_edits` went onto
+# the done frame for P1.h and into this list five minutes AFTER the run that
+# was supposed to demonstrate it, so `verification/p1h-v2.json` carries no such
+# key and P1.h's close-out claimed a number no artifact held. Nothing failed;
+# a session noticed, three cards later. A key the loop emits and the report
+# silently drops costs a live run to recover, and there is no reason for the
+# two lists to disagree by accident.
+#
+# So every key of the frame is in exactly one of these two, and
+# `tests/test_eval_report_contract.py` reads the frame out of `agent/loop.py`
+# and fails if one is in neither.
+# ---------------------------------------------------------------------------
+DONE_KEPT = (
+    "iterations", "tool_calls", "executed_calls", "duplicate_reads", "status",
+    "notice_forced",
+    # the clock (P0.3)
+    "duration_ms", "iteration_ms", "corrective_turns",
+    # what the gates did without a round trip, and how hard he thought (P1.h)
+    "deterministic_edits", "effort", "effort_kind",
+    # the four token counts, which are the only record of what a turn cost:
+    # an eval turn is not in george.conversations, so cost_report cannot see it
+    "usage", "cache_hit", "cache_measured",
+)
+
+DONE_DROPPED = {
+    "conversation_id": "the stubbed log's id — nothing can reopen it afterwards",
+    "thread_id": "same: identity of a turn that was never written down",
+}
+
+
+# ---------------------------------------------------------------------------
+# THE OUTCOME OF A SCENARIO, AND WHEN IT IS KNOWN.
+#
+# A record is written BEFORE the first assertion, deliberately: a scenario that
+# fails is the one most worth reading, and a report that only holds passes is
+# the gap log all over again. But its OUTCOME is not known then — and until
+# 2026-09-15 `add` took a `passed` argument, so every v2 call wrote
+# `passed=False` at the top of the function and never revised it. Four reports
+# claim eleven failures over runs pytest scored 11 of 11.
+#
+# Every rule in ops/NOW.md §2b about reading a recorded run instead of buying a
+# new one rests on the file being readable, and this is the one fact it could
+# not carry. So the outcome is not an argument any more: the runner writes it
+# when the test ends, through `score`, and `add` has no way to claim one.
+# ---------------------------------------------------------------------------
+REPORTS: list["Report"] = []
+CURRENT_TEST: Optional[str] = None
+
+SCORING_SINCE = "2026-09-15"
+SCORING_NOTE = (
+    "`passed` is this scenario's outcome AFTER its assertions ran, and `failure` "
+    "is the assertion that failed. `null` means the run ended before the "
+    "scenario was scored. A report with no top-level `scoring` key was written "
+    f"before {SCORING_SINCE}: every `passed` in it was written before the first "
+    "assertion ran and never revised, so it says nothing about whether the run "
+    "passed and cannot be re-scored."
+)
+
+
+def begin(nodeid: Optional[str]) -> None:
+    """The test now running, stamped onto every record it writes."""
+    global CURRENT_TEST
+    CURRENT_TEST = nodeid
+
+
+def score(nodeid: str, passed: bool, failure: Optional[str] = None) -> int:
+    """Give every scenario that test recorded its outcome. Returns how many."""
+    return sum(r.score(nodeid, passed, failure) for r in REPORTS)
+
+
+def assertion_text(longrepr: Any) -> Optional[str]:
+    """
+    The assertion that failed, off pytest's own representation of the failure.
+
+    The `E ` lines are the assertion and its message; the rest is source
+    context a report does not need. Bounded, because one of these carries a
+    whole answer in its message.
+    """
+    text = str(longrepr or "")
+    lines = [ln[2:].strip() for ln in text.splitlines() if ln.startswith("E ")]
+    if not lines:
+        lines = [ln.strip() for ln in text.splitlines() if ln.strip()][-1:]
+    return (" ".join(lines)[:600] or None) if lines else None
+
+
 class Report:
     """
     Per-scenario records, written as JSON at the end of the session when asked.
@@ -264,16 +352,52 @@ class Report:
     these — they are read by people — so the change costs nothing, but the
     seven reports written before that date are still bare lists and a script
     comparing runs across it has to handle both.
+
+    AND AGAIN 2026-09-15: a top-level `scoring` block, and `passed`/`failure`
+    on each case written by the runner when the test ends. Its ABSENCE is how
+    a reader and `tests/evals/corpus.py` tell a report that predates the fix.
     """
 
     def __init__(self) -> None:
         self.records: list[dict[str, Any]] = []
+        REPORTS.append(self)
+
+    def score(self, nodeid: str, passed: bool, failure: Optional[str] = None) -> int:
+        """
+        The outcome of every scenario `nodeid` recorded, once.
+
+        Only records still unscored are touched: a scenario re-recorded by a
+        later upsert is scored by the test it was written in, and a second
+        call cannot overturn a verdict already given.
+        """
+        n = 0
+        for record in self.records:
+            if record.get("test") == nodeid and record.get("passed") is None:
+                record["passed"] = bool(passed)
+                record["failure"] = None if passed else failure
+                n += 1
+        return n
+
+    def outcome(self) -> dict[str, Any]:
+        """Passed, failed and unscored, for the file and for stdout."""
+        passed = [r["scenario"] for r in self.records if r.get("passed") is True]
+        failed = [r["scenario"] for r in self.records if r.get("passed") is False]
+        unscored = [r["scenario"] for r in self.records if r.get("passed") is None]
+        return {
+            "recorded": "end_of_turn", "since": SCORING_SINCE, "note": SCORING_NOTE,
+            "scenarios": len(self.records), "passed": len(passed),
+            "failed": failed, "unscored": unscored,
+        }
 
     def add(self, name: str, turn: Turn, findings: dict[str, Any], judge: Optional[dict],
-            passed: Optional[bool] = None,
             extra_results: Optional[list[dict[str, Any]]] = None) -> None:
         """
         Upsert by scenario, so a failing scenario is still on the record.
+
+        THERE IS NO `passed` ARGUMENT, and that is the point (P2.0). This runs
+        before the first assertion — it has to, or a failing scenario would not
+        be recorded at all — so at this moment nobody knows the outcome. It is
+        written by `score`, from the runner, when the test ends.
 
         `extra_results` IS WHAT THE TURN COULD SEE BUT DID NOT READ — the rows
         an earlier turn of the same thread carried forward. The checks are
@@ -286,7 +410,11 @@ class Report:
         """
         self.records = [r for r in self.records if r["scenario"] != name]
         self.records.append({
-            "passed": passed,
+            # Filled in by `score` when the test ends: True, False with the
+            # assertion in `failure`, or null if the run never got that far.
+            "passed": None,
+            "failure": None,
+            "test": CURRENT_TEST,
             "scenario": name,
             "question": turn.question,
             "answer": turn.answer,
@@ -322,11 +450,7 @@ class Report:
             # the turn was told to think. Neither can be recovered from
             # anywhere else afterwards, and a run that does not record them
             # cannot be compared with the run before it.
-            "done": {k: turn.done.get(k) for k in ("iterations", "tool_calls", "executed_calls",
-                                                    "duplicate_reads", "status", "notice_forced",
-                                                    "duration_ms", "iteration_ms",
-                                                    "corrective_turns", "deterministic_edits",
-                                                    "effort", "effort_kind", "usage")},
+            "done": {k: turn.done.get(k) for k in DONE_KEPT},
             # TIME TO FIRST VISIBLE OBJECT (P1.b, 2026-09-13), replayed
             # through the room's own board rule (tests/evals/timing.py). Two
             # numbers, not one, because the card moves only the second:
@@ -392,9 +516,11 @@ class Report:
         cost = sum(totals[k] / 1e6 * RATES[k] for k in totals)
         scored = {"turns": len(self.records), "tokens": totals,
                   "usd": round(cost, 4), "rates_as_of": RATES_AS_OF}
-        # THE BILL IS THE METER, NOT THIS. `scored` counts only scenarios that
-        # reached `add`; a setup turn never does. Both are reported, so the gap
-        # between them can never go unnoticed again.
+        # THE BILL IS THE METER, NOT THIS. `scored` here means RECORDED — a
+        # scenario that reached `add` — and a setup turn never does. It is not
+        # the `scoring` block, which is whether each one passed; the key is
+        # `scored_only` in four recorded reports already, so it keeps its name.
+        # Both are reported, so the gap between them can never go unnoticed.
         run = METER.snapshot()
         run["scored_only"] = scored
         run["unscored_turns"] = run["turns"] - scored["turns"]
@@ -406,11 +532,18 @@ class Report:
         if not path:
             return None
         spend = self.spend()
+        outcome = self.outcome()
         with open(path, "w", encoding="utf-8") as fh:
-            json.dump({"spend": spend, "cases": self.records}, fh, indent=2, default=str)
+            json.dump({"scoring": outcome, "spend": spend, "cases": self.records},
+                      fh, indent=2, default=str)
         # On stdout as well as in the file: a run that cost real money should
         # say so where the person who started it is looking.
         print(f"\n[eval] {spend['turns']} live turns cost ${spend['usd']:.2f} "
               f"— {spend['scored_only']['turns']} scored (${spend['scored_only']['usd']:.2f}) "
               f"+ {spend['unscored_turns']} setup (${spend['unscored_usd']:.2f})")
+        # AND WHETHER IT PASSED, which until 2026-09-15 existed only in a
+        # pytest line nothing kept.
+        print(f"[eval] {outcome['passed']}/{outcome['scenarios']} scenarios passed"
+              + (f" — failed: {', '.join(outcome['failed'])}" if outcome["failed"] else "")
+              + (f" — unscored: {', '.join(outcome['unscored'])}" if outcome["unscored"] else ""))
         return path

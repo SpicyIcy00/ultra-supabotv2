@@ -51,11 +51,17 @@ def _write_report():
     print("\n\n== page workshop evals ==")
     for r in report.records:
         d = r["done"]
-        print(f"  {'PASS' if r.get('passed') else 'FAIL'} {r['scenario']:<28} calls={d.get('tool_calls')} "
+        print(f"  {_outcome(r):<4} {r['scenario']:<28} calls={d.get('tool_calls')} "
               f"exec={d.get('executed_calls')} iters={d.get('iterations')} "
               f"writes={r['findings'].get('writes')} warnings={','.join(r['warnings']) or '-'}")
     if path:
         print(f"  report: {path}")
+
+
+def _outcome(record) -> str:
+    """PASS, FAIL, or `----` for a scenario the run never scored (P2.0)."""
+    passed = record.get("passed")
+    return "----" if passed is None else ("PASS" if passed else "FAIL")
 
 
 # ---------------------------------------------------------------------------
@@ -182,7 +188,7 @@ def _common(name: str, turn: checks.Turn, writer: FakeWriter, *, max_calls: int 
         results.append({"rows": [turn.page_context]})
     findings["ungrounded_numerals"] = [f.text for f in checks.ungrounded_numerals(turn.answer, results)]
     findings["enumeration"] = checks.enumeration(turn.read_calls)
-    report.add(name, turn, findings, None, passed=False)
+    report.add(name, turn, findings, None)
 
     assert turn.done.get("status") == "ok", (turn.warnings, turn.answer[:300])
     assert turn.answer, "no answer"
@@ -201,7 +207,7 @@ def _common(name: str, turn: checks.Turn, writer: FakeWriter, *, max_calls: int 
 
 
 def _record(name, turn, findings):
-    report.add(name, turn, findings, judge(turn.question, turn.answer, evidence_summary(turn)), passed=True)
+    report.add(name, turn, findings, judge(turn.question, turn.answer, evidence_summary(turn)))
 
 
 def _executed_keys(turn: checks.Turn) -> set[str]:

@@ -31,6 +31,15 @@ Reports written before 2026-09-13 carry no `results`, so only the two
 answer-only checks replay against them. The file says so rather than
 silently reporting fewer findings.
 
+AND ONE THING NO REPLAY CAN RECOVER, P2.0. Whether the run PASSED is not a
+function of (answer, results): it is what the assertions decided on the day,
+and until 2026-09-15 nothing wrote it down. `Report.add` took a `passed`
+argument and every caller filled it in before the first assertion, so
+`p1e-v2`, `p1f-v2`, `p1h-v2` and `p1close-v2` each claim eleven failures over
+runs pytest scored 11 of 11. Those four cannot be re-scored. Reports written
+from here on carry a top-level `scoring` block and this tool prints it; a
+report without one gets that paragraph printed instead of a guess.
+
 AND ONE MORE BOUND, FOUND IN P1.e. A THREADED scenario's later turns cite
 figures an EARLIER turn read — "no i meant last week" is answered over rows
 "how are we doing?" brought back — and the run gives the checks both. Reports
@@ -48,11 +57,25 @@ import sys
 from pathlib import Path
 
 from tests.evals import checks
+from tests.evals.harness import SCORING_SINCE
 
 
 def load(path: str) -> list[dict]:
     d = json.loads(Path(path).read_text(encoding="utf-8"))
     return d["cases"] if isinstance(d, dict) else d
+
+
+def scoring(path: str):
+    """
+    What the report says about its own outcome, or None if it predates that.
+
+    A report written before 2026-09-15 has no `scoring` block, and every
+    `passed` in it is the hardcoded False `Report.add` used to be handed
+    before a single assertion ran. It cannot be re-scored: the outcome was
+    never written down anywhere, so there is nothing to recover it from.
+    """
+    d = json.loads(Path(path).read_text(encoding="utf-8"))
+    return d.get("scoring") if isinstance(d, dict) else None
 
 
 def replay(case: dict) -> dict:
@@ -91,6 +114,25 @@ def main(argv: list[str]) -> int:
     rows = [replay(c) for c in load(argv[1])]
     no_evidence = [r for r in rows if not r["evidence"]]
     print(f"replayed {len(rows)} recorded answers through today's checks — $0.00\n")
+    # WHAT THE RUN ITSELF SAID, before today's checks say anything. The two are
+    # different questions: the run's outcome is what its assertions decided on
+    # the day, and the replay below is what the checks would decide now.
+    said = scoring(argv[1])
+    if said is None:
+        print("  THIS REPORT DOES NOT SAY WHETHER IT PASSED. It predates "
+              + SCORING_SINCE + ", when the outcome was written into every "
+              "record before the first assertion ran, so every `passed` in it "
+              "is a hardcoded False and means nothing. The score existed only "
+              "in a pytest line, which nothing kept, and it cannot be "
+              "recovered.\n")
+    else:
+        line = f"  the run itself: {said['passed']}/{said['scenarios']} scenarios passed"
+        if said.get("failed"):
+            line += " - failed " + ", ".join(said["failed"])
+        if said.get("unscored"):
+            line += " - never scored " + ", ".join(said["unscored"])
+        print(line + "\n")
+
     bad = 0
     for r in rows:
         flags = []
