@@ -4108,3 +4108,26 @@ direction or `--flat`, because a hue his COLUMN picked is a claim no tool made.
 **Magnitude was not judged, it was found dead**: P1.e deleted the last caller
 that fed `--i`, so every tile had rendered at 0 for a day while the log called
 it live. Held by a DOM replay, not a source scan: 15 of 18 fail on `51af583`.
+
+
+**A figure is drawn under its own claim or not at all.** 2026-09-15, the log's
+worst item: `marks.Figure` chose `rowFor(...) ?? rows[0]`, so "Greenhills
+turned down" wore Rockwell's ₱206,800. `rowUnderClaim` decides on what the ROWS
+can contradict — the subject is in them, or nothing names a subject and there
+is exactly one row (a filter-scoped read: "Why was North Edsa up?" has no
+`store` column), or nothing is drawn. The one-row case is why match-or-nothing
+was wrong. Old code fails 7 recorded-run tests, six of them real reads.
+
+**An offer says why, sits on its row, and never says what it costs.** P2.d:
+`compose` takes a third statement, `{act, seq, target, reason}`. The target
+passes a block subject's own `_backs`; the reason is an annotation and carries
+no digit. **Cost is derived** from the act in `metrics.yaml` and the schema has
+no property for it, so speed cannot be claimed by a model that cannot measure
+it. `replay` is written down as the act NOT offered — it needs a value as well
+as an argument, and an un-tappable button is what the control validator already
+refuses. Placement is decided ONCE for the screen, not per mark, because the
+foot needs the leftovers; the test is that every offer is drawn exactly once
+and none nowhere, and it found two objects over one read drawing the same
+button. Ghosts complete from the board alone; Tab accepts, Enter still sends
+what was typed. Prompt byte-identical at 1,799 words — the catalogue is on the
+tool, read at the moment of choosing.
