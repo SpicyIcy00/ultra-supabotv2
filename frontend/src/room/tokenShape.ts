@@ -162,13 +162,12 @@ export function tokensFor(input: TokenInput): DrawnToken[] {
     // A token with one alternative is the one it is already on: nothing to
     // offer, so nothing to tap, so nothing to draw.
     if (alternatives.length < 2) continue;
-    const match = alternatives.find((a) => same(a.value, value));
     out.push({
       argument: token.argument,
       kind: token.kind,
       label: token.label,
       value,
-      valueLabel: match?.label ?? said(value),
+      valueLabel: nameFor(value, alternatives, token.label),
       alternatives,
       targets,
     });
@@ -208,6 +207,56 @@ function permitted(token: DeskToken, calls: ToolCall[]): DeskAlternative[] {
 function said(value: unknown): string {
   if (Array.isArray(value)) return value.map((v) => String(v)).join(' → ');
   return String(value ?? '').replace(/_/g, ' ');
+}
+
+/**
+ * Whether a value is an OPAQUE IDENTIFIER rather than a word.
+ *
+ * A store id is 24 hex characters and means nothing to a reader; a window's
+ * own name, a dimension and a count are words and numbers a person can read.
+ * The test is the SHAPE, because the alternative — a list of which arguments
+ * carry ids — would be a second copy of what the definitions already say, and
+ * the room is held to holding no such list (test_tokens_contract).
+ */
+function opaque(value: unknown): boolean {
+  const v = String(value ?? '');
+  return v.length >= 16 && !/\s/.test(v) && /^[0-9a-f-]+$/i.test(v);
+}
+
+/**
+ * WHAT A TOKEN CALLS ITS VALUE (the dogfood log, 2026-09-15).
+ *
+ * It was `match?.label ?? said(value)`, and `said` on a LIST joined the raw
+ * elements with an arrow. A shop alternative is keyed by id with the name as
+ * its label, so ONE shop resolved to its name and two shops — which is what
+ * "compare these" sets — matched no single alternative and printed a pair of
+ * 24-character ids on the owner's screen. P2.c's rule is that a subject
+ * TRAVELS as an id and is SHOWN as a label; the showing half was missing for
+ * every list.
+ *
+ * So a list is resolved element by element, in the definitions' own words. And
+ * where a value cannot be named at all, the token says how many rather than
+ * what: an id is never drawn, ever, which is the guarantee that stops this
+ * coming back through some other argument.
+ */
+function nameFor(value: unknown, alternatives: DeskAlternative[],
+                 label: string): string {
+  const whole = alternatives.find((a) => same(a.value, value));
+  if (whole) return whole.label;
+  if (Array.isArray(value)) {
+    const named = value.map((v) => alternatives.find((a) => same(a.value, v))?.label ?? null);
+    // A LIST OF NAMED THINGS IS A SET; A LIST OF PLAIN VALUES IS A RANGE.
+    // A pair of dates is one window read from its two ends and has always
+    // been drawn with an arrow; two shop ids are two subjects and read as a
+    // set. The difference is whether the definitions name the
+    // elements — not which argument they arrived on, which would be a second
+    // copy of what the definitions already say.
+    if (named.every((n) => n === null) && !value.some(opaque)) return said(value);
+    const all = named.map((n, i) => n ?? (opaque(value[i]) ? null : said(value[i])));
+    if (all.every((n): n is string => typeof n === 'string')) return all.join(', ');
+    return `${value.length} ${label}s`;
+  }
+  return opaque(value) ? `one ${label}` : said(value);
 }
 
 /**

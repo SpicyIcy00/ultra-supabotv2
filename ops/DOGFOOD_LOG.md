@@ -57,35 +57,6 @@ on compose frame" does.
 
 ## Open
 
-### 2026-09-15 — "compare" puts two shops in the shop filter, and the filter shows raw ids
-
-> *"when i click 2 stores and say compare it just puts them in the store
-> filterer i dont know we really need any those i think we might have to
-> remove it, it doesnt fit the build."*
-
-**THE TOKEN IS DRAWING DATABASE IDS AT THE OWNER.** His screenshot:
-
-> SHOP · `67612230a740d90007464e26 → 668a43f60fa9990007cfa158`
-
-That is the shop token's moved state — was, then now — with both values
-rendered as the id rather than the name the row carried. P2.c's whole point
-was that a subject travels as an id and is SHOWN as a label; the showing half
-is missing here. It is also why the feature "doesn't fit the build": the
-Ideal UI's own token reads `last week · 31 Aug – 6 Sep` and `7 shops · active
-retail`, in words.
-
-**AND THE READ DID NOT NARROW.** The board under it still draws seven shops
-(`7 rows`, `read Sep 15, 8:13 PM`), so whatever the replay did, it did not
-scope the read to the two picked. The chips stay in the composer afterwards,
-which is the third thing that makes it read as "nothing happened".
-
-*The session's own reading of the removal question, for the record rather
-than as a decision:* the Ideal UI keeps the tokens (feature 6, "Contextual
-conversation", marked built, with the pop-out and "not what I meant"). What
-it does not have is an id where a name should be. That is an argument for
-fixing the label, not for removing the row — but it is the owner's call and
-it is written here so it is made once rather than drifted into.
-
 ### 2026-09-15 — a tile explaining itself to the reader
 
 Not reported by the owner; seen in his screenshot and logged because the
@@ -127,6 +98,72 @@ once changes the next answer. That is the card's own done-when.
 ---
 
 ## Fixed
+
+### 2026-09-15 — "compare" put two shops in the shop filter, and the filter showed raw ids
+
+### 2026-09-15 — "compare" puts two shops in the shop filter, and the filter shows raw ids
+
+> *"when i click 2 stores and say compare it just puts them in the store
+> filterer i dont know we really need any those i think we might have to
+> remove it, it doesnt fit the build."*
+
+**THE TOKEN IS DRAWING DATABASE IDS AT THE OWNER.** His screenshot:
+
+> SHOP · `67612230a740d90007464e26 → 668a43f60fa9990007cfa158`
+
+That is the shop token's moved state — was, then now — with both values
+rendered as the id rather than the name the row carried. P2.c's whole point
+was that a subject travels as an id and is SHOWN as a label; the showing half
+is missing here. It is also why the feature "doesn't fit the build": the
+Ideal UI's own token reads `last week · 31 Aug – 6 Sep` and `7 shops · active
+retail`, in words.
+
+**AND THE READ DID NOT NARROW.** The board under it still draws seven shops
+(`7 rows`, `read Sep 15, 8:13 PM`), so whatever the replay did, it did not
+scope the read to the two picked. The chips stay in the composer afterwards,
+which is the third thing that makes it read as "nothing happened".
+
+*The session's own reading of the removal question, for the record rather
+than as a decision:* the Ideal UI keeps the tokens (feature 6, "Contextual
+conversation", marked built, with the pop-out and "not what I meant"). What
+it does not have is an id where a name should be. That is an argument for
+fixing the label, not for removing the row — but it is the owner's call and
+it is written here so it is made once rather than drifted into.
+
+**Fixed, and the diagnosis corrected: there was ONE bug, not two.**
+
+`tokensFor` set a token's words with `match?.label ?? said(value)`, and
+`said` on a list joined the raw elements with an arrow. A shop alternative is
+keyed by **id** with the name as its label, so one shop resolved to its name
+and the two-id list that "compare these" sets matched no single alternative
+and fell through to the raw join. A token now resolves a list element by
+element in the definitions' own words, and **never draws an opaque identifier
+at all** — where it cannot name them it says how many. That last rule is the
+general one, so this cannot come back through a different argument.
+
+**THE READ DID NARROW ALL ALONG, AND THE SESSION WAS WRONG TO LOG THAT IT HAD
+NOT.** Checked against the real catalogue: two ids resolve to 2 shops, one to
+1, no filter to 7. `check_value` accepts a list, `retarget` lands it at
+`filters.store`, and `resolve_store` has taken a list since P2.c. The board
+drew seven shops in his screenshot because it was caught before the replay
+landed, or because he read the gibberish token and stopped — either way
+nothing was broken underneath. What he actually saw was a correct gesture
+wearing an unreadable label, which is exactly what *"it just puts them in the
+store filterer"* describes.
+
+**A CORRECTION TO THE EXISTING SUITE CAUGHT A REAL DISTINCTION.** The first
+fix flattened a date range into a comma list: `['2026-08-01','2026-09-01']`
+is ONE window read from its two ends and has always been drawn with an arrow,
+while two shop ids are two subjects and read as a set. They are told apart by
+whether the definitions NAME the elements — not by which argument they
+arrived on, which would be a second copy of the definitions. And
+`test_tokens_contract` refused the first draft of the comment for naming a
+served preset and a shop; the guard cannot tell code from prose and is right
+not to try.
+
+Five tests, four of which fail without the fix, plus the one that already
+held the date range.
+
 
 ### 2026-09-15 — a change column with no colour in the opened panel
 

@@ -331,3 +331,93 @@ describe('a refusal does not outlive its gesture', () => {
     expect(ROOM.split('setRefusal(null)').length - 1).toBeGreaterThanOrEqual(3);
   });
 });
+
+
+/* ---------------------------------------------------------------------------
+ * A TOKEN NEVER DRAWS AN ID (the dogfood log, 2026-09-15)
+ *
+ * *"when i click 2 stores and say compare it just puts them in the store
+ * filterer"* — and what it put there was
+ * `67612230a740d90007464e26 → 668a43f60fa9990007cfa158`. A store alternative
+ * is keyed by id with the name as its label, so ONE shop resolved to
+ * "Magnolia" and the LIST that "compare these" sets matched no single
+ * alternative and fell through to the raw join.
+ *
+ * P2.c's rule is that a subject travels as an id and is SHOWN as a label. The
+ * showing half was missing for every list value, and these hold it for scalars
+ * and lists alike — including the general guarantee that an id is never drawn
+ * whatever argument it arrives on.
+ * ------------------------------------------------------------------------ */
+
+const SHOPS = [
+  { value: '67612230a740d90007464e26', label: 'Magnolia', spellings: ['magnolia'] },
+  { value: '668a43f60fa9990007cfa158', label: 'Greenhills', spellings: ['greenhills'] },
+  { value: '5f2b1c9e7a440d0007aa1111', label: 'OPUS', spellings: ['opus'] },
+];
+
+function shopToken(value: unknown) {
+  const defs = {
+    tokens: [{ argument: 'store', kind: 'navigation', label: 'shop',
+               alternatives: SHOPS }],
+    replay: { arguments: { store: { path: ['filters', 'store'] } } },
+  } as unknown as DeskDefinitions;
+  const turn = {
+    post: { answer_post_id: 'p1' },
+    toolCalls: [{ seq: 1, tool: 'get_sales', arguments: { filters: { store: value } },
+                  result: { rows: [], meta: {} } }],
+  } as unknown as AnswerTurn;
+  const board = [{ key: 'k', kind: 'ranked', weight: 'lead', seq: 1,
+                   tool: 'get_sales', turn: 0, touched: 0 }] as unknown as BoardObject[];
+  return tokensFor({ defs, answers: [turn], board, retuned: {} })
+    .find((t) => t.argument === 'store') ?? null;
+}
+
+describe('what a token calls its value', () => {
+  it('names two picked shops, rather than joining their ids', () => {
+    const t = shopToken(['67612230a740d90007464e26', '668a43f60fa9990007cfa158']);
+    expect(t?.valueLabel).toBe('Magnolia, Greenhills');
+  });
+
+  it('still names a single shop the way it always did', () => {
+    expect(shopToken('67612230a740d90007464e26')?.valueLabel).toBe('Magnolia');
+  });
+
+  it('draws no id anywhere, whatever the value is', () => {
+    /** The general guarantee, so this cannot come back through another argument. */
+    for (const value of [
+      ['67612230a740d90007464e26', '668a43f60fa9990007cfa158'],
+      ['67612230a740d90007464e26', 'deadbeefdeadbeefdeadbeef'],
+      'deadbeefdeadbeefdeadbeef',
+      ['67612230a740d90007464e26'],
+    ]) {
+      const drawn = shopToken(value)?.valueLabel ?? '';
+      expect(drawn, `${JSON.stringify(value)} leaked an id`).not.toMatch(/[0-9a-f]{16}/i);
+    }
+  });
+
+  it('says how many when it cannot name them all', () => {
+    // An id no alternative carries — a closed shop, say. Honest, and not an id.
+    const t = shopToken(['67612230a740d90007464e26', 'deadbeefdeadbeefdeadbeef']);
+    expect(t?.valueLabel).toBe('2 shops');
+  });
+
+  it('leaves a word-shaped value alone', () => {
+    /** `last_week` and `7` are readable; only opaque identifiers are withheld. */
+    const defs = {
+      tokens: [{ argument: 'top_n', kind: 'navigation', label: 'how many',
+                 alternatives: [{ value: 5, label: 'top 5', spellings: ['5'] },
+                                { value: 10, label: 'top 10', spellings: ['10'] }] }],
+      replay: { arguments: { top_n: { path: ['top_n'] } } },
+    } as unknown as DeskDefinitions;
+    const turn = {
+      post: { answer_post_id: 'p1' },
+      toolCalls: [{ seq: 1, tool: 'get_sales', arguments: { top_n: 7 },
+                    result: { rows: [], meta: {} } }],
+    } as unknown as AnswerTurn;
+    const board = [{ key: 'k', kind: 'ranked', weight: 'lead', seq: 1,
+                     tool: 'get_sales', turn: 0, touched: 0 }] as unknown as BoardObject[];
+    const t = tokensFor({ defs, answers: [turn], board, retuned: {} })
+      .find((x) => x.argument === 'top_n');
+    expect(t?.valueLabel).toBe('7');
+  });
+});
