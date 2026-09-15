@@ -4151,3 +4151,12 @@ came off it, and P2.d's duplicate `subjects` member reached origin and failed
 the Railway build. `tsc -b --force` is the command. Its runtime half was worse:
 JSX takes the later duplicate attribute, so picked subjects never reached the
 composer at all.
+
+**"The build failed" says which build.** 2026-09-15: P2.d's duplicate `subjects`
+failed `tsc`, and that is **Vercel**, which serves the room — `/health` was
+serving `7cb1ea5f` throughout, so Railway had deployed it fine. A session
+carried "main is red and nothing has deployed" into NOW.md on a peer's report
+and the backend reading contradicted half of it an hour later. The two
+platforms fail independently and only one of them runs `tsc`; no session has
+ever read a Vercel build status from a terminal, so a green frontend is
+confirmed by a hard refresh and by nothing else.
