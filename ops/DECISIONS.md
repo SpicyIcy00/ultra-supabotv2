@@ -4234,3 +4234,19 @@ fix his own call. UI rule 4 is what it broke on the way to the screen.
 loop already scans an answer with, and reduces it to one line with the tool's
 words behind a tap. Two reports, one defect; and the fix is at the surface,
 never by softening what the tool says.
+
+**Colour has four jobs and this palette fills three; the owner decided against
+the fourth.** 2026-09-15, of the calendar and the hour dots: *"why do these
+have no color? there should be color right?"* Two different answers. The
+opened object's table was a DEFECT — it ran `fmt` over every cell so a change
+had no arrow and no direction there and both everywhere else, in a panel
+`vi.mock`ed out of five suites and rendered by none. The calendar is not:
+after P2.l colour means direction, those rows carry none, and P2.l came from
+his own report. The research (Stripe, Linear and Vercel near-monochrome with
+colour reserved for meaning; Datawrapper's grey-for-context) says the
+direction is right and should not be undone. The one genuine gap is
+SEQUENTIAL magnitude — the calendar already says "brighter is more" in grey
+lightness, and a single-hue ramp would make an existing meaning legible
+without reopening identity-colour. Offered as a decision with the test that
+would hold it; **he said "just fix the panel"**. Written down as taken and
+taken against, so it is not rediscovered as an open question.

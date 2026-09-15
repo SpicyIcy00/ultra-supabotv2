@@ -86,23 +86,6 @@ machinery has traded a loud failure for a quiet one, and the honest fix is a
 person's sentence per refusal reason in the definitions — which is a piece of
 work, not a patch, and is why it is written here rather than done badly now.
 
-### 2026-09-15 — a change column with no colour in the opened panel
-
-> *"why do these have no color? there should be color right?"* — of the tables
-> inside an opened object
-
-**A THIRD RENDERER, and this one is a defect rather than a design choice.**
-`ObjectPanel.Rows` builds its own table and calls `fmt()` on every cell,
-`change_pct` included, so `+1.5%` is plain text there while the same figure on
-the board wears an arrow and its direction's colour through `Delta`. The
-comment above it says so in as many words: *"this panel is untouched by the
-board's redesign."*
-
-It is the same shape as P2.k — *"it doesnt feel like its from the same app and
-its beacause its not"* — in a surface no card mentions. The calendar and the
-dots in his other screenshot are NOT this: those are `Spec` marks in the room,
-flat because the rows carry no direction, which is what P2.l decided.
-
 ### 2026-09-15 — a tile explaining itself to the reader
 
 Not reported by the owner; seen in his screenshot and logged because the
@@ -144,6 +127,45 @@ once changes the next answer. That is the card's own done-when.
 ---
 
 ## Fixed
+
+### 2026-09-15 — a change column with no colour in the opened panel
+
+### 2026-09-15 — a change column with no colour in the opened panel
+
+> *"why do these have no color? there should be color right?"* — of the tables
+> inside an opened object
+
+**A THIRD RENDERER, and this one is a defect rather than a design choice.**
+`ObjectPanel.Rows` builds its own table and calls `fmt()` on every cell,
+`change_pct` included, so `+1.5%` is plain text there while the same figure on
+the board wears an arrow and its direction's colour through `Delta`. The
+comment above it says so in as many words: *"this panel is untouched by the
+board's redesign."*
+
+It is the same shape as P2.k — *"it doesnt feel like its from the same app and
+its beacause its not"* — in a surface no card mentions. The calendar and the
+dots in his other screenshot are NOT this: those are `Spec` marks in the room,
+flat because the rows carry no direction, which is what P2.l decided.
+
+**Fixed, and only this.** The panel's table draws `change_pct` through
+`Delta` — the one definition of what a measured change looks like — so it
+wears the same arrow and the same direction colour it wears everywhere else.
+Nothing else about the panel moved: its columns, its cap of five rows and its
+receipts are untouched.
+
+**AND THE PANEL NOW HAS TESTS, WHICH IS THE REAL FINDING.** It was
+`vi.mock`ed out of five suites and rendered by none, so it had never been
+drawn by a test since it was built — which is exactly how it grew a second
+visual vocabulary in the one place nobody looked. Five tests render it for
+real against a stubbed read; two of them fail without the fix.
+
+**THE CALENDAR AND THE DOTS WERE NOT THIS AND ARE NOT CHANGED.** Those are
+`Spec` marks in the room, flat because their rows carry no direction, which is
+what P2.l decided off his own report. Asked whether to add a sequential ramp
+for magnitude — the one of colour's four jobs this palette has never filled —
+the owner said **"just fix the panel"**. The ramp is not built and is not a
+pending item; it is a decision taken, and taken against.
+
 
 ### 2026-09-15 — the memory stopped after four and said nothing about the rest
 

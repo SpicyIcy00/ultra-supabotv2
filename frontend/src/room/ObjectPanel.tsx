@@ -13,6 +13,10 @@
  * THIS IS PLUMBING, NOT A DESIGN. It reuses the room's existing type, table and
  * receipts styles deliberately — the visual pass comes at the end, and a second
  * visual vocabulary invented here would be the thing that has to be undone.
+ * IT DID INVENT ONE ANYWAY, in the one place nobody looked: the table below
+ * ran `fmt` over every cell, so a change had no arrow and no direction here
+ * and had both everywhere else. It draws a change with `Delta` now, which is
+ * the only definition of what a measured change looks like.
  *
  * FIVE SECTION STATES, DRAWN AS FIVE THINGS (UI rule 8). Available, empty,
  * refused, failed and unresolved are different facts: "nothing is out of stock here" is
@@ -23,9 +27,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { openObject, type ObjectSection, type ObjectView } from '../services/objectApi';
 import type { AnswerTurn, Dimension } from './data';
-import { fmt, receiptsDetail, receiptsLine, unitOf } from './data';
+import { changeOf, fmt, receiptsDetail, receiptsLine, unitOf } from './data';
 import type { ToolMeta } from '../types/george';
 import { Spec } from './Spec';
+import { Delta } from './tiles';
 
 /** Which object kind a board subject is. Only these can be opened. */
 export function kindOf(dimension: Dimension | null | undefined): string | null {
@@ -79,10 +84,20 @@ function Rows({ rows }: { rows: Record<string, unknown>[] }) {
             <tr key={n}>
               {cols.map((c) => (
                 <td key={c} className={typeof row[c] === 'number' ? 'n' : ''}>
-                  {/* The row's own unit decides the currency, not the name of
-                      the column (P1.c) — this panel is untouched by the
-                      board's redesign and would otherwise keep the bug. */}
-                  {fmt(c, row[c], unitOf(row))}
+                  {/* A CHANGE IS DRAWN AS A CHANGE HERE TOO (the dogfood log,
+                      2026-09-15). *"why do these have no color? there should
+                      be color right?"* — and he was right: this table ran
+                      `fmt` over every cell, so `+1.5%` was plain text in the
+                      panel while the same figure on the board wore its
+                      direction's arrow and colour. `Delta` is the one
+                      definition of how a measured change looks, and the
+                      panel was the last place not using it.
+
+                      The row's own unit still decides the currency, not the
+                      name of the column (P1.c). */}
+                  {c === 'change_pct'
+                    ? <Delta change={changeOf(row)} />
+                    : fmt(c, row[c], unitOf(row))}
                 </td>
               ))}
             </tr>
