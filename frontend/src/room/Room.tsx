@@ -38,6 +38,7 @@ import type { ToolCall } from '../types/george';
 import { Noticed } from './Noticed';
 import { WorkLine, Working } from './Working';
 import { BehindIt } from './BehindIt';
+import { Replay } from './Replay';
 import { ThreadHeader, keptPages, type KeptAs, type ThreadView } from './ThreadHeader';
 import { ThreadPage } from './ThreadPage';
 import { listThreadPins } from '../services/pinsApi';
@@ -127,11 +128,12 @@ export default function Room() {
     staleTime: 60_000,
     retry: false,
   });
-  // WHICH OF THE THREAD'S THREE VIEWS IS OPEN (P2.a). `talk` is the reading
-  // and the board; `behind` is every read this thread stands on, with its
-  // receipts (P1.k); `page` is what this thread would be if it were kept. One
-  // URL, three readings of what is already loaded — none of them is a route,
-  // so coming back from one does not put you somewhere else.
+  // WHICH OF THE THREAD'S FOUR VIEWS IS OPEN (P2.a, P2.e). `talk` is the
+  // reading and the board; `behind` is every read this thread stands on, with
+  // its receipts (P1.k); `replay` is the work itself, walked a step at a time
+  // (P2.e); `page` is what this thread would be if it were kept. One URL, four
+  // readings of what is already loaded — none of them is a route, so coming
+  // back from one does not put you somewhere else.
   const [view, setView] = useState<ThreadView>('talk');
   // The read a tapped figure asked for, keyed `turn:seq` — the same key the
   // board uses, because seq restarts every turn. Only `behind` reads it.
@@ -775,6 +777,13 @@ export default function Room() {
               // scroll past. P2.a made it one of the header's three.
               <BehindIt answers={answers} focus={focus}
                         onBack={() => { setView('talk'); setFocus(null); }} />
+            ) : view === 'replay' ? (
+              // THE WORK, WALKED (P2.e). A view rather than a panel, for the
+              // same reason Behind it is one: it is an account of the whole
+              // conversation and it replaces the conversation while you read
+              // it. Nothing on this path asks anything — every rung is off
+              // frames that already arrived.
+              <Replay turns={george.turns} onBack={() => setView('talk')} />
             ) : view === 'page' ? (
               // THE THIRD VIEW: what this thread would be if it were kept, and
               // what it would not take. A draft of something that already

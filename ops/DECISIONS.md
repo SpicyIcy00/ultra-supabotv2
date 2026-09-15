@@ -4131,3 +4131,23 @@ and none nowhere, and it found two objects over one read drawing the same
 button. Ghosts complete from the board alone; Tab accepts, Enter still sends
 what was typed. Prompt byte-identical at 1,799 words — the catalogue is on the
 tool, read at the moment of choosing.
+
+**A finished ladder is walked, and it runs nothing.** P2.e: Replay is the
+thread's fourth view — every STEP in order, one at a time, with the rows it
+brought back, its receipts and its clock. Not Behind it: that is the reads,
+flat, answering *where did these numbers come from*; this is every step, the
+compose and the pin included, answering *what did he do and what did he see*.
+No planner, no re-read, no model call, held by a test that the component names
+no client, no api module and no `fetch`. It is the one work surface that draws
+FIGURES, so UI rule 6 bites: rows whose read kept no `snapshot_timestamp` are
+withheld and the rung says so. **It found "0 rows" for every read over the
+loop's row cap** — `rows: []` with `rows_complete: false` was being counted —
+on screen since P1.k. `surface.desk.work.replay` and `surface.desk.replay` are
+two things with one name and each now says it is not the other.
+
+**The typecheck in §4 was checking nothing.** `tsc --noEmit -p tsconfig.json`
+exits 0 on a solution file with `"files": []`; three "typecheck clean" reports
+came off it, and P2.d's duplicate `subjects` member reached origin and failed
+the Railway build. `tsc -b --force` is the command. Its runtime half was worse:
+JSX takes the later duplicate attribute, so picked subjects never reached the
+composer at all.

@@ -33,7 +33,8 @@
 import { useState, type CSSProperties } from 'react';
 import type { ToolMeta } from '../types/george';
 import {
-  changeOf, fmt, measureOf, rowUnderClaim, rowsOf, sorted, subjectOf, unitOf, valueOf,
+  changeOf, fmt, measureOf, rowUnderClaim, rowsOf, sorted, subjectOf, tableShape, unitOf,
+  valueOf,
   type Change,
 } from './data';
 import {
@@ -378,33 +379,11 @@ function Rows({ rows: all, meta, o, p }: { rows: Row[]; meta: Meta; o: TileProps
   const sort = p.local.sort;
   const rows = sorted(all, sort).slice(0, 40);
   const open = p.local.open ?? (o.weight !== 'quiet' || all.length <= 8);
-  const keys = Object.keys(rows[0]).filter(
-    (k) => !k.endsWith('_id') && !['seq', 'call_seq', 'direction', 'baseline_status'].includes(k));
-  const readable = (v: unknown) => v === null || v === undefined || typeof v !== 'object';
-  const constant: string[] = [];
-  const cols: string[] = [];
-  for (const k of keys) {
-    const distinct = new Set(rows.map((r) => String(r[k] ?? '')));
-    if (rows.length >= 3 && distinct.size === 1 && String(rows[0][k] ?? '').length <= 24
-        && readable(rows[0][k])
-        && !/sales|revenue|value|total|cost|price/i.test(k)) {
-      // NAMED, because the caption now stands on its own. It used to be
-      // joined to the title and the row count, which gave a bare `0` or `7`
-      // something to lean on; since the frame took those it read as a row of
-      // loose digits.
-      constant.push(`${k.replace(/_/g, ' ')} ${fmt(k, rows[0][k], unitOf(rows[0]) ?? unitOf(meta))}`);
-    } else {
-      cols.push(k);
-    }
-  }
+  // ONE DEFINITION OF WHICH COLUMNS A READ DRAWS (P2.e), so the table on the
+  // board and the same read at its rung in the walk agree about what is a
+  // column and what is a caption.
+  const { constant, columns: shown } = tableShape(rows, meta);
   const unit = (row: Row) => unitOf(row) ?? unitOf(meta);
-  const RANK: Record<string, number> = {
-    product: 0, store: 0, category: 0, name: 0, supplier: 0, label: 0, day: 0, week: 0, month: 0,
-    sku: 1, value: 2, change_pct: 3, change: 6, baseline: 7,
-  };
-  const shown = cols.slice()
-    .sort((a, b) => (RANK[a] ?? 4) - (RANK[b] ?? 4) || cols.indexOf(a) - cols.indexOf(b))
-    .slice(0, 5);
 
   return (
     <div className="r-mk r-mk-table">

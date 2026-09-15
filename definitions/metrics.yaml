@@ -6391,6 +6391,12 @@ surface:
     # arguments the tool accepted and answered. Everything but the one named
     # argument is therefore the record's, and a browser holding a stale or
     # edited copy of a call cannot put it back on screen under a receipts line.
+    #
+    # NOT `work.replay`, WHICH IS A DIFFERENT THING WITH THE SAME NAME. This
+    # is the ACT: one stored read RUN AGAIN, over a query, on a scope somebody
+    # moved. `surface.desk.work.replay` is the VIEW that walks a finished
+    # ladder and runs nothing at all. The act is spoken as "run it again"
+    # (room/actions.ts); the view is the word the person sees.
     replay:
       model_consulted: false
       max_calls: 8
@@ -6661,6 +6667,57 @@ surface:
         filter_line: definition_then_predicate
         # Three facts, three renderings (UI rule 8).
         states: [landed, declined, receipts_not_kept]
+
+      # REPLAY — A FINISHED LADDER, WALKED (P2.e, 2026-09-15).
+      #
+      # The owner's feature 9 is that George decides where to look next. This
+      # is how that decision is audited afterwards: the steps of the thread in
+      # the order they ran, one at a time, each showing what came back.
+      #
+      # NOT THE SAME VIEW AS `behind_it`, and the difference is the question
+      # each answers. Behind it is the EVIDENCE — the reads, flat, with their
+      # receipts: "where did these numbers come from". Replay is the WORK —
+      # every step including the ones that read nothing: "what did he do, and
+      # what did he see".
+      #
+      # NOT THE SAME THING AS `surface.desk.replay` EITHER. That is the ACT of
+      # running one stored read again with one argument changed, which costs a
+      # query. This runs nothing at all.
+      replay:
+        scope: thread
+        # A rung is a STEP, not a read. A compose read nothing and a pin read
+        # nothing, and both are things he DID: an account that left them out
+        # would say the workspace arranged itself.
+        walks: every_step
+        per_step: [words, rows, receipts, duration_ms]
+        # The rows the record kept, DRAWN — not a count of them, which is
+        # what the work line and Behind it already show. Which columns a
+        # table of rows draws is one client-side decision shared with the
+        # board's own table (room/data.tableShape), so the walk cannot
+        # disagree with the screen it explains.
+        shows: rows
+        # NOTHING IS RUN AND NOTHING IS ASKED. No planner, no re-read, no
+        # model turn (architecture rule 5): every rung is off frames that
+        # already arrived, and on a reopened thread off george.tool_calls with
+        # the answer post's charted rows put back.
+        reruns_nothing: true
+        model_calls: 0
+        # Four facts, four renderings (UI rule 8). `rows_not_kept` is a read
+        # that landed whose rows the record did not keep — over the loop's row
+        # cap, or restored from a log that only ever held the summary — and it
+        # says so rather than drawing an emptiness it did not measure.
+        states: [landed, rows_not_kept, declined, running]
+        # A REFUSAL TRAVELS WHOLE, in the tool's own sentence, and draws no
+        # receipts: it has none.
+        refusal: the_tools_own_words
+        # Rows are figures and a figure carries its time (UI rule 6). A read
+        # whose record kept rows but no snapshot_timestamp has its rows
+        # WITHHELD and says so — the one place this view refuses to draw
+        # something it is holding.
+        rows_need: snapshot_timestamp
+        # The same rule Behind it has: an account of the work, never a
+        # transcript of the calls.
+        never: [tool_names, tool_arguments, model_text]
 
       # A FIGURE IN THE CLAIM JUMPS TO ITS READ. Matched against the numbers
       # the turn's calls returned, by the rule agent/prose.py already uses; a

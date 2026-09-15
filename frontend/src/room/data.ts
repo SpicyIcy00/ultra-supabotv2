@@ -215,6 +215,76 @@ export function tone(change: Change): Direction {
   return change.direction ?? 'flat';
 }
 
+/* ------------------------------------------------------------------ table */
+
+/**
+ * WHICH COLUMNS A TABLE OF ROWS DRAWS, AND WHICH FOLD TO A CAPTION.
+ *
+ * ONE DEFINITION, TWO READERS. The board draws a read as a table (marks.tsx
+ * `Rows`) and the replay draws the same read at the rung that fetched it
+ * (Replay.tsx). Two column pickers would mean the same read read two ways on
+ * one screen — the shop that was a caption on the board back as a column of
+ * seven identical cells in the walk — so the choice is made here and both call
+ * it. P2.e, 2026-09-15.
+ *
+ * A COLUMN WHOSE VALUE IS THE SAME ON EVERY ROW IS NOT A COLUMN. It is a fact
+ * about the whole read — "store Greenhills" — and it is named rather than
+ * printed seven times. Never a money column, whatever its values: a table of
+ * three rows that happen to share a total is still a table of figures, and
+ * folding one into a caption would put a business figure somewhere with no
+ * row under it.
+ *
+ * NOTHING HERE COMPUTES. It counts distinct strings and orders names.
+ */
+export interface TableShape {
+  /** The single-valued columns, already in words: `store Greenhills`. */
+  constant: string[];
+  /** The columns drawn, in reading order — subject first, figures after. */
+  columns: string[];
+}
+
+/** Never a column: an id nobody reads, and the machinery of a comparison. */
+const NOT_A_COLUMN = ['seq', 'call_seq', 'direction', 'baseline_status'];
+
+/** Subject first, then the figure, then what it moved against. */
+const COLUMN_RANK: Record<string, number> = {
+  product: 0, store: 0, category: 0, name: 0, supplier: 0, label: 0, day: 0, week: 0, month: 0,
+  sku: 1, value: 2, change_pct: 3, change: 6, baseline: 7,
+};
+
+/** How many columns a table draws. Past this it is a spreadsheet, not a mark. */
+const COLUMNS_MAX = 5;
+
+export function tableShape(
+  rows: Record<string, unknown>[],
+  meta: ToolMeta | null | undefined,
+): TableShape {
+  if (!rows.length) return { constant: [], columns: [] };
+  const keys = Object.keys(rows[0]).filter(
+    (k) => !k.endsWith('_id') && !NOT_A_COLUMN.includes(k));
+  const readable = (v: unknown) => v === null || v === undefined || typeof v !== 'object';
+  const constant: string[] = [];
+  const cols: string[] = [];
+  for (const k of keys) {
+    const distinct = new Set(rows.map((r) => String(r[k] ?? '')));
+    if (rows.length >= 3 && distinct.size === 1 && String(rows[0][k] ?? '').length <= 24
+        && readable(rows[0][k])
+        && !/sales|revenue|value|total|cost|price/i.test(k)) {
+      // NAMED, because the caption now stands on its own. It used to be
+      // joined to the title and the row count, which gave a bare `0` or `7`
+      // something to lean on; since the frame took those it read as a row of
+      // loose digits.
+      constant.push(`${k.replace(/_/g, ' ')} ${fmt(k, rows[0][k], unitOf(rows[0]) ?? unitOf(meta))}`);
+    } else {
+      cols.push(k);
+    }
+  }
+  const columns = cols.slice()
+    .sort((a, b) => (COLUMN_RANK[a] ?? 4) - (COLUMN_RANK[b] ?? 4) || cols.indexOf(a) - cols.indexOf(b))
+    .slice(0, COLUMNS_MAX);
+  return { constant, columns };
+}
+
 /* ----------------------------------------------------------------- sorting */
 
 /** Rows in the order the person asked for. Reordering is not computing. */

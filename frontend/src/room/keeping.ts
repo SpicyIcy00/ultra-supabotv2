@@ -27,6 +27,10 @@
  */
 import type { GeorgeTurn, ToolCall } from '../types/george';
 import type { PinToolCall } from '../types/pins';
+// ONE PAIRING OF ANSWERS TO QUESTIONS (P2.e). A section of the page this
+// thread would be is named by the question its turn answered, and a rung of
+// the walk is headed by the same one — so they are the same function.
+import { asked } from './work';
 
 /**
  * How many sections one create may carry
@@ -128,21 +132,9 @@ function callKey(call: PinToolCall): string {
  * itself falls back to.
  */
 function titleFor(question: string | null, calls: PinToolCall[]): string {
-  const asked = (question ?? '').replace(/\s+/g, ' ').trim();
-  if (asked) return asked.slice(0, MAX_TITLE);
+  const words = (question ?? '').replace(/\s+/g, ' ').trim();
+  if (words) return words.slice(0, MAX_TITLE);
   return (calls[0]?.tool ?? '').slice(0, MAX_TITLE);
-}
-
-/** Each George turn with the question immediately before it, in thread order. */
-function paired(turns: GeorgeTurn[]): { question: string | null; turn: Extract<GeorgeTurn, { role: 'george' }> }[] {
-  const out: { question: string | null; turn: Extract<GeorgeTurn, { role: 'george' }> }[] = [];
-  let asked: string | null = null;
-  for (const t of turns) {
-    if (t.role === 'user') { asked = t.text; continue; }
-    out.push({ question: asked, turn: t });
-    asked = null;
-  }
-  return out;
 }
 
 /**
@@ -158,7 +150,7 @@ function paired(turns: GeorgeTurn[]): { question: string | null; turn: Extract<G
  * rest, and they can only do that if they know what is missing.
  */
 export function keepPlan(turns: GeorgeTurn[]): KeepPlan {
-  const all = paired(turns);
+  const all = asked(turns);
   const sections: Section[] = [];
   const leftOff: LeftOff[] = [];
   const seen = new Set<string>();
@@ -222,8 +214,8 @@ export function keepPlan(turns: GeorgeTurn[]): KeepPlan {
  */
 export function offeredTitle(turns: GeorgeTurn[], fallback = 'Kept from a conversation'): string {
   const first = turns.find((t) => t.role === 'user' && t.text.trim());
-  const asked = first && first.role === 'user' ? first.text.replace(/\s+/g, ' ').trim() : '';
+  const words = first && first.role === 'user' ? first.text.replace(/\s+/g, ' ').trim() : '';
   // The page title's own bound (page_writer.MAX_TITLE_LEN), stated where the
   // default is made so a long question is cut here rather than refused there.
-  return asked ? asked.slice(0, 100) : fallback;
+  return words ? words.slice(0, 100) : fallback;
 }

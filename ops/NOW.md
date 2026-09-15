@@ -107,8 +107,8 @@ shippable. The full diagnosis is the report linked in section 6.
 | Head | **`f8762a4` — pushed and live 2026-09-15.** One commit: the colourless-rows fix off his second report of the day — every store keeps the direction its own tool measured, emphasis is weight. **No migration, no backend file.** Before it, **`e561a29` — live 2026-09-15.** One commit: P2.l, the shell stops carrying identity. **No migration, and no backend file** — the only Python touched is none at all; it is `frontend/src/room` plus the four ops documents. `SYSTEM_PROMPT` is untouched at 1,799 words. **THE SWAP WAS NOT WATCHED**: `/health` was read once, after it had already happened, so there is no 502 count for this one and none should be invented. **The room is served by VERCEL**, not by the build `/health` names, so a healthy backend is not evidence the new board is being served — a hard refresh is. Before it, **`51af583` — pushed and live 2026-09-15.** One commit: P2.c, the id behind a tapped subject, the `@` door and the two-shop comparison. **No migration.** It is the first commit since P1.h to touch a MODEL-FACING file: `definitions/metrics.yaml` gained a fourth subject dimension, and the desk sentence lists them, so `SYSTEM_PROMPT` went 1,798 → 1,799 words. Before it, **`b21533c` — live 2026-09-15.** One commit: P2.b, the figure markers, the two-voice scan and the five-colour guard. **No migration**, and **no backend file at all** — the only Python touched is `tests/test_visible_work_contract.py`, which tightened an existing contract onto the new rendering. A docs commit recording this deploy sits above it and is docs-only. Before it, `81c677c`: P2.0 (`13795bb`), the plan page (`07a7d3a`), the Fable-review correction (`81c677c`), and `896805c`, the Fable 5.1 review paragraph, which was already uncommitted in the tree when the P2.0 session started and was committed on its own rather than swept in. |
 | Live | **`f8762a46`**, confirmed from `/health` 2026-09-15: healthy, schema `w7x8y9z0a1b2` ok, deployment `17bc522f`, **no migration**, and 15 of 15 polls 200 after it settled. **THIS SWAP WAS WATCHED AND IT COST 18 CONSECUTIVE 502s** — the worst of the twelve watched, against a previous worst of 4 — on a commit carrying no backend file and no migration, so the outage is the platform's restart and nothing in the diff. **Nobody should quote "one or two 502s" as the ordinary reading again without saying this one happened.** The previous reading, kept: **`e561a294`**, confirmed from `/health` 2026-09-15: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `61a2cf3a`, `george_pool` cap 8 with nothing in use and a peak of 0, **no migration**. Read once, after the swap, so **no 502 count for this deploy**. The previous reading, kept: **`51af583e`**, confirmed from `/health`: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `c978adc5`, `george_pool` cap 8 with nothing in use and a peak of 3, **no migration**. **ONE 502 in the swap** — a poll at ~3 s read 200 from 07:45:30 UTC, one 502 at 07:46:04, and 200 on `51af583e` after it: 99 of 100 polls served. `GET /api/v1/george/mentions?q=Seik` answers **401** on the live build rather than 404, so the new route is served and gated. The previous reading, kept: **`b21533ca`**, from `/health`: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `633119fb`, `george_pool` cap 8 with nothing in use, **no migration**. **THE SWAP COST NOTHING — not one 502.** A poll at ~3 s read 200 continuously from 06:49:52 UTC on `4ade8c43`, and **200 on `b21533ca` at 06:50:41**, with no failed reading between them: the first clean swap of the ten watched. **The push-to-swap latency is BOUNDED, not measured**, because the poll started after the push again — the first reading was 06:49:52 and the new build answered at 06:50:41, so it is **under 55 s** and nothing narrower should be claimed. Read `/health` rather than believing this row. |
 | Last deploy | `f8762a4`, and before it `e561a29`, `51af583`, `b21533c`, `81c677c`, `1267b52`, `e1ceb5e`, `9261c2e`, `ab01579`, `69d1fbf`, `1edf8fb`, `079359f` and `8ba0080`. **The 502 count per swap now reads 18, 1, 0, 1, 1, 1, 1, 0, 2, 4, 2, newest first** — the 18 is today's `f8762a4` and it is five times the previous worst; `e561a29`'s swap is not in the list because nobody watched it — — one or two of the eleven watched is still the ordinary reading, and the four on `1267b52` remain the only outlier. None of the eleven carried a migration, so none of them is the path the 50-minute outage on `8b0325a` lives in. |
-| Phase | **1 is CLOSED — P1.a through P1.k and P1.✓, every card of it.** **Phase 2 is under way: P2.0, P2.a, P2.b, P2.c, P2.l and P2.d are closed, six cards and the close remain.** **Its gate is further away than it was this morning**: the log's Open must be empty **five days running**, it reached day two, and **2026-09-15 put two items back in it** — the colour question, and the claim-over-another-shop's-figure found underneath it. **The count is back to zero and starts again the first day Open is empty.** By the log's own rule nothing in section 3 is started while Open has anything in it, so the next session takes the log, not P2.d. The other three gate conditions are met or named — median 17.1 s against < 10 s with its cause on the card, a navigation fragment redraws with no model call at 760 ms, trust rows unchanged. **The Fable 5.1 review of Phase 1 HAS happened** (2026-09-14, recorded in `ops/DECISIONS.md`, confirmed by the owner 2026-09-15). It confirms every number in the close-out and names four things Phase 2 should not trust: **760 ms is a unit timer**, in-process with no HTTP, browser or render, so the gate's fragment condition is met by a measurement nobody has seen on the live build; **19.0 → 17.1 includes `correction` reading nothing at low effort**, and low is most turns in a one-thread UI; **effort is unobservable in production** — not persisted, and a revoked beta pins the process to high; and **five empty days are vacuous if the room is not used**. |
-| Next card | **P2.e — replay an investigation.** **`ops/DOGFOOD_LOG.md` Open is EMPTY again as of 2026-09-15** (`4fbfa26`), which is what unblocked P2.d and what the gate's five-day count restarts from. **The wrong-figure item closed first, in the same session:** `marks.Figure` chose `rowFor(...) ?? rows[0]`, so a tile captioned *"Greenhills turned down on a smaller basket"* drew Rockwell's ₱206,800, a green +1.5% and a row labelled Rockwell — a real figure under a sentence that is not about it, which is the one thing rule 9 exists to prevent. `data.rowUnderClaim` decides it now, on what the ROWS can contradict: the subject is in them → that row and never another; the rows name no subject and there is exactly ONE of them → that row, because *"Why was North Edsa up?"* returns a single row with no `store` column and the shop is in the read's FILTERS, which is the case a plain match-or-nothing fix would have broken; anything else → **no number is drawn**, and `MissingRow` says so where the figure was while the tile keeps its title, its caveat and its source line. **The old fallback fails 7 of the recorded-run tests, six of them real reads.** **P2.d closed the same session** — see §3 for what it bought and the three things it did not. **The gate is still five days of an empty log**, and the count starts again at day one from 2026-09-15. **Nobody has opened a browser on any of the last five cards**, which is the standing shortfall and is now bigger than any card in the file: P2.a, P2.b, P2.c, P2.l and P2.d are all held by test processes alone. |
+| Phase | **1 is CLOSED — P1.a through P1.k and P1.✓, every card of it.** **Phase 2 is under way: P2.0, P2.a, P2.b, P2.c, P2.l, P2.d and P2.e are closed, six cards and the close remain.** **Its gate is further away than it was this morning**: the log's Open must be empty **five days running**, it reached day two, and **2026-09-15 put two items back in it** — the colour question, and the claim-over-another-shop's-figure found underneath it. **The count is back to zero and starts again the first day Open is empty.** By the log's own rule nothing in section 3 is started while Open has anything in it, so the next session takes the log, not P2.d. The other three gate conditions are met or named — median 17.1 s against < 10 s with its cause on the card, a navigation fragment redraws with no model call at 760 ms, trust rows unchanged. **The Fable 5.1 review of Phase 1 HAS happened** (2026-09-14, recorded in `ops/DECISIONS.md`, confirmed by the owner 2026-09-15). It confirms every number in the close-out and names four things Phase 2 should not trust: **760 ms is a unit timer**, in-process with no HTTP, browser or render, so the gate's fragment condition is met by a measurement nobody has seen on the live build; **19.0 → 17.1 includes `correction` reading nothing at low effort**, and low is most turns in a one-thread UI; **effort is unobservable in production** — not persisted, and a revoked beta pins the process to high; and **five empty days are vacuous if the room is not used**. |
+| Next card | **P2.f — what do you remember?** **`ops/DOGFOOD_LOG.md` Open is still EMPTY**, so the gate's five-day count is on day one from 2026-09-15. **main was RED on origin for the whole of P2.e and nothing has deployed since `8037259`**: P2.d left `ComposerProps` declaring `subjects` twice, `tsc -b` refused it, and Railway failed the build. The runtime half was worse than the build half — in JSX the later attribute wins, so Room.tsx passing both meant the picked subjects never reached the composer and every chip above the line would have drawn `undefined ×`. Fixed in `1043919` as its own commit, ahead of the card, with two tests holding the pair apart; **the fix is committed and NOT pushed**, so main is still red on origin until somebody pushes. **The command that missed it three times is `npx tsc --noEmit -p tsconfig.json`** — `frontend/tsconfig.json` is `{"files": [], "references": [...]}`, so it exits 0 having compiled nothing. **The typecheck in §4 is now `npx tsc -b --force`**; plain `-b` can report clean off a stale `.tsbuildinfo`. **P2.e closed the same session** — see §3, including the wrong row count it found in the work trail. **Nobody has opened a browser on any of the last six cards**, which is the standing shortfall and is bigger than any card in the file: P2.a, P2.b, P2.c, P2.l, P2.d and P2.e are all held by test processes alone. |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
@@ -2088,9 +2088,47 @@ Answering mode reaches the screens in the Ideal UI (§6).
       produced an offer**: every test drives the validator and the renderer
       directly, so whether George reaches for the channel unprompted is
       unknown until P2.✓.
-- [ ] **P2.e replay an investigation** — a finished ladder walked from the
-      post's stored calls: each step's rows, receipts, time; a refusal shows
-      as a refusal; no planner. No eval.
+- [x] **P2.e replay an investigation** — CLOSED 2026-09-15. **Replay is the
+      thread's fourth view**, beside Talk, Behind it and Page: every STEP of
+      the conversation in the order it ran, one at a time, with the rows it
+      brought back, its receipts and its own clock. `walkOf` in `room/work.ts`
+      is the list and `room/Replay.tsx` draws it. **It is not Behind it.**
+      Behind it is the EVIDENCE — the reads, flat, receipts only, answering
+      *where did these numbers come from*. Replay is the WORK — every step,
+      the compose and the pin included, answering *what did he do, and what
+      did he see*. **Nothing on the path asks anything**: no planner, no
+      re-read, no model turn, held by a test that the component names no
+      client, no api module and no `fetch`. A refusal is the tool's own
+      sentence and draws no receipts, because it has none.
+      **THE WALK IS THE ONE WORK SURFACE THAT DRAWS FIGURES**, so UI rule 6
+      bites here and it is enforced: rows with no `snapshot_timestamp` on
+      their read are WITHHELD and the rung says the receipts were not kept.
+      Four states, four renderings — landed with rows, landed with the rows
+      not kept, declined, running.
+      **IT FOUND A WRONG FIGURE THAT HAS BEEN ON SCREEN SINCE P1.k.** The
+      loop sends a read's rows all or none: past `MAX_ROWS_TO_CLIENT` the
+      frame carries `rows: []` with `rows_complete: false`. `stepsOf` counted
+      the array, so a read that returned 214 rows has been drawing **"0
+      rows"** in the live work trail and in Behind it — a number nothing
+      measured. It reads `row_count` now, which also gives a reopened thread
+      its counts back.
+      **Two things that were two definitions are now one**: which columns a
+      table of rows draws (`data.tableShape`, shared with the board's own
+      table) and which question an answer was given under (`work.asked`,
+      shared with the page a thread would be).
+      **1,744 → 1,762 pure, 1,196 → 1,220 vitest, `tsc -b --force` clean,
+      `npm run build` clean; no eval, $0.00.**
+      **THE SHORTFALL. Nobody has seen it in a browser** — the sixth card
+      running with that gap, and `Room.tsx` is still rendered by no test, so
+      the fourth tab's place in the header and the walk's layout at phone
+      width are held by jsdom and by nothing that lays out. **The walk is
+      thread-scoped and has no way in from an answer**: the header tab is the
+      only door, so a person reading one answer taps Replay and lands at step
+      one of the whole conversation rather than at that answer's first rung.
+      **And no stored thread has actually been walked** — every test drives
+      the component and `restoreFromPosts` directly; whether a real reopened
+      thread yields rows at every rung depends on what its post kept, and
+      that is unknown until somebody opens one.
 - [ ] **P2.f what do you remember?** — `view_memory` drawn as a finding:
       every belief, when, from what, how often applied; Forget on each; "not
       what I meant" → `record_belief` and the next answer uses it. Beliefs
@@ -2284,7 +2322,7 @@ of this plan, with every card's prompt, is **George, The Build Plan** in §6.
 Run from the repo root. The interpreter is `.venv\Scripts\python.exe`; a system
 `python` cannot import the backend (pinned SQLAlchemy).
 
-    .venv\Scripts\python.exe ops/verify_integration.py pure     # 1,704 here, 1,700 in CI
+    .venv\Scripts\python.exe ops/verify_integration.py pure     # 1,762 here, 1,758 in CI
 
 **THE PURE COUNT IS FOUR HIGHER HERE THAN IN CI, and that is not a fault.**
 `tests/test_eval_report_contract.py` parametrizes over every
@@ -2325,9 +2363,17 @@ with each other, across builds with `--since`.        # the weekly sweep
     .venv\Scripts\python.exe ops/turn_clock.py --days 7        # the clock (P0.3)
     .venv\Scripts\python.exe ops/turn_clock.py --days 30 --user-only
     cd frontend && npm ci                                       # after any merge
-    cd frontend && npx vitest run                               # 903 expected
-    cd frontend && npx tsc -b --noEmit
+    cd frontend && npx vitest run                               # 1,220 expected
+    cd frontend && npx tsc -b --force                           # NOT -p, NOT bare -b
     cd frontend && npm run build
+
+**`npx tsc --noEmit -p tsconfig.json` CHECKS NOTHING IN THIS REPO** and a
+session reported "typecheck clean" off it three times. `frontend/tsconfig.json`
+is `{"files": [], "references": [...]}` — a solution file — so `-p` exits 0
+having compiled no files at all. Plain `tsc -b` can also report clean off a
+stale `.tsbuildinfo`. **`npx tsc -b --force` is the check**, and it is the one
+Railway runs: P2.d shipped a duplicate interface member past all three of the
+weaker commands and main was red on origin for a day.
 
 The voice eval — real model, real reads, nothing written, opt-in. **It is v2
 and only v2 since P1.e**: `test_voice_evals.py`, the first twelve, is deleted,

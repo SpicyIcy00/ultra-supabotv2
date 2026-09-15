@@ -1533,6 +1533,51 @@ body.r-dragging-on .r-tile { transition: none; }
   font: 400 10px/1.5 var(--mono); color: var(--ink-3); margin-bottom: 6px;
 }
 
+/* ------------------------------------------------------------------ replay
+
+   A FINISHED LADDER, WALKED (P2.e). One column of rungs; the one you are on
+   carries everything about it. No colour of its own — the one colour means
+   "needs you" (UI rule 5), and a step you are standing on is not an approval,
+   so being HERE is drawn in weight and in an edge, exactly as Behind it draws
+   the read a figure jumped to. */
+.r-walk { margin: 0 0 26px; }
+.r-walk-where {
+  margin: 0 0 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.r-walk-where .r-chip { padding: 4px 11px; font-size: 11.5px; }
+.r-walk-where .r-chip:disabled { color: var(--ink-3); cursor: default; border-color: var(--edge); }
+.r-walk-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+/* The question is a heading for the run beneath it, not a label on each step. */
+.r-walk-asked {
+  margin: 20px 0 8px; font: 400 12.5px/1.5 var(--sans); color: var(--ink);
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; max-width: 62ch;
+}
+.r-walk-list > li:first-child .r-walk-asked { margin-top: 0; }
+.r-walk-rung { padding-left: 13px; border-left: 2px solid var(--edge); }
+.r-walk-rung--here { border-left-color: rgba(var(--george), 0.55); }
+.r-walk-line {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  width: 100%; text-align: left; background: none; border: 0; padding: 4px 0;
+  cursor: pointer; font: 400 12.5px/1.6 var(--sans); color: var(--ink-3);
+}
+.r-walk-rung--here .r-walk-line { color: var(--ink); }
+.r-walk-line:hover, .r-walk-line:focus-visible { color: var(--ink-2); }
+.r-walk-n {
+  font: 500 9.5px/1.5 var(--mono); color: var(--ink-3);
+  min-width: 2ch; font-variant-numeric: tabular-nums;
+}
+.r-walk-open { padding: 6px 0 14px; display: grid; gap: 8px; }
+.r-walk-declined {
+  margin: 0; font: 400 12px/1.55 var(--sans); color: var(--ink-2); max-width: 62ch;
+}
+.r-walk-note {
+  margin: 0; font: 400 11.5px/1.55 var(--sans); color: var(--ink-3); max-width: 62ch;
+}
+/* The rows never run wider than the column: the table scrolls inside itself,
+   the page does not scroll sideways. */
+.r-walk-rows { display: grid; gap: 6px; max-width: 100%; min-width: 0; }
+.r-walk-rows .r-scroll { max-width: 100%; }
+
 @media (max-width: 640px) {
   .r-mk-row, .r-mk-scale { grid-template-columns: minmax(5ch, 9ch) 1fr minmax(8ch, auto); gap: 7px; }
   .r-mk-name { font-size: 11px; }

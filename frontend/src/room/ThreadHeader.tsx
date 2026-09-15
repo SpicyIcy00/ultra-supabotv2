@@ -3,13 +3,21 @@
  *
  * Hex gives one object three views: the agent you talked to, the notebook
  * underneath, the app it becomes. This is George's version of that, and the
- * three are not three places — they are three readings of the same
+ * four are not four places — they are four readings of the same
  * conversation:
  *
  *   TALK       the reading and the board, which is where you already are.
  *   BEHIND IT  every read this thread stands on, with its receipts.
+ *   REPLAY     the work itself, walked: every step in the order it ran, one
+ *              at a time, with what it brought back (P2.e).
  *   PAGE       what this thread would be if you kept it, and what it would
  *              not take.
+ *
+ * FOUR NOW, AND THE FOURTH IS NOT THE SECOND. Behind it is the EVIDENCE — the
+ * reads, flat, with their receipts, answering "where did these numbers come
+ * from". Replay is the WORK — every step including the ones that read nothing,
+ * in order, answering "what did he do, and what did he see". A view that
+ * merged them would answer neither question well.
  *
  * NOTHING IS CREATED BY LOOKING. The Page view is a draft of something that
  * already exists: the questions asked, in order, standing on calls that can be
@@ -30,7 +38,7 @@ import { Link } from 'react-router-dom';
 
 import type { Pin } from '../types/pins';
 
-export type ThreadView = 'talk' | 'behind' | 'page';
+export type ThreadView = 'talk' | 'behind' | 'replay' | 'page';
 
 /** The page a thread was kept as: its identity, and the name to draw. */
 export interface KeptAs {
@@ -66,6 +74,7 @@ export function keptPages(pins: Pin[] | undefined): KeptAs[] {
 const WORDS: Record<ThreadView, string> = {
   talk: 'Talk',
   behind: 'Behind it',
+  replay: 'Replay',
   page: 'Page',
 };
 
@@ -101,12 +110,12 @@ export function ThreadHeader({ view, onView, kept, state }: {
           </>
         )}
       </p>
-      {/* THE THREE VIEWS, and they are one control. Tabs rather than links
+      {/* THE FOUR VIEWS, and they are one control. Tabs rather than links
           because none of them is a route: the thread is one URL and these are
-          three ways of reading what is already loaded, so leaving and coming
+          four ways of reading what is already loaded, so leaving and coming
           back does not put you somewhere else. */}
       <div className="r-thead-views" role="tablist" aria-label="This thread">
-        {(['talk', 'behind', 'page'] as ThreadView[]).map((v) => (
+        {(['talk', 'behind', 'replay', 'page'] as ThreadView[]).map((v) => (
           <button
             key={v}
             type="button"

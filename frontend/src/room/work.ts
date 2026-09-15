@@ -18,12 +18,14 @@
  *              caveats — above the claim, where Perplexity puts its sources
  *              (`summaryOf`).
  *   BEHIND IT  every read of the whole thread with its receipts (`readsOf`).
+ *   THE WALK    every STEP of the whole thread, in the order it ran, each
+ *              carrying the rows it brought back (`walkOf`). P2.e.
  *
  * NOTHING HERE IS A FIGURE, and that is structural rather than careful: the
  * only numbers this module produces are counts of calls, counts of rows and
  * milliseconds off a clock. It never opens a row.
  */
-import type { ToolCall, ToolMeta } from '../types/george';
+import type { GeorgeTurn, ToolCall, ToolMeta } from '../types/george';
 import { PROCESS, type AnswerTurn } from './data';
 
 /**
@@ -81,9 +83,37 @@ export const WORDS: Record<string, [string, string]> = {
   record_findings: ['marking what matters', 'marked what matters'],
 };
 
-function rows(result: unknown): number | null {
-  const r = (result as { rows?: unknown[] } | null | undefined)?.rows;
-  return Array.isArray(r) ? r.length : null;
+/**
+ * HOW MANY ROWS A READ BROUGHT BACK — which is not always how many are here.
+ *
+ * The loop sends a read's rows all or none: past `MAX_ROWS_TO_CLIENT` the
+ * frame carries `rows: []` with `rows_complete: false`, because a chart drawn
+ * from a prefix is a different chart. Counting the array in that case reported
+ * **0 rows** for a read that returned two hundred — a figure on the screen
+ * that nothing measured, which is what UI rule 8 exists to stop. The tool's
+ * own `row_count` is the answer there, and it is also the answer for a call
+ * read back out of the conversation log, where the rows were never kept.
+ *
+ * Found by P2.e, 2026-09-15, building the walk: a rung that said 0 rows and
+ * then drew a table would have been arguing with itself.
+ */
+function rows(result: ToolCall['result']): number | null {
+  if (!result) return null;
+  if (result.rows_complete !== false && Array.isArray(result.rows)) return result.rows.length;
+  return result.row_count ?? null;
+}
+
+/**
+ * THE ROWS THEMSELVES, when the record kept them whole.
+ *
+ * Null is not empty: a read that returned nothing has `[]` and a read whose
+ * rows were never kept has null, and the walk draws those as two different
+ * facts. Live they arrive on the tool_result frame; on a reopened thread they
+ * come off `payload.charted`, put back on the call by `restoreFromPosts`.
+ */
+function kept(result: ToolCall['result']): Record<string, unknown>[] | null {
+  if (!result || result.rows_complete === false) return null;
+  return Array.isArray(result.rows) ? result.rows : null;
 }
 
 /**
@@ -125,6 +155,16 @@ export interface Step {
   state: StepState;
   /** How many rows a read brought back. Null for anything that is not a read. */
   rows: number | null;
+  /**
+   * THE ROWS THEMSELVES, where the record kept them (P2.e).
+   *
+   * Null and `[]` are two different facts and the walk draws them as two: a
+   * read that returned nothing brought back an empty list, and a read whose
+   * rows were never kept — over the loop's cap, or a call read back out of a
+   * log that only ever held the summary — has none here while `rows` still
+   * says how many there were.
+   */
+  returned: Record<string, unknown>[] | null;
   /** The call's own clock, from the tool_result frame. Null when unrecorded. */
   ms: number | null;
   meta: ToolMeta | null;
@@ -171,6 +211,7 @@ function stepOf(call: ToolCall, turn: number, index: number | null): Step {
     words: landed || failed ? done : doing,
     state: failed ? 'declined' : landed ? 'landed' : 'running',
     rows: landed && counts(call.tool) ? rows(result) : null,
+    returned: landed && counts(call.tool) ? kept(result) : null,
     // A RESTORED CALL CARRIES A ZERO IT NEVER MEASURED. `restoreFromPosts`
     // rebuilds a call the chat history did not keep and has no clock to put
     // on it, so zero is "not recorded" rather than "instant" — and a read
@@ -243,6 +284,72 @@ export function readsOf(answers: AnswerTurn[]): Read[] {
     for (const step of stepsOf(turn, index)) {
       if (!counts(step.tool)) continue;
       out.push({ ...step, at: turn.at });
+    }
+  });
+  return out;
+}
+
+/* ------------------------------------------------------------------- walk */
+
+/** One answer with the question that caused it, in thread order. */
+export interface Asked {
+  /** The person's own words, or null where the turn had no question in the
+   *  thread — a morning brief, a workflow's answer, a standing question. */
+  question: string | null;
+  turn: AnswerTurn;
+}
+
+/**
+ * EACH GEORGE TURN WITH THE QUESTION IMMEDIATELY BEFORE IT.
+ *
+ * ONE DEFINITION. The page a thread would be names its sections by this
+ * (keeping.ts) and the walk heads its rungs by it; two pairings would let the
+ * page say a section answers one question while the walk says its steps ran
+ * under another.
+ */
+export function asked(turns: GeorgeTurn[]): Asked[] {
+  const out: Asked[] = [];
+  let question: string | null = null;
+  for (const t of turns) {
+    if (t.role === 'user') { question = t.text; continue; }
+    out.push({ question, turn: t });
+    question = null;
+  }
+  return out;
+}
+
+/** One rung of a walked ladder: a step, and the question it was taken under. */
+export interface Rung extends Step {
+  /** The question this step was taken under, as the person asked it. */
+  question: string | null;
+  /** When the answer it belongs to was given. */
+  at: string;
+}
+
+/**
+ * EVERY STEP OF THE THREAD, IN THE ORDER IT RAN (P2.e).
+ *
+ * THE LIST IS WHAT HAPPENED. There is no planner here and nothing is
+ * reconstructed: these are the calls the loop made, read back off the frames
+ * it sent and, on a reopened thread, off `george.tool_calls` and the answer
+ * post's own `charted` rows. Nothing is re-run and nothing is asked
+ * (architecture rule 5) — walking a finished investigation costs no request
+ * at all, which is the whole reason it can be walked.
+ *
+ * EVERY STEP, NOT EVERY READ, and that is the difference from Behind it. A
+ * compose read nothing and a pin read nothing, but both are things he DID,
+ * and an account of an investigation that leaves them out says the workspace
+ * arranged itself. Behind it answers "where did these numbers come from";
+ * this answers "what did he do, and what did he see".
+ *
+ * A DUPLICATE IS STILL NOT A RUNG. `stepsOf` drops it, because the loop
+ * served it out of the turn's own record and nobody did that work.
+ */
+export function walkOf(turns: GeorgeTurn[]): Rung[] {
+  const out: Rung[] = [];
+  asked(turns).forEach(({ question, turn }, index) => {
+    for (const step of stepsOf(turn, index)) {
+      out.push({ ...step, question, at: turn.at });
     }
   });
   return out;
