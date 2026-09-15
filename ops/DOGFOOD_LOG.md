@@ -57,6 +57,49 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-15 — "compare" does nothing
+
+> *"nothing happens when i say compare but clicking the stores works"*
+
+**The tap is fixed** — his word for it, on the live build, and the first
+confirmation that gesture has ever had.
+
+**HALF THE CAUSE IS FIXED AND IT IS NOT ESTABLISHED THAT IT WAS THE HALF THAT
+MATTERED.** The refusal under his figures was STALE: `refusal` was Room-level
+state cleared only when the next replay STARTED, never when a question was
+asked, so one refused move left its sentence under every board after it. His
+two screenshots show the same caveat under two different turns with different
+tokens above them, which on its own makes every later gesture look like it
+failed. Asking a question clears it now (`fb6c4f5`+).
+
+**What is still not known is whether "compare these" itself works.** The path
+is there — `comparisonReplay` resolves the two ids, the store token carries
+the targets, `resolve_store` takes a list — and nobody has watched it run. If
+it is still dead after the stale caveat stops appearing, the next thing to
+read is whether the replay is being REFUSED, and that needs the item below.
+
+**AND THE FIX SHIPPED THIS MORNING MADE THAT HARDER TO SEE.** Reducing a
+leaking refusal to one line was right; the line it reduces to says nothing
+about WHAT was refused, and `why` is a small grey word. Before today the tool
+named the argument. A reduction that removes the diagnosis along with the
+machinery has traded a loud failure for a quiet one, and the honest fix is a
+person's sentence per refusal reason in the definitions — which is a piece of
+work, not a patch, and is why it is written here rather than done badly now.
+
+### 2026-09-15 — a tile explaining itself to the reader
+
+Not reported by the owner; seen in his screenshot and logged because the
+sentence is addressed to the wrong person:
+
+> **Basket value fell too, far less** · Average transaction value · last month
+> · vs previous period · ₱
+> *George composed this from Rockwell, which this read does not carry.*
+
+A block named a subject its read does not carry, and the tile says so where
+the figures should be. That the surface refuses rather than drawing a wrong
+number is right. Saying it in those words, to the owner, is not: it is about
+George's composing and not about his business.
+
 ### 2026-09-15 — the Page view does not say what it is for
 
 > *"this is page i dont really know what its supposed to do"*
@@ -84,6 +127,28 @@ once changes the next answer. That is the card's own done-when.
 ---
 
 ## Fixed
+
+### 2026-09-15 — the memory stopped after four and said nothing about the rest
+
+### 2026-09-15 — the memory stops after four and says nothing about the rest
+
+> *"am i supposed to be able to scroll this memory"*
+
+**No.** It is a defect, shipped this morning in P2.f. `.r-tile` is
+`max-height: 560px; overflow: hidden` and `.r-tile > *` pins every direct
+child to `flex: 0 0 auto`, so the register of views is silently cut — six
+held, four drawn, no scrollbar and no line saying so. The card's own words are
+*"every view he holds"* and *"a memory you cannot see all of is not a memory
+you can check"*, and the screen contradicts both.
+
+**Fixed.** The list scrolls inside the tile now — which is what `.r-scroll`
+has always done for a long table — and **the label says how many there are**,
+so a list that scrolls is not a list that ends. The count is the read's own
+(`meta.held`, which counts every view he holds and can exceed the rows the
+read returns), falling back to the rows where it gave none, and absent
+entirely when there is nothing to count. Five tests, including that six rows
+draw six Forgets rather than the four that fit.
+
 
 ### 2026-09-15 — a tap on a store did nothing but move the widget
 

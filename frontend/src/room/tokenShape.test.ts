@@ -296,3 +296,38 @@ describe('a refusal a person may see', () => {
     expect(refusalForPerson('rank_by is not accepted here', { leaks: [] })!.detail).toBeNull();
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * A REFUSAL BELONGS TO THE GESTURE THAT CAUSED IT (the dogfood log, 2026-09-15)
+ *
+ * It was cleared only when the next replay STARTED, so a refused move left its
+ * sentence under every turn after it. The owner's screenshots show one caveat
+ * under two different boards with different tokens above them — which on its
+ * own makes every later gesture look like it failed, and is most of *"nothing
+ * happens when i say compare"*.
+ *
+ * THIS IS A SOURCE ASSERTION AND THEREFORE THE WEAKER KIND. The room has no
+ * mount harness — `room.dom.test.tsx` renders the Board, not the Room — so
+ * there is nowhere to drive an ask and watch the caveat go. It is written down
+ * as a weaker guarantee rather than left uncovered, and the real check is a
+ * person asking a second question and seeing the line disappear.
+ * ------------------------------------------------------------------------ */
+
+import { readFileSync } from 'node:fs';                     // eslint-disable-line
+import { join } from 'node:path';                           // eslint-disable-line
+
+describe('a refusal does not outlive its gesture', () => {
+  const ROOM = readFileSync(join(__dirname, 'Room.tsx'), 'utf8');
+
+  it('clears it when a question is asked, not only when a replay starts', () => {
+    const ask = ROOM.slice(ROOM.indexOf('const askGeorge = useCallback'));
+    const body = ask.slice(0, ask.indexOf('}, ['));
+    expect(body, 'askGeorge does not clear the refusal').toContain('setRefusal(null)');
+  });
+
+  it('still clears it when the room is cleared, and when a replay begins', () => {
+    // Both were already true and neither may quietly go: clearing the room
+    // and starting a replay are the other two ends of the same gesture.
+    expect(ROOM.split('setRefusal(null)').length - 1).toBeGreaterThanOrEqual(3);
+  });
+});

@@ -196,3 +196,68 @@ describe('holding nothing', () => {
     expect(document.querySelectorAll('.r-belief')).toHaveLength(ROWS.length);
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * EVERY VIEW, OR IT IS NOT A MEMORY YOU CAN CHECK (the dogfood log, 2026-09-15)
+ *
+ * *"am i supposed to be able to scroll this memory"* — he was looking at four
+ * of six. `.r-tile` is max-height 560px with overflow hidden and pins every
+ * direct child to `flex: 0 0 auto`, so the register was cut with no scrollbar
+ * and no line saying so, under a card whose own words are "every view he
+ * holds".
+ * ------------------------------------------------------------------------ */
+
+describe('a memory longer than the tile', () => {
+  const MANY = Array.from({ length: 6 }, (_, i) => ({
+    ...ROWS[0], id: `b${i}`, subject: `Shop ${i}`,
+    claim: `Shop ${i} is doing something worth a sentence about it.`,
+  }));
+
+  function drawMany(meta: Record<string, unknown> = META) {
+    const turn = {
+      role: 'george', text: 'Six things.', thinking: '', at: '2026-09-15T09:00:00Z',
+      toolCalls: [{ seq: 1, tool: 'view_memory', arguments: {},
+                    result: { rows: MANY, meta } }],
+    } as unknown as AnswerTurn;
+    const o = { key: 'mem', kind: 'memory', weight: 'lead', seq: 1,
+                tool: 'view_memory', turn: 0, touched: 0 } as BoardObject;
+    return render(<Board answers={[turn]} board={[o]} local={{}} focused={null}
+                         selection={[]} live={false} retuned={{}} on={acts()} />);
+  }
+
+  it('draws every view it was given, not the ones that happen to fit', () => {
+    drawMany();
+    expect(document.querySelectorAll('.r-belief')).toHaveLength(6);
+    expect(screen.getAllByRole('button', { name: 'Forget' })).toHaveLength(6);
+  });
+
+  it('says how many there are, so a list that scrolls is not a list that ends', () => {
+    drawMany({ ...META, held: 6 });
+    expect(screen.getByText(/6 views/)).toBeTruthy();
+  });
+
+  it('says the count the READ gave, which can exceed the rows it returned', () => {
+    /** self_reader caps the rows at MAX_VIEWS; `held` counts what he holds. */
+    drawMany({ ...META, held: 24 });
+    expect(screen.getByText(/24 views/)).toBeTruthy();
+  });
+
+  it('falls back to the rows when the read named no count', () => {
+    drawMany({ ...META, held: undefined });
+    expect(screen.getByText(/6 views/)).toBeTruthy();
+  });
+
+  it('says nothing about a count when there is nothing to count', () => {
+    const turn = {
+      role: 'george', text: '', thinking: '', at: '2026-09-15T09:00:00Z',
+      toolCalls: [{ seq: 1, tool: 'view_memory', arguments: {},
+                    result: { rows: [], meta: META } }],
+    } as unknown as AnswerTurn;
+    const o = { key: 'mem', kind: 'memory', weight: 'lead', seq: 1,
+                tool: 'view_memory', turn: 0, touched: 0 } as BoardObject;
+    render(<Board answers={[turn]} board={[o]} local={{}} focused={null}
+                  selection={[]} live={false} retuned={{}} on={acts()} />);
+    expect(screen.queryByText(/views/)).toBeNull();
+    expect(screen.getByText(/not holding a view about anything yet/)).toBeTruthy();
+  });
+});

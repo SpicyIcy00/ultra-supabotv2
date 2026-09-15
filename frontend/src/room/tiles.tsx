@@ -665,12 +665,26 @@ export function MemoryTile(p: TileProps) {
   // memory you cannot see all of is not a memory you can check.
   const shown = rowsOf(call);
   const forgotten = new Set(p.local?.forgot ?? []);
+  // The tool's own count where it gave one — it counts every view he holds,
+  // which can be more than the rows it returns (self_reader.MAX_VIEWS).
+  const meta = call?.result?.meta as { held?: unknown } | undefined;
+  const held = typeof meta?.held === 'number' ? meta.held : shown.length;
 
   return (
     <Shell quiet landing={p.landing} delay={p.delay}
            picked={p.focused} onOpen={() => p.on.open(p.o.key)}>
       <p className="r-label">
-        what I think right now{p.earlier ? ' · from earlier' : ''}
+        what I think right now
+        {/* HOW MANY THERE ARE, so a list that scrolls is not a list that ends.
+            *"am i supposed to be able to scroll this memory"* — the tile drew
+            four of six and said nothing about the other two. The count is the
+            read's own (`meta.held` where it gave one, the rows otherwise) and
+            it is a figure, so it wears the read time the source line carries
+            below it (UI rule 6). */}
+        {shown.length > 0 && (
+          <> · {held} {held === 1 ? 'view' : 'views'}</>
+        )}
+        {p.earlier ? ' · from earlier' : ''}
       </p>
       {shown.length === 0 && (
         /* HOLDING NOTHING IS ITS OWN STATE (UI rule 8) and it renders from

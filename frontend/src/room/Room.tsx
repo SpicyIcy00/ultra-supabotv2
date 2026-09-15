@@ -357,6 +357,13 @@ export default function Room() {
     const q = text.trim();
     if (!q) return;
     setDraft('');
+    // A REFUSAL BELONGS TO THE GESTURE THAT CAUSED IT (the dogfood log,
+    // 2026-09-15). It was cleared only when the next replay STARTED, so a
+    // refused move left its sentence under every turn after it — the owner's
+    // screenshots show one caveat sitting under two different boards with
+    // different tokens above it, which on its own makes every later gesture
+    // look like it failed. Asking a question is the end of that gesture.
+    setRefusal(null);
     // IDS, NOT LABELS (P2.c). `asSelection` reads the ids the rows carried —
     // or the ones a completion resolved — and keeps the one dimension that
     // travels, which is `DeskSelection`'s own shape. It used to send

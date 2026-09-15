@@ -1612,7 +1612,18 @@ button.r-mk-name[aria-pressed="true"], .r-mk-cellname[aria-pressed="true"] {
    a Forget beside it. No colour of its own — a view is not an approval, and
    the one colour means "needs you" (UI rule 5); an unconfirmed view takes its
    prominence from the line it is written on, as every caveat does. */
-.r-memory { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 14px; }
+/* EVERY VIEW, OR IT IS NOT A MEMORY YOU CAN CHECK (the dogfood log,
+   2026-09-15). `.r-tile` is max-height 560px with overflow hidden and pins
+   every direct child to `flex: 0 0 auto`, so six held views drew four and cut
+   the rest off with no scrollbar and no line saying so — the card promised
+   "every view he holds" and the screen contradicted it. It scrolls inside the
+   tile now, which is what `.r-scroll` has always done for a long table. */
+.r-memory {
+  list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 14px;
+  overflow-y: auto; min-height: 0; flex: 1 1 auto;
+}
+.r-memory::-webkit-scrollbar { width: 8px; }
+.r-memory::-webkit-scrollbar-thumb { background: var(--edge-strong); border-radius: 4px; }
 .r-belief { display: grid; gap: 5px; justify-items: start; max-width: 62ch; }
 .r-belief-claim { margin: 0; font: 400 13px/1.6 var(--sans); color: var(--ink); }
 .r-belief-stance {
