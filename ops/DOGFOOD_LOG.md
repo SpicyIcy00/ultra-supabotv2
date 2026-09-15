@@ -57,6 +57,48 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-15 — a 680px strip in a 1900px window, and no chart in it
+
+> *"why is still cropped? and why are the charts missing text? it should fill
+> it"*
+
+**TWO HALVES. ONE IS ESTABLISHED, THE OTHER IS NOT, AND THEY ARE WRITTEN APART
+ON PURPOSE.**
+
+**THE WIDTH IS THE RULE WORKING AS WRITTEN, WHICH IS WHY "STILL".** `--measure`
+is set from `data-rest` — **how many objects sit BELOW the lead** — and this
+turn's board has one or two, with **ten more folded into "10 things from
+earlier"**. One or fewer below the lead means **680px**. His window is ~1863px
+wide, so roughly **63% of the screen is black**.
+
+The rule was added 2026-09-14 off his own report, *"at 100% size theres lots of
+empty space on the right and its not centered"*, and it fixed the half it was
+aimed at: a board of two things no longer sits in a column built for six. **It
+did not fix the screen.** A column sized to the board is still a strip when the
+board is small, and he has now reported that shape TWICE. **That is evidence
+the rule is wrong rather than that it misfired**, and it is a design change to
+the one variable every surface in the room reads — the board, the composer, the
+list screens — so it is a card, not a midnight edit.
+
+**THE MISSING CHART IS NOT ESTABLISHED AND IS NOT GUESSED AT HERE.** The block
+in the screenshot is cut off by the bottom of the window with its caveat and
+its title (*"Units sold"*) drawn and the mark below the fold, so the picture
+cannot tell *"the chart is under the composer"* from *"the chart did not
+render"*. Two candidates, both real, neither confirmed:
+
+* a read past `MAX_ROWS_TO_CLIENT` (120) arrives with **no rows at all** — all
+  of them or none — and a block over no rows draws `Missing`, which is the
+  sentence already Open above as *"a tile explaining itself to the reader"*.
+  The visible caveat says **74 compared rows**, under the cap, but that is the
+  compared count and not necessarily the read's;
+* or nothing is wrong and it is simply below the fold.
+
+**WHAT WOULD SETTLE IT IN ONE LOOK:** scroll that same answer down, and if a
+chart is there the second half of this entry closes. If instead there is a grey
+line reading *"George composed this from rows, which this read does not
+carry"*, it is the first candidate and it is a different fix.
+
+
 ### 2026-09-15 — "analyze tradsnax per store" answered with one chart
 
 > *"the way it answered 'analyze tradsanx per store' in the first place is
