@@ -117,9 +117,11 @@ which on the dark theme is `--bloom: 0.62` — the loudest thing on the screen.
 The complaint came back at the layer that was left alone, which is the honest
 reading of it.
 
-**Not yet fixed.** The fix is to stop the shell carrying identity at all and
-let the tile be a tile, which is the same move P1.e made inside the mark; it is
-bigger than an hour and touches every tile, so it becomes a card ahead of P2.d.
+**Not yet fixed. It is now a card: `P2.l`, ahead of P2.d**, in NOW.md §3 and on
+the plan page. It is bigger than an hour and touches every tile, which is the
+log's own rule for when an item becomes a card rather than a next-session fix.
+The other item above stays here, because removing a fallback and holding it
+with a test is not.
 
 ---
 
