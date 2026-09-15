@@ -224,17 +224,45 @@ def test_the_assertion_text_is_bounded():
 # What the recorded reports can and cannot say
 # ---------------------------------------------------------------------------
 
-V2_REPORTS = sorted((ROOT / "verification").glob("*-v2.json"))
+# THE REPORTS THIS RUNS OVER, AND WHY TWO OF THEM ARE IN THE REPOSITORY.
+#
+# `verification/` is gitignored, and rightly: a recorded run carries real rows
+# off the estate, and those do not belong in git. But the rule below — absence
+# of the `scoring` block is how a reader knows a report predates 2026-09-15 —
+# is a rule about the FORMAT, and it has to hold on every machine. Read only
+# from `verification/`, it held on one laptop and nowhere else: in CI the glob
+# is empty, the parametrize collapses to a single "empty parameter set" skip,
+# and the guard that was meant to catch exactly that failed the build instead.
+# Red on `main` from 13795bb (P2.0) until 2026-09-15, because nobody pushed in
+# between.
+#
+# So the rule is held against two FIXTURES the repository carries — one of each
+# kind, synthetic, no business figures in either — and the local reports are
+# scanned as well wherever they exist. CI proves the rule; a developer machine
+# proves it and checks its own records at the same time.
+FIXTURE_REPORTS = sorted((ROOT / "tests" / "evals" / "fixtures").glob("*-v2.json"))
+LOCAL_REPORTS = sorted((ROOT / "verification").glob("*-v2.json"))
+V2_REPORTS = FIXTURE_REPORTS + LOCAL_REPORTS
 
 
-def test_there_are_recorded_v2_reports_to_reason_about():
-    assert V2_REPORTS, "verification/*-v2.json is where the four unre-scorable runs live"
+def test_both_kinds_of_report_are_on_hand_to_reason_about():
+    """
+    The parametrize below is only worth anything if it sees one of each. An
+    empty or one-sided set is the failure this test exists to name — and it
+    must never be a SKIP, because ops/verify_integration.py treats any skip in
+    the pure suite as the suite not having run.
+    """
+    kinds = {"scoring" in json.loads(p.read_text(encoding="utf-8")) for p in FIXTURE_REPORTS}
+    assert kinds == {True, False}, (
+        "tests/evals/fixtures needs one report with a `scoring` block and one "
+        f"without; found {len(FIXTURE_REPORTS)} carrying {kinds or 'nothing'}."
+    )
 
 
 @pytest.mark.parametrize("path", V2_REPORTS, ids=lambda p: p.name)
 def test_a_report_written_before_the_fix_is_identifiable_by_its_own_content(path):
     """
-    The four that exist cannot be re-scored — the outcome was never written
+    The four recorded runs cannot be re-scored — the outcome was never written
     down — so the only honest thing is that they SAY SO. Absence of the
     top-level `scoring` block is the marker, and `tests/evals/corpus.py` prints
     the sentence when it reads one.
@@ -245,9 +273,36 @@ def test_a_report_written_before_the_fix_is_identifiable_by_its_own_content(path
     if "scoring" in report:
         assert report["scoring"]["since"] == harness.SCORING_SINCE
         assert set(report["scoring"]) >= {"passed", "failed", "unscored", "scenarios"}
+        # Three-valued, and the block agrees with the cases it counts.
+        outcomes = [case.get("passed") for case in report["cases"]]
+        assert set(outcomes) <= {True, False, None}
+        assert report["scoring"]["scenarios"] == len(report["cases"])
+        assert report["scoring"]["passed"] == outcomes.count(True)
+        assert len(report["scoring"]["failed"]) == outcomes.count(False)
+        assert len(report["scoring"]["unscored"]) == outcomes.count(None)
+        # A failed scenario carries the assertion; a passed one carries none.
+        for case in report["cases"]:
+            if case.get("passed") is False:
+                assert case.get("failure"), f"{case['scenario']} failed and says nothing"
+            else:
+                assert case.get("failure") is None
         return
     # Predates 2026-09-15: every `passed` is the hardcoded False.
     assert all(case.get("passed") is False for case in report["cases"])
+
+
+def test_the_marker_is_the_absence_and_nothing_else():
+    """
+    A reader decides by ONE fact. Not by the date on the file, not by its name,
+    not by whether its `passed` values look plausible — by whether the block is
+    there. `tests/evals/corpus.py` reads it the same way, and this holds the two
+    readings equal.
+    """
+    from tests.evals import corpus
+
+    for path in FIXTURE_REPORTS:
+        report = json.loads(path.read_text(encoding="utf-8"))
+        assert bool(corpus.scoring(str(path))) is ("scoring" in report)
 
 
 # ---------------------------------------------------------------------------

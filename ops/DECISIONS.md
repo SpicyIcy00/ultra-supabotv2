@@ -9,6 +9,26 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-15 — a green suite on one laptop is not a green suite
+
+P2.0's `test_there_are_recorded_v2_reports_to_reason_about` asserted that
+`verification/*-v2.json` exists. That directory is **gitignored** — correctly; a
+recorded run carries real rows off the estate — so in CI the glob is empty, the
+parametrized scan collapses to one "empty parameter set" SKIP, and the guard
+written to catch exactly that failed the build. Red on `main` from `13795bb`
+until today, and only visible because this was the next push. Reproduced in a
+clone of HEAD (1 failed, 1 skipped), fixed, re-run there green.
+
+The rule is about the FORMAT, so it is now held against **two fixtures the
+repository carries**, one of each kind, synthetic — and the local reports are
+scanned as well where they exist. **A skip could not be the answer**:
+`ops/verify_integration.py` counts any skip in the pure suite as the suite not
+having run, so a skip fails just as loudly and says less.
+
+**What this costs: the pure count differs by machine** — 1,700 in CI, 1,704
+where the four runs live. Quote the CI one. P2.a's first close-out said 1,701,
+which was true nowhere else.
+
 ## 2026-09-15 — P2.a: keeping a thread is one write, through the service George uses
 
 `POST /george/pages` grew `analyses` and lost its own create path: BOTH cases now go

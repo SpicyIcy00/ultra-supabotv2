@@ -1,0 +1,20 @@
+{
+ "spend": {
+  "usd": 0.0,
+  "note": "a fixture; no model was called"
+ },
+ "cases": [
+  {
+   "scenario": "gate_how",
+   "test": "tests/evals/test_voice_evals_v2.py::test_gate_how",
+   "passed": false,
+   "findings": {}
+  },
+  {
+   "scenario": "gate_why",
+   "test": "tests/evals/test_voice_evals_v2.py::test_gate_why",
+   "passed": false,
+   "findings": {}
+  }
+ ]
+}

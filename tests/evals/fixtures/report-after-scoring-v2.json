@@ -1,0 +1,42 @@
+{
+ "spend": {
+  "usd": 0.0,
+  "note": "a fixture; no model was called"
+ },
+ "scoring": {
+  "recorded": "end_of_turn",
+  "since": "2026-09-15",
+  "note": "`passed` is this scenario's outcome AFTER its assertions ran, and `failure` is the assertion that failed. `null` means the run ended before the scenario was scored. A report with no top-level `scoring` key was written before 2026-09-15: every `passed` in it was written before the first assertion ran and never revised, so it says nothing about whether the run passed and cannot be re-scored.",
+  "scenarios": 3,
+  "passed": 1,
+  "failed": [
+   "gate_why"
+  ],
+  "unscored": [
+   "gate_order"
+  ]
+ },
+ "cases": [
+  {
+   "scenario": "gate_how",
+   "test": "tests/evals/test_voice_evals_v2.py::test_gate_how",
+   "passed": true,
+   "failure": null,
+   "findings": {}
+  },
+  {
+   "scenario": "gate_why",
+   "test": "tests/evals/test_voice_evals_v2.py::test_gate_why",
+   "passed": false,
+   "failure": "AssertionError: figures no tool returned: ['801'] assert not ['801']",
+   "findings": {}
+  },
+  {
+   "scenario": "gate_order",
+   "test": "tests/evals/test_voice_evals_v2.py::test_gate_order",
+   "passed": null,
+   "failure": null,
+   "findings": {}
+  }
+ ]
+}
