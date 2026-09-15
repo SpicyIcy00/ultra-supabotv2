@@ -57,7 +57,71 @@ on compose frame" does.
 
 ## Open
 
-**Nothing.**
+### 2026-09-15 · a claim about Greenhills over Rockwell's number
+
+Found while answering the colour report below, in the same screenshot, and it
+is not what he asked about — it is worse than what he asked about.
+
+One tile reads **"Greenhills turned down on a smaller basket"**, and under it:
+**₱206,800**, a **green ▲+1.5%**, and a dumbbell row labelled **Rockwell**. The
+lead tile on the same screen says Greenhills did ₱278,266 and Rockwell did
+₱206,800. So the claim names one shop and every figure under it belongs to
+another, with the other shop's name printed inside the tile.
+
+**The code path that does this is `marks.tsx` `Figure`, line 70:** it looks for
+the row matching the block's `subject` and falls back to **`?? rows[0]`** when
+it finds none. So a block whose subject the read does not hold silently draws
+the FIRST row of that read and captions it with George's claim. The `Missing`
+component on the next line is unreachable whenever the read returned anything
+at all.
+
+**This is the one thing the whole system exists to prevent** — a figure under a
+claim that is not about it (CLAUDE.md rule 9). What it is NOT: George inventing
+a number. ₱206,800 is real and was read; it is attached to the wrong sentence.
+Whether he composed a Greenhills block over a Rockwell-scoped read, or wrote a
+Greenhills claim onto a Rockwell block, is not decidable from the screenshot —
+the fallback hides which, and removing the fallback is what makes it visible.
+
+**Not yet fixed, and not yet reproduced from the record.** The next session
+takes it: draw nothing rather than the wrong row, and hold it with a test over
+the recorded runs.
+
+### 2026-09-15 · what do the colors mean now?
+
+> what do the colors mean now? does this make sense?
+
+Asked with a screenshot of the live build (`51af583`), dark theme: the lead
+dumbbell washed amber, a blue tile, two more amber tiles, one teal, pink and
+green marks inside them.
+
+**It does not make sense, and the answer is that colour means four things at
+once.** Read off the code rather than the picture:
+
+| what you see | what it means | where it is decided |
+|---|---|---|
+| the tile's background hue | WHICH shop or kind it is about | `identity.ts` — seven shops named by hand |
+| how brightly that wash burns | HOW HARD it moved — magnitude, **no direction** | `--i`, \|change\| capped at 30% |
+| a dot or a bar's colour | WHICH WAY it moved | `--up` / `--down` / `--flat` |
+| the pill | which way, with a sign | same three |
+
+**And three of the seven shop hues sit on top of the three semantic colours:**
+OPUS is amber (`222,138,11`) and so is George's own mark and the reserved
+approvals accent (`#D2691E`); Magnolia is rose (`224,68,102`) and `--down` on
+dark is pink (`255,92,138`); Greenhills is green and `--up` is green.
+`identity.ts` names the Greenhills collision in its own docstring and says the
+pill handles it — the pill is twelve pixels and the wash is the whole tile.
+
+**This is his seven-shops-seven-hues report from P1.e, one layer out.** That
+card took identity colour out of the MARKS and left it on the tile SHELL,
+which on the dark theme is `--bloom: 0.62` — the loudest thing on the screen.
+The complaint came back at the layer that was left alone, which is the honest
+reading of it.
+
+**Not yet fixed.** The fix is to stop the shell carrying identity at all and
+let the tile be a tile, which is the same move P1.e made inside the mark; it is
+bigger than an hour and touches every tile, so it becomes a card ahead of P2.d.
+
+---
 
 ---
 
