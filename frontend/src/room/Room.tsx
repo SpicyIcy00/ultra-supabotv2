@@ -889,7 +889,7 @@ export default function Room() {
         // pages are the caller's own, so one naming a subject can complete.
         // No new read on this path and no model on it either.
         tokens={tokens}
-        subjects={boardSubjects}
+        drawn={boardSubjects}
         pages={ownPages}
         onUnpick={(subject) => setSelection(
           (held) => toggleSubject(held, subject, maxSubjects(desk.data)))}

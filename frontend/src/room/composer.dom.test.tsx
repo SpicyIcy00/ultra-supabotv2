@@ -238,6 +238,34 @@ describe('what is held above the line', () => {
     expect(onUnpick).toHaveBeenCalledWith(opus);
   });
 
+  /**
+   * THE DEFECT THAT BROKE THE BUILD, held so it cannot come back.
+   *
+   * P2.d added a SECOND `subjects` to ComposerProps — `subjects?: string[]`,
+   * the board's own words for the grey completion — beside the
+   * `subjects: Subject[]` that carries what the person picked. TypeScript
+   * refused the interface and Railway refused the deploy, but the worse half
+   * was what it did when it ran: Room.tsx passed the attribute twice, the
+   * later one won, and the picked subjects never reached the composer at all.
+   * Every chip above the line would have drawn `undefined ×`.
+   *
+   * The board's words are `drawn` now. These two hold the pair apart: the
+   * chips are what was PICKED, and a board word never becomes one.
+   */
+  it('draws what was picked, not what the board happens to be showing', () => {
+    mount({ subjects: [opus], drawn: ['Greenhills', 'Rockwell'] });
+    expect(screen.getByText('OPUS ×')).toBeTruthy();
+    const chips = Array.from(document.querySelectorAll('.r-chips button'))
+      .map((c) => c.textContent ?? '');
+    expect(chips.join(' ')).not.toMatch(/undefined/);
+    expect(chips.some((c) => c.includes('Greenhills'))).toBe(false);
+  });
+
+  it('holds nothing above the line when only the board has names', () => {
+    mount({ subjects: [], drawn: ['Greenhills', 'Rockwell'] });
+    expect(document.querySelector('.r-chips')).toBeNull();
+  });
+
   it('names no figure anywhere in the chips', () => {
     mount({ subjects: [opus], scope: { id: 'p', title: 'A page' }, named: [] });
     const chips = document.querySelectorAll('.r-chips button');

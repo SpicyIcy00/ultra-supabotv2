@@ -56,12 +56,19 @@ export interface ComposerProps {
    *
    * Handed down rather than read here: they are what is on the screen, and the
    * screen is the Room's. `tokens` is the scope the work is on — a completion
-   * built from one is a REPLAY, about a second, no model turn — and `subjects`
+   * built from one is a REPLAY, about a second, no model turn — and `drawn`
    * is what the board is drawing. `pages` is the caller's own, so a page that
    * names one of those subjects can complete too.
+   *
+   * IT IS `drawn`, NOT `subjects`, AND THAT IS THE WHOLE OF A DEFECT (P2.e,
+   * 2026-09-15). P2.d added this as a second `subjects`, so the interface
+   * declared the name twice and Room.tsx passed the attribute twice — the
+   * later one won, the picked subjects never reached the composer, and the
+   * chips above the line drew `undefined` for every one of them. Two things
+   * are two names: what the person PICKED and what the board is DRAWING.
    */
   tokens?: DrawnToken[];
-  subjects?: string[];
+  drawn?: string[];
   pages?: { id: string; title: string }[];
 }
 
@@ -121,10 +128,15 @@ export function Composer(p: ComposerProps) {
     () => (asking ? null : ghostFor({
       draft: p.draft,
       tokens: p.tokens ?? [],
-      subjects: p.subjects.map((s) => s.label).concat(p.named.map((n) => n.label)),
+      // Every name on the screen: what the board drew, what was picked off
+      // it, and what was named and bound nothing. All three are in front of
+      // the person, which is what makes a completion from them free.
+      subjects: (p.drawn ?? [])
+        .concat(p.subjects.map((s) => s.label))
+        .concat(p.named.map((n) => n.label)),
       pages: p.pages ?? [],
     })),
-    [asking, p.draft, p.tokens, p.subjects, p.named, p.pages],
+    [asking, p.draft, p.tokens, p.drawn, p.subjects, p.named, p.pages],
   );
 
   const takeGhost = useCallback((g: Ghost) => {
