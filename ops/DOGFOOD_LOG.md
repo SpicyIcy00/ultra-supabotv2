@@ -167,6 +167,28 @@ once changes the next answer. That is the card's own done-when.
 
 ## Fixed
 
+### 2026-09-15 — a warehouse in the @ menu with nothing saying it was one
+
+> *"what can you @?"*
+
+A question rather than a report, and answering it honestly meant listing what
+the menu actually draws — which is how this was found. **`@AJI` offers both
+warehouses together and drew them as `AJI BARN · warehouse` and then `AJI CMG`
+with nothing beside it.** A bare name in a list of seven shops reads as an
+eighth shop.
+
+**Introduced the same evening, by the fix above this one.** The service decided
+the word by comparing the group's NAME against the string `"warehouse"`, and
+AJI CMG lives in a group called `vending_stock_location`. Adding that group to
+the menu without noticing the comparison is what put an unlabelled warehouse in
+front of him.
+
+**Fixed: the word is a definition, per group.** `kinds.store.groups` is a map
+now — each group to the word drawn beside a name, or nothing. Both warehouses
+say warehouse, which is his word, twice; a shop says nothing, because a shop is
+what the list is mostly made of.
+
+
 ### 2026-09-15 — the switch was a list of two different kinds of thing
 
 > *"vending can be different but barn and cmg are warehouses so they should be

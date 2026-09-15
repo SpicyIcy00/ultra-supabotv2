@@ -185,6 +185,17 @@ def test_a_warehouse_folded_in_is_still_reachable_by_name():
         found = [c["label"] for c in mentions_service.stores(name, DEFS, 8)]
         assert name in found, f"@{name} completes to nothing"
 
+    # AND A WAREHOUSE SAYS IT IS ONE. `@AJI` offers both of them together, and
+    # the menu drew "AJI BARN · warehouse" then "AJI CMG" with nothing beside
+    # it, because the service compared the group's NAME against "warehouse"
+    # and AJI CMG lives in a group with a longer one. A bare name in a list of
+    # seven shops reads as an eighth shop.
+    hints = {c["label"]: c.get("hint") for c in mentions_service.stores("AJI", DEFS, 8)}
+    assert hints["AJI BARN"] == "warehouse"
+    assert hints["AJI CMG"] == "warehouse"
+    shops = {c["label"]: c.get("hint") for c in mentions_service.stores("Rockwell", DEFS, 8)}
+    assert shops["Rockwell"] is None, "a shop needs no word; it is what the list is made of"
+
 
 def test_a_warehouse_is_never_filed_as_retail():
     """

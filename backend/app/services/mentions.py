@@ -56,7 +56,7 @@ from tools._common import load_defs, req  # noqa: E402
 from tools.products import get_product  # noqa: E402
 from tools.purchasing import get_purchasing  # noqa: E402
 
-def _store_groups(defs: Mapping[str, Any]) -> tuple[str, ...]:
+def _store_groups(defs: Mapping[str, Any]) -> dict[str, Any]:
     """
     The groups of the estate a person can mean by name, from the definitions.
 
@@ -71,7 +71,7 @@ def _store_groups(defs: Mapping[str, Any]) -> tuple[str, ...]:
     reach. See `surface.desk.selection.mentions.kinds.store.groups`, which also
     says which groups are deliberately NOT offered and why.
     """
-    return tuple(str(g) for g in req(spec(defs), "kinds.store.groups"))
+    return dict(req(spec(defs), "kinds.store.groups"))
 
 
 def spec(defs: Optional[Mapping[str, Any]] = None) -> Mapping[str, Any]:
@@ -137,7 +137,7 @@ def _take(rows: list[tuple[int, dict]], cap: int) -> list[dict]:
 def stores(query: str, defs: Mapping[str, Any], cap: int) -> list[dict]:
     """The estate, by name, from the store list and nowhere else."""
     found: list[tuple[int, dict]] = []
-    for group in _store_groups(defs):
+    for group, says in _store_groups(defs).items():
         for entry in req(defs, f"stores.{group}") or []:
             if not isinstance(entry, Mapping):
                 continue
@@ -147,7 +147,12 @@ def stores(query: str, defs: Mapping[str, Any], cap: int) -> list[dict]:
                 continue
             found.append((at, _candidate(
                 "store", str(entry["id"]), label,
-                "warehouse" if group == "warehouse" else None, defs)))
+                # THE WORD BESIDE THE NAME, from the definitions rather than
+                # from a comparison against one group's name. AJI CMG is a
+                # warehouse in a group called `vending_stock_location`, so
+                # `group == "warehouse"` drew it as a bare name among seven
+                # shops — which reads as an eighth shop.
+                str(says) if says else None, defs)))
     return _take(found, cap)
 
 

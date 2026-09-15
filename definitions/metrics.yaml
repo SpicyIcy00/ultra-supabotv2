@@ -6533,7 +6533,21 @@ surface:
             # closed shop resolves for a HISTORICAL question through the
             # tools, and offering it in a completion invites a current-state
             # question about a place that no longer trades.
-            groups: [active_retail, warehouse, vending_stock_location]
+            #
+            # A MAP, NOT A LIST, SINCE 2026-09-15 — and the second half of it
+            # is the word drawn beside the name. `@AJI` offers AJI BARN and
+            # AJI CMG together, and the menu said "AJI BARN · warehouse" and
+            # then "AJI CMG" with nothing at all, because the service asked
+            # `group == "warehouse"` and AJI CMG is in a group with a longer
+            # name. A bare name in a list of shops reads as a shop.
+            #
+            # The owner, twice in one evening: *"aji barn and aji cmg are our
+            # warehouses"*. So both say warehouse, and a shop says nothing
+            # because a shop is what the list is mostly made of.
+            groups:
+              active_retail: null
+              warehouse: warehouse
+              vending_stock_location: warehouse
           product:
             from: tools/products.py get_product(name=)
             reads: catalog
