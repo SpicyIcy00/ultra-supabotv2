@@ -320,7 +320,8 @@ describe('the picture points, so the sentence does not have to', () => {
     const { container } = draw([object('table', { emphasise: 'OPUS' })]);
     const rows = [...container.querySelectorAll('tbody tr')] as HTMLElement[];
     const lit = rows.filter((r) => r.style.opacity === '1');
-    const cooled = rows.filter((r) => r.style.opacity === '0.5');
+    // 0.5 until 2026-09-15 — "all stores still matter not full focus on one".
+    const cooled = rows.filter((r) => r.style.opacity === '0.75');
     expect(lit).toHaveLength(1);
     expect(cooled).toHaveLength(1);
     expect(lit[0].textContent).toMatch(/OPUS/);
@@ -378,8 +379,20 @@ describe('a bar chart names its bars', () => {
     const { container } = draw([object('chart', { form: 'bar', emphasise: 'OPUS' })]);
     const rows = [...container.querySelectorAll('.r-mk-ranked .r-mk-row')] as HTMLElement[];
     expect(rows.map((r) => r.getAttribute('data-lit'))).toEqual(['no', 'yes']);
-    expect(rows[0].style.opacity).toBe('0.5');
+    expect(rows[0].style.opacity).toBe('0.75');
     expect(rows[1].style.opacity).toBe('1');
+  });
+
+  it('still draws the way a cooled row moved, because a tool measured it', () => {
+    // The report this rule came from, held as a drawing: the row he did NOT
+    // point at is quieter and still wears its own direction. Both shops in the
+    // fixture rose, so both bars are the up colour whichever one is emphasised
+    // — the failure it catches is the cooled bar going flat.
+    const { container } = draw([object('chart', { form: 'bar', emphasise: 'OPUS' })]);
+    const fills = [...container.querySelectorAll('.r-mk-ranked .r-mk-bar i')]
+      .map((i) => (i as HTMLElement).style.background);
+    expect(fills[0]).toBe('rgb(var(--up))');
+    expect(fills[1]).toBe('rgb(var(--up))');
   });
 });
 

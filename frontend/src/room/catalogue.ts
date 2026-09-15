@@ -239,11 +239,25 @@ export type DataColour = (typeof DATA_COLOURS)[number];
  * with no direction is `flat`; the emphasised one is `george`.
  */
 export function colourOf(change: Change | null, lit: boolean): DataColour {
-  if (!lit) return 'flat';
+  // A ROW KEEPS THE DIRECTION ITS OWN TOOL MEASURED, LIT OR NOT (2026-09-15).
+  //
+  // It used to return `flat` for every row but the emphasised one — his
+  // report, of the board P2.l put live an hour before: *"why are the other
+  // names not highlighted? the other charts not colored? ... all stores still
+  // matter not full focus on one"*. Six shops whose fall was in the same read
+  // that coloured OPUS were drawn in the colour of no direction, and a reader
+  // could not tell "fell, but not the point" from "did not move".
+  //
+  // Emphasis is WEIGHT now and nothing else (`COOL` in marks.tsx): the row he
+  // named is fully lit, the rest are quieter and keep their colour. `lit` is
+  // still read, for one case only — a row with no direction at all. There,
+  // being the one he pointed at is the only thing to say about it, and that is
+  // his own mark; a row nobody pointed at that declared nothing is flat,
+  // because flat is the colour of exactly that.
   if (change && change.pct !== null && change.direction && change.direction !== 'flat') {
     return change.direction;
   }
-  return 'george';
+  return lit ? 'george' : 'flat';
 }
 
 /** The change a row declares, for `colourOf`. Null where it declares none. */

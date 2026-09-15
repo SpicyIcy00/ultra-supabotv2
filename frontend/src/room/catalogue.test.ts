@@ -210,8 +210,24 @@ describe('colour is direction', () => {
     expect(colourOf({ pct: null, direction: null }, true)).toBe('george');
   });
 
-  it('cools every row nobody pointed at, whichever way it moved', () => {
-    expect(colourOf({ pct: 30.6, direction: 'up' }, false)).toBe('flat');
+  it('keeps a row\'s own direction when nobody pointed at it', () => {
+    // HIS REPORT, 2026-09-15, of the board with no tile wash left on it:
+    // "why are the other names not highlighted? the other charts not colored?
+    // ... all stores still matter not full focus on one". This line used to
+    // return `flat` for every row but one, so six shops whose fall was in the
+    // same read that coloured OPUS were drawn as shops that had not moved.
+    // Emphasis is weight now; colour is what the tool measured, for every row.
+    expect(colourOf({ pct: 30.6, direction: 'up' }, false)).toBe('up');
+    expect(colourOf({ pct: -7.6, direction: 'down' }, false)).toBe('down');
+  });
+
+  it('draws a row that declared no direction as flat, unless it is the one he named', () => {
+    // The one thing `lit` still decides. A row with nothing measured about its
+    // movement has only one thing to say — whether he pointed at it — and his
+    // mark is what says that; a row nobody pointed at that declared nothing is
+    // flat, which is the colour of exactly that.
     expect(colourOf(null, false)).toBe('flat');
+    expect(colourOf({ pct: null, direction: null }, false)).toBe('flat');
+    expect(colourOf(null, true)).toBe('george');
   });
 });

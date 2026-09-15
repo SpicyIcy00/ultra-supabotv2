@@ -57,8 +57,17 @@ function paint(c: DataColour): string {
   return `rgb(var(--${c}))`;
 }
 
-/** How brightly a cooled row sits. A row nobody pointed at is still readable. */
-const COOL = 0.5;
+/**
+ * How brightly a cooled row sits.
+ *
+ * 0.5 until 2026-09-15, when he looked at a board with no tile wash on it and
+ * said *"all stores still matter not full focus on one"*. Half opacity on top
+ * of a grey name and a flat bar was three dimmings stacked, and six shops that
+ * moved read as six shops that did not. The row he named is still the loudest
+ * thing in the mark — it is fully lit, bold, and in the primary ink — but the
+ * others are now quieter rather than faint, and they keep their own colour.
+ */
+const COOL = 0.75;
 
 /* ------------------------------------------------------------------ figure */
 
