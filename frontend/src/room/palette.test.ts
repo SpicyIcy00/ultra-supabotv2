@@ -102,12 +102,27 @@ describe('the data palette', () => {
 
   it('lets identity nowhere near a drawing, and nowhere but an opened object', () => {
     // `--hue` had two homes: the tile SHELL, and the panel under an opened
-    // object. P2.l took the first away, so one use is left in this file and it
-    // is the second — the wrapper that hands an opened object its own colour.
-    // A second would mean a hue had got back onto a tile or into a mark.
+    // object. P2.l took the first away, so every use left in this file is the
+    // second kind — a wrapper handing an opened object its own colour. One
+    // anywhere else would mean a hue had got back onto a tile or into a mark.
+    //
+    // COUNTED AGAINST THE PANELS, not against 1 (P2.d, 2026-09-15). There are
+    // two openings now: the tile's own subject, and the row an offer opened,
+    // which are different subjects and must not be drawn as each other. The
+    // rule was never "one hue in the file" — it was "a hue only where an
+    // object is opened" — so that is what is asserted, and a hue with no
+    // ObjectPanel after it still fails.
     expect(tokens(MARKS).filter((t) => t === 'hue')).toHaveLength(0);
-    expect(MARKS.match(/'--hue'/g) ?? []).toHaveLength(1);
-    expect(MARKS).toMatch(/'--hue': hueFor\(label, dimension, kindOfRead\(p\.o\.tool\)\)[\s\S]{0,160}<ObjectPanel/);
+    const hues = MARKS.match(/'--hue'/g) ?? [];
+    const panels = MARKS.match(/<ObjectPanel/g) ?? [];
+    expect(hues.length, 'a --hue that opens no object').toBe(panels.length);
+    expect(hues.length).toBeGreaterThan(0);
+    for (const m of MARKS.matchAll(/'--hue': (.*)/g)) {
+      expect(m[1], 'a hue not from hueFor').toMatch(/^hueFor\(/);
+    }
+    // And every one of them is the wrapper immediately above a panel.
+    expect(MARKS.match(/'--hue': hueFor\([\s\S]{0,200}?<ObjectPanel/g) ?? [])
+      .toHaveLength(panels.length);
   });
 
   it('is the only thing the mark stylesheet paints with either', () => {

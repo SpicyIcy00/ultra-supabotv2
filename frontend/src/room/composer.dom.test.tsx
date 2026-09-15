@@ -246,3 +246,74 @@ describe('what is held above the line', () => {
     }
   });
 });
+
+/**
+ * GREY TEXT THAT FINISHES THE QUESTION (P2.d), through the component nobody
+ * can see it in otherwise.
+ *
+ * The pure half is `ghosts.test.ts`. This is the wiring: that the completion
+ * is drawn, that TAB takes it and ENTER does not, and that it gets out of the
+ * way of the `@` menu — two completions on one line, both bound to Tab, is one
+ * too many.
+ */
+describe('the grey completion', () => {
+  const TOKENS = [{
+    argument: 'date_range', kind: 'navigation' as const, label: 'window',
+    value: 'last_week', valueLabel: 'last week',
+    alternatives: [
+      { value: 'last_week', label: 'last week', spellings: ['last week'] },
+      { value: 'last_month', label: 'last month', spellings: ['last month'] },
+    ],
+    targets: [{ post: 'p1', turn: 0, seq: 1, tool: 'get_sales' }],
+  }];
+
+  it('finishes what is typed, in grey, with what it costs', () => {
+    const { line, view } = mount({ tokens: TOKENS, subjects: [] });
+    type(line, 'last mo');
+    expect(view.container.querySelector('.r-ghost-rest')?.textContent).toBe('nth');
+    expect(view.container.querySelector('.r-ghost-key')?.textContent).toContain('tab');
+    expect(view.container.querySelector('.r-ghost-key')?.textContent).toContain('~1s');
+  });
+
+  it('repeats the typed half transparently, so the grey starts at the caret', () => {
+    const { line, view } = mount({ tokens: TOKENS });
+    type(line, 'last mo');
+    expect(view.container.querySelector('.r-ghost-typed')?.textContent).toBe('last mo');
+  });
+
+  it('is taken by Tab', () => {
+    const { line, onDraft } = mount({ tokens: TOKENS });
+    type(line, 'last mo');
+    fireEvent.keyDown(line, { key: 'Tab' });
+    expect(onDraft).toHaveBeenLastCalledWith('last month');
+  });
+
+  it('is NOT taken by Enter — Enter sends what was actually typed', () => {
+    const { line, onDraft, onSend } = mount({ tokens: TOKENS });
+    type(line, 'last mo');
+    onDraft.mockClear();
+    fireEvent.keyDown(line, { key: 'Enter' });
+    expect(onSend).toHaveBeenCalled();
+    expect(onDraft).not.toHaveBeenCalled();
+  });
+
+  it('costs no request and no model turn to produce', async () => {
+    const { line, read, view } = mount({ tokens: TOKENS });
+    type(line, 'last mo');
+    await waitFor(() => expect(view.container.querySelector('.r-ghost')).not.toBeNull());
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it('gets out of the way of the @ menu, which also answers to Tab', async () => {
+    const { line, view } = mount({ tokens: TOKENS, draft: '@Seik' });
+    type(line, '@Seik');
+    await screen.findAllByRole('option');
+    expect(view.container.querySelector('.r-ghost')).toBeNull();
+  });
+
+  it('draws nothing when the board has nothing to finish with', () => {
+    const { line, view } = mount({ tokens: [], subjects: [], pages: [] });
+    type(line, 'last mo');
+    expect(view.container.querySelector('.r-ghost')).toBeNull();
+  });
+});

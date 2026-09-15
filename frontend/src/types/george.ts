@@ -489,6 +489,31 @@ export interface ReadingFrame {
   next?: string;
 }
 
+/**
+ * WHAT TO DO ABOUT ONE ROW, as the loop validated it (agent/actions.py).
+ *
+ * Every field but `reason` is machine fact; `reason` is George's few words for
+ * WHY this row, held to the annotation rule and carrying no digit. `costs` and
+ * `modelTurn` are DERIVED from the act in metrics.yaml and are never written by
+ * the model — a suggestion cannot advertise a speed this machine does not have.
+ */
+export interface ActionOffer {
+  /** What the surface does when it is tapped. */
+  act: 'why' | 'open' | 'replay' | string;
+  /** The read it is about — where the target was checked and what a replay re-runs. */
+  seq: number;
+  /** The row it sits on, or null for an action about the answer. */
+  target: string | null;
+  /** George's words: why this one. Never a figure. */
+  reason: string;
+  /** "a turn", "~1s", "replay · ~1s" — from the definitions, drawn as found. */
+  costs: string;
+  /** Whether tapping it costs a conversation rather than a second. */
+  modelTurn: boolean;
+  /** For a replay: which scope argument it moves. */
+  argument?: string;
+}
+
 export interface FindingFrame {
   /** The seq of the record_findings call itself. */
   seq: number;
@@ -657,6 +682,14 @@ export type GeorgeTurn =
        * exactly as it drew before this existed.
        */
       reading?: ReadingFrame;
+      /**
+       * WHAT HE OFFERED TO DO ABOUT A ROW, from the newest `actions` frame
+       * (P2.d). A targeted offer is drawn on the row it names, inside the mark
+       * that draws that read; an untargeted one is drawn at the foot beside
+       * `next`. Absent on a turn that offered none, which draws exactly as it
+       * drew before this existed.
+       */
+      actions?: ActionOffer[];
       /**
        * The screen George composed, from the newest `compose` frame. Absent
        * on a turn that never composed — which the workspace draws plainly.

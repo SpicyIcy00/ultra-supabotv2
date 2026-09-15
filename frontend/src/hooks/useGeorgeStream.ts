@@ -46,6 +46,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { authenticatedFetch } from '../services/httpAuth';
 import { retitled, scopeForAsk, scopeForRequest } from '../components/george/pageScope';
 import type {
+  ActionOffer,
   AskHistoryTurn,
   DeskContext,
   DoneFrame,
@@ -569,6 +570,23 @@ export function useGeorgeStream() {
                     ...(typeof frame.caveat === 'string' ? { caveat: frame.caveat } : {}),
                     ...(typeof frame.next === 'string' ? { next: frame.next } : {}),
                   };
+                });
+                break;
+
+              case 'actions':
+                // WHAT TO DO ABOUT A ROW, already validated by the loop.
+                // Replaces rather than accumulates, like the reading: two
+                // rounds of composing in one turn are one turn's worth of
+                // offers, and the second one is George changing his mind.
+                //
+                // `costs` rides the frame because it was DERIVED server-side
+                // from the act (metrics.yaml composition.actions.acts). The
+                // client draws what it is given and works none of it out — a
+                // second derivation here could disagree with the record of
+                // what the person was actually shown.
+                patchLast((t) => {
+                  const frame = data as unknown as { actions?: ActionOffer[] };
+                  t.actions = Array.isArray(frame.actions) ? frame.actions : [];
                 });
                 break;
 

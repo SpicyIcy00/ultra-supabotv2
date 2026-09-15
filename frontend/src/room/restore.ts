@@ -5,7 +5,7 @@
  * `/w2` renderer was deleted: this was the only function in that module the
  * room still used, and everything else it exported is in `room/data.ts`.
  */
-import type { CompositionBlock as Block, GeorgeTurn, ReadingFrame, ToolCall, ToolMeta } from '../types/george';
+import type { ActionOffer, CompositionBlock as Block, GeorgeTurn, ReadingFrame, ToolCall, ToolMeta } from '../types/george';
 import type { Post } from '../types/river';
 
 /** A result an answer post kept, as the loop stores it (`payload.charted`). */
@@ -32,7 +32,7 @@ export function restoreFromPosts(turns: GeorgeTurn[], posts: Post[]): GeorgeTurn
   return turns.map((t) => {
     if (t.role !== 'george' || !t.post?.answer_post_id) return t;
     const payload = byId.get(t.post.answer_post_id)?.payload as
-      { charted?: unknown; reading?: unknown;
+      { charted?: unknown; reading?: unknown; actions?: unknown;
         composition?: { blocks?: unknown; default_blocks?: unknown } }
       | null | undefined;
     if (!payload) return t;
@@ -62,8 +62,15 @@ export function restoreFromPosts(turns: GeorgeTurn[], posts: Post[]): GeorgeTurn
     const said = payload.reading;
     const reading = said && typeof said === 'object' && !Array.isArray(said)
       ? said as ReadingFrame : null;
+    // AND WHAT HE OFFERED TO DO ABOUT A ROW (P2.d). Read back rather than
+    // re-derived: `costs` was worked out from the definitions at the moment
+    // the offer was made, and deriving it again now could disagree with what
+    // the person was actually shown.
+    const offered = Array.isArray(payload.actions)
+      ? payload.actions as ActionOffer[] : null;
     return {
       ...t, toolCalls,
+      actions: offered?.length ? offered : t.actions,
       composition: blocks?.length ? { seq: -1, blocks, rejected: [] } : t.composition,
       defaultComposition: seeded?.length
         ? { seq: -1, blocks: seeded, rejected: [], default: true } : t.defaultComposition,

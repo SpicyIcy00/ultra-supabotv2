@@ -23,7 +23,7 @@ import {
   ownNotices, type TileActions, type TileProps,
 } from './tiles';
 import { MarkBlock } from './marks';
-import type { GeorgeNotice } from '../types/george';
+import type { ActionOffer, GeorgeNotice } from '../types/george';
 
 export interface BoardProps {
   /** Every answer turn, oldest first. An object names its own by index. */
@@ -45,6 +45,15 @@ export interface BoardProps {
    */
   retuned: Record<string, ToolCall>;
   on: TileActions;
+  /**
+   * WHICH OFFERS EACH OBJECT MAY CARRY, keyed by object (P2.d).
+   *
+   * Decided once by `room/actions.placement` and handed down rather than
+   * worked out here, because the FOOT needs the other half of the same
+   * decision — what was left over — and two places deciding it separately is
+   * how an offer ends up drawn twice or nowhere.
+   */
+  offers?: Map<string, ActionOffer[]>;
   /**
    * The index of the first answer the person has not seen (history.ts).
    * Objects touched from there on arrive with the landing glow, so what
@@ -131,6 +140,7 @@ export function Board(p: BoardProps) {
         earlier={o.touched < newest}
         retuned={o.seq === undefined ? null : p.retuned[retunedKey(o.turn, o.seq)] ?? null}
         on={on}
+        offers={p.offers?.get(o.key)}
       />
       {/* WHAT YOU CAN DO TO IT — under every object, whatever shape it is.
           It is quiet until the pointer is on the object or something inside

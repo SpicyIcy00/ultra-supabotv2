@@ -88,3 +88,38 @@ describe('a reopened thread', () => {
     expect(bare.toolCalls[0].result).toBeUndefined();
   });
 });
+
+/**
+ * AND WHAT HE OFFERED TO DO ABOUT A ROW (P2.d).
+ *
+ * Read back rather than re-derived, for one reason: `costs` was worked out
+ * from the definitions at the moment the offer was made. Deriving it again on
+ * reload could disagree with what the person was actually shown — the yaml may
+ * have changed since — and a reopened thread that promises a different speed
+ * from the live one is the divergence the receipts contract exists to prevent.
+ */
+describe('a reopened thread, and the offers on it', () => {
+  const OFFER = {
+    act: 'why', seq: 2, target: 'Magnolia', reason: 'it went the other way',
+    costs: 'a turn', modelTurn: true,
+  };
+
+  it('restores them exactly as they were stored', () => {
+    const [restored] = restoreFromPosts([stored()], [post({ actions: [OFFER] })]);
+    expect((restored as { actions?: unknown[] }).actions).toEqual([OFFER]);
+  });
+
+  it('leaves a turn that offered none exactly as it was', () => {
+    const [restored] = restoreFromPosts([stored()], [post({ charted: [] })]);
+    expect((restored as { actions?: unknown[] }).actions).toBeUndefined();
+  });
+
+  it('keeps the cost the record holds, and does not work one out', () => {
+    // A stored offer whose cost is not what today's definitions would say is
+    // still drawn with the cost it was made with.
+    const stale = { ...OFFER, costs: 'about four seconds' };
+    const [restored] = restoreFromPosts([stored()], [post({ actions: [stale] })]);
+    expect((restored as { actions?: { costs: string }[] }).actions?.[0].costs)
+      .toBe('about four seconds');
+  });
+});

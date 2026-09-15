@@ -19,9 +19,12 @@ import { replaysToRestore, restoreFromPosts } from './restore';
 import { boardContext, buildBoard, dropped, folded, inOrder, shapedByReplay,
          type Local, type BoardObject } from './board';
 import { keepLocal, restoreLocal } from './arrangement';
-import { callOf, type AnswerTurn, type Block } from './data';
+import { callOf, rowsOf, subjectOf, type AnswerTurn, type Block } from './data';
 import { Board, turnNotices } from './render';
 import { Reading, ReadingNext } from './Reading';
+import { FootOffers } from './FootOffers';
+import { offersOf, placement } from './actions';
+import { usePagesForGhosts } from './ghosts';
 import { Earlier } from './Earlier';
 import { readDeskDefinitions, replayStoredCall, type DeskAlternative } from '../services/deskApi';
 import { Tokens } from './Tokens';
@@ -224,6 +227,35 @@ export default function Room() {
     () => turnNotices({ answers, board: drawn, local, focused }),
     [answers, drawn, local, focused],
   );
+  // WHERE EVERY OFFER GOES, DECIDED ONCE (P2.d). Over what is DRAWN, for the
+  // same reason the caveats are: an offer placed on a tile that folded away is
+  // an offer nobody can take, and it belongs at the foot instead.
+  const offers = useMemo(
+    () => placement(offersOf(latest), drawn, answers),
+    [latest, drawn, answers],
+  );
+  // EVERY NAME THE BOARD IS DRAWING, for the grey completion. Off the rows the
+  // objects draw, so a completion is a word the data carried and never one
+  // anybody inferred — the same rule the selection is held to.
+  // THE CALLER'S OWN PAGES, through the door P2.c already opened (`@`). One
+  // cached read of things that exist, no SQL on the path and no model on it;
+  // the ghost uses only the ones whose title NAMES something on the board, so
+  // this is a completion and never a menu of every page.
+  const ownPages = usePagesForGhosts();
+  const boardSubjects = useMemo(() => {
+    const names: string[] = [];
+    const seen = new Set<string>();
+    for (const o of drawn) {
+      const rows = rowsOf(callOf(answers[o.turn], o.seq));
+      for (const name of [o.subject, ...rows.map((r) => subjectOf(r))]) {
+        const said = (name ?? '').trim();
+        if (!said || seen.has(said.toLowerCase())) continue;
+        seen.add(said.toLowerCase());
+        names.push(said);
+      }
+    }
+    return names;
+  }, [drawn, answers]);
   // AN EMPTY ROOM IS THE ONE WITH NOTHING IN IT AT ALL, which is no longer
   // the same question as an empty board: a turn that read nothing and said
   // something — a refusal, an answer off what he already knows — has a
@@ -784,6 +816,7 @@ export default function Room() {
               />
               <Board
                 answers={answers}
+                offers={offers.onRows}
                 board={shapedByReplay(drawn, shapes)}
                 local={local}
                 focused={focused}
@@ -797,6 +830,13 @@ export default function Room() {
                   and it is drawn here rather than up there, because it is read
                   after the evidence: the figures, then what to do about them. */}
               <ReadingNext reading={latest?.reading} />
+              {/* AND WHAT TO DO ABOUT ALL OF IT (P2.d). Only the offers no row
+                  on the board could carry: an offer about one shop is drawn on
+                  that shop, and this is where the ones about the answer go —
+                  beside `next`, because that is where "what now" is read.
+                  Nothing is lost between the two, which is what `placement`
+                  deciding both halves at once buys. */}
+              <FootOffers offers={offers.foot} answers={answers} on={on} />
             </>
             )}
           </>
@@ -843,6 +883,14 @@ export default function Room() {
         named={named}
         defs={desk.data}
         busy={busy}
+        // WHAT THE GREY COMPLETION IS BUILT FROM (P2.d) — all of it already on
+        // screen. The tokens are the scope the work is on, so a completion off
+        // one is a REPLAY; the subjects are what the board is drawing; the
+        // pages are the caller's own, so one naming a subject can complete.
+        // No new read on this path and no model on it either.
+        tokens={tokens}
+        subjects={boardSubjects}
+        pages={ownPages}
         onUnpick={(subject) => setSelection(
           (held) => toggleSubject(held, subject, maxSubjects(desk.data)))}
         onUnscope={() => setScope(null)}

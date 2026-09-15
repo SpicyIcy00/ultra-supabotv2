@@ -382,3 +382,83 @@ describe('a claim over a read that does not hold its subject', () => {
     }
   }
 });
+
+/**
+ * AN OFFER, ON THE ROW IT IS ABOUT (P2.d).
+ *
+ * The pure placement is `actions.test.ts`. This is what a person sees: the
+ * button lands inside the mark, on the row the offer named and on no other,
+ * carrying George's reason and the cost the server derived. And it draws no
+ * colour — an offer is not a direction and not an approval.
+ */
+describe('an offer on its row', () => {
+  const OFFER = {
+    act: 'why', seq: 1, target: 'Magnolia',
+    reason: 'the only shop that went the other way',
+    costs: 'a turn', modelTurn: true,
+  };
+
+  function drawWithOffers(o: Partial<BoardObject>, rows: Record<string, unknown>[],
+                          offers: typeof OFFER[]) {
+    const turn = {
+      role: 'george', text: 'A reading.', thinking: '', at: '2026-09-11T08:00:00Z',
+      toolCalls: [{ seq: 1, tool: 'get_sales', arguments: {}, result: { rows, meta: META } }],
+    } as unknown as AnswerTurn;
+    const object = {
+      key: 'k', kind: 'table', weight: 'supporting', seq: 1, tool: 'get_sales',
+      turn: 0, touched: 0, ...o,
+    } as BoardObject;
+    return render(
+      <Board answers={[turn]} board={[object]} local={{}} focused={null}
+             selection={[]} live={false} retuned={{}} on={on}
+             offers={new Map([['k', offers as never]])} />,
+    );
+  }
+
+  it('draws the act, the reason and the cost, on the row it names', () => {
+    const { container } = drawWithOffers({ kind: 'comparison' }, COMPARED, [OFFER]);
+    const buttons = [...container.querySelectorAll('.r-offer')];
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0].getAttribute('data-target')).toBe('Magnolia');
+    expect(buttons[0].querySelector('.r-offer-act')?.textContent).toBe('why');
+    expect(buttons[0].querySelector('.r-offer-why')?.textContent).toBe(OFFER.reason);
+    expect(buttons[0].querySelector('.r-offer-cost')?.textContent).toBe('a turn');
+    // AND IT IS INSIDE MAGNOLIA'S ROW, not beside the mark. The third row of
+    // COMPARED is Magnolia; nobody else's row carries a button.
+    const rows = [...container.querySelectorAll('.r-mk-dumbbells .r-mk-row')];
+    expect(rows.map((r) => r.querySelectorAll('.r-offer').length)).toEqual([0, 0, 1]);
+  });
+
+  it('lands on a ranked row and on a contributors row the same way', () => {
+    const plain = COMPARED.map(({ store, value }) => ({ store, value }));
+    expect(drawWithOffers({ kind: 'chart', form: 'bar' }, plain, [OFFER]).container
+      .querySelectorAll('.r-mk-ranked .r-mk-row .r-offer')).toHaveLength(1);
+    cleanup();
+    const drivers = COMPARED.map(({ store, change_pct, direction }) =>
+      ({ store, change: change_pct * 100, direction }));
+    expect(drawWithOffers({ kind: 'contributors' }, drivers, [OFFER]).container
+      .querySelectorAll('.r-mk-contributors .r-mk-row .r-offer')).toHaveLength(1);
+  });
+
+  it('asks George when `why` is tapped, about that row and not the block\'s', () => {
+    const { container } = drawWithOffers(
+      { kind: 'comparison', subject: 'OPUS' }, COMPARED, [OFFER]);
+    (container.querySelector('.r-offer') as HTMLButtonElement).click();
+    expect(on.why).toHaveBeenCalledWith('Magnolia', 'store');
+  });
+
+  it('draws no offer where the turn made none, which is most turns', () => {
+    const { container } = draw({ kind: 'comparison' }, COMPARED);
+    expect(container.querySelectorAll('.r-offer')).toHaveLength(0);
+  });
+
+  it('wears no colour: it is not a direction and it is not an approval', () => {
+    // UI rule 5 — one colour means "needs you" — and the four data colours
+    // mean direction. An offer is neither, so nothing on the button is
+    // painted at all.
+    const { container } = drawWithOffers({ kind: 'comparison' }, COMPARED, [OFFER]);
+    const button = container.querySelector('.r-offer') as HTMLElement;
+    expect(button.getAttribute('style')).toBeNull();
+    expect(button.className).toBe('r-offer');
+  });
+});

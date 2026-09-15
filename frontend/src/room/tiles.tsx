@@ -25,6 +25,8 @@ import {
 import { directionRgb } from './identity';
 import type { Region } from './drag';
 import { Spec } from './Spec';
+import { cost, says } from './actions';
+import type { ActionOffer } from '../types/george';
 
 export interface TileActions {
   /** Bring it forward and give it the room. */
@@ -82,6 +84,49 @@ export interface TileProps {
   notices?: GeorgeNotice[];
   /** What the person has picked, so a comparison can mark its own subjects. */
   selection?: string[];
+  /**
+   * WHAT GEORGE OFFERED TO DO ABOUT A ROW OF THIS OBJECT (P2.d).
+   *
+   * Already placed: `room/actions.placement` decided once, for the whole
+   * screen, which offers this object can carry — so a mark filters to the row
+   * and never decides whether it is the right object. Absent means none, which
+   * draws exactly as the board drew before offers existed.
+   */
+  offers?: ActionOffer[];
+}
+
+/**
+ * ONE OFFER, WHERE THE THING IT IS ABOUT IS DRAWN.
+ *
+ * Three parts and no fourth: the act in the surface's own word, George's
+ * reason, and what it costs. The reason is why this is not a menu item — a
+ * button saying "why" beside a row is a control, and a button saying "why —
+ * the only shop that fell while takings rose" is a suggestion you can
+ * disagree with.
+ *
+ * THE COST IS DRAWN AS IT ARRIVED. It was derived server-side from the act
+ * (metrics.yaml composition.actions.acts) and stored on the answer post; this
+ * component works none of it out, so what a reopened thread shows is what the
+ * person was shown. It takes no accent — an offer is not an approval, and the
+ * one colour that means "needs you" is spoken for (UI rule 5).
+ */
+export function Offer({ offer, onTake }: {
+  offer: ActionOffer;
+  onTake(offer: ActionOffer): void;
+}) {
+  return (
+    <button
+      type="button"
+      className="r-offer"
+      data-act={offer.act}
+      data-target={offer.target ?? ''}
+      onClick={(e) => { e.stopPropagation(); onTake(offer); }}
+    >
+      <span className="r-offer-act">{says(offer)}</span>
+      <span className="r-offer-why">{offer.reason}</span>
+      {cost(offer) && <span className="r-offer-cost">{cost(offer)}</span>}
+    </button>
+  );
 }
 
 /* ------------------------------------------------------------------ shell */

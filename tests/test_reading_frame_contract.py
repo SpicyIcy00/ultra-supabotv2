@@ -240,9 +240,15 @@ def test_the_tool_is_offered_and_takes_the_board_and_the_reading():
     assert george_loop.FINDING_TOOL not in george_loop.FINDING_TOOL_FUNCTIONS
     schema = next(t for t in george_loop.build_tool_schemas()
                   if t["name"] == george_loop.COMPOSE_TOOL)
-    assert set(schema["input_schema"]["properties"]) == {"blocks", "reading"}
-    # The reading is optional: a confirmation has nothing to say in three
-    # parts, and requiring it would put an empty slot on every such turn.
+    # THREE STATEMENTS SINCE P2.d, not two: the board, the reading, and what to
+    # do about a row. The set is still CLOSED — this is the assertion that
+    # catches a fourth channel arriving without anybody deciding it should —
+    # and the two that were here are still exactly what they were.
+    assert set(schema["input_schema"]["properties"]) == {"blocks", "reading", "actions"}
+    # Only the board is required. The reading is optional because a
+    # confirmation has nothing to say in three parts, and the actions are
+    # optional because most answers suggest nothing — an offer forced onto
+    # every turn is a suggestion nobody chose to make.
     assert schema["input_schema"]["required"] == ["blocks"]
 
 

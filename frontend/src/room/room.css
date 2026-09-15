@@ -673,6 +673,36 @@
 }
 .r-line input::placeholder { color: var(--ink-3); }
 
+/* GREY TEXT THAT FINISHES THE QUESTION (P2.d, 2026-09-15).
+   The completion is drawn UNDER the input in the same box, with the typed
+   part repeated transparently as a spacer, so the grey continues the line
+   from exactly where the caret is. Both layers carry identical type — any
+   difference in size, weight or spacing shows up as the ghost drifting away
+   from the caret as you type.
+   It takes no accent. A completion is a convenience and not a thing that
+   needs you (UI rule 5), and grey is what "not yet real" already means
+   everywhere else in this room. */
+.r-ghost-box { position: relative; flex: 1; display: flex; }
+.r-ghost {
+  position: absolute; inset: 0;
+  display: flex; align-items: center;
+  font: 400 15px/1.4 var(--sans);
+  white-space: pre;
+  overflow: hidden;
+  pointer-events: none;
+}
+.r-ghost-typed { color: transparent; }
+.r-ghost-rest { color: var(--ink-3); }
+/* WHAT THE KEY IS AND WHAT IT COSTS, at the far end of the line. A person who
+   has never seen a ghost completion does not know Tab takes it, and a person
+   who does still wants to know whether it is a second or a conversation. */
+.r-ghost-key {
+  margin-left: auto; padding-left: 12px;
+  font: 400 10px/1.6 var(--sans);
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-3); white-space: nowrap;
+}
+
 .r-send {
   width: 34px; height: 34px; border-radius: 50%; border: 0;
   background: rgb(var(--george)); color: var(--on-george);
@@ -1381,6 +1411,61 @@ body.r-dragging-on .r-tile { transition: none; }
   white-space: nowrap;
 }
 .r-mk-fig b { font-weight: 500; color: var(--ink); display: block; }
+
+/* AN OFFER, ON THE ROW IT IS ABOUT (P2.d, 2026-09-15).
+   It spans the whole row rather than taking a fourth column: the three
+   columns are name, bar and figure, and squeezing a sentence into any of them
+   would cost the bar its length — which is the one thing on the row that
+   encodes a value.
+   NO ACCENT AND NO DATA COLOUR. The accent means "needs you" and is spoken
+   for (UI rule 5); the four data colours mean direction, and an offer has
+   none. It is chrome, in the chrome's own greys, and it is the reason a row
+   with an offer reads as a row with a suggestion on it rather than as a row
+   that moved. */
+.r-mk-offers {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 4px;
+}
+.r-offer {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+  max-width: 100%;
+  padding: 5px 9px;
+  border: 1px solid var(--edge);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-2);
+  text-align: left;
+  cursor: pointer;
+}
+.r-offer:hover { border-color: var(--edge-strong); color: var(--ink); }
+.r-offer-act {
+  font: 600 10px/1.6 var(--sans);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+/* GEORGE'S OWN WORDS, in the sans he speaks in — never the mono the derived
+   lines use. The two voices are told apart by TYPE and nothing else, and a
+   reason is something he wrote. */
+.r-offer-why { font: 400 12.5px/1.45 var(--sans); color: var(--ink-2); }
+/* WHAT IT COSTS, derived from the act and drawn as it arrived. Quietest thing
+   on the button: it is the answer to a question you only ask once. */
+.r-offer-cost { font: 400 10.5px/1.5 var(--sans); color: var(--ink-3); white-space: nowrap; }
+
+/* THE ONES NO ROW COULD CARRY, at the foot beside `next`. */
+.r-foot-offers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 0;
+  max-width: 62ch;
+}
 .r-mk-fig small { font-size: 0.86em; color: var(--ink-3); display: block; }
 
 /* figure — one number, at the size its weight implies */

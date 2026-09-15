@@ -6001,6 +6001,64 @@ composition:
   allowed_fields: [op, kind, key, weight, seq, subject, label,
                    argument, spec, emphasise, claim]
 
+  # WHAT TO DO ABOUT IT, ON THE ROW IT IS ABOUT (P2.d, 2026-09-15).
+  #
+  # `action` left the block vocabulary with P1.f, and it deserved to: a
+  # `recommendation` tile saying "Order Aji Mix" competed for attention with
+  # the figures it was recommending, and every answer has a `next` sentence
+  # while few answers had that tile. What came back is not that tile. An
+  # action is an ANNOTATION on a row — a thing the surface can already do,
+  # pointed at one subject, carrying George's few words for WHY.
+  #
+  # THE MODEL SUPPLIES THREE THINGS AND DERIVES NOTHING: which act, which read
+  # and row it is about, and the reason. It never writes what the act costs,
+  # never writes the words on the button, and never writes a figure — `reason`
+  # is an annotation under CLAUDE.md's bound, so it may point at rows and
+  # characterise them and may not name a number.
+  #
+  # WHY THE COST IS DERIVED. "Replay · ~1s" and "a turn" are facts about the
+  # machine, not about the shop, and a model that wrote them could be wrong
+  # about them. Each act declares its own here, and the renderer draws what it
+  # finds. A person deciding whether to tap something is entitled to know
+  # whether it costs a second or a conversation.
+  actions:
+    introduced: "2026-09-15"
+    # Three is what fits under an answer without becoming a menu. Past that
+    # the person is choosing between suggestions instead of reading figures.
+    max: 3
+    # The acts the SURFACE can already perform. Nothing may be suggested that
+    # the room cannot do when it is tapped: a suggestion that opens nothing is
+    # a sentence pretending to be a control.
+    acts:
+      why:
+        about: "climb the ladder on this row — what moved it"
+        # It asks George a question, so it is a turn, and the label says so.
+        costs: "a turn"
+        model_turn: true
+      open:
+        about: "open this shop, product or supplier — everything already read about it"
+        costs: "~1s"
+        model_turn: false
+    # NOT HERE, AND THE REASON IS THE SAME ONE A CONTROL IS REFUSED FOR.
+    # `replay` was written and taken out on 2026-09-15. A replay needs an
+    # argument AND A VALUE — "date_range" is not an act, "date_range =
+    # last_month" is — and the preset values a person may pick live in the
+    # renderer (room/tiles.tsx WINDOWS, COUNTS) rather than in this file. An
+    # offer naming only the argument draws a button that cannot be tapped into
+    # anything, which is exactly what the control validator already refuses:
+    # "a control whose every option would have been refused on click is worse
+    # than no control". It comes back when the presets are a definition.
+    # A TARGET IS A ROW, VALIDATED LIKE A BLOCK'S SUBJECT: a value a row of the
+    # named read carries, or a value that read was scoped to. An action with
+    # no target is about the answer rather than about a row, and is drawn at
+    # the foot beside `next`.
+    target_optional: true
+    reason:
+      about: "why this one — in your own few words, the way you would say it out loud"
+      no_digits: true
+      max_length: 70
+    warning_reason: actions_rejected
+
 surface:
   introduced: "2026-09-09"
   executes_nothing: true

@@ -626,15 +626,16 @@ def validate(
     return accepted, rejected
 
 
-def compose(blocks: Any, reading: Any = None, *,
+def compose(blocks: Any, reading: Any = None, actions: Any = None, *,
             calls: Mapping[int, Mapping[str, Any]],
             defs: Mapping[str, Any], board: Any = None) -> dict:
     """
-    Compose the workspace: say which of the results you read the person sees, as which kind of object, at what weight — and say the reading in its three slots. Call it once, after your reads return and before you answer. Nothing here is a figure: every number is drawn from the read a block names.
+    Compose the workspace: say which of the results you read the person sees, as which kind of object, at what weight — say the reading in its three slots, and offer what to do about a row. Call it once, after your reads return and before you answer. Nothing here is a figure: every number is drawn from the read a block names.
 
     Args:
         blocks: the blocks on screen, in order. Each names a kind, a short key, a weight, the read (seq) it draws, and a claim — the few words saying what it says.
         reading: what you are about to say, in three slots — {"claim": the few words that ARE the point, said again word for word in your answer; "caveat": what qualifies these figures, drawn whole above them; "next": one sentence, the one thing to do or check, drawn last}. Optional; a confirmation needs none.
+        actions: what to do about ONE ROW, offered where that row is drawn — [{"act": what the surface does, "seq": the read, "target": the row's own value, "reason": why this one, in your words}]. Optional. You never say what it costs: that is derived from the act.
 
     Returns:
         The tool body. Returns {rows, meta} like every other tool, and names no
@@ -651,6 +652,14 @@ def compose(blocks: Any, reading: Any = None, *,
     # this is one door into it, not a second set of checks.
     from agent import reading as _reading
 
+    # THE THIRD STATEMENT (P2.d, 2026-09-15), on the same call and for the same
+    # reason the reading is: it is about the reads this composition is already
+    # validated against, it opens no connection, and splitting it off would buy
+    # a round trip and nothing else. agent/actions.py owns every rule.
+    from agent import actions as _actions
+
+    offered, offered_rejected = _actions.validate(actions, calls, defs)
+
     said, said_rejected = ({}, [])
     if reading is not None:
         # THE FIGURES THIS TURN ACTUALLY READ, so `caveat` and `next` may say
@@ -666,6 +675,8 @@ def compose(blocks: Any, reading: Any = None, *,
             "rejected": rejected,
             "reading": said,
             "rejected_slots": said_rejected,
+            "actions": offered,
+            "rejected_actions": offered_rejected,
             # What was ADJUSTED rather than refused: a discriminator renamed, a
             # second lead demoted, a subject taken from the read's own scope.
             # Named because the model has to describe the board it actually
@@ -678,13 +689,16 @@ def compose(blocks: Any, reading: Any = None, *,
                           for e in accepted if e.get("rewritten_from")],
             "widgets": list(vocabulary(defs)["widgets"]),
             "slots": list(_reading.SLOTS),
+            "acts": list(_actions.acts(defs)),
             "note": (
                 "How the board changed, from reads that already ran. Nothing "
                 "was read, and nothing you did not name has moved. A refused "
                 "edit did not happen and the answer must not describe the "
                 "board as though it did. A COERCED edit did happen, in the "
                 "form named beside it — describe that one. A claim you gave "
-                "here is lit where you say it in your answer, so say it there."
+                "here is lit where you say it in your answer, so say it there. "
+                "An action you offered is drawn on its own row, with what it "
+                "costs derived — do not say either in your answer."
             ),
         },
     }

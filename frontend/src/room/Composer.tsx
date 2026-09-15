@@ -20,6 +20,8 @@ import { useQuery } from '@tanstack/react-query';
 import type { DeskDefinitions } from '../services/deskApi';
 import { readMentions, type MentionCandidate, type Mentions } from '../services/mentionsApi';
 import { accept, bind, offered, openMention, worthReading, type Bound } from './mentions';
+import { accepted, ghostFor, type Ghost } from './ghosts';
+import type { DrawnToken } from './tokenShape';
 import type { Subject } from './subjects';
 
 export interface NamedReference {
@@ -49,6 +51,18 @@ export interface ComposerProps {
   defs: DeskDefinitions | null | undefined;
   /** Injected in tests so the resolution is driven without a network. */
   read?: (q: string, signal?: AbortSignal) => Promise<Mentions>;
+  /**
+   * THE BOARD'S OWN WORDS, for the grey completion (P2.d).
+   *
+   * Handed down rather than read here: they are what is on the screen, and the
+   * screen is the Room's. `tokens` is the scope the work is on — a completion
+   * built from one is a REPLAY, about a second, no model turn — and `subjects`
+   * is what the board is drawing. `pages` is the caller's own, so a page that
+   * names one of those subjects can complete too.
+   */
+  tokens?: DrawnToken[];
+  subjects?: string[];
+  pages?: { id: string; title: string }[];
 }
 
 export function Composer(p: ComposerProps) {
@@ -99,6 +113,29 @@ export function Composer(p: ComposerProps) {
     setCaret(e.currentTarget.selectionStart ?? e.currentTarget.value.length);
   };
 
+  // GREY TEXT THAT FINISHES THE QUESTION (P2.d). Pure, from what is already on
+  // screen, recomputed on every keystroke because it costs nothing to — no
+  // request, no model, no debounce. It is suppressed while the `@` menu is up:
+  // two completions on one line, both taking Tab, is one too many.
+  const ghost: Ghost | null = useMemo(
+    () => (asking ? null : ghostFor({
+      draft: p.draft,
+      tokens: p.tokens ?? [],
+      subjects: p.subjects.map((s) => s.label).concat(p.named.map((n) => n.label)),
+      pages: p.pages ?? [],
+    })),
+    [asking, p.draft, p.tokens, p.subjects, p.named, p.pages],
+  );
+
+  const takeGhost = useCallback((g: Ghost) => {
+    const next = accepted(g);
+    p.onDraft(next);
+    requestAnimationFrame(() => {
+      input.current?.setSelectionRange(next.length, next.length);
+      setCaret(next.length);
+    });
+  }, [p]);
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (list.length) {
       if (e.key === 'ArrowDown') {
@@ -112,6 +149,9 @@ export function Composer(p: ComposerProps) {
       }
       if (e.key === 'Escape') { e.preventDefault(); setShut(true); return; }
     }
+    // TAB ACCEPTS, AND ONLY TAB. Enter still sends what was actually typed:
+    // a completion taken by the key that sends is a question nobody wrote.
+    if (e.key === 'Tab' && ghost) { e.preventDefault(); takeGhost(ghost); return; }
     if (e.key === 'Enter') { p.onSend(); return; }
     if (e.key === 'Escape') { p.onClear(); return; }
     // Anything else may have moved the caret; the menu is decided from where
@@ -189,25 +229,41 @@ export function Composer(p: ComposerProps) {
         )}
 
         <div className="r-line">
-          <input
-            ref={input}
-            value={p.draft}
-            placeholder={
-              p.subjects.length ? 'say what to do with these'
-                : p.busy ? 'you can redirect while he reads'
-                : 'say something, or touch something above'
-            }
-            onChange={(e) => {
-              setShut(false);
-              p.onDraft(e.target.value);
-              setCaret(e.target.selectionStart ?? e.target.value.length);
-            }}
-            onKeyDown={onKeyDown}
-            onKeyUp={move}
-            onClick={move}
-            onSelect={move}
-            aria-label="Say something to George"
-          />
+          {/* THE GHOST SITS UNDER THE INPUT, in the same box with the same
+              type, so the grey continues the line rather than sitting beside
+              it. What has been typed is drawn transparent here — it is the
+              spacer that puts the completion in the right place — and the real
+              characters are the input's own, above it. aria-hidden, because a
+              screen reader reading the line twice is worse than not being
+              offered the completion; the hint below names it instead. */}
+          <span className="r-ghost-box">
+            {ghost && (
+              <span className="r-ghost" aria-hidden="true">
+                <span className="r-ghost-typed">{p.draft}</span>
+                <span className="r-ghost-rest">{ghost.rest}</span>
+                <span className="r-ghost-key">tab · {ghost.costs}</span>
+              </span>
+            )}
+            <input
+              ref={input}
+              value={p.draft}
+              placeholder={
+                p.subjects.length ? 'say what to do with these'
+                  : p.busy ? 'you can redirect while he reads'
+                  : 'say something, or touch something above'
+              }
+              onChange={(e) => {
+                setShut(false);
+                p.onDraft(e.target.value);
+                setCaret(e.target.selectionStart ?? e.target.value.length);
+              }}
+              onKeyDown={onKeyDown}
+              onKeyUp={move}
+              onClick={move}
+              onSelect={move}
+              aria-label="Say something to George"
+            />
+          </span>
           {p.busy ? (
             <button type="button" className="r-send" onClick={p.onStop}
                     title="Stop" aria-label="Stop"

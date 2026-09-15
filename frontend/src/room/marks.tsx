@@ -30,7 +30,7 @@
  * one arithmetic on this page is a percentage of a maximum, which is a
  * geometry and not a figure — nobody reads it and no answer cites it.
  */
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import type { ToolMeta } from '../types/george';
 import {
   changeOf, fmt, measureOf, rowUnderClaim, rowsOf, sorted, subjectOf, unitOf, valueOf,
@@ -41,9 +41,11 @@ import {
   type DataColour, type Mark,
 } from './catalogue';
 import {
-  Delta, Missing, MissingRow, OwnCaveat, Receipts, Shell, callFor, isLit, kindOfRead,
+  Delta, Missing, MissingRow, Offer, OwnCaveat, Receipts, Shell, callFor, isLit, kindOfRead,
   type TileProps,
 } from './tiles';
+import { onRow } from './actions';
+import type { ActionOffer } from '../types/george';
 import { ObjectPanel, kindOf } from './ObjectPanel';
 import { dimensionOf } from './data';
 import { hueFor } from './identity';
@@ -119,7 +121,8 @@ function Figure(p: TileProps & { rows: Row[]; meta: Meta }) {
  * be drawn — labelled "usual", never "healthy", because a range is where a
  * thing sits and not whether that is good.
  */
-function Dumbbell({ rows, meta, o }: { rows: Row[]; meta: Meta; o: TileProps['o'] }) {
+function Dumbbell({ rows, meta, o, offers, seq, onTake }:
+                  { rows: Row[]; meta: Meta; o: TileProps['o'] } & Offering) {
   const at = (r: Row) => Number(valueOf(r)?.value ?? 0);
   const before = (r: Row) => Number(r.baseline);
   const ends = rows.flatMap((r) => [at(r), before(r)]).filter(Number.isFinite);
@@ -163,6 +166,8 @@ function Dumbbell({ rows, meta, o }: { rows: Row[]; meta: Meta; o: TileProps['o'
               <b>{fmt(key, b, unit)}</b>
               <small>was {fmt(key, a, unit)}</small>
             </span>
+            <RowOffers offers={offers} seq={seq} subject={subjectOf(r)}
+                       onTake={onTake ?? NO_TAKE} />
           </div>
         );
       })}
@@ -178,10 +183,44 @@ function Dumbbell({ rows, meta, o }: { rows: Row[]; meta: Meta; o: TileProps['o'
   );
 }
 
+/* ------------------------------------------------------------------ offers */
+
+/**
+ * WHAT GEORGE OFFERED TO DO ABOUT THIS ROW, drawn on it.
+ *
+ * `room/actions.placement` already decided this object may carry these; all
+ * that is left is which row. Nothing is drawn where he offered nothing, which
+ * is most rows of most reads — an offer on every row would be a menu, and the
+ * point of putting it here is that he chose one.
+ */
+function RowOffers({ offers, seq, subject, onTake }: {
+  offers: ActionOffer[] | undefined;
+  seq: number | undefined;
+  subject: string | null;
+  onTake: Take;
+}) {
+  const mine = onRow(offers ?? [], seq, subject);
+  if (!mine.length) return null;
+  return (
+    <span className="r-mk-offers">
+      {mine.map((a) => <Offer key={`${a.act}:${a.target}`} offer={a} onTake={onTake} />)}
+    </span>
+  );
+}
+
+/** What happens when one is tapped. Owned by the block, not by the mark. */
+type Take = (offer: ActionOffer) => void;
+
+/** What every row mark needs to draw an offer, and nothing else. */
+interface Offering { offers?: ActionOffer[]; seq?: number; onTake?: Take }
+
+const NO_TAKE: Take = () => {};
+
 /* ------------------------------------------------------------------ ranked */
 
 /** BARS IN CELLS — a row, its length, its figure. No axis, no legend. */
-function Ranked({ rows, meta, o }: { rows: Row[]; meta: Meta; o: TileProps['o'] }) {
+function Ranked({ rows, meta, o, offers, seq, onTake }:
+                { rows: Row[]; meta: Meta; o: TileProps['o'] } & Offering) {
   const key = valueOf(rows[0])?.key ?? 'value';
   const unit = unitOf(rows[0]) ?? unitOf(meta);
   const values = rows.map((r) => Math.abs(Number(valueOf(r)?.value ?? 0)));
@@ -207,6 +246,8 @@ function Ranked({ rows, meta, o }: { rows: Row[]; meta: Meta; o: TileProps['o'] 
                   mark of its own. Only a change in UNITS is a decomposition. */}
               <Delta change={changeOf(r)} />
             </span>
+            <RowOffers offers={offers} seq={seq} subject={subjectOf(r)}
+                       onTake={onTake ?? NO_TAKE} />
           </div>
         );
       })}
@@ -225,7 +266,8 @@ function Ranked({ rows, meta, o }: { rows: Row[]; meta: Meta; o: TileProps['o'] 
  * movement, because an attribution share is exactly what CLAUDE.md 10 refuses
  * and no tool computes one.
  */
-function Contributors({ rows, meta, o }: { rows: Row[]; meta: Meta; o: TileProps['o'] }) {
+function Contributors({ rows, meta, o, offers, seq, onTake }:
+                      { rows: Row[]; meta: Meta; o: TileProps['o'] } & Offering) {
   const signed = (r: Row) => {
     const n = typeof r.change === 'number' ? r.change : Number(r.change_pct);
     return Number.isFinite(n) ? n : 0;
@@ -252,6 +294,8 @@ function Contributors({ rows, meta, o }: { rows: Row[]; meta: Meta; o: TileProps
                           background: paint(c) } as CSSProperties} />
             </span>
             <span className="r-mk-fig"><b>{fmt(key, v, unit)}</b></span>
+            <RowOffers offers={offers} seq={seq} subject={subjectOf(r)}
+                       onTake={onTake ?? NO_TAKE} />
           </div>
         );
       })}
@@ -418,6 +462,11 @@ function Rows({ rows: all, meta, o, p }: { rows: Row[]; meta: Meta; o: TileProps
  * expiry.
  */
 export function MarkBlock(p: TileProps) {
+  // THE SUBJECT AN OFFER OPENED, which is not the same as the tile being
+  // focused: `open` on a ROW opens that row's object, and the tile's own
+  // opened panel is about the tile's own subject. Local, because it is a
+  // person looking at something and not a change to the board.
+  const [revealed, setRevealed] = useState<string | null>(null);
   const call = callFor(p);
   const rows = rowsOf(call);
   const meta = call?.result?.meta ?? null;
@@ -433,6 +482,21 @@ export function MarkBlock(p: TileProps) {
   const label = p.o.subject ?? subjectOf(rows[0] ?? {}) ?? null;
   const dimension = label ? dimensionOf(rows, label) : null;
 
+  // TAKING AN OFFER IS THE SAME ACT AS DOING IT BY HAND, through the same
+  // path. `why` is the question the row's own button asks, and costs the turn
+  // it says it costs; `open` opens the object below the mark, which is the
+  // ~1s read the tile's own tap already makes. Nothing here is a new capability
+  // — an offer is George pointing at one of them.
+  const offering = {
+    offers: p.offers,
+    seq: p.o.seq,
+    onTake: (a: ActionOffer) => {
+      if (!a.target) return;
+      if (a.act === 'why') p.on.why(a.target, dimensionOf(rows, a.target));
+      else if (a.act === 'open') setRevealed((r) => (r === a.target ? null : a.target));
+    },
+  };
+
   return (
     <>
       <Shell quiet={!lit}
@@ -443,9 +507,9 @@ export function MarkBlock(p: TileProps) {
         {subtitle && <p className="r-mk-sub">{subtitle}</p>}
         <div className="r-mk-body" data-mark={mark}>
           {mark === 'figure' && <Figure {...p} rows={rows} meta={meta} />}
-          {mark === 'dumbbell' && <Dumbbell rows={rows} meta={meta} o={p.o} />}
-          {mark === 'ranked' && <Ranked rows={rows} meta={meta} o={p.o} />}
-          {mark === 'contributors' && <Contributors rows={rows} meta={meta} o={p.o} />}
+          {mark === 'dumbbell' && <Dumbbell rows={rows} meta={meta} o={p.o} {...offering} />}
+          {mark === 'ranked' && <Ranked rows={rows} meta={meta} o={p.o} {...offering} />}
+          {mark === 'contributors' && <Contributors rows={rows} meta={meta} o={p.o} {...offering} />}
           {mark === 'line' && <Line rows={rows} meta={meta} o={p.o} />}
           {mark === 'table' && <Rows rows={rows} meta={meta} o={p.o} p={p} />}
         </div>
@@ -455,6 +519,17 @@ export function MarkBlock(p: TileProps) {
           content and a panel is the one place a hue still says something: ONE
           object, named in its own heading, with nothing beside it to confuse
           the colour with. That is the only `--hue` left in the room. */}
+      {/* AN OFFER'S OWN PANEL, about the ROW it named — which is not the
+          tile's subject and must not be drawn as it. Below the tile for the
+          same reason the focused one is: a tile clips, and a panel is the one
+          place identity still says something. */}
+      {revealed && kindOf(dimensionOf(rows, revealed)) && (
+        <div onClick={(e) => e.stopPropagation()}
+             style={{ '--hue': hueFor(revealed, dimensionOf(rows, revealed),
+                                      kindOfRead(p.o.tool)) } as CSSProperties}>
+          <ObjectPanel kind={kindOf(dimensionOf(rows, revealed)) as string} name={revealed} />
+        </div>
+      )}
       {p.focused && label && kindOf(dimension) && (
         <div onClick={(e) => e.stopPropagation()}
              style={{ '--hue': hueFor(label, dimension, kindOfRead(p.o.tool)) } as CSSProperties}>

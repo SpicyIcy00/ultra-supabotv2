@@ -475,6 +475,54 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
             "additionalProperties": False,
         }
 
+    if pname == "actions" and fn_name == COMPOSE_TOOL:
+        # WHAT TO DO ABOUT ONE ROW, and nowhere to put what it costs (P2.d).
+        # The acts are the catalogue the surface performs, read at the moment
+        # the model composes — the same place the widgets are read. There is
+        # no `costs` property and no `label`: both are derived from the act
+        # (agent/actions.py), so neither can arrive from the model, and a
+        # suggestion cannot advertise a speed this machine does not have.
+        voc = req(_load_defs(), "composition.actions")
+        acts: dict = voc["acts"]
+        control_args = list(req(_load_defs(), "composition.control_arguments"))
+        return {
+            "type": "array",
+            "maxItems": int(voc.get("max") or 3),
+            "items": {
+                "type": "object",
+                "properties": {
+                    "act": {"type": "string", "enum": list(acts),
+                            "description": "what the surface does when it is tapped — "
+                                           + "; ".join(f"{k}: {v['about']}"
+                                                       for k, v in acts.items())},
+                    "seq": {"type": "integer",
+                            "description": "meta.call_seq of a read that returned this turn"},
+                    "target": {"type": "string",
+                               "description": "the row this sits on: a value that read "
+                                              "carries — a shop, product or supplier. "
+                                              "Leave it out for an action about the "
+                                              "answer rather than about one row."},
+                    "reason": {
+                        "type": "string",
+                        "maxLength": int((voc.get("reason") or {}).get("max_length") or 70),
+                        "description": " ".join(
+                            str((voc.get("reason") or {}).get("about") or "").split())
+                        + " NO DIGITS: the row under it draws its own figure.",
+                    },
+                    # ONLY WHERE AN ACT TAKES ONE. No act does today (the
+                    # yaml says why `replay` is not there), and a property the
+                    # schema declares is a property the model will eventually
+                    # fill in — so it is absent rather than present-and-refused.
+                    **({"argument": {"type": "string", "enum": control_args,
+                                     "description": "for a replay: which scope "
+                                                    "argument it moves"}}
+                       if any(a.get("needs_argument") for a in acts.values()) else {}),
+                },
+                "required": ["act", "seq", "reason"],
+                "additionalProperties": False,
+            },
+        }
+
     if pname == "beliefs":
         # A belief is a list of objects, and the schema has to SAY so. Until
         # 2026-09-10 this fell through to {"type": "string"}, the model
@@ -1749,7 +1797,8 @@ def _answer_payload(charted: Optional[list], calls: Optional[list],
                     page_context: Optional[dict] = None,
                     reading: Optional[dict] = None,
                     composition: Optional[list] = None,
-                    default_composition: Optional[list] = None) -> Optional[str]:
+                    default_composition: Optional[list] = None,
+                    actions: Optional[list] = None) -> Optional[str]:
     """
     The answer post's payload: the charted snapshot, the calls behind it, and
     the page George read to produce it.
@@ -1780,6 +1829,12 @@ def _answer_payload(charted: Optional[list], calls: Optional[list],
     # the validated slots, never what the model submitted.
     if reading:
         payload["reading"] = reading
+    # AND WHAT HE OFFERED TO DO ABOUT A ROW (P2.d, 2026-09-15). Stored for the
+    # same reason the reading is: a reopened thread draws what was on screen,
+    # and an action is a validated offer with its cost already derived — never
+    # re-derived on read, because the act's cost could have changed since.
+    if actions:
+        payload["actions"] = actions
     # The composition that stood (2026-09-10): the validated blocks, so a
     # reopened thread draws the screen George composed, from the charted rows
     # beside it, and never a layout the client derived.
@@ -2021,7 +2076,8 @@ class ConversationLog:
                 _answer_payload(kw.get("charted"), kw.get("calls"),
                                 kw.get("page_context"), kw.get("reading"),
                                 kw.get("composition"),
-                                kw.get("default_composition")),
+                                kw.get("default_composition"),
+                                kw.get("actions")),
                 json.dumps(_json_safe(kw["receipts"])) if kw.get("receipts") else None,
                 json.dumps(_json_safe(kw.get("notices") or [])),
                 self.conversation_id, datetime.now(timezone.utc),
@@ -2525,6 +2581,10 @@ async def run(
     # The blocks that stood, for the ANSWER POST and the UI. A later compose
     # call REPLACES this, for the same reason.
     composition_recorded: list[dict] = []
+
+    # What he offered to DO about a row (P2.d), for the answer post and the UI.
+    # Replaced by a later compose that names any, exactly as the reading is.
+    actions_recorded: list[dict] = []
 
     # THE BOARD BEFORE HE HAS SPOKEN (P1.b, 2026-09-13). What the reads that
     # have landed would look like if nobody had composed them — validated by
@@ -3452,6 +3512,7 @@ async def run(
                     result = compose.compose(
                         (b.input or {}).get("blocks"),
                         (b.input or {}).get("reading"),
+                        (b.input or {}).get("actions"),
                         calls=calls_by_seq, defs=defs,
                         board=(desk or {}).get("board"),
                     )
@@ -3497,6 +3558,28 @@ async def run(
                             "seq": gseq,
                             **reading_recorded,
                             "rejected": said_rejected,
+                        })
+                    # AND THE THIRD STATEMENT, ON ITS OWN FRAME (P2.d). Same
+                    # rule as the reading: a compose naming no actions leaves
+                    # whatever an earlier one offered standing, because the two
+                    # rounds of a turn are one turn's worth of offers.
+                    offered = result["meta"].get("actions") or []
+                    offered_rejected = result["meta"].get("rejected_actions") or []
+                    if offered or offered_rejected:
+                        actions_recorded = list(offered)
+                        yield _sse("actions", {
+                            "seq": gseq,
+                            "actions": actions_recorded,
+                            "rejected": offered_rejected,
+                        })
+                    if offered_rejected:
+                        yield _sse("warning", {
+                            "reason": req(defs, "composition.actions.warning_reason"),
+                            "detail": "; ".join(
+                                f"{r.get('action')}"
+                                + (f" on {r['target']}" if r.get("target") else "")
+                                + f": {r.get('reason')}"
+                                for r in offered_rejected),
                         })
                     if said_rejected:
                         detail = "; ".join(
@@ -3803,6 +3886,7 @@ async def run(
         final_answer=answer or None, notices=pending, receipts=last_meta,
         charted=charted, calls=calls_made, parent_id=parent_id,
         page_context=page_evidence, reading=reading_recorded,
+        actions=actions_recorded,
         composition=composition_recorded,
         default_composition=default_composition_recorded, desk=desk,
     )
