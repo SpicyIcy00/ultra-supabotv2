@@ -57,6 +57,12 @@ on compose frame" does.
 
 ## Open
 
+*Empty as of 2026-09-15.*
+
+---
+
+## Fixed
+
 ### 2026-09-15 · a claim about Greenhills over Rockwell's number
 
 Found while answering the colour report below, in the same screenshot, and it
@@ -82,15 +88,40 @@ Whether he composed a Greenhills block over a Rockwell-scoped read, or wrote a
 Greenhills claim onto a Rockwell block, is not decidable from the screenshot —
 the fallback hides which, and removing the fallback is what makes it visible.
 
-**Not yet fixed, and not yet reproduced from the record.** The next session
-takes it: draw nothing rather than the wrong row, and hold it with a test over
-the recorded runs.
+**FIXED: a mark that draws ONE number now asks which row it may draw it from,
+and the answer can be none.** `data.rowUnderClaim` replaces `rowFor(...) ??
+rows[0]`, and the rule is about what the ROWS can contradict rather than about
+matching text:
 
----
+- the subject is in the rows → **that** row, and never another;
+- the rows name no subject of their own and there is exactly **one** of them →
+  that row. This is the case the plain fix would have broken: *"Why was North
+  Edsa up so much last week?"* returns a single row with **no `store` column**,
+  because the shop is in the read's FILTERS, not in its data. Nothing in that
+  row can disagree with the claim;
+- anything else → **null, and no number is drawn**. Rows that name subjects and
+  do not name this one say the block is about something the read does not hold.
+  Several unnamed rows say the read is not about one thing at all.
 
----
+Where the figure was, the tile now says *"George composed this from Greenhills,
+which this read does not carry"* — and it keeps its title, its own caveat and
+its source line, because all three of those were still true. `Missing` replaces
+a whole tile and was the wrong shape for this; `MissingRow` is the same
+sentence in the one place that was lying.
 
-## Fixed
+**Held over the recorded runs, and the old code fails 7 of them** — the
+screenshot rebuilt exactly (Greenhills over a Rockwell-led read: no `.r-mk-num`,
+no "206,800", no "Rockwell"), plus every read in `__fixtures__/recorded-runs.json`
+that returned rows, captioned with a subject none of them holds. Six of the
+seven failures are real reads from real runs, not a pair I thought of. The
+reads whose rows name several subjects are also checked the other way: each
+named subject draws **its own row's** figure.
+
+**1,127 → 1,148 vitest, typecheck clean.** Which way round the original mistake
+was — a Greenhills claim written onto a Rockwell read, or a Greenhills block
+composed against one — is still not decidable from the screenshot; it is now
+**visible on the board** the next time it happens, which is what the fallback
+was hiding.
 
 ### 2026-09-15 · two different colours of black
 

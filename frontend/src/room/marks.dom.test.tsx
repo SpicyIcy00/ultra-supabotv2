@@ -20,7 +20,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
-import type { AnswerTurn } from './data';
+import { fmt, rowFor, subjectOf, unitOf, valueOf, type AnswerTurn } from './data';
 import type { BoardObject } from './board';
 import type { TileActions } from './tiles';
 import { MARKS } from './catalogue';
@@ -271,6 +271,114 @@ describe('every block in the recorded runs', () => {
         expect(container.querySelector('.r-mk-title')?.textContent ?? '').not.toBe('');
         expect(container.querySelector('.r-src')?.textContent ?? '').not.toBe('');
       });
+    }
+  }
+});
+
+/**
+ * A FIGURE UNDER A CLAIM THAT IS NOT ABOUT IT — the dogfood log's worst item,
+ * 2026-09-15, and the reason `rowUnderClaim` exists.
+ *
+ * The shape of the defect: a tile captioned "Greenhills turned down on a
+ * smaller basket" drew ₱206,800, a green ▲+1.5%, and a dumbbell row labelled
+ * Rockwell, because `Figure` chose `rowFor(...) ?? rows[0]`. Every figure on
+ * that tile was real and had been read; none of them was about the shop the
+ * sentence named.
+ *
+ * The test is over the RECORDED RUNS rather than a hand-made pair, because the
+ * question the fallback hid is whether any read a real run produced can be
+ * captioned with a subject it does not hold — and the answer has to be no for
+ * all of them, not for one I thought of.
+ */
+describe('a claim over a read that does not hold its subject', () => {
+  const runs = recorded.runs as {
+    run: string;
+    calls: { seq: number; tool: string; result: { rows: Record<string, unknown>[]; meta: unknown } }[];
+  }[];
+
+  /** One `figure` block, with its subject, over one recorded read. */
+  function figureOver(
+    call: { seq: number; tool: string; result: { rows: Record<string, unknown>[]; meta: unknown } },
+    subject: string,
+  ) {
+    const turn = {
+      role: 'george', text: '', thinking: '', at: '2026-09-11T08:00:00Z',
+      toolCalls: [{ seq: call.seq, tool: call.tool, arguments: {}, result: call.result }],
+    } as unknown as AnswerTurn;
+    const object = {
+      key: 'k', kind: 'figure', weight: 'lead', seq: call.seq, tool: call.tool,
+      turn: 0, touched: 0, subject,
+    } as unknown as BoardObject;
+    return render(
+      <Board answers={[turn]} board={[object]} local={{}} focused={null}
+             selection={[]} live={false} retuned={{}} on={on} />,
+    );
+  }
+
+  it('is exactly the screenshot, and it draws no number now', () => {
+    const rows = [
+      { store: 'Rockwell', value: 206800, baseline: 203700, change_pct: 1.5, direction: 'up', unit: 'PHP' },
+      { store: 'Magnolia', value: 121004, baseline: 133000, change_pct: -9.0, direction: 'down', unit: 'PHP' },
+    ];
+    const { container } = draw({ kind: 'figure', weight: 'lead', subject: 'Greenhills' }, rows);
+    expect(container.querySelector('.r-mk-num')).toBeNull();
+    expect(container.textContent).not.toContain('206,800');
+    expect(container.textContent).not.toContain('Rockwell');
+    expect(container.querySelector('.r-mk-absent')?.getAttribute('data-absent')).toBe('Greenhills');
+  });
+
+  it('still draws the shop the read DOES hold, and its own row', () => {
+    const rows = [
+      { store: 'Rockwell', value: 206800, change_pct: 1.5, direction: 'up', unit: 'PHP' },
+      { store: 'Greenhills', value: 278266, change_pct: -3.2, direction: 'down', unit: 'PHP' },
+    ];
+    const { container } = draw({ kind: 'figure', weight: 'lead', subject: 'Greenhills' }, rows);
+    expect(container.querySelector('.r-mk-num')?.textContent).toBe('₱278,266');
+    expect(container.querySelector('.r-mk-absent')).toBeNull();
+  });
+
+  it('has reads to check, from the recorded runs, and enough of them', () => {
+    const withRows = runs.flatMap((r) => r.calls.filter((c) => (c.result.rows ?? []).length));
+    expect(withRows.length).toBeGreaterThanOrEqual(8);
+  });
+
+  for (const run of runs) {
+    for (const call of run.calls) {
+      const rows = call.result.rows ?? [];
+      if (!rows.length) continue;
+      const names = [...new Set(rows.map((r) => subjectOf(r)).filter(Boolean))] as string[];
+
+      it(`${run.run} · ${call.tool} (seq ${call.seq}) draws nothing for a subject it does not hold`, () => {
+        const { container } = figureOver(call, 'Seikyo Trading Annex');
+        if (names.length) {
+          // The rows name subjects of their own, and none of them is this one.
+          expect(container.querySelector('.r-mk-num')).toBeNull();
+          expect(container.querySelector('.r-mk-absent')?.getAttribute('data-absent'))
+            .toBe('Seikyo Trading Annex');
+        } else {
+          // The rows name nothing, so they contradict nothing; a single-row read
+          // is the subject's own read, scoped by its filters. More than one and
+          // there is no row to choose.
+          expect(Boolean(container.querySelector('.r-mk-num')))
+            .toBe(rows.length === 1);
+        }
+      });
+
+      if (names.length > 1) {
+        it(`${run.run} · ${call.tool} (seq ${call.seq}) draws each named subject's own row`, () => {
+          for (const name of names.slice(0, 4)) {
+            cleanup();
+            const { container } = figureOver(call, name);
+            const own = rowFor(rows, name)!;
+            const v = valueOf(own);
+            expect(container.querySelector('.r-mk-absent'), name).toBeNull();
+            if (v) {
+              expect(container.querySelector('.r-mk-num')?.textContent, name)
+                .toBe(fmt(v.key, v.value, unitOf(own) ?? unitOf(call.result.meta as never)));
+            }
+          }
+        });
+      }
     }
   }
 });

@@ -248,6 +248,32 @@ export function Missing({ what }: { what: string }) {
 }
 
 /**
+ * THE SAME SENTENCE, WHERE A NUMBER WOULD HAVE BEEN.
+ *
+ * `Missing` replaces a whole tile, which is right when the read came back with
+ * nothing at all. When the read came back with rows and the block's subject is
+ * not among them, the tile's title, its own caveat and its source line are all
+ * still true and are kept; the one thing it cannot say honestly is the figure,
+ * so the figure is the one thing left out.
+ *
+ * WHY THIS EXISTS (dogfood log, 2026-09-15). A tile captioned "Greenhills
+ * turned down on a smaller basket" drew ₱206,800, a green +1.5% and a row
+ * labelled Rockwell, because the mark fell back to the FIRST row of the read
+ * when it could not find the subject. Nothing was invented — every figure was
+ * read — and it was attached to a sentence that is not about it, which is the
+ * one thing rule 9 exists to prevent. Drawing nothing is the correct answer,
+ * and it also makes visible WHICH way round the mistake was: a claim written
+ * onto the wrong read, or a block composed against one.
+ */
+export function MissingRow({ what }: { what: string }) {
+  return (
+    <p className="r-note r-mk-absent" data-absent={what}>
+      George composed this from {what}, which this read does not carry.
+    </p>
+  );
+}
+
+/**
  * WHAT KIND OF THING A READ IS ABOUT, from the tool that produced it. A table
  * of purchase orders is not the same kind of object as a table of shops, and
  * on a board of ten tiles that difference is worth a colour.

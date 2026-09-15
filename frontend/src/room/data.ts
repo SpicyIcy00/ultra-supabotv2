@@ -136,6 +136,44 @@ export function rowFor(rows: Record<string, unknown>[], subject: string): Record
     (v) => typeof v === 'string' && v.trim().toLowerCase() === want)) ?? null;
 }
 
+/**
+ * THE ROW A CLAIM ABOUT `subject` MAY BE DRAWN FROM, or null for none.
+ *
+ * A mark that draws ONE number has to choose one row, and until 2026-09-15 it
+ * chose `rowFor(...) ?? rows[0]` — the first row of the read whenever the
+ * subject was not in it. On the owner's board that drew Rockwell's ₱206,800,
+ * a green +1.5% and a row labelled Rockwell under the sentence "Greenhills
+ * turned down on a smaller basket". Nothing was invented; a real figure was
+ * attached to a claim that is not about it, which is the one thing CLAUDE.md
+ * rule 9 exists to prevent.
+ *
+ * The rule is about what the ROWS can contradict, not about matching text:
+ *
+ *   - the subject is in the rows          → that row, and never another.
+ *   - the rows name no subject of their own and there is exactly ONE of them
+ *                                         → that row. The read is already
+ *                                           scoped to the subject by its
+ *                                           filters — "Why was North Edsa up?"
+ *                                           returns one row with no `store`
+ *                                           column — so there is nothing in it
+ *                                           that could disagree with the claim.
+ *   - anything else                       → null, and the mark draws no
+ *                                           number. Rows that name subjects
+ *                                           and do not name this one say the
+ *                                           block is about something the read
+ *                                           does not hold; several unnamed
+ *                                           rows say the read is not about one
+ *                                           thing at all.
+ */
+export function rowUnderClaim(
+  rows: Record<string, unknown>[], subject: string,
+): Record<string, unknown> | null {
+  const found = rowFor(rows, subject);
+  if (found) return found;
+  const named = rows.some((r) => subjectOf(r) !== null);
+  return !named && rows.length === 1 ? rows[0] : null;
+}
+
 /** The first numeric column that is not a change — the row's headline figure. */
 export function valueOf(row: Record<string, unknown>): { key: string; value: number } | null {
   const skip = new Set(['change', 'change_pct', 'baseline', 'seq', 'call_seq', 'row_count']);

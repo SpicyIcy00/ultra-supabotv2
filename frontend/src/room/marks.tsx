@@ -33,7 +33,7 @@
 import type { CSSProperties } from 'react';
 import type { ToolMeta } from '../types/george';
 import {
-  changeOf, fmt, measureOf, rowsOf, sorted, subjectOf, unitOf, valueOf,
+  changeOf, fmt, measureOf, rowUnderClaim, rowsOf, sorted, subjectOf, unitOf, valueOf,
   type Change,
 } from './data';
 import {
@@ -41,7 +41,7 @@ import {
   type DataColour, type Mark,
 } from './catalogue';
 import {
-  Delta, Missing, OwnCaveat, Receipts, Shell, callFor, isLit, kindOfRead,
+  Delta, Missing, MissingRow, OwnCaveat, Receipts, Shell, callFor, isLit, kindOfRead,
   type TileProps,
 } from './tiles';
 import { ObjectPanel, kindOf } from './ObjectPanel';
@@ -79,10 +79,17 @@ const COOL = 0.75;
  */
 function Figure(p: TileProps & { rows: Row[]; meta: Meta }) {
   const { rows, meta } = p;
-  const row = p.o.subject ? rows.find((r) => Object.values(r).some(
-    (v) => typeof v === 'string' && v.trim().toLowerCase() === p.o.subject!.trim().toLowerCase(),
-  )) ?? rows[0] : rows[0];
-  if (!row) return <Missing what={p.o.subject ?? 'a row'} />;
+  // WHICH ROW A CLAIM MAY BE DRAWN FROM IS `rowUnderClaim`, and it can answer
+  // none. Until 2026-09-15 this fell back to `?? rows[0]`, so a block about
+  // Greenhills over a read that did not hold Greenhills drew the first row —
+  // Rockwell's ₱206,800 — under Greenhills' sentence, with Rockwell's own name
+  // in the dumbbell below it. Nothing was invented; it was attached to the
+  // wrong claim, which rule 9 exists to prevent. A block with no subject still
+  // takes the first row, because that is what a read of one thing is.
+  const row = p.o.subject ? rowUnderClaim(rows, p.o.subject) : rows[0] ?? null;
+  if (!row) return p.o.subject
+    ? <MissingRow what={p.o.subject} />
+    : <Missing what="a row" />;
   const v = figureOf(row, meta);
   const change = changeOf(row);
   const size = p.o.weight === 'lead' ? 44 : p.o.weight === 'quiet' ? 26 : 34;
