@@ -60,6 +60,13 @@ export interface TileActions {
    * wired it simply draws no control.
    */
   retune?(key: string, argument: string, value: string | number): void;
+  /**
+   * Stop holding a view. A PERSON'S GESTURE and never George's: he may revise
+   * a view a read contradicts, he may not decide to stop knowing something
+   * because somebody disagreed. Optional, so a surface that has not wired it
+   * draws the row with no Forget rather than one that does nothing.
+   */
+  forget?(key: string, beliefId: string): void;
 }
 
 export interface TileProps {
@@ -620,6 +627,103 @@ export function SystemTile(p: TileProps) {
           last {when.toLocaleString()}
         </p>
       )}
+      <Receipts meta={call?.result?.meta} />
+    </Shell>
+  );
+}
+
+/* ------------------------------------------------------------------ memory
+ *
+ * WHAT HE REMEMBERS — every view he currently holds, one line each, drawn
+ * over `view_memory`.
+ *
+ * IT IS NOT A MARK, and that is the whole reason it has a tile. The six marks
+ * are ways of drawing what a read RETURNED; this has a FORGET on every row,
+ * and a gesture per row is not something a drawing of rows can carry — the
+ * same reason `draft` kept its editable quantities. `catalogue.NOT_A_MARK`
+ * says so and `catalogue.test.ts` holds it there.
+ *
+ * FOUR THINGS PER ROW, because the question is about the memory and not only
+ * about the business: what he thinks, when he learned it, what it RESTS ON,
+ * and how many questions it has been carried into. All four come off the row
+ * the tool returned; nothing here counts, dates or infers anything.
+ *
+ * THE COUNT IS DRAWN AS WHAT IT MEASURED. "carried into 9 questions" is what
+ * the tool counted; "changed 9 answers" is what nobody measured, and the
+ * difference is the difference between a receipt and a claim.
+ */
+function learnedOn(row: Record<string, unknown>): string | null {
+  const when = row.held_since ? new Date(String(row.held_since)) : null;
+  return when && !Number.isNaN(when.getTime()) ? when.toLocaleDateString() : null;
+}
+
+export function MemoryTile(p: TileProps) {
+  const call = callFor(p);
+  // EVERY VIEW, NOT A PICK OF THEM. The vocabulary gives this kind `seq` and
+  // nothing else (`composition.widgets.memory`), so there is no channel for
+  // George to choose which of his views you are shown — which is right: a
+  // memory you cannot see all of is not a memory you can check.
+  const shown = rowsOf(call);
+  const forgotten = new Set(p.local?.forgot ?? []);
+
+  return (
+    <Shell quiet landing={p.landing} delay={p.delay}
+           picked={p.focused} onOpen={() => p.on.open(p.o.key)}>
+      <p className="r-label">
+        what I think right now{p.earlier ? ' · from earlier' : ''}
+      </p>
+      {shown.length === 0 && (
+        /* HOLDING NOTHING IS ITS OWN STATE (UI rule 8) and it renders from
+           the rows, which are loaded by the time this draws — never from a
+           literal, and never borrowed from not-yet-loaded. */
+        <p className="r-note" style={{ marginTop: 10 }}>
+          He is not holding a view about anything yet.
+        </p>
+      )}
+      <ul className="r-memory">
+        {shown.map((row) => {
+          const id = String(row.id ?? '');
+          const gone = forgotten.has(id);
+          const told = String(row.told ?? '').trim();
+          const applied = typeof row.applied === 'number' ? row.applied : null;
+          const learned = learnedOn(row);
+          return (
+            <li key={id || String(row.claim)} className="r-belief"
+                data-forgotten={gone ? true : undefined}>
+              <p className="r-belief-claim">
+                <span className="r-belief-stance">{String(row.stance ?? '')}</span>
+                {' '}{String(row.subject ?? '')}: {String(row.claim ?? '')}
+              </p>
+              <p className="r-belief-life">
+                {/* WHEN, FROM WHAT, HOW OFTEN — the card's three, in the
+                    tool's own words. `told` is quoted because a person said
+                    it; a list of reads is not. */}
+                {learned && <>learned {learned}</>}
+                {row.rests_on ? (
+                  <> · {told ? <>you said “{told}”</> : <>from {String(row.rests_on)}</>}</>
+                ) : null}
+                {applied !== null && (
+                  <> · carried into {applied} {applied === 1 ? 'question' : 'questions'}</>
+                )}
+                {row.carried === false && <> · no longer carried</>}
+                {row.unconfirmed === true && <> · unconfirmed since new data landed</>}
+              </p>
+              {gone ? (
+                <p className="r-belief-gone">Forgotten. He will not bring it to the next question.</p>
+              ) : (
+                <button
+                  type="button"
+                  className="r-chip"
+                  onClick={(e) => { e.stopPropagation(); p.on.forget?.(p.o.key, id); }}
+                  disabled={!id || !p.on.forget}
+                >
+                  Forget
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
       <Receipts meta={call?.result?.meta} />
     </Shell>
   );

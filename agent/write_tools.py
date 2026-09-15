@@ -980,6 +980,11 @@ async def record_belief(beliefs: list[dict], *, ctx: WriteContext) -> dict:
     Re-recording a view you already hold simply confirms it, which is how "held
     since Friday" stays true.
 
+    AND RECORD ONE WHEN THEY CORRECT YOU. "That is not what I meant" is the
+    most valuable thing anybody says to you: it settles what a question means
+    here, and nothing you read can. Keep it as a `means` view with their words
+    in `told`, and the next answer is scoped their way rather than yours.
+
     Args:
         beliefs: The views to keep, as a list of objects:
             subject_kind — one of store, warehouse, supplier, product, category,
@@ -996,6 +1001,12 @@ async def record_belief(beliefs: list[dict], *, ctx: WriteContext) -> dict:
                 [{"tool": ..., "arguments": {...}}]. Only calls you have already
                 run in this conversation; a view has to rest on something that
                 actually happened. A read that found nothing counts.
+            told — the other thing a view may rest on, and only for a `means`
+                view: what the person SAID, in their words. "We means the
+                shops, not the warehouse" is not a reading of data and no read
+                can settle it, so it names `told` and no evidence — and from
+                then on it is how you scope and word the answer. A view names
+                one ground or the other, never both.
             supersedes — the id of a belief this replaces, from the block of
                 current beliefs attached to the question. Include it when a read
                 has changed your mind.

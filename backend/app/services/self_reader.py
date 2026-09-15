@@ -20,6 +20,7 @@ names no user and no scope, because there is no argument for either.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from sqlalchemy import text
@@ -47,17 +48,32 @@ async def read_memory(session: AsyncSession, *, username: str) -> dict:
     A STORED VIEW CARRIES NO FIGURE (agent/beliefs.py refuses one), so these
     rows are safe beside measured numbers: nothing here can be read as a
     current figure, because there is no figure in it.
+
+    FOUR THINGS PER ROW SINCE P2.f, because "what do you remember" is a
+    question about the MEMORY and not only about the business: what he thinks,
+    WHEN he formed it, what it RESTS ON — the reads, by name, or the sentence
+    a person told him — and HOW OFTEN it has been carried into a question.
+
+    THE COUNT SAYS WHAT IT MEASURED AND NOT A WORD MORE. `applied` counts the
+    questions this view was attached to. It does not count answers it changed;
+    nothing on this path can observe that, and a number that implied it would
+    be the one thing this repo refuses everywhere else. The note says so, in
+    the rows' own company, so it cannot be read off the figure alone.
     """
     held = await belief_store.current(session)
     latest_data = await belief_store.latest_data_at(session)
+    read_at = datetime.now(timezone.utc)
     # What people did with what he raised, lately. In meta and not in rows:
     # a decision is not a view, and the agenda's own rows already carry
     # theirs. Here so "what have I been putting aside" has a read behind it.
     recent_decisions = await decisions.recent(session, window_days=RUNS_WINDOW_DAYS)
 
+    carried = set(belief_store.in_prompt(held))
+
     rows: list[dict[str, Any]] = []
     for b in held[:MAX_VIEWS]:
         confirmed = b.get("confirmed_at")
+        told = str(b.get("told") or "").strip()
         rows.append({
             "subject": b.get("subject"),
             "subject_kind": b.get("subject_kind"),
@@ -65,9 +81,26 @@ async def read_memory(session: AsyncSession, *, username: str) -> dict:
             "claim": b.get("claim"),
             "held_since": b.get("held_since"),
             "last_checked": confirmed,
-            # The one thing that makes a held view safe to lean on: whether
-            # anything has landed since it was last checked.
-            "unconfirmed": bool(latest_data and confirmed and latest_data > confirmed),
+            # WHAT IT RESTS ON, in one field, because there is exactly one
+            # ground per view and a reader should not have to work out which
+            # of two columns to look at. The reads by name, or their words.
+            "rests_on": told or _reads(b.get("evidence")),
+            # WHICH of the two, so the surface can say "you told me" without
+            # guessing it from the stance.
+            "told": told or None,
+            # A view that has fallen out of the register is not attached to
+            # anything any more, and stops counting. Said here rather than
+            # inferred from the count, which cannot distinguish "dropped out"
+            # from "formed this minute".
+            "carried": b.get("id") in carried,
+            "applied": int(b.get("applied_count") or 0),
+            "last_applied": b.get("last_applied_at"),
+            # A TAUGHT VIEW IS NEVER UNCONFIRMED. New data cannot make it less
+            # true that this is what they meant, so the mark that means
+            # "re-read before leaning on it" would be asking for a read that
+            # settles nothing.
+            "unconfirmed": bool(not told and latest_data and confirmed
+                                and latest_data > confirmed),
             "id": str(b.get("id")) if b.get("id") else None,
         })
 
@@ -77,9 +110,16 @@ async def read_memory(session: AsyncSession, *, username: str) -> dict:
             "source_table": "george.beliefs",
             "filters_applied": [
                 "superseded_by IS NULL   # only the views that still stand",
+                "forgotten_at IS NULL    # and none a person has forgotten",
                 f"limit {MAX_VIEWS}",
             ],
-            "snapshot_timestamp": latest_data,
+            # THE READ'S OWN TIME, not the business data's. These rows are the
+            # state of george.beliefs as of now, and that is what a snapshot
+            # timestamp is for: the surface draws a time under every figure
+            # (UI rule 6), and under a count of applications the honest time
+            # is when the count was read. When the DATA last landed is its own
+            # key below, where the unconfirmed mark is computed from it.
+            "snapshot_timestamp": read_at,
             "metric_label": "What I think right now",
             "held": len(held),
             "unconfirmed": sum(1 for r in rows if r["unconfirmed"]),
@@ -92,10 +132,33 @@ async def read_memory(session: AsyncSession, *, username: str) -> dict:
             "note": (
                 "These are views, not figures — a stored view never carries a "
                 "number. One marked unconfirmed has not been checked against "
-                "data that has landed since; re-read before leaning on it."
+                "data that has landed since; re-read before leaning on it. "
+                "`applied` counts the questions a view was ATTACHED to, which "
+                "is not how many answers it changed — nothing measures that. "
+                "A view with `told` is one a person taught you: it rests on "
+                "their words, never goes stale, and is not re-checkable."
             ),
         },
     }
+
+
+def _reads(evidence: Any) -> str:
+    """
+    The calls a view rests on, by name, for a person reading the row.
+
+    Names and not arguments: "from get_sales, get_stock" is what a reader
+    needs to know it was measured; the arguments are in the evidence, which is
+    what makes the view re-checkable. A view with no calls has words instead,
+    and this is never reached for one.
+    """
+    if not isinstance(evidence, (list, tuple)):
+        return ""
+    names: list[str] = []
+    for call in evidence:
+        name = str((call or {}).get("tool") or "").strip() if isinstance(call, dict) else ""
+        if name and name not in names:
+            names.append(name)
+    return ", ".join(names)
 
 
 async def view_of(session: AsyncSession, *, subject_kinds: tuple[str, ...],
@@ -136,7 +199,11 @@ async def view_of(session: AsyncSession, *, subject_kinds: tuple[str, ...],
             "claim": belief.get("claim"),
             "held_since": belief.get("held_since"),
             "last_checked": confirmed,
-            "unconfirmed": bool(latest_data and confirmed and latest_data > confirmed),
+            # A view a person TAUGHT him does not go stale and is never asked
+            # to be re-checked, here for the same reason as in read_memory.
+            "told": str(belief.get("told") or "").strip() or None,
+            "unconfirmed": bool(not belief.get("told") and latest_data
+                                and confirmed and latest_data > confirmed),
             "id": str(belief.get("id")) if belief.get("id") else None,
             "source_table": "george.beliefs",
         }

@@ -793,6 +793,15 @@ class DecisionOut(BaseModel):
     decided_at: datetime
 
 
+class ForgottenBelief(BaseModel):
+    """What was dropped, so the surface can say it by name rather than guess."""
+    id: str
+    subject: str
+    stance: str
+    claim: str
+    forgotten_at: datetime
+
+
 class StandingLatest(BaseModel):
     """The newest standing answer waiting for this person, if there is one."""
 
@@ -827,6 +836,42 @@ async def record_decision(
     except decisions_service.DecisionRefused as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     return DecisionOut(id=row.id, what=row.what, outcome=row.outcome, decided_at=row.decided_at)
+
+
+@router.post("/beliefs/{belief_id}/forget", response_model=ForgottenBelief)
+async def forget_belief(
+    belief_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: AppUser = Depends(_george_user),
+) -> ForgottenBelief:
+    """
+    Stop holding a view, at a person's word.
+
+    A GESTURE, NOT A TOOL (P2.f). Forget sits on every row the memory draws,
+    and it is the person's to make: George may revise a view when a read
+    contradicts it, but he may not decide to stop knowing something because
+    somebody disagreed. So there is no `forget_belief` in his schema and there
+    is no argument here for whose memory — beliefs are shared, as they have
+    been since they were introduced.
+
+    THE ROW IS NOT DELETED. `forgotten_at` and the hand that did it are
+    stamped on it and it stops being current, which is what takes it out of
+    the prompt and out of `view_memory` at the same moment. What George used
+    to think is still answerable.
+
+    404 when it is not a view he currently holds, INCLUDING one already
+    forgotten: a second Forget that reports success is telling the person
+    something untrue.
+    """
+    try:
+        row = await beliefs_service.forget(db, belief_id, by=user.username)
+    except beliefs_service.BeliefNotHeld as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    return ForgottenBelief(
+        id=str(row["id"]), subject=str(row["subject"] or ""),
+        stance=str(row["stance"] or ""), claim=str(row["claim"] or ""),
+        forgotten_at=row["forgotten_at"],
+    )
 
 
 @router.get("/standing", response_model=List[StandingQuestionOut])
@@ -2267,7 +2312,20 @@ async def _beliefs_for() -> Optional[str]:
         async with AsyncSessionLocal() as session:
             rows = await beliefs_service.current(session)
             latest = await beliefs_service.latest_data_at(session)
-        return beliefs_service.as_block(rows, latest_data=latest)
+            block = beliefs_service.as_block(rows, latest_data=latest)
+            # COUNT WHAT WAS ACTUALLY HANDED OVER (P2.f). The views that reach
+            # the question are the ones the block carries, and `in_prompt` is
+            # the one place that decides which — so the count cannot drift
+            # from the block it is counting. Nothing is counted when there is
+            # no block: an empty register applied nothing.
+            if block:
+                try:
+                    await beliefs_service.mark_applied(
+                        session, beliefs_service.in_prompt(rows))
+                except SQLAlchemyError:
+                    # A turn is never lost to a counter.
+                    await session.rollback()
+        return block
     except SQLAlchemyError:
         return None
 

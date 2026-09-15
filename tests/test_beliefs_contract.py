@@ -249,7 +249,13 @@ def test_the_schema_offers_a_list_of_objects_and_not_a_string():
     assert beliefs_schema["type"] == "array"
     items = beliefs_schema["items"]
     assert items["type"] == "object"
-    assert set(items["required"]) == {"subject_kind", "subject", "stance", "claim", "evidence"}
+    # EVIDENCE LEFT `required` AND `told` DID NOT JOIN IT (P2.f). A view rests
+    # on exactly one ground and which one depends on the stance, so no single
+    # field is required of every view; the pair is enforced in
+    # agent/beliefs.validate, where the stance is in hand, and by the table.
+    assert set(items["required"]) == {"subject_kind", "subject", "stance", "claim"}
+    assert "told" in items["properties"]
+    assert items["properties"]["evidence"]["minItems"] == 1
     assert items["additionalProperties"] is False
     assert set(items["properties"]["stance"]["enum"]) == set(beliefs.stances_for(load_defs()))
     assert set(items["properties"]["subject_kind"]["enum"]) == set(beliefs.subject_kinds_for(load_defs()))
@@ -266,3 +272,79 @@ def test_a_list_that_arrives_as_json_text_is_still_that_list():
     # Text that is not JSON is one refusal with a reason, not a refusal per character.
     accepted, rejected = beliefs.validate("not json at all", load_defs(), is_executed=lambda c: True)
     assert accepted == [] and len(rejected) == 1
+
+
+# ---------------------------------------------------------------------------
+# THE SECOND GROUND (P2.f, 2026-09-15): a view a person TAUGHT him.
+#
+# The card's own done-when is that "we means the shops", taught once, changes
+# the next "how are we doing". Under calls-only it could not be taught at all:
+# a correction rests on nothing a tool returned, so every one of them was
+# refused as ungrounded. These say the ground is a second one and not a hole —
+# exactly one per view, and the wrong one is refused with a reason that names
+# the right one.
+# ---------------------------------------------------------------------------
+
+TAUGHT = {
+    "subject_kind": "estate",
+    "subject": "we",
+    "stance": "means",
+    "claim": "When they say we they mean the retail shops, not the warehouse or vending.",
+    "told": "no, we means the shops",
+}
+
+
+def test_a_view_a_person_taught_him_rests_on_their_words_and_is_kept(defs):
+    accepted, rejected = beliefs.validate([TAUGHT], defs, is_executed=lambda c: False)
+    assert rejected == []
+    assert accepted[0]["told"] == "no, we means the shops"
+    # It names no calls, and the row says so rather than carrying an empty
+    # gesture at a read that never happened.
+    assert accepted[0]["evidence"] == []
+
+
+def test_a_taught_view_with_no_told_is_refused_and_the_reason_asks_for_it(defs):
+    accepted, rejected = beliefs.validate(
+        [{k: v for k, v in TAUGHT.items() if k != "told"}], defs,
+        is_executed=lambda c: True)
+    assert accepted == []
+    assert "told" in rejected[0]["reason"]
+
+
+def test_a_taught_view_may_not_also_name_reads(defs):
+    """
+    EXACTLY ONE GROUND. A view offering both would let a sentence somebody
+    typed borrow the authority of a read that was about something else.
+    """
+    accepted, rejected = beliefs.validate([{**TAUGHT, "evidence": [RAN]}], defs,
+                                          is_executed=executed_only(RAN))
+    assert accepted == []
+    assert "SAID" in rejected[0]["reason"]
+
+
+def test_a_reading_of_data_may_not_rest_on_what_somebody_said(defs):
+    """The other half of the same rule, and the one that matters more: a
+    judgment about a shop is not settled by being asserted at George."""
+    accepted, rejected = beliefs.validate(
+        [good(told="Rockwell is fine, trust me", evidence=[RAN])], defs,
+        is_executed=executed_only(RAN))
+    assert accepted == []
+    assert "evidence" in rejected[0]["reason"]
+
+
+def test_a_taught_view_still_carries_no_figure(defs):
+    """Everything else that makes a belief safe still applies to a taught one."""
+    accepted, rejected = beliefs.validate(
+        [{**TAUGHT, "claim": "We means the 7 shops."}], defs, is_executed=lambda c: False)
+    assert accepted == []
+    assert "figure" in rejected[0]["reason"]
+
+
+def test_a_told_longer_than_the_definitions_allow_is_refused(defs):
+    """A pasted passage is not the sentence that corrected you."""
+    limit = beliefs.max_told_words(defs)
+    accepted, rejected = beliefs.validate(
+        [{**TAUGHT, "told": " ".join(["word"] * (limit + 1))}], defs,
+        is_executed=lambda c: False)
+    assert accepted == []
+    assert str(limit) in rejected[0]["reason"]

@@ -14,15 +14,27 @@ is the pure question: is this a belief George is allowed to hold?
 
 FOUR RULES, AND EACH ONE IS THE ANSWER TO A WAY MEMORY GOES WRONG.
 
-  1. A BELIEF NAMES THE READS BEHIND IT, as CALLS rather than as row numbers.
-     At least one, every one a call actually run in this conversation — the
-     same provenance rule pin_answer has, reused rather than reinvented, and
-     for the same reason: a stored call can be re-run, so a belief can be
-     re-checked. This is `judgment.grounding` made mechanical:
+  1. A BELIEF NAMES WHAT IT RESTS ON, and there are exactly two things it may
+     rest on: the READS behind it, as CALLS rather than as row numbers, or —
+     for a view a person TAUGHT him — their own words.
+
+     THE READS. At least one, every one a call actually run in this
+     conversation — the same provenance rule pin_answer has, reused rather
+     than reinvented, and for the same reason: a stored call can be re-run,
+     so a belief can be re-checked. This is `judgment.grounding` made mechanical:
      an ungrounded view is an invention, and an invention that persists is
      worse than one that does not, because tomorrow nobody remembers it was
      invented. A read that established NOTHING counts — "I looked and there is
      nothing there" is grounded in the looking.
+
+     THE SECOND GROUND, added 2026-09-15 for P2.f. "We means the shops, not
+     the warehouse" is not a reading of anything, so under calls-only it could
+     not be kept at all — George was refused the one correction a person is
+     the sole authority on. A `means` view names `told` instead: what they
+     said, in their words. That is not a weaker ground than a read, it is a
+     different one, and the rule is EXACTLY ONE per view: a reading stance
+     names calls and may not name `told`; a `means` view names `told` and no
+     calls. Both would let a typed sentence borrow a read's authority.
 
   2. A BELIEF CARRIES NO FIGURE. This is the rule that keeps memory from
      becoming a lie. "Rockwell is down 9.4%" is false a week later and says so
@@ -32,9 +44,10 @@ FOUR RULES, AND EACH ONE IS THE ANSWER TO A WAY MEMORY GOES WRONG.
      one-sentence readings have had since they were introduced: characterise
      the rows, never restate them.
 
-  3. A STANCE IS ONE OF FIVE WORDS. metrics.yaml `judgment.stances`, and the
-     same five the prompt teaches. A sixth stance invented at the keyboard
-     would be a category of business situation nobody defined.
+  3. A STANCE IS ONE OF THE WORDS IN THE DEFINITIONS. metrics.yaml
+     `judgment.stances`, and the same ones the prompt teaches — five readings
+     of data and `means`. One invented at the keyboard would be a category of
+     business situation nobody defined.
 
   4. CHANGING A VIEW KEEPS THE OLD ONE AND SAYS WHY. A belief that supersedes
      another must name it and give a reason. A view that can be silently
@@ -65,8 +78,24 @@ MAX_WHY = 240
 MAX_BELIEFS_PER_TURN = 6
 
 
+def taught_stance(defs: Mapping[str, Any]) -> str:
+    """The one stance that rests on a person rather than on a read."""
+    return str(defs["judgment"]["taught"]["stance"])
+
+
+def max_told_words(defs: Mapping[str, Any]) -> int:
+    """
+    How much of what they said may be kept.
+
+    A bound in WORDS rather than characters because this is a quotation, and
+    the thing being refused is a paragraph pasted in as though it were a
+    correction. metrics.yaml judgment.taught.max_words.
+    """
+    return int(defs["judgment"]["taught"]["max_words"])
+
+
 def stances_for(defs: Mapping[str, Any]) -> tuple[str, ...]:
-    """The five stances, read from the definitions so the two cannot drift."""
+    """Every stance, read from the definitions so the two cannot drift."""
     return tuple(defs["judgment"]["stances"].keys())
 
 
@@ -99,6 +128,8 @@ def validate(
     """
     stances = stances_for(defs)
     kinds = subject_kinds_for(defs)
+    taught = taught_stance(defs)
+    max_told = max_told_words(defs)
 
     accepted: list[dict] = []
     rejected: list[dict] = []
@@ -168,7 +199,45 @@ def validate(
             )))
             continue
 
-        evidence, why_bad = _evidence(item.get("evidence"), is_executed)
+        # WHAT IT RESTS ON — exactly one ground, decided by the stance.
+        #
+        # A `means` view is the correction a person makes to what a question
+        # means, and nobody but them can settle it, so it rests on `told` and
+        # names no calls. Every other stance is a reading of data and rests on
+        # the reads, exactly as before. A view offering both would let a typed
+        # sentence borrow a read's authority, and a view offering neither is
+        # the invention rule 1 exists to refuse.
+        told = item.get("told")
+        if stance == taught:
+            evidence, why_bad = [], None
+            if item.get("evidence"):
+                why_bad = (
+                    f"a {taught!r} view rests on what the person SAID, not on a read. "
+                    f"Put their words in `told` and leave `evidence` out; if this is "
+                    f"a reading of data, it needs one of the other stances"
+                )
+            elif not isinstance(told, str) or not told.strip():
+                why_bad = (
+                    f"a {taught!r} view needs `told`: what the person actually said, "
+                    f"in their words. Without it there is nothing behind it"
+                )
+            else:
+                told = told.strip()
+                if len(told.split()) > max_told:
+                    why_bad = (
+                        f"`told` is longer than {max_told} words; that is a passage "
+                        f"being stored, not the sentence that corrected you"
+                    )
+        else:
+            told = None
+            if item.get("told"):
+                why_bad = (
+                    f"only a {taught!r} view rests on what a person said. A reading "
+                    f"of data rests on the reads behind it — name them in `evidence`"
+                )
+                evidence = []
+            else:
+                evidence, why_bad = _evidence(item.get("evidence"), is_executed)
         if why_bad:
             rejected.append(_reject(item, why_bad))
             continue
@@ -195,6 +264,7 @@ def validate(
             "subject": subject.strip(),
             "claim": claim,
             "evidence": evidence,
+            "told": told,
             "supersedes": str(supersedes).strip() if supersedes is not None else None,
             "why": why,
         })

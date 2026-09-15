@@ -260,3 +260,52 @@ def test_the_model_is_never_told_a_default_was_composed():
     for line in source.splitlines():
         if "default_composition_recorded" in line and "messages" in line:
             raise AssertionError(line)
+
+
+# ---------------------------------------------------------------------------
+# THE MEMORY HAS ONE HONEST DRAWING (P2.f, 2026-09-15)
+#
+# Every other branch of `shape_for` reads the COLUMNS, because for a read of
+# the business the rows are all there is to go on. `view_memory`'s rows are
+# not the business — they are the views George holds, each with a Forget on
+# it — and by columns alone they are a table, which draws no Forget at all.
+# The read itself says which, so nothing is inferred.
+# ---------------------------------------------------------------------------
+
+VIEWS = [
+    {"id": "b1", "subject": "Rockwell", "stance": "needs_attention",
+     "claim": "Rockwell is losing customers rather than smaller baskets.",
+     "rests_on": "get_sales", "applied": 9, "carried": True},
+    {"id": "t1", "subject": "we", "stance": "means",
+     "claim": "When they say we they mean the retail shops.",
+     "rests_on": "no, we means the shops", "told": "no, we means the shops",
+     "applied": 1, "carried": True},
+]
+
+
+def test_what_he_remembers_is_drawn_as_a_memory_and_not_as_a_table(defs):
+    block = default_composition.shape_for(
+        read(tool="view_memory", rows=VIEWS), 1, "read-1", "lead")
+    assert block["kind"] == "memory"
+
+
+def test_the_default_memory_survives_the_same_gate_george_composes_through(defs):
+    """
+    The guarantee that matters for every default: a block this produced and a
+    block he produced are the same object, because there is one gate.
+    """
+    block = default_composition.shape_for(
+        read(tool="view_memory", rows=VIEWS), 1, "read-1", "lead")
+    accepted, warnings = compose.validate(
+        [block], {1: read(tool="view_memory", rows=VIEWS)}, defs)
+    assert warnings == []
+    assert accepted[0]["kind"] == "memory"
+
+
+def test_a_memory_names_no_subject_so_no_view_can_be_left_out_of_it(defs):
+    """
+    `composition.widgets.memory` needs `seq` and nothing else. There is no
+    channel for George to choose which of his views you are shown, by design:
+    a memory you cannot see all of is not one you can check.
+    """
+    assert set(defs["composition"]["widgets"]["memory"]["needs"]) == {"seq"}

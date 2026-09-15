@@ -365,12 +365,13 @@ export interface CompositionBlock {
   kind?:
     /**
      * THE CATALOGUE (P1.f, 2026-09-14): the six marks the renderer draws,
-     * plus the four kinds that are not readings of a read and keep their own
+     * plus the five kinds that are not readings of a read and keep their own
      * tiles. `composition.widgets` in metrics.yaml is this list, and George
-     * may compose nothing else.
+     * may compose nothing else. `memory` is the fifth (P2.f): every view he
+     * holds, with a Forget on each row.
      */
     | 'figure' | 'dumbbell' | 'ranked' | 'contributors' | 'line' | 'table'
-    | 'draft' | 'state' | 'control' | 'system'
+    | 'draft' | 'state' | 'control' | 'system' | 'memory'
     /**
      * HISTORICAL ONLY. A board persists between turns and across a deploy, so
      * a browser that had these on screen still has them and a stored thread

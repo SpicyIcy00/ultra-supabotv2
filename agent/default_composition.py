@@ -58,6 +58,7 @@ from __future__ import annotations
 from typing import Any, Mapping, Optional, Sequence
 
 from agent import compose
+from agent.composite_tools import MEMORY_TOOL
 
 # Mirrors frontend/src/components/george/pinShape.ts. Where a constant appears
 # in both, it is the same constant for the same reason, and the reason is
@@ -142,6 +143,16 @@ def shape_for(call: Mapping[str, Any], seq: int, key: str, weight: str) -> Optio
     if not rows:
         return None
     block: dict[str, Any] = {"op": "put", "key": key, "seq": seq, "weight": weight}
+
+    # WHAT HE REMEMBERS HAS ONE SHAPE, AND IT IS NOT A TABLE (P2.f). Every
+    # other branch below reads the COLUMNS, because for a read of the business
+    # the rows are all there is to go on. These rows are not the business:
+    # they are the views he holds, every one of them with a Forget on it, and
+    # a table of them draws no Forget at all. The read itself says which, so
+    # nothing is inferred — this is the one tool whose result has exactly one
+    # honest drawing.
+    if str(call.get("tool") or "") == MEMORY_TOOL:
+        return {**block, "kind": "memory"}
 
     if len(rows) == 1:
         # ONE ROW IS A FIGURE, whether or not it was compared. `subject` is

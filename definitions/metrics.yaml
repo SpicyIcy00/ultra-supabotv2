@@ -5531,12 +5531,39 @@ judgment:
   # The stances a view can take. A CLOSED SET, and the vocabulary the persistent
   # understanding will store when it arrives — defined here first so the words
   # are settled before anything keeps them.
+  #
+  # FIVE ARE READINGS OF DATA. `means` is the sixth and it is a different
+  # thing, added 2026-09-15 for P2.f: five stances describe a business
+  # SITUATION George read, and there was no word at all for something a person
+  # TOLD him. "We means the shops, not the warehouse" is not a reading of
+  # anything — it is what the question means here, and until it had a stance
+  # George could not keep it, because `record_belief` refuses a view with no
+  # read behind it and a correction has none. See `taught` below.
   stances:
     needs_attention: "this matters, and here is the fact that makes it matter"
     unremarkable: "measured, and nothing here concerns me"
     unexplained: "it moved and I cannot establish why"
     not_visible: "I cannot see this at all"
     waiting: "nothing to say until something arrives"
+    means: "what a person told you they mean, not a reading of data"
+
+  # WHAT A PERSON TEACHES HIM, and why it is a belief rather than a setting.
+  #
+  # A belief names the reads behind it (agent/beliefs.py rule 1) because an
+  # ungrounded view that persists is worse than one that does not. A
+  # correction is grounded too — on the person, who is a better authority on
+  # what they meant than any read — so the rule is not relaxed here, it is
+  # answered by a SECOND ground. A taught view names `told`: their words.
+  #
+  # EXACTLY ONE GROUND PER VIEW. A reading stance names calls and may not name
+  # `told`; a `means` view names `told` and no calls. A view claiming both
+  # would let a sentence a person typed borrow a read's authority, and the
+  # table refuses it too (alembic x8y9z0a1b2c3).
+  taught:
+    stance: means
+    rests_on: "what the person said, in their own words"
+    max_words: 40
+    prompted_by: "not what I meant"
 
   # A view is held about a SUBJECT — the thing it is about — so that it can
   # later be attached to that thing rather than to a conversation.
@@ -5579,11 +5606,12 @@ composition:
   # did not decide before — they decide what a mark LOOKS like inside its own
   # family, not which family it is.
   #
-  # FOUR KINDS ARE NOT MARKS and keep their own tiles, for the reason P1.e
+  # FIVE KINDS ARE NOT MARKS and keep their own tiles, for the reason P1.e
   # recorded: a mark is a way of drawing what a read RETURNED, and these are
   # objects you do something to. `draft` has quantities you edit and a total
   # that follows them; `control` is a handle; `state` and `system` say where
-  # something stands.
+  # something stands; `memory` has a Forget on every row, which is a gesture
+  # no drawing of rows has.
   #
   # THERE IS NO `text` WIDGET, AND THAT IS THE POINT (P1.c, 2026-09-14). The
   # reading used to be one of these — a block George composed like any other,
@@ -5629,6 +5657,9 @@ composition:
     system:
       about: "something that RUNS — a saved rule, a standing question, a watch — with where it stands and what it did last. Drawn over a read that returned it, which is view_automations"
       needs: [seq, subject]
+    memory:
+      about: "what you currently believe, one line per view: what you think, when you formed it, what it rests on, and how many questions it has been carried into. Each one can be forgotten from it. Drawn over a read that returned them, which is view_memory"
+      needs: [seq]
   state_labels: [pending, running, waiting, done, blocked]
 
   # THE CLAIM-TITLE — the few words over a block, and the one thing on it

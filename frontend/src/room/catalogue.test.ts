@@ -89,8 +89,11 @@ describe('the catalogue covers the vocabulary', () => {
   });
 
   it('draws a kind the renderer keeps a tile for as its own object, not a mark', () => {
-    // The four are objects you do something to, not readings of a read.
-    expect(Object.keys(NOT_A_MARK).sort()).toEqual(['control', 'draft', 'state', 'system']);
+    // The five are objects you do something to, not readings of a read.
+    // `memory` joined them in P2.f: a Forget on every row is a gesture per
+    // row, and no drawing of rows carries one.
+    expect(Object.keys(NOT_A_MARK).sort())
+      .toEqual(['control', 'draft', 'memory', 'state', 'system']);
   });
 });
 

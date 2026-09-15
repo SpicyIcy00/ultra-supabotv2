@@ -29,13 +29,14 @@
  * each is a dumbbell, the same set without one is a ranking, because the rows
  * are what a reader is actually looking at.
  *
- * FOUR KINDS ARE NOT READINGS AND KEEP THEIR OWN TILES: `draft` (an order you
+ * FIVE KINDS ARE NOT READINGS AND KEEP THEIR OWN TILES: `draft` (an order you
  * edit, with a total that follows your edits), `control` (a handle on a read),
- * `state` and `system` (where something stands). A mark is a way of drawing
- * what a read RETURNED; those four are objects you do something to. Mapping
- * them onto `table` would have deleted the draft's editable quantities, which
- * is the one gesture the purchase arc turns on. This is the card's one
- * deviation and it is recorded in ops/DECISIONS.md.
+ * `state` and `system` (where something stands), and `memory` (every view he
+ * holds, with a Forget on each). A mark is a way of drawing what a read
+ * RETURNED; those five are objects you do something to. Mapping them onto
+ * `table` would have deleted the draft's editable quantities, which is the one
+ * gesture the purchase arc turns on, and the memory's Forget with it. This is
+ * the card's one deviation and it is recorded in ops/DECISIONS.md.
  */
 import type { BoardObject } from './board';
 import type { ToolMeta } from '../types/george';
@@ -51,6 +52,8 @@ export const NOT_A_MARK: Record<string, string> = {
   control: 'a handle on a read, not a drawing of one',
   state: 'where a process stands; it has a label, not rows',
   system: 'something that RUNS, with three states a mark cannot hold apart',
+  memory: 'what he currently believes, with a Forget on every row — a gesture '
+        + 'per row, which no drawing of rows carries',
 };
 
 const TIME_KEYS = ['day', 'week', 'month', 'bucket', 'date', 'snapshot_date', 'hour', 'period'];

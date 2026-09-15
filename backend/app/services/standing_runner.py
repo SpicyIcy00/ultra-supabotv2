@@ -160,7 +160,18 @@ async def _beliefs_block() -> Optional[str]:
         async with AsyncSessionLocal() as session:
             rows = await beliefs_service.current(session)
             latest = await beliefs_service.latest_data_at(session)
-        return beliefs_service.as_block(rows, latest_data=latest)
+            block = beliefs_service.as_block(rows, latest_data=latest)
+            # A SCHEDULED QUESTION IS A QUESTION (P2.f). The count means "how
+            # many questions this view was attached to", and a standing one
+            # attaches it exactly as a typed one does — counting only the
+            # typed ones would make the figure quietly mean something else.
+            if block:
+                try:
+                    await beliefs_service.mark_applied(
+                        session, beliefs_service.in_prompt(rows))
+                except Exception:  # noqa: BLE001 - never at the morning's expense
+                    await session.rollback()
+        return block
     except Exception as exc:  # noqa: BLE001 - a missing frame must not cost the answer
         print(f"[standing] beliefs unavailable: {type(exc).__name__}: {exc}")
         return None

@@ -97,6 +97,14 @@ def test_the_stances_are_a_closed_set(j):
     """
     assert set(req(j, "stances")) == {
         "needs_attention", "unremarkable", "unexplained", "not_visible", "waiting",
+        # THE SIXTH, ADDED 2026-09-15 (P2.f), and it is a different KIND of
+        # word from the five above it. Those describe a business situation
+        # George read; `means` describes something a person TOLD him, and
+        # there was no stance at all for that — so "we means the shops" could
+        # not be kept, because `record_belief` refuses a view with no read
+        # behind it and a correction has none. It is here rather than in the
+        # five because it names its own ground: metrics.yaml judgment.taught.
+        "means",
     }
 
 

@@ -545,15 +545,27 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
                               "description": "one sentence, no figure in it"},
                     "evidence": {
                         "type": "array", "minItems": 1,
+                        "description": ("the calls this view rests on, every one "
+                                        "already run in this conversation. Required "
+                                        "for every stance but the taught one"),
                         "items": {"type": "object",
                                   "properties": {"tool": {"type": "string"},
                                                  "arguments": {"type": "object"}},
                                   "required": ["tool", "arguments"]},
                     },
+                    # THE SECOND GROUND (P2.f). A view a person taught you rests
+                    # on their words and names no calls; a reading of data names
+                    # calls and no words. Exactly one, never both, never neither
+                    # — which is why `evidence` left `required` rather than
+                    # `told` joining it.
+                    "told": {"type": "string",
+                             "description": ("only for a `" + _beliefs.taught_stance(_defs)
+                                             + "` view: what the person said, in their "
+                                             "words. Such a view names no evidence")},
                     "supersedes": {"type": "string"},
                     "why": {"type": "string"},
                 },
-                "required": ["subject_kind", "subject", "stance", "claim", "evidence"],
+                "required": ["subject_kind", "subject", "stance", "claim"],
                 "additionalProperties": False,
             },
         }
@@ -1113,11 +1125,11 @@ def _judgment_section(defs: dict) -> str:
     return f"""
 JUDGMENT
 
-{req(j, 'principle')} What the figures MEAN is yours: say which true thing matters most, first — a reading, and it needs no score; say that something is not worth attention, that it moved and the reads do not establish why, "I don't know" and what would settle it; revise a view when evidence contradicts it, keeping what it said and why.
+{req(j, 'principle')} What the figures MEAN is yours: say which true thing matters most, first — a reading, and it needs no score; say "I don't know" and what would settle it.
 
-STANCES: {stances}. Every view rests on a fact a tool established — not on {never}. Still forbidden: {may_not}. You may not invent a FIGURE; you may absolutely form a VIEW.
+STANCES: {stances}. A view rests on a fact a tool established or on what they told you — not on {never}. Still forbidden: {may_not}. You may not invent a FIGURE; you may absolutely form a VIEW.
 
-KEEPING A VIEW. Say what you already think rather than rediscovering it, and never contradict it silently — `record_belief` the change against its id with the reason. A sentence about what something MEANS that you would still say tomorrow is a view: record it. A STORED VIEW CARRIES NO FIGURE. UNCONFIRMED means data landed since it was checked: re-read first.
+KEEPING A VIEW. Say what you already think rather than rediscovering it, and never contradict it silently — `record_belief` the change against its id with the reason. "Not what I meant" is a view: record it as MEANS with `told` — their words, no read. A STORED VIEW CARRIES NO FIGURE. UNCONFIRMED means data landed since it was checked: re-read first.
 """
 
 JUDGMENT_SECTION = _judgment_section(_load_defs())

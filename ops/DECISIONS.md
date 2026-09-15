@@ -4160,3 +4160,37 @@ and the backend reading contradicted half of it an hour later. The two
 platforms fail independently and only one of them runs `tsc`; no session has
 ever read a Vercel build status from a terminal, so a green frontend is
 confirmed by a hard refresh and by nothing else.
+
+**A person is a second ground for a belief, and the only one for what they
+meant.** P2.f: `record_belief` required calls behind every view, so "we means
+the shops, not the warehouse" — the one correction nobody but the owner can
+settle — was refused as ungrounded and George could not keep it. `judgment`
+gains a sixth stance, `means`, and `judgment.taught`: a `means` view names
+`told`, their own words, and no calls; every reading stance names calls and
+may not name `told`. EXACTLY ONE GROUND PER VIEW, refused in
+`agent/beliefs.validate` and again by a `NOT VALID` check on the table. A
+taught line in the prompt block says YOU WERE TOLD and is never marked
+unconfirmed: no amount of new data makes it less true that this is what they
+meant.
+
+**Forget is a person's gesture and there is no tool for it.** George may
+revise a view a read contradicts; he may not decide to stop knowing something
+because somebody disagreed. `POST /george/beliefs/{id}/forget` stamps
+`forgotten_at` and the hand that did it, the row stays, and it leaves the
+prompt and `view_memory` in the same breath. The absence from the model's
+schema is the guarantee, as it is for every write.
+
+**"How often applied" is a count of ATTACHMENTS, because nothing observes an
+answer changing.** `mark_applied` moves the counter for exactly the ids
+`in_prompt` put in the block, so the count cannot drift from what was handed
+over; the read's note and the tile both say "carried into N questions" rather
+than "changed N answers". A figure that implied the second would be the thing
+this repo refuses everywhere else, arriving on the one surface that is about
+George rather than about the shops.
+
+**`memory` is the fifth kind that is not a mark.** A mark draws what a read
+returned; this has a Forget on every row, and a gesture per row is not a
+drawing — the same reason `draft` kept its editable quantities.
+`default_composition` draws `view_memory` as one by the TOOL and not by the
+columns, which is its only such branch: by columns alone a register of beliefs
+is a table, and a table draws no Forget.

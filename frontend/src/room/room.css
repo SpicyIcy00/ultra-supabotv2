@@ -1578,6 +1578,30 @@ body.r-dragging-on .r-tile { transition: none; }
 .r-walk-rows { display: grid; gap: 6px; max-width: 100%; min-width: 0; }
 .r-walk-rows .r-scroll { max-width: 100%; }
 
+/* ------------------------------------------------------------------ memory
+
+   WHAT HE REMEMBERS (P2.f). A list of views, each with its life under it and
+   a Forget beside it. No colour of its own — a view is not an approval, and
+   the one colour means "needs you" (UI rule 5); an unconfirmed view takes its
+   prominence from the line it is written on, as every caveat does. */
+.r-memory { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 14px; }
+.r-belief { display: grid; gap: 5px; justify-items: start; max-width: 62ch; }
+.r-belief-claim { margin: 0; font: 400 13px/1.6 var(--sans); color: var(--ink); }
+.r-belief-stance {
+  font: 500 9.5px/1.5 var(--mono); color: var(--ink-3); text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.r-belief-life { margin: 0; font: 400 11px/1.6 var(--mono); color: var(--ink-3); }
+.r-belief .r-chip { padding: 3px 10px; font-size: 11px; }
+/* A forgotten row does not vanish under the hand that pressed it: it says
+   what happened, and what happens next. */
+.r-belief[data-forgotten] .r-belief-claim,
+.r-belief[data-forgotten] .r-belief-life { color: var(--ink-3); text-decoration: line-through; }
+.r-belief-gone {
+  margin: 0; font: 400 11.5px/1.55 var(--sans); color: var(--ink-2); max-width: 62ch;
+}
+.r-belief[data-forgotten] .r-belief-gone { text-decoration: none; }
+
 @media (max-width: 640px) {
   .r-mk-row, .r-mk-scale { grid-template-columns: minmax(5ch, 9ch) 1fr minmax(8ch, auto); gap: 7px; }
   .r-mk-name { font-size: 11px; }

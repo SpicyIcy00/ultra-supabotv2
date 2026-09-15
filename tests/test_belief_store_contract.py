@@ -222,3 +222,110 @@ def test_the_route_only_passes_the_wrapper_what_it_accepts():
     assert passed, "no call to _safe_stream found; this test has stopped looking"
     unknown = passed - accepted
     assert not unknown, f"the route passes _safe_stream arguments it cannot take: {unknown}"
+
+
+# ---------------------------------------------------------------------------
+# WHAT HE WAS TOLD, WHAT WAS APPLIED, AND WHAT WAS FORGOTTEN (P2.f)
+#
+# Still no database: the block, the cap and the SQL's SHAPE. What the three
+# statements actually do to rows was verified against the real table.
+# ---------------------------------------------------------------------------
+
+TAUGHT = dict(
+    id="t1", subject_kind="estate", subject="we", stance="means",
+    claim="When they say we they mean the retail shops, not the warehouse.",
+    evidence=[], told="no, we means the shops",
+    confirmed_at=NOW - timedelta(days=2), held_since=NOW - timedelta(days=2), why=None,
+)
+
+
+def test_a_taught_view_says_it_was_told_and_quotes_them():
+    """
+    The block is where "we means the shops" reaches the next question, so the
+    line has to say it was TOLD rather than read — otherwise the strongest
+    thing on the block is indistinguishable from a reading George made up.
+    """
+    block = belief_store.as_block([TAUGHT], latest_data=NOW, now=NOW)
+    assert "you were told" in block
+    assert "no, we means the shops" in block
+    assert "[id: t1]" in block
+
+
+def test_a_taught_view_is_never_marked_unconfirmed():
+    """
+    THE ONE PLACE THE FRESHNESS RULE MUST NOT APPLY. Data landing since cannot
+    make it less true that this is what they meant, and telling George to
+    re-read before relying on it would be sending him to find a fact no read
+    contains. The reading beside it is still marked, in the same block.
+    """
+    block = belief_store.as_block([TAUGHT, belief()], latest_data=NOW, now=NOW)
+    told_line, read_line = [ln for ln in block.splitlines() if ln.startswith("- ")]
+    assert "UNCONFIRMED" not in told_line
+    assert "UNCONFIRMED" in read_line
+
+
+def test_the_block_says_a_taught_line_is_not_up_for_re_checking():
+    block = belief_store.as_block([TAUGHT], now=NOW)
+    assert "YOU WERE TOLD" in block
+
+
+def test_what_is_counted_as_applied_is_exactly_what_the_block_carried():
+    """
+    The count and the block cannot drift, because the same function decides
+    both. A count of applications that did not happen would be a figure
+    nothing measured — the one thing this repo refuses everywhere.
+    """
+    many = [belief(id=f"b{i}") for i in range(belief_store.MAX_IN_PROMPT + 3)]
+    carried = belief_store.in_prompt(many)
+    block = belief_store.as_block(many, now=NOW)
+    assert len(carried) == belief_store.MAX_IN_PROMPT
+    for i in carried:
+        assert f"[id: {i}]" in block
+    assert "b12" not in carried and "[id: b12]" not in block
+
+
+def test_the_reads_never_return_a_view_that_was_forgotten_or_superseded():
+    """
+    Both endings take a view out of every path that reaches a question, and
+    neither deletes the row. Read off the statements themselves, because the
+    clause is the whole guarantee and a missing one is invisible until a
+    forgotten view turns up in tomorrow's prompt.
+    """
+    import inspect
+    src = inspect.getsource(belief_store)
+    for statement in ("FROM george.beliefs\n        WHERE superseded_by IS NULL",):
+        assert f"{statement} AND forgotten_at IS NULL" in src
+    assert "DELETE FROM" not in src.upper()
+
+
+def test_forgetting_is_not_superseding_and_asks_for_no_reason():
+    """
+    Superseding says "I was wrong, here is what I think now" and carries a
+    successor and a reason. Forgetting says "stop holding that" and carries
+    neither — demanding an explanation would make the easiest gesture on the
+    surface the one that costs the most.
+    """
+    import inspect
+    params = inspect.signature(belief_store.forget).parameters
+    assert set(params) == {"session", "belief_id", "by"}
+    src = inspect.getsource(belief_store.forget)
+    assert "forgotten_by = :by" in src
+    assert "superseded_by = " not in src
+
+
+def test_a_second_forget_on_the_same_view_is_not_reported_as_a_success():
+    """
+    Telling somebody it worked twice is telling them something untrue once.
+    The statement's own WHERE is what makes the second one match nothing.
+    """
+    import inspect
+    src = inspect.getsource(belief_store.forget)
+    assert "forgotten_at IS NULL" in src
+    assert "BeliefNotHeld" in src
+
+
+def test_applying_a_view_never_touches_one_that_is_no_longer_held():
+    import inspect
+    src = inspect.getsource(belief_store.mark_applied)
+    assert "applied_count = applied_count + 1" in src
+    assert "superseded_by IS NULL AND forgotten_at IS NULL" in src

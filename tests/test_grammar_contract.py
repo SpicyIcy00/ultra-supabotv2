@@ -263,7 +263,12 @@ def test_the_named_widgets_survive_and_are_the_catalogue():
     """
     widgets = req(DEFS, "composition.widgets")
     assert set(widgets) == {"figure", "dumbbell", "ranked", "contributors",
-                            "line", "table", "draft", "state", "control", "system"}
+                            "line", "table", "draft", "state", "control", "system",
+                            # P2.f: the fifth kind that is not a reading of a
+                            # read. Every row of it has a Forget on it, which
+                            # is a gesture no drawing of rows has — the same
+                            # reason `draft` kept its editable quantities.
+                            "memory"}
     ok, no = compose.validate({"blocks": [
         {"key": "plain", "kind": "table", "seq": 0},
     ]}, CALLS, DEFS)

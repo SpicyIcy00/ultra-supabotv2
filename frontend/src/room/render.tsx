@@ -19,7 +19,7 @@ import { useDrag } from './drag';
 import { PROCESS, callOf, dimensionOf, rowsOf, type AnswerTurn, type Dimension } from './data';
 import type { ToolCall } from '../types/george';
 import {
-  Acts, ControlTile, DraftTile, SpecTile, StateTile, SystemTile,
+  Acts, ControlTile, DraftTile, MemoryTile, SpecTile, StateTile, SystemTile,
   ownNotices, type TileActions, type TileProps,
 } from './tiles';
 import { MarkBlock } from './marks';
@@ -189,7 +189,7 @@ function dimensionFor(p: BoardProps, o: BoardObject): Dimension | null {
  * WHAT DRAWS A BLOCK.
  *
  * Since P1.e there are three answers, not fourteen. A composed shape draws its
- * own tree. FOUR kinds are objects you do something to rather than readings of
+ * own tree. FIVE kinds are objects you do something to rather than readings of
  * a read, and they keep their tiles — `catalogue.NOT_A_MARK` says which and
  * why, and `catalogue.test.ts` holds this switch to that list so a kind cannot
  * quietly fall out of both. Everything else is a READING, and every reading is
@@ -206,6 +206,7 @@ function Piece(props: TileProps) {
     case 'state': return <StateTile {...props} />;
     case 'control': return <ControlTile {...props} />;
     case 'system': return <SystemTile {...props} />;
+    case 'memory': return <MemoryTile {...props} />;
     default: return <MarkBlock {...props} />;
   }
 }

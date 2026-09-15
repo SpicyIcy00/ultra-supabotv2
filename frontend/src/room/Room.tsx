@@ -48,6 +48,7 @@ import { Rail } from './Rail';
 import { dismissStanding, useStandingOpening } from './useStandingOpening';
 import { decisionFor, leftBehind } from './decisions';
 import { recordDecision, type Outcome } from '../services/decisionsApi';
+import { forgetBelief } from '../services/beliefsApi';
 import { arrivedSince, firstUnseen, forgetLast, lastSeen, lastThread, remember } from './history';
 import type { TileActions } from './tiles';
 import './room.css';
@@ -687,6 +688,27 @@ export default function Room() {
     keep: (key, kept) => {
       if (kept) decide(board.find((o) => o.key === key), 'kept');
       patch(key, { kept });
+    },
+    // FORGET A VIEW — the memory's one write, and it is the person's.
+    //
+    // The row goes the moment they press it, before the server answers: the
+    // gesture is theirs, they know what they meant, and a Forget that waits
+    // on a round trip is a Forget people press twice. If the write fails the
+    // row comes back, which is the honest rendering of a view he still holds.
+    forget: (key, beliefId) => {
+      if (!beliefId) return;
+      setLocal((s) => {
+        setHistory((h) => [...h.slice(-19), s]);
+        const was = s[key]?.forgot ?? [];
+        return was.includes(beliefId) ? s
+          : { ...s, [key]: { ...s[key], forgot: [...was, beliefId] } };
+      });
+      void forgetBelief(beliefId).catch(() => {
+        setLocal((s) => ({
+          ...s,
+          [key]: { ...s[key], forgot: (s[key]?.forgot ?? []).filter((i) => i !== beliefId) },
+        }));
+      });
     },
   }), [ask, patch, retune, board, drawn, answers, retuned, desk.data, local, focused, decide]);
 

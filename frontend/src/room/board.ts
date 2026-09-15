@@ -96,6 +96,17 @@ export interface Local {
    * conversation happened to produce.
    */
   kept?: boolean;
+  /**
+   * THE VIEWS FORGOTTEN FROM THIS OBJECT, by belief id.
+   *
+   * The write already happened on the server and the row is no longer
+   * current, so the next read will not carry it. This object is drawn from
+   * the read the TURN made, which still has it — so the tile needs to know
+   * locally that it is gone, exactly as `closed` says an object was set
+   * aside. It is arrangement, not truth: reopening the thread redraws from a
+   * read that no longer returns the row at all.
+   */
+  forgot?: string[];
 }
 
 const FIELDS = ['kind', 'weight', 'seq', 'tool', 'subject', 'subjects', 'form',
