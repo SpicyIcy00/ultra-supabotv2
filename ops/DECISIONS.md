@@ -4096,3 +4096,15 @@ becomes a subject, a `page_scope` or a name on the question. "Compare these"
 is a replay rather than a question, which needed `resolve_store` to accept a
 list: the predicate was always `store_id IN (...)`, so one shop was never a
 different query, only a shorter list.
+
+
+**Colour means one thing, and the shell is held to it rather than exempted.**
+2026-09-15, P2.l, out of his log: *"what do the colors mean now?"*. The tile's
+wash was identity and its brightness magnitude, on top of direction inside the
+marks — P1.e's own report one layer out, at the layer `palette.test.ts` wrote
+an exemption for. The shell carries neither now; `var(--hue)` reaches one
+selector, `.r-obj`, an opened object with nothing beside it; `Spec` paints a
+direction or `--flat`, because a hue his COLUMN picked is a claim no tool made.
+**Magnitude was not judged, it was found dead**: P1.e deleted the last caller
+that fed `--i`, so every tile had rendered at 0 for a day while the log called
+it live. Held by a DOM replay, not a source scan: 15 of 18 fail on `51af583`.

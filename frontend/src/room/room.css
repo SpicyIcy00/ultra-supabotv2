@@ -7,15 +7,22 @@
  * distinguishable, and a bright saturated field is the worst possible surface
  * for a table of numbers — which is what this is full of.
  *
- * NO GRAIN. NO NOISE. NO TEXTURE. Asked for explicitly, in those words. What
- * gives the page depth is the wash of colour off each object and nothing else.
+ * NO GRAIN. NO NOISE. NO TEXTURE. Asked for explicitly, in those words.
  *
- * THREE MEANINGS, THREE CHANNELS, NEVER CROSSED:
- *   hue        which thing this is    — identity.ts, fixed forever
- *   strength   how hard it moved      — |change| against a cap
- *   the pill   which way it moved     — semantic green/red, always signed
- * So Rockwell is violet whether it rose or fell; a bad week makes its violet
- * burn brighter and puts a red figure on it. Nothing about a hue means "bad".
+ * COLOUR MEANS ONE THING (P2.l, 2026-09-15): WHICH WAY A FIGURE THE TOOL
+ * MEASURED WENT. It used to mean four at once — the tile's wash was identity,
+ * its brightness was magnitude with no direction, the marks were direction,
+ * and three shop hues sat on top of the three semantic colours. He looked at
+ * the live build and asked *"what do the colors mean now? does this make
+ * sense?"*, which is his seven-shops-seven-hues report from P1.e one layer
+ * out: that card took identity out of the MARKS and left it on the SHELL.
+ *
+ * What is left, each meaning one thing and nothing else:
+ *   --up / --down / --flat   the direction a tool declared, inside a mark
+ *   --george                 his voice — chrome, never a measurement
+ *   --accent                 "needs you". Approvals, and nothing else.
+ * And one hue: an OPENED object's panel, where identity is the point and
+ * there is nothing beside it to confuse the colour with.
  */
 
 /* ---------------------------------------------------------------- tokens */
@@ -38,19 +45,15 @@
   --ink: #F1F0F6;
   --ink-2: #A6A5B3;
   --ink-3: #6E6D7B;
-  /* On a fully coloured tile. Never pure white — it glares against a hue. */
-  --on-colour: #FFFDF9;
-  --on-colour-2: rgba(255, 253, 249, 0.72);
-
-  /* How hard a tile's own colour burns under its surface. On dark it is the
-     whole light source; on cream it is a wash. */
-  --bloom: 0.62;
   /* Neutral shadows. A shadow on near-black is deep and cheap; on cream it
-     is faint and warm. Never a hue — the hue has its own glow. */
+     is faint and warm. Never a hue — a tile has no colour of its own. */
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.3), 0 16px 36px -20px rgba(0, 0, 0, 0.7);
 
-  /* Set per tile from identity.ts. Neutral until something says otherwise. */
+  /* THE ONE PLACE IDENTITY STILL SHOWS (P2.l): an OPENED object's panel, set
+     from identity.ts by the one caller left. It was on every tile — the edge
+     and the wash — which made a board of seven shops seven hues over rows
+     that already carried the names. Neutral until an object is opened. */
   --hue: 124, 133, 150;
 
   /* Direction. Semantic, and never an identity. */
@@ -160,7 +163,6 @@
   --ink: #1C1917;
   --ink-2: #57534E;
   --ink-3: #8C837A;
-  --bloom: 0.30;
   --shadow-1: 0 1px 2px rgba(17, 24, 39, 0.04);
   --shadow-2: 0 2px 4px rgba(17, 24, 39, 0.04), 0 16px 36px -20px rgba(17, 24, 39, 0.28);
   --up: 14, 145, 100;
@@ -297,24 +299,27 @@
 /* ------------------------------------------------------------------ tile */
 
 /*
- * `--hue` is what this object IS. `--i` is intensity, 0..1, from |change|
- * capped at 30%. The wash never falls to nothing — an object with no
- * measurement still has to be recognisable — so identity has a floor and
- * magnitude adds on top of it.
+ * A TILE HAS NO COLOUR OF ITS OWN (P2.l, 2026-09-15).
+ *
+ * It used to have two. `--hue` was what the object IS — its shop's own colour,
+ * on the border and in the wash below — and `--i` was how hard it had moved,
+ * as a brightness with no direction in it. Read off the screen that was
+ * identity and magnitude on the shell, direction inside the marks, and three
+ * of the seven shop hues sitting on the three semantic colours: *"what do the
+ * colors mean now? does this make sense?"*.
+ *
+ * So the frame is the theme's card, edge and shadow, and every colour left on
+ * a tile is inside a mark, where a tool declared a direction. What the tile is
+ * ABOUT is its title, which every block has carried since P1.e.
  */
 .r-tile {
   position: relative;
   border-radius: var(--radius);
   background: var(--card);
-  border: 1px solid rgba(var(--hue), 0.28);
+  border: 1px solid var(--edge);
   padding: 20px 22px;
   overflow: hidden;
-  --i: 0;
-  /* The neutral shadow is the theme's; the glow is the tile's own hue, and
-     it grows with how hard the figure moved. */
-  box-shadow:
-    var(--shadow-1),
-    0 20px 50px -30px rgba(var(--hue), calc(0.35 + var(--i) * 0.45));
+  box-shadow: var(--shadow-1);
   transition: border-color 240ms var(--ease), box-shadow 400ms var(--ease), background 240ms var(--ease);
   max-height: 560px;
   display: flex;
@@ -322,24 +327,11 @@
   isolation: isolate;
 }
 
-/* THE BLOOM. The object's own colour under its surface — a large soft
-   radial that falls off to nothing, with a fainter answer in the far corner
-   so the light has a direction. `--bloom` is the theme's strength; `--i` is
-   the figure's. Nothing else lights the ground. */
-.r-tile::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(120% 80% at 18% -10%,
-      rgba(var(--hue), calc(var(--bloom) * (0.9 + var(--i) * 0.5))) 0%,
-      rgba(var(--hue), calc(var(--bloom) * 0.30)) 44%,
-      transparent 64%),
-    radial-gradient(70% 60% at 100% 110%,
-      rgba(var(--hue), calc(var(--bloom) * 0.35)), transparent 60%);
-}
+/* THE BLOOM IS GONE. It was the object's own colour under its surface, a
+   large soft radial at `--bloom: 0.62` on dark — the loudest thing on the
+   screen, and the thing P1.e deliberately left alone when it took identity
+   out of the marks. The complaint came back at this layer, so it went. There
+   is no replacement: a tile is a card on the ground now. */
 /*
  * EVERY CHILD HOLDS ITS SIZE; exactly one is allowed to give way, and it says
  * so itself (`.r-tile > .r-mk-body`).
@@ -355,61 +347,14 @@
 .r-tile > * { position: relative; min-width: 0; flex: 0 0 auto; }
 
 /*
- * A SOLID TILE — the reference, and the whole of what it was for.
+ * THE SOLID TILE IS GONE (P2.l), and with it `--on-colour`.
  *
- * The tiles in the peg are LABELS: a word on a field of colour, nothing else
- * on them. That is why they can be fully saturated and still look good. An
- * earlier pass took that gesture and applied it to cards carrying seven rows
- * of figures, which forced the colour down to a wash in one corner until it
- * meant nothing.
- *
- * So the board has two classes of object and they are different on purpose:
- *   SOLID — a shop, a product, a supplier. A name, a figure, a delta. Scanned.
- *   PAPER — a table, a chart, a draft. Dense figures. Read.
- * The coloured ones are how you find something; the quiet ones are how you
- * study it. Putting a table on a saturated gradient serves neither.
+ * It was a name and a figure on a FIELD of the object's own colour — the
+ * loudest statement of identity on the board, and the reason a dozen rules
+ * below it existed to bridge the room's ink onto a saturated ground. A tile
+ * that says which shop it is by being that shop's colour is the thing the
+ * owner asked about twice; its title always said the same thing in words.
  */
-.r-tile--solid {
-  border: 0;
-  color: var(--on-colour);
-  background:
-    radial-gradient(120% 96% at 20% 6%, rgba(255, 255, 255, 0.30), transparent 62%),
-    radial-gradient(90% 80% at 88% 96%, rgba(255, 255, 255, 0.12), transparent 58%),
-    linear-gradient(158deg,
-      rgba(var(--hue), 0.96) 0%,
-      rgba(var(--hue), 0.80) 52%,
-      rgba(var(--hue), 0.92) 100%);
-  /* Magnitude lives in the halo, not the fill: a tile has to stay the same
-     colour through a good week and a bad one, or the hue stops being an
-     identity. */
-  box-shadow:
-    var(--shadow-1),
-    0 calc(14px + var(--i) * 20px) calc(30px + var(--i) * 40px) calc(-18px + var(--i) * 4px)
-      rgba(var(--hue), calc(0.32 + var(--i) * 0.40));
-}
-.r-tile--solid::before { display: none; }
-.r-tile--solid .r-label { color: var(--on-colour-2); }
-.r-tile--solid .r-num { color: var(--on-colour); }
-.r-tile--solid .r-src { color: rgba(255, 253, 249, 0.62); }
-.r-tile--solid .r-act { color: rgba(255, 253, 249, 0.72); }
-.r-tile--solid .r-act:hover, .r-tile--solid .r-act:focus-visible { color: var(--on-colour); }
-.r-tile--solid .r-say { color: var(--on-colour); }
-/* On colour, the delta pill goes to glass rather than to its own hue — a red
-   pill on a red tile disappears, and a green one on Greenhills lies. */
-.r-tile--solid .r-delta {
-  background: rgba(255, 255, 255, 0.22);
-  color: var(--on-colour);
-}
-.r-tile--solid .r-delta--none { background: rgba(255, 255, 255, 0.14); color: var(--on-colour-2); }
-/* A caveat on a coloured tile reads in the tile's ink. It was drawn in the
-   board's grey, which on cyan is a whisper nobody can read — and a caveat
-   nobody can read has not surfaced (UI rule 4). */
-.r-tile--solid .r-caveats { border-color: rgba(255, 253, 249, 0.5); }
-.r-tile--solid .r-caveat { color: var(--on-colour); }
-.r-tile--solid .r-caveat-detail { color: var(--on-colour-2); }
-.r-tile--solid .r-more { color: var(--on-colour); }
-.r-tile--solid .r-more:hover { color: var(--on-colour); text-decoration-thickness: 2px; }
-.r-tile--solid[data-open]:hover { filter: brightness(1.05); }
 
 /* Long bodies scroll inside rather than making the tile define the page. */
 .r-scroll { overflow-y: auto; min-height: 0; }
@@ -418,39 +363,37 @@
   background: var(--edge-strong); border-radius: 4px;
 }
 
-/* Quiet: on the paper rather than on a card of its own. */
-/* Cooled: on the paper, keeping its hue as an edge so it is still findable.
-   The left rule is what a shop looks like once it is no longer the point. */
+/* COOLED: on the paper rather than on a card of its own, with a left rule so
+   it is still a thing on the page. The rule used to be the shop's colour —
+   "what a shop looks like once it is no longer the point" — and a cooled tile
+   is exactly where identity was least worth a hue, since it is the one nobody
+   is reading. It is the board's own edge now. */
 .r-tile--quiet {
   background: var(--paper);
-  border-color: rgba(var(--hue), 0.20);
-  border-left: 3px solid rgba(var(--hue), 0.55);
+  border-color: var(--edge);
+  border-left: 3px solid var(--edge-strong);
   box-shadow: none;
 }
-.r-tile--quiet::before { opacity: 0.75; }
 
-/* George speaking. His own warm hue, always at the same low strength, so his
-   thoughts never look like a figure that moved. */
-.r-tile--george { --hue: var(--george); --i: 0.10; }
-/* A READING IS NEVER CUT. Every tile caps its height so a table cannot
-   define the page; his words are clamped to a few lines with "read the
-   rest" instead, and once opened they have to be all there — the cap was
-   clipping the opened reading mid-sentence. */
-.r-tile--george { max-height: none; }
-/* His hue is a warm WHITE, and a white bloom at full strength on near-black
-   is a grey slab, not a glow. Held to a third, so it reads as candlelight. */
-.r-tile--george::before { opacity: 0.38; }
+/* `.r-tile--george` WAS HERE and is gone with P2.l. It was his own warm hue
+   on a tile, and the `george` argument that set it had had no caller since
+   P1.c moved the reading out of the board into a region of its own — so the
+   rule could not match anything. His voice is still `--george`, in the chrome
+   and in the reading; it is simply not a tile any more. */
 
 /* A tile that is only a frame for other tiles — the comparison — carries no
-   surface of its own: no bloom, no shadow, or a rectangle of light floats
-   behind its label with nothing under it. */
+   surface of its own: no shadow, or a rectangle of light floats behind its
+   label with nothing under it. */
 .r-tile--bare { box-shadow: none; }
-.r-tile--bare::before { display: none; }
 
 .r-tile[data-open] { cursor: pointer; }
-.r-tile[data-open]:hover { border-color: rgba(var(--hue), 0.4); }
-.r-tile:focus-visible { outline: 2px solid rgba(var(--hue), 0.8); outline-offset: 2px; }
-.r-tile--picked { border-color: rgba(var(--hue), 0.65); }
+/* HOVER, FOCUS AND PICKED ARE STATES OF THE CHROME, not facts about the
+   object, so all three are drawn in the room's own greys. They were the
+   object's hue at three alphas, which meant the one visual difference between
+   "you picked this" and "this is Greenhills" was 0.1 of an alpha. */
+.r-tile[data-open]:hover { border-color: var(--edge-strong); }
+.r-tile:focus-visible { outline: 2px solid var(--ink-3); outline-offset: 2px; }
+.r-tile--picked { border-color: var(--ink-3); }
 
 /* --------------------------------------------------------------- assembly */
 
@@ -660,7 +603,9 @@
 .r-rows td.n, .r-rows th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .r-rows td:first-child { min-width: 8ch; color: var(--ink); }
 .r-rows tr:last-child td { border-bottom: 0; }
-.r-rows tbody tr:hover td { background: rgba(var(--hue), 0.045); }
+/* A hovered row lifts in the theme's own track, not in the object's colour:
+   pointing at a row says nothing about what it measured. */
+.r-rows tbody tr:hover td { background: var(--track); }
 
 .r-dots { display: flex; align-items: center; gap: 7px; height: 42px; }
 .r-dots i {
@@ -692,7 +637,7 @@
   font: 400 11px/1 var(--sans); color: var(--ink-3);
   transition: color 160ms var(--ease);
 }
-.r-act:hover, .r-act:focus-visible { color: rgb(var(--hue)); }
+.r-act:hover, .r-act:focus-visible { color: var(--ink); }
 @media (hover: none) { .r-act { padding: 7px 0; color: var(--ink-2); } }
 
 /* ------------------------------------------------------------------ line */
@@ -823,6 +768,22 @@
 }
 .r-more:hover { color: rgb(var(--george)); }
 
+/* ------------------------------------------------------------- opened object
+   THE ONE PLACE A HUE STILL MEANS SOMETHING (P2.l, 2026-09-15).
+
+   Everywhere else on the board an object's colour decoded a name its own
+   title and rows already gave. Here there is ONE object, opened on purpose,
+   named in its own heading, with nothing beside it to confuse the colour
+   with — so the rule under it is that thing's own colour, the same every
+   time you open it, and it competes with nothing. `--hue` is set by the one
+   caller left (`marks.tsx`, wrapping ObjectPanel); with none set it is the
+   neutral the tokens declare. */
+.r-obj {
+  margin-top: 20px;
+  padding-top: 6px;
+  border-top: 2px solid rgba(var(--hue), 0.55);
+}
+
 /* ------------------------------------------------------------------ timeline
    WHEN something happened, laid out in real time rather than in row order —
    so two events a day apart sit a day apart, and a month's gap looks like one.
@@ -835,7 +796,9 @@
 .r-time-point { position: absolute; top: 0; transform: translateX(-50%); text-align: center; }
 .r-time-point i {
   display: block; width: 9px; height: 9px; border-radius: 50%; margin: 1px auto 0;
-  background: rgb(var(--hue)); box-shadow: 0 0 0 3px rgba(var(--hue), 0.14);
+  /* A point on a timeline is a WHEN. It declares no direction, so it is drawn
+     in the colour of no direction rather than in the object's own. */
+  background: rgb(var(--flat)); box-shadow: 0 0 0 3px rgba(var(--flat), 0.14);
 }
 .r-time-when {
   display: block; margin-top: 8px; white-space: nowrap;
@@ -1054,9 +1017,10 @@
 .r-behind-filter { font: 400 11px/1.5 var(--sans); color: var(--ink-2); }
 
 /* --------------------------------------------------------- composed shapes
-   The marks of the grammar (Spec.tsx). Every colour here comes from a --hue
-   the renderer resolved out of a row: there is no palette choice in this
-   block, because a hue George picked would be a claim no tool made. */
+   The marks of the grammar (Spec.tsx). Every colour here is a DIRECTION a row
+   declared, or `--flat` where it declared none (P2.l): there is no palette
+   choice in this block, because a hue George picked would be a claim no tool
+   made — and a hue his COLUMN picked was the same claim one step removed. */
 .r-spec-panel {
   border: 1px solid var(--edge); border-radius: 14px; padding: 14px 16px;
   background: var(--paper);
@@ -1101,8 +1065,6 @@
 }
 .r-acts-mine .r-act { padding-inline: 4px; min-width: 18px; text-align: center; }
 .r-acts-mine .r-act[aria-pressed='true'] { color: var(--ink); font-weight: 600; }
-.r-tile--solid .r-acts-mine { border-color: rgba(255, 255, 255, 0.28); }
-.r-tile--solid .r-acts-mine .r-act[aria-pressed='true'] { color: var(--on-colour); }
 
 /* ------------------------------------------------------------------- notes
    A few words ON the mark, which is the whole point: the sentence that used
@@ -1142,7 +1104,7 @@
 .r-dragging { pointer-events: none; opacity: 0.7; }
 .r-dragging .r-tile {
   transform: scale(0.985);
-  border-color: rgba(var(--hue), 0.55);
+  border-color: var(--edge-strong);
   box-shadow: var(--shadow-2);
 }
 
@@ -1250,8 +1212,8 @@ body.r-dragging-on .r-tile { transition: none; }
 
 /* ----------------------------------------------------------- instruments
    Five marks that are a second reading of a figure — where, how much of,
-   how each stands, when, the rhythm. Every colour is the tile's own hue or
-   a row's; every extent is a row's value. See Spec.tsx. */
+   how each stands, when, the rhythm. Every colour is a direction a row
+   declared; every extent is a row's value. See Spec.tsx. */
 
 /* range: a track from low to high, every row a dot, the marker a line */
 .r-spec-range { width: 100%; }
@@ -1259,11 +1221,14 @@ body.r-dragging-on .r-tile { transition: none; }
 .r-spec-range-when { font: 500 10px/1.2 var(--sans); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
 .r-spec-range-track {
   position: relative; height: 10px; border-radius: 5px; margin: 14px 0 8px;
-  background: linear-gradient(90deg, rgba(var(--hue), 0.14), rgba(var(--hue), 0.85));
+  /* `--mk` is the marked row's own direction, set by Spec.tsx; flat is what a
+     range with no direction in it looks like. It was `--hue`, the tile's
+     identity, so one shop's hours were drawn in that shop's colour. */
+  background: linear-gradient(90deg, rgba(var(--mk, var(--flat)), 0.14), rgba(var(--mk, var(--flat)), 0.85));
 }
 .r-spec-range-dot {
   position: absolute; top: 50%; width: 5px; height: 5px; border-radius: 50%;
-  transform: translate(-50%, -50%); background: rgb(var(--hue)); opacity: 0.45;
+  transform: translate(-50%, -50%); background: rgb(var(--mk, var(--flat))); opacity: 0.45;
 }
 .r-spec-range-mark {
   position: absolute; top: -8px; bottom: -8px; width: 2px; border-radius: 1px;
@@ -1339,7 +1304,6 @@ body.r-dragging-on .r-tile { transition: none; }
   margin: 8px 0 0; font: 400 10.5px/1.45 var(--sans); color: var(--ink-3);
 }
 .r-spec-dots { margin-bottom: 4px; }
-.r-tile--solid .r-spec-how { color: var(--on-colour-2); }
 
 
 
@@ -1370,8 +1334,6 @@ body.r-dragging-on .r-tile { transition: none; }
   color: var(--ink-3);
   margin: 0 0 12px;
 }
-.r-tile--solid .r-mk-title { color: var(--on-colour); }
-.r-tile--solid .r-mk-sub { color: var(--on-colour-2); }
 
 /*
  * THE MARK'S BODY IS WHAT SCROLLS, and the title, the subtitle and the source
@@ -1411,15 +1373,11 @@ body.r-dragging-on .r-tile { transition: none; }
 }
 .r-mk-fig b { font-weight: 500; color: var(--ink); display: block; }
 .r-mk-fig small { font-size: 0.86em; color: var(--ink-3); display: block; }
-.r-tile--solid .r-mk-name,
-.r-tile--solid .r-mk-fig { color: var(--on-colour-2); }
-.r-tile--solid .r-mk-fig b { color: var(--on-colour); }
 
 /* figure — one number, at the size its weight implies */
 .r-mk-figure { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .r-mk-num { font-family: var(--mono); letter-spacing: -0.02em; }
 .r-mk-measure { font: 400 11px/1.4 var(--sans); color: var(--ink-3); margin: 8px 0 0; }
-.r-tile--solid .r-mk-measure { color: var(--on-colour-2); }
 
 /* dumbbell — where it was, where it is, and the line between */
 .r-mk-track { position: relative; height: 18px; }

@@ -1,11 +1,13 @@
 /**
  * The things on the board.
  *
- * Every one is a tile lit from inside by its own figure: the hue says up or
- * down, the brightness says how hard, and neither is ever chosen by hand — see
- * `intensity()` in data.ts. A tile that carries no measurement (George's own
- * words, a table of rows) burns at nothing and stays dark, which is what makes
- * the ones that moved read across the room.
+ * THE TILE IS A FRAME AND CARRIES NO COLOUR OF ITS OWN (P2.l, 2026-09-15).
+ * It used to be lit from inside: the wash was the object's identity and its
+ * brightness was |change|, so a board of seven shops was seven hues over rows
+ * whose labels already said which shop each one was — the owner's P1.e report
+ * at the layer P1.e exempted, asked again as *"what do the colors mean now?"*.
+ * Now what a tile is about is read from its title and its rows, and the only
+ * colour anywhere on it is inside a mark, where a tool declared a direction.
  *
  * None of these components computes a business figure. They pick a row, read a
  * value the tool already returned, and format it.
@@ -17,10 +19,10 @@ import type { GeorgeNotice, ToolMeta } from '../types/george';
 import type { BoardObject, Local } from './board';
 import type { ToolCall } from '../types/george';
 import {
-  callOf, fmt, intensity, pct, receiptsDetail, receiptsLine, rowFor, rowsOf, splitCaveat, tone,
+  callOf, fmt, pct, receiptsDetail, receiptsLine, rowFor, rowsOf, splitCaveat, tone,
   type AnswerTurn, type Change, type Dimension,
 } from './data';
-import { directionRgb, hueFor, type Rgb } from './identity';
+import { directionRgb } from './identity';
 import type { Region } from './drag';
 import { Spec } from './Spec';
 
@@ -85,41 +87,37 @@ export interface TileProps {
 /* ------------------------------------------------------------------ shell */
 
 /**
- * The tile every object sits in.
+ * The tile every object sits in — a frame, and nothing that means anything.
  *
- * `hue` is WHAT THIS IS — from identity.ts, the same every time you see it.
- * `change` only sets how brightly that hue burns. The two never trade places,
- * which is what lets a shop keep its colour through a bad week.
+ * IT TAKES NO COLOUR, which is the whole of P2.l. It used to take a `hue` (the
+ * object's identity) and a `change` (how brightly that hue burnt), and those
+ * were two of the four meanings colour carried at once. `quiet` and `picked`
+ * are the two states left, and both are drawn in the chrome's own greys: one
+ * says this is no longer the point, the other says you picked it.
+ *
+ * THE `change` ARGUMENT WAS ALREADY DEAD when it was removed, and that is the
+ * evidence the magnitude channel cost nothing: P1.e deleted the last tile that
+ * passed one on 2026-09-14, so `--i` has been 0 on every tile since, and the
+ * dogfood log still described the brightness as a live meaning a month later.
  */
-export function Shell({ hue, change, quiet, solid, george, landing, delay, picked, children, onOpen }: {
-  hue?: Rgb;
-  change?: Change | null;
+export function Shell({ quiet, landing, delay, picked, children, onOpen }: {
   quiet?: boolean;
-  /** A name and a figure: fully coloured, the way the reference tiles are. */
-  solid?: boolean;
-  george?: boolean;
   landing: boolean;
   delay: number;
   picked?: boolean;
   children: ReactNode;
   onOpen?: () => void;
 }) {
-  const i = change ? intensity(change) : 0;
   const cls = [
     'r-tile',
-    solid ? 'r-tile--solid' : '',
-    george ? 'r-tile--george' : '',
-    quiet && !solid ? 'r-tile--quiet' : '',
+    quiet ? 'r-tile--quiet' : '',
     picked ? 'r-tile--picked' : '',
     landing ? 'r-landing' : '',
   ].filter(Boolean).join(' ');
   return (
     <div
       className={cls}
-      style={{
-        ...(george ? {} : { '--hue': hue, '--i': i.toFixed(3) }),
-        '--d': `${delay}ms`,
-      } as CSSProperties}
+      style={{ '--d': `${delay}ms` } as CSSProperties}
       {...(onOpen ? { 'data-open': true, role: 'button', tabIndex: 0,
         onClick: onOpen,
         onKeyDown: (e: React.KeyboardEvent) => {
@@ -339,7 +337,7 @@ export function DraftTile(p: TileProps) {
   const total = rows.reduce((s, row, n) => s + (qty[n] ?? suggested(row)), 0);
 
   return (
-    <Shell hue={hueFor(meta?.supplier, null, 'supplier')} landing={p.landing} delay={p.delay}>
+    <Shell landing={p.landing} delay={p.delay}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
         <div>
           <p className="r-label">draft order{meta?.supplier ? ` · ${meta.supplier}` : ''}</p>
@@ -417,7 +415,7 @@ export function StateTile(p: TileProps) {
   }) | undefined;
   const label = p.o.label ?? 'pending';
   return (
-    <Shell solid hue={hueFor(null, null, 'order')} landing={p.landing} delay={p.delay}>
+    <Shell landing={p.landing} delay={p.delay}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <p className="r-label">{label}</p>
         <span className="r-delta r-delta--none">{label}</span>
@@ -493,7 +491,7 @@ export function ControlTile(p: TileProps) {
   const options: (string | number)[] = argument === 'top_n' ? COUNTS : WINDOWS;
 
   return (
-    <Shell quiet hue={hueFor(null, null, 'order')} landing={p.landing} delay={p.delay}>
+    <Shell quiet landing={p.landing} delay={p.delay}>
       <p className="r-label">
         {argument === 'top_n' ? 'how many' : 'window'}
         {p.o.tool ? ` · ${p.o.tool.replace(/^get_/, '')}` : ''}
@@ -539,7 +537,7 @@ export function SystemTile(p: TileProps) {
   const when = row.when ? new Date(String(row.when)) : null;
 
   return (
-    <Shell quiet hue={hueFor(null, null, 'order')} landing={p.landing} delay={p.delay}
+    <Shell quiet landing={p.landing} delay={p.delay}
            picked={p.focused} onOpen={() => p.on.open(p.o.key)}>
       <p className="r-label">{subject}{p.earlier ? ' · from earlier' : ''}</p>
       <p className="r-note" style={{ marginTop: 8 }}>{state || 'no state recorded'}</p>
@@ -583,8 +581,7 @@ export function SpecTile(p: TileProps) {
   const lit = !p.earlier && p.o.weight !== 'quiet';
 
   return (
-    <Shell quiet={!lit} hue={hueFor(null, null, kindOfRead(p.o.tool))}
-           landing={p.landing} delay={p.delay} picked={p.focused}
+    <Shell quiet={!lit} landing={p.landing} delay={p.delay} picked={p.focused}
            onOpen={() => p.on.open(p.o.key)}>
       {/* A SHAPE IS NAMED LIKE EVERY OTHER OBJECT. The grammar has no field
           for a title — a heading is a column or nothing — so the label comes

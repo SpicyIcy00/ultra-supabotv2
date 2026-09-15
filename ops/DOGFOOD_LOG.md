@@ -86,6 +86,12 @@ the fallback hides which, and removing the fallback is what makes it visible.
 takes it: draw nothing rather than the wrong row, and hold it with a test over
 the recorded runs.
 
+---
+
+---
+
+## Fixed
+
 ### 2026-09-15 · what do the colors mean now?
 
 > what do the colors mean now? does this make sense?
@@ -117,17 +123,27 @@ which on the dark theme is `--bloom: 0.62` — the loudest thing on the screen.
 The complaint came back at the layer that was left alone, which is the honest
 reading of it.
 
-**Not yet fixed. It is now a card: `P2.l`, ahead of P2.d**, in NOW.md §3 and on
-the plan page. It is bigger than an hour and touches every tile, which is the
-log's own rule for when an item becomes a card rather than a next-session fix.
-The other item above stays here, because removing a fallback and holding it
-with a test is not.
+**FIXED by `P2.l`, 2026-09-15.** The tile shell carries no identity and no
+magnitude: `Shell` lost `hue`, `change`, `solid` and `george`, the bloom and the
+fully coloured tile are gone, and hover, focus and picked are the chrome's own
+greys. `var(--hue)` now reaches exactly one selector — `.r-obj`, an OPENED
+object, one thing on screen named in its own heading — and `marks.tsx` is its
+only caller. The grammar had the same hole one layer deeper and it went too:
+`Spec` painted a non-direction column as an identity, so `colour: store` drew
+the seven hues inside a composed shape; it is a direction or flat now.
 
----
+**The brightness question answered itself.** `--i` was |change| with no
+direction in it, and it had been **dead since 2026-09-14** — P1.e deleted the
+last tile that fed it, so every tile has rendered at `--i: 0.000`, including
+the one in his screenshot, and the table above described it as a live meaning
+anyway. Read off that build by the new test: `--hue: 222, 138, 11; --i: 0.000`.
 
----
-
-## Fixed
+`palette.test.ts` and `accentUse.test.ts` now cover the shell instead of
+exempting it, and `palette.dom.test.tsx` draws a board of seven shops and all
+13 blocks of the eight recorded runs and scans the rendered styles for every
+shop hue by value — **15 of its 18 tests fail on the build he was looking at**.
+**Not seen in a browser by anybody**, which for a card about what the screen
+looks like is the whole shortfall.
 
 ### 2026-09-15 · saved pages look really weird
 

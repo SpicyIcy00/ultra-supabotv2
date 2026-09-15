@@ -1,29 +1,42 @@
 /**
- * WHAT COLOUR A THING IS.
+ * WHAT COLOUR A THING IS — and, since P2.l, where that is allowed to show.
  *
- * Colour is IDENTITY here, not performance — the owner's call, made after
- * seeing both. Rockwell is violet every time you ever see it, so you find it
- * on a board of ten objects without reading a word. That only works if the
- * mapping is stable and chosen, which is why the seven shops are named by hand
- * below rather than hashed: a hash gives you whatever hue it lands on, puts two
- * shops next to each other on the wheel, and cannot be corrected.
+ * THE COMPLAINT, 2026-09-15, of the live build: *"what do the colors mean now?
+ * does this make sense?"*. It did not. Colour meant four things at once — the
+ * tile's wash was IDENTITY (the seven shops below), its brightness was
+ * MAGNITUDE with no direction, and the dots, bars and pills were DIRECTION —
+ * and three of the seven shop hues sat on top of the three semantic colours:
+ * OPUS amber like George's mark and the approvals accent, Magnolia rose like
+ * `--down`, Greenhills green like `--up`.
  *
- * THREE THINGS CARRY THREE DIFFERENT MEANINGS, and they never collide:
+ * That is the owner's seven-shops-seven-hues report from P1.e, one layer out.
+ * P1.e took identity out of the MARKS and deliberately left it on the tile
+ * SHELL; on the dark theme the shell is the loudest thing on the screen, so
+ * the same complaint came back at the layer that card exempted. P2.l applies
+ * P1.e's own move out one layer: THE SHELL CARRIES NO IDENTITY. What a tile is
+ * about is read from its title — every block has one — and from its row
+ * labels, which said the shop's name all along.
  *
- *   hue        WHICH thing this is          — from here, fixed forever
- *   strength   HOW HARD it moved            — from |change|, see data.ts
- *   the pill   WHICH WAY it moved           — semantic green/red, with a sign
+ * SO COLOUR ON THE BOARD MEANS ONE THING, AND ONLY WHERE A TOOL MEASURED IT:
  *
- * So a shop that fell 20% is its own violet, blooming hard, with a red −20.0%
- * on it. Nothing about the hue says "bad", which is the whole reason identity
- * and direction can share a screen.
+ *   --up / --down / --flat   WHICH WAY a figure moved, inside a mark
+ *   --george                 his voice, the one identity the room keeps
+ *   the reserved colour      "needs you" — approvals, and nothing else, which
+ *                            is why it is not written out here: naming it in a
+ *                            docstring is what `accentUse.test.ts` scans for.
  *
- * ONE COLLISION IS UNAVOIDABLE and is handled rather than ignored: Greenhills
- * is green and "up" is green. The delta pill is therefore always filled, always
- * carries its sign, and sits in the same place on every tile — so direction is
- * read from shape and position, not from hue alone. It also means the palette
- * never needs to avoid green, which would be a strange thing to ask of a
- * business with a shop called Greenhills.
+ * WHERE A HUE SURVIVES. One place: an OPENED object, where identity is the
+ * point and nothing else is competing — one thing on screen, named in its own
+ * heading, with its hue on the panel's own rule (`.r-obj`). `hueFor` has
+ * exactly one caller (`marks.tsx`, wrapping `ObjectPanel`), and
+ * `accentUse.test.ts` fails on a second.
+ *
+ * THE MAGNITUDE CHANNEL IS GONE, AND THE EVIDENCE IS THAT IT WAS ALREADY
+ * DEAD. `Shell` took a `change` and turned it into a brightness; the tiles
+ * that passed one were deleted by P1.e on 2026-09-14, so every tile on the
+ * board has burnt at `--i: 0` ever since and nobody noticed. A channel whose
+ * absence no one can see is not a channel — and a wash that says "this moved
+ * a lot" without saying which way is the one meaning here nobody asked for.
  */
 import type { Dimension } from './data';
 

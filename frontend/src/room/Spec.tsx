@@ -25,7 +25,7 @@ import type { CSSProperties } from 'react';
 import type { SpecNode, ToolCall } from '../types/george';
 import type { AnswerTurn } from './data';
 import { callOf, changeOf, fmt, rowsOf, sorted, unitOf } from './data';
-import { directionRgb, hueFor, NEUTRAL } from './identity';
+import { directionRgb } from './identity';
 
 export interface SpecProps {
   node: SpecNode;
@@ -79,32 +79,42 @@ function rowsFor(node: SpecNode, call: ToolCall | null): Record<string, unknown>
 }
 
 /**
- * The hue for one row.
+ * The colour for one row: A DIRECTION, OR NOTHING (P2.l, 2026-09-15).
  *
- * `colour` names a COLUMN, and what that column CONTAINS decides the hue: a
- * direction becomes the semantic up/down, anything else is looked up as an
- * identity (a shop's own colour). A hue George picked would be a claim he
- * made rather than one a row carries, which is why the grammar has no way to
- * express one.
+ * It was `hueOf` and it returned a hue; it returns a direction now, and the
+ * name says so.
+ *
+ * `colour` names a COLUMN, and what that column CONTAINS decides it. A
+ * direction the tool declared becomes the semantic up/down/flat. ANYTHING
+ * ELSE IS FLAT — it used to be looked up as an IDENTITY, so `colour: store`
+ * drew the seven shop hues inside a composed shape, which is the owner's
+ * seven-shops-seven-hues report surviving in the grammar after P1.e took it
+ * out of the six marks. A hue George picked would be a claim he made rather
+ * than one a row carries, which is why the grammar cannot express one; a hue
+ * his COLUMN picked was that same claim one step removed.
  */
-function hueOf(node: SpecNode, row: Record<string, unknown>): string {
-  if (!node.colour) return NEUTRAL;
+function colourOf(node: SpecNode, row: Record<string, unknown>): string {
+  if (!node.colour) return 'var(--flat)';
   const value = row[node.colour];
   if (value === 'up' || value === 'down' || value === 'flat') {
     return directionRgb(value as 'up' | 'down' | 'flat');
   }
-  return hueFor(typeof value === 'string' ? value : null, null, null);
+  return 'var(--flat)';
 }
 
 /**
- * What a mark is PAINTED with: the row's own hue when `colour` names a
- * column, otherwise the tile's — the object's identity, inherited as a CSS
- * variable. Until this existed a mark with no colour channel drew in the
- * neutral grey, so a chart of Rockwell sat on Rockwell's violet tile in
- * slate. Returns an `r, g, b` triple or a var(), both valid inside rgb()/rgba().
+ * What a mark is PAINTED with: the direction its own row declared, and `--flat`
+ * where it declared none.
+ *
+ * It used to fall back to `var(--hue)` — the TILE's identity, inherited as a
+ * CSS variable, so a chart of Rockwell's hours drew in Rockwell's violet. The
+ * shell carries no identity since P2.l, so there is nothing to inherit and
+ * nothing that should be: a mark whose rows declare no direction is a mark
+ * nobody measured one for, and grey is what that looks like.
+ * Returns an `r, g, b` triple or a var(), both valid inside rgb()/rgba().
  */
 function paint(node: SpecNode, row: Record<string, unknown>): string {
-  return node.colour ? hueOf(node, row) : 'var(--hue)';
+  return colourOf(node, row);
 }
 
 /**
@@ -327,8 +337,12 @@ function Mark(p: SpecProps) {
               <span className="r-spec-range-when">{niceDate(nameOf(node, mark))}</span>
             </div>
           )}
+          {/* `--mk` is THIS MARK's colour and nothing else's: the direction the
+              marked row declared, or flat. It was `--hue` — the tile's own
+              identity — until P2.l, which is how a range of one shop's hours
+              came to be drawn in that shop's colour. */}
           <div className="r-spec-range-track"
-               style={node.colour && mark ? { '--hue': hueOf(node, mark) } as CSSProperties : undefined}>
+               style={mark ? { '--mk': paint(node, mark) } as CSSProperties : undefined}>
             {rows.map((row, n) => (
               <i key={n} className="r-spec-range-dot" style={{ left: `${x(values[n]).toFixed(1)}%` }}
                  title={`${nameOf(node, row)} · ${fmt(node.field!, row[node.field!], u(row))}`} />

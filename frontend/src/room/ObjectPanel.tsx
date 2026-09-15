@@ -203,7 +203,10 @@ export function ObjectPanel({ kind, name }: { kind: string; name: string }) {
   const notice = data.meta?.notice as { message?: string } | null | undefined;
 
   return (
-    <div style={{ marginTop: 20, borderTop: '1px solid var(--edge)', paddingTop: 4 }}>
+    // `.r-obj` draws the rule in the object's OWN hue — the one identity colour
+    // left in the room (P2.l). It was the board's grey edge; on a panel about
+    // one named thing, a colour that says which thing is the point.
+    <div className="r-obj">
       {/* A caveat sits ABOVE the figures it qualifies, always (UI rule 4). */}
       {notice?.message && (
         <p className="r-note" style={{ marginTop: 14, borderLeft: '2px solid var(--edge)', paddingLeft: 10 }}>

@@ -2,10 +2,8 @@
  * Reading a row.
  *
  * Everything here answers a question about data a tool already returned: what
- * is this row about, what is its figure, which way did it move, how hard. None
- * of it computes a business figure — the closest it comes is turning a
- * percentage into an intensity between 0 and 1, which is a brightness, not a
- * number anybody reads.
+ * is this row about, what is its figure, which way did it move. None of it
+ * computes a business figure.
  */
 import type { CompositionBlock, GeorgeTurn, ToolCall, ToolMeta } from '../types/george';
 
@@ -165,21 +163,15 @@ export function changeOf(row: Record<string, unknown>): Change {
   return { pct: value, direction, status: row.baseline_status as string | undefined };
 }
 
-/**
- * HOW BRIGHTLY A TILE BURNS. |change| against a cap, so a shop up 30% is at
- * full and a shop up 2% barely lights.
- *
- * The cap is a brightness ceiling, not a business threshold — nothing is
- * classified by it, nothing is hidden below it, and no answer changes if it
- * moves. It exists so one extraordinary week cannot make every other tile
- * look dead.
+/*
+ * HOW BRIGHTLY A TILE BURNS was here — |change| against a 30% cap — and it is
+ * gone with P2.l. It fed the tile's wash: magnitude, with no direction in it,
+ * as a second meaning on top of identity. THE EVIDENCE THAT IT COST NOTHING is
+ * that it was already dead: P1.e deleted the last tile that passed a `change`
+ * to `Shell` on 2026-09-14, so every tile has burnt at 0 since, and the
+ * dogfood log still described the brightness as a live meaning. A channel
+ * whose absence nobody can see is not a channel.
  */
-export const INTENSITY_CAP_PCT = 30;
-
-export function intensity(change: Change): number {
-  if (change.pct === null) return 0;
-  return Math.min(1, Math.abs(change.pct) / INTENSITY_CAP_PCT);
-}
 
 export function tone(change: Change): Direction {
   return change.direction ?? 'flat';

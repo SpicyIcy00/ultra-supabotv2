@@ -98,7 +98,13 @@ describe('ring', () => {
     expect(ticks).toHaveLength(6);
     const zero = ticks[5];
     expect(Number(zero.getAttribute('opacity'))).toBeLessThan(0.5);
-    expect(zero.getAttribute('stroke')).toContain('var(--hue)');
+    // IT IS SHORT AND DIM, AND IT IS FLAT. The stroke was the tile's own hue
+    // until P2.l — a shop's identity inside a drawing, which is what the same
+    // card took off the shell — so a ring of one shop's days was drawn in that
+    // shop's colour. A row that declared no direction is drawn in the colour
+    // of no direction.
+    expect(zero.getAttribute('stroke')).toContain('var(--flat)');
+    expect(zero.getAttribute('stroke')).not.toContain('var(--hue)');
   });
 });
 

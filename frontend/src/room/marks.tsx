@@ -8,10 +8,13 @@
  * WHAT CHANGED, AND WHY, in the owner's own five failures (dogfood log,
  * 2026-09-13):
  *
- *   2. seven shops, seven hues     → colour is DIRECTION here. Identity keeps
- *                                    its hue where identity is the point; a
- *                                    row label already says which shop it is,
- *                                    so a hue per row was spent on nothing.
+ *   2. seven shops, seven hues     → colour is DIRECTION here. A row label
+ *                                    already says which shop it is, so a hue
+ *                                    per row was spent on nothing. HE ASKED
+ *                                    AGAIN ON 2026-09-15, of the tile SHELL
+ *                                    this card left coloured; P2.l took the
+ *                                    hue off the shell too, and the only one
+ *                                    left in the room is an opened object's.
  *   3. a caption decoding the bars → the dumbbell. Two dots joined by a line
  *                                    reads without a sentence under it, which
  *                                    "the track is the period before · the
@@ -406,15 +409,17 @@ export function MarkBlock(p: TileProps) {
   const mark: Mark = markFor(p.o, rows);
   const subtitle = subtitleFor(meta, rows);
   const lit = !p.earlier && p.o.weight !== 'quiet';
-  // The tile's own hue is IDENTITY and stays outside the mark: it is the edge
-  // and the wash that let you find a shop on a board of ten, and nothing
-  // inside the drawing takes its colour from it.
+  // WHAT THIS BLOCK IS ABOUT IS ITS TITLE, NOT ITS COLOUR (P2.l). The tile used
+  // to wear the subject's own hue as an edge and a wash; a board of seven shops
+  // was then seven hues over rows whose labels already said the names. The
+  // label is still read here — an opened object is where identity is still the
+  // point, and `why` needs to know what it is asking about.
   const label = p.o.subject ?? subjectOf(rows[0] ?? {}) ?? null;
   const dimension = label ? dimensionOf(rows, label) : null;
 
   return (
     <>
-      <Shell quiet={!lit} hue={hueFor(label, dimension, kindOfRead(p.o.tool))}
+      <Shell quiet={!lit}
              landing={p.landing} delay={p.delay} picked={p.focused || p.selected}
              onOpen={() => p.on.open(p.o.key)}>
         <OwnCaveat meta={meta} />
@@ -430,8 +435,10 @@ export function MarkBlock(p: TileProps) {
         </div>
         <Receipts meta={meta} tool={p.o.tool} />
       </Shell>
-      {/* OPENED — below the tile, never inside it: a tile clips its content
-          for the bloom, and a lit one is a solid colour that body text fights. */}
+      {/* OPENED — below the tile, never inside it, because a tile clips its
+          content and a panel is the one place a hue still says something: ONE
+          object, named in its own heading, with nothing beside it to confuse
+          the colour with. That is the only `--hue` left in the room. */}
       {p.focused && label && kindOf(dimension) && (
         <div onClick={(e) => e.stopPropagation()}
              style={{ '--hue': hueFor(label, dimension, kindOfRead(p.o.tool)) } as CSSProperties}>

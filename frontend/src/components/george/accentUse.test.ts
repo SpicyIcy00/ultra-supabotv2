@@ -39,7 +39,7 @@ const SHELL_DIR = join(__dirname, '..', 'shell');
 const ROOM_DIR = join(__dirname, '..', '..', 'room');
 
 /** The accent token, in every form Tailwind lets it be written. */
-const ACCENT = /george-accent|--accent|var\(--accent\)/;
+const ACCENT = /george-accent|--accent\b|var\(--accent\)/;
 
 /**
  * The semantic data tokens (Stage 5): `george-data-up`, `-down`, `-flat`, and
@@ -118,6 +118,12 @@ const COLOUR_ALLOWED: Record<(typeof DATA_TOKENS)[number], Record<string, string
   flat: {
     'marks.tsx': 'the zero line a diverging mark is read against',
     'room.css': 'defines it, and draws the spec bar and the dot that "was"',
+    // P2.l, 2026-09-15. A composed mark used to fall back to `var(--hue)` —
+    // the TILE's identity — wherever its rows declared no direction, so a
+    // chart of one shop's hours drew in that shop's colour. The shell carries
+    // no identity now, so there is nothing to inherit: no direction is drawn
+    // as no direction.
+    'Spec.tsx': 'a composed mark whose rows declare no direction',
   },
   george: {
     'room.css': 'defines it, and the chrome he speaks through — links, focus, the caveat rule',
@@ -128,6 +134,39 @@ const COLOUR_ALLOWED: Record<(typeof DATA_TOKENS)[number], Record<string, string
     // rule that draws it. One fewer file naming a colour, which is the
     // direction this list is supposed to move in.
   },
+};
+
+/* ------------------------------------------------- identity (P2.l) ----
+ *
+ * THE SIXTH COLOUR WAS THE ONE NOBODY WAS COUNTING, and it was the biggest
+ * thing on the screen. A tile wore its object's own hue — `identity.ts`, seven
+ * shops named by hand — on its border and in the wash under it, and the wash's
+ * brightness was |change| on top of that. So colour meant four things at once,
+ * and three of the seven shop hues sat on the three semantic colours: OPUS
+ * amber like George's mark and the approvals accent, Magnolia rose like
+ * `--down`, Greenhills green like `--up`. The owner looked at the live build
+ * and asked *"what do the colors mean now? does this make sense?"*.
+ *
+ * P1.e had already answered the same complaint one layer in — colour is
+ * direction, not identity, INSIDE a mark — and this file's `COLOUR_ALLOWED`
+ * has guarded that ever since. What it did not guard was the SHELL, which
+ * `palette.test.ts` explicitly exempted: "identity keeps its hue where
+ * identity is the point — the tile's edge and wash". P2.l took the exemption
+ * away, and this is where the absence is held.
+ *
+ * ONE PLACE IS LEFT, and it is the one where identity is genuinely the point:
+ * an OPENED object, alone on screen, named in its own heading. Everything else
+ * reads its name off a title and a row label, which it always could.
+ */
+const IDENTITY = /\bhueFor\b|var\(\s*--hue\s*\)|'--hue'/;
+
+const IDENTITY_ALLOWED: Record<string, string> = {
+  // Where the seven shops are named. Naming a colour is not spending one.
+  'identity.ts': 'the mapping itself',
+  // The ONE caller: the wrapper around an opened object's panel.
+  'marks.tsx': 'sets the hue on an opened object, and nowhere else',
+  // Declares the token, and draws the one rule that reads it (`.r-obj`).
+  'room.css': 'declares --hue and draws the rule an opened object wears',
 };
 
 /** Comments out, so a token NAMED in a docstring is not a token USED. */
@@ -275,6 +314,37 @@ describe('UI rule 5 — one colour means "needs you"', () => {
     // names them at all.
     expect(Object.keys(COLOUR_ALLOWED.up)).toEqual([]);
     expect(Object.keys(COLOUR_ALLOWED.down)).toEqual([]);
+  });
+
+  it('lets no identity colour onto the shell, or anywhere else it is not the point', () => {
+    const offenders: string[] = [];
+    for (const [dir, files] of DIRS()) {
+      for (const name of files) {
+        const source = noComments(readFileSync(join(dir, name), 'utf8'));
+        if (!IDENTITY.test(source)) continue;
+        if (!(name in IDENTITY_ALLOWED)) offenders.push(name);
+      }
+    }
+    expect(
+      offenders,
+      `These files reach for an object's IDENTITY colour. A tile says what it ` +
+        `is about in its title and its rows; a hue that decodes a name those ` +
+        `already give is colour spent on nothing, and it collides with the ` +
+        `three that mean a direction. The one place left is an opened object.`,
+    ).toEqual([]);
+  });
+
+  it('keeps the shell itself free of every colour that means something', () => {
+    // The tile frame, stated as itself. `tiles.tsx` draws the thing every
+    // object sits in; after P2.l it names no identity, no direction and no
+    // magnitude — the four `--i`/`--hue`/`change`/`solid` channels are gone —
+    // and the only colour left on a tile is inside a mark. `directionRgb` is
+    // the delta PILL, which is a figure's own sign and is drawn on the mark's
+    // side of that line.
+    const shell = noComments(readFileSync(join(ROOM_DIR, 'tiles.tsx'), 'utf8'));
+    expect(IDENTITY.test(shell), 'the shell names an identity colour').toBe(false);
+    expect(shell).not.toMatch(/'--i'/);
+    expect(shell).not.toMatch(/r-tile--solid/);
   });
 
   it('keeps the exemption list short enough to read', () => {
