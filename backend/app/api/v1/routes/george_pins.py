@@ -23,6 +23,13 @@ already bitten this database twice. Every read, update and delete filters on
 created_by, and a pin belonging to someone else is a 404, not a 403: whether a
 given pin id exists is not information a caller is entitled to.
 
+A THREAD IS AN AXIS OF ITS OWN (2026-09-15, P2.a). GET /?thread_id= answers
+"has this conversation been kept, and where" by joining the pins to the
+conversations IN that thread — pins carry the conversation they were made in,
+and a thread is a list of those rows. It is refused alongside a page scope
+rather than combined with one: two scopes on one listing means one was silently
+ignored and the caller cannot tell which.
+
 MEMBERSHIP (2026-09-07, by name; 2026-09-08, by id). A page is a row now
 (routes/george_pages.py) and a pin points at it with `page_id` and holds a
 `position` on it. PATCH /{pin_id} moves a pin by page id — or by TITLE, which
@@ -52,6 +59,7 @@ from app.models.app_user import AppUser
 from app.models.george_pin import GeorgePin
 from app.services import page_writer
 from app.services.pin_runner import PinValidationError, run_pin
+from app.services.thread_access import conversations_in_thread
 from app.services.pin_writer import (
     UNSET,
     NotAPage,
@@ -266,6 +274,9 @@ async def list_pins(
     page_id: Optional[uuid.UUID] = Query(None, description="Filter to one page, by id."),
     page: Optional[str] = Query(None, description="Filter to one page, by exact title (legacy)."),
     ungrouped: bool = Query(False, description="Only pins with no page."),
+    thread_id: Optional[uuid.UUID] = Query(
+        None, description="Only pins made in this thread, whatever page they sit on."
+    ),
     db: AsyncSession = Depends(get_db),
     user: AppUser = Depends(_pin_user),
 ) -> List[PinOut]:
@@ -277,7 +288,39 @@ async def list_pins(
     they come back newest first across every page. A page id that is not the
     caller's is a 404; a title that matches none of their pages is an empty
     list, as it always was.
+
+    `thread_id` IS A DIFFERENT AXIS, and it is what lets a thread say whether
+    it has been kept (P2.a): a pin records the conversation it was made in, a
+    thread is a list of conversations, so "the pins this thread produced" is
+    that join and nothing more. It is refused alongside a page scope rather
+    than combined with one — two scopes on one listing means one of them was
+    silently ignored, and a caller cannot tell which. An empty list is a real
+    answer: this thread has been kept nowhere.
     """
+    scopes = [
+        name for name, on in (
+            ("page_id", page_id is not None), ("page", page is not None),
+            ("ungrouped", ungrouped), ("thread_id", thread_id is not None),
+        ) if on
+    ]
+    if len(scopes) > 1:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Give one scope, not {len(scopes)}: {', '.join(scopes)}.",
+        )
+    if thread_id is not None:
+        ids = await conversations_in_thread(db, user.username, thread_id)
+        if not ids:
+            return []
+        rows = (
+            await db.execute(
+                select(GeorgePin)
+                .where(GeorgePin.created_by == user.username,
+                       GeorgePin.conversation_id.in_(ids))
+                .order_by(GeorgePin.created_at.desc(), GeorgePin.id.desc())
+            )
+        ).scalars().all()
+        return [PinOut.model_validate(p) for p in rows]
     if ungrouped:
         return [PinOut.model_validate(p)
                 for p in await page_writer.page_pins(db, user.username, None)]

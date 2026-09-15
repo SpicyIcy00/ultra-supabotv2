@@ -36,6 +36,18 @@ export const listPins = async (pageId?: string | null): Promise<Pin[]> => {
   return data;
 };
 
+/**
+ * The pins made in one thread, whatever page each sits on — which is how a
+ * thread says whether it has been kept (P2.a). A pin records the conversation
+ * it was made in and a thread is a list of conversations, so the backend does
+ * that join; nothing is inferred from a title. An empty array is a real
+ * answer: this thread is kept nowhere.
+ */
+export const listThreadPins = async (threadId: string): Promise<Pin[]> => {
+  const { data } = await axios.get<Pin[]>(API_BASE, { params: { thread_id: threadId } });
+  return data;
+};
+
 /** The legacy listing, for the picker: every real page with its id, and Ungrouped. */
 export const listPinPages = async (): Promise<PinPage[]> => {
   const { data } = await axios.get<PinPage[]>(`${API_BASE}/pages`);

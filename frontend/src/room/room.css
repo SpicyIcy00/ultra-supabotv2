@@ -789,6 +789,68 @@
 }
 .r-figure:hover, .r-figure:focus-visible { text-decoration-style: solid; }
 
+/* ------------------------------------------------------------ the thread
+   ITS HEADER AND ITS THIRD VIEW (P2.a). A thread is already a page, so it has
+   a name — or the honest absence of one — and three ways of being read. The
+   current view is the DARK one: no fill, no underline, no colour. The one
+   colour means "needs you" (UI rule 5) and a conversation nobody has kept is
+   not an approval. */
+.r-thead {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+  margin: 0 0 20px; padding-bottom: 11px; border-bottom: 1px solid var(--edge);
+}
+.r-thead-kept { margin: 0; display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.r-thead-quiet { font: 400 11.5px/1.5 var(--sans); color: var(--ink-3); }
+/* The page's name, and the way to it. George's own hue, which is identity and
+   not urgency — the same one Behind it lands a tapped figure with. */
+.r-thead-page {
+  font: 400 13px/1.5 var(--sans); color: rgb(var(--george));
+  text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.r-thead-page:hover, .r-thead-page:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
+.r-thead-views { display: flex; align-items: baseline; gap: 14px; }
+.r-thead-view {
+  background: none; border: 0; padding: 0; cursor: pointer;
+  font: 400 12.5px/1.5 var(--sans); color: var(--ink-3);
+  transition: color 160ms var(--ease);
+}
+.r-thead-view:hover, .r-thead-view:focus-visible { color: var(--ink-2); }
+.r-thead-view--on { color: var(--ink); }
+
+/* THE PAGE VIEW. A list, like Behind it — the sections a page would have, and
+   the turns it would leave off with the reason. Nothing drawn, because nothing
+   has been run: what the page produces is what the page shows when it opens. */
+.r-page { margin: 0 0 26px; display: grid; gap: 12px; }
+.r-page-already { margin: 0 0 4px; }
+.r-page-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.r-page-sec { padding-left: 13px; border-left: 2px solid var(--edge); display: grid; gap: 3px; }
+/* A turn the page would not take. The same shape, a quieter edge: it is part
+   of the account, not a failure. */
+.r-page-sec--off { border-left-style: dotted; }
+.r-page-q {
+  margin: 0; font: 400 13.5px/1.55 var(--sans); color: var(--ink);
+  max-width: 62ch; overflow-wrap: anywhere;
+}
+.r-page-sec--off .r-page-q { color: var(--ink-2); }
+.r-page-off-head { margin-top: 10px; }
+.r-page-keep {
+  display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;
+  margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--edge);
+}
+.r-page-name { display: grid; gap: 6px; min-width: 0; flex: 1 1 22ch; }
+.r-page-input {
+  border: 1px solid var(--edge); border-radius: 8px; background: var(--card);
+  padding: 7px 11px; font: 400 13.5px/1.4 var(--sans); color: var(--ink);
+  min-width: 0; width: 100%;
+}
+.r-page-input:focus-visible { outline: none; border-color: var(--edge-strong); }
+.r-page-input::placeholder { color: var(--ink-3); }
+.r-page-made { margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--edge); }
+/* THE REFUSAL, drawn as the caveat it is: above nothing, quiet, never in a
+   colour. It is the service's own sentence. */
+.r-page-refused { display: grid; gap: 10px; border-left: 2px solid var(--edge-strong); padding-left: 14px; }
+
 /* ---------------------------------------------------------------- behind it
    Every read of the thread with its receipts (BehindIt.tsx). A list, not a
    board: nothing here is drawn, because the drawings are on the board and

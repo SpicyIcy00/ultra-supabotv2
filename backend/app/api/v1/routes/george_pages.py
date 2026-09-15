@@ -11,7 +11,12 @@ EVERY RULE LIVES IN THE SERVICE, not here. app.services.page_writer is the one
 write path for a page and for a pin's place on it; George's `create_page` and
 `edit_page` reach the same functions through the writer routes/george.py
 injects. This router's own job is the HTTP shape: which refusal is a 404,
-which a 409, which a 422. Ownership is enforced in every statement the service
+which a 409, which a 422.
+
+A CREATE MAY CARRY THE PAGE'S FIRST SECTIONS (P2.a), and then it is one act:
+POST goes through page_operations.build_page, the same function George's
+`create_page` ends in, so the page and its pins commit together or not at all.
+An empty create is that same call with no analyses — one path, not two. Ownership is enforced in every statement the service
 makes, and a page belonging to someone else is a 404, not a 403 — whether a
 given id exists is not information a caller is entitled to.
 
@@ -26,7 +31,7 @@ it to Ungrouped. No pin is deleted by any route in this module.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -38,15 +43,19 @@ from app.core.database import get_db
 from app.core.deps import require_page
 from app.models.app_user import AppUser
 from app.models.george_pin import GeorgePin
-from app.services import page_writer
+from app.services import page_operations, page_writer
 from app.services.page_writer import (
     MAX_PURPOSE_LEN,
     MAX_TITLE_LEN,
+    AmbiguousTarget,
     PageNotFound,
     PageQuotaError,
     PageValidationError,
+    PinNotFound,
     SimilarPageError,
 )
+from app.services.pin_runner import PinValidationError
+from app.services.pin_writer import PinQuotaError
 
 router = APIRouter(tags=["george-pages"])
 
@@ -57,10 +66,36 @@ _page_user = require_page("george")
 # Schemas
 # ---------------------------------------------------------------------------
 
+class PageAnalysisIn(BaseModel):
+    """
+    One section of a page being created: a NEW analysis, or one the caller
+    already has.
+
+    A new one carries its calls, exactly as they ran, and the service validates
+    every one against the live tool surface before the page row exists. An
+    existing one carries only a pin_id. Giving both is refused in the service,
+    where George's `create_page` is refused it too — one rule, one place.
+    """
+
+    title: Optional[str] = None
+    tool_calls: Optional[list[dict[str, Any]]] = None
+    pin_id: Optional[uuid.UUID] = None
+
+
 class PageCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=MAX_TITLE_LEN)
     purpose: Optional[str] = Field(None, max_length=MAX_PURPOSE_LEN)
     allow_similar_page: bool = False
+    # THE PAGE AND ITS FIRST SECTIONS ARE ONE ACT (P2.a). "Keep as page" on a
+    # thread is one gesture and must be one write: a page that came into being
+    # with four of its five sections is a page nobody asked for. Absent or
+    # empty creates the empty page this route has always created.
+    analyses: Optional[list[PageAnalysisIn]] = None
+    # Provenance, recorded on each pin the build creates — the question the
+    # thread opened with and the conversation the calls ran in. Never used to
+    # decide anything; it is what lets a kept thread find its page again.
+    question: Optional[str] = None
+    conversation_id: Optional[uuid.UUID] = None
 
 
 class PageUpdate(BaseModel):
@@ -135,6 +170,27 @@ def _out(page, pins: int) -> PageOut:
                    created_at=page.created_at, updated_at=page.updated_at, pins=pins)
 
 
+def _from_summary(summary: dict[str, Any]) -> PageOut:
+    """
+    A page as page_operations reports it, in this router's shape.
+
+    The times arrive as ISO strings because that summary is also what reaches
+    the MODEL, where a datetime cannot go. `_at` is defensive about a null
+    rather than raising a 500 on one: the columns are written by the service on
+    every path, and a page that exists with no time on it would still be a
+    page, not a failed request.
+    """
+    def _at(value: Any) -> datetime:
+        return datetime.fromisoformat(value) if isinstance(value, str) else datetime.now(timezone.utc)
+
+    return PageOut(
+        id=uuid.UUID(summary["page_id"]), title=summary["title"],
+        purpose=summary["purpose"],
+        created_at=_at(summary["created_at"]), updated_at=_at(summary["updated_at"]),
+        pins=int(summary["analysis_count"]),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -156,19 +212,43 @@ async def create_page(
     db: AsyncSession = Depends(get_db),
     user: AppUser = Depends(_page_user),
 ) -> PageOut:
-    """A new, empty page. The first useful thing on it can come from a pin or from George."""
+    """
+    A new page — empty, or with its first sections, as ONE act.
+
+    ONE PATH, NOT TWO. Both cases go through page_operations.build_page, which
+    is the same service function George's `create_page` reaches through the
+    injected writer: analyses absent is the empty page this route has always
+    made, and analyses present is the page and its pins in one transaction, or
+    nothing. A second implementation for the button would be a second set of
+    bounds to keep equal.
+
+    THE REFUSALS ARE THE SERVICE'S, and every one of them is a sentence a
+    person can act on. This route's own job is which is a 422, which a 409 and
+    which a 404 — a pin id that is not the caller's is a 404 for the same
+    reason a page id is.
+    """
     try:
-        page = await page_writer.create_page(
+        built = await page_operations.build_page(
             db, owner=user.username, title=payload.title, purpose=payload.purpose,
+            analyses=[a.model_dump(exclude_none=True) for a in (payload.analyses or [])] or None,
+            question=payload.question,
+            conversation_id=payload.conversation_id,
             allow_similar_page=payload.allow_similar_page,
         )
-    except PageValidationError as exc:
+    except (PageValidationError, PinValidationError) as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
-    except PageQuotaError as exc:
+    except (PageQuotaError, PinQuotaError) as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     except SimilarPageError as exc:
         raise _similar_page_conflict(exc) from exc
-    return _out(page, 0)
+    except (PageNotFound, PinNotFound) as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except AmbiguousTarget as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    # The page the caller is told about is the page the service built, read off
+    # its own summary — the one page_operations reports to George too, so the
+    # button and the sentence describe the same row the same way.
+    return _from_summary(built.page)
 
 
 @router.get("/{page_id}", response_model=PageOut)

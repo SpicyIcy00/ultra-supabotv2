@@ -13,7 +13,8 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 READ_DB = ['tests/golden.py', 'tests/test_brief_live.py', 'tests/test_pins_live.py',
            'tests/test_storehub_tools_live.py']
-APP_DB = ['tests/test_page_reader_live.py', 'tests/test_page_workshop_live.py']
+APP_DB = ['tests/test_page_reader_live.py', 'tests/test_page_workshop_live.py',
+          'tests/test_thread_as_page_live.py']
 
 
 def main():

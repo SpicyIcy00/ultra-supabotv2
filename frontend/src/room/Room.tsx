@@ -30,6 +30,9 @@ import type { ToolCall } from '../types/george';
 import { Noticed } from './Noticed';
 import { WorkLine, Working } from './Working';
 import { BehindIt } from './BehindIt';
+import { ThreadHeader, keptPages, type KeptAs, type ThreadView } from './ThreadHeader';
+import { ThreadPage } from './ThreadPage';
+import { listThreadPins } from '../services/pinsApi';
 import { useQuery } from '@tanstack/react-query';
 import { listApprovals } from '../services/workflowsApi';
 import { Rail } from './Rail';
@@ -101,12 +104,44 @@ export default function Room() {
     staleTime: 60_000,
     retry: false,
   });
+  // WHICH OF THE THREAD'S THREE VIEWS IS OPEN (P2.a). `talk` is the reading
+  // and the board; `behind` is every read this thread stands on, with its
+  // receipts (P1.k); `page` is what this thread would be if it were kept. One
+  // URL, three readings of what is already loaded — none of them is a route,
+  // so coming back from one does not put you somewhere else.
+  const [view, setView] = useState<ThreadView>('talk');
+  // The read a tapped figure asked for, keyed `turn:seq` — the same key the
+  // board uses, because seq restarts every turn. Only `behind` reads it.
+  const [focus, setFocus] = useState<string | null>(null);
+  // The page this thread was just kept as, so the header names it without
+  // waiting for the listing to come back round. The query below is still the
+  // authority; this only fills the gap between the write and the refetch.
+  const [justKept, setJustKept] = useState<KeptAs | null>(null);
+  // WHETHER THIS THREAD HAS BEEN KEPT, AND AS WHAT (P2.a). The pins this
+  // thread produced, joined by the conversations in it — so a page named here
+  // is a page that exists. Read, never assumed: the header draws *checking*,
+  // *could not be read* and the answer as three separate things, because "not
+  // kept" is a claim about the world (UI rule 8).
+  const keptQuery = useQuery({
+    queryKey: ['thread-pins', threadId ?? george.threadId ?? null],
+    queryFn: () => listThreadPins((threadId ?? george.threadId) as string),
+    enabled: Boolean(threadId ?? george.threadId),
+    staleTime: 30_000,
+    retry: false,
+  });
+  const kept = useMemo(() => {
+    const read = keptPages(keptQuery.data);
+    // The page just created leads, until the listing carries it too. Never a
+    // duplicate: the same page from both sources is one entry.
+    if (!justKept || read.some((k) => k.pageId === justKept.pageId)) return read;
+    return [justKept, ...read];
+  }, [keptQuery.data, justKept]);
+  const keptState: 'loading' | 'failed' | 'loaded' =
+    justKept ? 'loaded'
+      : !(threadId ?? george.threadId) ? 'loaded'
+        : keptQuery.isPending ? 'loading'
+          : keptQuery.isError ? 'failed' : 'loaded';
   const [draft, setDraft] = useState('');
-  // WHERE THE FIGURES CAME FROM, AS A VIEW ON THE THREAD (P1.k). Null is the
-  // conversation; open is every read this thread stands on, with its receipts.
-  // `focus` is the read a tapped figure asked for, keyed `turn:seq` — the same
-  // key the board uses, because seq restarts every turn.
-  const [behind, setBehind] = useState<{ focus: string | null } | null>(null);
   const opened = useRef<string | null>(null);
 
   // A stored thread opens once, with its rows and compositions restored from
@@ -149,11 +184,11 @@ export default function Room() {
   // A new answer folds again. The fold is about the newest finding, and
   // leaving it open would put the accumulation straight back.
   useEffect(() => { setUnfolded(false); }, [answers.length]);
-  // AND ASKING CLOSES THE EVIDENCE (P1.k). Behind it is a view on what has
-  // already been read; a question is a request for something new, and an
+  // AND ASKING RETURNS TO THE TALK (P1.k). Behind it and Page are views on what
+  // has already happened; a question is a request for something new, and an
   // answer arriving behind a list nobody is looking at is the "stuff came out
   // but it just disappeared" shape all over again.
-  useEffect(() => { if (busy) setBehind(null); }, [busy]);
+  useEffect(() => { if (busy) { setView('talk'); setFocus(null); } }, [busy]);
   const drawn = unfolded ? board : shown;
   // The turn's caveats, minus the ones its objects already carry — computed
   // over what is DRAWN, because a caveat carried by a tile nobody can see has
@@ -530,7 +565,8 @@ export default function Room() {
     }
     // Leaving on purpose: "/" must not walk straight back in.
     forgetLast();
-    george.reset(); setSelection([]); setFocused(null); setBehind(null);
+    george.reset(); setSelection([]); setFocused(null);
+    setView('talk'); setFocus(null); setJustKept(null);
     setRetuned({}); setShapes({}); setRefusal(null);
     // WHAT YOU KEPT SURVIVES. Clearing is for the conversation, not for the
     // things you decided to hold on to — losing those to a button meant for
@@ -553,6 +589,14 @@ export default function Room() {
             2026-09-14 — "at 100% size theres lots of empty space on the right
             and its not centered". See `--measure` in room.css. */}
         <div className="r-measure">
+        {/* THE THREAD'S OWN HEADER (P2.a), and the first thing on the column
+            because it says what you are looking at before it says anything
+            about the world. Not drawn on an empty room: there is no thread to
+            have three views of, and "not kept" about nothing is noise. */}
+        {!empty && (
+          <ThreadHeader view={view} kept={kept} state={keptState}
+                        onView={(to) => { setView(to); if (to !== 'behind') setFocus(null); }} />
+        )}
         {/* Above the board, always — what happened while you were away comes
             before this morning's figures, the same way a caveat does. */}
         <Noticed onLookInto={(item) => navigate(`/w/${item.thread_id}`, {
@@ -570,7 +614,8 @@ export default function Room() {
                 below, and the whole thread's reads one tap sideways. */}
             {!busy && (
               <WorkLine turn={latest}
-                        onBehind={behind ? undefined : () => setBehind({ focus: null })} />
+                        onBehind={view === 'behind' ? undefined
+                          : () => { setView('behind'); setFocus(null); }} />
             )}
             {/* SINCE YOU LAST LOOKED. A count of answers with a time after
                 the mark this browser kept — derived, never guessed (UI rule
@@ -581,13 +626,20 @@ export default function Room() {
                 since you last looked · {arrived} {arrived === 1 ? 'answer' : 'answers'} arrived
               </p>
             )}
-            {behind ? (
+            {view === 'behind' ? (
               // A VIEW, NOT A PANEL. The evidence replaces the conversation
               // rather than sitting under it: a list of every read in the
               // thread beneath the answer it belongs to would be a page you
-              // scroll past, and P2.a names this one of three views.
-              <BehindIt answers={answers} focus={behind.focus}
-                        onBack={() => setBehind(null)} />
+              // scroll past. P2.a made it one of the header's three.
+              <BehindIt answers={answers} focus={focus}
+                        onBack={() => { setView('talk'); setFocus(null); }} />
+            ) : view === 'page' ? (
+              // THE THIRD VIEW: what this thread would be if it were kept, and
+              // what it would not take. A draft of something that already
+              // exists — the gesture names it, it does not assemble it.
+              <ThreadPage turns={george.turns} kept={kept}
+                          threadId={threadId ?? george.threadId ?? null}
+                          onKept={(page) => setJustKept({ pageId: page.id, title: page.title })} />
             ) : (
             <>
               {/* THE READING, ABOVE THE BOARD, ALWAYS. His words are not an
@@ -600,7 +652,10 @@ export default function Room() {
                        onToggle={() => setUnfolded((o) => !o)} />
               <Reading text={latest?.text} notices={notices} reading={latest?.reading}
                        calls={latest?.toolCalls}
-                       onFigure={(seq) => setBehind({ focus: `${answers.length - 1}:${seq}` })} />
+                       onFigure={(seq) => {
+                         setFocus(`${answers.length - 1}:${seq}`);
+                         setView('behind');
+                       }} />
               {/* WHAT THESE FIGURES ARE OF, AND HOW TO MOVE IT (P1.j). The
                   arguments the loop accepted, drawn between his reading and the
                   evidence it is about — which is where they are read, and where

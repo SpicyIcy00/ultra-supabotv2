@@ -61,6 +61,18 @@ ORG_ROOT_SQL = (
     "AND p.hidden_at IS NULL LIMIT 1"
 )
 
+# EVERY TURN OF THE THREAD THAT IS THE CALLER'S. The same scope and the same
+# visibility clause as OWN_CONVERSATION_SQL, returning the ids instead of
+# answering yes — a thread is a list of conversation rows, and anything joined
+# to a thread (its tool calls, its pins) is joined by them. routes/george.py's
+# get_chat has resolved the thread this way since the column existed; this is
+# that resolution given a name so a second route does not carry a second copy.
+THREAD_CONVERSATIONS_SQL = (
+    "SELECT c.id FROM george.conversations c "
+    "WHERE COALESCE(c.thread_id, c.id) = :t AND c.user_id = :u "
+    "AND c.hidden_at IS NULL ORDER BY c.asked_at"
+)
+
 # The post a reply names is in the thread and visible to the caller — the
 # river's own visibility clause, on owner_user, not author_user.
 PARENT_IN_THREAD_SQL = (
@@ -92,6 +104,26 @@ async def thread_continuable(
         return continuable(True, False)
     root = await _exists(session, ORG_ROOT_SQL, {"t": thread_id})
     return continuable(False, root)
+
+
+async def conversations_in_thread(
+    session: AsyncSession, username: str, thread_id: uuid.UUID,
+) -> list[uuid.UUID]:
+    """
+    The caller's conversation ids in `thread_id`, oldest first. Reads, never writes.
+
+    EMPTY IS A REAL ANSWER and is not an error: a thread George started on his
+    own has no conversation row of the caller's, and neither does a thread id
+    that belongs to nobody. A caller asking what of THEIRS is in a thread gets
+    the truth either way, and whether some other person's thread exists is not
+    information this leaks.
+    """
+    rows = (
+        await session.execute(
+            text(THREAD_CONVERSATIONS_SQL), {"t": thread_id, "u": username},
+        )
+    ).scalars().all()
+    return list(rows)
 
 
 async def parent_in_thread(

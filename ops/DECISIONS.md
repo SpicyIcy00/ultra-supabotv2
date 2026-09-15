@@ -9,6 +9,20 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-15 — P2.a: keeping a thread is one write, through the service George uses
+
+`POST /george/pages` grew `analyses` and lost its own create path: BOTH cases now go
+through `page_operations.build_page`, so a button and a sentence cannot drift into two
+sets of bounds — and a page that came into being with four of five sections is a page
+nobody asked for. The route stays `USER`; a page event saying `george` would answer
+"who moved this" with the wrong name. **The Page view states the refusals before the
+request**, which is why `keeping.ts` sorts argument keys recursively: the service keys on
+`json.dumps(sort_keys=True)`, and a shallower prediction is a 422 the person could have
+read in advance. A **new `thread_id` scope** on the pins listing is how a thread finds its
+page — pins carry a conversation, a thread is a list of them — and two scopes on one
+listing is refused rather than one silently winning. **Deliberately not built:** merging a
+second keep into the existing page. It says a second keep makes a second page instead.
+
 ## 2026-09-15 — P2.0: a verdict is written by the runner, never handed to the recorder
 
 `Report.add` loses its `passed` argument entirely rather than gaining a "write it

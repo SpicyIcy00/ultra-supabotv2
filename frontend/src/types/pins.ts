@@ -136,10 +136,31 @@ export interface PageRenameResult {
   pins_moved: number;
 }
 
+/**
+ * One section of a page being created: a new analysis with its calls, or one
+ * the caller already has, by id. Never both — the service refuses that, as it
+ * refuses it for George's own `create_page`.
+ */
+export interface CreatePageAnalysis {
+  title?: string;
+  tool_calls?: PinToolCall[];
+  pin_id?: string;
+}
+
 export interface CreatePageRequest {
   title: string;
   purpose?: string;
   allow_similar_page?: boolean;
+  /**
+   * The page's first sections, created WITH it in one transaction or not at
+   * all (P2.a). Absent or empty makes the empty page this has always made.
+   * At most `pages.workshop.max_analyses_per_build`; see room/keeping.ts,
+   * which states every bound where the plan is drawn.
+   */
+  analyses?: CreatePageAnalysis[];
+  /** Provenance for the pins the build creates. Decides nothing. */
+  question?: string;
+  conversation_id?: string;
 }
 
 /** A title or purpose change. `purpose: null` clears it. */
