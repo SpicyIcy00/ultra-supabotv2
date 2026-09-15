@@ -369,17 +369,27 @@ export function OwnCaveat({ meta }: { meta?: ToolMeta | null }) {
 
 
 /**
- * Whether a row is the one George pointed at.
+ * Whether a row is one George pointed at.
  *
  * Shared by every tile that draws a list, so "the row that matters" looks the
  * same whichever widget is showing it — and so a sentence naming it becomes
  * unnecessary rather than merely redundant.
+ *
+ * SEVERAL ROWS, SINCE 2026-09-15. It took one name, and a comparison is about
+ * two: asked to compare two shops George drew the estate, lit ONE of them and
+ * titled it "Both selected shops gave back basket value" — a claim the
+ * drawing could not support, with the comparison pushed into the prose
+ * because the picture had nowhere to hold it. A string still means one row,
+ * so every board stored before today draws exactly as it did.
  */
 export function isLit(o: BoardObject, row: Record<string, unknown>): boolean {
   if (!o.emphasise) return true;
-  const want = o.emphasise.trim().toLowerCase();
+  const want = (Array.isArray(o.emphasise) ? o.emphasise : [o.emphasise])
+    .map((e) => String(e).trim().toLowerCase())
+    .filter(Boolean);
+  if (!want.length) return true;
   return Object.values(row).some(
-    (v) => typeof v === 'string' && v.trim().toLowerCase() === want);
+    (v) => typeof v === 'string' && want.includes(v.trim().toLowerCase()));
 }
 
 /** George's few words about what is drawn. Never a figure. */

@@ -784,3 +784,70 @@ def test_the_board_clears_and_folds_rather_than_accumulating():
     assert "export function travel(" in src
     assert "export function folded(" in src
     assert "=== 'clears'" in src, "buildBoard no longer acts on the rule"
+
+
+# ---------------------------------------------------------------------------
+# A COMPARISON IS ABOUT TWO ROWS, AND `emphasise` TOOK ONE (2026-09-15)
+#
+# Read off the answer he actually got: asked to compare two shops, George read
+# the estate and composed
+#
+#   {"kind": "dumbbell", "claim": "Both selected shops gave back basket value
+#    in August", "emphasise": "Magnolia"}
+#
+# — a claim about two rows over a drawing that could light one, with the
+# comparison pushed into the prose because the picture had nowhere to hold it.
+# The owner: "when it compares it didnt generate any charts or anything".
+# ---------------------------------------------------------------------------
+
+def _shops_read():
+    return {1: {"tool": "get_sales", "arguments": {}, "error": None, "is_read": True,
+                "rows": [{"store": "Greenhills", "value": 431.7},
+                         {"store": "Magnolia", "value": 406.47},
+                         {"store": "OPUS", "value": 490.0}],
+                "meta": {"source_table": "new_transactions"}}}
+
+
+def _block(emphasise):
+    return {"op": "put", "key": "k", "seq": 1, "kind": "dumbbell",
+            "weight": "lead", "emphasise": emphasise}
+
+
+def test_a_block_may_emphasise_the_two_rows_a_comparison_is_about(defs):
+    accepted, warnings = compose.validate(
+        [_block(["Greenhills", "Magnolia"])], _shops_read(), defs)
+    assert warnings == []
+    assert accepted[0]["emphasise"] == ["Greenhills", "Magnolia"]
+
+
+def test_one_name_is_still_a_string_so_every_stored_board_draws_as_it_did(defs):
+    """The shape on the block is unchanged for the case that already worked."""
+    accepted, _ = compose.validate([_block("Magnolia")], _shops_read(), defs)
+    assert accepted[0]["emphasise"] == "Magnolia"
+
+
+def test_emphasising_more_than_the_definitions_allow_is_refused(defs):
+    """Lighting most of a chart emphasises nothing; the cap is what keeps it
+    an emphasis rather than a second way to draw every row bright."""
+    cap = int(req(defs, "composition.grammar.channels.emphasise.max_emphasised"))
+    accepted, warnings = compose.validate(
+        [_block([f"row {n}" for n in range(cap + 1)])], _shops_read(), defs)
+    assert accepted == []
+    assert str(cap) in warnings[0]["reason"]
+
+
+def test_every_emphasised_name_is_held_to_the_rule_one_name_was_held_to(defs):
+    """A list is not a way round the channel's own bounds."""
+    accepted, warnings = compose.validate(
+        [_block(["Greenhills", ""])], _shops_read(), defs)
+    assert accepted == []
+    assert warnings
+
+
+def test_the_schema_offers_the_model_both_shapes():
+    from agent import loop as george_loop
+    schema = next(t for t in george_loop.build_tool_schemas(include_write=True)
+                  if t["name"] == "compose")
+    blocks = schema["input_schema"]["properties"]["blocks"]["items"]["properties"]
+    kinds = {entry["type"] for entry in blocks["emphasise"]["anyOf"]}
+    assert kinds == {"string", "array"}

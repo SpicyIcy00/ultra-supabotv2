@@ -410,8 +410,11 @@ export interface CompositionBlock {
   spec?: SpecNode;
   /** Every read a spec draws from, so the loop charts them all. */
   seqs?: number[];
-  /** Which row stays lit while the rest cool. An annotation, not a shape. */
-  emphasise?: string;
+  /**
+   * Which row stays lit while the rest cool — or the two or three a
+   * comparison is about (2026-09-15). An annotation, not a shape.
+   */
+  emphasise?: string | string[];
   /**
    * THE CLAIM-TITLE: the few words saying what this block SAYS, in George's
    * own words. Never a digit — that is enforced server-side, because a figure
@@ -444,7 +447,11 @@ export interface SpecNode {
   field?: string;
   by?: string;
   colour?: string;
-  /** Which row stays lit while the others cool. Names a value, not a column. */
+  /**
+   * Which row stays lit while the others cool. Names a value, not a column.
+   * ONE here, unlike a block's: `grammar.annotation` takes a single name, and
+   * a type wider than the validator accepts would be a lie about the channel.
+   */
   emphasise?: string;
   /** A few words ON the mark. Never contains a digit — that is enforced. */
   note?: string;

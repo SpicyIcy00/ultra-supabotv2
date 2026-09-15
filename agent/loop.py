@@ -635,11 +635,15 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
                         ),
                     },
                     "emphasise": {
-                        "type": "string",
+                        "anyOf": [{"type": "string"},
+                                  {"type": "array", "items": {"type": "string"},
+                                   "minItems": 1}],
                         "description": (
-                            "which row stays lit while the others cool — a value a row "
-                            "carries, like a subject. Use it instead of writing 'one line "
-                            "dominates'. Works on a named widget as well as a spec."
+                            "which row or rows stay lit while the others cool — a value a "
+                            "row carries, like a subject. Use it instead of writing 'one "
+                            "line dominates'; name SEVERAL when the claim is about several, "
+                            "so a comparison of two shops lights both. Works on a named "
+                            "widget as well as a spec."
                         ),
                     },
                     "claim": {

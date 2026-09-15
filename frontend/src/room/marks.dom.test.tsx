@@ -535,3 +535,59 @@ describe('tapping a row', () => {
     expect(screen.queryByRole('button', { name: '1' })).toBeNull();
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * A COMPARISON LIGHTS BOTH ROWS (the dogfood log, 2026-09-15)
+ *
+ * `emphasise` took one name. Asked to compare two shops George read the
+ * estate and composed `emphasise: "Magnolia"` under the claim "Both selected
+ * shops gave back basket value in August" — a sentence the drawing could not
+ * support, with the comparison pushed into the prose because the picture had
+ * nowhere to hold it. The owner: *"when it compares it didnt generate any
+ * charts or anything"*.
+ * ------------------------------------------------------------------------ */
+
+const THREE = [
+  { store: 'OPUS', value: 490.47, baseline: 510.12, change: -19.65, change_pct: -3.9 },
+  { store: 'Greenhills', value: 431.7, baseline: 439.29, change: -7.59, change_pct: -1.7 },
+  { store: 'Magnolia', value: 406.47, baseline: 429.6, change: -23.13, change_pct: -5.4 },
+];
+
+/** Which row names are drawn lit, off the DOM the board produced. */
+function litNames(): string[] {
+  return [...document.querySelectorAll('.r-mk-row[data-lit="yes"]')]
+    .map((r) => r.querySelector('.r-mk-name')?.textContent ?? '')
+    .filter(Boolean);
+}
+
+describe('emphasising the rows a claim is about', () => {
+  it('lights both shops when the claim is about both', () => {
+    draw({ kind: 'dumbbell', emphasise: ['Greenhills', 'Magnolia'] }, THREE);
+    expect(litNames().sort()).toEqual(['Greenhills', 'Magnolia']);
+  });
+
+  it('still lights exactly one when one name is given', () => {
+    /** Every board stored before today draws as it did. */
+    draw({ kind: 'dumbbell', emphasise: 'Magnolia' }, THREE);
+    expect(litNames()).toEqual(['Magnolia']);
+  });
+
+  it('lights every row when nothing is emphasised', () => {
+    /** A chart with no point to make must not look like one where everything
+     *  failed to matter. */
+    draw({ kind: 'dumbbell' }, THREE);
+    expect(litNames()).toHaveLength(THREE.length);
+  });
+
+  it('cools the rows the claim is not about', () => {
+    draw({ kind: 'ranked', emphasise: ['Greenhills', 'Magnolia'] }, THREE);
+    const cooled = [...document.querySelectorAll('.r-mk-row[data-lit="no"]')]
+      .map((r) => r.querySelector('.r-mk-name')?.textContent);
+    expect(cooled).toEqual(['OPUS']);
+  });
+
+  it('treats an empty list as nothing emphasised, not as nothing lit', () => {
+    draw({ kind: 'ranked', emphasise: [] }, THREE);
+    expect(litNames()).toHaveLength(THREE.length);
+  });
+});

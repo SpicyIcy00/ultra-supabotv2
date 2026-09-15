@@ -5633,7 +5633,7 @@ composition:
       about: "before → after, one row each: a hollow dot where it was, a filled dot where it is, a line between. The shape for a compared read — seven shops against the week before. It needs no caption"
       needs: [seq]
     ranked:
-      about: "the rows in order, a bar in each cell and the figure beside it — a ranking, a split, biggest first. Use `emphasise` to light the one that matters"
+      about: "the rows in order, a bar in each cell and the figure beside it — a ranking, a split, biggest first. Use `emphasise` to light the row that matters, or the two or three a comparison is about"
       needs: [seq]
     contributors:
       about: "what MOVED the thing that moved: a signed change per row, in the metric's own unit, so the amounts that went missing are the picture. For a read whose rows carry a change"
@@ -5818,13 +5818,26 @@ composition:
       against: "the column that is the WHOLE a bullet's field is part of — the same row's baseline, target or total"
       emphasise:
         about: >
-          WHICH ROW MATTERS, among rows that are all drawn. Unlike `subject`
-          it hides nothing: every row stays, and the named one is lit while
-          the rest cool. It is how a picture says "this is the one" without a
-          sentence saying it — and it is the same rule the board already uses
-          at the object level, where a lead is lit and the rest are quiet.
-          Names a VALUE, checked against the rows like a subject.
+          WHICH ROW OR ROWS MATTER, among rows that are all drawn. Unlike
+          `subject` it hides nothing: every row stays, and the named ones are
+          lit while the rest cool. It is how a picture says "this is the one"
+          without a sentence saying it — and it is the same rule the board
+          already uses at the object level, where a lead is lit and the rest
+          are quiet. Names a VALUE, or several, checked against the rows like
+          a subject.
         names_a_value_not_a_column: true
+        # SEVERAL, SINCE 2026-09-15. It took one row, and a comparison is
+        # about two. Asked to compare two shops, George drew the estate,
+        # emphasised ONE of them and wrote "Both selected shops gave back
+        # basket value" as the claim — a sentence the drawing could not
+        # support, with the comparison pushed into the prose because the
+        # picture had nowhere to hold it. The owner: *"when it compares it
+        # didnt generate any charts or anything"*.
+        #
+        # The cap is what keeps it an emphasis. Lighting most of a chart
+        # emphasises nothing, so past this many the answer is a different
+        # read, not a brighter one.
+        max_emphasised: 3
 
       note:
         about: >

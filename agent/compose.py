@@ -522,11 +522,29 @@ def validate(
             if "claim" in item:
                 block["claim"] = _claim(item["claim"], voc)
             if "emphasise" in item:
+                # ONE ROW OR SEVERAL (2026-09-15). It took one, and a
+                # comparison is about two: asked to compare two shops George
+                # lit one of them and wrote "Both selected shops" as the
+                # claim, which the drawing could not support. Each name is
+                # held to exactly the rule one name was held to; the cap is
+                # what keeps it an emphasis rather than a second way to draw
+                # every row bright.
+                said = item["emphasise"]
+                many = said if isinstance(said, (list, tuple)) else [said]
+                cap = int((voc.get("grammar", {}).get("channels", {})
+                           .get("emphasise", {}) or {}).get("max_emphasised") or 3)
+                if len(many) > cap:
+                    raise Rejected(
+                        f"emphasise names at most {cap} rows; lighting more than "
+                        f"that emphasises nothing. Draw the read you mean instead."
+                    )
                 try:
-                    block["emphasise"] = grammar.annotation(
-                        "emphasise", item["emphasise"], defs)
+                    lit = [grammar.annotation("emphasise", one, defs) for one in many]
                 except grammar.Rejected as why:
                     raise Rejected(str(why)) from why
+                # A single name stays a STRING on the block, so every board
+                # stored before today draws exactly as it did.
+                block["emphasise"] = lit[0] if len(lit) == 1 else lit
 
             if "seq" in needs:
                 call = _read(calls, item.get("seq"))

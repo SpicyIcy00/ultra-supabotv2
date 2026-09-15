@@ -57,6 +57,39 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-15 — a comparison that drew no comparison
+
+> *"when it compares it didnt generate any charts or anything"*
+
+**There WAS a chart, and reading the answer he actually got is what found the
+real defect.** Read out of `george.posts`, his turn composed:
+
+    {"kind": "dumbbell", "seq": 0, "weight": "lead",
+     "claim": "Both selected shops gave back basket value in August",
+     "emphasise": "Magnolia"}
+
+over `get_sales(average_transaction_value, group_by=store,
+compare_to=previous_period, last_month)` — **no store filter, seven rows**.
+
+**`emphasise` took ONE name.** He compared two shops, the grammar let him
+point at one, so he lit Magnolia, cooled Greenhills with the other five, and
+wrote "Both selected shops" as the claim — a sentence the drawing could not
+support. The comparison went into the prose instead (*"Greenhills' basket
+slipped 1.7%… Magnolia's 5.4%"*), which is figures in sentences because the
+picture had nowhere to hold them.
+
+**Fixed: a block may emphasise the two or three rows a claim is about.** One
+name is still stored as a string, so every board made before today draws
+exactly as it did; past three it is refused, because lighting most of a chart
+emphasises nothing. Six backend tests and five renderer tests, three of which
+fail without the change.
+
+**WHAT THIS DOES NOT DO, AND HE SHOULD SAY WHICH HE WANTED.** The chart still
+draws all seven shops, with the two he picked lit. It is not a chart of only
+those two. George read the estate — the desk line already tells him *"read
+for these subjects by name"* and he read every shop anyway — so scoping the
+READ to a selection is a separate question and is not answered here.
+
 ### 2026-09-15 — "compare" still did not compare, so the shortcut was removed
 
 > *"compare still doesnt work, it just puts it here which i dont need so
