@@ -2230,7 +2230,7 @@ Answering mode reaches the screens in the Ideal UI (§6).
       answered by `get_vending` — **the join this yaml forbids, twice over**:
       that row is a stock location that takes no transactions and is
       explicitly *"NOT the vending business"*, and `get_vending` has no store
-      argument at all, only `machine`. Corrected in `d408713`: **AJI CMG is a
+      argument at all, only `machine`. Corrected the same hour: **AJI CMG is a
       warehouse**, read like the barn, and **vending is a BUSINESS** with
       `has_no_store_scope: true`, no store list, machines for places. Five
       pills. That also answers his second clause — a genuinely new business is
