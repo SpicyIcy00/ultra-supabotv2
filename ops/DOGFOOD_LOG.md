@@ -57,7 +57,68 @@ on compose frame" does.
 
 ## Open
 
-*Empty as of 2026-09-15.*
+### 2026-09-15 — a tap on a store does nothing but move the widget
+
+> *"this is how are doing looks like, but tapping doesnt work it just moves or
+> expands the widget so again for 2. i cant click any store cause theres no
+> tap."*
+
+The whole of P2.c's first half. `@` works — he said so — so an id can reach
+George by typing; it cannot reach him by pointing, which is the gesture the
+card is named after and the one everything downstream of it assumes.
+
+*Found by the session underneath, unverified:* the tile is `role="button"`
+with an `onClick` on the whole of it (`Shell`, `room/tiles.tsx`), and a mark's
+row sits inside it, so a click on a row may be reaching the tile's open/drag
+handler and never the row's own. That is a lead, not a diagnosis.
+
+### 2026-09-15 — the three changers above the figures do not work
+
+> *"these 3 changers no really work"* — of `WINDOW last month · SHOP Rockwell ·
+> GROUPED store`
+
+The read-as tokens from P1.j. They are drawn with the right words off the
+arguments the tools accepted, and they do not change anything when pressed.
+Same shape of failure as the tap above and possibly the same cause, which is
+a reason to look at them together and not a reason to assume it.
+
+### 2026-09-15 — the Page view does not say what it is for
+
+> *"this is page i dont really know what its supposed to do"*
+
+P2.a. It draws WHAT WOULD BE KEPT and WHAT WOULD NOT BE, AND WHY — correctly,
+by the look of it — and never says that this is a preview of a page it has not
+written yet, or what pressing anything would do. A screen whose first job is
+to be understood before you commit to it is failing at exactly that.
+
+*Found by the session underneath:* the not-kept list repeats "how are all
+stores doing?" three times and "how are we doing?" twice, each with a
+different reason, which reads as a bug before it reads as a list of turns.
+
+### 2026-09-15 — a raw diagnostic is sitting in the answer
+
+Not reported by the owner; **seen in his screenshot** and logged because UI
+rule 4 forbids it in those words — *raw diagnostics never reach the answer*.
+Under the tokens on the `@Rockwell lost last month` turn:
+
+> compare_to='previous_period' cannot be grouped by hour: each bucket against
+> its own predecessor is a lag series, which is not built (metrics.yaml
+> comparisons.not_supported.per_bucket_lag). Group by category, product, store
+> or by nothing, or drop compare_to and read the series as a chart.
+
+It names a yaml key and a file path. That sentence is written for George, and
+it is on the owner's screen.
+
+### 2026-09-15 — what do you remember only half works
+
+> *"what do you remember kinda works i guess"*
+
+The memory draws: six views, each with its stance, *learned 9/13/2026 · from
+get_sales · carried into 2 questions · unconfirmed since new data landed*, and
+a FORGET on every one. What "kinda" covers is not established and the session
+did not ask him to be more specific in the moment. **The half that is known
+not to be tested is the other one**: whether telling him "we means the shops"
+once changes the next answer. That is the card's own done-when.
 
 ---
 
