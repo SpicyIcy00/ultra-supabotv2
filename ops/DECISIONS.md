@@ -9,6 +9,28 @@ the reasoning CLAUDE.md carried until 2026-09-12 and it stays last.
 
 ---
 
+## 2026-09-15 — a costume is not the same app, and he said so
+
+*"it doesnt feel like its from the same app and its beacause its not, so make
+it."* Three named things, and his diagnosis is again the right one. Two were
+one-liners: `.r-column` never had `margin-inline: auto` where `.r-measure`
+always did (Kept, Needs you and Running, all three against the left edge), and
+`george-serif` is bridged to `--sans` because the room has no serif. The third
+was mine: the colour bridge mapped `george-navy` to the room's INK and a
+ranking's bar was filled with it, so the bars went white. A bar is a mark, not
+a word; it has its own token.
+
+**What I did NOT do is keep dressing it.** A kept page is a second renderer —
+1,623 lines from before the board learned its six marks — and every token I add
+is a costume on the wrong body. **P2.k**, written today and pulled ahead of the
+Phase 3 card that owned this surface, draws it with `room/marks.tsx` off the
+blocks `agent/default_composition` already produces for the board and the
+replay, and **deletes** `Instruments.tsx` and `ResultBlocks.tsx`.
+
+**Every new assertion was checked by reintroducing its own defect** — three for
+three. After shipping a dead CSS rule this morning, a test I have not seen fail
+is a test I do not believe.
+
 ## 2026-09-15 — a test that reads CSS as text cannot see whether it applies
 
 The token fix above shipped **dead**. The comment above the block was closed twice,

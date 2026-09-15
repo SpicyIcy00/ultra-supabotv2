@@ -1943,6 +1943,21 @@ Answering mode reaches the screens in the Ideal UI (§6).
       with no lead time set says so instead of firing. **No eval** — a
       scheduled watch makes no model call at all (rule 7), so the twelve
       cannot see this card.
+- [ ] **P2.k one renderer for a kept page** — **his words, 2026-09-15:**
+      *"it doesnt feel like its from the same app and its beacause its not, so
+      make it."* A kept page is drawn by `PinnedPage` → `PinTile` →
+      `ResultBlocks`/`Instruments`, 1,623 lines of the pre-P1.e renderer:
+      fourteen widget shapes where the room draws six, framed the other way
+      round, with its own idea of a figure. The ground, the type and the bar
+      were bridged the same day and that is all they were — a costume. The
+      seam already exists: `agent/default_composition.blocks` is what the
+      board and `/george/replay` are drawn from, so the pin-run route returns
+      the same blocks and the page draws them with `room/marks.tsx`. **This
+      DELETES a renderer rather than adding one.** Done when: a kept page and
+      the board draw the same read identically; `Instruments.tsx`,
+      `ResultBlocks.tsx` and `PinTile`'s drawing half are gone; the page's
+      controls survive as room controls; a dom test renders a recorded run
+      through both and compares. No eval.
 - [ ] **P2.✓ close** — walk the four board scenarios in the Ideal UI on the
       live build, report each against it, one full run. **Gate to Phase 3:**
       Open empty five days; the four scenarios work as drawn; median still

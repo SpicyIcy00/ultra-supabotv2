@@ -112,7 +112,29 @@ on a rule whose selector is exactly `.room`, with a general guard that no
 selector anywhere has swallowed a comment — both checked by putting the defect
 back (7 failures, six naming the dark room).
 
-`frontend/src/room/keptChrome.test.ts`, 20 cases.
+**Then a third report, the same day, and the important one:**
+
+> ok but still it isnt like what the george showed its not centered its a
+> different font, it doesnt feel like its from the same app and its beacause
+> its not, so make it
+
+All three named things were real and two were one-liners. **Not centred:**
+`.r-column` — what Kept, Needs you and Running are drawn in — had
+`max-width: 820px` and no `margin-inline: auto`, which `.r-measure` has carried
+since the room existed. One declaration, three screens. **A different font:**
+those headings and that one big figure are set in a system serif and the room
+has no serif at all, so `george-serif` is bridged to `--sans` inside the room by
+the same mechanism as the colours. **And the bars had gone white** — the bridge
+mapped `george-navy` to the room's ink, and a ranking's bar was filled with it;
+a bar is a mark, not a word, so it has its own token now.
+
+**His third sentence is the one that matters, and it is a card**, not a fix:
+*"its beacause its not"*. A kept page really is a different renderer — 1,623
+lines from before the board learned its six marks. **P2.k** is that, and it
+deletes a renderer rather than adding one.
+
+`frontend/src/room/keptChrome.test.ts`, 23 cases — and every new assertion was
+checked by reintroducing its own defect.
 
 
 ### 2026-09-14 · the caveat is forbidden a number, and George keeps trying

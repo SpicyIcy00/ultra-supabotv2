@@ -101,7 +101,7 @@ function LevelBar({ level, label }: { level: number; label: string }) {
       <div
         data-bar
         data-kind="level"
-        className="absolute left-0 top-0 h-full rounded-r-[4px] bg-george-navy"
+        className="absolute left-0 top-0 h-full rounded-r-[4px] bg-george-bar"
         style={{ width: `${Math.max(level * 100, level > 0 ? 0.6 : 0)}%` }}
       />
     </div>

@@ -243,7 +243,7 @@
 <header>
   <p class="kick">plan · <b>from the code as it is, to the Ideal UI</b> · 13 Sep 2026</p>
   <h1>The build plan, session by session</h1>
-  <p class="lede">Seventeen sessions in four phases, one card each, every prompt the same shape so a cold session can't go wrong. <em>The plan lives in ops/NOW.md; this page is the readable copy.</em> Nothing here is a rebuild. Every card is the next fix to the surface that exists, measured against a number.</p>
+  <p class="lede">Eighteen sessions in four phases, one card each, every prompt the same shape so a cold session can't go wrong. <em>The plan lives in ops/NOW.md; this page is the readable copy.</em> Nothing here is a rebuild. Every card is the next fix to the surface that exists, measured against a number.</p>
 </header>
 
 <h2 style="font-family:var(--serif);font-size:22px;font-weight:600;margin:0 0 14px">How you run it. Two prompts and a habit.</h2>
@@ -320,7 +320,7 @@
 <!-- ================= PHASE 2 ================= -->
 <section class="phase">
   <h2>Phase 2 · The finding, to the ideal</h2>
-  <p class="ph">Ten sessions. Answering mode reaches the Ideal UI's screens: a thread is a page, figures carry markers, a tap is context, actions sit where they apply, memory is visible, voice goes in.</p>
+  <p class="ph">Eleven sessions. Answering mode reaches the Ideal UI's screens: a thread is a page, figures carry markers, a tap is context, actions sit where they apply, memory is visible, voice goes in.</p>
   <p class="gate"><b>Gate to Phase 3:</b> five days of dogfood with Open empty; the four board scenarios in the Ideal UI (morning, how are we doing, why is Rockwell down, what do you remember) each work on the live build as drawn; median answer still under target.</p>
 
   <div class="card done"><div class="ch"><span class="id">P2.0</span><h3>Done: a report says whether it passed</h3><span class="tags"><span class="tag">done 15 Sep</span></span></div><p class="does">A saved eval run now says whether it passed, which is the one thing it could not say before. Every one of the eleven questions carries <b>passed</b>, or <b>failed with the check that failed written out</b>, or <b>not reached</b> for a run that stopped early — and nothing can fill that in early any more, because the recorder no longer accepts a verdict at all: the test runner writes it when the question is finished. Proved on three fake questions, one of each kind. <b>The four reports already saved cannot be fixed</b> — the score was never written down, so there is nothing to recover — and they now say so out loud: opening one prints a line telling you it predates this and its pass marks mean nothing. The second half found something real: two facts about every run — whether the cache was used, and whether that question is even meaningful for that turn — were being thrown away by the recorder, so the four saved runs do not have them. A test now reads the list of facts straight out of George's own code and fails the day one is added that nobody decided to keep. <b>What it does not do:</b> no run has been bought to exercise it, so the first report that says whether it passed will be the one at the end of Phase 2. 24 tests, no model spend.</p></div>
@@ -375,6 +375,12 @@
     <p class="does">The useful condition is <b>"will cross zero before it can be restocked."</b> The pieces exist: a replenishment tool, a purchase plan tool, and a units-per-week rate. The missing input is lead time, and it does not need the frozen purchase-order export: your architecture rules already allow a definition to declare a <b>bounded setting</b> a person binds and every run records, so "Seikyo takes three weeks" is a number you type once. A line with no lead time set says so rather than defaulting to a guess.</p>
     <p class="done-when"><b>Done when:</b> a watch fires for a line still above zero whose cover is under its supplier's lead time, naming both numbers; a line with no lead time set says so instead of firing.</p>
     <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card P2.j.</div></div>
+
+  <div class="card" style="border-color:rgba(var(--george),.45)"><div class="ch"><span class="id">P2.k</span><h3>One renderer for a kept page</h3><span class="tags"><span class="tag feat">#14 · #22</span><span class="tag free">no eval</span></span></div>
+    <p class="why"><b>Your words, 15 September:</b> <q>it doesnt feel like its from the same app and its beacause its not, so make it.</q> You were right twice — about how it looked, and about why.</p>
+    <p class="does">A kept page is drawn by a <b>different renderer</b>: 1,623 lines written before the board learned its six marks, with fourteen widget shapes, its own idea of a figure, and the parts of a block in a different order. The ground, the type and the bars were brought into line the same day you reported it, and that is all that was — a costume on the wrong body. The seam to do it properly already exists: the board and the replay are both drawn from one composer, so a re-run pin returns the same blocks and the page draws them with the room's own marks. <b>This deletes a renderer rather than adding one.</b></p>
+    <p class="done-when"><b>Done when:</b> the same read drawn on a kept page and on the board is the same drawing; the old widget files are gone; the page keeps its controls; a test renders one of your recorded runs through both and compares.</p>
+    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card P2.k.</div></div>
 
   <div class="card"><div class="ch"><span class="id">P2.✓</span><h3>Close the phase</h3><span class="tags"><span class="tag fable">switch to Fable after</span><span class="tag eval">eval · full, once</span></span></div>
     <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Close Phase 2: walk the four board scenarios on the live build, report each against the Ideal UI, and re-run the suite once.</div></div>
@@ -437,11 +443,11 @@
 <!-- ================= CALENDAR ================= -->
 <section class="phase">
   <h2>What it looks like on a calendar</h2>
-  <p class="ph">One card a day, five days a week, Fridays for the sweep. Dogfood fixes are counted in: expect one in three sessions to be a fix, not a card. Seventeen cards at four a week is a little over four weeks of cards, and one session in three is a fix rather than a card. Honest reading: <b>nine to eleven weeks</b> to the Phase 3 gate, and the sources decide whether the last four features arrive inside that or after.</p>
+  <p class="ph">One card a day, five days a week, Fridays for the sweep. Dogfood fixes are counted in: expect one in three sessions to be a fix, not a card. Eighteen cards at four a week is four and a half weeks of cards, and one session in three is a fix rather than a card. Honest reading: <b>nine to eleven weeks</b> to the Phase 3 gate, and the sources decide whether the last four features arrive inside that or after.</p>
   <div class="week">
     <div><b>weeks 1–2</b>The speed cards, then replay. The compose vocabulary has caught up with the six marks and the text has its three slots; from here the turns get shorter and a tap stops costing a model call.</div>
     <div><b>week 3</b>P1.✓ — done, 14 Sep. Visible work, tokens and replay are built; the answer is 17.1 s, not the sub-10 s this line promised, and a tap is 0.76 s.</div>
-    <div><b>weeks 4–6</b>P2.b → P2.✓, ten cards. Markers, taps, memory, voice, and the two capability cards. Keep as page landed 15 Sep.</div>
+    <div><b>weeks 4–6</b>P2.b → P2.✓, eleven cards. Markers, taps, memory, voice, and the two capability cards. Keep as page landed 15 Sep.</div>
     <div><b>weeks 7–9</b>P3.a → P3.✓, seven cards. Needs you, Today, Kept, building, diffs.</div>
     <div><b>any week</b>S.1 → S.6 land as you supply them, each a card of its own.</div>
   </div>

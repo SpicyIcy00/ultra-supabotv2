@@ -33,6 +33,11 @@
   --g-navy:   18  35  63;   /* #12233F  primary text */
   --g-slate:  74  93 120;   /* #4A5D78  secondary text */
   --g-muted: 132 150 172;   /* #8496AC  tertiary */
+  /* The system serif those headings have always been set in, and the ink a
+     ranking's bar has always been filled with. Bridged for the same reason as
+     the six above; identical values, so nothing outside the room moves. */
+  --g-serif: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+  --g-bar: 18 35 63;
 }
 
 * {

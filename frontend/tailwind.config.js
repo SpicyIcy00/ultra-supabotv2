@@ -40,6 +40,10 @@ export default {
           navy: 'rgb(var(--g-navy) / <alpha-value>)',     // primary text and headings
           slate: 'rgb(var(--g-slate) / <alpha-value>)',   // secondary text, metadata
           muted: 'rgb(var(--g-muted) / <alpha-value>)',   // tertiary: timestamps, citations
+          // A RANKING'S BAR IS A MARK, NOT A WORD. It was filled with `navy`,
+          // the primary INK, which reads as near-white on the room's ground —
+          // white bars, 2026-09-15. Its own token, so the ink can be ink.
+          bar: 'rgb(var(--g-bar) / <alpha-value>)',
           // RESERVED: "needs you" only — notices and approvals (UI rule 5).
           // Never use for errors, warnings or emphasis.
           accent: '#D2691E',
@@ -73,8 +77,12 @@ export default {
       },
       fontFamily: {
         // System serif — no webfont, so headings paint on first frame with no
-        // FOUT and no network dependency.
-        'george-serif': ['ui-serif', 'Georgia', 'Cambria', '"Times New Roman"', 'serif'],
+        // FOUT and no network dependency. A VARIABLE since 2026-09-15, for the
+        // reason the six colours are: inside the room there is no serif, and a
+        // kept page in Georgia was "its a different font". The fallback chain
+        // is the value the variable carries outside the room, so nothing that
+        // is still on cream moved.
+        'george-serif': 'var(--g-serif)',
       },
       minHeight: {
         'touch': '44px',

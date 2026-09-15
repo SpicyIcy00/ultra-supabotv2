@@ -58,6 +58,16 @@ const CONFIG = readFileSync(join(ROOT, 'tailwind.config.js'), 'utf8');
 const ROOM = postcss.parse(readFileSync(join(__dirname, 'room.css'), 'utf8'));
 const INDEX = postcss.parse(readFileSync(join(ROOT, 'src', 'index.css'), 'utf8'));
 
+/** Every declaration a rule with EXACTLY this selector makes, custom or not. */
+function declsOn(root: postcss.Root, selector: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  root.walkRules((rule) => {
+    if (rule.selector.trim() !== selector) return;
+    rule.walkDecls((decl) => { out[decl.prop] = decl.value.trim(); });
+  });
+  return out;
+}
+
 /** Every `--g-*` a rule with EXACTLY this selector declares, and its value. */
 function valuesOn(root: postcss.Root, selector: string): Record<string, string> {
   const out: Record<string, string> = {};
@@ -130,6 +140,34 @@ describe('the six chrome tokens the old components paint with', () => {
       }
     });
     expect(swallowed, 'these selectors have prose in them and match nothing').toEqual([]);
+  });
+
+  it("sets the old headings in this room's own face, not a serif", () => {
+    // "its a different font" — 2026-09-15. The room has no serif at all: its
+    // headings and its figures are both `--sans`, and a kept page in Georgia
+    // was a different app on the same screen.
+    expect(CONFIG).toContain("'george-serif': 'var(--g-serif)'");
+    expect(valuesOn(ROOM, DARK)['--g-serif']).toBe('var(--sans)');
+    // Outside the room it is the exact stack it always was.
+    expect(valuesOn(INDEX, ':root')['--g-serif']).toContain('Georgia');
+  });
+
+  it("fills a ranking's bar with a mark colour and not with the ink", () => {
+    // A bar painted in `navy` — the PRIMARY TEXT colour — is near-white on this
+    // ground, which is what the second screenshot showed. Ink is for words.
+    const bars = readFileSync(join(ROOT, 'src', 'components', 'george', 'Instruments.tsx'), 'utf8');
+    expect(bars).not.toContain('rounded-r-[4px] bg-george-navy');
+    expect(bars).toContain('rounded-r-[4px] bg-george-bar');
+    expect(valuesOn(ROOM, DARK)['--g-bar']).toBe('var(--flat)');
+  });
+
+  it('centres the column the other three screens are drawn in', () => {
+    // "its not centered" — 2026-09-15. `.r-measure` has carried this since the
+    // room existed; `.r-column`, which Kept, Needs you and Running are drawn
+    // in, never did, so all three sat against the left edge.
+    const column = declsOn(ROOM, '.r-column');
+    expect(column['max-width']).toBe('820px');
+    expect(column['margin-inline'], 'the column is not centred').toBe('auto');
   });
 
   it('keeps the reserved colour out of this entirely', () => {
