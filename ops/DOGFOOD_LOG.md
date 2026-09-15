@@ -57,6 +57,38 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-15 · why are the other names not highlighted?
+
+> why are the other names not highlighted? the other charts not colored?
+
+Asked of `e561a29` — the build P2.l put live an hour earlier — with a screenshot
+of the morning board: the lead dumbbell with OPUS's name in white and the other
+six shops grey, and the two ranked tiles with one coloured bar each (Rockwell
+green, OPUS pink) and every other bar grey.
+
+**Both questions have one cause, and it is one function.** `catalogue.colourOf`
+takes the row's change AND whether the row is lit, and **an unlit row returns
+`flat` whatever the tool measured** (`catalogue.ts:241`). `isLit` is false for
+every row except the one the block's `emphasise` names (`tiles.tsx:300`), and
+the same lit-ness sets the row's opacity to 0.5, which is what greys the NAME.
+So emphasis is doing two jobs at once: it says "this is the one that matters"
+AND it takes away the direction the tool declared for all six others.
+
+**On his screen that is six shops whose direction is on the record and not on
+the page.** Greenhills, Magnolia, Shangri-La, North Edsa and Fairview each have
+a `direction` in the same read that coloured OPUS; the dumbbell draws them in
+the colour of no direction. A reader cannot tell "fell, but not the point" from
+"did not move".
+
+**It predates P2.l — and P2.l is why it is visible.** `colourOf` has read this
+way since P1.e. Until this morning every tile also carried its shop's wash, so
+the board was never colourless; take the wash away and the honest state of the
+marks shows: colour is drawn once per tile, on one row in seven.
+
+**Not yet fixed.** The next session takes it: an unlit row keeps its own
+direction and loses only its weight, held by a test over the recorded runs —
+emphasis is opacity, never hue.
+
 ### 2026-09-15 · a claim about Greenhills over Rockwell's number
 
 Found while answering the colour report below, in the same screenshot, and it
