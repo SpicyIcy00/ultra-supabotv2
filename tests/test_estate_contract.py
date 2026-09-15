@@ -71,8 +71,16 @@ def test_every_part_is_places_out_of_the_store_lists_and_nothing_else():
     close in the same session.
     """
     for part in ESTATE["parts"]:
-        paths = part.get("places_from") or []
-        assert paths, f"{part['key']} covers no list"
+        paths = part.get("places_from")
+        assert paths is not None, f"{part['key']} does not say which places it covers"
+        # A PART MAY COVER NO STORE LIST, AND EXACTLY ONE DOES. Vending's places
+        # are machines, which live in Weimi and not in this file, so it names no
+        # `stores` path — and it has to say so, or "covers nothing" and "covers
+        # a business with no shops in it" would look the same here.
+        if not paths:
+            assert part.get("has_no_store_scope") is True, (
+                f"{part['key']} names no store list and does not say why")
+            continue
         for path in paths:
             assert path.startswith("stores."), f"{part['key']} reads outside stores"
             assert req(DEFS, path), f"{path} is empty"
@@ -82,34 +90,74 @@ def test_every_part_is_places_out_of_the_store_lists_and_nothing_else():
             assert not re.search(r"\d", value), f"{part['key']}.{field} carries a number"
 
 
-def test_the_three_businesses_are_all_there_and_are_told_apart():
+def test_two_warehouses_and_one_other_business_and_they_are_told_apart():
     """
-    Shops, the warehouse and vending — and the last is a DOMAIN, not a shop.
-    `vending.never_join_to_store_domain` is the rule this part must not break,
-    so it declares the join it may not make rather than leaving it to a habit.
+    THE OWNER'S OWN CORRECTION, 2026-09-15: *"aji barn and aji cmg are our
+    warehouses, but if in the future it can be a whole new buisness then ok"*.
+
+    The card shipped with ONE pill reading "AJI CMG · vending", scoped to
+    `stores.vending_stock_location` and answered by `get_vending`. That is the
+    join this file forbids, twice over: the row is a stock location that takes
+    no transactions and is explicitly "NOT the vending business", and
+    `get_vending` has no store argument at all — only `machine`. So the pill
+    handed George a store id the reads it named cannot take.
+
+    They are two parts now. Both warehouses are read like warehouses; the
+    vending BUSINESS carries no store scope, which is the shape a genuinely
+    separate business takes here and the thing he said would make the switch
+    worth having.
     """
     by_key = {p["key"]: p for p in ESTATE["parts"]}
-    assert set(by_key) >= {"shops", "barn", "vending"}
+    assert set(by_key) >= {"shops", "barn", "cmg", "vending"}
 
     assert by_key["shops"]["places_from"] == ["stores.active_retail"]
     assert by_key["shops"]["domain"] == "retail"
 
-    # THE WAREHOUSE IS NOT IN SALES, and it names the definition that says so
-    # rather than restating the reason — the tool's own refusal carries that.
-    assert by_key["barn"]["places_from"] == ["stores.warehouse"]
-    assert by_key["barn"]["not_in"] == "sales"
-    assert req(DEFS, by_key["barn"]["not_in_because"]), "the exclusion it cites does not exist"
-    barn_id = req(DEFS, "stores.warehouse")[0]["id"]
-    assert barn_id in req(DEFS, "filters.excluded_from_sales.excluded_store_ids")
+    # BOTH WAREHOUSES ARE WAREHOUSES: same domain, same exclusion, read the
+    # same way. Neither is in sales, and each names the definition that says so
+    # rather than restating the reason — the tool's own refusal carries it.
+    for key, path in (("barn", "stores.warehouse"),
+                      ("cmg", "stores.vending_stock_location")):
+        part = by_key[key]
+        assert part["places_from"] == [path]
+        assert part["domain"] == "retail", f"{key} is not a separate business"
+        assert part["not_in"] == "sales"
+        assert req(DEFS, part["not_in_because"]), "the exclusion it cites does not exist"
+        assert "get_stock" in part["answers_with"]
+        assert "get_vending" not in part["answers_with"], (
+            f"{key} is a stores row; the Weimi reads are not about it")
 
-    # VENDING IS ITS OWN DOMAIN. It travels as the stores row — a real place —
-    # and is ANSWERED by the Weimi views, which is exactly the distinction
-    # `stores.vending_stock_location` exists to keep.
-    assert by_key["vending"]["places_from"] == ["stores.vending_stock_location"]
-    assert by_key["vending"]["domain"] == "vending"
-    assert by_key["vending"]["not_joined_to"] == "retail"
-    assert req(DEFS, by_key["vending"]["not_joined_because"]) is True
-    assert set(by_key["vending"]["answers_with"]) == {"get_vending", "get_vending_stock"}
+    assert req(DEFS, "stores.warehouse")[0]["id"] in req(
+        DEFS, "filters.excluded_from_sales.excluded_store_ids")
+    # AJI CMG IS NOT IN THAT LIST, and that is not an oversight to fix here: it
+    # takes no transactions at all, so no sales metric can reach it in the first
+    # place, and every sales catalogue is scoped to active retail.
+    assert req(DEFS, "stores.vending_stock_location")[0]["takes_transactions"] is False
+
+    # VENDING IS A BUSINESS, AND IT HAS NO STORE SCOPE.
+    vending = by_key["vending"]
+    assert vending["places_from"] == []
+    assert vending["has_no_store_scope"] is True
+    assert vending["domain"] == "vending"
+    assert vending["not_joined_to"] == "retail"
+    assert req(DEFS, vending["not_joined_because"]) is True
+    assert set(vending["answers_with"]) == {"get_vending", "get_vending_stock"}
+
+
+def test_the_vending_tool_has_no_store_argument_which_is_why_the_part_has_none():
+    """
+    The fact underneath the correction, asserted rather than described. If
+    `get_vending` ever grew a `store`, `has_no_store_scope` would be a sentence
+    nobody had rechecked.
+    """
+    import inspect
+
+    from tools import vending
+
+    for fn in (vending.get_vending, vending.get_vending_stock):
+        names = set(inspect.signature(fn).parameters)
+        assert "store" not in names, f"{fn.__name__} takes a store now"
+        assert "machine" in names, f"{fn.__name__} does not take a machine"
 
 
 def test_every_tool_a_part_names_is_a_tool_that_exists():
@@ -178,15 +226,30 @@ def test_the_barn_says_it_is_in_no_sales_figure():
     assert "get_sales" not in said
 
 
-def test_vending_says_its_own_domain_and_never_joined():
-    said = surface._estate_words("vending", DEFS)
+def test_the_cmg_warehouse_is_read_like_a_warehouse_and_not_like_vending():
+    said = surface._estate_words("cmg", DEFS)
     assert "AJI CMG" in said
+    assert "no sales figure" in said
+    assert "get_stock" in said
+    # The correction, asserted: the warehouse pill may not send George to the
+    # Weimi reads. That row is not that business.
+    assert "get_vending" not in said
+
+
+def test_vending_says_its_own_domain_with_no_store_scope_at_all():
+    said = surface._estate_words("vending", DEFS)
+    assert "vending business" in said
     assert "get_vending" in said
     assert "never joined" in said
-    # The shops are not listed under a vending scope — that would be the join
-    # the definitions forbid, drawn in a sentence.
-    for shop in req(DEFS, "stores.active_retail"):
-        assert shop["display_name"] not in said
+    assert "no store scope" in said
+    assert "machines" in said
+    # AND IT NAMES NO PLACE IN `stores`. Naming the AJI CMG row here is exactly
+    # the join `vending.never_join_to_store_domain` forbids, written as a
+    # sentence — which is what this card shipped and the owner caught.
+    for group in req(DEFS, "stores.groups"):
+        for row in req(DEFS, f"stores.{group}"):
+            name = row.get("display_name") or row.get("name")
+            assert name not in said, f"the vending scope names {name}, a store row"
 
 
 def test_the_sentence_carries_no_figure():
@@ -319,10 +382,14 @@ def test_the_endpoint_serves_the_pills_with_their_places_resolved():
     assert served["shops"].places == [s["display_name"]
                                       for s in req(DEFS, "stores.active_retail")]
     assert served["barn"].places == ["AJI BARN"]
-    assert served["vending"].places == ["AJI CMG"]
+    assert served["cmg"].places == ["AJI CMG"]
+    # A BUSINESS WITH NO STORE SCOPE SERVES NO PLACES, and the pill draws
+    # nothing rather than borrowing a shop's name to have something to show.
+    assert served["vending"].places == []
     # Only the plural common noun counts its places; "1 AJI BARN" is nonsense.
     assert served["shops"].count_places is True
-    assert all(not served[k].count_places for k in ("all", "barn", "vending"))
+    assert all(not served[k].count_places
+               for k in ("all", "barn", "cmg", "vending"))
     # WHAT A PART MEANS IS NOT SERVED. Which domain answers for it and what it
     # is excluded from are George's to be told on the question; a client
     # drawing a pill has no use for either, and serving them would invite one

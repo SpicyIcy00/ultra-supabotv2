@@ -29,8 +29,8 @@ const defs = {
         places: ['Rockwell', 'Fairview', 'Greenhills'] },
       { key: 'barn', label: 'AJI BARN', says: 'warehouse', count_places: false,
         places: ['AJI BARN'] },
-      { key: 'vending', label: 'AJI CMG', says: 'vending · own domain',
-        count_places: false, places: ['AJI CMG'] },
+      { key: 'vending', label: 'vending', says: 'the machines · own domain',
+        count_places: false, places: [] },
     ],
   },
 } as unknown as DeskDefinitions;
@@ -42,7 +42,7 @@ describe('the estate switch', () => {
     render(<EstateSwitch defs={defs} picked={null} onPick={vi.fn()} />);
     const pills = screen.getAllByRole('button');
     expect(pills.map((b) => b.textContent)).toEqual(
-      ['All', '3 shopsretail', 'AJI BARNwarehouse', 'AJI CMGvending · own domain']);
+      ['All', '3 shopsretail', 'AJI BARNwarehouse', 'vendingthe machines · own domain']);
   });
 
   it('marks the part that is on, and only that one', () => {
@@ -56,7 +56,7 @@ describe('the estate switch', () => {
   it('hands back the part key that was pressed, and nothing else', () => {
     const onPick = vi.fn();
     render(<EstateSwitch defs={defs} picked={null} onPick={onPick} />);
-    fireEvent.click(screen.getByText('AJI CMG'));
+    fireEvent.click(screen.getByText('vending'));
     expect(onPick).toHaveBeenCalledWith('vending');
   });
 
@@ -113,7 +113,7 @@ describe('what the question carries', () => {
 
   it('removing the chip is the same gesture as pressing the default pill', () => {
     const onUnestate = vi.fn();
-    composer({ estate: { key: 'vending', label: 'AJI CMG' }, onUnestate });
+    composer({ estate: { key: 'vending', label: 'vending' }, onUnestate });
     fireEvent.click(screen.getByTitle('the part of the estate this question is about'));
     expect(onUnestate).toHaveBeenCalled();
   });

@@ -167,6 +167,43 @@ once changes the next answer. That is the card's own done-when.
 
 ## Fixed
 
+### 2026-09-15 — the estate switch called two warehouses a business
+
+> *"push  but does that make sense? aji barn and aji cmg are our warehouses,
+> but if in the future it can be a whole new buisness then ok"*
+
+Said of P2.g an hour after it shipped, and **he is right in the one way that
+breaks something.** The switch drew a pill reading **AJI CMG · vending**, scoped
+to `stores.vending_stock_location` and answered by `get_vending`.
+
+**That joined the two things `metrics.yaml` says must never be joined.** The
+note above that row reads: *"NOT retail, NOT the warehouse, and NOT the vending
+business. It holds store-side stock (3,534 inventory rows) and takes no
+transactions. The vending DOMAIN is Weimi … the two must never be conflated."*
+And `get_vending` has **no store argument at all** — only `machine`. So the pill
+handed George a store id the reads it named cannot take, under a word for a
+business that row is not.
+
+**Fixed as two parts, which is what they are.** **AJI CMG** is a warehouse,
+said so and read so — stock and movement, in no sales figure, exactly like AJI
+BARN. **vending** is a BUSINESS: no store scope at all, its places are
+machines, read with `get_vending` and `get_vending_stock`, never joined to or
+totalled with the shops. Five pills now: All · 7 shops · AJI BARN · AJI CMG ·
+vending.
+
+**And it answers the second half of what he said.** *"if in the future it can
+be a whole new buisness then ok"* — vending is now the first part shaped like
+one, and `has_no_store_scope` is the shape a new business takes here: its own
+tables, its own reads, no shops in it. A second one is a block in the yaml.
+
+Two backend tests fail without the change; the correction is also held by a
+test that reads `get_vending`'s signature, so `has_no_store_scope` cannot
+become a sentence nobody rechecked.
+
+**NOT SEEN IN A BROWSER.** The build he was looking at when he said this is
+`3bb55f22`, which has the wrong pill on it. The fix is not pushed.
+
+
 ### 2026-09-15 — "compare" put two shops in the shop filter, and the filter showed raw ids
 
 ### 2026-09-15 — "compare" puts two shops in the shop filter, and the filter shows raw ids

@@ -4283,3 +4283,15 @@ asked without it is byte-identical to yesterday's. **And a list in Python
 drifted from the yaml**: `_STORE_GROUPS` lacked `vending_stock_location`, so
 AJI CMG — the pill this card draws — answered "Unknown store". `stores.groups`
 now.
+
+**AJI CMG is a warehouse; vending is the business.** 2026-09-15, his own
+report an hour after P2.g shipped. The switch drew one pill, "AJI CMG ·
+vending", scoped to `stores.vending_stock_location` and answered by
+`get_vending` — the join metrics.yaml forbids, written into a control. Two
+parts now: a warehouse read like the barn, and a business with
+`has_no_store_scope: true`, no store list, machines for places. **That is the
+shape a new business takes here**, which is what he was asking when he said
+"if in the future it can be a whole new buisness then ok". The general lesson:
+a yaml comment saying "these must never be conflated" is not a guard, and the
+session that wrote the conflation had read the comment and quoted it while
+doing it.

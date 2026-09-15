@@ -6356,16 +6356,49 @@ surface:
           not_in: sales
           not_in_because: filters.excluded_from_sales
 
-        - key: vending
+        # -------------------------------------------------------------------
+        # AJI CMG IS A WAREHOUSE, AND THE OWNER SAID SO (2026-09-15).
+        #
+        # This part shipped as one pill reading "AJI CMG · vending", scoped to
+        # `stores.vending_stock_location` and answered by `get_vending`. He
+        # read it and said: *"aji barn and aji cmg are our warehouses, but if
+        # in the future it can be a whole new buisness then ok"* — and he was
+        # right, in the one way that breaks something.
+        #
+        # The pill JOINED THE TWO THINGS THIS FILE SAYS MUST NEVER BE JOINED.
+        # The `stores` row called AJI CMG holds store-side stock and takes no
+        # transactions; the note above it says it is "NOT retail, NOT the
+        # warehouse, and NOT the vending business". The vending business is
+        # Weimi — its own tables, its own metric registry, its own tool — and
+        # `get_vending` has no store argument at all, only `machine`. So the
+        # old part handed George a store id that the reads it named cannot
+        # take, under a word for a business that row is not.
+        #
+        # So they are two parts, which is what they are. AJI CMG is a
+        # warehouse, like the barn and read like the barn; vending is a
+        # BUSINESS, and its places are machines rather than shops.
+        # -------------------------------------------------------------------
+        - key: cmg
           label: "AJI CMG"
-          says: "vending · own domain"
-          noun: "AJI CMG, the vending business"
-          # THE STORES ROW, NOT THE WEIMI DOMAIN — and the two must never be
-          # conflated, which is why `stores.vending_stock_location` says so in
-          # its own comment. The row is where the scope TRAVELS (a real place,
-          # with store-side stock); `domain: vending` is what ANSWERS, through
-          # the `_php` views. A vending figure is never a store figure.
+          says: "warehouse"
+          noun: "AJI CMG, the warehouse the machines are stocked from"
           places_from: [stores.vending_stock_location]
+          domain: retail
+          answers_with: [get_stock, get_movement]
+          not_in: sales
+          not_in_because: filters.excluded_from_sales
+
+        - key: vending
+          label: "vending"
+          says: "the machines · own domain"
+          noun: "the vending business"
+          # NO STORE SCOPE, AND THAT IS THE POINT. A part may name no `stores`
+          # list at all — this is the first that does not, and it is the shape
+          # a genuinely separate business takes here. Its places are machines,
+          # which live in Weimi and not in this file, so nothing below names
+          # one: the tools take `machine` and George asks them.
+          places_from: []
+          has_no_store_scope: true
           domain: vending
           answers_with: [get_vending, get_vending_stock]
           not_joined_to: retail

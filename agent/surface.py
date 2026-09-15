@@ -258,6 +258,13 @@ def _estate_words(part_key: Any, defs: Mapping[str, Any]) -> Optional[str]:
     if places and not (len(places) == 1 and places[0] == label):
         said += f": {_names(places)}"
 
+    # A BUSINESS WITH NO STORE SCOPE says so (2026-09-15). Vending is the first
+    # part that names no `stores` list: its places are machines, `get_vending`
+    # takes `machine` and has no store argument, and a store id offered here
+    # would be the join `vending.never_join_to_store_domain` forbids.
+    if part.get("has_no_store_scope"):
+        said += " — no shop and no store scope; its places are machines"
+
     reads = [str(t) for t in (part.get("answers_with") or []) if t]
     if reads:
         said += f" — read with {_names(reads)}"

@@ -26,8 +26,12 @@ const defs = {
         places: SHOPS },
       { key: 'barn', label: 'AJI BARN', says: 'warehouse', count_places: false,
         places: ['AJI BARN'] },
-      { key: 'vending', label: 'AJI CMG', says: 'vending · own domain',
-        count_places: false, places: ['AJI CMG'] },
+      { key: 'cmg', label: 'AJI CMG', says: 'warehouse', count_places: false,
+        places: ['AJI CMG'] },
+      // A BUSINESS WITH NO STORE SCOPE. Its places are machines, which live in
+      // Weimi and not in the definitions, so it is served with none.
+      { key: 'vending', label: 'vending', says: 'the machines · own domain',
+        count_places: false, places: [] },
     ],
   },
 } as unknown as DeskDefinitions;
@@ -46,12 +50,13 @@ describe('the estate switch', () => {
 
   it('travels as the part key once a business is picked', () => {
     expect(estateFor(defs, 'barn')).toBe('barn');
-    expect(scopeChip(defs, 'vending')).toEqual({ key: 'vending', label: 'AJI CMG' });
+    expect(scopeChip(defs, 'vending')).toEqual({ key: 'vending', label: 'vending' });
   });
 
   it('draws how many places only where the definitions say to', () => {
     const pills = pillsFor(defs, 'shops');
-    expect(pills.map((p) => p.label)).toEqual(['All', '7 shops', 'AJI BARN', 'AJI CMG']);
+    expect(pills.map((p) => p.label)).toEqual(
+      ['All', '7 shops', 'AJI BARN', 'AJI CMG', 'vending']);
     expect(pills.find((p) => p.key === 'shops')?.on).toBe(true);
     expect(pills.filter((p) => p.on)).toHaveLength(1);
   });
