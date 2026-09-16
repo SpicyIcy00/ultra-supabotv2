@@ -4451,3 +4451,16 @@ authority per action kind as a visible control (Mantlr; Claude tool permissions)
 Later and j/k (Linear triage docs); graphite dark-native, translucent borders,
 chromatic colour only for meaning (Linear tokens, Geist scales). Fonts: Geist,
 Geist Mono, Newsreader — all on Google Fonts, checked. Still a proposal.
+
+## 2026-09-17 — the design is the artifact; the plan is its build order
+
+**The owner declared the beside room of *George, Ahead of Me* the design** — *"everything ive been
+leading you to this final artifact is it. except the alive we can workshop the shape color and
+everything."* Phase 2S in NOW.md §3 is that page in dependency order; the earlier Ideal UI is
+superseded, not deleted. Two closed decisions are reopened on purpose and say so on their cards:
+P2.l took identity hue off the room — it returns on the SWATCH only, the mark carries the verdict
+(his words: "green or red meaning good or bad not the same color as the stores"); P1.f closed the
+catalogue at six — P2S.g opens it to sixteen with a rule for what he reaches for unasked and a
+"stays what you asked for" on the pin. Nothing in the phase changes what George reads or writes
+except P2S.g, which is why it alone carries an eval.
+

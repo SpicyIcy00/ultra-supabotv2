@@ -106,13 +106,13 @@ model key.
 
 ## UI/UX
 
-**Visual direction: deliberately unlocked** (STANDARD §20, 2026-09-16). The
-cream workspace, cards, canvas, dashboard, feed and chat layout are discarded as
-constraints and no visual metaphor is preserved because it was built; the
-interface is rediscovered around the product the standard describes. What
-stays is not a look but a rule: a representation earns its place by
-communicating better than the alternatives, it never changes factual meaning,
-and every expressive channel is driven by a value the data carries.
+**Visual direction: the `beside` room of *George, Ahead of Me***
+(`ops/ideal/george-ahead-of-me.html`, https://claude.ai/artifact/BnwXtA3pPJxwui82FiKbpo),
+declared by the owner 2026-09-17 after STANDARD §20 unlocked the direction; only the
+alive mark's shape and colour are still open. NOW.md §3 Phase 2S builds it. The rule
+under it stays: a representation earns its place by communicating better than the
+alternatives, it never changes factual meaning, and every expressive channel is driven
+by a value the data carries.
 
 ### Vocabulary — eight words, eight meanings
 
