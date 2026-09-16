@@ -2638,6 +2638,15 @@ derived from the old standard: **it needs re-deriving from the new one before
 another surface card is taken.** The links below are kept as the record of
 how the old reading was reached.
 
+**The first render against the NEW standard — George, Ahead of Me** —
+https://claude.ai/artifact/BnwXtA3pPJxwui82FiKbpo (source: `ops/ideal/george-ahead-of-me.html`).
+Drawn 2026-09-16 from `ops/STANDARD.md` alone, per its own §20: not a target,
+a proposal for the owner to point at. Its spine is the vision's: a situation
+George already investigated, his confidence as four rows (known / likely /
+possible / unknown), the evidence on the step it supports, what he ruled out,
+the decision with its authority attached, and steering that transforms the
+situation in place. **Nothing in it is built.**
+
 The diagnosis behind this plan, the research, and the literal prompt for every
 card: **George, Eleven Days In** —
 https://claude.ai/code/artifact/90f62cb2-81f5-4ca1-b444-9ef3c92c858a
