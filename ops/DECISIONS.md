@@ -4418,3 +4418,13 @@ half the tiles a person sees are `default_blocks` George never composed, with
 no sentence on them. **Rule from here: a surface close-out names the Ideal UI
 scenario it matches and where it does not.** The fix is one card, recommended
 ahead of P2.h/i/j and taken with P2.k; the owner decides.
+
+**A database error is a refusal in words, and the last handler never prints
+raw.** 2026-09-16. `_call_tool` caught three refusal classes; a `QueryCanceled`
+was none of them and became the owner's entire answer. Any `psycopg.Error` is
+now a refusal from `failures.reads`, the raw text on the diagnostic key only,
+and both outer handlers speak `failures.turn`. Under it, the purchase plan read
+every line a supplier's products ever sold before filtering by date — 133,879
+buffers, 25 s cold; window-first and `MATERIALIZED` is 35,059. **And a seeded
+history marker that closes every assistant turn will be imitated**: the call
+list now opens the following user turn, and an echo is stripped and counted.

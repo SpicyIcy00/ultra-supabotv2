@@ -5198,6 +5198,39 @@ volunteering:
 # on the second attempt. Pushback that repeats itself is not an opinion, it is
 # an obstacle — and the person asking has more context than he does.
 # =============================================================================
+# =============================================================================
+# FAILURES — what a person is told when a read or a turn breaks. Added
+# 2026-09-16, off the owner's screenshot of an answer that read, in full,
+# "QueryCanceled: canceling statement due to statement timeout".
+#
+# A read that the database stops is a REFUSAL like any other: the model gets a
+# sentence in words and answers in words, and the raw text rides the gap log
+# on the diagnostic key that never reaches the model or the client. A turn
+# that dies outside any tool gets the sentence under `turn`; the exception
+# goes to george.gaps, where it was already going. UI rule 4: raw diagnostics
+# never reach the answer.
+# =============================================================================
+failures:
+  reads:
+    # The cap george_ro carries (tools/george_ro_role.sql). Named here so the
+    # sentence can say the number, and held equal to the role file by
+    # tests/test_read_failure_contract.py.
+    statement_timeout_s: 30
+    timed_out: >
+      This read was stopped at the {seconds}-second limit one read is allowed
+      and returned nothing. Ask for a narrower window, fewer products or one
+      shop, or ask what is available first.
+    database: >
+      The database could not complete this read and returned nothing. Nothing
+      was written. Try a narrower question; if it happens again, say so.
+  turn:
+    model_unavailable: >
+      I could not reach the model service, so this turn stopped before an
+      answer. Nothing was written. Ask again in a moment.
+    unhandled: >
+      Something broke on my side before I could answer. Nothing was written,
+      and it has been logged for the next fix.
+
 pushback:
   # An opinion. Never used for something that genuinely cannot be done.
   disagreement:

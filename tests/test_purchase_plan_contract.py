@@ -138,6 +138,25 @@ def test_the_availability_window_never_includes_today():
     assert "s.snapshot_date < CURRENT_DATE" in purchase_plan._SELECT_STARVED
 
 
+def test_demand_is_read_window_first_and_the_window_is_materialised():
+    """
+    2026-09-16. Product-first, the planner walked every line 18 products ever
+    sold and looked each transaction up by key to discard most of them:
+    133,879 buffers, 25 s cold, past the role's 30 s cap under load, and the
+    owner's answer was the raw timeout. The window set is materialised so the
+    planner cannot inline it and choose that plan again: 35,059 buffers,
+    measured on production with EXPLAIN (ANALYZE, BUFFERS), read-only.
+    """
+    sql = purchase_plan._SELECT_PLAN
+    assert "recent AS MATERIALIZED" in sql
+    recent = sql[sql.index("recent AS MATERIALIZED"):sql.index("demand AS")]
+    for predicate in ("t.is_cancelled = false", "t.store_id = ANY(%(retail_ids)s)", "t.transaction_time >= %(since)s"):
+        assert predicate in recent, predicate
+    demand = sql[sql.index("demand AS"):sql.index("stock AS")]
+    assert "JOIN recent r ON r.ref_id = ti.transaction_ref_id" in demand
+    assert "new_transactions t" not in demand, "the time filter belongs in `recent`, not repeated here"
+
+
 def test_no_caller_input_is_interpolated_into_sql():
     for template in (
         purchase_plan._SELECT_PLAN,

@@ -177,14 +177,27 @@ _SELECT_PLAN = """
 WITH mine AS (
     {mine}
 ),
-demand AS (
-    SELECT ti.product_id, SUM(ti.quantity) AS units_sold
-    FROM new_transaction_items ti
-    JOIN new_transactions t ON t.ref_id = ti.transaction_ref_id
+-- THE WINDOW FIRST, THEN THE PRODUCTS (2026-09-16). Written the other way
+-- round, the planner drove from the product index, walked every line those
+-- products ever sold (28,377 rows for 18 products) and then looked each
+-- transaction up by primary key to throw most of them away: 133,879 buffers,
+-- 25 s cold, over the role's 30 s cap under load — and the answer the owner
+-- saw was the raw timeout. MATERIALIZED stops the planner inlining this set
+-- and choosing that plan again: the 56-day set of transactions is ~33,000
+-- ref_ids, hashed once, and the same read is 35,059 buffers. Measured with
+-- EXPLAIN (ANALYZE, BUFFERS) on production, read-only.
+recent AS MATERIALIZED (
+    SELECT t.ref_id
+    FROM new_transactions t
     WHERE t.is_cancelled = false
       AND t.store_id = ANY(%(retail_ids)s)
       AND t.transaction_time >= %(since)s
-      AND ti.product_id IN (SELECT product_id FROM mine)
+),
+demand AS (
+    SELECT ti.product_id, SUM(ti.quantity) AS units_sold
+    FROM new_transaction_items ti
+    JOIN recent r ON r.ref_id = ti.transaction_ref_id
+    WHERE ti.product_id IN (SELECT product_id FROM mine)
     GROUP BY 1
 ),
 stock AS (

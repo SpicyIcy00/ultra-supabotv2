@@ -74,6 +74,7 @@ KINDS: dict[str, str] = {
     "reading_rejected":        "a slot of the reading was refused — a figure no read returned, or a slot past its bound",
     "volunteering_over_cap":   "more unasked-for figures than the cap allows",
     "tool_vocabulary_leaked":  "tool names reached the answer",
+    "history_marker_echoed":   "the model copied the seeded call list into its own answer, and it was stripped",
     "transaction_wording":     "raw table wording reached the answer",
     "restated_figure":         "prose said again what the board already draws",
     "misstated_figure":        "prose wrote a drawn figure WRONG — 800 over a row of 801",
@@ -92,7 +93,7 @@ KINDS: dict[str, str] = {
 # so a week with two hundred rows still says which ten matter.
 DEFECTS = {
     "api_error", "unhandled", "iteration_cap", "convergence_cap",
-    "tool_vocabulary_leaked", "transaction_wording",
+    "tool_vocabulary_leaked", "transaction_wording", "history_marker_echoed",
     "pin_claimed_not_made", "save_claimed_not_made", "page_claimed_not_made",
     # A wrong number on screen is never operating noise, and neither is one
     # with no receipt behind it at all.

@@ -228,6 +228,49 @@ once changes the next answer. That is the card's own done-when.
 
 ## Fixed
 
+### 2026-09-16 — a database error was the whole answer, and tool calls were printed as prose
+
+> *"also: QueryCanceled: canceling statement due to statement timeout happended
+> when i asked to make a ordering system for a supplier and when i told it a day
+> was a holiday it said of this data"*
+
+Two screenshots. (1) A supplier selected (JUDY JUD001), asked for an ordering
+system: the answer is the single line `QueryCanceled: canceling statement due
+to statement timeout` — 0 reads, 2 tools, 35.1s. A raw Postgres error reached
+the answer (UI rule 4: raw diagnostics never reach the answer). (2) Told a day
+was a holiday: a good answer, then `[Calls behind this answer: compose({...}),
+record_belief({...})]` — the tool-call JSON printed after his prose.
+
+**BOTH FIXED, SAME DAY, WITH THE CAUSES READ OUT OF PRODUCTION.**
+
+**(1) The timeout.** `george.conversations`: status `error`, one iteration,
+35,058 ms; `george.gaps`: `unhandled — QueryCanceled`. The tool wrapper caught
+ValueError, KeyError and RuntimeError and nothing else, so a Postgres
+`QueryCanceled` went past every handler in `run()` to the last one, which
+streamed the exception as the answer. Reproduced read-only: the plan for
+Judy JUD001 (18 products) took **25.1 s cold, 7.6 s warm** against the role's
+30 s cap. `EXPLAIN (ANALYZE, BUFFERS)` showed why: the planner walked all
+**28,377** lines those products ever sold, then looked each transaction up by
+key to keep 2,303 — 133,879 buffers. Three fixes: the wrapper now turns any
+`psycopg.Error` into a refusal in words from `failures.reads` (the sentence
+names the 30 s, held equal to the role file by a test), the raw text riding
+the diagnostic key to the gap log only; the two outer handlers say a sentence
+from `failures.turn` instead of the exception; and the demand query reads the
+56-day window first, `MATERIALIZED`, so the planner cannot choose that plan
+again — **35,059 buffers**, that statement 4.0 s → 1.4 s. **Not closed:** the
+plan is still ~8 s because its other two statements swing 1–3 s with load;
+the sentence is the safety net, not a promise it never fires.
+
+**(2) The bracket.** `_seed_history` closed every prior George turn with
+`[Calls behind this answer: …]` so the model could see what ran — and a
+model shown twenty answers that all end the same way ends its own the same
+way. The list now opens the user turn that FOLLOWS the answer, where nothing
+is imitated (an answer with no turn after it keeps it, because the pin
+follow-up reads the last message); and an echo is stripped deterministically
+— it is this file's own template — and recorded as `history_marker_echoed`.
+**1,836 → 1,848 pure**, prompt byte-identical at sha `bf57bd75`.
+
+
 ### 2026-09-16 — one frame, or three? The gaps, the cut names and the stack
 
 > *"now also look at the differnece why in this talking page is the side gaps

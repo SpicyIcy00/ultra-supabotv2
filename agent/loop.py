@@ -52,6 +52,7 @@ from decimal import Decimal
 from typing import Any, AsyncIterator, Callable, Optional
 
 import anthropic
+import psycopg
 
 from agent import prose as _prose
 from agent import compose, composite_tools, default_composition, reading, surface, write_tools
@@ -1448,6 +1449,36 @@ async def _call_tool(name: str, args: dict) -> tuple[dict, Optional[str], int]:
         # A refusal is a real answer — the tool declining to mislead. It goes
         # back to the model as an error result, never swallowed.
         return _refusal(exc, started)
+    except psycopg.Error as exc:
+        return _refusal(_read_failure(exc), started)
+
+
+def _read_failure(exc: psycopg.Error) -> RuntimeError:
+    """
+    A read the database stopped, as a refusal in words.
+
+    2026-09-16: the wrapper above caught the three refusal classes and nothing
+    else, so a `QueryCanceled` — the role's statement_timeout on a supplier's
+    purchase plan — went past every handler in run() to the last one, which
+    printed it raw, and the whole answer on the owner's screen read
+    "QueryCanceled: canceling statement due to statement timeout". This is
+    the sentence the model is told instead, from metrics.yaml `failures.reads`,
+    raised FROM the original so `_cause_of` keeps the raw text on the
+    diagnostic key — which reaches george.gaps and nothing else.
+    """
+    f = req(_load_defs(), "failures.reads")
+    if isinstance(exc, psycopg.errors.QueryCanceled):
+        text = str(f["timed_out"]).format(seconds=int(f["statement_timeout_s"]))
+    else:
+        text = str(f["database"])
+    err = RuntimeError(" ".join(text.split()))
+    err.__cause__ = exc
+    return err
+
+
+def _turn_failure_sentence(kind: str) -> str:
+    """What the person is told when the turn itself breaks (metrics.yaml `failures.turn`)."""
+    return " ".join(str(req(_load_defs(), f"failures.turn.{kind}")).split())
 
 
 async def _call_injected(registry: dict[str, Callable], name: str, args: dict,
@@ -1471,6 +1502,8 @@ async def _call_injected(registry: dict[str, Callable], name: str, args: dict,
         return result, None, int((time.perf_counter() - started) * 1000)
     except (ValueError, KeyError, RuntimeError) as exc:
         return _refusal(exc, started)
+    except psycopg.Error as exc:
+        return _refusal(_read_failure(exc), started)
 
 
 async def _call_write_tool(name: str, args: dict,
@@ -2298,6 +2331,24 @@ def _work_sentence(history: Optional[list], defs: dict) -> Optional[str]:
     return None
 
 
+HISTORY_MARKER = "[Calls behind this answer:"
+_ECHOED_MARKER = re.compile(r"\s*\[Calls behind this answer:.*\Z", re.S)
+
+
+def _strip_history_marker(answer: str) -> tuple[str, bool]:
+    """
+    The seeded call list, if the model wrote one of its own.
+
+    2026-09-16: every prior George turn in the history ended with the marker
+    below, so the model produced one too — and the owner's screen showed a
+    good answer followed by `[Calls behind this answer: compose({...}),
+    record_belief({...})]`. The marker is this file's own template, so it is
+    stripped deterministically, and the turn records that it happened.
+    """
+    stripped = _ECHOED_MARKER.sub("", answer)
+    return stripped.strip(), stripped != answer
+
+
 def _seed_history(history: Optional[list], executed: dict) -> list[dict]:
     """
     Prior turns as messages, and their calls recorded as already run.
@@ -2307,8 +2358,17 @@ def _seed_history(history: Optional[list], executed: dict) -> list[dict]:
     George turn kept behind THREAD_OPENER — the API requires a user message
     first, and the post a person is replying to must not be the one thing
     George cannot see.
+
+    WHERE THE CALL LIST GOES (2026-09-16). It used to close every assistant
+    turn, and a model shown twenty answers that all end the same way ends its
+    own the same way — the echo the owner saw. So it opens the user turn that
+    FOLLOWS the answer instead, where nothing is imitated; only an answer with
+    no turn after it keeps the list on itself, because the pin follow-up
+    copies its arguments out of the last message and that is still what it
+    finds there.
     """
     messages: list[dict] = []
+    carry = ""
     for turn in (history or [])[-MAX_HISTORY_TURNS:]:
         role = "assistant" if turn.get("role") == "george" else "user"
         content = (turn.get("text") or "").strip()[:MAX_HISTORY_TEXT]
@@ -2322,13 +2382,16 @@ def _seed_history(history: Optional[list], executed: dict) -> list[dict]:
                 f"{c.get('tool')}({json.dumps(c.get('arguments') or {}, sort_keys=True, default=str)})"
                 for c in calls if c.get("tool")
             )
-            content = (content + f"\n\n[Calls behind this answer: {listed}]").strip()
+            carry = f"{HISTORY_MARKER} {listed}]"
             for c in calls:
                 if c.get("tool"):
                     args = c.get("arguments") or {}
                     executed[call_key(c["tool"], args)] = {
                         "tool": c["tool"], "arguments": args,
                     }
+        elif role == "user" and carry:
+            content = f"{carry}\n\n{content}".strip()
+            carry = ""
 
         if not content:
             continue
@@ -2340,6 +2403,9 @@ def _seed_history(history: Optional[list], executed: dict) -> list[dict]:
             messages.append({"role": role, "content": content})
         else:
             messages.append({"role": role, "content": content})
+
+    if carry and messages and messages[-1]["role"] == "assistant":
+        messages[-1]["content"] = (messages[-1]["content"] + "\n\n" + carry).strip()
 
     return messages
 
@@ -2890,6 +2956,10 @@ async def run(
             # ---- no more tools: candidate answer -------------------------
             if not tool_uses:
                 answer = "".join(text_parts).strip()
+                answer, echoed = _strip_history_marker(answer)
+                if echoed:
+                    log.gap("history_marker_echoed", answer[:2000])
+                    yield _sse("warning", {"reason": "history_marker_echoed"})
 
                 # A pin claimed, or promised, but never made. Checked BEFORE the
                 # notice enforcement below, because the remedy may be another
@@ -3908,14 +3978,20 @@ async def run(
         if status == "ok" and not answer.strip():
             log.gap("answer_without_prose", question[:2000])
 
+    # WHAT THE PERSON IS TOLD WHEN THE TURN ITSELF BREAKS (2026-09-16). The
+    # client draws `message` as the answer, so it is a sentence from
+    # metrics.yaml `failures.turn` and never the exception — that goes to
+    # george.gaps, where it was already going. The owner's screenshot of
+    # "QueryCanceled: canceling statement due to statement timeout" as the
+    # whole answer is why (UI rule 4).
     except anthropic.APIError as exc:
         status = "api_error"
         log.gap("api_error", f"{type(exc).__name__}: {exc}"[:2000])
-        yield _sse("error", {"message": f"{type(exc).__name__}: {exc}"})
+        yield _sse("error", {"message": _turn_failure_sentence("model_unavailable")})
     except Exception as exc:  # noqa: BLE001
         status = "error"
         log.gap("unhandled", f"{type(exc).__name__}: {exc}"[:2000])
-        yield _sse("error", {"message": f"{type(exc).__name__}: {exc}"})
+        yield _sse("error", {"message": _turn_failure_sentence("unhandled")})
 
     # The clock, read once, after everything the person waited for.
     #
