@@ -578,6 +578,34 @@
   main.lay-focus .stage .st-hint{font:400 11px/1.6 var(--mono);color:var(--ink-4);margin:12px 0 0}
   main:not(.lay-focus) .stage{display:none}
   @media (max-width:900px){ main.lay-beside .chain .step > div, main.lay-tiles .chain, main.lay-focus .situation{display:block} main.lay-walk .chain .step{display:block} main.lay-walk .walkrail{display:none} }
+
+  /* ---------- NO BOX. The column is in the code; nothing is drawn as a container. ----------
+     Structure comes from type, spacing and hairlines. Evidence bleeds past the
+     text column on both sides. The one box left is the decision, because
+     that box means something. */
+  :root{--bleed:clamp(0px,(100vw - 1400px)/6,96px)}
+  .situation{background:transparent;box-shadow:none;border-radius:0;padding:28px 0 40px}
+  .queue > summary{background:transparent;box-shadow:none;padding:12px 0;border-bottom:1px solid var(--edge);border-radius:0}
+  .queue > summary:hover{box-shadow:none;color:var(--ink)}
+  .queue .att-groups{padding:18px 0 4px}
+  .att-group:first-child .att{background:transparent;box-shadow:none;padding-left:16px}
+  .att.on,.att:hover{background:var(--sunk);box-shadow:none}
+  .work summary{background:transparent;padding:5px 0}
+  .runlog{box-shadow:none;border-radius:0;border-top:1px solid var(--edge)}
+  .doc .pane{background:transparent;border-radius:0;padding:0;border-top:1px solid var(--edge)}
+  .doc .pane h4{padding-top:10px}
+  main.lay-focus .stage{background:transparent;box-shadow:none;padding:0 0 0 24px;border-left:1px solid var(--edge);border-radius:0}
+  main.lay-tiles .chain .step{background:transparent;box-shadow:none;border-top:1px solid var(--edge);border-radius:0;padding:16px 0}
+  .strip button.on{background:transparent;box-shadow:none;color:var(--ink);text-decoration:underline;text-underline-offset:6px;text-decoration-color:var(--ink-3)}
+  .side{border-right:0}
+  .box{background:transparent;box-shadow:none;border-bottom:1px solid var(--edge-2);border-radius:0;padding-left:0}
+  .compose-wrap{background:linear-gradient(to top,var(--ground) 55%,transparent)}
+  .toast{box-shadow:0 0 0 1px var(--edge-2)}
+  /* evidence bleeds beyond the words, in the document layout */
+  main.lay-document .situation .ev,main.lay-document .situation .fig,main.lay-document .situation .runlog,main.lay-document .situation .doc,main.lay-document .situation .timeline,main.lay-document .situation .life,main.lay-document .situation .people{width:calc(100% + 2*var(--bleed));margin-left:calc(-1*var(--bleed));margin-right:calc(-1*var(--bleed))}
+  main.lay-document .situation .ladder{width:calc(100% + 2*var(--bleed));margin-left:calc(-1*var(--bleed))}
+  main.lay-document .situation .ev .row,main.lay-document .situation .ev .scale{padding-left:8px;padding-right:8px;margin:0}
+  @media (max-width:1640px){:root{--bleed:0px}}
 </style>
 
 <button class="reopen" id="reopen" title="Open the sidebar  [" hidden>›</button>
@@ -1268,7 +1296,7 @@
   document.querySelectorAll('[data-steer]').forEach(function(b){b.addEventListener('click',function(){clearSeq(); state.mode='writing'; setDoing('<b>rearranging</b>the same reads, transformed'); seqTimer.push(setTimeout(function(){state.mode='idle'; setDoing('<b>quiet</b>transformed · nothing new read');},reduce?0:700));})});
   bring('situation');
   // FIVE LAYOUTS, same content. Remembered per browser.
-  var mainEl=document.querySelector('.console > main'), hints={document:'his sentences, evidence in the flow',beside:'his sentence left, its evidence right — argument beside proof',tiles:'the checks as titled tiles under the claim',walk:'one check at a time, in the order he took them',focus:'his words in a column; one figure, in focus, following the step'};
+  var mainEl=document.querySelector('.console > main'), hints={document:'his sentences, evidence in the flow, wider than the words',beside:'his sentence left, its evidence right — argument beside proof',tiles:'the checks as titled tiles under the claim',walk:'one check at a time, in the order he took them',focus:'his words in a column; one figure, in focus, following the step'};
   var mids={document:'840px',beside:'1120px',tiles:'1120px',walk:'960px',focus:'1180px'};
   function layout(name){
     mainEl.className=''; mainEl.classList.add('lay-'+name);
