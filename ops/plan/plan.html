@@ -243,9 +243,9 @@
 <header>
   <p class="kick">plan · <b>from the code as it is, to the Ideal UI</b> · 13 Sep 2026</p>
   <h1>The build plan, session by session</h1>
-  <p class="lede">Twenty-one sessions in four phases, one card each, every prompt the same shape so a cold session can't go wrong. <em>The plan lives in ops/NOW.md; this page is the readable copy.</em> Nothing here is a rebuild. Every card is the next fix to the surface that exists, measured against a number.</p>
+  <p class="lede">Sixteen sessions in four phases, one card each, every prompt the same shape so a cold session can't go wrong. <em>The plan lives in ops/NOW.md; this page is the readable copy.</em> Nothing here is a rebuild. Every card is the next fix to the surface that exists, measured against a number.</p>
 </header>
-<p class="gate" style="margin:-24px 0 36px"><b>The design is settled — 17 September.</b> You reached it yourself, pointing at thirty-nine versions of one page: <a href="https://claude.ai/artifact/BnwXtA3pPJxwui82FiKbpo">George, Ahead of Me</a>, its <i>beside</i> room. Your words: <q>everything ive been leading you to this final artifact is it. except the alive we can workshop the shape color and everything.</q> <b>Phase 2S below is that page, built card by card, in order, before anything else here</b> — nine sessions, one a day. The dogfood log still outranks everything.</p>
+<p class="gate" style="margin:-24px 0 36px"><b>The design is settled — 17 September.</b> You reached it yourself, pointing at thirty-nine versions of one page: <a href="https://claude.ai/artifact/BnwXtA3pPJxwui82FiKbpo">George, Ahead of Me</a>, its <i>beside</i> room. Your words: <q>everything ive been leading you to this final artifact is it. except the alive we can workshop the shape color and everything.</q> <b>Phase 2S below is that page, built before anything else here</b> — four sessions, re-cut from nine at your word. The dogfood log still outranks everything.</p>
 
 <h2 style="font-family:var(--serif);font-size:22px;font-weight:600;margin:0 0 14px">How you run it. Two prompts and a habit.</h2>
 <div class="loop">
@@ -388,51 +388,26 @@
 <!-- ================= PHASE 2S ================= -->
 <section class="phase">
   <h2>Phase 2S · The design, built</h2>
-  <p class="ph">Nine sessions. The page you pointed at, in the product: him, his words under him, the figures flowing beside, lines from him to each, nothing boxed, nothing scrolling, colour that means one thing per channel, and every shape he can draw. Nothing here changes what George reads or writes except P2S.g. Every card is measured against <span style="font-family:var(--mono);font-size:11px">ops/ideal/george-ahead-of-me.html</span>, not against what the room does today.</p>
+  <p class="ph">Four sessions. The page you pointed at, in the product &mdash; re-cut from nine cards to four at your word (<q>can we do it faster by putting stuff together? only do it if we still preserve function</q>). Function is preserved because only one of the four changes what George sees; the rest is how the same data is drawn and placed, and every check stays its own test. The page's own markup and CSS are ported in rather than re-derived: it is already the thing.</p>
   <p class="gate"><b>Gate to the rest of Phase 2:</b> you say it feels right on the live build, scene by scene beside the artifact; suites exact.</p>
 
-  <div class="card"><div class="ch"><span class="id">P2S.a</span><h3>The ground</h3><span class="tags"><span class="tag feat">§20</span><span class="tag free">no eval</span></span></div>
-    <p class="does">The artifact's tokens replace the room's: the graphite ground, the ink steps, <b>one</b> warm accent for what needs you, green up and red down, Geist / Geist Mono / Newsreader. Only the token block changes; every test about where colour may appear stays and passes.</p>
-    <p class="done-when"><b>Done when:</b> every surface renders from the new tokens and the accent is found on approvals only; typecheck and tests green.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card P2S.a.</div></div>
+  <div class="card"><div class="ch"><span class="id">P2S.1</span><h3>The room</h3><span class="tags"><span class="tag feat">§20</span><span class="tag free">no eval</span></span></div>
+    <p class="why"><b>Your words:</b> <q>when we do that it stops feeling like the workplace is building around you and starts feeling like just popping out kpis.</q> · <q>it should stay centered when sidebar is opened</q> · <q>i dont really ever want to see a scroll down on the charts</q></p>
+    <p class="does">Four parts in one pass, each its own commit. <b>The ground:</b> the page's tokens replace the room's &mdash; graphite, the ink steps, one warm accent for what needs you, green up and red down, Geist / Geist Mono / Newsreader. <b>The composition:</b> two fixed columns, 580 and 940, centred; him top-left, your words under him, the figures right; the sidebar slides it and never shrinks it; no page scrollbar; the figures area moves by arrows only; a phone stacks. <b>No boxes, flow, lines:</b> evidence loses its box, each figure goes to the shortest column in order, a dashed line runs from him to the claim and to every figure. <b>The chrome:</b> the sidebar as on the page (Pages, Systems, Automations · Watches, People, <span style="font-family:var(--mono)">[</span>) and the one-line composer.</p>
+    <p class="done-when"><b>Done when:</b> the accent is found on approvals only; with the sidebar open and closed the composition's centre equals the room's centre, held by a test on the numbers; no visible scrollbar in the room; a test says where 2, 3, 4 and 5 figures land; the Rockwell thread renders as the page frame for frame; every sidebar item opens what it names.</p>
+    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card P2S.1.</div></div>
 
-  <div class="card"><div class="ch"><span class="id">P2S.b</span><h3>The composition</h3><span class="tags"><span class="tag feat">§20</span><span class="tag free">no eval</span></span></div>
-    <p class="does">Two fixed columns, 580 and 940, centred in the room. Him top-left, your words under him, the figures on the right. <b>The sidebar slides it and never shrinks it.</b> No page scrollbar; only the figures area moves, by an up and a down arrow that appear only when there is more &mdash; never a scrollbar. On a phone the three stack.</p>
-    <p class="done-when"><b>Done when:</b> with the sidebar open and closed the composition's centre equals the room's centre, held by a test on the numbers; a test finds no visible scrollbar in the room.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card P2S.b.</div></div>
+  <div class="card" style="border-color:rgba(var(--george),.45)"><div class="ch"><span class="id">P2S.2</span><h3>The drawing</h3><span class="tags"><span class="tag feat">§20</span><span class="tag free">no eval</span></span></div>
+    <p class="why"><b>Your words:</b> <q>the line if its up or down should be green or red meaning good or bad not the same color as the stores.</q> · <q>except the alive we can workshop the shape color and everything.</q></p>
+    <p class="does">Three parts in one pass, each its own commit. <b>The alive mark:</b> one canvas mark driven by the turn, not a timer &mdash; idle breathes, reading pulses and turns a ring, writing steadies, need warms; the wide irregular form, with a switch of three forms for you to point at. <b>Identity on the swatch, verdict on the mark:</b> a store keeps one hue everywhere from a colour-blind-checked palette, by the store list's order and never a name in code; the hue lives on the dot beside the name; the drawing's own line says up or down, green or red, on every row. <b>Alive figures, and touch:</b> a figure draws itself when it arrives; hover or tap any row or mark for the exact figure and when it was read; a tap opens the receipts in place.</p>
+    <p class="done-when"><b>Done when:</b> the four states are four visibly different drawings, held by a test; Rockwell is one hue across a dumbbell, a line, a bar and a pie in one thread; the accent test still passes; every kind of drawing has the tooltip and a test reads it off one of your recorded runs.</p>
+    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card P2S.2.</div></div>
 
-  <div class="card"><div class="ch"><span class="id">P2S.c</span><h3>No boxes; the figures flow; lines from him</h3><span class="tags"><span class="tag feat">§20</span><span class="tag free">no eval</span></span></div>
-    <p class="why"><b>Your words:</b> <q>when we do that it stops feeling like the workplace is building around you and starts feeling like just popping out kpis.</q> and <q>it still feels like its in squares which it shouldnt.</q></p>
-    <p class="does">Evidence loses its box &mdash; a box stays only on a thing you act on. A figure is <i>read n</i>, its line, its drawing. Each figure, in order, goes to whichever column is shortest, so a short one never leaves a hole beside a tall one. A dashed line runs from him to the claim and to every figure. The words are the claim, the text with its read numbers, and <i>what I'd do next</i>, set toward the figures.</p>
-    <p class="done-when"><b>Done when:</b> the Rockwell thread renders as the artifact, frame for frame; a test asserts where 2, 3, 4 and 5 figures land.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card P2S.c.</div></div>
-
-  <div class="card" style="border-color:rgba(var(--george),.45)"><div class="ch"><span class="id">P2S.d</span><h3>The alive mark</h3><span class="tags"><span class="tag feat">§20</span><span class="tag free">no eval</span></span></div>
-    <p class="does">One canvas mark driven by the turn, not a timer: idle breathes, reading pulses on each read and turns a ring, writing steadies, need warms. The wide irregular form from the page &mdash; but <b>the shape and colour are yours to workshop</b>, so this ships a switch with three forms for you to point at, and nothing else depends on which.</p>
-    <p class="done-when"><b>Done when:</b> the four states are four visibly different drawings, held by a test; reduced motion honoured.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card P2S.d.</div></div>
-
-  <div class="card"><div class="ch"><span class="id">P2S.e</span><h3>Identity on the swatch, verdict on the mark</h3><span class="tags"><span class="tag feat">§20</span><span class="tag free">no eval</span></span></div>
-    <p class="why"><b>Your words:</b> <q>the line if its up or down should be green or red meaning good or bad not the same color as the stores.</q></p>
-    <p class="does">A store keeps one hue everywhere &mdash; Rockwell is the same blue on every figure in every thread &mdash; from a colour-blind-checked palette, taken by the store list's order and never by a name in code. The hue lives on the dot beside the name; the drawing's own line and dots say up or down, green or red, on every row. The accent stays for what needs you.</p>
-    <p class="done-when"><b>Done when:</b> Rockwell is one hue across a dumbbell, a line, a bar and a pie in one thread; the accent test still passes.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card P2S.e.</div></div>
-
-  <div class="card"><div class="ch"><span class="id">P2S.f</span><h3>Alive figures, and touch</h3><span class="tags"><span class="tag feat">§20</span><span class="tag free">no eval</span></span></div>
-    <p class="does">A figure draws itself when it arrives &mdash; rows in turn, bars grow, cells fill, a line is drawn &mdash; motion only for what the data does. Hover or tap any row or mark: the exact figure and when it was read; a tap opens the receipts in place.</p>
-    <p class="done-when"><b>Done when:</b> every kind of drawing has the tooltip; a test reads it off one of your recorded runs.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card P2S.f.</div></div>
-
-  <div class="card" style="border-color:rgba(var(--george),.45)"><div class="ch"><span class="id">P2S.g</span><h3>The vocabulary, and "ruled out"</h3><span class="tags"><span class="tag feat">§20</span><span class="tag eval">eval · subset</span></span></div>
+  <div class="card" style="border-color:rgba(var(--george),.45)"><div class="ch"><span class="id">P2S.3</span><h3>The vocabulary, and "ruled out"</h3><span class="tags"><span class="tag feat">§20</span><span class="tag eval">eval · subset</span></span></div>
     <p class="why"><b>Your words:</b> <q>it should have the ability to make all those different kinds of charts and visualizations like pie and others cause if it builds a dashboard it needs that.</q></p>
-    <p class="does">Six drawings become sixteen: bar against usual, small multiples, area, stacked, pie, scatter, heatmap, calendar, waterfall, treemap, funnel, gauge with its bullet, map, beside the six he has. Each shape carries a rule for when he reaches for it unasked; pie, treemap and gauge are only-when-asked, and <b>an asked-for shape stays</b> &mdash; "make that one a pie" makes a pie that stays a pie. A read the investigation ruled out is drawn as such, dimmed. This is the one card that changes what George sees, so it runs the four gate questions.</p>
+    <p class="does">On its own, because it is the one card that changes what George sees. Six drawings become sixteen: bar against usual, small multiples, area, stacked, pie, scatter, heatmap, calendar, waterfall, treemap, funnel, gauge with its bullet, map, beside the six he has. Each shape carries a rule for when he reaches for it unasked; pie, treemap and gauge are only-when-asked, and <b>an asked-for shape stays</b> &mdash; "make that one a pie" makes a pie that stays a pie. A read the investigation ruled out is drawn as such, dimmed. It runs the four gate questions.</p>
     <p class="done-when"><b>Done when:</b> each shape has a golden render; "make that one a pie" changes that pin and only that pin; the gate passes.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card P2S.g.</div></div>
-
-  <div class="card"><div class="ch"><span class="id">P2S.h</span><h3>The chrome: rail and composer</h3><span class="tags"><span class="tag feat">§20</span><span class="tag free">no eval</span></span></div>
-    <p class="does">The sidebar as on the page: George, the date, the business switch, Pages, Systems with their state, Automations · Watches, People, collapsible with <span style="font-family:var(--mono)">[</span>, sliding the composition. The composer is one line with its prompts, the offers, "tap anything above to bring it here", ↑ sends. No console switch, no status line.</p>
-    <p class="done-when"><b>Done when:</b> every sidebar item opens what it names; <span style="font-family:var(--mono)">[</span> slides the composition and the centring test still holds.</p>
-    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card P2S.h.</div></div>
+    <p class="pl">prompt</p><div class="cmd">Read ops/NOW.md. Do card P2S.3.</div></div>
 
   <div class="card"><div class="ch"><span class="id">P2S.✓</span><h3>Close: it feels right</h3><span class="tags"><span class="tag free">no eval</span></span></div>
     <p class="does">The Rockwell situation, "how are we doing", "nothing important" and the judgment scene on the live build, each screenshotted beside its frame of the page. You say it feels right, or name the next fix to the same surface.</p>
