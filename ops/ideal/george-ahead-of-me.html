@@ -997,7 +997,10 @@
      accent stays reserved for "needs you"); and touching a figure answers a question. ---------- */
   .sw{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 7px 1px 0;vertical-align:middle;background:var(--c,var(--quiet))}
   .row.lit .sw,.band.lit .sw,.sr.lit .sw{box-shadow:0 0 0 2px var(--ground),0 0 0 3px var(--c,var(--quiet))}
-  .row[data-c] .dot.now{background:var(--c)} .row[data-c] .seg{background:var(--c);opacity:.35}
+  /* the swatch is the store; the line is the verdict — green or red by direction, on every row */
+  .dumb .row[data-dir="down"] .seg,.dumb .row[data-dir="down"] .dot.now{background:var(--down)} .dumb .row[data-dir="down"] .dot.was{border-color:var(--down)}
+  .dumb .row[data-dir="up"] .seg,.dumb .row[data-dir="up"] .dot.now{background:var(--up)} .dumb .row[data-dir="up"] .dot.was{border-color:var(--up)}
+  .dumb .row[data-dir]:not(.lit) .seg,.dumb .row[data-dir]:not(.lit) .dot{opacity:.8}
   .band[data-c] i{background:var(--c)} .band[data-c] u{background:var(--c);opacity:.22}
   /* identity in the vocabulary tiles */
   .vt svg [data-c]{fill:var(--c)} .vt svg path[data-c].ln,.vt svg .sm path[data-c]{fill:none;stroke:var(--c)}
@@ -1906,7 +1909,7 @@
     var spots=[{left:'54vw',top:'7vh'},{left:'66vw',top:'38vh'},{left:'8vw',top:'58vh'},{left:'36vw',top:'64vh'}];
     var panels={}, order=[];
     function wire(){ wires.innerHTML=''; var W=stageView.clientWidth,H=stageView.clientHeight; var mx=W/2, my=H*0.5-0.06*Math.min(H*0.44,420); order.forEach(function(n,i){ var pn=panels[n]; var r=pn.getBoundingClientRect(); var x=r.left+r.width/2, y=r.top+r.height/2; var l=document.createElementNS('http://www.w3.org/2000/svg','line'); l.setAttribute('x1',mx); l.setAttribute('y1',my); l.setAttribute('x2',x); l.setAttribute('y2',y); l.setAttribute('stroke','rgba(138,143,152,.3)'); l.setAttribute('stroke-width', i===order.length-1?'1.5':'1'); l.setAttribute('stroke-dasharray','2 5'); l.style.opacity= i===order.length-1?'1':'.45'; wires.appendChild(l); }); }
-    function showRead(n){ if(panels[n]) return; var bl=P.blocks[n-1]; if(!bl) return; var i=order.length; var pnl=document.createElement('div'); pnl.className='st-panel arriving'+(bl.out?' out':''); var sp=spots[i%spots.length]; pnl.style.left=sp.left; pnl.style.top=sp.top; if(bl.say){ var sy=document.createElement('p'); sy.className='say'; sy.innerHTML=bl.say.innerHTML; pnl.appendChild(sy); } if(bl.ev){ pnl.appendChild(bl.ev.cloneNode(true)); swatches(pnl); animateFigure(pnl); } order.forEach(function(m){panels[m].classList.add('earlier')}); stageView.appendChild(pnl); panels[n]=pnl; order.push(n); state.mode='reading'; state.pulse=performance.now(); state.drawn=order.length; setTimeout(wire,60); }
+    function showRead(n){ if(panels[n]) return; var bl=P.blocks[n-1]; if(!bl) return; var i=order.length; var pnl=document.createElement('div'); pnl.className='st-panel arriving'+(bl.out?' out':''); var sp=spots[i%spots.length]; pnl.style.left=sp.left; pnl.style.top=sp.top; if(bl.say){ var sy=document.createElement('p'); sy.className='say'; sy.innerHTML=bl.say.innerHTML; pnl.appendChild(sy); } if(bl.ev){ pnl.appendChild(bl.ev.cloneNode(true)); swatches(pnl); directions(pnl); animateFigure(pnl); } order.forEach(function(m){panels[m].classList.add('earlier')}); stageView.appendChild(pnl); panels[n]=pnl; order.push(n); state.mode='reading'; state.pulse=performance.now(); state.drawn=order.length; setTimeout(wire,60); }
     var tmp=document.createElement('div'); tmp.innerHTML=P.stand; var sentences=tmp.innerHTML.split(/(?<=[.!?])\s+(?=[<A-Z\u201c"I])/).filter(function(x){return x.trim()});
     var i=0;
     function speak(){
@@ -2027,7 +2030,7 @@
     var spots=[{left:'5%',top:'6%'},{left:'57%',top:'9%'},{left:'4%',top:'60%'},{left:'58%',top:'63%'}];
     var panels={}, order=[];
     function wire(){ wires.innerHTML=''; var R=stg.getBoundingClientRect(); var mx=R.width/2, my=R.height/2; order.forEach(function(n,i){ var r=panels[n].getBoundingClientRect(); var x=r.left-R.left+r.width/2, y=r.top-R.top+r.height/2; var l=document.createElementNS('http://www.w3.org/2000/svg','line'); l.setAttribute('x1',mx); l.setAttribute('y1',my); l.setAttribute('x2',x); l.setAttribute('y2',y); l.setAttribute('stroke','rgba(138,143,152,.3)'); l.setAttribute('stroke-width', i===order.length-1?'1.5':'1'); l.setAttribute('stroke-dasharray','2 5'); l.style.opacity= i===order.length-1?'1':'.45'; wires.appendChild(l); }); }
-    function showRead(n){ if(panels[n]) return; var bl=P.blocks[n-1]; if(!bl) return; var i=order.length; var pnl=document.createElement('div'); pnl.className='nr-panel'+(bl.out?' out':''); var sp=spots[i%spots.length]; pnl.style.left=sp.left; pnl.style.top=sp.top; if(bl.say){ var sy=document.createElement('p'); sy.className='say'; sy.innerHTML=bl.say.innerHTML; pnl.appendChild(sy); } if(bl.ev){ pnl.appendChild(bl.ev.cloneNode(true)); swatches(pnl); animateFigure(pnl); } order.forEach(function(m){panels[m].classList.add('earlier')}); stg.appendChild(pnl); panels[n]=pnl; order.push(n); state.mode='reading'; state.pulse=performance.now(); state.drawn=order.length; setTimeout(wire,60); }
+    function showRead(n){ if(panels[n]) return; var bl=P.blocks[n-1]; if(!bl) return; var i=order.length; var pnl=document.createElement('div'); pnl.className='nr-panel'+(bl.out?' out':''); var sp=spots[i%spots.length]; pnl.style.left=sp.left; pnl.style.top=sp.top; if(bl.say){ var sy=document.createElement('p'); sy.className='say'; sy.innerHTML=bl.say.innerHTML; pnl.appendChild(sy); } if(bl.ev){ pnl.appendChild(bl.ev.cloneNode(true)); swatches(pnl); directions(pnl); animateFigure(pnl); } order.forEach(function(m){panels[m].classList.add('earlier')}); stg.appendChild(pnl); panels[n]=pnl; order.push(n); state.mode='reading'; state.pulse=performance.now(); state.drawn=order.length; setTimeout(wire,60); }
     var tmp=document.createElement('div'); tmp.innerHTML=P.claim+' '+P.stand; var sentences=tmp.innerHTML.split(/(?<=[.!?])\s+(?=[<A-Z\u201c"I])/).filter(function(x){return x.trim()});
     var i=0;
     function speak(){
@@ -2072,7 +2075,7 @@
       var fig=document.createElement('div'); fig.className='sh-fig'+(bl.out?' out':'');
       var num=document.createElement('p'); num.className='sh-n'; num.textContent='read '+n+' of '+P.blocks.length; fig.appendChild(num);
       if(bl.say){ var sy=document.createElement('p'); sy.className='say'; sy.innerHTML=bl.say.innerHTML; fig.appendChild(sy); }
-      if(bl.ev){ var ev=bl.ev.cloneNode(true); fig.appendChild(ev); swatches(fig); }
+      if(bl.ev){ var ev=bl.ev.cloneNode(true); fig.appendChild(ev); swatches(fig); directions(fig); }
       var chip=document.createElement('button'); chip.className=bl.out?'out':''; chip.innerHTML='<span>read '+n+'</span><b></b>'; chip.querySelector('b').textContent=label(bl); chip.onclick=function(){ focus(n); };
       figs[n]=fig; chips[n]=chip; order.push(n); strip.appendChild(chip);
       state.mode='reading'; state.pulse=performance.now(); state.drawn=order.length; focus(n);
@@ -2116,7 +2119,7 @@
     var ds=sentences.map(function(_,k){ var d=document.createElement('i'); d.onclick=function(){ stopTold(); show(k); }; dots.appendChild(d); return d; });
     var figs={}, cur=null, i=-1;
     function label(bl,n){ var t=''; if(bl.say){ var c=bl.say.cloneNode(true); c.querySelectorAll('s').forEach(function(x){x.remove()}); t=c.textContent.replace(/\s+/g,' ').trim(); if(t.length>72) t=t.slice(0,70).replace(/\s+\S*$/,'')+'\u2026'; } return 'read '+n+(bl.out?' \u00b7 <s>ruled out</s>':'')+(t?' \u00b7 '+t.replace(/</g,'&lt;'):''); }
-    function make(n){ var bl=P.blocks[n-1]; if(!bl) return null; var d=document.createElement('div'); var l=document.createElement('p'); l.className='lbl'; l.innerHTML=label(bl,n); d.appendChild(l); if(bl.ev){ var ev=bl.ev.cloneNode(true); d.appendChild(ev); swatches(d); } fig.appendChild(d); figs[n]=d; return d; }
+    function make(n){ var bl=P.blocks[n-1]; if(!bl) return null; var d=document.createElement('div'); var l=document.createElement('p'); l.className='lbl'; l.innerHTML=label(bl,n); d.appendChild(l); if(bl.ev){ var ev=bl.ev.cloneNode(true); d.appendChild(ev); swatches(d); directions(d); } fig.appendChild(d); figs[n]=d; return d; }
     function show(k){
       if(k<0||k>=sentences.length) return; i=k;
       say.querySelectorAll('span').forEach(function(x){ x.className='gone'; tdTimers.push(setTimeout(function(){ x.remove(); },500)); });
@@ -2141,6 +2144,9 @@
   function identOf(text){ var t=(text||'').toLowerCase(); for(var k in IDENT){ if(t.indexOf(k)===0) return IDENT[k]; } return null; }
   // a store or product carries its hue wherever it is named in a figure
   function swatches(root){ (root||document).querySelectorAll('.row .nm, .band .nm, .sr .nm, .node b').forEach(function(nm){ if(nm.querySelector('.sw')) return; var id=identOf(nm.textContent.trim()); if(!id) return; var host=nm.closest('.row,.band,.sr,.node'); if(host){ host.dataset.c=id; host.style.setProperty('--c','var(--c-'+id+')'); } var sw=document.createElement('i'); sw.className='sw'; sw.style.setProperty('--c','var(--c-'+id+')'); nm.insertBefore(sw, nm.firstChild); }); }
+  // direction on every dumbbell row: from the sign in its figure, else from where now sits against was
+  function directions(root){ (root||document).querySelectorAll('.dumb .row').forEach(function(r){ if(r.dataset.dir) return; var sg=r.querySelector('.fig s'), t=sg?sg.textContent.trim():''; var d=null; if(/^[−\-]/.test(t)) d='down'; else if(/^\+/.test(t)) d='up'; else { var now=r.querySelector('.dot.now'), was=r.querySelector('.dot.was'); if(now&&was){ var a=parseFloat(now.style.left), b=parseFloat(was.style.left); if(!isNaN(a)&&!isNaN(b)&&a!==b) d=a<b?'down':'up'; } } if(d) r.dataset.dir=d; }); }
+  directions();
   swatches();
   document.querySelectorAll('[data-scene]').forEach(function(b){ b.addEventListener('click', function(){ setTimeout(function(){ var sc=activeScene(); if(sc&&sc.id==='vocab') sc.querySelectorAll('.vt').forEach(function(t,k){ t.classList.remove('alive'); void t.offsetWidth; setTimeout(function(){ animateFigure(t); }, k*120); }); }, 40); }); });
   // a figure draws itself: rows arrive one after another, bars grow, cells fill, a line is drawn
@@ -2175,7 +2181,7 @@
     function label(bl){ var t=''; if(bl.say){ var c=bl.say.cloneNode(true); c.querySelectorAll('s').forEach(function(x){x.remove()}); t=c.textContent.replace(/\s+/g,' ').trim(); if(t.length>60) t=t.slice(0,58).replace(/\s+\S*$/,'')+'\u2026'; } return t; }
     function focus(n){ if(!figs[n]) return; figb.innerHTML=''; figb.appendChild(figs[n]); cur=n; order.forEach(function(m){ chips[m].classList.toggle('on', m===n); }); animateFigure(figs[n]); }
     function showRead(n){ if(figs[n]){ if(cur!==n) focus(n); return; } var bl=P.blocks[n-1]; if(!bl) return;
-      var d=document.createElement('div'); var l=document.createElement('p'); l.className='lbl'; l.innerHTML='read '+n+(bl.out?' \u00b7 <s>ruled out</s>':'')+' \u00b7 '+label(bl).replace(/</g,'&lt;'); d.appendChild(l); if(bl.ev){ var ev=bl.ev.cloneNode(true); d.appendChild(ev); swatches(d); }
+      var d=document.createElement('div'); var l=document.createElement('p'); l.className='lbl'; l.innerHTML='read '+n+(bl.out?' \u00b7 <s>ruled out</s>':'')+' \u00b7 '+label(bl).replace(/</g,'&lt;'); d.appendChild(l); if(bl.ev){ var ev=bl.ev.cloneNode(true); d.appendChild(ev); swatches(d); directions(d); }
       var chip=document.createElement('button'); chip.textContent='read '+n; chip.onclick=function(){ focus(n); }; seen.insertBefore(chip, nx&&nx.parentNode===seen?nx:null);
       figs[n]=d; chips[n]=chip; order.push(n); state.mode='reading'; state.pulse=performance.now(); state.drawn=order.length; focus(n); }
     var tmp=document.createElement('div'); tmp.innerHTML=P.claim+' '+P.stand; var sentences=tmp.innerHTML.split(/(?<=[.!?])\s+(?=[<A-Z\u201c"I])/).filter(function(x){return x.trim()});
