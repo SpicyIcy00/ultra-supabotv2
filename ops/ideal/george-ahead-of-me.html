@@ -1036,7 +1036,9 @@
   body.con-beside .side .strip button .n{display:inline-block;min-width:4.5ch}
   body.con-beside .side .strip button.on{background:var(--raise);color:var(--ink);box-shadow:0 0 0 1px var(--edge-2);text-decoration:none}
   body.con-beside main{display:none}
-  body.con-beside .bs-view{display:grid;position:relative;min-height:calc(100vh - 40px);grid-template-columns:minmax(320px,2fr) minmax(0,3fr);grid-template-rows:auto auto;grid-template-areas:"him right" "words right";column-gap:3vw;row-gap:1vh;padding:max(6vh,72px) 3vw 230px 1vw;align-items:start;align-content:start}
+  body.con-beside .bs-view{display:grid;position:fixed;inset:0;grid-template-columns:minmax(320px,2fr) minmax(0,3fr);grid-template-rows:auto minmax(0,1fr);grid-template-areas:"him right" "words right";column-gap:3vw;row-gap:1vh;padding:max(6vh,72px) 3vw 150px 3vw;align-items:start;transition:left .28s cubic-bezier(.2,.7,.3,1)}
+  :root[data-side="open"] body.con-beside .bs-view{left:232px}
+  body.con-beside{overflow:hidden}
   .bs-view svg.wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
   .bs-view svg.wires line{transition:opacity .4s}
   .bs-view .bs-him{grid-area:him;position:relative;min-width:0;display:flex;align-items:flex-start;justify-content:center}
@@ -1049,10 +1051,16 @@
   .bs-view .bs-stand sup{font:400 9px/1 var(--mono);color:var(--ink-3);vertical-align:super;margin-left:1px}
   .bs-view .bs-next{margin:6px 0 0;max-width:44ch;font:400 14px/1.5 var(--serif);color:var(--ink);border-right:3px solid var(--ink);padding-right:14px}
   .bs-view .bs-next b{display:block;font:500 10.5px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
-  .bs-view .bs-right{grid-area:right;min-width:0;display:grid;grid-template-rows:auto auto;gap:14px}
+  .bs-view .bs-right{grid-area:right;min-width:0;display:grid;grid-template-rows:auto minmax(0,1fr);gap:14px;max-height:100%;position:relative}
   .bs-view .bs-mood{font:400 12px/1.6 var(--mono);color:var(--ink-3);width:30ch;justify-self:end;text-align:right}
   .bs-view .bs-mood b{display:block;font:500 13px/1.5 var(--sans);color:var(--ink)}
-  .bs-view .bs-figs{min-width:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:34px 40px;align-content:start}
+  .bs-view .bs-figs{min-width:0;min-height:0;overflow:auto;scrollbar-width:none;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:34px 40px;align-content:start;padding-bottom:8px}
+  .bs-view .bs-figs::-webkit-scrollbar{display:none}
+  /* more figures than fit: an arrow at the edge, never a scrollbar */
+  .bs-view .bs-arr{position:absolute;right:-6px;width:30px;height:30px;border-radius:50%;background:var(--ground);color:var(--ink-2);box-shadow:0 0 0 1px var(--edge-2),0 6px 20px rgba(0,0,0,.3);font:400 14px/30px var(--sans);text-align:center;z-index:3;transition:opacity .2s}
+  .bs-view .bs-arr:hover{color:var(--ink);background:var(--sunk)}
+  .bs-view .bs-arr.up{top:44px} .bs-view .bs-arr.dn{bottom:0}
+  .bs-view .bs-arr[hidden]{display:none}
   .bs-view .bs-figs > div{min-width:0;position:relative}
   .bs-view .bs-figs .lbl{font:400 10.5px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 8px}
   .bs-view .bs-figs .lbl s{text-decoration:none;color:var(--ink-4)}
@@ -1063,7 +1071,7 @@
   .bs-view .bs-figs .ev .row{padding:5px 6px;margin:0;font-size:13.5px;gap:14px;grid-template-columns:minmax(7ch,13ch) 1fr minmax(10ch,auto)}
   .bs-view .bs-figs .line svg{width:100%;height:auto;max-height:260px}
   .bs-view .bs-figs > div.out{opacity:.55}
-  @media (max-width:900px){ body.con-beside .bs-view{position:static;display:block;padding:20px 5vw 120px} .bs-view svg.wires{display:none} .bs-view .bs-him{display:block} .bs-view .bs-him canvas{width:100%;max-width:420px;margin:0} .bs-view .bs-left{margin-top:12px;align-items:flex-start;text-align:left} .bs-view .bs-next{border-right:0;border-left:3px solid var(--ink);padding:0 0 0 14px} .bs-view .bs-right{margin-top:26px} .bs-view .bs-figs{grid-template-columns:1fr} .bs-view .bs-figs > div{grid-column:auto!important;grid-row:auto!important} .bs-view .bs-mood{justify-self:start;text-align:left} }
+  @media (max-width:900px){ body.con-beside .bs-view{position:static;display:block;padding:20px 5vw 120px} .bs-view svg.wires{display:none} .bs-view .bs-him{display:block} .bs-view .bs-him canvas{width:100%;max-width:420px;margin:0} .bs-view .bs-left{margin-top:12px;align-items:flex-start;text-align:left} body.con-beside{overflow:auto} .bs-view .bs-next{border-right:0;border-left:3px solid var(--ink);padding:0 0 0 14px} .bs-view .bs-right{margin-top:26px;max-height:none} .bs-view .bs-figs{grid-template-columns:1fr;overflow:visible} .bs-view .bs-arr{display:none} .bs-view .bs-figs > div{grid-column:auto!important;grid-row:auto!important} .bs-view .bs-mood{justify-self:start;text-align:left} }
 </style>
 
 <button class="reopen" id="reopen" title="Open the sidebar  [" hidden>›</button>
@@ -2198,6 +2206,10 @@
     var right=document.createElement('div'); right.className='bs-right'; v.appendChild(right);
     var mood=document.createElement('div'); mood.className='bs-mood'; mood.innerHTML=doing.innerHTML; right.appendChild(mood);
     var figs=document.createElement('div'); figs.className='bs-figs'; right.appendChild(figs);
+    var up=document.createElement('button'); up.className='bs-arr up'; up.textContent='\u2191'; up.title='earlier figures'; up.hidden=true; right.appendChild(up);
+    var dn=document.createElement('button'); dn.className='bs-arr dn'; dn.textContent='\u2193'; dn.title='more figures'; dn.hidden=true; right.appendChild(dn);
+    function arrows(){ up.hidden= figs.scrollTop<=2; dn.hidden= figs.scrollTop+figs.clientHeight>=figs.scrollHeight-2; }
+    up.onclick=function(){ figs.scrollBy({top:-figs.clientHeight*0.8, behavior: reduce?'auto':'smooth'}); }; dn.onclick=function(){ figs.scrollBy({top:figs.clientHeight*0.8, behavior: reduce?'auto':'smooth'}); };
     var made=[];
     function wire(){ wires.innerHTML=''; var V=v.getBoundingClientRect(), M=markEl.getBoundingClientRect(); var mx=M.left-V.left+M.width/2, my=M.top-V.top+M.height/2; var F=figs.getBoundingClientRect();
       made.forEach(function(d,i){ var r=d.getBoundingClientRect(); if(r.bottom<F.top||r.top>F.bottom) return; var x=r.left-V.left+18, y=Math.max(r.top,F.top)-V.top+8; var l=document.createElementNS('http://www.w3.org/2000/svg','line'); l.setAttribute('x1',mx); l.setAttribute('y1',my); l.setAttribute('x2',x); l.setAttribute('y2',y); l.setAttribute('stroke','rgba(138,143,152,.32)'); l.setAttribute('stroke-width', i===made.length-1?'1.5':'1'); l.setAttribute('stroke-dasharray','2 5'); l.style.opacity= d.classList.contains('alive')?'1':'0'; wires.appendChild(l); }); }
@@ -2210,10 +2222,10 @@
       bsTimers.push(setTimeout(function(){ animateFigure(d); wire(); }, reduce?0:200+k*260));
     });
     state.mode='reading'; state.pulse=performance.now(); state.drawn=P.blocks.length;
-    bsTimers.push(setTimeout(function(){ state.mode='idle'; setDoing('<b>quiet</b>brought \u00b7 '+P.blocks.length+' figures \u00b7 nothing written'); wire(); }, reduce?0:400+P.blocks.length*260));
+    bsTimers.push(setTimeout(function(){ state.mode='idle'; setDoing('<b>quiet</b>brought \u00b7 '+P.blocks.length+' figures \u00b7 nothing written'); wire(); arrows(); }, reduce?0:400+P.blocks.length*260));
     // left to right across, then down; a last row that is not full sits on the right, under the last column
     function place(){ var n=made.length; if(window.innerWidth<=900){ made.forEach(function(d){ d.style.gridRow=''; d.style.gridColumn=''; }); return; } var cols= n<=1?1: n===2||n===4?2: 3; var full=Math.floor(n/cols)*cols, rest=n-full; made.forEach(function(d,i){ var row=Math.floor(i/cols); var per= i<full? 6/cols : 6/rest; var col= i<full? (i%cols)*per : (i-full)*per; d.style.gridRow=String(row+1); d.style.gridColumn=(col+1)+' / span '+per; }); }
-    place(); var onresize=function(){ place(); wire(); };
+    place(); arrows(); var onresize=function(){ place(); wire(); arrows(); }; figs.addEventListener('scroll',function(){ wire(); arrows(); });
     bsWire=onresize; window.addEventListener('resize',onresize);
     bsMo=new MutationObserver(function(){ mood.innerHTML=doing.innerHTML; }); bsMo.observe(doing,{childList:true,subtree:true,characterData:true});
   }
