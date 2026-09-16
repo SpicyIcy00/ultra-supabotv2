@@ -1042,8 +1042,8 @@
   .bs-view svg.wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
   .bs-view svg.wires line{transition:opacity .4s}
   .bs-view .bs-him{grid-area:him;position:relative;min-width:0;display:flex;align-items:flex-start;justify-content:center}
-  .bs-view .bs-him canvas{width:100%;max-width:760px;height:auto;aspect-ratio:680/420;flex:none;margin:-2vh 0 0}
-  .bs-view .bs-left{grid-area:words;align-self:start;min-width:0;display:flex;flex-direction:column;align-items:flex-end;gap:12px;padding-right:4px;text-align:right}
+  .bs-view .bs-him canvas{width:100%;max-width:760px;height:auto;aspect-ratio:680/420;flex:none;margin:-3vh 0 0}
+  .bs-view .bs-left{grid-area:words;align-self:start;min-width:0;display:flex;flex-direction:column;align-items:flex-end;gap:12px;padding-right:4px;text-align:right;margin-top:-10vh;position:relative}
   .bs-view .bs-claim{margin:0;font:500 clamp(20px,1.9vw,26px)/1.22 var(--serif);color:var(--ink);letter-spacing:-.012em;max-width:30ch;text-wrap:balance}
   .bs-view .bs-claim em{font-style:italic}
   .bs-view .bs-stand{margin:0;font:400 15px/1.55 var(--serif);color:var(--ink-2);max-width:52ch}
@@ -2212,6 +2212,7 @@
     up.onclick=function(){ figs.scrollBy({top:-figs.clientHeight*0.8, behavior: reduce?'auto':'smooth'}); }; dn.onclick=function(){ figs.scrollBy({top:figs.clientHeight*0.8, behavior: reduce?'auto':'smooth'}); };
     var made=[];
     function wire(){ wires.innerHTML=''; var V=v.getBoundingClientRect(), M=markEl.getBoundingClientRect(); var mx=M.left-V.left+M.width/2, my=M.top-V.top+M.height/2; var F=figs.getBoundingClientRect();
+      var C=left.querySelector('.bs-claim'); if(C){ var cr=C.getBoundingClientRect(); var wl=document.createElementNS('http://www.w3.org/2000/svg','line'); wl.setAttribute('x1',mx); wl.setAttribute('y1',my); wl.setAttribute('x2',cr.right-V.left-6); wl.setAttribute('y2',cr.top-V.top+2); wl.setAttribute('stroke','rgba(138,143,152,.32)'); wl.setAttribute('stroke-width','1'); wl.setAttribute('stroke-dasharray','2 5'); wires.appendChild(wl); }
       made.forEach(function(d,i){ var r=d.getBoundingClientRect(); if(r.bottom<F.top||r.top>F.bottom) return; var x=r.left-V.left+18, y=Math.max(r.top,F.top)-V.top+8; var l=document.createElementNS('http://www.w3.org/2000/svg','line'); l.setAttribute('x1',mx); l.setAttribute('y1',my); l.setAttribute('x2',x); l.setAttribute('y2',y); l.setAttribute('stroke','rgba(138,143,152,.32)'); l.setAttribute('stroke-width', i===made.length-1?'1.5':'1'); l.setAttribute('stroke-dasharray','2 5'); l.style.opacity= d.classList.contains('alive')?'1':'0'; wires.appendChild(l); }); }
     P.blocks.forEach(function(bl,k){
       var d=document.createElement('div'); if(bl.out) d.className='out';
