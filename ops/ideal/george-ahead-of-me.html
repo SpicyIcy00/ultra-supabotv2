@@ -694,11 +694,126 @@
   body.con-split .side{transform:translateX(-100%)}
   body.con-split .reopen{display:none}
   body.con-split{padding-left:clamp(16px,2.5vw,32px)}
+
+  /* ---------- FOUR MORE ROOMS: timeline, estate, dense, narrated ---------- */
+  .consw{flex-wrap:wrap;max-width:60vw;justify-content:flex-end}
+
+  /* ---- timeline: the business as a line of time; the open situation under it ---- */
+  body.con-timeline .side,body.con-timeline .reopen,body.con-timeline .queue,body.con-timeline .layswitch,body.con-timeline .why-this{display:none}
+  body.con-timeline{padding-left:clamp(16px,2.5vw,32px)}
+  body.con-timeline .console{grid-template-columns:minmax(0,1fr) 260px;grid-template-areas:"tl pres" "ex pres" "main pres";column-gap:32px;max-width:1400px;margin:0 auto}
+  body.con-timeline .console > .presence{width:260px;padding-top:20px}
+  body.con-timeline .presence canvas{width:160px;height:160px}
+  body.con-timeline .presence .log{display:none}
+  .tl-view{display:none}
+  body.con-timeline .tl-view{display:block;grid-area:tl;margin:26px 0 8px}
+  .tl-view .axis{position:relative;height:120px;border-bottom:1px solid var(--edge-2)}
+  .tl-view .tick{position:absolute;bottom:-6px;width:1px;height:12px;background:var(--edge-2)}
+  .tl-view .tick small{position:absolute;top:14px;left:0;transform:translateX(-50%);font:400 10px/1.4 var(--mono);color:var(--ink-4);white-space:nowrap}
+  .tl-view .ev-dot{position:absolute;bottom:-5px;width:11px;height:11px;border-radius:50%;transform:translateX(-50%);background:var(--quiet);cursor:pointer;box-shadow:0 0 0 3px var(--ground)}
+  .tl-view .ev-dot.need{background:var(--act)}
+  .tl-view .ev-dot.open{background:transparent;box-shadow:inset 0 0 0 2px var(--ink-2),0 0 0 3px var(--ground)}
+  .tl-view .ev-dot.fine{width:7px;height:7px;bottom:-3px;background:var(--quiet-soft)}
+  .tl-view .ev-dot.on{transform:translateX(-50%) scale(1.5)}
+  .tl-view .ev-lab{position:absolute;bottom:14px;transform:translateX(-50%);font:400 12px/1.35 var(--sans);color:var(--ink-2);width:150px;text-align:center}
+  .tl-view .ev-lab.need{color:var(--ink)}
+  .tl-view .ev-lab.fine{color:var(--ink-4);font-size:11px}
+  .tl-view .ev-lab.alt{bottom:auto;top:-52px}
+  .tl-view .now{position:absolute;bottom:-8px;width:2px;height:16px;background:var(--ink)}
+  .tl-view .now small{position:absolute;top:18px;left:0;transform:translateX(-50%);font:500 10px/1.4 var(--mono);color:var(--ink)}
+  .tl-view .tl-hint{font:400 11px/1.6 var(--mono);color:var(--ink-4);margin:44px 0 0}
+
+  /* ---- estate: your businesses drawn as places; the situation attached to its place ---- */
+  body.con-estate .side,body.con-estate .reopen,body.con-estate .queue,body.con-estate .layswitch,body.con-estate .why-this{display:none}
+  body.con-estate{padding-left:clamp(16px,2.5vw,32px)}
+  body.con-estate .console{grid-template-columns:minmax(0,1fr);grid-template-areas:"ex" "es" "main";max-width:1200px;margin:0 auto}
+  body.con-estate .console > .presence{position:fixed;right:18px;bottom:110px;width:auto;min-height:0;padding:0;display:grid;justify-items:center;gap:6px;z-index:15}
+  body.con-estate .presence canvas{width:96px;height:96px}
+  body.con-estate .presence .log{display:none}
+  body.con-estate .presence .doing{font-size:11px;min-height:0}
+  .es-view{display:none}
+  body.con-estate .es-view{display:block;grid-area:es;margin:20px 0 10px}
+  .es-view svg{display:block;width:100%;height:auto;max-width:100%;overflow:visible}
+  .es-view .pl{cursor:pointer}
+  .es-view .pl circle{fill:var(--sunk);stroke:var(--edge-2);stroke-width:1.5}
+  .es-view .pl.lit circle{fill:var(--paper);stroke:var(--ink);stroke-width:2.5}
+  .es-view .pl.need circle{stroke:var(--act);stroke-width:2.5}
+  .es-view .pl text{font-family:'Geist',sans-serif;font-size:12px;fill:var(--ink-2);text-anchor:middle}
+  .es-view .pl.lit text{fill:var(--ink);font-weight:600}
+  .es-view .pl .st{font-family:'Geist Mono',monospace;font-size:9.5px;fill:var(--ink-4)}
+  .es-view .pl.need .st{fill:var(--act)}
+  .es-view .pl.lit .st{fill:var(--down)}
+  .es-view .flowline{stroke:var(--edge-2);stroke-width:1;fill:none}
+  .es-view .flowline.lit{stroke:var(--down);stroke-width:2}
+  .es-view .es-hint{font:400 11px/1.6 var(--mono);color:var(--ink-4);margin:6px 0 0}
+
+  /* ---- dense: everything at once ---- */
+  body.con-dense .side,body.con-dense .reopen,body.con-dense .queue,body.con-dense .layswitch,body.con-dense .why-this,body.con-dense .examples h2{display:none}
+  body.con-dense{padding-left:clamp(16px,2.5vw,32px);font-size:12px}
+  body.con-dense .console{grid-template-columns:minmax(0,1fr);grid-template-areas:"ex" "dn";max-width:none;margin:0}
+  body.con-dense .console > .presence,body.con-dense main{display:none}
+  .dn-view{display:none}
+  body.con-dense .dn-view{display:grid;grid-area:dn;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1px;background:var(--edge);border:1px solid var(--edge);margin-top:10px;font-family:var(--mono)}
+  .dn-view .cell{background:var(--ground);padding:10px 12px;min-height:120px;overflow:hidden}
+  .dn-view .cell h4{margin:0 0 6px;font:500 10px/1.4 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+  .dn-view .cell .say,.dn-view .cell p,.dn-view .cell .rung p{font:400 12px/1.45 var(--sans);color:var(--ink);margin:0 0 6px}
+  .dn-view .cell .ev{font-size:11px}
+  .dn-view .cell .ev .row{padding:2px 2px;margin:0;font-size:11px}
+  .dn-view .cell .line svg{height:60px}
+  .dn-view .cell .ladder{display:block;border:0;margin:0;padding:0}
+  .dn-view .cell .rung{padding:4px 0;border-bottom:1px solid var(--edge)}
+  .dn-view .cell .rung .lv{margin-bottom:2px}
+  .dn-view .cell .work{margin:0}
+  .dn-view .cell details{display:none}
+  .dn-view .cell .att{padding:4px 6px}
+  .dn-view .cell .att b{font-size:12px}
+  .dn-view .cell .att small{font-size:11px}
+  .dn-view .cell .att .when{display:none}
+  .dn-view .cell .att .later{display:none}
+  .dn-view .cell .h{padding:5px 0;font-size:12px}
+  .dn-view .cell .h b{font-size:12px}
+  .dn-view .cell .it{padding:3px 4px;font-size:12px}
+  .dn-view .cell.claim .say{font:500 15px/1.35 var(--serif)}
+  .dn-view .cell canvas{width:72px;height:72px;display:block}
+
+  /* ---- narrated: talking with him — his words a sentence at a time, evidence as he mentions it ---- */
+  body.con-narrated .side,body.con-narrated .reopen,body.con-narrated .queue,body.con-narrated .layswitch,body.con-narrated .console > .presence,body.con-narrated .why-this,body.con-narrated .mock{display:none}
+  body.con-narrated{padding-left:clamp(16px,2.5vw,32px)}
+  body.con-narrated .console{display:block;max-width:none}
+  body.con-narrated .examples{position:fixed;left:18px;top:14px;z-index:25;max-width:52vw;opacity:.55}
+  body.con-narrated .examples:hover{opacity:1}
+  body.con-narrated .examples h2{display:none}
+  body.con-narrated main{display:none}
+  .nr-view{display:none}
+  body.con-narrated .nr-view{display:grid;position:fixed;inset:0;grid-template-columns:minmax(300px,2fr) minmax(0,3fr);align-items:center;column-gap:4vw;padding:8vh 6vw 16vh}
+  .nr-view canvas{width:min(36vw,460px);height:min(36vw,460px);justify-self:center}
+  .nr-view .nr-right{min-width:0;max-height:76vh;overflow:auto;padding-right:8px}
+  .nr-view .nr-caption{font:400 clamp(20px,2.2vw,28px)/1.4 var(--serif);color:var(--ink);max-width:36ch;min-height:4.5em}
+  .nr-view .nr-caption .said{opacity:.42}
+  .nr-view .nr-caption .now{opacity:1}
+  .nr-view .nr-caption .now .cursor{display:inline-block;width:2px;height:.9em;background:var(--ink);vertical-align:-2px;margin-left:2px;animation:blink 1s step-end infinite}
+  @keyframes blink{50%{opacity:0}}
+  @media (prefers-reduced-motion:reduce){.nr-view .nr-caption .now .cursor{animation:none}}
+  .nr-view .nr-ev{margin-top:22px;display:grid;gap:14px}
+  .nr-view .nr-ev .shown{animation:land .5s cubic-bezier(.2,.7,.3,1) both;padding:12px 14px;border-radius:12px;box-shadow:0 0 0 1px var(--edge)}
+  .nr-view .nr-ev .shown .say{font:400 13.5px/1.45 var(--serif);color:var(--ink-2);margin:0 0 8px}
+  .nr-view .nr-ev .shown .say s{display:none}
+  .nr-view .nr-ev .shown .ev{font-size:12px}
+  .nr-view .nr-ev .shown .ev .row{padding:3px 4px;margin:0;font-size:12px}
+  .nr-view .nr-ev .shown .line svg{height:76px}
+  .nr-view .nr-ctl{display:flex;gap:8px;margin-top:18px;align-items:center;font:400 11px/1.6 var(--mono);color:var(--ink-4)}
+  .nr-view .nr-ctl button{font:400 12px/1.6 var(--sans);color:var(--ink-2);border-radius:999px;padding:4px 12px;box-shadow:0 0 0 1px var(--edge-2)}
+  .nr-view .nr-ctl button:hover{color:var(--ink);background:var(--sunk)}
+  body.con-narrated .compose-wrap{background:none}
+  body.con-narrated .compose{max-width:720px}
+  body.con-narrated .box{border-bottom:0;background:rgba(255,255,255,.03);border-radius:999px;padding-left:22px;box-shadow:0 0 0 1px var(--edge-2)}
+  @media (max-width:900px){ body.con-narrated .nr-view{position:static;display:block;padding:20px 0 120px} .nr-view canvas{width:120px;height:120px;margin:0 auto 12px;display:block} }
 </style>
 
 <button class="reopen" id="reopen" title="Open the sidebar  [" hidden>›</button>
-<div class="consw" id="consw"><span>console</span><button class="on" data-con="document">document</button><button data-con="stage">stage</button><button data-con="canvas">canvas</button><button data-con="split">split</button></div>
+<div class="consw" id="consw"><span>console</span><button class="on" data-con="document">document</button><button data-con="stage">stage</button><button data-con="canvas">canvas</button><button data-con="split">split</button><button data-con="timeline">timeline</button><button data-con="estate">estate</button><button data-con="dense">dense</button><button data-con="narrated">narrated</button></div>
 <div class="stage-view" id="stageview"></div>
+<div class="nr-view" id="nrview"></div>
 <div class="console">
 
   <!-- ================= THE SIDEBAR: what persists ================= -->
@@ -779,6 +894,9 @@
 
   <!-- ================= THE SITUATION ================= -->
   <div class="canvas-view" id="canvasview"></div>
+  <div class="tl-view" id="tlview"></div>
+  <div class="es-view" id="esview"></div>
+  <div class="dn-view" id="dnview"></div>
   <main style="min-width:0">
   <div class="layswitch" id="layswitch"><span>lay it out as</span>
     <button class="on" data-lay="document">document</button><button data-lay="beside">beside</button><button data-lay="tiles">tiles</button><button data-lay="walk">walk</button><button data-lay="focus">focus</button>
@@ -1226,6 +1344,7 @@
     <li><b>A chart is a sentence he chose to draw.</b> Its shape is picked by what the step asserts — a band for “outside its usual”, a strip of days for “was it on the shelf”, a flow for “where it went”, a chain for “why these are one story”. Every figure is a returned row; the shape and the one-line note are his. See <i>how he draws</i>.</li>
     <li><b>Three parts, by what each is for.</b> On the left, what persists — pages, systems, automations and watches, people — with a pip that says running, off, or needs you; it is a list of things you own, not a menu of screens. In the middle, the situation, at a reading width for his sentences and the full column for evidence. On the right, his mark: it breathes slowly when he is quiet, pulses once per read with the read named under it, turns to writing when he is connecting what the reads establish, and goes warm only when he is waiting on you. It never moves for effect.</li>
     <li><b>Four rooms around the same situation.</b> <i>Document</i> is a briefing. <i>Stage</i> is the Jarvis idea taken seriously: an empty dark room, his mark at the centre, and only what he brought floating around it, wired to him — nothing persistent on screen, the persistent things a gesture away, and the composer a line you speak into. <i>Canvas</i> is the spatial workspace tldraw’s agents-on-the-canvas work points at: he places the pieces, you move them, and position is meaning. <i>Split</i> is the operator’s desk mission-control benchmarking keeps arriving at: the queue on one side, the open situation on the other, the wall of everything replaced by one prioritised list.</li>
+    <li><b>Four more rooms, for contrast.</b> <i>Timeline</i> makes time the axis: the day as he saw it, situations as dots, what you open expanding under the line — memory is just the past on the same line. <i>Estate</i> makes the business the room: shops, warehouses and machines as places, stock flowing between them, the situation attached to the place it is about. <i>Dense</i> is the terminal pole — everything at once, no white space — here so the others can be measured against it. <i>Narrated</i> is talking with him: his words arrive a sentence at a time and each figure surfaces as he mentions it, which is what voice would sound like with something to look at.</li>
     <li><b>Borrowed, and from where.</b> Confidence that opens into what supports, contradicts or is silent (Consensus, Elicit, scite); a visible “no read” mark on any claim without one (Claude, Consensus); his work disclosed in layers — a line, then steps, then each read’s inputs and time (the 2025–26 agent deployments Zylos studied: no mid-run visibility tripled abandonment); one step redone or skipped rather than approve-all (the same); his authority per kind of action as a control you can move, defaulting conservative (Mantlr, Claude’s tool permissions); Later and j/k on the list (Linear triage); a graphite ground with borders as translucent white and colour only where it means something (Linear, Geist); every chart titled by its conclusion with one interpretive note (FT, Datawrapper).</li>
     <li><b>Nothing here is a chat bubble, a KPI grid, a feed or a canvas.</b> It is a document George wrote this morning about your business, with the parts you can push on.</li>
   </ol>
@@ -1427,10 +1546,10 @@
     return {claim:claim?claim.innerHTML:(plain?plain.innerHTML:''), stand:stand?stand.innerHTML:'', next:next?next.innerHTML:'', blocks:blocks};
   }
   function conLayout(name){
-    conBody.classList.remove('con-document','con-stage','con-canvas','con-split'); conBody.classList.add('con-'+name);
+    conBody.classList.remove('con-document','con-stage','con-canvas','con-split','con-timeline','con-estate','con-dense','con-narrated'); conBody.classList.add('con-'+name); stopNarration();
     document.querySelectorAll('#consw button').forEach(function(b){b.classList.toggle('on',b.dataset.con===name)});
     try{localStorage.setItem('george.con',name)}catch(e){}
-    if(name==='stage') buildStage(); else if(name==='canvas') buildCanvas(); else { if(markEl.parentNode!==markHome) markHome.insertBefore(markEl, markNext); }
+    if(name==='stage') buildStage(); else if(name==='canvas') buildCanvas(); else if(name==='timeline') buildTimeline(); else if(name==='estate') buildEstate(); else if(name==='dense') buildDense(); else if(name==='narrated') buildNarrated(); else { if(markEl.parentNode!==markHome) markHome.insertBefore(markEl, markNext); }
     if(name==='split'){ var q=document.getElementById('queue'); if(q) q.open=true; }
   }
   // STAGE: the mark at centre, the claim top-left, evidence floating around, wired to the mark
@@ -1479,10 +1598,98 @@
     var zb=z.querySelectorAll('button'); zb[0].onclick=function(){cvState.k=Math.max(.5,cvState.k-.1);redraw()}; zb[1].onclick=function(){cvState.k=Math.min(1.6,cvState.k+.1);redraw()}; zb[2].onclick=function(){cvState={x:40,y:30,k:1};redraw()};
     var hint=document.createElement('div'); hint.className='cv-hint'; hint.textContent='he placed these; drag a tile, drag the ground to pan, +/− to zoom · say “tidy” and he rearranges'; canvasView.appendChild(hint);
   }
+  // TIMELINE: situations as events on a line; the open one is what's under it
+  function buildTimeline(){
+    if(markEl.parentNode!==markHome) markHome.insertBefore(markEl, markNext);
+    var v=document.getElementById('tlview'); v.innerHTML='';
+    var ax=document.createElement('div'); ax.className='axis'; v.appendChild(ax);
+    var ticks=[['yesterday',6],['02:00',22],['06:00',46],['07:00',60],['08:00',76],['now',86]];
+    ticks.forEach(function(t){ if(t[0]==='now'){ var n=document.createElement('div'); n.className='now'; n.style.left=t[1]+'%'; n.innerHTML='<small>08:04 · you</small>'; ax.appendChild(n); return;} var k=document.createElement('div'); k.className='tick'; k.style.left=t[1]+'%'; k.innerHTML='<small>'+t[0]+'</small>'; ax.appendChild(k); });
+    var events=[
+      {at:8,kind:'open',label:'The ordering system you asked for · v2',scene:'build'},
+      {at:30,kind:'fine',label:'six shops, an ordinary Monday',scene:null,alt:true},
+      {at:41,kind:'fine',label:'OPUS: a holiday Monday, ruled out',scene:'judgment'},
+      {at:57,kind:'open',label:'Rockwell down — the basket',scene:'situation',alt:true},
+      {at:70,kind:'need',label:'Seikyo order, ₱46,200',scene:'decide'},
+      {at:78,kind:'fine',label:'barn: five lines to zero — raised',scene:'morning',alt:true}
+    ];
+    var active=(activeScene()||{}).id;
+    events.forEach(function(e){ var d=document.createElement('div'); d.className='ev-dot '+e.kind+(e.scene===active?' on':''); d.style.left=e.at+'%'; d.title=e.label; ax.appendChild(d); var l=document.createElement('div'); l.className='ev-lab '+e.kind+(e.alt?' alt':''); l.style.left=e.at+'%'; l.textContent=e.label; ax.appendChild(l); if(e.scene){ [d,l].forEach(function(x){ x.style.cursor='pointer'; x.addEventListener('click',function(){ var b=document.querySelector('.strip button[data-scene="'+e.scene+'"]'); if(b) b.click(); }); }); } });
+    var h=document.createElement('p'); h.className='tl-hint'; h.textContent='the day so far, as he saw it · a dot is a situation · warm needs you · hollow is open · faint was checked and left · what you open expands below'; v.appendChild(h);
+  }
+  // ESTATE: your businesses as places; the situation attached to the place it is about
+  function buildEstate(){
+    if(markEl.parentNode!==markHome) markHome.insertBefore(markEl, markNext);
+    var v=document.getElementById('esview'); v.innerHTML='';
+    var sc=activeScene(); var text=sc?sc.textContent:''; var need=(sc&&(sc.id==='decide'||sc.id==='run'))?'AJI BARN':null;
+    var places=[
+      {n:'AJI BARN',x:120,y:120,st:'5 lines at zero',w:true},{n:'AJI CMG',x:120,y:250,st:'warehouse',w:true},
+      {n:'OPUS',x:360,y:60,st:'inside its band'},{n:'Greenhills',x:480,y:130,st:'inside its band'},{n:'Shangri-La',x:600,y:60,st:'soft, inside'},{n:'Rockwell',x:720,y:130,st:'below its band'},{n:'Magnolia',x:840,y:60,st:'inside its band'},{n:'North Edsa',x:960,y:130,st:'inside its band'},{n:'Podium',x:1080,y:60,st:'inside its band'},
+      {n:'12 machines',x:1000,y:280,st:'vending · flat'}
+    ];
+    var NS='http://www.w3.org/2000/svg'; var svg=document.createElementNS(NS,'svg'); svg.setAttribute('viewBox','0 0 1180 340'); v.appendChild(svg);
+    var lit=places.filter(function(pl){return pl.n.length>3 && text.indexOf(pl.n)>-1 && pl.n!=='AJI CMG'}).map(function(pl){return pl.n});
+    if(!lit.length && sc && sc.id==='situation') lit=['Rockwell'];
+    // flows from the barn to the shops
+    places.filter(function(pl){return !pl.w && pl.n!=='12 machines'}).forEach(function(pl){ var l=document.createElementNS(NS,'path'); l.setAttribute('class','flowline'+(lit.indexOf(pl.n)>-1?' lit':'')); l.setAttribute('d','M150 120 C 240 120, '+(pl.x-80)+' '+pl.y+', '+(pl.x-28)+' '+pl.y); svg.appendChild(l); });
+    var m=document.createElementNS(NS,'path'); m.setAttribute('class','flowline'); m.setAttribute('d','M150 250 C 500 250, 800 280, 972 280'); svg.appendChild(m);
+    places.forEach(function(pl){
+      var g=document.createElementNS(NS,'g'); g.setAttribute('class','pl'+(lit.indexOf(pl.n)>-1?' lit':'')+(need===pl.n?' need':''));
+      var c=document.createElementNS(NS,'circle'); c.setAttribute('cx',pl.x); c.setAttribute('cy',pl.y); c.setAttribute('r',pl.w?30:24); g.appendChild(c);
+      var t=document.createElementNS(NS,'text'); t.setAttribute('x',pl.x); t.setAttribute('y',pl.y+(pl.w?48:42)); t.textContent=pl.n; g.appendChild(t);
+      var st=document.createElementNS(NS,'text'); st.setAttribute('class','st'); st.setAttribute('x',pl.x); st.setAttribute('y',pl.y+(pl.w?62:56)); st.textContent=pl.st; g.appendChild(st);
+      g.addEventListener('click',function(){ say(pl.n+': '+pl.st+' — tap again and he brings this place\u2019s situation, about 1s, no model turn.'); });
+      svg.appendChild(g);
+    });
+    var h=document.createElement('p'); h.className='es-hint'; h.textContent='the estate as places · lines are stock moving out of the barn · the lit place is what the open situation is about · warm needs you · tap a place to bring it'; v.appendChild(h);
+  }
+  // DENSE: everything on screen at once
+  function buildDense(){
+    var v=document.getElementById('dnview'); v.innerHTML='';
+    var sc=activeScene(); if(!sc) return; var P=sceneParts(sc);
+    function cell(cls,h4,inner){ var c=document.createElement('div'); c.className='cell '+cls; c.innerHTML='<h4>'+h4+'</h4>'; if(typeof inner==='string') c.insertAdjacentHTML('beforeend',inner); else if(inner) c.appendChild(inner); v.appendChild(c); return c; }
+    cell('claim','the situation','<p class="say">'+P.claim+'</p>'+(P.stand?'<p class="say" style="font:400 12px/1.45 var(--sans);color:var(--ink-2)">'+P.stand+'</p>':''));
+    var lad=sc.querySelector('.ladder'); if(lad) cell('','confidence',lad.cloneNode(true));
+    P.blocks.slice(0,6).forEach(function(b,i){ cell(b.out?'out':'','check '+(i+1)+(b.out?' · ruled out':''),(b.say?'<p class="say">'+b.say.innerHTML+'</p>':'')+(b.ev?b.ev.outerHTML:'')); });
+    if(P.next) cell('','what he\u2019d do next','<p class="say">'+P.next+'</p>');
+    var q=document.querySelector('.queue .att-groups'); if(q) cell('','his attention',q.cloneNode(true));
+    var sd=document.querySelector('.side'); if(sd){ var ss=sd.cloneNode(true); ss.querySelectorAll('.collapse,.name,.date,.biz').forEach(function(x){x.remove()}); cell('','what persists',ss); }
+    var mk=cell('','george',''); mk.appendChild(markEl); var md=document.createElement('div'); md.className='doing'; md.style.font='400 11px/1.5 var(--mono)'; md.innerHTML=doing.innerHTML; mk.appendChild(md);
+    var hd=document.querySelector('#situation .holds .hl'); if(hd) cell('','what he holds',hd.cloneNode(true));
+  }
+  // NARRATED: his words a sentence at a time; the evidence surfaces as he mentions it
+  var nrTimers=[];
+  function stopNarration(){ nrTimers.forEach(clearTimeout); nrTimers=[]; }
+  function buildNarrated(){
+    var v=document.getElementById('nrview'); v.innerHTML=''; stopNarration();
+    var sc=activeScene(); if(!sc) return; var P=sceneParts(sc);
+    v.appendChild(markEl);
+    var right=document.createElement('div'); right.className='nr-right'; v.appendChild(right);
+    var cap=document.createElement('div'); cap.className='nr-caption'; right.appendChild(cap);
+    var evb=document.createElement('div'); evb.className='nr-ev'; right.appendChild(evb);
+    var ctl=document.createElement('div'); ctl.className='nr-ctl'; ctl.innerHTML='<button id="nr-next">next</button><button id="nr-replay">say it again</button><span>he speaks; each figure appears as he mentions it · voice would read this aloud</span>'; right.appendChild(ctl);
+    var tmp=document.createElement('div'); tmp.innerHTML=P.claim+' '+P.stand; var raw=tmp.innerHTML;
+    // sentences, keeping the small read numbers so evidence can follow them
+    var sentences=raw.split(/(?<=[.!?])\s+(?=[A-Z“"I])/).filter(function(x){return x.trim()});
+    var shownReads={}; var i=0;
+    function showRead(n){ if(shownReads[n]) return; var b=P.blocks[n-1]; if(!b) return; shownReads[n]=1; var d=document.createElement('div'); d.className='shown'; d.innerHTML=(b.say?'<p class="say">'+b.say.innerHTML+'</p>':'')+(b.ev?b.ev.outerHTML:''); evb.appendChild(d); }
+    function speak(){
+      if(i>=sentences.length){ state.mode='idle'; setDoing('<b>quiet</b>said · '+sentences.length+' sentences'); return; }
+      state.mode='writing'; var sent=sentences[i];
+      var prev=cap.querySelectorAll('.now'); prev.forEach(function(x){x.className='said'; var c=x.querySelector('.cursor'); if(c)c.remove();});
+      var span=document.createElement('span'); span.className='now'; span.innerHTML=' '+sent+'<i class="cursor"></i>'; cap.appendChild(span); cap.scrollTop=cap.scrollHeight;
+      var refs=(sent.match(/<sup[^>]*>(\d)<\/sup>/g)||[]).map(function(x){return parseInt(x.replace(/\D/g,''),10)});
+      refs.forEach(function(n){ nrTimers.push(setTimeout(function(){ showRead(n); state.pulse=performance.now(); }, 350)); });
+      i++; nrTimers.push(setTimeout(speak, reduce?0:Math.max(1600, sent.replace(/<[^>]+>/g,'').length*38)));
+    }
+    document.getElementById('nr-next').onclick=function(){ stopNarration(); speak(); };
+    document.getElementById('nr-replay').onclick=function(){ stopNarration(); cap.innerHTML=''; evb.innerHTML=''; shownReads={}; i=0; speak(); };
+    speak();
+  }
   document.querySelectorAll('#consw button').forEach(function(b){b.addEventListener('click',function(){conLayout(b.dataset.con)})});
-  document.querySelectorAll('[data-scene]').forEach(function(b){b.addEventListener('click',function(){ setTimeout(function(){ if(conBody.classList.contains('con-stage')) buildStage(); if(conBody.classList.contains('con-canvas')) buildCanvas(); },30); })});
+  document.querySelectorAll('[data-scene]').forEach(function(b){b.addEventListener('click',function(){ setTimeout(function(){ ['stage','canvas','timeline','estate','dense','narrated'].forEach(function(n){ if(conBody.classList.contains('con-'+n)) ({stage:buildStage,canvas:buildCanvas,timeline:buildTimeline,estate:buildEstate,dense:buildDense,narrated:buildNarrated})[n](); }); },30); })});
   var rememberedCon=null; try{rememberedCon=localStorage.getItem('george.con')}catch(e){}
-  conLayout(rememberedCon&&/^(document|stage|canvas|split)$/.test(rememberedCon)?rememberedCon:'document');
+  conLayout(rememberedCon&&/^(document|stage|canvas|split|timeline|estate|dense|narrated)$/.test(rememberedCon)?rememberedCon:'document');
   var ask=document.getElementById('ask');
   ask.addEventListener('keydown',function(e){ if(e.key==='Enter'&&ask.value.trim()){say('“'+ask.value.trim()+'” — intent in words; the selection above is the reference. A turn.'); clearSeq(); state.mode='reading'; state.pulse=performance.now(); setDoing('<b>reading</b>'+ask.value.trim()); seqTimer.push(setTimeout(function(){state.mode='idle';setDoing('<b>quiet</b>a turn, in the real thing');},reduce?0:1600)); ask.value='';}});
   document.querySelector('.send').addEventListener('click',function(){ if(ask.value.trim()){say('“'+ask.value.trim()+'” — a turn.');ask.value='';} });
