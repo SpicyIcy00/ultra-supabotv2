@@ -448,13 +448,50 @@
     .console{grid-template-columns:minmax(0,1fr);grid-template-areas:"pres" "top" "queue" "ex" "main" "side"}
     .side{position:static;padding-top:8px}
   }
+
+  /* ---------- THE FRAME, again. sidebar on the edge, collapsible ---------- */
+  body{padding-inline:clamp(16px,2.5vw,32px);padding-left:calc(232px + clamp(16px,2.5vw,32px));transition:padding-left .28s cubic-bezier(.2,.7,.3,1)}
+  :root[data-side="closed"] body{padding-left:clamp(16px,2.5vw,32px)}
+  .side{position:fixed;left:0;top:0;bottom:0;width:232px;padding:22px 14px 24px 18px;background:var(--ground);border-right:1px solid var(--edge);overflow:auto;z-index:20;transition:transform .28s cubic-bezier(.2,.7,.3,1)}
+  :root[data-side="closed"] .side{transform:translateX(-100%)}
+  .side .collapse{position:absolute;right:8px;top:18px;width:26px;height:26px;border-radius:7px;color:var(--ink-3);font:400 18px/1 var(--sans)}
+  .side .collapse:hover{background:var(--sunk);color:var(--ink)}
+  .reopen{position:fixed;left:0;top:18px;width:22px;height:34px;border-radius:0 8px 8px 0;background:var(--paper);color:var(--ink-3);box-shadow:0 0 0 1px var(--edge);z-index:20;font:400 18px/1 var(--sans)}
+  .reopen:hover{color:var(--ink)}
+  .side .name{font:400 22px/1.1 var(--serif);color:var(--ink);margin:0 0 4px}
+  .side .it{grid-template-columns:8px minmax(0,1fr) auto;gap:10px;padding:6px 8px}
+  .side .it > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .side .it small{white-space:nowrap}
+  .console{display:grid;grid-template-columns:minmax(0,1fr) 300px;grid-template-areas:"queue pres" "ex pres" "main pres";column-gap:44px;max-width:1240px;margin:0 auto;align-items:start}
+  .console > .queue{grid-area:queue;margin-top:26px}
+  .console > .examples{grid-area:ex}
+  .console > main{grid-area:main;min-width:0}
+  .console > .presence{grid-area:pres;position:sticky;top:0;padding-top:34px;min-height:70vh;display:grid;justify-items:center;align-content:start;gap:16px}
+  .presence canvas{width:220px;height:220px;display:block}
+  .presence .doing{max-width:26ch;min-height:3.2em}
+  .presence .log{width:100%}
+  .presence .log div{grid-template-columns:minmax(0,1fr) auto}
+  .presence .log div span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  @media (prefers-reduced-motion:reduce){body,.side{transition:none}}
+  @media (max-width:1180px){
+    .console{grid-template-columns:minmax(0,1fr);grid-template-areas:"pres" "queue" "ex" "main"}
+    .console > .presence{position:static;min-height:0;display:flex;gap:18px;align-items:center;justify-items:start;padding-top:20px}
+    .presence canvas{width:72px;height:72px}
+    .presence .log{display:none}
+  }
+  @media (max-width:820px){
+    body{padding-left:clamp(16px,2.5vw,32px)}
+    .side{width:min(84vw,300px)}
+    :root:not([data-side="open"]) .side{transform:translateX(-100%)}
+  }
 </style>
 
+<button class="reopen" id="reopen" title="Open the sidebar  [" hidden>›</button>
 <div class="console">
-  <div class="topline"><h1>a situation George brought you</h1></div>
 
   <!-- ================= THE SIDEBAR: what persists ================= -->
   <aside class="side">
+    <button class="collapse" id="collapse" title="Collapse the sidebar  [">‹</button>
     <p class="name">George</p>
     <p class="date">Tuesday 16 September · 08:04</p>
     <div class="biz"><button class="on">All</button><button>Aji Ichiban</button><button>vending</button></div>
@@ -937,7 +974,7 @@
 
   <!-- ================= THE PRESENCE: alive while he works, quiet when he isn't ================= -->
   <aside class="presence" aria-live="polite">
-    <canvas id="mark" width="264" height="264" aria-label="George's mark: breathing slowly when idle, pulsing while he reads, warm when he is waiting on you"></canvas>
+    <canvas id="mark" width="440" height="440" aria-label="George's mark: breathing slowly when idle, pulsing while he reads, warm when he is waiting on you"></canvas>
     <div class="doing" id="doing"><b>quiet</b>last ran 08:00 · next watch 09:00</div>
     <div class="log" id="plog"></div>
   </aside>
@@ -1049,30 +1086,55 @@
     });
     wrap.appendChild(seg); wrap.appendChild(lab); a.replaceWith(wrap);
   });
-  // THE MARK. Not a thinking animation: it moves with his real state. Idle is a
-  // slow breath; each read is one pulse, named beneath it; waiting on you is warm.
+  // THE SIDEBAR folds to the edge. Remembered per browser; `[` toggles it.
+  var root=document.documentElement, reopen=document.getElementById('reopen'), collapse=document.getElementById('collapse');
+  function setSide(open){ root.setAttribute('data-side', open?'open':'closed'); reopen.hidden=open; try{localStorage.setItem('george.side', open?'open':'closed')}catch(e){} }
+  var remembered=null; try{remembered=localStorage.getItem('george.side')}catch(e){}
+  setSide(remembered? remembered==='open' : window.innerWidth>820);
+  collapse.addEventListener('click',function(){setSide(false)}); reopen.addEventListener('click',function(){setSide(true)});
+  document.addEventListener('keydown',function(e){ if(e.key==='['&&e.target.tagName!=='INPUT'){e.preventDefault();setSide(root.getAttribute('data-side')!=='open');} });
+
+  // THE MARK. Not a thinking animation: everything it does maps to his state.
+  //   idle     a slow breath; three motes drift on a wide orbit — the watches he keeps running
+  //   reading  one pulse per read; a ring turns; a mote is drawn in from the orbit for each read
+  //   writing  the motes settle close, the ring steadies — the reads being connected
+  //   need     warm, and still: he is waiting on you
   var cv=document.getElementById('mark'), cx=cv.getContext('2d'), doing=document.getElementById('doing'), plog=document.getElementById('plog');
-  var state={mode:'idle',t0:performance.now(),pulse:0};
+  var state={mode:'idle',t0:performance.now(),pulse:0,drawn:0};
   var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function tok(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
+  var motes=[0,1,2].map(function(i){return {a:i*2.1, r:1, speed:0.22+i*0.05}});
   function draw(now){
     var w=cv.width,h=cv.height,c=w/2, t=(now-state.t0)/1000;
     cx.clearRect(0,0,w,h);
-    var ink=tok('--ink'), act=tok('--act'), quiet=tok('--quiet');
-    var base=44, breath=reduce?0:Math.sin(t*0.9)*3;
-    var r=base+breath;
-    if(state.mode==='reading'&&!reduce){ r+= Math.max(0, Math.sin((now-state.pulse)/1000*Math.PI*2)*7) * Math.max(0,1-(now-state.pulse)/900); }
+    var ink=tok('--ink'), act=tok('--act'), quiet=tok('--quiet'), up=tok('--up');
+    var base=54, breath=reduce?0:Math.sin(t*0.8)*3.5, r=base+breath;
     var col= state.mode==='need'?act: ink;
-    // halo
-    var g=cx.createRadialGradient(c,c,r*0.6,c,c,r*2.2); g.addColorStop(0,col); g.addColorStop(1,'rgba(0,0,0,0)');
-    cx.globalAlpha= state.mode==='idle'?0.10:0.18; cx.fillStyle=g; cx.beginPath(); cx.arc(c,c,r*2.2,0,Math.PI*2); cx.fill();
-    // body
+    if(state.mode==='reading'&&!reduce){ var dt=(now-state.pulse)/1000; r+=Math.max(0,Math.sin(dt*Math.PI*2)*9)*Math.max(0,1-dt/0.9); }
+    // halo: breathes with him; wider and softer when quiet, tighter when working
+    var haloR = r*(state.mode==='idle'?2.6:2.1);
+    var g=cx.createRadialGradient(c,c,r*0.7,c,c,haloR); g.addColorStop(0,col); g.addColorStop(1,'rgba(0,0,0,0)');
+    cx.globalAlpha= state.mode==='idle'?0.12:0.2; cx.fillStyle=g; cx.beginPath(); cx.arc(c,c,haloR,0,Math.PI*2); cx.fill();
+    // motes: far and slow when idle; drawn in as reads land; close and steady while writing
+    var orbit = state.mode==='idle'? r*1.9 : state.mode==='writing'? r*1.25 : r*1.6;
+    motes.forEach(function(m,i){
+      if(!reduce) m.a += (state.mode==='reading'?m.speed*2.2:m.speed)*0.016;
+      var target = (state.mode==='reading' && i<state.drawn) ? r*1.25 : orbit;
+      m.r += (target - (m.r||orbit))*0.06; if(!m.r) m.r=orbit;
+      var x=c+Math.cos(m.a)*m.r, y=c+Math.sin(m.a)*m.r;
+      cx.globalAlpha= state.mode==='need'?0.35:0.75; cx.fillStyle= state.mode==='reading'&&i<state.drawn? up : quiet;
+      cx.beginPath(); cx.arc(x,y,4,0,Math.PI*2); cx.fill();
+    });
+    // the body
     cx.globalAlpha=1; cx.fillStyle=col; cx.beginPath(); cx.arc(c,c,r,0,Math.PI*2); cx.fill();
-    // a ring that only turns while reading
-    if(state.mode==='reading'){ cx.strokeStyle=quiet; cx.lineWidth=2; cx.beginPath(); cx.arc(c,c,r+14, t*2.4, t*2.4+Math.PI*1.3); cx.stroke(); }
-    // a still ring while waiting on you
-    if(state.mode==='need'){ cx.strokeStyle=act; cx.globalAlpha=.5; cx.lineWidth=2; cx.beginPath(); cx.arc(c,c,r+14,0,Math.PI*2); cx.stroke(); cx.globalAlpha=1; }
+    // a ring: turns while reading, steadies while writing, still and warm while waiting
+    if(state.mode==='reading'){ cx.strokeStyle=up; cx.lineWidth=2.5; cx.globalAlpha=.9; cx.beginPath(); cx.arc(c,c,r+16, t*2.6, t*2.6+Math.PI*1.2); cx.stroke(); }
+    if(state.mode==='writing'){ cx.strokeStyle=ink; cx.lineWidth=2; cx.globalAlpha=.5; cx.beginPath(); cx.arc(c,c,r+16, 0, Math.PI*2); cx.stroke(); }
+    if(state.mode==='need'){ cx.strokeStyle=act; cx.lineWidth=2.5; cx.globalAlpha=.6; cx.beginPath(); cx.arc(c,c,r+16,0,Math.PI*2); cx.stroke(); }
+    cx.globalAlpha=1;
     requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
   }
   requestAnimationFrame(draw);
   function setDoing(html,cls){doing.innerHTML=html;doing.className='doing'+(cls?' '+cls:'')}
@@ -1094,10 +1156,10 @@
     var reads=scenes[id]||[];
     var needs= id==='decide'||id==='run'||id==='team'||id==='build';
     if(!reads.length){ state.mode=needs?'need':'idle'; setDoing(needs?'<b>waiting on you</b>the decision is on the page':'<b>quiet</b>nothing to read for this'); return; }
-    state.mode='reading'; var at=0;
+    state.mode='reading'; state.drawn=0; var at=0;
     reads.forEach(function(r,i){
       var row=document.createElement('div'); row.innerHTML='<span>'+r[0]+'</span><span>'+r[1]+'</span>'; plog.appendChild(row);
-      seqTimer.push(setTimeout(function(){ state.pulse=performance.now(); row.className='now'; setDoing('<b>reading</b>'+r[0]); if(i>0)plog.children[i-1].className='done'; }, at));
+      seqTimer.push(setTimeout(function(){ state.pulse=performance.now(); state.drawn=i+1; row.className='now'; setDoing('<b>reading</b>'+r[0]); if(i>0)plog.children[i-1].className='done'; }, at));
       at+=reduce?0:520;
     });
     seqTimer.push(setTimeout(function(){ if(plog.lastChild)plog.lastChild.className='done'; state.mode='writing'; setDoing('<b>writing</b>connecting what the reads establish'); }, at+100));
