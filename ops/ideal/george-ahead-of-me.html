@@ -1021,9 +1021,9 @@
   .tip.on{opacity:1}
   .tip b{display:block;font:500 12.5px/1.4 var(--sans)}
   [data-v]{cursor:crosshair}
-  /* ---------- BESIDE: narrated, with him held still. He stays where he is, at the size he is;
-     the words on the right are smaller and fewer, and the figure he means takes the room
-     under them, drawing itself in. Earlier figures fold into a line of names. ---------- */
+  /* ---------- BESIDE: him up top on the left, his words under him, not narrated; every
+     figure filling the right, not narrated either — they draw themselves in once, together.
+     A composition you read, with him in it. ---------- */
   .bs-view{display:none}
   body.con-beside .side,body.con-beside .reopen,body.con-beside .queue,body.con-beside .layswitch,body.con-beside .console > .presence,body.con-beside .why-this,body.con-beside .mock{display:none}
   body.con-beside{padding-left:clamp(16px,2.5vw,32px)}
@@ -1032,32 +1032,30 @@
   body.con-beside .examples:hover{opacity:1}
   body.con-beside .examples h2{display:none}
   body.con-beside main{display:none}
-  body.con-beside .bs-view{display:grid;position:fixed;inset:0;grid-template-columns:minmax(300px,2fr) minmax(0,3fr);column-gap:3vw;padding:8vh 6vw 12vh 4vw;align-items:stretch}
-  .bs-view .bs-him{position:relative;display:grid;place-items:center;align-content:center;gap:10px}
-  .bs-view .bs-him canvas{width:min(36vw,460px);height:min(36vw,460px)}
-  .bs-view .bs-mood{text-align:center;font:400 12px/1.6 var(--mono);color:var(--ink-3);width:30ch}
+  body.con-beside .bs-view{display:grid;position:fixed;inset:0;grid-template-columns:minmax(300px,5fr) minmax(0,7fr);column-gap:4vw;padding:8vh 5vw 8vh 4vw;align-items:stretch}
+  .bs-view .bs-left{min-width:0;display:flex;flex-direction:column;gap:14px;max-height:100%;overflow:auto;padding-right:6px}
+  .bs-view .bs-left canvas{width:min(26vh,300px);height:min(26vh,300px);flex:none;margin:-10px 0 -6px -18px}
+  .bs-view .bs-mood{font:400 12px/1.6 var(--mono);color:var(--ink-3);width:30ch}
   .bs-view .bs-mood b{display:block;font:500 13px/1.5 var(--sans);color:var(--ink)}
-  .bs-view .bs-right{min-width:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:18px;max-height:100%}
-  .bs-view .bs-caption{font:400 clamp(15px,1.35vw,18px)/1.45 var(--serif);color:var(--ink);max-width:56ch;max-height:6.2em;overflow:hidden;position:relative}
-  .bs-view .bs-caption:after{content:"";position:absolute;left:0;right:0;top:0;height:1.2em;background:linear-gradient(var(--ground),transparent);pointer-events:none}
-  .bs-view .bs-caption .said{opacity:.4}
-  .bs-view .bs-caption .now{opacity:1}
-  .bs-view .bs-caption .now .cursor{display:inline-block;width:2px;height:.9em;background:var(--ink);vertical-align:-2px;margin-left:2px;animation:blink 1s step-end infinite}
-  .bs-view .bs-fig{min-height:0;overflow:auto;display:grid;align-content:start}
-  .bs-view .bs-fig > div{max-width:720px;min-width:0}
-  .bs-view .bs-fig .lbl{font:400 10.5px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 10px}
-  .bs-view .bs-fig .lbl s{text-decoration:none;color:var(--ink-4)}
-  .bs-view .bs-fig .ev{margin:0;font-size:13.5px}
-  .bs-view .bs-fig .ev .row{padding:5px 6px;margin:0;font-size:13.5px}
-  .bs-view .bs-fig .line svg{height:150px}
-  .bs-view .bs-seen{display:flex;gap:18px;flex-wrap:wrap;align-items:baseline;font:400 10.5px/1.5 var(--mono);color:var(--ink-4);min-height:1.5em}
-  .bs-view .bs-seen button{padding:2px 0;color:var(--ink-4);border-bottom:1px solid transparent;font:inherit;max-width:26ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .bs-view .bs-seen button:hover{color:var(--ink-2)}
-  .bs-view .bs-seen button.on{color:var(--ink);border-bottom-color:var(--ink)}
-  .bs-view .bs-seen .bs-next{margin-left:auto;font:400 13.5px/1.45 var(--serif);color:var(--ink);border-left:2px solid var(--ink);padding-left:10px;max-width:38ch;opacity:0;transition:opacity .5s;white-space:normal}
-  .bs-view .bs-seen .bs-next.shown{opacity:1}
-  .bs-view .bs-seen .bs-next b{display:block;font:500 10px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
-  @media (max-width:900px){ body.con-beside .bs-view{position:static;display:block;padding:20px 5vw 120px} .bs-view .bs-him canvas{width:120px;height:120px} .bs-view .bs-caption{max-height:none} .bs-view .bs-right{max-height:none;margin-top:16px} .bs-view .bs-fig{overflow:visible} }
+  .bs-view .bs-claim{margin:6px 0 0;font:500 clamp(20px,1.9vw,26px)/1.22 var(--serif);color:var(--ink);letter-spacing:-.012em;max-width:30ch;text-wrap:balance}
+  .bs-view .bs-claim em{font-style:italic}
+  .bs-view .bs-stand{margin:0;font:400 15px/1.55 var(--serif);color:var(--ink-2);max-width:52ch}
+  .bs-view .bs-stand b{color:var(--ink);font-weight:500}
+  .bs-view .bs-stand sup{font:400 9px/1 var(--mono);color:var(--ink-3);vertical-align:super;margin-left:1px}
+  .bs-view .bs-next{margin:8px 0 0;max-width:44ch;font:400 14px/1.5 var(--serif);color:var(--ink);border-left:3px solid var(--ink);padding-left:14px}
+  .bs-view .bs-next b{display:block;font:500 10.5px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+  .bs-view .bs-figs{min-width:0;max-height:100%;overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:30px 36px;align-content:start;padding-right:6px}
+  .bs-view .bs-figs > div{min-width:0}
+  .bs-view .bs-figs .lbl{font:400 10.5px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 10px}
+  .bs-view .bs-figs .lbl s{text-decoration:none;color:var(--ink-4)}
+  .bs-view .bs-figs .say{font:400 13.5px/1.45 var(--serif);color:var(--ink-2);margin:0 0 10px}
+  .bs-view .bs-figs .say b{color:var(--ink);font-weight:500}
+  .bs-view .bs-figs .say s{display:none}
+  .bs-view .bs-figs .ev{margin:0;font-size:13px}
+  .bs-view .bs-figs .ev .row{padding:4px 6px;margin:0;font-size:13px}
+  .bs-view .bs-figs .line svg{height:130px}
+  .bs-view .bs-figs > div.out{opacity:.55}
+  @media (max-width:900px){ body.con-beside .bs-view{position:static;display:block;padding:20px 5vw 120px} .bs-view .bs-left{max-height:none;overflow:visible} .bs-view .bs-left canvas{width:120px;height:120px;margin:0 0 0 -8px} .bs-view .bs-figs{max-height:none;overflow:visible;margin-top:26px;grid-template-columns:1fr} }
 </style>
 
 <button class="reopen" id="reopen" title="Open the sidebar  [" hidden>›</button>
@@ -1680,7 +1678,7 @@
     <li><b>Three parts, by what each is for.</b> On the left, what persists — pages, systems, automations and watches, people — with a pip that says running, off, or needs you; it is a list of things you own, not a menu of screens. In the middle, the situation, at a reading width for his sentences and the full column for evidence. On the right, his mark: it breathes slowly when he is quiet, pulses once per read with the read named under it, turns to writing when he is connecting what the reads establish, and goes warm only when he is waiting on you. It never moves for effect.</li>
     <li><b>Four rooms around the same situation.</b> <i>Document</i> is a briefing. <i>Stage</i> is the Jarvis idea taken seriously, merged with narration after the owner pointed at both: an empty dark room, his mark at the centre, his words arriving a sentence at a time, and each figure floating in at its place around him the moment he mentions it — one at a time, the earlier ones easing back, so it never jumbles. Nothing persistent on screen; the persistent things a gesture away; the composer a line you speak into. <i>Canvas</i> is the spatial workspace tldraw’s agents-on-the-canvas work points at: he places the pieces, you move them, and position is meaning. <i>Split</i> is the operator’s desk mission-control benchmarking keeps arriving at: the queue on one side, the open situation on the other, the wall of everything replaced by one prioritised list.</li>
     <li><b>Four more rooms, for contrast.</b> <i>Timeline</i> makes time the axis: the day as he saw it, situations as dots, what you open expanding under the line — memory is just the past on the same line. <i>Estate</i> makes the business the room: shops, warehouses and machines as places, stock flowing between them, the situation attached to the place it is about. <i>Dense</i> is the terminal pole — everything at once, no white space — here so the others can be measured against it. <i>Narrated</i> is the same idea from the other side, kept after the owner asked for it: the calm room first — his words in a column on the right, a sentence at a time — and the stage’s visuals brought to it, each figure floating in beside him on the left as he mentions it, wired to him. Stage is a room with words in it; narrated is a conversation with a room beside it. <i>Shown</i> is the third combination, after the owner said the stage’s figures go all over the place: narrated’s way of talking, and the figures in one place — the one he is talking about takes the slot on the right, large; the ones before it wait in an ordered strip beneath, a tap away. Nothing floats, nothing overlaps.</li>
-    <li><b>Alive, after the research.</b> Figures draw themselves as he speaks \— rows arrive one after another, bars grow, cells fill, a line is drawn \— motion only for the transition the data makes, never decoration. A store keeps one hue everywhere (Rockwell is the same blue on every figure in every room; products likewise): identity is a value the data carries, so it may have colour, while the accent stays reserved for \“needs you\”. The set is the validated categorical palette, stepped for each ground. And touch answers a question: hover any mark or row for the exact figure and when it was read. <i>Beside</i> is narrated with him held still \— same spot, same size \— the words smaller and fewer, the figure taking the room under them.</li>
+    <li><b>Alive, after the research.</b> Figures draw themselves as he speaks \— rows arrive one after another, bars grow, cells fill, a line is drawn \— motion only for the transition the data makes, never decoration. A store keeps one hue everywhere (Rockwell is the same blue on every figure in every room; products likewise): identity is a value the data carries, so it may have colour, while the accent stays reserved for \“needs you\”. The set is the validated categorical palette, stepped for each ground. And touch answers a question: hover any mark or row for the exact figure and when it was read. <i>Beside</i> is the composed one, after the owner asked for it: him up top on the left, his words under him, whole and not narrated; every figure filling the right, drawing itself in once, together. A page you read, with him in it.</li>
     <li><b>No boxes around evidence, in any room.</b> The owner: when a figure sits in a box it stops feeling like the workplace building around you and starts feeling like KPIs popping out. A border says “an object someone placed here”; without it a figure is something he drew on the room while talking. Position, a caption and the wire to him give it its place. A box is kept only for a thing you act on — a plan, an order — because that genuinely has an edge.</li>
     <li><b>Told is my own answer, and the default.</b> The owner said stop following him. One thing on screen at a time: him, the sentence he is saying, and the one figure it rests on \— centred, bare, no box. The sentence before is gone; the figure before is gone. When he has finished, the telling settles into the page, where it all stands still and can be read. Telling is time; the page is the record. Nothing is ever in two places, so nothing can jumble \— and there is no strip, no wire, no chip, nothing to manage while he is talking.</li>
     <li><b>Borrowed, and from where.</b> Confidence that opens into what supports, contradicts or is silent (Consensus, Elicit, scite); a visible “no read” mark on any claim without one (Claude, Consensus); his work disclosed in layers — a line, then steps, then each read’s inputs and time (the 2025–26 agent deployments Zylos studied: no mid-run visibility tripled abandonment); one step redone or skipped rather than approve-all (the same); his authority per kind of action as a control you can move, defaulting conservative (Mantlr, Claude’s tool permissions); Later and j/k on the list (Linear triage); a graphite ground with borders as translucent white and colour only where it means something (Linear, Geist); every chart titled by its conclusion with one interpretive note (FT, Datawrapper).</li>
@@ -2162,43 +2160,34 @@
   function readTime(el){ var host=el.closest('.fig,.step,.vt,.st-panel,.nr-panel,.sh-fig,.td-fig,.bs-fig,.scene'); var src=host&&host.querySelector('.src span, .vr'); var m=src&&/read (\d\d:\d\d[^·<]*)/.exec(src.textContent); return m?('read '+m[1].trim()):'read this morning'; }
   document.addEventListener('mousemove',function(e){ var m=e.target.closest&&e.target.closest('[data-v]'); if(!m){ tip.classList.remove('on'); return; } var r=m.getBoundingClientRect(); tip.innerHTML='<b></b>'; tip.querySelector('b').textContent=m.dataset.v; tip.appendChild(document.createTextNode(readTime(m))); tip.style.left=(r.left+r.width/2)+'px'; tip.style.top=r.top+'px'; tip.classList.add('on'); });
   document.addEventListener('mousemove',function(e){ var row=e.target.closest&&e.target.closest('.row[data-ref]'); if(!row||e.target.closest('[data-v]')) return; var f=row.querySelector('.fig'); if(!f) return; tip.innerHTML='<b></b>'; tip.querySelector('b').textContent=row.dataset.ref+' · '+f.textContent.replace(/(\S)([−+])/,'$1 · $2'); tip.appendChild(document.createTextNode(readTime(row))); var r=row.getBoundingClientRect(); tip.style.left=(r.left+r.width/2)+'px'; tip.style.top=r.top+'px'; tip.classList.add('on'); });
-  // BESIDE. He stays where he is, at the size he is. The words on the right are smaller and
-  // fewer; the figure he means takes the room under them and draws itself in; the ones before
-  // fold into a line of names. Nothing moves him, nothing floats.
+  // BESIDE. The owner: "move the alive up put the text under it but dont narrate it and then
+  // no need to narrate the visuals too just make them fill out the right of the alive and
+  // text." Him up top on the left, his words under him, whole; every figure on the right,
+  // together. They draw themselves in once, then stand still.
   var bsTimers=[], bsMo=null;
   function stopBeside(){ bsTimers.forEach(clearTimeout); bsTimers=[]; if(bsMo){ bsMo.disconnect(); bsMo=null; } }
   function buildBeside(){
     var v=document.getElementById('bsview'); v.innerHTML=''; stopBeside();
     var sc=activeScene(); if(!sc) return; var P=sceneParts(sc);
-    var him=document.createElement('div'); him.className='bs-him'; v.appendChild(him); him.appendChild(markEl);
-    var mood=document.createElement('div'); mood.className='bs-mood'; mood.innerHTML=doing.innerHTML; him.appendChild(mood);
-    var right=document.createElement('div'); right.className='bs-right'; v.appendChild(right);
-    var cap=document.createElement('div'); cap.className='bs-caption'; right.appendChild(cap);
-    var figb=document.createElement('div'); figb.className='bs-fig'; right.appendChild(figb);
-    var seen=document.createElement('div'); seen.className='bs-seen'; right.appendChild(seen);
-    var nx=null; if(P.next){ nx=document.createElement('div'); nx.className='bs-next'; nx.innerHTML='<b>what I\u2019d do next</b>'+P.next; }
-    var figs={}, chips={}, order=[], cur=null;
-    function label(bl){ var t=''; if(bl.say){ var c=bl.say.cloneNode(true); c.querySelectorAll('s').forEach(function(x){x.remove()}); t=c.textContent.replace(/\s+/g,' ').trim(); if(t.length>60) t=t.slice(0,58).replace(/\s+\S*$/,'')+'\u2026'; } return t; }
-    function focus(n){ if(!figs[n]) return; figb.innerHTML=''; figb.appendChild(figs[n]); cur=n; order.forEach(function(m){ chips[m].classList.toggle('on', m===n); }); animateFigure(figs[n]); }
-    function showRead(n){ if(figs[n]){ if(cur!==n) focus(n); return; } var bl=P.blocks[n-1]; if(!bl) return;
-      var d=document.createElement('div'); var l=document.createElement('p'); l.className='lbl'; l.innerHTML='read '+n+(bl.out?' \u00b7 <s>ruled out</s>':'')+' \u00b7 '+label(bl).replace(/</g,'&lt;'); d.appendChild(l); if(bl.ev){ var ev=bl.ev.cloneNode(true); d.appendChild(ev); swatches(d); directions(d); }
-      var chip=document.createElement('button'); chip.textContent='read '+n; chip.onclick=function(){ focus(n); }; seen.insertBefore(chip, nx&&nx.parentNode===seen?nx:null);
-      figs[n]=d; chips[n]=chip; order.push(n); state.mode='reading'; state.pulse=performance.now(); state.drawn=order.length; focus(n); }
-    var tmp=document.createElement('div'); tmp.innerHTML=P.claim+' '+P.stand; var sentences=tmp.innerHTML.split(/(?<=[.!?])\s+(?=[<A-Z\u201c"I])/).filter(function(x){return x.trim()});
-    var i=0;
-    function speak(){
-      var prev=cap.querySelectorAll('.now'); prev.forEach(function(x){x.className='said'; var cu=x.querySelector('.cursor'); if(cu)cu.remove();});
-      if(i>=sentences.length){ state.mode='idle'; if(nx){ seen.appendChild(nx); requestAnimationFrame(function(){ nx.classList.add('shown'); }); } setDoing('<b>quiet</b>brought \u00b7 '+order.length+' figures \u00b7 nothing written'); return; }
-      state.mode='writing'; setDoing('<b>saying</b>'+(i+1)+' of '+sentences.length); var sent=sentences[i];
-      var span=document.createElement('span'); span.className='now'; span.innerHTML=' '+sent+'<i class="cursor"></i>'; cap.appendChild(span); cap.scrollTop=cap.scrollHeight;
-      var refs=[]; var rre=/<sup[^>]*>(\d)<\/sup>/g, rm; while((rm=rre.exec(sent))) refs.push(parseInt(rm[1],10));
-      if(!refs.length && i===0 && P.blocks.length) refs=[1];
-      refs.forEach(function(n,k){ bsTimers.push(setTimeout(function(){ showRead(n); }, 300+k*700)); });
-      i++; bsTimers.push(setTimeout(speak, reduce?0:Math.max(1600, sent.replace(/<[^>]+>/g,'').length*30)));
-    }
-    cap.onclick=function(){ stopBeside(); speak(); };
+    var left=document.createElement('div'); left.className='bs-left'; v.appendChild(left);
+    left.appendChild(markEl);
+    var mood=document.createElement('div'); mood.className='bs-mood'; mood.innerHTML=doing.innerHTML; left.appendChild(mood);
+    if(P.claim){ var c=document.createElement('h2'); c.className='bs-claim'; c.innerHTML=P.claim; left.appendChild(c); }
+    if(P.stand){ var st=document.createElement('p'); st.className='bs-stand'; st.innerHTML=P.stand; left.appendChild(st); }
+    if(P.next){ var nx=document.createElement('div'); nx.className='bs-next'; nx.innerHTML='<b>what I\u2019d do next</b>'+P.next; left.appendChild(nx); }
+    var figs=document.createElement('div'); figs.className='bs-figs'; v.appendChild(figs);
+    function label(bl){ var t=''; if(bl.say){ var c2=bl.say.cloneNode(true); c2.querySelectorAll('s').forEach(function(x){x.remove()}); t=c2.textContent.replace(/\s+/g,' ').trim(); if(t.length>60) t=t.slice(0,58).replace(/\s+\S*$/,'')+'\u2026'; } return t; }
+    P.blocks.forEach(function(bl,k){
+      var d=document.createElement('div'); if(bl.out) d.className='out';
+      var l=document.createElement('p'); l.className='lbl'; l.innerHTML='read '+(k+1)+(bl.out?' \u00b7 <s>ruled out</s>':''); d.appendChild(l);
+      if(bl.say){ var sy=document.createElement('p'); sy.className='say'; sy.innerHTML=bl.say.innerHTML; d.appendChild(sy); }
+      if(bl.ev){ var ev=bl.ev.cloneNode(true); d.appendChild(ev); swatches(d); directions(d); }
+      figs.appendChild(d);
+      bsTimers.push(setTimeout(function(){ animateFigure(d); }, reduce?0:200+k*260));
+    });
+    state.mode='reading'; state.pulse=performance.now(); state.drawn=P.blocks.length;
+    bsTimers.push(setTimeout(function(){ state.mode='idle'; setDoing('<b>quiet</b>brought \u00b7 '+P.blocks.length+' figures \u00b7 nothing written'); }, reduce?0:400+P.blocks.length*260));
     bsMo=new MutationObserver(function(){ mood.innerHTML=doing.innerHTML; }); bsMo.observe(doing,{childList:true,subtree:true,characterData:true});
-    bsTimers.push(setTimeout(speak, reduce?0:600));
   }
   document.querySelectorAll('#consw button').forEach(function(b){b.addEventListener('click',function(){conLayout(b.dataset.con)})});
   document.querySelectorAll('[data-scene]').forEach(function(b){b.addEventListener('click',function(){ setTimeout(function(){ ['stage','canvas','timeline','estate','dense','narrated','shown','told','beside'].forEach(function(n){ if(conBody.classList.contains('con-'+n)) ({stage:buildStage,canvas:buildCanvas,timeline:buildTimeline,estate:buildEstate,dense:buildDense,narrated:buildNarrated,shown:buildShown,told:buildTold,beside:buildBeside})[n](); }); if(conBody.classList.contains('told-settled')) buildTold(); },30); })});
