@@ -407,3 +407,69 @@ def test_stops_when_cause_cannot_be_established(monkeypatch):
                 extra_results=[r["result"] for r in first.results if not r["error"]])
     assert f["limitation"], f"no statement of what the reads do not establish: {turn.answer}"
     _record("stop_at_unsupported_cause", turn, f)
+
+
+# ---------------------------------------------------------------------------
+# 16-17. The word is not the gate, and a lookup is still a lookup (P2.m)
+#
+# THE ONLY TWO SCENARIOS THAT CAN SEE THIS CARD. Every question above carries
+# "why", "which", "dig deeper" or "what caused" — so all eleven climbed the
+# ladder before the change and all eleven climb it after, and a full voice run
+# measures the REGRESSION (more reads, more chances to state an ungrounded
+# figure) without once measuring the fix. His question was "analyze tradsnax
+# per store" and nothing in either suite asked it.
+#
+# The window is pinned and the category is the one the surveyed week ranks
+# first, so the reads are stable. What is asserted is the DEPTH — the second
+# read, and where it went. Whether the answer carries a view is RECORDED and
+# not gated, for the reason v2 gives for every style row: what George chooses
+# to say flaps run to run, and a single draw of it is noise.
+# ---------------------------------------------------------------------------
+
+def test_analyze_is_taken_apart_without_the_word_why(monkeypatch):
+    turn = run_turn(monkeypatch, "analyze tradsnax per store in the week of 24 to 30 August 2026 "
+                                 "against the week before")
+    f = _common("analyze_is_an_investigation", turn)
+    reads = turn.ok_calls
+    assert len(reads) >= 2, (
+        "one read for a message asking to be taken apart is the P2.m defect: "
+        f"{[c['arguments'] for c in turn.read_calls]}")
+    # The second read is a SECOND read, not the first one again — the ladder
+    # goes somewhere, rather than filling a quota.
+    shapes = {json.dumps(c["arguments"], sort_keys=True) for c in reads}
+    assert len(shapes) >= 2, f"the same read twice: {[c['arguments'] for c in reads]}"
+    # And it went under the dimension the question named: a driver of the
+    # named metric, or a grouping the per-store read cannot show.
+    named_store = [c for c in reads if "store" in str(c["arguments"].get("group_by"))]
+    assert named_store, f"no per-store read at all: {[c['arguments'] for c in reads]}"
+    deeper = [c for c in reads
+              if c["arguments"].get("metric") in ("transaction_count", "average_transaction_value",
+                                                  "units_sold", "product_revenue")
+              or str(c["arguments"].get("group_by")) not in ("None", "[]", "['store']", "store")]
+    assert deeper, f"nothing was read under the per-store figure: {[c['arguments'] for c in reads]}"
+    f["reads"] = [c["arguments"] for c in reads]
+    f["read_count"] = len(reads)
+    # RECORDED, NOT GATED: whether he said what he THINKS. His complaint was
+    # "products per store and what i thinks", and a view is not mechanically
+    # detectable — the judge and the report carry it.
+    f["view"] = {"named_driver": f["named_driver"], "limitation": f["limitation"]}
+    _record("analyze_is_an_investigation", turn, f)
+
+
+def test_a_lookup_is_still_one_read(monkeypatch):
+    """
+    The mistake this card can cause. "how did Rockwell do" names a subject and
+    wants the figure; widening it into an investigation is the same failure in
+    the other direction, and it costs the owner time on every small question.
+    """
+    turn = run_turn(monkeypatch, "how did Rockwell do in the week of 24 to 30 August 2026")
+    f = _common("lookup_stays_a_lookup", turn, expect_compare=False, max_calls=3)
+    reads = turn.ok_calls
+    assert len(reads) <= 2, (
+        "a lookup was widened into an investigation: "
+        f"{[c['arguments'] for c in reads]}")
+    localized = [c for c in reads if str(c["arguments"].get("group_by")) not in ("None", "[]", "", "['store']", "store")]
+    assert not localized, f"a lookup localized: {[c['arguments'] for c in localized]}"
+    f["read_count"] = len(reads)
+    f["reads"] = [c["arguments"] for c in reads]
+    _record("lookup_stays_a_lookup", turn, f)

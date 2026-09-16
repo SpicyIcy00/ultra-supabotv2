@@ -4369,3 +4369,17 @@ population existed. **The rule now: a bound about the DATA is measured against
 the data, in the commit that introduces it, and the number goes in the comment.**
 Both fixes are shaped so the bound adapts — `max_words` from the definitions,
 `fit-content(40%)` from the tile — rather than being a better guess.
+
+**The ladder was gated on a word, and the word was "why".** 2026-09-16, P2.m.
+INVESTIGATING opened *"'Why' is an investigation"*, so "analyze tradsnax per
+store" climbed none of it: one read against four permitted, one finding against
+two to four asked for. The gate is the INTENT now (`investigation.opens_when`),
+FOCUSED names its second read the way BROAD already did
+(`scope.kinds.focused.taken_apart`, floor 2), and `judgment.a_view_is_owed`
+asks for the reading rather than permitting it — his complaint was "products
+per store AND WHAT I THINKS", and permission is not a request. **The budget
+paid for it**: 1,791 → 1,797 words, with the call mechanics moved onto
+get_sales and three duplicated sentences cut. **And the eleven voice scenarios
+cannot see this card** — every one of them already carries "why", "which" or
+"dig deeper" — so two scenarios that can were added to the investigation evals.
+

@@ -177,6 +177,24 @@ def test_a_focused_message_is_not_widened_because_it_could_be(defs):
     assert focused < broad <= george_loop.MAX_TOOL_CALLS
 
 
+def test_a_focused_message_that_asks_to_be_taken_apart_is_not_one_read(defs):
+    """
+    P2.m, 2026-09-16. "Do not widen it because you could" was the whole of
+    FOCUSED's policy, and "the smallest set that completely answers it" is one
+    read — so "analyze tradsnax per store" got one, inside the allowance. The
+    prompt now says both halves in the place breadth is decided.
+    """
+    scope = george_loop.SCOPE_SECTION
+    apart = req(defs, "investigation.scope.kinds.focused.taken_apart")
+    lookup = req(defs, "investigation.opens_when.a_lookup_is_not_one")
+    assert f"taken apart gets {apart['min_reads']}, not one" in scope
+    assert lookup["answered_with"] in scope
+    # BROAD's second read is still named, and FOCUSED's floor is under BROAD's
+    # ceiling — a focused message taken apart is not a broad one.
+    assert "then ONE localization" in req(defs, "investigation.scope.kinds.broad.reads")
+    assert int(apart["min_reads"]) < int(req(defs, "investigation.scope.kinds.broad.max_reads"))
+
+
 def test_clarification_is_not_the_default(defs):
     ambiguous = req(defs, "investigation.scope.kinds.ambiguous")
     assert ambiguous["clarification_is_not_the_default"] is True

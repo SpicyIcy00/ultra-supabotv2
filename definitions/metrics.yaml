@@ -1322,6 +1322,36 @@ investigation:
   introduced: "2026-09-08"
   executes_nothing: true
 
+  # WHAT OPENS AN INVESTIGATION (2026-09-16, P2.m).
+  #
+  # THE LADDER WAS GATED ON A WORD. The prompt's INVESTIGATING section opened
+  # "'Why' is an investigation", so a message asking for exactly this work in
+  # different words got none of it. Told "analyze tradsnax per store" the
+  # owner got ONE read and ONE thing said, against an allowance of four reads
+  # and two to four findings — inside the policy and at the floor of it — and
+  # said "i feels very limited not limitless".
+  #
+  # So an investigation is opened by the INTENT, not by a word. Prompt
+  # vocabulary: it executes nothing and matches nothing, and the verbs below
+  # are examples of the intent rather than a list to test a message against.
+  opens_when:
+    executes_nothing: true
+    introduced: "2026-09-16"
+    not_gated_on_the_word: why
+    # The message asks for a figure to be TAKEN APART rather than looked up.
+    asks_to_be_taken_apart: [why, what happened, analyze, look into,
+                             break it down, dig into, go deep, in depth]
+    # And the kinds of message that carry the same request without a verb:
+    # an intent is investigated for what it implies, an observation is
+    # verified the way the ladder verifies a premise.
+    message_kinds: [question, intent, observation]
+    # WHAT IS NOT ONE. Widening a lookup is the same mistake in the other
+    # direction, and it is the one this card can cause.
+    a_lookup_is_not_one:
+      means: "one subject, one metric, one window, asked for the figure"
+      example: "how did Rockwell do"
+      answered_with: "the read it names, and nothing under it"
+
   # The five rungs, in order. Each names what it establishes and which
   # trusted read establishes it. `reads` are get_sales argument shapes; the
   # window, filters and compare_to are the primary fact's, unchanged.
@@ -1414,6 +1444,25 @@ investigation:
         means: the message names a subject, a metric, a dimension or a window
         reads: the smallest set that completely answers it
         max_reads: 4
+        # ASKED TO BE TAKEN APART, THE SMALLEST SET IS NOT ONE READ (P2.m,
+        # 2026-09-16). "the smallest set that completely answers it" is the
+        # right instruction for a lookup and the wrong one for "analyze X per
+        # store", where the named read is where the answer STARTS. BROAD
+        # already names its second read — "and then ONE localization" — and
+        # FOCUSED named none, so George stopped at the first and was correct
+        # to. `min_reads` is a floor on the reading, not a quota: a read that
+        # establishes nothing is not made to reach it, and what it could not
+        # establish is said instead.
+        taken_apart:
+          min_reads: 2
+          reads: >
+            the read the message names, then the one it cannot show — the
+            metric's declared drivers in the same batch, or the dimension
+            under the one named — each keeping the first read's window,
+            filters and comparison
+          never: >
+            the same read again; a dimension no finding rests on; one read
+            per subject
       ambiguous:
         means: >
           the message is short or referential and could be either — "why?",
@@ -5543,6 +5592,26 @@ judgment:
     assert_an_unevidenced_cause: "localization is not cause"
     rank_by_something_uncomputed: "a ranking is the tool's, over the whole set"
 
+  # DESCRIBING THE ROWS IS NOT A READING (2026-09-16, P2.m).
+  #
+  # The owner, on the answer that opened this card: "i thought i would go in
+  # depth products per store AND WHAT I THINKS". `may.rank_importance` has
+  # permitted the view since this section was written; nothing ASKED for one
+  # at the moment of answering, and a George who narrates what is already
+  # drawn is a reporting tool with a chat box on it.
+  #
+  # This widens nothing. A view still rests on `grounding.rests_on` and every
+  # `may_not` stands: it is owed more often, not held to less.
+  a_view_is_owed:
+    introduced: "2026-09-16"
+    when: "the reads establish something a person would act differently for"
+    is: [which of the true things matters most,
+         what you expected to find and did not,
+         what you would leave alone]
+    is_not: [a restatement of the rows, a score,
+             a cause the reads do not establish]
+    silence_is_a_view: "measured, and nothing here concerns me"
+
   # The stances a view can take. A CLOSED SET, and the vocabulary the persistent
   # understanding will store when it arrives — defined here first so the words
   # are settled before anything keeps them.
@@ -6163,6 +6232,11 @@ surface:
     # a hard cap — a caveat or an uncertainty that needs explaining may take
     # more — but the default the prompt asks for.
     sentences_when_drawn: 3
+    # WHAT THE DEFAULT MAKES ROOM FOR (P2.m, 2026-09-16). It read as three
+    # sentences full stop, with a caveat the single exception — so a reading
+    # the drawing cannot carry had nowhere to go, and the answer that opened
+    # P2.m was one sentence over one chart.
+    more_for: [a caveat, a reading the drawing cannot carry]
     # Words that must never reach a reader. The loop scans the answer for
     # these and records a gap; the prompt (rule 17 and SURFACE) forbids them.
     # Whole-word, case-insensitive. Not a licence to be vague: the caveat is

@@ -113,40 +113,6 @@ line reading *"George composed this from rows, which this read does not
 carry"*, it is the first candidate and it is a different fix.
 
 
-### 2026-09-15 — "analyze tradsnax per store" answered with one chart
-
-> *"the way it answered 'analyze tradsanx per store' in the first place is
-> kinda of weird it only showed me 1 chart when i thought i would go in depth
-> products per store and what i thinks and do we only 1 chart option? i feels
-> very limited not limitless"*
-
-**Half of what looked wrong was the click defect under it** — everything below
-the chart in his screenshot ("what George thinks", "what it took last week",
-"how many bought") is the **Greenhills object panel**, opened by the bug that
-is now fixed. So the ANSWER really was one chart and nothing else, and the rest
-was the wrong shop's page stacked under it.
-
-**What the definitions actually allowed, read rather than guessed.** "analyze
-tradsnax per store" names a subject and a dimension, so
-`investigation.scope.kinds` classifies it **FOCUSED**: *"the smallest set that
-completely answers it"*, **max 4 reads**. And `presentation` asks for **2 to 4
-findings**. **George made ONE read and said one thing.** He was inside the
-policy and well under it — so this is not a cap that needs raising, it is
-George choosing the floor of his own allowance.
-
-**And no, there is not one chart option.** The catalogue is **six marks**
-(figure, dumbbell, ranked, contributors, line, table) and a board holds up to
-**12 objects**. He saw one because one read was made, not because one shape
-exists.
-
-**WHY THIS IS NOT FIXED HERE.** Whether George reads once or four times for a
-word like "analyze" is BEHAVIOUR, and behaviour is held by the evals, which no
-card in this phase runs. It wants a card of its own: either a message kind that
-says "analyze/in depth" is a request to decompose, or a FOCUSED read set that
-names a second read the way BROAD's does. **Neither is a line of code and both
-change every answer**, so it is written here rather than done at midnight.
-
-
 ### 2026-09-15 — a comparison that drew no comparison
 
 > *"when it compares it didnt generate any charts or anything"*
@@ -256,6 +222,41 @@ once changes the next answer. That is the card's own done-when.
 ---
 
 ## Fixed
+
+### 2026-09-15 — "analyze tradsnax per store" answered with one chart
+
+> *"the way it answered 'analyze tradsanx per store' in the first place is
+> kinda of weird it only showed me 1 chart when i thought i would go in depth
+> products per store and what i thinks and do we only 1 chart option? i feels
+> very limited not limitless"*
+
+**Half of what looked wrong was the click defect under it** — everything below
+the chart in his screenshot ("what George thinks", "what it took last week",
+"how many bought") is the **Greenhills object panel**, opened by the bug that
+is now fixed. So the ANSWER really was one chart and nothing else, and the rest
+was the wrong shop's page stacked under it.
+
+**What the definitions actually allowed, read rather than guessed.** "analyze
+tradsnax per store" names a subject and a dimension, so
+`investigation.scope.kinds` classifies it **FOCUSED**: *"the smallest set that
+completely answers it"*, **max 4 reads**. And `presentation` asks for **2 to 4
+findings**. **George made ONE read and said one thing.** He was inside the
+policy and well under it — so this is not a cap that needs raising, it is
+George choosing the floor of his own allowance.
+
+**And no, there is not one chart option.** The catalogue is **six marks**
+(figure, dumbbell, ranked, contributors, line, table) and a board holds up to
+**12 objects**. He saw one because one read was made, not because one shape
+exists.
+
+**WHY THIS IS NOT FIXED HERE.** Whether George reads once or four times for a
+word like "analyze" is BEHAVIOUR, and behaviour is held by the evals, which no
+card in this phase runs. It wants a card of its own: either a message kind that
+says "analyze/in depth" is a request to decompose, or a FOCUSED read set that
+names a second read the way BROAD's does. **Neither is a line of code and both
+change every answer**, so it is written here rather than done at midnight.
+
+**CLOSED BY P2.m, 2026-09-16 — the mechanism, not the behaviour.** The gate is the INTENT now and not the word "why"; a narrow question asked to be taken apart has a floor of two reads instead of "the smallest set"; and a view is OWED rather than permitted, which is the half he added on the day: *"george isnt thinking for himself … i want him to see the data and make his own"*. **What is not closed: nobody has asked him this since.** The eleven standing eval questions all contain "why", "which" or "dig deeper", so they could never have seen this; two that can were written and neither has been run. Until one is, the second read and the view are asserted by the definitions and unobserved in a conversation.
 
 ### 2026-09-16 — every product name in a chart was cut at 13 characters
 

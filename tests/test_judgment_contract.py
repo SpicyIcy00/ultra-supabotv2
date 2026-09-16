@@ -108,6 +108,36 @@ def test_the_stances_are_a_closed_set(j):
     }
 
 
+def test_a_view_is_owed_and_not_merely_permitted(j):
+    """
+    P2.m, 2026-09-16. `may.rank_importance` has permitted a view since this
+    section was written, and the owner still got an answer that described the
+    rows: "i thought i would go in depth products per store AND WHAT I
+    THINKS". Permission is not a request, so the definitions now say when one
+    is OWED — and say it without widening what a view may rest on.
+    """
+    owed = req(j, "a_view_is_owed")
+    assert owed["when"]
+    assert len(req(owed, "is")) >= 3
+    assert "a restatement of the rows" in req(owed, "is_not")
+    # NOTHING IS RELAXED. A view is owed more often; it is held to the same
+    # ground and the same prohibitions.
+    assert req(j, "grounding.required") is True
+    assert "a score" in req(owed, "is_not")
+    assert "invent_a_figure" in req(j, "may_not")
+
+
+def test_the_prompt_asks_for_the_view_rather_than_permitting_it(j):
+    owed = req(j, "a_view_is_owed")
+    section = george_loop.JUDGMENT_SECTION
+    assert "A VIEW IS OWED" in section
+    assert req(owed, "when") in section
+    for phrase in req(owed, "is"):
+        assert phrase in section, phrase
+    # And the sentence that was already there, which is not the same sentence.
+    assert "you may absolutely form a VIEW" in section
+
+
 def test_a_view_is_held_about_a_subject(j):
     """A view attached to a conversation dies with it; one attached to a thing does not."""
     kinds = req(j, "subject_kinds")

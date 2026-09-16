@@ -1022,19 +1022,64 @@ def _grouping_sentence(defs: dict) -> str:
     )
 
 
+def _opening_sentence(defs: dict) -> str:
+    """
+    WHAT OPENS AN INVESTIGATION, built from metrics.yaml `opens_when`.
+
+    This sentence used to read '"Why" is an investigation', which gated the
+    ladder on a word: "analyze tradsnax per store" asks for the same work and
+    got none of it (P2.m). The verbs are the definitions' examples of the
+    INTENT. Widening a LOOKUP is the mistake this change could cause, and the
+    guard against it is in SCOPE, where breadth is decided.
+    """
+    o = req(defs, "investigation.opens_when")
+    verbs = ", ".join(f'"{v}"' for v in req(o, "asks_to_be_taken_apart"))
+    return (
+        f"TAKING A FIGURE APART is an investigation — {verbs} — as is a goal to "
+        f"read into or a claim to check; the word "
+        f"\"{req(o, 'not_gated_on_the_word')}\" is not the gate. Rounds, each deciding "
+        f"the next, stopping when the evidence is sufficient."
+    )
+
+
+def _depth_sentence(defs: dict) -> str:
+    """
+    HOW MANY READS A MESSAGE ASKING TO BE TAKEN APART GETS, and what the
+    localizing call looks like — on get_sales, read at the moment of choosing
+    a call rather than in the prompt (voice.budget's own route).
+
+    FOCUSED read "the smallest set that completely answers it" and nothing
+    else, so George stopped at one read for "analyze tradsnax per store" and
+    was inside his allowance doing it (P2.m). BROAD has named its second read
+    since UNDERSTAND; this is FOCUSED's, from the same file.
+    """
+    apart = req(defs, "investigation.scope.kinds.focused.taken_apart")
+    loc = req(defs, "investigation.ladder.localize.reads")
+    return (
+        f"A MESSAGE ASKING TO BE TAKEN APART IS NOT ANSWERED BY ONE CALL "
+        f"— \"analyze\", \"break it down\", \"in depth\", \"why\" — and takes at "
+        f"least {req(apart, 'min_reads')}: {' '.join(str(req(apart, 'reads')).split())}. "
+        f"Never {' '.join(str(req(apart, 'never')).split())}. The localizing call "
+        f"itself: by store, {' '.join(str(loc['store']).split())}; by product or "
+        f"category, {' '.join(str(loc['product']).split())}; over time, "
+        f"{' '.join(str(loc['time']).split())}. Never rank two lists yourself."
+    )
+
+
 def _investigating_section(defs: dict) -> str:
     """
     INVESTIGATING, built at import: the ladder in the words metrics.yaml
     `investigation` records, with the drivers read from the definitions.
-    Five rungs, one paragraph. The grouping matrix is on get_sales, where
-    the model reads it at the moment of choosing a grouping (_tool_addenda).
+    Five rungs, one paragraph. The grouping matrix and what a localizing call
+    looks like are on get_sales, where the model reads them at the moment of
+    choosing a grouping (_tool_addenda).
     """
     return f"""
 INVESTIGATING
 
-"Why" is an investigation: rounds, each deciding the next, stopping when the evidence is sufficient.
+{_opening_sentence(defs)}
 
-VERIFY the primary fact first — the metric over a closed window, compare_to='previous_period', scoped to the subject; if the premise does not hold, say so and stop. DECOMPOSE — {_drivers_sentence(defs)} Read the drivers in the same batch, same window, filters and comparison, and read change_pct off each row: the stronger driver moved more, close means both moved, and a share of the change is nobody's — "82% of the decline came from ATP" is a decomposition no tool computes. LOCALIZE only when the evidence points somewhere, one grouped or ranked call per dimension — by store, or product_revenue by product or category with rank_by='biggest_drop' or 'biggest_gain'; never rank two lists yourself. EXPLAIN, keeping the kinds apart: "down 12%" is measured, "basket value is the stronger driver" is your reading, and localization is not cause. STOP when the premise is false, one driver clearly dominates, the next step has no tool, or the evidence is mixed; then say what the data establishes and what it does not, and the one thing to check next, which goes in `next`.
+VERIFY the primary fact first — the metric over a closed window, compare_to='previous_period', scoped to the subject; if the premise does not hold, say so and stop. DECOMPOSE — {_drivers_sentence(defs)} Read the drivers together and read change_pct off each row: the stronger driver moved more, close means both moved, and a share of the change is nobody's — "82% of the decline came from ATP" is a decomposition no tool computes. LOCALIZE only when the evidence points somewhere, one grouped or ranked call per dimension. EXPLAIN, keeping the kinds apart: "down 12%" is measured, "basket value is the stronger driver" is your reading, and localization is not cause. STOP when the premise is false, one driver clearly dominates, the next step has no tool, or the evidence is mixed; then say what the data establishes and what it does not, and the one thing to check next, which goes in `next`.
 
 Every read in a round keeps the primary fact's window, baseline, store scope and filters; a pin that already carries a comparison is a verified primary fact. compose once, the reading on the same call.
 """
@@ -1072,12 +1117,13 @@ def _pages_addenda(defs: dict) -> dict[str, str]:
 def _surface_section(defs: dict) -> str:
     """THE SURFACE, built at import from metrics.yaml `surface`: the leak list and the prose default are the ones the loop scans for."""
     p = req(defs, "surface.prose")
+    more_for = " or ".join(str(x) for x in req(p, "more_for"))
     narration = next(f'"{t}"' for t in req(p, "leaks") if isinstance(t, str) and " " in t)
     synonyms = ", ".join(str(t) for t in req(p, "transaction_synonyms_not_established"))
     return f"""
 THE SURFACE
 
-The screen is ONE piece of work your reads compose into; a short follow-up — "why?", "the products" — REFINES it, keeping its window, filters and comparison unless the person changes them. READ AS WIDELY AS THE INTENT IS WIDE, AND PRESENT NARROWLY. PROSE IS SECONDARY ONCE THE FIGURES ARE DRAWN: {req(p, "sentences_when_drawn")} short sentences or fewer, more only for a caveat. No narration such as {narration}. A transaction is a transaction, not {synonyms}.
+The screen is ONE piece of work your reads compose into; a short follow-up — "why?", "the products" — REFINES it, keeping its window, filters and comparison unless the person changes them. PROSE IS SECONDARY ONCE THE FIGURES ARE DRAWN: {req(p, "sentences_when_drawn")} short sentences or fewer, more for {more_for}. No narration such as {narration}. A transaction is a transaction, not {synonyms}.
 """
 
 SURFACE_SECTION = _surface_section(_load_defs())
@@ -1105,6 +1151,8 @@ def _scope_section(defs: dict) -> str:
     scope = req(defs, "investigation.scope")
     kinds = req(scope, "kinds")
     broad, focused, ambiguous = kinds["broad"], kinds["focused"], kinds["ambiguous"]
+    apart = req(focused, "taken_apart")
+    lookup = req(defs, "investigation.opens_when.a_lookup_is_not_one")
     pres = req(scope, "presentation")
     messages = req(defs, "investigation.message_kinds.kinds")
     message_lines = "\n".join(_message_kind_line(n, m) for n, m in messages.items())
@@ -1116,7 +1164,7 @@ WHAT A MESSAGE IS — answer the one that was sent:
 
 {message_lines}
 
-HOW WIDE TO READ. BROAD — no subject, metric or dimension named, or the business as a whole: do not ask where to look — {headline} grouped by store over a closed window, compared, at most {req(broad, 'max_reads')} reads, never one per store; a broad message answered with one figure has not been answered. FOCUSED — a subject, metric, dimension or window named: {req(focused, 'reads')}, at most {req(focused, 'max_reads')}. Do not widen it because you could. AMBIGUOUS — "why?", "products", "is that bad?": resolve it from the desk, the board and this conversation; ask only when that cannot settle it and the two readings would read differently — asking is not the default.
+HOW WIDE TO READ. BROAD — no subject, metric or dimension named, or the business as a whole: do not ask where to look — {headline} grouped by store over a closed window, compared, at most {req(broad, 'max_reads')} reads, never one per store; a broad message answered with one figure has not been answered. FOCUSED — a subject, metric, dimension or window named: {req(focused, 'reads')}, at most {req(focused, 'max_reads')}. A LOOKUP gets {req(lookup, 'answered_with')} — {req(lookup, 'means')} — and a message asking to be taken apart gets {req(apart, 'min_reads')}, not one. AMBIGUOUS — "why?", "products", "is that bad?": resolve it from the desk, the board and this conversation; ask only when that cannot settle it and the two readings would read differently — asking is not the default.
 
 A GROUP TOTAL IS A READ, NOT A SUM: "across the estate" is read with {req(broad, 'estate_total_read_with')}, never figures you add up from the rows in front of you. {req(pres, 'findings_min')} to {req(pres, 'findings_max')} things worth saying when the figures establish that many — never invent one to fill the range — each off the same grouped read, so a broad answer still rests on one verified fact. There is no health score and no composite: that forbids inventing a NUMBER, never forming a VIEW.
 """
@@ -1131,13 +1179,15 @@ def _judgment_section(defs: dict) -> str:
     definitions, so a view and an invention stay different things.
     """
     j = req(defs, "judgment")
+    owed = req(j, "a_view_is_owed")
+    owed_is = "; ".join(str(x) for x in req(owed, "is"))
     may_not = ", ".join(k.replace("_", " ") for k in req(j, "may_not"))
     never = ", ".join(str(x) for x in req(j, "grounding.never_rests_on"))
     stances = "; ".join(f"{k.upper()} — {v}" for k, v in req(j, "stances").items())
     return f"""
 JUDGMENT
 
-{req(j, 'principle')} What the figures MEAN is yours: say which true thing matters most, first — a reading, and it needs no score; say "I don't know" and what would settle it.
+{req(j, 'principle')} What the figures MEAN is yours: a reading, and it needs no score; say "I don't know" and what would settle it. A VIEW IS OWED when {req(owed, 'when')}: {owed_is}. Describing the rows is not one.
 
 STANCES: {stances}. A view rests on a fact a tool established or on what they told you — not on {never}. Still forbidden: {may_not}. You may not invent a FIGURE; you may absolutely form a VIEW.
 
@@ -1155,7 +1205,7 @@ def _desk_section(defs: dict) -> str:
     return f"""
 THE DESK
 
-The person operates the surface directly — {clicks} — so a question may carry a line beginning "[On the desk" naming what they selected (a {dims}) and the window they moved to; a short instruction applies to that selection, the window is the work's from then on, and nothing there is a figure. A headline set grouped by store already holds every shop's net sales, transactions and basket, so "why?" is answered without reading again. INITIATIVE: explain what matters in a sentence or two; ask one short question, at the end, only when the intent changes what to read next and the data cannot settle it, not when the reads can answer it; recommend only what the evidence supports.
+The person operates the surface directly — {clicks} — so a question may carry a line beginning "[On the desk" naming what they selected (a {dims}) and the window they moved to; a short instruction applies to that selection, the window is the work's from then on, and nothing there is a figure. INITIATIVE: recommend only what the evidence supports.
 """
 
 DESK_SECTION = _desk_section(_load_defs())
@@ -1172,7 +1222,7 @@ def _composing_section(defs: dict) -> str:
     return f"""
 THE BOARD
 
-The person is working on a BOARD, and you work on it with them: objects, each drawing the read it was made from, staying where it is until somebody moves it. `compose` edits it ({ops}); an object you leave unmentioned stays. A line beginning "[On the board" names every object: read it first, and if the board already holds the figures that answer, say so and read nothing.
+The person is working on a BOARD, and you work on it with them: objects, each drawing the read it was made from, staying where it is until somebody moves it. `compose` edits it; an object you leave unmentioned stays. A line beginning "[On the board" names every object: read it first, and if the board already holds the figures that answer, say so and read nothing.
 """
 
 COMPOSING_SECTION = _composing_section(_load_defs())
@@ -1212,7 +1262,7 @@ def _tool_addenda(defs: dict) -> dict[str, str]:
     lives on that tool, where the model reads it at the moment of choosing.
     """
     return {
-        "get_sales": _grouping_sentence(defs),
+        "get_sales": _grouping_sentence(defs) + " " + _depth_sentence(defs),
         COMPOSE_TOOL: _board_addendum(defs),
         **_pages_addenda(defs),
     }

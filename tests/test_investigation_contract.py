@@ -46,6 +46,65 @@ def test_the_investigation_section_executes_nothing():
     assert INV["introduced"] == "2026-09-08"
 
 
+# ---------------------------------------------------------------------------
+# What opens one (P2.m, 2026-09-16)
+#
+# The ladder was gated on the WORD "why". "analyze tradsnax per store" asks
+# for exactly this work, got one read and one thing said, and the owner said
+# "i feels very limited not limitless". These hold the gate to the INTENT, and
+# they hold the other half too: a lookup is still a lookup.
+# ---------------------------------------------------------------------------
+
+OPENS = req(INV, "opens_when")
+
+
+def test_an_investigation_is_opened_by_an_intent_and_not_by_a_word():
+    assert OPENS["executes_nothing"] is True
+    assert OPENS["not_gated_on_the_word"] == "why"
+    verbs = [str(v) for v in req(OPENS, "asks_to_be_taken_apart")]
+    # The word it used to be gated on is one example among several, not the
+    # gate: if it is the only one, nothing has changed.
+    assert "why" in verbs and len(verbs) > 1
+    for v in ("analyze", "look into", "break it down", "in depth"):
+        assert v in verbs, v
+
+
+def test_the_kinds_that_open_one_are_kinds_a_message_can_be():
+    """A kind named here and nowhere else would be vocabulary George cannot use."""
+    declared = set(req(INV, "message_kinds.kinds"))
+    assert set(req(OPENS, "message_kinds")) <= declared
+    # An intent and an observation carry the request without a verb, which is
+    # the half a verb list cannot cover.
+    assert {"intent", "observation"} <= set(req(OPENS, "message_kinds"))
+
+
+def test_a_lookup_is_still_a_lookup():
+    """
+    The mistake this change could cause is the opposite one: widening "how did
+    Rockwell do" into an investigation nobody asked for. The definitions say
+    what a lookup is and what it gets.
+    """
+    lookup = req(OPENS, "a_lookup_is_not_one")
+    assert "one subject, one metric, one window" in lookup["means"]
+    assert lookup["example"]
+    assert "nothing under it" in lookup["answered_with"]
+
+
+def test_a_focused_message_asked_to_be_taken_apart_gets_a_second_read():
+    """
+    BROAD has named its second read since UNDERSTAND ("and then ONE
+    localization"). FOCUSED named none, so "the smallest set that completely
+    answers it" was one read and George was inside his allowance making it.
+    """
+    focused = req(INV, "scope.kinds.focused")
+    apart = req(focused, "taken_apart")
+    assert int(apart["min_reads"]) >= 2
+    # A floor, not a quota, and still under the ceiling that scope sets.
+    assert int(apart["min_reads"]) <= int(focused["max_reads"])
+    assert "drivers" in apart["reads"] and "dimension under the one named" in apart["reads"]
+    assert "the same read again" in apart["never"]
+
+
 def test_the_ladder_is_the_five_rungs_in_order():
     assert list(req(INV, "ladder")) == ["verify", "decompose", "localize", "explain", "next"]
     for rung in INV["ladder"].values():
@@ -259,3 +318,52 @@ def test_the_get_sales_description_names_the_drivers_and_the_product_route():
     assert "metrics.net_sales.drivers" in doc
     assert "rank_by='biggest_drop'" in doc
     assert "never net_sales or ATP" in doc
+
+
+def test_the_prompt_no_longer_opens_the_ladder_on_the_word_why():
+    """
+    The defect, in one line of the prompt. It is not enough that the verbs are
+    in the yaml: the sentence George reads has to name the intent.
+    """
+    prompt = _prompt()
+    assert '"Why" is an investigation' not in prompt
+    for v in req(OPENS, "asks_to_be_taken_apart"):
+        assert f'"{v}"' in prompt, v
+    assert 'the word "why" is not the gate' in prompt
+
+
+def test_the_opening_sentence_is_built_from_the_definitions_not_typed():
+    import copy
+
+    from agent.loop import _opening_sentence
+
+    altered = copy.deepcopy(DEFS)
+    altered["investigation"]["opens_when"]["asks_to_be_taken_apart"] = ["SENTINEL"]
+    assert "SENTINEL" in _opening_sentence(altered)
+    assert "SENTINEL" not in _prompt()
+
+
+def test_the_second_read_is_taught_where_the_call_is_chosen():
+    """
+    On get_sales, by voice.budget's own route: a sentence that describes a
+    TOOL lives on that tool. The prompt says a taken-apart message gets more
+    than one read; get_sales says which read.
+    """
+    from agent.loop import build_tool_schemas
+
+    desc = next(s for s in build_tool_schemas() if s["name"] == "get_sales")["description"]
+    apart = req(INV, "scope.kinds.focused.taken_apart")
+    assert "NOT ANSWERED BY ONE CALL" in desc
+    assert str(apart["min_reads"]) in desc
+    assert "the metric's declared drivers in the same batch" in desc
+    # The localizing call shapes moved here from INVESTIGATING with it.
+    assert "rank_by='biggest_drop'" in desc and "WITHOUT compare_to" in desc
+
+
+def test_the_lookup_guard_is_in_the_prompt_where_breadth_is_decided():
+    prompt = _prompt()
+    lookup = req(OPENS, "a_lookup_is_not_one")
+    assert lookup["answered_with"] in prompt
+    assert lookup["means"] in prompt
+    apart = req(INV, "scope.kinds.focused.taken_apart")
+    assert f"taken apart gets {apart['min_reads']}, not one" in prompt
