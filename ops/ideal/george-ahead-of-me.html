@@ -44,11 +44,9 @@
   details summary{list-style:none;cursor:pointer}
   details summary::-webkit-details-marker{display:none}
 
-  /* ---------- frame ---------- */
-  .console{display:grid;grid-template-columns:272px minmax(0,1fr) 248px;gap:40px;max-width:1380px;margin:0 auto;align-items:start}
-  @media (max-width:1180px){.console{grid-template-columns:248px minmax(0,1fr);gap:28px} .holds{grid-column:1/-1}}
-  @media (max-width:820px){.console{grid-template-columns:1fr} .attention{order:2} .holds{order:3}}
-  .topline{grid-column:1/-1;display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:22px 0 0;flex-wrap:wrap}
+  /* ---------- frame: one column. the situation owns the screen ---------- */
+  .console{display:grid;grid-template-columns:minmax(0,1fr);gap:0;max-width:1040px;margin:0 auto}
+  .topline{display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:22px 0 0;flex-wrap:wrap}
   .topline h1{font:400 20px/1.2 var(--serif);letter-spacing:0;margin:0;color:var(--ink-2)}
   .topline h1 b{font-weight:600;color:var(--ink)}
   .topline .biz{display:flex;gap:2px;background:var(--sunk);border-radius:999px;padding:3px}
@@ -56,7 +54,7 @@
   .biz button.on{color:var(--ink);background:var(--raise)}
   .mock{font:400 11px/1.4 var(--mono);color:var(--ink-3)}
 
-  .examples{grid-column:1/-1;margin:14px 0 6px}
+  .examples{margin:16px 0 0}
   .examples h2{font:500 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 10px}
   .strip{display:flex;gap:4px;flex-wrap:wrap}
   .strip button{font-size:12.5px;color:var(--ink-2);border-radius:999px;padding:6px 12px}
@@ -65,8 +63,19 @@
   .strip button.on{background:var(--raise);color:var(--ink);box-shadow:0 0 0 1px var(--edge-2)}
   .strip button.on .n{color:var(--ink-3)}
 
+  /* ---------- his attention: a line you open, not a rail you live beside ---------- */
+  .queue{margin:22px 0 18px}
+  .queue > summary{display:flex;gap:18px;align-items:baseline;flex-wrap:wrap;padding:12px 16px;border-radius:12px;background:var(--paper);box-shadow:0 0 0 1px var(--edge);cursor:pointer}
+  .queue > summary:hover{box-shadow:0 0 0 1px var(--edge-2)}
+  .queue > summary .q{display:inline-flex;gap:8px;align-items:baseline;font-size:13.5px;color:var(--ink-2)}
+  .queue > summary .q b{font:500 15px/1 var(--sans);color:var(--ink);font-variant-numeric:tabular-nums}
+  .queue > summary .q.need b{color:var(--act)}
+  .queue > summary .q.need:before{content:'';width:8px;height:8px;border-radius:50%;background:var(--act);align-self:center}
+  .queue > summary .open-hint{margin-left:auto;font:400 11px/1.6 var(--mono);color:var(--ink-3)}
+  .queue[open] > summary .open-hint:after{content:' · close'}
+  .queue .att-groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;padding:18px 4px 4px}
+  @media (max-width:820px){.queue .att-groups{grid-template-columns:1fr}}
   /* ---------- attention: weight says what matters ---------- */
-  .attention{position:sticky;top:20px}
   .attention h2,.holds h2{font:500 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 10px}
   .att-group{margin-bottom:26px}
   .att{display:block;width:100%;text-align:left;padding:12px 14px;border-radius:12px;position:relative}
@@ -85,13 +94,13 @@
   .att-note{font:400 12px/1.5 var(--sans);color:var(--ink-3);padding:6px 14px 0}
 
   /* ---------- the situation ---------- */
-  .situation{background:var(--paper);border-radius:18px;padding:clamp(24px,3.2vw,44px) clamp(20px,4vw,56px) 36px;min-width:0;box-shadow:var(--shadow),0 0 0 1px var(--edge)}
+  .situation{background:var(--paper);border-radius:18px;padding:clamp(24px,3.2vw,44px) clamp(20px,4.5vw,64px) 40px;min-width:0;box-shadow:var(--shadow),0 0 0 1px var(--edge)}
   .sit-head{display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:14px}
   .sit-head .kind{font:500 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
   .sit-head .meta{font:400 11px/1.4 var(--mono);color:var(--ink-3)}
-  .claim{font:500 clamp(28px,3.6vw,42px)/1.15 var(--serif);letter-spacing:-.012em;margin:0 0 16px;max-width:24ch;text-wrap:balance;color:var(--ink)}
+  .claim{font:500 clamp(30px,4vw,46px)/1.12 var(--serif);letter-spacing:-.014em;margin:0 0 18px;max-width:22ch;text-wrap:balance;color:var(--ink)}
   .claim em{font-style:italic;font-weight:500;color:var(--ink);box-shadow:none}
-  .stand{font:400 18.5px/1.55 var(--serif);color:var(--ink-2);margin:0 0 30px;max-width:58ch}
+  .stand{font:400 19px/1.55 var(--serif);color:var(--ink-2);margin:0 0 30px;max-width:60ch}
   .stand b{font-weight:500;color:var(--ink)}
   .stand sup{font:500 10px/1 var(--mono);color:var(--act);margin-left:1px}
   .plain{font:400 26px/1.4 var(--serif);color:var(--ink);margin:6px 0 4px;max-width:30ch;text-wrap:balance}
@@ -193,8 +202,12 @@
   .act small{font-family:var(--mono);font-size:10px;color:var(--ink-3);margin-left:7px;font-weight:400}
   .act.go small{color:inherit;opacity:.65}
 
-  /* ---------- what he holds ---------- */
-  .holds{position:sticky;top:20px}
+  /* ---------- what he holds: where it was used, and on demand ---------- */
+  .holds{margin:26px 0 0}
+  .holds > summary{display:inline-flex;gap:10px;align-items:baseline;font:400 12px/1.6 var(--mono);color:var(--ink-3);padding:5px 12px;border-radius:999px;background:var(--sunk);cursor:pointer}
+  .holds > summary:hover{color:var(--ink)}
+  .holds .hl{margin-top:12px}
+  /* ---------- what he holds (rows) ---------- */
   .holds .h{padding:10px 0;border-bottom:1px solid var(--edge);font-size:13.5px;color:var(--ink-2)}
   .holds .h:last-child{border-bottom:0}
   .holds .h b{display:block;font-weight:500;color:var(--ink);line-height:1.4}
@@ -394,6 +407,36 @@
     <div class="biz"><button class="on">All</button><button>Aji Ichiban</button><button>vending</button></div>
   </div>
 
+  </div>
+
+  <!-- ================= HIS ATTENTION: a line, opened when you want it ================= -->
+  <details class="queue" id="queue">
+    <summary>
+      <span class="q need"><b>1</b> needs you</span>
+      <span class="q"><b>2</b> he’s looking at</span>
+      <span class="q"><b>2</b> checked · nothing to do</span>
+      <span class="open-hint">open the list</span>
+    </summary>
+    <div class="att-groups attention">
+    <div class="att-group">
+      <h2>Needs you</h2>
+      <button class="att" data-scene="decide"><span class="pip need"></span><span><b>Seikyo order, ₱46,200</b><small>Drafted from eight weeks of sales. Above the ₱20,000 you set, so it waits for you.</small><span class="when">since 07:52</span></span></button>
+    </div>
+    <div class="att-group">
+      <h2>I'm looking at</h2>
+      <button class="att on" data-scene="situation"><span class="pip open"></span><span><b>Rockwell is down, and it's the basket</b><small>Investigated this morning. Leading explanation found; cause still open.</small><span class="when">4 reads · 07:58</span></span></button>
+      <button class="att" data-scene="build"><span class="pip open"></span><span><b>The ordering system you asked for</b><small>Draft v2 with Judy's lead time. Waiting on your changes.</small><span class="when">yesterday</span></span></button>
+    </div>
+    <div class="att-group">
+      <h2>Checked · nothing to do</h2>
+      <button class="att fine" data-toast="OPUS: last week was down on the week before, and that week held a holiday Monday you told me about. Nothing to fix. Tap again to reopen."><span class="pip fine"></span><span><b>OPUS's week — a holiday Monday, not lost demand</b><small>Ruled out. Kept as a belief.</small></span></button>
+      <button class="att fine" data-toast="Six shops within their usual range yesterday. Nothing worth your time."><span class="pip fine"></span><span><b>Six shops, an ordinary Monday</b><small>Within their usual range.</small></span></button>
+      <p class="att-note">These stay visible so you can see what he chose not to raise.</p>
+      <p class="kbd"><b>j</b><b>k</b> move · <b>enter</b> open · <b>l</b> later · <b>/</b> say something</p>
+    </div>
+      </div>
+  </details>
+
   <div class="examples">
     <h2>One example per part of the vision · tap to open it</h2>
     <div class="strip">
@@ -412,27 +455,6 @@
       <button data-scene="team"><span class="n">17·18</span>businesses + team</button>
       <button data-scene="draw"><span class="n">6</span>how he draws</button>
     </div>
-  </div>
-
-  <!-- ================= ATTENTION: George's order ================= -->
-  <aside class="attention">
-    <div class="att-group">
-      <h2>Needs you</h2>
-      <button class="att" data-scene="decide"><span class="pip need"></span><span><b>Seikyo order, ₱46,200</b><small>Drafted from eight weeks of sales. Above the ₱20,000 you set, so it waits for you.</small><span class="when">since 07:52</span></span></button>
-    </div>
-    <div class="att-group">
-      <h2>I'm looking at</h2>
-      <button class="att on" data-scene="situation"><span class="pip open"></span><span><b>Rockwell is down, and it's the basket</b><small>Investigated this morning. Leading explanation found; cause still open.</small><span class="when">4 reads · 07:58</span></span></button>
-      <button class="att" data-scene="build"><span class="pip open"></span><span><b>The ordering system you asked for</b><small>Draft v2 with Judy's lead time. Waiting on your changes.</small><span class="when">yesterday</span></span></button>
-    </div>
-    <div class="att-group">
-      <h2>Checked · nothing to do</h2>
-      <button class="att fine" data-toast="OPUS: last week was down on the week before, and that week held a holiday Monday you told me about. Nothing to fix. Tap again to reopen."><span class="pip fine"></span><span><b>OPUS's week — a holiday Monday, not lost demand</b><small>Ruled out. Kept as a belief.</small></span></button>
-      <button class="att fine" data-toast="Six shops within their usual range yesterday. Nothing worth your time."><span class="pip fine"></span><span><b>Six shops, an ordinary Monday</b><small>Within their usual range.</small></span></button>
-      <p class="att-note">These stay visible so you can see what he chose not to raise.</p>
-      <p class="kbd"><b>j</b><b>k</b> move · <b>enter</b> open · <b>l</b> later · <b>/</b> say something</p>
-    </div>
-  </aside>
 
   <!-- ================= THE SITUATION ================= -->
   <main style="min-width:0">
@@ -465,6 +487,7 @@
         <span class="n">1</span>
         <div>
           <p class="say"><b>Is Rockwell actually down, and on what?</b> Yes — on a closed month, against the month before. <s>Premise holds.</s></p>
+          <p class="att-note" style="padding:0 0 10px;font-family:var(--mono);font-size:11px">using what I hold: <b style="font-weight:500;color:var(--ink-2)">“Kiamoy lines fell everywhere in August”</b> — so a Rockwell-only story has to be something other than Kiamoy</p>
           <div class="ev dumb">
             <div class="row lit" data-ref="Rockwell · Aug"><span class="nm">Rockwell</span><span class="track"><i class="seg" style="left:52%;right:38%"></i><i class="dot was" style="left:62%"></i><i class="dot now" style="left:52%"></i></span><span class="fig">₱918k<s>−6.1%</s></span></div>
             <div class="row" data-ref="OPUS · Aug"><span class="nm">OPUS</span><span class="track"><i class="seg" style="left:70%;right:8%"></i><i class="dot was" style="left:70%"></i><i class="dot now" style="left:92%"></i></span><span class="fig">₱1.62m<s>+9.4%</s></span></div>
@@ -829,17 +852,17 @@
     </div>
     <div class="acts"><button class="act go" data-toast="A turn: he asks the barn lead why August’s Aji Mix went where it went, through the connected channel, and brings back the answer.">Ask the barn why</button><button class="act" data-toast="A transfer drafted: 48 Aji Mix, barn → Rockwell. Waits for you.">Move stock to Rockwell</button><button class="act" data-toast="Watching Rockwell’s Aji Mix shelf daily; speaks only when it hits zero again.">Watch the shelf</button></div>
   </section>
-  </main>
 
-  <!-- ================= WHAT GEORGE HOLDS about this ================= -->
-  <aside class="holds">
-    <h2>What I hold about this</h2>
-    <div class="h told"><b>That Monday was a holiday</b><small>15 Sep · your words · used in OPUS's week, ruled it out</small></div>
+  <!-- ================= WHAT HE HOLDS about this — folded, where it was used it is inline ================= -->
+  <details class="holds"><summary>what I’m holding about this · 4 · one you told me</summary><div class="hl">
+        <div class="h told"><b>That Monday was a holiday</b><small>15 Sep · your words · used in OPUS's week, ruled it out</small></div>
     <div class="h"><b>Rockwell: basket is the driver, cause open</b><small>this morning · 4 reads · will update if stock says otherwise</small></div>
     <div class="h"><b>Kiamoy lines fell everywhere in August</b><small>14 Sep · estate-wide, not a shop story · unconfirmed since new sales landed</small></div>
     <div class="h"><b>Watching: barn lines crossing to zero</b><small>daily · spoke twice this month</small></div>
     <p class="att-note" style="padding:10px 0 0">Every one of these can be forgotten with a tap. He can't forget one himself.</p>
-  </aside>
+  </div></details>
+  </main>
+
 </div>
 
 <!-- ================= COMPOSER ================= -->
@@ -865,6 +888,7 @@
     <li><b>Steering transforms the situation in place.</b> "Show me the products" and "against OPUS" rearrange what's here; they don't stack a new answer under it. Tap a row and it becomes a reference the composer carries.</li>
     <li><b>Decisions arrive with their authority attached.</b> The one blue frame on the page is the one thing that is yours. Under it, in plain words, is what George may do alone today — and the button that widens it is a sentence, not a setting.</li>
     <li><b>A chart is a sentence he chose to draw.</b> Its shape is picked by what the step asserts — a band for “outside its usual”, a strip of days for “was it on the shelf”, a flow for “where it went”, a chain for “why these are one story”. Every figure is a returned row; the shape and the one-line note are his. See <i>how he draws</i>.</li>
+    <li><b>One column, on purpose.</b> The first draft had a rail on the left and a panel on the right — the admin-dashboard skeleton your section 20 names. His attention is not navigation: it is a line at the top you open when you arrive or finish, with counts. What he holds appears in the reasoning at the step that used it, and the full list folds under the situation. The situation owns the screen: his sentences at a reading width, the evidence allowed the whole of it.</li>
     <li><b>Borrowed, and from where.</b> Confidence that opens into what supports, contradicts or is silent (Consensus, Elicit, scite); a visible “no read” mark on any claim without one (Claude, Consensus); his work disclosed in layers — a line, then steps, then each read’s inputs and time (the 2025–26 agent deployments Zylos studied: no mid-run visibility tripled abandonment); one step redone or skipped rather than approve-all (the same); his authority per kind of action as a control you can move, defaulting conservative (Mantlr, Claude’s tool permissions); Later and j/k on the list (Linear triage); a graphite ground with borders as translucent white and colour only where it means something (Linear, Geist); every chart titled by its conclusion with one interpretive note (FT, Datawrapper).</li>
     <li><b>Nothing here is a chat bubble, a KPI grid, a feed or a canvas.</b> It is a document George wrote this morning about your business, with the parts you can push on.</li>
   </ol>
@@ -880,6 +904,7 @@
     document.querySelectorAll('.att').forEach(function(a){a.classList.toggle('on',a===b)});
     document.querySelectorAll('.strip button').forEach(function(a){a.classList.toggle('on',a.dataset.scene===b.dataset.scene)});
     document.querySelectorAll('.att').forEach(function(a){if(a.dataset.scene===b.dataset.scene)a.classList.add('on')});
+    var q=document.getElementById('queue'); if(q&&b.closest('#queue')) q.open=false;
     window.scrollTo({top:0,behavior:'smooth'});
   })});
   document.querySelectorAll('[data-toast]').forEach(function(b){b.addEventListener('click',function(){say(b.dataset.toast)})});
