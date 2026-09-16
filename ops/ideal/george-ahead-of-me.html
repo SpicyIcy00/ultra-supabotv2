@@ -808,10 +808,26 @@
   body.con-narrated .compose{max-width:720px}
   body.con-narrated .box{border-bottom:0;background:rgba(255,255,255,.03);border-radius:999px;padding-left:22px;box-shadow:0 0 0 1px var(--edge-2)}
   @media (max-width:900px){ body.con-narrated .nr-view{position:static;display:block;padding:20px 0 120px} .nr-view canvas{width:120px;height:120px;margin:0 auto 12px;display:block} }
+
+  /* ---------- STAGE, merged with narrated: an empty room, his words a sentence at a time,
+     each figure floating in at its place the moment he mentions it ---------- */
+  .stage-view .st-claim{top:8vh;max-width:min(40vw,24ch)}
+  .stage-view .st-cap{position:absolute;left:5vw;top:calc(8vh + 4.2em*1.18 + 22px);max-width:min(38vw,50ch);font:400 16.5px/1.5 var(--serif);color:var(--ink-2);min-height:5em}
+  .stage-view .st-cap .said{opacity:.4}
+  .stage-view .st-cap .now{opacity:1;color:var(--ink)}
+  .stage-view .st-cap .now .cursor{display:inline-block;width:2px;height:.9em;background:var(--ink);vertical-align:-2px;margin-left:2px;animation:blink 1s step-end infinite}
+  .stage-view .st-panel.earlier{opacity:.5;transform:scale(.96);transition:opacity .5s,transform .5s}
+  .stage-view .st-panel.arriving{animation:land .55s cubic-bezier(.2,.7,.3,1) both}
+  .stage-view .st-ctl{position:absolute;left:50%;bottom:11vh;transform:translateX(-50%);display:flex;gap:8px;align-items:center;font:400 11px/1.6 var(--mono);color:var(--ink-4);white-space:nowrap}
+  .stage-view .st-ctl button{font:400 12px/1.6 var(--sans);color:var(--ink-2);border-radius:999px;padding:4px 12px;box-shadow:0 0 0 1px var(--edge-2)}
+  .stage-view .st-ctl button:hover{color:var(--ink);background:var(--sunk)}
+  .stage-view .st-next{opacity:0;transition:opacity .5s}
+  .stage-view .st-next.shown{opacity:1}
+  .stage-view svg.wires line{transition:opacity .4s}
 </style>
 
 <button class="reopen" id="reopen" title="Open the sidebar  [" hidden>›</button>
-<div class="consw" id="consw"><span>console</span><button class="on" data-con="document">document</button><button data-con="stage">stage</button><button data-con="canvas">canvas</button><button data-con="split">split</button><button data-con="timeline">timeline</button><button data-con="estate">estate</button><button data-con="dense">dense</button><button data-con="narrated">narrated</button></div>
+<div class="consw" id="consw"><span>console</span><button data-con="document">document</button><button class="on" data-con="stage">stage</button><button data-con="canvas">canvas</button><button data-con="split">split</button><button data-con="timeline">timeline</button><button data-con="estate">estate</button><button data-con="dense">dense</button></div>
 <div class="stage-view" id="stageview"></div>
 <div class="nr-view" id="nrview"></div>
 <div class="console">
@@ -1343,7 +1359,7 @@
     <li><b>Decisions arrive with their authority attached.</b> The one blue frame on the page is the one thing that is yours. Under it, in plain words, is what George may do alone today — and the button that widens it is a sentence, not a setting.</li>
     <li><b>A chart is a sentence he chose to draw.</b> Its shape is picked by what the step asserts — a band for “outside its usual”, a strip of days for “was it on the shelf”, a flow for “where it went”, a chain for “why these are one story”. Every figure is a returned row; the shape and the one-line note are his. See <i>how he draws</i>.</li>
     <li><b>Three parts, by what each is for.</b> On the left, what persists — pages, systems, automations and watches, people — with a pip that says running, off, or needs you; it is a list of things you own, not a menu of screens. In the middle, the situation, at a reading width for his sentences and the full column for evidence. On the right, his mark: it breathes slowly when he is quiet, pulses once per read with the read named under it, turns to writing when he is connecting what the reads establish, and goes warm only when he is waiting on you. It never moves for effect.</li>
-    <li><b>Four rooms around the same situation.</b> <i>Document</i> is a briefing. <i>Stage</i> is the Jarvis idea taken seriously: an empty dark room, his mark at the centre, and only what he brought floating around it, wired to him — nothing persistent on screen, the persistent things a gesture away, and the composer a line you speak into. <i>Canvas</i> is the spatial workspace tldraw’s agents-on-the-canvas work points at: he places the pieces, you move them, and position is meaning. <i>Split</i> is the operator’s desk mission-control benchmarking keeps arriving at: the queue on one side, the open situation on the other, the wall of everything replaced by one prioritised list.</li>
+    <li><b>Four rooms around the same situation.</b> <i>Document</i> is a briefing. <i>Stage</i> is the Jarvis idea taken seriously, merged with narration after the owner pointed at both: an empty dark room, his mark at the centre, his words arriving a sentence at a time, and each figure floating in at its place around him the moment he mentions it — one at a time, the earlier ones easing back, so it never jumbles. Nothing persistent on screen; the persistent things a gesture away; the composer a line you speak into. <i>Canvas</i> is the spatial workspace tldraw’s agents-on-the-canvas work points at: he places the pieces, you move them, and position is meaning. <i>Split</i> is the operator’s desk mission-control benchmarking keeps arriving at: the queue on one side, the open situation on the other, the wall of everything replaced by one prioritised list.</li>
     <li><b>Four more rooms, for contrast.</b> <i>Timeline</i> makes time the axis: the day as he saw it, situations as dots, what you open expanding under the line — memory is just the past on the same line. <i>Estate</i> makes the business the room: shops, warehouses and machines as places, stock flowing between them, the situation attached to the place it is about. <i>Dense</i> is the terminal pole — everything at once, no white space — here so the others can be measured against it. <i>Narrated</i> is talking with him: his words arrive a sentence at a time and each figure surfaces as he mentions it, which is what voice would sound like with something to look at.</li>
     <li><b>Borrowed, and from where.</b> Confidence that opens into what supports, contradicts or is silent (Consensus, Elicit, scite); a visible “no read” mark on any claim without one (Claude, Consensus); his work disclosed in layers — a line, then steps, then each read’s inputs and time (the 2025–26 agent deployments Zylos studied: no mid-run visibility tripled abandonment); one step redone or skipped rather than approve-all (the same); his authority per kind of action as a control you can move, defaulting conservative (Mantlr, Claude’s tool permissions); Later and j/k on the list (Linear triage); a graphite ground with borders as translucent white and colour only where it means something (Linear, Geist); every chart titled by its conclusion with one interpretive note (FT, Datawrapper).</li>
     <li><b>Nothing here is a chat bubble, a KPI grid, a feed or a canvas.</b> It is a document George wrote this morning about your business, with the parts you can push on.</li>
@@ -1546,34 +1562,49 @@
     return {claim:claim?claim.innerHTML:(plain?plain.innerHTML:''), stand:stand?stand.innerHTML:'', next:next?next.innerHTML:'', blocks:blocks};
   }
   function conLayout(name){
-    conBody.classList.remove('con-document','con-stage','con-canvas','con-split','con-timeline','con-estate','con-dense','con-narrated'); conBody.classList.add('con-'+name); stopNarration();
+    conBody.classList.remove('con-document','con-stage','con-canvas','con-split','con-timeline','con-estate','con-dense','con-narrated'); conBody.classList.add('con-'+name); stopNarration(); stopStage();
     document.querySelectorAll('#consw button').forEach(function(b){b.classList.toggle('on',b.dataset.con===name)});
     try{localStorage.setItem('george.con',name)}catch(e){}
-    if(name==='stage') buildStage(); else if(name==='canvas') buildCanvas(); else if(name==='timeline') buildTimeline(); else if(name==='estate') buildEstate(); else if(name==='dense') buildDense(); else if(name==='narrated') buildNarrated(); else { if(markEl.parentNode!==markHome) markHome.insertBefore(markEl, markNext); }
+    if(name==='stage') buildStage(); else if(name==='canvas') buildCanvas(); else if(name==='timeline') buildTimeline(); else if(name==='estate') buildEstate(); else if(name==='dense') buildDense(); else { if(markEl.parentNode!==markHome) markHome.insertBefore(markEl, markNext); }
     if(name==='split'){ var q=document.getElementById('queue'); if(q) q.open=true; }
   }
-  // STAGE: the mark at centre, the claim top-left, evidence floating around, wired to the mark
+  // STAGE, merged with narrated. The room is empty except for him. His words arrive a
+  // sentence at a time, top-left. The moment a sentence mentions a read, that read's
+  // evidence floats in at its place around him, wired to him — one at a time, the
+  // earlier ones easing back. What he'd do next arrives last.
+  var stTimers=[];
+  function stopStage(){ stTimers.forEach(clearTimeout); stTimers=[]; }
   function buildStage(){
-    var sc=activeScene(); if(!sc) return; var P=sceneParts(sc);
+    stopStage(); var sc=activeScene(); if(!sc) return; var P=sceneParts(sc);
     stageView.innerHTML='';
     var wires=document.createElementNS('http://www.w3.org/2000/svg','svg'); wires.setAttribute('class','wires'); stageView.appendChild(wires);
     stageView.appendChild(markEl);
     var c=document.createElement('div'); c.className='st-claim'; c.innerHTML=P.claim; stageView.appendChild(c);
-    if(P.stand){ var sd=document.createElement('div'); sd.className='st-stand'; sd.innerHTML=P.stand; stageView.appendChild(sd); }
+    var cap=document.createElement('div'); cap.className='st-cap'; stageView.appendChild(cap);
     var mood=document.createElement('div'); mood.className='st-mood'; mood.innerHTML=doing.innerHTML; stageView.appendChild(mood);
-    var spots=[{left:'52vw',top:'8vh'},{left:'66vw',top:'40vh'},{left:'8vw',top:'56vh'},{left:'34vw',top:'66vh'}];
-    var panels=[];
-    P.blocks.slice(0,4).forEach(function(b,i){
-      var pnl=document.createElement('div'); pnl.className='st-panel'+(b.out?' out':''); pnl.style.left=spots[i].left; pnl.style.top=spots[i].top; pnl.style.animationDelay=(0.15+i*0.18)+'s';
-      if(b.say){ var sy=document.createElement('p'); sy.className='say'; sy.innerHTML=b.say.innerHTML; pnl.appendChild(sy); }
-      if(b.ev){ pnl.appendChild(b.ev.cloneNode(true)); }
-      stageView.appendChild(pnl); panels.push(pnl);
-    });
-    if(P.next){ var nx=document.createElement('div'); nx.className='st-next'; nx.innerHTML='<b>what I\u2019d do next</b>'+P.next; stageView.appendChild(nx); }
-    var hint=document.createElement('div'); hint.className='st-hint'; hint.textContent='say it, or point at anything · the room stays empty until he brings something'; stageView.appendChild(hint);
-    function wire(){ wires.innerHTML=''; var W=stageView.clientWidth,H=stageView.clientHeight; var mx=W/2, my=H*0.5-0.06*Math.min(H*0.44,420); panels.forEach(function(pn){ var r=pn.getBoundingClientRect(); var x=r.left+r.width/2, y=r.top+r.height/2; var l=document.createElementNS('http://www.w3.org/2000/svg','line'); l.setAttribute('x1',mx); l.setAttribute('y1',my); l.setAttribute('x2',x); l.setAttribute('y2',y); l.setAttribute('stroke','rgba(138,143,152,.28)'); l.setAttribute('stroke-width','1'); l.setAttribute('stroke-dasharray','2 5'); wires.appendChild(l); }); }
-    setTimeout(wire,50); window.addEventListener('resize',wire);
+    var nx=null; if(P.next){ nx=document.createElement('div'); nx.className='st-next'; nx.innerHTML='<b>what I\u2019d do next</b>'+P.next; stageView.appendChild(nx); }
+    var ctl=document.createElement('div'); ctl.className='st-ctl'; ctl.innerHTML='<button id="st-next">next</button><button id="st-again">say it again</button><span>he speaks · each figure arrives as he mentions it · voice would read this aloud</span>'; stageView.appendChild(ctl);
+    var spots=[{left:'54vw',top:'7vh'},{left:'66vw',top:'38vh'},{left:'8vw',top:'58vh'},{left:'36vw',top:'64vh'}];
+    var panels={}, order=[];
+    function wire(){ wires.innerHTML=''; var W=stageView.clientWidth,H=stageView.clientHeight; var mx=W/2, my=H*0.5-0.06*Math.min(H*0.44,420); order.forEach(function(n,i){ var pn=panels[n]; var r=pn.getBoundingClientRect(); var x=r.left+r.width/2, y=r.top+r.height/2; var l=document.createElementNS('http://www.w3.org/2000/svg','line'); l.setAttribute('x1',mx); l.setAttribute('y1',my); l.setAttribute('x2',x); l.setAttribute('y2',y); l.setAttribute('stroke','rgba(138,143,152,.3)'); l.setAttribute('stroke-width', i===order.length-1?'1.5':'1'); l.setAttribute('stroke-dasharray','2 5'); l.style.opacity= i===order.length-1?'1':'.45'; wires.appendChild(l); }); }
+    function showRead(n){ if(panels[n]) return; var bl=P.blocks[n-1]; if(!bl) return; var i=order.length; var pnl=document.createElement('div'); pnl.className='st-panel arriving'+(bl.out?' out':''); var sp=spots[i%spots.length]; pnl.style.left=sp.left; pnl.style.top=sp.top; if(bl.say){ var sy=document.createElement('p'); sy.className='say'; sy.innerHTML=bl.say.innerHTML; pnl.appendChild(sy); } if(bl.ev) pnl.appendChild(bl.ev.cloneNode(true)); order.forEach(function(m){panels[m].classList.add('earlier')}); stageView.appendChild(pnl); panels[n]=pnl; order.push(n); state.mode='reading'; state.pulse=performance.now(); state.drawn=order.length; setTimeout(wire,60); }
+    var tmp=document.createElement('div'); tmp.innerHTML=P.stand; var sentences=tmp.innerHTML.split(/(?<=[.!?])\s+(?=[<A-Z\u201c"I])/).filter(function(x){return x.trim()});
+    var i=0;
+    function speak(){
+      var prev=cap.querySelectorAll('.now'); prev.forEach(function(x){x.className='said'; var cu=x.querySelector('.cursor'); if(cu)cu.remove();});
+      if(i>=sentences.length){ state.mode='idle'; if(nx) nx.classList.add('shown'); setDoing('<b>quiet</b>brought · '+order.length+' figures · nothing written'); return; }
+      state.mode='writing'; setDoing('<b>saying</b>'+(i+1)+' of '+sentences.length); var sent=sentences[i];
+      var span=document.createElement('span'); span.className='now'; span.innerHTML=' '+sent+'<i class="cursor"></i>'; cap.appendChild(span);
+      var refs=[]; var rre=/<sup[^>]*>(\d)<\/sup>/g, rm; while((rm=rre.exec(sent))) refs.push(parseInt(rm[1],10));
+      refs.forEach(function(n,k){ stTimers.push(setTimeout(function(){ showRead(n); }, 300+k*400)); });
+      if(!refs.length && i===0 && P.blocks[0]) stTimers.push(setTimeout(function(){ showRead(1); }, 500));
+      i++; stTimers.push(setTimeout(speak, reduce?0:Math.max(1500, sent.replace(/<[^>]+>/g,'').length*28)));
+    }
+    document.getElementById('st-next').onclick=function(){ stopStage(); speak(); };
+    document.getElementById('st-again').onclick=function(){ buildStage(); };
+    window.addEventListener('resize',wire);
     var mo=new MutationObserver(function(){ mood.innerHTML=doing.innerHTML; }); mo.observe(doing,{childList:true,subtree:true,characterData:true});
+    stTimers.push(setTimeout(speak, reduce?0:700));
   }
   // CANVAS: tiles George placed, edges between them; drag to move, wheel to pan, buttons to zoom
   var cvState={x:40,y:30,k:1};
@@ -1670,7 +1701,7 @@
     var ctl=document.createElement('div'); ctl.className='nr-ctl'; ctl.innerHTML='<button id="nr-next">next</button><button id="nr-replay">say it again</button><span>he speaks; each figure appears as he mentions it · voice would read this aloud</span>'; right.appendChild(ctl);
     var tmp=document.createElement('div'); tmp.innerHTML=P.claim+' '+P.stand; var raw=tmp.innerHTML;
     // sentences, keeping the small read numbers so evidence can follow them
-    var sentences=raw.split(/(?<=[.!?])\s+(?=[A-Z“"I])/).filter(function(x){return x.trim()});
+    var sentences=raw.split(/(?<=[.!?])\s+(?=[<A-Z“"I])/).filter(function(x){return x.trim()});
     var shownReads={}; var i=0;
     function showRead(n){ if(shownReads[n]) return; var b=P.blocks[n-1]; if(!b) return; shownReads[n]=1; var d=document.createElement('div'); d.className='shown'; d.innerHTML=(b.say?'<p class="say">'+b.say.innerHTML+'</p>':'')+(b.ev?b.ev.outerHTML:''); evb.appendChild(d); }
     function speak(){
@@ -1678,7 +1709,7 @@
       state.mode='writing'; var sent=sentences[i];
       var prev=cap.querySelectorAll('.now'); prev.forEach(function(x){x.className='said'; var c=x.querySelector('.cursor'); if(c)c.remove();});
       var span=document.createElement('span'); span.className='now'; span.innerHTML=' '+sent+'<i class="cursor"></i>'; cap.appendChild(span); cap.scrollTop=cap.scrollHeight;
-      var refs=(sent.match(/<sup[^>]*>(\d)<\/sup>/g)||[]).map(function(x){return parseInt(x.replace(/\D/g,''),10)});
+      var refs=[]; var rre=/<sup[^>]*>(\d)<\/sup>/g, rm; while((rm=rre.exec(sent))) refs.push(parseInt(rm[1],10));
       refs.forEach(function(n){ nrTimers.push(setTimeout(function(){ showRead(n); state.pulse=performance.now(); }, 350)); });
       i++; nrTimers.push(setTimeout(speak, reduce?0:Math.max(1600, sent.replace(/<[^>]+>/g,'').length*38)));
     }
@@ -1687,9 +1718,9 @@
     speak();
   }
   document.querySelectorAll('#consw button').forEach(function(b){b.addEventListener('click',function(){conLayout(b.dataset.con)})});
-  document.querySelectorAll('[data-scene]').forEach(function(b){b.addEventListener('click',function(){ setTimeout(function(){ ['stage','canvas','timeline','estate','dense','narrated'].forEach(function(n){ if(conBody.classList.contains('con-'+n)) ({stage:buildStage,canvas:buildCanvas,timeline:buildTimeline,estate:buildEstate,dense:buildDense,narrated:buildNarrated})[n](); }); },30); })});
+  document.querySelectorAll('[data-scene]').forEach(function(b){b.addEventListener('click',function(){ setTimeout(function(){ ['stage','canvas','timeline','estate','dense'].forEach(function(n){ if(conBody.classList.contains('con-'+n)) ({stage:buildStage,canvas:buildCanvas,timeline:buildTimeline,estate:buildEstate,dense:buildDense})[n](); }); },30); })});
   var rememberedCon=null; try{rememberedCon=localStorage.getItem('george.con')}catch(e){}
-  conLayout(rememberedCon&&/^(document|stage|canvas|split|timeline|estate|dense|narrated)$/.test(rememberedCon)?rememberedCon:'document');
+  conLayout(rememberedCon&&/^(document|stage|canvas|split|timeline|estate|dense)$/.test(rememberedCon)?rememberedCon:'stage');
   var ask=document.getElementById('ask');
   ask.addEventListener('keydown',function(e){ if(e.key==='Enter'&&ask.value.trim()){say('“'+ask.value.trim()+'” — intent in words; the selection above is the reference. A turn.'); clearSeq(); state.mode='reading'; state.pulse=performance.now(); setDoing('<b>reading</b>'+ask.value.trim()); seqTimer.push(setTimeout(function(){state.mode='idle';setDoing('<b>quiet</b>a turn, in the real thing');},reduce?0:1600)); ask.value='';}});
   document.querySelector('.send').addEventListener('click',function(){ if(ask.value.trim()){say('“'+ask.value.trim()+'” — a turn.');ask.value='';} });
