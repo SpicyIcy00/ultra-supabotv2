@@ -1036,7 +1036,7 @@
   body.con-beside .side .strip button .n{display:inline-block;min-width:4.5ch}
   body.con-beside .side .strip button.on{background:var(--raise);color:var(--ink);box-shadow:0 0 0 1px var(--edge-2);text-decoration:none}
   body.con-beside main{display:none}
-  body.con-beside .bs-view{display:grid;position:relative;min-height:calc(100vh - 40px);grid-template-columns:minmax(320px,2fr) minmax(0,3fr);grid-template-rows:auto auto;grid-template-areas:"him right" "words right";column-gap:3vw;row-gap:1vh;padding:max(6vh,72px) 3vw 150px 1vw;align-items:start;align-content:start}
+  body.con-beside .bs-view{display:grid;position:relative;min-height:calc(100vh - 40px);grid-template-columns:minmax(320px,2fr) minmax(0,3fr);grid-template-rows:auto auto;grid-template-areas:"him right" "words right";column-gap:3vw;row-gap:1vh;padding:max(6vh,72px) 3vw 230px 1vw;align-items:start;align-content:start}
   .bs-view svg.wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
   .bs-view svg.wires line{transition:opacity .4s}
   .bs-view .bs-him{grid-area:him;position:relative;min-width:0;display:flex;align-items:flex-start;justify-content:center}
@@ -1052,18 +1052,18 @@
   .bs-view .bs-right{grid-area:right;min-width:0;display:grid;grid-template-rows:auto auto;gap:14px}
   .bs-view .bs-mood{font:400 12px/1.6 var(--mono);color:var(--ink-3);width:30ch;justify-self:end;text-align:right}
   .bs-view .bs-mood b{display:block;font:500 13px/1.5 var(--sans);color:var(--ink)}
-  .bs-view .bs-figs{min-width:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:28px 30px;align-content:start}
+  .bs-view .bs-figs{min-width:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:34px 40px;align-content:start}
   .bs-view .bs-figs > div{min-width:0;position:relative}
   .bs-view .bs-figs .lbl{font:400 10.5px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 8px}
   .bs-view .bs-figs .lbl s{text-decoration:none;color:var(--ink-4)}
-  .bs-view .bs-figs .say{font:400 13px/1.45 var(--serif);color:var(--ink-2);margin:0 0 10px}
+  .bs-view .bs-figs .say{font:400 14px/1.45 var(--serif);color:var(--ink-2);margin:0 0 12px;max-width:60ch}
   .bs-view .bs-figs .say b{color:var(--ink);font-weight:500}
   .bs-view .bs-figs .say s{display:none}
-  .bs-view .bs-figs .ev{margin:0;font-size:12.5px}
-  .bs-view .bs-figs .ev .row{padding:3px 5px;margin:0;font-size:12.5px;gap:10px;grid-template-columns:minmax(6ch,11ch) 1fr minmax(9ch,auto)}
-  .bs-view .bs-figs .line svg{height:110px}
+  .bs-view .bs-figs .ev{margin:0;font-size:13.5px}
+  .bs-view .bs-figs .ev .row{padding:5px 6px;margin:0;font-size:13.5px;gap:14px;grid-template-columns:minmax(7ch,13ch) 1fr minmax(10ch,auto)}
+  .bs-view .bs-figs .line svg{width:100%;height:auto;max-height:260px}
   .bs-view .bs-figs > div.out{opacity:.55}
-  @media (max-width:900px){ body.con-beside .bs-view{position:static;display:block;padding:20px 5vw 120px} .bs-view svg.wires{display:none} .bs-view .bs-him{display:block} .bs-view .bs-him canvas{width:100%;max-width:420px;margin:0} .bs-view .bs-left{margin-top:12px;align-items:flex-start;text-align:left} .bs-view .bs-next{border-right:0;border-left:3px solid var(--ink);padding:0 0 0 14px} .bs-view .bs-right{margin-top:26px} .bs-view .bs-figs{grid-template-columns:1fr} .bs-view .bs-mood{justify-self:start;text-align:left} }
+  @media (max-width:900px){ body.con-beside .bs-view{position:static;display:block;padding:20px 5vw 120px} .bs-view svg.wires{display:none} .bs-view .bs-him{display:block} .bs-view .bs-him canvas{width:100%;max-width:420px;margin:0} .bs-view .bs-left{margin-top:12px;align-items:flex-start;text-align:left} .bs-view .bs-next{border-right:0;border-left:3px solid var(--ink);padding:0 0 0 14px} .bs-view .bs-right{margin-top:26px} .bs-view .bs-figs{grid-template-columns:1fr} .bs-view .bs-figs > div{grid-column:auto!important;grid-row:auto!important} .bs-view .bs-mood{justify-self:start;text-align:left} }
 </style>
 
 <button class="reopen" id="reopen" title="Open the sidebar  [" hidden>›</button>
@@ -2212,7 +2212,7 @@
     state.mode='reading'; state.pulse=performance.now(); state.drawn=P.blocks.length;
     bsTimers.push(setTimeout(function(){ state.mode='idle'; setDoing('<b>quiet</b>brought \u00b7 '+P.blocks.length+' figures \u00b7 nothing written'); wire(); }, reduce?0:400+P.blocks.length*260));
     // left to right across, then down; a last row that is not full sits on the right, under the last column
-    function place(){ var cols=3; try{ var tc=getComputedStyle(figs).gridTemplateColumns; if(tc&&tc!=='none'&&!/repeat|minmax/.test(tc)) cols=tc.trim().split(/\s+/).length; else cols=Math.max(1,Math.floor((figs.clientWidth+30)/260)); }catch(e){} var n=made.length, full=Math.floor(n/cols)*cols, rest=n-full; made.forEach(function(d,i){ var row=Math.floor(i/cols), col=i%cols; if(i>=full) col+=cols-rest; d.style.gridRow=String(row+1); d.style.gridColumn=String(col+1); }); }
+    function place(){ var n=made.length; if(window.innerWidth<=900){ made.forEach(function(d){ d.style.gridRow=''; d.style.gridColumn=''; }); return; } var cols= n<=1?1: n===2||n===4?2: 3; var full=Math.floor(n/cols)*cols, rest=n-full; made.forEach(function(d,i){ var row=Math.floor(i/cols); var per= i<full? 6/cols : 6/rest; var col= i<full? (i%cols)*per : (i-full)*per; d.style.gridRow=String(row+1); d.style.gridColumn=(col+1)+' / span '+per; }); }
     place(); var onresize=function(){ place(); wire(); };
     bsWire=onresize; window.addEventListener('resize',onresize);
     bsMo=new MutationObserver(function(){ mood.innerHTML=doing.innerHTML; }); bsMo.observe(doing,{childList:true,subtree:true,characterData:true});
