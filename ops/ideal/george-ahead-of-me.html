@@ -1,37 +1,44 @@
 <title>George, Ahead of Me</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap">
 <style>
+  /* GRAPHITE, DARK-NATIVE. Near-black with a cool undertone, borders as
+     translucent white, chromatic colour only where it means something:
+     one warm hue for "needs you", green and red for direction. The light
+     theme is the same set on paper, not an inversion. (Linear, Geist.) */
   :root{
-    color-scheme: light;
-    --ground:#F3F5F7; --paper:#FFFFFF; --sunk:#E9EDF1; --edge:#D6DCE3; --edge-2:#B9C2CC;
-    --ink:#101820; --ink-2:#3E4A57; --ink-3:#73808F;
-    --act:#1F4FE0; --on-act:#FFFFFF; --act-soft:#E6ECFD;
-    --up:#1A8A5A; --down:#C8442B; --quiet:#8A94A6; --quiet-soft:#DDE2E8;
-    --george:#101820;
+    color-scheme: dark;
+    --ground:#0f1011; --paper:#17181a; --sunk:#202124; --raise:#26272b;
+    --edge:rgba(255,255,255,.08); --edge-2:rgba(255,255,255,.16);
+    --ink:#f7f8f8; --ink-2:#c9ced6; --ink-3:#8a8f98; --ink-4:#62666d;
+    --act:#E8B04B; --on-act:#17120a; --act-soft:rgba(232,176,75,.13);
+    --up:#2FA874; --down:#E8624B; --quiet:#62666d; --quiet-soft:#26272b;
     --serif:'Newsreader', Georgia, 'Times New Roman', serif;
-    --sans:'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-    --mono:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+    --sans:'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --mono:'Geist Mono', ui-monospace, Menlo, Consolas, monospace;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 12px 32px -18px rgba(0,0,0,.8);
   }
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){
-      color-scheme: dark;
-      --ground:#14181D; --paper:#1B2027; --sunk:#232A33; --edge:#2D3641; --edge-2:#3F4A57;
-      --ink:#ECEFF3; --ink-2:#B7C0CB; --ink-3:#7F8B98;
-      --act:#5B82FF; --on-act:#0B1020; --act-soft:#1D2A4F;
-      --up:#2FA874; --down:#E8624B; --quiet:#8A94A6; --quiet-soft:#2D3641;
-      --george:#ECEFF3;
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      color-scheme: light;
+      --ground:#f7f8f8; --paper:#ffffff; --sunk:#f0f1f3; --raise:#e9ebee;
+      --edge:rgba(16,17,19,.09); --edge-2:rgba(16,17,19,.18);
+      --ink:#101113; --ink-2:#3c4149; --ink-3:#6b7079; --ink-4:#9aa0a8;
+      --act:#B7791F; --on-act:#ffffff; --act-soft:rgba(183,121,31,.12);
+      --up:#1A8A5A; --down:#C8442B; --quiet:#9aa0a8; --quiet-soft:#e7e9ec;
+      --shadow:0 1px 2px rgba(16,17,19,.08), 0 12px 32px -18px rgba(16,17,19,.35);
     }
   }
-  :root[data-theme="dark"]{
-    color-scheme: dark;
-    --ground:#14181D; --paper:#1B2027; --sunk:#232A33; --edge:#2D3641; --edge-2:#3F4A57;
-    --ink:#ECEFF3; --ink-2:#B7C0CB; --ink-3:#7F8B98;
-    --act:#5B82FF; --on-act:#0B1020; --act-soft:#1D2A4F;
-    --up:#2FA874; --down:#E8624B; --quiet:#8A94A6; --quiet-soft:#2D3641;
-    --george:#ECEFF3;
+  :root[data-theme="light"]{
+    color-scheme: light;
+    --ground:#f7f8f8; --paper:#ffffff; --sunk:#f0f1f3; --raise:#e9ebee;
+    --edge:rgba(16,17,19,.09); --edge-2:rgba(16,17,19,.18);
+    --ink:#101113; --ink-2:#3c4149; --ink-3:#6b7079; --ink-4:#9aa0a8;
+    --act:#B7791F; --on-act:#ffffff; --act-soft:rgba(183,121,31,.12);
+    --up:#1A8A5A; --down:#C8442B; --quiet:#9aa0a8; --quiet-soft:#e7e9ec;
+    --shadow:0 1px 2px rgba(16,17,19,.08), 0 12px 32px -18px rgba(16,17,19,.35);
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--ground);color:var(--ink);font:15px/1.6 var(--sans);-webkit-font-smoothing:antialiased;padding-block:0 132px;padding-inline:clamp(16px,3vw,40px)}
+  body{margin:0;background:var(--ground);color:var(--ink);font:14.5px/1.6 var(--sans);letter-spacing:.005em;-webkit-font-smoothing:antialiased;padding-block:0 132px;padding-inline:clamp(16px,3vw,40px)}
   button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   :focus-visible{outline:2px solid var(--act);outline-offset:2px}
   details summary{list-style:none;cursor:pointer}
@@ -46,7 +53,7 @@
   .topline h1 b{font-weight:600;color:var(--ink)}
   .topline .biz{display:flex;gap:2px;background:var(--sunk);border-radius:999px;padding:3px}
   .biz button{font-size:12.5px;color:var(--ink-3);border-radius:999px;padding:5px 12px}
-  .biz button.on{color:var(--ink);background:var(--paper);box-shadow:0 1px 2px rgba(16,24,32,.12)}
+  .biz button.on{color:var(--ink);background:var(--raise)}
   .mock{font:400 11px/1.4 var(--mono);color:var(--ink-3)}
 
   .examples{grid-column:1/-1;margin:14px 0 6px}
@@ -55,8 +62,8 @@
   .strip button{font-size:12.5px;color:var(--ink-2);border-radius:999px;padding:6px 12px}
   .strip button .n{font:500 10px/1 var(--mono);color:var(--ink-3);margin-right:6px}
   .strip button:hover{background:var(--sunk);color:var(--ink)}
-  .strip button.on{background:var(--ink);color:var(--ground)}
-  .strip button.on .n{color:var(--ground);opacity:.6}
+  .strip button.on{background:var(--raise);color:var(--ink);box-shadow:0 0 0 1px var(--edge-2)}
+  .strip button.on .n{color:var(--ink-3)}
 
   /* ---------- attention: weight says what matters ---------- */
   .attention{position:sticky;top:20px}
@@ -68,8 +75,8 @@
   .att small{display:block;font:400 13px/1.45 var(--sans);color:var(--ink-3);margin-top:3px}
   .att .when{display:block;font:400 10.5px/1.6 var(--mono);color:var(--ink-3);margin-top:6px}
   .att:hover{background:var(--paper)}
-  .att.on{background:var(--paper);box-shadow:0 1px 2px rgba(16,24,32,.08),0 0 0 1px var(--edge)}
-  .att-group:first-child .att{background:var(--paper);box-shadow:0 2px 10px -6px rgba(16,24,32,.35),0 0 0 1px var(--edge);padding-left:18px}
+  .att.on{background:var(--paper);box-shadow:0 0 0 1px var(--edge-2)}
+  .att-group:first-child .att{background:var(--paper);box-shadow:var(--shadow),0 0 0 1px var(--edge);padding-left:18px}
   .att-group:first-child .att:before{content:'';position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:2px;background:var(--act)}
   .att-group:first-child .att b{font-family:var(--serif);font-size:17px;font-weight:500}
   .att.fine{padding:8px 14px}
@@ -78,7 +85,7 @@
   .att-note{font:400 12px/1.5 var(--sans);color:var(--ink-3);padding:6px 14px 0}
 
   /* ---------- the situation ---------- */
-  .situation{background:var(--paper);border-radius:18px;padding:clamp(24px,3.2vw,44px) clamp(20px,4vw,56px) 36px;min-width:0;box-shadow:0 1px 2px rgba(16,24,32,.06),0 0 0 1px var(--edge)}
+  .situation{background:var(--paper);border-radius:18px;padding:clamp(24px,3.2vw,44px) clamp(20px,4vw,56px) 36px;min-width:0;box-shadow:var(--shadow),0 0 0 1px var(--edge)}
   .sit-head{display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:14px}
   .sit-head .kind{font:500 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
   .sit-head .meta{font:400 11px/1.4 var(--mono);color:var(--ink-3)}
@@ -195,20 +202,20 @@
   .holds .h.told b:before{content:'you told me · ';font:400 10.5px/1 var(--mono);color:var(--ink-3)}
 
   /* ---------- composer ---------- */
-  .compose-wrap{position:fixed;left:0;right:0;bottom:0;padding:0 clamp(16px,3vw,40px) 20px;background:linear-gradient(to top,var(--ground) 68%,transparent);pointer-events:none;z-index:10}
+  .compose-wrap{position:fixed;left:0;right:0;bottom:0;padding:0 clamp(16px,3vw,40px) 20px;background:linear-gradient(to top,var(--ground) 62%,transparent);pointer-events:none;z-index:10}
   .compose{max-width:1380px;margin:0 auto;pointer-events:auto}
   .refs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px 16px;min-height:24px}
   .refs span{display:inline-flex;gap:6px;align-items:center;font-size:12.5px;color:var(--ink);background:var(--paper);border:1px solid var(--edge-2);border-radius:999px;padding:3px 11px}
   .refs span i{font:400 10px/1 var(--mono);color:var(--ink-3);font-style:normal}
   .refs .hint{border:0;background:transparent;color:var(--ink-3);font:400 11.5px/1.6 var(--mono);padding:3px 0}
-  .box{display:flex;align-items:center;gap:10px;background:var(--paper);border-radius:999px;padding:9px 10px 9px 22px;box-shadow:0 1px 2px rgba(16,24,32,.08),0 12px 36px -18px rgba(16,24,32,.45),0 0 0 1px var(--edge)}
+  .box{display:flex;align-items:center;gap:10px;background:var(--paper);border-radius:999px;padding:9px 10px 9px 22px;box-shadow:var(--shadow),0 0 0 1px var(--edge-2)}
   .box input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:var(--ink);font:16px var(--sans)}
   .box input::placeholder{color:var(--ink-3)}
   .steer{display:flex;gap:2px}
   .steer button{font-size:12.5px;color:var(--ink-3);border-radius:999px;padding:6px 10px}
   .steer button:hover{color:var(--ink);background:var(--sunk)}
   .send,.mic{width:36px;height:36px;border-radius:50%;background:var(--sunk);color:var(--ink-2);flex-shrink:0;font-size:15px}
-  .send:hover{background:var(--ink);color:var(--ground)}
+  .send:hover{background:var(--act);color:var(--on-act)}
 
   /* other forms, same treatment */
   .life{display:grid;grid-template-columns:auto 1fr;gap:14px 20px;margin:8px 0 4px;font-size:14px}
@@ -311,6 +318,54 @@
   .story .node .k{display:inline-block;font:500 10px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);border:1px solid var(--edge);border-radius:999px;padding:0 7px;margin-bottom:6px}
   .story .node.lit .k{color:var(--ink);border-color:var(--ink-3)}
   .story .node.lit b{text-decoration:underline;text-decoration-color:var(--edge-2);text-underline-offset:3px}
+  /* ---------- borrowed: his work, disclosed progressively ---------- */
+  .work{margin:-4px 0 22px;font-size:13px}
+  .work summary{display:inline-flex;gap:10px;align-items:center;font:400 12px/1.6 var(--mono);color:var(--ink-3);padding:5px 12px;border-radius:999px;background:var(--sunk)}
+  .work summary:hover{color:var(--ink)}
+  .work summary i{width:7px;height:7px;border-radius:50%;background:var(--up);display:inline-block}
+  .work ol{margin:10px 0 0;padding:0;list-style:none;display:grid;gap:2px}
+  .work li{display:grid;grid-template-columns:22px 1fr auto auto;gap:12px;align-items:baseline;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--ink-2)}
+  .work li:hover{background:var(--sunk)}
+  .work li .k{font:400 11px/1.6 var(--mono);color:var(--ink-4);text-align:right}
+  .work li .args{font:400 11px/1.6 var(--mono);color:var(--ink-3)}
+  .work li .ms{font:400 11px/1.6 var(--mono);color:var(--ink-3);white-space:nowrap}
+  .work li .rows{font:400 11px/1.6 var(--mono);color:var(--ink-3);white-space:nowrap}
+  .work li b{font-weight:500;color:var(--ink)}
+  .work li.out{color:var(--ink-3)}
+  .work li.out b{color:var(--ink-3);font-weight:400}
+  /* ---------- borrowed: confidence that opens into what supports it ---------- */
+  .conf{margin-top:8px}
+  .conf summary{display:inline-block;font:400 11px/1.6 var(--mono);color:var(--ink-3);border-bottom:1px dotted var(--ink-4)}
+  .conf summary:hover{color:var(--ink)}
+  .conf ul{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:4px;font:400 12px/1.5 var(--sans);color:var(--ink-2)}
+  .conf li{display:grid;grid-template-columns:78px 1fr;gap:10px}
+  .conf li .t{font:500 10px/1.8 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+  .conf li.sup .t{color:var(--up)}
+  .conf li.con .t{color:var(--down)}
+  .nosrc{display:inline-block;font:500 10px/1.6 var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);border:1px dashed var(--edge-2);border-radius:999px;padding:0 7px;vertical-align:2px;margin-left:6px}
+  /* ---------- borrowed: a figure's read on hover ---------- */
+  .stand sup,.claim sup{cursor:help;position:relative}
+  .stand sup[data-read]:hover:after{content:attr(data-read);position:absolute;left:0;bottom:calc(100% + 6px);z-index:5;white-space:nowrap;font:400 11px/1.6 var(--mono);color:var(--ink);background:var(--raise);border-radius:8px;padding:6px 10px;box-shadow:var(--shadow),0 0 0 1px var(--edge-2)}
+  @media (max-width:640px){.stand sup[data-read]:hover:after{white-space:normal;width:60vw}}
+  /* ---------- borrowed: step-level control ---------- */
+  .stepacts{display:flex;gap:2px;margin-top:10px;opacity:0;transition:opacity .15s}
+  .step:hover .stepacts,.step:focus-within .stepacts{opacity:1}
+  @media (hover:none){.stepacts{opacity:1}}
+  .stepacts button{font:400 11.5px/1.6 var(--mono);color:var(--ink-3);padding:2px 9px;border-radius:999px}
+  .stepacts button:hover{color:var(--ink);background:var(--sunk)}
+  /* ---------- borrowed: Later, and a keyboard ---------- */
+  .att .later{position:absolute;right:10px;top:10px;font:400 10.5px/1.6 var(--mono);color:var(--ink-4);padding:1px 8px;border-radius:999px;opacity:0}
+  .att:hover .later,.att.on .later{opacity:1}
+  .att .later:hover{color:var(--ink);background:var(--sunk)}
+  .kbd{font:400 10.5px/1.6 var(--mono);color:var(--ink-4);padding:8px 14px 0}
+  .kbd b{font-weight:400;color:var(--ink-3);border:1px solid var(--edge-2);border-radius:4px;padding:0 5px;margin:0 2px}
+  /* ---------- borrowed: his authority as a control you can see ---------- */
+  .auto{display:grid;gap:8px;margin-top:6px}
+  .auto .al{font:400 11px/1.6 var(--mono);color:var(--ink-3)}
+  .auto .seg{display:inline-flex;background:var(--sunk);border-radius:999px;padding:3px;gap:2px;flex-wrap:wrap}
+  .auto .seg button{font-size:12px;color:var(--ink-3);border-radius:999px;padding:5px 12px}
+  .auto .seg button.on{background:var(--raise);color:var(--ink);box-shadow:0 0 0 1px var(--edge-2)}
+  .auto .seg button:hover{color:var(--ink)}
   /* the situation arrives: blocks land in order, the way the work happened */
   @keyframes land{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   .scene.show > *{animation:land .42s cubic-bezier(.2,.7,.3,1) both}
@@ -323,7 +378,7 @@
   /* scenes */
   .scene{display:none}
   .scene.show{display:block}
-  .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--ink);color:var(--ground);font:400 12px/1.4 var(--mono);padding:8px 14px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20;max-width:90vw}
+  .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--raise);color:var(--ink);box-shadow:var(--shadow),0 0 0 1px var(--edge-2);font:400 12px/1.4 var(--mono);padding:8px 14px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20;max-width:90vw}
   .toast.show{opacity:1}
   @media (prefers-reduced-motion:reduce){.toast{transition:none}}
   .why-this{margin:18px auto 0;max-width:1380px;font:400 14px/1.6 var(--sans);color:var(--ink-2);border-top:1px solid var(--edge);padding-top:22px}
@@ -375,6 +430,7 @@
       <button class="att fine" data-toast="OPUS: last week was down on the week before, and that week held a holiday Monday you told me about. Nothing to fix. Tap again to reopen."><span class="pip fine"></span><span><b>OPUS's week — a holiday Monday, not lost demand</b><small>Ruled out. Kept as a belief.</small></span></button>
       <button class="att fine" data-toast="Six shops within their usual range yesterday. Nothing worth your time."><span class="pip fine"></span><span><b>Six shops, an ordinary Monday</b><small>Within their usual range.</small></span></button>
       <p class="att-note">These stay visible so you can see what he chose not to raise.</p>
+      <p class="kbd"><b>j</b><b>k</b> move · <b>enter</b> open · <b>l</b> later · <b>/</b> say something</p>
     </div>
   </aside>
 
@@ -384,14 +440,22 @@
   <!-- ---- scene: an investigated situation ---- -->
   <section class="scene show situation" id="situation">
     <div class="sit-head"><span class="kind">A situation George brought you</span><span class="meta">noticed 07:41 · investigated 07:41–07:58 · 4 reads, none repeated · 2 things ruled out</span></div>
+    <details class="work"><summary><i></i>4 reads · 2 ruled out · 17s · none repeated · nothing written</summary>
+      <ol>
+        <li><span class="k">1</span><span><b>net sales, by store</b> <span class="args">Aug vs Jul · 7 shops · compared</span></span><span class="rows">7 rows</span><span class="ms">1.2s</span></li>
+        <li><span class="k">2</span><span><b>drivers</b> <span class="args">Rockwell · transactions, average basket · same window</span></span><span class="rows">2 rows</span><span class="ms">1.1s</span></li>
+        <li class="out"><span class="k">3</span><span><b>by day</b> <span class="args">Rockwell · Aug with Jul dotted · ruled out “one bad week”</span></span><span class="rows">31 rows</span><span class="ms">0.9s</span></li>
+        <li><span class="k">4</span><span><b>products, biggest drops</b> <span class="args">Rockwell · Aug vs Jul · top 10 · 12 not ranked</span></span><span class="rows">38 rows</span><span class="ms">1.5s</span></li>
+      </ol>
+    </details>
     <h2 class="claim">Rockwell is down, and <em>people are buying less each visit</em>, not visiting less.</h2>
-    <p class="stand">August is 6.1% under July<sup>1</sup>. Footfall barely moved; the average basket fell 4.8%<sup>2</sup>, and that drop sits in two lines, Aji Mix first<sup>4</sup>. <b>I'd look at whether Aji Mix was on the shelf</b> — a stock-out is the one explanation that fits a steady footfall and a lighter basket, and it's the one I can't see from sales.</p>
+    <p class="stand">August is 6.1% under July<sup data-read="read 1 · net sales · Rockwell · Aug ₱918,204 vs Jul ₱977,860 · −6.1% · 07:41">1</sup>. Footfall barely moved; the average basket fell 4.8%<sup data-read="read 2 · drivers · transactions 1,890→1,864 (−1.4%) · basket ₱512→₱487 (−4.8%) · 07:44">2</sup>, and that drop sits in two lines, Aji Mix first<sup data-read="read 4 · products by biggest drop · Aji Mix −₱31,400 · Kameda Orange −₱12,900 · 07:56">4</sup>. <b>I'd look at whether Aji Mix was on the shelf</b> — a stock-out is the one explanation that fits a steady footfall and a lighter basket, and it's the one I can't see from sales.</p>
 
     <div class="ladder">
-      <div class="rung known"><div class="lv"><i></i>Known</div><p>Rockwell's August net sales are ₱918k against ₱978k in July. Transactions −1.4%, average basket −4.8%. Two products account for most of the fall.<details class="src src--inline"><summary>receipt</summary><span>get_sales · Rockwell · Aug vs Jul · closed months · read 07:41</span></details></p></div>
-      <div class="rung likely"><div class="lv"><i></i>Likely</div><p>The basket, not footfall, is the driver — the two moved in the same window, and one moved three times more than the other.<small>a reading of the two figures above; no share computed</small></p></div>
-      <div class="rung possible"><div class="lv"><i></i>Possible</div><p>Aji Mix was out of stock at Rockwell for part of August. It fits, and it is what I'd check first — but I haven't read the stock.</p></div>
-      <div class="rung unknown"><div class="lv"><i></i>Unknown</div><p>Whether Aji Mix was repriced, moved off display, or simply bought less. None of that is in what I read.</p></div>
+      <div class="rung known"><div class="lv"><i></i>Known</div><p>Rockwell's August net sales are ₱918k against ₱978k in July. Transactions −1.4%, average basket −4.8%. Two products account for most of the fall.<details class="conf"><summary>3 reads support · 0 contradict</summary><ul><li class="sup"><span class="t">supports</span><span>read 1 — the month is down, on closed months</span></li><li class="sup"><span class="t">supports</span><span>read 2 — basket −4.8%, footfall −1.4%, same window</span></li><li class="sup"><span class="t">supports</span><span>read 4 — two products carry most of it</span></li></ul></details></p></div>
+      <div class="rung likely"><div class="lv"><i></i>Likely</div><p>The basket, not footfall, is the driver — the two moved in the same window, and one moved three times more than the other.<details class="conf"><summary>1 read supports · 1 silent · a reading, not a share</summary><ul><li class="sup"><span class="t">supports</span><span>read 2 — the two drivers, measured together</span></li><li><span class="t">silent</span><span>read 3 — the daily shape says “the whole month”, nothing about which driver</span></li><li><span class="t">not done</span><span>no share of the change is computed — no tool does, and I won’t in prose</span></li></ul></details></p></div>
+      <div class="rung possible"><div class="lv"><i></i>Possible</div><p>Aji Mix was out of stock at Rockwell for part of August. It fits, and it is what I'd check first — but I haven't read the stock.<span class="nosrc">no read yet</span><details class="conf"><summary>0 reads · fits 2 · what would settle it</summary><ul><li class="sup"><span class="t">fits</span><span>read 2 — a lighter basket with steady footfall is what a missing line looks like</span></li><li class="sup"><span class="t">fits</span><span>read 4 — the lead line rose at OPUS the same month</span></li><li><span class="t">settles it</span><span>stock at Rockwell for Aji Mix, by day, August — one read, ~2s</span></li></ul></details></p></div>
+      <div class="rung unknown"><div class="lv"><i></i>Unknown</div><p>Whether Aji Mix was repriced, moved off display, or simply bought less. None of that is in what I read.<span class="nosrc">no read can</span></p></div>
     </div>
 
     <div class="chain">
@@ -801,6 +865,7 @@
     <li><b>Steering transforms the situation in place.</b> "Show me the products" and "against OPUS" rearrange what's here; they don't stack a new answer under it. Tap a row and it becomes a reference the composer carries.</li>
     <li><b>Decisions arrive with their authority attached.</b> The one blue frame on the page is the one thing that is yours. Under it, in plain words, is what George may do alone today — and the button that widens it is a sentence, not a setting.</li>
     <li><b>A chart is a sentence he chose to draw.</b> Its shape is picked by what the step asserts — a band for “outside its usual”, a strip of days for “was it on the shelf”, a flow for “where it went”, a chain for “why these are one story”. Every figure is a returned row; the shape and the one-line note are his. See <i>how he draws</i>.</li>
+    <li><b>Borrowed, and from where.</b> Confidence that opens into what supports, contradicts or is silent (Consensus, Elicit, scite); a visible “no read” mark on any claim without one (Claude, Consensus); his work disclosed in layers — a line, then steps, then each read’s inputs and time (the 2025–26 agent deployments Zylos studied: no mid-run visibility tripled abandonment); one step redone or skipped rather than approve-all (the same); his authority per kind of action as a control you can move, defaulting conservative (Mantlr, Claude’s tool permissions); Later and j/k on the list (Linear triage); a graphite ground with borders as translucent white and colour only where it means something (Linear, Geist); every chart titled by its conclusion with one interpretive note (FT, Datawrapper).</li>
     <li><b>Nothing here is a chat bubble, a KPI grid, a feed or a canvas.</b> It is a document George wrote this morning about your business, with the parts you can push on.</li>
   </ol>
 </section>
@@ -843,6 +908,42 @@
     say('transformed in place · '+b.textContent.trim().replace(/\s+transforms$/,'')+' · same situation, no new answer underneath');
     window.scrollTo({top:0,behavior:'smooth'});
   })});
+  // Later, on anything that is not already done with (Linear's snooze)
+  document.querySelectorAll('.att:not(.fine)').forEach(function(a){
+    var b=document.createElement('button'); b.className='later'; b.textContent='later'; b.title='Hide until tomorrow 08:00, or until something changes';
+    b.addEventListener('click',function(e){e.stopPropagation(); a.style.opacity='.35'; say('Later: back tomorrow at 08:00, or sooner if it changes.');});
+    a.appendChild(b);
+  });
+  // j / k / enter / l / slash — the list is operated, not only read
+  var atts=function(){return [].slice.call(document.querySelectorAll('.att'))};
+  document.addEventListener('keydown',function(e){
+    if(e.target.tagName==='INPUT'){ if(e.key==='Escape') e.target.blur(); return; }
+    var list=atts(), i=list.findIndex(function(a){return a.classList.contains('on')});
+    if(e.key==='j'||e.key==='k'){ e.preventDefault(); var n=e.key==='j'?Math.min(list.length-1,i+1):Math.max(0,i-1); list.forEach(function(a,x){a.classList.toggle('on',x===n)}); list[n].focus(); }
+    else if(e.key==='Enter'&&i>=0&&list[i].dataset.scene){ list[i].click(); }
+    else if(e.key==='l'&&i>=0){ var L=list[i].querySelector('.later'); if(L)L.click(); }
+    else if(e.key==='/'){ e.preventDefault(); document.getElementById('ask').focus(); }
+  });
+  // one step at a time: redo it differently, skip it, or ask why it was taken
+  document.querySelectorAll('#situation .step > div').forEach(function(d,n){
+    var row=document.createElement('div'); row.className='stepacts';
+    [['redo differently','Say how — a different window, another shop, a different grouping — and only this step re-runs.'],['skip','Skipped: the steps after it stand on their own reads, and the view is re-stated without this one.'],['why this step','He took it because the step before pointed here: '+(n===0?'the premise had to hold before anything else was read.':'the previous read left this as the open question.')]].forEach(function(x){
+      var b=document.createElement('button'); b.textContent=x[0]; b.addEventListener('click',function(){say(x[1])}); row.appendChild(b);
+    });
+    d.appendChild(row);
+  });
+  // his authority, as a control you can see and move (defaults conservative)
+  document.querySelectorAll('.decide .auth').forEach(function(a){
+    var wrap=document.createElement('div'); wrap.className='auto';
+    var lab=document.createElement('div'); lab.className='al'; lab.textContent=a.textContent;
+    var seg=document.createElement('div'); seg.className='seg';
+    [['suggest only',0],['prepare · you approve',1],['do it below ₱20,000',2]].forEach(function(x){
+      var b=document.createElement('button'); b.textContent=x[0]; if(x[1]===1)b.classList.add('on');
+      b.addEventListener('click',function(){seg.querySelectorAll('button').forEach(function(y){y.classList.remove('on')}); b.classList.add('on'); say('Authority changed: “'+x[0]+'”. Recorded in your words, with the date. Widening it is a sentence, not a setting.');});
+      seg.appendChild(b);
+    });
+    wrap.appendChild(seg); wrap.appendChild(lab); a.replaceWith(wrap);
+  });
   var ask=document.getElementById('ask');
   ask.addEventListener('keydown',function(e){ if(e.key==='Enter'&&ask.value.trim()){say('“'+ask.value.trim()+'” — intent in words; the selection above is the reference. A turn.');ask.value='';}});
   document.querySelector('.send').addEventListener('click',function(){ if(ask.value.trim()){say('“'+ask.value.trim()+'” — a turn.');ask.value='';} });

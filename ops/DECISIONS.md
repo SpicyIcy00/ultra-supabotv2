@@ -4439,3 +4439,15 @@ every visual direction as a constraint, so CLAUDE.md's direction line now says
 "deliberately unlocked" and the Ideal UI is no longer the target. The plan in
 NOW.md §3 was distilled from the old standard and is not taken further until it
 is re-derived from the new one. FACTS DETERMINISTIC, JUDGMENT INTELLIGENT stands.
+
+**Borrowed again, against the new standard.** 2026-09-16, the owner: the first
+render "doesnt feel optimal … research find better ways … i dont like the color
+scheme". Brought into `ops/ideal/george-ahead-of-me.html`: confidence that opens
+into supports / contradicts / silent, and a visible "no read" mark (AYDesign's
+2026 citation survey: Consensus, Elicit, scite, Claude); work disclosed in layers
+and one step redone or skipped, not approve-all (Zylos, 2025–26 deployments: no
+mid-run visibility tripled abandonment; high/low words beat percentages);
+authority per action kind as a visible control (Mantlr; Claude tool permissions);
+Later and j/k (Linear triage docs); graphite dark-native, translucent borders,
+chromatic colour only for meaning (Linear tokens, Geist scales). Fonts: Geist,
+Geist Mono, Newsreader — all on Google Fonts, checked. Still a proposal.
