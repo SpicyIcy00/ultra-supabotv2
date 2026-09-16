@@ -4428,3 +4428,14 @@ every line a supplier's products ever sold before filtering by date — 133,879
 buffers, 25 s cold; window-first and `MATERIALIZED` is 35,059. **And a seeded
 history marker that closes every assistant turn will be imitated**: the call
 list now opens the following user turn, and an echo is stripped and counted.
+
+**The standard was replaced.** 2026-09-16, the owner: *"this is my final what i
+want get rid of the rest and only use this"*. `ops/STANDARD.md` is his FINAL
+PRODUCT VISION verbatim; the 26-feature list is superseded, in git history only.
+Its centre is the operator, not the interface: notice → investigate → connect
+→ form a view → show the situation, before the owner is involved; conclusions,
+not homework; known / likely / possible / unknown said apart. Section 20 discards
+every visual direction as a constraint, so CLAUDE.md's direction line now says
+"deliberately unlocked" and the Ideal UI is no longer the target. The plan in
+NOW.md §3 was distilled from the old standard and is not taken further until it
+is re-derived from the new one. FACTS DETERMINISTIC, JUDGMENT INTELLIGENT stands.

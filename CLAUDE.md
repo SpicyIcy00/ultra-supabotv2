@@ -3,8 +3,9 @@
 The rules that do not change. If a task seems to need one broken, stop and ask.
 
 - **`ops/NOW.md`** — where we are, the cards, how we work. **Read it first.**
-- **`ops/STANDARD.md`** — the owner's 26 features. **The standard work is
-  measured against**, never a plan distilled from it.
+- **`ops/STANDARD.md`** — the owner's FINAL PRODUCT VISION (2026-09-16, twenty
+  sections; it replaced the 26-feature list). **The standard work is measured
+  against**, never a plan distilled from it.
 - **`ops/DECISIONS.md`** — why these rules got there, and every reading CLAUDE.md
   carried before 2026-09-12.
 
@@ -105,8 +106,11 @@ model key.
 
 ## UI/UX
 
-**Visual direction:** a calm business OS with expressive objects in it — cream
-ground, navy structure, orange for George. A representation earns its place by
+**Visual direction: deliberately unlocked** (STANDARD §20, 2026-09-16). The
+cream workspace, cards, canvas, dashboard, feed and chat layout are discarded as
+constraints and no visual metaphor is preserved because it was built; the
+interface is rediscovered around the product the standard describes. What
+stays is not a look but a rule: a representation earns its place by
 communicating better than the alternatives, it never changes factual meaning,
 and every expressive channel is driven by a value the data carries.
 
