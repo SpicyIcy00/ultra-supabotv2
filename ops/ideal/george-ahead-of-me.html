@@ -254,6 +254,63 @@
   .timeline p{margin:0;color:var(--ink-2);max-width:56ch;line-height:1.55}
   .timeline p b{color:var(--ink);font-weight:500}
 
+  /* ---------- forms that carry a claim ---------- */
+  .fig{margin:18px 0 0}
+  .fig .ft{font:400 17px/1.45 var(--serif);color:var(--ink);margin:0 0 4px;max-width:56ch}
+  .fig .ft b{font-weight:500}
+  .fig .fs{font:400 11px/1.6 var(--mono);color:var(--ink-3);margin:0 0 12px}
+  /* the estate: every shop against its own usual band, one row each */
+  .bands{display:grid;gap:6px}
+  .band{display:grid;grid-template-columns:minmax(7ch,12ch) 1fr minmax(9ch,auto);gap:14px;align-items:center;font-size:13px;padding:2px 8px;margin:0 -8px;border-radius:8px;cursor:pointer}
+  .band:hover{background:var(--sunk)}
+  .band .nm{color:var(--ink-2)}
+  .band.lit .nm{color:var(--ink);font-weight:600}
+  .band .tr{position:relative;height:22px}
+  .band .tr u{position:absolute;top:7px;height:8px;border-radius:4px;background:var(--quiet-soft)}
+  .band .tr i{position:absolute;top:4px;width:14px;height:14px;border-radius:50%;background:var(--paper);border:2.5px solid var(--quiet);transform:translateX(-50%)}
+  .band.lit .tr i{border-color:var(--down);background:var(--down);box-shadow:0 0 0 3px var(--paper)}
+  .band .fig2{font:400 12px/1.4 var(--mono);color:var(--ink-3);text-align:right;white-space:nowrap}
+  .band.lit .fig2{color:var(--ink)}
+  .band-note{font:400 11px/1.5 var(--mono);color:var(--ink-3);display:flex;justify-content:space-between;padding:4px 0 0 calc(12ch + 14px)}
+  /* the shape of a week: two weeks, seven bars each, one bar the point */
+  .weeks{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  @media (max-width:640px){.weeks{grid-template-columns:1fr}}
+  .week h5{margin:0 0 6px;font:500 10.5px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+  .week .bars{display:flex;align-items:flex-end;gap:5px;height:76px}
+  .week .bars i{flex:1;background:var(--quiet-soft);border-radius:3px 3px 0 0;position:relative;min-width:0}
+  .week .bars i.now{background:var(--ink)}
+  .week .bars i.ann:after{content:attr(data-l);position:absolute;top:-18px;left:50%;transform:translateX(-50%);font:500 10px/1 var(--mono);color:var(--ink);white-space:nowrap}
+  .week .days{display:flex;gap:5px;font:400 10px/1.4 var(--mono);color:var(--ink-3)}
+  .week .days span{flex:1;text-align:center}
+  .week .tot{font:400 11.5px/1.5 var(--mono);color:var(--ink-2);margin-top:4px}
+  /* the shelf: a day is a cell; empty is a hole */
+  .shelf{display:grid;gap:8px}
+  .shelf .sr{display:grid;grid-template-columns:minmax(7ch,12ch) 1fr;gap:14px;align-items:center;font-size:13px}
+  .shelf .sr .nm{color:var(--ink-2)}
+  .shelf .sr.lit .nm{color:var(--ink);font-weight:600}
+  .shelf .cells2{display:grid;grid-template-columns:repeat(31,1fr);gap:2px}
+  .shelf .cells2 i{height:16px;border-radius:2px;background:var(--quiet-soft)}
+  .shelf .cells2 i.s1{background:var(--quiet)}
+  .shelf .cells2 i.s2{background:var(--ink-2)}
+  .shelf .cells2 i.s3{background:var(--ink)}
+  .shelf .cells2 i.zero{background:transparent;box-shadow:inset 0 0 0 1.5px var(--down)}
+  .shelf .cells2 i.neg{background:repeating-linear-gradient(135deg,var(--down) 0 2px,transparent 2px 4px)}
+  .shelf .axis{display:grid;grid-template-columns:minmax(7ch,12ch) 1fr;gap:14px;font:400 10px/1.4 var(--mono);color:var(--ink-3)}
+  .shelf .axis div:last-child{display:flex;justify-content:space-between}
+  .shelf .legend{display:flex;gap:16px;flex-wrap:wrap;font:400 11px/1.4 var(--mono);color:var(--ink-3);margin-top:6px}
+  .shelf .legend i{display:inline-block;width:12px;height:12px;border-radius:2px;vertical-align:-2px;margin-right:5px}
+  /* the flow: barn to shops, width is volume */
+  .flow svg{display:block;width:100%;height:190px;overflow:visible;max-width:100%}
+  /* the story: things connected by the evidence */
+  .story{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;align-items:stretch;margin-top:6px}
+  @media (max-width:760px){.story{grid-template-columns:1fr 1fr}}
+  .story .node{position:relative;padding:12px 14px 12px 0}
+  .story .node:not(:last-child):after{content:'→';position:absolute;right:2px;top:12px;font:400 16px/1 var(--mono);color:var(--ink-3)}
+  .story .node b{display:block;font:500 15px/1.35 var(--serif);color:var(--ink)}
+  .story .node small{display:block;font:400 12px/1.5 var(--sans);color:var(--ink-3);margin-top:3px}
+  .story .node .k{display:inline-block;font:500 10px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);border:1px solid var(--edge);border-radius:999px;padding:0 7px;margin-bottom:6px}
+  .story .node.lit .k{color:var(--ink);border-color:var(--ink-3)}
+  .story .node.lit b{text-decoration:underline;text-decoration-color:var(--edge-2);text-underline-offset:3px}
   /* the situation arrives: blocks land in order, the way the work happened */
   @keyframes land{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   .scene.show > *{animation:land .42s cubic-bezier(.2,.7,.3,1) both}
@@ -298,6 +355,7 @@
       <button data-scene="run"><span class="n">14·15</span>handle this</button>
       <button data-scene="docs"><span class="n">16</span>a supplier’s invoice</button>
       <button data-scene="team"><span class="n">17·18</span>businesses + team</button>
+      <button data-scene="draw"><span class="n">6</span>how he draws</button>
     </div>
   </div>
 
@@ -501,6 +559,16 @@
       <div class="rung likely"><div class="lv"><i></i>Likely</div><p>Kiamoy is demand or supply across the estate — something upstream of any one shop.</p></div>
       <div class="rung unknown"><div class="lv"><i></i>Unknown</div><p>Why Kiamoy fell. Nothing I can read says price, promotion or a competitor. I don’t have enough to conclude that.</p></div>
     </div>
+    <div class="fig" style="margin:0 0 22px">
+      <p class="ft"><b>The bayberry, on the shelf and off it.</b> Sales stop the day the shelf empties; the warehouse has none either.</p>
+      <p class="fs">champoy honey bayberry · September · one cell per day · OPUS shelf, then the barn</p>
+      <div class="shelf">
+        <div class="sr lit"><span class="nm">OPUS</span><span class="cells2" style="grid-template-columns:repeat(16,1fr)"><i class="s3"></i><i class="s2"></i><i class="s2"></i><i class="s1"></i><i class="s1"></i><i class="zero"></i><i class="zero"></i><i class="zero"></i><i class="zero"></i><i class="zero"></i><i class="zero"></i><i class="zero"></i><i class="zero"></i><i class="zero"></i><i class="zero"></i><i class="zero"></i></span></div>
+        <div class="sr"><span class="nm">AJI BARN</span><span class="cells2" style="grid-template-columns:repeat(16,1fr)"><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="zero"></i><i class="zero"></i><i class="zero"></i><i class="zero"></i></span></div>
+        <div class="axis"><div></div><div><span>1 Sep</span><span>OPUS empty from the 6th · sales there: 55 packs the week before, 0 since</span><span>16 Sep</span></div></div>
+      </div>
+      <details class="src"><summary>receipt</summary><span>get_stock_history · OPUS, AJI BARN · champoy honey bayberry · 1–16 Sep · read 08:19</span></details>
+    </div>
     <div class="timeline">
       <div class="t"><time>14 Sep</time><p><b>What I said then:</b> “OPUS needs attention — the shop lost transactions last week.”</p></div>
       <div class="t you"><time>15 Sep · you</time><p>“that monday was a holiday.”</p></div>
@@ -614,6 +682,89 @@
     </div>
     <div class="decide"><b>Yours to decide</b><p>Judy’s transfer: 24 Aji Mix, barn → M-04.</p><div class="acts"><button class="act go" data-toast="Approved. Judy sees it approved; the transfer is prepared for the barn.">Approve</button><button class="act" data-toast="Standing instruction: Judy may move up to 50 units to a machine without asking. Recorded with your words.">Let Judy do these herself</button></div></div>
   </section>
+
+  <!-- ---- 6: how he draws — a form for each kind of claim ---- -->
+  <section class="scene situation" id="draw">
+    <div class="sit-head"><span class="kind">The same Rockwell facts, drawn for what each step claims</span><span class="meta">one figure per assertion · one thing lit · one note saying what to see</span></div>
+    <h2 class="claim">A chart is <em>a sentence he chose to draw</em> — so its shape is picked by what it asserts, not by the data type.</h2>
+    <p class="stand">A bar for “bigger than”, a strip of days for “was it on the shelf”, a week for “which day did this”, a flow for “where does it come from”, a chain for “why these are one story”. <b>Every figure is a row a tool returned; the shape is his choice, and the only thing he adds is the note.</b> Nothing is a KPI tile, and nothing glows.</p>
+
+    <div class="fig">
+      <p class="ft"><b>“Rockwell is the one outside its own usual.”</b> Every shop against its own band — a soft shop inside its band is not news.</p>
+      <p class="fs">net sales · August · the band is that shop’s last 8 months, low to high · the dot is August</p>
+      <div class="bands">
+        <div class="band lit" data-ref="Rockwell · Aug"><span class="nm">Rockwell</span><span class="tr"><u style="left:44%;right:28%"></u><i style="left:36%"></i></span><span class="fig2">₱918k · below its band</span></div>
+        <div class="band" data-ref="OPUS · Aug"><span class="nm">OPUS</span><span class="tr"><u style="left:58%;right:12%"></u><i style="left:88%"></i></span><span class="fig2">₱1.62m · high end</span></div>
+        <div class="band" data-ref="Greenhills · Aug"><span class="nm">Greenhills</span><span class="tr"><u style="left:40%;right:36%"></u><i style="left:52%"></i></span><span class="fig2">₱1.01m · usual</span></div>
+        <div class="band" data-ref="Shangri-La · Aug"><span class="nm">Shangri-La</span><span class="tr"><u style="left:32%;right:44%"></u><i style="left:41%"></i></span><span class="fig2">₱842k · usual</span></div>
+        <div class="band" data-ref="Magnolia · Aug"><span class="nm">Magnolia</span><span class="tr"><u style="left:22%;right:60%"></u><i style="left:31%"></i></span><span class="fig2">₱612k · usual</span></div>
+      </div>
+      <div class="band-note"><span>₱0</span><span>a band is where that shop normally lands — it says nothing about the shop next to it</span><span>₱1.8m</span></div>
+      <details class="src"><summary>receipt</summary><span>get_sales · by store · Aug · with usual_range(8 months) as a comparison — a definition to add before this is drawn for real · read 07:41</span></details>
+    </div>
+
+    <div class="fig">
+      <p class="ft"><b>“It wasn’t the shop — it was that Monday.”</b> Two weeks side by side; the one bar that explains the difference is the point.</p>
+      <p class="fs">OPUS · net sales by day · week of 31 Aug against the week before · ₱</p>
+      <div class="weeks">
+        <div class="week"><h5>week of 24 Aug · the baseline</h5><div class="bars"><i class="now ann" data-l="holiday · ₱71k" style="height:100%"></i><i style="height:58%"></i><i style="height:54%"></i><i style="height:60%"></i><i style="height:66%"></i><i style="height:82%"></i><i style="height:88%"></i></div><div class="days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div><p class="tot">₱553k · the Monday alone is ₱34k more than a usual Monday</p></div>
+        <div class="week"><h5>week of 31 Aug · last week</h5><div class="bars"><i style="height:52%"></i><i style="height:56%"></i><i style="height:53%"></i><i style="height:58%"></i><i style="height:64%"></i><i style="height:80%"></i><i style="height:86%"></i></div><div class="days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div><p class="tot">₱465k · every other day within a few percent of the week before</p></div>
+      </div>
+      <details class="src"><summary>receipt</summary><span>get_sales · OPUS · by day · 24 Aug–6 Sep · you told me the 25th was a holiday · read 06:37 yesterday</span></details>
+    </div>
+
+    <div class="fig">
+      <p class="ft"><b>“Was it on the shelf?”</b> A day is a cell. Empty is a hole you can see; a broken count is hatched, not a deficit.</p>
+      <p class="fs">stock on hand at Rockwell · August, one cell per day · darker is more · outlined is zero · hatched is negative</p>
+      <div class="shelf">
+        <div class="sr lit"><span class="nm">Aji Mix (SH1)</span><span class="cells2"><i class="s3"></i><i class="s3"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="zero"></i><i class="zero"></i><i class="zero"></i><i class="zero"></i><i class="zero"></i><i class="zero"></i><i class="zero"></i><i class="zero"></i><i class="zero"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s1"></i><i class="s1"></i><i class="zero"></i><i class="zero"></i><i class="zero"></i><i class="s3"></i><i class="s3"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i></span></div>
+        <div class="sr"><span class="nm">Kameda Orange</span><span class="cells2"><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i></span></div>
+        <div class="sr"><span class="nm">Kiamoy Strips</span><span class="cells2"><i class="s3"></i><i class="s3"></i><i class="s3"></i><i class="s3"></i><i class="s3"></i><i class="s3"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i><i class="s2"></i></span></div>
+        <div class="sr"><span class="nm">Fuan Haw Flakes</span><span class="cells2"><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="s1"></i><i class="neg"></i><i class="neg"></i><i class="neg"></i><i class="neg"></i><i class="neg"></i><i class="neg"></i><i class="neg"></i></span></div>
+        <div class="axis"><div></div><div><span>1 Aug</span><span>Aji Mix: 12 days at zero — the basket drop and the hole are the same days</span><span>31 Aug</span></div></div>
+        <div class="legend"><span><i style="background:var(--ink)"></i>plenty</span><span><i style="background:var(--quiet-soft)"></i>low</span><span><i style="box-shadow:inset 0 0 0 1.5px var(--down)"></i>zero</span><span><i style="background:repeating-linear-gradient(135deg,var(--down) 0 2px,transparent 2px 4px)"></i>negative · a broken record</span></div>
+      </div>
+      <details class="src"><summary>receipt</summary><span>get_stock_history · Rockwell · 4 products · 1–31 Aug · inventory_snapshots · read 08:31 — this is the read the Rockwell situation says it would make next; here it has been made</span></details>
+    </div>
+
+    <div class="fig">
+      <p class="ft"><b>“Where does Rockwell’s Aji Mix come from, and where did it go instead?”</b> Movement drawn as movement; width is volume.</p>
+      <p class="fs">transfers out of AJI BARN · August · Aji Mix (SH1) · units · from → to are real fields on the record</p>
+      <div class="flow"><svg viewBox="0 0 640 190" role="img" aria-label="Aji Mix moved from the barn to six shops in August; OPUS received the most and Rockwell the least">
+        <text x="0" y="98" font-family="IBM Plex Serif, IBM Plex Sans, sans-serif" font-size="13" font-weight="500" fill="var(--ink)">AJI BARN</text>
+        <text x="0" y="114" font-family="IBM Plex Mono" font-size="10" fill="var(--ink-3)">312 out</text>
+        <path d="M96 78 C 260 78, 300 22, 470 22" fill="none" stroke="var(--quiet)" stroke-width="14" stroke-linecap="round" opacity=".55"/>
+        <path d="M96 86 C 260 86, 300 52, 470 52" fill="none" stroke="var(--quiet)" stroke-width="9" stroke-linecap="round" opacity=".55"/>
+        <path d="M96 94 C 260 94, 300 82, 470 82" fill="none" stroke="var(--quiet)" stroke-width="8" stroke-linecap="round" opacity=".55"/>
+        <path d="M96 102 C 260 102, 300 112, 470 112" fill="none" stroke="var(--quiet)" stroke-width="6" stroke-linecap="round" opacity=".55"/>
+        <path d="M96 110 C 260 110, 300 142, 470 142" fill="none" stroke="var(--quiet)" stroke-width="5" stroke-linecap="round" opacity=".55"/>
+        <path d="M96 118 C 260 118, 300 172, 470 172" fill="none" stroke="var(--down)" stroke-width="2.5" stroke-linecap="round"/>
+        <g font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="var(--ink-2)">
+          <text x="484" y="26">OPUS <tspan font-family="IBM Plex Mono" font-size="10.5" fill="var(--ink-3)">· 120</tspan></text>
+          <text x="484" y="56">Greenhills <tspan font-family="IBM Plex Mono" font-size="10.5" fill="var(--ink-3)">· 72</tspan></text>
+          <text x="484" y="86">Shangri-La <tspan font-family="IBM Plex Mono" font-size="10.5" fill="var(--ink-3)">· 48</tspan></text>
+          <text x="484" y="116">Magnolia <tspan font-family="IBM Plex Mono" font-size="10.5" fill="var(--ink-3)">· 36</tspan></text>
+          <text x="484" y="146">North Edsa <tspan font-family="IBM Plex Mono" font-size="10.5" fill="var(--ink-3)">· 24</tspan></text>
+          <text x="484" y="176" fill="var(--ink)" font-weight="600">Rockwell <tspan font-family="IBM Plex Mono" font-size="10.5" fill="var(--down)" font-weight="400">· 12</tspan></text>
+        </g>
+        <text x="250" y="186" font-family="IBM Plex Mono" font-size="10" fill="var(--ink-3)">Rockwell got a tenth of what OPUS got, the month it sold out</text>
+      </svg></div>
+      <details class="src"><summary>receipt</summary><span>get_movement · transfer_records · from AJI BARN · Aji Mix · Aug · 6 destinations, all shown · read 08:33</span></details>
+    </div>
+
+    <div class="fig">
+      <p class="ft"><b>“These are one story.”</b> The situation as the things it connects — the evidence drawn as the relationship it establishes.</p>
+      <p class="fs">what each arrow rests on is one of the four reads above · tap a thing to open it</p>
+      <div class="story">
+        <div class="node lit"><span class="k">shop</span><b>Rockwell</b><small>basket −4.8%, footfall flat · August</small></div>
+        <div class="node lit"><span class="k">product</span><b>Aji Mix</b><small>−₱31k here · +12% at OPUS · 12 days at zero on Rockwell’s shelf</small></div>
+        <div class="node lit"><span class="k">warehouse</span><b>AJI BARN</b><small>312 out in August · 12 to Rockwell, 120 to OPUS</small></div>
+        <div class="node"><span class="k">supplier</span><b>Seikyo</b><small>Aji Mix is theirs · an order is waiting for you</small></div>
+      </div>
+      <div class="next" style="margin-top:22px"><b>What the drawings settle</b><p>The basket fell because the shelf was empty, and the shelf was empty because the barn sent Rockwell a tenth of what it sent OPUS. <b>Known</b> now, not possible. What’s still unknown is why the barn allocated it that way — and that is a question for a person, not a read.</p></div>
+    </div>
+    <div class="acts"><button class="act go" data-toast="A turn: he asks the barn lead why August’s Aji Mix went where it went, through the connected channel, and brings back the answer.">Ask the barn why</button><button class="act" data-toast="A transfer drafted: 48 Aji Mix, barn → Rockwell. Waits for you.">Move stock to Rockwell</button><button class="act" data-toast="Watching Rockwell’s Aji Mix shelf daily; speaks only when it hits zero again.">Watch the shelf</button></div>
+  </section>
   </main>
 
   <!-- ================= WHAT GEORGE HOLDS about this ================= -->
@@ -649,6 +800,7 @@
     <li><b>His attention is a short, ordered list you can audit</b> — including what he chose not to raise. "Checked · nothing to do" is on screen because trust is built on the things he didn't bother you with.</li>
     <li><b>Steering transforms the situation in place.</b> "Show me the products" and "against OPUS" rearrange what's here; they don't stack a new answer under it. Tap a row and it becomes a reference the composer carries.</li>
     <li><b>Decisions arrive with their authority attached.</b> The one blue frame on the page is the one thing that is yours. Under it, in plain words, is what George may do alone today — and the button that widens it is a sentence, not a setting.</li>
+    <li><b>A chart is a sentence he chose to draw.</b> Its shape is picked by what the step asserts — a band for “outside its usual”, a strip of days for “was it on the shelf”, a flow for “where it went”, a chain for “why these are one story”. Every figure is a returned row; the shape and the one-line note are his. See <i>how he draws</i>.</li>
     <li><b>Nothing here is a chat bubble, a KPI grid, a feed or a canvas.</b> It is a document George wrote this morning about your business, with the parts you can push on.</li>
   </ol>
 </section>
