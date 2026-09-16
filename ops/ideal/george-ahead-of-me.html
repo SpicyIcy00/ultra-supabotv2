@@ -45,15 +45,10 @@
   details summary::-webkit-details-marker{display:none}
 
   /* ---------- frame: one column. the situation owns the screen ---------- */
-  .console{display:grid;grid-template-columns:232px minmax(0,1fr) 224px;gap:36px;max-width:1400px;margin:0 auto;align-items:start}
-  .console > .topline,.console > .examples,.console > .queue,.console > main{grid-column:2}
-  @media (max-width:1180px){.console{grid-template-columns:216px minmax(0,1fr);gap:28px} .presence{grid-column:2;position:static;display:flex;gap:18px;align-items:center} .presence canvas{width:64px;height:64px} .presence .doing{margin:0}}
-  @media (max-width:820px){.console{grid-template-columns:1fr} .console > *{grid-column:1} .side{order:9} .presence{order:0}}
   /* the words keep a reading width inside the column; evidence may use it all */
   .situation .claim,.situation .stand,.situation .plain,.situation .say,.situation .rung p,.situation .next p,.situation .decide p{max-width:60ch}
 
   /* ---------- the sidebar: what persists, not where to click next ---------- */
-  .side{grid-column:1;grid-row:1/span 5;position:sticky;top:20px;padding-top:24px}
   .side h2{font:500 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 8px}
   .side .grp{margin:0 0 22px}
   .side .it{display:grid;grid-template-columns:10px 1fr auto;gap:10px;align-items:baseline;width:100%;text-align:left;padding:6px 8px;border-radius:8px;font-size:13.5px;color:var(--ink-2)}
@@ -68,7 +63,6 @@
   .side .biz{display:flex;gap:2px;background:var(--sunk);border-radius:999px;padding:3px;margin:0 0 24px;width:max-content}
 
   /* ---------- the presence: alive only while he works ---------- */
-  .presence{grid-column:3;grid-row:1/span 5;position:sticky;top:20px;padding-top:28px;display:grid;justify-items:center;gap:14px}
   .presence canvas{width:132px;height:132px;display:block}
   .presence .doing{text-align:center;font:400 12px/1.6 var(--mono);color:var(--ink-3);min-height:3.2em;max-width:22ch}
   .presence .doing b{display:block;font:500 12.5px/1.5 var(--sans);color:var(--ink);letter-spacing:0}
@@ -432,12 +426,32 @@
   .why-this ol{margin:0;padding-left:20px;max-width:70ch}
   .why-this li{margin:0 0 6px}
   .why-this li b{color:var(--ink);font-weight:500}
+
+  /* ---------- THE FRAME, named. sidebar | situation | presence ---------- */
+  .console{display:grid;grid-template-columns:232px minmax(0,1fr) 224px;grid-template-areas:"side top pres" "side queue pres" "side ex pres" "side main pres";column-gap:36px;row-gap:0;max-width:1400px;margin:0 auto;align-items:start}
+  .console > .side{grid-area:side}
+  .console > .topline{grid-area:top}
+  .console > .queue{grid-area:queue}
+  .console > .examples{grid-area:ex}
+  .console > main{grid-area:main;min-width:0}
+  .console > .presence{grid-area:pres}
+  .side,.presence{position:sticky;top:16px;align-self:start}
+  .side{padding-top:24px;min-width:0}
+  .presence{padding-top:28px;display:grid;justify-items:center;gap:14px;min-width:0}
+  @media (max-width:1180px){
+    .console{grid-template-columns:216px minmax(0,1fr);grid-template-areas:"side pres" "side top" "side queue" "side ex" "side main";column-gap:28px}
+    .presence{position:static;display:flex;gap:18px;align-items:center;justify-items:start;padding-top:24px}
+    .presence canvas{width:64px;height:64px}
+    .presence .log{display:none}
+  }
+  @media (max-width:820px){
+    .console{grid-template-columns:minmax(0,1fr);grid-template-areas:"pres" "top" "queue" "ex" "main" "side"}
+    .side{position:static;padding-top:8px}
+  }
 </style>
 
 <div class="console">
   <div class="topline"><h1>a situation George brought you</h1></div>
-
-  </div>
 
   <!-- ================= THE SIDEBAR: what persists ================= -->
   <aside class="side">
@@ -512,6 +526,7 @@
       <button data-scene="team"><span class="n">17·18</span>businesses + team</button>
       <button data-scene="draw"><span class="n">6</span>how he draws</button>
     </div>
+  </div>
 
   <!-- ================= THE SITUATION ================= -->
   <main style="min-width:0">
