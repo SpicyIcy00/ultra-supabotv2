@@ -1036,13 +1036,13 @@
   body.con-beside .side .strip button .n{display:inline-block;min-width:4.5ch}
   body.con-beside .side .strip button.on{background:var(--raise);color:var(--ink);box-shadow:0 0 0 1px var(--edge-2);text-decoration:none}
   body.con-beside main{display:none}
-  body.con-beside .bs-view{display:grid;position:fixed;inset:0;grid-template-columns:minmax(320px,2fr) minmax(0,3fr);grid-template-rows:minmax(0,auto) minmax(0,1fr);grid-template-areas:"him right" "words right";column-gap:3vw;row-gap:2vh;padding:4vh 4vw 5vh 3vw;align-items:stretch;transition:left .28s cubic-bezier(.2,.7,.3,1)}
+  body.con-beside .bs-view{display:grid;position:fixed;inset:0;grid-template-columns:minmax(320px,2fr) minmax(0,3fr);grid-template-rows:auto minmax(0,1fr);grid-template-areas:"him right" "words right";column-gap:3vw;row-gap:1vh;padding:4vh 4vw 13vh 3vw;align-items:stretch;transition:left .28s cubic-bezier(.2,.7,.3,1)}
   :root[data-side="open"] body.con-beside .bs-view{left:232px}
   .bs-view svg.wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
   .bs-view svg.wires line{transition:opacity .4s}
   .bs-view .bs-him{grid-area:him;position:relative;min-width:0;display:flex;align-items:flex-start;justify-content:center}
   .bs-view .bs-him canvas{width:100%;max-width:760px;height:auto;aspect-ratio:680/420;flex:none;margin:-2vh 0 0}
-  .bs-view .bs-left{grid-area:words;align-self:end;min-width:0;display:flex;flex-direction:column;align-items:flex-end;gap:12px;max-height:100%;overflow:auto;padding-right:4px;text-align:right}
+  .bs-view .bs-left{grid-area:words;align-self:start;min-width:0;display:flex;flex-direction:column;align-items:flex-end;gap:12px;max-height:100%;overflow:auto;padding-right:4px;text-align:right}
   .bs-view .bs-claim{margin:0;font:500 clamp(20px,1.9vw,26px)/1.22 var(--serif);color:var(--ink);letter-spacing:-.012em;max-width:30ch;text-wrap:balance}
   .bs-view .bs-claim em{font-style:italic}
   .bs-view .bs-stand{margin:0;font:400 15px/1.55 var(--serif);color:var(--ink-2);max-width:52ch}
@@ -2212,7 +2212,10 @@
     });
     state.mode='reading'; state.pulse=performance.now(); state.drawn=P.blocks.length;
     bsTimers.push(setTimeout(function(){ state.mode='idle'; setDoing('<b>quiet</b>brought \u00b7 '+P.blocks.length+' figures \u00b7 nothing written'); wire(); }, reduce?0:400+P.blocks.length*260));
-    bsWire=wire; window.addEventListener('resize',wire); figs.addEventListener('scroll',wire);
+    // left to right across, then down; a last row that is not full sits on the right, under the last column
+    function place(){ var cols=3; try{ var tc=getComputedStyle(figs).gridTemplateColumns; if(tc&&tc!=='none'&&!/repeat|minmax/.test(tc)) cols=tc.trim().split(/\s+/).length; else cols=Math.max(1,Math.floor((figs.clientWidth+30)/260)); }catch(e){} var n=made.length, full=Math.floor(n/cols)*cols, rest=n-full; made.forEach(function(d,i){ var row=Math.floor(i/cols), col=i%cols; if(i>=full) col+=cols-rest; d.style.gridRow=String(row+1); d.style.gridColumn=String(col+1); }); }
+    place(); var onresize=function(){ place(); wire(); };
+    bsWire=onresize; window.addEventListener('resize',onresize); figs.addEventListener('scroll',wire);
     bsMo=new MutationObserver(function(){ mood.innerHTML=doing.innerHTML; }); bsMo.observe(doing,{childList:true,subtree:true,characterData:true});
   }
   document.querySelectorAll('#consw button').forEach(function(b){b.addEventListener('click',function(){conLayout(b.dataset.con)})});
