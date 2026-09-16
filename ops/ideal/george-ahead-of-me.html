@@ -606,9 +606,99 @@
   main.lay-document .situation .ladder{width:calc(100% + 2*var(--bleed));margin-left:calc(-1*var(--bleed))}
   main.lay-document .situation .ev .row,main.lay-document .situation .ev .scale{padding-left:8px;padding-right:8px;margin:0}
   @media (max-width:1640px){:root{--bleed:0px}}
+
+  /* ---------- FOUR CONSOLES. The same situation, a different room around it. ----------
+     document — the reading column (what you have)
+     stage    — Jarvis: an empty dark stage, the mark at its centre, evidence floating around it
+     canvas   — a spatial workspace: tiles George placed, edges between them, you can move them
+     split    — an operator's desk: the queue of situations on the left, the open one on the right */
+  .consw{position:fixed;top:12px;right:16px;z-index:30;display:flex;gap:2px;align-items:center;font:400 11px/1.6 var(--mono);color:var(--ink-3);background:var(--ground);padding:4px 6px;border-radius:999px;box-shadow:0 0 0 1px var(--edge)}
+  .consw span{margin:0 6px 0 6px;letter-spacing:.06em;text-transform:uppercase}
+  .consw button{font:400 12px/1.6 var(--sans);color:var(--ink-3);border-radius:999px;padding:3px 10px}
+  .consw button:hover{color:var(--ink);background:var(--sunk)}
+  .consw button.on{color:var(--ink);background:var(--raise);box-shadow:0 0 0 1px var(--edge-2)}
+
+  /* ---- stage ---- */
+  body.con-stage .side,body.con-stage .reopen,body.con-stage .queue,body.con-stage .layswitch,body.con-stage .console > .presence,body.con-stage .why-this,body.con-stage .mock{display:none}
+  body.con-stage{padding-left:clamp(16px,2.5vw,32px)}
+  body.con-stage .console{display:block;max-width:none}
+  body.con-stage .examples{position:fixed;left:18px;top:14px;z-index:25;max-width:52vw;opacity:.55}
+  body.con-stage .examples:hover{opacity:1}
+  body.con-stage .examples h2{display:none}
+  body.con-stage main{display:none}
+  .stage-view{display:none}
+  body.con-stage .stage-view{display:block;position:fixed;inset:0;overflow:hidden}
+  .stage-view svg.wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .stage-view canvas{position:absolute;left:50%;top:50%;width:min(44vh,420px);height:min(44vh,420px);transform:translate(-50%,-56%)}
+  .stage-view .st-claim{position:absolute;left:5vw;top:9vh;max-width:min(42vw,26ch);font:500 clamp(24px,2.6vw,36px)/1.18 var(--serif);color:var(--ink);letter-spacing:-.012em;text-wrap:balance}
+  .stage-view .st-claim em{font-style:italic}
+  .stage-view .st-stand{position:absolute;left:5vw;top:calc(9vh + 5.2em*1.18);max-width:min(40vw,52ch);font:400 15px/1.55 var(--serif);color:var(--ink-2)}
+  .stage-view .st-mood{position:absolute;left:50%;top:calc(50% + min(22vh,210px) - 8px);transform:translateX(-50%);text-align:center;font:400 12px/1.6 var(--mono);color:var(--ink-3);width:30ch}
+  .stage-view .st-mood b{display:block;font:500 13px/1.5 var(--sans);color:var(--ink)}
+  .stage-view .st-panel{position:absolute;width:min(30vw,380px);padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.025);box-shadow:0 0 0 1px var(--edge);backdrop-filter:blur(6px);animation:land .5s cubic-bezier(.2,.7,.3,1) both}
+  :root[data-theme="light"] .stage-view .st-panel{background:rgba(16,17,19,.03)}
+  .stage-view .st-panel .say{font:400 14px/1.45 var(--serif);color:var(--ink);margin:0 0 8px}
+  .stage-view .st-panel .say b{font-weight:500}
+  .stage-view .st-panel .say s{display:none}
+  .stage-view .st-panel .ev{margin:0;font-size:12px}
+  .stage-view .st-panel .ev .row{padding:3px 4px;margin:0;font-size:12px}
+  .stage-view .st-panel .line svg{height:76px}
+  .stage-view .st-panel.out{opacity:.55}
+  .stage-view .st-next{position:absolute;right:5vw;bottom:14vh;max-width:min(30vw,44ch);font:400 15px/1.5 var(--serif);color:var(--ink);border-left:3px solid var(--ink);padding-left:14px}
+  .stage-view .st-next b{display:block;font:500 10.5px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+  .stage-view .st-hint{position:absolute;left:50%;bottom:4vh;transform:translateX(-50%);font:400 11px/1.6 var(--mono);color:var(--ink-4);white-space:nowrap}
+  body.con-stage .compose-wrap{background:none}
+  body.con-stage .compose{max-width:720px}
+  body.con-stage .box{border-bottom:0;background:rgba(255,255,255,.03);border-radius:999px;padding-left:22px;box-shadow:0 0 0 1px var(--edge-2)}
+  @media (max-width:1100px){ .stage-view .st-panel{position:static;width:auto;margin:10px 5vw} .stage-view{overflow:auto} .stage-view canvas{position:static;transform:none;margin:20px auto;display:block} .stage-view .st-claim,.stage-view .st-stand,.stage-view .st-next,.stage-view .st-mood{position:static;margin:12px 5vw;max-width:none;transform:none;width:auto;text-align:left} .stage-view svg.wires{display:none} }
+
+  /* ---- canvas ---- */
+  body.con-canvas .queue,body.con-canvas .layswitch,body.con-canvas .why-this,body.con-canvas .mock{display:none}
+  body.con-canvas .console{grid-template-columns:minmax(0,1fr);grid-template-areas:"ex" "main";max-width:none;margin:0}
+  body.con-canvas .console > .presence{position:fixed;right:18px;bottom:110px;width:auto;min-height:0;padding:0;display:grid;justify-items:center;gap:6px;z-index:15}
+  body.con-canvas .presence canvas{width:96px;height:96px}
+  body.con-canvas .presence .log{display:none}
+  body.con-canvas .presence .doing{font-size:11px;min-height:0}
+  body.con-canvas main{display:none}
+  .canvas-view{display:none}
+  body.con-canvas .canvas-view{display:block;position:relative;height:calc(100vh - 180px);overflow:hidden;border-top:1px solid var(--edge);border-bottom:1px solid var(--edge);cursor:grab;background-image:radial-gradient(var(--edge) 1px,transparent 1px);background-size:28px 28px}
+  .canvas-view.dragging{cursor:grabbing}
+  .canvas-view .layer{position:absolute;left:0;top:0;transform-origin:0 0}
+  .canvas-view svg.edges{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+  .canvas-view .tile{position:absolute;width:360px;padding:12px 14px;border-radius:12px;background:var(--ground);box-shadow:0 0 0 1px var(--edge-2);cursor:move;user-select:none}
+  .canvas-view .tile.claim{width:420px;background:var(--paper)}
+  .canvas-view .tile .say{font:400 14px/1.45 var(--serif);color:var(--ink);margin:0 0 8px}
+  .canvas-view .tile .say b{font-weight:500}
+  .canvas-view .tile .say s{display:none}
+  .canvas-view .tile .ev{font-size:12px}
+  .canvas-view .tile .ev .row{padding:3px 4px;margin:0;font-size:12px}
+  .canvas-view .tile .line svg{height:76px}
+  .canvas-view .tile.out{opacity:.6}
+  .canvas-view .tile .tag{font:500 10px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);display:block;margin-bottom:6px}
+  .canvas-view .tile.claim .say{font-size:19px;line-height:1.3}
+  .canvas-view .zoom{position:absolute;right:14px;top:14px;display:flex;gap:4px;z-index:2}
+  .canvas-view .zoom button{width:30px;height:30px;border-radius:8px;background:var(--ground);box-shadow:0 0 0 1px var(--edge-2);color:var(--ink-2);font:400 15px/1 var(--sans)}
+  .canvas-view .cv-hint{position:absolute;left:14px;bottom:10px;font:400 11px/1.6 var(--mono);color:var(--ink-4)}
+
+  /* ---- split ---- */
+  body.con-split .console{grid-template-columns:300px minmax(0,1fr) 300px;grid-template-areas:"list main pres" "list main pres" "list main pres";column-gap:32px;max-width:1500px;margin:0 auto}
+  body.con-split .console > .queue{grid-area:list;position:sticky;top:16px;margin-top:16px;align-self:start}
+  body.con-split .queue > summary{display:none}
+  body.con-split .queue .att-groups{display:grid;grid-template-columns:1fr;gap:18px;padding:0}
+  body.con-split .queue .att{padding:10px 12px}
+  body.con-split .console > .examples{display:none}
+  body.con-split .console > .presence{width:300px;padding-top:16px}
+  body.con-split .presence canvas{width:200px;height:200px}
+  body.con-split .layswitch{display:none}
+  body.con-split main{padding-top:16px}
+  body.con-split .side{transform:translateX(-100%)}
+  body.con-split .reopen{display:none}
+  body.con-split{padding-left:clamp(16px,2.5vw,32px)}
 </style>
 
 <button class="reopen" id="reopen" title="Open the sidebar  [" hidden>›</button>
+<div class="consw" id="consw"><span>console</span><button class="on" data-con="document">document</button><button data-con="stage">stage</button><button data-con="canvas">canvas</button><button data-con="split">split</button></div>
+<div class="stage-view" id="stageview"></div>
 <div class="console">
 
   <!-- ================= THE SIDEBAR: what persists ================= -->
@@ -688,6 +778,7 @@
   </div>
 
   <!-- ================= THE SITUATION ================= -->
+  <div class="canvas-view" id="canvasview"></div>
   <main style="min-width:0">
   <div class="layswitch" id="layswitch"><span>lay it out as</span>
     <button class="on" data-lay="document">document</button><button data-lay="beside">beside</button><button data-lay="tiles">tiles</button><button data-lay="walk">walk</button><button data-lay="focus">focus</button>
@@ -1134,6 +1225,7 @@
     <li><b>Decisions arrive with their authority attached.</b> The one blue frame on the page is the one thing that is yours. Under it, in plain words, is what George may do alone today — and the button that widens it is a sentence, not a setting.</li>
     <li><b>A chart is a sentence he chose to draw.</b> Its shape is picked by what the step asserts — a band for “outside its usual”, a strip of days for “was it on the shelf”, a flow for “where it went”, a chain for “why these are one story”. Every figure is a returned row; the shape and the one-line note are his. See <i>how he draws</i>.</li>
     <li><b>Three parts, by what each is for.</b> On the left, what persists — pages, systems, automations and watches, people — with a pip that says running, off, or needs you; it is a list of things you own, not a menu of screens. In the middle, the situation, at a reading width for his sentences and the full column for evidence. On the right, his mark: it breathes slowly when he is quiet, pulses once per read with the read named under it, turns to writing when he is connecting what the reads establish, and goes warm only when he is waiting on you. It never moves for effect.</li>
+    <li><b>Four rooms around the same situation.</b> <i>Document</i> is a briefing. <i>Stage</i> is the Jarvis idea taken seriously: an empty dark room, his mark at the centre, and only what he brought floating around it, wired to him — nothing persistent on screen, the persistent things a gesture away, and the composer a line you speak into. <i>Canvas</i> is the spatial workspace tldraw’s agents-on-the-canvas work points at: he places the pieces, you move them, and position is meaning. <i>Split</i> is the operator’s desk mission-control benchmarking keeps arriving at: the queue on one side, the open situation on the other, the wall of everything replaced by one prioritised list.</li>
     <li><b>Borrowed, and from where.</b> Confidence that opens into what supports, contradicts or is silent (Consensus, Elicit, scite); a visible “no read” mark on any claim without one (Claude, Consensus); his work disclosed in layers — a line, then steps, then each read’s inputs and time (the 2025–26 agent deployments Zylos studied: no mid-run visibility tripled abandonment); one step redone or skipped rather than approve-all (the same); his authority per kind of action as a control you can move, defaulting conservative (Mantlr, Claude’s tool permissions); Later and j/k on the list (Linear triage); a graphite ground with borders as translucent white and colour only where it means something (Linear, Geist); every chart titled by its conclusion with one interpretive note (FT, Datawrapper).</li>
     <li><b>Nothing here is a chat bubble, a KPI grid, a feed or a canvas.</b> It is a document George wrote this morning about your business, with the parts you can push on.</li>
   </ol>
@@ -1326,6 +1418,71 @@
   document.querySelectorAll('#layswitch button').forEach(function(b){b.addEventListener('click',function(){layout(b.dataset.lay)})});
   var rememberedLay=null; try{rememberedLay=localStorage.getItem('george.lay')}catch(e){}
   layout(rememberedLay&&hints[rememberedLay]?rememberedLay:'document');
+  // FOUR CONSOLES. document / stage / canvas / split — the same situation, a different room.
+  var conBody=document.body, stageView=document.getElementById('stageview'), canvasView=document.getElementById('canvasview'), markEl=document.getElementById('mark'), markHome=markEl.parentNode, markNext=markEl.nextSibling;
+  function activeScene(){ return document.querySelector('.scene.show'); }
+  function sceneParts(sc){
+    var claim=sc.querySelector('.claim'), stand=sc.querySelector('.stand'), plain=sc.querySelector('.plain'), next=sc.querySelector('.next p'), steps=[].slice.call(sc.querySelectorAll('.chain .step'));
+    var blocks=steps.length?steps.map(function(st){return {say:st.querySelector('.say'), ev:st.querySelector('.ev'), out:st.classList.contains('out')}}):[].slice.call(sc.querySelectorAll('.fig, .ev, .runlog, .timeline, .life, .doc, .cells')).slice(0,4).map(function(e){return {say:e.querySelector('.ft')||null, ev:e, out:false}});
+    return {claim:claim?claim.innerHTML:(plain?plain.innerHTML:''), stand:stand?stand.innerHTML:'', next:next?next.innerHTML:'', blocks:blocks};
+  }
+  function conLayout(name){
+    conBody.classList.remove('con-document','con-stage','con-canvas','con-split'); conBody.classList.add('con-'+name);
+    document.querySelectorAll('#consw button').forEach(function(b){b.classList.toggle('on',b.dataset.con===name)});
+    try{localStorage.setItem('george.con',name)}catch(e){}
+    if(name==='stage') buildStage(); else if(name==='canvas') buildCanvas(); else { if(markEl.parentNode!==markHome) markHome.insertBefore(markEl, markNext); }
+    if(name==='split'){ var q=document.getElementById('queue'); if(q) q.open=true; }
+  }
+  // STAGE: the mark at centre, the claim top-left, evidence floating around, wired to the mark
+  function buildStage(){
+    var sc=activeScene(); if(!sc) return; var P=sceneParts(sc);
+    stageView.innerHTML='';
+    var wires=document.createElementNS('http://www.w3.org/2000/svg','svg'); wires.setAttribute('class','wires'); stageView.appendChild(wires);
+    stageView.appendChild(markEl);
+    var c=document.createElement('div'); c.className='st-claim'; c.innerHTML=P.claim; stageView.appendChild(c);
+    if(P.stand){ var sd=document.createElement('div'); sd.className='st-stand'; sd.innerHTML=P.stand; stageView.appendChild(sd); }
+    var mood=document.createElement('div'); mood.className='st-mood'; mood.innerHTML=doing.innerHTML; stageView.appendChild(mood);
+    var spots=[{left:'52vw',top:'8vh'},{left:'66vw',top:'40vh'},{left:'8vw',top:'56vh'},{left:'34vw',top:'66vh'}];
+    var panels=[];
+    P.blocks.slice(0,4).forEach(function(b,i){
+      var pnl=document.createElement('div'); pnl.className='st-panel'+(b.out?' out':''); pnl.style.left=spots[i].left; pnl.style.top=spots[i].top; pnl.style.animationDelay=(0.15+i*0.18)+'s';
+      if(b.say){ var sy=document.createElement('p'); sy.className='say'; sy.innerHTML=b.say.innerHTML; pnl.appendChild(sy); }
+      if(b.ev){ pnl.appendChild(b.ev.cloneNode(true)); }
+      stageView.appendChild(pnl); panels.push(pnl);
+    });
+    if(P.next){ var nx=document.createElement('div'); nx.className='st-next'; nx.innerHTML='<b>what I\u2019d do next</b>'+P.next; stageView.appendChild(nx); }
+    var hint=document.createElement('div'); hint.className='st-hint'; hint.textContent='say it, or point at anything · the room stays empty until he brings something'; stageView.appendChild(hint);
+    function wire(){ wires.innerHTML=''; var W=stageView.clientWidth,H=stageView.clientHeight; var mx=W/2, my=H*0.5-0.06*Math.min(H*0.44,420); panels.forEach(function(pn){ var r=pn.getBoundingClientRect(); var x=r.left+r.width/2, y=r.top+r.height/2; var l=document.createElementNS('http://www.w3.org/2000/svg','line'); l.setAttribute('x1',mx); l.setAttribute('y1',my); l.setAttribute('x2',x); l.setAttribute('y2',y); l.setAttribute('stroke','rgba(138,143,152,.28)'); l.setAttribute('stroke-width','1'); l.setAttribute('stroke-dasharray','2 5'); wires.appendChild(l); }); }
+    setTimeout(wire,50); window.addEventListener('resize',wire);
+    var mo=new MutationObserver(function(){ mood.innerHTML=doing.innerHTML; }); mo.observe(doing,{childList:true,subtree:true,characterData:true});
+  }
+  // CANVAS: tiles George placed, edges between them; drag to move, wheel to pan, buttons to zoom
+  var cvState={x:40,y:30,k:1};
+  function buildCanvas(){
+    var sc=activeScene(); if(!sc) return; var P=sceneParts(sc);
+    canvasView.innerHTML='';
+    var layer=document.createElement('div'); layer.className='layer'; canvasView.appendChild(layer);
+    var edges=document.createElementNS('http://www.w3.org/2000/svg','svg'); edges.setAttribute('class','edges'); edges.setAttribute('width','2000'); edges.setAttribute('height','1400'); layer.appendChild(edges);
+    var tiles=[]; var pos=[{x:40,y:40},{x:520,y:20},{x:520,y:300},{x:960,y:80},{x:960,y:380}];
+    function tile(cls,html,x,y,tag){ var t=document.createElement('div'); t.className='tile '+cls; t.innerHTML=(tag?'<span class="tag">'+tag+'</span>':'')+html; t.style.left=x+'px'; t.style.top=y+'px'; layer.appendChild(t); tiles.push(t); return t; }
+    var claimT=tile('claim','<p class="say">'+P.claim+'</p>'+(P.stand?'<p class="say" style="font-size:13px;color:var(--ink-2)">'+P.stand+'</p>':''),pos[0].x,pos[0].y,'the situation');
+    P.blocks.slice(0,4).forEach(function(b,i){ var h=(b.say?'<p class="say">'+b.say.innerHTML+'</p>':'')+(b.ev?b.ev.outerHTML:''); tile(b.out?'out':'',h,pos[i+1].x,pos[i+1].y,'check '+(i+1)+(b.out?' · ruled out':'')); });
+    if(P.next){ tile('','<p class="say">'+P.next+'</p>',1400,240,'what I\u2019d do next'); }
+    function redraw(){ edges.innerHTML=''; for(var i=1;i<tiles.length;i++){ var a=tiles[i-1===0?0:(i<=4?0:i-1)], b=tiles[i]; if(i>=2&&i<=4) a=tiles[i-1]; var ar=[a.offsetLeft+a.offsetWidth, a.offsetTop+40], br=[b.offsetLeft, b.offsetTop+40]; var pth=document.createElementNS('http://www.w3.org/2000/svg','path'); var mx=(ar[0]+br[0])/2; pth.setAttribute('d','M'+ar[0]+' '+ar[1]+' C '+mx+' '+ar[1]+', '+mx+' '+br[1]+', '+br[0]+' '+br[1]); pth.setAttribute('fill','none'); pth.setAttribute('stroke','rgba(138,143,152,.45)'); pth.setAttribute('stroke-width','1.5'); edges.appendChild(pth); } layer.style.transform='translate('+cvState.x+'px,'+cvState.y+'px) scale('+cvState.k+')'; }
+    redraw();
+    // drag a tile, or pan the canvas
+    var drag=null;
+    canvasView.onpointerdown=function(e){ var t=e.target.closest('.tile'); drag={t:t, sx:e.clientX, sy:e.clientY, ox:t?t.offsetLeft:cvState.x, oy:t?t.offsetTop:cvState.y}; canvasView.classList.add('dragging'); canvasView.setPointerCapture(e.pointerId); };
+    canvasView.onpointermove=function(e){ if(!drag) return; var dx=(e.clientX-drag.sx)/ (drag.t?cvState.k:1), dy=(e.clientY-drag.sy)/(drag.t?cvState.k:1); if(drag.t){ drag.t.style.left=(drag.ox+dx)+'px'; drag.t.style.top=(drag.oy+dy)+'px'; } else { cvState.x=drag.ox+dx; cvState.y=drag.oy+dy; } redraw(); };
+    canvasView.onpointerup=canvasView.onpointercancel=function(){ drag=null; canvasView.classList.remove('dragging'); };
+    var z=document.createElement('div'); z.className='zoom'; z.innerHTML='<button title="zoom out">−</button><button title="zoom in">+</button><button title="reset">·</button>'; canvasView.appendChild(z);
+    var zb=z.querySelectorAll('button'); zb[0].onclick=function(){cvState.k=Math.max(.5,cvState.k-.1);redraw()}; zb[1].onclick=function(){cvState.k=Math.min(1.6,cvState.k+.1);redraw()}; zb[2].onclick=function(){cvState={x:40,y:30,k:1};redraw()};
+    var hint=document.createElement('div'); hint.className='cv-hint'; hint.textContent='he placed these; drag a tile, drag the ground to pan, +/− to zoom · say “tidy” and he rearranges'; canvasView.appendChild(hint);
+  }
+  document.querySelectorAll('#consw button').forEach(function(b){b.addEventListener('click',function(){conLayout(b.dataset.con)})});
+  document.querySelectorAll('[data-scene]').forEach(function(b){b.addEventListener('click',function(){ setTimeout(function(){ if(conBody.classList.contains('con-stage')) buildStage(); if(conBody.classList.contains('con-canvas')) buildCanvas(); },30); })});
+  var rememberedCon=null; try{rememberedCon=localStorage.getItem('george.con')}catch(e){}
+  conLayout(rememberedCon&&/^(document|stage|canvas|split)$/.test(rememberedCon)?rememberedCon:'document');
   var ask=document.getElementById('ask');
   ask.addEventListener('keydown',function(e){ if(e.key==='Enter'&&ask.value.trim()){say('“'+ask.value.trim()+'” — intent in words; the selection above is the reference. A turn.'); clearSeq(); state.mode='reading'; state.pulse=performance.now(); setDoing('<b>reading</b>'+ask.value.trim()); seqTimer.push(setTimeout(function(){state.mode='idle';setDoing('<b>quiet</b>a turn, in the real thing');},reduce?0:1600)); ask.value='';}});
   document.querySelector('.send').addEventListener('click',function(){ if(ask.value.trim()){say('“'+ask.value.trim()+'” — a turn.');ask.value='';} });
