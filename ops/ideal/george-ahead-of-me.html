@@ -926,6 +926,67 @@
   body.told-settled .told-again{display:block;position:fixed;left:50%;bottom:9vh;transform:translateX(-50%);z-index:30;font:400 12px/1.6 var(--sans);color:var(--ink-2);border-radius:999px;padding:5px 14px;background:var(--ground);box-shadow:0 0 0 1px var(--edge-2),0 8px 30px rgba(0,0,0,.25)}
   .told-again:hover{color:var(--ink);background:var(--sunk)}
   @media (max-width:900px){ body.con-told .td-view{position:static;overflow:visible;padding:20px 5vw 120px;min-height:80vh} .td-view canvas{width:110px;height:110px} .td-view .td-say{font-size:22px;width:100%} .td-view .td-fig{width:100%} .td-view .td-hint{display:none} }
+
+  /* ---------- VOCABULARY: everything he can draw, one tile per shape ---------- */
+  .voc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+  @media (max-width:1100px){.voc{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media (max-width:640px){.voc{grid-template-columns:1fr}}
+  .vt{padding:14px 16px 12px;border-radius:12px;box-shadow:0 0 0 1px var(--edge);min-width:0;display:flex;flex-direction:column;gap:8px}
+  .vt svg{width:100%;height:auto;display:block;overflow:visible}
+  .vt svg text{font-family:var(--mono);font-size:9.5px;fill:var(--ink-3)}
+  .vt svg text.lb{font-family:var(--sans);font-size:10px;fill:var(--ink-2)}
+  .vt svg text.lit{fill:var(--ink);font-weight:600}
+  .vt svg text.an{fill:var(--ink);font-size:9px}
+  .vt svg text.ax,.vt svg g.ax text{fill:var(--ink-4);font-size:8.5px}
+  .vt svg .grid line{stroke:var(--edge);stroke-width:1}
+  .vt svg .ln{fill:none;stroke:var(--ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+  .vt svg .ln.q{stroke:var(--quiet)}
+  .vt svg .ln.dn{stroke:var(--down)}
+  .vt svg .pt{fill:var(--ink)}
+  .vt svg .ar{fill:var(--quiet-soft);opacity:.5}
+  .vt svg rect.q{fill:var(--quiet)}
+  .vt svg rect.dn,.vt svg .dnf{fill:var(--down)}
+  .vt svg rect.up{fill:var(--up)}
+  .vt svg .tick{stroke:var(--ink);stroke-width:1.5}
+  .vt svg .s0{fill:var(--ink)}
+  .vt svg .s1{fill:var(--ink-3)}
+  .vt svg .s2{fill:var(--quiet)}
+  .vt svg .s3{fill:var(--edge-2)}
+  .vt svg .h0{fill:none}
+  .vt svg .h1{fill:var(--edge)}
+  .vt svg .h2{fill:var(--edge-2)}
+  .vt svg .h3{fill:var(--quiet)}
+  .vt svg .h4{fill:var(--ink-3)}
+  .vt svg rect.lit{stroke:var(--down);stroke-width:1.2}
+  .vt svg .sm path{fill:none;stroke:var(--quiet);stroke-width:1.5}
+  .vt svg .sm path.dn{stroke:var(--down);stroke-width:2}
+  .vt svg .sc circle{fill:var(--quiet)}
+  .vt svg .sc circle.dnf{fill:var(--down)}
+  .vt svg .lg text{font-size:9px;fill:var(--ink-3)}
+  .vt svg .gg .track{fill:none;stroke:var(--edge-2);stroke-width:10}
+  .vt svg .gg path.dn{fill:none;stroke:var(--down);stroke-width:10}
+  .vt svg .gg .needle{stroke:var(--ink);stroke-width:2}
+  .vt svg .bl rect.track{fill:var(--edge)}
+  .vt svg .mp .land{fill:var(--sunk);stroke:var(--edge-2)}
+  .vt svg .mp circle{fill:var(--quiet)}
+  .vt svg .mp circle.dnf{fill:var(--down)}
+  .vt svg .mp .barn{fill:var(--ink)}
+  .vt svg .tm rect,.vt svg .fn rect{stroke:var(--ground);stroke-width:2;opacity:.6}
+  .vt svg .tm rect.dnf,.vt svg .fn rect.dnf{opacity:.85}
+  .vt svg .tm text,.vt svg .fn text{fill:var(--ink)}
+  .vt .vk{margin:0;font:400 10.5px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+  .vt .vk b{color:var(--ink);font-weight:500}
+  .vt .vw{margin:auto 0 0;font:400 13px/1.45 var(--serif);color:var(--ink-2)}
+  .vt .vw i{font-style:italic}
+  .vt .vr{margin:0;font:400 10.5px/1.5 var(--mono);color:var(--ink-4)}
+  .vt .bign{padding:6px 0}
+  .vt .bign .cav{font:400 11px/1.5 var(--mono);color:var(--ink-2);margin:0 0 8px;border-left:2px solid var(--ink-3);padding-left:8px}
+  .vt .bign .n{font:500 36px/1.1 var(--serif);color:var(--ink);margin:0;letter-spacing:-.02em}
+  .vt .bign .d{font:500 13px/1.5 var(--mono);color:var(--down);margin:4px 0 0}
+  .vt .bign .d span{color:var(--ink-4);font-weight:400}
+  .vt .vt-tab{font-size:12.5px}
+  .vt .vt-tab .row.h{font:400 10px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-4)}
+  .vt .vt-tab .row.h .fig{font-weight:400;color:var(--ink-4)}
 </style>
 
 <button class="reopen" id="reopen" title="Open the sidebar  [" hidden>›</button>
@@ -1010,6 +1071,7 @@
       <button data-scene="docs"><span class="n">16</span>a supplier’s invoice</button>
       <button data-scene="team"><span class="n">17·18</span>businesses + team</button>
       <button data-scene="draw"><span class="n">6</span>how he draws</button>
+      <button data-scene="vocab"><span class="n">6</span>everything he can draw</button>
     </div>
   </div>
 
@@ -1338,6 +1400,85 @@
   </section>
 
   <!-- ---- 6: how he draws — a form for each kind of claim ---- -->
+  <section class="scene situation" id="vocab">
+    <div class="sit-head"><span class="kind">Everything he can draw — the whole vocabulary, on the estate’s own numbers</span><span class="meta">16 shapes · every one a tool’s rows · the shape is his choice, or yours</span></div>
+    <h2 class="claim">He can draw <em>any of these</em>. Unasked he picks the one the claim needs; asked, you get the one you named.</h2>
+    <p class="stand">A dashboard needs the full set, so the full set is here: the ones he reaches for on his own, and the ones he draws only because you asked — a pie, a gauge, a treemap. <b>One thing lit, greys for the rest, the number in the sentence or the table and never in the drawing.</b> Every tile below is a row a tool returned, with its receipt.</p>
+
+    <div class="fig">
+      <div class="voc">
+
+        <div class="vt"><p class="vk"><b>line</b> · change over time</p>
+          <svg viewBox="0 0 300 130" role="img" aria-label="Rockwell weekly net sales over twelve weeks, sliding in the last four"><g class="grid"><line x1="20" y1="20" x2="290" y2="20"/><line x1="20" y1="60" x2="290" y2="60"/><line x1="20" y1="100" x2="290" y2="100"/></g><path class="ln" d="M20 48 L44 40 L68 56 L92 32 L116 40 L140 48 L164 32 L188 56 L212 72 L236 80 L260 88 L284 80"/><circle class="pt" cx="284" cy="80" r="3.5"/><text x="284" y="112" text-anchor="end" class="an">since mid-August</text><text x="20" y="124" class="ax">Jun</text><text x="284" y="124" text-anchor="end" class="ax">Sep</text></svg>
+          <p class="vw">“Rockwell is down” is a claim about <i>since when</i>. He draws this unasked.</p><p class="vr">get_sales · Rockwell · by week · 12 weeks</p></div>
+
+        <div class="vt"><p class="vk"><b>bar</b> · a few things compared</p>
+          <svg viewBox="0 0 300 130" role="img" aria-label="August net sales by store against each store's usual; Rockwell is the one below"><g class="hb"><text x="0" y="22" class="lb">OPUS</text><rect x="70" y="14" width="200" height="10" class="q"/><text x="0" y="46" class="lb">Greenhills</text><rect x="70" y="38" width="128" height="10" class="q"/><text x="0" y="70" class="lb">Shangri-La</text><rect x="70" y="62" width="106" height="10" class="q"/><text x="0" y="94" class="lb lit">Rockwell</text><rect x="70" y="86" width="112" height="10" class="dn"/><line x1="138" y1="82" x2="138" y2="100" class="tick"/><text x="0" y="118" class="lb">Magnolia</text><rect x="70" y="110" width="76" height="10" class="q"/></g><text x="150" y="128" class="an">| = that shop’s usual</text></svg>
+          <p class="vw">“Bigger than” and “the one that’s off”. Horizontal, so the names read.</p><p class="vr">get_sales · by store · Aug · with usual_range</p></div>
+
+        <div class="vt"><p class="vk"><b>small multiples</b> · every store at a glance</p>
+          <svg viewBox="0 0 300 130" role="img" aria-label="Six store sparklines on one scale; Rockwell is the one sliding"><g class="sm"><text x="0" y="14" class="lb">OPUS</text><path d="M60 20 L75 16 L90 18 L105 12 L120 14 L135 10"/><text x="150" y="14" class="lb">Greenhills</text><path d="M220 16 L235 18 L250 14 L265 16 L280 15 L295 14"/><text x="0" y="54" class="lb lit">Rockwell</text><path class="dn" d="M60 50 L75 52 L90 50 L105 56 L120 60 L135 64"/><text x="150" y="54" class="lb">Shangri-La</text><path d="M220 56 L235 54 L250 56 L265 55 L280 56 L295 54"/><text x="0" y="94" class="lb">Magnolia</text><path d="M60 96 L75 94 L90 96 L105 95 L120 96 L135 94"/><text x="150" y="94" class="lb">North Edsa</text><path d="M220 98 L235 96 L250 94 L265 96 L280 94 L295 92"/></g><text x="0" y="124" class="ax">same scale · 6 weeks · one line per shop</text></svg>
+          <p class="vw">The morning dashboard’s first row: which store, since when, without opening one.</p><p class="vr">get_sales · by store · by week · 6 weeks</p></div>
+
+        <div class="vt"><p class="vk"><b>area</b> · a total accumulating</p>
+          <svg viewBox="0 0 300 130" role="img" aria-label="August cumulative net sales at Rockwell against July's curve, falling behind from the ninth"><path class="ar" d="M20 110 L52 96 L84 82 L116 68 L148 54 L180 42 L212 30 L244 20 L276 12 L276 110 Z"/><path class="ln q" d="M20 110 L52 96 L84 82 L116 68 L148 54 L180 42 L212 30 L244 20 L276 12"/><path class="ln dn" d="M20 110 L52 96 L84 84 L116 74 L148 64 L180 56 L212 48 L244 40 L276 34"/><line x1="84" y1="12" x2="84" y2="110" class="tick"/><text x="88" y="22" class="an">9 Aug · the shelf went empty</text><text x="20" y="124" class="ax">1</text><text x="276" y="124" text-anchor="end" class="ax">31</text></svg>
+          <p class="vw">“How far behind is the month” — the gap between two curves is the answer.</p><p class="vr">get_sales · Rockwell · by day · cumulative · Aug vs Jul</p></div>
+
+        <div class="vt"><p class="vk"><b>stacked bar</b> · what a total is made of</p>
+          <svg viewBox="0 0 300 130" role="img" aria-label="August revenue by store, split into candy, snacks and drinks"><g class="st"><text x="0" y="22" class="lb">OPUS</text><rect x="70" y="14" width="120" height="10" class="s1"/><rect x="192" y="14" width="56" height="10" class="s2"/><rect x="250" y="14" width="24" height="10" class="s3"/><text x="0" y="46" class="lb">Greenhills</text><rect x="70" y="38" width="74" height="10" class="s1"/><rect x="146" y="38" width="38" height="10" class="s2"/><rect x="186" y="38" width="16" height="10" class="s3"/><text x="0" y="70" class="lb lit">Rockwell</text><rect x="70" y="62" width="58" height="10" class="s1"/><rect x="130" y="62" width="42" height="10" class="s2"/><rect x="174" y="62" width="14" height="10" class="s3"/><text x="0" y="94" class="lb">Shangri-La</text><rect x="70" y="86" width="60" height="10" class="s1"/><rect x="132" y="86" width="32" height="10" class="s2"/><rect x="166" y="86" width="14" height="10" class="s3"/></g><g class="lg"><rect x="70" y="112" width="8" height="8" class="s1"/><text x="82" y="120">candy</text><rect x="122" y="112" width="8" height="8" class="s2"/><text x="134" y="120">snacks</text><rect x="178" y="112" width="8" height="8" class="s3"/><text x="190" y="120">drinks</text></g></svg>
+          <p class="vw">Candy is most of every shop; Rockwell’s candy is what shrank. Three parts at most, or it becomes a table.</p><p class="vr">get_sales · by store · by category · Aug</p></div>
+
+        <div class="vt"><p class="vk"><b>pie</b> · share of a whole</p>
+          <svg viewBox="0 0 300 130" role="img" aria-label="Share of August revenue by store; OPUS is a third, Rockwell is the lit slice at 18 percent"><g transform="translate(70,65)"><circle r="46" class="s1" stroke="var(--ground)" stroke-width="2"/><path d="M0 0 L0 -46 A46 46 0 0 1 43.7 -14.2 Z" class="s0"/><path d="M0 0 L43.7 -14.2 A46 46 0 0 1 27 37.2 Z" class="s2"/><path d="M0 0 L27 37.2 A46 46 0 0 1 -27 37.2 Z" class="dnf"/><path d="M0 0 L-27 37.2 A46 46 0 0 1 -43.7 -14.2 Z" class="s3"/><circle r="22" fill="var(--ground)"/></g><g class="lg"><rect x="140" y="20" width="8" height="8" class="s0"/><text x="152" y="28">OPUS · 33%</text><rect x="140" y="40" width="8" height="8" class="s2"/><text x="152" y="48">Greenhills · 21%</text><rect x="140" y="60" width="8" height="8" class="dnf"/><text x="152" y="68" class="lit">Rockwell · 18%</text><rect x="140" y="80" width="8" height="8" class="s3"/><text x="152" y="88">Shangri-La · 17%</text><rect x="140" y="100" width="8" height="8" class="s1"/><text x="152" y="108">Magnolia · 11%</text></g></svg>
+          <p class="vw">You asked for a pie, you get a pie. Unasked he’d give you the bar — slices don’t compare well, and the shares are in the legend so nobody has to guess an angle.</p><p class="vr">get_sales · by store · Aug · share_of_total</p></div>
+
+        <div class="vt"><p class="vk"><b>scatter</b> · two measures at once</p>
+          <svg viewBox="0 0 300 130" role="img" aria-label="Stores plotted by footfall change against basket change; Rockwell alone has flat footfall and a falling basket"><g class="grid"><line x1="40" y1="65" x2="290" y2="65"/><line x1="165" y1="12" x2="165" y2="118"/></g><g class="sc"><circle cx="230" cy="40" r="5"/><text x="238" y="44" class="lb">OPUS</text><circle cx="180" cy="58" r="5"/><text x="188" y="62" class="lb">Greenhills</text><circle cx="150" cy="70" r="5"/><text x="158" y="74" class="lb">Shangri-La</text><circle cx="120" cy="60" r="5"/><text x="128" y="64" class="lb">Magnolia</text><circle cx="168" cy="104" r="5" class="dnf"/><text x="176" y="108" class="lb lit">Rockwell</text></g><text x="290" y="128" text-anchor="end" class="ax">footfall, Aug vs Jul →</text><text x="12" y="20" class="ax">basket ↑</text></svg>
+          <p class="vw">“Fewer visits, or smaller baskets?” is a two-measure question; the answer is the one dot off the diagonal.</p><p class="vr">get_sales · by store · footfall + basket · Aug vs Jul</p></div>
+
+        <div class="vt"><p class="vk"><b>heatmap</b> · two dimensions, one intensity</p>
+          <svg viewBox="0 0 300 130" role="img" aria-label="Sales intensity by store and weekday; weekends run hot everywhere, Rockwell's Mondays are cold"><g class="hm"><text x="0" y="24" class="lb">OPUS</text><rect x="70" y="14" width="26" height="14" class="h2"/><rect x="98" y="14" width="26" height="14" class="h2"/><rect x="126" y="14" width="26" height="14" class="h2"/><rect x="154" y="14" width="26" height="14" class="h3"/><rect x="182" y="14" width="26" height="14" class="h3"/><rect x="210" y="14" width="26" height="14" class="h4"/><rect x="238" y="14" width="26" height="14" class="h4"/><text x="0" y="42" class="lb">Greenhills</text><rect x="70" y="32" width="26" height="14" class="h2"/><rect x="98" y="32" width="26" height="14" class="h1"/><rect x="126" y="32" width="26" height="14" class="h2"/><rect x="154" y="32" width="26" height="14" class="h2"/><rect x="182" y="32" width="26" height="14" class="h3"/><rect x="210" y="32" width="26" height="14" class="h4"/><rect x="238" y="32" width="26" height="14" class="h4"/><text x="0" y="60" class="lb lit">Rockwell</text><rect x="70" y="50" width="26" height="14" class="h0 lit"/><rect x="98" y="50" width="26" height="14" class="h1"/><rect x="126" y="50" width="26" height="14" class="h1"/><rect x="154" y="50" width="26" height="14" class="h2"/><rect x="182" y="50" width="26" height="14" class="h2"/><rect x="210" y="50" width="26" height="14" class="h3"/><rect x="238" y="50" width="26" height="14" class="h3"/><text x="0" y="78" class="lb">Shangri-La</text><rect x="70" y="68" width="26" height="14" class="h1"/><rect x="98" y="68" width="26" height="14" class="h2"/><rect x="126" y="68" width="26" height="14" class="h2"/><rect x="154" y="68" width="26" height="14" class="h2"/><rect x="182" y="68" width="26" height="14" class="h2"/><rect x="210" y="68" width="26" height="14" class="h3"/><rect x="238" y="68" width="26" height="14" class="h4"/></g><g class="ax"><text x="83" y="100" text-anchor="middle">M</text><text x="111" y="100" text-anchor="middle">T</text><text x="139" y="100" text-anchor="middle">W</text><text x="167" y="100" text-anchor="middle">T</text><text x="195" y="100" text-anchor="middle">F</text><text x="223" y="100" text-anchor="middle">S</text><text x="251" y="100" text-anchor="middle">S</text></g><text x="0" y="124" class="ax">darker is more · outlined is the cell he means</text></svg>
+          <p class="vw">“Which day, and where” — a grid is the only shape that answers both in one look.</p><p class="vr">get_sales · by store · by weekday · Aug</p></div>
+
+        <div class="vt"><p class="vk"><b>calendar</b> · a month, day by day</p>
+          <svg viewBox="0 0 300 130" role="img" aria-label="August at Rockwell as a calendar; the empty-shelf days from the ninth are outlined"><g class="cal"><g class="ax"><text x="34" y="12" text-anchor="middle">M</text><text x="66" y="12" text-anchor="middle">T</text><text x="98" y="12" text-anchor="middle">W</text><text x="130" y="12" text-anchor="middle">T</text><text x="162" y="12" text-anchor="middle">F</text><text x="194" y="12" text-anchor="middle">S</text><text x="226" y="12" text-anchor="middle">S</text></g><rect x="182" y="18" width="24" height="16" class="h3"/><rect x="214" y="18" width="24" height="16" class="h4"/><rect x="22" y="38" width="24" height="16" class="h1"/><rect x="54" y="38" width="24" height="16" class="h2"/><rect x="86" y="38" width="24" height="16" class="h2"/><rect x="118" y="38" width="24" height="16" class="h2"/><rect x="150" y="38" width="24" height="16" class="h2"/><rect x="182" y="38" width="24" height="16" class="h3"/><rect x="214" y="38" width="24" height="16" class="h4"/><rect x="22" y="58" width="24" height="16" class="h0 lit"/><rect x="54" y="58" width="24" height="16" class="h1 lit"/><rect x="86" y="58" width="24" height="16" class="h1 lit"/><rect x="118" y="58" width="24" height="16" class="h1 lit"/><rect x="150" y="58" width="24" height="16" class="h1 lit"/><rect x="182" y="58" width="24" height="16" class="h2 lit"/><rect x="214" y="58" width="24" height="16" class="h2 lit"/><rect x="22" y="78" width="24" height="16" class="h1 lit"/><rect x="54" y="78" width="24" height="16" class="h1 lit"/><rect x="86" y="78" width="24" height="16" class="h1 lit"/><rect x="118" y="78" width="24" height="16" class="h1 lit"/><rect x="150" y="78" width="24" height="16" class="h1 lit"/><rect x="182" y="78" width="24" height="16" class="h2"/><rect x="214" y="78" width="24" height="16" class="h3"/><rect x="22" y="98" width="24" height="16" class="h1"/><rect x="54" y="98" width="24" height="16" class="h2"/><rect x="86" y="98" width="24" height="16" class="h2"/><rect x="118" y="98" width="24" height="16" class="h2"/><rect x="150" y="98" width="24" height="16" class="h2"/><rect x="182" y="98" width="24" height="16" class="h3"/><rect x="214" y="98" width="24" height="16" class="h4"/></g><text x="250" y="70" class="an" style="font-size:8.5px">outlined:</text><text x="250" y="80" class="an" style="font-size:8.5px">12 days</text><text x="250" y="90" class="an" style="font-size:8.5px">no Aji Mix</text></svg>
+          <p class="vw">“Was it on the shelf?” — an empty day is a hole you can see, in the shape of a month you already know.</p><p class="vr">get_stock_history · Rockwell · Aji Mix · 1–31 Aug</p></div>
+
+        <div class="vt"><p class="vk"><b>waterfall</b> · how one number became another</p>
+          <svg viewBox="0 0 300 130" role="img" aria-label="July to August at Rockwell as a bridge: Aji Mix, Kameda and Kiamoy took it down, everything else was flat"><g class="wf"><rect x="16" y="30" width="34" height="80" class="q"/><text x="33" y="124" text-anchor="middle" class="ax">Jul</text><rect x="64" y="30" width="34" height="34" class="dn"/><text x="81" y="124" text-anchor="middle" class="ax">Aji Mix</text><rect x="112" y="64" width="34" height="14" class="dn"/><text x="129" y="124" text-anchor="middle" class="ax">Kameda</text><rect x="160" y="78" width="34" height="7" class="dn"/><text x="177" y="124" text-anchor="middle" class="ax">Kiamoy</text><rect x="208" y="82" width="34" height="6" class="up"/><text x="225" y="124" text-anchor="middle" class="ax">rest</text><rect x="256" y="36" width="34" height="74" class="q"/><text x="273" y="124" text-anchor="middle" class="ax">Aug</text><g class="grid"><line x1="50" y1="30" x2="64" y2="30"/><line x1="98" y1="64" x2="112" y2="64"/><line x1="146" y1="78" x2="160" y2="78"/><line x1="194" y1="85" x2="208" y2="85"/><line x1="242" y1="82" x2="256" y2="82"/></g></g><text x="16" y="20" class="an">one product is most of the fall</text></svg>
+          <p class="vw">“What made up the drop” — the sentence in the answer is this bridge, drawn.</p><p class="vr">get_sales · Rockwell · by product · Aug vs Jul · contribution</p></div>
+
+        <div class="vt"><p class="vk"><b>treemap</b> · a mix, by size</p>
+          <svg viewBox="0 0 300 130" role="img" aria-label="August product mix at Rockwell as nested rectangles; Aji Mix is the largest and the one that fell"><g class="tm"><rect x="0" y="0" width="150" height="130" class="dnf"/><text x="8" y="16" class="lb lit">Aji Mix</text><text x="8" y="28" class="ax">31%</text><rect x="152" y="0" width="148" height="66" class="s1"/><text x="160" y="16" class="lb">Kameda Orange</text><text x="160" y="28" class="ax">22%</text><rect x="152" y="68" width="82" height="62" class="s2"/><text x="160" y="84" class="lb">Kiamoy</text><text x="160" y="96" class="ax">12%</text><rect x="236" y="68" width="64" height="30" class="s2"/><text x="242" y="82" class="lb">Haw Flakes</text><rect x="236" y="100" width="64" height="30" class="s3"/><text x="242" y="116" class="lb">rest</text></g></svg>
+          <p class="vw">You ask for it; he draws it. It says “big” well and “how much bigger” badly, so the shares are printed on it.</p><p class="vr">get_sales · Rockwell · by product · Aug · share_of_total</p></div>
+
+        <div class="vt"><p class="vk"><b>funnel</b> · a sequence with drop-off</p>
+          <svg viewBox="0 0 300 130" role="img" aria-label="Seikyo orders this quarter: 14 drafted, 12 approved, 11 sent, 9 received on time"><g class="fn"><rect x="10" y="10" width="280" height="18" class="s1"/><text x="18" y="23" class="lb">drafted · 14</text><rect x="30" y="36" width="240" height="18" class="s1"/><text x="38" y="49" class="lb">approved · 12</text><rect x="40" y="62" width="220" height="18" class="s2"/><text x="48" y="75" class="lb">sent · 11</text><rect x="60" y="88" width="180" height="18" class="dnf"/><text x="68" y="101" class="lb lit">received on time · 9</text></g><text x="10" y="124" class="ax">the step that loses the most is the one lit</text></svg>
+          <p class="vw">For a process he runs — orders, approvals, transfers — where the drop-off is the finding.</p><p class="vr">get_orders · Seikyo · Q3 · by status</p></div>
+
+        <div class="vt"><p class="vk"><b>gauge</b> · one number against a target</p>
+          <svg viewBox="0 0 300 130" role="img" aria-label="Rockwell August against its plan: 84 percent of target, drawn as an arc and as a bullet bar"><g class="gg"><path d="M40 90 A60 60 0 0 1 160 90" class="track"/><path d="M40 90 A60 60 0 0 1 137 40" class="dn"/><line x1="100" y1="90" x2="147" y2="52" class="needle"/><circle cx="100" cy="90" r="3" fill="var(--ink)"/><text x="100" y="112" text-anchor="middle" class="an">84% of plan</text></g><g class="bl"><text x="184" y="44" class="ax">the same, as a bullet</text><rect x="184" y="52" width="106" height="12" class="track"/><rect x="184" y="55" width="89" height="6" class="dn"/><line x1="290" y1="48" x2="290" y2="68" class="tick"/><text x="184" y="84" class="ax">plan at the tick</text></g></svg>
+          <p class="vw">A dial if you ask. Unasked he’d give you the bullet on the right — the same fact in a fifth of the space, and it stacks.</p><p class="vr">get_sales · Rockwell · Aug · vs plan (a setting you bind)</p></div>
+
+        <div class="vt"><p class="vk"><b>map</b> · the estate as places</p>
+          <svg viewBox="0 0 300 130" role="img" aria-label="The Metro Manila shops as dots sized by August sales, the barn marked, Rockwell lit"><g class="mp"><path d="M40 30 C 80 10, 150 6, 210 22 S 280 60, 262 100 S 190 128, 120 118 S 30 90, 40 30 Z" class="land"/><circle cx="96" cy="48" r="9"/><text x="108" y="52" class="lb">OPUS</text><circle cx="150" cy="40" r="7"/><text x="160" y="44" class="lb">Greenhills</text><circle cx="120" cy="86" r="6"/><text x="130" y="90" class="lb">Shangri-La</text><circle cx="176" cy="86" r="6" class="dnf"/><text x="186" y="90" class="lb lit">Rockwell</text><circle cx="84" cy="106" r="5"/><text x="94" y="110" class="lb">Magnolia</text><rect x="212" y="52" width="10" height="10" class="barn"/><text x="226" y="61" class="lb">AJI BARN</text></g><text x="40" y="126" class="ax">dot = August net sales</text></svg>
+          <p class="vw">When the question is “where” — transfers, coverage, which shops share a supplier route.</p><p class="vr">get_object · stores · with location · Aug sales</p></div>
+
+        <div class="vt"><p class="vk"><b>big number</b> · one figure, its caveat above it</p>
+          <div class="bign"><p class="cav">August · Rockwell · one Monday was a holiday you told me about</p><p class="n">₱918k</p><p class="d">−6.1% <span>vs July · net sales · read 07:41</span></p></div>
+          <p class="vw">When there is one thing to know. The caveat is above the number wherever it is answered — that rule doesn’t bend for a tile.</p><p class="vr">get_sales · Rockwell · Aug vs Jul</p></div>
+
+        <div class="vt"><p class="vk"><b>table</b> · exact figures you will act on</p>
+          <div class="ev vt-tab"><div class="row h"><span>product</span><span class="fig">vs Jul</span><span class="fig">Aug</span></div><div class="row lit"><span>Aji Mix (SH1)</span><span class="fig">−₱31,400</span><span class="fig">₱84,900</span></div><div class="row"><span>Kameda Orange</span><span class="fig">−₱12,900</span><span class="fig">₱41,200</span></div><div class="row"><span>Kiamoy Strips</span><span class="fig">−₱6,100</span><span class="fig">₱38,700</span></div></div>
+          <p class="vw">A plan to approve, a receipt, pesos to the peso. A chart can’t be signed off; a table can.</p><p class="vr">get_sales · Rockwell · by product · Aug vs Jul</p></div>
+
+      </div>
+      <details class="src"><summary>receipt</summary><span>every tile above is one read; the shape is chosen after the rows come back, never before · the categorical greys are the same five steps everywhere, the lit one is the thing the sentence is about · numbers live in legends, tables and sentences</span></details>
+    </div>
+
+    <div class="next"><b>What a dashboard gets</b><p>When you say “build a dashboard for stores”, he proposes a page of pins and picks a shape for each from this set — small multiples first, a bar against usual, a status row of what changed — and if you say “make that one a pie”, it is a pie from then on. The definitions do the numbers; the shape is a choice, and choices are yours to overrule.</p></div>
+    <div class="acts"><button class="act go" data-toast="A page proposed: six pins for stores — sparklines, bar against usual, what changed, month calendar, product mix, a big number. Nothing pinned until you say.">Build a dashboard for stores</button><button class="act" data-toast="The bar becomes a pie on that pin, and stays a pie.">Make it a pie</button></div>
+  </section>
   <section class="scene situation" id="draw">
     <div class="sit-head"><span class="kind">The same Rockwell facts, drawn for what each step claims</span><span class="meta">one figure per assertion · one thing lit · one note saying what to see</span></div>
     <h2 class="claim">A chart is <em>a sentence he chose to draw</em> — so its shape is picked by what it asserts, not by the data type.</h2>
