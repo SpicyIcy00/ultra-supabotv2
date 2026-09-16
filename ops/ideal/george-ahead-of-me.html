@@ -635,8 +635,7 @@
   .stage-view .st-stand{position:absolute;left:5vw;top:calc(9vh + 5.2em*1.18);max-width:min(40vw,52ch);font:400 15px/1.55 var(--serif);color:var(--ink-2)}
   .stage-view .st-mood{position:absolute;left:50%;top:calc(50% + min(22vh,210px) - 8px);transform:translateX(-50%);text-align:center;font:400 12px/1.6 var(--mono);color:var(--ink-3);width:30ch}
   .stage-view .st-mood b{display:block;font:500 13px/1.5 var(--sans);color:var(--ink)}
-  .stage-view .st-panel{position:absolute;width:min(30vw,380px);padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.025);box-shadow:0 0 0 1px var(--edge);backdrop-filter:blur(6px);animation:land .5s cubic-bezier(.2,.7,.3,1) both}
-  :root[data-theme="light"] .stage-view .st-panel{background:rgba(16,17,19,.03)}
+  .stage-view .st-panel{position:absolute;width:min(30vw,380px);padding:0;animation:land .5s cubic-bezier(.2,.7,.3,1) both}
   .stage-view .st-panel .say{font:400 14px/1.45 var(--serif);color:var(--ink);margin:0 0 8px}
   .stage-view .st-panel .say b{font-weight:500}
   .stage-view .st-panel .say s{display:none}
@@ -803,8 +802,7 @@
   .nr-view .nr-stage canvas{position:absolute;left:50%;top:50%;width:min(40vh,400px);height:min(40vh,400px);transform:translate(-50%,-50%)}
   .nr-view .nr-mood{position:absolute;left:50%;top:calc(50% + min(20vh,200px) + 6px);transform:translateX(-50%);text-align:center;font:400 12px/1.6 var(--mono);color:var(--ink-3);width:30ch}
   .nr-view .nr-mood b{display:block;font:500 13px/1.5 var(--sans);color:var(--ink)}
-  .nr-view .nr-panel{position:absolute;width:min(24vw,340px);padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.025);box-shadow:0 0 0 1px var(--edge);backdrop-filter:blur(6px);animation:land .55s cubic-bezier(.2,.7,.3,1) both;transition:opacity .5s,transform .5s}
-  :root[data-theme="light"] .nr-view .nr-panel{background:rgba(16,17,19,.03)}
+  .nr-view .nr-panel{position:absolute;width:min(24vw,340px);padding:0;animation:land .55s cubic-bezier(.2,.7,.3,1) both;transition:opacity .5s,transform .5s}
   .nr-view .nr-panel .say{font:400 13.5px/1.45 var(--serif);color:var(--ink);margin:0 0 8px}
   .nr-view .nr-panel .say b{font-weight:500}
   .nr-view .nr-panel .say s{display:none}
@@ -867,8 +865,7 @@
   .sh-view .sh-right{min-width:0;display:grid;grid-template-rows:minmax(0,1fr) auto;gap:18px;align-content:center;max-height:100%}
   .sh-view .sh-slot{min-height:220px;display:grid;align-items:center;min-width:0}
   .sh-view .sh-empty{font:400 12px/1.6 var(--mono);color:var(--ink-4);justify-self:start}
-  .sh-view .sh-fig{width:100%;max-width:680px;padding:18px 20px;border-radius:14px;background:rgba(255,255,255,.025);box-shadow:0 0 0 1px var(--edge);animation:land .55s cubic-bezier(.2,.7,.3,1) both;min-width:0}
-  :root[data-theme="light"] .sh-view .sh-fig{background:rgba(16,17,19,.03)}
+  .sh-view .sh-fig{width:100%;max-width:680px;padding:0;animation:land .55s cubic-bezier(.2,.7,.3,1) both;min-width:0}
   .sh-view .sh-fig .sh-n{font:400 10.5px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
   .sh-view .sh-fig .say{font:400 15.5px/1.45 var(--serif);color:var(--ink);margin:0 0 12px}
   .sh-view .sh-fig .say b{font-weight:500}
@@ -878,10 +875,11 @@
   .sh-view .sh-fig .line svg{height:120px}
   .sh-view .sh-fig.out{opacity:.6}
   .sh-view .sh-strip{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;min-height:0}
-  .sh-view .sh-strip button{display:grid;gap:1px;text-align:left;padding:8px 11px;border-radius:10px;box-shadow:0 0 0 1px var(--edge);font:400 10.5px/1.5 var(--mono);color:var(--ink-3);max-width:24ch;min-width:0}
+  .sh-view .sh-strip{gap:22px}
+  .sh-view .sh-strip button{display:grid;gap:1px;text-align:left;padding:4px 0;border-radius:0;font:400 10.5px/1.5 var(--mono);color:var(--ink-4);max-width:24ch;min-width:0;border-bottom:1px solid transparent}
   .sh-view .sh-strip button b{font:400 12.5px/1.4 var(--serif);color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
-  .sh-view .sh-strip button:hover{background:var(--sunk)}
-  .sh-view .sh-strip button.on{color:var(--ink);box-shadow:0 0 0 1px var(--ink-3)}
+  .sh-view .sh-strip button:hover{color:var(--ink-2)}
+  .sh-view .sh-strip button.on{color:var(--ink);border-bottom-color:var(--ink)}
   .sh-view .sh-strip button.on b{color:var(--ink)}
   .sh-view .sh-strip button.out b{text-decoration:line-through;opacity:.7}
   @media (max-width:900px){ body.con-shown .sh-view{position:static;display:block;padding:20px 5vw 120px} .sh-view .sh-left{max-height:none} .sh-view .sh-left canvas{width:120px;height:120px;margin:0 0 0 -8px} .sh-view .sh-right{margin-top:22px;max-height:none} }
@@ -1607,6 +1605,7 @@
     <li><b>Three parts, by what each is for.</b> On the left, what persists — pages, systems, automations and watches, people — with a pip that says running, off, or needs you; it is a list of things you own, not a menu of screens. In the middle, the situation, at a reading width for his sentences and the full column for evidence. On the right, his mark: it breathes slowly when he is quiet, pulses once per read with the read named under it, turns to writing when he is connecting what the reads establish, and goes warm only when he is waiting on you. It never moves for effect.</li>
     <li><b>Four rooms around the same situation.</b> <i>Document</i> is a briefing. <i>Stage</i> is the Jarvis idea taken seriously, merged with narration after the owner pointed at both: an empty dark room, his mark at the centre, his words arriving a sentence at a time, and each figure floating in at its place around him the moment he mentions it — one at a time, the earlier ones easing back, so it never jumbles. Nothing persistent on screen; the persistent things a gesture away; the composer a line you speak into. <i>Canvas</i> is the spatial workspace tldraw’s agents-on-the-canvas work points at: he places the pieces, you move them, and position is meaning. <i>Split</i> is the operator’s desk mission-control benchmarking keeps arriving at: the queue on one side, the open situation on the other, the wall of everything replaced by one prioritised list.</li>
     <li><b>Four more rooms, for contrast.</b> <i>Timeline</i> makes time the axis: the day as he saw it, situations as dots, what you open expanding under the line — memory is just the past on the same line. <i>Estate</i> makes the business the room: shops, warehouses and machines as places, stock flowing between them, the situation attached to the place it is about. <i>Dense</i> is the terminal pole — everything at once, no white space — here so the others can be measured against it. <i>Narrated</i> is the same idea from the other side, kept after the owner asked for it: the calm room first — his words in a column on the right, a sentence at a time — and the stage’s visuals brought to it, each figure floating in beside him on the left as he mentions it, wired to him. Stage is a room with words in it; narrated is a conversation with a room beside it. <i>Shown</i> is the third combination, after the owner said the stage’s figures go all over the place: narrated’s way of talking, and the figures in one place — the one he is talking about takes the slot on the right, large; the ones before it wait in an ordered strip beneath, a tap away. Nothing floats, nothing overlaps.</li>
+    <li><b>No boxes around evidence, in any room.</b> The owner: when a figure sits in a box it stops feeling like the workplace building around you and starts feeling like KPIs popping out. A border says “an object someone placed here”; without it a figure is something he drew on the room while talking. Position, a caption and the wire to him give it its place. A box is kept only for a thing you act on — a plan, an order — because that genuinely has an edge.</li>
     <li><b>Told is my own answer, and the default.</b> The owner said stop following him. One thing on screen at a time: him, the sentence he is saying, and the one figure it rests on \— centred, bare, no box. The sentence before is gone; the figure before is gone. When he has finished, the telling settles into the page, where it all stands still and can be read. Telling is time; the page is the record. Nothing is ever in two places, so nothing can jumble \— and there is no strip, no wire, no chip, nothing to manage while he is talking.</li>
     <li><b>Borrowed, and from where.</b> Confidence that opens into what supports, contradicts or is silent (Consensus, Elicit, scite); a visible “no read” mark on any claim without one (Claude, Consensus); his work disclosed in layers — a line, then steps, then each read’s inputs and time (the 2025–26 agent deployments Zylos studied: no mid-run visibility tripled abandonment); one step redone or skipped rather than approve-all (the same); his authority per kind of action as a control you can move, defaulting conservative (Mantlr, Claude’s tool permissions); Later and j/k on the list (Linear triage); a graphite ground with borders as translucent white and colour only where it means something (Linear, Geist); every chart titled by its conclusion with one interpretive note (FT, Datawrapper).</li>
     <li><b>Nothing here is a chat bubble, a KPI grid, a feed or a canvas.</b> It is a document George wrote this morning about your business, with the parts you can push on.</li>
