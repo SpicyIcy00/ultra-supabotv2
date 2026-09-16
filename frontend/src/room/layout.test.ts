@@ -155,13 +155,27 @@ describe('the page is centred on one measure', () => {
 
   it('never leaves more columns than there are things to put in them', () => {
     expect(CSS).toContain('.r-board[data-rest="1"] .r-board-rest { columns: 1; }');
-    expect(CSS).toMatch(/\.r-board\[data-rest="2"\] \.r-board-rest,\s*\n\.r-board\[data-rest="3"\] \.r-board-rest \{ columns: 2 340px; \}/);
+  });
+
+  it('PLACES two or three tiles rather than balancing them by height', () => {
+    // 2026-09-16, his fourth look: the charts were still stacked. `columns: 2`
+    // is multi-column, which decides where an item goes by balancing HEIGHT —
+    // right for a pack of many, a guess for two equal tiles. A grid places
+    // them. Three wrap to a second row rather than taking a 428px third
+    // column, which is what the multi-column rule did and is still right.
+    const pack = /\.r-board\[data-rest="2"\] \.r-board-rest,\s*\r?\n\.r-board\[data-rest="3"\] \.r-board-rest \{([^}]*)\}/.exec(CSS);
+    expect(pack, 'no placed-pack rule for two or three').toBeTruthy();
+    expect(pack![1]).toMatch(/display:\s*grid/);
+    expect(pack![1]).toMatch(/grid-template-columns:\s*1fr 1fr/);
+    expect(pack![1]).toMatch(/align-items:\s*start/);
   });
 
   it('still collapses to one column on a phone, whatever the count says', () => {
     // UI rule 7. The count-based rules are more specific than the media
-    // query, so the phone rule has to name them or it loses.
+    // query, so the phone rule has to name them or it loses — and a grid
+    // ignores `columns`, so it has to be told in grid terms as well.
     expect(CSS).toContain('.r-board-rest, .r-board[data-rest] .r-board-rest { columns: 1; }');
+    expect(CSS).toMatch(/\.r-board\[data-rest="2"\] \.r-board-rest,\s*\r?\n\s*\.r-board\[data-rest="3"\] \.r-board-rest \{ grid-template-columns: 1fr; \}/);
   });
 
   it('tells the page how many objects are packed below the lead', () => {

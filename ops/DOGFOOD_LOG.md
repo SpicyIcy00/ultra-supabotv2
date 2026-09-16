@@ -238,6 +238,41 @@ against `.r-main`'s padding, at 1440 / 1663 / 1863 / 1920px — and fails below
 have passed on the stylesheet that caused this**, so it takes the minimum of
 every rule. Six tests, all six red on the old stylesheet, `1,297 → 1,301`.
 
+**HE LOOKED AGAIN AND THEY WERE STILL STACKED.** *"charts still not beside
+each other"*, with the names now whole — so the label half was closed and the
+side-by-side half was not.
+
+**THE FIRST FIX TARGETED THE WRONG CASE, and reading his own turn out of
+`george.posts` is what showed it.** The composition for that turn is ONE
+block — a `change` to `opus-drops`, an object carried from an earlier turn —
+and his two charts are `default_blocks`: `read-0` weight `lead`, `read-1`
+weight `quiet`. After `oneLead()` the carried object leads, so the board is
+**three objects with BOTH charts in the pack**, `data-rest="2"`. The row rule
+added this morning fires on `data-rest="1"` — one thing leading, one thing
+packed — and **was never going to apply to the screen he was looking at**.
+Lead-versus-pack was the wrong axis; his two charts are pack-versus-pack.
+
+**AND THE PACK DECIDED BY BALANCING, WHICH IS A GUESS FOR TWO.** `columns: 2`
+is multi-column: it places an item by balancing column HEIGHT. That is the
+right mechanism for a pack of many — it is why a tall table beside two short
+figures packs tight — and for two equal tiles it is a coin toss the
+stylesheet cannot state. **A grid PLACES them**: first item first column,
+second item second, no height involved. Two and three now use
+`display: grid; grid-template-columns: 1fr 1fr; align-items: start`; three
+wrap to a second row rather than taking a 428px third column, which is what
+the multi-column rule did and is still right. Four and more keep multi-column,
+where packing is what you want. The phone rule had to learn grid too, because
+a grid ignores `columns`.
+
+**WHAT I COULD NOT ESTABLISH, and did not guess at:** whether the screenshot
+was taken on this morning's build at all. A 652px tile is consistent with the
+new grid AND with two balanced multi-column columns, so the pixels do not
+separate them. What separates them is the composition above, which is read
+from production and says the row rule could not have fired either way.
+
+**1,301 → 1,302 vitest.** The pack rule is now asserted as PLACEMENT — grid,
+two columns, `align-items: start` — rather than as the text `columns: 2 340px`.
+
 **WHAT IS NOT DONE, AND IT IS THE POINT OF HIS SENTENCE.** This is the THIRD
 layout fix shipped without anybody seeing it, and the first two each produced
 the next report. The arithmetic above is a model of two CSS rules, not a

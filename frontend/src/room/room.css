@@ -633,10 +633,36 @@
  */
 .r-board-rest { columns: 3 340px; column-gap: 14px; }
 .r-board[data-rest="1"] .r-board-rest { columns: 1; }
+
+/* TWO OR THREE THINGS ARE PLACED, NOT BALANCED (2026-09-16, his fourth look).
+ *
+ * `columns: 2` is multi-column, and multi-column decides where an item goes by
+ * BALANCING HEIGHT. That is the right mechanism for a pack of many — it is why
+ * a tall table beside two short figures packs tight — and it is a guess for
+ * two. Read out of `george.posts`, the turn he screenshotted composed ONE
+ * block and the surface default-composed his two reads as `read-0` (lead) and
+ * `read-1` (quiet), so BOTH charts are in the pack with a carried object
+ * leading above them: two equal tiles, two equal columns, and where they land
+ * is whatever the balancer decides.
+ *
+ * A grid PLACES them: first item first column, second item second, no height
+ * involved. Three items wrap to a second row rather than taking a third
+ * column, which is what `columns: 2 340px` did and is still right — a third
+ * column of 428px is too narrow for a dumbbell to read in.
+ *
+ * `align-items: start` so a short tile beside a tall one keeps its own height.
+ */
 .r-board[data-rest="2"] .r-board-rest,
-.r-board[data-rest="3"] .r-board-rest { columns: 2 340px; }
+.r-board[data-rest="3"] .r-board-rest {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start;
+}
 @media (max-width: 900px) { .r-board-rest { columns: 2 280px; } }
-@media (max-width: 640px) { .r-board-rest, .r-board[data-rest] .r-board-rest { columns: 1; } }
+@media (max-width: 640px) {
+  .r-board-rest, .r-board[data-rest] .r-board-rest { columns: 1; }
+  /* A grid ignores `columns`, so the phone rule has to speak grid too. */
+  .r-board[data-rest="2"] .r-board-rest,
+  .r-board[data-rest="3"] .r-board-rest { grid-template-columns: 1fr; }
+}
 .r-board-rest > * {
   break-inside: avoid;
   -webkit-column-break-inside: avoid;
