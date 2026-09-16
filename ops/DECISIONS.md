@@ -4383,3 +4383,27 @@ get_sales and three duplicated sentences cut. **And the eleven voice scenarios
 cannot see this card** — every one of them already carries "why", "which" or
 "dig deeper" — so two scenarios that can were added to the investigation evals.
 
+**A page is a frame, and a frame does not move.** 2026-09-16, his third report
+of one rule. `--measure` was set from `data-rest`, so the page took 680px of a
+1,863px window while "Needs you" took 1,120 — two frames 440px apart, and the
+row label capped at 40% of its tile was squeezed by a page that has nothing to
+do with labels. **The count sizes the BOARD now and never the page**, and the
+room has one frame: `--measure-list` is gone. Under it a second cause no width
+could reach — the lead and the pack are two containers, so a two-object board
+was vertical at any size; with one thing in the pack they are a row, guarded on
+`:has(.r-board-lead)` because a lone unweighted object is `data-rest="1"` too.
+**And the reason three reports got past 1,284 tests: nothing in the room can
+see a width.** jsdom does no layout and there is no browser in the toolchain,
+so `layout.test.ts` asserted the narrowing rules were PRESENT. It now computes
+what the rules produce — narrowest `--measure` against `.r-main`'s padding, at
+four real viewports, failing under 65% occupied — and reading only the default
+on `.room` is how such a check would have passed on the old stylesheet.
+
+**The room has an address, and a build fingerprint.** 2026-09-16, off the
+status bar of his own screenshot: `https://thesupabot.vercel.app`. Nine
+close-outs said Vercel could not be checked from a terminal. It has no
+`/health`, but the entry bundle is content-hashed, so the frontend's build can
+be watched the way Railway's is — read it before the push, poll until it
+differs. It maps to no commit and says nothing about whether the page LOOKS
+right, which is still a hard refresh and a person.
+

@@ -75,11 +75,15 @@
      it. Narrowed by how much is on the board; see "the measure" below. The
      default is the wide one, so a browser without `:has()` is still centred,
      which is the half of the report that matters. */
+  /* ONE FRAME FOR THE ROOM (2026-09-16). It was two — 1,320px for a board of
+     tiles, 1,120px for a list of rows — on the reasoning that they are two
+     kinds of content. They are, and their CONTENT still says so: prose keeps
+     62ch and the reading keeps 66ch, so nothing sprawls at this width. What
+     they are not is two ROOMS, and a frame that changes when you cross a
+     screen is the thing he read as "it doesnt feel like its from the same
+     app". The list screens' own 1,120 was chosen against 820px breaking
+     "AJI BARN Reorder" mid-item; 1,320 clears that by more. */
   --measure: 1320px;
-  /* And the list screens' own, narrower: rows rather than a grid of tiles.
-     Two kinds of content, two measures, both named here so neither is a
-     number somebody once typed into a rule. */
-  --measure-list: 1120px;
 
   --sans: 'Schibsted Grotesk', ui-sans-serif, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
@@ -518,38 +522,37 @@
  * board of three things filled two of them and left the third empty inside an
  * already left-hugging page.
  *
- * So the measure is ONE variable on `.room`, set from how many objects are
- * packed below the lead, and read by the page and the composer both. It moves
- * with the board because the board is the content — the same reason the board
- * clears and transforms rather than accumulating.
+ * So the measure is ONE variable on `.room`, read by the page and the composer
+ * both so the two cannot drift onto different axes.
  *
- * `:has()` is the mechanism and the default is the wide one, so a browser
- * without it gets today's 1320 and is centred, which is the half that matters.
+ * IT USED TO MOVE WITH THE BOARD — "the board is the content" — and that is the
+ * sentence the block below reverses. A board is content; a page is a frame.
  */
-.room:has(.r-board[data-rest="0"]),
-.room:has(.r-board[data-rest="1"]) { --measure: 680px; }
-.room:has(.r-board[data-rest="2"]) { --measure: 940px; }
-.room:has(.r-board[data-rest="3"]) { --measure: 1040px; }
-
-/* NO BOARD AT ALL IS NOT A SMALL BOARD — reported 2026-09-15: the list screens
-   were widened and *"it didnt change for the [t]alking page"*.
-
-   The rule above sizes the page from what is packed below the lead, which is
-   right while there IS a board: a column built for six holding two is the
-   empty space he reported on 09-14. But `data-rest="0"` is true of two very
-   different pages — one lead tile and nothing under it, and NOTHING AT ALL —
-   and only the first is a board being sized. A turn that read nothing (he was
-   looking at "Saved as Estate Week", `0 reads · 1 tool`) got the narrowest
-   page in the room: a 680px strip of chrome, reading and composer in a 1900px
-   window.
-
-   `data-board` is the precise signal and it is already on the element. With no
-   board, the page is sized like the room's other non-board screens rather than
-   by a grid that is not there — one width when George is just talking. The
-   reading inside it does not move: it is prose, and 66ch is its own measure.
-
-   After the rules above on purpose: same specificity, so source order decides. */
-.room:has(.r-board[data-board="0"]) { --measure: var(--measure-list); }
+/* THE COUNT SIZES THE BOARD. IT NEVER AGAIN SIZES THE PAGE.
+ *
+ * Reported three times — 09-14 "lots of empty space on the right", 09-15 "why
+ * is still cropped", 09-16 "why is the side gaps different from other pages
+ * … there is clearly space". The first was answered by narrowing `--measure`
+ * from `data-rest`, and that rule is what produced the other two.
+ *
+ * MEASURED against his own screenshot, 2026-09-16. Window 1863px, a board of
+ * two objects, so `data-rest="1"`: the page took 680px and 1,047px of a 1,863px
+ * window was empty — 56%. Beside it "Needs you" took `--measure-list`, 1,120px.
+ * Same room, two frames, 440px apart, and he read the difference off the
+ * screen before he read anything in it.
+ *
+ * THE INVERSION: a page is a frame and a frame does not move. Sizing it from
+ * how many objects the model happened to compose makes the chrome, the reading
+ * and the composer a function of the answer — and squeezes everything inside
+ * it, which is why a row label capped at 40% of its tile was still cut and why
+ * two tiles could not sit side by side. Both were the strip, not their own
+ * rules.
+ *
+ * What the 09-14 report was actually about is a board that reserved three
+ * columns for two objects and left the third empty. That is a COLUMN COUNT and
+ * it is fixed below, where it belongs — never more columns than there are
+ * things. The page keeps one width, and two objects now get two columns of it.
+ */
 
 .r-main {
   padding: 26px clamp(18px, 3vw, 40px) 150px;
@@ -576,6 +579,45 @@
  */
 /* The board fills the measure; the measure is what was narrowed. */
 .r-board { max-width: 100%; }
+
+/* A SMALL BOARD IS TWO REGIONS STACKED, AND NO WIDTH FIXES THAT.
+ *
+ * "why arent the charts side by side there is clearly space" — 2026-09-16, and
+ * it is the half of that report the measure does not touch. What LEADS is one
+ * container and what packs below it is another, so a board of two objects is
+ * one above the other at 680px and still one above the other at 1320px. He was
+ * reading the space correctly; the layout could not use it.
+ *
+ * When the pack holds ONE thing, the lead and the pack are a ROW rather than a
+ * stack. Both regions survive — which is why this is a grid here and not a
+ * merge in `render.tsx`: `drag.ts` decides lead-or-rest by which container the
+ * pointer is over, and a board with no lead region is a board you cannot
+ * promote a tile into.
+ *
+ * `align-items: start` because the two are different heights and a row that
+ * stretched the shorter one is the twelve-column grid this board replaced.
+ * `:has(.r-board-lead)` because ONE object George did not weight `lead` is
+ * also `data-rest="1"` — one region, not two — and a single tile in a
+ * two-column row is the empty right-hand half he reported on 09-14. A row
+ * needs both halves to be a row.
+ */
+.r-board[data-rest="1"]:has(.r-board-lead) {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start;
+}
+.r-board[data-rest="1"] .r-board-lead { margin-bottom: 0; }
+/* That one object, then: capped and centred like any other lone tile. */
+.r-board[data-rest="1"]:not(:has(.r-board-lead)) .r-board-rest {
+  max-width: 760px; margin-inline: auto;
+}
+/* UI rule 7: the phone layout is the real one, and two charts abreast is not
+   it. Above the pack's own 640px collapse, because a two-column board wants
+   more room than a two-column pack. */
+@media (max-width: 900px) { .r-board[data-rest="1"]:has(.r-board-lead) { grid-template-columns: 1fr; } }
+
+/* ONE OBJECT AND NOTHING UNDER IT. The page no longer narrows to it, so the
+   natural width goes HERE — on the region, which is content, not on the frame.
+   A lone dumbbell run to 1320px is a different wrong from a 680px page. */
+.r-board[data-rest="0"] .r-board-lead { max-width: 760px; margin-inline: auto; }
 
 .r-board-lead { display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 14px; }
 @media (min-width: 1100px) {
@@ -1184,12 +1226,12 @@ body.r-dragging-on .r-tile { transition: none; }
    the screen empty — "its not centered", 2026-09-15.
 
    AND WIDER THAN 820px, reported the same day: *"dont you think the center is
-   too small? like it should occupy more on the center?"* It is its own measure
-   rather than the board's, because these are two kinds of content: the board
-   is a grid of tiles and wants `--measure`; a list is rows, and a row's widest
-   line is the questions a page holds, joined with `·`. This is the width at
-   which such a line reads as one or two clean lines rather than breaking
-   mid-item, which is what 820px was doing to "AJI BARN Reorder".
+   too small? like it should occupy more on the center?"* 820px was breaking
+   "AJI BARN Reorder" mid-item in `.r-item-of` — a row's widest line is the
+   questions a page holds, joined with `·`, which is a list and not a sentence.
+   It took its OWN measure for that, and on 2026-09-16 it stopped: one frame
+   for the room, because the two measures were 200px apart and he read the
+   difference walking between screens.
 
    WIDENING THE COLUMN ALONE WOULD HAVE DONE NOTHING VISIBLE, and that is worth
    saying: every paragraph in these screens is `.r-note`, capped at 62ch. A
@@ -1198,7 +1240,7 @@ body.r-dragging-on .r-tile { transition: none; }
    sentence. Prose keeps its measure, here and in the reading, because running
    an answer the full width of a 1900px screen is the thing a measure exists to
    prevent. */
-.r-column { max-width: var(--measure-list); margin-inline: auto; }
+.r-column { max-width: var(--measure); margin-inline: auto; }
 
 /* WHAT A KEPT PAGE HOLDS, quoted rather than described — a list of question
    names, not a sentence. A reading measure is for prose: applied to a

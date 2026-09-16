@@ -57,62 +57,6 @@ on compose frame" does.
 
 ## Open
 
-### 2026-09-15 — a 680px strip in a 1900px window, and no chart in it
-
-> *"why is still cropped? and why are the charts missing text? it should fill
-> it"*
-
-**TWO HALVES. ONE IS ESTABLISHED, THE OTHER IS NOT, AND THEY ARE WRITTEN APART
-ON PURPOSE.**
-
-**THE WIDTH IS THE RULE WORKING AS WRITTEN, WHICH IS WHY "STILL".** `--measure`
-is set from `data-rest` — **how many objects sit BELOW the lead** — and this
-turn's board has one or two, with **ten more folded into "10 things from
-earlier"**. One or fewer below the lead means **680px**. His window is ~1863px
-wide, so roughly **63% of the screen is black**.
-
-The rule was added 2026-09-14 off his own report, *"at 100% size theres lots of
-empty space on the right and its not centered"*, and it fixed the half it was
-aimed at: a board of two things no longer sits in a column built for six. **It
-did not fix the screen.** A column sized to the board is still a strip when the
-board is small, and he has now reported that shape TWICE. **That is evidence
-the rule is wrong rather than that it misfired**, and it is a design change to
-the one variable every surface in the room reads — the board, the composer, the
-list screens — so it is a card, not a midnight edit.
-
-**HALF OF IT ANSWERED ITSELF, 2026-09-16.** He scrolled and sent the charts:
-**they render.** "Product revenue" and "Units sold", ten rows each, dumbbells
-drawn, figures beside them. **Nothing was missing — they were below the fold,
-under the composer.** The second candidate below was the right one and the
-first is closed: no `Missing` line, no rowless block.
-
-**WHAT HE SAW INSTEAD, AND IT IS WORSE:** *"the product name are cut and they
-arent even beside each other when theres space"*. The cut names are their own
-entry under Fixed and are done. **The side-by-side half is still this entry**,
-and it is now evidenced rather than inferred — two tiles of ~460px stacked
-vertically inside a page with room for both, beside a "Needs you" screen that
-fills its width. Same `--measure` question, and the same card.
-
-**WHAT WAS WRITTEN HERE BEFORE HE SCROLLED, kept because the reasoning was
-wrong in an instructive way:** The block
-in the screenshot is cut off by the bottom of the window with its caveat and
-its title (*"Units sold"*) drawn and the mark below the fold, so the picture
-cannot tell *"the chart is under the composer"* from *"the chart did not
-render"*. Two candidates, both real, neither confirmed:
-
-* a read past `MAX_ROWS_TO_CLIENT` (120) arrives with **no rows at all** — all
-  of them or none — and a block over no rows draws `Missing`, which is the
-  sentence already Open above as *"a tile explaining itself to the reader"*.
-  The visible caveat says **74 compared rows**, under the cap, but that is the
-  compared count and not necessarily the read's;
-* or nothing is wrong and it is simply below the fold.
-
-**WHAT WOULD SETTLE IT IN ONE LOOK:** scroll that same answer down, and if a
-chart is there the second half of this entry closes. If instead there is a grey
-line reading *"George composed this from rows, which this read does not
-carry"*, it is the first candidate and it is a different fix.
-
-
 ### 2026-09-15 — a comparison that drew no comparison
 
 > *"when it compares it didnt generate any charts or anything"*
@@ -222,6 +166,154 @@ once changes the next answer. That is the card's own done-when.
 ---
 
 ## Fixed
+
+### 2026-09-16 — one frame, or three? The gaps, the cut names and the stack
+
+> *"now also look at the differnece why in this talking page is the side gaps
+> different from other pages? and why does this chart not fill out the names
+> there is clearly space and why arent the charts side by side there is clearly
+> space, i dont want you to just fix this exact problem cause its clearly a
+> bigger structural issue that needs to be addressed"*
+
+**HIS THIRD REPORT OF THE SAME RULE, AND HE IS RIGHT THAT IT IS STRUCTURAL.**
+09-14 *"lots of empty space on the right"*, 09-15 *"why is still cropped"*,
+now this. Two of the three symptoms he names are one cause and the third is a
+second cause underneath it.
+
+**MEASURED OFF HIS OWN TWO SCREENSHOTS, not estimated.** Window 1,863px.
+`.r-main` reserves 56px of rail plus `clamp(18px, 3vw, 40px)` each side, so
+1,727px is available.
+
+| screen | measure | content | empty |
+|---|---|---|---|
+| the thread | `--measure` at `data-rest="1"` | **680px** | **1,183px, 63%** |
+| Needs you | `--measure-list` | **1,120px** | 743px, 40% |
+
+Both centred, so his eye compared two frames 440px apart and read it
+correctly before reading anything in either.
+
+**CAUSE ONE: the page was sized by how many objects the answer happened to
+have.** `--measure` was set from `data-rest` — how many objects sit below the
+lead — at 680 / 940 / 1040 / 1320px. So the chrome, the reading and the
+composer were a function of the answer, and **the cut names are that too**:
+the row label is capped at 40% of its TILE (`fit-content(40%)`, fixed 09-16),
+and 40% of a tile inside a 680px page is ~180px. The label rule was right and
+was being squeezed by a page that had nothing to do with labels. Nothing was
+wrong with the chart.
+
+**CAUSE TWO, and no width fixes it: the board is two containers stacked.**
+What LEADS is `.r-board-lead`, what packs is `.r-board-rest`, and they are
+siblings in a column. A board of two objects is one above the other at 680px
+and still one above the other at 1320px. *"there is clearly space"* was true
+and the layout had no way to use it.
+
+**BOTH CAUSES CLOSED, 2026-09-16, and the 680px strip entry below goes with
+them.**
+
+1. **The count sizes the board; it never again sizes the page.** The four
+   `data-rest` → `--measure` rules and the `data-board="0"` rule are deleted.
+   A page is a frame and a frame does not move.
+2. **One frame for the room.** `--measure-list` is gone; `.r-column` — Kept,
+   Needs you, Running — reads `--measure`. Their CONTENT still differs: prose
+   keeps 62ch, the reading keeps 66ch, so nothing sprawls at 1,320px, and
+   1,320 clears the 820px that was breaking "AJI BARN Reorder" mid-item.
+3. **A small board is a row, not a stack.** With one thing in the pack, the
+   lead and the pack are a two-column grid, `align-items: start`. **Both
+   containers survive** — `drag.ts` decides lead-or-rest by which one the
+   pointer is over, so merging them in `render.tsx` would have made a board
+   you cannot promote a tile into. Conditioned on `:has(.r-board-lead)`,
+   because ONE object George did not weight `lead` is also `data-rest="1"`
+   and a single tile in a two-column row is the empty right half he reported
+   on 09-14. That tile is capped at 760px and centred instead.
+4. **The natural width of one object moved onto the region**, where it is
+   content, rather than onto the frame.
+
+**THE NUMBERS NOW, by the same arithmetic**: 1,320px of a 1,863px window is
+**71% occupied** against 36%, and every screen in the room is the same frame.
+
+**AND THE CHECK THAT WOULD HAVE CAUGHT IT EXISTS NOW.** `layout.test.ts`
+computes what the rules PRODUCE — the narrowest `--measure` any rule can set,
+against `.r-main`'s padding, at 1440 / 1663 / 1863 / 1920px — and fails below
+65% occupied. **Reading only the default on `.room` is how such a check would
+have passed on the stylesheet that caused this**, so it takes the minimum of
+every rule. Six tests, all six red on the old stylesheet, `1,297 → 1,301`.
+
+**WHAT IS NOT DONE, AND IT IS THE POINT OF HIS SENTENCE.** This is the THIRD
+layout fix shipped without anybody seeing it, and the first two each produced
+the next report. The arithmetic above is a model of two CSS rules, not a
+browser: it cannot see a line wrap, a tile's real height, or whether two
+charts abreast actually read. **`thesupabot.vercel.app` is now written down**
+(§3 of NOW.md) — it came off the status bar of his own screenshot, and it is
+the address nine close-outs have said was recorded nowhere. Seeing it is
+still his to do.
+
+**THE THIRD THING, which is why this got past 1,284 tests three times:**
+**nothing in the room can see a width.** jsdom does no layout and there is no
+browser in the toolchain, so `layout.test.ts` reads the stylesheet as a
+STRING — it asserted the narrowing rules were PRESENT, which is the opposite
+of catching them. A string match cannot see that 680 in 1,863 leaves 63% of
+the screen black.
+
+
+### 2026-09-15 — a 680px strip in a 1900px window, and no chart in it
+
+> *"why is still cropped? and why are the charts missing text? it should fill
+> it"*
+
+**TWO HALVES. ONE IS ESTABLISHED, THE OTHER IS NOT, AND THEY ARE WRITTEN APART
+ON PURPOSE.**
+
+**THE WIDTH IS THE RULE WORKING AS WRITTEN, WHICH IS WHY "STILL".** `--measure`
+is set from `data-rest` — **how many objects sit BELOW the lead** — and this
+turn's board has one or two, with **ten more folded into "10 things from
+earlier"**. One or fewer below the lead means **680px**. His window is ~1863px
+wide, so roughly **63% of the screen is black**.
+
+The rule was added 2026-09-14 off his own report, *"at 100% size theres lots of
+empty space on the right and its not centered"*, and it fixed the half it was
+aimed at: a board of two things no longer sits in a column built for six. **It
+did not fix the screen.** A column sized to the board is still a strip when the
+board is small, and he has now reported that shape TWICE. **That is evidence
+the rule is wrong rather than that it misfired**, and it is a design change to
+the one variable every surface in the room reads — the board, the composer, the
+list screens — so it is a card, not a midnight edit.
+
+**HALF OF IT ANSWERED ITSELF, 2026-09-16.** He scrolled and sent the charts:
+**they render.** "Product revenue" and "Units sold", ten rows each, dumbbells
+drawn, figures beside them. **Nothing was missing — they were below the fold,
+under the composer.** The second candidate below was the right one and the
+first is closed: no `Missing` line, no rowless block.
+
+**WHAT HE SAW INSTEAD, AND IT IS WORSE:** *"the product name are cut and they
+arent even beside each other when theres space"*. The cut names are their own
+entry under Fixed and are done. **The side-by-side half is still this entry**,
+and it is now evidenced rather than inferred — two tiles of ~460px stacked
+vertically inside a page with room for both, beside a "Needs you" screen that
+fills its width. Same `--measure` question, and the same card.
+
+**WHAT WAS WRITTEN HERE BEFORE HE SCROLLED, kept because the reasoning was
+wrong in an instructive way:** The block
+in the screenshot is cut off by the bottom of the window with its caveat and
+its title (*"Units sold"*) drawn and the mark below the fold, so the picture
+cannot tell *"the chart is under the composer"* from *"the chart did not
+render"*. Two candidates, both real, neither confirmed:
+
+* a read past `MAX_ROWS_TO_CLIENT` (120) arrives with **no rows at all** — all
+  of them or none — and a block over no rows draws `Missing`, which is the
+  sentence already Open above as *"a tile explaining itself to the reader"*.
+  The visible caveat says **74 compared rows**, under the cap, but that is the
+  compared count and not necessarily the read's;
+* or nothing is wrong and it is simply below the fold.
+
+**WHAT WOULD SETTLE IT IN ONE LOOK:** scroll that same answer down, and if a
+chart is there the second half of this entry closes. If instead there is a grey
+line reading *"George composed this from rows, which this read does not
+carry"*, it is the first candidate and it is a different fix.
+
+**CLOSED BY THE 2026-09-16 ENTRY ABOVE IT IN Fixed**, which is his third
+report of this rule and carries the diagnosis, the arithmetic and the fix.
+The side-by-side half named here was the second cause: two stacked
+containers, not a width.
 
 ### 2026-09-15 — "analyze tradsnax per store" answered with one chart
 

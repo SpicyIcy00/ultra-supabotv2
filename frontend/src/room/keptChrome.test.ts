@@ -182,14 +182,17 @@ describe('the six chrome tokens the old components paint with', () => {
       .toBe('auto');
   });
 
-  it('gives the list screens a measure of their own, wider than 820px', () => {
-    // "dont you think the center is too small?" — 2026-09-15. Its own token
-    // rather than the board's, because a grid of tiles and a list of rows are
-    // two kinds of content; both named in room.css so neither is a number
-    // somebody once typed into a rule.
-    expect(declsOn(ROOM, '.r-column')['max-width']).toBe('var(--measure-list)');
-    const measure = declsOn(ROOM, '.room')['--measure-list'];
-    expect(measure, '--measure-list is not defined on the room').toBeTruthy();
+  it('gives the list screens the room\'s one frame, wider than 820px', () => {
+    // "dont you think the center is too small?" — 2026-09-15 — was answered
+    // with a SECOND measure, `--measure-list`, on the reasoning that a grid of
+    // tiles and a list of rows are two kinds of content. They are, and their
+    // content still says so: prose keeps 62ch below. What they are not is two
+    // rooms, and 200px of frame moving as you cross a screen is what he read
+    // on 2026-09-16 as the side gaps being different from other pages.
+    expect(declsOn(ROOM, '.r-column')['max-width']).toBe('var(--measure)');
+    const measure = declsOn(ROOM, '.room')['--measure'];
+    expect(measure, '--measure is not defined on the room').toBeTruthy();
+    // Still clears the width that was breaking "AJI BARN Reorder" mid-item.
     expect(parseInt(measure, 10)).toBeGreaterThan(820);
   });
 
@@ -207,19 +210,17 @@ describe('the six chrome tokens the old components paint with', () => {
     expect(declsOn(ROOM, '.r-say--reading')['max-width']).toBe('66ch');
   });
 
-  it('does not size a page with no board as though it had a small one', () => {
-    // "it didnt change for the [t]alking page" — 2026-09-15. `data-rest="0"`
-    // is true both of a lead tile with nothing under it and of no board at
-    // all, and only the first is a board being sized. A turn that read nothing
-    // was getting the narrowest page in the room.
-    const empty = ruleFor(ROOM, '.room:has(.r-board[data-board="0"])');
-    expect(empty, 'a boardless page has no measure of its own').toBeTruthy();
-    expect(empty!['--measure']).toBe('var(--measure-list)');
-    // And it has to come AFTER the data-rest rules, which have the same
-    // specificity: source order is what decides between them.
-    const at = (sel: string) => ROOM.index(
-      ROOM.nodes.find((n) => n.type === 'rule' && (n as postcss.Rule).selector.includes(sel))!);
-    expect(at('data-board="0"')).toBeGreaterThan(at('data-rest="3"'));
+  it('sizes a page with no board exactly like every other page', () => {
+    // THE SHAPE OF THIS TEST IS THE FIX. It used to assert that a boardless
+    // page had a measure OF ITS OWN — `data-board="0"` → `--measure-list` —
+    // which was the 2026-09-15 patch for "it didnt change for the [t]alking
+    // page". That patch was a third width in a room that should have had one,
+    // and it left `data-rest="1"` at 680px, which is what he reported on
+    // 09-16. There is no special case now because there is nothing to special-
+    // case: one frame, so a turn that read nothing is the same page as a turn
+    // that read four.
+    expect(ruleFor(ROOM, '.room:has(.r-board[data-board="0"])')).toBeFalsy();
+    expect(ruleFor(ROOM, '.room:has(.r-board[data-rest="1"])')).toBeFalsy();
   });
 
   it('leaves the reading on its own measure whatever the page does', () => {

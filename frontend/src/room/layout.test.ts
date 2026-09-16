@@ -64,14 +64,93 @@ describe('the page is centred on one measure', () => {
     expect(rule('.r-line')).toContain('max-width: var(--measure)');
   });
 
-  it('narrows the measure when there is little on the board', () => {
-    for (const rest of ['1', '2', '3']) {
-      expect(CSS, `no measure for a board of ${rest}`)
-        .toContain(`.room:has(.r-board[data-rest="${rest}"])`);
+  it('never sizes the page from how many objects are on the board', () => {
+    // THE DEFECT THIS REPLACES, reported three times. `--measure` was set from
+    // `data-rest` — 680px for a board of one or fewer under the lead — so the
+    // chrome, the reading and the composer were a function of the answer. The
+    // assertion is the absence: no rule anywhere may set the measure from a
+    // count.
+    const sets = CSS.split(/\r?\n/).filter((l) => /--measure\s*:/.test(l));
+    for (const line of sets) {
+      expect(line, `the measure is set from a count: ${line.trim()}`)
+        .not.toMatch(/data-rest|data-board/);
     }
-    // And the default is the wide one, so a browser without :has() is still
-    // centred — which is the half that matters.
     expect(rule('.room')).toContain('--measure: 1320px');
+    // And no `:has()` rule may reintroduce it by another route.
+    expect(CSS).not.toMatch(/\.room:has\([^)]*data-(rest|board)[^)]*\)\s*\{[^}]*--measure/);
+  });
+
+  /*
+   * THE NUMBERS THE RULES PRODUCE, not the text of the rules.
+   *
+   * Every test above this reads the stylesheet as a string, for the reason the
+   * file header gives: jsdom does no layout. That is also why three reports in
+   * a row got past 1,284 tests — a string match cannot see that 680px in a
+   * 1,863px window leaves 56% of the screen black. There is no browser in this
+   * toolchain to ask, so the arithmetic is done here instead, from the same
+   * two rules the browser would use.
+   */
+  function occupied(viewport: number): number {
+    // THE NARROWEST WIDTH ANY RULE CAN SET, not the default on `.room`.
+    // Reading only the default is how this check would have passed on the
+    // stylesheet that produced the report: `.room` said 1320px and a `:has()`
+    // override three hundred lines below said 680px, and the page he was
+    // looking at got the 680.
+    const all = [...CSS.matchAll(/--measure:\s*(\d+)px/g)].map((m) => parseInt(m[1], 10));
+    expect(all.length, 'no --measure is set in px anywhere').toBeGreaterThan(0);
+    const measure = Math.min(...all);
+    // `.r-main` padding: clamp(18px, 3vw, 40px), and the rail is 56px of it.
+    const pad = Math.min(40, Math.max(18, viewport * 0.03));
+    const available = viewport - (56 + pad) - pad;
+    return Math.min(measure, available) / viewport;
+  }
+
+  it('fills the window it is given, at the sizes he actually uses', () => {
+    // 1,863px is his own window, measured off the 2026-09-16 screenshot; the
+    // rule then in force gave the page 680px of it. Anything under this floor
+    // is the strip he reported, whatever the rules say in words.
+    for (const viewport of [1440, 1663, 1863, 1920]) {
+      expect(occupied(viewport), `${viewport}px window`).toBeGreaterThan(0.65);
+    }
+    // The strip itself, so the floor is known to be able to fail: 680 in 1863.
+    expect(680 / 1863).toBeLessThan(0.65);
+  });
+
+  it('gives the same frame to every screen in the room', () => {
+    // "why is the side gaps different from other pages" — 2026-09-16. The list
+    // screens had `--measure-list`, 200px narrower, so walking between two
+    // screens moved the frame.
+    expect(rule('.r-column')).toContain('max-width: var(--measure)');
+    // Declared nowhere and read nowhere. The NAME still appears, in the
+    // comment recording why it went, and a test that banned the word would
+    // ban the history with it.
+    expect(CSS).not.toMatch(/--measure-list\s*:/);
+    expect(CSS).not.toMatch(/var\(--measure-list\)/);
+  });
+
+  it('puts two objects side by side rather than stacking two regions', () => {
+    // The half the measure does not touch: what LEADS and what PACKS are two
+    // containers, so a board of two was vertical at any width. With one thing
+    // in the pack they are a row — and both containers survive, because
+    // `drag.ts` decides lead-or-rest by which one the pointer is over.
+    const row = /\.r-board\[data-rest="1"\]:has\(\.r-board-lead\)\s*\{([^}]*)\}/.exec(CSS);
+    expect(row, 'no two-region row rule').toBeTruthy();
+    expect(row![1]).toMatch(/grid-template-columns:\s*1fr 1fr/);
+    expect(row![1]).toMatch(/align-items:\s*start/);
+    expect(RENDER).toContain('r-board-lead');
+    // ONE object George did not weight `lead` is ALSO data-rest="1", and a
+    // lone tile in a two-column row is the empty right half he reported on
+    // 09-14. The row is conditioned on both regions existing, and that single
+    // tile is capped and centred instead.
+    expect(CSS).toMatch(/\.r-board\[data-rest="1"\]:not\(:has\(\.r-board-lead\)\) \.r-board-rest \{[^}]*max-width/);
+    // UI rule 7: not on a phone.
+    expect(CSS).toMatch(/max-width: 900px\)\s*\{\s*\.r-board\[data-rest="1"\]:has\(\.r-board-lead\)\s*\{ grid-template-columns: 1fr/);
+  });
+
+  it('caps a lone tile on the region, never on the frame', () => {
+    // The natural width of one object is a fact about the object. Putting it
+    // on the page is what narrowed the composer and the chrome with it.
+    expect(CSS).toMatch(/\.r-board\[data-rest="0"\] \.r-board-lead \{[^}]*max-width/);
   });
 
   it('never leaves more columns than there are things to put in them', () => {
