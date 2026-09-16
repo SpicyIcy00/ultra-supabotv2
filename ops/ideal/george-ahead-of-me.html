@@ -1025,17 +1025,22 @@
      figure filling the right, not narrated either — they draw themselves in once, together.
      A composition you read, with him in it. ---------- */
   .bs-view{display:none}
-  body.con-beside .side,body.con-beside .reopen,body.con-beside .queue,body.con-beside .layswitch,body.con-beside .console > .presence,body.con-beside .why-this,body.con-beside .mock{display:none}
+  body.con-beside .queue,body.con-beside .layswitch,body.con-beside .console > .presence,body.con-beside .why-this,body.con-beside .mock{display:none}
   body.con-beside{padding-left:clamp(16px,2.5vw,32px)}
   body.con-beside .console{display:block;max-width:none}
-  body.con-beside .examples{position:fixed;left:18px;top:14px;z-index:25;max-width:52vw;opacity:.55}
-  body.con-beside .examples:hover{opacity:1}
-  body.con-beside .examples h2{display:none}
+  /* the examples live in the sidebar here, as a list */
+  body.con-beside .side .examples{margin:0 0 22px;max-width:none;opacity:1}
+  body.con-beside .side .examples h2{font:500 10.5px/1.6 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-4);margin:0 0 8px}
+  body.con-beside .side .strip{flex-direction:column;align-items:stretch;gap:1px}
+  body.con-beside .side .strip button{text-align:left;border-radius:8px;padding:5px 8px;font-size:12px;white-space:normal;line-height:1.3;text-decoration:none}
+  body.con-beside .side .strip button .n{display:inline-block;min-width:4.5ch}
+  body.con-beside .side .strip button.on{background:var(--raise);color:var(--ink);box-shadow:0 0 0 1px var(--edge-2);text-decoration:none}
   body.con-beside main{display:none}
-  body.con-beside .bs-view{display:grid;position:fixed;inset:0;grid-template-columns:minmax(300px,5fr) minmax(0,7fr);column-gap:4vw;padding:8vh 5vw 8vh 4vw;align-items:stretch}
+  body.con-beside .bs-view{display:grid;position:fixed;inset:0;grid-template-columns:minmax(320px,5fr) minmax(0,7fr);column-gap:4vw;padding:7vh 5vw 7vh 4vw;align-items:stretch;transition:left .28s cubic-bezier(.2,.7,.3,1)}
+  :root[data-side="open"] body.con-beside .bs-view{left:232px}
   .bs-view .bs-left{min-width:0;display:flex;flex-direction:column;gap:14px;max-height:100%;overflow:auto;padding-right:6px}
-  .bs-view .bs-left canvas{width:min(26vh,300px);height:min(26vh,300px);flex:none;margin:-10px 0 -6px -18px}
-  .bs-view .bs-mood{font:400 12px/1.6 var(--mono);color:var(--ink-3);width:30ch}
+  .bs-view .bs-left canvas{width:100%;max-width:680px;height:auto;aspect-ratio:680/300;flex:none;margin:-8px 0 0 -10px}
+  .bs-view .bs-mood{font:400 12px/1.6 var(--mono);color:var(--ink-3);width:30ch;margin-top:-6px}
   .bs-view .bs-mood b{display:block;font:500 13px/1.5 var(--sans);color:var(--ink)}
   .bs-view .bs-claim{margin:6px 0 0;font:500 clamp(20px,1.9vw,26px)/1.22 var(--serif);color:var(--ink);letter-spacing:-.012em;max-width:30ch;text-wrap:balance}
   .bs-view .bs-claim em{font-style:italic}
@@ -1055,7 +1060,7 @@
   .bs-view .bs-figs .ev .row{padding:4px 6px;margin:0;font-size:13px}
   .bs-view .bs-figs .line svg{height:130px}
   .bs-view .bs-figs > div.out{opacity:.55}
-  @media (max-width:900px){ body.con-beside .bs-view{position:static;display:block;padding:20px 5vw 120px} .bs-view .bs-left{max-height:none;overflow:visible} .bs-view .bs-left canvas{width:120px;height:120px;margin:0 0 0 -8px} .bs-view .bs-figs{max-height:none;overflow:visible;margin-top:26px;grid-template-columns:1fr} }
+  @media (max-width:900px){ body.con-beside .bs-view{position:static;display:block;padding:20px 5vw 120px} .bs-view .bs-left{max-height:none;overflow:visible} .bs-view .bs-left canvas{width:100%;max-width:360px;margin:0} .bs-view .bs-figs{max-height:none;overflow:visible;margin-top:26px;grid-template-columns:1fr} }
 </style>
 
 <button class="reopen" id="reopen" title="Open the sidebar  [" hidden>›</button>
@@ -1678,7 +1683,7 @@
     <li><b>Three parts, by what each is for.</b> On the left, what persists — pages, systems, automations and watches, people — with a pip that says running, off, or needs you; it is a list of things you own, not a menu of screens. In the middle, the situation, at a reading width for his sentences and the full column for evidence. On the right, his mark: it breathes slowly when he is quiet, pulses once per read with the read named under it, turns to writing when he is connecting what the reads establish, and goes warm only when he is waiting on you. It never moves for effect.</li>
     <li><b>Four rooms around the same situation.</b> <i>Document</i> is a briefing. <i>Stage</i> is the Jarvis idea taken seriously, merged with narration after the owner pointed at both: an empty dark room, his mark at the centre, his words arriving a sentence at a time, and each figure floating in at its place around him the moment he mentions it — one at a time, the earlier ones easing back, so it never jumbles. Nothing persistent on screen; the persistent things a gesture away; the composer a line you speak into. <i>Canvas</i> is the spatial workspace tldraw’s agents-on-the-canvas work points at: he places the pieces, you move them, and position is meaning. <i>Split</i> is the operator’s desk mission-control benchmarking keeps arriving at: the queue on one side, the open situation on the other, the wall of everything replaced by one prioritised list.</li>
     <li><b>Four more rooms, for contrast.</b> <i>Timeline</i> makes time the axis: the day as he saw it, situations as dots, what you open expanding under the line — memory is just the past on the same line. <i>Estate</i> makes the business the room: shops, warehouses and machines as places, stock flowing between them, the situation attached to the place it is about. <i>Dense</i> is the terminal pole — everything at once, no white space — here so the others can be measured against it. <i>Narrated</i> is the same idea from the other side, kept after the owner asked for it: the calm room first — his words in a column on the right, a sentence at a time — and the stage’s visuals brought to it, each figure floating in beside him on the left as he mentions it, wired to him. Stage is a room with words in it; narrated is a conversation with a room beside it. <i>Shown</i> is the third combination, after the owner said the stage’s figures go all over the place: narrated’s way of talking, and the figures in one place — the one he is talking about takes the slot on the right, large; the ones before it wait in an ordered strip beneath, a tap away. Nothing floats, nothing overlaps.</li>
-    <li><b>Alive, after the research.</b> Figures draw themselves as he speaks \— rows arrive one after another, bars grow, cells fill, a line is drawn \— motion only for the transition the data makes, never decoration. A store keeps one hue everywhere (Rockwell is the same blue on every figure in every room; products likewise): identity is a value the data carries, so it may have colour, while the accent stays reserved for \“needs you\”. The set is the validated categorical palette, stepped for each ground. And touch answers a question: hover any mark or row for the exact figure and when it was read. <i>Beside</i> is the composed one, after the owner asked for it: him up top on the left, his words under him, whole and not narrated; every figure filling the right, drawing itself in once, together. A page you read, with him in it.</li>
+    <li><b>Alive, after the research.</b> Figures draw themselves as he speaks \— rows arrive one after another, bars grow, cells fill, a line is drawn \— motion only for the transition the data makes, never decoration. A store keeps one hue everywhere (Rockwell is the same blue on every figure in every room; products likewise): identity is a value the data carries, so it may have colour, while the accent stays reserved for \“needs you\”. The set is the validated categorical palette, stepped for each ground. And touch answers a question: hover any mark or row for the exact figure and when it was read. <i>Beside</i> is the composed one, after the owner asked for it: him up top on the left as a wide figure — the same mark, drawn on a wide canvas, so everything he does still means what it means — his words under him, whole and not narrated; every figure filling the right, drawing itself in once, together; the examples in the sidebar. A page you read, with him in it.</li>
     <li><b>No boxes around evidence, in any room.</b> The owner: when a figure sits in a box it stops feeling like the workplace building around you and starts feeling like KPIs popping out. A border says “an object someone placed here”; without it a figure is something he drew on the room while talking. Position, a caption and the wire to him give it its place. A box is kept only for a thing you act on — a plan, an order — because that genuinely has an edge.</li>
     <li><b>Told is my own answer, and the default.</b> The owner said stop following him. One thing on screen at a time: him, the sentence he is saying, and the one figure it rests on \— centred, bare, no box. The sentence before is gone; the figure before is gone. When he has finished, the telling settles into the page, where it all stands still and can be read. Telling is time; the page is the record. Nothing is ever in two places, so nothing can jumble \— and there is no strip, no wire, no chip, nothing to manage while he is talking.</li>
     <li><b>Borrowed, and from where.</b> Confidence that opens into what supports, contradicts or is silent (Consensus, Elicit, scite); a visible “no read” mark on any claim without one (Claude, Consensus); his work disclosed in layers — a line, then steps, then each read’s inputs and time (the 2025–26 agent deployments Zylos studied: no mid-run visibility tripled abandonment); one step redone or skipped rather than approve-all (the same); his authority per kind of action as a control you can move, defaulting conservative (Mantlr, Claude’s tool permissions); Later and j/k on the list (Linear triage); a graphite ground with borders as translucent white and colour only where it means something (Linear, Geist); every chart titled by its conclusion with one interpretive note (FT, Datawrapper).</li>
@@ -1781,7 +1786,9 @@
   var motes=[0,1,2].map(function(i){return {a:i*2.1, r:1, speed:0.22+i*0.05}});
   function draw(now){
     if(!cx){return;}
-    var w=cv.width,h=cv.height,c=w/2, t=(now-state.t0)/1000;
+    var w=cv.width,h=cv.height,cxm=w/2,cym=h/2, t=(now-state.t0)/1000;
+    // a square canvas draws him round; a wide one draws the same him stretched into a horizontal figure
+    var reach=103*2.6, ex= w===h?1:(w/2)/reach, ey= w===h?1:(h/2)/reach;
     cx.clearRect(0,0,w,h);
     var ink=tok('--ink'), act=tok('--act'), quiet=tok('--quiet'), up=tok('--up');
     var base=84, breath=reduce?0:Math.sin(t*0.8)*5, r=base+breath;
@@ -1789,24 +1796,26 @@
     if(state.mode==='reading'&&!reduce){ var dt=(now-state.pulse)/1000; r+=Math.max(0,Math.sin(dt*Math.PI*2)*14)*Math.max(0,1-dt/0.9); }
     // halo: breathes with him; wider and softer when quiet, tighter when working
     var haloR = r*(state.mode==='idle'?2.6:2.1);
-    var g=cx.createRadialGradient(c,c,r*0.7,c,c,haloR); g.addColorStop(0,col); g.addColorStop(1,'rgba(0,0,0,0)');
-    cx.globalAlpha= state.mode==='idle'?0.12:0.2; cx.fillStyle=g; cx.beginPath(); cx.arc(c,c,haloR,0,Math.PI*2); cx.fill();
+    cx.save(); cx.translate(cxm,cym); cx.scale(ex,ey);
+    var g=cx.createRadialGradient(0,0,r*0.7,0,0,haloR); g.addColorStop(0,col); g.addColorStop(1,'rgba(0,0,0,0)');
+    cx.globalAlpha= state.mode==='idle'?0.12:0.2; cx.fillStyle=g; cx.beginPath(); cx.arc(0,0,haloR,0,Math.PI*2); cx.fill();
+    cx.restore();
     // motes: far and slow when idle; drawn in as reads land; close and steady while writing
     var orbit = state.mode==='idle'? r*1.9 : state.mode==='writing'? r*1.25 : r*1.6;
     motes.forEach(function(m,i){
       if(!reduce) m.a += (state.mode==='reading'?m.speed*2.2:m.speed)*0.016;
       var target = (state.mode==='reading' && i<state.drawn) ? r*1.25 : orbit;
       m.r += (target - (m.r||orbit))*0.06; if(!m.r) m.r=orbit;
-      var x=c+Math.cos(m.a)*m.r, y=c+Math.sin(m.a)*m.r;
+      var x=cxm+Math.cos(m.a)*m.r*ex, y=cym+Math.sin(m.a)*m.r*ey;
       cx.globalAlpha= state.mode==='need'?0.35:0.75; cx.fillStyle= state.mode==='reading'&&i<state.drawn? up : quiet;
       cx.beginPath(); cx.arc(x,y,6,0,Math.PI*2); cx.fill();
     });
     // the body
-    cx.globalAlpha=1; cx.fillStyle=col; cx.beginPath(); cx.arc(c,c,r,0,Math.PI*2); cx.fill();
+    cx.globalAlpha=1; cx.fillStyle=col; cx.beginPath(); cx.ellipse(cxm,cym,r*ex,r*ey,0,0,Math.PI*2); cx.fill();
     // a ring: turns while reading, steadies while writing, still and warm while waiting
-    if(state.mode==='reading'){ cx.strokeStyle=up; cx.lineWidth=3.5; cx.globalAlpha=.9; cx.beginPath(); cx.arc(c,c,r+24, t*2.6, t*2.6+Math.PI*1.2); cx.stroke(); }
-    if(state.mode==='writing'){ cx.strokeStyle=ink; cx.lineWidth=3; cx.globalAlpha=.5; cx.beginPath(); cx.arc(c,c,r+24, 0, Math.PI*2); cx.stroke(); }
-    if(state.mode==='need'){ cx.strokeStyle=act; cx.lineWidth=3.5; cx.globalAlpha=.6; cx.beginPath(); cx.arc(c,c,r+24,0,Math.PI*2); cx.stroke(); }
+    if(state.mode==='reading'){ cx.strokeStyle=up; cx.lineWidth=3.5; cx.globalAlpha=.9; cx.beginPath(); cx.ellipse(cxm,cym,(r+24)*ex,(r+24)*ey,0, t*2.6, t*2.6+Math.PI*1.2); cx.stroke(); }
+    if(state.mode==='writing'){ cx.strokeStyle=ink; cx.lineWidth=3; cx.globalAlpha=.5; cx.beginPath(); cx.ellipse(cxm,cym,(r+24)*ex,(r+24)*ey,0, 0, Math.PI*2); cx.stroke(); }
+    if(state.mode==='need'){ cx.strokeStyle=act; cx.lineWidth=3.5; cx.globalAlpha=.6; cx.beginPath(); cx.ellipse(cxm,cym,(r+24)*ex,(r+24)*ey,0,0,Math.PI*2); cx.stroke(); }
     cx.globalAlpha=1;
     requestAnimationFrame(draw);
   }
@@ -1874,6 +1883,11 @@
   var rememberedLay=null; try{rememberedLay=localStorage.getItem('george.lay')}catch(e){}
   layout(rememberedLay&&hints[rememberedLay]?rememberedLay:'document');
   // FOUR CONSOLES. document / stage / canvas / split — the same situation, a different room.
+  // the examples strip has a home above the page; beside borrows it into the sidebar
+  var exEl=document.querySelector('.examples'), exHome=exEl.parentNode, exNext=exEl.nextSibling, sideEl=document.querySelector('.side');
+  function examplesTo(where){ if(where==='side'){ if(exEl.parentNode!==sideEl) sideEl.appendChild(exEl); } else { if(exEl.parentNode!==exHome) exHome.insertBefore(exEl, exNext); } }
+  // the mark is drawn round on a square canvas and as a wide figure on a wide one
+  function markShape(wide){ var W=680, H=wide?300:680; if(cv.width!==W||cv.height!==H){ cv.width=W; cv.height=H; } }
   var conBody=document.body, stageView=document.getElementById('stageview'), canvasView=document.getElementById('canvasview'), markEl=document.getElementById('mark'), markHome=markEl.parentNode, markNext=markEl.nextSibling;
   function activeScene(){ return document.querySelector('.scene.show'); }
   function sceneParts(sc){
@@ -1882,7 +1896,7 @@
     return {claim:claim?claim.innerHTML:(plain?plain.innerHTML:''), stand:stand?stand.innerHTML:'', next:next?next.innerHTML:'', blocks:blocks};
   }
   function conLayout(name){
-    conBody.classList.remove('con-document','con-stage','con-canvas','con-split','con-timeline','con-estate','con-dense','con-narrated','con-shown','con-told','told-settled','con-beside'); conBody.classList.add('con-'+name); stopNarration(); stopStage(); stopShown(); stopTold(); stopBeside();
+    conBody.classList.remove('con-document','con-stage','con-canvas','con-split','con-timeline','con-estate','con-dense','con-narrated','con-shown','con-told','told-settled','con-beside'); conBody.classList.add('con-'+name); stopNarration(); stopStage(); stopShown(); stopTold(); stopBeside(); examplesTo('home'); markShape(false);
     document.querySelectorAll('#consw button').forEach(function(b){b.classList.toggle('on',b.dataset.con===name)});
     try{localStorage.setItem('george.con',name)}catch(e){}
     if(name==='stage') buildStage(); else if(name==='canvas') buildCanvas(); else if(name==='timeline') buildTimeline(); else if(name==='estate') buildEstate(); else if(name==='dense') buildDense(); else if(name==='narrated') buildNarrated(); else if(name==='shown') buildShown(); else if(name==='told') buildTold(); else if(name==='beside') buildBeside(); else { if(markEl.parentNode!==markHome) markHome.insertBefore(markEl, markNext); }
@@ -2167,7 +2181,7 @@
   var bsTimers=[], bsMo=null;
   function stopBeside(){ bsTimers.forEach(clearTimeout); bsTimers=[]; if(bsMo){ bsMo.disconnect(); bsMo=null; } }
   function buildBeside(){
-    var v=document.getElementById('bsview'); v.innerHTML=''; stopBeside();
+    var v=document.getElementById('bsview'); v.innerHTML=''; stopBeside(); examplesTo('side'); markShape(true);
     var sc=activeScene(); if(!sc) return; var P=sceneParts(sc);
     var left=document.createElement('div'); left.className='bs-left'; v.appendChild(left);
     left.appendChild(markEl);
