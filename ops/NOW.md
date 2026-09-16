@@ -2338,6 +2338,82 @@ Measure everything against `ops/ideal/george-ahead-of-me.html`, the `beside`
 room — **and port its markup and CSS into the React room rather than
 re-deriving them from a description: the page is already the thing.**
 
+**THE OWNER'S FIXES — every one he asked for in the artifact on 2026-09-16, the
+part that builds it, and what holds it.** *"i dont want a thing missing."* A
+card is not done while one of its rows is not on screen and in a test.
+
+| # | His words (2026-09-16) | Built by | Held by |
+|---|---|---|---|
+| 1 | "i dont like the color scheme" → the graphite ground, one warm accent, Geist / Geist Mono / Newsreader | P2S.1(a) | token block; `accentUse.test.ts` |
+| 2 | "too wide … should be space of the sides for a sidebar for pages workflows, automations etc" | P2S.1(b)(h) | rail present; composition centred test |
+| 3 | "make the sidebar to the left edge and collapseable" | P2S.1(h) | `[` toggles; slide test |
+| 4 | "the middle console should always stay centered" / "it should stay centered when sidebar is opened" / "when sidebar opens it shrinks the whole thing, that should not happen" | P2S.1(b) | centre = room centre at 1440/1920, rail open and closed; widths fixed |
+| 5 | "i kinda dont like how its inside a box visually" / "the charts still feel like they are in boxes" / "it still feels like its in squares" | P2S.1(c) | `Shell` has no border/background/shadow except draft/approval (css test) |
+| 6 | "if theres open space with the answer it should fill it … dont need to save space" | P2S.1(c) | shortest-column flow; placement test for 2/3/4/5 |
+| 7 | "charts should go from left to right then down on the right not on the left" | P2S.1(c) | placement test |
+| 8 | "here it gets cut … it should feel all connected" | P2S.1(b) | nothing clipped: no `overflow` cut inside the composition (css test) |
+| 9 | "i dont really ever want to see a scroll down on the charts … maybe just up and down arrows" / "why is there scroll bar on the edge now? … only charts area should be able to be scrolled" | P2S.1(b) | no visible scrollbar in the room (css test); arrows appear only when there is more (dom test) |
+| 10 | "add those like leading lines from stage" | P2S.1(c) | a line per figure, and one to the claim (dom test) |
+| 11 | "put the text like on the side of the visuals" → his mock: him top-left, words bottom-left set toward the figures, figures right | P2S.1(b)(c) | the Rockwell thread frame for frame |
+| 12 | "text is too low it can be almost directly under the blob" / "it should kinda feel like its coming from alive" | P2S.1(c) | words under the mark; the claim's leading line |
+| 13 | "dont narrate it … no need to narrate the visuals … fill out the right" | P2S.1(c) | nothing typed out; figures arrive together |
+| 14 | "alive is too small … make the alive a more wide horizontal figure but it has to be bigger" / "you made it smaller it should stay big" | P2S.2(d) | the mark spans its column (test on drawn size) |
+| 15 | "dont make it just an oval make it abnormal" | P2S.2(d) | the irregular form is one of the three on the switch; **shape and colour still his to workshop** |
+| 16 | "the right more alive" / "a moving thing like jarvis when processing like alive" | P2S.2(d) | four states, four drawings (dom test) |
+| 17 | "the line if its up or down should be green or red meaning good or bad not the same color as the stores" | P2S.2(e) | verdict on every row's segment and dots; identity on the swatch only |
+| 18 | identity colour, drawing-in, hover — "ok implement that" (after the research) | P2S.2(e)(f) | hue stable across figures; tooltip on every mark kind |
+| 19 | "it should have the ability to make all those different kinds of charts and visualizations like pie and others cause if it builds a dashboard it needs that" | P2S.3 | sixteen golden renders; "make that one a pie" stays |
+| 20 | "should they show more charts?" → not more, by rule: the claim picks the shape unasked | P2S.3 | the *reaches for it when* rules in `metrics.yaml` |
+| 21 | "in these types of charts … " the dumbbell keeps the swatch, the store colour never on the line | P2S.2(e) | dumbbell render test |
+| 22 | "remove, beside is the final now" — no console switch, no status line | P2S.1(h) | neither exists in the product; nothing to hold |
+| 23 | "move the example selectors to a sidebar" — the examples were the artifact's own device | — | not a product feature; the sidebar carries Pages / Systems / Automations / People instead |
+| 24 | "its not centered … its probably like the zone size" — the mark's body spans its column, the glow may run past it | P2S.2(d) | drawn-size test: body ≥ 70% of the column width |
+
+**WHERE EVERY EXISTING FUNCTION LIVES IN THE ROOM — nothing built since P0 is
+dropped by the redraw.** The artifact's `beside` room shows the claim, the
+standing text, *next* and the figures; these are where the rest goes, and
+each is a row a card must show:
+
+| Function (card) | In the beside room |
+|---|---|
+| the six marks + receipts under every number (P1.e, P2.b) | the figures; receipts open in place on tap (P2S.2 f) |
+| the reading leads, three text slots (P1.c, P1.f) | the words under the mark: claim · standing · next |
+| the ladder — known / likely / possible / unknown (P2.b, the standard §3) | **one line under the claim**, each word a tap to its figures — *assumed; the owner has not seen it and may point elsewhere* |
+| actions on the row they are about (P2.d) | on the figure's row, as now; the offers row on the composer |
+| selection as context — "this", "these two" (P2.c) | tap anything → the composer chip "tap anything above to bring it here" (P2S.1 h) |
+| the business switch (P2.g) | the sidebar, top |
+| a thread is a page: Talk · Behind it · Page · Replay (P2.a, P2.e) | the thread's name in the sidebar under Pages; the four readings stay as the thread header's tabs — *the artifact has no tabs; kept until the owner points* |
+| memory with Forget (P2.f) | a figure like any other, its rows with Forget |
+| the draft you edit, approvals (P0–P1) | the one thing that keeps a box (P2S.1 c) |
+| visible work while a turn runs (`Working.tsx`) | the mark's states (P2S.2 d); the elapsed line stays under the composer |
+| Earlier (history), Noticed (attention) | the sidebar: Pages; the attention queue (`details.queue` in the artifact) above the figures when non-empty |
+| the estate object panel — tap a shop opens it in ~1 s | in place, over the figures column, no route |
+| kept pages / pins, the same renderer (P2.k) | a page of pins draws with P2S.3's shapes, one per pin |
+| dark / light (`theme.ts`) | the three-theme tokens of P2S.1(a); the toggle stays in the sidebar |
+| the four board scenarios (P2.✓) | re-pointed to the artifact's scenes |
+
+**WHAT GOES — no old UI stays because it exists.** Counted 2026-09-17:
+`frontend/src/components/george/` is **10,510 non-test lines** — the OLD
+George surface (river feed, `PinnedPage.tsx` 637, `Instruments.tsx` 449,
+`workUnit.ts` 707, result surface, workspace). The room imports two of its
+modules (`threadHistory`, `pageScope`); the rest is reached only by
+`InboxPage`, `PagesPage`, `WorkflowsPage` and `RiverPreview`. **Rule for the
+phase: every card ends with a deletion list — what it made unreachable is
+deleted in the same commit, and the close-out states the directory's line
+count, which must fall at every close and reach zero by P3.✓.** In order:
+P2S.1 deletes `RiverPreview` and its `/george/preview` route, the `--measure`
+frame and the 2/3-tile grid rules, the console-less leftovers in `room.css`;
+P2S.3 deletes `markFor`'s mapping of the seven retired widget names once a
+migration rewrites stored boards (or keeps it with a test that says why);
+**P2.k** deletes the kept-page renderer (`PinnedPage`, `PinTile`,
+`Instruments`, `ResultSurface`, `ResultBlocks`, their shapes) — it is written
+into that card below; **P3.a** deletes `InboxPage` and the river feed;
+**P3.d** deletes `WorkflowsPage`. **Not touched without the owner's word:**
+`pages/AIChatPage.tsx` is the Supabot chatbot (freehand SQL, CLAUDE.md "George
+is not the existing chatbot") — deleting it is a product decision, not
+cleanup; he decides.
+
+
 - [ ] **P2S.1 the room** — four parts, one pass over `room.css` / `Room.tsx` /
       `Rail.tsx` / `Composer.tsx`, each its own commit:
       **(a) the ground** — the artifact's tokens replace the room's: graphite
@@ -2495,6 +2571,12 @@ re-deriving them from a description: the page is already the thing.**
       `ResultBlocks.tsx` and `PinTile`'s drawing half are gone; the page's
       controls survive as room controls; a dom test renders a recorded run
       through both and compares. No eval.
+      **Deletes** (added 2026-09-17, the phase rule): the old kept-page
+      renderer and what only it reached — `PinnedPage.tsx`, `PinTile.tsx`,
+      `Instruments.tsx`, `ResultSurface.tsx`, `ResultBlocks.tsx`, their
+      `*Shape.ts` modules and tests — and states the line count of
+      `frontend/src/components/george/` at close, against 10,510 on
+      2026-09-17.
 - [ ] **P2.✓ close** — walk the four scenes on the live build against the
       beside room of *George, Ahead of Me* (the Ideal UI is superseded, §6),
       report each against it, one full run. **Gate to Phase 3:**
