@@ -180,6 +180,58 @@
   .send,.mic{width:34px;height:34px;border-radius:50%;background:var(--sunk);color:var(--ink-2);flex-shrink:0;font-size:15px}
   .send:hover{background:var(--act);color:var(--on-act)}
 
+  /* ---------- examples strip: one per part of the vision ---------- */
+  .examples{grid-column:1/-1;margin:-8px 0 18px}
+  .examples h2{font:600 10.5px/1 var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin:0 0 8px}
+  .strip{display:flex;gap:6px;flex-wrap:wrap}
+  .strip button{font-size:12.5px;color:var(--ink-2);border:1px solid var(--edge);border-radius:999px;padding:5px 12px;background:var(--paper)}
+  .strip button .n{font:500 10px/1 var(--mono);color:var(--ink-3);margin-right:6px}
+  .strip button.on{color:var(--ink);border-color:var(--ink-3)}
+  .strip button:hover{border-color:var(--ink-3)}
+  .plain{font:400 20px/1.45 var(--serif);color:var(--ink);margin:6px 0 4px;max-width:34ch}
+  .plain small{display:block;font:400 11px/1.5 var(--mono);color:var(--ink-3);margin-top:8px}
+  .life{display:grid;grid-template-columns:auto 1fr;gap:10px 14px;margin:14px 0 4px;font-size:13.5px}
+  .life .st{font:600 10.5px/1.6 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+  .life .st.now{color:var(--ink)}
+  .life p{margin:0;color:var(--ink-2);max-width:60ch}
+  .life p b{color:var(--ink);font-weight:500}
+  .life small{display:block;font:400 11px/1.5 var(--mono);color:var(--ink-3)}
+  .runlog{border:1px solid var(--edge);border-radius:10px;overflow:hidden;margin-top:10px;font-size:13px}
+  .runlog .r{display:grid;grid-template-columns:70px 1fr auto;gap:12px;padding:9px 14px;border-bottom:1px solid var(--edge);align-items:baseline}
+  .runlog .r:last-child{border-bottom:0}
+  .runlog .r time{font:400 11px/1.5 var(--mono);color:var(--ink-3)}
+  .runlog .r .who{font:600 10px/1.5 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+  .runlog .r .who.you{color:var(--act)}
+  .runlog .r .who.done{color:var(--up)}
+  .runlog .r .who.stop{color:var(--down)}
+  .runlog .r p{margin:0;color:var(--ink)}
+  .runlog .r p small{display:block;font:400 11px/1.4 var(--mono);color:var(--ink-3)}
+  .doc{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px}
+  @media (max-width:640px){.doc{grid-template-columns:1fr}}
+  .doc .pane{border:1px solid var(--edge);border-radius:10px;padding:12px 14px;font-size:13px;background:var(--ground)}
+  .doc .pane h4{margin:0 0 8px;font:600 10.5px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+  .doc .pane .l{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--edge)}
+  .doc .pane .l:last-child{border-bottom:0}
+  .doc .pane .l .n{font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
+  .doc .pane .l.bad .n{color:var(--down);font-weight:500}
+  .doc .pane .l.new{color:var(--ink-3)}
+  .doc .pane .l.new .n{color:var(--ink-3)}
+  .prov{border:1.5px dashed var(--edge-2);border-radius:10px;padding:12px 14px;margin-top:12px;font-size:13px;color:var(--ink-2)}
+  .prov b{font:500 10.5px/1 var(--mono);color:var(--ink-3);display:block;margin-bottom:6px}
+  .people{display:grid;gap:8px;margin-top:10px;font-size:13.5px}
+  .people .p{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--edge)}
+  .people .p:last-child{border-bottom:0}
+  .people .p b{font:600 10.5px/1.6 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+  .people .p span{color:var(--ink-2)}
+  .people .p span em{font-style:normal;color:var(--ink)}
+  .timeline{border-left:2px solid var(--edge);margin:12px 0 0 6px;padding-left:16px;display:grid;gap:10px;font-size:13.5px}
+  .timeline .t{position:relative}
+  .timeline .t:before{content:'';position:absolute;left:-21px;top:7px;width:8px;height:8px;border-radius:50%;background:var(--quiet)}
+  .timeline .t.you:before{background:var(--act)}
+  .timeline .t.now:before{background:var(--ink)}
+  .timeline time{font:400 11px/1.5 var(--mono);color:var(--ink-3);display:block}
+  .timeline p{margin:0;color:var(--ink-2);max-width:60ch}
+  .timeline p b{color:var(--ink);font-weight:500}
   /* scenes */
   .scene{display:none}
   .scene.show{display:block}
@@ -198,6 +250,25 @@
     <h1><b>George</b> · Tuesday 16 September · 08:04</h1>
     <div class="biz"><button class="on">All</button><button>Aji Ichiban</button><button>vending</button></div>
     <span class="mock">a working mock · figures are illustrative, shaped like the real ones</span>
+  </div>
+
+  <div class="examples">
+    <h2>One example per part of the vision · tap to open it</h2>
+    <div class="strip">
+      <button class="on" data-scene="situation"><span class="n">1·4·5</span>ahead of me</button>
+      <button data-scene="doing"><span class="n">2·6</span>“how are we doing?”</button>
+      <button data-scene="nothing"><span class="n">5·6</span>nothing important</button>
+      <button data-scene="judgment"><span class="n">3</span>judgment · disagrees · was wrong</button>
+      <button data-scene="touch"><span class="n">7·8</span>touch + words</button>
+      <button data-scene="memory"><span class="n">9</span>remembers</button>
+      <button data-scene="morning"><span class="n">10</span>proactive morning</button>
+      <button data-scene="decide"><span class="n">15</span>needs you</button>
+      <button data-scene="build"><span class="n">11</span>build it</button>
+      <button data-scene="life"><span class="n">12·13</span>temporary → permanent</button>
+      <button data-scene="run"><span class="n">14·15</span>handle this</button>
+      <button data-scene="docs"><span class="n">16</span>a supplier’s invoice</button>
+      <button data-scene="team"><span class="n">17·18</span>businesses + team</button>
+    </div>
   </div>
 
   <!-- ================= ATTENTION: George's order ================= -->
@@ -358,6 +429,161 @@
       <button class="act" data-toast="Every Monday at six, switched off until you turn it on. He'll say so.">I want this every Monday</button>
     </div>
   </section>
+
+  <!-- ---- 2 · 6: "how are we doing?" ---- -->
+  <section class="scene situation" id="doing">
+    <div class="sit-head"><span class="kind">You asked · “how are we doing?”</span><span class="meta">read across sales, stock, vending, purchasing · 6 reads · 11s</span></div>
+    <h2 class="claim">Selling fine. <em>The warehouse is the thing</em> — three lines are empty and one is counted wrong.</h2>
+    <p class="stand">“Doing” this week is not a sales question: every shop is inside its usual range and the vending machines are flat. What isn’t fine is behind the shops — <b>the barn has five lines at or below zero</b>, the champoy bayberry is empty at OPUS and at the warehouse, and one count reads −14, which is a broken record, not an empty shelf. I looked at expenses too; nothing moved.</p>
+    <div class="ladder">
+      <div class="rung known"><div class="lv"><i></i>Known</div><p>Seven shops within their usual weekday range yesterday; vending ₱28,701 last week, inside its month’s band; five barn lines ≤ 0; Fuan Haw Flakes at −14.<small>get_sales · get_vending · get_stock AJI BARN · read 08:00–08:11</small></p></div>
+      <div class="rung likely"><div class="lv"><i></i>Likely</div><p>The bayberry stock-out is why its sales at OPUS went to zero last week — the days match.</p></div>
+      <div class="rung unknown"><div class="lv"><i></i>Unknown</div><p>Whether replenishment is already on its way. Purchase orders are a frozen export; I can’t see arrivals.</p></div>
+    </div>
+    <div class="chain"><h3>Where I looked, and what I didn’t bother you with</h3>
+      <div class="step out"><span class="n">1</span><div><p class="say"><b>Sales, by shop, against usual.</b> Nothing. <s>Not the story this week.</s></p>
+        <div class="ev"><div class="row" data-ref="OPUS · yesterday"><span class="nm">OPUS</span><span class="bar"><i style="width:84%"></i></span><span class="fig">₱196k<s>usual ₱188–231k</s></span></div><div class="row" data-ref="Greenhills · yesterday"><span class="nm">Greenhills</span><span class="bar"><i style="width:61%"></i></span><span class="fig">₱141k<s>usual ₱130–160k</s></span></div><div class="row" data-ref="Rockwell · yesterday"><span class="nm">Rockwell</span><span class="bar"><i style="width:44%"></i></span><span class="fig">₱102k<s>usual ₱98–121k</s></span></div></div>
+        <p class="src">get_sales · 7 shops · yesterday vs the last 8 same weekdays · read 08:00</p></div></div>
+      <div class="step out"><span class="n">2</span><div><p class="say"><b>Vending.</b> Flat, top three machines carrying half. <s>Nothing to do.</s></p><p class="src">get_vending · revenue by machine · last week · read 08:02</p></div></div>
+      <div class="step"><span class="n">3</span><div><p class="say"><b>The barn.</b> Five lines crossed to zero overnight, one into negative — this is the thing.</p>
+        <div class="ev cells"><div class="c hd"><span>line</span><span>yesterday</span><span>now</span></div><div class="c lit"><span>Fuan Haw Flakes<span class="because">more shipped than the book held</span></span><span class="n">22</span><span class="n">−14</span></div><div class="c"><span>champoy honey bayberry<span class="because">also empty at OPUS — sales there went to zero on 6 Sep</span></span><span class="n">3</span><span class="n">0</span></div><div class="c"><span>G35 sampaloc 1g</span><span class="n">12</span><span class="n">0</span></div></div>
+        <p class="src">get_stock · AJI BARN · qty ≤ 0 · 5 of 31,617 lines · read 08:04</p></div></div>
+    </div>
+    <div class="next"><b>What I’d do next</b><p>Draft the Seikyo order — three of the five lines are theirs — and treat the −14 as a counting problem first, not a purchasing one.</p></div>
+    <div class="acts"><button class="act go" data-scene="decide">Draft the order <small>a turn</small></button><button class="act" data-toast="A turn: the −14 — when it crossed, and what shipped out that day.">Look into the −14</button><button class="act" data-steer="products">Show me the shops anyway <small>transforms</small></button></div>
+  </section>
+
+  <!-- ---- 5 · 6: nothing important ---- -->
+  <section class="scene situation" id="nothing">
+    <div class="sit-head"><span class="kind">You asked · “anything wrong at Greenhills?”</span><span class="meta">3 reads · 6s</span></div>
+    <p class="plain">No. I checked sales, basket, and stock for the last two weeks; all three are inside their usual range, and nothing is empty. <b>I wouldn’t spend time here.</b><small>get_sales · get_sales drivers · get_stock Greenhills · read 08:14 · the three reads are a tap away</small></p>
+    <div class="acts"><button class="act" data-toast="The three reads, with their rows and receipts — there when you want them, not on screen when you don’t.">Show me anyway</button><button class="act" data-toast="Watching Greenhills weekly against its usual range. Silence is normal.">Watch it</button></div>
+    <p class="att-note" style="padding:14px 0 0">A simple situation needs almost nothing. The interface is as small as the answer.</p>
+  </section>
+
+  <!-- ---- 3: judgment ---- -->
+  <section class="scene situation" id="judgment">
+    <div class="sit-head"><span class="kind">You asked · “why are Kiamoy Strips down at OPUS?”</span><span class="meta">4 reads · 9s</span></div>
+    <h2 class="claim">They’re down everywhere, so it isn’t OPUS — and <em>I think you’re looking at the wrong thing</em>.</h2>
+    <p class="stand">Kiamoy Strips fell 48% at OPUS<sup>1</sup>, but they fell at all seven shops in the same weeks<sup>2</sup>; that is a range story, not a shop story, and it isn’t the biggest thing in front of you. <b>The bigger thing is champoy bayberry</b>: it sold nothing at OPUS last week because there was none, and there is none at the warehouse either<sup>3</sup>. I’d deal with that first.</p>
+    <div class="ladder">
+      <div class="rung known"><div class="lv"><i></i>Known</div><p>Kiamoy Strips: −48% at OPUS, down at 7 of 7 shops. Bayberry: 0 units at OPUS last week, 0 on hand at OPUS and at AJI BARN.</p></div>
+      <div class="rung likely"><div class="lv"><i></i>Likely</div><p>Kiamoy is demand or supply across the estate — something upstream of any one shop.</p></div>
+      <div class="rung unknown"><div class="lv"><i></i>Unknown</div><p>Why Kiamoy fell. Nothing I can read says price, promotion or a competitor. I don’t have enough to conclude that.</p></div>
+    </div>
+    <div class="timeline">
+      <div class="t"><time>14 Sep</time><p><b>What I said then:</b> “OPUS needs attention — the shop lost transactions last week.”</p></div>
+      <div class="t you"><time>15 Sep · you</time><p>“that monday was a holiday.”</p></div>
+      <div class="t now"><time>15 Sep</time><p><b>I was wrong about OPUS.</b> The baseline week had a holiday Monday you told me about; the shop is unremarkable. Recorded, and I won’t raise it again on that basis.</p></div>
+    </div>
+    <div class="acts"><button class="act go" data-toast="Transforms around the bayberry: stock by day at OPUS and the barn, and who supplies it.">Deal with the bayberry <small>transforms</small></button><button class="act" data-toast="He answers the question you asked, fully — after saying what he thinks.">Kiamoy anyway</button><button class="act" data-toast="“Not what I meant” — say it and it becomes something he holds, in your words.">Not what I meant</button></div>
+  </section>
+
+  <!-- ---- 7 · 8: touch + words ---- -->
+  <section class="scene situation" id="touch">
+    <div class="sit-head"><span class="kind">You selected two rows and said · “compare”</span><span class="meta">the reads already on screen, re-scoped · 0.5s · no model turn</span></div>
+    <h2 class="claim">OPUS and Rockwell, August: <em>same products, opposite directions</em>.</h2>
+    <p class="stand">Language was the intent — <b>compare</b> — and the two rows you tapped were the reference. Nothing was retyped. The work below is the same reads, scoped to the two you chose; say “against Greenhills” and it widens, say “last 90 days” and the window moves under all of it.</p>
+    <div class="ev dumb">
+      <div class="row sel lit up" data-ref="OPUS · Aug"><span class="nm">OPUS</span><span class="track"><i class="seg" style="left:70%;right:8%"></i><i class="dot was" style="left:70%"></i><i class="dot now" style="left:92%"></i></span><span class="fig">₱1.62m<s>+9.4%</s></span></div>
+      <div class="row sel lit" data-ref="Rockwell · Aug"><span class="nm">Rockwell</span><span class="track"><i class="seg" style="left:52%;right:38%"></i><i class="dot was" style="left:62%"></i><i class="dot now" style="left:52%"></i></span><span class="fig">₱918k<s>−6.1%</s></span></div>
+      <div class="scale"><div></div><div><span>₱0</span><span>net sales, August · hollow dot = July</span><span>₱1.8m</span></div><div></div></div>
+    </div>
+    <div class="ev cells" style="margin-top:14px"><div class="c hd"><span>product</span><span>OPUS</span><span>Rockwell</span></div><div class="c lit"><span>Aji Mix (SH1)</span><span class="n" style="color:var(--up)">+12%</span><span class="n">−27%</span></div><div class="c"><span>Kameda Orange Big Pack</span><span class="n">+3%</span><span class="n" style="color:var(--down)">−24%</span></div><div class="c"><span>Kiamoy Strips</span><span class="n" style="color:var(--down)">−48%</span><span class="n" style="color:var(--down)">−41%</span></div></div>
+    <p class="src" style="font:400 11px/1.5 var(--mono);color:var(--ink-3);margin:8px 0 0">get_sales · product_revenue · by product · Aug vs Jul · filtered to your two · read 07:56 · re-scoped 08:20</p>
+    <div class="acts"><button class="act" data-toast="Say the third shop; it joins. Voice works the same way — the screen is the reference.">“Against Greenhills”</button><button class="act" data-toast="The window moves under every read on screen.">“Last 90 days”</button><button class="act" data-toast="Tap a product row; “why is this down?” is about that row.">Tap a product, then “why?”</button></div>
+  </section>
+
+  <!-- ---- 9: remembers ---- -->
+  <section class="scene situation" id="memory">
+    <div class="sit-head"><span class="kind">You asked · “where are we on the barn counts?”</span><span class="meta">held since 2 Sep · 3 investigations · 1 correction · 1 watch</span></div>
+    <h2 class="claim">Two weeks in: <em>the negative counts are receiving, not theft</em>, and one question is still open.</h2>
+    <p class="stand">You didn’t start from zero and neither did I. Here is the thread of it — what we found, what you told me, what I changed my mind about, and the one thing nobody has settled.</p>
+    <div class="timeline">
+      <div class="t"><time>2 Sep</time><p><b>Noticed:</b> 3,190 stock records negative at OPUS, the lowest −230,507. I called it a data-integrity problem, not shrinkage.</p></div>
+      <div class="t you"><time>4 Sep · you</time><p>“the barn scans out before it scans in, thats why.”</p></div>
+      <div class="t"><time>5 Sep</time><p><b>Checked:</b> the negatives cluster on delivery days at the barn. Your explanation fits; I hold it as <em>likely</em>, not known — I can’t see the scans themselves.</p></div>
+      <div class="t"><time>9 Sep</time><p><b>Watch set:</b> barn lines crossing to zero, daily. It has spoken twice.</p></div>
+      <div class="t now"><time>today</time><p><b>Still open:</b> whether the −14 on Fuan Haw is the same receiving lag or an actual short shipment. Only a count on the floor settles that, and that’s not mine to read.</p></div>
+    </div>
+    <div class="holds" style="margin-top:16px"><h2>What I currently believe about the barn</h2><div class="h told"><b>Negative counts come from scan-out before scan-in</b><small>4 Sep · your words · likely, not known</small></div><div class="h"><b>Five lines empty this morning, three of them Seikyo’s</b><small>today · get_stock · known</small></div></div>
+    <div class="acts"><button class="act" data-toast="Forgotten from the next answer on. You can do this; he can’t do it to himself.">Forget one</button><button class="act" data-toast="A turn: he asks the person who would know — the barn lead — through the connected channel, and tells you when there’s an answer.">Ask the barn to count it</button></div>
+  </section>
+
+  <!-- ---- 10: proactive morning ---- -->
+  <section class="scene situation" id="morning">
+    <div class="sit-head"><span class="kind">You opened George · 08:04 · he ran at 08:00</span><span class="meta">overnight: 9 things checked · 1 brought to you · 8 not</span></div>
+    <h2 class="claim">One thing for you this morning: <em>the barn emptied five lines overnight</em>. The rest I checked and left alone.</h2>
+    <p class="stand">I didn’t wait to be asked. Since yesterday I looked at each shop against its usual weekday, the machines, the barn, open orders and the two things you had me watching. <b>One of nine deserved you.</b> The other eight are below, so you can see what I decided not to raise.</p>
+    <div class="runlog">
+      <div class="r"><time>08:00</time><p>Barn: five lines to zero, one to −14 <small>brought to you · the situation at the top of your list</small></p><span class="who stop">raised</span></div>
+      <div class="r"><time>08:00</time><p>Seven shops vs usual weekday <small>all inside range · Shangri-La soft but inside</small></p><span class="who">left</span></div>
+      <div class="r"><time>08:01</time><p>Vending, 12 machines <small>flat · two machines with failed vends, both under 2%</small></p><span class="who">left</span></div>
+      <div class="r"><time>08:02</time><p>Watch: Rockwell basket vs usual <small>no change since last week · silence is the normal state</small></p><span class="who">left</span></div>
+      <div class="r"><time>08:02</time><p>Watch: bayberry stock <small>still zero · already raised on 12 Sep, not raising it twice</small></p><span class="who">left</span></div>
+      <div class="r"><time>08:03</time><p>Open purchase orders <small>frozen export since 13 Jul · can’t see · said so once, not every day</small></p><span class="who">blind</span></div>
+    </div>
+    <div class="acts"><button class="act go" data-scene="situation">Open the one he raised</button><button class="act" data-toast="A standing instruction: “only bring me the barn if a line is a supplier’s I can order from.” Recorded in your words.">Change what he raises</button></div>
+  </section>
+
+  <!-- ---- 12 · 13: temporary → permanent ---- -->
+  <section class="scene situation" id="life">
+    <div class="sit-head"><span class="kind">One thing, from a question to an operation</span><span class="meta">the same object throughout · you never switched products</span></div>
+    <h2 class="claim">“What’s Seikyo’s cover?” became <em>a system that runs itself on Mondays</em>, without leaving this screen.</h2>
+    <div class="life">
+      <span class="st">investigation</span><p><b>You asked, 2 Sep:</b> “how much Seikyo stock do we have?” — a read, with a view: eight weeks of cover, two lines short.<small>get_purchase_plan · Seikyo</small></p>
+      <span class="st">useful interface</span><p>“Show it per shop.” The same object rearranged; nothing new read.</p>
+      <span class="st">saved tool</span><p><b>“Keep this.”</b> It re-runs when opened, with its date. His reads are kept; his words are not.<small>a page: Seikyo Purchasing</small></p>
+      <span class="st">system</span><p><b>“Add supplier lead time.”</b> Now a rule with a setting — Seikyo, 21 days, your number — and a version.<small>v2 · v1 kept</small></p>
+      <span class="st">automation</span><p><b>“I want this every Monday.”</b> Born switched off. Backtested over August; you promoted v2. It has run three Mondays.<small>schedule pinned to v2 · never “whatever is current”</small></p>
+      <span class="st now">operation</span><p><b>“Don’t ask me unless it’s over ₱20,000.”</b> Two Mondays it prepared the order and told you; one Monday it waited. That is today, at the top of your list.</p>
+    </div>
+    <div class="acts"><button class="act" data-toast="Every step is the same object. Its versions, runs, backtests and settings are one tap away, on it.">Open its history</button><button class="act" data-toast="A watch, not a report: he speaks when cover changes, not every Monday.">“Watch this instead”</button></div>
+  </section>
+
+  <!-- ---- 14 · 15: handle this ---- -->
+  <section class="scene situation" id="run">
+    <div class="sit-head"><span class="kind">You said · “handle the Seikyo order”</span><span class="meta">running under the authority you gave on 9 Sep</span></div>
+    <h2 class="claim">Handled to the point where it needs you — <em>one line short on the invoice</em>, everything else done.</h2>
+    <p class="stand">Prepared, approved by you, sent to Seikyo through the connected mail, followed up when they went quiet, checked what arrived against what was ordered. <b>One exception surfaced</b> and it is the only reason you’re reading this.</p>
+    <div class="runlog">
+      <div class="r"><time>Mon 08:00</time><p>Prepared the order from eight weeks of sales <small>14 lines · ₱46,200</small></p><span class="who done">george</span></div>
+      <div class="r"><time>Mon 09:12</time><p>Approved <small>above ₱20,000, so it waited for you</small></p><span class="who you">you</span></div>
+      <div class="r"><time>Mon 09:13</time><p>Sent to Seikyo <small>mail · the one action that leaves his hands, behind your approval</small></p><span class="who done">george</span></div>
+      <div class="r"><time>Wed 10:00</time><p>No confirmation in 48h — followed up <small>a standing instruction, not a decision</small></p><span class="who done">george</span></div>
+      <div class="r"><time>Fri 16:40</time><p>Confirmation read; delivery Tuesday</p><span class="who done">george</span></div>
+      <div class="r"><time>Tue 11:05</time><p>Arrival checked against the order: 13 of 14 lines match; <b>Kameda Orange 80 of 96</b> <small>invoice read from mail · matched to the PO · nothing recorded until you keep it</small></p><span class="who stop">needs you</span></div>
+    </div>
+    <div class="decide"><b>Yours to decide</b><p>Accept the short delivery and note it, or ask Seikyo for the 16.</p><div class="acts"><button class="act go" data-toast="Recorded: 80 received, 16 short, noted on the order. He’ll raise the shortfall on the next order.">Accept it</button><button class="act" data-toast="A drafted reply to Seikyo, in your name, waiting for you to send.">Ask for the 16</button><button class="act" data-toast="Standing instruction: short deliveries under 20% are accepted and noted without asking. Recorded.">Stop asking about small shortfalls</button></div><span class="auth">his authority today: prepare · send after approval · follow up · check arrivals · never accept a discrepancy alone</span></div>
+  </section>
+
+  <!-- ---- 16: documents ---- -->
+  <section class="scene situation" id="docs">
+    <div class="sit-head"><span class="kind">Mail from Seikyo · read against your order</span><span class="meta">invoice INV-2291 · 1 page · 3 mins ago</span></div>
+    <h2 class="claim">Three of four lines match the order. <em>Kameda Orange came in at 80, not 96</em>, and there’s a line the order never had.</h2>
+    <p class="stand">You don’t have to care where this lived — it arrived as a PDF in mail, and it is read here against the purchase order it belongs to. <b>Nothing is recorded until you keep it.</b></p>
+    <div class="doc">
+      <div class="pane"><h4>The invoice, as read</h4><div class="l"><span>Fuan Haw Flakes</span><span class="n">96</span></div><div class="l bad"><span>Kameda Orange Big Pack</span><span class="n">80</span></div><div class="l"><span>Aji Plum Lovers Seedless</span><span class="n">40</span></div><div class="l new"><span>Kiamoy Rolls · not on the order</span><span class="n">24</span></div></div>
+      <div class="pane"><h4>Your order · Seikyo PO v2</h4><div class="l"><span>Fuan Haw Flakes</span><span class="n">96</span></div><div class="l bad"><span>Kameda Orange Big Pack</span><span class="n">96</span></div><div class="l"><span>Aji Plum Lovers Seedless</span><span class="n">40</span></div><div class="l new"><span>—</span><span class="n">—</span></div></div>
+    </div>
+    <div class="prov"><b>offered · unkept</b>Match 3 lines · note Kameda 16 short · hold Kiamoy Rolls as unexplained. The invoice’s own text is a tap away; the numbers above are read from it, not typed by him.</div>
+    <div class="acts"><button class="act go" data-toast="Kept: the delivery is recorded as read, the shortfall noted, the extra line left open.">Keep</button><button class="act" data-toast="A drafted question to Seikyo about Kiamoy Rolls — substitution or mistake? — waiting for you.">Ask Seikyo about the extra line</button><button class="act" data-toast="Discarded; the mail stays where it was, unread by anything.">Discard</button></div>
+  </section>
+
+  <!-- ---- 17 · 18: businesses + team ---- -->
+  <section class="scene situation" id="team">
+    <div class="sit-head"><span class="kind">Vending · asked by Judy, the barn lead</span><span class="meta">her view · what she may see and do</span></div>
+    <h2 class="claim">Two businesses, one George — <em>and he knows who is asking</em>.</h2>
+    <p class="stand">Judy asked “what should I restock at the machines?” She sees the machines and the barn; she doesn’t see shop sales or profit. <b>Her request to move stock is drafted, and it waits for you</b>, because that is the rule you set — and when George didn’t know a machine’s location, he asked her, not you.</p>
+    <div class="ev cells"><div class="c hd"><span>machine · line</span><span>empty since</span><span>move</span></div><div class="c lit"><span>M-04 Megamall · Aji Mix<span class="because">out 3 days · barn has 61</span></span><span class="n">Sat</span><span class="n">24</span></div><div class="c"><span>M-09 Podium · Kiamoy White<span class="because">barn has 0 — nothing to move · on the Seikyo order</span></span><span class="n">Mon</span><span class="n">—</span></div></div>
+    <div class="people">
+      <div class="p"><b>can see</b><span>Judy: machines, barn stock, transfers · <em>not</em> shop sales, profit, purchasing</span></div>
+      <div class="p"><b>can change</b><span>Judy: request a transfer · you: approve it · nobody: the counts themselves</span></div>
+      <div class="p"><b>asked</b><span>“Where is M-11?” — George asked Judy, because she would know and the data didn’t</span></div>
+      <div class="p"><b>across businesses</b><span>vending is its own domain — its figures are never added to the shops’ — but Aji Mix short at a machine and Aji Mix falling at Rockwell is <em>one supply story</em>, and he says so</span></div>
+    </div>
+    <div class="decide"><b>Yours to decide</b><p>Judy’s transfer: 24 Aji Mix, barn → M-04.</p><div class="acts"><button class="act go" data-toast="Approved. Judy sees it approved; the transfer is prepared for the barn.">Approve</button><button class="act" data-toast="Standing instruction: Judy may move up to 50 units to a machine without asking. Recorded with your words.">Let Judy do these herself</button></div></div>
+  </section>
   </main>
 
   <!-- ================= WHAT GEORGE HOLDS about this ================= -->
@@ -404,6 +630,8 @@
   document.querySelectorAll('[data-scene]').forEach(function(b){b.addEventListener('click',function(){
     document.querySelectorAll('.scene').forEach(function(s){s.classList.toggle('show',s.id===b.dataset.scene)});
     document.querySelectorAll('.att').forEach(function(a){a.classList.toggle('on',a===b)});
+    document.querySelectorAll('.strip button').forEach(function(a){a.classList.toggle('on',a.dataset.scene===b.dataset.scene)});
+    document.querySelectorAll('.att').forEach(function(a){if(a.dataset.scene===b.dataset.scene)a.classList.add('on')});
     window.scrollTo({top:0,behavior:'smooth'});
   })});
   document.querySelectorAll('[data-toast]').forEach(function(b){b.addEventListener('click',function(){say(b.dataset.toast)})});
