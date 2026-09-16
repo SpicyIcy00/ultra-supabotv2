@@ -518,6 +518,66 @@
     :root[data-side="closed"] body{padding-left:clamp(16px,2.5vw,32px)}
   }
   @media (max-width:820px){ body{padding-left:clamp(16px,2.5vw,32px)} }
+
+  /* ---------- FIVE WAYS TO LAY OUT THE MIDDLE, same content ----------
+     A switch above the situation. The frame stays centred; only the width
+     of the middle and the arrangement inside it change. */
+  .console{grid-template-columns:minmax(360px,1fr) minmax(0,var(--mid,840px)) minmax(360px,1fr)}
+  .compose{max-width:var(--mid,840px)}
+  .layswitch{display:flex;gap:2px;align-items:center;margin:0 0 12px;font:400 11px/1.6 var(--mono);color:var(--ink-3)}
+  .layswitch span{margin-right:8px;letter-spacing:.06em;text-transform:uppercase}
+  .layswitch button{font:400 12.5px/1.6 var(--sans);color:var(--ink-3);border-radius:999px;padding:4px 11px}
+  .layswitch button:hover{color:var(--ink);background:var(--sunk)}
+  .layswitch button.on{color:var(--ink);background:var(--raise);box-shadow:0 0 0 1px var(--edge-2)}
+  .layswitch small{margin-left:auto;font:400 11px/1.6 var(--mono);color:var(--ink-4)}
+
+  /* beside: sentence left, evidence right, each check a row */
+  main.lay-beside .chain .step > div{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);grid-template-areas:"say ev" "src ev" "acts ev";column-gap:28px;align-items:start}
+  main.lay-beside .chain .step > div > .say{grid-area:say;margin:0}
+  main.lay-beside .chain .step > div > .ev{grid-area:ev;margin:0}
+  main.lay-beside .chain .step > div > .src{grid-area:src;margin-top:10px}
+  main.lay-beside .chain .step > div > .stepacts{grid-area:acts}
+  main.lay-beside .chain .step > div > .att-note{grid-column:1/-1}
+  main.lay-beside .step .say{font-size:16px}
+
+  /* tiles: the checks as a grid of titled tiles under the claim */
+  main.lay-tiles .chain{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+  main.lay-tiles .chain h3{grid-column:1/-1}
+  main.lay-tiles .chain .step{border:0;padding:16px 18px;border-radius:14px;background:var(--ground);box-shadow:0 0 0 1px var(--edge);margin:0}
+  main.lay-tiles .chain .step > div > .say{font-size:15.5px}
+  main.lay-tiles .chain .step.out{opacity:.7}
+
+  /* walk: one check at a time, left to right */
+  main.lay-walk .chain{display:grid;grid-template-columns:auto 1fr;gap:0 20px}
+  main.lay-walk .chain h3{grid-column:1/-1}
+  main.lay-walk .walkrail{display:grid;gap:6px;align-content:start;padding-top:22px}
+  main.lay-walk .walkrail button{width:34px;height:34px;border-radius:50%;font:500 12px/1 var(--mono);color:var(--ink-3);box-shadow:0 0 0 1px var(--edge)}
+  main.lay-walk .walkrail button.on{color:var(--ground);background:var(--ink)}
+  main.lay-walk .walkrail button.out{text-decoration:line-through;opacity:.6}
+  main.lay-walk .chain .step{display:none;border:0;padding:16px 0 0}
+  main.lay-walk .chain .step.walk-on{display:block}
+  main.lay-walk .chain .step > div > .say{font-size:19px}
+
+  /* focus: his words in a column, one large figure that follows the step */
+  main.lay-focus .situation{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);grid-template-areas:"head head" "claim stage" "stand stage" "ladder stage" "chain stage" "next stage" "acts stage" "holds stage";column-gap:36px;align-items:start}
+  main.lay-focus .situation > .sit-head{grid-area:head}
+  main.lay-focus .situation > .work{grid-column:1/-1}
+  main.lay-focus .situation > .claim{grid-area:claim;font-size:clamp(26px,2.6vw,34px)}
+  main.lay-focus .situation > .stand{grid-area:stand;font-size:16.5px}
+  main.lay-focus .situation > .ladder{grid-area:ladder;grid-template-columns:1fr 1fr;gap:12px}
+  main.lay-focus .situation > .chain{grid-area:chain}
+  main.lay-focus .situation > .next{grid-area:next}
+  main.lay-focus .situation > .acts{grid-area:acts}
+  main.lay-focus .situation > .holds{grid-area:holds}
+  main.lay-focus .chain .step{padding:10px 0;cursor:pointer;border-radius:8px}
+  main.lay-focus .chain .step:hover,main.lay-focus .chain .step.focus-on{background:var(--sunk);padding:10px 12px;margin:0 -12px}
+  main.lay-focus .chain .step > div > .ev,main.lay-focus .chain .step > div > .src,main.lay-focus .chain .step > div > .stepacts{display:none}
+  main.lay-focus .chain .step > div > .say{margin:0;font-size:15.5px}
+  main.lay-focus .stage{grid-area:stage;position:sticky;top:24px;border-radius:14px;background:var(--ground);box-shadow:0 0 0 1px var(--edge);padding:18px 20px;min-height:320px}
+  main.lay-focus .stage .st-say{font:400 17px/1.45 var(--serif);color:var(--ink);margin:0 0 12px;max-width:52ch}
+  main.lay-focus .stage .st-hint{font:400 11px/1.6 var(--mono);color:var(--ink-4);margin:12px 0 0}
+  main:not(.lay-focus) .stage{display:none}
+  @media (max-width:900px){ main.lay-beside .chain .step > div, main.lay-tiles .chain, main.lay-focus .situation{display:block} main.lay-walk .chain .step{display:block} main.lay-walk .walkrail{display:none} }
 </style>
 
 <button class="reopen" id="reopen" title="Open the sidebar  [" hidden>›</button>
@@ -601,6 +661,11 @@
 
   <!-- ================= THE SITUATION ================= -->
   <main style="min-width:0">
+  <div class="layswitch" id="layswitch"><span>lay it out as</span>
+    <button class="on" data-lay="document">document</button><button data-lay="beside">beside</button><button data-lay="tiles">tiles</button><button data-lay="walk">walk</button><button data-lay="focus">focus</button>
+    <small id="layhint">his sentences, evidence in the flow</small>
+  </div>
+
 
   <!-- ---- scene: an investigated situation ---- -->
   <section class="scene show situation" id="situation">
@@ -623,6 +688,7 @@
       <div class="rung unknown"><div class="lv"><i></i>Unknown</div><p>Whether Aji Mix was repriced, moved off display, or simply bought less. None of that is in what I read.<span class="nosrc">no read can</span></p></div>
     </div>
 
+    <div class="stage" id="stage"><p class="st-say">Hover or tap a check on the left; its evidence shows here.</p><p class="st-hint">one figure at a time, in focus</p></div>
     <div class="chain">
       <h3>How I got here</h3>
 
@@ -1201,6 +1267,37 @@
   document.querySelectorAll('[data-scene]').forEach(function(b){b.addEventListener('click',function(){bring(b.dataset.scene)})});
   document.querySelectorAll('[data-steer]').forEach(function(b){b.addEventListener('click',function(){clearSeq(); state.mode='writing'; setDoing('<b>rearranging</b>the same reads, transformed'); seqTimer.push(setTimeout(function(){state.mode='idle'; setDoing('<b>quiet</b>transformed · nothing new read');},reduce?0:700));})});
   bring('situation');
+  // FIVE LAYOUTS, same content. Remembered per browser.
+  var mainEl=document.querySelector('.console > main'), hints={document:'his sentences, evidence in the flow',beside:'his sentence left, its evidence right — argument beside proof',tiles:'the checks as titled tiles under the claim',walk:'one check at a time, in the order he took them',focus:'his words in a column; one figure, in focus, following the step'};
+  var mids={document:'840px',beside:'1120px',tiles:'1120px',walk:'960px',focus:'1180px'};
+  function layout(name){
+    mainEl.className=''; mainEl.classList.add('lay-'+name);
+    document.documentElement.style.setProperty('--mid', mids[name]);
+    document.querySelectorAll('#layswitch button').forEach(function(b){b.classList.toggle('on',b.dataset.lay===name)});
+    document.getElementById('layhint').textContent=hints[name];
+    try{localStorage.setItem('george.lay',name)}catch(e){}
+    if(name==='walk') buildWalk(); if(name==='focus') buildFocus();
+  }
+  function buildWalk(){
+    document.querySelectorAll('.scene .chain').forEach(function(ch){
+      if(ch.querySelector('.walkrail')) return;
+      var steps=[].slice.call(ch.querySelectorAll('.step')); if(!steps.length) return;
+      var rail=document.createElement('div'); rail.className='walkrail';
+      steps.forEach(function(st,i){ var b=document.createElement('button'); b.textContent=i+1; if(st.classList.contains('out'))b.classList.add('out'); b.addEventListener('click',function(){steps.forEach(function(x,j){x.classList.toggle('walk-on',j===i)}); rail.querySelectorAll('button').forEach(function(y,j){y.classList.toggle('on',j===i)}); }); rail.appendChild(b); });
+      var h=ch.querySelector('h3'); ch.insertBefore(rail, h?h.nextSibling:ch.firstChild);
+      rail.querySelector('button').click();
+    });
+  }
+  function buildFocus(){
+    var stage=document.getElementById('stage'); if(!stage) return;
+    var steps=[].slice.call(document.querySelectorAll('#situation .chain .step'));
+    function show(st){ steps.forEach(function(x){x.classList.toggle('focus-on',x===st)}); var say=st.querySelector('.say'), ev=st.querySelector('.ev'), src=st.querySelector('.src'); stage.innerHTML='<p class="st-say">'+(say?say.innerHTML:'')+'</p>'+(ev?ev.outerHTML:'')+(src?'<div class="st-hint">'+src.textContent.replace(/^receipt/,'')+'</div>':''); }
+    steps.forEach(function(st){ if(st.dataset.focusBound) return; st.dataset.focusBound='1'; st.addEventListener('mouseenter',function(){show(st)}); st.addEventListener('click',function(){show(st)}); });
+    show(steps[0]);
+  }
+  document.querySelectorAll('#layswitch button').forEach(function(b){b.addEventListener('click',function(){layout(b.dataset.lay)})});
+  var rememberedLay=null; try{rememberedLay=localStorage.getItem('george.lay')}catch(e){}
+  layout(rememberedLay&&hints[rememberedLay]?rememberedLay:'document');
   var ask=document.getElementById('ask');
   ask.addEventListener('keydown',function(e){ if(e.key==='Enter'&&ask.value.trim()){say('“'+ask.value.trim()+'” — intent in words; the selection above is the reference. A turn.'); clearSeq(); state.mode='reading'; state.pulse=performance.now(); setDoing('<b>reading</b>'+ask.value.trim()); seqTimer.push(setTimeout(function(){state.mode='idle';setDoing('<b>quiet</b>a turn, in the real thing');},reduce?0:1600)); ask.value='';}});
   document.querySelector('.send').addEventListener('click',function(){ if(ask.value.trim()){say('“'+ask.value.trim()+'” — a turn.');ask.value='';} });
