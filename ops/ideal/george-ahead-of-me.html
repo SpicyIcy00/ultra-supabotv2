@@ -486,6 +486,16 @@
   }
   .side{overflow-x:hidden;overflow-y:auto}
   .side .biz{width:auto;max-width:100%;display:inline-flex}
+  /* the mark fills its column */
+  .console{grid-template-columns:minmax(0,1fr) 380px;max-width:1420px;column-gap:40px}
+  .console > .presence{padding-top:24px;gap:18px;min-height:calc(100vh - 160px);align-content:center}
+  .presence canvas{width:340px;height:340px}
+  .presence .doing{font-size:13px;max-width:30ch}
+  .presence .doing b{font-size:14px}
+  .presence .log{font-size:11.5px;max-width:300px}
+  @media (max-width:1180px){.presence canvas{width:80px;height:80px}}
+  .side .biz{display:flex;flex-wrap:wrap;width:auto;max-width:100%;border-radius:14px;gap:2px}
+  .side .biz button{white-space:nowrap;flex:0 0 auto}
 </style>
 
 <button class="reopen" id="reopen" title="Open the sidebar  [" hidden>›</button>
@@ -976,7 +986,7 @@
 
   <!-- ================= THE PRESENCE: alive while he works, quiet when he isn't ================= -->
   <aside class="presence" aria-live="polite">
-    <canvas id="mark" width="440" height="440" aria-label="George's mark: breathing slowly when idle, pulsing while he reads, warm when he is waiting on you"></canvas>
+    <canvas id="mark" width="680" height="680" aria-label="George's mark: breathing slowly when idle, pulsing while he reads, warm when he is waiting on you"></canvas>
     <div class="doing" id="mood"><b>quiet</b>last ran 08:00 · next watch 09:00</div>
     <div class="log" id="plog"></div>
   </aside>
@@ -1111,9 +1121,9 @@
     var w=cv.width,h=cv.height,c=w/2, t=(now-state.t0)/1000;
     cx.clearRect(0,0,w,h);
     var ink=tok('--ink'), act=tok('--act'), quiet=tok('--quiet'), up=tok('--up');
-    var base=54, breath=reduce?0:Math.sin(t*0.8)*3.5, r=base+breath;
+    var base=84, breath=reduce?0:Math.sin(t*0.8)*5, r=base+breath;
     var col= state.mode==='need'?act: ink;
-    if(state.mode==='reading'&&!reduce){ var dt=(now-state.pulse)/1000; r+=Math.max(0,Math.sin(dt*Math.PI*2)*9)*Math.max(0,1-dt/0.9); }
+    if(state.mode==='reading'&&!reduce){ var dt=(now-state.pulse)/1000; r+=Math.max(0,Math.sin(dt*Math.PI*2)*14)*Math.max(0,1-dt/0.9); }
     // halo: breathes with him; wider and softer when quiet, tighter when working
     var haloR = r*(state.mode==='idle'?2.6:2.1);
     var g=cx.createRadialGradient(c,c,r*0.7,c,c,haloR); g.addColorStop(0,col); g.addColorStop(1,'rgba(0,0,0,0)');
@@ -1126,14 +1136,14 @@
       m.r += (target - (m.r||orbit))*0.06; if(!m.r) m.r=orbit;
       var x=c+Math.cos(m.a)*m.r, y=c+Math.sin(m.a)*m.r;
       cx.globalAlpha= state.mode==='need'?0.35:0.75; cx.fillStyle= state.mode==='reading'&&i<state.drawn? up : quiet;
-      cx.beginPath(); cx.arc(x,y,4,0,Math.PI*2); cx.fill();
+      cx.beginPath(); cx.arc(x,y,6,0,Math.PI*2); cx.fill();
     });
     // the body
     cx.globalAlpha=1; cx.fillStyle=col; cx.beginPath(); cx.arc(c,c,r,0,Math.PI*2); cx.fill();
     // a ring: turns while reading, steadies while writing, still and warm while waiting
-    if(state.mode==='reading'){ cx.strokeStyle=up; cx.lineWidth=2.5; cx.globalAlpha=.9; cx.beginPath(); cx.arc(c,c,r+16, t*2.6, t*2.6+Math.PI*1.2); cx.stroke(); }
-    if(state.mode==='writing'){ cx.strokeStyle=ink; cx.lineWidth=2; cx.globalAlpha=.5; cx.beginPath(); cx.arc(c,c,r+16, 0, Math.PI*2); cx.stroke(); }
-    if(state.mode==='need'){ cx.strokeStyle=act; cx.lineWidth=2.5; cx.globalAlpha=.6; cx.beginPath(); cx.arc(c,c,r+16,0,Math.PI*2); cx.stroke(); }
+    if(state.mode==='reading'){ cx.strokeStyle=up; cx.lineWidth=3.5; cx.globalAlpha=.9; cx.beginPath(); cx.arc(c,c,r+24, t*2.6, t*2.6+Math.PI*1.2); cx.stroke(); }
+    if(state.mode==='writing'){ cx.strokeStyle=ink; cx.lineWidth=3; cx.globalAlpha=.5; cx.beginPath(); cx.arc(c,c,r+24, 0, Math.PI*2); cx.stroke(); }
+    if(state.mode==='need'){ cx.strokeStyle=act; cx.lineWidth=3.5; cx.globalAlpha=.6; cx.beginPath(); cx.arc(c,c,r+24,0,Math.PI*2); cx.stroke(); }
     cx.globalAlpha=1;
     requestAnimationFrame(draw);
   }
