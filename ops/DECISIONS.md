@@ -4407,3 +4407,14 @@ be watched the way Railway's is — read it before the push, poll until it
 differs. It maps to no commit and says nothing about whether the page LOOKS
 right, which is still a hard refresh and a person.
 
+**The catalogue landed; the form did not.** 2026-09-16, Fable review of the
+room against the Ideal UI, on the owner's "the ui doesnt feel like what i was
+told we were building". The mockup draws an answer as one document — 760px,
+evidence blocks stacked inside the finding, each titled by a sentence George
+wrote. The room draws a reading over a dashboard of tiles at 1320px. Every
+catalogue piece is built; the container is not, and this morning's two layout
+fixes moved away from the standard while closing a report. Production says
+half the tiles a person sees are `default_blocks` George never composed, with
+no sentence on them. **Rule from here: a surface close-out names the Ideal UI
+scenario it matches and where it does not.** The fix is one card, recommended
+ahead of P2.h/i/j and taken with P2.k; the owner decides.

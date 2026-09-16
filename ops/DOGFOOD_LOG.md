@@ -57,6 +57,67 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-16 — "the ui doesnt feel like what i was told we were building"
+
+> *"1st. the ui doesnt feel like what i was told we were buidling:
+> https://claude.ai/code/artifact/7d69541a-ab54-4cfc-b622-77be5c7679c4 , i find
+> the widgets not good for what were building and i asked you before to steal
+> good things from other market leaders but ours doesnt feel like this yet alot
+> different. its charts feel very limited perhaps beacause of the widgets. the
+> way it talks feels very limited too. i think also just the main way it
+> arranges the things it outputs feels wrong."*
+
+Said in answer to *"where is phase 2 going? cause theres alot wrong in the main
+structure"*. **This is the FIRST item, by his own numbering, and it is a report
+against the standard** — the Ideal UI is the screen every card was to build
+toward (NOW.md §6). Four things in it, kept apart because they are four:
+the widgets, the borrowings, the voice, the arrangement. Reviewed below in a
+Fable session, against the artifact, before anything is built.
+
+**REVIEWED 2026-09-16 (Fable 5.1), against the artifact, with production numbers.**
+
+**The catalogue landed; the FORM did not.** The Ideal UI draws an answer as ONE
+document in a 760px column: top line, the ask, tokens, the claim in serif, the
+caveat, then evidence BLOCKS stacked down the page — each a sentence George
+wrote, a chart under it, a source line under that — then next, then actions.
+"Why is Rockwell down" is three such blocks. What is built is a reading on top
+and a dashboard under it: tiles in a 1320px column, packed. Six marks, three
+slots, receipts, tokens, `@`, row actions, ghost text — all present. The
+container is not. A tile is a peer in a grid; a block is a paragraph in an
+argument. That is his fourth point and it is upstream of the other three.
+
+**And the two fixes shipped this morning went the wrong way**: the room was
+widened to 1320 and tiles put side by side; the approved design is 760 with
+blocks one under another. Fixed against the report, not against the standard.
+
+**Half of what is on the board is not George's.** Last 27 answers in
+`george.posts`: George put 43 blocks (41 carrying a claim); the surface
+default-composed 44 (`default_blocks`). A default tile has no sentence, no
+emphasis, no `because`; its title is the measure name. Both charts in his
+screenshot were defaults — that turn George composed one `change`.
+
+**The talk is capped by a rule.** Three short sentences once figures are
+drawn; a block claim is "a few words, no digits". The Ideal finding is the
+claim + caveat + a full sentence on EVERY block + next: seven or eight
+sentences per investigation, each tied to the chart under it. P2.m opened the
+number of reads; it did not touch the form of what he says.
+
+**Borrowings: ~14 of 24 are in the code.** Missing are the ones that make it
+feel like the products named: "one sentence + one small chart as the unit of
+evidence" (Borrowed II #18), "the chart title is the claim" (#11, true only
+for the composed half), and all of Phase 3 (#5–9, #14, #22).
+
+**Recommended: one card, ahead of P2.h/i/j — draw the finding as designed.**
+Objects become evidence blocks inside the finding column at the mockup's
+width, each titled by George's sentence; a read he did not compose gets its
+sentence (compose titles every read it shows) or is drawn as a quiet appendix,
+never a peer tile. Not a rebuild: marks, slots, receipts, tokens, actions stay;
+the container and the width change. Take it with P2.k. One full run.
+
+**And a standing change to how sessions close:** every surface close-out names
+the Ideal UI scenario it matches and where it does not. Nine cards shipped
+without that line, and this entry is the bill.
+
 ### 2026-09-15 — a comparison that drew no comparison
 
 > *"when it compares it didnt generate any charts or anything"*
