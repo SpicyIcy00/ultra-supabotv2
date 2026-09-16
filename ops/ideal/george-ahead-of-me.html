@@ -484,6 +484,8 @@
     .side{width:min(84vw,300px)}
     :root:not([data-side="open"]) .side{transform:translateX(-100%)}
   }
+  .side{overflow-x:hidden;overflow-y:auto}
+  .side .biz{width:auto;max-width:100%;display:inline-flex}
 </style>
 
 <button class="reopen" id="reopen" title="Open the sidebar  [" hidden>›</button>
@@ -975,7 +977,7 @@
   <!-- ================= THE PRESENCE: alive while he works, quiet when he isn't ================= -->
   <aside class="presence" aria-live="polite">
     <canvas id="mark" width="440" height="440" aria-label="George's mark: breathing slowly when idle, pulsing while he reads, warm when he is waiting on you"></canvas>
-    <div class="doing" id="doing"><b>quiet</b>last ran 08:00 · next watch 09:00</div>
+    <div class="doing" id="mood"><b>quiet</b>last ran 08:00 · next watch 09:00</div>
     <div class="log" id="plog"></div>
   </aside>
 
@@ -1099,12 +1101,13 @@
   //   reading  one pulse per read; a ring turns; a mote is drawn in from the orbit for each read
   //   writing  the motes settle close, the ring steadies — the reads being connected
   //   need     warm, and still: he is waiting on you
-  var cv=document.getElementById('mark'), cx=cv.getContext('2d'), doing=document.getElementById('doing'), plog=document.getElementById('plog');
+  var cv=document.getElementById('mark'), cx=cv.getContext('2d'), doing=document.getElementById('mood'), plog=document.getElementById('plog');
   var state={mode:'idle',t0:performance.now(),pulse:0,drawn:0};
-  var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var reduce=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   function tok(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
   var motes=[0,1,2].map(function(i){return {a:i*2.1, r:1, speed:0.22+i*0.05}});
   function draw(now){
+    if(!cx){return;}
     var w=cv.width,h=cv.height,c=w/2, t=(now-state.t0)/1000;
     cx.clearRect(0,0,w,h);
     var ink=tok('--ink'), act=tok('--act'), quiet=tok('--quiet'), up=tok('--up');
@@ -1134,9 +1137,7 @@
     cx.globalAlpha=1;
     requestAnimationFrame(draw);
   }
-  requestAnimationFrame(draw);
-  }
-  requestAnimationFrame(draw);
+  if(cx) requestAnimationFrame(draw);
   function setDoing(html,cls){doing.innerHTML=html;doing.className='doing'+(cls?' '+cls:'')}
   var seqTimer=[];
   function clearSeq(){seqTimer.forEach(clearTimeout);seqTimer=[];}
