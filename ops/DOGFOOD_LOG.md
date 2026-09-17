@@ -82,14 +82,20 @@ if kiss delicous is the same supplier … and I will draft the five plans."*
    `misstated_figure`, `enumerated_remainder` and not these two, or
    `actions_rejected`. CLAUDE.md UI rule 4: raw diagnostics never reach the answer.
    Minutes to fix; the list should come from the definitions rather than be typed.
+   **Fixed in `0c9376d`:** every `warning` frame arrives as `source: 'loop'` and
+   none is drawn as a caveat (`render.turnNotices`).
 2. **A figure that draws nothing.** READ 2, *"purchase plan"* — the unscoped plan
    read George did not compose, placed by the default board — shows only a "show"
    button and a read time: a table of more than eight rows opens collapsed when
-   quiet. It reads as broken, and it is the largest thing on the left.
+   quiet. It reads as broken, and it is the largest thing on the left. **Fixed in `0c9376d`:** a
+   folded table draws its first eight rows and "all N".
 3. **The same point said three times on one chart.** READ 3 carries a sentence of
    his answer placed on it (*"On this year's spend GZ aji mix leads at ₱5.75M …"*,
    `beside.thoughtsOf`), then the notice, then the title *"Two of the top five are
-   the same name spelled two ways"*, then his thought saying it again.
+   the same name spelled two ways"*, then his thought saying it again. **Fixed in
+   `0c9376d`:** a chart that carries his own thought takes no sentence of the
+   answer; the sentence stays in "more from George". Item 4 and what he did are
+   still open; what he did is P2S.6.
 4. **An offer drawn as a box inside the ranking** (*OPEN the most regularly ordered
    of the five, twelve documents this year ~1s*) between two rows.
 
@@ -138,6 +144,11 @@ last week, and it's transactions doing it:54² fewer …"* — its start is abov
 top of the column, and a figure's superscript runs into the colon); and the
 refused-replay line sits on top of the charts rather than under the message box.
 
+**The two defects, in `0c9376d`:** the words column returns to its top when a
+turn settles, and the space before a figure is kept ("it: 54"). The refused line
+now closes (below). **The rest is card P2S.6**, written 2026-09-17 and taken before
+P2S.4.
+
 **What a fix is, and its size.** A broad question climbs the ladder for what it
 finds: the one or two shops that moved most get their drivers localized (hours,
 days, products) in the same turn, bounded, and the answer says why — a view, not
@@ -169,47 +180,6 @@ the weeks) wants reads of those shapes. The P2S.3 gate saw the same: no new shap
 unasked on four questions. **Not fixed.** The fix changes what he reads, so it is
 the prompt (at 1,797 of 1,800 words) or the read-side tool descriptions, and it
 needs a gate run — it is a card, not a same-day fix.
-
-### 2026-09-17 — "down arrow should be in the center of the charts"
-
-> *"and down arrow should be in the center of the charts."*
-
-Said with a crop of the figures area's down arrow. It is drawn at the area's
-right edge (`.r-arr { right: -6px }`, P2S.1, copied from the design's
-`arrows()`); he wants it centred under the charts. **Not fixed**; a CSS change
-to `.r-arr` in `room.css`, minutes.
-
-### 2026-09-17 — "this stays its not closeable"
-
-> *"That change cannot be made to this read. The figures have not moved. why"
-> — and this stays its not closeable.*
-
-Said with a crop of the line under the message box. It is the refused-replay
-line (`refusalForPerson`, drawn by `Composer` from `Room`'s `refusal`). It is
-cleared only by asking a question, starting another replay or opening another
-thread (`setRefusal(null)` in `Room.tsx`) — there is no way to dismiss it, so a
-refused chip or fragment leaves it under every later look at the board. **Not
-fixed**; a close control and clearing it when the board changes, under an hour.
-
-### 2026-09-17 — "why is there 2 thinkings it should only be around the blob"
-
-> *"also why is there 2 thinkings it should only be around the blob and should
-> be more in depth on what its doing with progess per thing its running but
-> just small."*
-
-Said of the live build `634423e` (P2S.3), with a screenshot of a turn in
-progress: a list at the top of the figures area (*1 read sales · 7 rows · 99ms,
-2 read sales …, kept what he now thinks 16ms … 38s*) and, under the mark, *kept
-what he now thinks · thinking… 38s*.
-
-**Found underneath (not fixed).** Two components draw the same stream while he
-works: `Working` (the step list, `Room.tsx` in the figures area, `busy &&`) and
-`Doing` (one line under the mark, added 2026-09-17 when the owner asked for "a
-line under the mark while he works"). Neither knew about the other. The fix his
-words describe: one place, under the mark — `Doing` becomes the small per-step
-progress (each read, its state, rows and time), and `Working` stops drawing in
-the figures area. About an hour; `working.dom.test.tsx` and
-`visibleWork.dom.test.tsx` hold the trail today and move with it.
 
 ### 2026-09-17 — "this should stay where it is in everypage and should know context"
 
@@ -400,6 +370,53 @@ once changes the next answer. That is the card's own done-when.
 ---
 
 ## Fixed
+
+### 2026-09-17 — "down arrow should be in the center of the charts"
+
+> *"and down arrow should be in the center of the charts."*
+
+Said with a crop of the figures area's down arrow. It is drawn at the area's
+right edge (`.r-arr { right: -6px }`, P2S.1, copied from the design's
+`arrows()`); he wants it centred under the charts. **Not fixed**; a CSS change
+to `.r-arr` in `room.css`, minutes.
+
+**Fixed in `0c9376d`, not verified by him:** `.r-arr` centred on the figures area; held by `ownerReports.dom.test.tsx`.
+
+### 2026-09-17 — "this stays its not closeable"
+
+> *"That change cannot be made to this read. The figures have not moved. why"
+> — and this stays its not closeable.*
+
+Said with a crop of the line under the message box. It is the refused-replay
+line (`refusalForPerson`, drawn by `Composer` from `Room`'s `refusal`). It is
+cleared only by asking a question, starting another replay or opening another
+thread (`setRefusal(null)` in `Room.tsx`) — there is no way to dismiss it, so a
+refused chip or fragment leaves it under every later look at the board. **Not
+fixed**; a close control and clearing it when the board changes, under an hour.
+
+**Fixed in `0c9376d`, not verified by him:** the refused line has a close (×); held by `ownerReports.dom.test.tsx`. It still sits over the figures while open, as a popover above the message line.
+
+### 2026-09-17 — "why is there 2 thinkings it should only be around the blob"
+
+> *"also why is there 2 thinkings it should only be around the blob and should
+> be more in depth on what its doing with progess per thing its running but
+> just small."*
+
+Said of the live build `634423e` (P2S.3), with a screenshot of a turn in
+progress: a list at the top of the figures area (*1 read sales · 7 rows · 99ms,
+2 read sales …, kept what he now thinks 16ms … 38s*) and, under the mark, *kept
+what he now thinks · thinking… 38s*.
+
+**Found underneath (not fixed).** Two components draw the same stream while he
+works: `Working` (the step list, `Room.tsx` in the figures area, `busy &&`) and
+`Doing` (one line under the mark, added 2026-09-17 when the owner asked for "a
+line under the mark while he works"). Neither knew about the other. The fix his
+words describe: one place, under the mark — `Doing` becomes the small per-step
+progress (each read, its state, rows and time), and `Working` stops drawing in
+the figures area. About an hour; `working.dom.test.tsx` and
+`visibleWork.dom.test.tsx` hold the trail today and move with it.
+
+**Fixed in `0c9376d`, not verified by him:** the trail over the figures is gone; `Doing` draws it under the mark — each step with rows and time, small — and a foot saying reading… or thinking… beside the clock. Held by `ownerReports.dom.test.tsx`; no frame of a turn in progress exists, because the frames harness draws a finished turn.
 
 ### 2026-09-17 — "we need more text with each chart if needed explaination with the visuals"
 
