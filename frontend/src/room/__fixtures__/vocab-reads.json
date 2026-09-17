@@ -3983,479 +3983,14 @@
  "scatter": {
   "tool": "get_sales",
   "arguments": {
-   "group_by": "product",
-   "metric": "units_sold",
+   "group_by": "store",
    "date_range": "last_month",
-   "compare_to": "previous_period",
-   "top_n": 30
+   "compare_to": "previous_period"
   },
   "channels": {
    "field": "value",
    "against": "baseline"
   },
-  "rows": [
-   {
-    "product_id": "663c7869391c7c00079595a8",
-    "sku": "SH1",
-    "product": "Aji Mix",
-    "value": 1320779.0,
-    "baseline": 1419992.0,
-    "change": -99213.0,
-    "change_pct": -7.0,
-    "direction": "down",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "6905bf94d35af500071e8cba",
-    "sku": "N10",
-    "product": "Singapore peanut 1g N10",
-    "value": 39849.0,
-    "baseline": 35285.0,
-    "change": 4564.0,
-    "change_pct": 12.9,
-    "direction": "up",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "66d692cc8756c4000779482a",
-    "sku": "Ajiskoops1",
-    "product": "Aji scoops",
-    "value": 35702.0,
-    "baseline": 56698.0,
-    "change": -20996.0,
-    "change_pct": -37.0,
-    "direction": "down",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "68665545cf922a00076ad45e",
-    "sku": "G4",
-    "product": "G4 honey bayberry 1g",
-    "value": 11232.0,
-    "baseline": 20523.0,
-    "change": -9291.0,
-    "change_pct": -45.3,
-    "direction": "down",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "68665547cf922a00076ad87e",
-    "sku": "F3",
-    "product": "F3 mango 1g",
-    "value": 10871.0,
-    "baseline": 6287.0,
-    "change": 4584.0,
-    "change_pct": 72.9,
-    "direction": "up",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "68665547cf922a00076ad9b2",
-    "sku": "G35",
-    "product": "G35 sampaloc 1g",
-    "value": 10485.0,
-    "baseline": 9714.0,
-    "change": 771.0,
-    "change_pct": 7.9,
-    "direction": "up",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "69b2789c3c970a0007ab7518",
-    "sku": "G172",
-    "product": "G172 black plum 1g",
-    "value": 9929.0,
-    "baseline": 8477.0,
-    "change": 1452.0,
-    "change_pct": 17.1,
-    "direction": "up",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "68665547cf922a00076ad9de",
-    "sku": "G36",
-    "product": "G36 sampaloc spicy 1g",
-    "value": 9752.0,
-    "baseline": 8153.0,
-    "change": 1599.0,
-    "change_pct": 19.6,
-    "direction": "up",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "68665546cf922a00076ad48a",
-    "sku": "P16",
-    "product": "P16 dikiam 1g",
-    "value": 7453.0,
-    "baseline": 7654.0,
-    "change": -201.0,
-    "change_pct": -2.6,
-    "direction": "down",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "68665547cf922a00076ad95a",
-    "sku": "G33",
-    "product": "G33 guava spicy 1g",
-    "value": 7108.0,
-    "baseline": 250.0,
-    "change": 6858.0,
-    "change_pct": 2743.2,
-    "direction": "up",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "6972df67f0a19d0007aee27f",
-    "sku": "Pack03",
-    "product": "aji mix plastic 1pc",
-    "value": 6846.0,
-    "baseline": 6505.0,
-    "change": 341.0,
-    "change_pct": 5.2,
-    "direction": "up",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "68665545cf922a00076ad406",
-    "sku": "G2",
-    "product": "G2 kiamoy curl 1g",
-    "value": 5696.0,
-    "baseline": 7154.0,
-    "change": -1458.0,
-    "change_pct": -20.4,
-    "direction": "down",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "68665546cf922a00076ad50e",
-    "sku": "P18",
-    "product": "P18 plum red lovers 1g",
-    "value": 4470.0,
-    "baseline": 4849.0,
-    "change": -379.0,
-    "change_pct": -7.8,
-    "direction": "down",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "68f309cad46da800075b98a3",
-    "sku": "FZ102",
-    "product": "Fruit and veggies 1g",
-    "value": 4408.0,
-    "baseline": 1900.0,
-    "change": 2508.0,
-    "change_pct": 132.0,
-    "direction": "up",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "67404730c2a88b00074b316f",
-    "sku": "Bag04",
-    "product": "Red E dragon free 500",
-    "value": 4024.0,
-    "baseline": 4841.0,
-    "change": -817.0,
-    "change_pct": -16.9,
-    "direction": "down",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "68f332293e97c300076ed923",
-    "sku": "FZ103",
-    "product": "XL freeze dried strawberries 1g",
-    "value": 3806.0,
-    "baseline": 2218.0,
-    "change": 1588.0,
-    "change_pct": 71.6,
-    "direction": "up",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "686bda542b0fbf00078156f2",
-    "sku": "F17",
-    "product": "F17 Ms peaches 1g",
-    "value": 3662.0,
-    "baseline": 1915.0,
-    "change": 1747.0,
-    "change_pct": 91.2,
-    "direction": "up",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "68665547cf922a00076ad8aa",
-    "sku": "F14",
-    "product": "F14 pineapple 1g",
-    "value": 3289.0,
-    "baseline": 5476.0,
-    "change": -2187.0,
-    "change_pct": -39.9,
-    "direction": "down",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "686be041362648000745dac2",
-    "sku": "F11",
-    "product": "F11 Olives 1g",
-    "value": 2714.0,
-    "baseline": 1524.0,
-    "change": 1190.0,
-    "change_pct": 78.1,
-    "direction": "up",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "69e807cd85530300070d2a64",
-    "sku": "P100",
-    "product": "P05 plum hellboy 1g",
-    "value": 2684.0,
-    "baseline": 2212.0,
-    "change": 472.0,
-    "change_pct": 21.3,
-    "direction": "up",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "68665547cf922a00076ad8d6",
-    "sku": "F15",
-    "product": "F15 langka 1g",
-    "value": 2631.0,
-    "baseline": 1136.0,
-    "change": 1495.0,
-    "change_pct": 131.6,
-    "direction": "up",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "68665547cf922a00076ad986",
-    "sku": "G34",
-    "product": "G34 guava 1g",
-    "value": 2556.0,
-    "baseline": 50.0,
-    "change": 2506.0,
-    "change_pct": 5012.0,
-    "direction": "up",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "68665546cf922a00076ad53a",
-    "sku": "P22",
-    "product": "P22 winter curl  1g",
-    "value": 2245.0,
-    "baseline": 900.0,
-    "change": 1345.0,
-    "change_pct": 149.4,
-    "direction": "up",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "6a0c1928e3db6a0007513112",
-    "sku": "P101",
-    "product": "k plum 1g",
-    "value": 2086.0,
-    "baseline": 730.0,
-    "change": 1356.0,
-    "change_pct": 185.8,
-    "direction": "up",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "686bdaa0cb97020007925f21",
-    "sku": "F6",
-    "product": "F6 Red grapefruit bits 1g",
-    "value": 1714.0,
-    "baseline": 1210.0,
-    "change": 504.0,
-    "change_pct": 41.7,
-    "direction": "up",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "66e3f2e5abd6be0007e7610e",
-    "sku": "MJ3",
-    "product": "Cow Label Beef Jerky Per Pc",
-    "value": 1622.0,
-    "baseline": 1726.0,
-    "change": -104.0,
-    "change_pct": -6.0,
-    "direction": "down",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "678a122104a1f4000718ac42",
-    "sku": "Free02",
-    "product": "Gummy free pack 500",
-    "value": 1544.0,
-    "baseline": 191.0,
-    "change": 1353.0,
-    "change_pct": 708.4,
-    "direction": "up",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "663c78b8391c7c000795d43c",
-    "sku": "SH1145",
-    "product": "Aji Kiamoy Strips",
-    "value": 1344.0,
-    "baseline": 2102.0,
-    "change": -758.0,
-    "change_pct": -36.1,
-    "direction": "down",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "6666c82fc7a0920007c45a5b",
-    "sku": "AJI1014",
-    "product": "aji champoy honey bayberry",
-    "value": 1116.0,
-    "baseline": 870.0,
-    "change": 246.0,
-    "change_pct": 28.3,
-    "direction": "up",
-    "unit": "units",
-    "baseline_status": "ok"
-   },
-   {
-    "product_id": "67aeea3f992319000754e24e",
-    "sku": "F71",
-    "product": "Aji Jio jio Lemon 1g",
-    "value": 1030.0,
-    "baseline": 997.0,
-    "change": 33.0,
-    "change_pct": 3.3,
-    "direction": "up",
-    "unit": "units",
-    "baseline_status": "ok"
-   }
-  ],
-  "meta": {
-   "source_table": "new_transaction_items + new_transactions + products",
-   "metric": "units_sold",
-   "metric_unit": "units",
-   "metric_grain": "transaction_item",
-   "metric_kind": "base",
-   "metric_label": "Units sold",
-   "metric_domain": "retail_sales",
-   "valid_group_by": [
-    "store",
-    "hour",
-    "day",
-    "week",
-    "month",
-    "product",
-    "category"
-   ],
-   "drivers": [],
-   "top_n": 30,
-   "group_by": [
-    "product"
-   ],
-   "window": {
-    "kind": "preset",
-    "name": "last_month",
-    "includes_partial_day": false,
-    "start": "2026-08-01",
-    "end": "2026-09-01",
-    "convention": "half-open [start, end)",
-    "resolved_against": "2026-09-17"
-   },
-   "filters_applied": [
-    "t.is_cancelled = false   # metrics.yaml: filters.cancelled",
-    "t.transaction_type = 'Sale'   # metrics.yaml: filters.returns",
-    "t.store_id IN (7: Rockwell, Fairview, Greenhills, North Edsa, Magnolia, OPUS, Shangri-La)   # metrics.yaml: stores.active_retail",
-    "excluded: AJI BARN, AJI PINA, AJI MACOPA   # metrics.yaml: filters.excluded_from_sales.excluded_store_ids",
-    "transaction_time within preset 'last_month' (Asia/Manila, half-open; includes_partial_day=False)   # metrics.yaml: sales_day.presets.last_month",
-    "baseline: transaction_time >= 2026-07-01 AND < 2026-08-01 (Asia/Manila, half-open; previous_period, same metric, grouping, stores and guards)   # metrics.yaml: comparisons.previous_period"
-   ],
-   "snapshot_timestamp": "2026-09-17T12:10:33.387056+00:00",
-   "definitions_version": 1,
-   "row_count": 30,
-   "full_row_count": 638,
-   "full_row_count_note": "Size of the complete result set before top_n or the row cap. When it exceeds row_count, the rows shown are the top slice by the ordering in meta.ordering — never a sample, and never something to total.",
-   "ordering": "value DESC",
-   "truncated": false,
-   "row_limit": 30,
-   "reconciliation": {
-    "applicable": false,
-    "reason": "metric 'units_sold' is not one of the two money measures the reconciliation governs (net_sales, product_revenue)."
-   },
-   "gap_filled": false,
-   "gap_filled_note": "Buckets with no transactions are absent, not zero. No row is synthesised for an empty day — that would fabricate data.",
-   "comparison": {
-    "kind": "previous_period",
-    "display_name": "vs previous period",
-    "method": "shift_back_by_relative_length",
-    "current": {
-     "start": "2026-08-01",
-     "end": "2026-09-01"
-    },
-    "baseline": {
-     "kind": "preset",
-     "name": "last_month",
-     "periods_back": 1,
-     "start": "2026-07-01",
-     "end": "2026-08-01",
-     "convention": "half-open [start, end)"
-    },
-    "same_population": true,
-    "change_pct_formula": "change / abs(baseline) * 100",
-    "baseline_statuses": {
-     "ok": 30
-    },
-    "row_count_baseline": 631,
-    "rank_by": "value",
-    "ranked_by_current": true,
-    "ranking_note": "top_n=30 ranked the current period; only those 30 subjects are compared, and a subject outside them is not absent from trade — it was not ranked.",
-    "source": "definitions/metrics.yaml: comparisons.previous_period"
-   },
-   "baseline_reconciliation": {
-    "applicable": false,
-    "reason": "metric 'units_sold' is not one of the two money measures the reconciliation governs (net_sales, product_revenue)."
-   },
-   "data_quality": {
-    "orphan_line_items": 0,
-    "orphan_line_items_note": "Line items whose product_id has no row in `products`. They are RETAINED via LEFT JOIN — an INNER JOIN would drop them and understate every total. Database-wide there are 4 such rows out of 891,714.",
-    "uncategorized_products": 3,
-    "uncategorized_line_items": 18,
-    "uncategorized_note": "Products with a NULL or blank category, grouped under 'Uncategorized' rather than dropped. Database-wide, 83 of 3,678 products have no category."
-   }
-  }
- },
- "table": {
-  "tool": "get_sales",
-  "arguments": {
-   "group_by": "store",
-   "date_range": "last_month",
-   "compare_to": "previous_period"
-  },
-  "channels": {},
   "rows": [
    {
     "store_id": "68c5bb269da1d500073690c2",
@@ -4575,7 +4110,7 @@
     "transaction_time within preset 'last_month' (Asia/Manila, half-open; includes_partial_day=False)   # metrics.yaml: sales_day.presets.last_month",
     "baseline: transaction_time >= 2026-07-01 AND < 2026-08-01 (Asia/Manila, half-open; previous_period, same metric, grouping, stores and guards)   # metrics.yaml: comparisons.previous_period"
    ],
-   "snapshot_timestamp": "2026-09-17T12:10:34.849543+00:00",
+   "snapshot_timestamp": "2026-09-17T12:54:10.201419+00:00",
    "definitions_version": 1,
    "row_count": 7,
    "full_row_count": 7,
@@ -4633,6 +4168,248 @@
     "discount_total": 0.0,
     "holds": true,
     "explained_by_discount": null
+   }
+  }
+ },
+ "table": {
+  "tool": "get_sales",
+  "arguments": {
+   "group_by": "product",
+   "metric": "product_revenue",
+   "date_range": "last_month",
+   "compare_to": "previous_period",
+   "filters": {
+    "store": "Rockwell"
+   },
+   "top_n": 10
+  },
+  "channels": {},
+  "rows": [
+   {
+    "product_id": "663c7869391c7c00079595a8",
+    "sku": "SH1",
+    "product": "Aji Mix",
+    "value": 191521.5,
+    "baseline": 421965.0,
+    "change": -230443.5,
+    "change_pct": -54.6,
+    "direction": "down",
+    "unit": "PHP",
+    "baseline_status": "ok"
+   },
+   {
+    "product_id": "663c78b8391c7c000795d43c",
+    "sku": "SH1145",
+    "product": "Aji Kiamoy Strips",
+    "value": 54725.0,
+    "baseline": 118007.0,
+    "change": -63282.0,
+    "change_pct": -53.6,
+    "direction": "down",
+    "unit": "PHP",
+    "baseline_status": "ok"
+   },
+   {
+    "product_id": "663c78b8391c7c000795d458",
+    "sku": "SH1147",
+    "product": "Aji Kiamoy White",
+    "value": 31243.0,
+    "baseline": 42188.0,
+    "change": -10945.0,
+    "change_pct": -25.9,
+    "direction": "down",
+    "unit": "PHP",
+    "baseline_status": "ok"
+   },
+   {
+    "product_id": "692e55e40768f80007399191",
+    "sku": "BGP07",
+    "product": "Aji honey bayberry binge pack",
+    "value": 28329.0,
+    "baseline": 30324.0,
+    "change": -1995.0,
+    "change_pct": -6.6,
+    "direction": "down",
+    "unit": "PHP",
+    "baseline_status": "ok"
+   },
+   {
+    "product_id": "663c78b7391c7c000795d3cc",
+    "sku": "SH1137",
+    "product": "Aji Kiamoy Curl Sour",
+    "value": 27263.0,
+    "baseline": 19900.0,
+    "change": 7363.0,
+    "change_pct": 37.0,
+    "direction": "up",
+    "unit": "PHP",
+    "baseline_status": "ok"
+   },
+   {
+    "product_id": "663c78b7391c7c000795d3e8",
+    "sku": "SH1139",
+    "product": "Aji Kiamoy King Seedless",
+    "value": 21293.0,
+    "baseline": 34626.0,
+    "change": -13333.0,
+    "change_pct": -38.5,
+    "direction": "down",
+    "unit": "PHP",
+    "baseline_status": "ok"
+   },
+   {
+    "product_id": "663c78bc391c7c000795d7ae",
+    "sku": "SH1208",
+    "product": "Kai Fat Brown Seedless Chan Pui Ying Che 400G",
+    "value": 19960.0,
+    "baseline": 17465.0,
+    "change": 2495.0,
+    "change_pct": 14.3,
+    "direction": "up",
+    "unit": "PHP",
+    "baseline_status": "ok"
+   },
+   {
+    "product_id": "66e3f2e5abd6be0007e7610e",
+    "sku": "MJ3",
+    "product": "Cow Label Beef Jerky Per Pc",
+    "value": 19430.0,
+    "baseline": 13050.0,
+    "change": 6380.0,
+    "change_pct": 48.9,
+    "direction": "up",
+    "unit": "PHP",
+    "baseline_status": "ok"
+   },
+   {
+    "product_id": "663c78bb391c7c000795d6a4",
+    "sku": "SH1189",
+    "product": "Aji Squid Rings",
+    "value": 16966.0,
+    "baseline": 29441.0,
+    "change": -12475.0,
+    "change_pct": -42.4,
+    "direction": "down",
+    "unit": "PHP",
+    "baseline_status": "ok"
+   },
+   {
+    "product_id": "6666c82fc7a0920007c45a5b",
+    "sku": "AJI1014",
+    "product": "aji champoy honey bayberry",
+    "value": 16716.0,
+    "baseline": 39800.0,
+    "change": -23084.0,
+    "change_pct": -58.0,
+    "direction": "down",
+    "unit": "PHP",
+    "baseline_status": "ok"
+   }
+  ],
+  "meta": {
+   "source_table": "new_transaction_items + new_transactions + products",
+   "metric": "product_revenue",
+   "metric_unit": "PHP",
+   "metric_grain": "transaction_item",
+   "metric_kind": "base",
+   "metric_label": "Product revenue",
+   "metric_domain": "retail_sales",
+   "valid_group_by": [
+    "store",
+    "hour",
+    "day",
+    "week",
+    "month",
+    "product",
+    "category"
+   ],
+   "drivers": [],
+   "top_n": 10,
+   "group_by": [
+    "product"
+   ],
+   "window": {
+    "kind": "preset",
+    "name": "last_month",
+    "includes_partial_day": false,
+    "start": "2026-08-01",
+    "end": "2026-09-01",
+    "convention": "half-open [start, end)",
+    "resolved_against": "2026-09-17"
+   },
+   "filters_applied": [
+    "t.is_cancelled = false   # metrics.yaml: filters.cancelled",
+    "t.transaction_type = 'Sale'   # metrics.yaml: filters.returns",
+    "t.store_id IN (1: Rockwell)   # metrics.yaml: stores.active_retail",
+    "excluded: AJI BARN, AJI PINA, AJI MACOPA   # metrics.yaml: filters.excluded_from_sales.excluded_store_ids",
+    "transaction_time within preset 'last_month' (Asia/Manila, half-open; includes_partial_day=False)   # metrics.yaml: sales_day.presets.last_month",
+    "baseline: transaction_time >= 2026-07-01 AND < 2026-08-01 (Asia/Manila, half-open; previous_period, same metric, grouping, stores and guards)   # metrics.yaml: comparisons.previous_period"
+   ],
+   "snapshot_timestamp": "2026-09-17T13:01:36.010037+00:00",
+   "definitions_version": 1,
+   "row_count": 10,
+   "full_row_count": 282,
+   "full_row_count_note": "Size of the complete result set before top_n or the row cap. When it exceeds row_count, the rows shown are the top slice by the ordering in meta.ordering — never a sample, and never something to total.",
+   "ordering": "value DESC",
+   "truncated": false,
+   "row_limit": 10,
+   "reconciliation": {
+    "applicable": true,
+    "method": "compute both measures over the same window and filters; compare directly",
+    "net_sales": 1075722.48,
+    "product_revenue": 1075722.48,
+    "gap": 0.0,
+    "gap_pct": 0.0,
+    "discount_total": 0.0,
+    "holds": true,
+    "explained_by_discount": null
+   },
+   "gap_filled": false,
+   "gap_filled_note": "Buckets with no transactions are absent, not zero. No row is synthesised for an empty day — that would fabricate data.",
+   "comparison": {
+    "kind": "previous_period",
+    "display_name": "vs previous period",
+    "method": "shift_back_by_relative_length",
+    "current": {
+     "start": "2026-08-01",
+     "end": "2026-09-01"
+    },
+    "baseline": {
+     "kind": "preset",
+     "name": "last_month",
+     "periods_back": 1,
+     "start": "2026-07-01",
+     "end": "2026-08-01",
+     "convention": "half-open [start, end)"
+    },
+    "same_population": true,
+    "change_pct_formula": "change / abs(baseline) * 100",
+    "baseline_statuses": {
+     "ok": 10
+    },
+    "row_count_baseline": 421,
+    "rank_by": "value",
+    "ranked_by_current": true,
+    "ranking_note": "top_n=10 ranked the current period; only those 10 subjects are compared, and a subject outside them is not absent from trade — it was not ranked.",
+    "source": "definitions/metrics.yaml: comparisons.previous_period"
+   },
+   "baseline_reconciliation": {
+    "applicable": true,
+    "method": "compute both measures over the same window and filters; compare directly",
+    "net_sales": 2355681.78,
+    "product_revenue": 2355681.78,
+    "gap": 0.0,
+    "gap_pct": 0.0,
+    "discount_total": 0.0,
+    "holds": true,
+    "explained_by_discount": null
+   },
+   "data_quality": {
+    "orphan_line_items": 0,
+    "orphan_line_items_note": "Line items whose product_id has no row in `products`. They are RETAINED via LEFT JOIN — an INNER JOIN would drop them and understate every total. Database-wide there are 4 such rows out of 891,714.",
+    "uncategorized_products": 0,
+    "uncategorized_line_items": 0,
+    "uncategorized_note": "Products with a NULL or blank category, grouped under 'Uncategorized' rather than dropped. Database-wide, 83 of 3,678 products have no category."
    }
   }
  },
@@ -4771,8 +4548,10 @@
    "contributors",
    "table",
    "bar",
+   "pie",
    "scatter",
    "waterfall",
+   "treemap",
    "gauge"
   ],
   "table": [

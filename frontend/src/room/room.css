@@ -1713,6 +1713,8 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
 .r-mk-tick { position: absolute; left: 8%; right: 8%; height: 2px; background: var(--ink-2); }
 .r-mk-tick--across { top: -3px; bottom: -3px; left: auto; right: auto; width: 2px; height: auto; }
 .r-mk-colname { justify-content: center; text-align: center; padding-left: 0; }
+/* A NAME UNDER A BAR NEVER BREAKS INSIDE A WORD ("OPU S", the vocab frames). */
+.r-mk-colname .r-mk-name-text { overflow-wrap: normal; word-break: keep-all; hyphens: none; }
 .r-fig[data-arrived="yes"] .r-mk-colbar i {
   transform-origin: center bottom;
   animation: r-grow-up 600ms var(--ease) both; animation-delay: calc(var(--d, 0ms) + 60ms);
@@ -1772,9 +1774,11 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
 
 /* treemap and gauge */
 .r-mk-boxname { font: 500 10.5px var(--sans); }
-.r-mk-gauge { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 18px; }
-.r-mk-gauge-words { min-width: 0; }
-.r-mk-bullet { grid-column: 1 / -1; margin-top: 12px; height: 8px; }
+/* THE ARC AND ITS WORDS WRAP rather than overlap the figure beside (1440 frame). */
+.r-mk-gauge { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; }
+.r-mk-gauge-words { min-width: 0; flex: 1 1 150px; }
+.r-mk-bullet { flex: 1 1 100%; margin-top: 8px; height: 8px; }
+.r-mk-dotname { font: 400 10px var(--sans); fill: var(--ink-2); }
 
 /* THEY ARRIVE LIKE THE SIX: once, on arrival, still under reduced motion. */
 @keyframes r-fade { from { opacity: 0; } }

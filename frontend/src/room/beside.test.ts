@@ -92,6 +92,12 @@ describe('the figures flow into columns — his rows 6 and 7', () => {
     expect(needsWidth('table', 12, 6)).toBe(true);
     expect(needsWidth('table', 12, 3)).toBe(false);
     expect(needsWidth('spec', 0, 0)).toBe(true);
+    // P2S.3: bars past four names, an area like a line, a grid of many cells.
+    expect(needsWidth('bar', 7, 3)).toBe(true);
+    expect(needsWidth('bar', 4, 3)).toBe(false);
+    expect(needsWidth('area', 31, 2)).toBe(true);
+    expect(needsWidth('heatmap', 91, 4)).toBe(true);
+    expect(needsWidth('pie', 7, 2)).toBe(false);
   });
 
   it('puts a spanning figure under the tallest column and raises both to its foot', () => {

@@ -15,6 +15,7 @@ Nothing here is a definition. Which store a read is filtered to comes out of
 
     .venv\\Scripts\\python.exe ops/record_vocab_reads.py            # read again, then the matrix
     .venv\\Scripts\\python.exe ops/record_vocab_reads.py --matrix   # the matrix only, same rows
+    .venv\\Scripts\\python.exe ops/record_vocab_reads.py --only scatter   # one shape again
 
 THE MATRIX. `_drawable` (which shapes each read's rows can make) and `_default`
 (the shape `default_composition.shape_for` gives it) are written beside the
@@ -77,6 +78,7 @@ def matrix(out: dict, defs: dict) -> None:
 
 def main() -> None:
     defs = load_defs()
+    only = sys.argv[sys.argv.index("--only") + 1:] if "--only" in sys.argv else None
     if "--matrix" in sys.argv:
         out = json.loads(OUT.read_text(encoding="utf-8"))
         matrix(out, defs)
@@ -114,18 +116,29 @@ def main() -> None:
         "stacked": (get_sales, {"group_by": ["store", "category"], "metric": "product_revenue",
                                 "date_range": "last_month"}, {}),
         "heatmap": (get_sales, {"group_by": ["store", "hour"], "date_range": "last_month"}, {}),
-        "scatter": (get_sales, {"group_by": "product", "metric": "units_sold",
-                                "date_range": "last_month", "compare_to": "previous_period",
-                                "top_n": 30}, {"field": "value", "against": "baseline"}),
-        "table": (get_sales, {"group_by": "store", "date_range": "last_month",
-                              "compare_to": "previous_period"}, {}),
+        # Over the shops, not products: one product sells thirty times the next,
+        # and a scatter of that read is one dot and a smudge in a corner.
+        "scatter": (get_sales, {"group_by": "store", "date_range": "last_month",
+                                "compare_to": "previous_period"},
+                    {"field": "value", "against": "baseline"}),
+        # Exact pesos someone will act on: the products, not the shops a bar,
+        # a dumbbell and a scatter already draw.
+        "table": (get_sales, {"group_by": "product", "metric": "product_revenue",
+                              "date_range": "last_month", "compare_to": "previous_period",
+                              "filters": shop, "top_n": 10}, {}),
     }
 
-    out: dict[str, dict] = {
-        "_why": ("One real read per shape, recorded by ops/record_vocab_reads.py with "
-                 "the vetted tools and no model. Rows and meta as the tool returned them."),
-        "_recorded": date.today().isoformat(),
-    }
+    if only:
+        # RE-RECORD NAMED SHAPES ONLY, keeping every other read as it was — so
+        # the golden snapshots of the rest do not move with the estate's data.
+        out = json.loads(OUT.read_text(encoding="utf-8"))
+        plan = {k: v for k, v in plan.items() if k in only}
+    else:
+        out = {
+            "_why": ("One real read per shape, recorded by ops/record_vocab_reads.py with "
+                     "the vetted tools and no model. Rows and meta as the tool returned them."),
+            "_recorded": date.today().isoformat(),
+        }
     for shape, (fn, arguments, channels) in plan.items():
         result = fn(**arguments)
         meta = {k: v for k, v in (result.get("meta") or {}).items() if k not in DROP_META}

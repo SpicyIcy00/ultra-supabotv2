@@ -151,8 +151,13 @@ export function columnsFor(count: number, viewport: number, onlyOneNeedsWidth = 
  */
 export function needsWidth(mark: string | null, points: number, columns: number): boolean {
   if (mark === 'spec') return true;
-  if (mark === 'line') return points > 8;
+  if (mark === 'line' || mark === 'area') return points > 8;
   if (mark === 'table') return columns > 4;
+  // P2S.3, seen in the vocab frames: upright bars share the width between
+  // their names, so past four a name broke mid-word ("OPU S"); a grid of many
+  // cells shrinks its cells below a readable size in half the area.
+  if (mark === 'bar') return points > 4;
+  if (mark === 'heatmap') return points > 48;
   return false;
 }
 

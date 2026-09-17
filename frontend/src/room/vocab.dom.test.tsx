@@ -160,7 +160,7 @@ describe('a read too small, too big or empty for its shape', () => {
   });
 
   it('a pie of more parts than a whole can show is a ranking', () => {
-    const many = all.scatter.rows.map((r) => ({ product: r.product, value: r.value }));
+    const many = all.multiples.rows.map((r) => ({ product: `${r.store} ${r.week}`, value: r.value }));
     expect(many.length).toBeGreaterThan(12);
     expect(markFor({ kind: 'pie' } as BoardObject, many)).toBe('ranked');
   });

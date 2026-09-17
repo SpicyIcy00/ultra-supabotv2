@@ -410,16 +410,20 @@ function Scatter({ rows, meta, o }: ShapeProps) {
               <circle className="r-mk-hit" cx={x(xs[n])} cy={y(ys[n])} r={8} fill="none"
                       data-v={told(name, `${words(field)} ${fmt(field, ys[n], unit)}`,
                                    `${words(against)} ${fmt(against, xs[n], unit)}`)} />
-              {lit && emphasised(o) && (
-                <text x={x(xs[n]) + 8} y={y(ys[n]) - 6} className="r-mk-point">{name}</text>
+              {/* A NAME ON EVERY DOT WHILE THEY FIT (a dozen or fewer); past
+                  that, only the ones he pointed at, and a touch for the rest. */}
+              {((rows.length <= 12 && name) || (lit && emphasised(o))) && (
+                <text x={x(xs[n]) + (x(xs[n]) > W * 0.8 ? -8 : 8)} y={y(ys[n]) - 6}
+                      textAnchor={x(xs[n]) > W * 0.8 ? 'end' : 'start'}
+                      className="r-mk-point r-mk-dotname">{name}</text>
               )}
             </g>
           );
         })}
       </svg>
       <div className="r-mk-ends">
-        <span>{words(against)} {fmt(against, x0, unit)} → {fmt(against, x1, unit)}</span>
-        <span>{words(field)} {fmt(field, y0, unit)} → {fmt(field, y1, unit)}</span>
+        <span>across · {words(against)} {fmt(against, x0, unit)} → {fmt(against, x1, unit)}</span>
+        <span>up · {words(field)} {fmt(field, y0, unit)} → {fmt(field, y1, unit)}</span>
       </div>
     </div>
   );
@@ -665,7 +669,7 @@ function Gauge({ rows, meta, o }: ShapeProps) {
     ? (meta?.comparison?.display_name ?? 'the period before') : against.replace(/_/g, ' ');
   return (
     <div className="r-mk r-mk-gauge">
-      <svg viewBox="0 0 180 96" width={220} height={118} role="img"
+      <svg viewBox="0 0 180 96" width={200} height={107} role="img"
            aria-label={`${fmt(key, v, unit)} against ${fmt(key, a, unit)}`}>
         <path d={path(1)} fill="none" stroke="var(--track)" strokeWidth={12} strokeLinecap="round" />
         <path className="r-mk-series-line" d={path(v / top)} fill="none" stroke={c} strokeWidth={12}
@@ -674,7 +678,7 @@ function Gauge({ rows, meta, o }: ShapeProps) {
         <line x1={tx0} y1={ty0} x2={tx1} y2={ty1} stroke="var(--ink)" strokeWidth={2} />
       </svg>
       <div className="r-mk-gauge-words">
-        <span className="r-num r-mk-num" style={{ '--size': '30px' } as CSSProperties}>{fmt(key, v, unit)}</span>
+        <span className="r-num r-mk-num" style={{ '--size': '26px' } as CSSProperties}>{fmt(key, v, unit)}</span>
         <p className="r-mk-measure">{measureOf(meta, key)} · {says} {fmt(key, a, unit)}</p>
       </div>
       <span className="r-mk-bar r-mk-bullet" role="img" aria-label="the same figure as a bullet"

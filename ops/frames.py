@@ -43,6 +43,17 @@ has to guess it from a filename:
              with their swatches and the verdict on the mark (P2S.2(e))
   memory     ops/frames_fixtures/memory.json — no report has recorded a
              view_memory read; the fixture's own `why` says what it is
+  vocab      frontend/src/room/__fixtures__/vocab-reads.json (P2S.3) — one
+  vocab2     real read per shape, recorded with the vetted tools and no model
+  vocab3     by ops/record_vocab_reads.py, each composed as the shape it was
+             recorded for. In three scenes, because the board draws one read
+             ONCE ("this is that", board.ts readIdentity) and several shapes
+             were recorded over the same read — a bar, a dumbbell, a scatter
+             and a table of the same shops — so no scene holds a read twice.
+             All three stand beside the design's one `vocab` scene. The question and
+             answer are fixture lines. The figures run past one screen, so
+             each is also shot a page at a time (`-page2`, `-page3`, …), and
+             the design's scene scrolled beside it
 
 Their words are not the design's words and should not be: the LOOK is held on
 fixtures, the BEHAVIOUR at the phase close (NOW.md, "LOOK AND BEHAVIOUR ARE TWO
@@ -93,6 +104,7 @@ FIXTURE_OF = {"memory": ROOT / "ops" / "frames_fixtures" / "memory.json",
               # in verification/, which is not committed, like every recorded run.
               "shangrila": ROOT / "verification" / "frames_fixtures" / "shangrila.json"}
 SIZES = {1440: 900, 1920: 1080, 1857: 963}
+VOCAB_READS = ROOT / "frontend" / "src" / "room" / "__fixtures__" / "vocab-reads.json"
 MAX_ROWS = 200
 
 
@@ -105,6 +117,9 @@ def build_scenes(report_path: Path, scenes: list[str]) -> dict[str, Any]:
     cases = {c.get("scenario"): c for c in report["cases"]}
     out = []
     for scene in scenes:
+        if scene in ("vocab", "vocab2", "vocab3"):
+            out.append(vocab_scene(scene))
+            continue
         if scene in FIXTURE_OF:
             if not FIXTURE_OF[scene].exists():
                 print(f"  {scene}: {FIXTURE_OF[scene].relative_to(ROOT)} is not on this machine; skipped")
@@ -165,6 +180,37 @@ def build_scenes(report_path: Path, scenes: list[str]) -> dict[str, Any]:
     colours = json.loads((ROOT / "ops" / "frames_fixtures" / "store_colours.json").read_text(encoding="utf-8"))
     return {"from": str(report_path.relative_to(ROOT)), "desk": desk_definitions(),
             "stores": colours["stores"], "scenes": out}
+
+
+def vocab_scene(scene: str) -> dict[str, Any]:
+    """EVERYTHING HE CAN DRAW: one recorded read per shape, composed as that shape."""
+    reads = json.loads(VOCAB_READS.read_text(encoding="utf-8"))
+    every = [k for k in reads if not k.startswith("_")]
+    # Each shape into the first scene that does not already draw its read.
+    scenes: list[list[str]] = [[], [], []]
+    for name in every:
+        same = json.dumps([reads[name]["tool"], reads[name]["arguments"]], sort_keys=True)
+        for group in scenes:
+            if all(json.dumps([reads[n]["tool"], reads[n]["arguments"]], sort_keys=True) != same
+                   for n in group):
+                group.append(name)
+                break
+    names = scenes[{"vocab": 0, "vocab2": 1, "vocab3": 2}[scene]]
+    calls, composed = [], []
+    for seq, name in enumerate(names):
+        read = reads[name]
+        calls.append({"seq": seq, "tool": read["tool"], "arguments": read["arguments"],
+                      "result": {"rows": read["rows"], "meta": read["meta"]}})
+        composed.append({"op": "put", "kind": name, "key": name, "seq": seq, "tool": read["tool"],
+                         "weight": "lead" if seq == 0 else "supporting", **read["channels"]})
+    # The board puts each new object FIRST, so the shapes are composed last to
+    # first and drawn in the order they were recorded.
+    composed.reverse()
+    at = next((reads[n]["meta"].get("snapshot_timestamp") for n in names), None)
+    return {"scene": scene, "from": str(VOCAB_READS.relative_to(ROOT)),
+            "question": "show me everything you can draw",
+            "answer": "Every shape I can draw, each over the read recorded for it.",
+            "at": at or "2026-09-17T00:00:00Z", "blocks": [], "composed": composed, "calls": calls}
 
 
 def desk_definitions() -> dict[str, Any] | None:
@@ -381,10 +427,42 @@ async def run(scenes: list[str], out: Path, sizes: dict[int, int], cdp_port: int
                         " const open = document.documentElement.getAttribute('data-side') === 'open';"
                         " if (want !== open) document.getElementById(want ? 'reopen' : 'collapse').click();"
                         " const b = document.querySelector('.strip [data-scene=\"%s\"]'); if (b) b.click();"
-                        " return true; })()" % ("true" if rail == "open" else "false", scene))
+                        " return true; })()" % ("true" if rail == "open" else "false",
+                                                "vocab" if scene.startswith("vocab") else scene))
                     await asyncio.sleep(3.0)
                     await page.shot(out / f"{stem}-design.png")
                     print(f"  {stem}: room + design")
+                    # A SCENE LONGER THAN A SCREEN (vocab): the figures area and
+                    # the design's scene, a page at a time, so every shape is seen.
+                    if scene.startswith("vocab") and rail == "open":
+                        await page.goto(f"{base}/frames.html?scene={scene}&rail={rail}", width, height, 0.5)
+                        for _ in range(120):
+                            if await page.eval("!!document.querySelector('.r-beside canvas')"):
+                                break
+                            await asyncio.sleep(0.5)
+                        await asyncio.sleep(6.0)
+                        for n in range(2, 12):
+                            moved = await page.eval(
+                                "(() => { const a = document.querySelector('.r-figs'); if (!a) return false;"
+                                " const was = a.scrollTop; a.scrollTop = was + a.clientHeight * 0.9;"
+                                " return a.scrollTop > was; })()")
+                            if not moved:
+                                break
+                            await asyncio.sleep(1.2)
+                            await page.shot(out / f"{stem}-room-page{n}.png")
+                        await page.goto(design, width, height, 2.5)
+                        await page.eval(
+                            "(() => { const b = document.querySelector('.strip [data-scene=\"vocab\"]');"
+                            " if (b) b.click(); return true; })()")
+                        await asyncio.sleep(3.0)
+                        for n in range(2, 8):
+                            moved = await page.eval(
+                                "(() => { const was = scrollY; scrollBy(0, innerHeight * 0.9);"
+                                " return scrollY > was; })()")
+                            if not moved:
+                                break
+                            await asyncio.sleep(1.0)
+                            await page.shot(out / f"{stem}-design-page{n}.png")
     return measured
 
 
