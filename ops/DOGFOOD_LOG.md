@@ -232,6 +232,24 @@ once changes the next answer. That is the card's own done-when.
 
 ## Fixed
 
+### 2026-09-17 — "why are these bars diiferent size depending on the size of the name?"
+
+> *"why are these bars diiferent size depending on the size of the name? shoudlbt it be standard ?"*
+
+Said of the live build `315b59d`, with six screenshots of ranked and contributors
+charts: a transactions change per shop, basket value per shop, products at
+Shangri-La, categories at Shangri-La.
+
+**Found and fixed the same day.** Every row of a mark was its own CSS grid, so
+`fit-content(40%)` sized the name column to THAT row's name: "Tong Garden Salted
+Broad Beans 500G" pushed its bar right and shortened it, and a diverging chart's
+zero line moved row to row — a chart read down its bars could not be read. The
+track list now lives on the mark (`.r-mk-dumbbells`, `.r-mk-ranked`,
+`.r-mk-contributors`) and every row and the scale take it by `subgrid`, so the
+widest name sets the column once. Held by `palette.test.ts`; seen in
+`verification/frames/subgrid/draw-1440-open-room.png` (every track starts and
+ends at one x). **Not verified by him.**
+
 ### 2026-09-17 — "it still feels like the charts and stuff are still in boxes and grids"
 
 > *"we dont need those disclaimers, and also all charts dont need to be the

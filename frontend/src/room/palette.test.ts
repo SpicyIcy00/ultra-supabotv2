@@ -303,8 +303,20 @@ describe('the data palette', () => {
  * population and wrong for the next.
  */
 describe('the row label column', () => {
-  const ROW = rule('.r-mk-row');
+  // THE TRACK LIST IS THE MARK'S, and every row takes it by subgrid (the log,
+  // 2026-09-17: "why are these bars diiferent size depending on the size of the
+  // name?"). A per-row list sized each row's name column to its own name.
+  const ROW = rule('.r-mk-dumbbells');
   const SCALE = rule('.r-mk-scale');
+
+  it('gives every row and the scale the MARK\'s columns, so every bar starts in one place', () => {
+    for (const mark of ['.r-mk-dumbbells', '.r-mk-ranked', '.r-mk-contributors']) {
+      expect(rule(mark)?.['grid-template-columns'], mark).toBe(ROW?.['grid-template-columns']);
+    }
+    expect(rule('.r-mk-row')?.['grid-template-columns']).toBe('subgrid');
+    expect(rule('.r-mk-row')?.['grid-column']).toBe('1 / -1');
+    expect(SCALE?.['grid-template-columns']).toBe('subgrid');
+  });
 
   it('sizes itself to the label rather than to a fixed number of characters', () => {
     const tracks = ROW?.['grid-template-columns'] ?? '';
@@ -326,8 +338,8 @@ describe('the row label column', () => {
 
   it('draws the scale on the very same track list as the rows', () => {
     // A scale whose ends do not sit under the track's ends is a ruler
-    // measuring something else.
-    expect(SCALE?.['grid-template-columns']).toBe(ROW?.['grid-template-columns']);
+    // measuring something else — both take the mark's columns.
+    expect(SCALE?.['grid-template-columns']).toBe(rule('.r-mk-row')?.['grid-template-columns']);
   });
 
   it('wraps to two lines before it cuts a name (the log, 2026-09-17)', () => {

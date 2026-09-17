@@ -1487,10 +1487,23 @@
    THE SCALE BELOW A MARK USES THE SAME TRACK LIST, and must: its two ends sit
    under the two ends of the track, and a scale on a different grid is a ruler
    measuring something else. */
+/* ONE TRACK LIST FOR THE WHOLE MARK, NOT ONE PER ROW (the log, 2026-09-17: *"why
+   are these bars diiferent size depending on the size of the name? shoudlbt it
+   be standard ?"*). Each row was its own grid, so `fit-content` sized the name
+   column to THAT row's name: a long product name pushed its bar right and
+   shortened it, and a diverging chart's zero line wandered row to row. The
+   columns now live on the mark and every row and the scale take them by
+   `subgrid` — the widest name sets the column once, and every bar starts, ends
+   and crosses zero in the same place. */
+.r-mk-dumbbells, .r-mk-ranked, .r-mk-contributors {
+  grid-template-columns: fit-content(40%) 1fr minmax(9ch, auto);
+  column-gap: 10px;
+  row-gap: 2px;
+}
 .r-mk-row {
   display: grid;
-  grid-template-columns: fit-content(40%) 1fr minmax(9ch, auto);
-  gap: 10px;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
   padding: 4px 0;
 }
@@ -1628,11 +1641,11 @@ button.r-mk-name[aria-pressed="true"], .r-mk-cellname[aria-pressed="true"] {
 .r-mk-dot--now { width: 11px; height: 11px; }
 .r-mk-scale {
   display: grid;
-  /* The same track list as `.r-mk-row`, deliberately: the scale's two ends sit
-     under the track's two ends, and a scale on its own grid is a ruler
-     measuring something else. */
-  grid-template-columns: fit-content(40%) 1fr minmax(9ch, auto);
-  gap: 10px;
+  /* The mark's own track list, deliberately: the scale's two ends sit under
+     the track's two ends, and a scale on its own grid is a ruler measuring
+     something else. */
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   font: 400 9.5px/1.4 var(--mono);
   color: var(--ink-3);
   margin-top: 4px;
@@ -1818,7 +1831,7 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
      So the cap tightens to a third and the ellipsis does more work — which is
      the right trade at this width and the wrong one at 940px, which is how the
      13ch above came to be applied everywhere. */
-  .r-mk-row, .r-mk-scale { grid-template-columns: fit-content(33%) 1fr minmax(8ch, auto); gap: 7px; }
+  .r-mk-dumbbells, .r-mk-ranked, .r-mk-contributors { grid-template-columns: fit-content(33%) 1fr minmax(8ch, auto); column-gap: 7px; }
   .r-mk-name { font-size: 11px; }
   .r-mk-fig { font-size: 10.5px; }
 }
