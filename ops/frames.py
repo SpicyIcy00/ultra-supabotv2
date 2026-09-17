@@ -132,7 +132,9 @@ def build_scenes(report_path: Path, scenes: list[str]) -> dict[str, Any]:
             "blocks": default_composition.blocks(seen, max_rows=MAX_ROWS),
             "calls": calls,
         })
-    return {"from": str(report_path.relative_to(ROOT)), "desk": desk_definitions(), "scenes": out}
+    colours = json.loads((ROOT / "ops" / "frames_fixtures" / "store_colours.json").read_text(encoding="utf-8"))
+    return {"from": str(report_path.relative_to(ROOT)), "desk": desk_definitions(),
+            "stores": colours["stores"], "scenes": out}
 
 
 def desk_definitions() -> dict[str, Any] | None:

@@ -61,6 +61,8 @@ axios.defaults.adapter = async (config: InternalAxiosRequestConfig): Promise<Axi
       { data: null, status: 404, statusText: 'Not Found', headers: {}, config } as AxiosResponse);
   }
   if (url.includes('/standing/latest')) return ok(null);
+  // The colours Settings saved, so a frame's swatches are the live room's.
+  if (url.endsWith('/analytics/stores')) return ok((scenes as { stores?: unknown[] }).stores ?? []);
   return ok([]);
 };
 

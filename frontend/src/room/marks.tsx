@@ -580,7 +580,13 @@ export function MarkBlock(p: TileProps) {
   const call = callFor(p);
   const rows = rowsOf(call);
   const meta = call?.result?.meta ?? null;
-  if (!rows.length) return <Missing what="rows" />;
+  if (!rows.length) {
+    // A READ THAT RETURNED ROWS THE RECORD DID NOT KEEP is not a read that came
+    // back empty (the log, 2026-09-17: a reopened page said "this read came
+    // back without rows" under figures that had drawn fine live). Say which.
+    const had = Number((call?.result as { row_count?: unknown } | undefined)?.row_count ?? 0);
+    return had > 0 ? <NotKept /> : <Missing what="rows" />;
+  }
   const mark: Mark = markFor(p.o, rows);
   const lit = !p.earlier && p.o.weight !== 'quiet';
   // WHAT THIS BLOCK IS ABOUT IS ITS TITLE, NOT ITS COLOUR (P2.l). The tile used
@@ -670,6 +676,18 @@ export function MarkBlock(p: TileProps) {
         </div>
       )}
     </>
+  );
+}
+
+/** Rows a read returned that the conversation did not keep, said as that. */
+function NotKept() {
+  return (
+    <div className="r-tile r-tile--quiet">
+      <p className="r-note" data-not-kept="">
+        This read&rsquo;s rows were not kept with the conversation, so there is nothing to draw here.
+        Ask again to read it fresh.
+      </p>
+    </div>
   );
 }
 

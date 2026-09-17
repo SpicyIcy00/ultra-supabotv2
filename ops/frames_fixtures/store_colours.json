@@ -1,0 +1,12 @@
+{
+ "why": "The colours set on Supabot's Settings page (stores.color), read 2026-09-17 by id for the stores in stores.active_retail. The frames harness serves them as /analytics/stores so a frame draws the swatches the live room draws.",
+ "stores": [
+  {"id": "6639efd54694700008d7ccc6", "name": "(1) Aji Ichiban Food Products", "display_name": "Rockwell", "color": "#ef4444"},
+  {"id": "668023c94721460006092609", "name": "(2) Aji Ichiban food products SM Fairview", "display_name": "Fairview", "color": "#8b5cf6"},
+  {"id": "668a43f60fa9990007cfa158", "name": "(3) Ajiichiban Food Products Greenhills", "display_name": "Greenhills", "color": "#22c55e"},
+  {"id": "66cfff31aa7adf0007c9de41", "name": "(4) Ajiichiban Food Products SM North Edsa", "display_name": "North Edsa", "color": "#3b82f6"},
+  {"id": "67612230a740d90007464e26", "name": "(5) Ajiichiban food products Magnolia", "display_name": "Magnolia", "color": "#f1c40f"},
+  {"id": "68c5bb269da1d500073690c2", "name": "(6) Aji Ichiban  OPUS", "display_name": "Opus", "color": "#14b8a6"},
+  {"id": "69c73fcb277aa600076dfaaa", "name": "Ajiichiban SHANG", "display_name": "Shangri-La", "color": "#ec4899"}
+ ]
+}

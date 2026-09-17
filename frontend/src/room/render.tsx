@@ -19,7 +19,7 @@ import { inOrder } from './board';
 import { retunedKey } from './tokenShape';
 import { FIGURE_GAP, columnsFor, placeFigures, revealAt } from './beside';
 import { readIndexes } from './work';
-import { PROCESS, type AnswerTurn, type Dimension } from './data';
+import { PROCESS, callOf, rowsOf, type AnswerTurn, type Dimension } from './data';
 import type { ToolCall } from '../types/george';
 import {
   ControlTile, DraftTile, MemoryTile, SpecTile, StateTile, SystemTile,
@@ -147,7 +147,12 @@ export function Board(p: BoardProps) {
     : ordered;
   const width = useViewport();
   const columns = columnsFor(objects.length, width);
-  const spans = objects.map((o) => o.key === leadKey);
+  // IT SPANS ONLY WHEN WIDTH HELPS IT: a read of several rows spreads out; one
+  // number across 940px is an empty track with a dot at its end (frames,
+  // 2026-09-17). A one-row lead still goes first and reads larger.
+  const spans = objects.map((o) => o.key === leadKey
+    && (o.spec !== undefined || rowsOf(callOf(p.answers[o.turn], o.seq)).length > 1));
+  const leads = objects.map((o) => o.key === leadKey);
   const keys = objects.map((o) => o.key).join('|');
 
   // HOW TALL EACH FIGURE IS, measured — the one input the placement needs.
@@ -211,9 +216,10 @@ export function Board(p: BoardProps) {
             data-figure={o.key}
             data-col={placed[n]}
             data-arrived={arrived.has(o.key) ? 'yes' : 'no'}
-            data-lead={spans[n] ? 'yes' : undefined}
+            data-lead={leads[n] ? 'yes' : undefined}
+            data-span={spans[n] ? 'yes' : undefined}
             className={['r-fig', out ? 'r-fig--out' : '', p.focused === o.key ? 'r-fig--open' : '',
-                        spans[n] ? 'r-fig--lead' : '']
+                        leads[n] ? 'r-fig--lead' : '']
               .filter(Boolean).join(' ')}
             style={{ gridColumn: spans[n] && columns > 1 ? '1 / -1' : placed[n] + 1,
                      gridRowEnd: `span ${Math.max(1, h + FIGURE_GAP)}` }}

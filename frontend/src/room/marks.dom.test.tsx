@@ -609,3 +609,18 @@ describe('a click on a figure (the log, 2026-09-17)', () => {
     expect(on.open).not.toHaveBeenCalled();
   });
 });
+
+describe('a reopened read whose rows were not kept (the log, 2026-09-17)', () => {
+  it('says the rows were not kept, not that the read came back empty', () => {
+    const turn = {
+      role: 'george', text: '', thinking: '', at: '2026-09-11T08:00:00Z',
+      toolCalls: [{ seq: 1, tool: 'get_sales', arguments: {}, result: { rows: [], row_count: 7, meta: META } }],
+    } as unknown as AnswerTurn;
+    const o = { key: 'k', kind: 'ranked', weight: 'supporting', seq: 1, tool: 'get_sales', turn: 0, touched: 0 } as BoardObject;
+    const { container } = render(
+      <Board answers={[turn]} board={[o]} local={{}} focused={null} selection={[]} live={false} retuned={{}} on={on} />,
+    );
+    expect(container.querySelector('[data-not-kept]')?.textContent).toMatch(/not kept with the conversation/);
+    expect(container.textContent).not.toMatch(/came back without rows/);
+  });
+});

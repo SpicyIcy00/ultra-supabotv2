@@ -591,3 +591,23 @@ describe('a tile draws what the rows actually say', () => {
     expect(text).not.toContain('₱1,187');
   });
 });
+
+describe('the lead spans only when width helps it (frames, 2026-09-17)', () => {
+  it('keeps a one-number lead first and larger, in one column', () => {
+    const one = { ...TURN, toolCalls: [{ ...TURN.toolCalls[0], seq: 5,
+      result: { rows: [ROWS[0]], meta: TURN.toolCalls[0].result!.meta } }] } as unknown as AnswerTurn;
+    const figures = [
+      { key: 'a', kind: 'table', weight: 'supporting', seq: 5, tool: 'get_sales', turn: 0, touched: 0 },
+      { key: 'b', kind: 'table', weight: 'supporting', seq: 5, tool: 'get_sales', turn: 0, touched: 0 },
+    ] as unknown as BoardObject[];
+    const { container } = render(
+      <Board answers={[one]} board={figures} local={{}} focused={null} selection={[]}
+             live={false} retuned={{}} on={ACTIONS()} lead="b" />,
+    );
+    const first = container.querySelector('[data-figure]') as HTMLElement;
+    expect(first.getAttribute('data-figure')).toBe('b');
+    expect(first.getAttribute('data-lead')).toBe('yes');
+    expect(first.getAttribute('data-span')).toBeNull();
+    expect(first.style.gridColumn).not.toBe('1 / -1');
+  });
+});
