@@ -2450,7 +2450,7 @@ card is not done while one of its rows is not on screen and in a test.
 | 11 | "put the text like on the side of the visuals" → his mock: him top-left, words bottom-left set toward the figures, figures right | P2S.1(b)(c) | the Rockwell thread frame for frame |
 | 12 | "text is too low it can be almost directly under the blob" / "it should kinda feel like its coming from alive" | P2S.1(c) | words under the mark; the claim's leading line |
 | 13 | "dont narrate it … no need to narrate the visuals … fill out the right" | P2S.1(c) | nothing typed out; figures arrive together |
-| 14 | "alive is too small … make the alive a more wide horizontal figure but it has to be bigger" / "you made it smaller it should stay big" | P2S.2(d) | the mark spans its column (test on drawn size) |
+| 14 | "alive is too small … make the alive a more wide horizontal figure but it has to be bigger" / "you made it smaller it should stay big" | P2S.1(b) size · P2S.2(d) form | the mark spans its column (test on drawn size) |
 | 15 | "dont make it just an oval make it abnormal" | P2S.2(d) | the irregular form is one of the three on the switch; **shape and colour still his to workshop** |
 | 16 | "the right more alive" / "a moving thing like jarvis when processing like alive" | P2S.2(d) | four states, four drawings (dom test) |
 | 17 | "the line if its up or down should be green or red meaning good or bad not the same color as the stores" | P2S.2(e) | verdict on every row's segment and dots; identity on the swatch only |
@@ -2460,7 +2460,7 @@ card is not done while one of its rows is not on screen and in a test.
 | 21 | "in these types of charts … " the dumbbell keeps the swatch, the store colour never on the line | P2S.2(e) | dumbbell render test |
 | 22 | "remove, beside is the final now" — no console switch, no status line | P2S.1(h) | neither exists in the product; nothing to hold |
 | 23 | "move the example selectors to a sidebar" — the examples were the artifact's own device | — | not a product feature; the sidebar carries Pages / Systems / Automations / People instead |
-| 24 | "its not centered … its probably like the zone size" — the mark's body spans its column, the glow may run past it | P2S.2(d) | drawn-size test: body ≥ 70% of the column width |
+| 24 | "its not centered … its probably like the zone size" — the mark's body spans its column, the glow may run past it | P2S.1(b) | drawn-size test: body ≥ 70% of the column width |
 
 **WHERE EVERY EXISTING FUNCTION LIVES IN THE ROOM — nothing built since P0 is
 dropped by the redraw.** The artifact's `beside` room shows the claim, the
@@ -2517,7 +2517,21 @@ cleanup; he decides.
       `accentUse.test.ts` and the palette tests stay and pass.
       **(b) the composition** — two fixed columns, 580 and 940 with 40 between,
       centred in the room; him top-left, his words under him set toward the
-      figures, the figures right; the rail SLIDES the composition and never
+      figures, the figures right.
+      **THE ALIVE MARK'S PLACE AND SIZE ARE THIS CARD'S, NOT P2S.2's** (moved
+      2026-09-17, when the owner asked where the alive, the words and the
+      figures were in the card and the session found the mark arriving one
+      card after the lines drawn from it and the frame that contains it).
+      From the artifact's own rules (`.bs-him`, `.bs-left` in
+      `ops/ideal/george-ahead-of-me.html`): the grid is `"him right" "words
+      right"`; the mark's canvas is **136% of its 580 column**, aspect
+      680:420, pulled up by `-6vh` and out by `-18%` each side so its glow
+      runs past the column while its BODY spans at least 70% of it (his
+      rows 14 and 24); the words are pulled up under it by `-10vh`,
+      right-aligned toward the figures (row 12). This card draws the mark
+      STILL, in the artifact's irregular form, so the lines have an origin
+      and the frame check has the real picture; P2S.2(d) makes it move.
+      The rail SLIDES the composition and never
       shrinks it; no page scrollbar; only the figures area moves, by an up and
       a down arrow that appear only when there is more, never a scrollbar; on a
       phone the three stack. Replaces the `--measure` frame and the 2/3-tile
@@ -2547,10 +2561,13 @@ cleanup; he decides.
       `nothing` scenes from recorded fixture threads in headless Chrome at
       1440 and 1920, rail open and closed, beside the same scenes of the
       artifact, and the images are looked at before close; every rail item
-      opens what it names; `tsc -b --force` and vitest green. No eval.
+      opens what it names; the mark's drawn body is at least 70% of its
+      column and the claim starts within its lower edge, both held by a test
+      on the numbers; `tsc -b --force` and vitest green. No eval.
 - [ ] **P2S.2 the drawing** — three parts, one pass over `marks.tsx` /
       `identity.ts` / `tiles.tsx`, each its own commit:
-      **(d) the alive mark** — one canvas mark driven by the turn stream the
+      **(d) the alive mark** — its place and size are already set by
+      P2S.1(b), drawn still; this part makes it ALIVE. One canvas mark driven by the turn stream the
       room already carries (`Working.tsx`), not a timer: idle breathes; reading
       pulses on each read landing and turns a ring; writing steadies; need
       warms (the accent's one exemption; its error state changes the drawing,
