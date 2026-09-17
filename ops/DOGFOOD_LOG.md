@@ -57,6 +57,50 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-17 — "its failing here" (an ordering system for the top 5 suppliers)
+
+> *"its failing here"*
+
+Said of the live build `634423e` with three screenshots of one turn, read back
+from `george.posts` (14:57 UTC): *"lets building an ordering system for our top 5
+suppliers"*. Four reads — suppliers by ordered value last 30 days, an unscoped
+`get_purchase_plan`, suppliers this year, and a GZ aji mix plan that came back
+empty — one composed block (a ranking of suppliers this year), and an answer that
+stops before building: *"two of the top five are the same name spelled two ways"*
+(KD kiss delicious / kiss delicous; Judy JUD001 / JU Judy aji mix), next *"Tell me
+if kiss delicous is the same supplier … and I will draft the five plans."*
+
+**What failed on screen, found underneath (not fixed):**
+
+1. **George's own validator messages are drawn to the owner as caveats.** Above
+   the headline: *"caveat: caveat is at most 320 characters — it is one thing said
+   once (voice.reading.slots.caveat) — said. which ones"* and a bare
+   *"header_total_mismatch"*. They are loop warnings — `reading_rejected` (his first
+   caveat was too long and was refused) and `unsurfaced_notice` (naming a notice
+   kind) — and the room's filter of process warnings (`data.ts` `PROCESS`) lists
+   `composition_rejected`, `findings_rejected`, `restated_figure`,
+   `misstated_figure`, `enumerated_remainder` and not these two, or
+   `actions_rejected`. CLAUDE.md UI rule 4: raw diagnostics never reach the answer.
+   Minutes to fix; the list should come from the definitions rather than be typed.
+2. **A figure that draws nothing.** READ 2, *"purchase plan"* — the unscoped plan
+   read George did not compose, placed by the default board — shows only a "show"
+   button and a read time: a table of more than eight rows opens collapsed when
+   quiet. It reads as broken, and it is the largest thing on the left.
+3. **The same point said three times on one chart.** READ 3 carries a sentence of
+   his answer placed on it (*"On this year's spend GZ aji mix leads at ₱5.75M …"*,
+   `beside.thoughtsOf`), then the notice, then the title *"Two of the top five are
+   the same name spelled two ways"*, then his thought saying it again.
+4. **An offer drawn as a box inside the ranking** (*OPEN the most regularly ordered
+   of the five, twelve documents this year ~1s*) between two rows.
+
+**And what he did.** He was asked to build and did not: the data does not say who
+supplies a product (321 of 596 selling products trace to no supplier), supplier
+names are free text, and the biggest supplier's plan came back empty. Stopping to
+ask about the duplicate names is defensible — merging suppliers is a judgement —
+but he built none of the five while asking about two, and "an ordering system" is
+the build arc (P3.d, the Seikyo acceptance test) that the room does not yet draw
+as a thing being built.
+
 ### 2026-09-17 — "how are we doing … its not saying why and then it suggests me to ask why next"
 
 > *"and look this is what it shows me when i ask how are we doing but this is
