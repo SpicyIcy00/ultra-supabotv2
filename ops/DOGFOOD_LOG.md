@@ -57,6 +57,62 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-17 — "it still feels like the charts and stuff are still in boxes and grids"
+
+> *"we dont need those disclaimers, and also all charts dont need to be the
+> same size or small it should decide based on the space it has and how
+> important it is to make it bigger beacuse it should have his ai thoughts with
+> the charts to aside from the text below alive its more of like the bigger
+> picture get it? it still feels like the charts and stuff are still in boxes
+> and grids but we dont want it like that"*
+
+Said 2026-09-17 of the live build `c288831`, right after the answer about
+what "baseline" meant.
+
+**The complaint, restated (NOW.md §1: his prompts are complaints, not designs).**
+Every figure is the same width in an even column grid, so the answer reads as a
+dashboard of equal tiles rather than one picture with a point: the figure the
+claim rests on does not dominate, and the figures carry no reasoning of their
+own — his thinking lives only in the words under the mark.
+
+**Found underneath (not fixed).** P2S.1(c) ported the design's `place()`
+exactly: 1 / 2–4 / 5+ figures → 1 / 2 / 3 equal columns, each figure into the
+shortest (`beside.columnsFor`, `placeFigures`), held by `layout.test.ts`. A
+block's `weight` (`lead` / `supporting` / `quiet`) exists and changes nothing
+about a figure's size since P2S.1 removed the lead row. So "boxes and grids" is
+the column grid itself, not a border — the borders went in P2S.1. **This moves
+past the design page** (his rows 6 and 7, *"fill it"*, *"left to right then
+down"*, were answered with that grid), so the session that takes it decides the
+new rule and says why, and he reacts to the frames — he is not asked to design
+it. The size rule must come from values the answer carries (the block's
+`weight`, whether the claim cites the read, how many rows it draws), never from
+a guess. The "his ai thoughts with the charts" half is the entry below this one
+("more text with each chart"), which is P2S.3's.
+
+### 2026-09-17 — "we dont need those disclaimers"
+
+> *"we dont need those disclaimers, and also all charts dont need to be the
+> same size or small it should decide based on the space it has and how
+> important it is to make it bigger beacuse it should have his ai thoughts with
+> the charts to aside from the text below alive its more of like the bigger
+> picture get it? it still feels like the charts and stuff are still in boxes
+> and grids but we dont want it like that"*
+
+Said 2026-09-17 of the live build `c288831`, right after the answer about
+what "baseline" meant.
+
+**A rule is in the way, so this one is HIS to decide, and nothing was changed.**
+CLAUDE.md UI rule 4: *"Notices always surface … A caveat may be reduced to one
+line naming it, explanation on tap, but wherever a figure is ANSWERED it stays
+whole and ABOVE the number."* Removing them breaks that rule, and CLAUDE.md
+says a task that needs a rule broken stops and asks. What the rule already
+allows, and what the session proposes by default: every caveat becomes **one
+short plain line** above its chart (*"110 of 173 products have no change to
+show"*), the rest on tap — no status keys, no timestamps, no box — which is also
+the fix for the entry *"what are these disclaimers?"* below. If he wants them
+gone entirely, that is a change to CLAUDE.md, recorded in `ops/DECISIONS.md`
+with the test that holds it, before it is built.
+
 ### 2026-09-17 — "what are these disclaimers? what is baseline is something wrong"
 
 > *"the text should reach the end of the alive where it can move not its
