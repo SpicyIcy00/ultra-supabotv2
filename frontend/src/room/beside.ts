@@ -39,7 +39,16 @@ import { placeFigures as figuresPlaced } from './figures';
  * sentences are the answer's own slices, in order.
  */
 export function thoughtsOf(text: string | null | undefined, claimSpan: string | null | undefined,
-                           calls: ToolCall[]): { bySeq: Map<number, string[]>; unbound: string } {
+                           calls: ToolCall[],
+                           /**
+                            * THE READS WHOSE CHART ALREADY CARRIES HIS THOUGHT. A
+                            * sentence citing one of them is NOT placed on it too —
+                            * the owner's screenshot, 2026-09-17: one point said by
+                            * a placed sentence, the title and the thought, three
+                            * times on one chart. It stays with the rest of his words.
+                            */
+                           thoughtful: ReadonlySet<number> = new Set()):
+  { bySeq: Map<number, string[]>; unbound: string } {
   const parts = claimAndStanding(text, claimSpan);
   const bySeq = new Map<number, string[]>();
   const unbound: string[] = [];
@@ -50,7 +59,7 @@ export function thoughtsOf(text: string | null | undefined, claimSpan: string | 
         if (piece.seq !== undefined) count.set(piece.seq, (count.get(piece.seq) ?? 0) + 1);
       }
       const best = [...count.entries()].sort((a, b) => b[1] - a[1])[0];
-      if (best) bySeq.set(best[0], [...(bySeq.get(best[0]) ?? []), sentence]);
+      if (best && !thoughtful.has(best[0])) bySeq.set(best[0], [...(bySeq.get(best[0]) ?? []), sentence]);
       else unbound.push(sentence);
     }
   }

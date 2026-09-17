@@ -190,7 +190,10 @@ describe('over the four recorded runs', () => {
     for (const a of ANSWERS.filter((x) => x.calls.length)) {
       const { container } = render(
         <Reading text={a.answer} calls={a.calls} onFigure={() => {}} />);
-      const want = figuresIn(a.answer.trim()).map((f) => a.answer.trim().slice(f.start, f.end));
+      // TRIMMED: a match may carry the space before its digits (the pattern's
+      // `\s?`), and since 2026-09-17 that space is drawn outside the button —
+      // where a button's own edge used to swallow it ("it:54").
+      const want = figuresIn(a.answer.trim()).map((f) => a.answer.trim().slice(f.start, f.end).trim());
       const drawn = Array.from(
         container.querySelectorAll('.r-figure, .r-figure-bare'),
       ).map((e) => e.textContent ?? '');

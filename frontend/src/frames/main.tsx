@@ -31,6 +31,8 @@ interface Scene {
   reading?: Record<string, unknown>;
   composed?: Record<string, unknown>[];
   scene: string;
+  /** The turn's notices, loop warnings included, as the stream sent them. */
+  notices?: Record<string, unknown>[];
   question: string;
   answer: string;
   at: string;
@@ -77,7 +79,7 @@ const turns = [
   { role: 'user', text: scene.question, at: scene.at },
   {
     role: 'george', text: scene.answer, thinking: '', at: scene.at,
-    toolCalls: scene.calls, defaultComposition: { blocks },
+    toolCalls: scene.calls, defaultComposition: { blocks }, notices: scene.notices ?? [],
     ...(scene.reading ? { reading: scene.reading } : {}),
     ...(scene.composed?.length ? { composition: { blocks: scene.composed } } : {}),
   },

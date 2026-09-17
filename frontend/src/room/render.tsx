@@ -110,7 +110,13 @@ export function turnNotices(p: {
   focused: string | null;
 }): GeorgeNotice[] {
   const newest = p.answers.length - 1;
-  const all = (p.answers[newest]?.notices ?? []).filter((n) => !PROCESS.has(n.kind));
+  // A WARNING THE LOOP RAISED ABOUT HIS OWN WORK IS NEVER A CAVEAT (the log,
+  // 2026-09-17: "caveat: caveat is at most 320 characters … (voice.reading.slots.
+  // caveat)" and a bare "header_total_mismatch" drawn above the headline). Every
+  // `warning` frame arrives as `source: 'loop'` (useGeorgeStream); a tool's
+  // notice never does. The named list stays for turns stored before that.
+  const all = (p.answers[newest]?.notices ?? [])
+    .filter((n) => !PROCESS.has(n.kind) && n.source !== 'loop');
   const onObjects = new Set(
     inOrder(p.board, p.local, p.focused).flatMap((o) => (
       o.seq === undefined ? []

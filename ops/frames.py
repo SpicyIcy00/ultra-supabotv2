@@ -102,7 +102,12 @@ SCENE_OF = {"situation": "follow-up", "doing": "vague", "nothing": "caveats", "d
 FIXTURE_OF = {"memory": ROOT / "ops" / "frames_fixtures" / "memory.json",
               # The owner's own turn, with real rows off the estate — so it lives
               # in verification/, which is not committed, like every recorded run.
-              "shangrila": ROOT / "verification" / "frames_fixtures" / "shangrila.json"}
+              "shangrila": ROOT / "verification" / "frames_fixtures" / "shangrila.json",
+              # The owner's "how are we doing" and "an ordering system" turns of
+              # 2026-09-17, after P2S.3 went live — the words column cut at its
+              # top, and loop warnings drawn as caveats. Real rows: verification/.
+              "howdoing": ROOT / "verification" / "frames_fixtures" / "howdoing.json",
+              "ordering": ROOT / "verification" / "frames_fixtures" / "ordering.json"}
 SIZES = {1440: 900, 1920: 1080, 1857: 963}
 VOCAB_READS = ROOT / "frontend" / "src" / "room" / "__fixtures__" / "vocab-reads.json"
 MAX_ROWS = 200
@@ -129,7 +134,9 @@ def build_scenes(report_path: Path, scenes: list[str]) -> dict[str, Any]:
                     **{k: fx[k] for k in ("question", "answer", "at", "blocks", "calls")}}
             if fx.get("reading"):
                 item["reading"] = fx["reading"]
-            if fx.get("default_blocks"):
+            if fx.get("notices"):
+                item["notices"] = fx["notices"]
+            if "default_blocks" in fx:
                 # A recorded post: George's own blocks that name a read of THIS
                 # turn are the composition; the loop's defaults stand beside.
                 item["composed"] = [b for b in fx["blocks"] if b.get("seq") is not None]
@@ -364,6 +371,9 @@ MEASURE = r"""
       }
       return out;
     })(),
+    // WHAT THE HEADLINE READS AS, rendered — a swallowed space shows here (2026-09-17).
+    claim_text: claim ? claim.innerText : null,
+    words_scroll_top: words ? words.scrollTop : null,
     mark_state: canvas ? canvas.getAttribute('data-state') : null,
     mark_form: canvas ? canvas.getAttribute('data-form') : null,
     swatches: document.querySelectorAll('.r-sw').length,

@@ -50,7 +50,7 @@ import { pathFor, refusalForPerson, resolveFragment, retunedKey, tokensFor,
          type DrawnToken } from './tokenShape';
 import type { ToolCall } from '../types/george';
 import { Noticed } from './Noticed';
-import { Doing, Working } from './Working';
+import { Doing } from './Working';
 import { useQuery } from '@tanstack/react-query';
 import { listApprovals } from '../services/workflowsApi';
 import { Rail } from './Rail';
@@ -249,11 +249,25 @@ export default function Room() {
   // HIS SENTENCES BY THE CHART THEY CITE (the owner, 2026-09-17: "if the ai
   // thoughts are with the charts it feels likes your going thorugh it
   // together"). What no chart takes stays with the rest of his words.
-  const thoughts = useMemo(() => (latest && !busy
-    ? thoughtsOf(latest.text, latest.reading?.claim, latest.toolCalls) : null),
-  [latest, busy]);
+  const thoughts = useMemo(() => {
+    if (!latest || busy) return null;
+    // A chart that already carries his own thought takes no sentence of the
+    // answer as well (the log, 2026-09-17: one point said three times).
+    const newest = answers.length - 1;
+    const thoughtful = new Set(drawn.flatMap((o) => (
+      o.turn === newest && o.thought?.trim() ? [o.seq ?? o.seqs?.[0]] : []
+    )).filter((s): s is number => typeof s === 'number'));
+    return thoughtsOf(latest.text, latest.reading?.claim, latest.toolCalls, thoughtful);
+  }, [latest, busy, drawn, answers.length]);
   const [moreOpen, setMoreOpen] = useState(false);
   useEffect(() => { setMoreOpen(false); }, [answers.length]);
+  // A NEW ANSWER IS READ FROM ITS TOP (the log, 2026-09-17: the headline shown
+  // from its middle). While he works, the lines above the answer come and go
+  // and the browser keeps the column's scroll where the old content was; when
+  // the turn settles, the column goes back to its start.
+  useEffect(() => {
+    if (!busy && wordsRef.current) wordsRef.current.scrollTop = 0;
+  }, [busy, answers.length]);
 
   const lead = useMemo(() => {
     if (!latest || busy) return null;
@@ -802,7 +816,6 @@ export default function Room() {
                       area says so — the reads running, each as it lands —
                       instead of an empty column that looks finished. A read
                       that failed is drawn as that, in the trail. */}
-                  {busy && <Working turn={latest} live={busy} />}
                   <Earlier count={earlier.length} open={unfolded}
                            onToggle={() => setUnfolded((o) => !o)} />
                   <Board
@@ -859,6 +872,7 @@ export default function Room() {
             correction={desk.data?.fragments?.correction?.token}
             moving={moving > 0}
             refusal={refusalForPerson(refusal, desk.data?.replay)}
+            onDismiss={() => setRefusal(null)}
             detailWord={String(desk.data?.replay?.refused_detail_word ?? 'why')}
             onMove={(token, alternative) => { void move(token, alternative); }}
             onCorrect={() => {

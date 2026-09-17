@@ -372,8 +372,11 @@ function Line({ rows, meta, o, subject }: {
  */
 function Rows({ rows: all, meta, o, p }: { rows: Row[]; meta: Meta; o: TileProps['o']; p: TileProps }) {
   const sort = p.local.sort;
-  const rows = sorted(all, sort).slice(0, 40);
   const open = p.local.open ?? (o.weight !== 'quiet' || all.length <= 8);
+  // A FOLDED TABLE STILL SHOWS ITS FIRST ROWS (the log, 2026-09-17: a quiet
+  // purchase plan drew only "show" and a read time, a figure that looked
+  // broken). Folded is eight rows and "all N", never nothing.
+  const rows = sorted(all, sort).slice(0, open ? 40 : 8);
   // ONE DEFINITION OF WHICH COLUMNS A READ DRAWS (P2.e), so the table on the
   // board and the same read at its rung in the walk agree about what is a
   // column and what is a caption.
@@ -387,12 +390,12 @@ function Rows({ rows: all, meta, o, p }: { rows: Row[]; meta: Meta; o: TileProps
           <span>{constant.join(' · ')}</span>
           {all.length > 8 && (
             <button type="button" className="r-act" onClick={() => p.on.patch(o.key, { open: !open })}>
-              {open ? 'less' : 'show'}
+              {open ? 'less' : `all ${all.length}`}
             </button>
           )}
         </div>
       )}
-      {open && (
+      {rows.length > 0 && (
         <div className="r-scroll" style={{ overflowX: 'auto' }}>
           <table className="r-rows">
             <thead>

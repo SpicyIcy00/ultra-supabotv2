@@ -80,12 +80,19 @@ export function Figures({ text, calls, onFigure }: {
           return <span key={n} className="r-figure-bare">{piece.text}</span>;
         }
         if (piece.seq === undefined) return <span key={n}>{piece.text}</span>;
+        // THE SPACE STAYS OUTSIDE THE BUTTON (the log, 2026-09-17: "it:54",
+        // "₱14,816,19.9%"). A button drops the white space at its own edges,
+        // so a space the figure's match carried vanished from his sentence.
+        const lead = /^\s*/.exec(piece.text)?.[0] ?? '';
+        const trail = /\s*$/.exec(piece.text)?.[0] ?? '';
         return (
           <span key={n}>
+            {lead}
             <button type="button" className="r-figure"
                     onClick={() => onFigure(piece.seq as number)}>
-              {piece.text}
+              {piece.text.trim()}
             </button>
+            {trail}
             {/* THE MARKER, OUTSIDE THE DOOR. The figure is what you tap; this
                 says which read it came out of. It is a count off the turn's
                 own calls, so it wears the receipt face, not his. */}

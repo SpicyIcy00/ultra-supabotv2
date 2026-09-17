@@ -41,6 +41,11 @@ export interface TokensProps {
   refusal?: { head: string; detail: string | null } | null;
   /** The word the tool's own sentence sits behind, from the definitions. */
   detailWord?: string;
+  /**
+   * PUT IT AWAY (the log, 2026-09-17: "this stays its not closeable"). It
+   * cleared only when something else was asked, so it sat over the figures.
+   */
+  onDismiss?(): void;
   onMove(token: DrawnToken, alternative: DeskAlternative): void;
   onCorrect(): void;
 }
@@ -102,6 +107,10 @@ export function Tokens(p: TokensProps) {
           where they are not. */}
       {p.refusal && (
         <p className="r-caveat r-token-refusal">
+          {p.onDismiss && (
+            <button type="button" className="r-token-refusal-close" aria-label="close"
+                    onClick={p.onDismiss}>×</button>
+          )}
           {p.refusal.head}
           {p.refusal.detail && (
             <>

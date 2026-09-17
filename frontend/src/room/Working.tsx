@@ -133,7 +133,16 @@ function StepLine({ step, open, onToggle }: {
   );
 }
 
-export function Working({ turn, live }: { turn: AnswerTurn | null; live: boolean }) {
+export function Working({ turn, live, status }: {
+  turn: AnswerTurn | null;
+  live: boolean;
+  /**
+   * WHAT HE IS DOING NOW, said at the foot beside the clock — "reading…",
+   * "thinking…". Given by `Doing`, which draws this trail under the mark;
+   * absent, the foot is the clock alone, as it always was.
+   */
+  status?: string;
+}) {
   // Before the early return: a hook cannot be called conditionally, and the
   // turn is the only thing it needs.
   const elapsed = useElapsed(turn?.at, live);
@@ -148,7 +157,7 @@ export function Working({ turn, live }: { turn: AnswerTurn | null; live: boolean
   const steps = stepsOf(turn);
   if (!steps.length) {
     // Real, and the only honest thing to say before the first call returns.
-    return <p className="r-work">thinking…{clock}</p>;
+    return <p className={`r-work${status ? ' r-doing-line' : ''}`}>thinking…{clock}</p>;
   }
 
   return (
@@ -160,7 +169,9 @@ export function Working({ turn, live }: { turn: AnswerTurn | null; live: boolean
       {/* At the FOOT of the trail, not beside the running line: a call that
           lands moves that line's words, and a number that jumped with it
           would read as part of the call rather than as the wait. */}
-      {clock && <p className="r-work r-work--clock">{clock}</p>}
+      {status
+        ? <p className="r-work r-work--clock r-doing-line">{status}{clock}</p>
+        : clock && <p className="r-work r-work--clock">{clock}</p>}
     </div>
   );
 }
@@ -187,18 +198,18 @@ export function Doing({ turn, live, answering }: {
   /** His answer has started to arrive — told by the room, which reads it. */
   answering: boolean;
 }) {
-  const elapsed = useElapsed(turn?.at, live);
   if (!live || !turn || answering) return null;
   const steps = stepsOf(turn);
-  const running = steps.find((s) => s.state === 'running');
-  const last = [...steps].reverse().find((s) => s.state !== 'running');
-  const doing = running ? `${running.words}…` : last ? `${last.words} · thinking…` : 'thinking…';
+  const running = steps.some((s) => s.state === 'running');
+  // ONE ACCOUNT OF THE WORK, UNDER HIM (the log, 2026-09-17: "why is there 2
+  // thinkings it should only be around the blob and should be more in depth on
+  // what its doing with progess per thing its running but just small"). It was
+  // a line here AND the step trail over the figures; now it is the trail, each
+  // step with what came back and how long it took, and a foot saying what he is
+  // doing now beside the clock — here, and nowhere else.
   return (
     <div className="r-doing" data-doing={running ? 'reading' : 'thinking'}>
-      <p className="r-doing-line">
-        {doing}
-        {elapsed !== null && <span className="r-work-clock">{elapsedWords(elapsed)}</span>}
-      </p>
+      <Working turn={turn} live={live} status={steps.length ? (running ? 'reading…' : 'thinking…') : undefined} />
     </div>
   );
 }
