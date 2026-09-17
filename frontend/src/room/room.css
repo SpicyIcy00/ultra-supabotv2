@@ -1606,6 +1606,68 @@ button.r-mk-name[aria-pressed="true"], .r-mk-cellname[aria-pressed="true"] {
 }
 .r-mk-bar--split i { left: auto; }
 
+/* ---- ALIVE FIGURES (P2S.2(f)) — the design's drawing-in, once, on arrival.
+   Rows arrive one after another, bars and segments grow, dots fill, a line is
+   drawn. Keyed on the figure's own arrival, so a figure already on screen
+   never replays it. Each keyframe gives only its FROM state, so it lands on
+   the row's own values — a cooled row keeps its 0.75. Reduced motion draws
+   the figure still. */
+@keyframes r-rise { from { opacity: 0; transform: translateY(6px); } }
+@keyframes r-grow { from { transform: scaleX(0); } }
+@keyframes r-grow-seg { from { transform: translateY(-50%) scaleX(0); } }
+@keyframes r-fill-dot { from { opacity: 0; transform: translate(-50%, -50%) scale(0.4); } }
+@keyframes r-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.r-fig[data-arrived="yes"] .r-mk-row,
+.r-fig[data-arrived="yes"] .r-rows tbody tr,
+.r-fig[data-arrived="yes"] .r-belief,
+.r-fig[data-arrived="yes"] .r-mk-figure {
+  animation: r-rise 500ms var(--ease) both; animation-delay: var(--d, 0ms);
+}
+.r-fig[data-arrived="yes"] .r-mk-bar i {
+  transform-origin: left center;
+  animation: r-grow 600ms var(--ease) both; animation-delay: calc(var(--d, 0ms) + 60ms);
+}
+.r-fig[data-arrived="yes"] .r-mk-bar[data-neg="yes"] i { transform-origin: right center; }
+.r-fig[data-arrived="yes"] .r-mk-seg {
+  transform-origin: left center;
+  animation: r-grow-seg 600ms var(--ease) both; animation-delay: calc(var(--d, 0ms) + 60ms);
+}
+.r-fig[data-arrived="yes"] .r-mk-dot {
+  animation: r-fill-dot 450ms ease both; animation-delay: calc(var(--d, 0ms) + 200ms);
+}
+.r-fig[data-arrived="yes"] .r-mk-series-line {
+  stroke-dasharray: 1; animation: r-draw 1100ms cubic-bezier(0.3, 0.6, 0.3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .r-fig[data-arrived] .r-mk-row, .r-fig[data-arrived] .r-rows tbody tr,
+  .r-fig[data-arrived] .r-belief, .r-fig[data-arrived] .r-mk-figure,
+  .r-fig[data-arrived] .r-mk-bar i, .r-fig[data-arrived] .r-mk-seg,
+  .r-fig[data-arrived] .r-mk-dot, .r-fig[data-arrived] .r-mk-series-line { animation: none; }
+}
+
+/* ---- TOUCH (P2S.2(f)) — the exact figure, and when it was read. Ink on the
+   ground, inverted like the design's `.tip`; no data colour, no accent. */
+[data-v] { cursor: crosshair; }
+.r-mk-hit { pointer-events: all; }
+.r-flow { position: relative; }
+.r-tip {
+  position: absolute; z-index: 30; pointer-events: none;
+  padding: 6px 9px; border-radius: 8px;
+  background: var(--ink); color: var(--ground);
+  font: 400 11.5px/1.45 var(--mono); white-space: nowrap;
+  transform: translate(-50%, -100%) translateY(-8px);
+}
+.r-tip b { display: block; font: 500 12.5px/1.4 var(--sans); }
+
+/* THE RECEIPT LINE IS A BUTTON (UI rule 3): a tap opens the source and every
+   filter in place, under it. Drawn as the line it always was. */
+button.r-src--tap {
+  display: block; background: none; border: 0; padding: 0; text-align: left;
+  cursor: pointer; width: 100%;
+}
+button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--ink-2); }
+.r-receipt { margin-top: 6px; padding-left: 10px; border-left: 1px solid var(--edge-strong); }
+
 /* line — a series, its baseline dotted where the tool returned one */
 .r-mk-line svg { margin-top: 4px; }
 .r-mk-point { font: 500 10px var(--mono); fill: var(--ink); }

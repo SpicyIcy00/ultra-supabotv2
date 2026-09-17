@@ -174,13 +174,17 @@ export function Board(p: BoardProps) {
   const { onLanding } = p;
   useEffect(() => { onLanding?.({ pending, arrived: landed }); }, [onLanding, pending, landed]);
 
+  const touch = useTouch();
+
   // While he is still reading, what has landed is evidence — he has not said
   // where any of it goes yet.
   const settling = p.live && !p.answers[newest]?.composition;
 
   return (
     <div className="r-board r-flow" data-board={objects.length} data-columns={columns}
-         style={{ '--cols': columns } as CSSProperties}>
+         style={{ '--cols': columns } as CSSProperties}
+         onMouseOver={touch.over} onMouseLeave={touch.leave} onClickCapture={touch.tap}>
+      {touch.tip}
       {objects.map((o, n) => {
         const turn = p.answers[o.turn];
         const index = readNumber(turn, o);
@@ -227,6 +231,60 @@ export function Board(p: BoardProps) {
       })}
     </div>
   );
+}
+
+/**
+ * TOUCHING A MARK (P2S.2(f)) — the design's tooltip: the exact figure, and
+ * when it was read. Hover shows it; a tap pins it, and a second tap on the
+ * same mark (or a tap anywhere else in the figures) lets it go.
+ *
+ * ONE LISTENER FOR EVERY MARK KIND. Each mark puts its own words on the
+ * element in `data-v` — values the tool returned, formatted, never worked out
+ * — and its figure carries `data-read` off the call's `snapshot_timestamp`.
+ * A tap on a mark is the mark's: it does not also open the figure behind it.
+ */
+function useTouch() {
+  const [tip, setTip] = useState<{ text: string; read: string; x: number; y: number; pinned: boolean } | null>(null);
+  // Placed in the board's own coordinates, so it scrolls with the figures and
+  // no transformed ancestor can throw it off.
+  const at = (el: Element, host: Element, pinned: boolean) => {
+    const r = el.getBoundingClientRect();
+    const h = host.getBoundingClientRect();
+    return {
+      text: el.getAttribute('data-v') ?? '',
+      read: el.closest('[data-read]')?.getAttribute('data-read') ?? '',
+      x: r.left - h.left + r.width / 2,
+      y: r.top - h.top,
+      pinned,
+    };
+  };
+  const markOf = (target: EventTarget | null) =>
+    (target instanceof Element ? target.closest('[data-v]') : null);
+  return {
+    over: (e: React.MouseEvent) => {
+      // Measured NOW: React clears `currentTarget` before an updater runs.
+      const el = markOf(e.target);
+      const next = el ? at(el, e.currentTarget, false) : null;
+      setTip((t) => (t?.pinned ? t : next));
+    },
+    leave: () => setTip((t) => (t?.pinned ? t : null)),
+    tap: (e: React.MouseEvent) => {
+      const el = markOf(e.target);
+      if (!el) { setTip((t) => (t?.pinned ? null : t)); return; }
+      e.stopPropagation();
+      const next = at(el, e.currentTarget, true);
+      setTip((t) => (t?.pinned && t.text === next.text ? null : next));
+    },
+    tip: tip && tip.text ? (
+      <div className="r-tip" role="tooltip" data-pinned={tip.pinned ? 'yes' : 'no'}
+           style={{ left: tip.x, top: tip.y }}>
+        <b>{tip.text}</b>
+        {/* UI rule 6: a figure without its time is a claim with no expiry, so
+            a read that carried none says that rather than nothing. */}
+        {tip.read || 'no read time on this read'}
+      </div>
+    ) : null,
+  };
 }
 
 /** The read's number in its turn — the same count the superscripts use. */

@@ -203,11 +203,31 @@ export function Delta({ change }: { change: Change }) {
 export function Receipts({ meta, tool }: {
   meta: Parameters<typeof receiptsLine>[0]; tool?: string | null;
 }) {
+  // A TAP OPENS THE RECEIPTS IN PLACE (UI rule 3, P2S.2(f)): the source and
+  // every filter the read applied, under the line, with no route and no modal.
+  const [open, setOpen] = useState(false);
   const line = receiptsLine(meta)
     || [tool?.replace(/^get_/, '').replace(/_/g, ' ') ?? null,
         meta?.source_table ?? null].filter(Boolean).join(' · ');
   if (!line) return null;
-  return <p className="r-src" style={{ marginTop: 12 }} title={receiptsDetail(meta)}>{line}</p>;
+  const detail = receiptsDetail(meta);
+  return (
+    <>
+      <button type="button" className="r-src r-src--tap" style={{ marginTop: 12 }}
+              title={detail} aria-expanded={open}
+              onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}>
+        {line}
+      </button>
+      {open && (
+        <div className="r-receipt" onClick={(e) => e.stopPropagation()}>
+          {detail
+            ? detail.split('\n').map((d) => <p key={d} className="r-src">{d}</p>)
+            : <p className="r-src">the read carried no source or filters</p>}
+          {meta?.snapshot_timestamp && <p className="r-src">read at {meta.snapshot_timestamp}</p>}
+        </div>
+      )}
+    </>
+  );
 }
 
 /*

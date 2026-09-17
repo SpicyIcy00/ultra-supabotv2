@@ -34,7 +34,7 @@
 import { useState, type CSSProperties } from 'react';
 import type { ToolMeta } from '../types/george';
 import {
-  changeOf, fmt, measureOf, rowUnderClaim, rowsOf, sorted, subjectOf, tableShape, unitOf,
+  changeOf, fmt, measureOf, pct, readAt, rowUnderClaim, rowsOf, sorted, subjectOf, tableShape, unitOf,
   valueOf,
   type Change,
 } from './data';
@@ -74,6 +74,25 @@ function paint(c: DataColour): string {
  */
 const COOL = 0.75;
 
+/**
+ * WHAT A TOUCH SAYS (P2S.2(f)) — the exact figure, in the tool's own values,
+ * formatted and never recomputed. The read time is added by the tip from the
+ * figure's own `data-read`, so every mark says when as well as what.
+ */
+function told(...parts: (string | null | undefined | false)[]): string {
+  return parts.filter((x): x is string => typeof x === 'string' && x.trim() !== '').join(' · ');
+}
+
+/** The change a row declares, as a signed percentage — or nothing. */
+function moved(change: Change | null): string | null {
+  return change && change.pct !== null && change.pct !== undefined ? pct(change.pct) : null;
+}
+
+/** Each row arrives a beat after the one above it (the design's 90ms). */
+function beat(n: number): CSSProperties {
+  return { '--d': `${n * 90}ms` } as CSSProperties;
+}
+
 /* ------------------------------------------------------------------ figure */
 
 /**
@@ -101,7 +120,9 @@ function Figure(p: TileProps & { rows: Row[]; meta: Meta }) {
   return (
     <>
       <div className="r-mk-figure">
-        <span className="r-num r-mk-num" style={{ '--size': `${size}px` } as CSSProperties}>
+        <span className="r-num r-mk-num" style={{ '--size': `${size}px` } as CSSProperties}
+              data-v={v ? told(p.o.subject ?? subjectOf(row), measureOf(meta, v.key),
+                                fmt(v.key, v.value, v.unit), moved(change)) : undefined}>
           {v ? fmt(v.key, v.value, v.unit) : '—'}
         </span>
         <Delta change={change} />
@@ -150,13 +171,14 @@ function Dumbbell({ rows, meta, o, offers, seq, onTake, onPick, picked }:
                                   Number(t.absolute_floor) || 0) : 0;
         return (
           <div key={n} className="r-mk-row" data-lit={lit ? 'yes' : 'no'}
-               style={{ opacity: lit ? 1 : COOL }}>
+               style={{ opacity: lit ? 1 : COOL, ...beat(n) }}>
             <RowName name={name} className="r-mk-name"
                      dimension={subjectOf(r) ? dimensionOf(rows, name) : null}
                      pickable={Boolean(subjectOf(r))} onPick={onPick}
                      picked={picked?.includes(name)} />
             <span className="r-mk-track" role="img"
-                  aria-label={`${name}: ${fmt(key, a, unit)} before, ${fmt(key, b, unit)} now`}>
+                  aria-label={`${name}: ${fmt(key, a, unit)} before, ${fmt(key, b, unit)} now`}
+                  data-v={told(name, fmt(key, b, unit), `was ${fmt(key, a, unit)}`, moved(change))}>
               {band > 0 && (
                 <i className="r-mk-band"
                    style={{ left: x(a - band), width: `calc(${x(a + band)} - ${x(a - band)})` }} />
@@ -300,13 +322,14 @@ function Ranked({ rows, meta, o, offers, seq, onTake, onPick, picked }:
         const name = subjectOf(r) ?? String(n + 1);
         return (
           <div key={n} className="r-mk-row" data-lit={lit ? 'yes' : 'no'}
-               style={{ opacity: lit ? 1 : COOL }}>
+               style={{ opacity: lit ? 1 : COOL, ...beat(n) }}>
             <RowName name={name} className="r-mk-name r-mk-name--left"
                      dimension={subjectOf(r) ? dimensionOf(rows, name) : null}
                      pickable={Boolean(subjectOf(r))} onPick={onPick}
                      picked={picked?.includes(name)} />
             <span className="r-mk-bar" role="img"
-                  aria-label={`${name}: ${fmt(key, valueOf(r)?.value, unit)}`}>
+                  aria-label={`${name}: ${fmt(key, valueOf(r)?.value, unit)}`}
+                  data-v={told(name, fmt(key, valueOf(r)?.value, unit), moved(changeIfAny(r)))}>
               <i style={{ width: `${(values[n] / most) * 100}%`, background: paint(c) }} />
             </span>
             <span className="r-mk-fig">
@@ -355,13 +378,15 @@ function Contributors({ rows, meta, o, offers, seq, onTake, onPick, picked }:
         const name = subjectOf(r) ?? String(n + 1);
         return (
           <div key={n} className="r-mk-row" data-lit={lit ? 'yes' : 'no'}
-               style={{ opacity: lit ? 1 : COOL }}>
+               style={{ opacity: lit ? 1 : COOL, ...beat(n) }}>
             <RowName name={name} className="r-mk-name r-mk-name--left"
                      dimension={subjectOf(r) ? dimensionOf(rows, name) : null}
                      pickable={Boolean(subjectOf(r))} onPick={onPick}
                      picked={picked?.includes(name)} />
             <span className="r-mk-bar r-mk-bar--split" role="img"
-                  aria-label={`${name}: ${fmt(key, v, unit)}`}>
+                  aria-label={`${name}: ${fmt(key, v, unit)}`}
+                  data-v={told(name, fmt(key, v, unit))}
+                  data-neg={v < 0 ? 'yes' : undefined}>
               <i style={{ width: `${(Math.abs(v) / most) * 50}%`,
                           [v < 0 ? 'right' : 'left']: '50%',
                           background: paint(c) } as CSSProperties} />
@@ -421,7 +446,9 @@ function Line({ rows, meta, o, subject }: {
           <polyline className="r-mk-baseline" fill="none" stroke="rgb(var(--flat))"
                     strokeWidth={1.2} strokeDasharray="3 4" points={path(bases)} />
         )}
-        <polyline fill="none" stroke={paint(c)} strokeWidth={1.8} points={path(values)} />
+        {/* pathLength 1, so the line can draw itself in without measuring. */}
+        <polyline className="r-mk-series-line" fill="none" stroke={paint(c)} strokeWidth={1.8}
+                  pathLength={1} points={path(values)} />
         {points.length > 2 && Array.from(new Set([iHi, iLo, last])).map((i) => (
           <g key={i}>
             <circle cx={x(i)} cy={y(values[i])} r={3.4} fill={paint(c)}
@@ -432,6 +459,12 @@ function Line({ rows, meta, o, subject }: {
               {fmt(key, values[i], unit)}
             </text>
           </g>
+        ))}
+        {/* A TOUCH ON ANY POINT, not only the three labelled: an invisible
+            target per point, bigger than the point, saying its exact figure. */}
+        {points.map((_, n) => (
+          <circle key={`hit-${n}`} className="r-mk-hit" cx={x(n)} cy={y(values[n])} r={9}
+                  fill="none" data-v={told(subject, label(n), fmt(key, values[n], unit))} />
         ))}
       </svg>
       <div className="r-mk-ends">
@@ -496,7 +529,7 @@ function Rows({ rows: all, meta, o, p }: { rows: Row[]; meta: Meta; o: TileProps
             </thead>
             <tbody>
               {rows.map((row, n) => (
-                <tr key={n} style={{ opacity: isLit(o, row) ? 1 : COOL }}>
+                <tr key={n} style={{ opacity: isLit(o, row) ? 1 : COOL, ...beat(n) }}>
                   {shown.map((c) => {
                     // THE CELL THAT HOLDS THE ROW'S SUBJECT IS TAPPABLE, and
                     // only that one: a table of a shop's products has one
@@ -505,7 +538,9 @@ function Rows({ rows: all, meta, o, p }: { rows: Row[]; meta: Meta; o: TileProps
                     const subject = subjectOf(row);
                     const isSubject = typeof subject === 'string' && row[c] === subject;
                     return (
-                      <td key={c} className={typeof row[c] === 'number' ? 'n' : ''}>
+                      <td key={c} className={typeof row[c] === 'number' ? 'n' : ''}
+                          data-v={typeof row[c] === 'number'
+                            ? told(subject, c.replace(/_/g, ' '), fmt(c, row[c], unit(row))) : undefined}>
                         {c === 'change_pct' ? <Delta change={changeOf(row)} />
                           : isSubject ? (
                             <RowName name={subject} className="r-mk-cellname" pickable
@@ -601,7 +636,7 @@ export function MarkBlock(p: TileProps) {
              onOpen={() => p.on.open(p.o.key)}>
         <OwnCaveat meta={meta} />
         <p className="r-mk-title">{titleFor(p.o, meta)}{p.earlier ? ' · from earlier' : ''}</p>
-        <div className="r-mk-body" data-mark={mark}>
+        <div className="r-mk-body" data-mark={mark} data-read={readAt(meta?.snapshot_timestamp) ?? ''}>
           {mark === 'figure' && <Figure {...p} rows={rows} meta={meta} />}
           {mark === 'dumbbell' && <Dumbbell rows={rows} meta={meta} o={p.o} {...offering} />}
           {mark === 'ranked' && <Ranked rows={rows} meta={meta} o={p.o} {...offering} />}
