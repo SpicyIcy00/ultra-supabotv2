@@ -281,11 +281,6 @@ export function MissingRow({ what }: { what: string }) {
 }
 
 /**
- * WHAT KIND OF THING A READ IS ABOUT, from the tool that produced it. A table
- * of purchase orders is not the same kind of object as a table of shops, and
- * on a board of ten tiles that difference is worth a colour.
- */
-/**
  * The call an object draws from: the re-tuned one if a control moved, else the
  * turn's own. One function so no tile can disagree with another about which
  * figures are on screen.
@@ -354,14 +349,6 @@ function Note({ o }: { o: BoardObject }) {
 }
 
 
-export function kindOfRead(tool?: string | null): string {
-  if (!tool) return 'product';
-  if (tool.includes('purchas')) return 'supplier';
-  if (tool.includes('replenish') || tool.includes('movement')) return 'delivery';
-  if (tool.includes('stock') || tool.includes('dead')) return 'stock';
-  if (tool.includes('product') || tool.includes('cost')) return 'product';
-  return 'category';
-}
 
 /**
  * A DRAFT — an order George produced. The quantity a person nudges is theirs

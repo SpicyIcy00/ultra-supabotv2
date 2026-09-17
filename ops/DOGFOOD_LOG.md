@@ -186,20 +186,6 @@ says about two shops is behaviour, and behaviour is held by the evals. This
 is the second time this feature has been reported fixed — it is not fixed
 until he says so.
 
-### 2026-09-15 — a tile explaining itself to the reader
-
-Not reported by the owner; seen in his screenshot and logged because the
-sentence is addressed to the wrong person:
-
-> **Basket value fell too, far less** · Average transaction value · last month
-> · vs previous period · ₱
-> *George composed this from Rockwell, which this read does not carry.*
-
-A block named a subject its read does not carry, and the tile says so where
-the figures should be. That the surface refuses rather than drawing a wrong
-number is right. Saying it in those words, to the owner, is not: it is about
-George's composing and not about his business.
-
 ### 2026-09-15 — the Page view does not say what it is for
 
 > *"this is page i dont really know what its supposed to do"*
@@ -227,6 +213,27 @@ once changes the next answer. That is the card's own done-when.
 ---
 
 ## Fixed
+
+### 2026-09-15 — a tile explaining itself to the reader
+
+Not reported by the owner; seen in his screenshot and logged because the
+sentence is addressed to the wrong person:
+
+> **Basket value fell too, far less** · Average transaction value · last month
+> · vs previous period · ₱
+> *George composed this from Rockwell, which this read does not carry.*
+
+A block named a subject its read does not carry, and the tile says so where
+the figures should be. That the surface refuses rather than drawing a wrong
+number is right. Saying it in those words, to the owner, is not: it is about
+George's composing and not about his business.
+
+**Fixed 2026-09-17, with P2S.2 (`bad1582`).** Both sentences now speak about the
+read, to the reader: *"Greenhills is not in this read, so there is no figure for
+it here"*, and a read with nothing at all says *"Nothing to draw here: this read
+came back without rows"*. Refusing to draw a wrong number is unchanged.
+`marks.dom.test.tsx` holds that the sentence names the subject and does not say
+"George" or "composed". Not reported by the owner, so not waiting on him.
 
 ### 2026-09-16 — a database error was the whole answer, and tool calls were printed as prose
 
