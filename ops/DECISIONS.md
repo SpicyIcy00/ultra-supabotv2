@@ -4521,3 +4521,11 @@ steer replays like a chip, hands-free reads the claim only and is interruptible,
 every state is visible, and the mic is drawn only where the browser can
 recognise speech. Chrome sends the audio to Google's speech service, which the
 card requires the close-out to say. Open cards 13 → 14; eval spend unchanged.
+
+**Set aside and keep come off the chart.** 2026-09-17, the owner: "remove",
+of the per-figure set-aside and keep controls the audit had kept. Set aside is
+gone entirely (no list to bring a figure back, `Local.closed` deleted). The keep
+BUTTON goes but keeping does not, because standard §12 asks for "keep this" /
+"make this a page": it stays by words (George's pin and page tools) and by the
+thread header's Keep as page, which is now the one save gesture UI rule 2
+requires.

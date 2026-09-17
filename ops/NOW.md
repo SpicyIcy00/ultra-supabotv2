@@ -2465,8 +2465,8 @@ here and said why, so the owner can point rather than design:
 | `@` completion over shops, products, categories, suppliers, pages, rules (`mentions.ts`) | unchanged, in the one-line composer | the artifact's composer is a text line; `@` lives in the line |
 | Tab grey completion (`ghosts.ts`, P2.d) | unchanged, in the same line | as above |
 | drag, resize, bring forward, undo (`drag.ts`, `arrangement.ts`) | **removed** | his rows 6 and 7 ask the figures to flow left to right, then down, filling the space; a hand-placed figure breaks the rule he gave, and undo exists only to undo the drag. Deleted with the layout they served |
-| set aside a figure | kept: a quiet × on the figure; set-aside figures are one line under *what I'd do next*, tap to bring back | nothing he chose to put away is lost |
-| keep a figure (P2.a pins) | kept: the one save gesture on the figure (CLAUDE.md UI rule 2) | §12 "keep this" |
+| set aside a figure | **removed** — no control on the figure, no set-aside list; `Local.closed`, the "set aside" chips in `Room.tsx` and their tests are deleted | the owner: *"remove"* (2026-09-17) |
+| keep a figure (P2.a pins) | **the per-figure keep control is removed** — the owner: *"remove"* (2026-09-17). Keeping itself stays, because standard §12 asks for it: saying *"keep this"* / *"make this a page"* (George's pin and page tools, unchanged) and the thread header's Page view with *Keep as page* (P2.a), which is now the one save gesture (UI rule 2) | nothing that §12 asks for is lost; only the button on each chart goes |
 | after a turn: *"4 reads · 7 tools · 3 caveats · behind it"* (`Working.tsx` WorkLine) | the thread header, beside its tabs | it describes the thread, not the answer |
 | *"since you last looked · N answers arrived"* (`history.ts`) | one quiet line above the turn caveat, only when N > 0 | UI 8: drawn only from a loaded count |
 | a refused replay's line (`refusalForPerson`) | under the composer chips, where the replay was asked | a refusal belongs to the gesture that caused it |
@@ -2477,7 +2477,7 @@ here and said why, so the owner can point rather than design:
 
 **THE OWNER'S ANSWERS TO TABLE 2, 2026-09-17:** the composer chips, `@` and Tab —
 *"yes we keep that"*; drag, resize and undo removed — *"yes we can remove that"*;
-set aside and keep on the figure — confirmed; the mic — **overruled**, *"we need to
+set aside and keep on the figure — first confirmed, then **removed**, *"remove"*; the mic — **overruled**, *"we need to
 make it"*, so voice is card P2S.5. These rows are decisions now, not proposals.
 
 **3. What the artifact's code does EXACTLY, which the cards had only paraphrased.**
@@ -2648,8 +2648,8 @@ cleanup; he decides.
       figure, a figure's caveat above its mark and the turn's above the claim,
       the column counts for 1, 2–4, 5+ figures and ≤ 900px, the reveal order,
       the wire endpoints, the composer's chips replaying with no model turn,
-      `@` and Tab still working in the new line, set aside and keep on a
-      figure, no mic button yet (P2S.5 draws it), and `drag.ts` deleted; `tsc -b --force` and vitest green. No eval.
+      `@` and Tab still working in the new line, NO set-aside or keep control
+      on a figure (keeping still works by words and by the Page view), no mic button yet (P2S.5 draws it), and `drag.ts` deleted; `tsc -b --force` and vitest green. No eval.
 - [ ] **P2S.2 the drawing** — three parts, one pass over `marks.tsx` /
       `identity.ts` / `tiles.tsx`, each its own commit:
       **(d) the alive mark** — its place and size are already set by
