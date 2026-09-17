@@ -39,6 +39,10 @@ has to guess it from a filename:
   doing      "how are we doing?"          (vague)
   nothing    "What is running low at Greenhills?" (caveats) — the design's
              `nothing` scene looks at Greenhills and finds little to do
+  draw       "add top sellers by sales not units…" (taught) — products drawn
+             with their swatches and the verdict on the mark (P2S.2(e))
+  memory     ops/frames_fixtures/memory.json — no report has recorded a
+             view_memory read; the fixture's own `why` says what it is
 
 Their words are not the design's words and should not be: the LOOK is held on
 fixtures, the BEHAVIOUR at the phase close (NOW.md, "LOOK AND BEHAVIOUR ARE TWO
@@ -77,7 +81,10 @@ CHROME_CANDIDATES = [
     Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
 ]
 
-SCENE_OF = {"situation": "follow-up", "doing": "vague", "nothing": "caveats"}
+SCENE_OF = {"situation": "follow-up", "doing": "vague", "nothing": "caveats", "draw": "taught"}
+# A scene no eval report has ever recorded, drawn from a checked-in fixture
+# that says in its own `why` where its rows came from (P2S.2).
+FIXTURE_OF = {"memory": ROOT / "ops" / "frames_fixtures" / "memory.json"}
 SIZES = {1440: 900, 1920: 1080}
 MAX_ROWS = 200
 
@@ -91,6 +98,11 @@ def build_scenes(report_path: Path, scenes: list[str]) -> dict[str, Any]:
     cases = {c.get("scenario"): c for c in report["cases"]}
     out = []
     for scene in scenes:
+        if scene in FIXTURE_OF:
+            fx = json.loads(FIXTURE_OF[scene].read_text(encoding="utf-8"))
+            out.append({"scene": scene, "from": str(FIXTURE_OF[scene].relative_to(ROOT)),
+                        **{k: fx[k] for k in ("question", "answer", "at", "blocks", "calls")}})
+            continue
         scenario = SCENE_OF.get(scene)
         case = cases.get(scenario)
         if case is None:
@@ -233,6 +245,11 @@ MEASURE = r"""
     him: box(him), mark: box(canvas), words: box(words), claim: box(claim),
     claim_starts_inside_mark_lower_edge: claim && canvas ? box(claim).top <= box(canvas).bottom : null,
     figures: document.querySelectorAll('[data-figure]').length,
+    mark_state: canvas ? canvas.getAttribute('data-state') : null,
+    mark_form: canvas ? canvas.getAttribute('data-form') : null,
+    swatches: document.querySelectorAll('.r-sw').length,
+    touchable_marks: document.querySelectorAll('[data-v]').length,
+    receipts: document.querySelectorAll('button.r-src').length,
     figure_columns: [...document.querySelectorAll('[data-figure]')].map((el) => Number(el.getAttribute('data-col'))),
     wires: document.querySelectorAll('.r-wires line').length,
     arrows_shown: [...document.querySelectorAll('.r-arr')].filter((a) => !a.hidden).map((a) => a.className),
@@ -273,6 +290,15 @@ async def run(scenes: list[str], out: Path, sizes: dict[int, int], cdp_port: int
                     await asyncio.sleep(3.5)
                     await page.shot(out / f"{stem}-room.png")
                     measured[stem] = await page.eval(MEASURE)
+                    # TOUCH (P2S.2(f)): one mark tapped and its receipt opened,
+                    # so the tip and the receipts in place are seen, not assumed.
+                    if rail == "open" and await page.eval(
+                            "(() => { const m = document.querySelector('[data-figure] [data-v]');"
+                            " const r = document.querySelector('[data-figure] button.r-src');"
+                            " if (r) r.click(); if (m) m.dispatchEvent(new MouseEvent('click', {bubbles: true}));"
+                            " return !!m; })()"):
+                        await asyncio.sleep(0.6)
+                        await page.shot(out / f"{stem}-touch.png")
                     # THE DESIGN, the same scene, the sidebar set the same way
                     await page.goto(design, width, height, 2.5)
                     await page.eval(

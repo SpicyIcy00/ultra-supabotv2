@@ -692,6 +692,337 @@
  },
  "scenes": [
   {
+   "scene": "draw",
+   "from": "p1close-v2.json/taught",
+   "question": "add top sellers by sales not units, i value sales more",
+   "answer": "**Aji Mix still leads Rockwell, but the binge pack is what grew** — ₱14.8k last week against ₱8.0k the week before. Check the binge pack's stock at Rockwell — it nearly doubled off a small base and can empty a shelf fast.",
+   "at": "2026-09-14T13:48:59.038710+00:00",
+   "blocks": [
+    {
+     "op": "put",
+     "key": "read-0",
+     "seq": 0,
+     "weight": "lead",
+     "kind": "dumbbell"
+    }
+   ],
+   "calls": [
+    {
+     "seq": 0,
+     "tool": "get_sales",
+     "arguments": {
+      "metric": "product_revenue",
+      "group_by": "product",
+      "date_range": "last_week",
+      "filters": {
+       "store": "Rockwell"
+      },
+      "compare_to": "previous_period",
+      "top_n": 10
+     },
+     "result": {
+      "rows": [
+       {
+        "product_id": "663c7869391c7c00079595a8",
+        "sku": "SH1",
+        "product": "Aji Mix",
+        "value": 32322.0,
+        "baseline": 34144.5,
+        "change": -1822.5,
+        "change_pct": -5.3,
+        "direction": "down",
+        "unit": "PHP",
+        "baseline_status": "ok"
+       },
+       {
+        "product_id": "692e54ae3ac36600079562ff",
+        "sku": "TVP01",
+        "product": "Aji Kiamoy strips binge pack",
+        "value": 14763.0,
+        "baseline": 7980.0,
+        "change": 6783.0,
+        "change_pct": 85.0,
+        "direction": "up",
+        "unit": "PHP",
+        "baseline_status": "ok"
+       },
+       {
+        "product_id": "663c78b8391c7c000795d43c",
+        "sku": "SH1145",
+        "product": "Aji Kiamoy Strips",
+        "value": 9154.0,
+        "baseline": 10348.0,
+        "change": -1194.0,
+        "change_pct": -11.5,
+        "direction": "down",
+        "unit": "PHP",
+        "baseline_status": "ok"
+       },
+       {
+        "product_id": "663c78bc391c7c000795d7ae",
+        "sku": "SH1208",
+        "product": "Kai Fat Brown Seedless Chan Pui Ying Che 400G",
+        "value": 7485.0,
+        "baseline": 4990.0,
+        "change": 2495.0,
+        "change_pct": 50.0,
+        "direction": "up",
+        "unit": "PHP",
+        "baseline_status": "ok"
+       },
+       {
+        "product_id": "6666c82fc7a0920007c45a5b",
+        "sku": "AJI1014",
+        "product": "aji champoy honey bayberry",
+        "value": 7363.0,
+        "baseline": 3184.0,
+        "change": 4179.0,
+        "change_pct": 131.2,
+        "direction": "up",
+        "unit": "PHP",
+        "baseline_status": "ok"
+       },
+       {
+        "product_id": "66e3f2e5abd6be0007e7610e",
+        "sku": "MJ3",
+        "product": "Cow Label Beef Jerky Per Pc",
+        "value": 7250.0,
+        "baseline": 3190.0,
+        "change": 4060.0,
+        "change_pct": 127.3,
+        "direction": "up",
+        "unit": "PHP",
+        "baseline_status": "ok"
+       },
+       {
+        "product_id": "663c78b8391c7c000795d458",
+        "sku": "SH1147",
+        "product": "Aji Kiamoy White",
+        "value": 6368.0,
+        "baseline": 6368.0,
+        "change": 0.0,
+        "change_pct": 0.0,
+        "direction": "flat",
+        "unit": "PHP",
+        "baseline_status": "ok"
+       },
+       {
+        "product_id": "663c78b4391c7c000795d1d4",
+        "sku": "SH1101",
+        "product": "Aji Dikiam Sweet Taiwan",
+        "value": 5373.0,
+        "baseline": 2189.0,
+        "change": 3184.0,
+        "change_pct": 145.5,
+        "direction": "up",
+        "unit": "PHP",
+        "baseline_status": "ok"
+       },
+       {
+        "product_id": "663c78b7391c7c000795d3cc",
+        "sku": "SH1137",
+        "product": "Aji Kiamoy Curl Sour",
+        "value": 5174.0,
+        "baseline": 4378.0,
+        "change": 796.0,
+        "change_pct": 18.2,
+        "direction": "up",
+        "unit": "PHP",
+        "baseline_status": "ok"
+       },
+       {
+        "product_id": "673ad532d4de960007ad28e3",
+        "sku": "judy12",
+        "product": "aji plum frost",
+        "value": 4975.0,
+        "baseline": 4179.0,
+        "change": 796.0,
+        "change_pct": 19.0,
+        "direction": "up",
+        "unit": "PHP",
+        "baseline_status": "ok"
+       }
+      ],
+      "meta": {
+       "source_table": "new_transaction_items + new_transactions + products",
+       "metric": "product_revenue",
+       "metric_sql": "SUM(ti.item_total)",
+       "metric_unit": "PHP",
+       "metric_grain": "transaction_item",
+       "metric_kind": "base",
+       "metric_label": "Product revenue",
+       "metric_domain": "retail_sales",
+       "valid_group_by": [
+        "store",
+        "hour",
+        "day",
+        "week",
+        "month",
+        "product",
+        "category"
+       ],
+       "drivers": [],
+       "top_n": 10,
+       "group_by": [
+        "product"
+       ],
+       "window": {
+        "kind": "preset",
+        "name": "last_week",
+        "includes_partial_day": false,
+        "start": "2026-09-07",
+        "end": "2026-09-14",
+        "convention": "half-open [start, end)",
+        "resolved_against": "2026-09-14"
+       },
+       "filters_applied": [
+        "t.is_cancelled = false   # metrics.yaml: filters.cancelled",
+        "t.transaction_type = 'Sale'   # metrics.yaml: filters.returns",
+        "t.store_id IN (1: Rockwell)   # metrics.yaml: stores.active_retail",
+        "excluded: AJI BARN, AJI PINA, AJI MACOPA   # metrics.yaml: filters.excluded_from_sales.excluded_store_ids",
+        "transaction_time within preset 'last_week' (Asia/Manila, half-open; includes_partial_day=False)   # metrics.yaml: sales_day.presets.last_week",
+        "baseline: transaction_time >= 2026-08-31 AND < 2026-09-07 (Asia/Manila, half-open; previous_period, same metric, grouping, stores and guards)   # metrics.yaml: comparisons.previous_period"
+       ],
+       "snapshot_timestamp": "2026-09-14T13:48:59.038710+00:00",
+       "definitions_version": 1,
+       "definitions_path": "C:\\ultra-supabotv2-main\\definitions\\metrics.yaml",
+       "row_count": 10,
+       "full_row_count": 97,
+       "full_row_count_note": "Size of the complete result set before top_n or the row cap. When it exceeds row_count, the rows shown are the top slice by the ordering in meta.ordering — never a sample, and never something to total.",
+       "ordering": "value DESC",
+       "truncated": false,
+       "row_limit": 10,
+       "reconciliation": {
+        "applicable": true,
+        "method": "compute both measures over the same window and filters; compare directly",
+        "net_sales": 206799.5,
+        "product_revenue": 206799.5,
+        "gap": 0.0,
+        "gap_pct": 0.0,
+        "discount_total": 0.0,
+        "holds": true,
+        "explained_by_discount": null
+       },
+       "gap_filled": false,
+       "gap_filled_note": "Buckets with no transactions are absent, not zero. No row is synthesised for an empty day — that would fabricate data.",
+       "comparison": {
+        "kind": "previous_period",
+        "display_name": "vs previous period",
+        "method": "shift_back_by_relative_length",
+        "current": {
+         "start": "2026-09-07",
+         "end": "2026-09-14"
+        },
+        "baseline": {
+         "kind": "preset",
+         "name": "last_week",
+         "periods_back": 1,
+         "start": "2026-08-31",
+         "end": "2026-09-07",
+         "convention": "half-open [start, end)"
+        },
+        "same_population": true,
+        "change_pct_formula": "change / abs(baseline) * 100",
+        "baseline_statuses": {
+         "ok": 10
+        },
+        "row_count_baseline": 103,
+        "rank_by": "value",
+        "ranked_by_current": true,
+        "ranking_note": "top_n=10 ranked the current period; only those 10 subjects are compared, and a subject outside them is not absent from trade — it was not ranked.",
+        "source": "definitions/metrics.yaml: comparisons.previous_period"
+       },
+       "baseline_reconciliation": {
+        "applicable": true,
+        "method": "compute both measures over the same window and filters; compare directly",
+        "net_sales": 203717.0,
+        "product_revenue": 203717.0,
+        "gap": 0.0,
+        "gap_pct": 0.0,
+        "discount_total": 0.0,
+        "holds": true,
+        "explained_by_discount": null
+       },
+       "data_quality": {
+        "orphan_line_items": 0,
+        "orphan_line_items_note": "Line items whose product_id has no row in `products`. They are RETAINED via LEFT JOIN — an INNER JOIN would drop them and understate every total. Database-wide there are 4 such rows out of 891,714.",
+        "uncategorized_products": 1,
+        "uncategorized_line_items": 3,
+        "uncategorized_note": "Products with a NULL or blank category, grouped under 'Uncategorized' rather than dropped. Database-wide, 83 of 3,678 products have no category."
+       },
+       "call_seq": 0
+      }
+     }
+    }
+   ]
+  },
+  {
+   "scene": "memory",
+   "from": "ops\\frames_fixtures\\memory.json",
+   "question": "what do you remember?",
+   "answer": "Two views, and what each rests on.",
+   "at": "2026-09-15T09:00:00Z",
+   "blocks": [
+    {
+     "key": "memory",
+     "kind": "memory",
+     "seq": 0,
+     "weight": "lead"
+    }
+   ],
+   "calls": [
+    {
+     "seq": 0,
+     "tool": "view_memory",
+     "arguments": {},
+     "result": {
+      "meta": {
+       "source_table": "george.beliefs",
+       "snapshot_timestamp": "2026-09-15T09:00:00Z",
+       "metric_label": "What I think right now",
+       "filters_applied": [
+        "superseded_by IS NULL",
+        "forgotten_at IS NULL"
+       ],
+       "held": 2
+      },
+      "rows": [
+       {
+        "id": "b1",
+        "subject": "Rockwell",
+        "subject_kind": "store",
+        "stance": "needs_attention",
+        "claim": "Rockwell is losing customers rather than smaller baskets.",
+        "held_since": "2026-09-04T09:00:00Z",
+        "last_checked": "2026-09-12T09:00:00Z",
+        "rests_on": "get_sales, get_stock",
+        "told": null,
+        "carried": true,
+        "applied": 9,
+        "last_applied": "2026-09-15T08:55:00Z",
+        "unconfirmed": true
+       },
+       {
+        "id": "t1",
+        "subject": "we",
+        "subject_kind": "estate",
+        "stance": "means",
+        "claim": "When they say we they mean the retail shops, not the warehouse.",
+        "held_since": "2026-09-12T09:00:00Z",
+        "last_checked": "2026-09-12T09:00:00Z",
+        "rests_on": "no, we means the shops",
+        "told": "no, we means the shops",
+        "carried": true,
+        "applied": 1,
+        "last_applied": "2026-09-15T08:55:00Z",
+        "unconfirmed": false
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
    "scene": "situation",
    "from": "p1close-v2.json/follow-up",
    "question": "how about rockwell",

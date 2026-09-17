@@ -238,10 +238,18 @@ export function Receipts({ meta, tool }: {
  * and asking why are still a tap on the row itself.
  */
 
+/*
+ * BOTH SENTENCES ARE ADDRESSED TO THE READER (the dogfood log, 2026-09-15,
+ * "a tile explaining itself to the reader"). They said *"George composed this
+ * from Rockwell, which this read does not carry"* — true, and about George's
+ * composing rather than the business, to a person who did not compose it. Now
+ * they say what is and is not in the read, which is the thing the reader can
+ * use; refusing to draw a wrong number is unchanged.
+ */
 export function Missing({ what }: { what: string }) {
   return (
     <div className="r-tile r-tile--quiet">
-      <p className="r-note">George composed this from {what}, which this read does not carry.</p>
+      <p className="r-note">Nothing to draw here: this read came back without {what}.</p>
     </div>
   );
 }
@@ -267,7 +275,7 @@ export function Missing({ what }: { what: string }) {
 export function MissingRow({ what }: { what: string }) {
   return (
     <p className="r-note r-mk-absent" data-absent={what}>
-      George composed this from {what}, which this read does not carry.
+      {what} is not in this read, so there is no figure for it here.
     </p>
   );
 }

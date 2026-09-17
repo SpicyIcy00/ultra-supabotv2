@@ -1,0 +1,27 @@
+{
+ "why": "No eval report has ever recorded a view_memory read, so the memory scene cannot be lifted from one. These rows are the shape self_reader returns (the same two frontend/src/room/memory.dom.test.tsx draws); the question is the owner's own words from the dogfood log. The answer is a fixture line, not George's.",
+ "question": "what do you remember?",
+ "answer": "Two views, and what each rests on.",
+ "at": "2026-09-15T09:00:00Z",
+ "blocks": [{"key": "memory", "kind": "memory", "seq": 0, "weight": "lead"}],
+ "calls": [{
+  "seq": 0, "tool": "view_memory", "arguments": {},
+  "result": {
+   "meta": {"source_table": "george.beliefs", "snapshot_timestamp": "2026-09-15T09:00:00Z",
+            "metric_label": "What I think right now",
+            "filters_applied": ["superseded_by IS NULL", "forgotten_at IS NULL"], "held": 2},
+   "rows": [
+    {"id": "b1", "subject": "Rockwell", "subject_kind": "store", "stance": "needs_attention",
+     "claim": "Rockwell is losing customers rather than smaller baskets.",
+     "held_since": "2026-09-04T09:00:00Z", "last_checked": "2026-09-12T09:00:00Z",
+     "rests_on": "get_sales, get_stock", "told": null, "carried": true,
+     "applied": 9, "last_applied": "2026-09-15T08:55:00Z", "unconfirmed": true},
+    {"id": "t1", "subject": "we", "subject_kind": "estate", "stance": "means",
+     "claim": "When they say we they mean the retail shops, not the warehouse.",
+     "held_since": "2026-09-12T09:00:00Z", "last_checked": "2026-09-12T09:00:00Z",
+     "rests_on": "no, we means the shops", "told": "no, we means the shops", "carried": true,
+     "applied": 1, "last_applied": "2026-09-15T08:55:00Z", "unconfirmed": false}
+   ]
+  }
+ }]
+}

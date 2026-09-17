@@ -326,6 +326,11 @@ describe('a claim over a read that does not hold its subject', () => {
     expect(container.textContent).not.toContain('206,800');
     expect(container.textContent).not.toContain('Rockwell');
     expect(container.querySelector('.r-mk-absent')?.getAttribute('data-absent')).toBe('Greenhills');
+    // SAID TO THE READER, about the read — not about George's composing (the
+    // dogfood log, 2026-09-15, "a tile explaining itself to the reader").
+    const said = container.querySelector('.r-mk-absent')?.textContent ?? '';
+    expect(said).toContain('Greenhills is not in this read');
+    expect(said).not.toMatch(/George|composed/);
   });
 
   it('still draws the shop the read DOES hold, and its own row', () => {
