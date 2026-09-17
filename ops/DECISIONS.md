@@ -4492,3 +4492,18 @@ the artifact's before closing. Look (fixtures) and behaviour (live, the full run
 plus P2.m's two unrun questions) are separate checks, because the artifact's
 words are authored and George's are not. The build order was judged right; the
 proof was what was weak.
+
+**The Phase 2S audit: the artifact is the look, the rules are not negotiable.**
+2026-09-17, the owner asked for every instruction to be checked. Read against the
+artifact's code rather than its picture: `buildBeside()` drops each figure's
+`details.src` receipt, so the beside room as drawn breaks UI rules 3 and 6 (no
+read time, nothing to open) — the port keeps a receipt line under every figure
+and caveats above their figures (rule 4). Room functions with no stated place
+were given one: read-as tokens become the composer's chips (the artifact's own
+device), `@` and Tab stay, set-aside and keep stay on the figure, the work line
+goes to the thread header, and **drag/resize/undo are removed** because his rows 6
+and 7 ask for automatic flow. The mic is not drawn while voice is parked. The
+cards' paraphrases were replaced with the code's exact numbers (column counts,
+200/260 ms reveal, wire endpoints and dash, 80% arrows, 820px sidebar default,
+≤900px stack). The translation: the chrome, words and grid copy across; the
+sixteen shapes are static SVG in the artifact and must become renderers.

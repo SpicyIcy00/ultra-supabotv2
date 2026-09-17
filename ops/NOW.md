@@ -2431,6 +2431,80 @@ what §1 of this file forbids. What was weak was never the order but the proof:
 four of fifteen scenes checked, in jsdom, against a design whose words George
 does not write. That is what this block changes.
 
+**THE AUDIT, 2026-09-17 — Phase 2S checked line by line against the artifact's
+code, CLAUDE.md, and every module in `frontend/src/room/`.** The owner: *"please go
+over all the instrunctions again and make sure everything we discussed will be
+built exactly how we want it and with functions"*. Three kinds of gap were found,
+and each is now written into the card that closes it. **A card is not done while
+any row below that names it is missing from the screen and from a test.**
+
+**1. What the artifact's beside room LEAVES OUT and the rules require.** The
+artifact is the look; CLAUDE.md's rules are not negotiable and win where the two
+differ. `buildBeside()` builds each figure from `sceneParts()`, which keeps a
+step's `say`, `ev` and `out` and **drops its `details.src` receipt** — the line
+every OTHER room on the same page draws under each figure (*"receipt · get_sales ·
+Rockwell · by day · read 07:49"*). So the beside room, as drawn, shows numbers
+with no read time and no receipts.
+
+| Rule | What the beside room must carry that the artifact omits | Card |
+|---|---|---|
+| UI 3, UI 6 — every number inspectable; no number without a time | **a receipt line under every figure**: the source in words, the window, `read HH:MM` off the call's `snapshot_timestamp`, in the artifact's own `.src` style (mono, `--ink-3`); a tap opens the receipts in place | P2S.1(c) draws it; P2S.2(f) opens it |
+| UI 4 — a caveat stays whole and ABOVE the figure it qualifies; may be one line naming it, explanation on tap; never the accent | **a figure's own caveat**: one line between its `READ n` label and its mark; **the turn's caveat**: one line directly above the claim in the words column | P2S.1(c) |
+| UI 8 — loading, failed, loaded are three renderings | the figures area while a read is running, and a read that failed, each drawn as itself — never an empty column that looks finished | P2S.1(c) |
+| UI 5 — one colour means needs you | the artifact's needs-you items (Systems "needs you") keep the accent; nothing else in the port may | P2S.1(a), `accentUse.test.ts` |
+
+**2. Functions the room has today that the function table did not place.**
+Found by reading every module in `frontend/src/room/`. Each gets a place, decided
+here and said why, so the owner can point rather than design:
+
+| Function today (module) | In the beside room | Why |
+|---|---|---|
+| read-as tokens: window · grouped · how many, re-run with no model turn (`Tokens.tsx`, `tokenShape.ts`, P1.i–j) | **the composer's chips** — the artifact already draws *"last 90 days"*, *"products"*, *"why?"* on the composer line; tapping one is the same replay path, no model turn | it is the artifact's own device for the same act |
+| "not what I meant" (P2.f) | a chip on the composer line beside them | same row as every other steer |
+| `@` completion over shops, products, categories, suppliers, pages, rules (`mentions.ts`) | unchanged, in the one-line composer | the artifact's composer is a text line; `@` lives in the line |
+| Tab grey completion (`ghosts.ts`, P2.d) | unchanged, in the same line | as above |
+| drag, resize, bring forward, undo (`drag.ts`, `arrangement.ts`) | **removed** | his rows 6 and 7 ask the figures to flow left to right, then down, filling the space; a hand-placed figure breaks the rule he gave, and undo exists only to undo the drag. Deleted with the layout they served |
+| set aside a figure | kept: a quiet × on the figure; set-aside figures are one line under *what I'd do next*, tap to bring back | nothing he chose to put away is lost |
+| keep a figure (P2.a pins) | kept: the one save gesture on the figure (CLAUDE.md UI rule 2) | §12 "keep this" |
+| after a turn: *"4 reads · 7 tools · 3 caveats · behind it"* (`Working.tsx` WorkLine) | the thread header, beside its tabs | it describes the thread, not the answer |
+| *"since you last looked · N answers arrived"* (`history.ts`) | one quiet line above the turn caveat, only when N > 0 | UI 8: drawn only from a loaded count |
+| a refused replay's line (`refusalForPerson`) | under the composer chips, where the replay was asked | a refusal belongs to the gesture that caused it |
+| Behind it, Replay, Page (`BehindIt.tsx`, `Replay.tsx`, `ThreadPage.tsx`) | the thread header's tabs — **on trial**, the artifact has no tabs | kept until he points |
+| the estate switch (`EstateSwitch.tsx`) | the sidebar, top, as the artifact draws it | already the row above |
+| the object panel (`ObjectPanel.tsx`) | in place over the figures column | already the row above |
+| the voice mic button the artifact draws on the composer | **not drawn** | voice is parked (§8: *"not speech-to-chat"*); a button that does nothing teaches that buttons do nothing |
+
+**3. What the artifact's code does EXACTLY, which the cards had only paraphrased.**
+From `buildBeside()`, `place()`, `wire()`, `arrows()`, `draw()`:
+
+| Behaviour | Exactly | Card |
+|---|---|---|
+| columns | **1** figure → 1 column; **2–4** → 2; **5+** → 3; **≤ 900px wide → 1** | P2S.1(c) |
+| placement | each figure, in order, into the column whose height is smallest (ties to fewest children) | P2S.1(c) |
+| arrival | in order, the first at 200 ms then one every 260 ms, each drawing itself; the mark is `reading` while they land and `idle` after the last; reduced motion shows all at once. **His row 13 "arrive together" means not narrated sentence by sentence — this reveal is the artifact's, and the artifact is final** | P2S.1(c) order and timing; P2S.2(d)(f) the mark and the draw |
+| wires | 1px, `rgba(138,143,152,.32)`, dashed `2 5`; from the mark's centre to the claim's top-right corner, and to each figure's top-left (+18, +8) only while that figure is inside the figures area; redrawn when a figure lands, on resize and on scroll | P2S.1(c) |
+| arrows | up hidden within 2px of the top, down hidden within 2px of the bottom; each moves 80% of the area's height; smooth unless reduced motion; no scrollbar anywhere | P2S.1(b) |
+| words | claim: serif, 20–26px, max 30ch, emphasis in italic; standing: serif 15.5px, max 56ch, read superscripts; *what I'd do next*: serif 14px, max 44ch, a mono uppercase label, a 3px rule on its right | P2S.1(c) |
+| ≤ 900px | him (max 420px wide) → words left-aligned, *next*'s rule moves to its left → figures in one column; no wires, no arrows; the page scrolls | P2S.1(b) |
+| sidebar | open by default when the window is wider than 820px, remembered per browser, `[` toggles it (not while typing) | P2S.1(h) |
+| the mark | a 680×420 canvas; idle breathes with three motes on a wide orbit; reading pulses once per read and turns a ring; writing settles the motes close and steadies the ring; need is warm and still | P2S.1(b) place and size; P2S.2(d) life |
+| **not product** — the artifact's own devices | the console switch, the example-scene list, double-click "back to how George brought it", the hidden `.bs-mood` line | not built |
+
+**AND THE TRANSLATION, HONESTLY.** The owner asked whether moving the artifact into
+the product is hard. **Half of it is copying and half of it is not.** The tokens,
+fonts, sidebar, words, composer look and the two-column grid are CSS and markup —
+copied, not re-derived. The mark (~40 lines of canvas), the wires, the column flow
+and the arrows are small pieces of vanilla script that port to React directly. **The
+part that is real work is that the artifact is hand-authored and the product is
+not**: every claim, figure and number on that page was typed by a person for one
+scene, and **its sixteen chart shapes are static SVG with fixed coordinates**
+(the `vocab` scene), not renderers. In the room each must be produced from George's
+actual turn — the read order, the say line per figure, which read was ruled out (a
+flag that does not exist until P2S.3), and sixteen shapes drawn from real rows with
+their empty, one-row and too-many-row cases. That is why P2S.3 is a card of its own
+with golden renders, and why "frame for frame" is held on recorded fixtures rather
+than by expecting live answers to match hand-written ones.
+
 **THE OWNER'S FIXES — every one he asked for in the artifact on 2026-09-16, the
 part that builds it, and what holds it.** *"i dont want a thing missing."* A
 card is not done while one of its rows is not on screen and in a test.
@@ -2563,7 +2637,13 @@ cleanup; he decides.
       artifact, and the images are looked at before close; every rail item
       opens what it names; the mark's drawn body is at least 70% of its
       column and the claim starts within its lower edge, both held by a test
-      on the numbers; `tsc -b --force` and vitest green. No eval.
+      on the numbers; **every row of the AUDIT naming P2S.1 is on screen and in
+      a test** — in particular a receipt line with `read HH:MM` under every
+      figure, a figure's caveat above its mark and the turn's above the claim,
+      the column counts for 1, 2–4, 5+ figures and ≤ 900px, the reveal order,
+      the wire endpoints, the composer's chips replaying with no model turn,
+      `@` and Tab still working in the new line, set aside and keep on a
+      figure, no mic button, and `drag.ts` deleted; `tsc -b --force` and vitest green. No eval.
 - [ ] **P2S.2 the drawing** — three parts, one pass over `marks.tsx` /
       `identity.ts` / `tiles.tsx`, each its own commit:
       **(d) the alive mark** — its place and size are already set by
@@ -2595,7 +2675,8 @@ cleanup; he decides.
       drawings for the four states; Rockwell is the same hue in a dumbbell
       swatch, a line, a bar and a pie in one thread (test); `accentUse.test.ts`
       passes; every mark kind has the tooltip and a dom test reads its text off
-      a recorded run; **frames** of `draw` and `memory` beside the artifact's.
+      a recorded run; **every row of the AUDIT naming P2S.2 is on screen and in
+      a test**; **frames** of `draw` and `memory` beside the artifact's.
       No eval.
 - [ ] **P2S.3 the vocabulary, and "ruled out"** — alone, because it is the one
       card that changes what George sees. The catalogue grows from six marks to
