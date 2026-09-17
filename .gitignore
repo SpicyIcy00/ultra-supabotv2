@@ -86,6 +86,3 @@ new storehub exports/
 # Local integration verification artifacts
 verification/
 .worktrees/
-
-# Frame screenshots (ops/frames.py): regenerated on demand, measure.json is kept
-verification/frames/**/*.png
