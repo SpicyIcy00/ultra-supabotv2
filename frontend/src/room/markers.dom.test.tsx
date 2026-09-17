@@ -23,13 +23,13 @@
  * of them is drawn as one of the two, and the reading still says exactly what
  * he said — the scan cannot lose a word or double one.
  */
-import { cleanup, fireEvent, render } from '@testing-library/react';
+import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { ToolCall } from '../types/george';
 import type { AnswerTurn } from './data';
 import { Reading } from './Reading';
-import { WorkLine } from './Working';
+import { Working } from './Working';
 import { figuresIn } from './figures';
 import { readIndexes } from './work';
 import recorded from './__fixtures__/recorded-answers.json';
@@ -123,8 +123,7 @@ describe('a figure says which read it came out of', () => {
       toolCalls: CALLS, notices: [], pinned: [], saved: [], pageChanges: [],
       done: { duration_ms: 9_000 },
     } as unknown as AnswerTurn;
-    const { container } = render(<WorkLine turn={turn} />);
-    fireEvent.click(container.querySelector('.r-workline-line') as HTMLElement);
+    const { container } = render(<Working turn={turn} live />);
     const drawn = Array.from(container.querySelectorAll('.r-work-i'))
       .map((n) => n.textContent);
     // Three reads numbered, the compose not — it read nothing.

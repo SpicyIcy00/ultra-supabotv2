@@ -214,6 +214,8 @@ export function Board(p: BoardProps) {
             key={o.key}
             ref={(el) => { if (el) nodes.current.set(o.key, el); else nodes.current.delete(o.key); }}
             data-figure={o.key}
+            data-turn={o.turn}
+            data-seq={o.seq ?? o.seqs?.[0]}
             data-col={placed[n]}
             data-arrived={arrived.has(o.key) ? 'yes' : 'no'}
             data-lead={leads[n] ? 'yes' : undefined}

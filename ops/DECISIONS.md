@@ -4562,3 +4562,10 @@ The figures stopped being an equal grid: the read his claim cites (else his `lea
 Words start at the canvas's foot, not -10vh — alive, the mark reaches it — and scroll in their own column. While he works, `Doing` draws the running read, the clock and his narration, which nothing had drawn since P2S.1.
 A figure takes no click; focus no longer reorders. The `opened` decision for attention.learning is no longer written from a figure.
 Not done: "more text with each chart" (P2S.3, compose grammar + eval); why today's turns took 53–73 s; why a kept page's earlier reads lost their rows (`payload.charted`). The room now says "rows were not kept" there instead of "came back without rows".
+
+## 2026-09-17 · The thread header, its four views and the composer hint removed at the owner's word
+
+*"we also dont need anything of these anymroe"*, of "tap anything above to bring it here, then say what you mean" and the header "KEPT AS Estate Week · Talk · Behind it · Replay · Page" with "2 reads · 4 tools · 2 caveats · behind it". NOW.md's audit had kept the tabs "on trial until the owner points"; he pointed.
+Deleted: `ThreadHeader.tsx`, `BehindIt.tsx`, `Replay.tsx` (P2.e), `ThreadPage.tsx` and `keeping.ts` (P2.a's Keep as page), `WorkLine`, their CSS, `listThreadPins`, `surface.desk.work.line/behind_it/replay`, `test_investigation_replay_contract.py` and the Behind-it/line half of `test_visible_work_contract.py` (which now holds that they stay gone).
+**What is lost, said plainly:** Replay (walking the steps afterwards), Behind it (every read of a thread in one list), and the Keep-as-page button — keeping is now only by saying "keep this" / "make this a page" to George, whose tools are unchanged, so UI rule 2's one save gesture is the spoken one. Every figure's receipts still open in place; a figure in his words now scrolls to its figure and lights its READ label instead of opening Behind it.
+Kept: the live trail while he works, the backend page and pin routes (George's create_page uses them). Suites: pure 1,830, vitest 70 / 1,007.

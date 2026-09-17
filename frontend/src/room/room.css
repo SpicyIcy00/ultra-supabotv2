@@ -638,6 +638,9 @@
   color: var(--ink-3); margin: 0 0 8px;
 }
 .r-fig-lbl s { text-decoration: none; color: var(--ink-4); }
+/* A figure in his words was tapped: its label lights for a moment. */
+.r-fig-lbl { transition: color 400ms var(--ease); }
+.r-fig[data-flash="yes"] .r-fig-lbl { color: var(--ink); }
 
 /* A PHONE IS THE REAL LAYOUT (UI rule 7): him, his words, the figures, one
    column, no lines, no arrows, and the page scrolls. */
@@ -837,7 +840,6 @@
   pointer-events: auto;
 }
 /* The design's hint when nothing is picked: how to give the line something. */
-.r-refs-hint { font: 400 11.5px/1.6 var(--mono); color: var(--ink-3); padding: 3px 0; }
 .r-chip--subject { border-color: var(--edge-strong); color: var(--ink); }
 .r-chip--scope, .r-chip--named { color: var(--ink-3); }
 
@@ -1016,25 +1018,6 @@
   margin: 0; font: 400 12px/1.55 var(--sans); color: var(--ink-2); max-width: 62ch;
 }
 
-/* ------------------------------------------------------------- the work line
-   What the turn cost, once it is over: reads, tools, time, caveats — four
-   counts off frames that already arrived, above the claim, where Perplexity
-   puts its sources. Never coloured and never a score. */
-.r-workline { margin: 0 0 14px; }
-.r-workline-row {
-  margin: 0; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
-}
-.r-workline-line, .r-workline-behind {
-  font: 400 10.5px/1.5 var(--mono);
-  letter-spacing: 0.02em;
-  color: var(--ink-3);
-  background: none; border: 0; padding: 0; cursor: pointer;
-}
-.r-workline-line:hover, .r-workline-line:focus-visible,
-.r-workline-behind:hover, .r-workline-behind:focus-visible { color: var(--ink-2); }
-.r-workline-behind { text-decoration: underline; text-underline-offset: 3px; }
-.r-work-trail--settled { margin: 8px 0 0; }
-
 /* A FIGURE IN THE CLAIM WITH A READ BEHIND IT. Underlined, in his own words,
    in his own sentence — the underline is the only thing that changes, so the
    reading is still a sentence and not a row of links. */
@@ -1069,94 +1052,6 @@
    a verdict on his arithmetic: a difference he worked out is a real number,
    and CLAUDE.md rule 9 leaves checking prose numerals to the evals. */
 .r-figure-bare { color: var(--ink-2); }
-
-/* ------------------------------------------------------------ the thread
-   ITS HEADER AND ITS THIRD VIEW (P2.a). A thread is already a page, so it has
-   a name — or the honest absence of one — and three ways of being read. The
-   current view is the DARK one: no fill, no underline, no colour. The one
-   colour means "needs you" (UI rule 5) and a conversation nobody has kept is
-   not an approval. */
-.r-thead {
-  display: flex; align-items: baseline; justify-content: space-between;
-  gap: 16px; flex-wrap: wrap;
-  margin: 0 0 20px; padding-bottom: 11px; border-bottom: 1px solid var(--edge);
-}
-.r-thead-kept { margin: 0; display: flex; align-items: baseline; gap: 8px; min-width: 0; }
-.r-thead-quiet { font: 400 11.5px/1.5 var(--sans); color: var(--ink-3); }
-/* The page's name, and the way to it. George's own hue, which is identity and
-   not urgency — the same one Behind it lands a tapped figure with. */
-.r-thead-page {
-  font: 400 13px/1.5 var(--sans); color: rgb(var(--george));
-  text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.r-thead-page:hover, .r-thead-page:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
-.r-thead-views { display: flex; align-items: baseline; gap: 14px; }
-.r-thead-view {
-  background: none; border: 0; padding: 0; cursor: pointer;
-  font: 400 12.5px/1.5 var(--sans); color: var(--ink-3);
-  transition: color 160ms var(--ease);
-}
-.r-thead-view:hover, .r-thead-view:focus-visible { color: var(--ink-2); }
-.r-thead-view--on { color: var(--ink); }
-
-/* THE PAGE VIEW. A list, like Behind it — the sections a page would have, and
-   the turns it would leave off with the reason. Nothing drawn, because nothing
-   has been run: what the page produces is what the page shows when it opens. */
-.r-page { margin: 0 0 26px; display: grid; gap: 12px; }
-.r-page-already { margin: 0 0 4px; }
-.r-page-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
-.r-page-sec { padding-left: 13px; border-left: 2px solid var(--edge); display: grid; gap: 3px; }
-/* A turn the page would not take. The same shape, a quieter edge: it is part
-   of the account, not a failure. */
-.r-page-sec--off { border-left-style: dotted; }
-.r-page-q {
-  margin: 0; font: 400 13.5px/1.55 var(--sans); color: var(--ink);
-  max-width: 62ch; overflow-wrap: anywhere;
-}
-.r-page-sec--off .r-page-q { color: var(--ink-2); }
-.r-page-off-head { margin-top: 10px; }
-.r-page-keep {
-  display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;
-  margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--edge);
-}
-.r-page-name { display: grid; gap: 6px; min-width: 0; flex: 1 1 22ch; }
-.r-page-input {
-  border: 1px solid var(--edge); border-radius: 8px; background: var(--card);
-  padding: 7px 11px; font: 400 13.5px/1.4 var(--sans); color: var(--ink);
-  min-width: 0; width: 100%;
-}
-.r-page-input:focus-visible { outline: none; border-color: var(--edge-strong); }
-.r-page-input::placeholder { color: var(--ink-3); }
-.r-page-made { margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--edge); }
-/* THE REFUSAL, drawn as the caveat it is: above nothing, quiet, never in a
-   colour. It is the service's own sentence. */
-.r-page-refused { display: grid; gap: 10px; border-left: 2px solid var(--edge-strong); padding-left: 14px; }
-
-/* ---------------------------------------------------------------- behind it
-   Every read of the thread with its receipts (BehindIt.tsx). A list, not a
-   board: nothing here is drawn, because the drawings are on the board and
-   this is the account of where they came from. */
-.r-behind { margin: 0 0 26px; }
-.r-behind-head {
-  margin: 0 0 14px; display: flex; align-items: baseline; gap: 14px;
-  padding-bottom: 10px; border-bottom: 1px solid var(--edge);
-}
-.r-behind-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px; }
-.r-behind-read { padding-left: 13px; border-left: 2px solid var(--edge); }
-/* WHERE A TAPPED FIGURE LANDED. A brighter edge and nothing else — no accent,
-   which means "needs you", and no fill, which would make one read look like a
-   different kind of read. */
-.r-behind-read--here { border-left-color: rgba(var(--george), 0.55); }
-.r-behind-what {
-  margin: 0 0 5px; font: 400 12.5px/1.6 var(--sans); color: var(--ink);
-  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
-}
-.r-behind-declined {
-  margin: 0 0 5px; font: 400 12px/1.55 var(--sans); color: var(--ink-2); max-width: 62ch;
-}
-.r-behind-filters { list-style: none; margin: 5px 0 0; padding: 0; display: grid; gap: 3px; }
-.r-behind-filters li { display: grid; gap: 1px; }
-.r-behind-filter { font: 400 11px/1.5 var(--sans); color: var(--ink-2); }
 
 /* --------------------------------------------------------- composed shapes
    The marks of the grammar (Spec.tsx). Every colour here is a DIRECTION a row
@@ -1738,59 +1633,6 @@ button.r-src--tap:hover, button.r-src--tap[aria-expanded="true"] { color: var(--
 .r-mk-tablehead {
   display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
   font: 400 10px/1.5 var(--mono); color: var(--ink-3); margin-bottom: 6px;
-}
-
-/* ------------------------------------------------------------------ replay
-
-   A FINISHED LADDER, WALKED (P2.e). One column of rungs; the one you are on
-   carries everything about it. No colour of its own — the one colour means
-   "needs you" (UI rule 5), and a step you are standing on is not an approval,
-   so being HERE is drawn in weight and in an edge, exactly as Behind it draws
-   the read a figure jumped to. */
-.r-walk { margin: 0 0 26px; }
-.r-walk-where {
-  margin: 0 0 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-}
-.r-walk-where .r-chip { padding: 4px 11px; font-size: 11.5px; }
-.r-walk-where .r-chip:disabled { color: var(--ink-3); cursor: default; border-color: var(--edge); }
-.r-walk-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-/* The question is a heading for the run beneath it, not a label on each step. */
-.r-walk-asked {
-  margin: 20px 0 8px; font: 400 12.5px/1.5 var(--sans); color: var(--ink);
-  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; max-width: 62ch;
-}
-.r-walk-list > li:first-child .r-walk-asked { margin-top: 0; }
-.r-walk-rung { padding-left: 13px; border-left: 2px solid var(--edge); }
-.r-walk-rung--here { border-left-color: rgba(var(--george), 0.55); }
-.r-walk-line {
-  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
-  width: 100%; text-align: left; background: none; border: 0; padding: 4px 0;
-  cursor: pointer; font: 400 12.5px/1.6 var(--sans); color: var(--ink-3);
-}
-.r-walk-rung--here .r-walk-line { color: var(--ink); }
-.r-walk-line:hover, .r-walk-line:focus-visible { color: var(--ink-2); }
-.r-walk-n {
-  font: 500 9.5px/1.5 var(--mono); color: var(--ink-3);
-  min-width: 2ch; font-variant-numeric: tabular-nums;
-}
-.r-walk-open { padding: 6px 0 14px; display: grid; gap: 8px; }
-.r-walk-declined {
-  margin: 0; font: 400 12px/1.55 var(--sans); color: var(--ink-2); max-width: 62ch;
-}
-.r-walk-note {
-  margin: 0; font: 400 11.5px/1.55 var(--sans); color: var(--ink-3); max-width: 62ch;
-}
-/* The rows never run wider than the column: the table scrolls inside itself,
-   the page does not scroll sideways. */
-.r-walk-rows { display: grid; gap: 6px; max-width: 100%; min-width: 0; }
-.r-walk-rows .r-scroll { max-width: 100%; }
-
-/* A refusal's own words, where they were written for George and not for a
-   person (the dogfood log, 2026-09-15). Behind a tap, in the receipt face, so
-   the line above it stays one sentence anybody can read. */
-.r-token-refusal-detail {
-  display: block; margin-top: 6px;
-  font: 400 10.5px/1.6 var(--mono); color: var(--ink-3); max-width: 62ch;
 }
 
 /* ------------------------------------------------------------------ memory

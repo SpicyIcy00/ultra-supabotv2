@@ -15,10 +15,9 @@ NO DATABASE, NO MODEL. Both halves are decidable without either:
      title, never on a guess. Two scopes on one listing is refused rather than
      one of them silently winning.
 
-AND THE BOUNDS ARE ONE SET, in three languages: what the client draws its plan
-against (room/keeping.ts), what the service refuses on, and what metrics.yaml
-tells the model. A number that disagrees is a 422 the person could have read
-before they pressed anything.
+AND THE BOUNDS ARE ONE SET: what the service refuses on and what metrics.yaml
+tells the model. The client's own copy (room/keeping.ts, the Page view's plan)
+went on 2026-09-17 with the view, at the owner's word.
 """
 
 from __future__ import annotations
@@ -47,7 +46,6 @@ from app.services.pin_runner import PinValidationError
 from app.services.pin_writer import PinQuotaError
 
 ROOT = Path(__file__).resolve().parents[1]
-KEEPING_TS = ROOT / "frontend" / "src" / "room" / "keeping.ts"
 
 ME = SimpleNamespace(username="ice", role="admin")
 THREAD = uuid.UUID("11111111-1111-1111-1111-111111111111")
@@ -299,24 +297,6 @@ def test_the_thread_resolution_is_scoped_to_the_caller_and_hides_hidden_turns():
 # ---------------------------------------------------------------------------
 # 3. The bounds are one set
 # ---------------------------------------------------------------------------
-
-def _ts_const(name: str) -> int:
-    source = KEEPING_TS.read_text(encoding="utf-8")
-    found = re.search(rf"export const {name} = (\d+);", source)
-    assert found, f"{name} is not declared in {KEEPING_TS.name}"
-    return int(found.group(1))
-
-
-def test_the_client_plans_against_the_service_bounds_and_not_its_own():
-    """
-    room/keeping.ts draws what would be kept and what would be left off, with
-    the reason, BEFORE the request. A bound it holds loosely is a refusal
-    nobody could have predicted; one it holds tightly is a section silently
-    dropped. Both are held here, by value.
-    """
-    assert _ts_const("MAX_SECTIONS") == page_operations.MAX_ANALYSES_PER_BUILD
-    assert _ts_const("MAX_CALLS_PER_SECTION") == pin_writer.MAX_TOOL_CALLS_PER_PIN
-
 
 def test_the_same_bounds_are_what_the_model_is_told():
     """The definitions are the third copy, and `create_page` reads them at runtime."""

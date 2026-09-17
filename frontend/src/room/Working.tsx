@@ -20,16 +20,16 @@
  * found nothing, and both are knowable from the frame rather than from the
  * prose.
  *
- * AND THE WORK OUTLIVES THE TURN (P1.k). The trail used to vanish the moment
- * the answer landed: the person had watched four reads go by and then had a
- * paragraph with nothing behind it. `WorkLine` is what is left — one derived
- * line above the claim, and the same steps under it when you want them.
+ * WHEN THE TURN IS OVER THE TRAIL GOES. The line that stood in for it — "4
+ * reads · 7 tools · 3 caveats · behind it" — was removed at the owner's word
+ * (2026-09-17, "we also dont need anything of these anymroe"); each figure's
+ * receipts open in place under it.
  */
 import { useEffect, useState } from 'react';
 
 import type { AnswerTurn } from './data';
 import { receiptsLine } from './data';
-import { durationWords, stepsOf, summaryOf, summaryWords, type Step } from './work';
+import { durationWords, stepsOf, type Step } from './work';
 
 /**
  * HOW LONG HE HAS BEEN AT IT (P0.3).
@@ -199,59 +199,6 @@ export function Doing({ turn, live, answering }: {
         {doing}
         {elapsed !== null && <span className="r-work-clock">{elapsedWords(elapsed)}</span>}
       </p>
-    </div>
-  );
-}
-
-/**
- * WHAT THE TURN COST, ONE LINE, ABOVE THE CLAIM.
- *
- * Perplexity's shape: sources above the answer, steps behind one plain line.
- * Four counts off frames that already arrived — reads that landed, calls made,
- * the turn's own clock, caveats raised — and the steps themselves one tap
- * away. It is the only account of the work that survives the turn, which is
- * the point: an answer whose evidence is a paragraph of prose is an answer you
- * have to take on trust.
- *
- * NOT AN ACCENT, NOT A BADGE, NOT A SCORE. Four counts is not a rating of the
- * work and nothing here is coloured: the one colour means "needs you" (UI
- * rule 5), and a turn that read four things is not better than one that read
- * one.
- */
-export function WorkLine({ turn, onBehind }: {
-  turn: AnswerTurn | null;
-  /** Opens the whole thread's reads. Absent where there is nowhere to go. */
-  onBehind?: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<string | null>(null);
-  if (!turn) return null;
-  const steps = stepsOf(turn);
-  // A TURN THAT CALLED NOTHING HAS NO WORK TO SHOW. He answered from what he
-  // already had, and "0 reads · 0 tools" would be a line about an absence.
-  if (!steps.length) return null;
-  const words = summaryWords(summaryOf(turn));
-  return (
-    <div className="r-workline">
-      <p className="r-workline-row">
-        <button type="button" className="r-workline-line" aria-expanded={open}
-                onClick={() => setOpen(!open)}>
-          {words.join(' · ')}
-        </button>
-        {onBehind && (
-          <button type="button" className="r-workline-behind" onClick={onBehind}>
-            behind it
-          </button>
-        )}
-      </p>
-      {open && (
-        <div className="r-work-trail r-work-trail--settled">
-          {steps.map((s) => (
-            <StepLine key={s.key} step={s} open={step === s.key}
-                      onToggle={() => setStep(step === s.key ? null : s.key)} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }

@@ -251,11 +251,11 @@ export function Composer(p: ComposerProps) {
               </button>
             ))}
           </div>
-        ) : (
-          <div className="r-chips">
-            <span className="r-refs-hint">tap anything above to bring it here, then say what you mean</span>
-          </div>
-        )}
+        ) : null}
+        {/* NO HINT WHEN NOTHING IS PICKED (the log, 2026-09-17: "we also dont
+            need anything of these anymroe", of "tap anything above to bring it
+            here, then say what you mean"). The chips above appear when there
+            is something to travel with. */}
 
         {asking && !sentence && (
           <div className="r-mentions" role="listbox" aria-label="What that could mean">

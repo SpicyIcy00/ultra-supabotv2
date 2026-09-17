@@ -13,7 +13,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { AnswerTurn } from './data';
-import { durationWords, filtersOf, readsOf, stepsOf, summaryOf, summaryWords } from './work';
+import { durationWords, stepsOf } from './work';
 import { figuresIn, placeFigures } from './figures';
 import type { ToolCall } from '../types/george';
 
@@ -116,82 +116,12 @@ describe('the steps', () => {
   });
 });
 
-describe('the line above the claim', () => {
-  it('counts reads, tools, the turn\'s clock and its caveats', () => {
-    const t = turn({
-      toolCalls: [LANDED, call({
-        seq: 1, tool: 'compose',
-        result: { row_count: 0, source_table: null, truncated: false, duration_ms: 5, error: null },
-      })],
-      notices: [{ kind: 'partial_window', message: 'this week is not over' }],
-      done: { duration_ms: 19_000 } as AnswerTurn['done'],
-    });
-    expect(summaryOf(t)).toEqual({ reads: 1, tools: 2, ms: 19_000, caveats: 1 });
-    expect(summaryWords(summaryOf(t))).toEqual(['1 read', '2 tools', '19.0s', '1 caveat']);
-  });
-
-  it('leaves out the loop\'s warnings about his own edits', () => {
-    // "a block carries a kind or a spec, never both" is process, not a caveat
-    // on a figure — and the count has to leave out exactly what the region
-    // above the board leaves out.
-    const t = turn({ notices: [{ kind: 'composition_rejected', message: 'x' }] });
-    expect(summaryOf(t).caveats).toBe(0);
-  });
-
-  it('omits the time rather than drawing a zero nobody measured', () => {
-    const words = summaryWords(summaryOf(turn({ toolCalls: [LANDED] })));
-    expect(words).toEqual(['1 read', '1 tool', 'no caveats']);
-    expect(words.join(' ')).not.toContain('0.0s');
-  });
-
-  it('says there were no caveats rather than falling silent about them', () => {
-    // The turn is loaded, so this is a claim from a result and not a guess
-    // (UI rule 8) — and a turn with a caveat and a turn with none must not
-    // draw the same line.
-    expect(summaryWords(summaryOf(turn({ toolCalls: [LANDED] })))).toContain('no caveats');
-  });
-});
-
 describe('durations', () => {
   it('reads in milliseconds under a second and seconds above it', () => {
     expect(durationWords(412)).toBe('412ms');
     expect(durationWords(1_240)).toBe('1.2s');
     expect(durationWords(19_000)).toBe('19.0s');
     expect(durationWords(84_000)).toBe('1m 24s');
-  });
-});
-
-describe('behind it', () => {
-  const thread = [
-    turn({ toolCalls: [LANDED], at: '2026-09-14T08:00:00Z' }),
-    turn({
-      toolCalls: [call({
-        seq: 0, tool: 'compose',
-        result: { row_count: 0, source_table: null, truncated: false, duration_ms: 4, error: null },
-      }), { ...LANDED, seq: 1 }],
-      at: '2026-09-14T08:04:00Z',
-    }),
-  ];
-
-  it('is every read of the thread, and only the reads', () => {
-    const reads = readsOf(thread);
-    expect(reads.map((r) => r.key)).toEqual(['0:0', '1:1']);
-    expect(reads.every((r) => r.tool.startsWith('get_'))).toBe(true);
-  });
-
-  it('carries the receipts each read came back with', () => {
-    const [read] = readsOf(thread);
-    expect(read.meta?.source_table).toBe('new_transactions');
-    expect(read.at).toBe('2026-09-14T08:00:00Z');
-  });
-
-  it('splits a filter into the definition and the predicate under it', () => {
-    const [defined, plain] = filtersOf(META as never);
-    expect(defined.label).toBe('filters cancelled');
-    expect(defined.detail).toBe("t.status <> 'cancelled'");
-    // An entry the tool wrote as words has no second half to hide.
-    expect(plain.label).toBe('owner = the signed-in user');
-    expect(plain.detail).toBeNull();
   });
 });
 

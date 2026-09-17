@@ -25,8 +25,8 @@
  * only numbers this module produces are counts of calls, counts of rows and
  * milliseconds off a clock. It never opens a row.
  */
-import type { GeorgeTurn, ToolCall, ToolMeta } from '../types/george';
-import { PROCESS, type AnswerTurn } from './data';
+import type { ToolCall, ToolMeta } from '../types/george';
+import type { AnswerTurn } from './data';
 
 /**
  * What each tool is, in words: what it looks like happening, and what it looks
@@ -237,124 +237,6 @@ export function stepsOf(turn: AnswerTurn | null | undefined, index = 0): Step[] 
     .map((c) => stepOf(c, index, numbered.get(c.seq) ?? null));
 }
 
-/* ------------------------------------------------------------------- line */
-
-/** What the turn cost, counted off its frames. Every field is a count or a clock. */
-export interface WorkSummary {
-  /** Reads that landed — the evidence the answer stands on. */
-  reads: number;
-  /** Every call he made, reads included: what the turn actually did. */
-  tools: number;
-  /** The turn's own clock (`done.duration_ms`). Null on a turn that has none. */
-  ms: number | null;
-  /** Caveats this turn raised, the loop's warnings about his own edits apart. */
-  caveats: number;
-}
-
-export function summaryOf(turn: AnswerTurn | null | undefined): WorkSummary {
-  const steps = stepsOf(turn);
-  return {
-    reads: steps.filter((s) => s.state === 'landed' && counts(s.tool)).length,
-    tools: steps.length,
-    ms: turn?.done?.duration_ms ?? null,
-    caveats: (turn?.notices ?? []).filter((n) => !PROCESS.has(n.kind)).length,
-  };
-}
-
-/* -------------------------------------------------------------- behind it */
-
-/** One read of the thread, with the call it was and the receipts it carried. */
-export interface Read extends Step {
-  /** When the turn it belongs to was asked — for ordering and for the header. */
-  at: string;
-}
-
-/**
- * EVERY READ OF THE THREAD, oldest first.
- *
- * Reads only: this is what the answers stand on, and a compose or a pin is
- * something he did to the screen rather than something he looked at. A
- * declined read stays in the list — a read that was refused is part of the
- * account of the work, and leaving it out would make the list say he never
- * tried.
- */
-export function readsOf(answers: AnswerTurn[]): Read[] {
-  const out: Read[] = [];
-  answers.forEach((turn, index) => {
-    for (const step of stepsOf(turn, index)) {
-      if (!counts(step.tool)) continue;
-      out.push({ ...step, at: turn.at });
-    }
-  });
-  return out;
-}
-
-/* ------------------------------------------------------------------- walk */
-
-/** One answer with the question that caused it, in thread order. */
-export interface Asked {
-  /** The person's own words, or null where the turn had no question in the
-   *  thread — a morning brief, a workflow's answer, a standing question. */
-  question: string | null;
-  turn: AnswerTurn;
-}
-
-/**
- * EACH GEORGE TURN WITH THE QUESTION IMMEDIATELY BEFORE IT.
- *
- * ONE DEFINITION. The page a thread would be names its sections by this
- * (keeping.ts) and the walk heads its rungs by it; two pairings would let the
- * page say a section answers one question while the walk says its steps ran
- * under another.
- */
-export function asked(turns: GeorgeTurn[]): Asked[] {
-  const out: Asked[] = [];
-  let question: string | null = null;
-  for (const t of turns) {
-    if (t.role === 'user') { question = t.text; continue; }
-    out.push({ question, turn: t });
-    question = null;
-  }
-  return out;
-}
-
-/** One rung of a walked ladder: a step, and the question it was taken under. */
-export interface Rung extends Step {
-  /** The question this step was taken under, as the person asked it. */
-  question: string | null;
-  /** When the answer it belongs to was given. */
-  at: string;
-}
-
-/**
- * EVERY STEP OF THE THREAD, IN THE ORDER IT RAN (P2.e).
- *
- * THE LIST IS WHAT HAPPENED. There is no planner here and nothing is
- * reconstructed: these are the calls the loop made, read back off the frames
- * it sent and, on a reopened thread, off `george.tool_calls` and the answer
- * post's own `charted` rows. Nothing is re-run and nothing is asked
- * (architecture rule 5) — walking a finished investigation costs no request
- * at all, which is the whole reason it can be walked.
- *
- * EVERY STEP, NOT EVERY READ, and that is the difference from Behind it. A
- * compose read nothing and a pin read nothing, but both are things he DID,
- * and an account of an investigation that leaves them out says the workspace
- * arranged itself. Behind it answers "where did these numbers come from";
- * this answers "what did he do, and what did he see".
- *
- * A DUPLICATE IS STILL NOT A RUNG. `stepsOf` drops it, because the loop
- * served it out of the turn's own record and nobody did that work.
- */
-export function walkOf(turns: GeorgeTurn[]): Rung[] {
-  const out: Rung[] = [];
-  asked(turns).forEach(({ question, turn }, index) => {
-    for (const step of stepsOf(turn, index)) {
-      out.push({ ...step, question, at: turn.at });
-    }
-  });
-  return out;
-}
-
 /* ------------------------------------------------------------- formatting */
 
 /**
@@ -367,52 +249,4 @@ export function durationWords(ms: number): string {
   if (ms < 60_000) return `${(ms / 1_000).toFixed(1)}s`;
   const s = Math.round(ms / 1_000);
   return `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`;
-}
-
-/** `4 reads · 6 tools · 19.0s · 1 caveat`, with nothing said that is not known. */
-export function summaryWords(s: WorkSummary): string[] {
-  const out = [
-    `${s.reads} ${s.reads === 1 ? 'read' : 'reads'}`,
-    `${s.tools} ${s.tools === 1 ? 'tool' : 'tools'}`,
-  ];
-  // THE TIME IS OMITTED RATHER THAN ZEROED when the turn carries no clock —
-  // a turn stored before P0.3 has no `duration_ms`, and "0.0s" would be a
-  // measurement nobody made (UI rule 8).
-  if (s.ms !== null) out.push(durationWords(s.ms));
-  out.push(s.caveats === 0 ? 'no caveats'
-    : `${s.caveats} ${s.caveats === 1 ? 'caveat' : 'caveats'}`);
-  return out;
-}
-
-/**
- * ONE FILTER, AS A PERSON READS IT AND AS THE TOOL WROTE IT.
- *
- * Every `filters_applied` entry is a predicate the tool applied and, after a
- * `#`, the definition it came from: `t.store_id IN (…)   # metrics.yaml:
- * stores.active_retail`. Behind it is "reads with receipts, never code", so
- * the DEFINITION is the line — "stores · active retail" — and the predicate is
- * under it, quiet, for whoever wants it. Neither is dropped: the definition
- * alone does not say which shops, and the predicate alone does not say which
- * rule put them there.
- *
- * No heuristic decides which half is readable. The split is on the `#` the
- * tools write, and an entry without one is drawn whole.
- */
-export interface Filter {
-  /** The definition, in words — or the predicate, when there is no `#`. */
-  label: string;
-  /** The predicate, when the definition took the line. Never the only thing. */
-  detail: string | null;
-}
-
-export function filtersOf(meta: ToolMeta | null | undefined): Filter[] {
-  return (meta?.filters_applied ?? []).map((raw) => {
-    const text = String(raw);
-    const cut = text.indexOf('#');
-    if (cut < 0) return { label: text.trim(), detail: null };
-    const predicate = text.slice(0, cut).trim();
-    const source = text.slice(cut + 1).trim();
-    if (!source) return { label: predicate, detail: null };
-    return { label: source.replace(/^metrics\.yaml:\s*/, '').replace(/[._]/g, ' '), detail: predicate };
-  });
 }

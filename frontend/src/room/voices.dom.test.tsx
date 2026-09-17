@@ -41,8 +41,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import type { AnswerTurn } from './data';
 import { Reading } from './Reading';
-import { WorkLine } from './Working';
-import { BehindIt } from './BehindIt';
+import { Working } from './Working';
 
 afterEach(cleanup);
 
@@ -171,13 +170,11 @@ const TURN: AnswerTurn = {
 function surfaces() {
   const out = render(
     <>
-      <WorkLine turn={TURN} onBehind={() => {}} />
-      <BehindIt answers={[TURN]} onBack={() => {}} />
+      <Working turn={TURN} live />
       <Reading text={SAID} reading={TURN.reading} calls={TURN.toolCalls}
                onFigure={() => {}} />
     </>,
   );
-  fireEvent.click(out.container.querySelector('.r-workline-line') as HTMLElement);
   for (const step of Array.from(out.container.querySelectorAll('.r-work--step'))) {
     fireEvent.click(step);
   }
@@ -225,8 +222,7 @@ describe('the two voices of the room', () => {
     expect(MONO).toContain('.r-work-n');
     expect(MONO).toContain('.r-figure-n');
     expect(SANS).toContain('.r-say');
-    expect(SANS).toContain('.r-behind-what');
-    expect(SANS).toContain('.r-behind-filter');
+    expect(SANS).toContain('.r-work-declined');
     // Nothing on screen may wear both, or the scan would argue with itself.
     const container = surfaces();
     const mono = wearing(container, MONO);
@@ -274,7 +270,7 @@ describe('the two voices of the room', () => {
     // produce, written out: the same two functions, over a line that does the
     // wrong thing, and they find it.
     const { container } = render(
-      <p className="r-behind-what">read sales from new_transactions</p>);
+      <p className="r-say">read sales from new_transactions</p>);
     const found = wearing(container, SANS)
       .flatMap((el) => machineStrings().filter((s) => ownText(el, wearing(container, MONO)).includes(s)));
     expect(found).toContain('new_transactions');
@@ -284,8 +280,8 @@ describe('the two voices of the room', () => {
     // The excuse above has to buy something real, or it is a hole rather than
     // a rule: the tool's own sentence IS on screen and IS in prose type.
     const container = surfaces();
-    const declined = container.querySelector('.r-behind-declined');
-    expect(SANS).toContain('.r-behind-declined');
+    const declined = container.querySelector('.r-work-declined');
+    expect(SANS).toContain('.r-work-declined');
     expect(declined?.textContent).toContain('compare last_month instead');
   });
 });

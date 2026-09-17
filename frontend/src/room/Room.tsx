@@ -23,7 +23,7 @@ import { boardContext, buildBoard, folded, shapedByReplay,
 import { keepLocal, restoreLocal } from './arrangement';
 import { callOf, rowsOf, subjectOf, type AnswerTurn, type Block } from './data';
 import { Board, turnNotices } from './render';
-import { FiguresArea, Wires, useMoreBelow } from './FiguresArea';
+import { FiguresArea, Wires, scrollToFigure, useMoreBelow } from './FiguresArea';
 import { AliveMark } from './AliveMark';
 import { markStateOf } from './alive';
 import { claimAndStanding } from './beside';
@@ -50,12 +50,7 @@ import { pathFor, refusalForPerson, resolveFragment, retunedKey, tokensFor,
          type DrawnToken } from './tokenShape';
 import type { ToolCall } from '../types/george';
 import { Noticed } from './Noticed';
-import { Doing, WorkLine, Working } from './Working';
-import { BehindIt } from './BehindIt';
-import { Replay } from './Replay';
-import { ThreadHeader, keptPages, type KeptAs, type ThreadView } from './ThreadHeader';
-import { ThreadPage } from './ThreadPage';
-import { listThreadPins } from '../services/pinsApi';
+import { Doing, Working } from './Working';
 import { useQuery } from '@tanstack/react-query';
 import { listApprovals } from '../services/workflowsApi';
 import { Rail } from './Rail';
@@ -146,44 +141,6 @@ export default function Room() {
     staleTime: 60_000,
     retry: false,
   });
-  // WHICH OF THE THREAD'S FOUR VIEWS IS OPEN (P2.a, P2.e). `talk` is the
-  // reading and the board; `behind` is every read this thread stands on, with
-  // its receipts (P1.k); `replay` is the work itself, walked a step at a time
-  // (P2.e); `page` is what this thread would be if it were kept. One URL, four
-  // readings of what is already loaded — none of them is a route, so coming
-  // back from one does not put you somewhere else.
-  const [view, setView] = useState<ThreadView>('talk');
-  // The read a tapped figure asked for, keyed `turn:seq` — the same key the
-  // board uses, because seq restarts every turn. Only `behind` reads it.
-  const [focus, setFocus] = useState<string | null>(null);
-  // The page this thread was just kept as, so the header names it without
-  // waiting for the listing to come back round. The query below is still the
-  // authority; this only fills the gap between the write and the refetch.
-  const [justKept, setJustKept] = useState<KeptAs | null>(null);
-  // WHETHER THIS THREAD HAS BEEN KEPT, AND AS WHAT (P2.a). The pins this
-  // thread produced, joined by the conversations in it — so a page named here
-  // is a page that exists. Read, never assumed: the header draws *checking*,
-  // *could not be read* and the answer as three separate things, because "not
-  // kept" is a claim about the world (UI rule 8).
-  const keptQuery = useQuery({
-    queryKey: ['thread-pins', threadId ?? george.threadId ?? null],
-    queryFn: () => listThreadPins((threadId ?? george.threadId) as string),
-    enabled: Boolean(threadId ?? george.threadId),
-    staleTime: 30_000,
-    retry: false,
-  });
-  const kept = useMemo(() => {
-    const read = keptPages(keptQuery.data);
-    // The page just created leads, until the listing carries it too. Never a
-    // duplicate: the same page from both sources is one entry.
-    if (!justKept || read.some((k) => k.pageId === justKept.pageId)) return read;
-    return [justKept, ...read];
-  }, [keptQuery.data, justKept]);
-  const keptState: 'loading' | 'failed' | 'loaded' =
-    justKept ? 'loaded'
-      : !(threadId ?? george.threadId) ? 'loaded'
-        : keptQuery.isPending ? 'loading'
-          : keptQuery.isError ? 'failed' : 'loaded';
   const [draft, setDraft] = useState('');
   const opened = useRef<string | null>(null);
   // THE FOUR ELEMENTS THE LEADING LINES ARE MEASURED BETWEEN (P2S.1(c)).
@@ -216,13 +173,6 @@ export default function Room() {
     if (!threadId && george.storedThreadId) navigate(`/w/${george.storedThreadId}`, { replace: true });
   }, [threadId, george.storedThreadId, navigate]);
 
-  // ANOTHER THREAD IS ANOTHER THREAD (P2.a). The view and the page just kept
-  // both belong to the conversation that was open: carrying them across would
-  // put one thread's page name in another thread's header, which is the exact
-  // claim UI rule 8 exists to stop. The query is keyed by thread and answers
-  // for itself; this clears what was held locally.
-  useEffect(() => { setView('talk'); setFocus(null); setJustKept(null); }, [threadId]);
-
   const answers = useMemo(
     () => george.turns.filter((t): t is AnswerTurn => t.role === 'george'),
     [george.turns],
@@ -243,11 +193,6 @@ export default function Room() {
   // A new answer folds again. The fold is about the newest finding, and
   // leaving it open would put the accumulation straight back.
   useEffect(() => { setUnfolded(false); }, [answers.length]);
-  // AND ASKING RETURNS TO THE TALK (P1.k). Behind it and Page are views on what
-  // has already happened; a question is a request for something new, and an
-  // answer arriving behind a list nobody is looking at is the "stuff came out
-  // but it just disappeared" shape all over again.
-  useEffect(() => { if (busy) { setView('talk'); setFocus(null); } }, [busy]);
   const drawn = unfolded ? board : shown;
   // The turn's caveats, minus the ones its objects already carry — computed
   // over what is DRAWN, because a caveat carried by a tile nobody can see has
@@ -295,6 +240,12 @@ export default function Room() {
   // THE FIGURE THE ANSWER RESTS ON (the log, 2026-09-17). The first read his
   // CLAIM cites by a figure in it, drawn from this turn; the Board falls back
   // to the block he weighted `lead`. Values the answer carries, never a guess.
+  // A FIGURE IN HIS WORDS SCROLLS TO THE FIGURE IT CAME FROM, and lights its
+  // READ label for a moment — the door it used to open was Behind it.
+  const showFigure = useCallback((seq: number) => {
+    scrollToFigure(areaRef.current, answers.length - 1, seq);
+  }, [answers.length]);
+
   const lead = useMemo(() => {
     if (!latest || busy) return null;
     const { claimRaw } = claimAndStanding(latest.text, latest.reading?.claim);
@@ -315,7 +266,7 @@ export default function Room() {
   const mark = markStateOf({
     busy,
     turn: latest,
-    landing: view === 'talk' ? landing.pending : 0,
+    landing: landing.pending,
     needsYou: approvals.data?.length,
   });
 
@@ -741,7 +692,6 @@ export default function Room() {
     // on, and carrying it into a new board would be the room deciding what the
     // next question is about (P2.g).
     setEstate(null);
-    setView('talk'); setFocus(null); setJustKept(null);
     setRetuned({}); setShapes({}); setRefusal(null);
     setLocal({});
     navigate('/george');
@@ -768,7 +718,7 @@ export default function Room() {
       <main className="r-main">
         <div className="r-beside" ref={frameRef}>
           <Wires frameRef={frameRef} markRef={himRef} wordsRef={wordsRef} areaRef={areaRef}
-                 version={`${answers.length}:${view}:${drawn.length}:${busy}`} />
+                 version={`${answers.length}:${drawn.length}:${busy}`} />
 
           <div className="r-him" ref={himRef}>
             <AliveMark state={mark.state} failed={mark.failed} drawn={mark.reads}
@@ -798,10 +748,7 @@ export default function Room() {
                     Not a tile and not narrated. See Reading.tsx. */}
                 <Reading text={latest?.text} notices={drawnOnly(notices, explainsOnly)} reading={latest?.reading}
                          calls={latest?.toolCalls}
-                         onFigure={(seq) => {
-                           setFocus(`${answers.length - 1}:${seq}`);
-                           setView('behind');
-                         }} />
+                         onFigure={showFigure} />
                 <ReadingNext reading={latest?.reading} />
                 {/* WHAT TO DO ABOUT ALL OF IT (P2.d) — the offers no row on a
                     figure could carry, beside `next`, where "what now" is read. */}
@@ -812,37 +759,18 @@ export default function Room() {
           </div>
 
           <div className="r-right">
-            {!empty && (
-              <div className="r-right-head">
-                {/* THE THREAD'S OWN HEADER (P2.a), beside the line describing
-                    the work (P1.k) — it describes the thread, not the answer. The
-                    four views are on trial: the design has no tabs, and they
-                    stay until the owner points. */}
-                <ThreadHeader view={view} kept={kept} state={keptState}
-                              onView={(to) => { setView(to); if (to !== 'behind') setFocus(null); }} />
-                {!busy && (
-                  <WorkLine turn={latest}
-                            onBehind={view === 'behind' ? undefined
-                              : () => { setView('behind'); setFocus(null); }} />
-                )}
-              </div>
-            )}
+            {/* NO HEADER OVER THE FIGURES (the log, 2026-09-17: "we also dont
+                need anything of these anymroe", of the kept-as line, the Talk /
+                Behind it / Replay / Page tabs and "2 reads · 4 tools · 2
+                caveats · behind it"). Every figure's receipts open in place
+                under it; a figure in his words scrolls to the figure. */}
             {/* WHAT HE NOTICED UNASKED, above the figures when there is any. */}
             <Noticed onLookInto={(item) => navigate(`/w/${item.thread_id}`, {
               state: { ask: 'what happened here? look into it.' },
             })} />
 
             <FiguresArea areaRef={areaRef}>
-              {view === 'behind' ? (
-                <BehindIt answers={answers} focus={focus}
-                          onBack={() => { setView('talk'); setFocus(null); }} />
-              ) : view === 'replay' ? (
-                <Replay turns={george.turns} onBack={() => setView('talk')} />
-              ) : view === 'page' ? (
-                <ThreadPage turns={george.turns} kept={kept}
-                            threadId={threadId ?? george.threadId ?? null}
-                            onKept={(page) => setJustKept({ pageId: page.id, title: page.title })} />
-              ) : empty ? null : (
+              {empty ? null : (
                 <>
                   {/* THREE RENDERINGS, NEVER TWO (UI rule 8). While he is
                       reading and nothing of this turn has landed, the figures

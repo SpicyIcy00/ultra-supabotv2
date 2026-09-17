@@ -102,6 +102,20 @@ export function useMoreBelow(ref: RefObject<HTMLElement | null>): boolean {
   return more;
 }
 
+/**
+ * A FIGURE IN HIS WORDS WAS TAPPED: scroll the figures area to the figure that
+ * read came out of and light its READ label for a moment. The door it used to
+ * open was Behind it, which went on 2026-09-17 at the owner's word.
+ */
+export function scrollToFigure(area: HTMLElement | null, turn: number, seq: number) {
+  const el = area?.querySelector<HTMLElement>(
+    `[data-figure][data-turn="${turn}"][data-seq="${seq}"]`);
+  if (!el) return;
+  el.scrollIntoView?.({ block: 'nearest', behavior: reducedMotion() ? 'auto' : 'smooth' });
+  el.setAttribute('data-flash', 'yes');
+  window.setTimeout(() => el.removeAttribute('data-flash'), 1400);
+}
+
 function boxOf(el: Element | null): Box | null {
   if (!el) return null;
   const r = el.getBoundingClientRect();

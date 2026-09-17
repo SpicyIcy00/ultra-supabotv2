@@ -262,13 +262,14 @@ describe('what is held above the line', () => {
     expect(chips.some((c) => c.includes('Greenhills'))).toBe(false);
   });
 
-  it('holds no chip above the line when only the board has names — only the hint', () => {
-    // P2S.1(h): with nothing picked, the design's one line says how to give the
-    // line something. A name the board is drawing is not a thing picked.
+  it('holds nothing above the line when nothing is picked — no chip and no hint', () => {
+    // A name the board is drawing is not a thing picked. And the hint that
+    // stood here went at the owner's word (2026-09-17): "we also dont need
+    // anything of these anymroe".
     mount({ subjects: [], drawn: ['Greenhills', 'Rockwell'] });
     expect(document.querySelectorAll('.r-chips button')).toHaveLength(0);
-    expect(document.querySelector('.r-refs-hint')?.textContent)
-      .toBe('tap anything above to bring it here, then say what you mean');
+    expect(document.querySelector('.r-refs-hint')).toBeNull();
+    expect(document.body.textContent).not.toMatch(/tap anything above/);
   });
 
   it('draws the read-as chips ON the line, beside send (P2S.1(h))', () => {

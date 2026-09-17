@@ -7113,18 +7113,10 @@ surface:
     # opens a row. That is what makes the whole of it safe to draw without a
     # receipt of its own.
     work:
-      # ONE DERIVED LINE ABOVE THE CLAIM, and the steps behind it — the shape
-      # Perplexity uses for sources. Four counts, no score, no colour: a turn
-      # that read four things is not better than one that read one, and the
-      # one colour means "needs you".
-      line:
-        counts: [reads, tools, time, caveats]
-        from: frames
-        never_a_figure: true
-        # A count nobody measured is omitted, never drawn as zero (UI rule 8).
-        # A turn stored before the clock existed has no `duration_ms`, and
-        # "0.0s" would be a measurement that was never taken.
-        omitted_when_unmeasured: [time]
+      # THE LINE ABOVE THE CLAIM, BEHIND IT AND REPLAY WENT ON 2026-09-17 at the
+      # owner's word ("we also dont need anything of these anymroe"). What stays
+      # is the live ladder while he works, and a figure in his words finding
+      # its read.
 
       # THE LIVE LADDER — one rung per call as it happens, with what came back
       # and how long it took, each opening its own receipts. No planner and no
@@ -7137,77 +7129,7 @@ surface:
         # work: drawing it would put a duration on the screen nobody spent.
         excludes: duplicate_calls
 
-      # BEHIND IT — every read of the THREAD with its receipts, as a view on
-      # the conversation rather than a panel under an answer.
-      behind_it:
-        scope: thread
-        per_read: [source_table, filters_applied, window, snapshot_timestamp,
-                   row_count, duration_ms]
-        # The one rule the view has. A person opening it asks where the numbers
-        # came from; the answer is the source, the definitions that filtered it
-        # and the moment it was read — never the call that fetched them.
-        never: [tool_names, tool_arguments, model_text]
-        # A filter is `<predicate>   # metrics.yaml: <key>`. The DEFINITION is
-        # the line and the predicate sits under it: the definition alone does
-        # not say which shops, and the predicate alone does not say which rule
-        # put them there. Split on the `#` the tools write — never by guessing
-        # which half reads as English.
-        filter_line: definition_then_predicate
-        # Three facts, three renderings (UI rule 8).
-        states: [landed, declined, receipts_not_kept]
-
-      # REPLAY — A FINISHED LADDER, WALKED (P2.e, 2026-09-15).
-      #
-      # The owner's feature 9 is that George decides where to look next. This
-      # is how that decision is audited afterwards: the steps of the thread in
-      # the order they ran, one at a time, each showing what came back.
-      #
-      # NOT THE SAME VIEW AS `behind_it`, and the difference is the question
-      # each answers. Behind it is the EVIDENCE — the reads, flat, with their
-      # receipts: "where did these numbers come from". Replay is the WORK —
-      # every step including the ones that read nothing: "what did he do, and
-      # what did he see".
-      #
-      # NOT THE SAME THING AS `surface.desk.replay` EITHER. That is the ACT of
-      # running one stored read again with one argument changed, which costs a
-      # query. This runs nothing at all.
-      replay:
-        scope: thread
-        # A rung is a STEP, not a read. A compose read nothing and a pin read
-        # nothing, and both are things he DID: an account that left them out
-        # would say the workspace arranged itself.
-        walks: every_step
-        per_step: [words, rows, receipts, duration_ms]
-        # The rows the record kept, DRAWN — not a count of them, which is
-        # what the work line and Behind it already show. Which columns a
-        # table of rows draws is one client-side decision shared with the
-        # board's own table (room/data.tableShape), so the walk cannot
-        # disagree with the screen it explains.
-        shows: rows
-        # NOTHING IS RUN AND NOTHING IS ASKED. No planner, no re-read, no
-        # model turn (architecture rule 5): every rung is off frames that
-        # already arrived, and on a reopened thread off george.tool_calls with
-        # the answer post's charted rows put back.
-        reruns_nothing: true
-        model_calls: 0
-        # Four facts, four renderings (UI rule 8). `rows_not_kept` is a read
-        # that landed whose rows the record did not keep — over the loop's row
-        # cap, or restored from a log that only ever held the summary — and it
-        # says so rather than drawing an emptiness it did not measure.
-        states: [landed, rows_not_kept, declined, running]
-        # A REFUSAL TRAVELS WHOLE, in the tool's own sentence, and draws no
-        # receipts: it has none.
-        refusal: the_tools_own_words
-        # Rows are figures and a figure carries its time (UI rule 6). A read
-        # whose record kept rows but no snapshot_timestamp has its rows
-        # WITHHELD and says so — the one place this view refuses to draw
-        # something it is holding.
-        rows_need: snapshot_timestamp
-        # The same rule Behind it has: an account of the work, never a
-        # transcript of the calls.
-        never: [tool_names, tool_arguments, model_text]
-
-      # A FIGURE IN THE CLAIM JUMPS TO ITS READ. Matched against the numbers
+      # A FIGURE IN THE CLAIM SCROLLS TO ITS FIGURE. Matched against the numbers
       # the turn's calls returned, by the rule agent/prose.py already uses; a
       # numeral no read holds is drawn exactly as he wrote it, with no mark.
       # This is not a check on the answer's arithmetic — CLAUDE.md rule 9

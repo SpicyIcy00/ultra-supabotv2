@@ -232,6 +232,22 @@ once changes the next answer. That is the card's own done-when.
 
 ## Fixed
 
+### 2026-09-17 — "we also dont need anything of these anymroe"
+
+> *"we also dont need anything of these anymroe"*
+
+Said with two screenshots: the line above the composer, *"tap anything above to
+bring it here, then say what you mean"*, and the thread header — *KEPT AS Estate
+Week · Talk · Behind it · Replay · Page* and *2 reads · 4 tools · 2 caveats ·
+behind it*.
+
+**Done the same day, and it is a removal of features, so what went is named.**
+The hint, the header, the four views and the work line are deleted with their
+code and tests (DECISIONS.md, same date). Lost: Replay, Behind it, and the Keep
+as page button — keeping a thread is by saying so to George. Each figure's
+receipts still open in place under it, and a figure in his words now scrolls to
+its figure. Seen in `verification/frames/noheader`. **Not verified by him.**
+
 ### 2026-09-17 — "why are these bars diiferent size depending on the size of the name?"
 
 > *"why are these bars diiferent size depending on the size of the name? shoudlbt it be standard ?"*

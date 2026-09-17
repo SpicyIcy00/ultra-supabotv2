@@ -1,15 +1,18 @@
 """
 Visible work, for free. P1.k (2026-09-14).
 
-Four things the frames already carried, drawn: the line above the claim, the
-Working line as a step list with a result and a duration per step, Behind it as
-a view on the thread, and a figure in the claim that jumps to its read.
+What the frames already carried, drawn: the Working line as a step list with a
+result and a duration per step, and a figure in the claim that finds its read.
+
+THE LINE ABOVE THE CLAIM AND BEHIND IT WENT ON 2026-09-17, at the owner's word
+("we also dont need anything of these anymroe"), with the Replay and Page views
+and the thread header. Every figure's receipts open in place under it, and a
+figure in his words scrolls to the figure it came from.
 
 WHAT THIS HOLDS.
 
-  1. The definitions. `surface.desk.work` names what each of the three
-     surfaces draws, says that none of it is a figure, and closes the list of
-     what Behind it may never show — tool names, arguments, model text.
+  1. The definitions. `surface.desk.work` names what a step carries and how
+     a figure in the claim is matched.
 
   2. It costs nothing. Every field these surfaces read is already on a frame
      the loop sends: `duration_ms` on the tool result, `duration_ms` on the
@@ -21,11 +24,6 @@ WHAT THIS HOLDS.
      the same numbers in the restatement gate, in the caveat slot and in the
      evals. A looser client would underline what the server calls ungrounded.
      The constants are compared here, in both files, by value.
-
-  4. Behind it shows no code. `never: [tool_names, tool_arguments, model_text]`
-     is grepped for in the component, because the obvious way to build this
-     view is a list of calls with their arguments, and that is the one thing
-     the view may not be.
 """
 
 from __future__ import annotations
@@ -44,7 +42,6 @@ _ROOM = _ROOT / "frontend" / "src" / "room"
 _WORK_TS = _ROOM / "work.ts"
 _FIGURES_TS = _ROOM / "figures.ts"
 _WORKING_TSX = _ROOM / "Working.tsx"
-_BEHIND_TSX = _ROOM / "BehindIt.tsx"
 _READING_TSX = _ROOM / "Reading.tsx"
 _ROOM_TSX = _ROOM / "Room.tsx"
 
@@ -54,74 +51,12 @@ WORK = DEFS["surface"]["desk"]["work"]
 
 # ----------------------------------------------------------------- 1. the yaml
 
-def test_the_line_counts_four_things_and_none_of_them_is_a_figure():
-    """
-    Reads, tools, time, caveats — counts of calls and a clock off the turn.
-
-    The line is the only account of the work that survives the turn, and the
-    thing it must never become is a score: four counts is not a rating, a turn
-    that read four things is not better than one that read one, and nothing in
-    it may be a business figure with no receipt.
-    """
-    line = WORK["line"]
-    assert line["counts"] == ["reads", "tools", "time", "caveats"]
-    assert line["from"] == "frames"
-    assert line["never_a_figure"] is True
-
-
-def test_an_unmeasured_count_is_omitted_rather_than_zeroed():
-    """UI rule 8: a turn stored before the clock has no duration, and `0.0s`
-    would be a measurement nobody took."""
-    assert WORK["line"]["omitted_when_unmeasured"] == ["time"]
-
-
 def test_a_step_carries_its_result_and_its_own_clock():
     steps = WORK["steps"]
     assert steps["per_step"] == ["words", "result", "duration_ms"]
     assert steps["opens"] == "receipts"
     # A read the loop served out of the turn's own record was not work.
     assert steps["excludes"] == "duplicate_calls"
-
-
-def test_behind_it_is_the_thread_and_carries_the_receipts():
-    behind = WORK["behind_it"]
-    assert behind["scope"] == "thread"
-    for field in ("source_table", "filters_applied", "snapshot_timestamp"):
-        assert field in behind["per_read"], (
-            f"the card's own done-when says every read shows source, filters "
-            f"and time; {field} is not in per_read"
-        )
-
-
-def test_behind_it_may_never_show_code():
-    """
-    The one rule the view has, and the obvious way to build it is the thing it
-    forbids: a list of calls with their arguments.
-    """
-    assert set(WORK["behind_it"]["never"]) == {"tool_names", "tool_arguments", "model_text"}
-
-
-def test_a_filter_is_split_on_the_hash_the_tools_write():
-    """
-    Never by guessing which half reads as English. Every `filters_applied`
-    entry is `<predicate>   # metrics.yaml: <key>`, and both halves are drawn:
-    the definition does not say which shops, the predicate does not say which
-    rule put them there.
-    """
-    assert WORK["behind_it"]["filter_line"] == "definition_then_predicate"
-    source = _WORK_TS.read_text(encoding="utf-8")
-    block = source[source.index("export function filtersOf"):]
-    assert 'indexOf(\'#\')' in block
-    assert "metrics\\.yaml" in block
-    # No heuristic: nothing in the splitter asks whether a string looks like
-    # SQL, which is the kind of invented rule that quietly drops receipts.
-    assert not re.search(r"looksLike|isSql|/[^/]*SELECT", block, re.I)
-
-
-def test_three_states_for_three_facts():
-    """A read that landed, one that was refused and one whose receipts the
-    record did not keep are not one another (UI rule 8)."""
-    assert WORK["behind_it"]["states"] == ["landed", "declined", "receipts_not_kept"]
 
 
 def test_an_unmatched_figure_is_drawn_as_he_wrote_it():
@@ -217,41 +152,29 @@ def test_a_figure_with_no_read_behind_it_gets_no_underline():
 
 # ------------------------------------------------------ 4. no code on screen
 
-def test_behind_it_draws_no_tool_name_and_no_argument():
-    """
-    The obvious build is `call.tool` and `call.arguments` in a list. Neither
-    appears: a read is drawn by what it IS in words, and its receipts are the
-    tool's own meta.
-    """
-    behind = _BEHIND_TSX.read_text(encoding="utf-8")
-    assert ".arguments" not in behind
-    assert "read.tool" not in behind and "{step.tool}" not in behind
-    # The words come from the one map every surface reads.
-    assert "read.words" in behind
-
-
 def test_the_work_surfaces_draw_no_model_text():
     """
     Nothing model-written appears in a mono line, which is the card's own
     done-when. The model's channels are `text`, `reading.claim`, `claim` and
     `note` on a block; none of them is read by either work surface.
     """
-    for path in (_WORK_TS, _WORKING_TSX, _BEHIND_TSX):
+    for path in (_WORK_TS, _WORKING_TSX):
         source = path.read_text(encoding="utf-8")
         for channel in ("turn.text", "reading.claim", ".note", "narration"):
             assert channel not in source, f"{path.name} draws {channel}"
 
 
-def test_the_room_draws_the_line_and_the_view():
+
+
+def test_the_views_that_went_stay_gone():
+    """2026-09-17, the owner: "we also dont need anything of these anymroe" —
+    the thread header, its four views and the work line. A file coming back is
+    a decision reversed without anybody making it."""
+    for gone in ("BehindIt.tsx", "Replay.tsx", "ThreadHeader.tsx", "ThreadPage.tsx"):
+        assert not (_ROOM / gone).exists(), f"{gone} is back"
     room = _ROOM_TSX.read_text(encoding="utf-8")
-    assert "<WorkLine" in room and "<BehindIt" in room
-    # The line sits in the thread's header, beside its tabs (P2S.1, NOW.md's
-    # audit table 2: "it describes the thread, not the answer"). Until the
-    # beside room it sat above the claim.
-    head = room.index('className="r-right-head"')
-    assert head < room.index("<ThreadHeader") < room.index("<WorkLine")
-    assert room.index("<WorkLine") < room.index("<FiguresArea")
-    # And a tapped figure opens the view at that read.
-    assert "onFigure" in room
-    reading = _READING_TSX.read_text(encoding="utf-8")
-    assert "placeFigures" in reading
+    for tag in ("<WorkLine", "<BehindIt", "<Replay", "<ThreadHeader", "<ThreadPage"):
+        assert tag not in room, f"Room.tsx draws {tag}"
+    # A figure in his words still finds its read — on the board now.
+    assert "onFigure={showFigure}" in room
+    assert "placeFigures" in _READING_TSX.read_text(encoding="utf-8")

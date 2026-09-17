@@ -19,9 +19,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { AnswerTurn } from './data';
 import { Reading } from './Reading';
-import { WorkLine, Working } from './Working';
-import { BehindIt } from './BehindIt';
-import recorded from './__fixtures__/recorded-runs.json';
+import { Working } from './Working';
 
 afterEach(cleanup);
 
@@ -104,80 +102,6 @@ describe('the steps, while he works', () => {
   });
 });
 
-describe('the line above the claim', () => {
-  it('is four counts off the turn, and the steps are one tap under it', () => {
-    const { container } = render(<WorkLine turn={WHY} />);
-    const line = container.querySelector('.r-workline-line') as HTMLElement;
-    expect(line.textContent).toBe('4 reads · 5 tools · 19.0s · 1 caveat');
-    expect(container.querySelector('.r-work-trail')).toBeNull();
-    fireEvent.click(line);
-    expect(container.querySelectorAll('.r-work').length).toBeGreaterThanOrEqual(5);
-  });
-
-  it('draws nothing for a turn that called nothing', () => {
-    // He answered from what he already had. "0 reads · 0 tools" would be a
-    // line about an absence.
-    const { container } = render(
-      <WorkLine turn={{ ...WHY, toolCalls: [] } as AnswerTurn} />);
-    expect(container.textContent).toBe('');
-  });
-
-  it('and the work line is what is left once the trail is gone', () => {
-    // The trail is live only; the line outlives the turn. Between them the
-    // work is on screen at every moment of it.
-    const { container } = render(<Working turn={WHY} live={false} />);
-    expect(container.textContent).toBe('');
-  });
-});
-
-describe('behind it', () => {
-  const THREAD = [WHY, { ...WHY, at: '2026-09-14T08:06:00Z' } as AnswerTurn];
-
-  it('lists every read of the thread with its source, its filters and its time', () => {
-    const { container } = render(<BehindIt answers={THREAD} onBack={() => {}} />);
-    const reads = container.querySelectorAll('.r-behind-read');
-    // Four reads per answer, twice; the compose is not a read.
-    expect(reads).toHaveLength(8);
-    for (const entry of Array.from(reads)) {
-      const text = entry.textContent ?? '';
-      expect(text).toContain('from new_transactions');
-      expect(text).toContain('filters cancelled');
-      expect(text).toMatch(/read .*Sep/);
-    }
-  });
-
-  it('shows no tool name and no argument anywhere in it', () => {
-    const { container } = render(<BehindIt answers={THREAD} onBack={() => {}} />);
-    const text = container.textContent ?? '';
-    expect(text).not.toContain('get_sales');
-    expect(text).not.toContain('date_range');
-    expect(text).toContain('read sales');
-  });
-
-  it('draws a refused read as refused, in the tool\'s own words', () => {
-    const refused = {
-      ...WHY,
-      toolCalls: [{
-        seq: 0, tool: 'get_sales', arguments: {},
-        result: {
-          row_count: null, source_table: null, truncated: false, duration_ms: 2,
-          error: 'this_month is still running; compare last_month instead.',
-        },
-      }],
-    } as AnswerTurn;
-    const { container } = render(<BehindIt answers={[refused]} onBack={() => {}} />);
-    expect(container.textContent).toContain('last_month instead');
-    // And it claims no receipts it does not have.
-    expect(container.textContent).not.toContain('from new_transactions');
-  });
-
-  it('says a thread has read nothing only from the list it holds', () => {
-    const { container } = render(
-      <BehindIt answers={[{ ...WHY, toolCalls: [] } as AnswerTurn]} onBack={() => {}} />);
-    expect(container.textContent).toContain('nothing has been read');
-  });
-});
-
 describe('a figure in the claim jumps to its read', () => {
   it('does not underline a figure of his that no read returned', () => {
     // ₱18,400 is the difference he worked out; no row of this turn holds it,
@@ -222,57 +146,4 @@ describe('a figure in the claim jumps to its read', () => {
  * line, every source table and every snapshot in them is a real read George
  * really made, and a view that holds over invented meta is a view that holds
  * over what I imagined a tool returns.
- */
-describe('behind it, over the runs that actually happened', () => {
-  const runs = (recorded as { runs: { question: string; calls: unknown[] }[] }).runs;
-
-  it('gives every read that landed a source, its filters and the time it was read', () => {
-    const answers = runs.map((run) => ({
-      role: 'george', text: run.question, thinking: '', at: '2026-09-14T08:00:00Z',
-      toolCalls: run.calls, notices: [], pinned: [], saved: [], pageChanges: [],
-    })) as unknown as AnswerTurn[];
-    const { container } = render(<BehindIt answers={answers} onBack={() => {}} />);
-    const reads = Array.from(container.querySelectorAll('.r-behind-read'));
-    expect(reads.length).toBe(runs.reduce((n, r) => n + r.calls.length, 0));
-    for (const entry of reads) {
-      const text = entry.textContent ?? '';
-      expect(text, text).toMatch(/from \w+/);
-      expect(text, text).toMatch(/read \w/);
-      expect(entry.querySelectorAll('.r-behind-filters li').length,
-             `no filters drawn: ${text}`).toBeGreaterThan(0);
-    }
-  });
-
-  it('puts the definition on the line and the predicate under it', () => {
-    // Where a tool named the definition it applied — 75 of the 79 filters in
-    // these runs — the line a person reads is that definition and the SQL sits
-    // beneath it. The other four are lines the tools wrote as words with no
-    // provenance at all ("brief written on 2026-09-14 (Asia/Manila)"), and
-    // those are drawn whole: there is no second half to promote, and dropping
-    // them would drop a receipt.
-    const answers = runs.map((run) => ({
-      role: 'george', text: run.question, thinking: '', at: '2026-09-14T08:00:00Z',
-      toolCalls: run.calls, notices: [], pinned: [], saved: [], pageChanges: [],
-    })) as unknown as AnswerTurn[];
-    const { container } = render(<BehindIt answers={answers} onBack={() => {}} />);
-    const entries = Array.from(container.querySelectorAll('.r-behind-filters li'));
-    const split = entries.filter((li) => li.querySelector('.r-src'));
-    expect(split.length).toBeGreaterThan(entries.length * 0.9);
-    for (const li of split) {
-      const label = li.querySelector('.r-behind-filter')?.textContent ?? '';
-      expect(label, label).not.toMatch(/[<>=(]|IS NULL/);
-      // And the predicate is kept, never dropped for being code.
-      expect((li.querySelector('.r-src')?.textContent ?? '').length).toBeGreaterThan(0);
-    }
-  });
-});
-
-/* ------------------------------------------------------------- the scan */
-
-/**
- * THE SCAN MOVED, AND IT GREW A MIRROR. "Nothing model-written in a mono line"
- * is P1.k's and is still enforced; it lives in `voices.dom.test.tsx` now,
- * beside the other direction P2.b added — nothing frame-derived in a prose
- * line. One file, two faces, both scanned off room.css, because the pair only
- * makes sense read together.
  */
