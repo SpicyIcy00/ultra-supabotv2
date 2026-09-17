@@ -40,3 +40,22 @@ stands for, by construction (`swatch.tsx`, and `RowName` in `marks.tsx`).
   an 8px dot before a name against the segment, bar or line — which is the
   design's own arrangement; nothing measured here says a reader cannot confuse
   them, and the owner looking at the frames is the check.
+
+## The stores' own colours, toned — 2026-09-17
+
+The owner: *"color mapping should be more like these colors but in our theme
+style"*, pointing at Supabot's Settings. A store's swatch now takes the colour
+set there (`stores.color`, matched by id), toned by `identity.toned`: hue kept,
+OKLCH lightness 0.60–0.66 and chroma 0.10–0.14 on the dark ground, 0.52–0.62
+and 0.10–0.15 on paper. The eight slots above remain the fallback for a store
+with no colour set. Every run is in `stores.txt`.
+
+**Toned, they pass the lightness band, the chroma floor, the normal-vision
+floor and contrast on both grounds. They FAIL colour-blind separation, and so
+do his raw colours:** OPUS teal (`#14b8a6`) against Shangri-La pink
+(`#ec4899`) is ΔE 3.7 under deuteranopia raw and 1.2–1.3 toned — toning cannot
+separate two hues a deutan sees as one, and changing a hue would no longer be
+his colour. The validator's required relief is secondary encoding, and it is
+there by construction: a swatch is never drawn without the store's name beside
+it. Recorded rather than silently re-coloured; if the pair ever confuses him,
+the fix is one colour in Settings.

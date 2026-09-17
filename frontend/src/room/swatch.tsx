@@ -12,7 +12,7 @@
  */
 import { createContext, useContext, type CSSProperties } from 'react';
 import type { Dimension } from './data';
-import { NO_IDENTITIES, hueFor, slotColour, slotFor, type Identities } from './identity';
+import { NO_IDENTITIES, hueFor, slotColour, slotFor, storeColour, type Identities } from './identity';
 
 export const IdentityContext = createContext<Identities>(NO_IDENTITIES);
 
@@ -27,9 +27,15 @@ export function Swatch({ name, dimension }: {
   const ids = useIdentities();
   const slot = slotFor(ids, name, dimension);
   if (!slot) return null;
+  // HIS COLOUR WHERE HE SET ONE, toned per ground; the palette slot otherwise.
+  const own = storeColour(ids, name, dimension);
   return (
     <i className="r-sw" aria-hidden="true" data-slot={slot} data-identity={name ?? ''}
-       style={{ '--sw': slotColour(slot) } as CSSProperties} />
+       data-colour={own ? 'set' : 'slot'}
+       style={{
+         '--sw-dark': own ? own.dark : slotColour(slot),
+         '--sw-light': own ? own.light : slotColour(slot),
+       } as CSSProperties} />
   );
 }
 

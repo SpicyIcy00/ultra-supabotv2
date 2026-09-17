@@ -160,7 +160,7 @@ const COLOUR_ALLOWED: Record<(typeof DATA_TOKENS)[number], Record<string, string
  * an OPENED object, alone on screen, named in its own heading. Everything else
  * reads its name off a title and a row label, which it always could.
  */
-const IDENTITY = /\bhueFor\b|var\(\s*--hue\s*\)|'--hue'|--c-\d|'--sw'|\bslotColour\b|var\(\s*--sw\s*\)/;
+const IDENTITY = /\bhueFor\b|var\(\s*--hue\s*\)|'--hue'|--c-\d|'--sw-(dark|light)'|\bslotColour\b|\btoned\b|var\(\s*--sw-(dark|light)\s*\)/;
 
 /*
  * AND SINCE P2S.2(e), THE SWATCH. The owner asked for identity back — *"ok

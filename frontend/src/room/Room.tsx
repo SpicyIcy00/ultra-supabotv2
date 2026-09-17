@@ -27,6 +27,7 @@ import { FiguresArea, Wires } from './FiguresArea';
 import { AliveMark } from './AliveMark';
 import { markStateOf } from './alive';
 import { identitiesFrom } from './identity';
+import { readStoreAppearance } from '../services/storesApi';
 import { IdentityContext } from './swatch';
 import { ExplainsOnlyContext, drawnOnly, explainsOnlyFrom } from './noticeDrawing';
 import { Reading, ReadingNext } from './Reading';
@@ -359,7 +360,16 @@ export default function Room() {
   const scoped = useMemo(() => estateFor(desk.data, estate), [desk.data, estate]);
   // WHICH HUE EACH STORE IS (P2S.2(e)): its place in `stores.active_retail`,
   // as served. Nothing until the definitions load — no swatch is guessed.
-  const identities = useMemo(() => identitiesFrom(desk.data), [desk.data]);
+  // AND EACH STORE'S OWN COLOUR, as Settings saved it — the one every other
+  // Supabot chart already draws. Unloaded or failed, the palette slot stands in.
+  const storeRecords = useQuery({
+    queryKey: ['store-appearance'],
+    queryFn: readStoreAppearance,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const identities = useMemo(() => identitiesFrom(desk.data, storeRecords.data),
+    [desk.data, storeRecords.data]);
   // WHICH NOTICES ARE DRAWN (UI rule 4, 2026-09-17): not the ones that only
   // explain how a figure was measured. Everything, until the definitions load.
   const explainsOnly = useMemo(() => explainsOnlyFrom(desk.data), [desk.data]);

@@ -83,7 +83,7 @@ function identityDrawn(container: HTMLElement): string[] {
   for (const el of container.querySelectorAll<HTMLElement>('[style]')) {
     const style = (el.getAttribute('style') ?? '').replace(/\s+/g, ' ');
     const where = `${el.tagName.toLowerCase()}.${el.className || '—'}`;
-    if (/--c-\d|--sw\s*:/.test(style) && !el.classList.contains('r-sw')) found.push(`a slot on ${where}`);
+    if (/--c-\d|--sw-(dark|light)\s*:/.test(style) && !el.classList.contains('r-sw')) found.push(`a slot on ${where}`);
     if (/--hue\s*:/.test(style)) found.push(`--hue set on ${where}`);
   }
   return found;

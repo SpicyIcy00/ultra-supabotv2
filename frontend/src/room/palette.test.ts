@@ -190,7 +190,7 @@ describe('the data palette', () => {
     SHEET.walkRules((r) => {
       r.walkDecls((decl) => {
         if (/^--c-\d$/.test(decl.prop)) return; // the tokens themselves
-        if (/var\(\s*--(sw|c-\d)\s*\)/.test(decl.value)) wearing.push(r.selector.trim());
+        if (/var\(\s*--(sw-dark|sw-light|ring|c-\d)\s*\)/.test(decl.value)) wearing.push(r.selector.trim());
       });
     });
     expect(wearing.length).toBeGreaterThan(0);

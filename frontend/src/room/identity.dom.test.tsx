@@ -15,7 +15,7 @@ import type { AnswerTurn } from './data';
 import type { BoardObject } from './board';
 import type { TileActions } from './tiles';
 import { Board } from './render';
-import { NO_IDENTITIES, PRODUCT_SLOTS, SLOTS, identitiesFrom, slotFor } from './identity';
+import { NO_IDENTITIES, PRODUCT_SLOTS, SLOTS, identitiesFrom, slotFor, storeColour, toned } from './identity';
 import { IdentityContext } from './swatch';
 
 vi.mock('./ObjectPanel', () => ({ ObjectPanel: () => null, kindOf: () => null }));
@@ -72,6 +72,64 @@ describe('the slot', () => {
       expect(PRODUCT_SLOTS).toContain(slot);
       expect(slotFor(IDS, name.toUpperCase(), 'product')).toBe(slot);
     }
+  });
+});
+
+describe("his own colour, from Settings (the dogfood log, 2026-09-17)", () => {
+  // What `/analytics/stores` serves: Settings' names (it says "Opus") and colours.
+  const RECORDS = [
+    { id: 'a', color: '#ef4444' },      // Rockwell, red
+    { id: 'd', color: '#14b8a6' },      // "Opus" in Settings, teal
+    { id: 'c', color: null },           // Greenhills, never set
+  ];
+  const OWN = identitiesFrom({ locations: LOCATIONS }, RECORDS);
+
+  it('matches a colour to a store by id, not by the name Settings uses', () => {
+    expect(OWN.colours?.['rockwell']).toBe('#ef4444');
+    expect(OWN.colours?.['opus']).toBe('#14b8a6');
+    expect(OWN.colours?.['greenhills']).toBeUndefined();
+  });
+
+  it('keeps his hue and tones it for each ground, into the validated band', () => {
+    const own = storeColour(OWN, 'Rockwell', 'store')!;
+    expect(own.dark).toMatch(/^#[0-9a-f]{6}$/);
+    expect(own.light).toMatch(/^#[0-9a-f]{6}$/);
+    expect(own.dark).not.toBe('#ef4444');
+    // Still red: the red channel leads on both grounds.
+    for (const hex of [own.dark, own.light]) {
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+      expect(r).toBeGreaterThan(g);
+      expect(r).toBeGreaterThan(b);
+    }
+  });
+
+  it('tones his seven exactly as ops/palette/stores.txt validated them', () => {
+    const raw = ['#ef4444', '#8b5cf6', '#22c55e', '#3b82f6', '#f1c40f', '#14b8a6', '#ec4899'];
+    expect(raw.map((h) => toned(h, 'dark')).join(','))
+      .toBe('#d3655e,#866fcd,#48a962,#5286da,#af8f15,#1ba898,#d16996');
+    expect(raw.map((h) => toned(h, 'light')).join(','))
+      .toBe('#d15c56,#866dd3,#309e52,#4d84df,#a18308,#119b8c,#c95a8c');
+  });
+
+  it("draws the dot in his colour where he set one, and the palette slot where he did not", () => {
+    const turn = {
+      role: 'george', text: '', thinking: '', at: '2026-09-17T00:41:00Z',
+      toolCalls: [{ seq: 1, tool: 'get_sales', arguments: {}, result: {
+        rows: [{ store: 'Rockwell', value: 1, unit: 'PHP' }, { store: 'Greenhills', value: 2, unit: 'PHP' }],
+        meta: META } }],
+    } as unknown as AnswerTurn;
+    const o = { key: 'r', kind: 'ranked', seq: 1, tool: 'get_sales', weight: 'lead', turn: 0, touched: 0 } as unknown as BoardObject;
+    const { container } = render(
+      <IdentityContext.Provider value={OWN}>
+        <Board answers={[turn]} board={[o]} local={{}} focused={null} selection={[]} live={false} retuned={{}} on={on} />
+      </IdentityContext.Provider>,
+    );
+    const rockwell = container.querySelector('.r-sw[data-identity="Rockwell"]') as HTMLElement;
+    const greenhills = container.querySelector('.r-sw[data-identity="Greenhills"]') as HTMLElement;
+    expect(rockwell.dataset.colour).toBe('set');
+    expect(rockwell.style.getPropertyValue('--sw-dark')).toBe(storeColour(OWN, 'Rockwell', 'store')!.dark);
+    expect(greenhills.dataset.colour).toBe('slot');
+    expect(greenhills.style.getPropertyValue('--sw-dark')).toBe('var(--c-3)');
   });
 });
 

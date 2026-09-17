@@ -1384,10 +1384,16 @@
   display: inline-block; flex: none;
   width: 8px; height: 8px; border-radius: 50%;
   margin: 0 7px 1px 0; vertical-align: middle;
-  background: var(--sw);
+  background: var(--sw-dark);
+  --ring: var(--sw-dark);
 }
+/* ON PAPER, THE LIGHT TONE — the same two scopes every light token uses. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-room-theme="dark"]) .room .r-sw { background: var(--sw-light); --ring: var(--sw-light); }
+}
+:root[data-room-theme="light"] .room .r-sw { background: var(--sw-light); --ring: var(--sw-light); }
 .r-mk[data-emphasis="yes"] .r-mk-row[data-lit="yes"] .r-sw {
-  box-shadow: 0 0 0 2px var(--ground), 0 0 0 3px var(--sw);
+  box-shadow: 0 0 0 2px var(--ground), 0 0 0 3px var(--ring);
 }
 .r-mk-series { display: inline-flex; align-items: center; color: var(--ink-2); }
 

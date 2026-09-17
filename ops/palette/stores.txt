@@ -1,0 +1,42 @@
+Store colours as set in Settings (stores.color), read 2026-09-17, in stores.active_retail order:
+Rockwell #ef4444, Fairview #8b5cf6, Greenhills #22c55e, North Edsa #3b82f6, Magnolia #f1c40f, OPUS #14b8a6, Shangri-La #ec4899
+
+== raw, dark
+
+Palette (dark, surface #0f1011, categorical): 7 slots
+  [FAIL] Lightness band         outside band: [["#22c55e",0.723],["#f1c40f",0.836],["#14b8a6",0.704]]
+  [PASS] Chroma floor           all 7 >= 0.1
+  [FAIL] CVD separation         worst adjacent #ec4899↔#14b8a6 ΔE 3.7 (deutan) · tritan 10.7
+  [PASS] Normal-vision floor    worst adjacent #14b8a6↔#f1c40f ΔE 24.8 (normal)
+  [PASS] Contrast vs surface    all 7 >= 3:1
+
+  → FAILED — fix the marked checks  (CVD in the 6–8 floor band is legal ONLY with secondary encoding: direct labels, gaps, or texture)
+  scope: categorical palettes only. For a lone status/text color check WCAG text contrast; for a sequential ramp, lightness monotonicity.
+
+exit 1
+== toned (identity.toned, dark band), dark
+
+Palette (dark, surface #0f1011, categorical): 7 slots
+  [PASS] Lightness band         all 7 inside L 0.48–0.67
+  [PASS] Chroma floor           all 7 >= 0.1
+  [FAIL] CVD separation         worst adjacent #d16996↔#1ba898 ΔE 1.2 (deutan) · tritan 5.3
+  [PASS] Normal-vision floor    worst adjacent #1ba898↔#af8f15 ΔE 17.3 (normal)
+  [PASS] Contrast vs surface    all 7 >= 3:1
+
+  → FAILED — fix the marked checks  (CVD in the 6–8 floor band is legal ONLY with secondary encoding: direct labels, gaps, or texture)
+  scope: categorical palettes only. For a lone status/text color check WCAG text contrast; for a sequential ramp, lightness monotonicity.
+
+exit 1
+== toned (light band), light
+
+Palette (light, surface #f7f8f8, categorical): 7 slots
+  [PASS] Lightness band         all 7 inside L 0.43–0.77
+  [PASS] Chroma floor           all 7 >= 0.1
+  [FAIL] CVD separation         worst adjacent #c95a8c↔#119b8c ΔE 1.3 (deutan) · tritan 4.4
+  [PASS] Normal-vision floor    worst adjacent #119b8c↔#a18308 ΔE 16.6 (normal)
+  [PASS] Contrast vs surface    all 7 >= 3:1
+
+  → FAILED — fix the marked checks  (CVD in the 6–8 floor band is legal ONLY with secondary encoding: direct labels, gaps, or texture)
+  scope: categorical palettes only. For a lone status/text color check WCAG text contrast; for a sequential ramp, lightness monotonicity.
+
+exit 1
