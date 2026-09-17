@@ -2783,6 +2783,15 @@ cleanup; he decides.
       the compose grammar, so **eval: subset**. `ops/DECISIONS.md`: P1.f closed
       the catalogue at six on purpose; this reopens it on purpose, with the
       rule that decides unasked.
+      **AND A THOUGHT ON EVERY CHART (the owner, 2026-09-17: *"more text of what
+      george thinks should be integrated on the charts so when you see the
+      visual and you here his thought you can get a good picture of whats
+      happening"*).** A block's `claim` is "a few words, no digits" (P1.f), and a
+      read he did not compose carries none, so the `speak` layout can only place
+      the thought he already wrote. This card lets a block carry a sentence of
+      his reading — what the chart shows and what it means — drawn beside the
+      mark, and gives every drawn read one. It changes what he writes, so it
+      rides this card's subset run.
       **(g) one renderer for a kept page — was P2.k, merged 2026-09-17.** His
       words, 2026-09-15: *"it doesnt feel like its from the same app and its
       beacause its not, so make it."* A kept page is still drawn by
