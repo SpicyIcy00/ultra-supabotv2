@@ -57,6 +57,51 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-17 — "its not using any new charts or displays, does it know it has access to those stuff now?"
+
+> *"and also its not using any new charts or displays, does it know it has
+> access to those stuff now?"*
+
+Said of the live build `634423e`, the evening P2S.3 shipped.
+
+**Checked against his own turns, read-only from `george.posts`.** Since the deploy
+he answered *"make me a store dashboard"* with four reads, **all
+`get_sales(group_by='store')`**, drawn as dumbbell, contributors, contributors,
+dumbbell; and *"how are we doing"* with three store reads, drawn as contributors,
+dumbbell, dumbbell. Given those reads, those are the right shapes by the new rules —
+a compared set of shops IS a dumbbell. **So yes, he knows the shapes, and no, he
+never gets to use them:** they are listed on the `compose` tool, which he reads
+AFTER choosing what to read, and his instructions steer every broad question to
+the same read — *"net_sales, transaction_count, average_transaction_value grouped
+by store over a closed window, compared"*. A heatmap needs a read by store AND
+hour, a calendar a read by day, a stacked bar store by category; nothing tells
+him a dashboard (or a question about when / what it is made of / the rhythm of
+the weeks) wants reads of those shapes. The P2S.3 gate saw the same: no new shape
+unasked on four questions. **Not fixed.** The fix changes what he reads, so it is
+the prompt (at 1,797 of 1,800 words) or the read-side tool descriptions, and it
+needs a gate run — it is a card, not a same-day fix.
+
+### 2026-09-17 — "down arrow should be in the center of the charts"
+
+> *"and down arrow should be in the center of the charts."*
+
+Said with a crop of the figures area's down arrow. It is drawn at the area's
+right edge (`.r-arr { right: -6px }`, P2S.1, copied from the design's
+`arrows()`); he wants it centred under the charts. **Not fixed**; a CSS change
+to `.r-arr` in `room.css`, minutes.
+
+### 2026-09-17 — "this stays its not closeable"
+
+> *"That change cannot be made to this read. The figures have not moved. why"
+> — and this stays its not closeable.*
+
+Said with a crop of the line under the message box. It is the refused-replay
+line (`refusalForPerson`, drawn by `Composer` from `Room`'s `refusal`). It is
+cleared only by asking a question, starting another replay or opening another
+thread (`setRefusal(null)` in `Room.tsx`) — there is no way to dismiss it, so a
+refused chip or fragment leaves it under every later look at the board. **Not
+fixed**; a close control and clearing it when the board changes, under an hour.
+
 ### 2026-09-17 — "why is there 2 thinkings it should only be around the blob"
 
 > *"also why is there 2 thinkings it should only be around the blob and should
