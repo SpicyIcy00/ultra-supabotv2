@@ -746,6 +746,7 @@ export function SpecTile(p: TileProps) {
           hours sat on the board unlabelled, and the reader had to open the
           receipts to learn what the dots were. */}
       <p className="r-label">{specLabel(call)}{p.earlier ? ' · from earlier' : ''}</p>
+      {p.o.thought?.trim() && <p className="r-mk-thought">{p.o.thought.trim()}</p>}
       <div style={{ marginTop: 10 }}>
         <Spec node={p.o.spec} turn={p.turn} retuned={{}} />
       </div>

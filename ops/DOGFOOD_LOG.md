@@ -57,6 +57,18 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-17 — found by the session: a product chart names every row after its shop
+
+Not reported by the owner; seen in the frames of the recorded gate turns
+(`verification/frames/thoughts`). A ranked chart over `get_replenishment` rows
+labels all fifteen rows **"Greenhills"**, and one over `get_attention` labels its
+rows **"AJI BARN"** — the rows are products, each carrying the shop it is in.
+`data.subjectOf` looks for `store` before `product`, so any row that carries both
+is named after the shop. The bars and figures are right; the names are wrong,
+and so would be the swatches, a tap to pick, and `why` on that row. **Not fixed**:
+the fix is the dimension a read is grouped by (its `group_by`, or the tool's own
+subject column) deciding which column names the row, and it touches every mark.
+
 ### 2026-09-17 — "we need more text with each chart if needed explaination with the visuals"
 
 > *"the text should reach the end of the alive where it can move not its

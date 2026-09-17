@@ -32,7 +32,7 @@ import { identitiesFrom } from './identity';
 import { readStoreAppearance } from '../services/storesApi';
 import { IdentityContext } from './swatch';
 import { ExplainsOnlyContext, drawnOnly, explainsOnlyFrom } from './noticeDrawing';
-import { Narration, Reading, ReadingNext } from './Reading';
+import { Narration, Reading, ReadingAsks, ReadingNext } from './Reading';
 import { FootOffers } from './FootOffers';
 import { offersOf, placement } from './actions';
 import { usePagesForGhosts } from './ghosts';
@@ -760,6 +760,7 @@ export default function Room() {
                     one tap away, never gone. See Reading.tsx. */}
                 <Reading part="claim" text={latest?.text} notices={drawnOnly(notices, explainsOnly)}
                          reading={latest?.reading} calls={latest?.toolCalls} onFigure={showFigure} />
+                <ReadingAsks reading={latest?.reading} busy={busy} onAsk={(q) => ask(q)} />
                 <ReadingNext reading={latest?.reading} />
                 {!busy && (latest?.reading?.caveat?.trim() || thoughts?.unbound) && (
                   <div className="r-more-said">

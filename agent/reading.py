@@ -57,6 +57,8 @@ from agent import prose as _prose
 
 #: The order they are read in, and the order they are drawn in.
 SLOTS = ("claim", "caveat", "next")
+#: The questions he suggests asking next — a list beside the slots, not one of them.
+ASKS = "asks"
 
 #: The only value `figures` takes: a figure this turn's reads returned, and no
 #: other. A slot declaring anything else is a definition nobody implemented,
@@ -146,6 +148,8 @@ def validate(submitted: Any, defs: Mapping[str, Any],
         return accepted, [{"slot": None, "reason": "the reading is three named slots"}]
 
     for name in submitted:
+        if name == ASKS:
+            continue
         if name not in spec:
             rejected.append({
                 "slot": str(name),
@@ -169,7 +173,48 @@ def validate(submitted: Any, defs: Mapping[str, Any],
             # log all over again.
             rejected.append({"slot": name, "reason": str(why),
                              "said": _shorten(submitted[name])})
+    if ASKS in submitted:
+        asks, refused = _asks(submitted[ASKS], _reading(defs).get(ASKS) or {},
+                              returned, presentation)
+        if asks:
+            accepted[ASKS] = asks
+        rejected.extend(refused)
     return accepted, rejected
+
+
+def _asks(value: Any, spec: Mapping[str, Any], returned: set[float],
+          presentation: int) -> tuple[list[str], list[dict]]:
+    """
+    THE QUESTIONS HE SUGGESTS (2026-09-17): up to `max_items`, each held to the
+    slot rule — bounded, and no figure a read did not return. One that fails is
+    dropped with its reason and the rest stand, as a slot does.
+    """
+    if not spec:
+        return [], [{"slot": ASKS, "reason": "voice.reading.asks is not defined"}]
+    if not isinstance(value, list):
+        return [], [{"slot": ASKS, "reason": "asks is a short list of questions",
+                     "said": _shorten(value)}]
+    accepted: list[str] = []
+    rejected: list[dict] = []
+    most = int(spec.get("max_items") or 3)
+    for item in value:
+        try:
+            text = _check(ASKS, item, spec, returned, presentation)
+        except Rejected as why:
+            rejected.append({"slot": ASKS, "reason": str(why), "said": _shorten(item)})
+            continue
+        if len(accepted) >= most:
+            rejected.append({"slot": ASKS, "reason": f"at most {most} questions",
+                             "said": _shorten(item)})
+            continue
+        accepted.append(text)
+    return accepted, rejected
+
+
+def check_sentence(name: str, value: Any, spec: Mapping[str, Any],
+                   returned: set[float], defs: Mapping[str, Any]) -> str:
+    """A sentence held to a slot's rule, for a field outside the reading (a block's thought)."""
+    return _check(name, value, spec, returned, presentation_max(defs))
 
 
 def _shorten(value: Any) -> str:

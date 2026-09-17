@@ -54,6 +54,8 @@ export interface BoardObject {
   subjects?: string[];
   /** The few words titling it — George's claim about what it says. */
   claim?: Block['claim'];
+  /** What he thinks it shows, drawn beside the mark (2026-09-17). */
+  thought?: Block['thought'];
   form?: Block['form'];
   label?: Block['label'];
   action?: Block['action'];
@@ -94,7 +96,7 @@ export interface Local {
 
 const FIELDS = ['kind', 'weight', 'seq', 'tool', 'subject', 'subjects', 'form',
                 'label', 'action', 'argument', 'spec', 'seqs', 'claim',
-                'emphasise', 'note'] as const;
+                'emphasise', 'note', 'thought'] as const;
 
 function carried(edit: Block): Partial<BoardObject> {
   const out: Record<string, unknown> = {};
@@ -621,7 +623,7 @@ export function shapedByReplay(
   shapes: Record<string, Block[]>,
 ): BoardObject[] {
   if (!Object.keys(shapes).length) return board;
-  const SAID = ['claim', 'note', 'emphasise', 'label', 'form', 'action', 'argument'] as const;
+  const SAID = ['claim', 'note', 'thought', 'emphasise', 'label', 'form', 'action', 'argument'] as const;
   return board.map((o) => {
     if (o.seq === undefined) return o;
     const blocks = shapes[`${o.turn}:${o.seq}`];

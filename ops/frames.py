@@ -82,7 +82,10 @@ CHROME_CANDIDATES = [
     Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
 ]
 
-SCENE_OF = {"situation": "follow-up", "doing": "vague", "nothing": "caveats", "draw": "taught"}
+SCENE_OF = {"situation": "follow-up", "doing": "vague", "nothing": "caveats", "draw": "taught",
+            # A gate run records George's compose call, so these draw HIS
+            # blocks, thoughts and questions (2026-09-17).
+            "low": "caveats", "morning": "morning"}
 # A scene no eval report has ever recorded, drawn from a checked-in fixture
 # that says in its own `why` where its rows came from (P2S.2).
 FIXTURE_OF = {"memory": ROOT / "ops" / "frames_fixtures" / "memory.json",
@@ -138,7 +141,19 @@ def build_scenes(report_path: Path, scenes: list[str]) -> dict[str, Any]:
             calls.append({"seq": seq, "tool": r.get("tool"),
                           "arguments": r.get("arguments") or {},
                           "result": {"rows": rows, "meta": meta}})
+        # GEORGE'S OWN COMPOSITION, where the report kept his compose call: his
+        # blocks (with their claims and thoughts) and his reading (with its
+        # asks). A report that kept none draws the loop's default board.
+        composes = [x for x in (case.get("calls") or [])
+                    if isinstance(x, dict) and x.get("tool") == "compose"]
+        composed = [dict(b) for b in ((composes[0].get("arguments") or {}).get("blocks") or [])
+                    if composes and b.get("kind") and b.get("seq") is not None] if composes else []
+        for b in composed:
+            b.pop("subject", None) if b.get("kind") != "figure" else None
+        said = ((composes[-1].get("arguments") or {}).get("reading") if composes else None)
         out.append({
+            **({"composed": composed} if composed else {}),
+            **({"reading": said} if said else {}),
             "scene": scene,
             "from": f"{report_path.name}/{scenario}",
             "question": case.get("question") or "",

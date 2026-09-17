@@ -270,17 +270,25 @@ def test_a_pin_and_a_workflow_can_never_hold_a_reading():
         validate_call({"tool": george_loop.COMPOSE_TOOL, "arguments": {"reading": {}}})
 
 
-def test_the_schema_has_no_field_but_the_three_slots():
+def test_the_schema_has_no_field_but_the_three_slots_and_the_asks():
     schema = next(t for t in george_loop.build_tool_schemas()
                   if t["name"] == george_loop.COMPOSE_TOOL)
     said = schema["input_schema"]["properties"]["reading"]
-    assert set(said["properties"]) == set(reading.SLOTS)
+    # The three slots, and since 2026-09-17 the questions he suggests asking
+    # next — a bounded list beside them ("under the blob is the main headline
+    # and question suggestions").
+    assert set(said["properties"]) == set(reading.SLOTS) | {reading.ASKS}
     assert said["additionalProperties"] is False
     # Bounded in the schema as well as in the validator, so the model is told
     # the length rather than refused for it.
-    for name, spec in said["properties"].items():
+    for name in reading.SLOTS:
+        spec = said["properties"][name]
         assert spec["type"] == "string"
         assert spec["maxLength"] == _DEFS["voice"]["reading"]["slots"][name]["max_length"]
+    asks = said["properties"][reading.ASKS]
+    assert asks["type"] == "array"
+    assert asks["maxItems"] == _DEFS["voice"]["reading"]["asks"]["max_items"]
+    assert asks["items"]["maxLength"] == _DEFS["voice"]["reading"]["asks"]["max_length"]
 
 
 # ---------------------------------------------------------------------------

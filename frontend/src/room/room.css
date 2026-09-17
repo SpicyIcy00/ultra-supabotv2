@@ -562,6 +562,17 @@
 .r-words > * { flex: none; }
 .r-words[data-more-down="yes"] { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent); }
 
+/* THE QUESTIONS HE SUGGESTS, under the headline — his words, a tap each. No
+   accent (UI rule 5): a suggestion is not something that needs you. */
+.r-asks { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.r-ask {
+  background: none; border: 1px solid var(--edge); border-radius: 999px;
+  padding: 5px 12px; cursor: pointer; text-align: right; max-width: 42ch;
+  font: 400 13.5px/1.35 var(--serif); color: var(--ink-2);
+}
+.r-ask:hover, .r-ask:focus-visible { border-color: var(--edge-strong); color: var(--ink); }
+@media (max-width: 900px) { .r-asks { align-items: flex-start; } .r-ask { text-align: left; } }
+
 /* THE REST OF WHAT HE SAID, one tap away under the headline and next. */
 .r-more-said { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
 .r-more-said-toggle {
@@ -1358,6 +1369,10 @@
   color: var(--ink-2);
   margin: 0 0 12px;
   max-width: 60ch;
+}
+.r-mk-thought {
+  font: 400 15px/1.5 var(--serif); color: var(--ink-2);
+  margin: -4px 0 14px; max-width: 62ch;
 }
 .r-mk-sub {
   font: 400 10px/1.5 var(--mono);

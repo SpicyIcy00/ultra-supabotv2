@@ -423,6 +423,12 @@ export interface CompositionBlock {
    */
   claim?: string;
   note?: string;
+  /**
+   * WHAT HE THINKS THIS BLOCK SHOWS (2026-09-17): a sentence or two, drawn
+   * beside the mark. Held server-side to the reading's rule — a figure only
+   * when a read this turn returned it (metrics.yaml composition.thought).
+   */
+  thought?: string;
 }
 
 /** One node of a composed shape: a layout that arranges, or a mark that draws. */
@@ -495,6 +501,8 @@ export interface ReadingFrame {
   caveat?: string;
   /** One sentence: the one thing to do or check. Never carries a digit. */
   next?: string;
+  /** Up to three questions he suggests asking next, drawn to tap (2026-09-17). */
+  asks?: string[];
 }
 
 /**

@@ -93,3 +93,43 @@ describe('the headline apart from the rest', () => {
     expect(container.textContent).toContain('That is the whole of it.');
   });
 });
+
+describe('a thought George writes for a chart (2026-09-17)', () => {
+  it('draws it beside the mark, in his words', () => {
+    const turn = { role: 'george', text: 'OPUS fell.', thinking: '', at: '2026-09-17T06:20:00Z', toolCalls: CALLS } as unknown as AnswerTurn;
+    const board = [{
+      key: 'sales', kind: 'dumbbell', seq: 0, tool: 'get_sales', weight: 'lead', turn: 0, touched: 0,
+      claim: 'OPUS gave up the estate',
+      thought: 'OPUS dropped to ₱467,102 while Rockwell held — the fall is one shop, not the estate.',
+    }] as unknown as BoardObject[];
+    const on: TileActions = { open: vi.fn(), pick: vi.fn(), why: vi.fn(), patch: vi.fn(), retune: vi.fn() };
+    const { container } = render(
+      <Board answers={[turn]} board={board} local={{}} focused={null} selection={[]} live={false} retuned={{}} on={on} />,
+    );
+    const thought = container.querySelector('[data-figure="sales"] .r-mk-thought');
+    expect(thought?.textContent).toContain('the fall is one shop, not the estate');
+    expect(thought?.textContent).toContain('₱467,102');
+  });
+});
+
+describe('the questions he suggests, under the headline (2026-09-17)', () => {
+  it('draws each as a tap that asks it', async () => {
+    const { ReadingAsks } = await import('./Reading');
+    const onAsk = vi.fn();
+    const { container } = render(
+      <ReadingAsks busy={false} onAsk={onAsk}
+                   reading={{ asks: ['Which products fell at OPUS?', 'What about Greenhills?'] } as never} />,
+    );
+    const buttons = container.querySelectorAll('.r-ask');
+    expect([...buttons].map((b) => b.textContent)).toEqual(['Which products fell at OPUS?', 'What about Greenhills?']);
+    (buttons[1] as HTMLButtonElement).click();
+    expect(onAsk).toHaveBeenCalledWith('What about Greenhills?');
+  });
+
+  it('draws none while he works, or where he suggested none', async () => {
+    const { ReadingAsks } = await import('./Reading');
+    expect(render(<ReadingAsks busy onAsk={vi.fn()} reading={{ asks: ['x?'] } as never} />).container.firstChild).toBeNull();
+    cleanup();
+    expect(render(<ReadingAsks busy={false} onAsk={vi.fn()} reading={{} as never} />).container.firstChild).toBeNull();
+  });
+});

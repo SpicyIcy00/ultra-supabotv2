@@ -296,6 +296,28 @@ export function Narration({ said, live, answering }: {
 }
 
 /**
+ * THE QUESTIONS HE SUGGESTS ASKING NEXT, under the headline (the owner,
+ * 2026-09-17: "under the blob is the main headline and question suggestions").
+ * His words; tapping one asks it, which is an ordinary turn. None drawn while
+ * he is still working, and none where he suggested none.
+ */
+export function ReadingAsks({ reading, busy, onAsk }: {
+  reading?: ReadingFrame;
+  busy: boolean;
+  onAsk(question: string): void;
+}) {
+  const asks = (reading?.asks ?? []).map((a) => a.trim()).filter(Boolean);
+  if (busy || !asks.length) return null;
+  return (
+    <div className="r-asks" aria-label="questions to ask next">
+      {asks.map((q) => (
+        <button key={q} type="button" className="r-ask" onClick={() => onAsk(q)}>{q}</button>
+      ))}
+    </div>
+  );
+}
+
+/**
  * ONE SENTENCE, ALWAYS LAST — under the evidence, because that is where it is
  * read: you look at the figures, and then at what to do about them.
  *

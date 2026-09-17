@@ -51,6 +51,7 @@ import type { ActionOffer } from '../types/george';
 import { ObjectPanel, kindOf } from './ObjectPanel';
 import { dimensionOf } from './data';
 import { Swatch, useHueFor } from './swatch';
+import { Figures } from './Reading';
 import type { Dimension } from './data';
 
 type Row = Record<string, unknown>;
@@ -657,9 +658,16 @@ export function MarkBlock(p: TileProps) {
       <Shell quiet={!lit}
              landing={p.landing} delay={p.delay} picked={p.focused || p.selected}>
         <OwnCaveat meta={meta} />
-        <p className="r-mk-title" data-thought={p.o.claim?.trim() ? 'yes' : undefined}>
+        <p className="r-mk-title">
           {titleFor(p.o, meta)}{p.earlier ? ' · from earlier' : ''}
         </p>
+        {/* WHAT HE THINKS IT SHOWS, beside the mark (the owner, 2026-09-17:
+            "if the ai thoughts are with the charts it feels likes your going
+            thorugh it together"). His sentence; any figure in it one this turn
+            read, with the superscript of the read it came out of. */}
+        {p.o.thought?.trim() && (
+          <p className="r-mk-thought"><Figures text={p.o.thought.trim()} calls={p.turn.toolCalls} /></p>
+        )}
         <div className="r-mk-body" data-mark={mark} data-read={readAt(meta?.snapshot_timestamp) ?? ''}>
           {mark === 'figure' && <Figure {...p} rows={rows} meta={meta} />}
           {mark === 'dumbbell' && <Dumbbell rows={rows} meta={meta} o={p.o} order={p.order} {...offering} />}

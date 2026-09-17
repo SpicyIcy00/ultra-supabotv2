@@ -465,13 +465,20 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
         # on screen the answer does not already carry; the other two carry only
         # a figure one of this turn's reads returned.
         spec = req(_load_defs(), "voice.reading.slots")
+        asks = req(_load_defs(), "voice.reading.asks")
         return {
             "type": "object",
             "properties": {
-                name: {"type": "string",
-                       "maxLength": int(spec[name].get("max_length") or 160),
-                       "description": " ".join(str(spec[name]["about"]).split())}
-                for name in reading.SLOTS if name in spec
+                **{name: {"type": "string",
+                          "maxLength": int(spec[name].get("max_length") or 160),
+                          "description": " ".join(str(spec[name]["about"]).split())}
+                   for name in reading.SLOTS if name in spec},
+                # THE QUESTIONS HE SUGGESTS NEXT (2026-09-17), a short list.
+                reading.ASKS: {"type": "array",
+                               "maxItems": int(asks["max_items"]),
+                               "items": {"type": "string",
+                                         "maxLength": int(asks["max_length"])},
+                               "description": " ".join(str(asks["about"]).split())},
             },
             "additionalProperties": False,
         }
@@ -603,6 +610,11 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
                                 "description": "a value a row of that read carries: a shop, "
                                                "product or supplier name"},
                     "label": {"type": "string", "enum": list(voc["state_labels"])},
+                    # WHAT HE THINKS THE BLOCK SHOWS (2026-09-17), drawn beside
+                    # it. A sentence he says, held to the reading's figure rule.
+                    "thought": {"type": "string",
+                                "maxLength": int(voc["thought"]["max_length"]),
+                                "description": " ".join(str(voc["thought"]["about"]).split())},
                     # A control's handle. DECLARED HERE OR IT DOES NOT EXIST:
                     # the vocabulary and the validator knew about these before
                     # the schema did, so the model reached for the only nearby

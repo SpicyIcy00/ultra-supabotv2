@@ -308,6 +308,17 @@ def validate(
     """
     existing = _existing_reads(board)
     voc = vocabulary(defs)
+    # THE FIGURES THIS TURN READ, for a block's `thought` — the reading's rule.
+    from agent import reading as _reading_rules
+    returned = _reading_rules.returned_numbers(calls.values())
+
+    def thought_of(text: Any) -> str:
+        try:
+            return _reading_rules.check_sentence(
+                "thought", text, voc.get("thought") or {}, returned, defs)
+        except _reading_rules.Rejected as why:
+            raise Rejected(str(why).replace("voice.reading.slots.thought",
+                                            "composition.thought")) from None
     widgets: Mapping[str, Any] = voc["widgets"]
     weights = list(voc["weights"])
     allowed = set(voc["allowed_fields"])
@@ -436,6 +447,8 @@ def validate(
                 # figure, so it changes on its own exactly as a weight does.
                 if "claim" in item:
                     edit["claim"] = _claim(item["claim"], voc)
+                if "thought" in item:
+                    edit["thought"] = thought_of(item["thought"])
                 if "seq" in item:
                     call = _read(calls, item.get("seq"))
                     edit["seq"] = item["seq"]
@@ -521,6 +534,8 @@ def validate(
             # whole of what makes a few words over a figure safe.
             if "claim" in item:
                 block["claim"] = _claim(item["claim"], voc)
+            if "thought" in item:
+                block["thought"] = thought_of(item["thought"])
             if "emphasise" in item:
                 # ONE ROW OR SEVERAL (2026-09-15). It took one, and a
                 # comparison is about two: asked to compare two shops George
@@ -651,8 +666,8 @@ def compose(blocks: Any, reading: Any = None, actions: Any = None, *,
     Compose the workspace: say which of the results you read the person sees, as which kind of object, at what weight — say the reading in its three slots, and offer what to do about a row. Call it once, after your reads return and before you answer. Nothing here is a figure: every number is drawn from the read a block names.
 
     Args:
-        blocks: the blocks on screen, in order. Each names a kind, a short key, a weight, the read (seq) it draws, and a claim — the few words saying what it says.
-        reading: what you are about to say, in three slots — {"claim": the few words that ARE the point, said again word for word in your answer; "caveat": what qualifies these figures, drawn whole above them; "next": one sentence, the one thing to do or check, drawn last}. Optional; a confirmation needs none.
+        blocks: the blocks on screen, in order. Each names a kind, a short key, a weight, the read (seq) it draws, a claim — the few words saying what it says — and a thought: one or two sentences of what you think it shows, drawn beside it as you go through it together.
+        reading: what you are about to say, in three slots — {"claim": the few words that ARE the point, said again word for word in your answer; "caveat": what qualifies these figures, drawn whole above them; "next": one sentence, the one thing to do or check, drawn last} — and "asks": two or three short questions they might ask you next, drawn under your headline to tap. Optional; a confirmation needs none.
         actions: what to do about ONE ROW, offered where that row is drawn — [{"act": what the surface does, "seq": the read, "target": the row's own value, "reason": why this one, in your words}]. Optional. You never say what it costs: that is derived from the act.
 
     Returns:

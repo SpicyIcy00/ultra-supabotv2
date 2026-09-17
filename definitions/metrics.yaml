@@ -5020,6 +5020,18 @@ voice:
     # named here so the two cannot drift: the gate on the answer's prose and
     # the rule on these slots excuse the same things.
     presentation_max: 31
+    # QUESTIONS HE SUGGESTS ASKING NEXT (the owner, 2026-09-17: "under the blob
+    # is the main headline and question suggestions"). Drawn under the headline;
+    # tapping one asks it. Not a slot of the three — a short list — and held to
+    # the same figure rule as `caveat` and `next`.
+    asks:
+      about: >
+        two or three short questions the person might ask you next, in their
+        own words — each one you could answer with a read or two. They are
+        drawn under your headline to tap. A figure only when a read returned it.
+      max_items: 3
+      max_length: 90
+      figures: returned
     # A claim nobody said is not drawn, and the loop records that it was not:
     # the gap log's own word for it, so the rate is measurable rather than
     # asserted.
@@ -5804,6 +5816,24 @@ composition:
     no_digits: true
     max_length: 80
 
+  # WHAT HE THINKS THIS BLOCK SHOWS (the owner, 2026-09-17: "add more ai
+  # thoughts to the charts cause if the ai thoughts are with the charts it
+  # feels likes your going thorugh it together").
+  #
+  # THE CLAIM IS A TITLE; THIS IS HIS READING OF IT. Drawn under the title,
+  # beside the mark, in his voice. Unlike the claim it is a sentence he SAYS,
+  # not an annotation over a figure, so it is held to the reading's rule rather
+  # than the claim's: a figure belongs here only when a read this turn returned
+  # it (agent/reading.py, `figures: returned`) — never one worked out.
+  thought:
+    about: >
+      what you think this block shows, said to the person beside you as you
+      go through it together — one or two sentences: what stands out in it and
+      what that means for their question. Give every block you put one.
+      A figure belongs here only when a read this turn returned it.
+    figures: returned
+    max_length: 260
+
 
   # ===========================================================================
   # THE GRAMMAR — how George composes a shape nobody listed in advance.
@@ -6160,7 +6190,7 @@ composition:
   # `form` (a chart), `action` (a recommendation), and the block-level `note`,
   # which `claim` now does under its own name.
   allowed_fields: [op, kind, key, weight, seq, subject, label,
-                   argument, spec, emphasise, claim]
+                   argument, spec, emphasise, claim, thought]
 
   # WHAT TO DO ABOUT IT, ON THE ROW IT IS ABOUT (P2.d, 2026-09-15).
   #
