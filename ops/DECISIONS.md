@@ -4554,3 +4554,11 @@ The owner, of the caveat boxes over his charts: *"remove them, change the rule w
 The split lives in `surface.desk.notices` (`explains_only`, `data_may_be_wrong`), served with the desk; the room hides only `explains_only`, so an unlisted kind and every notice before the definitions load are DRAWN — fail toward showing. `version_divergence` stays drawn (architecture rule 8).
 Held by `tests/test_notice_drawing_contract.py` (every raised kind decided, none in both) and `disclaimers.dom.test.tsx` (his exact `comparison_incomplete` hidden, `stale_stock` drawn).
 **Not changed, on purpose:** the tools raise every notice, George receives every one, and the loop still requires him to surface them in his own words — that is the trust machinery and needs a live run, so his prose may still say "110 of 173 cannot be compared". Also here: a caveat-slot sentence the answer already says is no longer drawn twice (`Reading.unsaid`).
+
+## 2026-09-17 · Nine owner reports on the live P2S.2 build, fixed the same day
+
+Store dots are `stores.color` from Settings, matched by id and toned in OKLCH per ground; the palette slot is the fallback. His OPUS teal and Shangri-La pink fail colour-blind separation raw and toned — kept (they are his), relieved by the name, recorded in `ops/palette/REPORT.md`.
+The figures stopped being an equal grid: the read his claim cites (else his `lead` block) goes first, larger, and spans the area when it has rows to spread; at most two columns (three cut every product name); names wrap to two lines; the area fades at its edge. This departs from the design's `place()` (1/2/3 columns) at his word — *"all charts dont need to be the same size"*.
+Words start at the canvas's foot, not -10vh — alive, the mark reaches it — and scroll in their own column. While he works, `Doing` draws the running read, the clock and his narration, which nothing had drawn since P2S.1.
+A figure takes no click; focus no longer reorders. The `opened` decision for attention.learning is no longer written from a figure.
+Not done: "more text with each chart" (P2S.3, compose grammar + eval); why today's turns took 53–73 s; why a kept page's earlier reads lost their rows (`payload.charted`). The room now says "rows were not kept" there instead of "came back without rows".

@@ -57,94 +57,6 @@ on compose frame" does.
 
 ## Open
 
-### 2026-09-17 — "it still feels like the charts and stuff are still in boxes and grids"
-
-> *"we dont need those disclaimers, and also all charts dont need to be the
-> same size or small it should decide based on the space it has and how
-> important it is to make it bigger beacuse it should have his ai thoughts with
-> the charts to aside from the text below alive its more of like the bigger
-> picture get it? it still feels like the charts and stuff are still in boxes
-> and grids but we dont want it like that"*
-
-Said 2026-09-17 of the live build `c288831`, right after the answer about
-what "baseline" meant.
-
-**The complaint, restated (NOW.md §1: his prompts are complaints, not designs).**
-Every figure is the same width in an even column grid, so the answer reads as a
-dashboard of equal tiles rather than one picture with a point: the figure the
-claim rests on does not dominate, and the figures carry no reasoning of their
-own — his thinking lives only in the words under the mark.
-
-**Found underneath (not fixed).** P2S.1(c) ported the design's `place()`
-exactly: 1 / 2–4 / 5+ figures → 1 / 2 / 3 equal columns, each figure into the
-shortest (`beside.columnsFor`, `placeFigures`), held by `layout.test.ts`. A
-block's `weight` (`lead` / `supporting` / `quiet`) exists and changes nothing
-about a figure's size since P2S.1 removed the lead row. So "boxes and grids" is
-the column grid itself, not a border — the borders went in P2S.1. **This moves
-past the design page** (his rows 6 and 7, *"fill it"*, *"left to right then
-down"*, were answered with that grid), so the session that takes it decides the
-new rule and says why, and he reacts to the frames — he is not asked to design
-it. The size rule must come from values the answer carries (the block's
-`weight`, whether the claim cites the read, how many rows it draws), never from
-a guess. The "his ai thoughts with the charts" half is the entry below this one
-("more text with each chart"), which is P2S.3's.
-
-### 2026-09-17 — "we dont need those disclaimers"
-
-> *"we dont need those disclaimers, and also all charts dont need to be the
-> same size or small it should decide based on the space it has and how
-> important it is to make it bigger beacuse it should have his ai thoughts with
-> the charts to aside from the text below alive its more of like the bigger
-> picture get it? it still feels like the charts and stuff are still in boxes
-> and grids but we dont want it like that"*
-
-Said 2026-09-17 of the live build `c288831`, right after the answer about
-what "baseline" meant.
-
-**A rule is in the way, so this one is HIS to decide, and nothing was changed.**
-CLAUDE.md UI rule 4: *"Notices always surface … A caveat may be reduced to one
-line naming it, explanation on tap, but wherever a figure is ANSWERED it stays
-whole and ABOVE the number."* Removing them breaks that rule, and CLAUDE.md
-says a task that needs a rule broken stops and asks. What the rule already
-allows, and what the session proposes by default: every caveat becomes **one
-short plain line** above its chart (*"110 of 173 products have no change to
-show"*), the rest on tap — no status keys, no timestamps, no box — which is also
-the fix for the entry *"what are these disclaimers?"* below. If he wants them
-gone entirely, that is a change to CLAUDE.md, recorded in `ops/DECISIONS.md`
-with the test that holds it, before it is built.
-
-### 2026-09-17 — "what are these disclaimers? what is baseline is something wrong"
-
-> *"the text should reach the end of the alive where it can move not its
-> borders and text can be scrollable if its too long but also i think we need
-> more text with each chart if needed explaination with the visuals. and what
-> are these disclaimers? what is baseline is something wrong"*
-
-Said 2026-09-17 of the live build `c288831`, with three screenshots of one
-Shangri-La turn ("the basket moved into the weighed mix"): the whole room, a
-caveat over READ 1, and the words column under the mark.
-
-**Nothing is wrong with the figures; the sentence is written for the model, and
-the room hands it to him raw.** The read compared this week so far (Monday to
-Thursday 14:20) with the same stretch last week (7 Sep 00:00 to 10 Sep 14:20),
-product by product. 110 of 173 products have no percentage because one side is
-empty — 48 sold this week and not in last week's stretch, 58 sold last week and
-not this week (his own prose says both), the rest a zero baseline — and the tool
-refuses to invent one. That is correct and worth saying. What reached the
-screen is `tools/sales.py`'s `comparison_incomplete` message verbatim: *"110 of
-173 compared row(s) could not be compared against the 2026-09-07 00:00:00 to
-2026-09-10 14:20:23 baseline: 48 no_baseline (the baseline window returned no
-figure (NULL) — nothing to compare against)"* — `row(s)`, a status key, `NULL`,
-raw timestamps, built from `comparisons.*.baseline_statuses` in metrics.yaml,
-whose wording is for George. CLAUDE.md UI rule 4: *"Raw diagnostics never reach
-the answer."* The fix is a person's sentence for the notice (a `says` beside each
-status in the definitions, read by the tool — e.g. "110 of 173 products have no
-change to show: 48 are new this week, 58 sold last week and not yet this week"),
-drawn by `OwnCaveat`; the model keeps its own wording in `guidance`. **Also on the
-same screen:** the turn's caveat sentence (*"Shangri-La, Monday to this afternoon
-against the same stretch of last week — a bit over half the week"*) is drawn
-twice — above the claim and again in the standing text.
-
 ### 2026-09-17 — "we need more text with each chart if needed explaination with the visuals"
 
 > *"the text should reach the end of the alive where it can move not its
@@ -162,125 +74,6 @@ digits" (P1.f) — and a read he did not compose carries none. The design's
 figures carry a sentence of reading each (`say` per block). More words per chart
 changes the compose grammar and the prompt, so it is **P2S.3's** to decide with
 its eval subset, not a room fix; it is written here so that card reads it.
-
-### 2026-09-17 — "the text should reach the end of the alive where it can move not its borders and text can be scrollable if its too long"
-
-> *"the text should reach the end of the alive where it can move not its
-> borders and text can be scrollable if its too long but also i think we need
-> more text with each chart if needed explaination with the visuals. and what
-> are these disclaimers? what is baseline is something wrong"*
-
-Said 2026-09-17 of the live build `c288831`, with three screenshots of one
-Shangri-La turn ("the basket moved into the weighed mix"): the whole room, a
-caveat over READ 1, and the words column under the mark.
-
-**Found underneath (not fixed).** P2S.1 pulled the words up `-10vh` so the claim
-starts inside the mark's lower edge (his row 12, *"almost directly under the
-blob"*), measured against the canvas box. With the mark now moving (P2S.2(d))
-its reach is bigger than its resting body — breath, the pulse, the ring at
-`r + 24` — so a long caveat above the claim sits on top of the blob (screenshot
-one: *"Shangri-La, Monday to this afternoon…"* over the shape). And the words
-column does not scroll or stop: a long answer runs down under the composer, and
-*what I'd do next* is drawn through *"tap anything above to bring it here"*.
-The fix: start the words at the mark's furthest reach (the ring's extent, from
-`alive.ts`, not the canvas box), and give the words column the figures area's
-own treatment — bounded above the composer, scrolling with no visible bar.
-Row 12's "directly under" is then under what moves, which is what he said.
-
-### 2026-09-17 — "we dont need the feature where when you click the chart it rearranges"
-
-> *"color mapping should be more like these colors but in our theme style and
-> the alive not saying any text for awhile but it came out maybe it just took
-> long to load take a look at that. and some charts are still getting cut, and
-> we dont need the feature where when you click the chart it rearranges"*
-
-Said 2026-09-17 of the live build `c288831` (P2S.1 + P2S.2), with four
-screenshots: Supabot's Settings → store display names and colours, the room
-mid-answer, and one contributors chart. One message, four reports, kept apart
-because they are four.
-
-**Found underneath (not fixed).** Clicking a figure calls `on.open` →
-`setFocused` (`Room.tsx`), and `board.inOrder` makes the focused object the
-lead and moves it to the front of the flow; opening its object panel under it
-also changes its height, so `placeFigures` re-flows the other figures across
-columns. Both are the rearrange. The fix is to take the click off the figure
-(`Shell onOpen` in `marks.tsx` / `tiles.tsx`) and the focus reordering out of
-`inOrder`; an object panel stays reachable from a row's own `open` offer. The
-per-tile `opened` decision for `attention.learning` goes with it — say so in the
-fix.
-
-### 2026-09-17 — "some charts are still getting cut"
-
-> *"color mapping should be more like these colors but in our theme style and
-> the alive not saying any text for awhile but it came out maybe it just took
-> long to load take a look at that. and some charts are still getting cut, and
-> we dont need the feature where when you click the chart it rearranges"*
-
-Said 2026-09-17 of the live build `c288831` (P2S.1 + P2S.2), with four
-screenshots: Supabot's Settings → store display names and colours, the room
-mid-answer, and one contributors chart. One message, four reports, kept apart
-because they are four.
-
-**Found underneath (not fixed), and not yet pinned to one cause.** The figures
-area (`.r-figs`) is `overflow-y: auto; overflow-x: hidden`, so two things clip:
-a figure at the bottom edge is cut in half with the ↓ arrow beside it (his
-screenshot shows three titles with their charts below the edge), and anything
-wider than its column is cut on the right. The next session renders his layout
-in `ops/frames.py` (three columns, 9+ figures) and looks before choosing. **Also
-seen in the same screenshot, a separate defect:** figures "from earlier" in a
-reopened, kept thread draw *"Nothing to draw here: this read came back without
-rows"* — an earlier turn's rows are not restored, so its chart is empty rather
-than cut.
-
-### 2026-09-17 — "the alive not saying any text for awhile but it came out maybe it just took long to load"
-
-> *"color mapping should be more like these colors but in our theme style and
-> the alive not saying any text for awhile but it came out maybe it just took
-> long to load take a look at that. and some charts are still getting cut, and
-> we dont need the feature where when you click the chart it rearranges"*
-
-Said 2026-09-17 of the live build `c288831` (P2S.1 + P2S.2), with four
-screenshots: Supabot's Settings → store display names and colours, the room
-mid-answer, and one contributors chart. One message, four reports, kept apart
-because they are four.
-
-**Found underneath (not fixed).** It did take long: `ops/turn_clock.py --days 1`
-reads today's two turns at **53 s and 73 s**, 4 model round trips each, the
-slowest round trip 31 s — against the 17.1 s median P1.✓ measured. The words
-stream as he writes (`text` deltas), but only the last round trip writes the
-answer, so for most of a minute the words column under the mark is empty. And
-**since P2S.1 the room draws nothing he says before it**: interim prose ("let me
-look at the drivers") is kept as `turn.narration` and a rewrite's draft as
-`turn.superseded`, and no room component renders either (grep finds no
-reader). The work trail is on the right, not under him. The fix is a line under
-the mark while he works, off the stream — the running step's words, his
-narration when he wrote any — not a made-up status. Why today's turns took 4
-round trips at 12–31 s each is a separate question for the clock, not the room.
-
-### 2026-09-17 — "color mapping should be more like these colors but in our theme style"
-
-> *"color mapping should be more like these colors but in our theme style and
-> the alive not saying any text for awhile but it came out maybe it just took
-> long to load take a look at that. and some charts are still getting cut, and
-> we dont need the feature where when you click the chart it rearranges"*
-
-Said 2026-09-17 of the live build `c288831` (P2S.1 + P2S.2), with four
-screenshots: Supabot's Settings → store display names and colours, the room
-mid-answer, and one contributors chart. One message, four reports, kept apart
-because they are four.
-
-**Found underneath (not fixed).** The colours in his screenshot are not a
-design idea — they are **data he already set**: `stores.color`, edited on
-Supabot's Settings page, served by `GET /api/v1/analytics/stores`, and used by
-every BI chart (`dashboardStore.getStoreColor`). P2S.2(e) ignored that column
-and dealt out the dataviz palette by `stores.active_retail` order instead, so
-Rockwell is blue in George and red everywhere else in Supabot. The fix: a
-store's swatch takes its own `stores.color` (matched by id to the served
-`locations`), adapted per theme — hue kept, lightness and chroma brought into
-the room's band for the dark and light grounds — with the palette slot only as
-the fallback for a store that has no colour set. Re-run the validator on the
-adapted seven and record it; his red for Rockwell and green for Greenhills sit
-near `--down` / `--up`, which he has now seen and chosen.
 
 ### 2026-09-16 — "the ui doesnt feel like what i was told we were building"
 
@@ -438,6 +231,229 @@ once changes the next answer. That is the card's own done-when.
 ---
 
 ## Fixed
+
+### 2026-09-17 — "it still feels like the charts and stuff are still in boxes and grids"
+
+> *"we dont need those disclaimers, and also all charts dont need to be the
+> same size or small it should decide based on the space it has and how
+> important it is to make it bigger beacuse it should have his ai thoughts with
+> the charts to aside from the text below alive its more of like the bigger
+> picture get it? it still feels like the charts and stuff are still in boxes
+> and grids but we dont want it like that"*
+
+Said 2026-09-17 of the live build `c288831`, right after the answer about
+what "baseline" meant.
+
+**The complaint, restated (NOW.md §1: his prompts are complaints, not designs).**
+Every figure is the same width in an even column grid, so the answer reads as a
+dashboard of equal tiles rather than one picture with a point: the figure the
+claim rests on does not dominate, and the figures carry no reasoning of their
+own — his thinking lives only in the words under the mark.
+
+**Found underneath (not fixed).** P2S.1(c) ported the design's `place()`
+exactly: 1 / 2–4 / 5+ figures → 1 / 2 / 3 equal columns, each figure into the
+shortest (`beside.columnsFor`, `placeFigures`), held by `layout.test.ts`. A
+block's `weight` (`lead` / `supporting` / `quiet`) exists and changes nothing
+about a figure's size since P2S.1 removed the lead row. So "boxes and grids" is
+the column grid itself, not a border — the borders went in P2S.1. **This moves
+past the design page** (his rows 6 and 7, *"fill it"*, *"left to right then
+down"*, were answered with that grid), so the session that takes it decides the
+new rule and says why, and he reacts to the frames — he is not asked to design
+it. The size rule must come from values the answer carries (the block's
+`weight`, whether the claim cites the read, how many rows it draws), never from
+a guess. The "his ai thoughts with the charts" half is the entry below this one
+("more text with each chart"), which is P2S.3's.
+
+**Fixed 2026-09-17 (`def5956`, `2489425`).** The figure his claim cites (else the block he weighted `lead`) goes first and reads larger, and spans the whole figures area when it has rows to spread; the rest flow in at most two columns. Held by `beside.test.ts` and `room.dom.test.tsx`; seen in `verification/frames/fixes-0917b`. **Not verified by him.** The sizing is two steps (lead, the rest), not a continuous scale.
+
+### 2026-09-17 — "we dont need those disclaimers"
+
+> *"we dont need those disclaimers, and also all charts dont need to be the
+> same size or small it should decide based on the space it has and how
+> important it is to make it bigger beacuse it should have his ai thoughts with
+> the charts to aside from the text below alive its more of like the bigger
+> picture get it? it still feels like the charts and stuff are still in boxes
+> and grids but we dont want it like that"*
+
+Said 2026-09-17 of the live build `c288831`, right after the answer about
+what "baseline" meant.
+
+**A rule is in the way, so this one is HIS to decide, and nothing was changed.**
+CLAUDE.md UI rule 4: *"Notices always surface … A caveat may be reduced to one
+line naming it, explanation on tap, but wherever a figure is ANSWERED it stays
+whole and ABOVE the number."* Removing them breaks that rule, and CLAUDE.md
+says a task that needs a rule broken stops and asks. What the rule already
+allows, and what the session proposes by default: every caveat becomes **one
+short plain line** above its chart (*"110 of 173 products have no change to
+show"*), the rest on tap — no status keys, no timestamps, no box — which is also
+the fix for the entry *"what are these disclaimers?"* below. If he wants them
+gone entirely, that is a change to CLAUDE.md, recorded in `ops/DECISIONS.md`
+with the test that holds it, before it is built.
+
+**Fixed 2026-09-17 (`d428871`), at his word: *"remove them, change the rule we dont need those disclaimers unless it has wrong data"*.** CLAUDE.md UI rule 4 changed and recorded in DECISIONS.md: the room draws a notice only when it says a figure may be wrong (`surface.desk.notices`, unlisted kinds still drawn). **George's own words may still mention one** — the loop that makes him surface notices in prose is the trust machinery and was not touched.
+
+### 2026-09-17 — "what are these disclaimers? what is baseline is something wrong"
+
+> *"the text should reach the end of the alive where it can move not its
+> borders and text can be scrollable if its too long but also i think we need
+> more text with each chart if needed explaination with the visuals. and what
+> are these disclaimers? what is baseline is something wrong"*
+
+Said 2026-09-17 of the live build `c288831`, with three screenshots of one
+Shangri-La turn ("the basket moved into the weighed mix"): the whole room, a
+caveat over READ 1, and the words column under the mark.
+
+**Nothing is wrong with the figures; the sentence is written for the model, and
+the room hands it to him raw.** The read compared this week so far (Monday to
+Thursday 14:20) with the same stretch last week (7 Sep 00:00 to 10 Sep 14:20),
+product by product. 110 of 173 products have no percentage because one side is
+empty — 48 sold this week and not in last week's stretch, 58 sold last week and
+not this week (his own prose says both), the rest a zero baseline — and the tool
+refuses to invent one. That is correct and worth saying. What reached the
+screen is `tools/sales.py`'s `comparison_incomplete` message verbatim: *"110 of
+173 compared row(s) could not be compared against the 2026-09-07 00:00:00 to
+2026-09-10 14:20:23 baseline: 48 no_baseline (the baseline window returned no
+figure (NULL) — nothing to compare against)"* — `row(s)`, a status key, `NULL`,
+raw timestamps, built from `comparisons.*.baseline_statuses` in metrics.yaml,
+whose wording is for George. CLAUDE.md UI rule 4: *"Raw diagnostics never reach
+the answer."* The fix is a person's sentence for the notice (a `says` beside each
+status in the definitions, read by the tool — e.g. "110 of 173 products have no
+change to show: 48 are new this week, 58 sold last week and not yet this week"),
+drawn by `OwnCaveat`; the model keeps its own wording in `guidance`. **Also on the
+same screen:** the turn's caveat sentence (*"Shangri-La, Monday to this afternoon
+against the same stretch of last week — a bit over half the week"*) is drawn
+twice — above the claim and again in the standing text.
+
+**Fixed 2026-09-17 (`d428871`).** `comparison_incomplete` is `explains_only`, so that box is no longer drawn; the repeated caveat sentence is drawn once (`Reading.unsaid`). The tool's message is still engineering wording where George reads it; nothing a person sees carries it now.
+
+### 2026-09-17 — "the text should reach the end of the alive where it can move not its borders and text can be scrollable if its too long"
+
+> *"the text should reach the end of the alive where it can move not its
+> borders and text can be scrollable if its too long but also i think we need
+> more text with each chart if needed explaination with the visuals. and what
+> are these disclaimers? what is baseline is something wrong"*
+
+Said 2026-09-17 of the live build `c288831`, with three screenshots of one
+Shangri-La turn ("the basket moved into the weighed mix"): the whole room, a
+caveat over READ 1, and the words column under the mark.
+
+**Found underneath (not fixed).** P2S.1 pulled the words up `-10vh` so the claim
+starts inside the mark's lower edge (his row 12, *"almost directly under the
+blob"*), measured against the canvas box. With the mark now moving (P2S.2(d))
+its reach is bigger than its resting body — breath, the pulse, the ring at
+`r + 24` — so a long caveat above the claim sits on top of the blob (screenshot
+one: *"Shangri-La, Monday to this afternoon…"* over the shape). And the words
+column does not scroll or stop: a long answer runs down under the composer, and
+*what I'd do next* is drawn through *"tap anything above to bring it here"*.
+The fix: start the words at the mark's furthest reach (the ring's extent, from
+`alive.ts`, not the canvas box), and give the words column the figures area's
+own treatment — bounded above the composer, scrolling with no visible bar.
+Row 12's "directly under" is then under what moves, which is what he said.
+
+**Fixed 2026-09-17 (`6975200`).** The words begin at the canvas's lower edge — past his breath, pulse and ring — and fill the column above the composer, scrolling with no bar and fading at the foot. Held by `beside.test.ts`; seen in the frames. **Not verified by him.**
+
+### 2026-09-17 — "color mapping should be more like these colors but in our theme style"
+
+> *"color mapping should be more like these colors but in our theme style and
+> the alive not saying any text for awhile but it came out maybe it just took
+> long to load take a look at that. and some charts are still getting cut, and
+> we dont need the feature where when you click the chart it rearranges"*
+
+Said 2026-09-17 of the live build `c288831` (P2S.1 + P2S.2), with four
+screenshots: Supabot's Settings → store display names and colours, the room
+mid-answer, and one contributors chart. One message, four reports, kept apart
+because they are four.
+
+**Found underneath (not fixed).** The colours in his screenshot are not a
+design idea — they are **data he already set**: `stores.color`, edited on
+Supabot's Settings page, served by `GET /api/v1/analytics/stores`, and used by
+every BI chart (`dashboardStore.getStoreColor`). P2S.2(e) ignored that column
+and dealt out the dataviz palette by `stores.active_retail` order instead, so
+Rockwell is blue in George and red everywhere else in Supabot. The fix: a
+store's swatch takes its own `stores.color` (matched by id to the served
+`locations`), adapted per theme — hue kept, lightness and chroma brought into
+the room's band for the dark and light grounds — with the palette slot only as
+the fallback for a store that has no colour set. Re-run the validator on the
+adapted seven and record it; his red for Rockwell and green for Greenhills sit
+near `--down` / `--up`, which he has now seen and chosen.
+
+**Fixed 2026-09-17 (`3f36831`).** A store's dot is its `stores.color` from Settings, matched by id, toned in OKLCH for each ground; the palette slot only where no colour is set. Validated in `ops/palette/stores.txt`: OPUS teal and Shangri-La pink cannot be told apart under deuteranopia, raw or toned — the name beside each dot is the relief, recorded in REPORT.md. **Not verified by him.**
+
+### 2026-09-17 — "the alive not saying any text for awhile but it came out maybe it just took long to load"
+
+> *"color mapping should be more like these colors but in our theme style and
+> the alive not saying any text for awhile but it came out maybe it just took
+> long to load take a look at that. and some charts are still getting cut, and
+> we dont need the feature where when you click the chart it rearranges"*
+
+Said 2026-09-17 of the live build `c288831` (P2S.1 + P2S.2), with four
+screenshots: Supabot's Settings → store display names and colours, the room
+mid-answer, and one contributors chart. One message, four reports, kept apart
+because they are four.
+
+**Found underneath (not fixed).** It did take long: `ops/turn_clock.py --days 1`
+reads today's two turns at **53 s and 73 s**, 4 model round trips each, the
+slowest round trip 31 s — against the 17.1 s median P1.✓ measured. The words
+stream as he writes (`text` deltas), but only the last round trip writes the
+answer, so for most of a minute the words column under the mark is empty. And
+**since P2S.1 the room draws nothing he says before it**: interim prose ("let me
+look at the drivers") is kept as `turn.narration` and a rewrite's draft as
+`turn.superseded`, and no room component renders either (grep finds no
+reader). The work trail is on the right, not under him. The fix is a line under
+the mark while he works, off the stream — the running step's words, his
+narration when he wrote any — not a made-up status. Why today's turns took 4
+round trips at 12–31 s each is a separate question for the clock, not the room.
+
+**The room half fixed 2026-09-17 (`6975200`).** While he works and before his answer arrives, one line under him: the read running or "thinking…", the turn's clock, and his narration (`Doing`, `doing.dom.test.tsx`). **The time itself is not fixed:** 53 s and 73 s, 4 round trips — that is the clock's question, not the room's.
+
+### 2026-09-17 — "some charts are still getting cut"
+
+> *"color mapping should be more like these colors but in our theme style and
+> the alive not saying any text for awhile but it came out maybe it just took
+> long to load take a look at that. and some charts are still getting cut, and
+> we dont need the feature where when you click the chart it rearranges"*
+
+Said 2026-09-17 of the live build `c288831` (P2S.1 + P2S.2), with four
+screenshots: Supabot's Settings → store display names and colours, the room
+mid-answer, and one contributors chart. One message, four reports, kept apart
+because they are four.
+
+**Found underneath (not fixed), and not yet pinned to one cause.** The figures
+area (`.r-figs`) is `overflow-y: auto; overflow-x: hidden`, so two things clip:
+a figure at the bottom edge is cut in half with the ↓ arrow beside it (his
+screenshot shows three titles with their charts below the edge), and anything
+wider than its column is cut on the right. The next session renders his layout
+in `ops/frames.py` (three columns, 9+ figures) and looks before choosing. **Also
+seen in the same screenshot, a separate defect:** figures "from earlier" in a
+reopened, kept thread draw *"Nothing to draw here: this read came back without
+rows"* — an earlier turn's rows are not restored, so its chart is empty rather
+than cut.
+
+**Fixed 2026-09-17 (`def5956`, `2489425`).** The cut he screenshotted was product names ellipsed in three ~290px columns ("P4 kiamoy s…"): at most two columns now, and a name wraps to two lines before it clips. The figures area fades at its edge instead of slicing a chart beside the arrow. A reopened read whose rows were not kept says so instead of "came back without rows". **Not fixed:** why that kept page's earlier reads lost their rows (`payload.charted` did not keep them) — a backend question, still open underneath.
+
+### 2026-09-17 — "we dont need the feature where when you click the chart it rearranges"
+
+> *"color mapping should be more like these colors but in our theme style and
+> the alive not saying any text for awhile but it came out maybe it just took
+> long to load take a look at that. and some charts are still getting cut, and
+> we dont need the feature where when you click the chart it rearranges"*
+
+Said 2026-09-17 of the live build `c288831` (P2S.1 + P2S.2), with four
+screenshots: Supabot's Settings → store display names and colours, the room
+mid-answer, and one contributors chart. One message, four reports, kept apart
+because they are four.
+
+**Found underneath (not fixed).** Clicking a figure calls `on.open` →
+`setFocused` (`Room.tsx`), and `board.inOrder` makes the focused object the
+lead and moves it to the front of the flow; opening its object panel under it
+also changes its height, so `placeFigures` re-flows the other figures across
+columns. Both are the rearrange. The fix is to take the click off the figure
+(`Shell onOpen` in `marks.tsx` / `tiles.tsx`) and the focus reordering out of
+`inOrder`; an object panel stays reachable from a row's own `open` offer. The
+per-tile `opened` decision for `attention.learning` goes with it — say so in the
+fix.
+
+**Fixed 2026-09-17 (`abf3692`).** A figure takes no click, and focus no longer reorders the flow. A row's name still picks it; a row's `open` offer still opens its panel. The per-figure `opened` decision for `attention.learning` is no longer written from a figure click.
 
 ### 2026-09-15 — a tile explaining itself to the reader
 
