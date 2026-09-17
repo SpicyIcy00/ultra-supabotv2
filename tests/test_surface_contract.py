@@ -35,8 +35,6 @@ from tools._common import load_defs                                    # noqa: E
 from agent import surface                                              # noqa: E402
 
 _ROOT = Path(__file__).resolve().parents[1]
-_MODEL_TS = _ROOT / "frontend" / "src" / "components" / "george" / "surfaceModel.ts"
-_ANCHOR_TS = _ROOT / "frontend" / "src" / "components" / "george" / "surfaceAnchor.ts"
 
 DEFS = load_defs()
 
@@ -257,15 +255,6 @@ def test_a_clean_answer_raises_no_prose_warning(monkeypatch):
 
 # ------------------------------------------------------ prompt and definitions --
 
-def test_refinement_ops_agree_between_definitions_and_client():
-    ops = DEFS["surface"]["refinements"]
-    ts = _MODEL_TS.read_text(encoding="utf-8")
-    m = re.search(r"SURFACE_OPS[^=]*=\s*\[([^\]]*)\]", ts)
-    assert m, "surfaceModel.ts no longer declares SURFACE_OPS"
-    client = re.findall(r"'([a-z_]+)'", m.group(1))
-    assert sorted(client) == sorted(ops)
-
-
 def test_identity_and_shape_are_declared_and_attention_has_no_score():
     s = DEFS["surface"]
     assert s["executes_nothing"] is True
@@ -274,10 +263,6 @@ def test_identity_and_shape_are_declared_and_attention_has_no_score():
     assert s["attention"]["score"] == "not_supported"
     assert s["attention"]["threshold"] == "not_supported"
     assert sorted(s["attention"]["reasons"]) == ["against_the_majority", "ranked_first"]
-    # The client's subject-filter list is the server's.
-    ts = _ANCHOR_TS.read_text(encoding="utf-8")
-    for key in surface._SUBJECT_FILTERS:
-        assert f"'{key}'" in ts
 
 
 def test_every_tool_george_can_call_has_words_on_the_room_surface():

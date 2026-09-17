@@ -35,10 +35,6 @@ const Room = React.lazy(() => import('./room/Room'));
 const InboxPage = React.lazy(() => import('./pages/InboxPage'));
 const PagesPage = React.lazy(() => import('./pages/PagesPage'));
 const WorkflowsPage = React.lazy(() => import('./pages/WorkflowsPage'));
-// A design surface: outside the app chrome and behind no RequirePage gate
-// (SessionGuard still applies, as it does to every route). Fixtures only, no
-// backend, and nothing links to it. See pages/RiverPreview.tsx.
-const RiverPreview = React.lazy(() => import('./pages/RiverPreview'));
 
 // The existing application. AIChatPage is the legacy NL->SQL chatbot and is
 // not George; it stays reachable under Operations, unchanged.
@@ -116,7 +112,6 @@ function App() {
                   path="/packing/:listId/print"
                   element={<RequirePage pageKey="packing"><PackingPrintPage /></RequirePage>}
                 />
-                <Route path="/george/preview" element={<RiverPreview />} />
 
                 {/* "/" is a redirect to the first page a person may see, which
                     is the dashboard. George is a page in the app, at its own

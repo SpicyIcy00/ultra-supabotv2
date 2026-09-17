@@ -4,7 +4,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GeorgeState, GeorgeTurn } from '../../types/george';
 import { attentionAccent } from './approvalState';
-import { MARK_LABEL, markClass, markPath, MARK_PATH } from './markState';
 import { liveActivity, presenceState } from './presence';
 
 const STATES: GeorgeState[] = [
@@ -31,13 +30,11 @@ describe('presenceState', () => {
     expect(presenceState({ state: 'error', composer: 'drafting' })).toBe('listening');
   });
 
-  it('returns only states the mark already has a drawing and a label for', () => {
+  it('returns only states the presence knows', () => {
     for (const state of STATES) {
       for (const composer of ['idle', 'focused', 'drafting'] as const) {
         const out = presenceState({ state, composer });
         expect(STATES).toContain(out);
-        expect(MARK_LABEL[out]).toBeTruthy();
-        expect(markClass(out)).toBe(`george-mark george-mark--${out}`);
       }
     }
   });
@@ -71,8 +68,6 @@ describe('presenceState', () => {
       expect(attentionAccent(count)).toBe(count !== null && count > 0);
       expect(presenceState({ state: 'idle', composer: 'idle' })).toBe('idle');
     }
-    expect(markPath('idle')).toBe(MARK_PATH);
-    expect(markPath('listening')).toBe(MARK_PATH);
   });
 });
 

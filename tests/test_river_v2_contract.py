@@ -46,10 +46,8 @@ _ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "george.py"
 # hook that wires it to persistence. Ask stopped being a page.
 # The one renderer both a live turn and a stored post go through (Stage 1).
 _ROOM = _ROOT / "frontend" / "src" / "room" / "Room.tsx"
-_ENTRY = _ROOT / "frontend" / "src" / "components" / "george" / "RiverEntry.tsx"
 # The parts both renderers draw from since Generative Workspace V3 (2026-09-09):
 # an entry on its own, and a surface composed of several.
-_PARTS = _ROOT / "frontend" / "src" / "components" / "george" / "entryParts.tsx"
 _HOOK = _ROOT / "frontend" / "src" / "hooks" / "useGeorgeStream.ts"
 _THREAD_HOOK = _ROOT / "frontend" / "src" / "hooks" / "useThread.ts"
 
@@ -185,20 +183,14 @@ def test_the_stream_exposes_the_thread_id_only_once_its_posts_exist():
     )
 
 
-def test_the_turn_list_no_longer_scrolls_anything():
-    # AnswerTurn.tsx was the other file held to this and was deleted unused on
-    # 2026-09-12; RiverEntry.tsx is the one that ships.
-    for path in (_ENTRY,):
-        source = _source(path)
-        assert "scrollIntoView" not in source, f"{path.name} scrolls"
-        assert "scrollTop" not in source, f"{path.name} scrolls"
-
-
 def test_nothing_in_the_workspace_asks_for_smooth_scrolling():
     # Of the four files this held, three (AnswerTurn.tsx, the desk, the
     # auto-follow hook) were deleted unused on 2026-09-12. The room is added
     # in their place: it is the surface that actually grows under a reader.
-    for path in (_ENTRY, _ROOM):
+    # RiverEntry.tsx went with the old surface in P2S.1. The figures area's
+    # arrows scroll smoothly by design (FiguresArea.tsx) — a press, not a stream
+    # following itself — which is why the room file is what is held here.
+    for path in (_ROOM,):
         assert "smooth" not in _source(path), f"{path.name} animates the stream"
 
 
@@ -236,17 +228,6 @@ def test_a_finished_turn_never_shows_prose_the_river_does_not_have():
         "the server resets `answer` too, so a rewrite that never arrived is not "
         "the stored answer and must not be left on screen as one"
     )
-
-
-def test_the_superseded_answer_is_marked_as_being_replaced():
-    # Drawn by the one renderer since Stage 1, live and stored alike — and,
-    # since V3, by the surface too, through the shared parts.
-    entry = _source(_ENTRY)
-    parts = _source(_PARTS)
-    assert "SupersededAnswer" in entry
-    body = parts.split("function SupersededAnswer(", 1)[1].split("\n}", 1)[0]
-    assert "Rewriting" in body, "text about to stop being true must say so"
-    assert "SupersededAnswer" in _source(_ROOT / "frontend" / "src" / "components" / "george" / "WorkSurface.tsx")
 
 
 # ---------------------------------------------------------------------------

@@ -67,9 +67,6 @@ const DATA_ALLOWED: Record<string, string> = {
  * without a reason that survives being read out loud.
  */
 const ALLOWED: Record<string, string> = {
-  // The needs-you count above the river, shown only for a loaded, non-zero
-  // count (UI rules 5 and 8).
-  'StatusBand.tsx': 'the needs-you count on the status band',
   // The approval queue itself, and Promote: the one accent-coloured ACTION
   // in the app, because this is what the colour is for.
   'InboxPage.tsx': 'the approval queue and its one decision — the reserved use',
@@ -240,7 +237,9 @@ describe('UI rule 5 — one colour means "needs you"', () => {
   it('is not used to mark a refused tool call', () => {
     // A refusal is the tool declining to produce a misleading number — a real
     // answer, and nothing anyone has to act on.
-    const source = readFileSync(join(GEORGE_DIR, 'ToolCallRow.tsx'), 'utf8');
+    // ToolCallRow.tsx went with the old river in P2S.1; the room draws a
+    // declined read in its work trail.
+    const source = readFileSync(join(ROOM_DIR, 'Working.tsx'), 'utf8');
     expect(ACCENT.test(source)).toBe(false);
   });
 
@@ -278,12 +277,14 @@ describe('UI rule 5 — one colour means "needs you"', () => {
     // information, and whether it is bad depends on the question.
     expect(DATA.test(readFileSync(join(GEORGE_DIR, 'ResultBlocks.tsx'), 'utf8'))).toBe(false);
     expect(DATA.test(readFileSync(join(GEORGE_DIR, 'NoticeBanner.tsx'), 'utf8'))).toBe(false);
-    expect(DATA.test(readFileSync(join(GEORGE_DIR, 'WorkSpine.tsx'), 'utf8'))).toBe(false);
+    expect(DATA.test(readFileSync(join(ROOM_DIR, 'Working.tsx'), 'utf8'))).toBe(false);
   });
 
   it('never lets the accent onto an instrument or the spine', () => {
     expect(ACCENT.test(readFileSync(join(GEORGE_DIR, 'Instruments.tsx'), 'utf8'))).toBe(false);
-    expect(ACCENT.test(readFileSync(join(GEORGE_DIR, 'WorkSpine.tsx'), 'utf8'))).toBe(false);
+    // The spine (WorkSpine.tsx) went with the old river in P2S.1; the room's
+    // account of the work is Working.tsx.
+    expect(ACCENT.test(readFileSync(join(ROOM_DIR, 'Working.tsx'), 'utf8'))).toBe(false);
   });
 
   it('keeps the four data colours where a value chose them', () => {

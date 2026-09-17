@@ -39,8 +39,6 @@ from agent import surface  # noqa: E402
 
 _ROOT = Path(__file__).resolve().parents[1]
 _FRONT = _ROOT / "frontend" / "src"
-_ANCHOR_TS = _FRONT / "components" / "george" / "surfaceAnchor.ts"
-_MODEL_TS = _FRONT / "components" / "george" / "surfaceModel.ts"
 _DATA_TS = _FRONT / "room" / "data.ts"
 _SUBJECTS_TS = _FRONT / "room" / "subjects.ts"
 _ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "george.py"
@@ -103,10 +101,8 @@ def test_selection_is_ids_from_rows_and_agrees_with_the_client():
 def test_the_refinement_ops_carry_the_selection_aware_pair_on_both_sides():
     ops = DEFS["surface"]["refinements"]
     assert "compare_selection" in ops and "explain_selection" in ops
-    ts = _MODEL_TS.read_text(encoding="utf-8")
-    m = re.search(r"SURFACE_OPS[^=]*=\s*\[([^\]]*)\]", ts)
-    assert m
-    assert sorted(re.findall(r"'([a-z_]+)'", m.group(1))) == sorted(ops)
+    # The client half, surfaceModel.ts, was the old surface's and went with it
+    # in P2S.1 (2026-09-17); nothing on screen reads SURFACE_OPS any more.
 
 
 def test_the_field_encodes_only_what_rows_carry():

@@ -678,7 +678,7 @@ export type GeorgeTurn =
        * The roles that stood, from the newest `finding` frame. HISTORICAL
        * since P1.f: the loop no longer emits one — the channel is now the
        * reading below — and a stored turn from before it still carries them
-       * for the preview surface at /george/preview.
+       * for any surface that reads the old frames.
        */
       findings?: Finding[];
       /**
