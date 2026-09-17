@@ -57,6 +57,51 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-17 — "how are we doing … its not saying why and then it suggests me to ask why next"
+
+> *"and look this is what it shows me when i ask how are we doing but this is
+> basically a dashboard and its telling me what stores are down but its not
+> saying why and then it suggests me to ask why next but it should be like that
+> when i ask a question like how are doing, i except it to show me those things
+> already plus simple times it gave me i shouldnt need to ask why, it has
+> intiative, it really reads the data on its owm and forms its own opinions not
+> just reading it back to me"*
+
+Said of the live build `634423e`, with two screenshots of *"how are we doing"*:
+three reads, all by store (net sales, transactions, basket), a headline that North
+Edsa is carrying the shortfall on fewer transactions, asks *"Why is North Edsa
+down?"* / *"Is Greenhills still losing both?"*, and *what I'd do next: "Worth
+checking whether North Edsa's lost transactions are concentrated in particular
+hours or days before treating it as lost demand."*
+
+**Found underneath (not fixed), and it is his instructions doing exactly what they
+say.** `SYSTEM_PROMPT`, HOW WIDE TO READ: a BROAD question gets *"net_sales,
+transaction_count, average_transaction_value grouped by store over a closed
+window, compared, at most 5 reads"* — so it stops at the estate by store. The
+ladder that goes further (VERIFY → DECOMPOSE → **LOCALIZE** → explain) runs only
+for *"TAKING A FIGURE APART … 'why', 'what happened', 'analyze' …"*. So on "how are
+we doing" he verifies and decomposes (he did say *transactions, not basket*) and
+is not allowed to localize — which is precisely the check he then recommends to
+the owner as `next` and offers as a question to tap. **The owner's standard
+(ops/STANDARD.md) is that he goes and looks on his own**; the rule was written for
+speed and a small answer (P1 era), and it now contradicts the product. This is
+also why P2S.3's shapes go unused (the entry below): the localizing reads — by
+hour, by day, by product — are the ones those shapes draw.
+
+**Two defects visible in the same screenshots, noted here rather than lost:** the
+headline in the words column is shown from its middle (*"against the same point
+last week, and it's transactions doing it:54² fewer …"* — its start is above the
+top of the column, and a figure's superscript runs into the colon); and the
+refused-replay line sits on top of the charts rather than under the message box.
+
+**What a fix is, and its size.** A broad question climbs the ladder for what it
+finds: the one or two shops that moved most get their drivers localized (hours,
+days, products) in the same turn, bounded, and the answer says why — a view, not
+a readback — with `next` left for what the reads could NOT settle. It changes what
+he reads and says, so it is the prompt (1,797 of 1,800 words — something has to
+give) and needs a gate run and likely the latency budget rethought (more reads per
+broad turn). **A card, not a same-day fix.**
+
 ### 2026-09-17 — "its not using any new charts or displays, does it know it has access to those stuff now?"
 
 > *"and also its not using any new charts or displays, does it know it has
