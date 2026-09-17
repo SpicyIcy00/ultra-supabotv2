@@ -345,10 +345,13 @@ describe('the row label column', () => {
   it('wraps to two lines before it cuts a name (the log, 2026-09-17)', () => {
     // "some charts are still getting cut": one line and an ellipsis cut
     // "P4 kiamoy strips" to "P4 kiamoy s…". Two lines, then clipped.
-    const name = rule('.r-mk-name');
+    const name = rule('.r-mk-name-text');
     expect(name?.['white-space']).toBe('normal');
     expect(name?.['-webkit-line-clamp']).toBe('2');
     expect(name?.['text-overflow']).toBeUndefined();
+    // And the box that clamps is NOT the box the dot sits in (the log,
+    // 2026-09-17: "these things keep getting slightly cut").
+    expect(rule('.r-mk-name')?.overflow).toBeUndefined();
   });
 });
 

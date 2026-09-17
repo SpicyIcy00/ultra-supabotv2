@@ -291,8 +291,13 @@ function RowName({ name, pickable, onPick, picked, className, dimension }: {
    */
   dimension?: Dimension | null;
 }) {
+  // THE SWATCH SITS OUTSIDE THE TEXT THAT CLAMPS (the log, 2026-09-17: "these
+  // things keep getting slightly cut we cant accept that"). A two-line clamp
+  // needs `overflow: hidden`, and a dot inside that box lost its left edge and
+  // its ring. The dot is a sibling now; only the words are clamped.
   const swatch = <Swatch name={name} dimension={dimension} />;
-  if (!pickable || !onPick) return <span className={className}>{swatch}{name}</span>;
+  const words = <span className="r-mk-name-text">{name}</span>;
+  if (!pickable || !onPick) return <span className={className}>{swatch}{words}</span>;
   return (
     <button
       type="button"
@@ -300,7 +305,7 @@ function RowName({ name, pickable, onPick, picked, className, dimension }: {
       aria-pressed={picked ?? false}
       onClick={(e) => { e.stopPropagation(); onPick(name); }}
     >
-      {swatch}{name}
+      {swatch}{words}
     </button>
   );
 }

@@ -232,6 +232,27 @@ once changes the next answer. That is the card's own done-when.
 
 ## Fixed
 
+### 2026-09-17 — "these things keep getting slightly cut we cant accept that"
+
+> *"also look these things keep getting slightly cut we cant accept that"*
+
+Said with five crops of the live build: the store dots at the left edge of
+ranked and contributors rows, the ringed dot of the row George pointed at cut
+flat on its left.
+
+**Found and fixed the same day, and now MEASURED rather than looked for.** The
+dot sat inside the name's box, and the two-line name clamp (added that morning)
+needs `overflow: hidden` — so the box clipped the dot's left edge and the ring a
+lit dot wears. The figures area also clips horizontally with no room for a ring
+at its edge. The dot is now a sibling of the clamped words, the name box has room
+on every side, the figures area keeps 8px inside its clip, and the dot is centred
+on the first line at any font size. **`ops/frames.py` now measures it:** every
+dot, ring, segment, bar, figure and label inside a figure is checked against each
+ancestor that clips (`clipped` in measure.json), and `--lit NAME` draws the
+ringed case. On the code before the fix it reads **3 clipped** (the ringed OPUS
+dots, `verification/frames/clip-before`); after, **0 on all ten frames**
+(`clip-after`, `clip-after2`). **Not verified by him.**
+
 ### 2026-09-17 — "we also dont need anything of these anymroe"
 
 > *"we also dont need anything of these anymroe"*

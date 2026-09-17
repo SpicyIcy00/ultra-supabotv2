@@ -581,6 +581,10 @@
 .r-figs {
   height: 100%; min-height: 0;
   overflow-y: auto; overflow-x: hidden;
+  /* ROOM FOR WHAT SITS ON A FIGURE'S EDGE — a ringed dot, a dumbbell's end dot
+     — so the area's own clip never takes a pixel of it (the log, 2026-09-17).
+     The negative margin keeps the figures where they were. */
+  padding-inline: 8px; margin-inline: -8px;
   scrollbar-width: none;
   overscroll-behavior: contain;
   padding-bottom: 8px;
@@ -1410,10 +1414,19 @@
    charts are still getting cut" — "P4 kiamoy s…", "Tong Garden …"). One line
    and an ellipsis fitted shops and cut products; two lines fit the names the
    catalogue actually has at the two-column width. */
+/* THE DOT AND THE WORDS ARE SIBLINGS: the words clamp, the dot is never inside
+   the box that clips (the log, 2026-09-17: "these things keep getting slightly
+   cut"). The ring a lit dot wears has room on every side. */
 .r-mk-name {
   font: 400 11.5px/1.3 var(--sans);
   color: var(--ink);
-  text-align: right;
+  display: flex; align-items: flex-start; min-width: 0;
+  padding: 3px 0 3px 3px;
+}
+.r-mk-name > .r-sw { margin-top: calc((1.3em - 8px) / 2); }
+button.r-mk-name > .r-sw, .r-mk-cellname > .r-sw { margin-top: calc((1.3em - 8px) / 2); }
+.r-mk-name-text {
+  min-width: 0;
   white-space: normal; overflow-wrap: anywhere; overflow: hidden;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
 }
@@ -1426,10 +1439,9 @@
    colour means "needs you" (UI rule 5), and picking a shop is not that. The
    underline is the affordance and the edge is the picked state. */
 button.r-mk-name, .r-mk-cellname {
-  font: inherit; color: var(--ink); background: none; border: 0; padding: 0;
-  cursor: pointer; text-align: inherit; max-width: 100%;
-  white-space: normal; overflow-wrap: anywhere; overflow: hidden;
-  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+  font: inherit; line-height: 1.3; color: var(--ink); background: none; border: 0; padding: 3px 0 3px 3px;
+  cursor: pointer; text-align: left; max-width: 100%;
+  display: flex; align-items: flex-start; min-width: 0;
   text-decoration: underline; text-decoration-style: dotted;
   text-underline-offset: 3px; text-decoration-color: var(--edge-strong);
 }

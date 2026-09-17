@@ -66,11 +66,16 @@ axios.defaults.adapter = async (config: InternalAxiosRequestConfig): Promise<Axi
   return ok([]);
 };
 
+// ?lit=NAME puts one name in every block's emphasis, so a frame draws the
+// ringed swatch a lit row wears — the case the clip measurement must see.
+const lit = params.get('lit');
+const blocks = lit ? scene.blocks.map((b) => ({ ...b, emphasise: lit })) : scene.blocks;
+
 const turns = [
   { role: 'user', text: scene.question, at: scene.at },
   {
     role: 'george', text: scene.answer, thinking: '', at: scene.at,
-    toolCalls: scene.calls, defaultComposition: { blocks: scene.blocks },
+    toolCalls: scene.calls, defaultComposition: { blocks },
   },
 ];
 

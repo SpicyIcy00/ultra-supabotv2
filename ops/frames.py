@@ -64,6 +64,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -247,6 +248,26 @@ MEASURE = r"""
     him: box(him), mark: box(canvas), words: box(words), claim: box(claim),
     claim_starts_inside_mark_lower_edge: claim && canvas ? box(claim).top <= box(canvas).bottom : null,
     figures: document.querySelectorAll('[data-figure]').length,
+    // CLIPPED: any dot, ring, swatch or mark inside a figure whose drawn box —
+    // a ringed swatch's ring included — reaches past an ancestor that clips
+    // (the log, 2026-09-17: "these things keep getting slightly cut").
+    clipped: (() => {
+      const out = [];
+      const clips = (el) => { const s = getComputedStyle(el); return s.overflowX !== 'visible' || s.overflowY !== 'visible'; };
+      for (const el of document.querySelectorAll('[data-figure] .r-sw, [data-figure] .r-mk-dot, [data-figure] .r-mk-seg, [data-figure] .r-mk-bar i, [data-figure] .r-mk-num, [data-figure] .r-fig-lbl')) {
+        const r = el.getBoundingClientRect();
+        if (!r.width) continue;
+        const ring = el.classList.contains('r-sw') && getComputedStyle(el).boxShadow !== 'none' ? 3 : 0;
+        for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+          if (!clips(a)) continue;
+          const c = a.getBoundingClientRect();
+          if (r.left - ring < c.left - 0.5 || r.right + ring > c.right + 0.5) {
+            out.push(`${el.className} in ${a.className}`); break;
+          }
+        }
+      }
+      return out;
+    })(),
     mark_state: canvas ? canvas.getAttribute('data-state') : null,
     mark_form: canvas ? canvas.getAttribute('data-form') : null,
     swatches: document.querySelectorAll('.r-sw').length,
@@ -263,7 +284,8 @@ MEASURE = r"""
 """
 
 
-async def run(scenes: list[str], out: Path, sizes: dict[int, int], cdp_port: int, base: str) -> dict:
+async def run(scenes: list[str], out: Path, sizes: dict[int, int], cdp_port: int, base: str,
+              lit: str | None = None) -> dict:
     import websockets
 
     def new_tab() -> str:
@@ -282,7 +304,8 @@ async def run(scenes: list[str], out: Path, sizes: dict[int, int], cdp_port: int
                 for rail in ("open", "closed"):
                     stem = f"{scene}-{width}-{rail}"
                     # THE ROOM
-                    await page.goto(f"{base}/frames.html?scene={scene}&rail={rail}", width, height, 0.5)
+                    lit_q = f"&lit={urllib.parse.quote(lit)}" if lit else ""
+                    await page.goto(f"{base}/frames.html?scene={scene}&rail={rail}{lit_q}", width, height, 0.5)
                     # Vite compiles on first request; wait for the room itself,
                     # then for every figure to land (the last at 200 + 260·n ms).
                     for _ in range(120):
@@ -321,6 +344,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--report", default="verification/p1close-v2.json")
     ap.add_argument("--out", default="verification/frames/p2s1")
     ap.add_argument("--widths", nargs="+", type=int, default=[1440, 1920])
+    ap.add_argument("--lit", default=None, help="a name to emphasise on every block (draws ringed swatches)")
     args = ap.parse_args(argv)
 
     out = ROOT / args.out
@@ -341,7 +365,7 @@ def main(argv: list[str]) -> int:
         chrome = start_chrome(cdp_port, profile)
         wait_http(f"http://127.0.0.1:{cdp_port}/json/version", 30)
         sizes = {w: SIZES.get(w, 1080) for w in args.widths}
-        measured = asyncio.run(run(scenes, out, sizes, cdp_port, base))
+        measured = asyncio.run(run(scenes, out, sizes, cdp_port, base, args.lit))
     finally:
         if chrome:
             chrome.terminate()
