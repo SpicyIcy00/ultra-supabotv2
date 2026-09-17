@@ -119,12 +119,14 @@ describe('the six chrome tokens the old components paint with', () => {
       .toContain(token);
   });
 
-  it('leaves the light room on the exact values it always had', () => {
-    // The light room was never the broken one. Changing it in the same edit
-    // would be a second change nobody reported and nobody has seen.
+  it("puts the light room on the design's paper (P2S.1(a))", () => {
+    // It was left on cream while the dark room moved, on the reasoning that
+    // nobody had reported it. P2S.1(a) re-grounds the whole room on the
+    // artifact's tokens, both themes, and a kept page on cream beside a board
+    // on white paper would be the "different app" report one theme over.
     expect(valuesOn(ROOM, LIGHT)).toMatchObject({
-      '--g-cream': '251 247 239', '--g-paper': '255 253 248', '--g-line': '228 220 203',
-      '--g-navy': '18 35 63', '--g-slate': '74 93 120', '--g-muted': '132 150 172',
+      '--g-cream': '247 248 248', '--g-paper': '255 255 255', '--g-line': '233 235 238',
+      '--g-navy': '16 17 19', '--g-slate': '60 65 73', '--g-muted': '107 112 121',
     });
   });
 

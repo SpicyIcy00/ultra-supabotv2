@@ -1,11 +1,8 @@
 /*
  * THE ROOM — George's surface.
  *
- * Light ground, objects lit by their own colour. Chosen after building the
- * dark version and looking at both: the owner wanted MANY colours, and many
- * colours only work on light. On a dark ground a hue has to be bright to stay
- * distinguishable, and a bright saturated field is the worst possible surface
- * for a table of numbers — which is what this is full of.
+ * The beside room of *George, Ahead of Me* (`ops/ideal/george-ahead-of-me.html`),
+ * ported rather than re-derived: its tokens, its type, its composition.
  *
  * NO GRAIN. NO NOISE. NO TEXTURE. Asked for explicitly, in those words.
  *
@@ -27,153 +24,142 @@
 
 /* ---------------------------------------------------------------- tokens */
 
+/*
+ * THE GROUND IS THE DESIGN'S (P2S.1(a), 2026-09-17).
+ *
+ * Every value in this block is copied from `ops/ideal/george-ahead-of-me.html`,
+ * the page the owner declared the design: *"everything ive been leading you to
+ * this final artifact is it"*. His first fix in it was *"i dont like the color
+ * scheme"*, and the answer was a GRAPHITE ground — near-black with a cool
+ * undertone, borders as translucent white, chromatic colour only where it means
+ * something: one warm hue for "needs you", green and red for direction. The
+ * light theme is the same set on paper, not an inversion.
+ *
+ * THE NAMES ARE THE ROOM'S, THE VALUES ARE THE ARTIFACT'S. `--card` is the
+ * artifact's `--paper`; `--edge-strong` is its `--edge-2`. Renaming them would
+ * be a word changing in two hundred places and not a meaning.
+ *
+ * THREE THEMES, THE ARTIFACT'S STRUCTURE: dark by default; the system's light
+ * when nobody chose; and whatever the person chose, which wins either way.
+ */
 .room {
-  /* DARK IS THE DESIGN. Near-black with a blue-violet bias, and every object
-     lit from inside by its own colour. Chosen 2026-09-12 from the owner's
-     pegs, which the plan had said from the start; the cream room below was
-     my detour, kept as the light theme because it was complete and because
-     a toggle is a toggle only if both sides are real. */
-  --ground: #0B0B11;
-  --card: #14141C;          /* raised — for things you READ */
-  --sunk: #1B1B26;
-  --edge: rgba(255, 255, 255, 0.07);
+  --ground: #0f1011;
+  --card: #17181a;          /* the artifact's --paper: raised, for things you READ */
+  --sunk: #202124;
+  --raise: #26272b;
+  --edge: rgba(255, 255, 255, 0.08);
   --edge-strong: rgba(255, 255, 255, 0.16);
   /* Quiet fill and neutral track — what a thing sits on when it has cooled. */
   --paper: rgba(255, 255, 255, 0.03);
   --track: rgba(255, 255, 255, 0.08);
 
-  --ink: #F1F0F6;
-  --ink-2: #A6A5B3;
-  --ink-3: #6E6D7B;
-  /* Neutral shadows. A shadow on near-black is deep and cheap; on cream it
-     is faint and warm. Never a hue — a tile has no colour of its own. */
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.3), 0 16px 36px -20px rgba(0, 0, 0, 0.7);
+  --ink: #f7f8f8;
+  --ink-2: #c9ced6;
+  --ink-3: #8a8f98;
+  --ink-4: #62666d;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-2: 0 1px 2px rgba(0, 0, 0, 0.5), 0 12px 32px -18px rgba(0, 0, 0, 0.8);
 
-  /* THE ONE PLACE IDENTITY STILL SHOWS (P2.l): an OPENED object's panel, set
-     from identity.ts by the one caller left. It was on every tile — the edge
-     and the wash — which made a board of seven shops seven hues over rows
-     that already carried the names. Neutral until an object is opened. */
+  /* THE ONE PLACE IDENTITY STILL SHOWS (P2.l): an OPENED object's panel. */
   --hue: 124, 133, 150;
 
-  /* Direction. Semantic, and never an identity. */
-  --up: 79, 227, 181;
-  --down: 255, 92, 138;
-  --flat: 138, 143, 168;
-  /* George's voice. Warm white on dark, never a measurement, never an
-     object's identity. What sits ON it needs its own ink. */
-  --george: 255, 236, 205;
-  --on-george: #1C1917;
+  /* Direction. Semantic, and never an identity. `--flat` is the artifact's
+     ink-3 — the grey its wires are drawn in — because "no direction" is the
+     chrome's own colour, not a third data colour. */
+  --up: 47, 168, 116;       /* #2FA874 */
+  --down: 232, 98, 75;      /* #E8624B */
+  --flat: 138, 143, 152;    /* #8a8f98 */
+  /* George's voice. The artifact draws him in the primary ink and nothing
+     warmer: the one warm hue on the page is "needs you". */
+  --george: 247, 248, 248;
+  --on-george: #0f1011;
 
-  /* THE ONE COLOUR THAT MEANS "NEEDS YOU" (CLAUDE.md UI rule 5). #D2691E, the
-     same hue the rest of the app reserves — one meaning, one value, whichever
-     chrome you are in, whichever theme. */
-  --accent: 210, 105, 30;
+  /* THE ONE COLOUR THAT MEANS "NEEDS YOU" (CLAUDE.md UI rule 5). The design's
+     own warm accent, with the ink that sits on it. */
+  --accent: 232, 176, 75;   /* #E8B04B */
+  --on-accent: #17120a;
 
-  --radius: 22px;
-  /* THE MEASURE — how wide the page's one column is, and the composer's with
-     it. Narrowed by how much is on the board; see "the measure" below. The
-     default is the wide one, so a browser without `:has()` is still centred,
-     which is the half of the report that matters. */
-  /* ONE FRAME FOR THE ROOM (2026-09-16). It was two — 1,320px for a board of
-     tiles, 1,120px for a list of rows — on the reasoning that they are two
-     kinds of content. They are, and their CONTENT still says so: prose keeps
-     62ch and the reading keeps 66ch, so nothing sprawls at this width. What
-     they are not is two ROOMS, and a frame that changes when you cross a
-     screen is the thing he read as "it doesnt feel like its from the same
-     app". The list screens' own 1,120 was chosen against 820px breaking
-     "AJI BARN Reorder" mid-item; 1,320 clears that by more. */
+  --radius: 14px;
+
+  /* THE COMPOSITION (P2S.1(b)) — the artifact's beside room, in numbers. Two
+     columns, 580 and 940, 40 between; the sidebar 232 on the left edge. */
+  --him-w: 580px;
+  --figs-w: 940px;
+  --comp-gap: 40px;
+  --comp-max: 1560px;
+  /* The old frame, until (b) replaces it in the next commit. */
   --measure: 1320px;
+  --side-w: 232px;
 
-  --sans: 'Schibsted Grotesk', ui-sans-serif, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+  --sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'Geist Mono', ui-monospace, Menlo, Consolas, monospace;
   --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
 
   color-scheme: dark;
   min-height: 100dvh;
   background: var(--ground);
   color: var(--ink);
-  font-family: var(--sans);
+  font: 14.5px/1.6 var(--sans);
+  letter-spacing: 0.005em;
   -webkit-font-smoothing: antialiased;
   transition: background 240ms var(--ease), color 240ms var(--ease);
 }
 
 /* THE OLD COMPONENTS, LIT FOR THIS ROOM (2026-09-15).
 
-   `/pages/:id` renders PinnedPage and everything under it — PinTile,
-   ResultBlocks, Instruments, ReceiptsBlock — and every colour in that tree
-   comes from six `george-*` chrome tokens describing a cream page with navy
-   text. Inside this chrome, on the dark ground, that is navy on near-black and
-   white receipt pills: the "saved pages look really weird" of 2026-09-15.
-
-   The six are CSS variables now (src/index.css), so they are redefined here to
-   this room's own ground and ink rather than 164 class names being rewritten.
-   Same six meanings, this room's values, and NO class in those components
-   changed — which is why this cannot move anything on a surface still on cream.
-
-   It buys legibility and nothing else. Those components are still the pre-P1.e
-   widgets: fourteen shapes where the room draws six, and the receipts line that
-   still says "vs vs previous period". Drawing a kept page with the room's own
-   marks is a card, not a token swap.
-
-   ONLY THE DARK ROOM CHANGES. The light room is left on the exact hexes it has
-   always had: it was never the broken one, and a "fix" nobody reported that
-   also moves the theme he was not looking at is two changes in one commit. */
+   `/pages/:id` renders PinnedPage and everything under it, and every colour in
+   that tree comes from six `george-*` chrome tokens (src/index.css). They are
+   redefined here to this room's own ground and ink, so a kept page sits on the
+   same graphite as the board — until P2S.3(g) deletes that renderer. */
 .room {
-  --g-cream: 11 11 17;      /* --ground   the page they sit on */
-  --g-paper: 20 20 28;      /* --card     raised, for things you READ */
-  /* A HAIRLINE AT FULL ALPHA, not white. `border-george-line` is written bare
-     far more often than as `/40`, so this channel has to read as a line on its
-     own — `--edge` is white at 0.07, which lands here, and the `/NN` forms then
-     fall away from it rather than up to pure white. */
-  --g-line: 30 30 38;
-  --g-navy: 241 240 246;    /* --ink      primary text and headings */
-  --g-slate: 166 165 179;   /* --ink-2    secondary */
-  --g-muted: 110 109 123;   /* --ink-3    tertiary */
+  --g-cream: 15 16 17;      /* --ground */
+  --g-paper: 23 24 26;      /* --card */
+  --g-line: 38 39 43;       /* --raise, a hairline at full alpha */
+  --g-navy: 247 248 248;    /* --ink */
+  --g-slate: 201 206 214;   /* --ink-2 */
+  --g-muted: 138 143 152;   /* --ink-3 */
 }
 
-/* AND THE TYPE, for the same reason and by the same mechanism. The old
-   components set their headings and their one big figure in a system serif;
-   the room has no serif at all and draws both in `--sans`. "its a different
-   font" — 2026-09-15, and it was, on every heading of a kept page. The bar a
-   ranking draws is bridged here too: it was painted in the primary INK, which
-   on this ground is near-white, and a bar is a mark rather than a word. */
+/* AND THE TYPE. The old headings take the chrome's sans: the design's serif is
+   George's VOICE (the claim, the standing text, next), and a kept page's
+   heading is chrome. The bar a ranking draws is bridged to no direction. */
 .room {
   --g-serif: var(--sans);
   --g-bar: var(--flat);
 }
 
-:root[data-room-theme="light"] .room {
-  --g-cream: 251 247 239;   /* #FBF7EF, unchanged */
-  --g-paper: 255 253 248;   /* #FFFDF8, unchanged */
-  --g-line: 228 220 203;    /* #E4DCCB, unchanged */
-  --g-navy: 18 35 63;       /* #12233F, unchanged */
-  --g-slate: 74 93 120;     /* #4A5D78, unchanged */
-  --g-muted: 132 150 172;   /* #8496AC, unchanged */
+/* LIGHT — THE SAME SET ON PAPER. Written out twice, as the artifact writes it:
+   once for the system's light when nobody chose, once for a person's choice.
+   Keyed on <html>, see theme.ts. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-room-theme="dark"]) .room {
+    --ground: #f7f8f8; --card: #ffffff; --sunk: #f0f1f3; --raise: #e9ebee;
+    --edge: rgba(16, 17, 19, 0.09); --edge-strong: rgba(16, 17, 19, 0.18);
+    --paper: rgba(16, 17, 19, 0.02); --track: rgba(16, 17, 19, 0.07);
+    --ink: #101113; --ink-2: #3c4149; --ink-3: #6b7079; --ink-4: #9aa0a8;
+    --shadow-1: 0 1px 2px rgba(16, 17, 19, 0.08);
+    --shadow-2: 0 1px 2px rgba(16, 17, 19, 0.08), 0 12px 32px -18px rgba(16, 17, 19, 0.35);
+    --up: 26, 138, 90; --down: 200, 68, 43; --flat: 107, 112, 121;
+    --george: 16, 17, 19; --on-george: #ffffff;
+    --accent: 183, 121, 31; --on-accent: #ffffff;
+    --g-cream: 247 248 248; --g-paper: 255 255 255; --g-line: 233 235 238;
+    --g-navy: 16 17 19; --g-slate: 60 65 73; --g-muted: 107 112 121;
+    color-scheme: light;
+  }
 }
-
-/* LIGHT — the cream room, complete. Warm and deliberately not white: a cool
-   grey ground made the coloured tiles look like stickers on an office wall.
-   Every token above is redefined here, so nothing has a colour that only
-   exists in one theme. Keyed on <html>, see theme.ts. */
 :root[data-room-theme="light"] .room {
-  --ground: #EFEAE1;
-  --card: #FBF8F3;
-  --sunk: #E7E1D6;
-  --edge: rgba(28, 25, 23, 0.10);
-  --edge-strong: rgba(28, 25, 23, 0.20);
-  --paper: rgba(255, 255, 255, 0.55);
-  --track: rgba(17, 24, 39, 0.06);
-  --ink: #1C1917;
-  --ink-2: #57534E;
-  --ink-3: #8C837A;
-  --shadow-1: 0 1px 2px rgba(17, 24, 39, 0.04);
-  --shadow-2: 0 2px 4px rgba(17, 24, 39, 0.04), 0 16px 36px -20px rgba(17, 24, 39, 0.28);
-  --up: 14, 145, 100;
-  --down: 206, 43, 66;
-  --flat: 113, 122, 140;
-  --george: 196, 128, 44;
-  --on-george: #FFFDF9;
+  --ground: #f7f8f8; --card: #ffffff; --sunk: #f0f1f3; --raise: #e9ebee;
+  --edge: rgba(16, 17, 19, 0.09); --edge-strong: rgba(16, 17, 19, 0.18);
+  --paper: rgba(16, 17, 19, 0.02); --track: rgba(16, 17, 19, 0.07);
+  --ink: #101113; --ink-2: #3c4149; --ink-3: #6b7079; --ink-4: #9aa0a8;
+  --shadow-1: 0 1px 2px rgba(16, 17, 19, 0.08);
+  --shadow-2: 0 1px 2px rgba(16, 17, 19, 0.08), 0 12px 32px -18px rgba(16, 17, 19, 0.35);
+  --up: 26, 138, 90; --down: 200, 68, 43; --flat: 107, 112, 121;
+  --george: 16, 17, 19; --on-george: #ffffff;
+  --accent: 183, 121, 31; --on-accent: #ffffff;
+  --g-cream: 247 248 248; --g-paper: 255 255 255; --g-line: 233 235 238;
+  --g-navy: 16 17 19; --g-slate: 60 65 73; --g-muted: 107 112 121;
   color-scheme: light;
 }
 
@@ -491,7 +477,7 @@
   position: absolute; top: 2px; right: 2px;
   min-width: 15px; height: 15px; padding: 0 4px;
   border-radius: 8px;
-  background: rgb(var(--accent)); color: #fff;
+  background: rgb(var(--accent)); color: var(--on-accent);
   font: 600 9px/15px var(--sans); text-align: center;
 }
 
@@ -1316,7 +1302,7 @@ body.r-dragging-on .r-tile { transition: none; }
 /* The one action in the app that wears the approvals colour. */
 .r-do {
   border: 0; border-radius: 9px; cursor: pointer;
-  background: rgb(var(--accent)); color: #fff;
+  background: rgb(var(--accent)); color: var(--on-accent);
   font: 500 12px/1 var(--sans); padding: 9px 14px;
 }
 .r-do:disabled { opacity: 0.5; cursor: default; }
