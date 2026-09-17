@@ -26,6 +26,8 @@ import { Board, turnNotices } from './render';
 import { FiguresArea, Wires } from './FiguresArea';
 import { AliveMark } from './AliveMark';
 import { markStateOf } from './alive';
+import { claimAndStanding } from './beside';
+import { placeFigures as figuresInText } from './figures';
 import { identitiesFrom } from './identity';
 import { readStoreAppearance } from '../services/storesApi';
 import { IdentityContext } from './swatch';
@@ -286,6 +288,23 @@ export default function Room() {
   // reading and no objects, and used to land on the greeting with his words
   // thrown away.
   const empty = board.length === 0 && !(latest?.text ?? '').trim() && notices.length === 0;
+
+  // THE FIGURE THE ANSWER RESTS ON (the log, 2026-09-17). The first read his
+  // CLAIM cites by a figure in it, drawn from this turn; the Board falls back
+  // to the block he weighted `lead`. Values the answer carries, never a guess.
+  const lead = useMemo(() => {
+    if (!latest || busy) return null;
+    const { claimRaw } = claimAndStanding(latest.text, latest.reading?.claim);
+    const cited = figuresInText(claimRaw, latest.toolCalls)
+      .map((piece) => piece.seq)
+      .filter((seq): seq is number => seq !== undefined);
+    const newest = answers.length - 1;
+    for (const seq of cited) {
+      const o = drawn.find((x) => x.turn === newest && (x.seq === seq || x.seqs?.includes(seq)));
+      if (o) return o.key;
+    }
+    return null;
+  }, [latest, busy, answers.length, drawn]);
 
   // WHAT HE IS DOING, off the stream and nothing else (P2S.2(d)). `need` only
   // from a LOADED approvals count (UI rule 8); a failed turn breaks the
@@ -838,6 +857,7 @@ export default function Room() {
                     on={on}
                     seenUpTo={firstUnseen(answers, sinceAt)}
                     onLanding={onLanding}
+                    lead={lead}
                   />
                 </>
               )}

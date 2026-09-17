@@ -69,6 +69,14 @@ export interface BoardProps {
    * their way and pulses once per arrival — the design's reveal, said to him.
    */
   onLanding?(progress: { pending: number; arrived: number }): void;
+  /**
+   * THE FIGURE THE ANSWER RESTS ON, by key (the log, 2026-09-17: *"all charts
+   * dont need to be the same size or small it should decide based on the space
+   * it has and how important it is"*). It goes first, spans the whole figures
+   * area and reads larger. `Room` decides it from what the answer carries — the
+   * read his claim cites, else the block he weighted `lead` — never a guess.
+   */
+  lead?: string | null;
 }
 
 
@@ -130,10 +138,16 @@ export function turnNotices(p: {
  *   on screen stays put when the answer around it changes.
  */
 export function Board(p: BoardProps) {
-  const objects = inOrder(p.board, p.local, p.focused);
+  const ordered = inOrder(p.board, p.local, p.focused);
   const newest = p.answers.length - 1;
+  const leadKey = p.lead && ordered.some((o) => o.key === p.lead) ? p.lead
+    : ordered.find((o) => o.turn === newest && o.weight === 'lead')?.key ?? null;
+  const objects = leadKey
+    ? [...ordered.filter((o) => o.key === leadKey), ...ordered.filter((o) => o.key !== leadKey)]
+    : ordered;
   const width = useViewport();
   const columns = columnsFor(objects.length, width);
+  const spans = objects.map((o) => o.key === leadKey);
   const keys = objects.map((o) => o.key).join('|');
 
   // HOW TALL EACH FIGURE IS, measured — the one input the placement needs.
@@ -164,7 +178,7 @@ export function Board(p: BoardProps) {
     });
     return () => seen.disconnect();
   }, [keys]);
-  const placed = placeFigures(objects.map((o) => heights[o.key] ?? 0), columns);
+  const placed = placeFigures(objects.map((o) => heights[o.key] ?? 0), columns, spans);
 
   // WHICH FIGURES HAVE ARRIVED. Keyed, so an answer that transforms a figure
   // in place does not make it arrive again.
@@ -197,9 +211,12 @@ export function Board(p: BoardProps) {
             data-figure={o.key}
             data-col={placed[n]}
             data-arrived={arrived.has(o.key) ? 'yes' : 'no'}
-            className={['r-fig', out ? 'r-fig--out' : '', p.focused === o.key ? 'r-fig--open' : '']
+            data-lead={spans[n] ? 'yes' : undefined}
+            className={['r-fig', out ? 'r-fig--out' : '', p.focused === o.key ? 'r-fig--open' : '',
+                        spans[n] ? 'r-fig--lead' : '']
               .filter(Boolean).join(' ')}
-            style={{ gridColumn: placed[n] + 1, gridRowEnd: `span ${Math.max(1, h + FIGURE_GAP)}` }}
+            style={{ gridColumn: spans[n] && columns > 1 ? '1 / -1' : placed[n] + 1,
+                     gridRowEnd: `span ${Math.max(1, h + FIGURE_GAP)}` }}
           >
             <div className="r-fig-body">
               {/* WHICH READ THIS IS — the number his words' superscripts point

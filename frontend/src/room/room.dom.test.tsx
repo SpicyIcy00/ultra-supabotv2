@@ -252,11 +252,27 @@ describe('the figures flow into columns, left to right then down (P2S.1(c))', ()
     [2, 2, [0, 1]],
     [3, 2, [0, 1, 0]],
     [4, 2, [0, 1, 0, 1]],
-    [5, 3, [0, 1, 2, 0, 1]],
+    // Never three since 2026-09-17: three columns cut what a row names.
+    [5, 2, [0, 1, 0, 1, 0]],
   ])('puts %i figures in %i columns, in that order', (n, cols, want) => {
     const { container } = draw(many(n as number));
     expect(container.querySelector('.r-flow')?.getAttribute('data-columns')).toBe(String(cols));
     expect(columnsOf()).toEqual(want);
+  });
+
+  it('lets the figure the answer rests on span the area and go first (the log, 2026-09-17)', () => {
+    // "all charts dont need to be the same size or small it should decide
+    // based on the space it has and how important it is"
+    const figures = [
+      object('table', { key: 'a' }), object('table', { key: 'b' }),
+      object('table', { key: 'c', weight: 'lead' }),
+    ];
+    const { container } = draw(figures);
+    const first = container.querySelector('[data-figure]') as HTMLElement;
+    expect(first.getAttribute('data-figure')).toBe('c');
+    expect(first.getAttribute('data-lead')).toBe('yes');
+    expect(first.style.gridColumn).toBe('1 / -1');
+    expect(container.querySelectorAll('[data-lead="yes"]')).toHaveLength(1);
   });
 
   it('labels every figure with the read it came from, as the superscripts do', () => {

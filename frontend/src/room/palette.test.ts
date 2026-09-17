@@ -330,10 +330,13 @@ describe('the row label column', () => {
     expect(SCALE?.['grid-template-columns']).toBe(ROW?.['grid-template-columns']);
   });
 
-  it('still ellipses, because a label longer than the picture is a third thing', () => {
+  it('wraps to two lines before it cuts a name (the log, 2026-09-17)', () => {
+    // "some charts are still getting cut": one line and an ellipsis cut
+    // "P4 kiamoy strips" to "P4 kiamoy s…". Two lines, then clipped.
     const name = rule('.r-mk-name');
-    expect(name?.['text-overflow']).toBe('ellipsis');
-    expect(name?.['white-space']).toBe('nowrap');
+    expect(name?.['white-space']).toBe('normal');
+    expect(name?.['-webkit-line-clamp']).toBe('2');
+    expect(name?.['text-overflow']).toBeUndefined();
   });
 });
 

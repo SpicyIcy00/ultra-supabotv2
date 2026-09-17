@@ -74,10 +74,18 @@ describe('the composition is the design\'s, and it stays centred', () => {
 });
 
 describe('the figures flow into columns — his rows 6 and 7', () => {
-  it('uses the artifact\'s column counts for 1, 2–4 and 5+', () => {
+  it('uses one column for one figure and two for more — never three (the log, 2026-09-17)', () => {
+    // "some charts are still getting cut": nine figures in three ~290px
+    // columns ellipsed every product name.
     expect(columnsFor(1, 1920)).toBe(1);
-    for (const n of [2, 3, 4]) expect(columnsFor(n, 1920)).toBe(2);
-    for (const n of [5, 6, 9]) expect(columnsFor(n, 1920)).toBe(3);
+    for (const n of [2, 3, 4, 5, 6, 9]) expect(columnsFor(n, 1920)).toBe(2);
+  });
+
+  it('puts a spanning figure under the tallest column and raises both to its foot', () => {
+    // The lead first: it takes the whole width, then the rest flow beneath it.
+    expect(placeFigures([300, 120, 120, 120], 2, [true])).toEqual([0, 0, 1, 0]);
+    // A spanning figure later in the order lands under both columns.
+    expect(placeFigures([400, 100, 200, 100], 2, [false, false, true, false])).toEqual([0, 1, 0, 0]);
   });
 
   it('takes one column at 900px and under, whatever the count', () => {
@@ -89,7 +97,7 @@ describe('the figures flow into columns — his rows 6 and 7', () => {
     [2, [0, 1]],
     [3, [0, 1, 0]],
     [4, [0, 1, 0, 1]],
-    [5, [0, 1, 2, 0, 1]],
+    [5, [0, 1, 0, 1, 0]],
   ])('places %i equal figures left to right, then down', (n, want) => {
     const heights = new Array(n as number).fill(200);
     expect(placeFigures(heights, columnsFor(n as number, 1920))).toEqual(want);

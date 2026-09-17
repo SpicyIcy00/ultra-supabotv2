@@ -89,15 +89,20 @@ export function composition(viewport: number, sideOpen: boolean): Composition {
 /* ---------------------------------------------------------- the figures */
 
 /**
- * HOW MANY COLUMNS THE FIGURES TAKE — the artifact's `place()`, exactly:
- * one figure one column, two to four two, five and more three, and one on a
- * phone whatever the count.
+ * HOW MANY COLUMNS THE FIGURES TAKE — one figure one column, more than one
+ * two, and one on a phone whatever the count.
+ *
+ * THREE COLUMNS WENT ON 2026-09-17. The design's `place()` gave five or more
+ * figures three columns of ~290px, and the owner, looking at nine: *"some
+ * charts are still getting cut"* — product names ellipsed to "P4 kiamoy s…",
+ * "Tong Garden …" — and *"all charts dont need to be the same size or small"*.
+ * Two columns is the most the figures area holds without cutting what a row
+ * names; the chart the answer rests on spans both (`placeFigures`' `spans`).
  */
-export function columnsFor(count: number, viewport: number): 1 | 2 | 3 {
+export function columnsFor(count: number, viewport: number): 1 | 2 {
   if (viewport <= PHONE) return 1;
   if (count <= 1) return 1;
-  if (count <= 4) return 2;
-  return 3;
+  return 2;
 }
 
 /** The artifact's gap between two figures in one column (`.bs-col` gap). */
@@ -112,11 +117,19 @@ export const FIGURE_GAP = 34;
  * beside a tall one, and with equal heights the order reads left to right,
  * then down (his row 7).
  */
-export function placeFigures(heights: readonly number[], columns: number): number[] {
+export function placeFigures(heights: readonly number[], columns: number,
+                             spans: readonly boolean[] = []): number[] {
   const cols = Math.max(1, columns);
   const height = new Array<number>(cols).fill(0);
   const count = new Array<number>(cols).fill(0);
-  return heights.map((h) => {
+  return heights.map((h, n) => {
+    // A FIGURE THAT SPANS — the one the answer rests on — goes under the
+    // tallest column and raises every column to its foot. It reports column 0.
+    if (spans[n] && cols > 1) {
+      const top = Math.max(...height.map((x, c) => x + (count[c] > 0 ? FIGURE_GAP : 0)));
+      for (let c = 0; c < cols; c += 1) { height[c] = top + Math.max(0, h); count[c] += 1; }
+      return 0;
+    }
     let best = 0;
     for (let c = 1; c < cols; c += 1) {
       const a = height[c] * 1000 + count[c];

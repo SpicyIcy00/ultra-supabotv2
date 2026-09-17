@@ -101,11 +101,12 @@ describe('no figure sits in a box — his row 5', () => {
 describe('nothing is cut, and nothing shows a scrollbar — rows 8 and 9', () => {
   it('clips nothing inside the composition', () => {
     // `overflow: hidden` on the room itself stops the PAGE scrolling (row 9);
-    // on anything inside it, it cuts a figure off (row 8). Truncating one line
-    // of text with an ellipsis is not a cut and is allowed.
+    // on anything inside it, it cuts a figure off (row 8). Truncating TEXT —
+    // one line with an ellipsis, or a name clamped at two lines (2026-09-17) —
+    // is not a cut and is allowed.
     const cuts = rules().filter((r) => r.media === null
       && (r.decls.overflow === 'hidden' || r.decls['overflow-y'] === 'hidden')
-      && !r.decls['text-overflow']
+      && !r.decls['text-overflow'] && !r.decls['-webkit-line-clamp']
       && r.selector !== '.r-main');
     const allowed = new Set([
       // a bar's track, whose fill is the bar: nothing is behind it to cut

@@ -63,7 +63,8 @@ export function FiguresArea({ children, areaRef }: {
 
   return (
     <div className="r-right-figs">
-      <div className="r-figs" ref={areaRef} data-figures-area="">
+      <div className="r-figs" ref={areaRef} data-figures-area=""
+           data-more-up={arrows.up ? 'yes' : 'no'} data-more-down={arrows.down ? 'yes' : 'no'}>
         {children}
       </div>
       <button type="button" className="r-arr r-arr--up" title="earlier figures"
