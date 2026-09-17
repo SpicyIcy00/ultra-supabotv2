@@ -32,7 +32,7 @@ import { identitiesFrom } from './identity';
 import { readStoreAppearance } from '../services/storesApi';
 import { IdentityContext } from './swatch';
 import { ExplainsOnlyContext, drawnOnly, explainsOnlyFrom } from './noticeDrawing';
-import { Reading, ReadingNext } from './Reading';
+import { Narration, Reading, ReadingNext } from './Reading';
 import { FootOffers } from './FootOffers';
 import { offersOf, placement } from './actions';
 import { usePagesForGhosts } from './ghosts';
@@ -777,7 +777,9 @@ export default function Room() {
 
           <div className="r-words" ref={wordsRef} data-more-down={wordsMore ? 'yes' : 'no'}>
             {/* WHILE HE WORKS, A LINE UNDER HIM (the log, 2026-09-17). */}
-            <Doing turn={latest} live={busy} />
+            <Doing turn={latest} live={busy} answering={Boolean((latest?.text ?? '').trim())} />
+            <Narration said={(latest as { narration?: string } | null)?.narration} live={busy}
+                       answering={Boolean((latest?.text ?? '').trim())} />
             {empty ? (
               <Opening loading={Boolean(threadId) && thread.loading} />
             ) : (

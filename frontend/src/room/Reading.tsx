@@ -259,6 +259,25 @@ export function Reading({ text, notices, reading, calls, onFigure }: {
 }
 
 /**
+ * WHAT HE SAID BEFORE THE ANSWER, WHILE HE WORKS (the log, 2026-09-17).
+ *
+ * The stream keeps interim prose — "Rockwell is down; let me look at the
+ * drivers" — as `narration` when the answer resets, and since P2S.1 nothing drew
+ * it, so a minute of work under the mark was silent. It is his voice, so it is
+ * drawn here, in his serif, quieter than an answer, under the work line; and it
+ * is gone once the answer itself arrives.
+ */
+export function Narration({ said, live, answering }: {
+  said: string | null | undefined;
+  live: boolean;
+  answering: boolean;
+}) {
+  const text = (said ?? '').trim();
+  if (!live || answering || !text) return null;
+  return <p className="r-say r-say--standing r-doing-said">{text}</p>;
+}
+
+/**
  * ONE SENTENCE, ALWAYS LAST — under the evidence, because that is where it is
  * read: you look at the figures, and then at what to do about them.
  *

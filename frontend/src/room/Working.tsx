@@ -173,27 +173,32 @@ export function Working({ turn, live }: { turn: AnswerTurn | null; live: boolean
  * model round trip — so for most of a minute the column under the mark was
  * empty, while the trail on the right was the only sign of life. This is one
  * line, in his place: the read running now (or the last to land) in the
- * trail's own words, the turn's clock, and — where he wrote any before the
- * answer — his own narration ("let me look at the drivers"), which the stream
- * keeps as `narration` and nothing drew. Nothing here is invented: every word
+ * trail's own words, and the turn's clock. Nothing here is invented: every word
  * is a frame's, and it is gone the moment his answer starts to arrive.
+ *
+ * HIS OWN WORDS ARE NOT DRAWN HERE. A work surface never draws model text
+ * (`test_visible_work_contract`: the mono voice is the system's, the serif is
+ * his). What he writes before the answer is drawn by `Narration` in
+ * Reading.tsx, directly under this line.
  */
-export function Doing({ turn, live }: { turn: AnswerTurn | null; live: boolean }) {
+export function Doing({ turn, live, answering }: {
+  turn: AnswerTurn | null;
+  live: boolean;
+  /** His answer has started to arrive — told by the room, which reads it. */
+  answering: boolean;
+}) {
   const elapsed = useElapsed(turn?.at, live);
-  if (!live || !turn) return null;
-  if ((turn.text ?? '').trim()) return null;
+  if (!live || !turn || answering) return null;
   const steps = stepsOf(turn);
   const running = steps.find((s) => s.state === 'running');
   const last = [...steps].reverse().find((s) => s.state !== 'running');
   const doing = running ? `${running.words}…` : last ? `${last.words} · thinking…` : 'thinking…';
-  const said = (turn as AnswerTurn & { narration?: string }).narration?.trim();
   return (
     <div className="r-doing" data-doing={running ? 'reading' : 'thinking'}>
       <p className="r-doing-line">
         {doing}
         {elapsed !== null && <span className="r-work-clock">{elapsedWords(elapsed)}</span>}
       </p>
-      {said && <p className="r-say r-say--standing r-doing-said">{said}</p>}
     </div>
   );
 }
