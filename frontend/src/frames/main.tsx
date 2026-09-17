@@ -28,6 +28,8 @@ import scenes from './scenes.json';
 import '../index.css';
 
 interface Scene {
+  reading?: Record<string, unknown>;
+  composed?: Record<string, unknown>[];
   scene: string;
   question: string;
   answer: string;
@@ -76,6 +78,8 @@ const turns = [
   {
     role: 'george', text: scene.answer, thinking: '', at: scene.at,
     toolCalls: scene.calls, defaultComposition: { blocks },
+    ...(scene.reading ? { reading: scene.reading } : {}),
+    ...(scene.composed?.length ? { composition: { blocks: scene.composed } } : {}),
   },
 ];
 

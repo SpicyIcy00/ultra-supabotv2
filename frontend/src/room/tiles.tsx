@@ -82,6 +82,12 @@ export interface TileProps {
    * draws exactly as the board drew before offers existed.
    */
   offers?: ActionOffer[];
+  /**
+   * THE ORDER STORES ARE LISTED IN ACROSS AN ANSWER (the `speak` layout,
+   * 2026-09-17): a comparison lists its stores in this order, so the eye finds
+   * OPUS in the same place on every chart. Absent keeps the tool's own order.
+   */
+  order?: string[];
 }
 
 /**

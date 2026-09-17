@@ -85,7 +85,10 @@ CHROME_CANDIDATES = [
 SCENE_OF = {"situation": "follow-up", "doing": "vague", "nothing": "caveats", "draw": "taught"}
 # A scene no eval report has ever recorded, drawn from a checked-in fixture
 # that says in its own `why` where its rows came from (P2S.2).
-FIXTURE_OF = {"memory": ROOT / "ops" / "frames_fixtures" / "memory.json"}
+FIXTURE_OF = {"memory": ROOT / "ops" / "frames_fixtures" / "memory.json",
+              # The owner's own turn, with real rows off the estate — so it lives
+              # in verification/, which is not committed, like every recorded run.
+              "shangrila": ROOT / "verification" / "frames_fixtures" / "shangrila.json"}
 SIZES = {1440: 900, 1920: 1080}
 MAX_ROWS = 200
 
@@ -100,9 +103,20 @@ def build_scenes(report_path: Path, scenes: list[str]) -> dict[str, Any]:
     out = []
     for scene in scenes:
         if scene in FIXTURE_OF:
+            if not FIXTURE_OF[scene].exists():
+                print(f"  {scene}: {FIXTURE_OF[scene].relative_to(ROOT)} is not on this machine; skipped")
+                continue
             fx = json.loads(FIXTURE_OF[scene].read_text(encoding="utf-8"))
-            out.append({"scene": scene, "from": str(FIXTURE_OF[scene].relative_to(ROOT)),
-                        **{k: fx[k] for k in ("question", "answer", "at", "blocks", "calls")}})
+            item = {"scene": scene, "from": str(FIXTURE_OF[scene].relative_to(ROOT)),
+                    **{k: fx[k] for k in ("question", "answer", "at", "blocks", "calls")}}
+            if fx.get("reading"):
+                item["reading"] = fx["reading"]
+            if fx.get("default_blocks"):
+                # A recorded post: George's own blocks that name a read of THIS
+                # turn are the composition; the loop's defaults stand beside.
+                item["composed"] = [b for b in fx["blocks"] if b.get("seq") is not None]
+                item["blocks"] = fx["default_blocks"]
+            out.append(item)
             continue
         scenario = SCENE_OF.get(scene)
         case = cases.get(scenario)
@@ -285,7 +299,7 @@ MEASURE = r"""
 
 
 async def run(scenes: list[str], out: Path, sizes: dict[int, int], cdp_port: int, base: str,
-              lit: str | None = None) -> dict:
+              lit: str | None = None, layout: str | None = None) -> dict:
     import websockets
 
     def new_tab() -> str:
@@ -304,7 +318,7 @@ async def run(scenes: list[str], out: Path, sizes: dict[int, int], cdp_port: int
                 for rail in ("open", "closed"):
                     stem = f"{scene}-{width}-{rail}"
                     # THE ROOM
-                    lit_q = f"&lit={urllib.parse.quote(lit)}" if lit else ""
+                    lit_q = (f"&lit={urllib.parse.quote(lit)}" if lit else "") + (f"&layout={layout}" if layout else "")
                     await page.goto(f"{base}/frames.html?scene={scene}&rail={rail}{lit_q}", width, height, 0.5)
                     # Vite compiles on first request; wait for the room itself,
                     # then for every figure to land (the last at 200 + 260·n ms).
@@ -345,6 +359,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--out", default="verification/frames/p2s1")
     ap.add_argument("--widths", nargs="+", type=int, default=[1440, 1920])
     ap.add_argument("--lit", default=None, help="a name to emphasise on every block (draws ringed swatches)")
+    ap.add_argument("--layout", default=None, choices=["beside", "speak"], help="which composition to render")
     args = ap.parse_args(argv)
 
     out = ROOT / args.out
@@ -365,7 +380,7 @@ def main(argv: list[str]) -> int:
         chrome = start_chrome(cdp_port, profile)
         wait_http(f"http://127.0.0.1:{cdp_port}/json/version", 30)
         sizes = {w: SIZES.get(w, 1080) for w in args.widths}
-        measured = asyncio.run(run(scenes, out, sizes, cdp_port, base, args.lit))
+        measured = asyncio.run(run(scenes, out, sizes, cdp_port, base, args.lit, args.layout))
     finally:
         if chrome:
             chrome.terminate()

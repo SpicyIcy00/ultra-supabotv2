@@ -24,6 +24,73 @@
  * millisecond.
  */
 
+import type { ToolCall } from '../types/george';
+import { placeFigures as figuresPlaced } from './figures';
+
+/* ----------------------------------------------------------- the layout */
+
+/**
+ * WHICH COMPOSITION — THE DESIGN'S, OR GEORGE SPEAKING (2026-09-17).
+ *
+ * The owner asked whether the beside room is ideal and was told, honestly, no:
+ * the mark takes the top-left and pushes the headline halfway down, the dotted
+ * lines cross the words, and his thinking sits apart from the charts. He said
+ * *"okay lets try that but dont make blob too small"*. So `speak` is built BESIDE
+ * `beside`, switched by `?layout=speak` (remembered per browser), and the two
+ * are rendered from the same answers for him to point at. The one he does not
+ * pick is deleted.
+ *
+ *   beside  the design's: him top-left, his words under him, figures right,
+ *           a line from him to every figure.
+ *   speak   him and his headline across the top, like him saying it; his
+ *           other words left, left-aligned; figures right, each carrying its
+ *           own thought; a line from him only to the figure under the pointer.
+ */
+export type Layout = 'beside' | 'speak';
+const LAYOUT_KEY = 'george.layout';
+
+export function layoutFrom(search: string | null | undefined): Layout {
+  let asked: string | null = null;
+  try { asked = new URLSearchParams(search ?? '').get('layout'); } catch { asked = null; }
+  if (asked === 'speak' || asked === 'beside') {
+    try { localStorage.setItem(LAYOUT_KEY, asked); } catch { /* the choice still holds for this page */ }
+    return asked;
+  }
+  let kept: string | null = null;
+  try { kept = localStorage.getItem(LAYOUT_KEY); } catch { kept = null; }
+  return kept === 'speak' ? 'speak' : 'beside';
+}
+
+/**
+ * HIS SENTENCES, BY THE CHART THEY ARE ABOUT (the owner, 2026-09-17: *"more text
+ * of what george thinks should be integrated on the charts so when you see the
+ * visual and you here his thought you can get a good picture"*).
+ *
+ * A sentence that cites figures from a read belongs beside that read's chart —
+ * the read most of its figures came from, by the same matcher the superscripts
+ * use. A sentence citing none stays in the words column. The claim's own
+ * sentence is not moved: it is the headline. Not a character is rewritten; the
+ * sentences are the answer's own slices, in order.
+ */
+export function thoughtsOf(text: string | null | undefined, claimSpan: string | null | undefined,
+                           calls: ToolCall[]): { bySeq: Map<number, string[]>; unbound: string } {
+  const parts = claimAndStanding(text, claimSpan);
+  const bySeq = new Map<number, string[]>();
+  const unbound: string[] = [];
+  for (const slice of [parts.before, parts.after]) {
+    for (const sentence of slice.trim() ? slice.trim().split(/(?<=[.!?])\s+/) : []) {
+      const count = new Map<number, number>();
+      for (const piece of figuresPlaced(sentence, calls)) {
+        if (piece.seq !== undefined) count.set(piece.seq, (count.get(piece.seq) ?? 0) + 1);
+      }
+      const best = [...count.entries()].sort((a, b) => b[1] - a[1])[0];
+      if (best) bySeq.set(best[0], [...(bySeq.get(best[0]) ?? []), sentence]);
+      else unbound.push(sentence);
+    }
+  }
+  return { bySeq, unbound: unbound.join(' ') };
+}
+
 /* ------------------------------------------------------------ the frame */
 
 /** The artifact's own dimensions (`.bs-view`, `.side`), mirrored in room.css. */

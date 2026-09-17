@@ -519,6 +519,38 @@
   align-items: start;
 }
 
+/* ------------------------------------------------------------ GEORGE SPEAKING
+   The `speak` layout (2026-09-17), built beside the design's for the owner to
+   point at. Him and his headline across the top; his other words left and
+   left-aligned; the figures right, each with its own thought; a line from him
+   only to the figure under the pointer. */
+.r-beside[data-layout="speak"] {
+  grid-template-areas: "him say" "words right";
+  grid-template-rows: auto minmax(0, 1fr);
+  row-gap: 18px;
+}
+.r-beside[data-layout="speak"] .r-him { align-self: center; }
+.r-beside[data-layout="speak"] .r-him canvas { width: 100%; margin: -5vh 0 -5vh; }
+.r-say-band { grid-area: say; align-self: center; min-width: 0; position: relative; z-index: 1; }
+.r-say-band .r-reading { display: flex; flex-direction: column; gap: 12px; }
+.r-say-band .r-say--claim { font-size: clamp(24px, 2.3vw, 34px); line-height: 1.18; max-width: 34ch; text-wrap: balance; }
+.r-beside[data-layout="speak"] .r-words { align-items: flex-start; text-align: left; padding-right: 0; }
+.r-beside[data-layout="speak"] .r-words .r-reading { align-items: flex-start; }
+.r-beside[data-layout="speak"] .r-say--standing { max-width: 58ch; }
+.r-beside[data-layout="speak"] .r-next { border-right: 0; border-left: 3px solid var(--ink); padding: 0 0 0 14px; }
+.r-beside[data-layout="speak"] .r-words .r-foot-offers { justify-content: flex-start; }
+.r-beside[data-layout="speak"] .r-doing { align-items: flex-start; }
+/* EACH FIGURE'S OWN THOUGHT, in his voice: the block's claim reads as a
+   sentence of his, and any sentence of his answer that cites this read sits
+   above the mark. */
+.r-beside[data-layout="speak"] .r-mk-title[data-thought] { font: 400 17px/1.4 var(--serif); color: var(--ink); max-width: 60ch; }
+.r-fig-thought { display: grid; gap: 6px; margin: 0 0 12px; max-width: 62ch; }
+.r-fig-thought .r-say { font: 400 15px/1.5 var(--serif); color: var(--ink-2); margin: 0; }
+@media (max-width: 900px) {
+  .r-say-band { margin: 8px 0 4px; }
+  .r-beside[data-layout="speak"] .r-him canvas { margin: 0; }
+}
+
 /* THE LEADING LINES, over the whole composition (row 10). */
 .r-wires {
   position: absolute; inset: 0; width: 100%; height: 100%;

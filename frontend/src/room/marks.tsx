@@ -145,11 +145,19 @@ function Figure(p: TileProps & { rows: Row[]; meta: Meta }) {
  * be drawn — labelled "usual", never "healthy", because a range is where a
  * thing sits and not whether that is good.
  */
-function Dumbbell({ rows, meta, o, offers, seq, onTake, onPick, picked }:
-                  { rows: Row[]; meta: Meta; o: TileProps['o'] } & Offering) {
-  const at = (r: Row) => Number(valueOf(r)?.value ?? 0);
+function Dumbbell({ rows: given, meta, o, offers, seq, onTake, onPick, picked, order }:
+                  { rows: Row[]; meta: Meta; o: TileProps['o']; order?: string[] } & Offering) {
+  // ONE STORE ORDER ACROSS THE ANSWER, where the room asks for it: a row the
+  // order names takes its place, the rest keep theirs after it. Nothing is
+  // dropped and nothing is ranked by this — it is where the eye finds a store.
+  const at = (r: Row) => {
+    const i = order ? order.indexOf(String(subjectOf(r) ?? '')) : -1;
+    return i < 0 ? Number.MAX_SAFE_INTEGER : i;
+  };
+  const rows = order && order.length ? [...given].sort((a, b) => at(a) - at(b)) : given;
+  const now = (r: Row) => Number(valueOf(r)?.value ?? 0);
   const before = (r: Row) => Number(r.baseline);
-  const ends = rows.flatMap((r) => [at(r), before(r)]).filter(Number.isFinite);
+  const ends = rows.flatMap((r) => [now(r), before(r)]).filter(Number.isFinite);
   const low = Math.min(0, ...ends);
   const high = Math.max(1, ...ends);
   const span = high - low || 1;
@@ -164,7 +172,7 @@ function Dumbbell({ rows, meta, o, offers, seq, onTake, onPick, picked }:
         const lit = isLit(o, r);
         const c = colourOf(change, lit);
         const a = before(r);
-        const b = at(r);
+        const b = now(r);
         const name = subjectOf(r) ?? measureOf(meta, key) ?? '';
         const t = r.threshold_applied as { pct_threshold?: number; absolute_floor?: number } | undefined;
         const band = t ? Math.max(Math.abs(a) * (Number(t.pct_threshold) || 0) / 100,
@@ -649,10 +657,12 @@ export function MarkBlock(p: TileProps) {
       <Shell quiet={!lit}
              landing={p.landing} delay={p.delay} picked={p.focused || p.selected}>
         <OwnCaveat meta={meta} />
-        <p className="r-mk-title">{titleFor(p.o, meta)}{p.earlier ? ' · from earlier' : ''}</p>
+        <p className="r-mk-title" data-thought={p.o.claim?.trim() ? 'yes' : undefined}>
+          {titleFor(p.o, meta)}{p.earlier ? ' · from earlier' : ''}
+        </p>
         <div className="r-mk-body" data-mark={mark} data-read={readAt(meta?.snapshot_timestamp) ?? ''}>
           {mark === 'figure' && <Figure {...p} rows={rows} meta={meta} />}
-          {mark === 'dumbbell' && <Dumbbell rows={rows} meta={meta} o={p.o} {...offering} />}
+          {mark === 'dumbbell' && <Dumbbell rows={rows} meta={meta} o={p.o} order={p.order} {...offering} />}
           {mark === 'ranked' && <Ranked rows={rows} meta={meta} o={p.o} {...offering} />}
           {mark === 'contributors' && <Contributors rows={rows} meta={meta} o={p.o} {...offering} />}
           {mark === 'line' && <Line rows={rows} meta={meta} o={p.o} subject={seriesOf} />}

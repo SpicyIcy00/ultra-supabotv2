@@ -26,6 +26,7 @@ import {
   ownNotices, type TileActions, type TileProps,
 } from './tiles';
 import { MarkBlock } from './marks';
+import { Figures } from './Reading';
 import type { ActionOffer, GeorgeNotice } from '../types/george';
 
 export interface BoardProps {
@@ -77,6 +78,12 @@ export interface BoardProps {
    * read his claim cites, else the block he weighted `lead` — never a guess.
    */
   lead?: string | null;
+  /** His sentences by the read they cite, for the newest turn (`beside.thoughtsOf`). */
+  thoughts?: Map<number, string[]>;
+  /** List stores in one order across the answer's comparisons (the `speak` layout). */
+  sameOrder?: boolean;
+  /** Which figure the pointer is over, so the room can draw only its line. */
+  onHover?(key: string | null): void;
 }
 
 
@@ -150,6 +157,16 @@ export function Board(p: BoardProps) {
   // IT SPANS ONLY WHEN WIDTH HELPS IT: a read of several rows spreads out; one
   // number across 940px is an empty track with a dot at its end (frames,
   // 2026-09-17). A one-row lead still goes first and reads larger.
+  // ONE STORE ORDER: the first figure of this answer that lists stores sets it.
+  const order = p.sameOrder ? (() => {
+    for (const o of objects) {
+      if (o.turn !== newest) continue;
+      const names = rowsOf(callOf(p.answers[o.turn], o.seq)).map((r) => r.store)
+        .filter((x): x is string => typeof x === 'string');
+      if (names.length > 1) return names;
+    }
+    return undefined;
+  })() : undefined;
   const spans = objects.map((o) => o.key === leadKey
     && (o.spec !== undefined || rowsOf(callOf(p.answers[o.turn], o.seq)).length > 1));
   const leads = objects.map((o) => o.key === leadKey);
@@ -202,7 +219,13 @@ export function Board(p: BoardProps) {
   return (
     <div className="r-board r-flow" data-board={objects.length} data-columns={columns}
          style={{ '--cols': columns } as CSSProperties}
-         onMouseOver={touch.over} onMouseLeave={touch.leave} onClickCapture={touch.tap}>
+         onMouseOver={(e) => {
+           touch.over(e);
+           const fig = (e.target as Element).closest?.('[data-figure]');
+           p.onHover?.(fig?.getAttribute('data-figure') ?? null);
+         }}
+         onMouseLeave={() => { touch.leave(); p.onHover?.(null); }}
+         onClickCapture={touch.tap}>
       {touch.tip}
       {objects.map((o, n) => {
         const turn = p.answers[o.turn];
@@ -235,7 +258,22 @@ export function Board(p: BoardProps) {
                 read{index !== null ? ` ${index}` : ''}
                 {out && <> · <s>ruled out</s></>}
               </p>
+              {(() => {
+                const seq = o.seq ?? o.seqs?.[0];
+                const said = o.turn === newest && seq !== undefined ? p.thoughts?.get(seq) : undefined;
+                const first = objects.findIndex((x) => x.turn === newest && (x.seq ?? x.seqs?.[0]) === seq) === n;
+                if (!said?.length || !first) return null;
+                // HIS THOUGHT ON THE CHART IT IS ABOUT, in his own voice.
+                return (
+                  <div className="r-fig-thought" data-thought-for={seq}>
+                    {said.map((s, i) => (
+                      <p key={i} className="r-say"><Figures text={s} calls={turn?.toolCalls ?? []} /></p>
+                    ))}
+                  </div>
+                );
+              })()}
               <Piece
+                order={order}
                 o={o}
                 turn={turn}
                 local={p.local[o.key] ?? {}}

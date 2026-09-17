@@ -67,7 +67,7 @@ import { claimAndStanding } from './beside';
  * unplaced would report an absence of evidence that is an absence of RECORD
  * (UI rule 8).
  */
-function Figures({ text, calls, onFigure }: {
+export function Figures({ text, calls, onFigure }: {
   text: string;
   calls: ToolCall[];
   onFigure?: (seq: number) => void;
@@ -187,7 +187,7 @@ export function unsaid(caveat: string | null | undefined, said: string): string 
     .join(' ');
 }
 
-export function Reading({ text, notices, reading, calls, onFigure }: {
+export function Reading({ text, notices, reading, calls, onFigure, part = 'all', standing }: {
   /** The turn's own words. Streaming, so it fills as he speaks. */
   text: string | null | undefined;
   /** The turn's caveats, already filtered to the ones no object carries. */
@@ -198,6 +198,14 @@ export function Reading({ text, notices, reading, calls, onFigure }: {
   calls?: ToolCall[];
   /** Where a tapped figure goes. Absent leaves the claim plain. */
   onFigure?: (seq: number) => void;
+  /**
+   * WHICH PART, for the `speak` layout (2026-09-17): the headline with the
+   * notices above it, or the rest — his caveat and whatever he said that no
+   * chart took. `all` is the beside room's one column.
+   */
+  part?: 'all' | 'claim' | 'rest';
+  /** The standing text to draw in place of before/after — the sentences no chart took. */
+  standing?: string;
 }) {
   // HIS EMPHASIS IS DRAWN, NOT PRINTED. He writes `**the point**`; the frame
   // check (ops/frames.py, P2S.1) showed the asterisks in the claim. The markers
@@ -217,12 +225,22 @@ export function Reading({ text, notices, reading, calls, onFigure }: {
   const pieces = { calls: calls ?? [], onFigure };
   const before = parts.before.trim() ? parts.before : '';
   const after = parts.after.trim() ? parts.after : '';
+  if (part === 'rest') {
+    const rest = (standing ?? '').trim();
+    if (!caveat && !rest) return null;
+    return (
+      <section className="r-reading r-reading--rest" data-reading="rest">
+        {caveat && <p className="r-caveat r-turn-caveat">{caveat}</p>}
+        {rest && <p className="r-say r-say--standing"><Figures text={rest} {...pieces} /></p>}
+      </section>
+    );
+  }
   return (
     <section className="r-reading" data-reading={said ? 'said' : 'caveats'}>
       {/* THE TURN'S CAVEAT, ONE LINE DIRECTLY ABOVE THE CLAIM (UI rule 4). His
           own words for what qualifies the figures first, the machine's notices
           under them — both above the sentence they qualify, never the accent. */}
-      {caveat && <p className="r-caveat r-turn-caveat">{caveat}</p>}
+      {part === 'all' && caveat && <p className="r-caveat r-turn-caveat">{caveat}</p>}
       {notices && notices.length > 0 && (
         <div className="r-reading-caveats"><Caveats notices={notices} /></div>
       )}
@@ -240,7 +258,7 @@ export function Reading({ text, notices, reading, calls, onFigure }: {
       {/* THE STANDING TEXT. Every figure in it is scanned against the reads,
           so a number carries the superscript of the read it came out of — the
           same number the figure on the right wears as READ n (P2.b). */}
-      {(before || after) && (
+      {part === 'all' && (before || after) && (
         <p className="r-say r-say--standing">
           {before && (
             <span data-part="before">
