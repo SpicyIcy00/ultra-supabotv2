@@ -267,7 +267,7 @@ where a regression was speculative AND **the four gate scenarios could not
 have seen it.** A new comparison (`P2S.4`, `P3.f`) is a capability no gate
 scenario asks for, so a run there proves nothing; `P2.c`, `P2.d` and `P2.f`
 are context and rendering; `P1.c` breaks or fixes compose refusals, which are
-its own numbers. **Three live runs across 13 open cards, $3.66** (P2S.3's subset and two full closes, after the 2026-09-17 merge) — P2.m closed 2026-09-16 and **its own run has not been made**, so the paragraph below it is the record of what that costs — the two
+its own numbers. **Three live runs across 14 open cards, $3.66** (P2S.3's subset and two full closes, after the 2026-09-17 merge) — P2.m closed 2026-09-16 and **its own run has not been made**, so the paragraph below it is the record of what that costs — the two
 phase closes still to come, at $1.51 each on v2, the measured price.
 Every remaining gate was dropped or absorbed, so two FULL runs is the whole
 of it.
@@ -1770,8 +1770,9 @@ functions are good to carry thtough"*. Each open card was judged against the
 standard (`ops/STANDARD.md`, 2026-09-16) rather than against the plan it came
 from, and they went four different ways — see the MERGE paragraph at the top
 of Phase 2S. In one line: **P2.k → P2S.3(g)**, **P2.i → P2S.4**, **P2.✓ →
-P2S.✓**, **P2.j → P3.g**, and **P2.h is parked** because the standard's own
-sentence rules out the version it described.
+P2S.✓**, **P2.j → P3.g**, and **P2.h was parked** because the standard's own
+sentence rules out the version it described — **then restored the same day as
+P2S.5 at the owner's word**, built to that sentence's bar instead.
 
 - [x] **P2.0 a report says whether it passed** — **CLOSED 2026-09-15.** The
       outcome is no longer something a caller can claim: `Report.add` has no
@@ -2371,10 +2372,10 @@ thtough"*. **The answer splits in two, and the split is the point:**
 | P2.i same-store year-over-year | **kept, renamed P2S.4** | changes what George can SAY, not how it looks; §1 lists "historical periods" among what he investigates. Independent of the redraw, so it may be pulled ahead of any P2S card any day — it is the seasonal one. |
 | P2.✓ close | **into P2S.✓** | two closes walking the same four scenes against the same artifact is one close. The merged close keeps P2.✓'s full run and its gate to Phase 3. |
 | P2.j stock watch before the stock-out | **moved to Phase 3 as P3.g** | §10 ("notice situations himself") and §13–14; a watch is operating mode, not the design. Backend only, no surface. |
-| P2.h voice, hands-free | **parked, not a card** | §8 says, in the owner's words: *"Eventually voice should become a first-class way of operating George rather than simply speech-to-chat."* P2.h was browser speech into the composer — speech-to-chat, the version the standard rules out, for a capability it calls "eventually". Parked under Candidates with that sentence. |
+| P2.h voice, hands-free | **parked by the merge, then RESTORED as P2S.5 the same day** — the owner: *"we need to make it"*. Built to §8's first-class bar, not as the dictation P2.h described. Why it was parked, kept for the record: | §8 says, in the owner's words: *"Eventually voice should become a first-class way of operating George rather than simply speech-to-chat."* P2.h was browser speech into the composer — speech-to-chat, the version the standard rules out, for a capability it calls "eventually". Parked under Candidates with that sentence. |
 
 Eval spend is unchanged at **$3.66**: P2S.3's subset, the merged close's full
-run, and P3.✓'s. Open cards 16 → 13.
+run, and P3.✓'s. Open cards 16 → 13, then 14 when voice came back as P2S.5.
 
 **THE FIFTEEN SCENES — WHAT "THE IDEAL UI" ACTUALLY CONTAINS, AND WHERE EACH ONE
 IS FINISHED (2026-09-17).** The owner: *"so at the end of p2s we will have my ideal
@@ -2392,7 +2393,7 @@ here exactly once, and the close it names must name the scene in its own card.
 | `doing` | 2·6 | "how are we doing?" | P2S.1–P2S.3 | P2S.✓ |
 | `nothing` | 5·6 | "nothing important", and where he looked | P2S.1, P2S.3 | P2S.✓ |
 | `judgment` | 3 | disagrees, was wrong | P2S.1 (words), P2.m's views | P2S.✓ |
-| `touch` | 7·8 | tap anything, then words | P2.c + P2S.1(h) | P2S.✓ |
+| `touch` | 7·8 | tap anything, then words — or speak them | P2.c + P2S.1(h) + P2S.5 | P2S.✓ |
 | `memory` | 9 | what he believes, with Forget | P2.f redrawn by P2S.2 | P2S.✓ |
 | `draw` | 6 | how he draws | P2S.2 | P2S.✓ |
 | `vocab` | 6 | everything he can draw | P2S.3 | P2S.✓ |
@@ -2472,7 +2473,12 @@ here and said why, so the owner can point rather than design:
 | Behind it, Replay, Page (`BehindIt.tsx`, `Replay.tsx`, `ThreadPage.tsx`) | the thread header's tabs — **on trial**, the artifact has no tabs | kept until he points |
 | the estate switch (`EstateSwitch.tsx`) | the sidebar, top, as the artifact draws it | already the row above |
 | the object panel (`ObjectPanel.tsx`) | in place over the figures column | already the row above |
-| the voice mic button the artifact draws on the composer | **not drawn** | voice is parked (§8: *"not speech-to-chat"*); a button that does nothing teaches that buttons do nothing |
+| the voice mic button the artifact draws on the composer | **drawn and working — built by P2S.5** | the owner overruled the park: *"we need to make it"*. P2S.1 leaves its place on the composer line and draws NO mic until P2S.5 lands, because a button that does nothing teaches that buttons do nothing |
+
+**THE OWNER'S ANSWERS TO TABLE 2, 2026-09-17:** the composer chips, `@` and Tab —
+*"yes we keep that"*; drag, resize and undo removed — *"yes we can remove that"*;
+set aside and keep on the figure — confirmed; the mic — **overruled**, *"we need to
+make it"*, so voice is card P2S.5. These rows are decisions now, not proposals.
 
 **3. What the artifact's code does EXACTLY, which the cards had only paraphrased.**
 From `buildBeside()`, `place()`, `wire()`, `arrows()`, `draw()`:
@@ -2643,7 +2649,7 @@ cleanup; he decides.
       the column counts for 1, 2–4, 5+ figures and ≤ 900px, the reveal order,
       the wire endpoints, the composer's chips replaying with no model turn,
       `@` and Tab still working in the new line, set aside and keep on a
-      figure, no mic button, and `drag.ts` deleted; `tsc -b --force` and vitest green. No eval.
+      figure, no mic button yet (P2S.5 draws it), and `drag.ts` deleted; `tsc -b --force` and vitest green. No eval.
 - [ ] **P2S.2 the drawing** — three parts, one pass over `marks.tsx` /
       `identity.ts` / `tiles.tsx`, each its own commit:
       **(d) the alive mark** — its place and size are already set by
@@ -2738,13 +2744,54 @@ cleanup; he decides.
       excluded BY NAME in the receipts. **No eval** — a new comparison is a
       new CAPABILITY and no gate scenario asks for one; its contract tests are
       the check, and it rides the phase close.
+- [ ] **P2S.5 voice — a first-class way of operating George** — **restored by
+      the owner 2026-09-17**, after the merge had parked it: *"we need to make
+      it"*. The bar is his own standard, §8: *"Eventually voice should become a
+      first-class way of operating George rather than simply speech-to-chat"*,
+      and *"Language is for intent. Direct interaction is for reference. They
+      should work naturally together."* So this is NOT dictation into a box.
+      Needs P2S.1's composer line; changes nothing George reads. Five parts:
+      **(a) speaking goes with pointing** — hold the mic (or tap to start, tap to
+      stop) and speak; the words appear in the composer line as they are heard
+      and send on release; whatever is selected on screen travels with them
+      exactly as with typing, so tapping two shops and saying "compare these"
+      is ONE gesture.
+      **(b) a spoken steer is a steer** — "last 90 days", "products", "why?"
+      spoken resolve through the same fragment path as the composer chips: a
+      window, grouping or count change replays with no model turn.
+      **(c) hands-free** — a switch on the composer line: when an answer lands
+      George reads the CLAIM aloud (browser speech synthesis) and nothing else,
+      never the figures or the receipts; the claim is lit while he speaks;
+      speaking or tapping anything stops him at once; "read it to me" reads the
+      current claim on demand.
+      **(d) states you can see** — the mic shows it is listening; the words
+      appear live and, outside hands-free, can be corrected before sending; no
+      permission, no speech service, or nothing heard each say which in one line
+      and never pretend to have heard.
+      **(e) only where it works** — speech recognition exists in Chrome, Edge and
+      current Safari; where the browser has none the mic is not drawn and one
+      line says voice is not available in this browser. **Chrome's recognition
+      sends the audio to Google's speech service**; the close-out says so
+      plainly, and George stores nothing spoken beyond the question text, exactly
+      as if it had been typed.
+      Done when: hold the mic, say "how are we doing", release — the words appear
+      as heard and send; with two shops tapped, a spoken "compare these" sends
+      both as the selection (a test on the request); a spoken "last 90 days"
+      replays with no model call (a test); hands-free reads the claim and nothing
+      else and a tap stops it mid-sentence (a dom test on a mocked speech
+      synthesis); a browser without recognition draws no mic and says why (a
+      test); a **frame** of the composer listening beside the artifact's mic;
+      `tsc -b --force` and vitest green. No eval — a spoken question is a typed
+      question; nothing on the model path changes.
 - [ ] **P2S.✓ close: it feels right** — **the one close for all of Phase 2,
       merged with P2.✓ 2026-09-17.** **All eight scenes it owns in the ledger
       above — `situation`, `doing`, `nothing`, `judgment`, `touch`, `memory`,
       `draw`, `vocab` — not four.** The LOOK: each rendered by `ops/frames.py`
       beside its frame of the beside room. The BEHAVIOUR: each scene's
       question asked on the live build inside the full run, plus P2.m's two
-      unrun questions. The owner says it feels right or names the next fix to
+      unrun questions — and voice on the live build in Chrome: hold, speak,
+      release; two shops tapped and "compare these" spoken; hands-free read
+      and interrupted. The owner says it feels right or names the next fix to
       the same surface. **The close-out states plainly that seven scenes are
       not part of this phase** and names where each is finished. **One full
       run** (eval: full, $1.51) — kept from P2.✓, because this close covers
@@ -2757,12 +2804,6 @@ cleanup; he decides.
 started.** Each is grounded in data that already exists; none is scheduled,
 and none is begun without the owner saying so.
 
-- **Voice as a first-class way of operating George** — was card P2.h, parked
-  by the merge 2026-09-17. The standard §8: *"Eventually voice should become
-  a first-class way of operating George rather than simply speech-to-chat."*
-  P2.h was browser speech into the composer, which is exactly speech-to-chat.
-  It returns as a card when it can be the first-class version — hands-free,
-  interruptible, reading the claim and pointing at figures — not before.
 - **Negative stock as a data-integrity measure.** Fuan Haw reached −14: the
   book is wrong, and negative lines per store per month is a shrinkage /
   receiving-accuracy signal computable from `inventory_levels` with no new

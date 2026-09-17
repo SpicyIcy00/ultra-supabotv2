@@ -4507,3 +4507,17 @@ cards' paraphrases were replaced with the code's exact numbers (column counts,
 200/260 ms reveal, wire endpoints and dash, 80% arrows, 820px sidebar default,
 ≤900px stack). The translation: the chrome, words and grid copy across; the
 sixteen shapes are static SVG in the artifact and must become renderers.
+
+**The owner answered the audit: four confirmed, one overruled.** 2026-09-17.
+Composer chips, `@` and Tab: *"yes we keep that"*. Drag, resize and undo:
+*"yes we can remove that"*. Set aside and keep on the figure: confirmed. **The
+mic: overruled** — the merge had parked voice because P2.h described
+speech-to-chat, and he said *"we need to make it"*. Recorded as a case of the
+rule in NOW.md §1: a session raises the concern once, the owner decides, the
+session builds the full request. So voice is **P2S.5**, built to his standard's
+own bar (§8: first-class, "language is for intent, direct interaction is for
+reference") rather than as dictation: speech carries the selection, a spoken
+steer replays like a chip, hands-free reads the claim only and is interruptible,
+every state is visible, and the mic is drawn only where the browser can
+recognise speech. Chrome sends the audio to Google's speech service, which the
+card requires the close-out to say. Open cards 13 → 14; eval spend unchanged.
