@@ -4582,3 +4582,12 @@ The owner: *"i say keep beside but you can make blob slightly smaller, some char
 **The grammar**: a block may carry `thought` (≤260 chars, `figures: returned`, metrics.yaml `composition.thought`), a reading may carry `asks` (≤3, ≤90 chars, same rule, `voice.reading.asks`). Taught on the compose tool's schema, not in SYSTEM_PROMPT (at its budget). This pulls part of P2S.3 forward at his word.
 **Gate run, 4 turns, $0.73** (`verification/thoughts-gate.json`), all four passing; George wrote a thought on every block and asks on every turn unprompted. **What the rule cannot see:** a figure in WORDS — "Rockwell's gain is three times Fairview's loss", "fourteen thousand units" — passes the digit matcher, as it passes in the answer's prose; CLAUDE.md rule 9's eval-only enforcement applies here too.
 Under him now: the data-may-be-wrong notices, the headline, the asks, `next`, and "more from George" (his caveat and sentences no chart took).
+
+## 2026-09-17 · P2S.3 — the catalogue reopened on purpose; kept pages drawn by the room
+
+P1.f closed the catalogue at six so George was not choosing between synonyms; the owner asked for the rest. **What keeps seventeen from being that menu is a rule per shape** (`when`, taught on the compose schema), what its rows must carry (`rows`, one implementation each side, held to one recorded matrix), and **pie, treemap and gauge only when asked** — the person's question names it, or the object is already drawn that way, which is how an asked shape stays.
+**A shape the rows cannot make is coerced, not refused** (P1.a's line): the drawing changes, no value does, and it is named. A pie of signed values is never drawable.
+**Map and funnel declined** (`composition.declined`), with what would change each — the 2026-09-05 rule that a picture with nothing behind it asserts what nobody recorded. So 14 of the design's 16.
+**Parts of a whole are steps of one ink** (`markParts.wash` of a DataColour), never a hue per part; no share, stack total or running total is printed.
+**A pin's shape rides on its stored calls (`drawn_as`), not a new column**, because no migration can be rehearsed here; a pin run returns the board's own blocks, so a kept page and the board are one renderer. `edit_page draw` is audited like every structural write.
+Recorded reads for the golden tests come from the vetted tools with no model (`ops/record_vocab_reads.py`), committed like `recorded-answers.json`. Gate 4/4, $0.72; George chose no new shape unasked on those four questions.

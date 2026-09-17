@@ -69,24 +69,6 @@ and so would be the swatches, a tap to pick, and `why` on that row. **Not fixed*
 the fix is the dimension a read is grouped by (its `group_by`, or the tool's own
 subject column) deciding which column names the row, and it touches every mark.
 
-### 2026-09-17 — "we need more text with each chart if needed explaination with the visuals"
-
-> *"the text should reach the end of the alive where it can move not its
-> borders and text can be scrollable if its too long but also i think we need
-> more text with each chart if needed explaination with the visuals. and what
-> are these disclaimers? what is baseline is something wrong"*
-
-Said 2026-09-17 of the live build `c288831`, with three screenshots of one
-Shangri-La turn ("the basket moved into the weighed mix"): the whole room, a
-caveat over READ 1, and the words column under the mark.
-
-**Found underneath (not fixed), and it is the Fable review of 2026-09-16 again.**
-A figure carries one line George wrote — a block `claim`, "a few words, no
-digits" (P1.f) — and a read he did not compose carries none. The design's
-figures carry a sentence of reading each (`say` per block). More words per chart
-changes the compose grammar and the prompt, so it is **P2S.3's** to decide with
-its eval subset, not a room fix; it is written here so that card reads it.
-
 ### 2026-09-16 — "the ui doesnt feel like what i was told we were building"
 
 > *"1st. the ui doesnt feel like what i was told we were buidling:
@@ -243,6 +225,30 @@ once changes the next answer. That is the card's own done-when.
 ---
 
 ## Fixed
+
+### 2026-09-17 — "we need more text with each chart if needed explaination with the visuals"
+
+> *"the text should reach the end of the alive where it can move not its
+> borders and text can be scrollable if its too long but also i think we need
+> more text with each chart if needed explaination with the visuals. and what
+> are these disclaimers? what is baseline is something wrong"*
+
+Said 2026-09-17 of the live build `c288831`, with three screenshots of one
+Shangri-La turn ("the basket moved into the weighed mix"): the whole room, a
+caveat over READ 1, and the words column under the mark.
+
+**Found underneath (not fixed), and it is the Fable review of 2026-09-16 again.**
+A figure carries one line George wrote — a block `claim`, "a few words, no
+digits" (P1.f) — and a read he did not compose carries none. The design's
+figures carry a sentence of reading each (`say` per block). More words per chart
+changes the compose grammar and the prompt, so it is **P2S.3's** to decide with
+its eval subset, not a room fix; it is written here so that card reads it.
+
+**Fixed, in two steps, and not verified by him.** `c6226ee` gave every block
+George composes a `thought` — a sentence of what the chart shows, drawn beside
+it — and questions to tap under the headline; P2S.3 (`eeb7c7d`, `3af501e`,
+`dbf9dac`) closed the card this was written to, with the shapes to carry it. A
+read he did not compose still carries no thought.
 
 ### 2026-09-17 — "these things keep getting slightly cut we cant accept that"
 
