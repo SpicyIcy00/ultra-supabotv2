@@ -63,6 +63,12 @@ export interface BoardProps {
    * changed since they last looked is what comes to the centre.
    */
   seenUpTo?: number;
+  /**
+   * HOW THE ARRIVAL IS GOING (P2S.2(d)): how many drawn figures have not
+   * landed yet, and how many have. The mark is `reading` while any are on
+   * their way and pulses once per arrival — the design's reveal, said to him.
+   */
+  onLanding?(progress: { pending: number; arrived: number }): void;
 }
 
 
@@ -163,6 +169,10 @@ export function Board(p: BoardProps) {
   // WHICH FIGURES HAVE ARRIVED. Keyed, so an answer that transforms a figure
   // in place does not make it arrive again.
   const arrived = useArrival(objects.map((o) => o.key));
+  const pending = objects.filter((o) => !arrived.has(o.key)).length;
+  const landed = objects.length - pending;
+  const { onLanding } = p;
+  useEffect(() => { onLanding?.({ pending, arrived: landed }); }, [onLanding, pending, landed]);
 
   // While he is still reading, what has landed is evidence — he has not said
   // where any of it goes yet.

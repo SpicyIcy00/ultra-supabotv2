@@ -25,6 +25,7 @@ import { callOf, rowsOf, subjectOf, type AnswerTurn, type Block } from './data';
 import { Board, turnNotices } from './render';
 import { FiguresArea, Wires } from './FiguresArea';
 import { AliveMark } from './AliveMark';
+import { markStateOf } from './alive';
 import { Reading, ReadingNext } from './Reading';
 import { FootOffers } from './FootOffers';
 import { offersOf, placement } from './actions';
@@ -184,6 +185,12 @@ export default function Room() {
   const himRef = useRef<HTMLDivElement>(null);
   const wordsRef = useRef<HTMLDivElement>(null);
   const areaRef = useRef<HTMLDivElement>(null);
+  // HOW THE FIGURES' ARRIVAL IS GOING, from the board (P2S.2(d)). The mark
+  // stays `reading` while any are on their way, and pulses as each lands.
+  const [landing, setLanding] = useState({ pending: 0, arrived: 0 });
+  const onLanding = useCallback((p: { pending: number; arrived: number }) => {
+    setLanding((was) => (was.pending === p.pending && was.arrived === p.arrived ? was : p));
+  }, []);
 
   // A stored thread opens once, with its rows and compositions restored from
   // the posts — so the board a reload rebuilds is the board that was there.
@@ -275,6 +282,16 @@ export default function Room() {
   // reading and no objects, and used to land on the greeting with his words
   // thrown away.
   const empty = board.length === 0 && !(latest?.text ?? '').trim() && notices.length === 0;
+
+  // WHAT HE IS DOING, off the stream and nothing else (P2S.2(d)). `need` only
+  // from a LOADED approvals count (UI rule 8); a failed turn breaks the
+  // drawing. The talk view is the only one whose figures arrive.
+  const mark = markStateOf({
+    busy,
+    turn: latest,
+    landing: view === 'talk' ? landing.pending : 0,
+    needsYou: approvals.data?.length,
+  });
 
   // THE COLD OPEN. Arriving with nothing in hand, the room opens on the
   // newest answer George gave to a question he was asked to keep asking —
@@ -711,7 +728,8 @@ export default function Room() {
                  version={`${answers.length}:${view}:${drawn.length}:${busy}`} />
 
           <div className="r-him" ref={himRef}>
-            <AliveMark />
+            <AliveMark state={mark.state} failed={mark.failed} drawn={mark.reads}
+                       pulses={mark.reads + landing.arrived} />
           </div>
 
           <div className="r-words" ref={wordsRef}>
@@ -798,6 +816,7 @@ export default function Room() {
                     retuned={retuned}
                     on={on}
                     seenUpTo={firstUnseen(answers, sinceAt)}
+                    onLanding={onLanding}
                   />
                 </>
               )}

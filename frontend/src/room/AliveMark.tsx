@@ -1,43 +1,104 @@
 /**
- * HIM — the mark the words and the lines come from (P2S.1(b)).
+ * HIM — the mark the words and the lines come from.
  *
- * The design's `draw()`, at rest. Its PLACE and SIZE are this card's: a 680×420
- * canvas at 136% of its 580 column, pulled up and out so its glow runs past
- * the column while its body spans most of it — the owner, twice: *"alive is
- * too small … make the alive a more wide horizontal figure but it has to be
- * bigger"*, then *"you made it smaller it should stay big"*.
+ * P2S.1(b) set its PLACE and SIZE: a 680×420 canvas at 136% of its 580
+ * column, pulled up and out so its glow runs past the column while its body
+ * spans most of it — the owner, twice: *"alive is too small … make the alive a
+ * more wide horizontal figure but it has to be bigger"*, then *"you made it
+ * smaller it should stay big"*.
  *
- * IT IS DRAWN STILL. Breathing, pulsing per read and turning a ring are
- * P2S.2(d), driven by the turn stream; drawing them here off a timer would be
- * a mark that moves for nothing, which the design rules out in its own words
- * ("It never moves for effect"). The form is the design's wide irregular one,
- * not an oval (*"dont make it just an oval make it abnormal"*); its shape and
- * colour are still the owner's to workshop, so nothing else depends on them.
+ * P2S.2(d) MAKES IT ALIVE, and only from what the room already knows: the
+ * state is handed in by `Room` off the turn stream (`alive.markStateOf`), and a
+ * pulse is a read landing or a figure arriving — never a clock deciding he is
+ * busy. The drawing is `alive.drawMark`; this component is the frame loop and
+ * the colours.
  *
- * Its only colours are the ink and the quiet grey, read from the tokens at
- * draw time so a theme change redraws it. It carries no accent: "needs you" is
- * a state P2S.2(d) draws, and nothing here knows about one.
+ * ITS COLOURS ARE READ FROM THE TOKENS AT DRAW TIME, so a theme change is the
+ * next frame. It is the ONE thing in the room that may wear the "needs you"
+ * colour outside an approval (CLAUDE.md UI rule 5, the mark's exemption), and
+ * it does so only in the `need` state; a failed turn changes the drawing.
  */
 import { useEffect, useRef } from 'react';
-import { MARK_H, MARK_W, markEdge, markGeometry } from './beside';
+import { MARK_H, MARK_W } from './beside';
+import { drawMark, formFrom, motes, type Colours, type MarkForm, type MarkState, type Pen } from './alive';
+import { reducedMotion } from './render';
 
-export function AliveMark() {
+export function AliveMark({ state = 'idle', failed = false, pulses = 0, drawn = 0, form }: {
+  state?: MarkState;
+  failed?: boolean;
+  /** A counter: every increase is one read landing or one figure arriving. */
+  pulses?: number;
+  /** How many reads of this turn have landed — a mote drawn in for each. */
+  drawn?: number;
+  /** The workshop switch; read from `?form=` when not given. */
+  form?: MarkForm;
+}) {
   const ref = useRef<HTMLCanvasElement | null>(null);
+  const shape = form ?? formFrom(typeof window === 'undefined' ? '' : window.location.search);
+  // The loop reads the newest props without restarting.
+  const live = useRef({ state, failed, drawn, shape, pulseAt: null as number | null });
+  const seenPulses = useRef(pulses);
+  live.current.state = state;
+  live.current.failed = failed;
+  live.current.drawn = drawn;
+  live.current.shape = shape;
+  if (pulses !== seenPulses.current) {
+    seenPulses.current = pulses;
+    live.current.pulseAt = now();
+  }
 
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return undefined;
-    draw(canvas);
-    // A THEME CHANGE IS A REDRAW, whichever way it came: the switch in the
-    // sidebar writes an attribute on <html>, the system flips a media query.
-    const redraw = () => draw(canvas);
-    const seen = new MutationObserver(redraw);
+    let cx: CanvasRenderingContext2D | null = null;
+    try { cx = canvas.getContext('2d'); } catch { cx = null; }
+    if (!cx) return undefined;
+    const pen = cx as unknown as Pen;
+    const started = now();
+    const orbiting = motes();
+    const reduce = reducedMotion();
+    let frame: number | null = null;
+    const paint = () => {
+      const l = live.current;
+      const at = now();
+      drawMark(pen, {
+        state: l.state,
+        failed: l.failed,
+        form: l.shape,
+        t: (at - started) / 1000,
+        sincePulse: l.pulseAt === null ? null : (at - l.pulseAt) / 1000,
+        drawn: l.drawn,
+        reduce,
+        colours: coloursOf(canvas),
+      }, orbiting);
+    };
+    const tick = () => {
+      paint();
+      frame = raf(tick);
+    };
+    // REDUCED MOTION DRAWS EACH STATE STILL: one frame now, and one whenever
+    // the state or the theme changes (below), never a loop.
+    if (reduce) paint(); else tick();
+    const seen = new MutationObserver(paint);
     seen.observe(document.documentElement, { attributes: true, attributeFilter: ['data-room-theme'] });
-    let media: MediaQueryList | null = null;
-    try { media = window.matchMedia?.('(prefers-color-scheme: light)') ?? null; } catch { media = null; }
-    media?.addEventListener?.('change', redraw);
-    return () => { seen.disconnect(); media?.removeEventListener?.('change', redraw); };
+    return () => {
+      if (frame !== null) caf(frame);
+      seen.disconnect();
+    };
   }, []);
+
+  // Still frames need a redraw when the state moves; a loop draws it anyway.
+  useEffect(() => {
+    if (!reducedMotion()) return;
+    const canvas = ref.current;
+    let cx: CanvasRenderingContext2D | null = null;
+    try { cx = canvas?.getContext('2d') ?? null; } catch { cx = null; }
+    if (!canvas || !cx) return;
+    drawMark(cx as unknown as Pen, {
+      state, failed, form: shape, t: 0, sincePulse: null, drawn, reduce: true,
+      colours: coloursOf(canvas),
+    }, motes());
+  }, [state, failed, shape, drawn]);
 
   return (
     <canvas
@@ -45,78 +106,41 @@ export function AliveMark() {
       className="r-alive"
       width={MARK_W}
       height={MARK_H}
-      data-state="idle"
+      data-state={state}
+      data-failed={failed ? 'yes' : undefined}
+      data-form={shape}
       aria-hidden="true"
     />
   );
 }
 
-function draw(canvas: HTMLCanvasElement) {
-  let cx: CanvasRenderingContext2D | null = null;
-  try { cx = canvas.getContext('2d'); } catch { cx = null; }
-  if (!cx) return;
-  const tok = (name: string, fallback: string) => {
-    try {
-      return getComputedStyle(canvas).getPropertyValue(name).trim() || fallback;
-    } catch {
-      return fallback;
-    }
+function now(): number {
+  return typeof performance !== 'undefined' ? performance.now() : Date.now();
+}
+
+function raf(fn: () => void): number | null {
+  return typeof window !== 'undefined' && window.requestAnimationFrame
+    ? window.requestAnimationFrame(fn) : null;
+}
+
+function caf(id: number) {
+  if (typeof window !== 'undefined' && window.cancelAnimationFrame) window.cancelAnimationFrame(id);
+}
+
+/** The ink, the quiet grey, up, and the one warm colour — off the tokens, now. */
+function coloursOf(canvas: HTMLCanvasElement): Colours {
+  let style: CSSStyleDeclaration | null = null;
+  try { style = getComputedStyle(canvas); } catch { style = null; }
+  const tok = (name: string, fallback: string) => style?.getPropertyValue(name).trim() || fallback;
+  // `--up` and the reserved colour are `r, g, b` triples in room.css.
+  const triple = (name: string, fallback: string) => {
+    const v = tok(name, '');
+    return v ? `rgb(${v})` : fallback;
   };
-  const ink = tok('--ink', '#f7f8f8');
-  const quiet = tok('--ink-4', '#62666d');
-  const { ex, ey, radius: r } = markGeometry();
-  const w = canvas.width;
-  const h = canvas.height;
-  const cxm = w / 2;
-  const cym = h / 2;
-
-  cx.clearRect(0, 0, w, h);
-
-  // The halo, following the same irregular edge, wider and softer at rest.
-  const haloR = r * 1.36;
-  cx.save();
-  cx.translate(cxm, cym);
-  cx.scale(ex, ey);
-  const g = cx.createRadialGradient(0, 0, r * 0.7, 0, 0, haloR);
-  g.addColorStop(0, ink);
-  g.addColorStop(1, 'rgba(0,0,0,0)');
-  cx.globalAlpha = 0.12;
-  cx.fillStyle = g;
-  cx.beginPath();
-  for (let k = 0; k <= 120; k += 1) {
-    const th = (k / 120) * Math.PI * 2;
-    const e = markEdge(th);
-    const x = Math.cos(th) * haloR * e;
-    const y = Math.sin(th) * haloR * e;
-    if (k === 0) cx.moveTo(x, y); else cx.lineTo(x, y);
-  }
-  cx.closePath();
-  cx.fill();
-  cx.restore();
-
-  // Three motes on the wide orbit: the watches he keeps, at rest.
-  const orbit = r * 1.3;
-  [0, 1, 2].forEach((i) => {
-    const a = i * 2.1;
-    const e = markEdge(a);
-    cx!.globalAlpha = 0.75;
-    cx!.fillStyle = quiet;
-    cx!.beginPath();
-    cx!.arc(cxm + Math.cos(a) * orbit * ex * e, cym + Math.sin(a) * orbit * ey * e, 6, 0, Math.PI * 2);
-    cx!.fill();
-  });
-
-  // The body.
-  cx.globalAlpha = 1;
-  cx.fillStyle = ink;
-  cx.beginPath();
-  for (let k = 0; k <= 140; k += 1) {
-    const th = (k / 140) * Math.PI * 2;
-    const e = markEdge(th);
-    const x = cxm + Math.cos(th) * r * ex * e;
-    const y = cym + Math.sin(th) * r * ey * e;
-    if (k === 0) cx.moveTo(x, y); else cx.lineTo(x, y);
-  }
-  cx.closePath();
-  cx.fill();
+  return {
+    ink: tok('--ink', '#f7f8f8'),
+    quiet: tok('--ink-4', '#62666d'),
+    up: triple('--up', '#2FA874'),
+    act: triple('--accent', '#E8B04B'),
+  };
 }

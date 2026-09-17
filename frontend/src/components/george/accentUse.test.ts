@@ -77,6 +77,11 @@ const ALLOWED: Record<string, string> = {
   // Where the room DEFINES the token. One value for the one meaning, so a
   // second chrome cannot quietly invent a second approvals colour.
   'room.css': 'the room defines the reserved token here',
+  // HIS MARK, THE ONE EXEMPTION CLAUDE.md UI rule 5 NAMES (P2S.2(d)). It warms
+  // in the `need` state — something is waiting on a decision, the same fact
+  // the rail's count says — and in no other; a failed turn changes the
+  // drawing, never the colour. `alive.dom.test.tsx` holds both.
+  'AliveMark.tsx': 'his mark, warm only while something needs you',
 };
 
 /* ---------------------------------------------- the other four (P2.b) ----
