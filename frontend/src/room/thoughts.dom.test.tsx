@@ -1,17 +1,16 @@
 // @vitest-environment jsdom
 /**
- * GEORGE SPEAKING — the `speak` layout, built beside the design's on
- * 2026-09-17 for the owner to point at: *"okay lets try that but dont make blob
- * too small and i think more text of what george thinks should be integrated on
- * the charts"*.
+ * HIS THOUGHTS WITH THE CHARTS (the owner, 2026-09-17: "if the ai thoughts are
+ * with the charts it feels likes your going thorugh it together").
  *
- * Held here: the switch and its memory; his sentences placed on the chart they
- * cite, word for word, and the rest kept in the words column; the headline drawn
- * apart from the rest; a comparison listing stores in the answer's one order.
+ * Held here: his sentences placed on the chart they cite, word for word, and the
+ * rest kept with his words; the headline drawn apart from the rest; a
+ * comparison listing stores in the answer's one order. (The `speak` layout these
+ * were first built for was tried and not kept; the pieces were.)
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
-import { layoutFrom, thoughtsOf } from './beside';
+import { thoughtsOf } from './beside';
 import { Reading } from './Reading';
 import { Board } from './render';
 import type { AnswerTurn } from './data';
@@ -20,7 +19,6 @@ import type { TileActions } from './tiles';
 
 vi.mock('./ObjectPanel', () => ({ ObjectPanel: () => null, kindOf: () => null }));
 afterEach(cleanup);
-beforeEach(() => { try { localStorage.clear(); } catch { /* none */ } });
 
 const META = { source_table: 'new_transactions', snapshot_timestamp: '2026-09-17T06:20:00Z', metric_label: 'Net sales', filters_applied: [] };
 const SALES = [
@@ -35,16 +33,6 @@ const CALLS = [
   { seq: 0, tool: 'get_sales', arguments: {}, result: { rows: SALES, meta: META } },
   { seq: 1, tool: 'get_sales', arguments: {}, result: { rows: BASKET, meta: META } },
 ];
-
-describe('the switch', () => {
-  it('is the design by default, speak when asked, and remembered', () => {
-    expect(layoutFrom('')).toBe('beside');
-    expect(layoutFrom('?layout=speak')).toBe('speak');
-    expect(layoutFrom('')).toBe('speak');
-    expect(layoutFrom('?layout=beside')).toBe('beside');
-    expect(layoutFrom('')).toBe('beside');
-  });
-});
 
 describe('his thoughts, on the chart they cite', () => {
   const TEXT = 'OPUS alone gave up the estate. OPUS fell to ₱467,102 while Rockwell held at ₱206,800. '

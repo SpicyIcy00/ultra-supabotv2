@@ -27,40 +27,6 @@
 import type { ToolCall } from '../types/george';
 import { placeFigures as figuresPlaced } from './figures';
 
-/* ----------------------------------------------------------- the layout */
-
-/**
- * WHICH COMPOSITION — THE DESIGN'S, OR GEORGE SPEAKING (2026-09-17).
- *
- * The owner asked whether the beside room is ideal and was told, honestly, no:
- * the mark takes the top-left and pushes the headline halfway down, the dotted
- * lines cross the words, and his thinking sits apart from the charts. He said
- * *"okay lets try that but dont make blob too small"*. So `speak` is built BESIDE
- * `beside`, switched by `?layout=speak` (remembered per browser), and the two
- * are rendered from the same answers for him to point at. The one he does not
- * pick is deleted.
- *
- *   beside  the design's: him top-left, his words under him, figures right,
- *           a line from him to every figure.
- *   speak   him and his headline across the top, like him saying it; his
- *           other words left, left-aligned; figures right, each carrying its
- *           own thought; a line from him only to the figure under the pointer.
- */
-export type Layout = 'beside' | 'speak';
-const LAYOUT_KEY = 'george.layout';
-
-export function layoutFrom(search: string | null | undefined): Layout {
-  let asked: string | null = null;
-  try { asked = new URLSearchParams(search ?? '').get('layout'); } catch { asked = null; }
-  if (asked === 'speak' || asked === 'beside') {
-    try { localStorage.setItem(LAYOUT_KEY, asked); } catch { /* the choice still holds for this page */ }
-    return asked;
-  }
-  let kept: string | null = null;
-  try { kept = localStorage.getItem(LAYOUT_KEY); } catch { kept = null; }
-  return kept === 'speak' ? 'speak' : 'beside';
-}
-
 /**
  * HIS SENTENCES, BY THE CHART THEY ARE ABOUT (the owner, 2026-09-17: *"more text
  * of what george thinks should be integrated on the charts so when you see the
@@ -68,7 +34,7 @@ export function layoutFrom(search: string | null | undefined): Layout {
  *
  * A sentence that cites figures from a read belongs beside that read's chart —
  * the read most of its figures came from, by the same matcher the superscripts
- * use. A sentence citing none stays in the words column. The claim's own
+ * use. A sentence citing none stays with the rest of his words. The claim's own
  * sentence is not moved: it is the headline. Not a character is rewritten; the
  * sentences are the answer's own slices, in order.
  */
@@ -156,8 +122,8 @@ export function composition(viewport: number, sideOpen: boolean): Composition {
 /* ---------------------------------------------------------- the figures */
 
 /**
- * HOW MANY COLUMNS THE FIGURES TAKE — one figure one column, more than one
- * two, and one on a phone whatever the count.
+ * HOW MANY COLUMNS THE FIGURES TAKE — two on a desk, one on a phone, and one
+ * only when the answer is a single figure that needs the width.
  *
  * THREE COLUMNS WENT ON 2026-09-17. The design's `place()` gave five or more
  * figures three columns of ~290px, and the owner, looking at nine: *"some
@@ -166,10 +132,28 @@ export function composition(viewport: number, sideOpen: boolean): Composition {
  * Two columns is the most the figures area holds without cutting what a row
  * names; the chart the answer rests on spans both (`placeFigures`' `spans`).
  */
-export function columnsFor(count: number, viewport: number): 1 | 2 {
+export function columnsFor(count: number, viewport: number, onlyOneNeedsWidth = false): 1 | 2 {
   if (viewport <= PHONE) return 1;
-  if (count <= 1) return 1;
+  // A CHART TAKES THE SIZE IT NEEDS (the owner, 2026-09-17: "some charts are
+  // too big that dont need to be it should know like how much size it needs
+  // not waste it"). One ranked list of eight categories across 940px is bars
+  // twice as long as they need to be; it sits in a column like any other.
+  if (count <= 1) return onlyOneNeedsWidth ? 1 : 2;
   return 2;
+}
+
+/**
+ * WHETHER A FIGURE NEEDS THE WHOLE AREA — from what it draws, never a guess:
+ * a line over many points reads its shape only when it is long, a table with
+ * many columns cuts them in half a width, and a composed shape lays itself
+ * out. Everything else — a figure, a ranking, a comparison, contributors —
+ * says all it says in one column.
+ */
+export function needsWidth(mark: string | null, points: number, columns: number): boolean {
+  if (mark === 'spec') return true;
+  if (mark === 'line') return points > 8;
+  if (mark === 'table') return columns > 4;
+  return false;
 }
 
 /** The artifact's gap between two figures in one column (`.bs-col` gap). */
@@ -280,7 +264,7 @@ export function wireEnds(p: {
 /**
  * THE MARK'S CANVAS AND ITS BODY — the artifact's `draw()` at rest.
  *
- * A 680×420 canvas drawn at 136% of its 580 column, so the glow runs past the
+ * A 680×420 canvas drawn at 122% of its 580 column, so the glow runs past the
  * column while the BODY spans most of it (his rows 14 and 24). The body is an
  * irregular form, not an oval (row 15): a base radius stretched to the wide
  * canvas, its edge moved by three slow sines. At rest `t = 0`; P2S.2(d) makes
@@ -289,7 +273,7 @@ export function wireEnds(p: {
 export const MARK_W = 680;
 export const MARK_H = 420;
 /** The canvas's CSS width as a share of its column (`.bs-him canvas`). */
-export const MARK_SPAN = 1.36;
+export const MARK_SPAN = 1.22;
 const BASE_R = 84;
 const REACH = 103 * 1.36 * 1.23;
 

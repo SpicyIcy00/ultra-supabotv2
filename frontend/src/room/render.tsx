@@ -17,9 +17,10 @@ import {
 import type { BoardObject, Local } from './board';
 import { inOrder } from './board';
 import { retunedKey } from './tokenShape';
-import { FIGURE_GAP, columnsFor, placeFigures, revealAt } from './beside';
+import { FIGURE_GAP, columnsFor, needsWidth, placeFigures, revealAt } from './beside';
 import { readIndexes } from './work';
-import { PROCESS, callOf, rowsOf, type AnswerTurn, type Dimension } from './data';
+import { PROCESS, callOf, rowsOf, tableShape, type AnswerTurn, type Dimension } from './data';
+import { markFor } from './catalogue';
 import type { ToolCall } from '../types/george';
 import {
   ControlTile, DraftTile, MemoryTile, SpecTile, StateTile, SystemTile,
@@ -80,15 +81,8 @@ export interface BoardProps {
   lead?: string | null;
   /** His sentences by the read they cite, for the newest turn (`beside.thoughtsOf`). */
   thoughts?: Map<number, string[]>;
-  /** List stores in one order across the answer's comparisons (the `speak` layout). */
+  /** List stores in one order across the answer's comparisons. */
   sameOrder?: boolean;
-  /**
-   * WHETHER THE LEAD MAY SPAN THE AREA. The speak layout says no (the owner,
-   * 2026-09-17, at his own window height one chart fit): a wide chart's rows
-   * are no shorter, so spanning only takes the place a second chart would sit.
-   * The lead still goes first and reads larger.
-   */
-  spanLead?: boolean;
   /** Which figure the pointer is over, so the room can draw only its line. */
   onHover?(key: string | null): void;
 }
@@ -160,10 +154,16 @@ export function Board(p: BoardProps) {
     ? [...ordered.filter((o) => o.key === leadKey), ...ordered.filter((o) => o.key !== leadKey)]
     : ordered;
   const width = useViewport();
-  const columns = columnsFor(objects.length, width);
-  // IT SPANS ONLY WHEN WIDTH HELPS IT: a read of several rows spreads out; one
-  // number across 940px is an empty track with a dot at its end (frames,
-  // 2026-09-17). A one-row lead still goes first and reads larger.
+  // WHAT EACH FIGURE NEEDS, from what it draws (beside.needsWidth).
+  const wide = objects.map((o) => {
+    if (o.spec) return needsWidth('spec', 0, 0);
+    const call = callOf(p.answers[o.turn], o.seq);
+    const rows = rowsOf(call);
+    if (!rows.length) return false;
+    const mark = markFor(o, rows);
+    return needsWidth(mark, rows.length, tableShape(rows, call?.result?.meta ?? null).columns.length);
+  });
+  const columns = columnsFor(objects.length, width, objects.length === 1 && wide[0]);
   // ONE STORE ORDER: the first figure of this answer that lists stores sets it.
   const order = p.sameOrder ? (() => {
     for (const o of objects) {
@@ -174,8 +174,8 @@ export function Board(p: BoardProps) {
     }
     return undefined;
   })() : undefined;
-  const spans = objects.map((o) => p.spanLead !== false && o.key === leadKey
-    && (o.spec !== undefined || rowsOf(callOf(p.answers[o.turn], o.seq)).length > 1));
+  // A FIGURE SPANS ONLY WHEN IT NEEDS THE WIDTH, whoever leads.
+  const spans = wide;
   const leads = objects.map((o) => o.key === leadKey);
   const keys = objects.map((o) => o.key).join('|');
 

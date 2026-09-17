@@ -26,7 +26,7 @@ import { Board, turnNotices } from './render';
 import { FiguresArea, Wires, scrollToFigure, useMoreBelow } from './FiguresArea';
 import { AliveMark } from './AliveMark';
 import { markStateOf } from './alive';
-import { claimAndStanding, layoutFrom, thoughtsOf } from './beside';
+import { claimAndStanding, thoughtsOf } from './beside';
 import { placeFigures as figuresInText } from './figures';
 import { identitiesFrom } from './identity';
 import { readStoreAppearance } from '../services/storesApi';
@@ -151,12 +151,6 @@ export default function Room() {
   // WHETHER HIS WORDS RUN PAST THE BOTTOM OF THEIR COLUMN, so the column can
   // fade there instead of cutting a sentence (the log, 2026-09-17).
   const wordsMore = useMoreBelow(wordsRef);
-  // WHICH COMPOSITION (2026-09-17): the design's, or George speaking — built
-  // side by side for the owner to point at. `?layout=speak` switches and is
-  // remembered in this browser.
-  const layout = useMemo(() => layoutFrom(typeof window === 'undefined' ? '' : window.location.search), []);
-  const speak = layout === 'speak';
-  const [hovered, setHovered] = useState<string | null>(null);
   // HOW THE FIGURES' ARRIVAL IS GOING, from the board (P2S.2(d)). The mark
   // stays `reading` while any are on their way, and pulses as each lands.
   const [landing, setLanding] = useState({ pending: 0, arrived: 0 });
@@ -252,10 +246,14 @@ export default function Room() {
     scrollToFigure(areaRef.current, answers.length - 1, seq);
   }, [answers.length]);
 
-  // HIS SENTENCES BY THE CHART THEY CITE, in the speak layout only.
-  const thoughts = useMemo(() => (speak && latest && !busy
+  // HIS SENTENCES BY THE CHART THEY CITE (the owner, 2026-09-17: "if the ai
+  // thoughts are with the charts it feels likes your going thorugh it
+  // together"). What no chart takes stays with the rest of his words.
+  const thoughts = useMemo(() => (latest && !busy
     ? thoughtsOf(latest.text, latest.reading?.claim, latest.toolCalls) : null),
-  [speak, latest, busy]);
+  [latest, busy]);
+  const [moreOpen, setMoreOpen] = useState(false);
+  useEffect(() => { setMoreOpen(false); }, [answers.length]);
 
   const lead = useMemo(() => {
     if (!latest || busy) return null;
@@ -727,25 +725,14 @@ export default function Room() {
           leading line from him to each. Two fixed columns, 580 and 940,
           centred in the room; the sidebar slides it and never shrinks it. */}
       <main className="r-main">
-        <div className="r-beside" ref={frameRef} data-layout={layout}>
+        <div className="r-beside" ref={frameRef}>
           <Wires frameRef={frameRef} markRef={himRef} wordsRef={wordsRef} areaRef={areaRef}
-                 version={`${answers.length}:${drawn.length}:${busy}`}
-                 only={speak ? hovered : undefined} claim={!speak} />
+                 version={`${answers.length}:${drawn.length}:${busy}:${moreOpen}`} />
 
           <div className="r-him" ref={himRef}>
             <AliveMark state={mark.state} failed={mark.failed} drawn={mark.reads}
                        pulses={mark.reads + landing.arrived} />
           </div>
-
-          {/* GEORGE SPEAKING (the speak layout): his headline beside him,
-              across the top, with any notice that says the data may be wrong
-              above it. */}
-          {speak && !empty && (
-            <div className="r-say-band">
-              <Reading part="claim" text={latest?.text} notices={drawnOnly(notices, explainsOnly)}
-                       reading={latest?.reading} calls={latest?.toolCalls} onFigure={showFigure} />
-            </div>
-          )}
 
           <div className="r-words" ref={wordsRef} data-more-down={wordsMore ? 'yes' : 'no'}>
             {/* WHILE HE WORKS, A LINE UNDER HIM (the log, 2026-09-17). */}
@@ -765,19 +752,28 @@ export default function Room() {
                     since you last looked · {arrived} {arrived === 1 ? 'answer' : 'answers'} arrived
                   </p>
                 )}
-                {/* HIS WORDS, UNDER HIM: the turn's caveat, the claim, the
-                    standing text with read superscripts, and what he'd do next.
-                    Not a tile and not narrated. See Reading.tsx. */}
-                {speak ? (
-                  <Reading part="rest" text={latest?.text} reading={latest?.reading}
-                           calls={latest?.toolCalls} onFigure={showFigure}
-                           standing={thoughts?.unbound} />
-                ) : (
-                  <Reading text={latest?.text} notices={drawnOnly(notices, explainsOnly)} reading={latest?.reading}
-                           calls={latest?.toolCalls}
-                           onFigure={showFigure} />
-                )}
+                {/* UNDER HIM, THE HEADLINE — and what to ask or do next (the
+                    owner, 2026-09-17: "under the blob is the main headline and
+                    question suggestions"). A notice that says the data may be
+                    wrong stays above the headline (UI rule 4). The rest of what
+                    he said — his caveat, and any sentence no chart took — is
+                    one tap away, never gone. See Reading.tsx. */}
+                <Reading part="claim" text={latest?.text} notices={drawnOnly(notices, explainsOnly)}
+                         reading={latest?.reading} calls={latest?.toolCalls} onFigure={showFigure} />
                 <ReadingNext reading={latest?.reading} />
+                {!busy && (latest?.reading?.caveat?.trim() || thoughts?.unbound) && (
+                  <div className="r-more-said">
+                    <button type="button" className="r-more-said-toggle" aria-expanded={moreOpen}
+                            onClick={() => setMoreOpen((o) => !o)}>
+                      {moreOpen ? 'less' : 'more from George'}
+                    </button>
+                    {moreOpen && (
+                      <Reading part="rest" text={latest?.text} reading={latest?.reading}
+                               calls={latest?.toolCalls} onFigure={showFigure}
+                               standing={thoughts?.unbound} />
+                    )}
+                  </div>
+                )}
                 {/* WHAT TO DO ABOUT ALL OF IT (P2.d) — the offers no row on a
                     figure could carry, beside `next`, where "what now" is read. */}
                 <FootOffers offers={offers.foot} answers={answers} on={on} />
@@ -822,9 +818,7 @@ export default function Room() {
                     onLanding={onLanding}
                     lead={lead}
                     thoughts={thoughts?.bySeq}
-                    sameOrder={speak}
-                    spanLead={!speak}
-                    onHover={speak ? setHovered : undefined}
+                    sameOrder
                   />
                 </>
               )}

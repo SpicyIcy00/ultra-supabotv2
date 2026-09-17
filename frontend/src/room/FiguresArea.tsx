@@ -127,20 +127,13 @@ function boxOf(el: Element | null): Box | null {
  * `markRef`, to the claim and to every figure that has ARRIVED inside
  * `areaRef` — a line to a figure still on its way would be a line to nothing.
  */
-export function Wires({ frameRef, markRef, wordsRef, areaRef, version, only, claim = true }: {
+export function Wires({ frameRef, markRef, wordsRef, areaRef, version }: {
   frameRef: RefObject<HTMLElement | null>;
   markRef: RefObject<HTMLElement | null>;
   wordsRef: RefObject<HTMLElement | null>;
   areaRef: RefObject<HTMLElement | null>;
   /** Anything that changes what is drawn — a new answer, a new view. */
   version: string;
-  /**
-   * ONLY THIS FIGURE'S LINE (the `speak` layout): a key, or null for none.
-   * Undefined draws every line, as the beside room does.
-   */
-  only?: string | null;
-  /** Whether a line runs to the claim. */
-  claim?: boolean;
 }) {
   const [wires, setWires] = useState<Wire[]>([]);
   const frame = useRef<number | null>(null);
@@ -156,7 +149,7 @@ export function Wires({ frameRef, markRef, wordsRef, areaRef, version, only, cla
     setWires(wireEnds({
       frame: boxOf(host) as Box,
       mark: boxOf(markRef.current?.querySelector('canvas') ?? markRef.current),
-      claim: claim ? boxOf(wordsRef.current?.querySelector('.r-say--claim') ?? null) : null,
+      claim: boxOf(wordsRef.current?.querySelector('.r-say--claim') ?? null),
       area: boxOf(area),
       figures,
     }));
@@ -181,11 +174,11 @@ export function Wires({ frameRef, markRef, wordsRef, areaRef, version, only, cla
       if (frame.current !== null) window.cancelAnimationFrame(frame.current);
       frame.current = null;
     };
-  }, [draw, soon, areaRef, version, only, claim]);
+  }, [draw, soon, areaRef, version]);
 
   return (
     <svg className="r-wires" aria-hidden="true">
-      {wires.filter((w) => only === undefined || w.to === only).map((w) => (
+      {wires.map((w) => (
         <line key={w.to} data-to={w.to} x1={w.x1} y1={w.y1} x2={w.x2} y2={w.y2}
               strokeWidth={w.last ? 1.5 : 1} />
       ))}

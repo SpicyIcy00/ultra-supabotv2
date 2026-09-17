@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   COMP_GAP, COMP_MAX, FIGS_W, HIM_W, SIDE_W, arrowStep, arrowsFor, claimAndStanding,
-  columnsFor, composition, markGeometry, placeFigures, revealAt, wireEnds, type Box,
+  columnsFor, composition, markGeometry, needsWidth, placeFigures, revealAt, wireEnds, type Box,
 } from './beside';
 
 const CSS = readFileSync(join(__dirname, 'room.css'), 'utf8');
@@ -74,11 +74,24 @@ describe('the composition is the design\'s, and it stays centred', () => {
 });
 
 describe('the figures flow into columns — his rows 6 and 7', () => {
-  it('uses one column for one figure and two for more — never three (the log, 2026-09-17)', () => {
-    // "some charts are still getting cut": nine figures in three ~290px
-    // columns ellipsed every product name.
-    expect(columnsFor(1, 1920)).toBe(1);
+  it('uses two columns on a desk — never three, and one only for a lone figure that needs the width', () => {
+    // "some charts are still getting cut" (three ~290px columns ellipsed every
+    // product name) and "some charts are too big that dont need to be".
+    expect(columnsFor(1, 1920)).toBe(2);
+    expect(columnsFor(1, 1920, true)).toBe(1);
     for (const n of [2, 3, 4, 5, 6, 9]) expect(columnsFor(n, 1920)).toBe(2);
+  });
+
+  it('knows which figures need the width, from what they draw', () => {
+    expect(needsWidth('ranked', 8, 3)).toBe(false);
+    expect(needsWidth('contributors', 10, 3)).toBe(false);
+    expect(needsWidth('dumbbell', 7, 3)).toBe(false);
+    expect(needsWidth('figure', 1, 3)).toBe(false);
+    expect(needsWidth('line', 30, 2)).toBe(true);
+    expect(needsWidth('line', 5, 2)).toBe(false);
+    expect(needsWidth('table', 12, 6)).toBe(true);
+    expect(needsWidth('table', 12, 3)).toBe(false);
+    expect(needsWidth('spec', 0, 0)).toBe(true);
   });
 
   it('puts a spanning figure under the tallest column and raises both to its foot', () => {
@@ -183,11 +196,14 @@ describe('the leading lines come from him — his rows 10 and 12', () => {
 });
 
 describe('the mark is big — his rows 14 and 24', () => {
-  it('draws a body at least 70% of its column', () => {
+  it('draws a body at least 65% of its column', () => {
+    // It was 70%, his rows 14 and 24 ("alive is too small"). On 2026-09-17,
+    // keeping this layout, he asked for it "slightly smaller": 136% → 122% of
+    // the column, and the body is still two thirds of it.
     const g = markGeometry();
-    expect(g.bodyShareOfColumn).toBeGreaterThanOrEqual(0.7);
-    // And the canvas is the design's: 680×420, at 136% of the column.
-    expect(CSS).toMatch(/\.r-him canvas \{[^}]*width:\s*136%/);
+    expect(g.bodyShareOfColumn).toBeGreaterThanOrEqual(0.65);
+    // 680×420, at 122% of the column since 2026-09-17 ("slightly smaller").
+    expect(CSS).toMatch(/\.r-him canvas \{[^}]*width:\s*122%/);
     expect(CSS).toMatch(/\.r-him canvas \{[^}]*aspect-ratio:\s*680\s*\/\s*420/);
   });
 
@@ -196,7 +212,7 @@ describe('the mark is big — his rows 14 and 24', () => {
     // canvas's foot, and -10vh put a caveat on top of him.
     expect(CSS).toMatch(/\.r-words \{[^}]*margin-top:\s*0;/);
     expect(CSS).toMatch(/\.r-words \{[^}]*overflow-y:\s*auto/);
-    expect(CSS).toMatch(/\.r-him canvas \{[^}]*margin:\s*-6vh -18% 0/);
+    expect(CSS).toMatch(/\.r-him canvas \{[^}]*margin:\s*-5vh -11% 0/);
   });
 });
 

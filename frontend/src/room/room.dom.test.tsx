@@ -243,12 +243,15 @@ describe('nothing on a figure arranges it by hand (P2S.1)', () => {
 });
 
 describe('the figures flow into columns, left to right then down (P2S.1(c))', () => {
-  const many = (n: number) => Array.from({ length: n }, (_, i) => object('table', { key: `f${i}` }));
+  // A ranking says what it says in a column; a nine-column table would need the
+  // whole width (beside.needsWidth), which is a different test.
+  const many = (n: number) => Array.from({ length: n }, (_, i) => object('ranked', { key: `f${i}` }));
   const columnsOf = () => Array.from(document.querySelectorAll('[data-figure]'))
     .map((el) => Number(el.getAttribute('data-col')));
 
   it.each([
-    [1, 1, [0]],
+    // One figure that does not need the width sits in a column (2026-09-17).
+    [1, 2, [0]],
     [2, 2, [0, 1]],
     [3, 2, [0, 1, 0]],
     [4, 2, [0, 1, 0, 1]],
@@ -260,19 +263,27 @@ describe('the figures flow into columns, left to right then down (P2S.1(c))', ()
     expect(columnsOf()).toEqual(want);
   });
 
-  it('lets the figure the answer rests on span the area and go first (the log, 2026-09-17)', () => {
-    // "all charts dont need to be the same size or small it should decide
-    // based on the space it has and how important it is"
+  it('puts the figure the answer rests on first, at the size it needs (the log, 2026-09-17)', () => {
+    // "some charts are too big that dont need to be it should know like how
+    // much size it needs not waste it"
     const figures = [
-      object('table', { key: 'a' }), object('table', { key: 'b' }),
-      object('table', { key: 'c', weight: 'lead' }),
+      object('ranked', { key: 'a' }), object('ranked', { key: 'b' }),
+      object('ranked', { key: 'c', weight: 'lead' }),
     ];
     const { container } = draw(figures);
     const first = container.querySelector('[data-figure]') as HTMLElement;
     expect(first.getAttribute('data-figure')).toBe('c');
     expect(first.getAttribute('data-lead')).toBe('yes');
-    expect(first.style.gridColumn).toBe('1 / -1');
+    expect(first.style.gridColumn).not.toBe('1 / -1');
     expect(container.querySelectorAll('[data-lead="yes"]')).toHaveLength(1);
+  });
+
+  it('lets a figure that needs the width span it, lead or not', () => {
+    // A table of nine columns cuts them in half a width.
+    const { container } = draw([object('ranked', { key: 'a' }), object('table', { key: 'wide' })]);
+    const wide = container.querySelector('[data-figure="wide"]') as HTMLElement;
+    expect(wide.getAttribute('data-span')).toBe('yes');
+    expect(wide.style.gridColumn).toBe('1 / -1');
   });
 
   it('labels every figure with the read it came from, as the superscripts do', () => {
@@ -592,13 +603,13 @@ describe('a tile draws what the rows actually say', () => {
   });
 });
 
-describe('the lead spans only when width helps it (frames, 2026-09-17)', () => {
-  it('keeps a one-number lead first and larger, in one column', () => {
+describe('a lead that needs no width does not span (frames, 2026-09-17)', () => {
+  it('keeps a small lead first and larger, in one column', () => {
     const one = { ...TURN, toolCalls: [{ ...TURN.toolCalls[0], seq: 5,
       result: { rows: [ROWS[0]], meta: TURN.toolCalls[0].result!.meta } }] } as unknown as AnswerTurn;
     const figures = [
-      { key: 'a', kind: 'table', weight: 'supporting', seq: 5, tool: 'get_sales', turn: 0, touched: 0 },
-      { key: 'b', kind: 'table', weight: 'supporting', seq: 5, tool: 'get_sales', turn: 0, touched: 0 },
+      { key: 'a', kind: 'ranked', weight: 'supporting', seq: 5, tool: 'get_sales', turn: 0, touched: 0 },
+      { key: 'b', kind: 'ranked', weight: 'supporting', seq: 5, tool: 'get_sales', turn: 0, touched: 0 },
     ] as unknown as BoardObject[];
     const { container } = render(
       <Board answers={[one]} board={figures} local={{}} focused={null} selection={[]}
