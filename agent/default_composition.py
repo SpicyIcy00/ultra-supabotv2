@@ -28,7 +28,12 @@ signed change on every row is `contributors`; an ordered series is a `line`; a
 set of named rows is `ranked`; everything else is a `table`. Two implementations
 of one rule, in the two places a board can be composed, and
 tests/test_default_composition_contract.py is what keeps them saying the same
-thing.
+thing. P2S.3 added three answers for a read grouped by TWO things, which until
+then fell to a line joining every store's weeks into one zigzag: a name over
+hours is a `heatmap`, a name over a calendar order is `multiples`, two names of
+parts are `stacked`. The other new shapes are George's to pick, never a
+default's — a default decides a noun from the columns, and "a pie" is not
+something the columns say.
 
 WHAT IT DELIBERATELY DOES NOT DO:
 
@@ -57,7 +62,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Optional, Sequence
 
-from agent import compose
+from agent import compose, vocabulary
 from agent.composite_tools import MEMORY_TOOL
 
 # Mirrors frontend/src/components/george/pinShape.ts. Where a constant appears
@@ -173,6 +178,19 @@ def shape_for(call: Mapping[str, Any], seq: int, key: str, weight: str) -> Optio
         if all(_is_number(r.get("change")) for r in rows):
             return {**block, "kind": "contributors"}
         return {**block, "kind": "ranked"}
+
+    # A READ GROUPED BY TWO THINGS (P2S.3). Until the vocabulary had a shape
+    # for one, a read by store AND week fell to the line below — every store's
+    # weeks joined into one zigzag, a series that does not exist. Now: a name
+    # over the hours of the day is WHERE IN THE DAY, a heatmap; a name over a
+    # calendar order is one small line per name; two names is what each total
+    # is made of.
+    if vocabulary.satisfies("series_per_name", rows):
+        if vocabulary.order_key(rows) == "hour":
+            return {**block, "kind": "heatmap"}
+        return {**block, "kind": "multiples"}
+    if vocabulary.satisfies("two_key_parts", rows):
+        return {**block, "kind": "stacked"}
 
     if len(rows) >= MIN_CHART_ROWS and _homogeneous(rows):
         if any(k in rows[0] for k in TIME_KEYS):

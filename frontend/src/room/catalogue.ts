@@ -1,5 +1,7 @@
 /**
- * SIX MARKS, DRAWN ONE WAY EACH.
+ * SIX MARKS, DRAWN ONE WAY EACH — and, since P2S.3, eleven more (below, at
+ * `MARKS`), each with the rule that picks it and what its rows must carry.
+ * What follows is why the six were six; `MARKS` says why it reopened.
  *
  * The owner, on the board he was handed: "with the widgets i dont really know
  * what im looking at, what visual language is better". The diagnosis in the
@@ -40,11 +42,165 @@
  */
 import type { BoardObject } from './board';
 import type { ToolMeta } from '../types/george';
-import { changeOf, unitOf, valueOf, windowLabel, type Change } from './data';
+import { ORDER_KEYS, changeOf, unitOf, valueOf, windowLabel, type Change } from './data';
 
-/** The catalogue. Closed — a seventh is a decision, not an addition. */
-export const MARKS = ['figure', 'dumbbell', 'ranked', 'contributors', 'line', 'table'] as const;
+/**
+ * The catalogue. Closed — a new shape is a decision, not an addition.
+ *
+ * REOPENED ON PURPOSE BY P2S.3 (2026-09-17), after P1.f closed it at six. The
+ * owner: *"it should have the ability to make all those different kinds of
+ * charts and visualizations like pie and others cause if it builds a dashboard
+ * it needs that"*. What keeps seventeen from being the menu P1.f removed is
+ * the rule on every shape in `composition.widgets` — `when` picks it unasked,
+ * `rows` says what its read must carry, and pie, treemap and gauge are drawn
+ * only when asked. Map and funnel are declined there, with what would change it.
+ */
+export const MARKS = [
+  'figure', 'dumbbell', 'ranked', 'contributors', 'line', 'table',
+  'bar', 'multiples', 'area', 'stacked', 'pie', 'scatter', 'heatmap', 'calendar',
+  'waterfall', 'treemap', 'gauge',
+] as const;
 export type Mark = (typeof MARKS)[number];
+
+/**
+ * WHAT EACH SHAPE'S ROWS MUST CARRY — `composition.widgets.*.rows`, copied
+ * because the client draws before the definitions load. `catalogue.test.ts`
+ * reads the yaml and fails if the two disagree.
+ */
+export const SHAPE_ROWS: Record<Mark, string> = {
+  figure: 'one_value', dumbbell: 'baseline', ranked: 'named', contributors: 'change',
+  line: 'series', table: 'any', bar: 'named', multiples: 'series_per_name', area: 'series',
+  stacked: 'two_key_parts', pie: 'parts', scatter: 'two_measures', heatmap: 'two_keys',
+  calendar: 'days', waterfall: 'change', treemap: 'parts', gauge: 'baseline',
+};
+
+/** `composition.widgets.*.min_rows`: one row is a figure, whatever shape was named. */
+export const MIN_ROWS: Partial<Record<Mark, number>> = {
+  bar: 2, multiples: 2, area: 2, stacked: 2, pie: 2, scatter: 2, heatmap: 2, calendar: 2,
+  waterfall: 2, treemap: 2,
+};
+
+/** `composition.max_parts`: past this many slices a whole is a ranking. */
+export const MAX_PARTS = 12;
+
+/** A NAME: a string column that says what a row is about (`vocabulary.NAME_KEYS`). */
+export const NAME_KEYS = ['store', 'product', 'category', 'supplier', 'machine', 'payment_method',
+                          'status', 'state', 'label', 'name', 'subject'];
+const DATE_KEYS = ['day', 'date', 'snapshot_date'];
+
+function realNumber(v: unknown): v is number {
+  return typeof v === 'number' && Number.isFinite(v);
+}
+
+function present(v: unknown): boolean {
+  return v !== null && v !== undefined && !(typeof v === 'string' && !v.trim());
+}
+
+/** The first NAME column carried as a non-empty string on every row. */
+export function nameKeyOf(rows: Row[]): string | null {
+  return NAME_KEYS.find((k) => rows.length > 0
+    && rows.every((r) => typeof r[k] === 'string' && (r[k] as string).trim() !== '')) ?? null;
+}
+
+/** The first ORDER column present on every row. */
+export function orderKeyOf(rows: Row[]): string | null {
+  return ORDER_KEYS.find((k) => rows.length > 0 && rows.every((r) => present(r[k]))) ?? null;
+}
+
+/** Every grouping on every row, names first, then orders. */
+export function keysOf(rows: Row[]): string[] {
+  const names = NAME_KEYS.filter((k) => rows.length > 0
+    && rows.every((r) => typeof r[k] === 'string' && (r[k] as string).trim() !== ''));
+  const orders = ORDER_KEYS.filter((k) => rows.length > 0 && rows.every((r) => present(r[k])));
+  return [...names, ...orders];
+}
+
+function distinct(rows: Row[], ...cols: string[]): boolean {
+  const seen = new Set<string>();
+  for (const r of rows) {
+    const key = JSON.stringify(cols.map((c) => String(r[c])));
+    if (seen.has(key)) return false;
+    seen.add(key);
+  }
+  return true;
+}
+
+const valued = (rows: Row[]) => rows.length > 0 && rows.every((r) => valueOf(r) !== null);
+
+/**
+ * WHETHER A READ'S ROWS CAN MAKE A SHAPE — `agent/vocabulary.satisfies`, the
+ * same answers over the same recorded reads (`vocab.dom.test.tsx` and
+ * `tests/test_vocabulary_contract.py` both hold `__fixtures__/vocab-reads.json`
+ * `_drawable`). A shape its rows cannot make is drawn as what they do make.
+ */
+export function drawable(kind: Mark, rows: Row[],
+                         o?: Pick<BoardObject, 'field' | 'against'>): boolean {
+  if (rows.length < (MIN_ROWS[kind] ?? 1)) return false;
+  switch (SHAPE_ROWS[kind]) {
+    case 'any': return rows.length > 0;
+    case 'one_value': return rows.some((r) => valueOf(r) !== null);
+    case 'baseline': {
+      const against = o?.against ?? 'baseline';
+      return valued(rows) && rows.every((r) => realNumber(r[against]));
+    }
+    case 'change': return rows.length > 0 && rows.every((r) => realNumber(r.change));
+    case 'named': {
+      const name = nameKeyOf(rows);
+      return Boolean(name) && valued(rows) && distinct(rows, name as string);
+    }
+    case 'parts':
+      return drawable('ranked', rows) && rows.length <= MAX_PARTS
+        && rows.every((r) => (valueOf(r)?.value ?? -1) >= 0)
+        && rows.some((r) => (valueOf(r)?.value ?? 0) > 0);
+    case 'series': {
+      const order = orderKeyOf(rows);
+      return Boolean(order) && rows.length >= 2 && valued(rows) && distinct(rows, order as string);
+    }
+    case 'days': {
+      const order = DATE_KEYS.find((k) => rows.length > 0
+        && rows.every((r) => typeof r[k] === 'string' && /^\d{4}-\d{2}-\d{2}/.test(r[k] as string)));
+      return Boolean(order) && valued(rows) && distinct(rows, order as string);
+    }
+    case 'series_per_name': {
+      const name = nameKeyOf(rows);
+      const order = orderKeyOf(rows);
+      return Boolean(name && order) && valued(rows)
+        && distinct(rows, name as string, order as string) && !distinct(rows, order as string);
+    }
+    case 'two_keys': {
+      const keys = keysOf(rows);
+      return keys.length >= 2 && valued(rows) && distinct(rows, keys[0], keys[1])
+        && !distinct(rows, keys[0]);
+    }
+    case 'two_key_parts':
+      return drawable('heatmap', rows) && rows.every((r) => (valueOf(r)?.value ?? -1) >= 0);
+    case 'two_measures': {
+      const { field, against } = o ?? {};
+      return typeof field === 'string' && typeof against === 'string' && field !== against
+        && rows.length >= 2 && rows.every((r) => realNumber(r[field]) && realNumber(r[against]));
+    }
+    default: return false;
+  }
+}
+
+/**
+ * THE SHAPE A READ MAKES WHEN NOBODY NAMED ONE — `default_composition.shape_for`,
+ * in the same order: one row is a figure; a compared set of named rows is its
+ * movement; a name over hours is a heatmap; a name over a calendar order is
+ * small multiples; two names of parts is stacked; a series is a line; named
+ * rows are ranked; anything else is a table.
+ */
+export function defaultMark(rows: Row[]): Mark {
+  if (!rows.length) return 'table';
+  if (rows.length === 1) return valueOf(rows[0]) ? 'figure' : 'table';
+  if (hasBaseline(rows) && nameKeyOf(rows)) return 'dumbbell';
+  if (hasChange(rows) && nameKeyOf(rows)) return 'contributors';
+  if (drawable('multiples', rows)) return orderKeyOf(rows) === 'hour' ? 'heatmap' : 'multiples';
+  if (drawable('stacked', rows)) return 'stacked';
+  if (rows.length >= 3 && timeKeyOf(rows) && drawable('line', rows)) return 'line';
+  if (drawable('ranked', rows)) return 'ranked';
+  return 'table';
+}
 
 /** The kinds that are not readings of a read, and why each keeps its tile. */
 export const NOT_A_MARK: Record<string, string> = {
@@ -56,7 +212,7 @@ export const NOT_A_MARK: Record<string, string> = {
         + 'per row, which no drawing of rows carries',
 };
 
-const TIME_KEYS = ['day', 'week', 'month', 'bucket', 'date', 'snapshot_date', 'hour', 'period'];
+const TIME_KEYS = ORDER_KEYS;
 
 type Row = Record<string, unknown>;
 
@@ -100,9 +256,15 @@ export function hasChange(rows: Row[]): boolean {
  * which is the same rule `default_composition.shape_for` uses on the way out
  * and `inferShape` used before that.
  */
-export function markFor(o: Pick<BoardObject, 'kind' | 'form' | 'subject' | 'subjects'>,
+export function markFor(o: Pick<BoardObject, 'kind' | 'form' | 'subject' | 'subjects'>
+                          & Partial<Pick<BoardObject, 'field' | 'against'>>,
                         rows: Row[]): Mark {
   switch (o.kind) {
+    // ---- the eleven P2S.3 added: named, and drawn when the rows make them --
+    case 'bar': case 'multiples': case 'area': case 'stacked': case 'pie': case 'scatter':
+    case 'heatmap': case 'calendar': case 'waterfall': case 'treemap': case 'gauge':
+      if (o.kind === 'gauge' && rows.length !== 1) return defaultMark(rows);
+      return drawable(o.kind, rows, o) ? o.kind : defaultMark(rows);
     // ---- the six, said by name (P1.f) -----------------------------------
     // ONE NUMBER. Its change and what it is in sit with it; more rows than one
     // do not make it a series, because he asked for a figure.
@@ -114,8 +276,10 @@ export function markFor(o: Pick<BoardObject, 'kind' | 'form' | 'subject' | 'subj
       return hasChange(rows) ? 'contributors' : ranking(rows);
     case 'ranked':
       return 'ranked';
+    // A LINE THROUGH A READ GROUPED BY TWO THINGS joined every store's weeks
+    // into one zigzag, a series that does not exist (P2S.3).
     case 'line':
-      return 'line';
+      return drawable('line', rows) ? 'line' : defaultMark(rows);
     case 'table':
       return 'table';
 

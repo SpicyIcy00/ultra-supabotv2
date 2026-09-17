@@ -597,9 +597,24 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
                     # THE CATALOGUE LIVES HERE, not in the prompt: the model
                     # reads it at the moment it composes, which is the only
                     # moment it needs it (plan phase A, 2026-09-12).
+                    # EACH SHAPE CARRIES THE RULE THAT PICKS IT UNASKED
+                    # (P2S.3): the claim decides the drawing, and three
+                    # shapes are drawn only when the person names them.
                     "kind": {"type": "string", "enum": list(voc["widgets"]),
-                             "description": "what the object is drawn as — " + "; ".join(
-                                 f"{k}: {v['about']}" for k, v in voc["widgets"].items())},
+                             "description": "what the object is drawn as; pick by what the claim needs — " + "; ".join(
+                                 f"{k}: {v['about']}"
+                                 + (f" (ONLY WHEN ASKED)" if v.get("only_when_asked")
+                                    else f" (when {v['when']})" if v.get("when") else "")
+                                 for k, v in voc["widgets"].items())
+                             + ". To redraw an object already on the board as another shape, "
+                               "change its key with the new kind and no seq."},
+                    "field": {"type": "string",
+                              "description": "a scatter's upright measure: a numeric COLUMN of the read"},
+                    "against": {"type": "string",
+                                "description": "a scatter's across measure, or what a gauge is measured "
+                                               "against: a numeric COLUMN of the same row"},
+                    "ruled_out": {"type": "boolean",
+                                  "description": " ".join(str(voc["ruled_out"]["about"]).split())},
                     "key": {"type": "string", "pattern": voc["key_pattern"],
                             "description": "a short slug naming this object; a later turn that "
                                            "composes the same key changes it in place"},
@@ -3675,6 +3690,7 @@ async def run(
                         (b.input or {}).get("actions"),
                         calls=calls_by_seq, defs=defs,
                         board=(desk or {}).get("board"),
+                        question=question,
                     )
                     err = None
                 except (ValueError, KeyError, TypeError) as exc:

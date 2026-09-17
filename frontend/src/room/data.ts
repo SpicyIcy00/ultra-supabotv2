@@ -174,11 +174,22 @@ export function rowUnderClaim(
   return !named && rows.length === 1 ? rows[0] : null;
 }
 
-/** The first numeric column that is not a change — the row's headline figure. */
+/** The columns a row RUNS ALONG — where it sits, never how much it holds. */
+export const ORDER_KEYS = ['day', 'week', 'month', 'hour', 'date', 'bucket', 'snapshot_date', 'period'];
+
+/**
+ * THE ROW'S HEADLINE FIGURE: the tool's own `value` where it has one, else the
+ * first numeric column that is not a change, an id or an ORDER. The order rule
+ * arrived with P2S.3's reads grouped by hour: `{hour: 9, value: 354}` drew its
+ * hour as its figure. `agent/vocabulary.value_of` is the same rule.
+ */
 export function valueOf(row: Record<string, unknown>): { key: string; value: number } | null {
   const skip = new Set(['change', 'change_pct', 'baseline', 'seq', 'call_seq', 'row_count']);
+  const own = row.value;
+  if (typeof own === 'number' && Number.isFinite(own)) return { key: 'value', value: own };
+  if (typeof own === 'string' && /^-?\d+(\.\d+)?$/.test(own)) return { key: 'value', value: Number(own) };
   for (const [k, v] of Object.entries(row)) {
-    if (skip.has(k) || k.endsWith('_id')) continue;
+    if (skip.has(k) || k.endsWith('_id') || ORDER_KEYS.includes(k)) continue;
     if (typeof v === 'number' && Number.isFinite(v)) return { key: k, value: v };
     if (typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v)) return { key: k, value: Number(v) };
   }

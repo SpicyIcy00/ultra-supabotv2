@@ -371,6 +371,9 @@ export interface CompositionBlock {
      * holds, with a Forget on each row.
      */
     | 'figure' | 'dumbbell' | 'ranked' | 'contributors' | 'line' | 'table'
+    /** P2S.3 reopened the catalogue: the design's shapes, each with its rule. */
+    | 'bar' | 'multiples' | 'area' | 'stacked' | 'pie' | 'scatter' | 'heatmap'
+    | 'calendar' | 'waterfall' | 'treemap' | 'gauge'
     | 'draft' | 'state' | 'control' | 'system' | 'memory'
     /**
      * HISTORICAL ONLY. A board persists between turns and across a deploy, so
@@ -429,6 +432,11 @@ export interface CompositionBlock {
    * when a read this turn returned it (metrics.yaml composition.thought).
    */
   thought?: string;
+  /** A scatter's upright measure and across measure, or a gauge's against — COLUMNS. */
+  field?: string;
+  against?: string;
+  /** The ladder checked this read and ruled it out; drawn `READ n · RULED OUT` (P2S.3). */
+  ruled_out?: boolean;
 }
 
 /** One node of a composed shape: a layout that arranges, or a mark that draws. */

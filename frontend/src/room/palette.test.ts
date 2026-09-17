@@ -43,6 +43,8 @@ import { describe, expect, it } from 'vitest';
 import { DATA_COLOURS } from './catalogue';
 
 const MARKS = readFileSync(join(__dirname, 'marks.tsx'), 'utf8');
+const PARTS = readFileSync(join(__dirname, 'markParts.tsx'), 'utf8');
+const SHAPES = readFileSync(join(__dirname, 'shapes.tsx'), 'utf8');
 const SHELL = readFileSync(join(__dirname, 'tiles.tsx'), 'utf8');
 const CSS = readFileSync(join(__dirname, 'room.css'), 'utf8');
 const SHEET = postcss.parse(CSS);
@@ -115,7 +117,10 @@ describe('the data palette', () => {
     // One function produces every colour in the file, and its argument is a
     // `DataColour` — so the compiler refuses a fifth and this refuses a
     // second producer, which is the hole the compiler cannot see.
-    expect(MARKS).toMatch(/function paint\(c: DataColour\): string \{\s*\n\s*return `rgb\(var\(--\$\{c\}\)\)`;/);
+    // Moved to markParts.tsx by P2S.3, beside `wash` — the same colour at a
+    // strength, for parts of a whole and a cell's brightness.
+    expect(PARTS).toMatch(/function paint\(c: DataColour\): string \{\s*\n\s*return `rgb\(var\(--\$\{c\}\)\)`;/);
+    expect(PARTS).toMatch(/function wash\(c: DataColour, strength: number\): string \{\s*\n\s*return `rgba\(var\(--\$\{c\}\), /);
     const painted = [...MARKS.matchAll(/(?:background|borderColor|stroke|fill)[:=]\s*([^,\n}]+)/g)]
       .map((m) => m[1].trim().replace(/["'{}]/g, ''));
     for (const value of painted) {
@@ -151,6 +156,25 @@ describe('the data palette', () => {
     // And every one of them is the wrapper immediately above a panel.
     expect(MARKS.match(/'--hue': hueFor\([\s\S]{0,200}?<ObjectPanel/g) ?? [])
       .toHaveLength(panels.length);
+  });
+
+  it('is the only thing the eleven shapes paint with (P2S.3)', () => {
+    // Every colour a new shape paints is `paint` or `wash` of a DataColour —
+    // directly, through the two helpers that take one (`step`, `glow`), or the
+    // `c` a line took from `paint` — or the ground and ink a drawing sits on.
+    const painted = [...SHAPES.matchAll(/(?:background|borderColor|stroke|fill)[:=]\s*([^,\n}]+)/g)]
+      // The value only — not the next JSX attribute on the same line.
+      .map((m) => m[1].trim().replace(/["'{}]/g, '').replace(/\s+([a-zA-Z-]+=.*|\/>.*|>.*)$/, ''));
+    expect(painted.length).toBeGreaterThan(10);
+    for (const value of painted) {
+      expect(value, `${value} is a colour no value chose`).toMatch(
+        /^(paint\(|wash\(|step\(|glow\(|c$|none( stroke=c)?$|r \? glow\(|var\(--(ground|ink|track|edge-strong)\)$|b\.i < 2 \? var\(--ground\))/);
+    }
+    const spent = tokens(SHAPES).filter((t) => !STRUCTURAL.has(t) && !t.startsWith('mk'));
+    expect(spent, `a data colour named outside paint/wash: ${spent.join(', ')}`).toEqual([]);
+    expect(SHAPES).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+    expect(SHAPES).not.toMatch(/rgba?\(\s*\d/);
+    expect(SHAPES).not.toMatch(/--sw|--hue/);
   });
 
   it('is the only thing the mark stylesheet paints with either', () => {

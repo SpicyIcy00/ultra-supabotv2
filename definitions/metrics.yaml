@@ -5721,7 +5721,8 @@ composition:
   executes_nothing: true
 
   # THE VOCABULARY. Closed. `needs` says what a block must carry to be drawn;
-  # `about` is the one-line meaning George is taught.
+  # `about` is the one-line meaning George is taught, `when` the rule that
+  # picks it unasked (P2S.3), and `rows` what the read must carry.
   #
   # IT IS THE CATALOGUE THE RENDERER DRAWS, AND NOTHING ELSE (P1.f,
   # 2026-09-14). Until now this list held fourteen names and the renderer drew
@@ -5754,26 +5755,122 @@ composition:
   # cannot be forgotten, cannot be evicted and cannot be boxed. The grammar's
   # `prose` mark went the same way and for the same reason.
   widgets:
-    # ---- the six marks: ways of drawing what a read returned ---------------
+    # ---- the marks: ways of drawing what a read returned --------------------
+    #
+    # THE CATALOGUE REOPENED ON PURPOSE (P2S.3, 2026-09-17). P1.f closed it at
+    # six so George was not choosing between synonyms; the owner then asked for
+    # the rest — *"it should have the ability to make all those different kinds
+    # of charts and visualizations like pie and others cause if it builds a
+    # dashboard it needs that"*. What keeps eighteen from being a menu is the
+    # rule that decides unasked, written on every shape as `when`, and three
+    # shapes George never picks on his own (`only_when_asked`).
+    #
+    # EVERY SHAPE NAMES WHAT ITS ROWS MUST CARRY (`rows`, one of `shape_rows`
+    # below). A shape the read cannot make is not refused — it is drawn as the
+    # shape those rows make by default (default_composition.shape_for), and
+    # the coercion is named. Changing the drawing never changes a value.
     figure:
-      about: "ONE number from one row, large, with its change and what it is in. A read that answers outright. More rows than one do not make it a series — name the subject whose row it draws"
+      about: "ONE number from one row, large, with its change and what it is in. More rows than one do not make it a series — name the subject whose row it draws"
+      when: "the answer is one figure"
+      rows: one_value
       needs: [seq, subject]
     dumbbell:
-      about: "before → after, one row each: a hollow dot where it was, a filled dot where it is, a line between. The shape for a compared read — seven shops against the week before. It needs no caption"
+      about: "before → after, one row each: a hollow dot where it was, a filled dot where it is, a line between"
+      when: "a compared read — seven shops against the period before"
+      rows: baseline
       needs: [seq]
     ranked:
-      about: "the rows in order, a bar in each cell and the figure beside it — a ranking, a split, biggest first. Use `emphasise` to light the row that matters, or the two or three a comparison is about"
+      about: "the rows in order, a bar in each and the figure beside it — biggest first. Use `emphasise` to light the rows that matter"
+      when: "a ranking or a split, where who is biggest is the point"
+      rows: named
       needs: [seq]
     contributors:
-      about: "what MOVED the thing that moved: a signed change per row, in the metric's own unit, so the amounts that went missing are the picture. For a read whose rows carry a change"
+      about: "what MOVED the thing that moved: a signed change per row, in the metric's own unit, diverging from zero"
+      when: "the rows carry a change and the question is what drove it"
+      rows: change
       needs: [seq]
     line:
-      about: "a measure over an ordered field — eight weeks, the days of a month — with the period before dotted where the tool returned one. Use it when WHEN is the point"
+      about: "a measure over an ordered field, the period before dotted where the tool returned one"
+      when: "change over time — WHEN is the point"
+      rows: series
       needs: [seq]
     table:
-      about: "the rows, when precision beats shape and there is nothing to see in their shape"
+      about: "the rows, exactly"
+      when: "exact pesos someone will act on, or nothing in the shape to see"
+      rows: any
       needs: [seq]
-    # ---- the four that are not readings, and keep their own tiles ----------
+    bar:
+      about: "upright bars in the read's own order, the period before as a tick on each where the tool returned one"
+      when: "a few things compared side by side, eight or fewer, when their order is not the point"
+      rows: named
+      min_rows: 2
+      needs: [seq]
+    multiples:
+      about: "one small line per name on one shared scale — every store at a glance"
+      when: "a read grouped by a name AND a time, and the question is which one moved differently"
+      rows: series_per_name
+      min_rows: 2
+      needs: [seq]
+    area:
+      about: "a measure over an ordered field, filled to zero — how much, over time"
+      when: "the size of a total over time matters more than its turns"
+      rows: series
+      min_rows: 2
+      needs: [seq]
+    stacked:
+      about: "one bar per name, split into the parts of a second grouping — what each total is made of"
+      when: "a read grouped by two things, and the question is what each one is made of"
+      rows: two_key_parts
+      min_rows: 2
+      needs: [seq]
+    pie:
+      about: "each row a slice of one whole; the figures on touch, never printed on the slices"
+      when: "never unasked — a ranked bar reads a share better"
+      rows: parts
+      min_rows: 2
+      only_when_asked: true
+      asked_by: [pie, donut, doughnut]
+      needs: [seq]
+    scatter:
+      about: "one dot per row at two measures of that row: `field` up, `against` across — both columns of the SAME row"
+      when: "two measures of the same rows, and the question is how they go together"
+      rows: two_measures
+      min_rows: 2
+      needs: [seq, field, against]
+    heatmap:
+      about: "a grid of two groupings, each cell's brightness the measure — store by hour of the day"
+      when: "where in the day or week, across several names at once"
+      rows: two_keys
+      min_rows: 2
+      needs: [seq]
+    calendar:
+      about: "the days as weeks, Monday to Sunday, each day's brightness the measure; a day the read has no row for is drawn empty"
+      when: "a read by day, and the question is the rhythm of the weeks — which weekday carries it, which week broke"
+      rows: days
+      min_rows: 2
+      needs: [seq]
+    waterfall:
+      about: "a bridge: each row's signed change stepped from where the last one ended, in the metric's own unit"
+      when: "how one number became another, change by change"
+      rows: change
+      min_rows: 2
+      needs: [seq]
+    treemap:
+      about: "each row a rectangle sized by its measure — a mix, by size"
+      when: "never unasked — a ranked bar reads sizes better"
+      rows: parts
+      min_rows: 2
+      only_when_asked: true
+      asked_by: [treemap, tree map]
+      needs: [seq]
+    gauge:
+      about: "one row's figure as an arc and a bullet, against a column of the SAME row — its period before, unless `against` names another"
+      when: "never unasked — a figure with its change says the same"
+      rows: baseline
+      only_when_asked: true
+      asked_by: [gauge, dial, meter]
+      needs: [seq]
+    # ---- the five that are not readings, and keep their own tiles ----------
     draft:
       about: "an order or document you have produced, with editable rows and a total — the purchase plan"
       needs: [seq]
@@ -5790,6 +5887,48 @@ composition:
       about: "what you currently believe, one line per view: what you think, when you formed it, what it rests on, and how many questions it has been carried into. Each one can be forgotten from it. Drawn over a read that returned them, which is view_memory"
       needs: [seq]
   state_labels: [pending, running, waiting, done, blocked]
+
+  # WHAT A SHAPE'S ROWS MUST CARRY — the closed list `widgets.*.rows` names.
+  # One implementation in agent/vocabulary.py and one in
+  # frontend/src/room/catalogue.ts `drawable`, held to the same answers over
+  # the recorded reads by tests/test_vocabulary_contract.py and
+  # catalogue.test.ts. A NAME is a string column (store, product, category …);
+  # an ORDER is a time column (day, week, month, hour …); a VALUE is `value`.
+  shape_rows:
+    any: "at least one row"
+    one_value: "at least one row with a numeric value"
+    baseline: "every row a numeric value and the tool's own baseline"
+    change: "every row a signed change in the metric's own unit"
+    named: "every row a distinct name and a numeric value"
+    parts: "every row a distinct name and a value of zero or more, at most max_parts rows — parts of one whole"
+    series: "every row an order and a numeric value, one row per point"
+    days: "every row a date and a numeric value, one row per day"
+    series_per_name: "every row a name, an order and a numeric value, one row per name and point"
+    two_keys: "every row two groupings and a numeric value, one row per pair"
+    two_key_parts: "two_keys, and every value zero or more — totals made of parts"
+    two_measures: "the block's `field` and `against` numeric on every row"
+  max_parts: 12
+  # ONE ROW IS A FIGURE, whatever shape was named (`widgets.*.min_rows`): a pie
+  # of one slice, a calendar of one day, a bridge of one step each draw a
+  # single number dressed as a picture of many.
+
+  # TWO SHAPES THE DESIGN DRAWS AND THIS VOCABULARY DOES NOT, AND WHY. A picture
+  # with nothing behind it asserts what nobody recorded (ops/DECISIONS.md
+  # 2026-09-05, "Two visuals declined"). Each says what would change it.
+  declined:
+    map:
+      because: "no store record carries a coordinate; placing shops approximately would assert positions nobody entered"
+      until: "real coordinates on the store records, from a source filters_applied can cite"
+    funnel:
+      because: "no read returns the stages of one process in order, each counting what reached it — a purchase order's status is a state, not a stage"
+      until: "a read of stage counts, which the order channel (sources S.2, S.5) would bring"
+
+  # A READ THE LADDER RULED OUT (P2S.3). A block may say it drew a read that was
+  # checked and did not explain the thing — the holiday that was not it, the
+  # stock that was fine — and it is drawn `READ n · RULED OUT`, dimmed. It is
+  # a flag, never a sentence: the why is George's to say.
+  ruled_out:
+    about: "true when this read was checked and ruled out as the explanation — drawn dimmed, marked ruled out"
 
   # THE CLAIM-TITLE — the few words over a block, and the one thing on it
   # George writes rather than binds.
@@ -6190,7 +6329,8 @@ composition:
   # `form` (a chart), `action` (a recommendation), and the block-level `note`,
   # which `claim` now does under its own name.
   allowed_fields: [op, kind, key, weight, seq, subject, label,
-                   argument, spec, emphasise, claim, thought]
+                   argument, spec, emphasise, claim, thought,
+                   field, against, ruled_out]
 
   # WHAT TO DO ABOUT IT, ON THE ROW IT IS ABOUT (P2.d, 2026-09-15).
   #

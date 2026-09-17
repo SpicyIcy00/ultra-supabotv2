@@ -285,12 +285,50 @@ def _claim(text: Any, voc: Mapping[str, Any]) -> str:
     return said
 
 
+def _mark_kinds(voc: Mapping[str, Any]) -> set[str]:
+    """The widgets that are ways of drawing a read — the ones with a `rows` rule."""
+    return {k for k, v in (voc.get("widgets") or {}).items()
+            if isinstance(v, Mapping) and v.get("rows")}
+
+
+def _drawn_as(kind: str, item: Mapping[str, Any], call: Mapping[str, Any], key: str,
+              defs: Mapping[str, Any], question: Optional[str], board: Any,
+              coerced: list[str]) -> str:
+    """
+    THE SHAPE A BLOCK IS DRAWN AS (P2S.3): the one George named, unless his
+    rows cannot make it or it is a shape drawn only when asked and nobody
+    asked. Then it is the shape those rows make by default, and the coercion
+    is named. A drawing changes; no value does (agent/vocabulary.py).
+    """
+    from agent import default_composition, vocabulary
+
+    def fallback(why: str) -> str:
+        shaped = default_composition.shape_for(call, 0, key, "supporting")
+        instead = str((shaped or {}).get("kind") or "table")
+        if instead == kind:
+            return kind
+        coerced.append(f"{key!r}: {why}, so it is drawn as a {instead}")
+        return instead
+
+    if vocabulary.only_when_asked(kind, defs) and not vocabulary.asked_for(
+            kind, question, defs, board, key):
+        return fallback(f"a {kind} is drawn only when the person asks for one")
+    if not vocabulary.drawable(kind, call.get("rows"), defs, item):
+        rule = ((defs["composition"]["widgets"][kind].get("rows")) or "")
+        said = (defs["composition"].get("shape_rows") or {}).get(rule, rule)
+        return fallback(f"a {kind} needs {said}, and read {item.get('seq')} does not carry that")
+    if kind == "gauge" and len(call.get("rows") or []) != 1:
+        return fallback("a gauge draws one row, and this read returned several")
+    return kind
+
+
 def validate(
     submitted: Any,
     calls: Mapping[int, Mapping[str, Any]],
     defs: Mapping[str, Any],
     board: Any = None,
     coerced: Optional[list[str]] = None,
+    question: Optional[str] = None,
 ) -> tuple[list[dict], list[dict]]:
     """
     Split a submitted composition into the blocks that may be drawn and those
@@ -319,6 +357,13 @@ def validate(
         except _reading_rules.Rejected as why:
             raise Rejected(str(why).replace("voice.reading.slots.thought",
                                             "composition.thought")) from None
+
+    def ruled_out_of(flag: Any) -> bool:
+        # A FLAG, NEVER A SENTENCE (composition.ruled_out): why a read was
+        # ruled out is George's to say in the reading, with its receipts.
+        if not isinstance(flag, bool):
+            raise Rejected("ruled_out is true or false — the why belongs in what you say")
+        return flag
     widgets: Mapping[str, Any] = voc["widgets"]
     weights = list(voc["weights"])
     allowed = set(voc["allowed_fields"])
@@ -449,6 +494,8 @@ def validate(
                     edit["claim"] = _claim(item["claim"], voc)
                 if "thought" in item:
                     edit["thought"] = thought_of(item["thought"])
+                if "ruled_out" in item:
+                    edit["ruled_out"] = ruled_out_of(item["ruled_out"])
                 if "seq" in item:
                     call = _read(calls, item.get("seq"))
                     edit["seq"] = item["seq"]
@@ -474,6 +521,57 @@ def validate(
                     )
                     keys_seen.add(key)
                     continue
+                keys_seen.add(key)
+                accepted.append(edit)
+                continue
+
+            # "MAKE THAT ONE A PIE" (P2S.3). A change naming a new kind and no
+            # read redraws the object already on the board under that key, over
+            # the rows it already draws. Nothing is read and no value moves, so
+            # it needs no seq — only that the object is a drawing of a read and
+            # the new kind is one too. Whether its rows can make the shape is
+            # the client's to answer with the same rule (catalogue.drawable);
+            # a pie its rows cannot make is drawn as what they do make.
+            if (op == "change" and kind is not None and "seq" not in item
+                    and item.get("spec") is None):
+                marks = _mark_kinds(voc)
+                if kind not in marks:
+                    raise Rejected(
+                        f"{kind!r} is not a shape a read is drawn as — reshape to one of "
+                        f"{', '.join(sorted(marks))}"
+                    )
+                on_board = next((o for o in (board or [])
+                                 if isinstance(o, Mapping) and o.get("key") == key), None)
+                if on_board is None:
+                    raise Rejected(
+                        f"nothing on the board is called {key!r} — to draw a read as a "
+                        f"{kind}, name its seq"
+                    )
+                if (str(on_board.get("kind")) in set(widgets) - marks
+                        or on_board.get("kind") == voc.get("composed_kind")):
+                    raise Rejected(
+                        f"{key!r} is a {on_board.get('kind')}, not a drawing of a read, so it "
+                        f"has no other shape"
+                    )
+                from agent import vocabulary as _vocabulary
+                if (_vocabulary.only_when_asked(kind, defs)
+                        and not _vocabulary.asked_for(kind, question, defs, board, key)):
+                    coerced.append(
+                        f"{key!r}: a {kind} is drawn only when the person asks for one, so "
+                        f"it stays as it was"
+                    )
+                    keys_seen.add(key)
+                    continue
+                edit = {"op": "change", "key": key, "kind": kind}
+                for field in ("field", "against"):
+                    if isinstance(item.get(field), str):
+                        edit[field] = item[field]
+                if "claim" in item:
+                    edit["claim"] = _claim(item["claim"], voc)
+                if "thought" in item:
+                    edit["thought"] = thought_of(item["thought"])
+                if "ruled_out" in item:
+                    edit["ruled_out"] = ruled_out_of(item["ruled_out"])
                 keys_seen.add(key)
                 accepted.append(edit)
                 continue
@@ -525,8 +623,34 @@ def validate(
                 # worth drawing one rank down.
                 weight = _demote(key, lead_key, weights, coerced)
 
+            # WHICH SHAPE IT IS DRAWN AS, decided before what the shape needs,
+            # because a pie its rows cannot make becomes what they do make and
+            # takes that shape's needs (P2S.3).
+            if widgets[kind].get("rows") and isinstance(item.get("seq"), int) \
+                    and not isinstance(item.get("seq"), bool):
+                read_for = _read(calls, item.get("seq"))
+                kind = _drawn_as(kind, item, read_for, key, defs, question, board, coerced)
+
             needs = list(widgets[kind].get("needs") or [])
             block: dict[str, Any] = {"op": op, "kind": kind, "key": key, "weight": weight}
+            for field in ("field", "against"):
+                if field in item and not isinstance(item[field], str):
+                    raise Rejected(f"{field} names a column of the read, as a string")
+            # A COLUMN IS NAMED, NEVER A VALUE — held exactly as the grammar
+            # holds a channel. Only the shapes that draw two measures of a row
+            # take them; on any other shape they would mean nothing, so they
+            # are dropped and said.
+            takes = {"field", "against"} if kind == "scatter" else {"against"} if kind == "gauge" else set()
+            for field in ("field", "against"):
+                if field not in item:
+                    continue
+                if field in takes:
+                    block[field] = item[field]
+                else:
+                    coerced.append(f"{key!r}: a {kind} draws no {field}, so it was ignored")
+            if "ruled_out" in item:
+                if ruled_out_of(item["ruled_out"]):
+                    block["ruled_out"] = True
 
             # POINTING IS NOT A SHAPE. A claim and an emphasis annotate
             # whatever is drawn, so they belong on a named widget as much as on
@@ -661,7 +785,8 @@ def validate(
 
 def compose(blocks: Any, reading: Any = None, actions: Any = None, *,
             calls: Mapping[int, Mapping[str, Any]],
-            defs: Mapping[str, Any], board: Any = None) -> dict:
+            defs: Mapping[str, Any], board: Any = None,
+            question: Optional[str] = None) -> dict:
     """
     Compose the workspace: say which of the results you read the person sees, as which kind of object, at what weight — say the reading in its three slots, and offer what to do about a row. Call it once, after your reads return and before you answer. Nothing here is a figure: every number is drawn from the read a block names.
 
@@ -676,7 +801,8 @@ def compose(blocks: Any, reading: Any = None, actions: Any = None, *,
     answer's receipts, and this read nothing.
     """
     coerced: list[str] = []
-    accepted, rejected = validate(blocks, calls, defs, board=board, coerced=coerced)
+    accepted, rejected = validate(blocks, calls, defs, board=board, coerced=coerced,
+                                  question=question)
     # ONE CALL, TWO STATEMENTS (P1.a, 2026-09-13; the second one swapped in
     # P1.f). The board and the reading are said at the same moment, about the
     # same turn, and neither reads anything. Splitting them across two tools

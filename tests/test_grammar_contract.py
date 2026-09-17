@@ -260,10 +260,16 @@ def test_the_named_widgets_survive_and_are_the_catalogue():
     bought nothing on screen. Held here so a seventh mark cannot be added to
     the yaml without the renderer growing one — the frontend half is
     catalogue.test.ts, which holds the same list against render.tsx.
+
+    REOPENED ON PURPOSE BY P2S.3 (2026-09-17): the eleven shapes the design
+    draws that the six did not, each with the rule that picks it unasked.
     """
     widgets = req(DEFS, "composition.widgets")
     assert set(widgets) == {"figure", "dumbbell", "ranked", "contributors",
-                            "line", "table", "draft", "state", "control", "system",
+                            "line", "table",
+                            "bar", "multiples", "area", "stacked", "pie", "scatter",
+                            "heatmap", "calendar", "waterfall", "treemap", "gauge",
+                            "draft", "state", "control", "system",
                             # P2.f: the fifth kind that is not a reading of a
                             # read. Every row of it has a Forget on it, which
                             # is a gesture no drawing of rows has — the same

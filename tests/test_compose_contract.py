@@ -35,6 +35,12 @@ CALLS = {
         "is_read": True, "rows": []},
     3: {"tool": "pin_answer", "arguments": {}, "error": None, "duplicate": False,
         "is_read": False, "rows": []},
+    # A COMPARED READ (P2S.3): a dumbbell needs the tool's own before on every
+    # row, and a read without one is drawn as what its rows make instead.
+    4: {"tool": "get_sales", "arguments": {"compare_to": "previous_period"}, "error": None,
+        "duplicate": False, "is_read": True,
+        "rows": [{"store": "Rockwell", "value": 412884, "baseline": 455000},
+                 {"store": "OPUS", "value": 121451, "baseline": 93000}]},
 }
 
 
@@ -58,7 +64,7 @@ def with_coercions(blocks, defs, calls=None):
 def test_a_well_formed_composition_is_accepted(defs):
     accepted, rejected = only([
         {"kind": "figure", "key": "rockwell", "seq": 1, "subject": "Rockwell", "weight": "lead"},
-        {"kind": "dumbbell", "key": "opus", "seq": 1, "weight": "supporting"},
+        {"kind": "dumbbell", "key": "opus", "seq": 4, "weight": "supporting"},
         {"kind": "table", "key": "shops", "seq": 1, "weight": "quiet"},
     ], defs)
     assert rejected == []

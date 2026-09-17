@@ -65,6 +65,12 @@ export interface BoardObject {
   seqs?: Block['seqs'];
   emphasise?: Block['emphasise'];
   note?: Block['note'];
+  /** A scatter's upright measure, as a COLUMN of the read (P2S.3). */
+  field?: string;
+  /** A scatter's across measure, or what a gauge is measured against — a column. */
+  against?: string;
+  /** The ladder checked this read and it did not explain the thing (P2S.3). */
+  ruled_out?: boolean;
   /** The turn whose reads and prose this object draws. Never re-pointed silently. */
   turn: number;
   /** The turn that last touched it, so "from earlier" can be said honestly. */
@@ -96,7 +102,7 @@ export interface Local {
 
 const FIELDS = ['kind', 'weight', 'seq', 'tool', 'subject', 'subjects', 'form',
                 'label', 'action', 'argument', 'spec', 'seqs', 'claim',
-                'emphasise', 'note', 'thought'] as const;
+                'emphasise', 'note', 'thought', 'field', 'against', 'ruled_out'] as const;
 
 function carried(edit: Block): Partial<BoardObject> {
   const out: Record<string, unknown> = {};
