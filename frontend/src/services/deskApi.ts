@@ -168,6 +168,12 @@ export interface DeskDefinitions {
     correction: { token: string; asks: string };
     [key: string]: unknown;
   };
+  /**
+   * WHICH NOTICES THE ROOM DRAWS (surface.desk.notices, UI rule 4 as changed
+   * 2026-09-17). Optional: an older server sends none, and then every notice
+   * is drawn.
+   */
+  notices?: { explains_only?: string[]; data_may_be_wrong?: string[] };
 }
 
 export const readDeskDefinitions = async (): Promise<DeskDefinitions> => {

@@ -4547,3 +4547,10 @@ Not built, said here: the ladder line (no turn carries one), the object panel ov
 Touch: one delegated listener; each mark writes its own `data-v` from formatted tool values. The first draw read `currentTarget` inside a state updater, where React has cleared it — found by the recorded-run test, fixed by measuring first.
 Frames gained draw ← "taught" and memory ← a checked-in fixture, because no eval has recorded `view_memory`; said in the fixture's own `why`. The mark is only ever idle in a frame.
 Shortfalls are on the card: no pie yet (P2S.3), no multi-series mark, memory is not the design's timeline, tooltip not keyboard, `components/george` did not fall (5,087).
+
+## 2026-09-17 · UI rule 4 changed by the owner — a notice is drawn only when the data may be wrong
+
+The owner, of the caveat boxes over his charts: *"remove them, change the rule we dont need those disclaimers unless it has wrong data"*. It was *"Notices always surface … stays whole and ABOVE the number"*; it is now *"A notice is drawn when it says a figure may be wrong … One that only explains how a figure was measured is not drawn"*.
+The split lives in `surface.desk.notices` (`explains_only`, `data_may_be_wrong`), served with the desk; the room hides only `explains_only`, so an unlisted kind and every notice before the definitions load are DRAWN — fail toward showing. `version_divergence` stays drawn (architecture rule 8).
+Held by `tests/test_notice_drawing_contract.py` (every raised kind decided, none in both) and `disclaimers.dom.test.tsx` (his exact `comparison_incomplete` hidden, `stale_stock` drawn).
+**Not changed, on purpose:** the tools raise every notice, George receives every one, and the loop still requires him to surface them in his own words — that is the trust machinery and needs a live run, so his prose may still say "110 of 173 cannot be compared". Also here: a caveat-slot sentence the answer already says is no longer drawn twice (`Reading.unsaid`).

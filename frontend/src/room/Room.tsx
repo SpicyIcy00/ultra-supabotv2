@@ -28,6 +28,7 @@ import { AliveMark } from './AliveMark';
 import { markStateOf } from './alive';
 import { identitiesFrom } from './identity';
 import { IdentityContext } from './swatch';
+import { ExplainsOnlyContext, drawnOnly, explainsOnlyFrom } from './noticeDrawing';
 import { Reading, ReadingNext } from './Reading';
 import { FootOffers } from './FootOffers';
 import { offersOf, placement } from './actions';
@@ -359,6 +360,9 @@ export default function Room() {
   // WHICH HUE EACH STORE IS (P2S.2(e)): its place in `stores.active_retail`,
   // as served. Nothing until the definitions load — no swatch is guessed.
   const identities = useMemo(() => identitiesFrom(desk.data), [desk.data]);
+  // WHICH NOTICES ARE DRAWN (UI rule 4, 2026-09-17): not the ones that only
+  // explain how a figure was measured. Everything, until the definitions load.
+  const explainsOnly = useMemo(() => explainsOnlyFrom(desk.data), [desk.data]);
   // The same thing, drawn above the line. Null on the default, because nothing
   // is travelling and a chip saying "All" would be a chip about nothing.
   const estateChip = useMemo(() => scopeChip(desk.data, estate), [desk.data, estate]);
@@ -713,6 +717,7 @@ export default function Room() {
 
   return (
     <IdentityContext.Provider value={identities}>
+    <ExplainsOnlyContext.Provider value={explainsOnly}>
     <div className="room">
       <Rail busy={busy} needsYou={approvals.data?.length} onNew={clear}
             estate={(
@@ -755,7 +760,7 @@ export default function Room() {
                 {/* HIS WORDS, UNDER HIM: the turn's caveat, the claim, the
                     standing text with read superscripts, and what he'd do next.
                     Not a tile and not narrated. See Reading.tsx. */}
-                <Reading text={latest?.text} notices={notices} reading={latest?.reading}
+                <Reading text={latest?.text} notices={drawnOnly(notices, explainsOnly)} reading={latest?.reading}
                          calls={latest?.toolCalls}
                          onFigure={(seq) => {
                            setFocus(`${answers.length - 1}:${seq}`);
@@ -872,6 +877,7 @@ export default function Room() {
         )}
       />
     </div>
+    </ExplainsOnlyContext.Provider>
     </IdentityContext.Provider>
   );
 }

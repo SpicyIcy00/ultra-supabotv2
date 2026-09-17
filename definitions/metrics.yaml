@@ -6377,6 +6377,96 @@ surface:
     introduced: "2026-09-09"
     executes_nothing: true
 
+    # -------------------------------------------------------------------------
+    # WHICH NOTICES ARE DRAWN (CLAUDE.md UI rule 4, changed 2026-09-17).
+    #
+    # The owner, of the boxes over his charts: "we dont need those disclaimers
+    # unless it has wrong data". So the SCREEN draws a notice only when it says
+    # a figure may be wrong. One that explains how a figure was measured — a
+    # comparison with rows that have no baseline, a ratio with no denominator,
+    # a closed shop, two bases not summed — is not drawn.
+    #
+    # WHAT THIS DOES NOT CHANGE: the tools still raise every notice, George
+    # still receives every one, and the loop's rule that he surfaces them in
+    # his own words is untouched (changing that is the trust machinery, and it
+    # needs a live run). This is what the room DRAWS, nothing more.
+    #
+    # FAIL TOWARD SHOWING. A kind in neither list is drawn, so a new notice is
+    # never hidden by nobody deciding. `tests/test_notice_drawing_contract.py`
+    # fails on a kind raised in the code and listed in neither, and on a kind
+    # listed in both.
+    notices:
+      explains_only:
+        - comparison_incomplete
+        - ratio_undefined
+        - location_closed
+        - metric_redefined
+        - quantity_not_additive
+        - two_bases_not_summed
+        - bases_not_comparable
+        - open_is_not_unreceived
+        - purchasing_open_not_outstanding
+        - completion_not_delivery
+        - cover_period_not_chosen
+        - dead_stock_share
+        - empty_section
+        - object_view_thin
+        - object_has_no_sales
+        - page_context_partial
+        - page_context_truncated
+        - schedule_slots_skipped
+        - delivery_lead_time_unsupported
+        - replenishment_allocation_not_binding
+        - replenishment_mixed_algorithms
+        - replenishment_days_of_stock_tail
+      data_may_be_wrong:
+        - reconciliation_failed
+        - header_total_mismatch
+        - subtotal_mismatch
+        - stale_stock
+        - stale_sources
+        - snapshot_gaps
+        - snapshot_coverage_gap
+        - history_coverage
+        - negative_on_hand
+        - purchase_plan_negative_on_hand
+        - replenishment_negative_on_hand
+        - replenishment_partial_run
+        - replenishment_run_stale
+        - replenishment_fallback_velocity
+        - demand_suppressed_by_stockouts
+        - orphan_line_items
+        - mojibake_product_names
+        - lines_removed_on_reimport
+        - duplicate_skus_in_result
+        - profit_overstated
+        - cost_not_entered
+        - low_category_coverage
+        - supplier_coverage
+        - supplier_map_not_approved
+        - supplier_ambiguous
+        - ambiguous_sku
+        - sku_not_found
+        - unresolved_location
+        - unresolved_skus
+        - received_quantity_coverage
+        - received_differs_from_ordered
+        - unmoved_transfer_value
+        - no_recorded_dispatch
+        - document_without_lines
+        - empty_export
+        - definitions_drift
+        - backtest_not_reproducible
+        - watch_backtest_stale
+        - could_not_look
+        - watch_could_not_look
+        - workflow_step_failed
+        - object_not_found
+        - object_ambiguous
+        # CLAUDE.md architecture rule 8: a run diverging from a schedule's
+        # pinned version says so on the record AND in the answer.
+        - version_divergence
+
     # The business the desk lays out. FFR arrives only with an authoritative
     # source (data_availability.ffr) and is not placeholdered. Which PART of
     # it a question is about is `estate`, below.

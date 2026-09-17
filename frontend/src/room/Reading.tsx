@@ -163,6 +163,30 @@ function Weighted({ text, from, bold, calls, onFigure }: {
   );
 }
 
+/**
+ * THE CAVEAT'S SENTENCES HE DID NOT ALSO SAY (the dogfood log, 2026-09-17).
+ *
+ * The caveat slot and the answer are written separately, and he often puts the
+ * same sentence in both — *"Shangri-La, Monday to this afternoon against the
+ * same stretch of last week — a bit over half the week"* was drawn above the
+ * claim and again under it. A sentence already in what he said is left where
+ * he said it; the rest of the caveat is drawn above the claim as before. Not a
+ * character of either is rewritten, only a repeat is not drawn twice.
+ */
+export function unsaid(caveat: string | null | undefined, said: string): string {
+  const flat = (x: string) => x.replace(/\s+/g, ' ').trim().toLowerCase();
+  const text = flat(said);
+  const whole = (caveat ?? '').trim();
+  if (!whole) return '';
+  // Split only where a sentence ends and a space follows, so "12.3%" and
+  // "₱1.70m" stay whole.
+  const sentences = whole.split(/(?<=[.!?])\s+/);
+  return sentences
+    .filter((x) => x.trim() && !text.includes(flat(x)))
+    .map((x) => x.trim())
+    .join(' ');
+}
+
 export function Reading({ text, notices, reading, calls, onFigure }: {
   /** The turn's own words. Streaming, so it fills as he speaks. */
   text: string | null | undefined;
@@ -181,7 +205,7 @@ export function Reading({ text, notices, reading, calls, onFigure }: {
   // character is his, untouched.
   const { plain, bold } = unmark((text ?? '').trim());
   const said = plain;
-  const caveat = reading?.caveat?.trim();
+  const caveat = unsaid(reading?.caveat, said);
   if (!said && !notices?.length && !caveat) return null;
   // THE CLAIM, AND WHAT STANDS UNDER IT (P2S.1(c)). The design sets the point
   // as a sentence of its own, large, in serif, and the rest of what he said

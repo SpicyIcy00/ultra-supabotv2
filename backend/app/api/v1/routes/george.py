@@ -2838,6 +2838,11 @@ class DeskDefinitions(BaseModel):
     #: The bounds and words a fragment is resolved by (surface.desk.fragments):
     #: how short a fragment may be, and the one token that costs a turn.
     fragments: dict[str, Any]
+    #: WHICH NOTICES THE ROOM DRAWS (surface.desk.notices, UI rule 4 as changed
+    #: 2026-09-17): the kinds that only explain how a figure was measured, and
+    #: the kinds that say it may be wrong. A client draws any kind not in
+    #: `explains_only`, so an unlisted kind is shown.
+    notices: dict[str, List[str]]
 
 
 def _desk_tokens(
@@ -3000,6 +3005,7 @@ async def desk_definitions(user: AppUser = Depends(_george_user)) -> DeskDefinit
             "leaks": [str(w) for w in _req(defs, "surface.prose.leaks")],
         },
         fragments=dict(_req(desk, "fragments")),
+        notices={k: [str(x) for x in v] for k, v in dict(_req(desk, "notices")).items()},
         windows=windows,
         window_arguments=dict(_req(defs, "workflows.backtest.window_arguments")),
         rest_reads=[dict(r) for r in _req(desk, "rest.reads")],

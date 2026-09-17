@@ -23,6 +23,7 @@ import {
 import { directionRgb } from './identity';
 import { Spec } from './Spec';
 import { Swatch } from './swatch';
+import { useDrawnOnly } from './noticeDrawing';
 import { cost, says } from './actions';
 import type { ActionOffer } from '../types/george';
 
@@ -312,7 +313,9 @@ export function ownNotices(meta?: ToolMeta | null): GeorgeNotice[] {
 }
 
 export function OwnCaveat({ meta }: { meta?: ToolMeta | null }) {
-  const notices = ownNotices(meta);
+  // ONLY WHAT SAYS THE FIGURE MAY BE WRONG (UI rule 4, 2026-09-17): a notice
+  // that explains how it was measured is George's to say, not a box's.
+  const notices = useDrawnOnly(ownNotices(meta));
   if (!notices.length) return null;
   return <Caveats notices={notices} />;
 }

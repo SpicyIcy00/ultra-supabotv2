@@ -145,10 +145,12 @@ carried, never a label the model inferred and never a figure) are internal names
 2. **One save gesture**: same icon, placement and confirmation everywhere.
 3. **Every number is inspectable.** Clicking a figure shows its receipts in the
    same panel wherever it came from, with no new route or modal stack.
-4. **Notices always surface**, identically everywhere: a tile that cannot show
-   the caveat is the wrong shape. A caveat may be **reduced to one line naming
-   it**, explanation on tap, but wherever a figure is ANSWERED it stays whole
-   and ABOVE the number. Raw diagnostics never reach the answer.
+4. **A notice is drawn when it says a figure may be wrong** — stale,
+   incomplete, disagreeing, a version divergence — identically everywhere, ABOVE
+   the number. One that only explains how a figure was measured is not drawn
+   (the owner, 2026-09-17: *"we dont need those disclaimers unless it has wrong
+   data"*). Which is which is `surface.desk.notices`; an unlisted kind is drawn.
+   Raw diagnostics never reach the answer.
 5. **One colour means "needs you"** — approvals, nothing else. **A notice never
    wears the accent**: a caveat takes prominence from position and structure,
    never hue. George's mark is the one exemption, and its error state changes
