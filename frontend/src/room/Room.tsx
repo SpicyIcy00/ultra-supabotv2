@@ -23,7 +23,7 @@ import { boardContext, buildBoard, folded, shapedByReplay,
 import { keepLocal, restoreLocal } from './arrangement';
 import { callOf, rowsOf, subjectOf, type AnswerTurn, type Block } from './data';
 import { Board, turnNotices } from './render';
-import { FiguresArea, Wires } from './FiguresArea';
+import { FiguresArea, Wires, useMoreBelow } from './FiguresArea';
 import { AliveMark } from './AliveMark';
 import { markStateOf } from './alive';
 import { claimAndStanding } from './beside';
@@ -50,7 +50,7 @@ import { pathFor, refusalForPerson, resolveFragment, retunedKey, tokensFor,
          type DrawnToken } from './tokenShape';
 import type { ToolCall } from '../types/george';
 import { Noticed } from './Noticed';
-import { WorkLine, Working } from './Working';
+import { Doing, WorkLine, Working } from './Working';
 import { BehindIt } from './BehindIt';
 import { Replay } from './Replay';
 import { ThreadHeader, keptPages, type KeptAs, type ThreadView } from './ThreadHeader';
@@ -191,6 +191,9 @@ export default function Room() {
   const himRef = useRef<HTMLDivElement>(null);
   const wordsRef = useRef<HTMLDivElement>(null);
   const areaRef = useRef<HTMLDivElement>(null);
+  // WHETHER HIS WORDS RUN PAST THE BOTTOM OF THEIR COLUMN, so the column can
+  // fade there instead of cutting a sentence (the log, 2026-09-17).
+  const wordsMore = useMoreBelow(wordsRef);
   // HOW THE FIGURES' ARRIVAL IS GOING, from the board (P2S.2(d)). The mark
   // stays `reading` while any are on their way, and pulses as each lands.
   const [landing, setLanding] = useState({ pending: 0, arrived: 0 });
@@ -772,7 +775,9 @@ export default function Room() {
                        pulses={mark.reads + landing.arrived} />
           </div>
 
-          <div className="r-words" ref={wordsRef}>
+          <div className="r-words" ref={wordsRef} data-more-down={wordsMore ? 'yes' : 'no'}>
+            {/* WHILE HE WORKS, A LINE UNDER HIM (the log, 2026-09-17). */}
+            <Doing turn={latest} live={busy} />
             {empty ? (
               <Opening loading={Boolean(threadId) && thread.loading} />
             ) : (

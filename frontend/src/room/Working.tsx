@@ -166,6 +166,39 @@ export function Working({ turn, live }: { turn: AnswerTurn | null; live: boolean
 }
 
 /**
+ * WHAT HE IS DOING, UNDER HIM, WHILE HE WORKS (the log, 2026-09-17: *"the alive
+ * not saying any text for awhile"*).
+ *
+ * Today's turns took 53 s and 73 s, and his words arrive only with the last
+ * model round trip — so for most of a minute the column under the mark was
+ * empty, while the trail on the right was the only sign of life. This is one
+ * line, in his place: the read running now (or the last to land) in the
+ * trail's own words, the turn's clock, and — where he wrote any before the
+ * answer — his own narration ("let me look at the drivers"), which the stream
+ * keeps as `narration` and nothing drew. Nothing here is invented: every word
+ * is a frame's, and it is gone the moment his answer starts to arrive.
+ */
+export function Doing({ turn, live }: { turn: AnswerTurn | null; live: boolean }) {
+  const elapsed = useElapsed(turn?.at, live);
+  if (!live || !turn) return null;
+  if ((turn.text ?? '').trim()) return null;
+  const steps = stepsOf(turn);
+  const running = steps.find((s) => s.state === 'running');
+  const last = [...steps].reverse().find((s) => s.state !== 'running');
+  const doing = running ? `${running.words}…` : last ? `${last.words} · thinking…` : 'thinking…';
+  const said = (turn as AnswerTurn & { narration?: string }).narration?.trim();
+  return (
+    <div className="r-doing" data-doing={running ? 'reading' : 'thinking'}>
+      <p className="r-doing-line">
+        {doing}
+        {elapsed !== null && <span className="r-work-clock">{elapsedWords(elapsed)}</span>}
+      </p>
+      {said && <p className="r-say r-say--standing r-doing-said">{said}</p>}
+    </div>
+  );
+}
+
+/**
  * WHAT THE TURN COST, ONE LINE, ABOVE THE CLAIM.
  *
  * Perplexity's shape: sources above the answer, steps behind one plain line.

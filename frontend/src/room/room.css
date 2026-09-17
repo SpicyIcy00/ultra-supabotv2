@@ -543,11 +543,29 @@
 
 /* HIS WORDS — under him, pulled up so they come from him (row 12), set toward
    the figures. */
+/* THE WORDS START WHERE HE STOPS MOVING, AND SCROLL (the log, 2026-09-17:
+   "the text should reach the end of the alive where it can move not its borders
+   and text can be scrollable if its too long"). They were pulled up -10vh under
+   his RESTING body; alive, his breath, pulse and ring reach the canvas's foot,
+   so a long caveat sat on top of him. Now they begin at the canvas's lower edge
+   and fill the rest of the column above the composer, scrolling with no bar and
+   fading at the foot when there is more. */
 .r-words {
-  grid-area: words; align-self: start; min-width: 0; position: relative; z-index: 1;
+  grid-area: words; align-self: stretch; min-width: 0; min-height: 0; position: relative; z-index: 1;
   display: flex; flex-direction: column; align-items: flex-end; gap: 12px;
-  padding-right: 4px; text-align: right; margin-top: -10vh;
+  padding-right: 4px; padding-bottom: 12px; text-align: right; margin-top: 0;
+  overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain;
 }
+.r-words::-webkit-scrollbar { display: none; }
+.r-words > * { flex: none; }
+.r-words[data-more-down="yes"] { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent); }
+
+/* WHAT HE IS DOING, while nothing he says has arrived. The trail's own mono
+   words and clock; his narration under it in his serif, quieter. */
+.r-doing { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.r-doing-line { font: 400 12px/1.6 var(--mono); color: var(--ink-2); margin: 0; }
+.r-doing-line .r-work-clock { margin-left: 10px; color: var(--ink-3); }
+.r-doing-said { color: var(--ink-3); max-width: 46ch; }
 .r-words .r-reading { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; margin: 0; max-width: none; }
 .r-words .r-caveats { border-left: 0; border-right: 2px solid var(--edge-strong); padding: 0 12px 0 0; }
 .r-words .r-foot-offers { justify-content: flex-end; }
@@ -629,7 +647,8 @@
   .r-wires { display: none; }
   .r-him { display: block; }
   .r-him canvas { width: 100%; max-width: 420px; margin: 0; }
-  .r-words { margin-top: 12px; align-items: flex-start; text-align: left; }
+  .r-words { margin-top: 12px; align-items: flex-start; text-align: left; overflow: visible; -webkit-mask-image: none; mask-image: none; }
+  .r-doing { align-items: flex-start; }
   .r-words .r-reading { align-items: flex-start; }
   .r-words .r-caveats { border-right: 0; border-left: 2px solid var(--edge-strong); padding: 0 0 0 12px; }
   .r-words .r-foot-offers { justify-content: flex-start; }

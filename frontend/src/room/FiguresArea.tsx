@@ -75,6 +75,33 @@ export function FiguresArea({ children, areaRef }: {
   );
 }
 
+/**
+ * WHETHER AN ELEMENT HAS MORE BELOW WHAT IT SHOWS — for a column that scrolls
+ * with no bar, so its foot can fade rather than cut (the words, 2026-09-17).
+ */
+export function useMoreBelow(ref: RefObject<HTMLElement | null>): boolean {
+  const [more, setMore] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const measure = () => setMore(arrowsFor(el.scrollTop, el.clientHeight, el.scrollHeight).down);
+    measure();
+    el.addEventListener('scroll', measure, { passive: true });
+    window.addEventListener('resize', measure);
+    const grew = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    grew?.observe(el);
+    const changed = new MutationObserver(measure);
+    changed.observe(el, { childList: true, subtree: true, characterData: true });
+    return () => {
+      el.removeEventListener('scroll', measure);
+      window.removeEventListener('resize', measure);
+      grew?.disconnect();
+      changed.disconnect();
+    };
+  }, [ref]);
+  return more;
+}
+
 function boxOf(el: Element | null): Box | null {
   if (!el) return null;
   const r = el.getBoundingClientRect();

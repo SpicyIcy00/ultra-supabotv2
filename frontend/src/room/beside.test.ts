@@ -191,8 +191,11 @@ describe('the mark is big — his rows 14 and 24', () => {
     expect(CSS).toMatch(/\.r-him canvas \{[^}]*aspect-ratio:\s*680\s*\/\s*420/);
   });
 
-  it('pulls the words up under him, so they come from him — his row 12', () => {
-    expect(CSS).toMatch(/\.r-words \{[^}]*margin-top:\s*-10vh/);
+  it('starts the words where he stops moving, and lets them scroll (the log, 2026-09-17)', () => {
+    // Row 12 was "almost directly under the blob"; alive, the blob reaches the
+    // canvas's foot, and -10vh put a caveat on top of him.
+    expect(CSS).toMatch(/\.r-words \{[^}]*margin-top:\s*0;/);
+    expect(CSS).toMatch(/\.r-words \{[^}]*overflow-y:\s*auto/);
     expect(CSS).toMatch(/\.r-him canvas \{[^}]*margin:\s*-6vh -18% 0/);
   });
 });
