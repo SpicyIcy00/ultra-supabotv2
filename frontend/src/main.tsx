@@ -21,6 +21,27 @@ window.addEventListener('vite:preloadError', (event) => {
   window.location.reload()
 })
 
+// A NEW DEPLOY SHOWS UP WITHOUT CLEARING ANYTHING (the owner, 2026-09-17: "it
+// didnt change" — his tab was a build behind, served by the offline cache).
+// The service worker installs a new build in the background and, with
+// skipWaiting + clientsClaim, takes over the open page; nothing then reloaded
+// the page, so it kept running the old bundle. When a NEW worker takes over a
+// page an OLD one controlled, reload once. The first install (no worker before)
+// does not reload, and the flag stops a second reload in the same page. An open
+// tab also asks for an update every half hour.
+if ('serviceWorker' in navigator) {
+  const hadController = Boolean(navigator.serviceWorker.controller)
+  let reloading = false
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloading) return
+    reloading = true
+    window.location.reload()
+  })
+  const check = () => { void navigator.serviceWorker.getRegistration().then((r) => r?.update()).catch(() => {}) }
+  window.addEventListener('load', check)
+  window.setInterval(check, 30 * 60_000)
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
