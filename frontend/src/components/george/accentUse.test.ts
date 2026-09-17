@@ -160,15 +160,26 @@ const COLOUR_ALLOWED: Record<(typeof DATA_TOKENS)[number], Record<string, string
  * an OPENED object, alone on screen, named in its own heading. Everything else
  * reads its name off a title and a row label, which it always could.
  */
-const IDENTITY = /\bhueFor\b|var\(\s*--hue\s*\)|'--hue'/;
+const IDENTITY = /\bhueFor\b|var\(\s*--hue\s*\)|'--hue'|--c-\d|'--sw'|\bslotColour\b|var\(\s*--sw\s*\)/;
 
+/*
+ * AND SINCE P2S.2(e), THE SWATCH. The owner asked for identity back — *"ok
+ * implement that"*, after the research — on the condition that it never rides
+ * the mark: *"the line if its up or down should be green or red … not the same
+ * color as the stores"*. So identity has exactly one new home, the 8px dot
+ * before a name (`swatch.tsx`), and every other file reaches it only by
+ * rendering that component, which names no colour.
+ */
 const IDENTITY_ALLOWED: Record<string, string> = {
-  // Where the seven shops are named. Naming a colour is not spending one.
+  // Where a store's slot is worked out from the served retail order. No store
+  // is named there; naming a slot is not spending one.
   'identity.ts': 'the mapping itself',
+  // THE SWATCH — the one element that wears a categorical hue, beside a name.
+  'swatch.tsx': 'the swatch, and the opened object rule in the same hue',
   // The ONE caller: the wrapper around an opened object's panel.
   'marks.tsx': 'sets the hue on an opened object, and nowhere else',
   // Declares the token, and draws the one rule that reads it (`.r-obj`).
-  'room.css': 'declares --hue and draws the rule an opened object wears',
+  'room.css': 'declares the eight slots and --hue; draws the swatch and the opened object rule',
 };
 
 /** Comments out, so a token NAMED in a docstring is not a token USED. */

@@ -181,6 +181,33 @@ describe('the data palette', () => {
     expect([...new Set(wearing)]).toEqual(['.r-obj']);
   });
 
+  it("lets a store's slot paint the swatch and nothing else (P2S.2(e))", () => {
+    // Identity came back on ONE channel: the dot before a name. Every rule
+    // that paints with `--sw` or a slot, by selector — and each of them must be
+    // the swatch. A slot reaching a segment, a bar or a line would put the
+    // store's colour where the owner asked for the verdict.
+    const wearing: string[] = [];
+    SHEET.walkRules((r) => {
+      r.walkDecls((decl) => {
+        if (/^--c-\d$/.test(decl.prop)) return; // the tokens themselves
+        if (/var\(\s*--(sw|c-\d)\s*\)/.test(decl.value)) wearing.push(r.selector.trim());
+      });
+    });
+    expect(wearing.length).toBeGreaterThan(0);
+    for (const selector of new Set(wearing)) expect(selector).toMatch(/\.r-sw$/);
+    expect(MARKS).not.toMatch(/--c-\d|'--sw'/);
+  });
+
+  it('declares eight slots in every theme, and no ninth', () => {
+    const declared = new Map<string, number>();
+    SHEET.walkDecls((decl) => {
+      if (!/^--c-\d+$/.test(decl.prop)) return;
+      const scope = (decl.parent as { selector?: string }).selector ?? '';
+      declared.set(scope, (declared.get(scope) ?? 0) + 1);
+    });
+    expect([...declared.values()]).toEqual([8, 8, 8]);
+  });
+
   it('draws no tile in the colour of the thing it is about', () => {
     // The shell, stated as itself. Every rule whose selector names a tile, and
     // nothing any of them paints with may be an identity or a magnitude.
@@ -307,5 +334,38 @@ describe('the row label column', () => {
     const name = rule('.r-mk-name');
     expect(name?.['text-overflow']).toBe('ellipsis');
     expect(name?.['white-space']).toBe('nowrap');
+  });
+});
+
+/**
+ * THE EIGHT SLOTS ARE THE ONES THAT WERE VALIDATED (P2S.2(e)).
+ *
+ * `ops/palette/REPORT.md` records the dataviz validator run on the room's two
+ * grounds, with the exact hex list each run checked. A slot edited in the
+ * stylesheet without re-running it would be a palette nobody validated.
+ */
+describe('the identity palette', () => {
+  const REPORT = readFileSync(join(__dirname, '..', '..', '..', 'ops', 'palette', 'REPORT.md'), 'utf8');
+  const validated = (mode: string) => {
+    const m = new RegExp(`validate_palette\.js "([^"]+)" --mode ${mode}`).exec(REPORT);
+    return (m?.[1] ?? '').split(',').map((h) => h.toLowerCase());
+  };
+  const declared = (selectorTest: (s: string) => boolean) => {
+    const out: string[] = [];
+    SHEET.walkRules((r) => {
+      if (!selectorTest(r.selector)) return;
+      r.walkDecls((d) => { if (/^--c-\d$/.test(d.prop)) out.push(d.value.toLowerCase()); });
+    });
+    return out;
+  };
+
+  it('declares on the dark ground exactly the eight validated for it', () => {
+    expect(validated('dark')).toHaveLength(8);
+    expect(declared((s) => s.trim() === '.room')).toEqual(validated('dark'));
+  });
+
+  it('declares in both light scopes exactly the eight validated for paper', () => {
+    expect(validated('light')).toHaveLength(8);
+    expect(declared((s) => /data-room-theme/.test(s))).toEqual([...validated('light'), ...validated('light')]);
   });
 });

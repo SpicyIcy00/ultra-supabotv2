@@ -22,6 +22,7 @@ import {
 } from './data';
 import { directionRgb } from './identity';
 import { Spec } from './Spec';
+import { Swatch } from './swatch';
 import { cost, says } from './actions';
 import type { ActionOffer } from '../types/george';
 
@@ -642,7 +643,14 @@ export function MemoryTile(p: TileProps) {
                 data-forgotten={gone ? true : undefined}>
               <p className="r-belief-claim">
                 <span className="r-belief-stance">{String(row.stance ?? '')}</span>
-                {' '}{String(row.subject ?? '')}: {String(row.claim ?? '')}
+                {' '}
+                {/* A VIEW ABOUT A STORE WEARS THAT STORE'S SWATCH (P2S.2(e)) —
+                    the same hue it has in every figure, by what the row says
+                    it is about, never by the name alone. */}
+                <Swatch name={String(row.subject ?? '')}
+                        dimension={row.subject_kind === 'store' || row.subject_kind === 'product'
+                          ? row.subject_kind : undefined} />
+                {String(row.subject ?? '')}: {String(row.claim ?? '')}
               </p>
               <p className="r-belief-life">
                 {/* WHEN, FROM WHAT, HOW OFTEN — the card's three, in the

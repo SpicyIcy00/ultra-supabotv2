@@ -26,6 +26,8 @@ import { Board, turnNotices } from './render';
 import { FiguresArea, Wires } from './FiguresArea';
 import { AliveMark } from './AliveMark';
 import { markStateOf } from './alive';
+import { identitiesFrom } from './identity';
+import { IdentityContext } from './swatch';
 import { Reading, ReadingNext } from './Reading';
 import { FootOffers } from './FootOffers';
 import { offersOf, placement } from './actions';
@@ -354,6 +356,9 @@ export default function Room() {
   // so a key this build no longer declares travels as nothing rather than as
   // a scope the server would refuse.
   const scoped = useMemo(() => estateFor(desk.data, estate), [desk.data, estate]);
+  // WHICH HUE EACH STORE IS (P2S.2(e)): its place in `stores.active_retail`,
+  // as served. Nothing until the definitions load — no swatch is guessed.
+  const identities = useMemo(() => identitiesFrom(desk.data), [desk.data]);
   // The same thing, drawn above the line. Null on the default, because nothing
   // is travelling and a chip saying "All" would be a chip about nothing.
   const estateChip = useMemo(() => scopeChip(desk.data, estate), [desk.data, estate]);
@@ -707,6 +712,7 @@ export default function Room() {
   }, [george, navigate, threadId, answers, board]);
 
   return (
+    <IdentityContext.Provider value={identities}>
     <div className="room">
       <Rail busy={busy} needsYou={approvals.data?.length} onNew={clear}
             estate={(
@@ -866,6 +872,7 @@ export default function Room() {
         )}
       />
     </div>
+    </IdentityContext.Provider>
   );
 }
 

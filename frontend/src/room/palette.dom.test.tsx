@@ -17,9 +17,14 @@
  * WHAT COUNTS AS A COLOUR HERE. Three things reach a rendered element:
  * `rgb(var(--up))` and friends, which a mark paints with; a bare `r, g, b`
  * triple, which is how `directionRgb` hands the delta pill its sign; and a
- * custom property somebody set. Every identity triple in `identity.ts` is
- * built into the forbidden set BY VALUE — if a shop's hue is ever drawn again,
- * on a tile or inside a mark, it is named here with the shop it decodes.
+ * custom property somebody set.
+ *
+ * SINCE P2S.2(e) IDENTITY HAS ONE CHANNEL, AND THIS IS WHERE IT IS HELD. The
+ * owner, of the design: *"the line if its up or down should be green or red
+ * meaning good or bad not the same color as the stores"*. A store's hue is
+ * drawn on its SWATCH (`.r-sw`, beside its name) and on nothing else; every
+ * segment, dot, bar and line is the verdict. So a categorical slot found on
+ * any element that is not a swatch is named here with where it was.
  *
  * TWO BOARDS ARE DRAWN. A board of the seven shops, which is the card's own
  * sentence — *"a board of seven shops draws no hue that decodes a name the row
@@ -32,7 +37,8 @@ import type { AnswerTurn } from './data';
 import type { BoardObject } from './board';
 import type { TileActions } from './tiles';
 import { Board } from './render';
-import { DOWN, FLAT, UP, hueFor, namedSubjects } from './identity';
+import { DOWN, UP } from './identity';
+import { IdentityContext } from './swatch';
 import recorded from './__fixtures__/recorded-runs.json';
 
 vi.mock('./ObjectPanel', () => ({ ObjectPanel: () => null, kindOf: () => null }));
@@ -63,24 +69,6 @@ const SEVEN = [
   { store: 'Shangri-La', value: 187300, baseline: 160000, change_pct: 17.1, direction: 'up', unit: 'PHP' },
 ];
 
-/**
- * EVERY IDENTITY COLOUR THE ROOM KNOWS, by value, with the name it decodes.
- *
- * Built through `hueFor` rather than copied, so the day a shop is added to
- * `identity.ts` its hue is forbidden here without anybody remembering to say
- * so. The three directions are excluded by construction: they are a different
- * family and `directionRgb` is what a pill is allowed to wear.
- */
-function identityColours(): Map<string, string> {
-  const out = new Map<string, string>();
-  for (const shop of namedSubjects()) out.set(hueFor(shop), shop);
-  for (const kind of ['product', 'category', 'supplier', 'order', 'draft', 'delivery', 'stock']) {
-    out.set(hueFor(null, null, kind), kind);
-  }
-  for (const direction of [UP, DOWN, FLAT]) out.delete(direction);
-  return out;
-}
-
 /** Every inline style on every element, as the browser would apply it. */
 function styles(container: HTMLElement): { where: string; style: string }[] {
   return [...container.querySelectorAll<HTMLElement>('[style]')].map((el) => ({
@@ -89,18 +77,21 @@ function styles(container: HTMLElement): { where: string; style: string }[] {
   }));
 }
 
-/** Where an identity colour was drawn, and which name it decoded. */
+/** Where an identity colour was drawn anywhere but on a swatch. */
 function identityDrawn(container: HTMLElement): string[] {
-  const forbidden = identityColours();
   const found: string[] = [];
-  for (const { where, style } of styles(container)) {
-    for (const [triple, name] of forbidden) {
-      if (style.includes(triple)) found.push(`${name} (${triple}) on ${where}`);
-    }
+  for (const el of container.querySelectorAll<HTMLElement>('[style]')) {
+    const style = (el.getAttribute('style') ?? '').replace(/\s+/g, ' ');
+    const where = `${el.tagName.toLowerCase()}.${el.className || '—'}`;
+    if (/--c-\d|--sw\s*:/.test(style) && !el.classList.contains('r-sw')) found.push(`a slot on ${where}`);
     if (/--hue\s*:/.test(style)) found.push(`--hue set on ${where}`);
   }
   return found;
 }
+
+/** The served retail order, as `/definitions/desk` sends it — a fixture, not the file. */
+const STORES = ['Rockwell', 'Fairview', 'Greenhills', 'North EDSA', 'Magnolia', 'OPUS', 'Shangri-La']
+  .map((s) => s.toLowerCase());
 
 function boardOf(rows: Record<string, unknown>[], o: Partial<BoardObject>) {
   const turn = {
@@ -112,15 +103,31 @@ function boardOf(rows: Record<string, unknown>[], o: Partial<BoardObject>) {
     turn: 0, touched: 0, ...o,
   } as BoardObject;
   return render(
-    <Board answers={[turn]} board={[object]} local={{}} focused={null}
-           selection={[]} live={false} retuned={{}} on={on} />,
+    <IdentityContext.Provider value={{ stores: STORES }}>
+      <Board answers={[turn]} board={[object]} local={{}} focused={null}
+             selection={[]} live={false} retuned={{}} on={on} />
+    </IdentityContext.Provider>,
   );
 }
 
 describe('a board of seven shops', () => {
-  it('draws no hue that decodes a name the row label already gives', () => {
+  it("draws a store's hue on its swatch and on nothing else", () => {
     const { container } = boardOf(SEVEN, {});
     expect(identityDrawn(container)).toEqual([]);
+    // And the swatches ARE there: one before every shop's name.
+    const swatches = [...container.querySelectorAll('.r-sw')];
+    expect(swatches.map((s) => s.getAttribute('data-identity')).sort())
+      .toEqual(SEVEN.map((r) => r.store).sort());
+  });
+
+  it("puts the verdict on every row's segment and dots, never the store", () => {
+    const { container } = boardOf(SEVEN, { kind: 'comparison' });
+    for (const row of container.querySelectorAll('.r-mk-dumbbells .r-mk-row')) {
+      for (const part of row.querySelectorAll<HTMLElement>('.r-mk-seg, .r-mk-dot--now')) {
+        expect(part.getAttribute('style') ?? '').toMatch(/rgb\(var\(--(up|down|flat|george)\)\)/);
+        expect(part.getAttribute('style') ?? '').not.toMatch(/--c-/);
+      }
+    }
   });
 
   it('says which shop each row is in WORDS, which is what the hue was for', () => {

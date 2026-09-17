@@ -13,8 +13,9 @@
  *                                    per row was spent on nothing. HE ASKED
  *                                    AGAIN ON 2026-09-15, of the tile SHELL
  *                                    this card left coloured; P2.l took the
- *                                    hue off the shell too, and the only one
- *                                    left in the room is an opened object's.
+ *                                    hue off the shell too. P2S.2(e) gave it
+ *                                    back on ONE channel: the swatch before a
+ *                                    name. The mark stays the verdict.
  *   3. a caption decoding the bars → the dumbbell. Two dots joined by a line
  *                                    reads without a sentence under it, which
  *                                    "the track is the period before · the
@@ -42,14 +43,15 @@ import {
   type DataColour, type Mark,
 } from './catalogue';
 import {
-  Delta, Missing, MissingRow, Offer, OwnCaveat, Receipts, Shell, callFor, isLit, kindOfRead,
+  Delta, Missing, MissingRow, Offer, OwnCaveat, Receipts, Shell, callFor, isLit,
   type TileProps,
 } from './tiles';
 import { onRow } from './actions';
 import type { ActionOffer } from '../types/george';
 import { ObjectPanel, kindOf } from './ObjectPanel';
 import { dimensionOf } from './data';
-import { hueFor } from './identity';
+import { Swatch, useHueFor } from './swatch';
+import type { Dimension } from './data';
 
 type Row = Record<string, unknown>;
 /** The read's own `meta` — every subtitle and source line comes off it. */
@@ -135,7 +137,7 @@ function Dumbbell({ rows, meta, o, offers, seq, onTake, onPick, picked }:
   const key = valueOf(rows[0])?.key ?? 'value';
 
   return (
-    <div className="r-mk r-mk-dumbbells">
+    <div className="r-mk r-mk-dumbbells" data-emphasis={emphasised(o) ? 'yes' : undefined}>
       {rows.map((r, n) => {
         const change = changeIfAny(r);
         const lit = isLit(o, r);
@@ -150,6 +152,7 @@ function Dumbbell({ rows, meta, o, offers, seq, onTake, onPick, picked }:
           <div key={n} className="r-mk-row" data-lit={lit ? 'yes' : 'no'}
                style={{ opacity: lit ? 1 : COOL }}>
             <RowName name={name} className="r-mk-name"
+                     dimension={subjectOf(r) ? dimensionOf(rows, name) : null}
                      pickable={Boolean(subjectOf(r))} onPick={onPick}
                      picked={picked?.includes(name)} />
             <span className="r-mk-track" role="img"
@@ -235,6 +238,12 @@ interface Offering {
 
 const NO_TAKE: Take = () => {};
 
+/** Whether a block pointed at particular rows — the only time a swatch is ringed. */
+function emphasised(o: TileProps['o']): boolean {
+  const e = o.emphasise;
+  return Array.isArray(e) ? e.some((x) => String(x).trim()) : Boolean(String(e ?? '').trim());
+}
+
 /**
  * A ROW'S NAME, TAPPABLE WHERE THE ROW HAS ONE.
  *
@@ -248,14 +257,20 @@ const NO_TAKE: Take = () => {};
  * A row with no subject of its own is drawn as it always was: a plain label
  * is honest about there being nothing to pick.
  */
-function RowName({ name, pickable, onPick, picked, className }: {
+function RowName({ name, pickable, onPick, picked, className, dimension }: {
   name: string;
   pickable: boolean;
   onPick?(subject: string): void;
   picked?: boolean;
   className: string;
+  /**
+   * WHAT KIND OF THING THE NAME IS, for its swatch (P2S.2(e)). The swatch is
+   * the store; the mark beside it is the verdict.
+   */
+  dimension?: Dimension | null;
 }) {
-  if (!pickable || !onPick) return <span className={className}>{name}</span>;
+  const swatch = <Swatch name={name} dimension={dimension} />;
+  if (!pickable || !onPick) return <span className={className}>{swatch}{name}</span>;
   return (
     <button
       type="button"
@@ -263,7 +278,7 @@ function RowName({ name, pickable, onPick, picked, className }: {
       aria-pressed={picked ?? false}
       onClick={(e) => { e.stopPropagation(); onPick(name); }}
     >
-      {name}
+      {swatch}{name}
     </button>
   );
 }
@@ -278,7 +293,7 @@ function Ranked({ rows, meta, o, offers, seq, onTake, onPick, picked }:
   const values = rows.map((r) => Math.abs(Number(valueOf(r)?.value ?? 0)));
   const most = Math.max(1, ...values);
   return (
-    <div className="r-mk r-mk-ranked">
+    <div className="r-mk r-mk-ranked" data-emphasis={emphasised(o) ? 'yes' : undefined}>
       {rows.slice(0, 40).map((r, n) => {
         const lit = isLit(o, r);
         const c = colourOf(changeIfAny(r), lit);
@@ -287,6 +302,7 @@ function Ranked({ rows, meta, o, offers, seq, onTake, onPick, picked }:
           <div key={n} className="r-mk-row" data-lit={lit ? 'yes' : 'no'}
                style={{ opacity: lit ? 1 : COOL }}>
             <RowName name={name} className="r-mk-name r-mk-name--left"
+                     dimension={subjectOf(r) ? dimensionOf(rows, name) : null}
                      pickable={Boolean(subjectOf(r))} onPick={onPick}
                      picked={picked?.includes(name)} />
             <span className="r-mk-bar" role="img"
@@ -330,7 +346,7 @@ function Contributors({ rows, meta, o, offers, seq, onTake, onPick, picked }:
   const unit = key === 'change' ? unitOf(rows[0]) ?? unitOf(meta) : null;
   const most = Math.max(1, ...rows.map((r) => Math.abs(signed(r))));
   return (
-    <div className="r-mk r-mk-contributors">
+    <div className="r-mk r-mk-contributors" data-emphasis={emphasised(o) ? 'yes' : undefined}>
       {rows.slice(0, 40).map((r, n) => {
         const lit = isLit(o, r);
         const change = changeIfAny(r);
@@ -341,6 +357,7 @@ function Contributors({ rows, meta, o, offers, seq, onTake, onPick, picked }:
           <div key={n} className="r-mk-row" data-lit={lit ? 'yes' : 'no'}
                style={{ opacity: lit ? 1 : COOL }}>
             <RowName name={name} className="r-mk-name r-mk-name--left"
+                     dimension={subjectOf(r) ? dimensionOf(rows, name) : null}
                      pickable={Boolean(subjectOf(r))} onPick={onPick}
                      picked={picked?.includes(name)} />
             <span className="r-mk-bar r-mk-bar--split" role="img"
@@ -365,7 +382,11 @@ function Contributors({ rows, meta, o, offers, seq, onTake, onPick, picked }:
  * A SERIES OVER AN ORDERED FIELD, and its baseline dotted where the tool
  * returned one. Ends and extremes are labelled on the mark itself.
  */
-function Line({ rows, meta, o }: { rows: Row[]; meta: Meta; o: TileProps['o'] }) {
+function Line({ rows, meta, o, subject }: {
+  rows: Row[]; meta: Meta; o: TileProps['o'];
+  /** The one thing this series is OF, where the read says so — for its key. */
+  subject: string | null;
+}) {
   const by = timeKeyOf(rows);
   const points = rows.slice(0, 60);
   const values = points.map((r) => Number(valueOf(r)?.value ?? 0));
@@ -415,6 +436,11 @@ function Line({ rows, meta, o }: { rows: Row[]; meta: Meta; o: TileProps['o'] })
       </svg>
       <div className="r-mk-ends">
         <span>{label(0)}</span>
+        {/* WHOSE SERIES THIS IS: its swatch and its name, in the key — the
+            line itself stays the verdict (P2S.2(e)). */}
+        {subject && (
+          <span className="r-mk-key r-mk-series"><Swatch name={subject} dimension={dimensionOf(rows, subject) ?? 'store'} />{subject}</span>
+        )}
         {drawnBase && <span className="r-mk-key">dotted · the period before</span>}
         <span>{label(last)}</span>
       </div>
@@ -483,6 +509,7 @@ function Rows({ rows: all, meta, o, p }: { rows: Row[]; meta: Meta; o: TileProps
                         {c === 'change_pct' ? <Delta change={changeOf(row)} />
                           : isSubject ? (
                             <RowName name={subject} className="r-mk-cellname" pickable
+                                     dimension={dimensionOf(all, subject)}
                                      onPick={(x) => p.on.pick(x, dimensionOf(all, x))}
                                      picked={p.selection?.includes(subject)} />
                           ) : fmt(c, row[c], unit(row))}
@@ -514,6 +541,7 @@ export function MarkBlock(p: TileProps) {
   // opened panel is about the tile's own subject. Local, because it is a
   // person looking at something and not a change to the board.
   const [revealed, setRevealed] = useState<string | null>(null);
+  const hueFor = useHueFor();
   const call = callFor(p);
   const rows = rowsOf(call);
   const meta = call?.result?.meta ?? null;
@@ -541,6 +569,10 @@ export function MarkBlock(p: TileProps) {
   // already do, each carrying the row's own name.
   const label = p.o.subject ?? (rows.length === 1 ? subjectOf(rows[0] ?? {}) : null) ?? null;
   const dimension = label ? dimensionOf(rows, label) : null;
+  // A SERIES IS OF ONE STORE when the block says so, or when the read was
+  // filtered to one — the read's own argument, never a name inferred.
+  const filters = (call?.arguments as { filters?: Record<string, unknown> } | undefined)?.filters;
+  const seriesOf = label ?? (typeof filters?.store === 'string' ? filters.store : null);
 
   // TAKING AN OFFER IS THE SAME ACT AS DOING IT BY HAND, through the same
   // path. `why` is the question the row's own button asks, and costs the turn
@@ -574,7 +606,7 @@ export function MarkBlock(p: TileProps) {
           {mark === 'dumbbell' && <Dumbbell rows={rows} meta={meta} o={p.o} {...offering} />}
           {mark === 'ranked' && <Ranked rows={rows} meta={meta} o={p.o} {...offering} />}
           {mark === 'contributors' && <Contributors rows={rows} meta={meta} o={p.o} {...offering} />}
-          {mark === 'line' && <Line rows={rows} meta={meta} o={p.o} />}
+          {mark === 'line' && <Line rows={rows} meta={meta} o={p.o} subject={seriesOf} />}
           {mark === 'table' && <Rows rows={rows} meta={meta} o={p.o} p={p} />}
         </div>
         <Receipts meta={meta} tool={p.o.tool} />
@@ -589,14 +621,13 @@ export function MarkBlock(p: TileProps) {
           place identity still says something. */}
       {revealed && kindOf(dimensionOf(rows, revealed)) && (
         <div onClick={(e) => e.stopPropagation()}
-             style={{ '--hue': hueFor(revealed, dimensionOf(rows, revealed),
-                                      kindOfRead(p.o.tool)) } as CSSProperties}>
+             style={{ '--hue': hueFor(revealed, dimensionOf(rows, revealed)) } as CSSProperties}>
           <ObjectPanel kind={kindOf(dimensionOf(rows, revealed)) as string} name={revealed} />
         </div>
       )}
       {p.focused && label && kindOf(dimension) && (
         <div onClick={(e) => e.stopPropagation()}
-             style={{ '--hue': hueFor(label, dimension, kindOfRead(p.o.tool)) } as CSSProperties}>
+             style={{ '--hue': hueFor(label, dimension) } as CSSProperties}>
           <ObjectPanel kind={kindOf(dimension) as string} name={label} />
         </div>
       )}
