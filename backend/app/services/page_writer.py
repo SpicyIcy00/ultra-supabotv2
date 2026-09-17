@@ -693,6 +693,17 @@ async def place_pin(
     return await move_pin(db, owner=owner, pin=pin, to_page=page, place=place, actor=actor)
 
 
+def record_draw(db: AsyncSession, *, owner: str, actor: Actor, page: GeorgePage,
+                pin: GeorgePin, before: Any, after: Any, call: int) -> None:
+    """
+    A pin redrawn as another shape (P2S.3(g)) is a structural write like the
+    others, so it is audited like them — `draw`, before and after.
+    """
+    _touch(page)
+    _event(db, owner=owner, actor=actor, operation="draw", page_id=page.id, pin_id=pin.id,
+           before={"call": call, "drawn_as": before}, after={"call": call, "drawn_as": after})
+
+
 async def append_new_pin(
     db: AsyncSession, *, owner: str, pin: GeorgePin, to_page: Optional[GeorgePage],
     actor: Actor = USER,

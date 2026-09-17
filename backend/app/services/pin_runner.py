@@ -169,13 +169,27 @@ def validate_call(call: Any) -> tuple[str, dict]:
 
 
 def validate_calls(calls: Any) -> list[dict]:
-    """Validate the whole list and return it normalised to {tool, arguments}."""
+    """
+    Validate the whole list and return it normalised to {tool, arguments}, plus
+    the shape a call is drawn as where it names one (P2S.3(g), `drawn_as`) — a
+    kind from composition.widgets that draws a read, and the columns a scatter
+    or gauge draws. A shape is presentation: it never changes what runs.
+    """
     if not isinstance(calls, list) or not calls:
         raise PinValidationError("A pin needs at least one tool call.")
+    from agent import vocabulary
+    from tools._common import load_defs
+
     out = []
     for call in calls:
         name, args = validate_call(call)
-        out.append({"tool": name, "arguments": args})
+        entry: dict[str, Any] = {"tool": name, "arguments": args}
+        if call.get("drawn_as") is not None:
+            try:
+                entry["drawn_as"] = vocabulary.drawn_as(call["drawn_as"], load_defs())
+            except ValueError as exc:
+                raise PinValidationError(f"{name}: {exc}.") from exc
+        out.append(entry)
     return out
 
 

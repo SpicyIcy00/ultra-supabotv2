@@ -11,8 +11,9 @@ to move.
 The safety property is the whole design: ALL OF THEM OR NONE. A chart drawn
 from the first 120 of 900 rows is not a smaller chart, it is a different and
 wrong one, asserting a shape the data does not have. So a result over the cap
-sends no rows at all and says so, and pinShape refuses to chart it (see
-pinShape.test.ts, "never charts a prefix").
+sends no rows at all and says so, and the default composition composes nothing
+over it (agent/default_composition.blocks). pinShape.ts, which held the
+client's half, went with the kept-page renderer in P2S.3(g).
 
 NO DATABASE, NO API — the client is a stub and the tool dispatcher is replaced,
 exactly as test_convergence_cap_contract does.

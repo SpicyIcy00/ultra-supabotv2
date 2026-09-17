@@ -248,3 +248,53 @@ def compose_default(calls: Mapping[int, Mapping[str, Any]], *,
     except (ValueError, KeyError, TypeError):
         return []
     return list(result.get("rows") or [])
+
+
+def pin_blocks(tool_calls: Sequence[Mapping[str, Any]], results: Sequence[Mapping[str, Any]],
+               *, defs: Mapping[str, Any]) -> list[dict]:
+    """
+    THE BLOCKS A KEPT PAGE DRAWS ONE PIN WITH (P2S.3(g)) — the same blocks, by
+    the same rule and through the same gate, that the board is drawn from.
+
+    WHY. A kept page was drawn by `PinnedPage` → `PinTile` → the pre-P1.e
+    renderer, so a chart kept from the room came back looking like another
+    product. The owner: *"it doesnt feel like its from the same app and its
+    beacause its not, so make it."* Now a pin run returns blocks and the page
+    draws them with the room's own marks.
+
+    Each call that came back with rows is one block: the shape its rows make
+    (`shape_for`), or the shape the pin remembers (`drawn_as`). The remembered
+    shape is handed to `compose` as the object already on the board under that
+    key, which is exactly the rule that keeps an asked-for pie a pie — and a
+    shape the rows can no longer make is drawn as what they do make, and said.
+    """
+    calls: dict[int, dict] = {}
+    proposed: list[dict] = []
+    remembered: list[dict] = []
+    for i, (stored, result) in enumerate(zip(tool_calls, results)):
+        ok = result.get("status") == "ok"
+        rows = [r for r in (result.get("rows") or []) if isinstance(r, Mapping)]
+        meta = result.get("meta") if isinstance(result.get("meta"), Mapping) else {}
+        calls[i] = {
+            "tool": result.get("tool"), "arguments": result.get("arguments") or {},
+            "error": None if ok else (result.get("error") or result.get("status") or "failed"),
+            "duplicate": False, "is_read": True, "rows": rows,
+            "filters": meta.get("filters_applied") if isinstance(meta.get("filters_applied"), Mapping) else {},
+        }
+        if not ok or not rows:
+            continue
+        block = shape_for(calls[i], i, f"pin-{i}", "lead" if not proposed else "supporting")
+        if block is None:
+            continue
+        shape = stored.get("drawn_as") if isinstance(stored, Mapping) else None
+        if isinstance(shape, Mapping) and isinstance(shape.get("kind"), str):
+            block = {**block, **{k: v for k, v in shape.items() if k in ("kind", "field", "against")}}
+            remembered.append({"key": block["key"], "kind": shape["kind"]})
+        proposed.append(block)
+    if not proposed:
+        return []
+    try:
+        result = compose.compose(proposed, None, calls=calls, defs=defs, board=remembered)
+    except (ValueError, KeyError, TypeError):
+        return []
+    return list(result.get("rows") or [])

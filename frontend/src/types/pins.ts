@@ -13,6 +13,12 @@ import type { GeorgeNotice, ToolMeta } from './george';
 export interface PinToolCall {
   tool: string;
   arguments: Record<string, unknown>;
+  /**
+   * THE SHAPE THIS CALL IS DRAWN AS (P2S.3(g)) — remembered from the board when
+   * it was kept, or set by "make that one a pie". Presentation only: it never
+   * changes what runs.
+   */
+  drawn_as?: { kind: string; field?: string; against?: string };
 }
 
 /**
@@ -85,6 +91,12 @@ export interface PinRun {
   /** The PREVIOUS success when this run failed, so a tile can say how old the last good figure was. */
   last_ok_at: string | null;
   ran_at: string;
+  /**
+   * THE BLOCKS THE ROOM DRAWS THIS RUN WITH (P2S.3(g)): the same blocks, by the
+   * same rule, the board is drawn from — one per call that came back with
+   * rows, each call's `seq` its index in `results`.
+   */
+  blocks: import('./george').CompositionBlock[];
 }
 
 export interface CreatePinRequest {

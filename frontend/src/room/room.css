@@ -1205,6 +1205,34 @@
 .r-chip--needs { background: rgba(var(--accent), 0.12); color: rgb(var(--accent)); }
 
 .r-row-acts { display: flex; align-items: center; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
+/* A QUIET TEXT ACTION — Rename, Move, Delete, All pages. P2S.1 deleted this rule
+   with the per-figure toolbar it was written for, while Kept, Needs you and a
+   kept page still drew their actions with the class, so those buttons fell back
+   to the browser's own. Restored by P2S.3(g), as it was. */
+.r-act {
+  border: 0; background: none; padding: 3px 0; cursor: pointer;
+  font: 400 12px/1.2 var(--sans); color: var(--ink-3);
+  transition: color 160ms var(--ease);
+}
+.r-act:hover, .r-act:focus-visible { color: var(--ink); }
+.r-act:disabled { opacity: 0.4; cursor: default; }
+.r-act:disabled:hover { color: var(--ink-3); }
+
+/* A KEPT PAGE (P2S.3(g)) — one section per analysis, a hairline between, the
+   figures drawn by the room's own board. No box: a kept figure is a figure. */
+.r-kept-pin { padding: 26px 0 8px; border-top: 1px solid var(--edge); }
+.r-kept-pin:first-of-type { border-top: 0; }
+.r-kept-pin-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 18px;
+  flex-wrap: wrap; margin-bottom: 14px;
+}
+.r-kept-pin-title { font: 400 18px/1.35 var(--serif); color: var(--ink); margin: 0; }
+.r-kept-purpose { margin: 10px 0 6px; }
+.r-kept-ask {
+  display: flex; gap: 12px; align-items: center; margin-top: 34px; padding-top: 22px;
+  border-top: 1px solid var(--edge);
+}
+.r-kept-ask .r-field { flex: 1; }
 
 /* The one action in the app that wears the approvals colour. */
 .r-do {

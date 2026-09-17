@@ -206,3 +206,86 @@ def asked_for(kind: str, question: Optional[str], defs: Mapping[str, Any],
         if isinstance(obj, Mapping) and key and obj.get("key") == key and obj.get("kind") == kind:
             return True
     return False
+
+
+# ---------------------------------------------------------------------------
+# A shape a PIN remembers (P2S.3(g))
+# ---------------------------------------------------------------------------
+
+def mark_kinds(defs: Mapping[str, Any]) -> list[str]:
+    """The widgets that are ways of drawing a read — the ones with a `rows` rule."""
+    return [k for k, v in ((defs.get("composition") or {}).get("widgets") or {}).items()
+            if isinstance(v, Mapping) and v.get("rows")]
+
+
+def drawn_as(value: Any, defs: Mapping[str, Any]) -> Optional[dict]:
+    """
+    THE SHAPE ONE PINNED CALL IS DRAWN AS, normalised: `{"kind": k}` and, for a
+    scatter or a gauge, the COLUMNS it draws. None for none. Raises ValueError
+    with a reason a person could act on.
+
+    A pin stores calls, never figures, and now the shape they were asked to be
+    drawn as — the same pin on the board and on its page (P2S.3(g)). It rides
+    on the stored call rather than a new column, so a kept page needed no
+    migration: a pin has always been a list of calls, and a call may say how it
+    is drawn.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        value = {"kind": value}
+    if not isinstance(value, Mapping):
+        raise ValueError("drawn_as is a shape: a kind, or {kind, field, against}")
+    marks = mark_kinds(defs)
+    kind = value.get("kind")
+    if kind not in marks:
+        raise ValueError(f"{kind!r} is not a shape a read is drawn as — one of {', '.join(marks)}")
+    extra = set(value) - {"kind", "field", "against"}
+    if extra:
+        raise ValueError(f"drawn_as carries a kind and the columns it draws, never {sorted(extra)}")
+    out: dict[str, Any] = {"kind": kind}
+    for column in ("field", "against"):
+        if column in value and value[column] is not None:
+            if not isinstance(value[column], str) or not value[column].strip():
+                raise ValueError(f"drawn_as.{column} names a column of the read")
+            out[column] = value[column].strip()
+    return out
+
+
+def board_shapes(board: Any, composition: Iterable[Mapping[str, Any]],
+                 calls: Mapping[int, Mapping[str, Any]], defs: Mapping[str, Any],
+                 key_of) -> dict[str, dict]:
+    """
+    WHAT EACH READ ON THE BOARD IS DRAWN AS, by call identity (`key_of(tool,
+    arguments)`), so pinning a chart keeps the shape it has on screen: a pie
+    pinned is a pie on its page. The board the question carried, with this
+    turn's composition applied over it — a put or change that names a read, and
+    a reshape that names only a key.
+    """
+    marks = set(mark_kinds(defs))
+    by_key: dict[str, dict] = {}
+    for obj in board or []:
+        if not isinstance(obj, Mapping) or not isinstance(obj.get("key"), str):
+            continue
+        read = obj.get("read") if isinstance(obj.get("read"), Mapping) else {}
+        by_key[obj["key"]] = {"kind": obj.get("kind"), "tool": read.get("tool"),
+                              "arguments": read.get("arguments") or {}}
+    for block in composition or []:
+        key = block.get("key")
+        if not isinstance(key, str) or block.get("op") in ("drop", "quiet"):
+            continue
+        entry = dict(by_key.get(key) or {})
+        if isinstance(block.get("seq"), int) and block["seq"] in calls:
+            call = calls[block["seq"]]
+            entry.update(tool=call.get("tool"), arguments=call.get("arguments") or {})
+        for field in ("kind", "field", "against"):
+            if field in block:
+                entry[field] = block[field]
+        by_key[key] = entry
+    out: dict[str, dict] = {}
+    for entry in by_key.values():
+        if entry.get("kind") in marks and isinstance(entry.get("tool"), str):
+            shape = {"kind": entry["kind"]}
+            shape.update({c: entry[c] for c in ("field", "against") if isinstance(entry.get(c), str)})
+            out[key_of(entry["tool"], entry.get("arguments") or {})] = shape
+    return out

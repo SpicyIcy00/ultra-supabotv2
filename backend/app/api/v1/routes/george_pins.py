@@ -87,6 +87,9 @@ _pin_user = require_page("george")
 class ToolCallIn(BaseModel):
     tool: str = Field(..., min_length=1, max_length=64)
     arguments: dict[str, Any] = Field(default_factory=dict)
+    # The shape this call is drawn as (P2S.3(g)): a kind, or {kind, field,
+    # against}. Validated in pin_runner.validate_calls; never changes what runs.
+    drawn_as: Optional[Any] = None
 
 
 class PinCreate(BaseModel):
@@ -179,6 +182,10 @@ class PinRunOut(BaseModel):
     notices: List[dict]
     last_ok_at: Optional[datetime]
     ran_at: datetime
+    # THE BLOCKS THE ROOM DRAWS THIS PIN WITH (P2S.3(g)) — the same blocks, by
+    # the same rule and through the same gate, the board is drawn from, one per
+    # call that came back with rows (agent/default_composition.pin_blocks).
+    blocks: List[dict] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -504,6 +511,9 @@ async def run_pinned(
     ran_at = datetime.now(timezone.utc)
 
     outcome = await run_pin(pin.tool_calls)
+    from agent import default_composition
+    from tools._common import load_defs
+    blocks = default_composition.pin_blocks(pin.tool_calls, outcome["results"], defs=load_defs())
 
     pin.last_run_at = ran_at
     pin.last_status = outcome["status"]
@@ -522,4 +532,5 @@ async def run_pinned(
         # last good figure was. On a successful run this equals ran_at.
         last_ok_at=pin.last_ok_at if outcome["status"] == "ok" else previous_ok,
         ran_at=ran_at,
+        blocks=blocks,
     )

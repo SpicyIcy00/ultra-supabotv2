@@ -369,6 +369,10 @@ class WriteContext:
     # call_key -> {tool, arguments} for every call that RAN AND SUCCEEDED in this
     # conversation. The loop fills it; pin_answer refuses anything absent from it.
     executed: dict[str, dict] = field(default_factory=dict)
+    # call_key -> the shape that read is drawn as on the board right now
+    # ({kind, field?, against?}), so a pin keeps the drawing the person saw
+    # (P2S.3(g)). The loop fills it from the board; the model names nothing.
+    shapes: dict[str, dict] = field(default_factory=dict)
     workflow_writer: Optional[WorkflowWriter] = None
     workflow_runner: Optional[WorkflowRunner] = None
     # The page the caller is on, readable through the application role. Bound
@@ -449,7 +453,51 @@ def _normalize_calls(tool_calls: Any) -> list[dict]:
             raise PinRefused(
                 f"{name}: 'arguments' must be an object, got {type(args).__name__}."
             )
-        out.append({"tool": name, "arguments": args})
+        entry = {"tool": name, "arguments": args}
+        # THE SHAPE IT IS DRAWN AS, carried through untouched (P2S.3(g)). The
+        # writer validates it against the vocabulary; structure only here.
+        if call.get("drawn_as") is not None:
+            entry["drawn_as"] = call["drawn_as"]
+        out.append(entry)
+    return out
+
+
+def _shaped(calls: list[dict], ctx: "WriteContext", coerced: list[str]) -> list[dict]:
+    """
+    EACH PINNED CALL KEEPS THE SHAPE IT HAS ON THE BOARD (P2S.3(g)): a pie
+    kept is a pie on its page. A shape George names himself is held to the
+    vocabulary's rule — pie, treemap and gauge only when the person asked, in
+    this question or by the object already being drawn that way — and one
+    that fails it is left off, and said.
+    """
+    from agent import vocabulary
+    from tools._common import load_defs
+
+    defs = load_defs()
+    out = []
+    for call in calls:
+        key = call_key(call["tool"], call["arguments"])
+        on_board = (ctx.shapes or {}).get(key)
+        named = call.get("drawn_as")
+        entry = {"tool": call["tool"], "arguments": call["arguments"]}
+        if named is not None:
+            try:
+                shape = vocabulary.drawn_as(named, defs)
+            except ValueError as exc:
+                raise PinRefused(f"{call['tool']}: {exc}.") from exc
+            asked = (not vocabulary.only_when_asked(shape["kind"], defs)
+                     or vocabulary.asked_for(shape["kind"], ctx.question, defs)
+                     or (on_board or {}).get("kind") == shape["kind"])
+            if asked:
+                entry["drawn_as"] = shape
+            else:
+                coerced.append(f"{call['tool']}: a {shape['kind']} is drawn only when the person "
+                               f"asks for one, so it keeps the shape its rows make")
+                if on_board:
+                    entry["drawn_as"] = on_board
+        elif on_board:
+            entry["drawn_as"] = on_board
+        out.append(entry)
     return out
 
 
@@ -473,6 +521,8 @@ async def pin_answer(
 
     Args:
         tool_calls: The calls to pin, as [{"tool": ..., "arguments": {...}}].
+            A call keeps the shape it is drawn as on the board; name
+            "drawn_as": a kind only when they ask for another shape.
             You may ONLY pin calls you have already run, successfully, in this
             conversation. To pin a variant of an answer — the same question
             grouped by day, or for one store — run the adjusted call FIRST, read
@@ -518,6 +568,8 @@ async def pin_answer(
             f"{ran}."
         )
 
+    coerced: list[str] = []
+    calls = _shaped(calls, ctx, coerced)
     stored = await ctx.writer(
         PinSpec(
             tool_calls=calls,
@@ -549,6 +601,7 @@ async def pin_answer(
             "page": stored["page"],
             "pins_on_page": stored["pins_on_page"],
             "wrote": "pin",
+            "coerced": coerced,
         },
     }
 
@@ -732,6 +785,7 @@ def _page_bounds() -> dict:
 # (app/services/page_operations.EDIT_OPERATIONS) and held equal by a test.
 PAGE_EDIT_OPERATIONS = (
     "rename", "set_purpose", "add", "add_existing", "remove", "move_to_page", "place",
+    "draw",
 )
 
 
@@ -901,7 +955,10 @@ async def edit_page(
             — to another of the user's pages, or to Ungrouped;
             place {pin_id | title, place} where place is exactly one of
             {"before": pin_id}, {"after": pin_id}, {"at": "top"},
-            {"at": "bottom"}.
+            {"at": "bottom"};
+            draw {pin_id | title, kind, call?, field?, against?} — redraw an
+            analysis as another shape ("make that one a pie"); `call` is which
+            of its calls, needed only when it has several.
             Name an analysis by pin_id (from view_page or an earlier result);
             a title is accepted when exactly one analysis has it, and a title
             two analyses share is refused with both ids — never guess between
@@ -960,8 +1017,32 @@ async def edit_page(
             if not isinstance(title, str) or not title.strip():
                 raise PageRefused(f"operations[{i}] (add) needs a title.")
             _refuse_unrun(calls, ctx, f"operations[{i}] ({title.strip()!r})")
-            entry["tool_calls"] = calls
+            coerced: list[str] = []
+            entry["tool_calls"] = _shaped(calls, ctx, coerced)
             entry["title"] = title.strip()
+        if kind == "draw":
+            from agent import vocabulary
+            from tools._common import load_defs
+
+            defs = load_defs()
+            try:
+                shape = vocabulary.drawn_as(
+                    {k: op[k] for k in ("kind", "field", "against") if k in op}, defs)
+            except ValueError as exc:
+                raise PageRefused(f"operations[{i}] (draw): {exc}.") from exc
+            # THE SAME RULE AS THE BOARD: a pie, a treemap or a gauge only when
+            # the person asked for one.
+            if (vocabulary.only_when_asked(shape["kind"], defs)
+                    and not vocabulary.asked_for(shape["kind"], ctx.question, defs)):
+                raise PageRefused(
+                    f"operations[{i}] (draw): a {shape['kind']} is drawn only when the "
+                    f"person asks for one — leave the analysis as it is."
+                )
+            call = op.get("call")
+            if call is not None and (not isinstance(call, int) or isinstance(call, bool) or call < 0):
+                raise PageRefused(f"operations[{i}] (draw): call is the index of one of its calls.")
+            entry = {"op": "draw", "shape": shape, "call": call,
+                     **{k: op[k] for k in ("pin_id", "title") if k in op}}
         cleaned.append(entry)
 
     stored = await ctx.page_writer.edit(PageEditSpec(

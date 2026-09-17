@@ -52,12 +52,9 @@ const ACCENT = /george-accent|--accent\b|var\(--accent\)/;
 const DATA = /george-data-/;
 
 const DATA_ALLOWED: Record<string, string> = {
-  // Diverging bars in a ranking by change and in a driver split. The bar
-  // already diverges from a drawn zero line with its signed figure printed
-  // beside it; colour reinforces a direction the tool measured.
-  'Instruments.tsx': 'diverging bars whose data declares direction',
-  // Field.tsx and Anatomy.tsx left this list on 2026-09-12 with the desk they
-  // belonged to. The room draws the same diverging forms through Instruments.
+  // EMPTY SINCE P2S.3(g): Instruments.tsx, the last file allowed a
+  // `george-data-*` token, went with the kept-page renderer. The room's marks
+  // paint direction through `paint()` and `wash()` (palette.test.ts).
 };
 
 /**
@@ -243,10 +240,11 @@ describe('UI rule 5 — one colour means "needs you"', () => {
     ).toEqual([]);
   });
 
-  it('is not used by the notice banner, on any surface', () => {
-    // The one component every surface renders a caveat through. If it wears
-    // the colour, every notice in the app does.
-    const source = readFileSync(join(GEORGE_DIR, 'NoticeBanner.tsx'), 'utf8');
+  it('is not used by a caveat, on any surface', () => {
+    // The one component every surface renders a caveat through — the room's
+    // `Caveats`, since NoticeBanner went with the kept-page renderer
+    // (P2S.3(g)). If it wears the colour, every notice in the app does.
+    const source = readFileSync(join(ROOM_DIR, 'tiles.tsx'), 'utf8');
     expect(ACCENT.test(source)).toBe(false);
   });
 
@@ -259,9 +257,11 @@ describe('UI rule 5 — one colour means "needs you"', () => {
     expect(ACCENT.test(source)).toBe(false);
   });
 
-  it('is not used to mark measures disagreeing', () => {
-    const source = readFileSync(join(GEORGE_DIR, 'ReceiptsBlock.tsx'), 'utf8');
-    expect(ACCENT.test(source)).toBe(false);
+  it('is not used on a kept page or its receipts', () => {
+    // ReceiptsBlock went with the kept-page renderer (P2S.3(g)); a kept page is
+    // drawn by the room now, and its receipts are the room's.
+    expect(ACCENT.test(readFileSync(join(ROOM_DIR, 'KeptPage.tsx'), 'utf8'))).toBe(false);
+    expect(ACCENT.test(readFileSync(join(ROOM_DIR, 'marks.tsx'), 'utf8'))).toBe(false);
   });
 
   it('confines the data tokens to instruments whose data declares direction', () => {
@@ -291,13 +291,13 @@ describe('UI rule 5 — one colour means "needs you"', () => {
     // The narrowing recorded in the V2 proposal: "no colour carries the
     // direction" stays true for a single figure. A fall in sales is
     // information, and whether it is bad depends on the question.
-    expect(DATA.test(readFileSync(join(GEORGE_DIR, 'ResultBlocks.tsx'), 'utf8'))).toBe(false);
-    expect(DATA.test(readFileSync(join(GEORGE_DIR, 'NoticeBanner.tsx'), 'utf8'))).toBe(false);
+    expect(DATA.test(readFileSync(join(ROOM_DIR, 'tiles.tsx'), 'utf8'))).toBe(false);
+    expect(DATA.test(readFileSync(join(ROOM_DIR, 'KeptPage.tsx'), 'utf8'))).toBe(false);
     expect(DATA.test(readFileSync(join(ROOM_DIR, 'Working.tsx'), 'utf8'))).toBe(false);
   });
 
   it('never lets the accent onto an instrument or the spine', () => {
-    expect(ACCENT.test(readFileSync(join(GEORGE_DIR, 'Instruments.tsx'), 'utf8'))).toBe(false);
+    expect(ACCENT.test(readFileSync(join(ROOM_DIR, 'shapes.tsx'), 'utf8'))).toBe(false);
     // The spine (WorkSpine.tsx) went with the old river in P2S.1; the room's
     // account of the work is Working.tsx.
     expect(ACCENT.test(readFileSync(join(ROOM_DIR, 'Working.tsx'), 'utf8'))).toBe(false);

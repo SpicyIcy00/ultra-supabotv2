@@ -42,12 +42,11 @@ import yaml                                                            # noqa: E
 _ROOT = Path(__file__).resolve().parents[1]
 _LOOP = _ROOT / "agent" / "loop.py"
 _DEFS = _ROOT / "definitions" / "metrics.yaml"
-_NOTICE_BANNER = _ROOT / "frontend" / "src" / "components" / "george" / "NoticeBanner.tsx"
-_RECEIPTS = _ROOT / "frontend" / "src" / "components" / "george" / "ReceiptsBlock.tsx"
-# scopeLine lives apart from the component, as pinShape does: a decision the
-# suite can hold without a DOM, and a component file that also exports helpers
-# breaks fast refresh.
-_RECEIPT_SHAPE = _ROOT / "frontend" / "src" / "components" / "george" / "receiptShape.ts"
+# THE ROOM'S OWN CAVEAT AND RECEIPTS (P2S.3(g)). NoticeBanner, ReceiptsBlock
+# and receiptShape went with the kept-page renderer; every surface - the board
+# and a kept page alike - draws a caveat and a receipt through these now.
+_TILES = _ROOT / "frontend" / "src" / "room" / "tiles.tsx"
+_ROOM_DATA = _ROOT / "frontend" / "src" / "room" / "data.ts"
 
 # Every module that builds a notice dict.
 _NOTICE_SOURCES = sorted((_ROOT / "tools").glob("*.py")) + [
@@ -338,29 +337,35 @@ def test_rule_17_allows_answering_a_question_about_method():
 
 
 def test_the_caveat_itself_is_never_behind_a_disclosure():
-    # UI rule 4, unchanged and non-negotiable. What moved is the CITATION.
-    banner = _ts_source(_NOTICE_BANNER)
-    body = banner.split("export function NoticeBanner(", 1)[1]
-    assert "{n.message}" in body
-    # The message is rendered directly in the banner, not inside the source
-    # toggle's conditional.
-    assert "n.source && <NoticeSource" in body
+    # UI rule 4, unchanged and non-negotiable. What moves behind a tap is the
+    # explanation, never the line that names the caveat.
+    tiles = _ts_source(_TILES)
+    body = tiles.split("function Caveat(", 1)[1].split("\nexport function Caveats(", 1)[0]
+    head_at = body.index("{head}")
+    assert "{open &&" in body and head_at < body.index("{open &&"), (
+        "the caveat's own line must be drawn outside the disclosure"
+    )
+
+
+def _receipts_component() -> str:
+    return _ts_source(_TILES).split("export function Receipts(", 1)[1].split("\n}\n", 1)[0]
+
+
+def _receipts_line() -> str:
+    return _ts_source(_ROOM_DATA).split("export function receiptsLine(", 1)[1].split("\n}\n", 1)[0]
 
 
 def test_the_citation_is_one_tap_down():
-    banner = _ts_source(_NOTICE_BANNER)
-    assert "function NoticeSource(" in banner
-    source_block = banner.split("function NoticeSource(", 1)[1].split("\nexport function", 1)[0]
-    assert "aria-expanded" in source_block
-    assert "Where this comes from" in source_block
+    receipts = _receipts_component()
+    assert "aria-expanded={open}" in receipts
+    assert "receiptsDetail(meta)" in receipts and "{open && (" in receipts
 
 
 def test_the_receipts_line_leads_with_scope_and_not_a_table_name():
-    receipts = _ts_source(_RECEIPTS)
-    assert "export function scopeLine(" in _ts_source(_RECEIPT_SHAPE)
-    collapsed = receipts.split("aria-expanded={open}", 1)[1].split("</button>", 1)[0]
-    assert "scopeLine(meta)" in collapsed
-    assert "source_table" not in collapsed, (
+    # The line a reader sees is the scope, off meta; the table is the detail
+    # behind a tap, and a last resort only for a read whose meta says nothing.
+    assert "const line = receiptsLine(meta)" in _receipts_component()
+    assert "source_table" not in _receipts_line(), (
         "the always-visible receipts line named a database table under every "
         "figure in the app"
     )
@@ -369,17 +374,15 @@ def test_the_receipts_line_leads_with_scope_and_not_a_table_name():
 def test_the_read_time_is_still_always_visible():
     # UI rule 6: no number displays without a timestamp. This one may never
     # move behind a disclosure, whatever else does.
-    receipts = _ts_source(_RECEIPTS)
-    collapsed = receipts.split("aria-expanded={open}", 1)[1].split("</button>", 1)[0]
-    assert "ago(meta.snapshot_timestamp)" in collapsed
+    assert "readAt(meta.snapshot_timestamp" in _receipts_line()
 
 
 def test_the_scope_line_is_built_from_meta_and_never_from_prose():
-    shape = _ts_source(_RECEIPT_SHAPE)
-    for field in ("meta.metric_label", "meta.window", "meta.comparison"):
-        assert field in shape, f"the scope line does not read {field}"
+    line = _receipts_line()
+    assert "meta.metric_label" in line and "windowLabel(meta)" in line and "groupingLabel(meta)" in line
     # A result with no window gets no window, rather than a guessed one.
-    assert "SCOPE_UNKNOWN" in shape and "Scope not recorded" in shape
+    window = _ts_source(_ROOM_DATA).split("export function windowLabel(", 1)[1].split("\n}\n", 1)[0]
+    assert "if (!w) return null;" in window
 
 
 # ---------------------------------------------------------------------------

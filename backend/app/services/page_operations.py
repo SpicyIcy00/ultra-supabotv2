@@ -63,6 +63,7 @@ MAX_ADDS_PER_EDIT = 6
 # The closed set of things edit_page can do. Mirrored in the tool schema.
 EDIT_OPERATIONS = (
     "rename", "set_purpose", "add", "add_existing", "remove", "move_to_page", "place",
+    "draw",
 )
 
 
@@ -393,6 +394,35 @@ async def plan_edit(
                 )
             plan.steps.append({"op": kind, "pin": pin, "place": place})
 
+        elif kind == "draw":
+            # "MAKE THAT ONE A PIE" (P2S.3(g)). A shape is presentation: the
+            # pin keeps its calls, runs the same reads, and draws them as the
+            # named shape. Membership and order are untouched.
+            pin = await _resolve_target_pin(db, owner, op, within=page.id)
+            if pin.page_id != page.id:
+                raise PageNotFound(f"{pin.title!r} is not on {page.title!r}.")
+            from agent import vocabulary
+            from tools._common import load_defs
+            try:
+                shape = vocabulary.drawn_as(op.get("shape") or {
+                    k: op[k] for k in ("kind", "field", "against") if k in op}, load_defs())
+            except ValueError as exc:
+                raise PageValidationError(f"draw: {exc}.") from exc
+            calls = list(pin.tool_calls or [])
+            which = op.get("call")
+            if which is None:
+                if len(calls) != 1:
+                    raise PageValidationError(
+                        f"draw: {pin.title!r} has {len(calls)} calls; say which by `call`, "
+                        f"0 to {len(calls) - 1}."
+                    )
+                which = 0
+            if not isinstance(which, int) or isinstance(which, bool) or not 0 <= which < len(calls):
+                raise PageValidationError(
+                    f"draw: call {which!r} is not one of {pin.title!r}'s calls (0 to {len(calls) - 1})."
+                )
+            plan.steps.append({"op": kind, "pin": pin, "call": which, "shape": shape})
+
         if on_page > MAX_PINS_PER_PAGE:
             raise PageQuotaError(
                 f"{page.title!r} would hold more than {MAX_PINS_PER_PAGE} analyses after "
@@ -417,7 +447,7 @@ async def _preflight_order(db: AsyncSession, owner: str, plan: _Plan) -> None:
 
     for step in plan.steps:
         kind = step["op"]
-        if kind in ("rename", "set_purpose"):
+        if kind in ("rename", "set_purpose", "draw"):
             continue
         if kind == "add":
             pin = GeorgePin(id=uuid.uuid4())
@@ -529,6 +559,19 @@ async def apply_edit(
             await page_writer.place_pin(db, owner=owner, pin=pin, place=step["place"], actor=actor)
             ops.append({"op": kind, "pin_id": str(pin.id), "title": pin.title,
                         "from_position": before, "position": pin.position})
+
+        elif kind == "draw":
+            pin, which, shape = step["pin"], step["call"], step["shape"]
+            calls = [dict(c) for c in (pin.tool_calls or [])]
+            before = calls[which].get("drawn_as")
+            calls[which]["drawn_as"] = shape
+            # A NEW LIST, not a mutation: a JSONB column changed in place is
+            # not seen by the unit of work and would silently not be written.
+            pin.tool_calls = calls
+            page_writer.record_draw(db, owner=owner, actor=actor, page=page, pin=pin,
+                                    before=before, after=shape, call=which)
+            ops.append({"op": kind, "pin_id": str(pin.id), "title": pin.title,
+                        "call": which, "from": before, "to": shape})
 
     await db.flush()
     pins = await page_writer.page_pins(db, owner, page.id)

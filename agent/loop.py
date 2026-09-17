@@ -55,7 +55,7 @@ import anthropic
 import psycopg
 
 from agent import prose as _prose
-from agent import compose, composite_tools, default_composition, reading, surface, write_tools
+from agent import compose, composite_tools, default_composition, reading, surface, vocabulary, write_tools
 from agent.write_tools import WriteContext, call_key
 from tools import (
     attention,
@@ -366,6 +366,11 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
                 "properties": {
                     "tool": {"type": "string", "enum": sorted(TOOL_FUNCTIONS)},
                     "arguments": {"type": "object"},
+                    # A shape, only when the person asked for another one; a
+                    # call otherwise keeps the one it has on the board.
+                    "drawn_as": {"type": "string",
+                                 "enum": [k for k, v in req(_load_defs(), "composition.widgets").items()
+                                          if v.get("rows")]},
                 },
                 "required": ["tool", "arguments"],
             },
@@ -719,6 +724,13 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
                     },
                     "pin_id": {"type": "string"},
                     "page_id": {"type": ["string", "null"]},
+                    # draw (P2S.3(g)): the shape, and which call when several.
+                    "kind": {"type": "string",
+                             "enum": [k for k, v in req(_load_defs(), "composition.widgets").items()
+                                      if v.get("rows")]},
+                    "call": {"type": "integer", "minimum": 0},
+                    "field": {"type": "string"},
+                    "against": {"type": "string"},
                     "place": {
                         "type": "object",
                         "properties": {
@@ -3622,6 +3634,13 @@ async def run(
                     )
                     yield _sse("page_context", page_evidence)
 
+            # WHAT EACH READ IS DRAWN AS on the board right now, so a pin keeps
+            # the shape the person saw (P2S.3(g)). Refreshed before every batch
+            # of writes: a compose from an earlier iteration may have reshaped.
+            if writes:
+                write_ctx.shapes = vocabulary.board_shapes(
+                    (desk or {}).get("board"), composition_recorded, calls_by_seq, defs,
+                    write_tools.call_key)
             for gseq, b in writes:
                 done_calls.append(
                     ((gseq, b), await _call_write_tool(b.name, dict(b.input), write_ctx))

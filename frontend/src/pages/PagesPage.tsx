@@ -21,7 +21,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { PinnedPage } from '../components/george/PinnedPage';
+import { KeptPage, ago } from '../room/KeptPage';
 import {
   freshness,
   legacyPagePath,
@@ -29,7 +29,6 @@ import {
   pagePath,
   pageViews,
 } from '../components/george/pageShape';
-import { ago } from '../components/george/pinShape';
 import { RoomHead } from '../room/RoomShell';
 import type { SimilarPageConflict } from '../types/pins';
 import { createPage, listPages } from '../services/pagesApi';
@@ -47,7 +46,7 @@ export default function PagesPage() {
 
   if (segment !== undefined) {
     return (
-      <PinnedPage pageId={pageIdFromSegment(segment)} onBack={() => navigate('/pages')} />
+      <KeptPage pageId={pageIdFromSegment(segment)} onBack={() => navigate('/pages')} />
     );
   }
 

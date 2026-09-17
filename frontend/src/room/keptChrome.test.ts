@@ -25,9 +25,11 @@
  *      `receiptShape.ts` never heard; both are checked, so a third copy has
  *      somewhere to be added and a fixed one cannot regress alone.
  *
- * WHAT THIS DOES NOT CLAIM. Legibility is not the redesign. Those components
- * are still the pre-P1.e widgets — fourteen shapes where the room draws six —
- * and drawing a kept page with the room's own marks is a card.
+ * WHAT THIS DOES NOT CLAIM. Legibility is not the redesign. P2S.3(g) was the
+ * redesign: a kept page is drawn by the room's own board now (KeptPage.tsx),
+ * and PinnedPage, PinTile, ResultBlocks, Instruments, ReceiptsBlock and
+ * receiptShape are deleted — so the kept-page halves of the tests below went
+ * with them. What is left holds the tokens the other old screens still use.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -35,7 +37,6 @@ import postcss from 'postcss';
 import { describe, expect, it } from 'vitest';
 
 import { subtitleFor } from './catalogue';
-import { scopeLine } from '../components/george/receiptShape';
 import type { ToolMeta } from '../types/george';
 
 const ROOT = join(__dirname, '..', '..');
@@ -165,15 +166,6 @@ describe('the six chrome tokens the old components paint with', () => {
     expect(valuesOn(INDEX, ':root')['--g-serif']).toContain('Georgia');
   });
 
-  it("fills a ranking's bar with a mark colour and not with the ink", () => {
-    // A bar painted in `navy` — the PRIMARY TEXT colour — is near-white on this
-    // ground, which is what the second screenshot showed. Ink is for words.
-    const bars = readFileSync(join(ROOT, 'src', 'components', 'george', 'Instruments.tsx'), 'utf8');
-    expect(bars).not.toContain('rounded-r-[4px] bg-george-navy');
-    expect(bars).toContain('rounded-r-[4px] bg-george-bar');
-    expect(valuesOn(ROOM, DARK)['--g-bar']).toBe('var(--flat)');
-  });
-
   it('centres the column the other three screens are drawn in', () => {
     // "its not centered" — 2026-09-15. `.r-measure` has carried this since the
     // room existed; `.r-column`, which Kept, Needs you and Running are drawn
@@ -250,30 +242,17 @@ const COMPARED: ToolMeta = {
 } as unknown as ToolMeta;
 
 describe('what a figure was measured against, said once', () => {
-  it('does not say it twice on a kept page', () => {
-    const line = scopeLine(COMPARED);
-    expect(line).toContain('vs previous period');
-    expect(line).not.toContain('vs vs');
-  });
-
   it('does not say it twice on the board either', () => {
     const line = subtitleFor(COMPARED, [{ value: 1 }]);
     expect(line).toContain('vs previous period');
     expect(line).not.toContain('vs vs');
   });
 
-  it("still says the word where the sentence is its own, not the yaml's", () => {
-    // No display_name: the fallback is this module's own wording and has to
-    // carry the "vs" the definitions would have supplied.
-    const line = scopeLine({
-      ...COMPARED, comparison: { baseline: { start: 'a', end: 'b' } },
-    } as unknown as ToolMeta);
-    expect(line).toContain('vs the previous period');
-    expect(line).not.toContain('vs vs');
-  });
-
+  // "still says the word where the sentence is its own" held receiptShape's
+  // fallback wording, which went with the kept-page renderer (P2S.3(g)). The
+  // board's subtitle has no fallback of its own: no display_name, no "vs".
   it('says nothing about a comparison that was not made', () => {
-    const line = scopeLine({ metric_label: 'Net sales' } as unknown as ToolMeta);
+    const line = subtitleFor({ metric_label: 'Net sales' } as unknown as ToolMeta, [{ value: 1 }]);
     expect(line).not.toContain('vs');
   });
 });
