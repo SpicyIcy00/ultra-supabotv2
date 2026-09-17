@@ -597,3 +597,15 @@ describe('emphasising the rows a claim is about', () => {
     expect(litNames()).toHaveLength(THREE.length);
   });
 });
+
+describe('a click on a figure (the log, 2026-09-17)', () => {
+  it('opens nothing and moves nothing — "we dont need the feature where when you click the chart it rearranges"', () => {
+    (on.open as ReturnType<typeof vi.fn>).mockClear();
+    const { container } = draw({ kind: 'ranked' }, COMPARED);
+    const tile = container.querySelector('.r-tile') as HTMLElement;
+    expect(tile.getAttribute('data-open')).toBeNull();
+    expect(tile.getAttribute('role')).toBeNull();
+    tile.click();
+    expect(on.open).not.toHaveBeenCalled();
+  });
+});

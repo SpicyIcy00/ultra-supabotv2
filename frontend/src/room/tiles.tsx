@@ -571,7 +571,7 @@ export function SystemTile(p: TileProps) {
 
   return (
     <Shell quiet landing={p.landing} delay={p.delay}
-           picked={p.focused} onOpen={() => p.on.open(p.o.key)}>
+           picked={p.focused}>
       <p className="r-label">{subject}{p.earlier ? ' · from earlier' : ''}</p>
       <p className="r-note" style={{ marginTop: 8 }}>{state || 'no state recorded'}</p>
       {row.by ? (
@@ -627,7 +627,7 @@ export function MemoryTile(p: TileProps) {
 
   return (
     <Shell quiet landing={p.landing} delay={p.delay}
-           picked={p.focused} onOpen={() => p.on.open(p.o.key)}>
+           picked={p.focused}>
       <p className="r-label">
         what I think right now
         {/* HOW MANY THERE ARE, so a list that scrolls is not a list that ends.
@@ -732,8 +732,7 @@ export function SpecTile(p: TileProps) {
   const lit = !p.earlier && p.o.weight !== 'quiet';
 
   return (
-    <Shell quiet={!lit} landing={p.landing} delay={p.delay} picked={p.focused}
-           onOpen={() => p.on.open(p.o.key)}>
+    <Shell quiet={!lit} landing={p.landing} delay={p.delay} picked={p.focused}>
       {/* A SHAPE IS NAMED LIKE EVERY OTHER OBJECT. The grammar has no field
           for a title — a heading is a column or nothing — so the label comes
           from the read: what was measured, and the shop it was filtered to.

@@ -631,9 +631,12 @@ export function MarkBlock(p: TileProps) {
 
   return (
     <>
+      {/* NO CLICK ON THE FIGURE (the log, 2026-09-17: "we dont need the
+          feature where when you click the chart it rearranges"). A click made
+          it the lead, moved it to the front and re-flowed the rest. A row's
+          name still picks it; a row's own `open` offer still opens it. */}
       <Shell quiet={!lit}
-             landing={p.landing} delay={p.delay} picked={p.focused || p.selected}
-             onOpen={() => p.on.open(p.o.key)}>
+             landing={p.landing} delay={p.delay} picked={p.focused || p.selected}>
         <OwnCaveat meta={meta} />
         <p className="r-mk-title">{titleFor(p.o, meta)}{p.earlier ? ' · from earlier' : ''}</p>
         <div className="r-mk-body" data-mark={mark} data-read={readAt(meta?.snapshot_timestamp) ?? ''}>

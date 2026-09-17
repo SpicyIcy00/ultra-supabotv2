@@ -229,14 +229,16 @@ describe('nothing on a figure arranges it by hand (P2S.1)', () => {
     expect(document.querySelector('.r-acts, .r-grip')).toBeNull();
   });
 
-  it('keeps George\'s order, with what was opened first', async () => {
+  it('keeps George\'s order, and opening a figure does not move it', async () => {
     const { inOrder } = await import('./board');
     const board = [
       object('subject', { key: 'a', weight: 'lead', subject: 'Rockwell' }),
       object('table', { key: 'b' }),
     ];
     expect(inOrder(board, {}, null).map((o) => o.key)).toEqual(['a', 'b']);
-    expect(inOrder(board, {}, 'b').map((o) => o.key)).toEqual(['b', 'a']);
+    // Opening a figure no longer moves it (the log, 2026-09-17: "we dont need
+    // the feature where when you click the chart it rearranges").
+    expect(inOrder(board, {}, 'b').map((o) => o.key)).toEqual(['a', 'b']);
   });
 });
 

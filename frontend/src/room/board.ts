@@ -539,11 +539,10 @@ export function inOrder(
   _local: Record<string, Local>,
   focused: string | null,
 ): BoardObject[] {
-  const shown = board.map((o) => {
-    if (!focused) return o;
-    if (o.key === focused) return { ...o, weight: 'lead' as const };
-    return o.weight === 'lead' ? { ...o, weight: 'supporting' as const } : o;
-  });
+  // FOCUS NO LONGER REORDERS (the log, 2026-09-17: "we dont need the feature
+  // where when you click the chart it rearranges"). What leads is George's.
+  void focused;
+  const shown = board;
   // WHAT LEADS COMES FIRST, in George's order after it. There is no lead row
   // any more (P2S.1(c)); leading is simply being first into the flow.
   const lead = shown.filter((o) => o.weight === 'lead');
