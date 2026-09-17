@@ -80,9 +80,10 @@ function rule(selector: string): Record<string, string> | null {
  * about a value.
  */
 const STRUCTURAL = new Set([
-  'track', 'card', 'sunk', 'ground', 'paper', 'edge', 'edge-strong',
-  'ink', 'ink-2', 'ink-3',
-  'sans', 'mono', 'ease', 'radius', 'size', 'd',
+  'track', 'card', 'sunk', 'raise', 'ground', 'paper', 'edge', 'edge-strong',
+  'ink', 'ink-2', 'ink-3', 'ink-4',
+  // The design's serif (P2S.1(a)): George's voice, and a face is not a colour.
+  'sans', 'mono', 'serif', 'ease', 'radius', 'size', 'd',
 ]);
 // `on-colour`, `on-colour-2` and `i` left this list with P2.l: the first two
 // were the ink a FULLY COLOURED tile needed and there is no longer one, and
@@ -215,7 +216,9 @@ describe('the data palette', () => {
         }
       });
     });
-    expect(grounds).toEqual(['.r-tile { var(--card) }']);
+    // P2S.1(c): a figure has NO ground at all — no box — and the one tile that
+    // keeps one (a draft, a thing you act on) keeps the one black.
+    expect(grounds).toEqual(['.r-tile { none }', '.r-tile--boxed { var(--card) }']);
   });
 
   it('leaves no magnitude channel anywhere — it was dead before it was removed', () => {

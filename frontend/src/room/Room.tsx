@@ -6,9 +6,11 @@
  * made from. It is not the last answer, and a follow-up transforms an object
  * rather than drawing a second one beneath it.
  *
- * What is yours: bring something forward, set it aside, sort a table, pick a
- * subject to talk about. All instant, all local, never sent back to George as
- * though he had decided it. Only a new FACT costs a turn.
+ * DRAWN AS THE DESIGN'S BESIDE ROOM since P2S.1 (`ops/ideal/george-ahead-of-me.html`):
+ * him, his words under him, the figures flowing on the right, a line from him
+ * to each. What is yours: open a figure, sort a table, pick a subject to talk
+ * about. All instant, all local, never sent back to George as though he had
+ * decided it. Only a new FACT costs a turn.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -16,11 +18,13 @@ import { useGeorge } from '../hooks/useGeorge';
 import { useThread } from '../hooks/useThread';
 import { threadHistory } from '../components/george/threadHistory';
 import { replaysToRestore, restoreFromPosts } from './restore';
-import { boardContext, buildBoard, dropped, folded, inOrder, shapedByReplay,
+import { boardContext, buildBoard, folded, shapedByReplay,
          type Local, type BoardObject } from './board';
 import { keepLocal, restoreLocal } from './arrangement';
 import { callOf, rowsOf, subjectOf, type AnswerTurn, type Block } from './data';
 import { Board, turnNotices } from './render';
+import { FiguresArea, Wires } from './FiguresArea';
+import { AliveMark } from './AliveMark';
 import { Reading, ReadingNext } from './Reading';
 import { FootOffers } from './FootOffers';
 import { offersOf, placement } from './actions';
@@ -86,9 +90,6 @@ export default function Room() {
   // reload it would teach you not to bother.
   const [local, setLocal] = useState<Record<string, Local>>(
     () => restoreLocal(threadId));
-  // Every arrangement you had before this one. Undo is the thing that makes
-  // rearranging safe to try.
-  const [history, setHistory] = useState<Record<string, Local>[]>([]);
   const [focused, setFocused] = useState<string | null>(null);
   // Reads re-run because somebody moved a token or a control, keyed
   // `turn:seq`. Deliberately not sent back to George as though he had decided
@@ -178,6 +179,11 @@ export default function Room() {
           : keptQuery.isError ? 'failed' : 'loaded';
   const [draft, setDraft] = useState('');
   const opened = useRef<string | null>(null);
+  // THE FOUR ELEMENTS THE LEADING LINES ARE MEASURED BETWEEN (P2S.1(c)).
+  const frameRef = useRef<HTMLDivElement>(null);
+  const himRef = useRef<HTMLDivElement>(null);
+  const wordsRef = useRef<HTMLDivElement>(null);
+  const areaRef = useRef<HTMLDivElement>(null);
 
   // A stored thread opens once, with its rows and compositions restored from
   // the posts — so the board a reload rebuilds is the board that was there.
@@ -205,12 +211,7 @@ export default function Room() {
     () => george.turns.filter((t): t is AnswerTurn => t.role === 'george'),
     [george.turns],
   );
-  // What the person KEPT never expires from the board.
-  const keptKeys = useMemo(
-    () => new Set(Object.entries(local).filter(([, l]) => l?.kept).map(([k]) => k)),
-    [local],
-  );
-  const board = useMemo(() => buildBoard(answers, keptKeys), [answers, keptKeys]);
+  const board = useMemo(() => buildBoard(answers), [answers]);
   const busy = george.busy;
   const latest = answers[answers.length - 1] ?? null;
   // WHAT CAME BEFORE THIS FINDING FOLDS TO A LINE (P1.d). Clearing handles a
@@ -328,36 +329,8 @@ export default function Room() {
 
 
   const patch = useCallback((key: string, p: Local) => {
-    setLocal((s) => {
-      setHistory((h) => [...h.slice(-19), s]);
-      return { ...s, [key]: { ...s[key], ...p } };
-    });
+    setLocal((s) => ({ ...s, [key]: { ...s[key], ...p } }));
   }, []);
-
-  const undo = useCallback(() => {
-    setHistory((h) => {
-      if (!h.length) return h;
-      setLocal(h[h.length - 1]);
-      return h.slice(0, -1);
-    });
-  }, []);
-
-  // George putting an object back is him disagreeing with your setting it
-  // aside, deliberately and by name — so it returns. Everything else you did
-  // to it survives, because he did not touch that.
-  useEffect(() => {
-    const newest = answers.length - 1;
-    setLocal((s) => {
-      let next = s;
-      for (const o of board) {
-        if (o.touched === newest && s[o.key]?.closed) {
-          if (next === s) next = { ...s };
-          next[o.key] = { ...next[o.key], closed: false };
-        }
-      }
-      return next;
-    });
-  }, [answers.length, board]);
 
   // THE PART OF THE ESTATE THE NEXT QUESTION CARRIES (P2.g) — the key, or
   // undefined on the definitions' default. Resolved against what was served,
@@ -629,8 +602,10 @@ export default function Room() {
   }, [desk.data]);
 
   // A GESTURE ON AN AGENDA ROW IS A DECISION, and George learns from it: what
-  // you keep, set aside, open, ask about or leave decides where it ranks next
-  // morning (metrics.yaml attention.learning). Recorded once per identity
+  // you open, ask about or leave decides where it ranks next morning
+  // (metrics.yaml attention.learning). The per-figure keep and dismiss went
+  // with their controls in P2S.1, so those two outcomes are no longer written
+  // from the room. Recorded once per identity
   // and outcome for this room, fire-and-forget: a record that fails must
   // never stop the gesture. Nothing is recorded for any other object.
   const decided = useRef(new Set<string>());
@@ -661,62 +636,8 @@ export default function Room() {
       ask('why?', [subjectOnBoard({ answers, board: drawn, retuned, defs: desk.data },
                                   label, dimension ?? 'store')]);
     },
-    aside: (key) => {
-      decide(board.find((o) => o.key === key), 'dismissed');
-      patch(key, { closed: true }); setFocused((f) => (f === key ? null : f));
-    },
     patch,
     retune: (key, argument, value) => { void retune(key, argument, value); },
-    // MOVING SOMETHING IS A SWAP WITH ITS NEIGHBOUR, not a free-floating
-    // index: it keeps the order dense and it means one press does exactly one
-    // visible thing, which is what makes it undoable in your head as well as
-    // in the stack.
-    shift: (key, by) => {
-      const order = inOrder(board, local, focused);
-      const at = order.findIndex((o) => o.key === key);
-      const to = at + by;
-      if (at < 0 || to < 0 || to >= order.length) return;
-      const swap = order[to];
-      setLocal((s) => {
-        setHistory((h) => [...h.slice(-19), s]);
-        return {
-          ...s,
-          [key]: { ...s[key], at: to },
-          [swap.key]: { ...s[swap.key], at },
-        };
-      });
-    },
-    // WHERE YOU PUT IT DOWN. The drag has already moved the board under the
-    // cursor by the time this runs — it is called on every crossing, not on
-    // release — so it writes the whole arrangement each time and one drag
-    // leaves one thing on the undo stack per tile it passed, not per pixel.
-    //
-    // THE REGION IS PART OF THE DROP, and this is the only place that fact
-    // exists. The top of the board is where the lead sits: something dragged
-    // up there is being made the point, and something dragged out of it is
-    // being told it is not — so the drop writes the size as well as the
-    // position, because otherwise the tile springs back to the row you just
-    // took it out of and the board looks like it is fighting you.
-    move: (key, target, after, region) => {
-      const order = inOrder(board, local, focused);
-      const at = dropped(order, key, target, after);
-      const his = board.find((o) => o.key === key)?.weight;
-      const size: Local['size'] | undefined = region === 'lead' ? 'big'
-        : his === 'lead' ? 'normal' : undefined;
-      if (!at && local[key]?.size === size) return;
-      setLocal((s2) => {
-        setHistory((h) => [...h.slice(-19), s2]);
-        const out = { ...s2 };
-        if (at) for (const [k, n] of Object.entries(at)) out[k] = { ...out[k], at: n };
-        out[key] = { ...out[key], size };
-        return out;
-      });
-    },
-    resize: (key, to) => patch(key, { size: to ?? undefined }),
-    keep: (key, kept) => {
-      if (kept) decide(board.find((o) => o.key === key), 'kept');
-      patch(key, { kept });
-    },
     // FORGET A VIEW — the memory's one write, and it is the person's.
     //
     // The row goes the moment they press it, before the server answers: the
@@ -726,7 +647,6 @@ export default function Room() {
     forget: (key, beliefId) => {
       if (!beliefId) return;
       setLocal((s) => {
-        setHistory((h) => [...h.slice(-19), s]);
         const was = s[key]?.forgot ?? [];
         return was.includes(beliefId) ? s
           : { ...s, [key]: { ...s[key], forgot: [...was, beliefId] } };
@@ -742,7 +662,6 @@ export default function Room() {
 
   useEffect(() => { keepLocal(threadId, local); }, [threadId, local]);
 
-  const aside = board.filter((o) => local[o.key]?.closed);
   const clear = useCallback(() => {
     // Put away whatever is open, INCLUDING a standing answer: dismissing it
     // has to outlive the navigate back to "/", or the cold open immediately
@@ -766,205 +685,141 @@ export default function Room() {
     setEstate(null);
     setView('talk'); setFocus(null); setJustKept(null);
     setRetuned({}); setShapes({}); setRefusal(null);
-    // WHAT YOU KEPT SURVIVES. Clearing is for the conversation, not for the
-    // things you decided to hold on to — losing those to a button meant for
-    // starting fresh is the reason people stop using a keep.
-    setLocal((s) => Object.fromEntries(
-      Object.entries(s).filter(([, v]) => v.kept)));
-    setHistory([]);
+    setLocal({});
     navigate('/george');
   }, [george, navigate, threadId, answers, board]);
 
   return (
     <div className="room">
-      <Rail busy={busy} needsYou={approvals.data?.length} onNew={clear} />
+      <Rail busy={busy} needsYou={approvals.data?.length} onNew={clear}
+            estate={(
+              // WHICH BUSINESS (P2.g) — at the top of the sidebar, as the
+              // design draws it. Set before the question, about the next thing
+              // said and not about what is drawn.
+              <EstateSwitch defs={desk.data} picked={estate} failed={desk.isError}
+                            onPick={(key) => setEstate(key)} />
+            )} />
 
+      {/* THE BESIDE ROOM (P2S.1(b)) — the design's composition, ported from
+          `ops/ideal/george-ahead-of-me.html`: him top-left, his words under
+          him set toward the figures, the figures filling the right, and a
+          leading line from him to each. Two fixed columns, 580 and 940,
+          centred in the room; the sidebar slides it and never shrinks it. */}
       <main className="r-main">
-        {/* ONE COLUMN, CENTRED, AND IT IS THE MEASURE THE COMPOSER USES.
-            A wrapper rather than a rule on every child: the reading has its
-            own measure (66ch, because it is prose) and forcing the page's
-            onto it would run his words the full width of the board. Reported
-            2026-09-14 — "at 100% size theres lots of empty space on the right
-            and its not centered". See `--measure` in room.css. */}
-        <div className="r-measure">
-        {/* WHICH BUSINESS (P2.g). Above everything, including the thread's own
-            header, because it is set BEFORE the question rather than read
-            after the answer — and unlike everything below it, it is about the
-            NEXT thing said and not about what is drawn. */}
-        <EstateSwitch defs={desk.data} picked={estate} failed={desk.isError}
-                      onPick={(key) => setEstate(key)} />
-        {/* THE THREAD'S OWN HEADER (P2.a), and the first thing on the column
-            because it says what you are looking at before it says anything
-            about the world. Not drawn on an empty room: there is no thread to
-            have three views of, and "not kept" about nothing is noise. */}
-        {!empty && (
-          <ThreadHeader view={view} kept={kept} state={keptState}
-                        onView={(to) => { setView(to); if (to !== 'behind') setFocus(null); }} />
-        )}
-        {/* Above the board, always — what happened while you were away comes
-            before this morning's figures, the same way a caveat does. */}
-        <Noticed onLookInto={(item) => navigate(`/w/${item.thread_id}`, {
-          state: { ask: 'what happened here? look into it.' },
-        })} />
+        <div className="r-beside" ref={frameRef}>
+          <Wires frameRef={frameRef} markRef={himRef} wordsRef={wordsRef} areaRef={areaRef}
+                 version={`${answers.length}:${view}:${drawn.length}:${busy}`} />
 
-        {empty ? (
-          <Opening loading={Boolean(threadId) && thread.loading} />
-        ) : (
-          <>
-            <Working turn={latest} live={busy} />
-            {/* WHAT THE WORK WAS, ONCE IT IS OVER (P1.k). The trail above is
-                live and goes when the turn does; this is what is left of it —
-                four counts off the turn's own frames, the steps one tap
-                below, and the whole thread's reads one tap sideways. */}
-            {!busy && (
-              <WorkLine turn={latest}
-                        onBehind={view === 'behind' ? undefined
-                          : () => { setView('behind'); setFocus(null); }} />
-            )}
-            {/* SINCE YOU LAST LOOKED. A count of answers with a time after
-                the mark this browser kept — derived, never guessed (UI rule
-                8) — and only when there is one. What it counts is what
-                lands with the glow below. */}
-            {arrived > 0 && !busy && (
-              <p className="r-label r-since">
-                since you last looked · {arrived} {arrived === 1 ? 'answer' : 'answers'} arrived
-              </p>
-            )}
-            {view === 'behind' ? (
-              // A VIEW, NOT A PANEL. The evidence replaces the conversation
-              // rather than sitting under it: a list of every read in the
-              // thread beneath the answer it belongs to would be a page you
-              // scroll past. P2.a made it one of the header's three.
-              <BehindIt answers={answers} focus={focus}
-                        onBack={() => { setView('talk'); setFocus(null); }} />
-            ) : view === 'replay' ? (
-              // THE WORK, WALKED (P2.e). A view rather than a panel, for the
-              // same reason Behind it is one: it is an account of the whole
-              // conversation and it replaces the conversation while you read
-              // it. Nothing on this path asks anything — every rung is off
-              // frames that already arrived.
-              <Replay turns={george.turns} onBack={() => setView('talk')} />
-            ) : view === 'page' ? (
-              // THE THIRD VIEW: what this thread would be if it were kept, and
-              // what it would not take. A draft of something that already
-              // exists — the gesture names it, it does not assemble it.
-              <ThreadPage turns={george.turns} kept={kept}
-                          threadId={threadId ?? george.threadId ?? null}
-                          onKept={(page) => setJustKept({ pageId: page.id, title: page.title })} />
+          <div className="r-him" ref={himRef}>
+            <AliveMark />
+          </div>
+
+          <div className="r-words" ref={wordsRef}>
+            {empty ? (
+              <Opening loading={Boolean(threadId) && thread.loading} />
             ) : (
-            <>
-              {/* THE READING, ABOVE THE BOARD, ALWAYS. His words are not an
-                  object and cannot be forgotten into one: whatever he says
-                  this turn is drawn here, with the turn's caveats above it,
-                  and the objects below are its evidence. See Reading.tsx. */}
-              {/* WHAT CAME BEFORE IT, folded to one quiet line — above the
-                  finding, because that is the order they happened in. */}
-              <Earlier count={earlier.length} open={unfolded}
-                       onToggle={() => setUnfolded((o) => !o)} />
-              <Reading text={latest?.text} notices={notices} reading={latest?.reading}
-                       calls={latest?.toolCalls}
-                       onFigure={(seq) => {
-                         setFocus(`${answers.length - 1}:${seq}`);
-                         setView('behind');
-                       }} />
-              {/* WHAT THESE FIGURES ARE OF, AND HOW TO MOVE IT (P1.j). The
-                  arguments the loop accepted, drawn between his reading and the
-                  evidence it is about — which is where they are read, and where
-                  what they change is directly below them. Tapping one is a
-                  replay; typing one of the same words is the same act. */}
-              <Tokens
-                tokens={tokens}
-                correction={desk.data?.fragments?.correction?.token}
-                moving={moving > 0}
-                refusal={refusalForPerson(refusal, desk.data?.replay)}
-                detailWord={String(desk.data?.replay?.refused_detail_word ?? 'why')}
-                onMove={(token, alternative) => { void move(token, alternative); }}
-                onCorrect={() => {
-                  const asks = desk.data?.fragments?.correction?.asks;
-                  if (asks) askGeorge(asks);
-                }}
-              />
-              <Board
-                answers={answers}
-                offers={offers.onRows}
-                board={shapedByReplay(drawn, shapes)}
-                local={local}
-                focused={focused}
-                selection={selection.map((s) => s.label)}
-                live={busy}
-                retuned={retuned}
-                on={on}
-                seenUpTo={firstUnseen(answers, sinceAt)}
-              />
-              {/* ONE SENTENCE, ALWAYS LAST. It is the third slot of the reading
-                  and it is drawn here rather than up there, because it is read
-                  after the evidence: the figures, then what to do about them. */}
-              <ReadingNext reading={latest?.reading} />
-              {/* AND WHAT TO DO ABOUT ALL OF IT (P2.d). Only the offers no row
-                  on the board could carry: an offer about one shop is drawn on
-                  that shop, and this is where the ones about the answer go —
-                  beside `next`, because that is where "what now" is read.
-                  Nothing is lost between the two, which is what `placement`
-                  deciding both halves at once buys. */}
-              <FootOffers offers={offers.foot} answers={answers} on={on} />
-            </>
+              <>
+                {/* SINCE YOU LAST LOOKED. A count of answers with a time after
+                    the mark this browser kept — derived, never guessed (UI rule
+                    8) — one quiet line above the turn's caveat, only when there
+                    is one. */}
+                {arrived > 0 && !busy && (
+                  <p className="r-label r-since">
+                    since you last looked · {arrived} {arrived === 1 ? 'answer' : 'answers'} arrived
+                  </p>
+                )}
+                {/* HIS WORDS, UNDER HIM: the turn's caveat, the claim, the
+                    standing text with read superscripts, and what he'd do next.
+                    Not a tile and not narrated. See Reading.tsx. */}
+                <Reading text={latest?.text} notices={notices} reading={latest?.reading}
+                         calls={latest?.toolCalls}
+                         onFigure={(seq) => {
+                           setFocus(`${answers.length - 1}:${seq}`);
+                           setView('behind');
+                         }} />
+                <ReadingNext reading={latest?.reading} />
+                {/* WHAT TO DO ABOUT ALL OF IT (P2.d) — the offers no row on a
+                    figure could carry, beside `next`, where "what now" is read. */}
+                <FootOffers offers={offers.foot} answers={answers} on={on} />
+              </>
             )}
-          </>
-        )}
-
-        {latest?.error && <p className="r-note" style={{ marginTop: 18 }}>{latest.error}</p>}
-
-        {/* UNDO IS WHAT MAKES REARRANGING SAFE TO TRY. It shows only when
-            there is something to undo — a permanent, always-dead control
-            teaches you it does nothing. It undoes YOUR changes to the board,
-            never George's reads: what he found is not yours to take back. */}
-        {history.length > 0 && (
-          <div style={{ marginTop: 26 }}>
-            <button type="button" className="r-chip" onClick={undo}>
-              ↺ undo {history.length > 1 ? `(${history.length})` : ''}
-            </button>
+            {latest?.error && <p className="r-note r-failed">{latest.error}</p>}
           </div>
-        )}
 
-        {aside.length > 0 && (
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 30 }}>
-            <span className="r-label">set aside</span>
-            {aside.map((o) => (
-              <button key={o.key} type="button" className="r-chip"
-                      onClick={() => patch(o.key, { closed: false })}>
-                {o.key} ↩
-              </button>
-            ))}
+          <div className="r-right">
+            {!empty && (
+              <div className="r-right-head">
+                {/* THE THREAD'S OWN HEADER (P2.a), beside the line describing
+                    the work (P1.k) — it describes the thread, not the answer. The
+                    four views are on trial: the design has no tabs, and they
+                    stay until the owner points. */}
+                <ThreadHeader view={view} kept={kept} state={keptState}
+                              onView={(to) => { setView(to); if (to !== 'behind') setFocus(null); }} />
+                {!busy && (
+                  <WorkLine turn={latest}
+                            onBehind={view === 'behind' ? undefined
+                              : () => { setView('behind'); setFocus(null); }} />
+                )}
+              </div>
+            )}
+            {/* WHAT HE NOTICED UNASKED, above the figures when there is any. */}
+            <Noticed onLookInto={(item) => navigate(`/w/${item.thread_id}`, {
+              state: { ask: 'what happened here? look into it.' },
+            })} />
+
+            <FiguresArea areaRef={areaRef}>
+              {view === 'behind' ? (
+                <BehindIt answers={answers} focus={focus}
+                          onBack={() => { setView('talk'); setFocus(null); }} />
+              ) : view === 'replay' ? (
+                <Replay turns={george.turns} onBack={() => setView('talk')} />
+              ) : view === 'page' ? (
+                <ThreadPage turns={george.turns} kept={kept}
+                            threadId={threadId ?? george.threadId ?? null}
+                            onKept={(page) => setJustKept({ pageId: page.id, title: page.title })} />
+              ) : empty ? null : (
+                <>
+                  {/* THREE RENDERINGS, NEVER TWO (UI rule 8). While he is
+                      reading and nothing of this turn has landed, the figures
+                      area says so — the reads running, each as it lands —
+                      instead of an empty column that looks finished. A read
+                      that failed is drawn as that, in the trail. */}
+                  {busy && <Working turn={latest} live={busy} />}
+                  <Earlier count={earlier.length} open={unfolded}
+                           onToggle={() => setUnfolded((o) => !o)} />
+                  <Board
+                    answers={answers}
+                    offers={offers.onRows}
+                    board={shapedByReplay(drawn, shapes)}
+                    local={local}
+                    focused={focused}
+                    selection={selection.map((s) => s.label)}
+                    live={busy}
+                    retuned={retuned}
+                    on={on}
+                    seenUpTo={firstUnseen(answers, sinceAt)}
+                  />
+                </>
+              )}
+            </FiguresArea>
           </div>
-        )}
         </div>
       </main>
 
-      {/* THE LINE YOU TALK ON, AND THE TWO DOORS ONTO A SUBJECT (P2.c).
-          It is a component now because the `@` menu has to be held by a test
-          and Room.tsx is rendered by none. What sits above it is what the
-          question will travel with: subjects as ids, the page in scope, and
-          anything named that binds neither. */}
+      {/* THE LINE YOU TALK ON (P2.c), and above it what the question will
+          travel with. The read-as chips sit here since P2S.1(h): the design
+          draws "last 90 days", "products", "why?" on the composer line, and
+          tapping one is the same replay path it always was — no model turn. */}
       <Composer
         draft={draft}
         onDraft={setDraft}
         subjects={selection}
         scope={scope}
         named={named}
-        // WHICH BUSINESS, WHERE THE REST OF WHAT TRAVELS IS DRAWN (P2.g). The
-        // switch itself is at the top of the column, which scrolls away on a
-        // full board — and what the question carries has to be visible at the
-        // moment it is sent. Removing it here is the same gesture as pressing
-        // the default pill up there.
         estate={estateChip}
         onUnestate={() => setEstate(null)}
         defs={desk.data}
         busy={busy}
-        // WHAT THE GREY COMPLETION IS BUILT FROM (P2.d) — all of it already on
-        // screen. The tokens are the scope the work is on, so a completion off
-        // one is a REPLAY; the subjects are what the board is drawing; the
-        // pages are the caller's own, so one naming a subject can complete.
-        // No new read on this path and no model on it either.
         tokens={tokens}
         drawn={boardSubjects}
         pages={ownPages}
@@ -976,6 +831,20 @@ export default function Room() {
         onSend={() => ask(draft)}
         onStop={() => george.cancel()}
         onClear={() => { setDraft(''); setSelection([]); setScope(null); setNamed([]); }}
+        steer={(
+          <Tokens
+            tokens={tokens}
+            correction={desk.data?.fragments?.correction?.token}
+            moving={moving > 0}
+            refusal={refusalForPerson(refusal, desk.data?.replay)}
+            detailWord={String(desk.data?.replay?.refused_detail_word ?? 'why')}
+            onMove={(token, alternative) => { void move(token, alternative); }}
+            onCorrect={() => {
+              const asks = desk.data?.fragments?.correction?.asks;
+              if (asks) askGeorge(asks);
+            }}
+          />
+        )}
       />
     </div>
   );

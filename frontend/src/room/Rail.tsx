@@ -1,35 +1,38 @@
 /**
- * The rail — the only permanent thing on screen.
+ * THE SIDEBAR — what persists, on the left edge, collapsible (P2S.1(h)).
  *
- * The way back to Supabot, George's mark, what needs you, the pages you kept
- * and the rules that run. Everything else is one surface that becomes
- * whatever you are doing.
+ * The design's own (`.side` in `ops/ideal/george-ahead-of-me.html`), after the
+ * owner's two fixes: *"too wide … should be space of the sides for a sidebar
+ * for pages workflows, automations etc"*, then *"make the sidebar to the left
+ * edge and collapseable"*. It is a list of things you OWN — pages, systems,
+ * automations, people — with a pip saying running, off or needs you, not a
+ * menu of screens. Every item opens what it names.
  *
- * GEORGE TAKES THE WHOLE SCREEN (the owner, 2026-09-13: "when you open george
- * in supabot tab it should cover the whole screen, no more supabot, but there
- * should be a back button on sidebar"). Opening George from the Supabot
- * sidebar leaves that chrome behind entirely, so this rail is the only
- * navigation there is while you are here — which is why the back arrow is its
- * first item rather than an afterthought at the bottom.
+ * OPEN BY DEFAULT on a window wider than 820px, REMEMBERED per browser, and
+ * `[` toggles it anywhere but in a text field. Opening it SLIDES the room and
+ * never narrows it (room.css, `beside.composition`).
  *
- * Drawing George inside the Supabot chrome was tried for one commit and
- * reverted: two vertical rails side by side, and the board — which wants the
- * width of the screen — squeezed into a content column.
+ * The file keeps its old name so its exemption in `accentUse.test.ts` still
+ * reads true: the needs-you count is still here, and still the only accent.
  *
- * The mark draws a real state and nothing else: it breathes while a turn is
- * running and is still when it is not. There is no caption under it — its
- * behaviour is the caption. "Waiting for you" has no frame behind it and is
- * not drawn.
+ * NO COUNT AND NO LIST UNTIL SOMETHING IS LOADED (UI rule 8). Each group
+ * draws *loading*, *could not be read* and what came back as three different
+ * things; "no pages yet" is said only from a loaded, empty result.
  *
- * NO COUNT UNTIL SOMETHING IS LOADED. "Nothing needs you" is an assertion
- * about the world, and this rail never makes one it has not checked — the
- * badge appears when the approvals query has answered, and not before.
+ * THE WAY OUT COMES FIRST: George takes the whole screen, so the arrow back to
+ * Supabot BI is the only route to the Dashboard while you are here.
  */
+import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { listPages } from '../services/pagesApi';
+import { listWorkflows } from '../services/workflowsApi';
+import { listStanding } from '../services/standingApi';
+import { useAuthStore } from '../stores/authStore';
 import { useRoomTheme } from './theme';
 
 export interface RailProps {
-  /** True while a turn is running. The mark's only input. */
+  /** True while a turn is running. */
   busy: boolean;
   /**
    * How many decisions are waiting, once that has actually been read.
@@ -37,73 +40,188 @@ export interface RailProps {
    */
   needsYou?: number;
   onNew(): void;
+  /** The business switch (P2.g), drawn at the top as the design draws it. */
+  estate?: ReactNode;
 }
 
-export function Rail({ busy, needsYou, onNew }: RailProps) {
-  const navigate = useNavigate();
-  const [theme, toggleTheme] = useRoomTheme();
+const SIDE_KEY = 'george.side';
+
+/** Open unless the person closed it; closed by default on a narrow window. */
+export function restoreSide(width = typeof window === 'undefined' ? 1920 : window.innerWidth): boolean {
+  try {
+    const got = localStorage.getItem(SIDE_KEY);
+    if (got === 'open') return true;
+    if (got === 'closed') return false;
+  } catch { /* no storage: the width decides */ }
+  return width > 820;
+}
+
+/** Whether a key press belongs to a field someone is typing in. */
+function typing(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el) return false;
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+}
+
+export function useSide(): [boolean, (open: boolean) => void] {
+  const [open, setOpen] = useState<boolean>(() => restoreSide());
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute('data-side', open ? 'open' : 'closed');
+    return () => root.removeAttribute('data-side');
+  }, [open]);
+  const set = (next: boolean) => {
+    setOpen(next);
+    try { localStorage.setItem(SIDE_KEY, next ? 'open' : 'closed'); } catch { /* the room still slides */ }
+  };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '[' || e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
+      e.preventDefault();
+      setOpen((was) => {
+        try { localStorage.setItem(SIDE_KEY, was ? 'closed' : 'open'); } catch { /* as above */ }
+        return !was;
+      });
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+  return [open, set];
+}
+
+/** Today, in Manila, as the design writes it: "Tuesday 16 September · 08:04". */
+function today(now: Date): string {
+  const zone = 'Asia/Manila';
+  const day = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: zone });
+  const time = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: zone });
+  return `${day.replace(',', '')} · ${time}`;
+}
+
+function useNow(): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(t);
+  }, []);
+  return now;
+}
+
+/** One group: a heading, and its three renderings. */
+function Group<T>({ title, query, empty, children }: {
+  title: string;
+  query: { isPending: boolean; isError: boolean; data?: T[] };
+  empty: string;
+  children: (rows: T[]) => ReactNode;
+}) {
   return (
-    <nav className="r-rail" aria-label="George">
-      {/* THE WAY OUT, AND IT COMES FIRST. George takes the whole screen — the
-          Supabot chrome is not drawn behind it — so this is the only route
-          back to the Dashboard, the Warehouse and every other page. It sits
-          at the top because that is where a person looks for a way back, and
-          it is the one item here that leaves George at all.
-          Before 2026-09-12 it did not exist, and the rest of Supabot BI was
-          reachable from nowhere a person stood: still routed, still allowed,
-          and invisible. A surface you cannot leave is not a page. */}
-      <NavLink to="/dashboard" className="r-rail-btn" title="Back to Supabot"
-               aria-label="Back to Supabot BI" style={{ marginTop: 2 }}>
-        <span aria-hidden="true">←</span>
-      </NavLink>
+    <div className="r-side-grp">
+      <h2 className="r-side-h">{title}</h2>
+      {query.isPending ? <p className="r-side-quiet">loading</p>
+        : query.isError ? <p className="r-side-quiet">could not be read</p>
+          : (query.data ?? []).length === 0 ? <p className="r-side-quiet">{empty}</p>
+            : children(query.data ?? [])}
+    </div>
+  );
+}
 
-      <button
-        type="button"
-        className="r-rail-btn"
-        onClick={() => navigate('/george')}
-        aria-label="George — the board"
-        title="The board"
-      >
-        <span className={`r-mark ${busy ? 'r-mark--busy' : ''}`} />
-      </button>
+export function Rail({ busy, needsYou, onNew, estate }: RailProps) {
+  const navigate = useNavigate();
+  const [open, setOpen] = useSide();
+  const [theme, toggleTheme] = useRoomTheme();
+  const now = useNow();
+  const user = useAuthStore((s) => s.user);
 
-      <NavLink to="/inbox" className="r-rail-btn" title="Needs you"
-               aria-label={needsYou ? `Needs you, ${needsYou} waiting` : 'Needs you'}>
-        {({ isActive }) => (
-          <>
-            <span aria-hidden="true" style={{ opacity: isActive ? 1 : 0.85 }}>▲</span>
-            {needsYou !== undefined && needsYou > 0 && (
-              <span className="r-rail-count">{needsYou}</span>
-            )}
-          </>
-        )}
-      </NavLink>
+  const pages = useQuery({ queryKey: ['pages'], queryFn: listPages, staleTime: 30_000, retry: false });
+  const systems = useQuery({ queryKey: ['workflows'], queryFn: listWorkflows, staleTime: 30_000, retry: false });
+  const standing = useQuery({ queryKey: ['standing'], queryFn: listStanding, staleTime: 60_000, retry: false });
 
-      <NavLink to="/pages" className="r-rail-btn" title="Kept" aria-label="Kept pages">
-        <span aria-hidden="true">▣</span>
-      </NavLink>
+  return (
+    <>
+      <nav className="r-side" aria-label="George" data-open={open ? 'yes' : 'no'} aria-hidden={!open}>
+        <button type="button" className="r-side-collapse" title="Collapse the sidebar  ["
+                aria-label="Collapse the sidebar" onClick={() => setOpen(false)}>‹</button>
 
-      {/* Running — the saved rules and what they last did. It was routed but
-          reachable only from one link inside Inbox, which is not navigation:
-          a person who had not opened an approval could not find it at all. */}
-      <NavLink to="/workflows" className="r-rail-btn" title="Running"
-               aria-label="Running — saved rules">
-        <span aria-hidden="true">⟳</span>
-      </NavLink>
+        {/* THE WAY OUT, FIRST. See the header. */}
+        <NavLink to="/dashboard" className="r-side-back" title="Back to Supabot"
+                 aria-label="Back to Supabot BI">← Supabot</NavLink>
 
-      <span style={{ flex: 1 }} />
+        <button type="button" className="r-side-name" onClick={() => navigate('/george')}
+                title="The room" aria-label="George — the room">
+          George{busy && <span className="r-side-busy" aria-label="reading"> · reading</span>}
+        </button>
+        <p className="r-side-date">{today(now)}</p>
 
-      <button type="button" className="r-rail-btn r-rail-btn--theme" onClick={toggleTheme}
-              title={theme === 'dark' ? 'Lights on' : 'Lights off'}
-              aria-label={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
-              aria-pressed={theme === 'light'}>
-        <span aria-hidden="true">{theme === 'dark' ? '\u263c' : '\u263e'}</span>
-      </button>
+        {estate}
 
-      <button type="button" className="r-rail-btn" onClick={onNew} title="Clear the board"
-              aria-label="Clear the board">
-        <span aria-hidden="true">＋</span>
-      </button>
-    </nav>
+        {/* NEEDS YOU — the one accent on this side of the room, and only for a
+            loaded, non-zero count. */}
+        <NavLink to="/inbox" className="r-side-it r-side-need" title="Needs you"
+                 aria-label={needsYou ? `Needs you, ${needsYou} waiting` : 'Needs you'}>
+          <i className={needsYou ? 'r-pip r-pip--need' : 'r-pip'} />
+          <span>Needs you</span>
+          {needsYou !== undefined && needsYou > 0 && <small className="r-side-count">{needsYou}</small>}
+        </NavLink>
+
+        <Group title="Pages" query={pages} empty="nothing kept yet">
+          {(rows) => rows.map((page) => (
+            <NavLink key={page.id} to={`/pages/${page.id}`} className="r-side-it" title={page.purpose ?? page.title}>
+              <i className="r-pip" />
+              <span>{page.title}</span>
+              <small>{page.pins}</small>
+            </NavLink>
+          ))}
+        </Group>
+
+        <Group title="Systems" query={systems} empty="none built yet">
+          {(rows) => rows.map((w) => {
+            const v = w.current_version?.version;
+            return (
+              <NavLink key={w.id} to="/workflows" className="r-side-it" title={w.name}>
+                <i className={w.status === 'active' ? 'r-pip r-pip--run' : 'r-pip r-pip--off'} />
+                <span>{w.name}</span>
+                <small>{[v ? `v${v}` : null, w.status].filter(Boolean).join(' · ')}</small>
+              </NavLink>
+            );
+          })}
+        </Group>
+
+        <Group title="Automations · watches" query={standing} empty="none switched on">
+          {(rows) => rows.map((q) => (
+            <NavLink key={q.id} to="/workflows" className="r-side-it" title={q.question}>
+              <i className={q.state === 'switched off' ? 'r-pip r-pip--off' : 'r-pip r-pip--run'} />
+              <span>{q.question}</span>
+              <small>{q.state === 'switched off' ? 'off' : q.when}</small>
+            </NavLink>
+          ))}
+        </Group>
+
+        {/* PEOPLE — whoever the system already knows, which today is the person
+            signed in. Nobody else is invented to fill the list (S.6). */}
+        <div className="r-side-grp">
+          <h2 className="r-side-h">People</h2>
+          {user ? (
+            <NavLink to="/settings" className="r-side-it" title="Your account">
+              <i className="r-pip" />
+              <span>{user.display_name || user.username}</span>
+              <small>{user.role}</small>
+            </NavLink>
+          ) : <p className="r-side-quiet">nobody signed in</p>}
+        </div>
+
+        <div className="r-side-foot">
+          <button type="button" className="r-side-tool" onClick={onNew} title="Clear the room"
+                  aria-label="Clear the room">＋ new</button>
+          <button type="button" className="r-side-tool" onClick={toggleTheme}
+                  title={theme === 'dark' ? 'Lights on' : 'Lights off'}
+                  aria-label={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
+                  aria-pressed={theme === 'light'}>
+            {theme === 'dark' ? '☼' : '☾'}
+          </button>
+        </div>
+      </nav>
+      <button type="button" className="r-side-reopen" title="Open the sidebar  ["
+              aria-label="Open the sidebar" hidden={open} onClick={() => setOpen(true)}>›</button>
+    </>
   );
 }

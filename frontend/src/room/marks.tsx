@@ -38,7 +38,7 @@ import {
   type Change,
 } from './data';
 import {
-  changeIfAny, colourOf, figureOf, hasBaseline, markFor, subtitleFor, timeKeyOf, titleFor,
+  changeIfAny, colourOf, figureOf, hasBaseline, markFor, timeKeyOf, titleFor,
   type DataColour, type Mark,
 } from './catalogue';
 import {
@@ -519,7 +519,6 @@ export function MarkBlock(p: TileProps) {
   const meta = call?.result?.meta ?? null;
   if (!rows.length) return <Missing what="rows" />;
   const mark: Mark = markFor(p.o, rows);
-  const subtitle = subtitleFor(meta, rows);
   const lit = !p.earlier && p.o.weight !== 'quiet';
   // WHAT THIS BLOCK IS ABOUT IS ITS TITLE, NOT ITS COLOUR (P2.l). The tile used
   // to wear the subject's own hue as an edge and a wash; a board of seven shops
@@ -570,7 +569,6 @@ export function MarkBlock(p: TileProps) {
              onOpen={() => p.on.open(p.o.key)}>
         <OwnCaveat meta={meta} />
         <p className="r-mk-title">{titleFor(p.o, meta)}{p.earlier ? ' · from earlier' : ''}</p>
-        {subtitle && <p className="r-mk-sub">{subtitle}</p>}
         <div className="r-mk-body" data-mark={mark}>
           {mark === 'figure' && <Figure {...p} rows={rows} meta={meta} />}
           {mark === 'dumbbell' && <Dumbbell rows={rows} meta={meta} o={p.o} {...offering} />}

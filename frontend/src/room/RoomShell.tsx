@@ -41,7 +41,9 @@ export function RoomShell({ children }: { children: ReactNode }) {
     <div className="room">
       <Rail busy={george.busy} needsYou={approvals.data?.length}
             onNew={() => navigate('/george')} />
-      <main className="r-main">
+      {/* A LIST, NOT THE BESIDE ROOM: the same ground, sidebar and type, and a
+          column centred in the room the sidebar leaves (P2S.1(h)). */}
+      <main className="r-main r-main--list">
         <div className="r-column">{children}</div>
       </main>
     </div>

@@ -12,9 +12,7 @@
  * None of these components computes a business figure. They pick a row, read a
  * value the tool already returned, and format it.
  */
-import {
-  useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode,
-} from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import type { GeorgeNotice, ToolMeta } from '../types/george';
 import type { BoardObject, Local } from './board';
 import type { ToolCall } from '../types/george';
@@ -23,7 +21,6 @@ import {
   type AnswerTurn, type Change, type Dimension,
 } from './data';
 import { directionRgb } from './identity';
-import type { Region } from './drag';
 import { Spec } from './Spec';
 import { cost, says } from './actions';
 import type { ActionOffer } from '../types/george';
@@ -35,24 +32,7 @@ export interface TileActions {
   pick(subject: string, dimension: Dimension | null): void;
   /** Ask George about this one thing, now. */
   why(subject: string, dimension: Dimension | null): void;
-  aside(key: string): void;
   patch(key: string, local: Local): void;
-  /**
-   * Move it earlier or later than where George put it.
-   *
-   * The keyboard's way in. Dragging is the way anybody actually does it, but
-   * a drag cannot be performed without a pointer, and a board you can only
-   * arrange with a mouse is a board somebody cannot arrange.
-   */
-  shift(key: string, by: -1 | 1): void;
-  /** Put it down next to `target` — the drag's way in. See drag.ts. */
-  move(key: string, target: string, after: boolean, region: Region): void;
-  /** The grip's pointer handlers, supplied by the board that owns the drag. */
-  grip?(key: string): { onPointerDown(e: ReactPointerEvent): void };
-  /** Make it bigger or smaller than the weight he gave it. */
-  resize(key: string, to: 'big' | 'small' | null): void;
-  /** Hold on to it: a kept object survives clearing the room. */
-  keep(key: string, kept: boolean): void;
   /**
    * Re-run the read an object draws from with ONE scope argument changed.
    * No model turn: this is the desk replay's path, which is why a control
@@ -152,16 +132,25 @@ export function Offer({ offer, onTake }: {
  * passed one on 2026-09-14, so `--i` has been 0 on every tile since, and the
  * dogfood log still described the brightness as a live meaning a month later.
  */
-export function Shell({ quiet, landing, delay, picked, children, onOpen }: {
+export function Shell({ quiet, landing, delay, picked, boxed, children, onOpen }: {
   quiet?: boolean;
   landing: boolean;
   delay: number;
   picked?: boolean;
+  /**
+   * A BOX, ONLY FOR A THING YOU ACT ON (P2S.1(c)). The owner, three times:
+   * *"i kinda dont like how its inside a box visually"*, *"the charts still
+   * feel like they are in boxes"*, *"it still feels like its in squares"*. The
+   * design keeps an edge only where the thing genuinely has one — a draft you
+   * edit, an approval you decide — and a reading of a read is not that.
+   */
+  boxed?: boolean;
   children: ReactNode;
   onOpen?: () => void;
 }) {
   const cls = [
     'r-tile',
+    boxed ? 'r-tile--boxed' : '',
     quiet ? 'r-tile--quiet' : '',
     picked ? 'r-tile--picked' : '',
     landing ? 'r-landing' : '',
@@ -220,76 +209,13 @@ export function Receipts({ meta, tool }: {
   return <p className="r-src" style={{ marginTop: 12 }} title={receiptsDetail(meta)}>{line}</p>;
 }
 
-/**
- * The three things the owner asked to be able to do to an object without
- * typing a sentence. Two are instant and local; only `why` costs a turn,
- * because only `why` needs a new fact.
+/*
+ * `Acts` WAS HERE — open, compare, why, a drag grip, bigger, smaller, keep and
+ * set aside under every object. Gone with P2S.1 at the owner's word
+ * (2026-09-17, *"remove"*): the figures flow, so nothing is placed by hand,
+ * and keeping is said or done from the thread's Page view. Opening a subject
+ * and asking why are still a tap on the row itself.
  */
-/**
- * What you can do to an object.
- *
- * TWO KINDS OF ACTION, AND THE DIFFERENCE IS THE POINT. `open`, `compare` and
- * `why` are questions — they may cost a turn and they change what George is
- * looking at. The rest change YOUR VIEW and nothing else: they are never sent
- * back to him as though he had decided them, they cost nothing, and they are
- * instant.
- *
- * He arranges the board because he knows what matters. You rearrange it
- * because you know what you want to look at, and those are different
- * questions — so both answers survive, yours on top.
- *
- * DRAWN BY THE BOARD, UNDER EVERY OBJECT. It used to be called by two tile
- * kinds out of fourteen — so on a real board of ten things, nine of them
- * could not be moved, kept, resized or set aside at all, and the one that
- * could was whichever happened to be a subject. Arranging is a property of
- * being ON the board, not of being a particular shape, so the board draws it.
- * `compare` and `why` are the exceptions and stay conditional: they are
- * questions about a subject, and an object with no subject has none to ask.
- */
-export function Acts({ subject, dimension, o, on, local }: {
-  subject: string | null; dimension: Dimension | null; o: BoardObject;
-  on: TileActions; local?: Local;
-}) {
-  const size = local?.size;
-  return (
-    <div className="r-acts" onClick={(e) => e.stopPropagation()}>
-      <button type="button" className="r-act" onClick={() => on.open(o.key)}>open</button>
-      {subject && (
-        <>
-          <button type="button" className="r-act" onClick={() => on.pick(subject, dimension)}>compare</button>
-          <button type="button" className="r-act" onClick={() => on.why(subject, dimension)}>why</button>
-        </>
-      )}
-      <span className="r-acts-mine">
-        {/* PICK IT UP. Not a button that moves it one place — a handle you
-            drag, on a mouse anywhere on the tile and on a finger here. The
-            arrow keys do the same thing one step at a time, because a drag
-            needs a pointer and arranging the board should not. */}
-        <button type="button" className="r-act r-grip" title="Drag to move it"
-                aria-label="Move it" {...(on.grip?.(o.key) ?? {})}
-                onKeyDown={(e) => {
-                  const by = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1
-                    : e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : 0;
-                  if (!by) return;
-                  e.preventDefault();
-                  on.shift(o.key, by as -1 | 1);
-                }}>⠿</button>
-        <button type="button" className="r-act" aria-pressed={size === 'big'}
-                title="Give it the room" aria-label="Bigger"
-                onClick={() => on.resize(o.key, size === 'big' ? null : 'big')}>＋</button>
-        <button type="button" className="r-act" aria-pressed={size === 'small'}
-                title="Push it down" aria-label="Smaller"
-                onClick={() => on.resize(o.key, size === 'small' ? null : 'small')}>－</button>
-        <button type="button" className="r-act" aria-pressed={Boolean(local?.kept)}
-                title="Hold on to it" aria-label="Keep"
-                onClick={() => on.keep(o.key, !local?.kept)}>
-          {local?.kept ? 'kept' : 'keep'}
-        </button>
-      </span>
-      <button type="button" className="r-act" onClick={() => on.aside(o.key)}>set aside</button>
-    </div>
-  );
-}
 
 export function Missing({ what }: { what: string }) {
   return (
@@ -425,7 +351,7 @@ export function DraftTile(p: TileProps) {
   const total = rows.reduce((s, row, n) => s + (qty[n] ?? suggested(row)), 0);
 
   return (
-    <Shell landing={p.landing} delay={p.delay}>
+    <Shell boxed landing={p.landing} delay={p.delay}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
         <div>
           <p className="r-label">draft order{meta?.supplier ? ` · ${meta.supplier}` : ''}</p>

@@ -262,9 +262,29 @@ describe('what is held above the line', () => {
     expect(chips.some((c) => c.includes('Greenhills'))).toBe(false);
   });
 
-  it('holds nothing above the line when only the board has names', () => {
+  it('holds no chip above the line when only the board has names — only the hint', () => {
+    // P2S.1(h): with nothing picked, the design's one line says how to give the
+    // line something. A name the board is drawing is not a thing picked.
     mount({ subjects: [], drawn: ['Greenhills', 'Rockwell'] });
-    expect(document.querySelector('.r-chips')).toBeNull();
+    expect(document.querySelectorAll('.r-chips button')).toHaveLength(0);
+    expect(document.querySelector('.r-refs-hint')?.textContent)
+      .toBe('tap anything above to bring it here, then say what you mean');
+  });
+
+  it('draws the read-as chips ON the line, beside send (P2S.1(h))', () => {
+    // The design draws "why?", "products" and "last 90 days" on the composer
+    // line. The chips are the Room's Tokens, handed in; what tapping one does is
+    // held in tokens.dom.test.tsx (a replay, no model turn).
+    mount({ subjects: [], steer: <button type="button">last 90 days</button> });
+    const chip = document.querySelector('.r-line .r-steer button');
+    expect(chip?.textContent).toBe('last 90 days');
+    const line = document.querySelector('.r-line')!;
+    expect(line.querySelector('input')!.compareDocumentPosition(chip!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('draws no mic — P2S.5 builds voice, and a dead button teaches nothing works', () => {
+    mount({ subjects: [] });
+    expect(document.querySelector('.r-mic, [aria-label*="Speak" i], [title*="Speak" i]')).toBeNull();
   });
 
   it('names no figure anywhere in the chips', () => {

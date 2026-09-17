@@ -191,9 +191,10 @@ describe('the six chrome tokens the old components paint with', () => {
     // content still says so: prose keeps 62ch below. What they are not is two
     // rooms, and 200px of frame moving as you cross a screen is what he read
     // on 2026-09-16 as the side gaps being different from other pages.
-    expect(declsOn(ROOM, '.r-column')['max-width']).toBe('var(--measure)');
-    const measure = declsOn(ROOM, '.room')['--measure'];
-    expect(measure, '--measure is not defined on the room').toBeTruthy();
+    // P2S.1: the one frame is the composition's own width now, `--comp-max`.
+    expect(declsOn(ROOM, '.r-column')['max-width']).toBe('var(--comp-max)');
+    const measure = declsOn(ROOM, '.room')['--comp-max'];
+    expect(measure, '--comp-max is not defined on the room').toBeTruthy();
     // Still clears the width that was breaking "AJI BARN Reorder" mid-item.
     expect(parseInt(measure, 10)).toBeGreaterThan(820);
   });
@@ -209,7 +210,7 @@ describe('the six chrome tokens the old components paint with', () => {
     // And prose keeps its own, here and in the reading. Running an answer the
     // full width of a 1900px screen is what a measure exists to prevent.
     expect(declsOn(ROOM, '.r-note')['max-width']).toBe('62ch');
-    expect(declsOn(ROOM, '.r-say--reading')['max-width']).toBe('66ch');
+    expect(declsOn(ROOM, '.r-say--standing')['max-width']).toBe('56ch');
   });
 
   it('sizes a page with no board exactly like every other page', () => {
@@ -225,10 +226,12 @@ describe('the six chrome tokens the old components paint with', () => {
     expect(ruleFor(ROOM, '.room:has(.r-board[data-rest="1"])')).toBeFalsy();
   });
 
-  it('leaves the reading on its own measure whatever the page does', () => {
-    // The page got wider; his words did not. 66ch is prose, decided in P1.c,
-    // and no page width may run an answer across a 1900px screen.
-    expect(declsOn(ROOM, '.r-say--reading')['max-width']).toBe('66ch');
+  it('leaves his words on their own measures whatever the page does', () => {
+    // The design's (P2S.1(c)): the claim 30ch, the standing text 56ch, next
+    // 44ch. No page width may run an answer across a 1900px screen.
+    expect(declsOn(ROOM, '.r-say--claim')['max-width']).toBe('30ch');
+    expect(declsOn(ROOM, '.r-say--standing')['max-width']).toBe('56ch');
+    expect(declsOn(ROOM, '.r-next')['max-width']).toBe('44ch');
   });
 
   it('keeps the reserved colour out of this entirely', () => {

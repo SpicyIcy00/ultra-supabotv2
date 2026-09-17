@@ -412,13 +412,30 @@ function groupingLabel(meta: ToolMeta | null | undefined): string | null {
  * "new_transactions" at the foot of every tile told the reader where the
  * figures lived and not what they were.
  */
-export function receiptsLine(meta: ToolMeta | null | undefined): string {
+export function receiptsLine(meta: ToolMeta | null | undefined, now: Date = new Date()): string {
   if (!meta) return '';
-  const when = meta.snapshot_timestamp
-    ? new Date(meta.snapshot_timestamp).toLocaleString('en-PH', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
-    : null;
-  return [meta.metric_label ?? null, groupingLabel(meta), windowLabel(meta), when ? `read ${when}` : null]
+  const when = readAt(meta.snapshot_timestamp, now);
+  return [meta.metric_label ?? null, groupingLabel(meta), windowLabel(meta), when]
     .filter(Boolean).join(' · ');
+}
+
+/**
+ * `read HH:MM` — WHEN THE ROWS WERE READ, in Manila (P2S.1(c), UI rule 6).
+ *
+ * The design's own words under every figure: *"read 07:49"*. A read from
+ * another day carries its date as well, because an hour with no day on it is
+ * a claim about this morning that may be about last week.
+ */
+export function readAt(stamp: string | null | undefined, now: Date = new Date()): string | null {
+  if (!stamp) return null;
+  const at = new Date(stamp);
+  if (Number.isNaN(at.getTime())) return null;
+  const zone = 'Asia/Manila';
+  const hm = at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: zone });
+  const day = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: zone });
+  if (day(at) === day(now)) return `read ${hm}`;
+  const date = at.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: zone });
+  return `read ${date} ${hm}`;
 }
 
 /** The rest of the receipt: the source and every filter, for the hover. */

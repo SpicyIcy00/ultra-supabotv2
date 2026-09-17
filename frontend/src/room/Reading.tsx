@@ -41,6 +41,7 @@ import type { GeorgeNotice, ReadingFrame, ToolCall } from '../types/george';
 import { Caveats } from './tiles';
 import { splitClaim } from './claim';
 import { placeFigures } from './figures';
+import { claimAndStanding } from './beside';
 
 /**
  * EVERY FIGURE IN WHAT HE SAID, MARKED OR VISIBLY UNMARKED (P1.k, P2.b).
@@ -111,6 +112,57 @@ function Lit({ text, calls, onFigure }: {
   );
 }
 
+/**
+ * `**x**` pairs out of the text, and where they were. An odd marker with no
+ * partner is left in place: it is not emphasis, and removing it would be
+ * changing what he wrote.
+ */
+export function unmark(text: string): { plain: string; bold: [number, number][] } {
+  const bold: [number, number][] = [];
+  let plain = '';
+  let open = -1;
+  let i = 0;
+  const pairs = (text.match(/\*\*/g) ?? []).length;
+  const usable = pairs - (pairs % 2);
+  let used = 0;
+  while (i < text.length) {
+    if (text.startsWith('**', i) && used < usable) {
+      used += 1;
+      if (open < 0) { open = plain.length; } else { bold.push([open, plain.length]); open = -1; }
+      i += 2;
+      continue;
+    }
+    plain += text[i];
+    i += 1;
+  }
+  // Trimming the plain text moves every index by what was cut off the front.
+  const lead = plain.length - plain.trimStart().length;
+  return { plain: plain.trim(), bold: bold.map(([a, b]) => [a - lead, b - lead] as [number, number]) };
+}
+
+/** A slice of the answer, starting at `from`, with his bold ranges set in weight. */
+function Weighted({ text, from, bold, calls, onFigure }: {
+  text: string; from: number; bold: [number, number][];
+  calls: ToolCall[]; onFigure?: (seq: number) => void;
+}) {
+  const cuts = new Set<number>([0, text.length]);
+  for (const [a, b] of bold) {
+    for (const at of [a - from, b - from]) if (at > 0 && at < text.length) cuts.add(at);
+  }
+  const edges = [...cuts].sort((x, y) => x - y);
+  return (
+    <>
+      {edges.slice(0, -1).map((start, n) => {
+        const end = edges[n + 1];
+        const piece = text.slice(start, end);
+        const strong = bold.some(([a, b]) => a - from <= start && end <= b - from);
+        const drawn = <Figures text={piece} calls={calls} onFigure={onFigure} />;
+        return strong ? <b key={start}>{drawn}</b> : <span key={start}>{drawn}</span>;
+      })}
+    </>
+  );
+}
+
 export function Reading({ text, notices, reading, calls, onFigure }: {
   /** The turn's own words. Streaming, so it fills as he speaks. */
   text: string | null | undefined;
@@ -123,38 +175,59 @@ export function Reading({ text, notices, reading, calls, onFigure }: {
   /** Where a tapped figure goes. Absent leaves the claim plain. */
   onFigure?: (seq: number) => void;
 }) {
-  const said = (text ?? '').trim();
+  // HIS EMPHASIS IS DRAWN, NOT PRINTED. He writes `**the point**`; the frame
+  // check (ops/frames.py, P2S.1) showed the asterisks in the claim. The markers
+  // come out and the ranges they held are set in weight — every other
+  // character is his, untouched.
+  const { plain, bold } = unmark((text ?? '').trim());
+  const said = plain;
   const caveat = reading?.caveat?.trim();
   if (!said && !notices?.length && !caveat) return null;
-  const lit = splitClaim(said, reading?.claim);
+  // THE CLAIM, AND WHAT STANDS UNDER IT (P2S.1(c)). The design sets the point
+  // as a sentence of its own, large, in serif, and the rest of what he said
+  // beneath it; `claimAndStanding` takes the sentence his claim span sits in
+  // and hands back EXACT slices, so not one character he said is changed —
+  // `data-part` before + claim + after is the answer (markers.dom.test.tsx).
+  const parts = claimAndStanding(said, reading?.claim);
+  const lit = splitClaim(parts.claimRaw, reading?.claim);
+  const pieces = { calls: calls ?? [], onFigure };
+  const before = parts.before.trim() ? parts.before : '';
+  const after = parts.after.trim() ? parts.after : '';
   return (
     <section className="r-reading" data-reading={said ? 'said' : 'caveats'}>
-      {caveat && (
-        // HIS OWN WORDS FOR WHAT QUALIFIES THE FIGURES, whole and first. The
-        // notice below it is the machine's statement of the same thing; this
-        // is the one a person reads, and rule 4 puts both above the number.
-        <p className="r-caveat">{caveat}</p>
-      )}
+      {/* THE TURN'S CAVEAT, ONE LINE DIRECTLY ABOVE THE CLAIM (UI rule 4). His
+          own words for what qualifies the figures first, the machine's notices
+          under them — both above the sentence they qualify, never the accent. */}
+      {caveat && <p className="r-caveat r-turn-caveat">{caveat}</p>}
       {notices && notices.length > 0 && (
         <div className="r-reading-caveats"><Caveats notices={notices} /></div>
       )}
-      {/* Full measure, no border, no tile. It is the page speaking, not a
-          thing on the page. */}
-      {said && (
-        <p className="r-say r-say--reading">
+      {parts.claimRaw && (
+        <h2 className="r-say r-say--claim" data-part="claim">
           {lit ? (
-            // THE FIGURES ARE SCANNED ACROSS THE WHOLE ANSWER, not only inside
-            // the lit span (P2.b). A claim slot is the few words that ARE the
-            // point; the figures that qualify them are usually in the sentence
-            // after it, and until today every one of those was drawn as plain
-            // prose — so whether a figure could be opened depended on where in
-            // his paragraph he happened to put it.
             <>
-              <Figures text={lit.before} calls={calls ?? []} onFigure={onFigure} />
-              <Lit text={lit.hit} calls={calls ?? []} onFigure={onFigure} />
-              <Figures text={lit.after} calls={calls ?? []} onFigure={onFigure} />
+              <Figures text={lit.before} {...pieces} />
+              <Lit text={lit.hit} {...pieces} />
+              <Figures text={lit.after} {...pieces} />
             </>
-          ) : <Figures text={said} calls={calls ?? []} onFigure={onFigure} />}
+          ) : <Figures text={parts.claimRaw} {...pieces} />}
+        </h2>
+      )}
+      {/* THE STANDING TEXT. Every figure in it is scanned against the reads,
+          so a number carries the superscript of the read it came out of — the
+          same number the figure on the right wears as READ n (P2.b). */}
+      {(before || after) && (
+        <p className="r-say r-say--standing">
+          {before && (
+            <span data-part="before">
+              <Weighted text={before} from={0} bold={bold} {...pieces} />
+            </span>
+          )}
+          {after && (
+            <span data-part="after">
+              <Weighted text={after} from={parts.before.length + parts.claimRaw.length} bold={bold} {...pieces} />
+            </span>
+          )}
         </p>
       )}
     </section>
@@ -174,10 +247,12 @@ export function Reading({ text, notices, reading, calls, onFigure }: {
 export function ReadingNext({ reading }: { reading?: ReadingFrame }) {
   const next = reading?.next?.trim();
   if (!next) return null;
+  // THE DESIGN'S `.bs-next`: a mono label, his sentence in serif, and a rule
+  // on the side facing the figures.
   return (
-    <p className="r-next">
-      <span className="r-next-label">what I'd do next</span>
+    <div className="r-next">
+      <b className="r-next-label">what I&rsquo;d do next</b>
       {next}
-    </p>
+    </div>
   );
 }

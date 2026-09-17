@@ -15,7 +15,7 @@
  * by the server off vetted reads; a kind that could not be read says so rather
  * than being drawn as nothing found (UI rule 8).
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { DeskDefinitions } from '../services/deskApi';
 import { readMentions, type MentionCandidate, type Mentions } from '../services/mentionsApi';
@@ -80,6 +80,13 @@ export interface ComposerProps {
   tokens?: DrawnToken[];
   drawn?: string[];
   pages?: { id: string; title: string }[];
+  /**
+   * THE CHIPS ON THE LINE (P2S.1(h)) — the read-as tokens, drawn where the
+   * design draws "why?", "products" and "last 90 days". Tapping one is the
+   * replay path it always was: no model turn. Handed in, because what it moves
+   * is the Room's.
+   */
+  steer?: ReactNode;
 }
 
 export function Composer(p: ComposerProps) {
@@ -210,8 +217,10 @@ export function Composer(p: ComposerProps) {
 
   return (
     <div className="r-line-wrap">
-      <div className="r-measure">
-        {(p.subjects.length > 0 || p.scope || p.named.length > 0 || p.estate) && (
+      <div className="r-compose">
+        {/* WHAT THE QUESTION WILL CARRY, or the design's one line saying how
+            to give it something: tap anything above. */}
+        {(p.subjects.length > 0 || p.scope || p.named.length > 0 || p.estate) ? (
           <div className="r-chips">
             {p.estate && (
               <button type="button" className="r-chip r-chip--scope"
@@ -241,6 +250,10 @@ export function Composer(p: ComposerProps) {
                 {r.kind} · {r.label} ×
               </button>
             ))}
+          </div>
+        ) : (
+          <div className="r-chips">
+            <span className="r-refs-hint">tap anything above to bring it here, then say what you mean</span>
           </div>
         )}
 
@@ -301,7 +314,7 @@ export function Composer(p: ComposerProps) {
               placeholder={
                 p.subjects.length ? 'say what to do with these'
                   : p.busy ? 'you can redirect while he reads'
-                  : 'say something, or touch something above'
+                  : 'say what you mean · “why?” · “these two” · “last 90 days”'
               }
               onChange={(e) => {
                 setShut(false);
@@ -315,10 +328,12 @@ export function Composer(p: ComposerProps) {
               aria-label="Say something to George"
             />
           </span>
+          {p.steer && <div className="r-steer">{p.steer}</div>}
+          {/* NO MIC YET. The design draws one here; P2S.5 builds voice, and a
+              button that does nothing teaches that buttons do nothing. */}
           {p.busy ? (
             <button type="button" className="r-send" onClick={p.onStop}
-                    title="Stop" aria-label="Stop"
-                    style={{ background: 'var(--sunk)', color: 'var(--ink)' }}>■</button>
+                    title="Stop" aria-label="Stop">■</button>
           ) : (
             <button type="button" className="r-send" onClick={p.onSend}
                     disabled={!p.draft.trim()} title="Send" aria-label="Send">↑</button>

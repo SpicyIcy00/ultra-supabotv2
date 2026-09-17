@@ -31,8 +31,8 @@ vi.mock('./ObjectPanel', () => ({ ObjectPanel: () => null, kindOf: () => null })
 afterEach(cleanup);
 
 const on: TileActions = {
-  open: vi.fn(), pick: vi.fn(), why: vi.fn(), aside: vi.fn(), patch: vi.fn(),
-  retune: vi.fn(), shift: vi.fn(), move: vi.fn(), resize: vi.fn(), keep: vi.fn(),
+  open: vi.fn(), pick: vi.fn(), why: vi.fn(), patch: vi.fn(),
+  retune: vi.fn(),
 };
 
 const META = {
@@ -73,14 +73,15 @@ const DAYS = [
 ];
 
 describe('every block is framed the same way round', () => {
-  it('carries a title, a subtitle off meta and a source line', () => {
+  it('carries its say line and a source line, and no subtitle (P2S.1(c))', () => {
+    // The design's figure is READ n, its say line, its mark and its receipt.
+    // What the subtitle said — the measure and the window — is on the receipt.
     const { container } = draw({ kind: 'comparison' }, COMPARED);
     expect(container.querySelector('.r-mk-title')?.textContent).toBe('Net sales');
-    const sub = container.querySelector('.r-mk-sub')?.textContent ?? '';
-    expect(sub).toContain('Net sales');
-    expect(sub).toContain('last week');
-    expect(sub).toContain('₱');
-    expect(container.querySelector('.r-src')?.textContent).toContain('read');
+    expect(container.querySelector('.r-mk-sub')).toBeNull();
+    const src = container.querySelector('.r-src')?.textContent ?? '';
+    expect(src).toContain('Net sales');
+    expect(src).toContain('read');
   });
 
   it('puts George\'s note in the title when he characterised the shape', () => {

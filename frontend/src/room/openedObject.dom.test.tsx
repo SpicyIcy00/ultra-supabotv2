@@ -38,8 +38,8 @@ vi.mock('./ObjectPanel', () => ({
 afterEach(cleanup);
 
 const on: TileActions = {
-  open: vi.fn(), pick: vi.fn(), why: vi.fn(), aside: vi.fn(), patch: vi.fn(),
-  retune: vi.fn(), shift: vi.fn(), move: vi.fn(), resize: vi.fn(), keep: vi.fn(),
+  open: vi.fn(), pick: vi.fn(), why: vi.fn(), patch: vi.fn(),
+  retune: vi.fn(),
 };
 
 const META = {

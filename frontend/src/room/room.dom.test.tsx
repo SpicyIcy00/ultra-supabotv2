@@ -20,7 +20,7 @@
  * intent. They mock nothing below the component — the board fold, the call
  * resolver and every tile run for real.
  */
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Board } from './render';
 import type { AnswerTurn } from './data';
@@ -70,8 +70,8 @@ function object(kind: string, extra: Partial<BoardObject> = {}): BoardObject {
 }
 
 const ACTIONS = (): TileActions => ({
-  open: vi.fn(), pick: vi.fn(), why: vi.fn(), aside: vi.fn(), patch: vi.fn(),
-  retune: vi.fn(), shift: vi.fn(), move: vi.fn(), resize: vi.fn(), keep: vi.fn(),
+  open: vi.fn(), pick: vi.fn(), why: vi.fn(), patch: vi.fn(),
+  retune: vi.fn(),
 });
 
 function draw(objects: BoardObject[], on: TileActions = ACTIONS()) {
@@ -108,16 +108,6 @@ describe('the room draws what it claims to draw', () => {
   it.each(KINDS)('draws a %s without crashing', (kind, extra) => {
     const { container } = draw([object(kind, extra)]);
     expect(container.firstChild).toBeTruthy();
-  });
-
-  // THE BUG THIS HOLDS. Arranging was drawn by the tile, and only two of the
-  // fourteen kinds drew it — so on a real board of ten objects, nine could
-  // not be moved, kept, resized or set aside, and nothing failed to say so.
-  it.each(KINDS)('lets you arrange a %s, whatever shape it is', (kind, extra) => {
-    const { container } = draw([object(kind, extra)]);
-    expect(container.querySelector('.r-grip')).toBeTruthy();
-    expect(container.querySelectorAll('[aria-label="Keep"]').length).toBe(1);
-    expect(container.querySelectorAll('[aria-label="Bigger"]').length).toBe(1);
   });
 
   it('draws a whole board of every kind at once', () => {
@@ -227,93 +217,76 @@ describe('a composed shape draws the row it names', () => {
 });
 
 
-describe('the board is yours to arrange', () => {
-  // George arranges it because he knows what matters. You rearrange it
-  // because you know what you want to look at. Both are legitimate, and
-  // yours wins on your screen — which is what makes it a workspace rather
-  // than a report he sends you.
-  it('offers move, resize and keep on an object', () => {
-    const on = ACTIONS();
-    draw([object('subject', { subject: 'Rockwell' })], on);
-
-    // MOVING IS A DRAG, AND THE KEYBOARD IS THE OTHER WAY IN. The grip is
-    // where a finger picks a tile up; the arrow keys on it do one step, so a
-    // board can still be arranged by somebody with no pointer.
-    fireEvent.keyDown(screen.getByRole('button', { name: 'Move it' }), { key: 'ArrowLeft' });
-    expect(on.shift).toHaveBeenCalledWith('k-subject', -1);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Bigger' }));
-    expect(on.resize).toHaveBeenCalledWith('k-subject', 'big');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Keep' }));
-    expect(on.keep).toHaveBeenCalledWith('k-subject', true);
+describe('nothing on a figure arranges it by hand (P2S.1)', () => {
+  // The owner, 2026-09-17, of drag, resize, keep and set aside on a figure:
+  // "remove". The figures flow; a hand-placed figure breaks the flow he asked
+  // for, and keeping is said, or done from the thread's Page view.
+  it('draws no move, bigger, smaller, keep or set-aside control', () => {
+    draw([object('table', { key: 'a' }), object('figure', { key: 'b', subject: 'Rockwell' })]);
+    for (const name of [/move it/i, /bigger/i, /smaller/i, /^keep$/i, /set aside/i, /undo/i]) {
+      expect(screen.queryByRole('button', { name })).toBeNull();
+    }
+    expect(document.querySelector('.r-acts, .r-grip')).toBeNull();
   });
 
-  it('lets you turn a size back off rather than only on', () => {
-    const on = ACTIONS();
-    render(
-      <Board answers={[TURN]} board={[object('subject', { subject: 'Rockwell' })]}
-             local={{ 'k-subject': { size: 'big' } }} focused={null}
-             selection={[]} live={false} retuned={{}} on={on} />,
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Bigger' }));
-    expect(on.resize).toHaveBeenCalledWith('k-subject', null);
-  });
-});
-
-describe('your arrangement beats his', () => {
-  it('puts a resized object where you put it, not where he did', async () => {
-    const { inOrder } = await import('./board');
-    const board = [
-      object('subject', { key: 'a', weight: 'lead', subject: 'Rockwell' }),
-      object('table', { key: 'b', weight: 'quiet' }),
-    ];
-    // He led with 'a'. You made 'b' big, so 'b' leads for you.
-    const ordered = inOrder(board, { b: { size: 'big' } }, null);
-    expect(ordered[0].key).toBe('b');
-    // And his weight survives underneath: clear your size and his order returns.
-    expect(inOrder(board, {}, null)[0].key).toBe('a');
-  });
-
-  it('carries a tile to where the pointer left it, and renumbers the rest', async () => {
-    const { dropped } = await import('./board');
-    const order = [
-      object('table', { key: 'a' }), object('table', { key: 'b' }),
-      object('table', { key: 'c' }),
-    ];
-    // Carried over 'a' and released above its middle: it goes first.
-    expect(dropped(order, 'c', 'a', false)).toEqual({ c: 0, a: 1, b: 2 });
-    // Below its middle: straight after it.
-    expect(dropped(order, 'c', 'a', true)).toEqual({ a: 0, c: 1, b: 2 });
-    // Landing where it already was is not a move — it must not reach the
-    // undo stack, or one drag across the board fills the stack with the
-    // arrangement the board was already in.
-    expect(dropped(order, 'a', 'b', false)).toBeNull();
-    expect(dropped(order, 'a', 'a', true)).toBeNull();
-  });
-
-  it('lets you drag his lead out of the lead row without it springing back', async () => {
+  it('keeps George\'s order, with what was opened first', async () => {
     const { inOrder } = await import('./board');
     const board = [
       object('subject', { key: 'a', weight: 'lead', subject: 'Rockwell' }),
       object('table', { key: 'b' }),
     ];
-    // Dropped in the body of the board, below 'b'. `normal` is what records
-    // that; with only `big` and `small` there was nothing to write, and his
-    // weight pulled it straight back to the top.
-    const order = inOrder(board, { a: { at: 1, size: 'normal' }, b: { at: 0 } }, null);
-    expect(order.map((o) => o.key)).toEqual(['b', 'a']);
-    expect(order[1].weight).toBe('supporting');
-  });
-
-  it('honours a position you set', async () => {
-    const { inOrder } = await import('./board');
-    const board = [object('table', { key: 'a' }), object('table', { key: 'b' })];
-    expect(inOrder(board, { b: { at: 0 }, a: { at: 1 } }, null).map((o) => o.key))
-      .toEqual(['b', 'a']);
+    expect(inOrder(board, {}, null).map((o) => o.key)).toEqual(['a', 'b']);
+    expect(inOrder(board, {}, 'b').map((o) => o.key)).toEqual(['b', 'a']);
   });
 });
 
+describe('the figures flow into columns, left to right then down (P2S.1(c))', () => {
+  const many = (n: number) => Array.from({ length: n }, (_, i) => object('table', { key: `f${i}` }));
+  const columnsOf = () => Array.from(document.querySelectorAll('[data-figure]'))
+    .map((el) => Number(el.getAttribute('data-col')));
+
+  it.each([
+    [1, 1, [0]],
+    [2, 2, [0, 1]],
+    [3, 2, [0, 1, 0]],
+    [4, 2, [0, 1, 0, 1]],
+    [5, 3, [0, 1, 2, 0, 1]],
+  ])('puts %i figures in %i columns, in that order', (n, cols, want) => {
+    const { container } = draw(many(n as number));
+    expect(container.querySelector('.r-flow')?.getAttribute('data-columns')).toBe(String(cols));
+    expect(columnsOf()).toEqual(want);
+  });
+
+  it('labels every figure with the read it came from, as the superscripts do', () => {
+    const { container } = draw([object('table', { key: 'a' })]);
+    expect(container.querySelector('.r-fig-lbl')?.textContent).toBe('read 1');
+  });
+
+  it('arrives in order — the first at 200ms, the next 260ms after', async () => {
+    vi.useFakeTimers();
+    try {
+      const { container } = draw(many(3));
+      const state = () => Array.from(container.querySelectorAll('[data-figure]'))
+        .map((el) => el.getAttribute('data-arrived'));
+      expect(state()).toEqual(['no', 'no', 'no']);
+      await act(async () => { vi.advanceTimersByTime(200); });
+      expect(state()).toEqual(['yes', 'no', 'no']);
+      await act(async () => { vi.advanceTimersByTime(260); });
+      expect(state()).toEqual(['yes', 'yes', 'no']);
+      await act(async () => { vi.advanceTimersByTime(260); });
+      expect(state()).toEqual(['yes', 'yes', 'yes']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('puts a receipt with its read time under every figure', () => {
+    const { container } = draw(many(2));
+    const receipts = container.querySelectorAll('[data-figure] .r-src');
+    expect(receipts).toHaveLength(2);
+    for (const r of Array.from(receipts)) expect(r.textContent).toMatch(/read (\w{3} \d+ )?\d\d:\d\d/);
+  });
+});
 
 describe('the picture points, so the sentence does not have to', () => {
   it('lights the row George named and cools the rest', () => {
@@ -407,9 +380,9 @@ describe('what arrived since you last looked comes to the centre', () => {
       <Board answers={[TURN, TURN]} board={objects} local={{}} focused={null}
              selection={[]} live={false} retuned={{}} on={ACTIONS()} seenUpTo={1} />,
     );
-    const landing = [...container.querySelectorAll('[data-drag-key]')]
+    const landing = [...container.querySelectorAll('[data-figure]')]
       .filter((el) => el.querySelector('.r-landing'))
-      .map((el) => (el as HTMLElement).dataset.dragKey);
+      .map((el) => (el as HTMLElement).dataset.figure);
     expect(landing).toEqual(['new']);
   });
 

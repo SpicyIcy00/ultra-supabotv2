@@ -78,6 +78,16 @@ function reading(over: Partial<Parameters<typeof Reading>[0]> = {}) {
   );
 }
 
+/**
+ * WHAT THE READING SAYS, IN THE ORDER HE SAID IT. The claim is lifted into a
+ * sentence of its own (P2S.1(c)), so the words are read back by part —
+ * before, claim, after — which is the answer, character for character.
+ */
+function spoken(container: Element): string {
+  const part = (name: string) => container.querySelector(`[data-part="${name}"]`)?.textContent ?? '';
+  return `${part('before')}${part('claim')}${part('after')}`.trim();
+}
+
 describe('a figure says which read it came out of', () => {
   it('draws the read index after each placed figure', () => {
     const { container } = reading();
@@ -140,7 +150,7 @@ describe('a figure says which read it came out of', () => {
     const { container } = render(<Reading text={SAID} calls={[]} onFigure={() => {}} />);
     expect(container.querySelector('.r-figure')).toBeNull();
     expect(container.querySelector('.r-figure-bare')).toBeNull();
-    expect(container.querySelector('.r-say--reading')?.textContent).toBe(SAID);
+    expect(spoken(container)).toBe(SAID);
   });
 
   it('marks the figures in the whole answer, not only inside the lit claim', () => {
@@ -219,8 +229,7 @@ describe('over the four recorded runs', () => {
         <Reading text={a.answer} calls={a.calls} onFigure={() => {}} />);
       expect(container.querySelector('.r-figure'), a.scenario).toBeNull();
       expect(container.querySelector('.r-figure-bare'), a.scenario).toBeNull();
-      expect(container.querySelector('.r-say--reading')?.textContent)
-        .toBe(a.answer.trim());
+      expect(spoken(container)).toBe(a.answer.trim().replace(/\*\*/g, ''));
       cleanup();
     }
   });
@@ -252,8 +261,9 @@ describe('over the four recorded runs', () => {
       for (const m of Array.from(container.querySelectorAll('.r-figure-n'))) {
         m.remove();
       }
-      const said = container.querySelector('.r-say--reading')?.textContent ?? '';
-      expect(said, `${a.run}/${a.scenario}`).toBe(a.answer.trim());
+      const said = spoken(container);
+      // His `**` markers are drawn as weight, not printed (P2S.1).
+      expect(said, `${a.run}/${a.scenario}`).toBe(a.answer.trim().replace(/\*\*/g, ''));
       cleanup();
     }
   });

@@ -11,15 +11,18 @@
  * which since P1.c means above the READING, one region further up the page.
  * `turnNotices` is which ones still have to be said; the drawing is there.
  */
-import { useMemo } from 'react';
+import {
+  useEffect, useLayoutEffect, useRef, useState, type CSSProperties,
+} from 'react';
 import type { BoardObject, Local } from './board';
 import { inOrder } from './board';
 import { retunedKey } from './tokenShape';
-import { useDrag } from './drag';
-import { PROCESS, callOf, dimensionOf, rowsOf, type AnswerTurn, type Dimension } from './data';
+import { FIGURE_GAP, columnsFor, placeFigures, revealAt } from './beside';
+import { readIndexes } from './work';
+import { PROCESS, type AnswerTurn, type Dimension } from './data';
 import type { ToolCall } from '../types/george';
 import {
-  Acts, ControlTile, DraftTile, MemoryTile, SpecTile, StateTile, SystemTile,
+  ControlTile, DraftTile, MemoryTile, SpecTile, StateTile, SystemTile,
   ownNotices, type TileActions, type TileProps,
 } from './tiles';
 import { MarkBlock } from './marks';
@@ -95,94 +98,181 @@ export function turnNotices(p: {
   return all.filter((n) => !onObjects.has(n.kind));
 }
 
+/**
+ * THE FIGURES, FLOWING (P2S.1(c)).
+ *
+ * The design's beside room, not a board of tiles. His words, 2026-09-16: *"if
+ * theres open space with the answer it should fill it"*, *"charts should go
+ * from left to right then down"*, *"it still feels like its in squares"*. So:
+ *
+ *   NO LEAD ROW AND NO PACK. One flow, in George's order. How many columns is
+ *   decided by how many figures there are (`columnsFor`); each figure goes to
+ *   whichever column is shortest (`placeFigures`).
+ *
+ *   PLACED ON A GRID, NOT MOVED BETWEEN COLUMNS. A figure changing column must
+ *   not remount — it would lose an opened panel and replay its arrival — so
+ *   every figure is a child of ONE grid, told its column, and spans as many
+ *   1px rows as it is tall. Items given a column stack in order within it.
+ *
+ *   NO BOX, NO CONTROLS ON IT. The frame is gone (`Shell`), and so are drag,
+ *   resize, keep and set aside — the owner, 2026-09-17: *"remove"*. A hand-
+ *   placed figure breaks the flow he asked for. Keeping still works by saying
+ *   so, and by the thread's Page view.
+ *
+ *   IT ARRIVES, IT IS NOT NARRATED. A figure new to the board lands at 200ms,
+ *   the next 260ms after, each drawing itself (`revealAt`). A figure already
+ *   on screen stays put when the answer around it changes.
+ */
 export function Board(p: BoardProps) {
   const objects = inOrder(p.board, p.local, p.focused);
-  // THE DRAG LIVES HERE, not in a tile and not in the page. A tile cannot
-  // own it because the thing being dragged passes over every other tile;
-  // the page cannot, because what a drop means is a question about the
-  // board's own two regions. The page is told where things ended up.
-  const { dragging, grip, body } = useDrag(p.on);
-  const on = useMemo(() => ({ ...p.on, grip }), [p.on, grip]);
   const newest = p.answers.length - 1;
+  const width = useViewport();
+  const columns = columnsFor(objects.length, width);
+  const keys = objects.map((o) => o.key).join('|');
+
+  // HOW TALL EACH FIGURE IS, measured — the one input the placement needs.
+  // Unmeasured is 0, which still places in order (ties go to fewest figures).
+  const [heights, setHeights] = useState<Record<string, number>>({});
+  const nodes = useRef(new Map<string, HTMLElement>());
+  useLayoutEffect(() => {
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const seen = new ResizeObserver((entries) => {
+      setHeights((was) => {
+        let next = was;
+        for (const e of entries) {
+          const el = e.target as HTMLElement;
+          const key = el.dataset.figure ?? '';
+          const body = el.firstElementChild as HTMLElement | null;
+          const h = Math.round(body ? body.getBoundingClientRect().height : e.contentRect.height);
+          if (key && was[key] !== h) {
+            if (next === was) next = { ...was };
+            next[key] = h;
+          }
+        }
+        return next;
+      });
+    });
+    nodes.current.forEach((n) => {
+      seen.observe(n);
+      if (n.firstElementChild) seen.observe(n.firstElementChild);
+    });
+    return () => seen.disconnect();
+  }, [keys]);
+  const placed = placeFigures(objects.map((o) => heights[o.key] ?? 0), columns);
+
+  // WHICH FIGURES HAVE ARRIVED. Keyed, so an answer that transforms a figure
+  // in place does not make it arrive again.
+  const arrived = useArrival(objects.map((o) => o.key));
+
   // While he is still reading, what has landed is evidence — he has not said
-  // where any of it goes yet. It is drawn as it arrives, which is the whole of
-  // "you can feel him working".
+  // where any of it goes yet.
   const settling = p.live && !p.answers[newest]?.composition;
 
-  // What leads sits in its own row at the top, in George's order. IT NO
-  // LONGER CARRIES HIS READING WITH IT: the reading is a region above this
-  // board (Reading.tsx), so the special case that dragged a text tile up
-  // beside whatever led — because "the sentence explaining it ends up three
-  // columns away from the thing it explains" — has nothing left to fix.
-  const lead = objects.filter((o) => o.weight === 'lead' || p.focused === o.key);
-  const rest = objects.filter((o) => !lead.includes(o));
-
-  const draw = (o: (typeof objects)[number], n: number) => (
-    <div
-      key={o.key}
-      // The key the pointer finds under itself, and the class that takes the
-      // carried tile out of its own way so it finds the board beneath.
-      data-drag-key={o.key}
-      className={[p.focused === o.key ? 'r-w-full' : '', dragging === o.key ? 'r-dragging' : '']
-        .filter(Boolean).join(' ') || undefined}
-      {...body(o.key)}
-    >
-      <Piece
-        o={o}
-        turn={p.answers[o.turn]}
-        local={p.local[o.key] ?? {}}
-        landing={(settling && o.turn === newest) || (p.live && o.touched === newest)
-          || (p.seenUpTo !== undefined && o.touched >= p.seenUpTo)}
-        delay={n * 110}
-        focused={p.focused === o.key}
-        selected={Boolean(o.subject && p.selection.includes(o.subject))}
-        selection={p.selection}
-        earlier={o.touched < newest}
-        retuned={o.seq === undefined ? null : p.retuned[retunedKey(o.turn, o.seq)] ?? null}
-        on={on}
-        offers={p.offers?.get(o.key)}
-      />
-      {/* WHAT YOU CAN DO TO IT — under every object, whatever shape it is.
-          It is quiet until the pointer is on the object or something inside
-          it has focus, so a board of ten things is ten things and not ten
-          things with a toolbar each. */}
-      <Acts
-        subject={o.subject ?? null}
-        dimension={dimensionFor(p, o)}
-        o={o}
-        on={on}
-        local={p.local[o.key]}
-      />
-    </div>
-  );
-
   return (
-    // `data-rest` is how many objects are packed into columns below the lead,
-    // and the page's whole measure is set from it (room.css, `--measure`). A
-    // board of two things in a column built for six is the "lots of empty
-    // space on the right" the owner reported on 2026-09-14.
-    <div className="r-board" data-board={objects.length} data-rest={rest.length}>
-      {/* THE CAVEATS ARE NOT DRAWN HERE any more. They belong to the turn,
-          not to the board, and they go above the reading — which is above
-          this (Room.tsx, `turnNotices`). A board that drew them too would
-          show each one twice. */}
-      {lead.length > 0 && <div className="r-board-lead">{lead.map(draw)}</div>}
-      {rest.length > 0 && <div className="r-board-rest">{rest.map((o, n) => draw(o, n + lead.length))}</div>}
+    <div className="r-board r-flow" data-board={objects.length} data-columns={columns}
+         style={{ '--cols': columns } as CSSProperties}>
+      {objects.map((o, n) => {
+        const turn = p.answers[o.turn];
+        const index = readNumber(turn, o);
+        const out = (o as BoardObject & { ruled_out?: boolean }).ruled_out === true;
+        const h = heights[o.key] ?? 0;
+        return (
+          <div
+            key={o.key}
+            ref={(el) => { if (el) nodes.current.set(o.key, el); else nodes.current.delete(o.key); }}
+            data-figure={o.key}
+            data-col={placed[n]}
+            data-arrived={arrived.has(o.key) ? 'yes' : 'no'}
+            className={['r-fig', out ? 'r-fig--out' : '', p.focused === o.key ? 'r-fig--open' : '']
+              .filter(Boolean).join(' ')}
+            style={{ gridColumn: placed[n] + 1, gridRowEnd: `span ${Math.max(1, h + FIGURE_GAP)}` }}
+          >
+            <div className="r-fig-body">
+              {/* WHICH READ THIS IS — the number his words' superscripts point
+                  at, so a figure and the sentence citing it match by eye. Off
+                  the turn's own calls, never a rank. `ruled out` is drawn when
+                  a block says so; nothing sets it until P2S.3. */}
+              <p className="r-fig-lbl">
+                read{index !== null ? ` ${index}` : ''}
+                {out && <> · <s>ruled out</s></>}
+              </p>
+              <Piece
+                o={o}
+                turn={turn}
+                local={p.local[o.key] ?? {}}
+                landing={(settling && o.turn === newest) || (p.live && o.touched === newest)
+                  || (p.seenUpTo !== undefined && o.touched >= p.seenUpTo)}
+                delay={n * 110}
+                focused={p.focused === o.key}
+                selected={Boolean(o.subject && p.selection.includes(o.subject))}
+                selection={p.selection}
+                earlier={o.touched < newest}
+                retuned={o.seq === undefined ? null : p.retuned[retunedKey(o.turn, o.seq)] ?? null}
+                on={p.on}
+                offers={p.offers?.get(o.key)}
+              />
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
+/** The read's number in its turn — the same count the superscripts use. */
+function readNumber(turn: AnswerTurn | undefined, o: BoardObject): number | null {
+  if (!turn) return null;
+  const seq = o.seq ?? o.seqs?.[0];
+  if (seq === undefined) return null;
+  return readIndexes(turn.toolCalls).get(seq) ?? null;
+}
+
+/** The window's width, kept current — the column count reads it. */
+function useViewport(): number {
+  const [w, setW] = useState(() => (typeof window === 'undefined' ? 1920 : window.innerWidth));
+  useEffect(() => {
+    const on = () => setW(window.innerWidth);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  return w;
+}
+
+export function reducedMotion(): boolean {
+  try {
+    return Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Which kind of thing the subject is, for the colour and for `why`.
- *
- * Read off the ROWS, exactly as the subject tile has always read it — not
- * from the object's kind, which says what shape it is drawn as and not what
- * it is about.
+ * THE KEYS THAT HAVE ARRIVED. A key seen for the first time is scheduled by
+ * its place among the NEW keys, so a second answer's figures arrive in their
+ * own order and the first answer's stay where they are.
  */
-function dimensionFor(p: BoardProps, o: BoardObject): Dimension | null {
-  if (!o.subject || o.seq === undefined) return null;
-  const call = p.retuned[retunedKey(o.turn, o.seq)] ?? callOf(p.answers[o.turn], o.seq);
-  return dimensionOf(rowsOf(call), o.subject);
+function useArrival(keys: string[]): Set<string> {
+  const [arrived, setArrived] = useState<Set<string>>(() => new Set());
+  const scheduled = useRef(new Set<string>());
+  const joined = keys.join('|');
+  useEffect(() => {
+    const fresh = joined.split('|').filter((k) => k && !scheduled.current.has(k));
+    if (!fresh.length) return undefined;
+    const reduced = reducedMotion();
+    const timers = fresh.map((key, i) => {
+      scheduled.current.add(key);
+      return window.setTimeout(() => {
+        setArrived((was) => (was.has(key) ? was : new Set(was).add(key)));
+      }, revealAt(i, reduced));
+    });
+    return () => {
+      // An unmount mid-reveal un-schedules what had not landed, so the next
+      // mount schedules it again rather than leaving it invisible for good.
+      timers.forEach((t) => window.clearTimeout(t));
+      for (const key of fresh) scheduled.current.delete(key);
+    };
+  }, [joined]);
+  return arrived;
 }
 
 /**

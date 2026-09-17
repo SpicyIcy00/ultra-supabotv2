@@ -57,8 +57,8 @@ const TURN = {
 
 function acts(over: Partial<TileActions> = {}): TileActions {
   return {
-    open: vi.fn(), pick: vi.fn(), why: vi.fn(), aside: vi.fn(), patch: vi.fn(),
-    retune: vi.fn(), shift: vi.fn(), move: vi.fn(), resize: vi.fn(), keep: vi.fn(),
+    open: vi.fn(), pick: vi.fn(), why: vi.fn(), patch: vi.fn(),
+    retune: vi.fn(),
     forget: vi.fn(), ...over,
   };
 }

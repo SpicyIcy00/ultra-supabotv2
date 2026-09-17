@@ -1,212 +1,157 @@
 /**
- * THE PAGE IS CENTRED, AND NOTHING IS CUT OFF.
+ * THE BESIDE ROOM'S STYLESHEET, HELD RULE BY RULE (P2S.1(b)(c)(h)).
  *
- * Two things the owner reported in one sentence on 2026-09-14, on his first
- * sitting with the six marks: *"should i be able to scroll down on this? and
- * at 100% size theres lots of empty space on the right and its not centered"*.
- * Both were true, and they were three faults between them.
+ * Re-derived from the design on 2026-09-17. What this file used to hold — one
+ * `--measure` for the page, a lead row and a packed region, a tile that
+ * scrolled its own body — was the answer to three reports that the design
+ * answers differently, and all of it is gone. What it holds now is the owner's
+ * own fixes (NOW.md, "THE OWNER'S FIXES"), each as the rule a browser reads:
  *
- * They are held by reading the stylesheet, for the reason `accentUse.test.ts`
- * and `palette.test.ts` give: jsdom does no layout, so a dom test can prove
- * the ATTRIBUTES are there and nothing about what they produce. The rules
- * themselves are what regressed and they are what is asserted. A rule that
- * moves has to move here too, which is the point — each of these was a single
- * plausible line, and nobody saw any of them.
+ *   row 5   "it still feels like its in squares"      → no box on a figure
+ *   row 8   "here it gets cut … it should feel all connected" → nothing clipped
+ *   row 9   "why is there scroll bar on the edge now?" → no visible scrollbar
+ *
+ * PARSED, NOT SEARCHED (`keptChrome.test.ts`, 2026-09-15): a comment closed
+ * twice once swallowed a selector, and a string search could not tell a dead
+ * rule from a live one. The arithmetic — centre, columns, reveal, wires, the
+ * mark — is in `beside.test.ts`; the pixels are `ops/frames.py`'s.
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import postcss from 'postcss';
 import { describe, expect, it } from 'vitest';
 
 const CSS = readFileSync(join(__dirname, 'room.css'), 'utf8');
-const RENDER = readFileSync(join(__dirname, 'render.tsx'), 'utf8');
+const SHEET = postcss.parse(CSS);
 
-/** The declarations inside one selector's block. */
-function rule(selector: string): string {
-  const at = CSS.indexOf(`${selector} {`);
-  expect(at, `no rule for ${selector}`).toBeGreaterThan(-1);
-  return CSS.slice(at, CSS.indexOf('}', at));
+/** Every rule, with its selector and declarations, media-query rules included. */
+function rules(): { selector: string; decls: Record<string, string>; media: string | null }[] {
+  const out: { selector: string; decls: Record<string, string>; media: string | null }[] = [];
+  SHEET.walkRules((r) => {
+    const decls: Record<string, string> = {};
+    r.walkDecls((d) => { decls[d.prop] = d.value.trim(); });
+    const parent = r.parent as postcss.AtRule | undefined;
+    out.push({ selector: r.selector.trim(), decls,
+               media: parent?.type === 'atrule' ? parent.params : null });
+  });
+  return out;
 }
 
-describe('the page is centred on one measure', () => {
-  it('has a measure, and it is set on the room rather than per region', () => {
-    expect(rule('.room')).toContain('--measure:');
+function base(selector: string): Record<string, string> {
+  const found = rules().find((r) => r.selector === selector && r.media === null);
+  expect(found, `no base rule for ${selector}`).toBeTruthy();
+  return found!.decls;
+}
+
+describe('the page is a composition, not a measure', () => {
+  it('has no --measure anywhere, and nothing sized from a count', () => {
+    expect(CSS).not.toMatch(/--measure\s*:/);
+    expect(CSS).not.toMatch(/var\(--measure/);
+    expect(CSS).not.toMatch(/data-rest|r-board-lead|r-board-rest/);
   });
 
-  it('centres the main column in the space beside the rail', () => {
-    const measure = rule('.r-measure');
-    expect(measure).toContain('max-width: var(--measure)');
-    expect(measure).toContain('margin-inline: auto');
-    // The rail is PADDING, not margin: a margin cannot be centred around,
-    // and `margin-left: 56px` is what it was before this.
-    expect(rule('.r-main')).toContain('padding-left: calc(56px');
-    expect(rule('.r-main')).not.toMatch(/margin-left:\s*56px/);
+  it('fixes the room to the window and slides it with the sidebar', () => {
+    const main = base('.r-main');
+    expect(main.position).toBe('fixed');
+    expect(main.overflow).toBe('hidden');
+    expect(base(':root[data-side="open"] .r-main').left).toBe('var(--side-w)');
   });
 
-  it('wraps the page and the composer in the SAME element, not two rules', () => {
-    // Both used to cap themselves, one of them centred, and that divergence
-    // is what the report was looking at.
-    //
-    // TWO FILES SINCE P2.c, one claim. The composer became a component of its
-    // own when the `@` menu needed a test to mount, so the page's wrapper is
-    // in Room.tsx and the composer's is in Composer.tsx — the same class,
-    // which is what the rule was ever about. Counted across both, because
-    // counting one would say the composer had stopped sharing the axis.
-    const room = readFileSync(join(__dirname, 'Room.tsx'), 'utf8');
-    const composer = readFileSync(join(__dirname, 'Composer.tsx'), 'utf8');
-    expect((room + composer).match(/className="r-measure"/g) ?? []).toHaveLength(2);
-    expect(room).not.toContain('maxWidth: 1320');
-    expect(composer).not.toContain('maxWidth: 1320');
+  it('lays out him, his words and the figures as the design does', () => {
+    const b = base('.r-beside');
+    expect(b['grid-template-areas']).toBe('"him right" "words right"');
+    expect(b['column-gap']).toBe('var(--comp-gap)');
+    expect(b['margin-inline']).toBe('auto');
   });
 
-  it('puts the composer on the same measure, so the two share an axis', () => {
-    // The composer already centred itself when the page did not, which is
-    // exactly what "it's not centered" looked like.
-    expect(rule('.r-line')).toContain('max-width: var(--measure)');
+  it('draws the lines as the design does: 1px, dashed 2 5, the wire grey', () => {
+    const line = base('.r-wires line');
+    expect(line.stroke).toBe('rgba(138, 143, 152, 0.32)');
+    expect(line['stroke-dasharray']).toBe('2 5');
   });
 
-  it('never sizes the page from how many objects are on the board', () => {
-    // THE DEFECT THIS REPLACES, reported three times. `--measure` was set from
-    // `data-rest` — 680px for a board of one or fewer under the lead — so the
-    // chrome, the reading and the composer were a function of the answer. The
-    // assertion is the absence: no rule anywhere may set the measure from a
-    // count.
-    const sets = CSS.split(/\r?\n/).filter((l) => /--measure\s*:/.test(l));
-    for (const line of sets) {
-      expect(line, `the measure is set from a count: ${line.trim()}`)
-        .not.toMatch(/data-rest|data-board/);
-    }
-    expect(rule('.room')).toContain('--measure: 1320px');
-    // And no `:has()` rule may reintroduce it by another route.
-    expect(CSS).not.toMatch(/\.room:has\([^)]*data-(rest|board)[^)]*\)\s*\{[^}]*--measure/);
-  });
-
-  /*
-   * THE NUMBERS THE RULES PRODUCE, not the text of the rules.
-   *
-   * Every test above this reads the stylesheet as a string, for the reason the
-   * file header gives: jsdom does no layout. That is also why three reports in
-   * a row got past 1,284 tests — a string match cannot see that 680px in a
-   * 1,863px window leaves 56% of the screen black. There is no browser in this
-   * toolchain to ask, so the arithmetic is done here instead, from the same
-   * two rules the browser would use.
-   */
-  function occupied(viewport: number): number {
-    // THE NARROWEST WIDTH ANY RULE CAN SET, not the default on `.room`.
-    // Reading only the default is how this check would have passed on the
-    // stylesheet that produced the report: `.room` said 1320px and a `:has()`
-    // override three hundred lines below said 680px, and the page he was
-    // looking at got the 680.
-    const all = [...CSS.matchAll(/--measure:\s*(\d+)px/g)].map((m) => parseInt(m[1], 10));
-    expect(all.length, 'no --measure is set in px anywhere').toBeGreaterThan(0);
-    const measure = Math.min(...all);
-    // `.r-main` padding: clamp(18px, 3vw, 40px), and the rail is 56px of it.
-    const pad = Math.min(40, Math.max(18, viewport * 0.03));
-    const available = viewport - (56 + pad) - pad;
-    return Math.min(measure, available) / viewport;
-  }
-
-  it('fills the window it is given, at the sizes he actually uses', () => {
-    // 1,863px is his own window, measured off the 2026-09-16 screenshot; the
-    // rule then in force gave the page 680px of it. Anything under this floor
-    // is the strip he reported, whatever the rules say in words.
-    for (const viewport of [1440, 1663, 1863, 1920]) {
-      expect(occupied(viewport), `${viewport}px window`).toBeGreaterThan(0.65);
-    }
-    // The strip itself, so the floor is known to be able to fail: 680 in 1863.
-    expect(680 / 1863).toBeLessThan(0.65);
-  });
-
-  it('gives the same frame to every screen in the room', () => {
-    // "why is the side gaps different from other pages" — 2026-09-16. The list
-    // screens had `--measure-list`, 200px narrower, so walking between two
-    // screens moved the frame.
-    expect(rule('.r-column')).toContain('max-width: var(--measure)');
-    // Declared nowhere and read nowhere. The NAME still appears, in the
-    // comment recording why it went, and a test that banned the word would
-    // ban the history with it.
-    expect(CSS).not.toMatch(/--measure-list\s*:/);
-    expect(CSS).not.toMatch(/var\(--measure-list\)/);
-  });
-
-  it('puts two objects side by side rather than stacking two regions', () => {
-    // The half the measure does not touch: what LEADS and what PACKS are two
-    // containers, so a board of two was vertical at any width. With one thing
-    // in the pack they are a row — and both containers survive, because
-    // `drag.ts` decides lead-or-rest by which one the pointer is over.
-    const row = /\.r-board\[data-rest="1"\]:has\(\.r-board-lead\)\s*\{([^}]*)\}/.exec(CSS);
-    expect(row, 'no two-region row rule').toBeTruthy();
-    expect(row![1]).toMatch(/grid-template-columns:\s*1fr 1fr/);
-    expect(row![1]).toMatch(/align-items:\s*start/);
-    expect(RENDER).toContain('r-board-lead');
-    // ONE object George did not weight `lead` is ALSO data-rest="1", and a
-    // lone tile in a two-column row is the empty right half he reported on
-    // 09-14. The row is conditioned on both regions existing, and that single
-    // tile is capped and centred instead.
-    expect(CSS).toMatch(/\.r-board\[data-rest="1"\]:not\(:has\(\.r-board-lead\)\) \.r-board-rest \{[^}]*max-width/);
-    // UI rule 7: not on a phone.
-    expect(CSS).toMatch(/max-width: 900px\)\s*\{\s*\.r-board\[data-rest="1"\]:has\(\.r-board-lead\)\s*\{ grid-template-columns: 1fr/);
-  });
-
-  it('caps a lone tile on the region, never on the frame', () => {
-    // The natural width of one object is a fact about the object. Putting it
-    // on the page is what narrowed the composer and the chrome with it.
-    expect(CSS).toMatch(/\.r-board\[data-rest="0"\] \.r-board-lead \{[^}]*max-width/);
-  });
-
-  it('never leaves more columns than there are things to put in them', () => {
-    expect(CSS).toContain('.r-board[data-rest="1"] .r-board-rest { columns: 1; }');
-  });
-
-  it('PLACES two or three tiles rather than balancing them by height', () => {
-    // 2026-09-16, his fourth look: the charts were still stacked. `columns: 2`
-    // is multi-column, which decides where an item goes by balancing HEIGHT —
-    // right for a pack of many, a guess for two equal tiles. A grid places
-    // them. Three wrap to a second row rather than taking a 428px third
-    // column, which is what the multi-column rule did and is still right.
-    const pack = /\.r-board\[data-rest="2"\] \.r-board-rest,\s*\r?\n\.r-board\[data-rest="3"\] \.r-board-rest \{([^}]*)\}/.exec(CSS);
-    expect(pack, 'no placed-pack rule for two or three').toBeTruthy();
-    expect(pack![1]).toMatch(/display:\s*grid/);
-    expect(pack![1]).toMatch(/grid-template-columns:\s*1fr 1fr/);
-    expect(pack![1]).toMatch(/align-items:\s*start/);
-  });
-
-  it('still collapses to one column on a phone, whatever the count says', () => {
-    // UI rule 7. The count-based rules are more specific than the media
-    // query, so the phone rule has to name them or it loses — and a grid
-    // ignores `columns`, so it has to be told in grid terms as well.
-    expect(CSS).toContain('.r-board-rest, .r-board[data-rest] .r-board-rest { columns: 1; }');
-    expect(CSS).toMatch(/\.r-board\[data-rest="2"\] \.r-board-rest,\s*\r?\n\s*\.r-board\[data-rest="3"\] \.r-board-rest \{ grid-template-columns: 1fr; \}/);
-  });
-
-  it('tells the page how many objects are packed below the lead', () => {
-    expect(RENDER).toContain('data-rest={rest.length}');
+  it('stacks on a phone: one column, no lines, no arrows, the page scrolls (UI rule 7)', () => {
+    const phone = rules().filter((r) => r.media?.includes('max-width: 900px'));
+    const at = (sel: string) => phone.find((r) => r.selector === sel)?.decls ?? {};
+    expect(at('.r-wires').display).toBe('none');
+    expect(at('.r-arr').display).toBe('none');
+    expect(at('.r-flow').display).toBe('block');
+    expect(at('.r-main').position).toBe('static');
   });
 });
 
-describe('a long body scrolls inside its tile', () => {
-  it('lets exactly ONE child shrink, and it is the mark body', () => {
-    // THE BUG THIS HOLDS, and it lasted an hour. `min-height: 0` is what lets
-    // a flex child shrink below its content, and the scrolling body needs it.
-    // It was put on EVERY child of the tile, so a caveat — a block of text
-    // with nowhere to scroll — shrank too, and its words ran over the title
-    // underneath. Every child holds its size; the body says otherwise itself.
-    expect(rule('.r-tile > *')).toContain('flex: 0 0 auto');
-    expect(rule('.r-tile > *')).not.toContain('min-height: 0');
-    expect(rule('.r-tile')).toContain('overflow: hidden');
-    expect(rule('.r-tile')).toContain('max-height: 560px');
+describe('no figure sits in a box — his row 5', () => {
+  it('gives a tile no border, no ground and no shadow', () => {
+    const tile = base('.r-tile');
+    expect(tile.border).toBe('0');
+    expect(tile.background).toBe('none');
+    expect(tile['box-shadow']).toBe('none');
   });
 
-  it('scrolls the mark and never the title, the subtitle or the source line', () => {
-    const body = rule('.r-tile > .r-mk-body');
-    expect(body).toContain('overflow-y: auto');
-    expect(body).toContain('min-height: 0');
-    expect(body).toContain('flex: 1 1 auto');
-    // Named with the tile so it beats `.r-tile > *` on specificity rather than
-    // on which of them happens to come later in the file.
-    expect(CSS.indexOf('.r-tile > .r-mk-body')).toBeGreaterThan(-1);
+  it('keeps a box only for a thing you act on, and the draft is the one that asks', () => {
+    const boxed = rules().filter((r) => /\.r-tile/.test(r.selector)
+      && (r.decls.border?.includes('solid') || (r.decls.background && r.decls.background !== 'none')));
+    expect(boxed.map((r) => r.selector)).toEqual(['.r-tile--boxed']);
+    const tiles = readFileSync(join(__dirname, 'tiles.tsx'), 'utf8');
+    expect(tiles.match(/<Shell boxed/g) ?? []).toHaveLength(1);
+    expect(tiles).toMatch(/export function DraftTile[\s\S]*?<Shell boxed/);
+  });
+});
+
+describe('nothing is cut, and nothing shows a scrollbar — rows 8 and 9', () => {
+  it('clips nothing inside the composition', () => {
+    // `overflow: hidden` on the room itself stops the PAGE scrolling (row 9);
+    // on anything inside it, it cuts a figure off (row 8). Truncating one line
+    // of text with an ellipsis is not a cut and is allowed.
+    const cuts = rules().filter((r) => r.media === null
+      && (r.decls.overflow === 'hidden' || r.decls['overflow-y'] === 'hidden')
+      && !r.decls['text-overflow']
+      && r.selector !== '.r-main');
+    const allowed = new Set([
+      // a bar's track, whose fill is the bar: nothing is behind it to cut
+      '.r-spec-bar-track', '.r-spec-bullet-whole',
+      // the grey completion, one line under the input
+      '.r-ghost',
+    ]);
+    expect(cuts.map((r) => r.selector).filter((s) => !allowed.has(s))).toEqual([]);
+    expect(CSS).not.toMatch(/max-height:\s*560px/);
   });
 
-  it('draws a scrollbar you can see on the body as well as on a table', () => {
-    expect(CSS).toContain('.r-scroll::-webkit-scrollbar, .r-mk-body::-webkit-scrollbar');
+  it('hides the scrollbar on everything that can scroll', () => {
+    const scrolls = rules().filter((r) => ['auto', 'scroll'].includes(r.decls['overflow-y'] ?? '')
+      || ['auto', 'scroll'].includes(r.decls.overflow ?? ''));
+    expect(scrolls.length).toBeGreaterThan(0);
+    for (const r of scrolls) {
+      expect(r.decls['scrollbar-width'], `${r.selector} shows a scrollbar`).toBe('none');
+      const webkit = rules().find((w) => w.selector === `${r.selector}::-webkit-scrollbar`);
+      expect(webkit?.decls.display, `${r.selector} shows a webkit scrollbar`).toBe('none');
+    }
+    // And no rule anywhere styles a scrollbar into view.
+    for (const r of rules().filter((x) => /::-webkit-scrollbar/.test(x.selector))) {
+      expect(r.decls.display, r.selector).toBe('none');
+    }
+  });
+
+  it('moves only the figures, by arrows that appear only when there is more', () => {
+    expect(base('.r-figs')['overflow-y']).toBe('auto');
+    expect(base('.r-arr[hidden]').display).toBe('none');
+  });
+});
+
+describe('what went with the layout it served', () => {
+  it('deleted drag.ts, and nothing imports it', () => {
+    expect(existsSync(join(__dirname, 'drag.ts'))).toBe(false);
+    for (const f of ['render.tsx', 'tiles.tsx', 'Room.tsx']) {
+      expect(readFileSync(join(__dirname, f), 'utf8')).not.toMatch(/from '\.\/drag'/);
+    }
+    expect(CSS).not.toMatch(/\.r-grip|\.r-dragging|\.r-acts/);
+  });
+
+  it('leaves no set-aside list, no undo and no per-figure keep in the room', () => {
+    const room = readFileSync(join(__dirname, 'Room.tsx'), 'utf8');
+    expect(room).not.toMatch(/set aside/);
+    expect(room).not.toMatch(/↺ undo|setHistory/);
+    const board = readFileSync(join(__dirname, 'board.ts'), 'utf8');
+    expect(board).not.toMatch(/^\s*(closed|kept|at|size)\?:/m);
   });
 });

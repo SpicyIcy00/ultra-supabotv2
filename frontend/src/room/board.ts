@@ -71,31 +71,14 @@ export interface BoardObject {
 
 /** What the PERSON has done to an object. Never George's, never a figure. */
 export interface Local {
-  closed?: boolean;
   sort?: { column: string; desc: boolean };
   open?: boolean;
-  /**
-   * WHERE YOU PUT IT. George composes an order; this overrides it for you.
-   * Lower comes first. Absent means "wherever he put it".
+  /*
+   * `closed`, `at`, `size` and `kept` WERE HERE — set aside, where you dragged
+   * it, how big you made it, and keep. All four were the person arranging the
+   * board by hand, and P2S.1 removed every control that wrote them (the owner,
+   * 2026-09-17: *"remove"*). The figures flow; nothing is placed by hand.
    */
-  at?: number;
-  /**
-   * HOW BIG YOU WANT IT, over his weight. He says what matters; you say what
-   * you want to look at, and those are different questions.
-   *
-   * `normal` is the one a button never sets and a DRAG does: it is what
-   * dragging his lead down into the body of the board means. Without it that
-   * gesture had nowhere to be recorded, so the tile sprang back to the top
-   * the moment you let go of it — the arrangement lost to the weight, which
-   * is the opposite of what every other line here says.
-   */
-  size?: 'big' | 'normal' | 'small';
-  /**
-   * KEEP IT. A kept object survives clearing the room, because it is
-   * something you decided to hold on to rather than something this
-   * conversation happened to produce.
-   */
-  kept?: boolean;
   /**
    * THE VIEWS FORGOTTEN FROM THIS OBJECT, by belief id.
    *
@@ -406,22 +389,18 @@ export function travel(
  * everything (boardContext is taken from the whole board) and nothing George
  * put down has been thrown away.
  *
- * TWO THINGS NEVER FOLD. What the person KEPT — keeping is them saying "this
- * stays", and it outranks a turn count exactly as it outranks expiry — and
- * what they are looking at right now. What they set aside is not here at all:
- * it is in the set-aside row already.
+ * ONE THING NEVER FOLDS: what they are looking at right now.
  */
 export function folded(
   board: readonly BoardObject[],
   newest: number,
-  local: Record<string, Local>,
+  _local: Record<string, Local>,
   focused: string | null,
 ): { shown: BoardObject[]; earlier: BoardObject[] } {
   const shown: BoardObject[] = [];
   const earlier: BoardObject[] = [];
   for (const o of board) {
-    const mine = local[o.key];
-    if (o.touched < newest && !mine?.kept && !mine?.closed && o.key !== focused) earlier.push(o);
+    if (o.touched < newest && o.key !== focused) earlier.push(o);
     else shown.push(o);
   }
   return { shown, earlier };
@@ -548,7 +527,8 @@ function expired(board: BoardObject[], now: number, kept: ReadonlySet<string>): 
 }
 
 /**
- * The board as it should be drawn: the person's own view applied on top.
+ * The board as it should be drawn: George's order, with what the person opened
+ * first.
  *
  * `focused` is a click, not a judgment — it makes one object lead for as long
  * as they are looking at it, and demotes George's lead rather than deleting
@@ -556,43 +536,18 @@ function expired(board: BoardObject[], now: number, kept: ReadonlySet<string>): 
  */
 export function inOrder(
   board: BoardObject[],
-  local: Record<string, Local>,
+  _local: Record<string, Local>,
   focused: string | null,
 ): BoardObject[] {
-  // IF YOU HAVE MADE SOMETHING BIG, HIS LEAD STANDS DOWN. Otherwise "bigger"
-  // would add a second lead rather than choosing one, and the board would
-  // have two things claiming to be the point — which is the arrangement
-  // neither of you asked for.
-  const yoursLeads = Object.values(local).some((l) => l?.size === 'big');
-
-  const shown = board
-    .filter((o) => !local[o.key]?.closed)
-    .map((o) => {
-      // YOUR SIZE BEATS HIS WEIGHT. He is saying what matters; you are saying
-      // what you want to look at. Both are legitimate and they are not the
-      // same question, so yours wins on your screen — and his survives
-      // underneath, so an object he later leads with still leads.
-      const size = local[o.key]?.size;
-      const weight = size === 'big' ? 'lead' as const
-        : size === 'small' ? 'quiet' as const
-        : size === 'normal' ? 'supporting' as const
-        : (yoursLeads && o.weight === 'lead') ? 'supporting' as const
-        : o.weight;
-      if (!focused) return { ...o, weight };
-      if (o.key === focused) return { ...o, weight: 'lead' as const };
-      return weight === 'lead' ? { ...o, weight: 'supporting' as const } : { ...o, weight };
-    });
-
-  // WHERE YOU PUT THINGS, over where he put them. An object you have never
-  // moved keeps his position exactly; one you have moved goes where you left
-  // it, and the two interleave rather than one list following the other.
-  const placed = shown
-    .map((o, n) => ({ o, at: local[o.key]?.at ?? n + shown.length }))
-    .sort((a, b) => a.at - b.at)
-    .map((x) => x.o);
-
-  const lead = placed.filter((o) => o.weight === 'lead');
-  return [...lead, ...placed.filter((o) => o.weight !== 'lead')];
+  const shown = board.map((o) => {
+    if (!focused) return o;
+    if (o.key === focused) return { ...o, weight: 'lead' as const };
+    return o.weight === 'lead' ? { ...o, weight: 'supporting' as const } : o;
+  });
+  // WHAT LEADS COMES FIRST, in George's order after it. There is no lead row
+  // any more (P2S.1(c)); leading is simply being first into the flow.
+  const lead = shown.filter((o) => o.weight === 'lead');
+  return [...lead, ...shown.filter((o) => o.weight !== 'lead')];
 }
 
 /**
@@ -641,44 +596,6 @@ export function boardContext(
       ...(win ? { window: win.replace(/_/g, ' ') } : {}),
     };
   });
-}
-
-/**
- * WHERE A DRAG LEAVES THE BOARD.
- *
- * Pure, and separate from the pointer, because the pointer is the part that
- * cannot be tested and this is the part that can be wrong. Given the order on
- * screen, the thing being carried and the thing it is over, this returns the
- * position for EVERY object — dense, 0..n-1 — or null when the drag would
- * change nothing.
- *
- * It renumbers everything rather than only what moved. A drag is the person
- * saying where things go, and half an arrangement (some placed, some still
- * wherever George put them) reads as the board fighting the cursor.
- */
-export function dropped(
-  order: BoardObject[],
-  key: string,
-  target: string,
-  after: boolean,
-): Record<string, number> | null {
-  if (key === target) return null;
-  const from = order.findIndex((o) => o.key === key);
-  const onto = order.findIndex((o) => o.key === target);
-  if (from < 0 || onto < 0) return null;
-
-  const next = order.slice();
-  const [moved] = next.splice(from, 1);
-  const at = next.findIndex((o) => o.key === target);
-  next.splice(after ? at + 1 : at, 0, moved);
-
-  // Landing where it already was is not a move, and writing positions for it
-  // would put an arrangement in the undo stack that nobody made.
-  if (next.every((o, n) => o.key === order[n].key)) return null;
-
-  const out: Record<string, number> = {};
-  next.forEach((o, n) => { out[o.key] = n; });
-  return out;
 }
 
 /* ------------------------------------------------- a replay that reshapes */

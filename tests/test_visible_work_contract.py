@@ -245,8 +245,12 @@ def test_the_work_surfaces_draw_no_model_text():
 def test_the_room_draws_the_line_and_the_view():
     room = _ROOM_TSX.read_text(encoding="utf-8")
     assert "<WorkLine" in room and "<BehindIt" in room
-    # The line is ABOVE the claim: the work line comes before the reading.
-    assert room.index("<WorkLine") < room.index("<Reading ")
+    # The line sits in the thread's header, beside its tabs (P2S.1, NOW.md's
+    # audit table 2: "it describes the thread, not the answer"). Until the
+    # beside room it sat above the claim.
+    head = room.index('className="r-right-head"')
+    assert head < room.index("<ThreadHeader") < room.index("<WorkLine")
+    assert room.index("<WorkLine") < room.index("<FiguresArea")
     # And a tapped figure opens the view at that read.
     assert "onFigure" in room
     reading = _READING_TSX.read_text(encoding="utf-8")

@@ -179,15 +179,13 @@ describe('earlier turns fold; they do not stack', () => {
     expect(earlier.map((x) => x.key)).toEqual(['a']);
   });
 
-  it('never folds what was kept, or what is being looked at', () => {
+  it('never folds what is being looked at', () => {
+    // Keeping a figure by hand and setting one aside left with P2S.1 (the
+    // owner, 2026-09-17: "remove"), so the one thing that never folds is the
+    // figure somebody opened.
     const board = [o('a', 0), o('b', 0), o('c', 1)];
-    const { shown, earlier } = folded(board, 1, { a: { kept: true } }, 'b');
-    expect(shown.map((x) => x.key).sort()).toEqual(['a', 'b', 'c']);
-    expect(earlier).toHaveLength(0);
-  });
-
-  it('does not count what is already set aside — that row says it once', () => {
-    const { earlier } = folded([o('a', 0), o('b', 1)], 1, { a: { closed: true } }, null);
-    expect(earlier).toHaveLength(0);
+    const { shown, earlier } = folded(board, 1, {}, 'b');
+    expect(shown.map((x) => x.key).sort()).toEqual(['b', 'c']);
+    expect(earlier.map((x) => x.key)).toEqual(['a']);
   });
 });

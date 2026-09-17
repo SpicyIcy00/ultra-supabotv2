@@ -87,8 +87,6 @@
   --figs-w: 940px;
   --comp-gap: 40px;
   --comp-max: 1560px;
-  /* The old frame, until (b) replaces it in the next commit. */
-  --measure: 1320px;
   --side-w: 232px;
 
   --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
@@ -182,63 +180,53 @@
 }
 .r-say--lead { font-size: 20px; line-height: 1.55; }
 
-/* THE READING — the region above the board, not a tile in it (Reading.tsx).
-   No border, no ground of its own, full measure: it is the page speaking. It
-   reads one step larger than prose inside an object because it is the answer
-   and they are its evidence, and it wraps at a measure a person reads rather
-   than at the width of a column. */
-.r-reading { margin: 0 0 22px; max-width: 66ch; }
-.r-say--reading {
-  font-size: 19px;
-  line-height: 1.62;
-  max-width: 66ch;
-  white-space: pre-wrap;
+/* THE WORDS (P2S.1(c)) — the design's `.bs-claim`, `.bs-stand` and `.bs-next`.
+   Serif, because this is George speaking; the chrome around it is sans. */
+.r-reading { margin: 0; }
+.r-say--claim {
+  margin: 0;
+  font: 500 clamp(20px, 1.9vw, 26px) / 1.22 var(--serif);
+  color: var(--ink); letter-spacing: -0.012em;
+  max-width: 30ch; text-wrap: balance;
 }
-/* Above the reading, always, with room between: a caveat qualifies the
-   answer, so it is read first (UI rule 4) and never wears the accent. */
-.r-reading-caveats { margin-bottom: 14px; }
-@media (max-width: 640px) { .r-say--reading { font-size: 17px; } }
+.r-say--claim em, .r-say--claim .r-claim { font-style: italic; }
+.r-say--standing {
+  margin: 0;
+  font: 400 15.5px/1.55 var(--serif);
+  color: var(--ink-2); max-width: 56ch;
+  /* Newlines he wrote are kept; a space at the start of a line is not. */
+  white-space: pre-line;
+}
+.r-say--standing b { color: var(--ink); font-weight: 500; }
+/* The turn's caveat: one line, directly above the claim (UI rule 4). */
+.r-turn-caveat { max-width: 56ch; }
+.r-reading-caveats { margin: 0; }
 
 /* THE THREE SLOTS (P1.f).
 
-   CAVEAT — his own words for what qualifies the figures, whole, above them.
-   A rule of the same quiet hue as the board's own edges, never the accent:
-   one colour means "needs you", and a caveat takes its prominence from
-   position and structure (UI rules 4 and 5). */
+   CAVEAT — his own words for what qualifies the figures, whole, above them,
+   never the accent: prominence from position, not hue (UI rules 4 and 5). */
 .r-caveat {
-  font: 400 15px/1.55 var(--sans);
+  font: 400 13.5px/1.5 var(--sans);
   color: var(--ink-2);
-  max-width: 62ch;
-  margin: 0 0 14px;
-  padding-left: 13px;
-  border-left: 2px solid rgba(var(--george), 0.45);
+  max-width: 56ch;
+  margin: 0;
 }
 
-/* CLAIM — the few words of the answer that ARE the point, lit where he said
-   them. A wash under the text rather than a colour on it: the sentence stays
-   one sentence, and nothing about it says a different thing is true. */
-.r-claim {
-  font-style: normal;
-  box-shadow: inset 0 -0.55em 0 rgba(var(--george), 0.16);
-}
+/* CLAIM — the few words that ARE the point, in italic where he said them. */
+.r-claim { font-style: italic; }
 
-/* NEXT — one sentence, last, under the board. A dashed rule above it says it
-   is a different kind of thing from the evidence, without boxing it. */
+/* NEXT — the design's: a mono label, his sentence, a 3px rule facing the
+   figures. */
 .r-next {
-  font: 400 15px/1.55 var(--sans);
-  color: var(--ink-2);
-  max-width: 62ch;
-  margin: 22px 0 0;
-  padding-top: 12px;
-  border-top: 1px dashed var(--edge);
+  margin: 6px 0 0; max-width: 44ch;
+  font: 400 14px/1.5 var(--serif); color: var(--ink);
+  border-right: 3px solid var(--ink); padding-right: 14px;
 }
 .r-next-label {
   display: block;
-  font: 600 10px/1.6 var(--sans);
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  font: 500 10.5px/1.6 var(--mono); letter-spacing: 0.06em; text-transform: uppercase;
   color: var(--ink-3);
-  margin-bottom: 3px;
 }
 
 /* THE TOKENS (P1.j) — the arguments the loop accepted, between his reading
@@ -298,7 +286,7 @@
 .r-note { font: 400 13px/1.6 var(--sans); color: var(--ink-2); max-width: 62ch; margin: 0; }
 
 /* Receipts and machine facts. Findable, never read first. */
-.r-src { font: 400 10px/1.6 var(--mono); color: var(--ink-3); margin: 0; word-break: break-word; }
+.r-src { font: 400 10.5px/1.6 var(--mono); color: var(--ink-3); margin: 0; word-break: break-word; }
 
 /* A figure. Tabular, so a column of them lines up. */
 .r-num {
@@ -312,106 +300,54 @@
 /* ------------------------------------------------------------------ tile */
 
 /*
- * A TILE HAS NO COLOUR OF ITS OWN (P2.l, 2026-09-15).
+ * A FIGURE HAS NO BOX (P2S.1(c)).
  *
- * It used to have two. `--hue` was what the object IS — its shop's own colour,
- * on the border and in the wash below — and `--i` was how hard it had moved,
- * as a brightness with no direction in it. Read off the screen that was
- * identity and magnitude on the shell, direction inside the marks, and three
- * of the seven shop hues sitting on the three semantic colours: *"what do the
- * colors mean now? does this make sense?"*.
+ * The owner, three times on 2026-09-16: *"i kinda dont like how its inside a
+ * box visually"*, *"the charts still feel like they are in boxes"*, *"it still
+ * feels like its in squares"*. The design's own reasoning, in its notes: a
+ * border says "an object someone placed here"; without it a figure is
+ * something he drew on the room while talking. Position, a caption and the
+ * line to him give it its place.
  *
- * So the frame is the theme's card, edge and shadow, and every colour left on
- * a tile is inside a mark, where a tool declared a direction. What the tile is
- * ABOUT is its title, which every block has carried since P1.e.
+ * So `.r-tile` is a frame with no border, no ground, no shadow and no clip —
+ * nothing is cut (his row 8, *"here it gets cut … it should feel all
+ * connected"*). A box is kept only for a thing you ACT on — a draft you edit,
+ * an approval you decide — because that genuinely has an edge.
  */
 .r-tile {
   position: relative;
-  border-radius: var(--radius);
-  background: var(--card);
-  border: 1px solid var(--edge);
-  padding: 20px 22px;
-  overflow: hidden;
-  box-shadow: var(--shadow-1);
-  transition: border-color 240ms var(--ease), box-shadow 400ms var(--ease), background 240ms var(--ease);
-  max-height: 560px;
   display: flex;
   flex-direction: column;
   isolation: isolate;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  padding: 0;
+  transition: opacity 240ms var(--ease);
 }
-
-/* THE BLOOM IS GONE. It was the object's own colour under its surface, a
-   large soft radial at `--bloom: 0.62` on dark — the loudest thing on the
-   screen, and the thing P1.e deliberately left alone when it took identity
-   out of the marks. The complaint came back at this layer, so it went. There
-   is no replacement: a tile is a card on the ground now. */
-/*
- * EVERY CHILD HOLDS ITS SIZE; exactly one is allowed to give way, and it says
- * so itself (`.r-tile > .r-mk-body`).
- *
- * `min-height: 0` is what lets a flex child shrink below its content, and it
- * is what a scrolling body inside a capped tile depends on — without it the
- * body keeps its full height and the tile's `overflow: hidden` clips it, which
- * is the table that ended mid-row. It was put HERE first, on every child, and
- * that was wrong: a caveat is a block of text with nowhere to scroll, so
- * shrinking it did not hide anything, it just let the words run over the title
- * underneath. Reported within the hour — "theres also some text overlap".
- */
 .r-tile > * { position: relative; min-width: 0; flex: 0 0 auto; }
 
-/*
- * THE SOLID TILE IS GONE (P2.l), and with it `--on-colour`.
- *
- * It was a name and a figure on a FIELD of the object's own colour — the
- * loudest statement of identity on the board, and the reason a dozen rules
- * below it existed to bridge the room's ink onto a saturated ground. A tile
- * that says which shop it is by being that shop's colour is the thing the
- * owner asked about twice; its title always said the same thing in words.
- */
-
-/* Long bodies scroll inside rather than making the tile define the page. */
-.r-scroll { overflow-y: auto; min-height: 0; }
-.r-scroll::-webkit-scrollbar, .r-mk-body::-webkit-scrollbar { width: 8px; height: 8px; }
-.r-scroll::-webkit-scrollbar-thumb, .r-mk-body::-webkit-scrollbar-thumb {
-  background: var(--edge-strong); border-radius: 4px;
+/* THE ONE BOX: a thing you act on. */
+.r-tile--boxed {
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow-1);
+  padding: 18px 20px;
 }
 
-/* COOLED — AND ON THE SAME BLACK AS EVERY OTHER TILE (2026-09-15).
-   *"why are there 2 different colors of black here? a navy ish and a more
-   greyish?"*, then, of the next build: *"look its still different shades of
-   black"*. He was right and my first measurement was wrong about what it
-   means. A cooled tile drew on `--paper`, which is white at 3% over the
-   ground: `#121218` against the read tile's `#14141C`. Two units of 255 —
-   which I called too small to see — but at that end of the scale it is a
-   tenth of the tile's whole luminance, and two tiles side by side in one row
-   were visibly two different blacks.
-   A tile is ONE black now. Cooled is said by what it does not have: no
-   shadow, and a rule down its left side. Ground is not a channel. */
-.r-tile--quiet {
-  border-color: var(--edge);
-  border-left: 3px solid var(--edge-strong);
-  box-shadow: none;
-}
+/* Tables no longer scroll inside a clipped tile: the figures AREA is what
+   moves, by its arrows, and nothing else shows a bar. */
+.r-scroll { min-height: 0; }
 
-/* `.r-tile--george` WAS HERE and is gone with P2.l. It was his own warm hue
-   on a tile, and the `george` argument that set it had had no caller since
-   P1.c moved the reading out of the board into a region of its own — so the
-   rule could not match anything. His voice is still `--george`, in the chrome
-   and in the reading; it is simply not a tile any more. */
-
-/* A tile that is only a frame for other tiles — the comparison — carries no
-   surface of its own: no shadow, or a rectangle of light floats behind its
-   label with nothing under it. */
-.r-tile--bare { box-shadow: none; }
+/* COOLED — no longer the point. Said by the ink stepping back, not by a hue
+   and not by a box. */
+.r-tile--quiet { opacity: 0.86; }
 
 .r-tile[data-open] { cursor: pointer; }
-/* HOVER, FOCUS AND PICKED ARE STATES OF THE CHROME, not facts about the
-   object, so all three are drawn in the room's own greys. They were the
-   object's hue at three alphas, which meant the one visual difference between
-   "you picked this" and "this is Greenhills" was 0.1 of an alpha. */
-.r-tile[data-open]:hover { border-color: var(--edge-strong); }
-.r-tile:focus-visible { outline: 2px solid var(--ink-3); outline-offset: 2px; }
-.r-tile--picked { border-color: var(--ink-3); }
+.r-tile:focus-visible { outline: 2px solid var(--ink-3); outline-offset: 6px; border-radius: 6px; }
+/* Picked: a quiet rule down its side, in the chrome's own grey. */
+.r-tile--picked { box-shadow: -14px 0 0 -12px var(--ink-3); }
 
 /* --------------------------------------------------------------- assembly */
 
@@ -440,223 +376,255 @@
   * { transition-duration: 1ms !important; }
 }
 
-/* ------------------------------------------------------------------ rail */
+/* --------------------------------------------------------------- sidebar */
 
-.r-rail {
-  position: fixed;
-  left: 0; top: 0; bottom: 0;
-  width: 56px;
-  display: flex; flex-direction: column; align-items: center;
-  gap: 22px; padding: 18px 0;
+/*
+ * THE SIDEBAR, ON THE LEFT EDGE, COLLAPSIBLE (P2S.1(h)) — the design's `.side`.
+ * Open or closed is `data-side` on <html> (Rail.tsx), so the room can slide
+ * without the sidebar knowing anything about it.
+ */
+.r-side {
+  position: fixed; left: 0; top: 0; bottom: 0;
+  width: var(--side-w);
+  padding: 22px 14px 24px 18px;
+  background: var(--ground);
   border-right: 1px solid var(--edge);
-  background: var(--card);
+  overflow-x: hidden; overflow-y: auto;
+  scrollbar-width: none;
   z-index: 20;
+  transition: transform 280ms var(--ease);
 }
+.r-side::-webkit-scrollbar { display: none; }
+:root:not([data-side="open"]) .r-side { transform: translateX(-100%); }
 
-.r-mark {
-  width: 11px; height: 11px; border-radius: 50%;
-  background: rgb(var(--george));
-  box-shadow: 0 0 14px 1px rgba(var(--george), 0.5);
-  flex-shrink: 0;
+.r-side-collapse {
+  position: absolute; right: 8px; top: 18px;
+  width: 26px; height: 26px; border-radius: 7px; border: 0; background: none;
+  color: var(--ink-3); font: 400 18px/1 var(--sans); cursor: pointer;
 }
-.r-mark--busy { animation: r-breathe 1500ms var(--ease) infinite; }
-
-.r-rail-btn {
-  position: relative;
-  width: 34px; height: 34px;
-  display: grid; place-items: center;
-  border: 0; border-radius: 11px; background: transparent;
-  color: var(--ink-3); cursor: pointer;
-  font: 400 10px/1 var(--mono); letter-spacing: 0.04em;
-  transition: color 180ms var(--ease), background 180ms var(--ease);
+.r-side-collapse:hover { background: var(--sunk); color: var(--ink); }
+.r-side-reopen {
+  position: fixed; left: 0; top: 18px; width: 22px; height: 34px;
+  border: 0; border-radius: 0 8px 8px 0; background: var(--card); color: var(--ink-3);
+  box-shadow: 0 0 0 1px var(--edge); z-index: 20; font: 400 18px/1 var(--sans); cursor: pointer;
 }
-.r-rail-btn:hover, .r-rail-btn:focus-visible { color: var(--ink); background: var(--sunk); }
-.r-rail-btn[aria-current='true'] { color: var(--ink); background: var(--sunk); }
+.r-side-reopen:hover { color: var(--ink); }
+.r-side-reopen[hidden] { display: none; }
 
-.r-rail-count {
-  position: absolute; top: 2px; right: 2px;
-  min-width: 15px; height: 15px; padding: 0 4px;
-  border-radius: 8px;
-  background: rgb(var(--accent)); color: var(--on-accent);
-  font: 600 9px/15px var(--sans); text-align: center;
+.r-side-back {
+  display: inline-block; margin: 0 0 14px;
+  font: 400 11px/1.4 var(--mono); color: var(--ink-3); text-decoration: none;
 }
-
-/* The one setting on the rail. A glyph, not a switch: it is the room's
-   light, and you reach for the light without reading a label. */
-.r-rail-btn--theme { font-size: 15px; }
-
-@media (max-width: 720px) {
-  .r-rail {
-    top: auto; right: 0; width: auto; height: 54px;
-    flex-direction: row; justify-content: space-around; gap: 0;
-    padding: 0 12px; border-right: 0; border-top: 1px solid var(--edge);
-    padding-bottom: env(safe-area-inset-bottom, 0);
-  }
+.r-side-back:hover { color: var(--ink); }
+.r-side-name {
+  display: block; margin: 0 0 4px; padding: 0; border: 0; background: none; cursor: pointer;
+  font: 400 22px/1.1 var(--serif); color: var(--ink); text-align: left;
 }
+.r-side-busy { font: 400 11px/1 var(--mono); color: var(--ink-3); }
+.r-side-date { margin: 0 0 16px; font: 400 11px/1.5 var(--mono); color: var(--ink-3); white-space: nowrap; }
+/* THE BUSINESS SWITCH, as the design draws it: one segmented control in a
+   sunk, rounded well. Its "says" line is the pill's title in the sidebar. */
+.r-side .r-estate {
+  margin: 0 0 18px; padding: 3px; gap: 2px; border-radius: 14px; background: var(--sunk);
+  display: flex; flex-wrap: wrap;
+}
+.r-side .r-estate > .r-label { display: none; }
+.r-side .r-est { border: 0; padding: 5px 12px; border-radius: 10px; background: none; font-size: 13px; white-space: nowrap; }
+.r-side .r-est small { display: none; }
+.r-side .r-est--on { background: var(--raise); box-shadow: 0 0 0 1px var(--edge-strong); color: var(--ink); font-weight: 500; }
+.r-side-grp { margin: 0 0 22px; }
+.r-side-h {
+  font: 500 11px/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-3); margin: 0 0 8px;
+}
+.r-side-it {
+  display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; gap: 10px; align-items: baseline;
+  width: 100%; padding: 6px 8px; border-radius: 8px; text-decoration: none;
+  font: 400 13.5px/1.35 var(--sans); color: var(--ink-2);
+}
+.r-side-it:hover, .r-side-it.active { background: var(--sunk); color: var(--ink); }
+.r-side-it > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.r-side-it small { font: 400 11px/1 var(--mono); color: var(--ink-3); white-space: nowrap; }
+.r-side-need { margin-bottom: 20px; }
+.r-side-quiet { margin: 0; padding: 4px 8px; font: 400 11.5px/1.5 var(--mono); color: var(--ink-4); }
+/* A pip: running is filled ink, off is hollow, needs you is the accent. */
+.r-pip {
+  display: block; width: 7px; height: 7px; border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--ink-4); align-self: center;
+}
+.r-pip--run { background: var(--ink-3); box-shadow: none; }
+.r-pip--need { background: rgb(var(--accent)); box-shadow: none; }
+.r-side-count {
+  min-width: 18px; padding: 2px 6px; border-radius: 9px; text-align: center;
+  background: rgb(var(--accent)); color: var(--on-accent) !important; font-weight: 600;
+}
+.r-side-foot { display: flex; gap: 6px; margin-top: 8px; padding-top: 14px; border-top: 1px solid var(--edge); }
+.r-side-tool {
+  border: 0; background: none; cursor: pointer; padding: 6px 10px; border-radius: 8px;
+  font: 400 12.5px/1 var(--sans); color: var(--ink-3);
+}
+.r-side-tool:hover { background: var(--sunk); color: var(--ink); }
 
-/* ----------------------------------------------------------------- board */
+@media (prefers-reduced-motion: reduce) { .r-side { transition: none; } }
+@media (max-width: 820px) { .r-side { width: min(84vw, 300px); box-shadow: var(--shadow-2); } }
+
+/* ----------------------------------------------------------- composition */
 
 /*
- * THE MEASURE — one column, centred, and it is the same one the composer uses.
+ * THE BESIDE ROOM (P2S.1(b)) — the design's `.bs-view`, ported.
  *
- * Reported 2026-09-14, on the first sitting with the six marks: "at 100% size
- * theres lots of empty space on the right and its not centered". Both halves
- * were true and they were two faults. `.r-board` capped itself at 1320px and
- * never centred, while `.r-line` capped at the same width and DID — so on a
- * wide window the answer sat hard left under a centred composer. And the
- * column region always reserved three columns however little was in it, so a
- * board of three things filled two of them and left the third empty inside an
- * already left-hugging page.
+ * `.r-main` is the room: the window right of the sidebar. It SLIDES when the
+ * sidebar opens (`left`), and nothing inside it depends on how far.
  *
- * So the measure is ONE variable on `.room`, read by the page and the composer
- * both so the two cannot drift onto different axes.
+ * `.r-beside` is the composition: two columns, 580 and 940 with 40 between,
+ * centred in the room. ITS WIDTH IS DECIDED AS IF THE SIDEBAR WERE ALWAYS
+ * THERE — `100vw - var(--side-w)` — so opening the sidebar moves it and never
+ * narrows it (his row 4). `beside.composition` is the same arithmetic, tested.
  *
- * IT USED TO MOVE WITH THE BOARD — "the board is the content" — and that is the
- * sentence the block below reverses. A board is content; a page is a frame.
+ * No page scrollbar: the room is fixed to the window and only the figures
+ * area moves (row 9).
  */
-/* THE COUNT SIZES THE BOARD. IT NEVER AGAIN SIZES THE PAGE.
- *
- * Reported three times — 09-14 "lots of empty space on the right", 09-15 "why
- * is still cropped", 09-16 "why is the side gaps different from other pages
- * … there is clearly space". The first was answered by narrowing `--measure`
- * from `data-rest`, and that rule is what produced the other two.
- *
- * MEASURED against his own screenshot, 2026-09-16. Window 1863px, a board of
- * two objects, so `data-rest="1"`: the page took 680px and 1,047px of a 1,863px
- * window was empty — 56%. Beside it "Needs you" took `--measure-list`, 1,120px.
- * Same room, two frames, 440px apart, and he read the difference off the
- * screen before he read anything in it.
- *
- * THE INVERSION: a page is a frame and a frame does not move. Sizing it from
- * how many objects the model happened to compose makes the chrome, the reading
- * and the composer a function of the answer — and squeezes everything inside
- * it, which is why a row label capped at 40% of its tile was still cut and why
- * two tiles could not sit side by side. Both were the strip, not their own
- * rules.
- *
- * What the 09-14 report was actually about is a board that reserved three
- * columns for two objects and left the third empty. That is a COLUMN COUNT and
- * it is fixed below, where it belongs — never more columns than there are
- * things. The page keeps one width, and two objects now get two columns of it.
- */
-
 .r-main {
-  padding: 26px clamp(18px, 3vw, 40px) 150px;
-  /* The rail is 56px of fixed chrome on the left, so it is padding here and
-     the column centres in what is left — exactly what the composer does. A
-     margin could not be centred around, which is why it used to be one. */
-  padding-left: calc(56px + clamp(18px, 3vw, 40px));
+  position: fixed; top: 0; bottom: 0; right: 0; left: 0;
+  overflow: hidden;
+  transition: left 280ms var(--ease);
+}
+:root[data-side="open"] .r-main { left: var(--side-w); }
+@media (prefers-reduced-motion: reduce) { .r-main { transition: none; } }
+
+.r-beside {
+  position: relative;
+  box-sizing: border-box;
+  height: 100%;
+  width: min(var(--comp-max), 100vw - var(--side-w) - 32px);
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 29fr) minmax(0, 47fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: "him right" "words right";
+  column-gap: var(--comp-gap);
+  padding: max(5vh, 64px) 0 150px;
+  align-items: start;
 }
 
-/* THE COLUMN ITSELF, and it is a wrapper rather than a rule on every child
-   because the reading has a measure of its own — 66ch, because it is prose —
-   and the page's would run his words the whole width of the board. The page
-   and the composer both use it, so they cannot drift onto different axes. */
-.r-measure { max-width: var(--measure); margin-inline: auto; }
-@media (max-width: 720px) {
-  .r-main { padding-left: clamp(18px, 3vw, 40px); padding-bottom: 190px; }
+/* THE LEADING LINES, over the whole composition (row 10). */
+.r-wires {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; overflow: visible; z-index: 0;
+}
+.r-wires line {
+  stroke: rgba(138, 143, 152, 0.32);
+  stroke-dasharray: 2 5;
+  transition: opacity 400ms;
 }
 
-/*
- * A BOARD PACKS. A twelve-column grid gave every row the height of its tallest
- * tile, so a forty-line draft beside a two-line reading left three hundred
- * pixels of nothing. What LEADS takes its own row at the top, in George's
- * order; everything after it flows into columns and packs tight.
- */
-/* The board fills the measure; the measure is what was narrowed. */
-.r-board { max-width: 100%; }
-
-/* A SMALL BOARD IS TWO REGIONS STACKED, AND NO WIDTH FIXES THAT.
- *
- * "why arent the charts side by side there is clearly space" — 2026-09-16, and
- * it is the half of that report the measure does not touch. What LEADS is one
- * container and what packs below it is another, so a board of two objects is
- * one above the other at 680px and still one above the other at 1320px. He was
- * reading the space correctly; the layout could not use it.
- *
- * When the pack holds ONE thing, the lead and the pack are a ROW rather than a
- * stack. Both regions survive — which is why this is a grid here and not a
- * merge in `render.tsx`: `drag.ts` decides lead-or-rest by which container the
- * pointer is over, and a board with no lead region is a board you cannot
- * promote a tile into.
- *
- * `align-items: start` because the two are different heights and a row that
- * stretched the shorter one is the twelve-column grid this board replaced.
- * `:has(.r-board-lead)` because ONE object George did not weight `lead` is
- * also `data-rest="1"` — one region, not two — and a single tile in a
- * two-column row is the empty right-hand half he reported on 09-14. A row
- * needs both halves to be a row.
- */
-.r-board[data-rest="1"]:has(.r-board-lead) {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start;
+/* HIM — top-left, big, the glow running past the column (rows 14, 24). */
+.r-him {
+  grid-area: him; position: relative; min-width: 0;
+  display: flex; align-items: flex-start; justify-content: center;
+  overflow: visible; pointer-events: none;
 }
-.r-board[data-rest="1"] .r-board-lead { margin-bottom: 0; }
-/* That one object, then: capped and centred like any other lone tile. */
-.r-board[data-rest="1"]:not(:has(.r-board-lead)) .r-board-rest {
-  max-width: 760px; margin-inline: auto;
-}
-/* UI rule 7: the phone layout is the real one, and two charts abreast is not
-   it. Above the pack's own 640px collapse, because a two-column board wants
-   more room than a two-column pack. */
-@media (max-width: 900px) { .r-board[data-rest="1"]:has(.r-board-lead) { grid-template-columns: 1fr; } }
-
-/* ONE OBJECT AND NOTHING UNDER IT. The page no longer narrows to it, so the
-   natural width goes HERE — on the region, which is content, not on the frame.
-   A lone dumbbell run to 1320px is a different wrong from a 680px page. */
-.r-board[data-rest="0"] .r-board-lead { max-width: 760px; margin-inline: auto; }
-
-.r-board-lead { display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 14px; }
-@media (min-width: 1100px) {
-  .r-board-lead { grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); }
+.r-him canvas {
+  width: 136%; max-width: none; height: auto; aspect-ratio: 680 / 420;
+  flex: none; margin: -6vh -18% 0; pointer-events: none;
 }
 
-/*
- * NEVER MORE COLUMNS THAN THERE ARE THINGS. Multi-column balances by HEIGHT,
- * so three columns holding one tall table and two short figures puts the table
- * in the first, both figures in the second, and leaves the third empty — which
- * is what the report was looking at. The count is capped by the object count,
- * and the measure above shrinks with it, so the region is full at every size.
- */
-.r-board-rest { columns: 3 340px; column-gap: 14px; }
-.r-board[data-rest="1"] .r-board-rest { columns: 1; }
+/* HIS WORDS — under him, pulled up so they come from him (row 12), set toward
+   the figures. */
+.r-words {
+  grid-area: words; align-self: start; min-width: 0; position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 12px;
+  padding-right: 4px; text-align: right; margin-top: -10vh;
+}
+.r-words .r-reading { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; margin: 0; max-width: none; }
+.r-words .r-caveats { border-left: 0; border-right: 2px solid var(--edge-strong); padding: 0 12px 0 0; }
+.r-words .r-foot-offers { justify-content: flex-end; }
+.r-failed { color: var(--ink-2); }
 
-/* TWO OR THREE THINGS ARE PLACED, NOT BALANCED (2026-09-16, his fourth look).
- *
- * `columns: 2` is multi-column, and multi-column decides where an item goes by
- * BALANCING HEIGHT. That is the right mechanism for a pack of many — it is why
- * a tall table beside two short figures packs tight — and it is a guess for
- * two. Read out of `george.posts`, the turn he screenshotted composed ONE
- * block and the surface default-composed his two reads as `read-0` (lead) and
- * `read-1` (quiet), so BOTH charts are in the pack with a carried object
- * leading above them: two equal tiles, two equal columns, and where they land
- * is whatever the balancer decides.
- *
- * A grid PLACES them: first item first column, second item second, no height
- * involved. Three items wrap to a second row rather than taking a third
- * column, which is what `columns: 2 340px` did and is still right — a third
- * column of 428px is too narrow for a dumbbell to read in.
- *
- * `align-items: start` so a short tile beside a tall one keeps its own height.
- */
-.r-board[data-rest="2"] .r-board-rest,
-.r-board[data-rest="3"] .r-board-rest {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start;
+/* THE FIGURES — the right column, the whole height. */
+.r-right {
+  grid-area: right; position: relative; z-index: 1; min-width: 0; min-height: 0;
+  height: 100%; display: flex; flex-direction: column;
 }
-@media (max-width: 900px) { .r-board-rest { columns: 2 280px; } }
-@media (max-width: 640px) {
-  .r-board-rest, .r-board[data-rest] .r-board-rest { columns: 1; }
-  /* A grid ignores `columns`, so the phone rule has to speak grid too. */
-  .r-board[data-rest="2"] .r-board-rest,
-  .r-board[data-rest="3"] .r-board-rest { grid-template-columns: 1fr; }
+.r-right-head { flex: none; }
+.r-right-figs { position: relative; flex: 1 1 auto; min-height: 0; }
+.r-figs {
+  height: 100%; min-height: 0;
+  overflow-y: auto; overflow-x: hidden;
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+  padding-bottom: 8px;
 }
-.r-board-rest > * {
-  break-inside: avoid;
-  -webkit-column-break-inside: avoid;
-  display: inline-block;
-  width: 100%;
-  margin-bottom: 14px;
+.r-figs::-webkit-scrollbar { display: none; }
+
+/* ONLY WHEN THERE IS MORE (row 9). Each moves 80% of the area. */
+.r-arr {
+  position: absolute; right: -6px; width: 30px; height: 30px; border-radius: 50%;
+  border: 0; cursor: pointer;
+  background: var(--ground); color: var(--ink-2);
+  box-shadow: 0 0 0 1px var(--edge-strong), 0 6px 20px rgba(0, 0, 0, 0.3);
+  font: 400 14px/30px var(--sans); text-align: center; z-index: 3;
+  transition: opacity 200ms;
 }
-.r-w-full { break-inside: avoid; }
+.r-arr:hover { color: var(--ink); background: var(--sunk); }
+.r-arr--up { top: 0; }
+.r-arr--dn { bottom: 0; }
+.r-arr[hidden] { display: none; }
+
+/* THE FLOW (row 6, 7). One grid; each figure told its column and spanning its
+   own height in 1px rows, so a figure changing column never remounts. */
+.r-flow {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
+  grid-auto-rows: 1px;
+  column-gap: var(--comp-gap);
+  row-gap: 0;
+  align-items: start;
+}
+.r-fig { min-width: 0; position: relative; }
+.r-fig-body { padding-bottom: 34px; }
+/* ARRIVING: invisible until its moment, then drawn in (row 13). */
+.r-fig[data-arrived="no"] { opacity: 0; transform: translateY(6px); }
+.r-fig[data-arrived="yes"] { opacity: 1; transform: none; transition: opacity 420ms var(--ease), transform 420ms var(--ease); }
+.r-fig--out { opacity: 0.55; }
+@media (prefers-reduced-motion: reduce) {
+  .r-fig[data-arrived] { transition: none; transform: none; }
+}
+/* READ n · RULED OUT — the design's `.lbl`. */
+.r-fig-lbl {
+  font: 400 10.5px/1.6 var(--mono); letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-3); margin: 0 0 8px;
+}
+.r-fig-lbl s { text-decoration: none; color: var(--ink-4); }
+
+/* A PHONE IS THE REAL LAYOUT (UI rule 7): him, his words, the figures, one
+   column, no lines, no arrows, and the page scrolls. */
+@media (max-width: 900px) {
+  .r-main { position: static; overflow: visible; }
+  .r-beside { display: block; height: auto; width: auto; padding: 20px 5vw 190px; }
+  .r-wires { display: none; }
+  .r-him { display: block; }
+  .r-him canvas { width: 100%; max-width: 420px; margin: 0; }
+  .r-words { margin-top: 12px; align-items: flex-start; text-align: left; }
+  .r-words .r-reading { align-items: flex-start; }
+  .r-words .r-caveats { border-right: 0; border-left: 2px solid var(--edge-strong); padding: 0 0 0 12px; }
+  .r-words .r-foot-offers { justify-content: flex-start; }
+  .r-next { border-right: 0 !important; border-left: 3px solid var(--ink); padding: 0 0 0 14px !important; }
+  .r-right { margin-top: 26px; height: auto; }
+  .r-figs { height: auto; overflow: visible; }
+  .r-arr { display: none; }
+  .r-flow { display: block; }
+  .r-fig { grid-column: auto !important; grid-row: auto !important; }
+}
+
+/* THE LIST SCREENS — Needs you, Kept, Running. The same room and ground, a
+   column centred in what the sidebar leaves, and here the page scrolls. */
+.r-main--list {
+  position: fixed; overflow-y: auto; scrollbar-width: none;
+  padding: 40px clamp(18px, 3vw, 40px) 150px;
+}
+.r-main--list::-webkit-scrollbar { display: none; }
+@media (max-width: 900px) { .r-main--list { position: static; } }
 
 /* --------------------------------------------------------------- pieces */
 
@@ -697,58 +665,70 @@
   transform: translateY(var(--y, 0));
 }
 
-.r-acts {
-  display: flex; align-items: center; gap: 12px; margin-top: 10px;
-  flex-wrap: wrap;
-  /* QUIET UNTIL YOU ARE THERE. The row is under every object now, so ten
-     objects would otherwise be ten toolbars and the board would read as a
-     control panel. It keeps its space — nothing jumps when it appears — and
-     it is reachable by keyboard while invisible, because tabbing to it is
-     what reveals it. */
-  opacity: 0; pointer-events: none;
-  transition: opacity 160ms var(--ease);
-}
-[data-drag-key]:hover .r-acts,
-[data-drag-key]:focus-within .r-acts { opacity: 1; pointer-events: auto; }
-/* A finger has no hover, so there it is simply always there (UI rule 7). */
-@media (hover: none) {
-  .r-acts { opacity: 1; pointer-events: auto; }
-}
-.r-act {
-  border: 0; background: none; padding: 3px 0; cursor: pointer;
-  font: 400 11px/1 var(--sans); color: var(--ink-3);
-  transition: color 160ms var(--ease);
-}
-.r-act:hover, .r-act:focus-visible { color: var(--ink); }
-@media (hover: none) { .r-act { padding: 7px 0; color: var(--ink-2); } }
-
 /* ------------------------------------------------------------------ line */
 
+/*
+ * THE COMPOSER (P2S.1(h)) — the design's `.compose`: one line, the chips on
+ * it, what travels above it, and ↑ sends. It sits under the composition, as
+ * wide as the composition, and slides with the room.
+ */
 .r-line-wrap {
-  position: fixed; left: 56px; right: 0; bottom: 0;
-  padding: 0 clamp(18px, 3vw, 40px) 22px;
+  position: fixed; left: 0; right: 0; bottom: 0;
+  padding: 0 16px 20px;
   background: linear-gradient(to top, var(--ground) 62%, transparent);
   pointer-events: none; z-index: 15;
+  transition: left 280ms var(--ease);
 }
-@media (max-width: 720px) { .r-line-wrap { left: 0; bottom: 54px; } }
+:root[data-side="open"] .r-line-wrap { left: var(--side-w); }
+@media (prefers-reduced-motion: reduce) { .r-line-wrap { transition: none; } }
+@media (max-width: 900px) { :root[data-side="open"] .r-line-wrap { left: 0; } }
+
+/* The design's own width for the line in the beside room: 840, centred. */
+.r-compose {
+  width: min(840px, 100vw - var(--side-w) - 32px);
+  margin: 0 auto;
+}
+@media (max-width: 900px) { .r-compose { width: auto; } }
 
 .r-line {
   display: flex; align-items: center; gap: 10px;
-  /* The same measure as the page, so the two never sit on different axes. */
-  max-width: var(--measure); margin: 0 auto;
   background: var(--card);
-  border: 1px solid var(--edge);
   border-radius: 999px;
-  padding: 9px 10px 9px 20px;
-  box-shadow: var(--shadow-2);
+  padding: 9px 10px 9px 22px;
+  box-shadow: var(--shadow-2), 0 0 0 1px var(--edge-strong);
   pointer-events: auto;
 }
-.r-line:focus-within { border-color: rgba(var(--george), 0.5); }
+.r-line:focus-within { box-shadow: var(--shadow-2), 0 0 0 1px var(--ink-3); }
 .r-line input {
-  flex: 1; border: 0; outline: 0; background: transparent;
-  font: 400 15px/1.4 var(--sans); color: var(--ink);
+  flex: 1; min-width: 0; border: 0; outline: 0; background: transparent;
+  font: 16px var(--sans); color: var(--ink);
 }
 .r-line input::placeholder { color: var(--ink-3); }
+
+/* THE CHIPS ON THE LINE — the read-as tokens, drawn as the design's `.steer`:
+   quiet words that brighten under the pointer. What a token can be moved to
+   opens ABOVE the line, and a refused move says so there too. */
+.r-steer { position: relative; flex: none; display: flex; align-items: center; min-width: 0; }
+.r-steer .r-tokens { margin: 0; position: static; }
+.r-steer .r-token-row { flex-wrap: nowrap; gap: 2px; }
+.r-steer .r-token {
+  flex-direction: row; align-items: baseline; gap: 5px;
+  border: 0; background: none; border-radius: 999px; padding: 6px 10px;
+}
+.r-steer .r-token:hover, .r-steer .r-token[aria-pressed='true'] { background: var(--sunk); }
+.r-steer .r-token-what { font: 400 10px/1 var(--mono); letter-spacing: 0.04em; }
+.r-steer .r-token-is { font: 400 12.5px/1 var(--sans); color: var(--ink-3); white-space: nowrap; }
+.r-steer .r-token:hover .r-token-is { color: var(--ink); }
+.r-steer .r-token-open,
+.r-steer .r-token-refusal,
+.r-steer .r-token-busy {
+  position: absolute; right: 0; bottom: calc(100% + 16px);
+  margin: 0; padding: 10px 12px; min-width: 260px; max-width: 520px;
+  background: var(--card); border-radius: 12px; box-shadow: var(--shadow-2), 0 0 0 1px var(--edge);
+  text-align: left;
+}
+
+.r-grounded { display: none; }
 
 /* GREY TEXT THAT FINISHES THE QUESTION (P2.d, 2026-09-15).
    The completion is drawn UNDER the input in the same box, with the typed
@@ -763,7 +743,7 @@
 .r-ghost {
   position: absolute; inset: 0;
   display: flex; align-items: center;
-  font: 400 15px/1.4 var(--sans);
+  font: 16px var(--sans);
   white-space: pre;
   overflow: hidden;
   pointer-events: none;
@@ -780,12 +760,15 @@
   color: var(--ink-3); white-space: nowrap;
 }
 
+/* ↑ — the design's: a quiet circle, not a lit one. The accent is for "needs
+   you", so sending does not wear it. */
 .r-send {
-  width: 34px; height: 34px; border-radius: 50%; border: 0;
-  background: rgb(var(--george)); color: var(--on-george);
+  width: 36px; height: 36px; border-radius: 50%; border: 0; flex-shrink: 0;
+  background: var(--sunk); color: var(--ink-2);
   display: grid; place-items: center; cursor: pointer; font-size: 15px;
 }
-.r-send:disabled { background: var(--sunk); color: var(--ink-3); cursor: default; }
+.r-send:hover { background: var(--raise); color: var(--ink); }
+.r-send:disabled { color: var(--ink-4); cursor: default; background: var(--sunk); }
 
 .r-chip {
   border: 1px solid var(--edge); background: var(--card);
@@ -805,10 +788,12 @@
    reserved for approvals (UI rule 5).                                      */
 
 .r-chips {
-  display: flex; flex-wrap: wrap; gap: 6px;
-  margin: 0 auto 8px; max-width: var(--measure);
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  margin: 0 0 8px 16px; min-height: 24px;
   pointer-events: auto;
 }
+/* The design's hint when nothing is picked: how to give the line something. */
+.r-refs-hint { font: 400 11.5px/1.6 var(--mono); color: var(--ink-3); padding: 3px 0; }
 .r-chip--subject { border-color: var(--edge-strong); color: var(--ink); }
 .r-chip--scope, .r-chip--named { color: var(--ink-3); }
 
@@ -821,15 +806,16 @@
    a kind apart.                                                            */
 
 .r-mentions {
-  max-width: var(--measure); margin: 0 auto 8px;
+  margin: 0 0 8px;
   background: var(--card);
   border: 1px solid var(--edge);
   border-radius: 14px;
   box-shadow: var(--shadow-2);
   padding: 6px;
-  max-height: 46vh; overflow-y: auto;
+  max-height: 46vh; overflow-y: auto; scrollbar-width: none;
   pointer-events: auto;
 }
+.r-mentions::-webkit-scrollbar { display: none; }
 .r-mentions .r-label { margin: 0; padding: 8px 10px; }
 
 .r-mention {
@@ -872,7 +858,7 @@
 /* A caveat. Above the work, never behind a hint-less disclosure, and never in
    a direction colour — it qualifies a figure, it is not one. */
 .r-caveats { display: grid; gap: 9px; border-left: 2px solid var(--edge-strong); padding-left: 14px; }
-.r-caveat { font: 400 12.5px/1.6 var(--sans); color: var(--ink-2); max-width: 66ch; margin: 0; }
+.r-caveats .r-caveat { font: 400 12.5px/1.55 var(--sans); color: var(--ink-2); max-width: 60ch; margin: 0; }
 .r-caveat-detail { display: block; margin-top: 6px; color: var(--ink-3); font-size: 11.5px; }
 .r-more {
   border: 0; background: none; padding: 0; cursor: pointer; font: inherit;
@@ -1024,7 +1010,7 @@
    with the figure would be the wrong way round. Never coloured: the one colour
    means "needs you" (UI rule 5), and a footnote is not an approval. */
 .r-figure-n {
-  font: 400 9.5px/1 var(--mono);
+  font: 400 9px/1 var(--mono);
   font-variant-numeric: tabular-nums;
   color: var(--ink-3);
   margin-left: 1px;
@@ -1164,20 +1150,6 @@
                   text-overflow: ellipsis; white-space: nowrap; }
 .r-spec-cell b { font: 500 13px/1.2 var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
 
-/* ------------------------------------------------------- what is yours
-   Two kinds of action sit on a tile, and they should not read as one row.
-   `open`, `compare`, `why` are QUESTIONS — they may cost a turn and they
-   change what George is looking at. The group below changes YOUR VIEW and
-   nothing else: instant, free, never sent back to him. A thin rule and a
-   little air is the whole distinction, which is as much as it needs. */
-.r-acts-mine {
-  display: inline-flex; align-items: center; gap: 2px;
-  margin: 0 2px; padding: 0 8px;
-  border-left: 1px solid var(--edge); border-right: 1px solid var(--edge);
-}
-.r-acts-mine .r-act { padding-inline: 4px; min-width: 18px; text-align: center; }
-.r-acts-mine .r-act[aria-pressed='true'] { color: var(--ink); font-weight: 600; }
-
 /* ------------------------------------------------------------------- notes
    A few words ON the mark, which is the whole point: the sentence that used
    to sit under the chart saying "this line carries the order" becomes three
@@ -1194,36 +1166,6 @@
   text-transform: uppercase; color: var(--ink-3);
 }
 .r-spec-bar { grid-template-columns: minmax(6ch, 12ch) 1fr auto auto; }
-
-/* ------------------------------------------------------------------- drag
-   Arranging the board by moving things, rather than by pressing a button that
-   moves them. See drag.ts for why it is pointer events and window listeners
-   and not HTML5 drag and drop. */
-
-.r-grip {
-  cursor: grab;
-  /* The ONE place a finger drags instead of scrolling. Anywhere else on a
-     tile, a touch still scrolls the page — reading the board must not cost
-     anything to make arranging it possible. */
-  touch-action: none;
-  font-size: 13px; line-height: 1; letter-spacing: 1px;
-}
-.r-grip:active { cursor: grabbing; }
-@media (hover: none) { .r-grip { padding-inline: 8px; font-size: 15px; } }
-
-/* The carried tile gets out of its own way, so what is under the pointer is
-   the board. Without this the drag hit-tests itself and nothing ever moves. */
-.r-dragging { pointer-events: none; opacity: 0.7; }
-.r-dragging .r-tile {
-  transform: scale(0.985);
-  border-color: var(--edge-strong);
-  box-shadow: var(--shadow-2);
-}
-
-body.r-dragging-on { cursor: grabbing; user-select: none; }
-/* The board re-flows under the hand on every crossing; animating each tile
-   into its new place turns that into a swim rather than a rearrangement. */
-body.r-dragging-on .r-tile { transition: none; }
 
 /* ------------------------------------------------------- the other rooms
    What needs a decision, what you kept, what runs on its own. Lists, not
@@ -1252,7 +1194,7 @@ body.r-dragging-on .r-tile { transition: none; }
    sentence. Prose keeps its measure, here and in the reading, because running
    an answer the full width of a 1900px screen is the thing a measure exists to
    prevent. */
-.r-column { max-width: var(--measure); margin-inline: auto; }
+.r-column { max-width: var(--comp-max); margin-inline: auto; }
 
 /* WHAT A KEPT PAGE HOLDS, quoted rather than described — a list of question
    names, not a sentence. A reading measure is for prose: applied to a
@@ -1435,26 +1377,15 @@ body.r-dragging-on .r-tile { transition: none; }
  * line up down the block instead of drifting with their glyph widths.
  */
 .r-mk-title {
-  font: 600 15px/1.35 var(--sans);
-  letter-spacing: -0.008em;
-  color: var(--ink);
-  margin: 0 0 2px;
-  max-width: 46ch;
+  font: 400 14px/1.45 var(--serif);
+  color: var(--ink-2);
+  margin: 0 0 12px;
+  max-width: 60ch;
 }
 .r-mk-sub {
   font: 400 10px/1.5 var(--mono);
   color: var(--ink-3);
   margin: 0 0 12px;
-}
-
-/*
- * THE MARK'S BODY IS WHAT SCROLLS, and the title, the subtitle and the source
- * line never do — a figure whose receipts scrolled out of sight would be a
- * number with no time on it (UI rule 6). The tile caps at 560px; this is the
- * one child allowed to give way.
- */
-.r-tile > .r-mk-body {
-  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
 }
 
 .r-mk { display: grid; gap: 2px; }
@@ -1728,10 +1659,7 @@ button.r-mk-name[aria-pressed="true"], .r-mk-cellname[aria-pressed="true"] {
    tile now, which is what `.r-scroll` has always done for a long table. */
 .r-memory {
   list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 14px;
-  overflow-y: auto; min-height: 0; flex: 1 1 auto;
 }
-.r-memory::-webkit-scrollbar { width: 8px; }
-.r-memory::-webkit-scrollbar-thumb { background: var(--edge-strong); border-radius: 4px; }
 .r-belief { display: grid; gap: 5px; justify-items: start; max-width: 62ch; }
 .r-belief-claim { margin: 0; font: 400 13px/1.6 var(--sans); color: var(--ink); }
 .r-belief-stance {

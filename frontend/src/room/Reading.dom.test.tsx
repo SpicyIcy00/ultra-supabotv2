@@ -21,6 +21,16 @@ import type { GeorgeNotice } from '../types/george';
 
 afterEach(cleanup);
 
+/**
+ * WHAT THE READING SAYS, IN THE ORDER HE SAID IT. The claim is lifted into a
+ * sentence of its own (P2S.1(c)), so the words are read back by part —
+ * before, claim, after — which is the answer, character for character.
+ */
+function spoken(container: Element): string {
+  const part = (name: string) => container.querySelector(`[data-part="${name}"]`)?.textContent ?? '';
+  return `${part('before')}${part('claim')}${part('after')}`.trim();
+}
+
 const ROWS = [
   { store: 'Rockwell', value: 203717, change_pct: 13.8, direction: 'up', unit: 'PHP' },
   { store: 'OPUS', value: 555147, change_pct: 30.6, direction: 'up', unit: 'PHP' },
@@ -59,8 +69,7 @@ describe('the reading is drawn from the turn, not composed', () => {
     const { container } = render(<Reading text={TURN.text} />);
     expect(container.querySelector('.r-tile')).toBeNull();
     expect(container.querySelector('.r-reading')).toBeTruthy();
-    expect(container.querySelector('.r-say--reading')?.textContent)
-      .toBe(TURN.text);
+    expect(spoken(container)).toBe(TURN.text);
   });
 
   it('draws nothing at all when he said nothing, and claims nothing either', () => {
@@ -88,7 +97,7 @@ describe('the reading is drawn from the turn, not composed', () => {
     const lit = container.querySelector('.r-claim');
     expect(lit?.textContent).toBe(claim);
     // The sentence is still the sentence: the highlight is a span inside it.
-    expect(container.querySelector('.r-say--reading')?.textContent).toBe(TURN.text);
+    expect(spoken(container)).toBe(TURN.text);
   });
 
   it('lights nothing when the claim is not in what he said', () => {
@@ -98,7 +107,7 @@ describe('the reading is drawn from the turn, not composed', () => {
     const { container } = render(
       <Reading text={TURN.text} reading={{ claim: 'Rockwell is in trouble' }} />);
     expect(container.querySelector('.r-claim')).toBeNull();
-    expect(container.querySelector('.r-say--reading')?.textContent).toBe(TURN.text);
+    expect(spoken(container)).toBe(TURN.text);
   });
 
   it('puts his caveat whole above the reading, and never in the accent', () => {
