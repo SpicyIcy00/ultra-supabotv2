@@ -4464,3 +4464,17 @@ catalogue at six — P2S.g opens it to sixteen with a rule for what he reaches f
 "stays what you asked for" on the pin. Nothing in the phase changes what George reads or writes
 except P2S.g, which is why it alone carries an eval.
 
+
+**Phase 2 merged into Phase 2S — the functions carry, the screens do not.**
+2026-09-17, the owner: "could you just merge them together cause i dont know
+if the old functions are good to carry thtough". Judged card by card against
+the standard, not against the plan the cards came from. P2.k (one renderer for
+a kept page) folds into P2S.3 because it would have ported pages onto the six
+marks P2S.3 replaces; P2.i (year-over-year) is kept as P2S.4 because it changes
+what George can say and the redraw cannot touch it; P2.✓ folds into P2S.✓, one
+close with the full run; P2.j (watch before stock-out) moves to Phase 3 as
+P3.g; P2.h (voice) is PARKED, not built, because standard §8 asks for voice as
+"a first-class way of operating George rather than simply speech-to-chat" and
+the card was speech-to-chat. Open cards 16 → 13, eval spend unchanged at $3.66.
+The old functions all map to a numbered section of the standard; the old UI
+is deleted under the phase's line-count rule.
