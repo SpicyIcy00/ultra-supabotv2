@@ -57,6 +57,47 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-17 — "why is there 2 thinkings it should only be around the blob"
+
+> *"also why is there 2 thinkings it should only be around the blob and should
+> be more in depth on what its doing with progess per thing its running but
+> just small."*
+
+Said of the live build `634423e` (P2S.3), with a screenshot of a turn in
+progress: a list at the top of the figures area (*1 read sales · 7 rows · 99ms,
+2 read sales …, kept what he now thinks 16ms … 38s*) and, under the mark, *kept
+what he now thinks · thinking… 38s*.
+
+**Found underneath (not fixed).** Two components draw the same stream while he
+works: `Working` (the step list, `Room.tsx` in the figures area, `busy &&`) and
+`Doing` (one line under the mark, added 2026-09-17 when the owner asked for "a
+line under the mark while he works"). Neither knew about the other. The fix his
+words describe: one place, under the mark — `Doing` becomes the small per-step
+progress (each read, its state, rows and time), and `Working` stops drawing in
+the figures area. About an hour; `working.dom.test.tsx` and
+`visibleWork.dom.test.tsx` hold the trail today and move with it.
+
+### 2026-09-17 — "this should stay where it is in everypage and should know context"
+
+> *"this should stay where it is in everypage and should know context."*
+
+Said of the live build `634423e`, with a screenshot of the message line (*say
+what you mean · "why?" · "these two" · "last 90 days" · HOW MANY top 10 · not
+what I meant*).
+
+**Found underneath (not fixed), and it is CLAUDE.md UI rule 1** — *"George is on
+every page, not a page you navigate to, and receives that page as context"* —
+which the room does not keep. The message line is drawn by `Room.tsx` only, so it
+exists at `/george` and `/w/:id` and nowhere else: Kept, Needs you and Running
+(`RoomShell`) have no line, a kept page has its own different ask box at its foot
+(P2S.3(g)), and the BI pages (Dashboard, Analytics, Warehouse …) have none. The
+context half exists already — a page question carries `pageScope` / `pageContext`
+— but only the kept page sends it. The fix: one fixed message line in a shared
+shell for every screen, sending that screen as context (the page id on a kept
+page, the screen's name elsewhere) and opening the answer in the room. **Bigger
+than an hour** — it touches every shell and the BI `Layout` — so by §2b it
+becomes a card rather than a same-day fix, unless he says to jump the queue.
+
 ### 2026-09-17 — found by the session: a product chart names every row after its shop
 
 Not reported by the owner; seen in the frames of the recorded gate turns
