@@ -4478,3 +4478,17 @@ P3.g; P2.h (voice) is PARKED, not built, because standard §8 asks for voice as
 the card was speech-to-chat. Open cards 16 → 13, eval spend unchanged at $3.66.
 The old functions all map to a numbered section of the standard; the old UI
 is deleted under the phase's line-count rule.
+
+**"The ideal UI" is fifteen scenes, and Phase 2S finishes eight.** 2026-09-17,
+the owner: "so at the end of p2s we will have my ideal ui? make sure we will".
+The artifact has one scene per part of his vision; Phase 2S's close walked four.
+Every scene now has exactly one close in a ledger in NOW.md §3 — eight at
+P2S.✓, five at P3.✓, docs at S.4, team at S.6 — and
+`tests/test_plan_alignment_contract.py` fails if a scene has no close or a close
+card does not name every scene it owns (mutation-checked both ways). And "frame
+for frame" is held by pixels: headless Chrome is installed and rendered the
+artifact at 1920x1080 in this session, so every 2S card renders its scenes beside
+the artifact's before closing. Look (fixtures) and behaviour (live, the full run,
+plus P2.m's two unrun questions) are separate checks, because the artifact's
+words are authored and George's are not. The build order was judged right; the
+proof was what was weak.

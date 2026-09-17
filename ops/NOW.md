@@ -2376,6 +2376,61 @@ thtough"*. **The answer splits in two, and the split is the point:**
 Eval spend is unchanged at **$3.66**: P2S.3's subset, the merged close's full
 run, and P3.✓'s. Open cards 16 → 13.
 
+**THE FIFTEEN SCENES — WHAT "THE IDEAL UI" ACTUALLY CONTAINS, AND WHERE EACH ONE
+IS FINISHED (2026-09-17).** The owner: *"so at the end of p2s we will have my ideal
+ui? make sure we will and is this the best way to do it?"* **At the end of Phase 2S
+he has the room and EIGHT of the fifteen scenes — not all fifteen, and nothing
+may say otherwise.** The design has one scene per part of his vision
+(`data-scene` in `ops/ideal/george-ahead-of-me.html`); five need Phase 3's
+surfaces and two need a source only he can supply. This table is held by
+`tests/test_plan_alignment_contract.py`: every scene in the artifact appears
+here exactly once, and the close it names must name the scene in its own card.
+
+| Scene (`data-scene`) | Vision § | What it shows | Built by | Closes at |
+|---|---|---|---|---|
+| `situation` | 1·4·5 | Rockwell, already investigated, reads and one ruled out | P2S.1–P2S.3 on an asked question; **unasked it is P3.b's morning** | P2S.✓ |
+| `doing` | 2·6 | "how are we doing?" | P2S.1–P2S.3 | P2S.✓ |
+| `nothing` | 5·6 | "nothing important", and where he looked | P2S.1, P2S.3 | P2S.✓ |
+| `judgment` | 3 | disagrees, was wrong | P2S.1 (words), P2.m's views | P2S.✓ |
+| `touch` | 7·8 | tap anything, then words | P2.c + P2S.1(h) | P2S.✓ |
+| `memory` | 9 | what he believes, with Forget | P2.f redrawn by P2S.2 | P2S.✓ |
+| `draw` | 6 | how he draws | P2S.2 | P2S.✓ |
+| `vocab` | 6 | everything he can draw | P2S.3 | P2S.✓ |
+| `morning` | 10 | the proactive morning | P3.b, and the first standing question actually switched on | P3.✓ |
+| `decide` | 15 | needs you | P3.a | P3.✓ |
+| `build` | 11 | build it with me, versions | P3.d, P3.e | P3.✓ |
+| `life` | 12·13 | temporary → permanent → automation | P3.c, P3.d, P3.e | P3.✓ |
+| `run` | 14·15 | handle this, running | P3.d, P3.g | P3.✓ |
+| `docs` | 16 | a supplier's invoice | nothing until a document source exists | S.4 |
+| `team` | 17·18 | businesses + team | the businesses half is built (P2.g); the team half needs people | S.6 |
+
+**HOW "FRAME FOR FRAME" IS HELD — BY PIXELS, NOT BY JSDOM.** Nine cards in a row
+closed with *"nobody has seen it in a browser"*. That is not necessary any more:
+on 2026-09-17 a session rendered the artifact headless in the installed Chrome
+at 1920×1080 and read the screenshot back. So every Phase 2S card's done-when
+includes **a frame check**: the scene it owns rendered from a recorded fixture
+thread in headless Chrome at 1440 and 1920, sidebar open and closed, saved
+beside the same scene of the artifact rendered the same way, and both images
+looked at before the card closes. P2S.1 writes the script that does it
+(`ops/frames.py`); every later card reuses it.
+
+**LOOK AND BEHAVIOUR ARE TWO CHECKS, NOT ONE.** The artifact's words and figures
+are authored; George's live answer to the same question will not match them word
+for word, and should not be forced to. So the LOOK is held on fixtures — the same
+rows drawn the same way — and the BEHAVIOUR is held live at the close: the eight
+scenes' questions asked on the live build in the full run, including the two
+questions P2.m wrote and never ran (*"analyze tradsnax per store"*, *"how did
+Rockwell do"*).
+
+**Is this the best way — the session's answer, recorded.** Yes on the build
+order, with the verification above added. Porting the artifact into the room
+keeps ten closed cards of working behaviour (selection, memory, the ladder,
+actions, the business switch) and deletes the old screens under a line-count
+rule; rebuilding from the artifact as a new app would throw that away and is
+what §1 of this file forbids. What was weak was never the order but the proof:
+four of fifteen scenes checked, in jsdom, against a design whose words George
+does not write. That is what this block changes.
+
 **THE OWNER'S FIXES — every one he asked for in the artifact on 2026-09-16, the
 part that builds it, and what holds it.** *"i dont want a thing missing."* A
 card is not done while one of its rows is not on screen and in a test.
@@ -2487,8 +2542,12 @@ cleanup; he decides.
       the composition's centre equals the room's centre (a test on the
       numbers); a test scanning `room.css` finds no visible scrollbar; a test
       asserts the column each of 2, 3, 4 and 5 figures lands in; the Rockwell
-      thread renders as the artifact frame for frame; every rail item opens
-      what it names; `tsc -b --force` and vitest green. No eval.
+      thread renders as the artifact frame for frame — **held by pixels**:
+      `ops/frames.py` (written here) renders the `situation`, `doing` and
+      `nothing` scenes from recorded fixture threads in headless Chrome at
+      1440 and 1920, rail open and closed, beside the same scenes of the
+      artifact, and the images are looked at before close; every rail item
+      opens what it names; `tsc -b --force` and vitest green. No eval.
 - [ ] **P2S.2 the drawing** — three parts, one pass over `marks.tsx` /
       `identity.ts` / `tiles.tsx`, each its own commit:
       **(d) the alive mark** — one canvas mark driven by the turn stream the
@@ -2519,7 +2578,8 @@ cleanup; he decides.
       drawings for the four states; Rockwell is the same hue in a dumbbell
       swatch, a line, a bar and a pie in one thread (test); `accentUse.test.ts`
       passes; every mark kind has the tooltip and a dom test reads its text off
-      a recorded run. No eval.
+      a recorded run; **frames** of `draw` and `memory` beside the artifact's.
+      No eval.
 - [ ] **P2S.3 the vocabulary, and "ruled out"** — alone, because it is the one
       card that changes what George sees. The catalogue grows from six marks to
       the artifact's sixteen shapes: bar against usual, small multiples, area,
@@ -2555,7 +2615,8 @@ cleanup; he decides.
       "make that one a pie" changes that pin and only that pin, on the board
       and on its page alike; a kept page and the board draw the same read
       identically, held by a dom test over a recorded run; the old renderer's
-      files are gone; the four gate scenarios pass.
+      files are gone; **frames** of `vocab` beside the artifact's; the four
+      gate scenarios pass.
 - [ ] **P2S.4 same-store year-over-year** — **was P2.i, kept by the merge
       2026-09-17 because it changes what George can SAY, not how it looks,
       and so is untouched by the redraw.** It may be taken ahead of any P2S
@@ -2580,10 +2641,14 @@ cleanup; he decides.
       new CAPABILITY and no gate scenario asks for one; its contract tests are
       the check, and it rides the phase close.
 - [ ] **P2S.✓ close: it feels right** — **the one close for all of Phase 2,
-      merged with P2.✓ 2026-09-17.** The Rockwell situation, "how are we
-      doing", "nothing important" and the judgment scene on the live build,
-      each screenshotted beside its frame of the beside room; the owner says
-      it feels right or names the next fix to the same surface. **One full
+      merged with P2.✓ 2026-09-17.** **All eight scenes it owns in the ledger
+      above — `situation`, `doing`, `nothing`, `judgment`, `touch`, `memory`,
+      `draw`, `vocab` — not four.** The LOOK: each rendered by `ops/frames.py`
+      beside its frame of the beside room. The BEHAVIOUR: each scene's
+      question asked on the live build inside the full run, plus P2.m's two
+      unrun questions. The owner says it feels right or names the next fix to
+      the same surface. **The close-out states plainly that seven scenes are
+      not part of this phase** and names where each is finished. **One full
       run** (eval: full, $1.51) — kept from P2.✓, because this close covers
       P2S.3's new vocabulary and P2S.4's new comparison together, and the
       subset cannot see either. Suites exact, numbers at close, the old
@@ -2671,7 +2736,9 @@ objects; none recomposes on a question.
       cover is under its supplier's lead time, naming both numbers; a line
       with no lead time set says so instead of firing. **No eval** — a
       scheduled watch makes no model call at all (rule 7).
-- [ ] **P3.✓ close: the Seikyo arc, timed** — end to end on the live build as
+- [ ] **P3.✓ close: the Seikyo arc, timed** — and the five scenes the ledger
+      gives it, `morning`, `decide`, `build`, `life` and `run`, rendered by
+      `ops/frames.py` beside the artifact's. End to end on the live build as
       the Ideal UI's build scenario draws it: morning finding → draft →
       revise in place → save → page → Monday question → backtest → promote →
       the v2 diff; every step timed; nothing described that is not shown.

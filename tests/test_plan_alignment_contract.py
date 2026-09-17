@@ -166,3 +166,64 @@ def test_the_page_is_publishable():
         "a feature pill reads '#' followed by a word — the numbers are "
         "references to ops/STANDARD.md and a word is not one"
     )
+
+
+# ---------------------------------------------------------------------------
+# THE FIFTEEN SCENES (2026-09-17)
+#
+# The owner asked: "so at the end of p2s we will have my ideal ui? make sure we
+# will". The ideal is `ops/ideal/george-ahead-of-me.html`, and it has one scene
+# per part of his vision. Phase 2S finishes eight of them, not fifteen — so the
+# claim "the ideal UI is built" is only true when every scene has a close that
+# owns it, and each close's own card says so. These hold that, so a scene cannot
+# quietly fall between phases and a close cannot claim more than it walks.
+# ---------------------------------------------------------------------------
+ARTIFACT = ROOT / "ops" / "ideal" / "george-ahead-of-me.html"
+CLOSES = {"P2S.✓", "P3.✓", "S.4", "S.6"}
+
+
+def artifact_scenes() -> list[str]:
+    html = ARTIFACT.read_text(encoding="utf-8")
+    return re.findall(r'data-scene="([a-z]+)"><span class="n">', html)
+
+
+def ledger() -> dict[str, str]:
+    """scene -> the close it names, read off the ledger table in NOW.md §3."""
+    rows = re.findall(r"^\| `([a-z]+)` \|[^\n]*\| (P2S\.✓|P3\.✓|S\.\d) \|\s*$",
+                      _now(), re.M)
+    out: dict[str, str] = {}
+    for scene, close in rows:
+        assert scene not in out, f"scene {scene!r} is in the ledger twice"
+        out[scene] = close
+    return out
+
+
+def test_the_artifact_still_has_its_fifteen_scenes():
+    scenes = artifact_scenes()
+    assert len(scenes) == len(set(scenes)) == 15, scenes
+
+
+def test_every_scene_of_the_ideal_has_exactly_one_close():
+    missing = set(artifact_scenes()) - set(ledger())
+    extra = set(ledger()) - set(artifact_scenes())
+    assert not missing, f"scenes of the ideal UI nobody finishes: {sorted(missing)}"
+    assert not extra, f"ledger rows for scenes the artifact does not have: {sorted(extra)}"
+    assert set(ledger().values()) <= CLOSES
+
+
+@pytest.mark.parametrize("close", ["P2S.✓", "P3.✓"])
+def test_each_close_card_names_every_scene_it_owns(close):
+    owned = sorted(s for s, c in ledger().items() if c == close)
+    card = re.search(r"\n- \[ \] \*\*" + re.escape(close) + r" (.*?)(?=\n- \[|\n\*\*[A-Z])",
+                     _now(), re.S)
+    assert card, f"no open {close} card"
+    unnamed = [s for s in owned if f"`{s}`" not in card.group(1)]
+    assert not unnamed, f"{close} owns {unnamed} in the ledger and its card does not walk them"
+
+
+def test_phase_2s_is_not_described_as_the_whole_ideal():
+    """Eight of fifteen, said as such — on the page as well as in NOW.md."""
+    owned = sum(1 for c in ledger().values() if c == "P2S.✓")
+    assert owned == 8
+    assert "eight of the fifteen" in _plan().lower(), (
+        "the owner's page must say Phase 2S finishes eight of the fifteen scenes")
