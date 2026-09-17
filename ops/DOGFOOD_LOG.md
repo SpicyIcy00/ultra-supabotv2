@@ -57,6 +57,101 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-17 — "we dont need the feature where when you click the chart it rearranges"
+
+> *"color mapping should be more like these colors but in our theme style and
+> the alive not saying any text for awhile but it came out maybe it just took
+> long to load take a look at that. and some charts are still getting cut, and
+> we dont need the feature where when you click the chart it rearranges"*
+
+Said 2026-09-17 of the live build `c288831` (P2S.1 + P2S.2), with four
+screenshots: Supabot's Settings → store display names and colours, the room
+mid-answer, and one contributors chart. One message, four reports, kept apart
+because they are four.
+
+**Found underneath (not fixed).** Clicking a figure calls `on.open` →
+`setFocused` (`Room.tsx`), and `board.inOrder` makes the focused object the
+lead and moves it to the front of the flow; opening its object panel under it
+also changes its height, so `placeFigures` re-flows the other figures across
+columns. Both are the rearrange. The fix is to take the click off the figure
+(`Shell onOpen` in `marks.tsx` / `tiles.tsx`) and the focus reordering out of
+`inOrder`; an object panel stays reachable from a row's own `open` offer. The
+per-tile `opened` decision for `attention.learning` goes with it — say so in the
+fix.
+
+### 2026-09-17 — "some charts are still getting cut"
+
+> *"color mapping should be more like these colors but in our theme style and
+> the alive not saying any text for awhile but it came out maybe it just took
+> long to load take a look at that. and some charts are still getting cut, and
+> we dont need the feature where when you click the chart it rearranges"*
+
+Said 2026-09-17 of the live build `c288831` (P2S.1 + P2S.2), with four
+screenshots: Supabot's Settings → store display names and colours, the room
+mid-answer, and one contributors chart. One message, four reports, kept apart
+because they are four.
+
+**Found underneath (not fixed), and not yet pinned to one cause.** The figures
+area (`.r-figs`) is `overflow-y: auto; overflow-x: hidden`, so two things clip:
+a figure at the bottom edge is cut in half with the ↓ arrow beside it (his
+screenshot shows three titles with their charts below the edge), and anything
+wider than its column is cut on the right. The next session renders his layout
+in `ops/frames.py` (three columns, 9+ figures) and looks before choosing. **Also
+seen in the same screenshot, a separate defect:** figures "from earlier" in a
+reopened, kept thread draw *"Nothing to draw here: this read came back without
+rows"* — an earlier turn's rows are not restored, so its chart is empty rather
+than cut.
+
+### 2026-09-17 — "the alive not saying any text for awhile but it came out maybe it just took long to load"
+
+> *"color mapping should be more like these colors but in our theme style and
+> the alive not saying any text for awhile but it came out maybe it just took
+> long to load take a look at that. and some charts are still getting cut, and
+> we dont need the feature where when you click the chart it rearranges"*
+
+Said 2026-09-17 of the live build `c288831` (P2S.1 + P2S.2), with four
+screenshots: Supabot's Settings → store display names and colours, the room
+mid-answer, and one contributors chart. One message, four reports, kept apart
+because they are four.
+
+**Found underneath (not fixed).** It did take long: `ops/turn_clock.py --days 1`
+reads today's two turns at **53 s and 73 s**, 4 model round trips each, the
+slowest round trip 31 s — against the 17.1 s median P1.✓ measured. The words
+stream as he writes (`text` deltas), but only the last round trip writes the
+answer, so for most of a minute the words column under the mark is empty. And
+**since P2S.1 the room draws nothing he says before it**: interim prose ("let me
+look at the drivers") is kept as `turn.narration` and a rewrite's draft as
+`turn.superseded`, and no room component renders either (grep finds no
+reader). The work trail is on the right, not under him. The fix is a line under
+the mark while he works, off the stream — the running step's words, his
+narration when he wrote any — not a made-up status. Why today's turns took 4
+round trips at 12–31 s each is a separate question for the clock, not the room.
+
+### 2026-09-17 — "color mapping should be more like these colors but in our theme style"
+
+> *"color mapping should be more like these colors but in our theme style and
+> the alive not saying any text for awhile but it came out maybe it just took
+> long to load take a look at that. and some charts are still getting cut, and
+> we dont need the feature where when you click the chart it rearranges"*
+
+Said 2026-09-17 of the live build `c288831` (P2S.1 + P2S.2), with four
+screenshots: Supabot's Settings → store display names and colours, the room
+mid-answer, and one contributors chart. One message, four reports, kept apart
+because they are four.
+
+**Found underneath (not fixed).** The colours in his screenshot are not a
+design idea — they are **data he already set**: `stores.color`, edited on
+Supabot's Settings page, served by `GET /api/v1/analytics/stores`, and used by
+every BI chart (`dashboardStore.getStoreColor`). P2S.2(e) ignored that column
+and dealt out the dataviz palette by `stores.active_retail` order instead, so
+Rockwell is blue in George and red everywhere else in Supabot. The fix: a
+store's swatch takes its own `stores.color` (matched by id to the served
+`locations`), adapted per theme — hue kept, lightness and chroma brought into
+the room's band for the dark and light grounds — with the palette slot only as
+the fallback for a store that has no colour set. Re-run the validator on the
+adapted seven and record it; his red for Rockwell and green for Greenhills sit
+near `--down` / `--up`, which he has now seen and chosen.
+
 ### 2026-09-16 — "the ui doesnt feel like what i was told we were building"
 
 > *"1st. the ui doesnt feel like what i was told we were buidling:
