@@ -823,6 +823,7 @@ export default function Room() {
                     lead={lead}
                     thoughts={thoughts?.bySeq}
                     sameOrder={speak}
+                    spanLead={!speak}
                     onHover={speak ? setHovered : undefined}
                   />
                 </>

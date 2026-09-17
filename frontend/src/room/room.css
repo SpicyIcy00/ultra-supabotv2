@@ -525,15 +525,23 @@
    left-aligned; the figures right, each with its own thought; a line from him
    only to the figure under the pointer. */
 .r-beside[data-layout="speak"] {
-  grid-template-areas: "him say" "words right";
-  grid-template-rows: auto minmax(0, 1fr);
-  row-gap: 18px;
+  /* THE CHARTS START UNDER THE HEADLINE, NOT UNDER HIM (2026-09-17). He spans
+     the first two rows; the headline takes the first; the charts begin at the
+     second — so the height his ring needs is taken from his own column, where
+     his words start below it, and not from the charts'. */
+  grid-template-areas: "him say" "him right" "words right";
+  grid-template-rows: auto auto minmax(0, 1fr);
+  row-gap: 14px;
+  /* A SHORTER TOP (2026-09-17): at his window, 963px tall, the band took a
+     third of the height and one chart fit. Less padding above, the canvas's
+     empty glow trimmed top and bottom — his body stays the size it was. */
+  padding-top: max(2.5vh, 22px);
 }
 .r-beside[data-layout="speak"] .r-him { align-self: center; }
-.r-beside[data-layout="speak"] .r-him canvas { width: 100%; margin: -5vh 0 -5vh; }
-.r-say-band { grid-area: say; align-self: center; min-width: 0; position: relative; z-index: 1; }
+.r-beside[data-layout="speak"] .r-him canvas { width: 92%; margin: -4vh 4% -2vh; }
+.r-say-band { grid-area: say; align-self: start; min-width: 0; position: relative; z-index: 1; padding-top: 2vh; }
 .r-say-band .r-reading { display: flex; flex-direction: column; gap: 12px; }
-.r-say-band .r-say--claim { font-size: clamp(24px, 2.3vw, 34px); line-height: 1.18; max-width: 34ch; text-wrap: balance; }
+.r-say-band .r-say--claim { font-size: clamp(22px, 2vw, 30px); line-height: 1.2; max-width: 40ch; text-wrap: balance; }
 .r-beside[data-layout="speak"] .r-words { align-items: flex-start; text-align: left; padding-right: 0; }
 .r-beside[data-layout="speak"] .r-words .r-reading { align-items: flex-start; }
 .r-beside[data-layout="speak"] .r-say--standing { max-width: 58ch; }

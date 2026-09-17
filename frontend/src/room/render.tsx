@@ -82,6 +82,13 @@ export interface BoardProps {
   thoughts?: Map<number, string[]>;
   /** List stores in one order across the answer's comparisons (the `speak` layout). */
   sameOrder?: boolean;
+  /**
+   * WHETHER THE LEAD MAY SPAN THE AREA. The speak layout says no (the owner,
+   * 2026-09-17, at his own window height one chart fit): a wide chart's rows
+   * are no shorter, so spanning only takes the place a second chart would sit.
+   * The lead still goes first and reads larger.
+   */
+  spanLead?: boolean;
   /** Which figure the pointer is over, so the room can draw only its line. */
   onHover?(key: string | null): void;
 }
@@ -167,7 +174,7 @@ export function Board(p: BoardProps) {
     }
     return undefined;
   })() : undefined;
-  const spans = objects.map((o) => o.key === leadKey
+  const spans = objects.map((o) => p.spanLead !== false && o.key === leadKey
     && (o.spec !== undefined || rowsOf(callOf(p.answers[o.turn], o.seq)).length > 1));
   const leads = objects.map((o) => o.key === leadKey);
   const keys = objects.map((o) => o.key).join('|');

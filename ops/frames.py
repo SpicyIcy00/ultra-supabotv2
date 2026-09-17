@@ -89,7 +89,7 @@ FIXTURE_OF = {"memory": ROOT / "ops" / "frames_fixtures" / "memory.json",
               # The owner's own turn, with real rows off the estate — so it lives
               # in verification/, which is not committed, like every recorded run.
               "shangrila": ROOT / "verification" / "frames_fixtures" / "shangrila.json"}
-SIZES = {1440: 900, 1920: 1080}
+SIZES = {1440: 900, 1920: 1080, 1857: 963}
 MAX_ROWS = 200
 
 
@@ -262,6 +262,27 @@ MEASURE = r"""
     him: box(him), mark: box(canvas), words: box(words), claim: box(claim),
     claim_starts_inside_mark_lower_edge: claim && canvas ? box(claim).top <= box(canvas).bottom : null,
     figures: document.querySelectorAll('[data-figure]').length,
+    // HOW MANY CHARTS A PERSON SEES WITHOUT SCROLLING: wholly inside the
+    // figures area as it opens (the owner, 2026-09-17: one chart fit).
+    figures_fully_visible: (() => {
+      const area = document.querySelector('.r-figs');
+      if (!area) return 0;
+      const a = area.getBoundingClientRect();
+      return [...document.querySelectorAll('[data-figure][data-arrived="yes"]')].filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.top >= a.top - 1 && r.bottom <= a.bottom + 1;
+      }).length;
+    })(),
+    // HIS REACH vs THE WORDS AND THE WINDOW: the ring he draws while working
+    // reaches ~87% of the canvas's half-height; the words must start below it
+    // and the window's top must not cut it.
+    mark_reach: (() => {
+      const c = document.querySelector('.r-him canvas'); const w = document.querySelector('.r-words');
+      if (!c || !w) return null;
+      const r = c.getBoundingClientRect(); const mid = r.top + r.height / 2; const reach = r.height / 2 * 0.87;
+      return { ring_top: Math.round(mid - reach), ring_bottom: Math.round(mid + reach), words_top: Math.round(w.getBoundingClientRect().top) };
+    })(),
+    band_px: (() => { const b = document.querySelector('.r-say-band'); const h = document.querySelector('.r-him'); return h ? Math.round(h.getBoundingClientRect().height) : null; })(),
     // CLIPPED: any dot, ring, swatch or mark inside a figure whose drawn box —
     // a ringed swatch's ring included — reaches past an ancestor that clips
     // (the log, 2026-09-17: "these things keep getting slightly cut").
