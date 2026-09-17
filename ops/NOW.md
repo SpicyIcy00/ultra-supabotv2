@@ -267,7 +267,7 @@ where a regression was speculative AND **the four gate scenarios could not
 have seen it.** A new comparison (`P2S.4`, `P3.f`) is a capability no gate
 scenario asks for, so a run there proves nothing; `P2.c`, `P2.d` and `P2.f`
 are context and rendering; `P1.c` breaks or fixes compose refusals, which are
-its own numbers. **Two live runs across 11 open cards, $3.02** (the two full closes; P2S.3's subset was spent 2026-09-17, $0.72 against $0.64) — P2.m closed 2026-09-16 and **its own run has not been made**, so the paragraph below it is the record of what that costs — the two
+its own numbers. **Two live runs across 12 open cards, $3.02** (the two full closes; P2S.3's subset was spent 2026-09-17, $0.72 against $0.64) — P2.m closed 2026-09-16 and **its own run has not been made**, so the paragraph below it is the record of what that costs — the two
 phase closes still to come, at $1.51 each on v2, the measured price.
 Every remaining gate was dropped or absorbed, so two FULL runs is the whole
 of it.
@@ -2964,7 +2964,7 @@ and none is begun without the owner saying so.
   retailer, but it needs a definition and misleads easily. Lowest confidence
   of the four; parked deliberately behind the others.
 
-**Phase 3 — operating mode.** Seven sessions. Stable surfaces of many
+**Phase 3 — operating mode.** Nine sessions. Stable surfaces of many
 objects; none recomposes on a question.
 
 - [ ] **P3.a Needs you as a queue** — one queue, per-kind verbs (Promote,
@@ -3018,6 +3018,42 @@ objects; none recomposes on a question.
       cover is under its supplier's lead time, naming both numbers; a line
       with no lead time set says so instead of firing. **No eval** — a
       scheduled watch makes no model call at all (rule 7).
+- [ ] **P3.h StoreHub exports in — an upload page, or the API** — added
+      2026-09-17 at the owner's word (*"ok add that to the plan"*), after: *"also a
+      page we i can upload my exports of stock transfers, purchaes orders and
+      products and it will upload it to the database cause we have to api for
+      that, unless that can be automated?"* **Half of it exists.** The importer is
+      built and has run (`51391e7`): `POST /storehub-imports/{kind}` for
+      `purchase_orders` and `stock_transfers`, one transaction per file, a
+      re-upload converges rather than duplicates, a file that cannot be trusted is
+      refused whole with the reason, and every import is a ledger row
+      (`GET /storehub-imports`). **There is no page** (`frontend/src/constants/
+      pages.ts` says to add the entry "when the page is built"), and no
+      `products` kind. **May be taken ahead of any card**: it is the way in for
+      source S.2 (arrivals and open orders), which the ordering-system turn in the
+      dogfood log needs.
+      **(a) the API first** — the room already calls StoreHub's API for products
+      (`routes/barcodes.py`, `STOREHUB_USERNAME` / `STOREHUB_API_TOKEN`, unset in
+      the local `.env`). Establish from StoreHub's own API documentation whether
+      purchase orders, stock transfers and products can be read; for any kind it
+      offers, a scheduled pull through the same `import_file` path replaces the
+      upload for that kind, and the card says so in its close. Never claimed from
+      memory.
+      **(b) the page** — `/storehub-imports` in the room's chrome (`RoomShell`,
+      page key `storehub_imports`, already granted): choose the kind, drop the
+      file, and the result drawn from the response — documents and lines
+      inserted, updated and deleted, unmatched and ambiguous SKUs, header-total
+      mismatches, and the notices — with the ledger of earlier imports below it
+      from a loaded list (UI rule 8). The 11-column document-only transfer export
+      is refused by name, saying to export the itemised one.
+      **(c) products** — find how `products` is filled today before adding
+      anything; if an export is the way, a `products` kind under the importer's
+      same rules (idempotent, whole-file, ledgered, definitions from the yaml).
+      **Done when:** a purchase-order export uploaded from the page lands, and
+      the same file uploaded again inserts nothing; a document-only transfer
+      export is refused with the reason; the ledger lists both; George's
+      `get_purchasing` reads the new orders; the API question is answered with
+      its source. **No eval** — nothing on the model path changes.
 - [ ] **P3.✓ close: the Seikyo arc, timed** — and the five scenes the ledger
       gives it, `morning`, `decide`, `build`, `life` and `run`, rendered by
       `ops/frames.py` beside the artifact's. End to end on the live build as
