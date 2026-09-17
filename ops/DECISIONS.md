@@ -4529,3 +4529,11 @@ BUTTON goes but keeping does not, because standard §12 asks for "keep this" /
 "make this a page": it stays by words (George's pin and page tools) and by the
 thread header's Keep as page, which is now the one save gesture UI rule 2
 requires.
+
+## 2026-09-17 · P2S.1 — the beside room, built; held by pixels
+
+Ported from the artifact, not re-derived: tokens, fonts, composition, words, wires, arrows, sidebar, composer. **The width is decided as if the sidebar were always there**, so opening it slides the composition and never narrows it (his row 4); the cost is that under 1,824px the columns are narrower than 580/940 even with the sidebar closed, by its width. Columns keep 29:47 rather than the artifact's equal-pixel `minmax` shrink.
+Figures are ONE grid with 1px rows, each told its column, so a figure changing column never remounts. The claim is the sentence the claim span sits in; exact slices keep "word for word" true over 44 recorded answers; `**` is drawn as weight.
+`ops/frames.py` mounts the real Room from a recorded eval (no network) in headless Chrome over CDP and MEASURES: centre offset 0px and 580/940 (1920) · 433/703 (1440) open and closed on 12 frames, no scrollbar, no page scroll. Scenes are recorded turns, not the artifact's words: situation ← follow-up, doing ← vague, nothing ← caveats.
+Deleting RiverPreview stranded 32 old river modules, deleted in the card per the phase rule: components/george 10,510 → 5,087 lines. Three Python contracts lost their client half with the client file.
+Not built, said here: the ladder line (no turn carries one), the object panel over the figures column (still under its figure), a dom test of the figures area's loading/failed states, watches in the sidebar (no read lists them). Keep/dismiss decisions are no longer written from the room. (b)(c)(h) are one commit: they share Room.tsx and room.css and no split typechecks.
