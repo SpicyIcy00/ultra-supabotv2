@@ -4644,3 +4644,9 @@ At the owner's word (*"that should only be the headline and suggestions what to 
 The owner: *"revise the plan no more tests ill do it at the end of the phase"*. P2S.9, P2S.10 and P2S.11 lose their subset runs, and the P2S.✓ full run checks everything the phase changed. It names which card any failure came from. Eval spend left: $6.22 → $3.02, the two phase closes.
 **P2S.6 and P2S.7 are closed as built.** Both are live, and their only open condition was their own trust run, which is now the close's. The known failure to beat there is the morning's "₱25–45k".
 **The trade, said plainly:** a regression surfaces at the close with up to six cards behind it, where a per-card run would have caught it at its own card. The owner chose that knowingly.
+
+## 2026-09-18 · P2S.9: fewer rounds, and a metric set asked as one call
+
+**A round of composes that stood, named the claim and has words beside it is the answer.** The loop no longer sends it back for a closing line. The compose tool says so, since otherwise the closing line ("I'd ship those four lines now…") would be lost. Gates still run, and a rewrite still gets its round.
+**`metric_sets` may now be ASKED as one call** (`asked_as_one_call`). This amends 2026-09-07's "nothing executes a set" in how it is asked, not in what runs. The loop expands the call into the set's single-metric reads, each with its own seq, receipts, object and pin. get_sales still refuses a set name, and no row is joined across them. So there is still one calculation path per metric.
+**The model's copy of `meta` carries each repeated note once a turn** and a pointer after that. Source, filters, window, read time, notices, errors and truncation go whole every time. The person's receipts are never shortened. Offline it saves −9.9% of result characters, not the card's "most of 59%": the fields the card keeps whole are most of the meta.

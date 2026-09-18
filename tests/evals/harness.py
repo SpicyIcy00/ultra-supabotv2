@@ -24,6 +24,7 @@ from typing import Any, Callable, Optional
 import pytest
 
 from agent import loop as george_loop
+from agent.model_receipts import ModelReceipts
 from tests.evals import timing
 from tests.evals.checks import Turn
 from tests.test_loop_correction_contract import StubLog
@@ -148,6 +149,22 @@ def run_turn(monkeypatch, question: str, *, history: Optional[list[dict]] = None
     turn.calls = [calls[k] for k in sorted(calls)]
     METER.add(turn)
     return turn
+
+
+def _result_sizes(turn: Turn) -> list[dict]:
+    """Each read's size as handed to the model, and whole (P2S.9(c))."""
+    receipts = ModelReceipts(george_loop._load_defs())
+    out = []
+    for n, r in enumerate(turn.results):
+        if r["error"] or not r["result"]:
+            continue
+        capped = george_loop._truncate(r["result"] or {})
+        seq = ((capped.get("meta") or {}).get("call_seq"))
+        shown = receipts.copy(capped, int(seq) if isinstance(seq, int) else -1 - n)
+        out.append({"tool": r["tool"], "rows": len(capped.get("rows") or []),
+                    "chars_to_model": len(json.dumps(george_loop._json_safe(shown))),
+                    "chars_full": len(json.dumps(george_loop._json_safe(capped)))})
+    return out
 
 
 def evidence_summary(turn: Turn, max_rows: int = 15) -> str:
@@ -299,6 +316,9 @@ DONE_KEPT = (
     "notice_forced",
     # the clock (P0.3)
     "duration_ms", "iteration_ms", "corrective_turns",
+    # the closing rounds not sent because the round before was the answer
+    # (P2S.9(a)) — what P2S.✓ measures that card by
+    "rounds_saved",
     # what the gates did without a round trip, and how hard he thought (P1.h)
     "deterministic_edits", "effort", "effort_kind",
     # the four token counts, which are the only record of what a turn cost:
@@ -514,12 +534,12 @@ class Report:
             # cut: in P2S.6's Greenhills turn $0.20 of $0.34 was caching
             # large stock and replenishment results, and the owner's rule is
             # that cost never makes George read less.
-            "result_sizes": [
-                {"tool": r["tool"], "rows": len((r["result"] or {}).get("rows") or []),
-                 "chars_to_model": len(json.dumps(george_loop._json_safe(
-                     george_loop._truncate(r["result"] or {}))))}
-                for r in turn.results if not r["error"] and r["result"]
-            ],
+            #
+            # SINCE P2S.9, `chars_to_model` is what the model was actually
+            # sent — the receipts shortened as the loop shortens them, in the
+            # order the turn read — and `chars_full` is the whole result, the
+            # figure every report before P2S.9 recorded as chars_to_model.
+            "result_sizes": _result_sizes(turn),
             # THE EVIDENCE, BOUNDED — added 2026-09-13 so a recorded run can be
             # REPLAYED through changed checks for free. Every trust check is a
             # function of (answer, results): `ungrounded_numerals`,

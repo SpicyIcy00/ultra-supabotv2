@@ -284,7 +284,7 @@ def test_broad_reads_reach_the_model_as_the_definitions_say_them(defs):
     """
     import copy
 
-    headline = ", ".join(str(m) for m in req(defs, "metric_sets.sales_headline.metrics"))
+    headline = george_loop._headline_read(defs)
     rendered = " ".join(str(req(defs, "investigation.scope.kinds.broad.reads")).split())
     assert rendered.format(headline=headline) in george_loop.SCOPE_SECTION
     assert "get_attention" in rendered, "a broad question reads beyond sales"

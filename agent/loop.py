@@ -56,6 +56,7 @@ import psycopg
 
 from agent import prose as _prose
 from agent import compose, composite_tools, default_composition, reading, surface, vocabulary, write_tools
+from agent.model_receipts import ModelReceipts
 from agent.write_tools import WriteContext, call_key
 from tools import (
     attention,
@@ -231,7 +232,11 @@ def _enum_sources(defs: dict) -> dict[tuple[str, str], list]:
     the definitions means a metric added to the yaml appears in the schema
     automatically, and one removed disappears.
     """
-    sales_metrics = sorted(req(defs, "metrics"))
+    # A metric set asked as one call is offered beside the metrics it names
+    # (metric_sets.<name>.asked_as_one_call); the loop runs it as those reads.
+    sales_metrics = sorted(req(defs, "metrics")) + sorted(
+        name for name, spec in req(defs, "metric_sets").items()
+        if (spec.get("asked_as_one_call") or {}).get("tool") == "get_sales")
     sales_groups = sorted({
         g for m in req(defs, "metrics").values() for g in m.get("valid_group_by", [])
     })
@@ -1198,6 +1203,18 @@ def _message_kind_line(name: str, meaning: str) -> str:
     return f"  {name.upper()} — {text}"
 
 
+def _headline_read(defs: dict) -> str:
+    """
+    How the prompt names the sales headline: as the one call that reads it
+    when the set may be asked that way (P2S.9(b)), else as its metrics.
+    """
+    spec = req(defs, "metric_sets.sales_headline")
+    asked = spec.get("asked_as_one_call") or {}
+    if asked:
+        return f"{asked['argument']}='sales_headline'"
+    return ", ".join(str(m) for m in req(spec, "metrics"))
+
+
 def _scope_section(defs: dict) -> str:
     """
     SCOPE, built at import from metrics.yaml `investigation.scope` and
@@ -1212,7 +1229,7 @@ def _scope_section(defs: dict) -> str:
     pres = req(scope, "presentation")
     messages = req(defs, "investigation.message_kinds.kinds")
     message_lines = "\n".join(_message_kind_line(n, m) for n, m in messages.items())
-    headline = ", ".join(str(m) for m in req(defs, "metric_sets.sales_headline.metrics"))
+    headline = _headline_read(defs)
     # BROAD'S READS ARE THE YAML'S, RENDERED (P2S.6). This line used to type
     # its own shorter version and dropped "then ONE localization", so the
     # definition and what the model read disagreed and nobody could see it.
@@ -1314,7 +1331,8 @@ def _board_addendum(defs: dict) -> str:
         f"and an edit carrying a figure, a colour or a size is refused. YOUR "
         f"WORDS ARE NOT AN OBJECT: the reading is drawn above the board from what "
         f"you say this turn, always — so compose the evidence, name its three "
-        f"slots here, and never a block to hold your prose."
+        f"slots here, and never a block to hold your prose. "
+        + " ".join(str(req(defs, "rounds.settle.tool_sentence")).split())
     )
 
 
@@ -1414,6 +1432,95 @@ def _truncate(result: dict) -> dict:
         f"by its own key before saying anything about it."
     )
     return {"rows": rows[:MAX_ROWS_TO_MODEL], "meta": meta}
+
+
+class _SetMember:
+    """
+    One read of a metric set that was asked as one call (P2S.9(b)).
+
+    It answers to the model's tool_use id — the model made ONE call and gets
+    one result — and to everything else it is an ordinary call: its own seq,
+    its own frames, its own object on the board, its own receipts, pinnable
+    as the single-metric call it is. So a set changes how many calls George
+    writes, and nothing about what is read, drawn or kept.
+    """
+
+    type = "tool_use"
+
+    def __init__(self, parent: Any, metric: str):
+        self.id = parent.id
+        self.name = parent.name
+        self.set_name = str(parent.input["metric"])
+        self.input = {**dict(parent.input), "metric": metric}
+
+
+def _expand_sets(tool_uses: list, defs: dict) -> list:
+    """
+    Each call naming a metric set, replaced by one call per metric it names
+    (metrics.yaml metric_sets.<name>.asked_as_one_call). Nothing computes
+    across them: each is the tool's own single-metric read, exactly as if
+    George had written the three calls himself — which is what he did before
+    this, in 4 of the 7 answers of verification/p2s7-gate-2.json.
+    """
+    sets = req(defs, "metric_sets")
+    out: list = []
+    for b in tool_uses:
+        named = (b.input or {}).get("metric") if isinstance(b.input, dict) else None
+        spec = sets.get(named) if isinstance(named, str) else None
+        asked = (spec or {}).get("asked_as_one_call") or {}
+        if spec and b.name == asked.get("tool"):
+            out.extend(_SetMember(b, str(m)) for m in req(spec, "metrics"))
+        else:
+            out.append(b)
+    return out
+
+
+def _model_result(tool_use_id: str, parts: list, defs: dict) -> dict:
+    """
+    The one tool_result the model is sent for one tool_use. A set's reads go
+    back together, each whole with its own call_seq, so the model can compose
+    each by its own number; it is an error only when every read in it was.
+    """
+    if len(parts) == 1 and not isinstance(parts[0][0], _SetMember):
+        _b, shown, err = parts[0]
+        payload: Any = shown
+        failed = bool(err)
+    else:
+        first = parts[0][0]
+        payload = {
+            "set": first.set_name,
+            "answered_with": " ".join(str(req(
+                defs, f"metric_sets.{first.set_name}.asked_as_one_call.answered_with")).split()),
+            "results": [{"metric": b.input.get("metric"), **(shown if isinstance(shown, dict) else {})}
+                        for b, shown, _err in parts],
+        }
+        failed = all(err for _b, _s, err in parts)
+    return {
+        "type": "tool_result",
+        "tool_use_id": tool_use_id,
+        "content": json.dumps(payload),
+        **({"is_error": True} if failed else {}),
+    }
+
+
+def _join_user_turns(messages: list[dict]) -> None:
+    """
+    Two user turns at the end of the conversation, as one (P2S.9(a)). A
+    settled round's results are appended as the model would have received
+    them; if a gate then asks for a rewrite, its request is a second user
+    turn, and tool_results have to lead the turn that follows their
+    tool_use. Joined in place, results first.
+    """
+    def blocks(content: Any) -> list:
+        return list(content) if isinstance(content, list) else [{"type": "text", "text": str(content)}]
+
+    while (len(messages) >= 2 and messages[-1].get("role") == "user"
+           and messages[-2].get("role") == "user"
+           and any(isinstance(b, dict) and b.get("type") == "tool_result"
+                   for b in blocks(messages[-2].get("content")))):
+        last = messages.pop()
+        messages[-1] = {"role": "user",
+                        "content": blocks(messages[-1]["content"]) + blocks(last["content"])}
 
 
 def _notices_from(result: dict) -> list[dict]:
@@ -2717,6 +2824,14 @@ async def run(
     # the log was a refusal retried verbatim (34 of 34, all time).
     served_reads: dict[str, tuple[dict, Optional[str], int, int]] = {}
     duplicate_reads = 0
+    # What the model has already been sent this turn, so an explanatory note
+    # reaches him once (P2S.9(c), agent/model_receipts.py). Per turn, like
+    # served_reads: a pointer can only name a result already in front of him.
+    model_receipts = ModelReceipts(defs)
+    # The round that composed, named the claim and wrote beside it is the
+    # answer; the next pass runs the gates without a request (P2S.9(a)).
+    settled = False
+    rounds_saved = 0
     # READS THAT RAN, the one thing the convergence cap counts (2026-09-18).
     # It counted every call — compose, record_belief, a pin — so a broad turn
     # of nine reads plus its board and a view met the cap at the edge of the
@@ -2867,9 +2982,19 @@ async def run(
                          "logging_enabled": log.enabled})
 
     try:
-        while iterations < MAX_ITERATIONS:
-            iterations += 1
-            iteration_marks.append(time.monotonic())
+        while iterations < MAX_ITERATIONS or settled:
+            # A SETTLED ANSWER SPENDS NO REQUEST (P2S.9(a)). The round before
+            # composed, named the claim and wrote beside it; this pass is that
+            # round's answer going through the gates below, with nothing sent.
+            # A gate that asks for a rewrite appends its request and the next
+            # pass is an ordinary round again.
+            settling, settled = settled, False
+            if not settling:
+                iterations += 1
+                iteration_marks.append(time.monotonic())
+            # Two user turns in a row — the settled round's results, then a
+            # gate's request — are one turn to the API.
+            _join_user_turns(messages)
 
             # Cache breakpoints: tools render first, then system, then messages.
             # One breakpoint at the end of each stable region covers both. The
@@ -2910,8 +3035,9 @@ async def run(
             # the client, replaying would duplicate them, so a mid-stream fault
             # surfaces instead of retrying.
             attempt = 0
-            while True:
-                text_parts: list[str] = []
+            text_parts: list[str] = []
+            while not settling:
+                text_parts = []
                 streamed = False
                 try:
                     # ONE REQUEST SHAPE, ONE DOOR, AND A HEADER. Per-turn
@@ -3029,13 +3155,16 @@ async def run(
                     })
                     await asyncio.sleep(delay)
 
-            usage["input"] += final.usage.input_tokens or 0
-            usage["output"] += final.usage.output_tokens or 0
-            usage["cache_read"] += getattr(final.usage, "cache_read_input_tokens", 0) or 0
-            usage["cache_creation"] += getattr(final.usage, "cache_creation_input_tokens", 0) or 0
+            if settling:
+                tool_uses = []
+            else:
+                usage["input"] += final.usage.input_tokens or 0
+                usage["output"] += final.usage.output_tokens or 0
+                usage["cache_read"] += getattr(final.usage, "cache_read_input_tokens", 0) or 0
+                usage["cache_creation"] += getattr(final.usage, "cache_creation_input_tokens", 0) or 0
 
-            messages.append({"role": "assistant", "content": final.content})
-            tool_uses = [b for b in final.content if b.type == "tool_use"]
+                messages.append({"role": "assistant", "content": final.content})
+                tool_uses = [b for b in final.content if b.type == "tool_use"]
 
             # Prose in an iteration that goes on to call tools is NARRATION,
             # not the answer — "Rockwell is down; let me look at the drivers"
@@ -3620,7 +3749,10 @@ async def run(
             batch = []
             batch_keys: dict[str, int] = {}         # key -> seq, this batch
             duplicate_of: dict[int, str] = {}       # seq -> the key it repeats
-            for b in tool_uses:
+            # A metric set asked as one call is run as its reads, each its own
+            # call from here on — seq, frames, board, pin — and the model is
+            # answered once for the call it made (P2S.9(b), _expand_sets).
+            for b in _expand_sets(tool_uses, defs):
                 is_read = (b.name not in write_tools.WRITE_TOOL_FUNCTIONS
                            and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS
                            and b.name not in FINDING_TOOL_FUNCTIONS)
@@ -3798,6 +3930,10 @@ async def run(
             # Validation is the whole of the work (agent/compose.py); the
             # frame carries only what survived it, and a warning names what did
             # not so a refused role is visible rather than silently absent.
+            # Whether this round's composes stood whole and one named the
+            # claim — two of the conditions for the round being the answer.
+            round_stood = bool(labels)
+            round_claimed = False
             for gseq, b in labels:
                 started = time.perf_counter()
                 try:
@@ -3819,6 +3955,12 @@ async def run(
                     result, err = {"rows": [], "meta": {"error": str(exc)}}, str(exc)
                 ms = int((time.perf_counter() - started) * 1000)
                 done_calls.append(((gseq, b), (result, err, ms)))
+                verdict = result.get("meta") or {}
+                if err is not None or any(verdict.get(k) for k in (
+                        "rejected", "rejected_slots", "rejected_actions")):
+                    round_stood = False
+                if err is None and (verdict.get("reading") or {}).get("claim"):
+                    round_claimed = True
                 if err is None:
                     # A COMPOSE THAT NAMES NO BLOCKS MOVES NO OBJECT. The two
                     # statements ride one call and are independent: naming
@@ -3906,7 +4048,8 @@ async def run(
                             "detail": detail,
                         })
 
-            tool_results = []
+            # tool_use id -> [(call, the model's copy, error)], in the order they ran.
+            model_parts: dict[str, list[tuple[Any, Any, Optional[str]]]] = {}
             for (gseq, b), (result, err, ms) in done_calls:
                 capped = _truncate(result)
                 # The call's own number, on its own result, so the model has
@@ -4078,12 +4221,13 @@ async def run(
                 for n in found:
                     yield _sse("notice", {"kind": n.get("kind"), "message": n.get("message")})
 
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": b.id,
-                    "content": json.dumps(_json_safe(capped)),
-                    **({"is_error": True} if err else {}),
-                })
+                # THE MODEL'S COPY, and only the model's: every frame, log row
+                # and stored post above was built from `capped` whole.
+                model_parts.setdefault(b.id, []).append(
+                    (b, _json_safe(model_receipts.copy(capped, gseq)), err))
+
+            tool_results = [_model_result(tool_use_id, parts, defs)
+                            for tool_use_id, parts in model_parts.items()]
 
             # THE BOARD FILLS WHEN THE DATA LANDS (P1.b, 2026-09-13). The rows
             # are in hand; the only thing missing is somebody saying what shape
@@ -4129,6 +4273,17 @@ async def run(
             # All results go back in ONE user message — splitting them trains
             # the model out of parallel tool use.
             messages.append({"role": "user", "content": tool_results})
+
+            # NO EMPTY LAST ROUND (P2S.9(a), metrics.yaml rounds.settle). A
+            # round of composes only, each standing whole, one naming the
+            # claim, with his words beside them, is his answer: sending the
+            # compose back bought a closing line — 42 s of the 422 in
+            # verification/p2s7-gate-2.json. Anything less keeps its round.
+            if (tool_uses and all(b.name == COMPOSE_TOOL for b in tool_uses)
+                    and round_stood and round_claimed
+                    and "".join(text_parts).strip()):
+                settled = True
+                rounds_saved += 1
         else:
             status = "iteration_cap"
             log.gap("iteration_cap", f"hit {MAX_ITERATIONS} iterations without finishing")
@@ -4294,6 +4449,9 @@ async def run(
         "duration_ms": duration_ms,
         "iteration_ms": iteration_ms,
         "corrective_turns": corrections_total,
+        # The closing rounds not sent because the round before was the answer
+        # (P2S.9(a)) — the number that card is measured on.
+        "rounds_saved": rounds_saved,
         # What the gates did WITHOUT a round trip (P1.h), and how hard he
         # thought. Both are on the frame because both are what this card is
         # measured on, and neither could be read back from anywhere else.

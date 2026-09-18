@@ -460,9 +460,11 @@ def get_sales(
                     returns_value, average_transaction_value (net_sales over
                     transaction_count, computed here — never divide the two
                     yourself). "How did <store> do?" is net_sales,
-                    transaction_count and average_transaction_value together,
-                    each with the same date_range, filters and compare_to
-                    (metrics.yaml metric_sets.sales_headline).
+                    transaction_count and average_transaction_value together:
+                    metric='sales_headline' reads all three in ONE call, with
+                    one date_range, filters and compare_to, and answers with
+                    the three results side by side, each with its own
+                    call_seq (metrics.yaml metric_sets.sales_headline).
         top_n:      return only the N largest by the metric, ranked in SQL.
                     OVERRIDES chronological ordering for day/week/month, so
                     top_n=5 with group_by='day' gives the five biggest days.
@@ -492,7 +494,8 @@ def get_sales(
                     explain a change in net_sales, read its drivers —
                     transaction_count and average_transaction_value — with
                     the same date_range, filters and compare_to (metrics.yaml
-                    metrics.net_sales.drivers).
+                    metrics.net_sales.drivers); metric='sales_headline' reads
+                    net_sales and both drivers in one call.
         rank_by:    with compare_to and top_n, which end to return:
                     'value' (default: largest current value, as top_n always
                     ranked), 'biggest_drop' (most negative change first) or

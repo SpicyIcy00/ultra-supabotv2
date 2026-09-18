@@ -1076,6 +1076,16 @@ metrics:
 # the loop runs the calls together, and the composition on screen is
 # adjacency (resultShape.ts). A set that ran as one query would be a second
 # calculation path, which is what this block must never become.
+#
+# ASKED AS ONE CALL SINCE P2S.9 (2026-09-18), and still executing nothing.
+# George asked for the three as three calls in 4 of the 7 answers of
+# verification/p2s7-gate-2.json — the same scope written out three times, and
+# three results back. Now `get_sales(metric='sales_headline', ...)` is one
+# call, and agent/loop.py `_expand_sets` runs it as the three single-metric
+# reads it names: each its own call with its own seq, receipts, object and
+# pin, exactly as if he had written them. The model is answered once, with
+# the three results side by side. No row is joined and nothing is computed
+# across them, so there is still one calculation path per metric.
 # =============================================================================
 metric_sets:
   sales_headline:
@@ -1085,6 +1095,13 @@ metric_sets:
       What "how did <store> do <window>?" asks. Run each with the same
       date_range, filters and compare_to so the three figures share one scope.
     executes_nothing: true
+    asked_as_one_call:
+      introduced: "2026-09-18"
+      tool: get_sales
+      argument: metric
+      answered_with: >
+        one read per metric, in the order the set names them, each whole with
+        its own call_seq and receipts; compose each by its own call_seq
 
 
 # =============================================================================
@@ -7816,3 +7833,65 @@ effort:
       level: high
       means: a question in its own right, which is everything else
       default_kind: true
+
+
+# =============================================================================
+# ROUNDS — fewer model rounds for the same work. Added 2026-09-18 (P2S.9).
+#
+# The owner: "is our tool use really optimized?" Measured on
+# verification/p2s7-gate-2.json (7 questions, 422 s, $1.91): 65 rounds for 81
+# reads, ~14 s a round; spend 47% cache writes, 31% output, 22% cache reads.
+# Three changes, none of which changes what George can read, say or show.
+# =============================================================================
+rounds:
+  introduced: "2026-09-18"
+
+  # (a) NO EMPTY LAST ROUND. George wrote his answer beside his last compose
+  # and the loop sent the compose back to him for a closing line — 2 to 10 s
+  # a turn, 42 s of the 422. A round whose ONLY calls are compose, where every
+  # compose stood whole (nothing refused, no slot or action rejected), one of
+  # them named the claim, and words were written beside it, IS the answer: the
+  # turn ends there, through the same gates as any answer. A gate that asks
+  # for a rewrite still gets its round. Anything short of all of that keeps
+  # the round it always had.
+  settle:
+    ends_on: compose_only_with_claim_and_words
+    # Said on the compose tool, where the model reads it at the moment of
+    # composing (agent/loop.py _board_addendum).
+    tool_sentence: >
+      A compose that names the claim, with your words beside it, ENDS THE
+      TURN — write the whole answer in that round; there is no round after it.
+
+  # (c) SHORTER RECEIPTS FOR THE MODEL (agent/model_receipts.py). The model's
+  # copy of a result's meta sends each explanatory note ONCE per turn; a value
+  # identical to one already sent this turn — same field, same text — becomes
+  # a pointer to the call that carried it. The person's receipts are built
+  # from the full result and never see this.
+  model_receipts:
+    # Sent whole on every read, however often they repeat: what a figure is
+    # trusted by, and everything that says it may be wrong.
+    whole:
+      - source_table
+      - filters_applied
+      - window
+      - snapshot_timestamp
+      - notice
+      - data_quality
+      - error
+      - call_seq
+      - row_count
+      - full_row_count
+      - truncated
+      - truncated_for_model
+      - rows_shown
+      - rows_omitted
+      - truncation_note
+      - duplicate_of
+      - duplicate_note
+    # Never sent to the model: where the definitions file sits on the server's
+    # disk says nothing about any figure.
+    dropped:
+      - definitions_path
+    # A value shorter than this is sent as it is: a pointer would save nothing.
+    repeat_min_chars: 40
+    repeat_says: "same as call {seq}"
