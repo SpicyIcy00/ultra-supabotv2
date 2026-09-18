@@ -5394,6 +5394,14 @@ failures:
     database: >
       The database could not complete this read and returned nothing. Nothing
       was written. Try a narrower question; if it happens again, say so.
+    # A CALL ITS TOOL CANNOT TAKE (dogfood 2026-09-18). The Sonnet 5 trial
+    # sent get_sales without group_by, the loop called the function anyway,
+    # and the TypeError ended 3 of 7 turns as "Something broke on my side".
+    # Checked against the signature before anything runs, and sent back to
+    # the model as a refusal it can correct in the next round.
+    arguments: >
+      {tool} was not run: {what}. Its arguments are {accepted}; call it again
+      with the ones it needs.
   turn:
     model_unavailable: >
       I could not reach the model service, so this turn stopped before an

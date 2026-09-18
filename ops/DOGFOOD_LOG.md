@@ -57,18 +57,6 @@ on compose frame" does.
 
 ## Open
 
-### 2026-09-18 — found by the session: a tool call missing a required argument breaks the whole answer
-
-Found running the owner's Sonnet 5 trial (*"Trying using sonnet in one of your
-tests and let me know how it goes"*): 3 of 7 turns ended in "Something broke on
-my side". Underneath, every time: `TypeError: get_sales() missing 1 required
-positional argument: 'group_by'`. The model called a read without an argument
-the schema marks required, and the loop called the Python function anyway, so
-the exception killed the turn instead of going back to the model as a tool
-error it could correct. Opus 5 has not tripped it in any recorded run; any model
-can. **Not fixed**: a missing or unknown argument should come back as an error
-`tool_result` naming it, with a test. Under an hour.
-
 ### 2026-09-18 — "it does feel slow and really rough, it didn't feel like it was investigating"
 
 > *"Its does feel slow and really rough, It didn't feel like it was investigating, Is there ways to make this better in the way it works and uses tools or something?"*
@@ -392,6 +380,26 @@ once changes the next answer. That is the card's own done-when.
 ---
 
 ## Fixed
+
+### 2026-09-18 — found by the session: a tool call missing a required argument breaks the whole answer
+
+Found running the owner's Sonnet 5 trial (*"Trying using sonnet in one of your
+tests and let me know how it goes"*): 3 of 7 turns ended in "Something broke on
+my side". Underneath, every time: `TypeError: get_sales() missing 1 required
+positional argument: 'group_by'`. The model called a read without an argument
+the schema marks required, and the loop called the Python function anyway, so
+the exception killed the turn instead of going back to the model as a tool
+error it could correct. Opus 5 has not tripped it in any recorded run; any model
+can.
+
+**Fixed 2026-09-18 (P2S.10's session), not seen live.** Every read, write and
+workflow call is checked against its tool's signature before it runs
+(`loop._unfit_arguments`); a missing or unknown argument comes back to the model
+as an error result naming it, in the words of `failures.reads.arguments`, and
+he can correct it next round. A name no tool has is refused the same way
+instead of raising. A `TypeError` raised INSIDE a tool is still a bug and is
+not dressed up as a wrong argument. Five tests in
+`test_read_failure_contract.py`, one of them the whole turn surviving.
 
 ### 2026-09-18 — "no not on top and before of the charts with the charts thats it related to … i dont want it to get to crowded"
 

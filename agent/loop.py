@@ -1591,6 +1591,36 @@ def _cause_of(exc: BaseException, depth: int = 4) -> Optional[str]:
     return _CREDENTIAL.sub(r"\g<scheme>***:***@", " <- ".join(chain))[:1500]
 
 
+def _unfit_arguments(name: str, fn: Callable, args: dict,
+                     injected: tuple[str, ...] = ()) -> Optional[ValueError]:
+    """
+    A call its tool's signature cannot take, as a refusal naming what is wrong
+    — or None when it fits (dogfood 2026-09-18).
+
+    Checked BEFORE the call rather than by catching TypeError around it: a
+    TypeError raised inside a tool is a bug in the tool, and turning that into
+    "you called it wrong" would send the model to fix an argument that was
+    fine. `injected` names the keyword-only parameters the loop supplies
+    (the writer's `ctx`), which the model neither sends nor may send.
+    """
+    params = inspect.signature(fn).parameters
+    taken = [p for p, spec in params.items()
+             if p not in injected and spec.kind in (spec.POSITIONAL_OR_KEYWORD,
+                                                     spec.KEYWORD_ONLY)]
+    open_ended = any(spec.kind is spec.VAR_KEYWORD for spec in params.values())
+    missing = [p for p in taken if params[p].default is params[p].empty and p not in args]
+    unknown = [] if open_ended else sorted(k for k in args if k not in taken)
+    if not (missing or unknown):
+        return None
+    what = "; ".join(filter(None, (
+        f"it needs {', '.join(missing)}" if missing else "",
+        f"it takes no {', '.join(unknown)}" if unknown else "",
+    )))
+    text = str(req(_load_defs(), "failures.reads.arguments")).format(
+        tool=name, what=what, accepted=", ".join(taken) or "none")
+    return ValueError(" ".join(text.split()))
+
+
 def _refusal(exc: BaseException, started: float) -> tuple[dict, str, int]:
     """The (payload, error, ms) a refused or failed call returns."""
     payload: dict = {"rows": [], "meta": {"error": str(exc)}}
@@ -1610,8 +1640,15 @@ async def _call_tool(name: str, args: dict) -> tuple[dict, Optional[str], int]:
     that loop yields SSE frames, so a slow client inflated every duration after
     the first, and two genuinely concurrent calls reported 678ms and 2524ms.
     """
-    fn = TOOL_FUNCTIONS[name]
     started = time.perf_counter()
+    fn = TOOL_FUNCTIONS.get(name)
+    if fn is None:
+        return _refusal(ValueError(
+            f"There is no read called {name!r}. The reads are: "
+            f"{', '.join(sorted(TOOL_FUNCTIONS))}."), started)
+    unfit = _unfit_arguments(name, fn, args)
+    if unfit is not None:
+        return _refusal(unfit, started)
     try:
         result = await asyncio.to_thread(fn, **args)
         return result, None, int((time.perf_counter() - started) * 1000)
@@ -1667,6 +1704,9 @@ async def _call_injected(registry: dict[str, Callable], name: str, args: dict,
     """
     fn = registry[name]
     started = time.perf_counter()
+    unfit = _unfit_arguments(name, fn, args, injected=("ctx",))
+    if unfit is not None:
+        return _refusal(unfit, started)
     try:
         result = await fn(**args, ctx=ctx)
         return result, None, int((time.perf_counter() - started) * 1000)

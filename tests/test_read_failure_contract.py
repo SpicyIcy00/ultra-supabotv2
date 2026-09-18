@@ -223,3 +223,56 @@ def test_the_echo_is_stripped_in_the_loop_and_recorded(monkeypatch):
     assert "history_marker_echoed" in text
     done = [json.loads(f.split("data: ", 1)[1]) for f in frames if f.startswith("event: done")]
     assert done and "[Calls behind" not in json.dumps(done[0])
+
+
+# ---------------------------------------------------------------------------
+# 3. A call its tool cannot take is a refusal he can correct (dogfood
+#    2026-09-18: the Sonnet 5 trial sent get_sales without group_by, and the
+#    TypeError ended 3 of 7 turns as "Something broke on my side")
+# ---------------------------------------------------------------------------
+
+def test_a_missing_required_argument_comes_back_naming_it():
+    payload, err, _ms = asyncio.run(george_loop._call_tool(
+        "get_sales", {"date_range": "last_week", "metric": "net_sales"}))
+    assert err and "get_sales was not run" in err and "it needs group_by" in err
+    assert payload["rows"] == [] and payload["meta"]["error"] == err
+
+
+def test_an_argument_the_tool_does_not_take_comes_back_naming_it():
+    _payload, err, _ms = asyncio.run(george_loop._call_tool(
+        "get_sales", {"group_by": "store", "date_range": "last_week", "shop": "OPUS"}))
+    assert err and "it takes no shop" in err and "filters" in err
+
+
+def test_a_tool_that_does_not_exist_is_refused_not_raised():
+    _payload, err, _ms = asyncio.run(george_loop._call_tool("get_weather", {}))
+    assert err and "get_weather" in err
+
+
+def test_a_type_error_inside_a_tool_is_not_blamed_on_the_arguments(monkeypatch):
+    """Only the signature decides 'you called it wrong'; a bug inside stays a bug."""
+    def broken(group_by, date_range):
+        raise TypeError("unsupported operand")
+    monkeypatch.setitem(george_loop.TOOL_FUNCTIONS, "get_sales", broken)
+    with pytest.raises(TypeError, match="unsupported operand"):
+        asyncio.run(george_loop._call_tool("get_sales", {"group_by": "store", "date_range": "x"}))
+
+
+def test_the_turn_survives_a_call_missing_an_argument(monkeypatch):
+    fake = FakeClient([
+        [_ToolUse("t1", "get_sales", {"date_range": "last_week"})],
+        [_TextBlock("I could not read that.")],
+    ])
+    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    StubLog.instances.clear()
+    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+
+    async def collect():
+        return [f async for f in george_loop.run("net sales last week")]
+    frames = asyncio.run(collect())
+    done = [json.loads(f.split("data: ", 1)[1]) for f in frames if f.startswith("event: done")]
+    assert done and done[0]["status"] == "ok"
+    sent = [b for m in fake.messages.requests[-1]["messages"] if m["role"] == "user"
+            and isinstance(m["content"], list) for b in m["content"]
+            if isinstance(b, dict) and b.get("type") == "tool_result"]
+    assert sent and sent[0].get("is_error") and "it needs group_by" in sent[0]["content"]
