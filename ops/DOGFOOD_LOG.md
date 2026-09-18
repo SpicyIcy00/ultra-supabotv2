@@ -57,6 +57,45 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-19 — "default should be aji ichiban not all not vending"
+
+> *"also default should be aji ichiban not all not vending"*
+
+The estate switch above the board opens on All. He wants it to open on Aji
+Ichiban (the retail shops), not All and not vending.
+
+### 2026-09-19 — "disclaimers can be hid and you can open it if you want to see it"
+
+> *"disclaimers can be hid and you can open it if you want to see it"*
+
+Said of the two notices drawn above the attention read ("These sources are
+too old…", "There is no 'newly low on stock' section…"). He wants notices
+collapsed by default with a way to open them. UI rule 4 draws a notice that
+says a figure may be wrong above the number; the ask is a collapsed drawing of
+the same notice, not its removal.
+
+### 2026-09-19 — "when hovering some are cut it should not"
+
+> *"also when hovering some are cut it should not"*
+
+Screenshot: the hover on a line chart ("Rockwell · 2026-08-10 · ₱199,949 ·
+read Sep 18 16:58") drawn past the left edge of the figures column, its first
+letters cut off. The tooltip is positioned at the point and not kept inside
+the room.
+
+### 2026-09-19 — "what does this report mean i dont understand is there something wrong?"
+
+> *"also what does this report mean i dont understand is there something wrong?"*
+
+Screenshot: the attention read drawn as a table with its internal names —
+`sales_vs_same_weekday|Fairview|`, `stock_crossed_out|Aji Kiamoy King
+Seedless|Magnolia`, a MEASURE column saying "change" and "was", a "kept no"
+label, values of "—". The rows are the tool's own identity strings, not words
+a person reads (prompt rule 17 / UI rule 4: raw diagnostics never reach the
+answer); and the notice's "which ones" link opens nothing readable. The data
+behind it was checked the same day (see the session's answer in chat); the
+drawing is the defect.
+
 ### 2026-09-18 — found by the session: the memory figure prints a stance as its raw name
 
 `what do you remember?` draws each belief's stance as the enum, uppercased by

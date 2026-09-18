@@ -4713,3 +4713,11 @@ The owner's own 30 days (78 turns that read, 351 calls) asked the same reads pie
 **The old API paths stay as aliases** (`/api/v1/george/...` mounted beside `/bob/...`, out of the schema) so Vercel and Railway can swap minutes apart without a dead front end; remove them one deploy later.
 **Suites after:** pure 2,028, vitest 986, `tsc -b --force` clean. No live run — a name is not logic.
 **Not renamed online:** the design artifact *George, Ahead of Me* on claude.ai is the owner's record; its file in the repo now says Bob. The plan page was republished under its new title.
+
+## 2026-09-19 · Phase 3 re-cut: nine sessions to six, the screens out, the loop closed once
+
+**At the owner's word ("go and rewrite the plan").** Four screen cards went: P3.a (a queue with keys and a snooze migration for a queue holding nothing), P3.c (page polish), P3.e (merged into P3.d), P3.f (folded into P3.b). The UI is frozen since 2026-09-18; every card left is Bob doing something, and each is checked against the design's own scene.
+**Order:** P3.h exports in (unfreezes orders and transfers, 16 and 80 days old), P3.b the morning unasked (the first standing question ON; the attention read as words; notices folded; Aji Ichiban default), P3.g the first watch ON, P3.d build it and keep it (versions, the provisional frame, the diff, Needs you as a figure), P3.i he checks what happened (new: the standard's last step, which no card did), P3.✓.
+**Five sources added to Phase 4** that only the owner can supply: the vending aisle feed (stopped 2026-08-05), expenses, customers/promotions/events, the low-stock level in StoreHub, the autumn of 2024.
+**Phase 5 is three decisions, not cards:** what "build it" means, what Bob connects to, what happens to the old app. The owner: "dont have an answer and dont need one" — parked, not cut into cards. The room at phone width is owed and unmeasured.
+**Note-only pushes redeploy Railway** — seen 2026-09-19 (`1910f428` served after a docs commit) and probably behind the owner's 404. NOW.md's claim that they do not was wrong; notes now ride the next real push.
