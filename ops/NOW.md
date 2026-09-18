@@ -267,7 +267,7 @@ where a regression was speculative AND **the four gate scenarios could not
 have seen it.** A new comparison (`P2S.4`, `P3.f`) is a capability no gate
 scenario asks for, so a run there proves nothing; `P2.c`, `P2.d` and `P2.f`
 are context and rendering; `P1.c` breaks or fixes compose refusals, which are
-its own numbers. **Three live runs across 13 open cards, $3.66** (P2S.6's subset and the two full closes; P2S.3's subset was spent 2026-09-17, $0.72 against $0.64) — P2.m closed 2026-09-16 and **its own run has not been made**, so the paragraph below it is the record of what that costs — the two
+its own numbers. **Four live runs across 14 open cards, $4.30** (P2S.6 and P2S.7 subsets and the two full closes; P2S.3's subset was spent 2026-09-17, $0.72 against $0.64) — P2.m closed 2026-09-16 and **its own run has not been made**, so the paragraph below it is the record of what that costs — the two
 phase closes still to come, at $1.51 each on v2, the measured price.
 Every remaining gate was dropped or absorbed, so two FULL runs is the whole
 of it.
@@ -2374,7 +2374,7 @@ thtough"*. **The answer splits in two, and the split is the point:**
 | P2.j stock watch before the stock-out | **moved to Phase 3 as P3.g** | §10 ("notice situations himself") and §13–14; a watch is operating mode, not the design. Backend only, no surface. |
 | P2.h voice, hands-free | **parked by the merge, then RESTORED as P2S.5 the same day** — the owner: *"we need to make it"*. Built to §8's first-class bar, not as the dictation P2.h described. Why it was parked, kept for the record: | §8 says, in the owner's words: *"Eventually voice should become a first-class way of operating George rather than simply speech-to-chat."* P2.h was browser speech into the composer — speech-to-chat, the version the standard rules out, for a capability it calls "eventually". Parked under Candidates with that sentence. |
 
-Eval spend is unchanged at **$3.66**: P2S.3's subset, the merged close's full
+Eval spend is unchanged at **$4.30**: P2S.3's subset, the merged close's full
 run, and P3.✓'s. (P2S.3's subset ran 2026-09-17 for $0.72; **$3.02** is left.) Open cards 16 → 13, then 14 when voice came back as P2S.5.
 
 **THE FIFTEEN SCENES — WHAT "THE IDEAL UI" ACTUALLY CONTAINS, AND WHERE EACH ONE
@@ -3004,6 +3004,44 @@ cleanup; he decides.
       check does not catch. Gate cost for the four old questions $0.72 →
       $0.97; broad $0.30 / $0.51; slowest turn 113 s. **NOT DONE — the trust
       rows moved, so this is not pushable as a close.**
+- [ ] **P2S.7 George builds the answer in front of you — and the fixes P2S.6's
+      live runs found** — written 2026-09-18 at the owner's word: *"when it
+      does how are we doing it should still display like the normal data first
+      and then it goes deeper so theres something to see already and the more
+      pop up so you can really see it building"*. **Measured, not guessed**
+      (`verification/p2s6-gate-2.json`): "how are we doing?" drew the shops'
+      figures at **10.4 s**, George's own board at **59.6 s**, and finished at
+      **105.7 s**; the morning 4.8 / 62.5 / 72.6 s. Between the first charts
+      and the end NOTHING new appears, for two reasons in the code: the default
+      board is drawn once a turn and never again (`agent/default_composition.py`,
+      so a board is never rearranged under a reader), and the prompt says
+      *"compose once, the reading on the same call"*.
+      **(a) the board builds as he goes.** Each round's findings are drawn in
+      the SAME call that asks for the next reads — `compose` beside the reads
+      in one batch, so no round and next to no cost is added — as new blocks
+      that ADD to the board and change their own by key; nothing already drawn
+      moves (P1.b's reason stands). Each block's thought says what it shows so
+      far; the headline settles last. "compose once" becomes "compose as you
+      go". A read that lands after George's first compose is drawn by the
+      default rule as a quiet added block, never a rearrangement.
+      **(b) the trust fixes the two runs found:** a caveat refused for a
+      rounded figure ("about 13,100" over 13,134) left a notice to be forced —
+      the caveat is kept and the figure corrected, or the rounding refused
+      with the row's own value named; share-shaped sentences ("₱10,701 of the
+      ₱11,843 gap", "roughly half the gap") are caught by the attribution
+      check; the deletion gates no longer leave an orphaned sentence ("That's
+      a bookkeeping problem" with its subject deleted, 3 of 14 turns); the
+      convergence cap's forced answer stops printing a tool call to the reader
+      (rule 9); George can see the category names, so "tradsnax" is not four
+      reads of spelling.
+      **(c) a broad answer leads with the view and its few findings** — 503
+      words on run 2; data-quality notes belong in the caveat, not the body.
+      **Done when:** on the live gate, "how are we doing?" shows the shops'
+      figures first and **at least one deeper block lands before the answer
+      finishes** (timed off the compose frames); nothing drawn earlier moves;
+      every trust row clean on the gate and depth turns; no orphaned sentence
+      in the seven answers; the recorded cost per turn reported beside
+      `p2s6-gate-2.json`. **eval: subset** — the five gate and two depth turns.
 - [ ] **P2S.4 same-store year-over-year** — **was P2.i, kept by the merge
       2026-09-17 because it changes what George can SAY, not how it looks,
       and so is untouched by the redraw.** It may be taken ahead of any P2S
