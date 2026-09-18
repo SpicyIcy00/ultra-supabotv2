@@ -57,6 +57,16 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-18 — "it does feel slow and really rough, it didn't feel like it was investigating"
+
+> *"Its does feel slow and really rough, It didn't feel like it was investigating, Is there ways to make this better in the way it works and uses tools or something?"*
+
+Said after P2S.7 (`4338529`) was pushed. The recorded runs agree on the slow
+half: in `verification/p2s7-gate-2.json` a broad turn took 85 s in 5 model
+rounds, the morning 84 s in 6, "analyze tradsnax" 117 s in 7 — about 17 s a
+round, each one thinking at high effort before the next reads can start. Not
+yet diagnosed on the live build.
+
 ### 2026-09-17 — "its failing here" (an ordering system for the top 5 suppliers)
 
 > *"its failing here"*
