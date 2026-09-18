@@ -333,7 +333,8 @@ def test_the_new_tool_does_not_break_the_shared_prefix():
 
     names = [s["name"] for s in loop.build_tool_schemas(include_write=True)]
     injected = [n for n in names if n not in loop.TOOL_FUNCTIONS
-                and n not in loop.FINDING_TOOL_FUNCTIONS]
+                and n not in loop.FINDING_TOOL_FUNCTIONS
+                and n not in loop.one_call.FUNCTIONS]
     assert injected == sorted(injected)
     assert write_tools.WATCH_TOOL in injected
     assert injected[-1] == composite_tools.PAGE_CONTEXT_TOOL

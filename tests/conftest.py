@@ -50,6 +50,14 @@ def pytest_configure(config):
         "tradsnax per store' and 'how did Rockwell do?'. Two live turns; run "
         "with -m depth on a card that changes how far he reads.",
     )
+    config.addinivalue_line(
+        "markers",
+        "core: the owner's core questions, in his own wording "
+        "(ops/EVAL_QUESTIONS.md, 2026-09-18) — 'how are we doing?', the "
+        "Rockwell premise, foot traffic, net sales by store yesterday, and "
+        "the per-gram instruction once P2S.11 builds it. Run with -m core at "
+        "a phase close or when choosing a model.",
+    )
 
 
 @pytest.fixture(autouse=True)

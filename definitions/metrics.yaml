@@ -1105,6 +1105,154 @@ metric_sets:
 
 
 # =============================================================================
+# READS ASKED AS ONE CALL (P2S.10, 2026-09-18)
+#
+# The owner: "build more case specific tools … based of the things were
+# testing and the logs cause they might help other questions too". His own
+# 30 days in george.conversations (78 turns that read, 351 calls) and the 177
+# recorded test turns ask the same reads piece by piece, over two or three
+# rounds: a shop's three drivers, its days, the products that moved, whether
+# those were on the shelf; a shop's shelf beside its replenishment plan.
+#
+# EACH IS A LIST OF READS THAT ALREADY EXIST, and nothing else — the metric
+# set's arrangement (metric_sets.*.asked_as_one_call) widened to several
+# tools. The model makes ONE call; the loop runs the reads below, each an
+# ordinary call from then on: its own seq, frames, board object, receipts and
+# pin, exactly as if George had written them himself. No read here consumes
+# another's rows, nothing is summed or joined across them, and the tools
+# they name are unchanged. So there is still one calculation path per figure.
+#
+# THE THIRD TOOL THE CARD NAMED IS NOT HERE: "every shop at a glance" is
+# get_sales(metric='sales_headline', group_by='store', compare_to=...), one
+# call since P2S.9(b). A second name for it would be a choice, not a saving.
+#
+# How each read's window and scope are filled from the call's arguments:
+#   window  date_range         — the asked window, as asked
+#           baseline_and_window — [the baseline's start, the window's end): the
+#                                 comparison window's own days and the asked
+#                                 ones, one series (ladder.check
+#                                 unusual_baseline; characterised, never
+#                                 differenced)
+#           window_days         — start and end of the asked window as the
+#                                 inclusive calendar dates stock history takes
+#   scope   filters             — filters: {store: <store>, category: <category>}
+#           store               — store: <store>
+#   compared: true              — compare_to: the call's comparison
+# The windows come from tools/windows.py over sales_day.presets, anchored on
+# the Manila date, so they are the windows get_sales itself resolves.
+# =============================================================================
+one_call_reads:
+  introduced: "2026-09-18"
+  executes_nothing: true
+  answered_with: >
+    one result per read, in the order listed, each whole with its own
+    call_seq and receipts; compose each by its own call_seq
+  tools:
+    get_change:
+      asks: how did this change, and where — for one shop or the whole estate, or one category
+      # VERIFY, DECOMPOSE, LOCALIZE and CHECK in one call: the ladder's reads
+      # for one subject, which took two or three rounds before.
+      ladder: [verify, decompose, localize, check]
+      # The comparisons it may be asked with — each already a definition in
+      # `comparisons`, whose window rule also places the baseline's days.
+      # same_weekday_last_week is the morning's: yesterday against the same
+      # weekday a week before (p2s7-gate-2.json's morning asked it that way).
+      compare_to: [previous_period, same_weekday_last_week]
+      default_compare_to: previous_period
+      default_window: last_week
+      stores: stores.active_retail          # a warehouse sells nothing
+      reads:
+        - part: headline
+          tool: get_sales
+          arguments: {metric: sales_headline, group_by: store}
+          compared: true
+          window: date_range
+          scope: filters
+        - part: days
+          tool: get_sales
+          arguments: {metric: net_sales, group_by: day}
+          window: baseline_and_window
+          scope: filters
+        - part: fell
+          tool: get_sales
+          arguments: {metric: product_revenue, group_by: product, rank_by: biggest_drop, top_n: 5}
+          compared: true
+          window: date_range
+          scope: filters
+        - part: rose
+          tool: get_sales
+          arguments: {metric: product_revenue, group_by: product, rank_by: biggest_gain, top_n: 5}
+          compared: true
+          window: date_range
+          scope: filters
+        # The empty-shelf check as George already makes it (tool_calls,
+        # 2026-09-15..18: stockouts, ranked most_days_out, 10–15 rows). A
+        # product that fell and is not in these rows is not known to have
+        # been on the shelf — the read's full_row_count says how many went out.
+        - part: shelf
+          tool: get_stock_history
+          arguments: {view: stockouts, rank_by: most_days_out, top_n: 10}
+          window: window_days
+          scope: store
+      # WITH A CATEGORY, A DIFFERENT LIST, because the scope changes what can
+      # be read. net_sales and its drivers are whole-till figures (transaction
+      # grain) and cannot be cut to a category, so the category's own revenue
+      # stands in for them, by shop; and stock history cannot be filtered to a
+      # category, so the shelf is not read — a read of every product would not
+      # be about the category. "analyze tradsnax per store" (p2s7-gate-2.json)
+      # is this list.
+      reads_with_a_category:
+        - part: where
+          tool: get_sales
+          arguments: {metric: product_revenue, group_by: store}
+          compared: true
+          window: date_range
+          scope: filters
+        - part: days
+          tool: get_sales
+          arguments: {metric: product_revenue, group_by: day}
+          window: baseline_and_window
+          scope: filters
+        - part: fell
+          tool: get_sales
+          arguments: {metric: product_revenue, group_by: product, rank_by: biggest_drop, top_n: 5}
+          compared: true
+          window: date_range
+          scope: filters
+        - part: rose
+          tool: get_sales
+          arguments: {metric: product_revenue, group_by: product, rank_by: biggest_gain, top_n: 5}
+          compared: true
+          window: date_range
+          scope: filters
+    get_stock_health:
+      asks: a shop's stock health — what is out, what the plan wants shipped, and the broken counts
+      stores: [stores.active_retail, stores.warehouse]
+      reads:
+        # How many lines stand in each state, per shop.
+        - part: states
+          tool: get_stock
+          arguments: {group_by: [store, state]}
+          scope: store
+        # Emptiest first, so a negative count — a record that cannot be a
+        # shelf (inventory.states: negative on hand counts as out) — leads.
+        - part: emptiest
+          tool: get_stock
+          arguments: {state: out_of_stock, direction: lowest, top_n: 10}
+          scope: store
+        # "Running low" is the engine's minimum, not warning_stock, which is
+        # unset on every row (inventory.low_stock_thresholds_elsewhere).
+        - part: plan
+          tool: get_replenishment
+          arguments: {view: summary}
+          scope: store
+        - part: to_ship
+          tool: get_replenishment
+          arguments: {rank_by: most_requested, top_n: 10}
+          scope: store
+
+
+# =============================================================================
 # COMPARISONS — "vs what?", as a definition. Added 2026-09-07.
 #
 # A period-over-period figure has a baseline, and WHICH baseline is a business
@@ -1511,16 +1659,22 @@ investigation:
         # not a sales question (STANDARD §2: "rather than simply returning a
         # sales dashboard"): it is the read that notices across sources, each
         # against its own declared normal, and it invents no threshold.
+        # P2S.10: the second round is get_change, which reads the moving
+        # driver at a shop by time and by what sold, and CHECKs the shelf and
+        # the baseline's days, in one call — the rounds this took before.
         reads: >
           {headline} by store over a closed window, compared, and
-          get_attention, in ONE round; then in ONE more, the moving driver at
-          the shop or two that moved most, by time and by what sold
+          get_attention, in ONE round; then in ONE more, get_change at the
+          shop or two that moved most
         grouped_not_fanned_out: true
         # 5 → 7 (P2S.6): three headline reads, get_attention, and one call per
         # localizing dimension across both shops (group_by [store, day] with
         # the two shops filtered is one call, not two).
         # 7 → 9 (2026-09-18): the CHECK round — the baseline's days and the
         # stock record for the lines that fell.
+        # COUNTED IN CALLS SINCE P2S.10: what George asks for, a call asked as
+        # one (one_call_reads, metric_sets) counting once, exactly as the
+        # loop's convergence cap counts. Broad is about four now.
         max_reads: 9
         # NO COST CEILING. One was set here on 2026-09-18 ($0.50 a broad eval
         # turn) and withdrawn the same day by the owner: "cost should not hold

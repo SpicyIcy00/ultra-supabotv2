@@ -290,9 +290,18 @@ def test_the_sales_schema_offers_exactly_the_supported_comparisons():
 
 
 def test_no_other_tool_offers_a_comparison_yet():
-    for s in _george_loop().build_tool_schemas():
-        if s["name"] != "get_sales":
-            assert "compare_to" not in s["input_schema"]["properties"], s["name"]
+    loop = _george_loop()
+    for s in loop.build_tool_schemas():
+        if s["name"] == "get_sales":
+            continue
+        if s["name"] in loop.one_call.FUNCTIONS:
+            # P2S.10: asked as one call and run as get_sales reads, which make
+            # the comparison — so it may offer only ones get_sales computes.
+            offered = (s["input_schema"]["properties"].get("compare_to") or {}).get("enum") or []
+            sales = next(t for t in loop.build_tool_schemas() if t["name"] == "get_sales")
+            assert set(offered) <= set(sales["input_schema"]["properties"]["compare_to"]["enum"])
+            continue
+        assert "compare_to" not in s["input_schema"]["properties"], s["name"]
 
 
 def test_a_pin_may_hold_a_comparison():

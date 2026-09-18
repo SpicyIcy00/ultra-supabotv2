@@ -370,6 +370,22 @@ def localizing_reads(calls: Iterable[dict]) -> list[dict]:
     return out
 
 
+def asked_reads(calls: Iterable[dict]) -> int:
+    """
+    The reading calls George MADE, as the loop's convergence cap counts them
+    (P2S.10): a call asked as one — a metric set, get_change — counts once
+    however many reads it became, and a duplicate served from the turn's
+    own record does not count at all.
+    """
+    asked = set()
+    for c in calls:
+        if not str(c.get("tool", "")).startswith("get_") or c.get("duplicate_of") is not None:
+            continue
+        one = c.get("one_call") or {}
+        asked.add(("call", one["of"]) if "of" in one else ("read", c.get("seq")))
+    return len(asked)
+
+
 def compared_windows(calls: Iterable[dict]) -> set[str]:
     """The distinct windows of every successful get_sales call carrying compare_to."""
     out = set()

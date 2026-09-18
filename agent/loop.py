@@ -55,7 +55,7 @@ import anthropic
 import psycopg
 
 from agent import prose as _prose
-from agent import compose, composite_tools, default_composition, reading, surface, vocabulary, write_tools
+from agent import compose, composite_tools, default_composition, one_call, reading, surface, vocabulary, write_tools
 from agent.model_receipts import ModelReceipts
 from agent.write_tools import WriteContext, call_key
 from tools import (
@@ -282,9 +282,22 @@ def _enum_sources(defs: dict) -> dict[tuple[str, str], list]:
     })
     movement_bases = sorted(list(req(defs, "movement.bases")) + ["both"])
 
+    # The shops a read asked as one call may be asked about (P2S.10), from
+    # the store groups its definition names.
+    def _one_call_stores(name: str) -> list[str]:
+        groups = req(defs, f"one_call_reads.tools.{name}.stores")
+        out: list[str] = []
+        for group in (groups if isinstance(groups, list) else [groups]):
+            out.extend(s.get("display_name") or s["name"] for s in req(defs, group))
+        return out
+
     return {
         # The object kinds, from the definitions, so adding one is a yaml edit.
         ("get_object", "kind"): sorted(req(defs, "objects.kinds")),
+        ("get_change", "store"): _one_call_stores("get_change"),
+        ("get_change", "date_range"): presets,
+        ("get_change", "compare_to"): list(req(defs, "one_call_reads.tools.get_change.compare_to")),
+        ("get_stock_health", "store"): _one_call_stores("get_stock_health"),
         ("get_object", "date_range"): presets,
         ("get_purchasing", "measure"): purch_measures,
         ("get_purchasing", "group_by"): purch_groups,
@@ -897,6 +910,9 @@ def build_tool_schemas(defs: Optional[dict] = None,
     schemas = []
 
     surface: dict[str, Callable[..., Any]] = dict(TOOL_FUNCTIONS)
+    # Reads asked as one call are offered beside the reads they become
+    # (P2S.10) and are never in TOOL_FUNCTIONS: a pin holds the reads.
+    surface.update(one_call.FUNCTIONS)
     surface.update(FINDING_TOOL_FUNCTIONS)
     if include_write:
         surface.update(write_tools.WRITE_TOOL_FUNCTIONS)
@@ -907,10 +923,11 @@ def build_tool_schemas(defs: Optional[dict] = None,
     # What a tool teaches beyond its docstring, from the definitions — the
     # prompt's mechanics, moved onto the tool they describe (voice.budget).
     addenda = _tool_addenda(defs)
-    reads = sorted(n for n in surface if n in TOOL_FUNCTIONS)
+    reads = sorted(n for n in surface if n in TOOL_FUNCTIONS or n in one_call.FUNCTIONS)
     labels = sorted(n for n in surface if n in FINDING_TOOL_FUNCTIONS)
     injected = sorted(n for n in surface
-                      if n not in TOOL_FUNCTIONS and n not in FINDING_TOOL_FUNCTIONS)
+                      if n not in TOOL_FUNCTIONS and n not in FINDING_TOOL_FUNCTIONS
+                      and n not in one_call.FUNCTIONS)
     # Reads, then the label tool, then whatever was injected. The label tool is
     # in every session, so it sits inside the shared prefix rather than after
     # the part that varies.
@@ -1107,7 +1124,7 @@ def _depth_sentence(defs: dict) -> str:
                 "round: every round re-reads the whole conversation."
                 if req(defs, "investigation.ladder.localize.one_round") else "")
     return (
-        f"A MESSAGE ASKING TO BE TAKEN APART IS NOT ANSWERED BY ONE CALL "
+        f"A MESSAGE ASKING TO BE TAKEN APART IS NOT ANSWERED BY ONE READ "
         f"— \"analyze\", \"break it down\", \"in depth\", \"why\" — and takes at "
         f"least {req(apart, 'min_reads')}: {' '.join(str(req(apart, 'reads')).split())}. "
         f"Never {' '.join(str(req(apart, 'never')).split())}. The localizing call "
@@ -1118,6 +1135,16 @@ def _depth_sentence(defs: dict) -> str:
         f"\"₱10,701 of the ₱11,843 gap\", \"half the drop\" is a share no read "
         f"computed: say what each moved, side by side."
     )
+
+
+def _one_call_sentence(defs: dict) -> str:
+    """
+    The one line the prompt spends on get_change (P2S.10): which rungs it
+    reads, from its definition. What it reads, and its arguments, are on the
+    tool, where the model reads them at the moment of choosing.
+    """
+    rungs = [str(r).upper() for r in req(defs, "one_call_reads.tools.get_change.ladder")]
+    return f"get_change reads {rungs[0]} to {rungs[-1]} in one call."
 
 
 def _investigating_section(defs: dict) -> str:
@@ -1140,7 +1167,7 @@ INVESTIGATING
 
 {_opening_sentence(defs)}
 
-VERIFY the primary fact first, compared over a closed window; if the premise does not hold, say so and stop. DECOMPOSE — {_drivers_sentence(defs)} Read change_pct off each driver's row: the stronger moved more, close means both moved, and a share of the change — "most of the gap" — is nobody's. LOCALIZE the driver that moved — dominating is where to look, not a reason to stop — by time and by what sold, both in ONE round. CHECK what the data can test before offering an explanation: {checks}; {req(chk, 'unchecked')}. EXPLAIN, keeping the kinds apart: "down 12%" is measured, "basket value is the stronger driver" is your reading, and localization is not cause — and say whether it MATTERS: {matters}. STOP when the premise is false, the movement is localized and checked, no tool goes further, the evidence is mixed or the reads are spent.
+VERIFY the primary fact first, compared over a closed window; if the premise does not hold, say so and stop. DECOMPOSE — {_drivers_sentence(defs)} Read change_pct off each driver's row: the stronger moved more, close means both moved, and a share of the change — "most of the gap" — is nobody's. LOCALIZE the driver that moved — dominating is where to look, not a reason to stop — by time and by what sold, both in ONE round. CHECK what the data can test before offering an explanation: {checks}; {req(chk, 'unchecked')}. EXPLAIN, keeping the kinds apart: "down 12%" is measured, "basket value is the stronger driver" is your reading, and localization is not cause — and say whether it MATTERS: {matters}. STOP when the premise is false, the movement is localized and checked, no tool goes further, the evidence is mixed or the reads are spent. {_one_call_sentence(defs)}
 
 Every read keeps the primary fact's window — the baseline's own days aside — store scope and filters. COMPOSE AS YOU GO: each round's findings go on the board in the same call as the next reads; the claim settles last.
 """
@@ -1241,7 +1268,7 @@ WHAT A MESSAGE IS — answer the one that was sent:
 
 {message_lines}
 
-HOW WIDE TO READ; what the reads find decides how deep. BROAD — no subject, metric or dimension named, or the business as a whole: do not ask where to look — {broad_reads}, at most {req(broad, 'max_reads')} reads. FOCUSED — a subject, metric, dimension or window named: {req(focused, 'reads')}, at most {req(focused, 'max_reads')}. A LOOKUP gets {req(lookup, 'answered_with')} — {req(lookup, 'means')} — and a message asking to be taken apart gets {req(apart, 'min_reads')}, not one. AMBIGUOUS — "why?", "products", "is that bad?": resolve it from the desk, the board and this conversation; ask only when those cannot settle it and the readings would differ.
+HOW WIDE TO READ; what the reads find decides how deep. BROAD — no subject, metric or dimension named, or the business as a whole: do not ask where to look — {broad_reads}, at most {req(broad, 'max_reads')} calls. FOCUSED — a subject, metric, dimension or window named: {req(focused, 'reads')}, at most {req(focused, 'max_reads')}. A LOOKUP gets {req(lookup, 'answered_with')} — {req(lookup, 'means')} — and a message asking to be taken apart gets {req(apart, 'min_reads')}, not one. AMBIGUOUS — "why?", "products", "is that bad?": resolve it from the desk, the board and this conversation; ask only when those cannot settle it and the readings would differ.
 
 A GROUP TOTAL IS A READ, NOT A SUM: "across the estate" is read with {req(broad, 'estate_total_read_with')}, never figures you add up from the rows in front of you. {req(pres, 'findings_min')} to {req(pres, 'findings_max')} things worth saying when the figures establish that many — never invent one to fill the range — each resting on {req(pres, 'rests_on')}, so a broad answer still rests on one verified fact.
 """
@@ -1436,42 +1463,69 @@ def _truncate(result: dict) -> dict:
 
 class _SetMember:
     """
-    One read of a metric set that was asked as one call (P2S.9(b)).
+    One read of a call that was asked as one: a metric set (P2S.9(b)) or a
+    read from metrics.yaml `one_call_reads` (P2S.10).
 
     It answers to the model's tool_use id — the model made ONE call and gets
     one result — and to everything else it is an ordinary call: its own seq,
     its own frames, its own object on the board, its own receipts, pinnable
-    as the single-metric call it is. So a set changes how many calls George
+    as the call it is. So asking as one changes how many calls George
     writes, and nothing about what is read, drawn or kept.
+
+    `set_name` is what the model asked for (a set's name, or the one-call
+    tool's), and `part` which of its reads this is, when it has parts.
     """
 
     type = "tool_use"
 
-    def __init__(self, parent: Any, metric: str):
+    def __init__(self, parent: Any, name: str, arguments: dict,
+                 set_name: str, part: Optional[str] = None):
         self.id = parent.id
-        self.name = parent.name
-        self.set_name = str(parent.input["metric"])
-        self.input = {**dict(parent.input), "metric": metric}
+        self.name = name
+        self.input = dict(arguments)
+        self.set_name = set_name
+        self.part = part
+
+
+def _expand_set(b: Any, defs: dict, outer: Optional[_SetMember] = None) -> list:
+    """A get_sales call naming a metric set, as one call per metric it names."""
+    named = (b.input or {}).get("metric") if isinstance(b.input, dict) else None
+    spec = req(defs, "metric_sets").get(named) if isinstance(named, str) else None
+    asked = (spec or {}).get("asked_as_one_call") or {}
+    if not (spec and b.name == asked.get("tool")):
+        return [b]
+    return [_SetMember(b, b.name, {**dict(b.input), "metric": str(m)},
+                       outer.set_name if outer else str(named),
+                       outer.part if outer else None)
+            for m in req(spec, "metrics")]
 
 
 def _expand_sets(tool_uses: list, defs: dict) -> list:
     """
-    Each call naming a metric set, replaced by one call per metric it names
-    (metrics.yaml metric_sets.<name>.asked_as_one_call). Nothing computes
-    across them: each is the tool's own single-metric read, exactly as if
-    George had written the three calls himself — which is what he did before
-    this, in 4 of the 7 answers of verification/p2s7-gate-2.json.
+    Each call asked as one, replaced by the reads it names. Nothing computes
+    across them: each is the tool's own read, exactly as if George had
+    written it himself.
+
+    A one-call tool (get_change, get_stock_health) becomes its listed reads
+    (agent/one_call.py), and a read in it that names a metric set becomes
+    one read per metric, still answering to the same call. A one-call tool
+    that REFUSES — an unknown shop, a window still in progress — is left
+    whole, and _call_tool answers it with that refusal.
     """
-    sets = req(defs, "metric_sets")
     out: list = []
     for b in tool_uses:
-        named = (b.input or {}).get("metric") if isinstance(b.input, dict) else None
-        spec = sets.get(named) if isinstance(named, str) else None
-        asked = (spec or {}).get("asked_as_one_call") or {}
-        if spec and b.name == asked.get("tool"):
-            out.extend(_SetMember(b, str(m)) for m in req(spec, "metrics"))
-        else:
+        expander = one_call.FUNCTIONS.get(b.name)
+        if expander is None:
+            out.extend(_expand_set(b, defs))
+            continue
+        try:
+            reads = expander(**dict(b.input or {}))
+        except (ValueError, TypeError):
             out.append(b)
+            continue
+        for r in reads:
+            member = _SetMember(b, r["tool"], r["arguments"], b.name, r["part"])
+            out.extend(_expand_set(member, defs, outer=member))
     return out
 
 
@@ -1487,13 +1541,23 @@ def _model_result(tool_use_id: str, parts: list, defs: dict) -> dict:
         failed = bool(err)
     else:
         first = parts[0][0]
-        payload = {
-            "set": first.set_name,
-            "answered_with": " ".join(str(req(
-                defs, f"metric_sets.{first.set_name}.asked_as_one_call.answered_with")).split()),
-            "results": [{"metric": b.input.get("metric"), **(shown if isinstance(shown, dict) else {})}
-                        for b, shown, _err in parts],
-        }
+        if first.set_name in one_call.FUNCTIONS:
+            payload = {
+                "call": first.set_name,
+                "answered_with": " ".join(str(req(defs, "one_call_reads.answered_with")).split()),
+                "results": [{"part": b.part, "tool": b.name,
+                             **({"metric": b.input.get("metric")} if b.input.get("metric") else {}),
+                             **(shown if isinstance(shown, dict) else {})}
+                            for b, shown, _err in parts],
+            }
+        else:
+            payload = {
+                "set": first.set_name,
+                "answered_with": " ".join(str(req(
+                    defs, f"metric_sets.{first.set_name}.asked_as_one_call.answered_with")).split()),
+                "results": [{"metric": b.input.get("metric"), **(shown if isinstance(shown, dict) else {})}
+                            for b, shown, _err in parts],
+            }
         failed = all(err for _b, _s, err in parts)
     return {
         "type": "tool_result",
@@ -1641,6 +1705,19 @@ async def _call_tool(name: str, args: dict) -> tuple[dict, Optional[str], int]:
     the first, and two genuinely concurrent calls reported 678ms and 2524ms.
     """
     started = time.perf_counter()
+    if name in one_call.FUNCTIONS:
+        # Reached only when it would not expand (_expand_sets): its refusal —
+        # an unknown shop, a window in progress, an argument it cannot take —
+        # is the answer, in its own words.
+        expander = one_call.FUNCTIONS[name]
+        unfit = _unfit_arguments(name, expander, args)
+        if unfit is not None:
+            return _refusal(unfit, started)
+        try:
+            expander(**args)
+        except ValueError as exc:
+            return _refusal(exc, started)
+        return _refusal(RuntimeError(f"{name} could not be run as its reads."), started)
     fn = TOOL_FUNCTIONS.get(name)
     if fn is None:
         return _refusal(ValueError(
@@ -2878,6 +2955,14 @@ async def run(
     # investigation the prompt asks for. The owner: "cost should not hold us
     # back in functionality". Drawing and remembering are not searching.
     executed_reads = 0
+    # AND WHAT IT COUNTS THEM IN SINCE P2S.10: the calls George MADE that
+    # read something, a call asked as one counting once. A get_change is
+    # seven reads and one decision; the cap guards against enumerating a
+    # subject per call (25 calls on one question, 2026-09-04), which a
+    # declared list of reads is not. executed_reads stays the rows' count
+    # for the done frame.
+    asked_reads: set[str] = set()
+    first_of_call: dict[str, int] = {}
     corrective_turns = 0
     max_corrective = req(defs, "notices.max_corrective_turns")
     # Writes actually made this run, and the budget for asking the model to
@@ -3693,8 +3778,9 @@ async def run(
                           and call_key(b.name, dict(b.input)) not in served_reads]
             # The budget is the READS that actually ran. A duplicate served
             # from this turn's own record did no work and is not counted, and
-            # since 2026-09-18 neither is a compose, a view or a write.
-            executed = executed_reads
+            # since 2026-09-18 neither is a compose, a view or a write. A call
+            # asked as one counts once (P2S.10, asked_reads).
+            executed = len(asked_reads)
             if executed >= MAX_TOOL_CALLS and not conceded and more_reads:
                 conceded = True
                 attempted = ", ".join(
@@ -3798,6 +3884,12 @@ async def run(
                            and b.name not in FINDING_TOOL_FUNCTIONS)
                 key = call_key(b.name, dict(b.input)) if is_read else None
                 frame = {"seq": seq, "tool": b.name, "arguments": b.input}
+                if isinstance(b, _SetMember):
+                    # Which call this read was asked as, so a count of what
+                    # George DECIDED to read can be made off the frames.
+                    first_of_call.setdefault(b.id, seq)
+                    frame["one_call"] = {"of": first_of_call[b.id], "asked": b.set_name,
+                                         **({"part": b.part} if b.part else {})}
                 if key is not None and (key in served_reads or key in batch_keys):
                     duplicate_of[seq] = key
                     frame["duplicate_of"] = (served_reads[key][3] if key in served_reads
@@ -3805,6 +3897,7 @@ async def run(
                 elif key is not None:
                     batch_keys[key] = seq
                     executed_reads += 1
+                    asked_reads.add(b.id)
                 batch.append((seq, b))
                 called_tools.append(b.name)
                 yield _sse("tool_call", frame)
@@ -4480,6 +4573,9 @@ async def run(
         # from this turn's own record without reaching one.
         "executed_calls": seq - duplicate_reads,
         "duplicate_reads": duplicate_reads,
+        # The reading calls George MADE, a call asked as one counting once —
+        # what the convergence cap counts (P2S.10).
+        "asked_reads": len(asked_reads),
         "status": status,
         "notice_forced": notice_forced,
         # The same measured clock that goes to the log, so a client and an

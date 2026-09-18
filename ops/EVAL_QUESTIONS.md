@@ -53,6 +53,14 @@ A question passes when every AUTO and RUBRIC line holds.
 
 - **Every phase close** (the only live test runs, since 2026-09-18).
 - **Choosing a model:** the five on each candidate, same day, same data.
-- **Not yet wired** into `tests/evals/`: questions 4 and 5 map onto existing
-  checks; 1–3 need their RUBRIC lines read by a person. Wiring is P2S.10's
-  first step.
+- **Wired 2026-09-18 (P2S.10), not yet run**, in `tests/evals/test_voice_evals_v2.py`
+  under the `core` marker: 1 is `test_gate_5_how_are_we_doing` and 4 is
+  `test_gate_3_cannot` (both already in the full run); 2 and 5 are
+  `test_core_2_a_premise` and `test_core_5_a_simple_lookup_is_fast`, which run
+  **only** with `-m core`, so the full run stays the eleven turns its measured
+  $1.51 is for. `-m core` is four turns. **3 is not wired**: it tests what
+  P2S.11 builds (a told view the reads apply), so P2S.11 writes it with that
+  seam. RUBRIC lines are read by a person off the report.
+
+      set GEORGE_EVALS=1
+      .venv\Scripts\python.exe -m pytest tests/evals/test_voice_evals_v2.py -q -m core

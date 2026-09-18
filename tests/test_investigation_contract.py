@@ -375,7 +375,7 @@ def test_the_second_read_is_taught_where_the_call_is_chosen():
 
     desc = next(s for s in build_tool_schemas() if s["name"] == "get_sales")["description"]
     apart = req(INV, "scope.kinds.focused.taken_apart")
-    assert "NOT ANSWERED BY ONE CALL" in desc
+    assert "NOT ANSWERED BY ONE READ" in desc
     assert str(apart["min_reads"]) in desc
     assert "the metric's declared drivers in the same batch" in desc
     # The localizing call shapes moved here from INVESTIGATING with it.

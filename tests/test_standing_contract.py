@@ -356,7 +356,8 @@ def test_the_new_tool_does_not_break_the_shared_prefix():
     schemas = loop.build_tool_schemas(include_write=True)
     names = [s["name"] for s in schemas]
     injected = [n for n in names
-                if n not in loop.TOOL_FUNCTIONS and n not in loop.FINDING_TOOL_FUNCTIONS]
+                if n not in loop.TOOL_FUNCTIONS and n not in loop.FINDING_TOOL_FUNCTIONS
+                and n not in loop.one_call.FUNCTIONS]
 
     assert injected == sorted(injected)
     assert write_tools.STANDING_TOOL in injected

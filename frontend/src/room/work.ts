@@ -60,6 +60,10 @@ export const WORDS: Record<string, [string, string]> = {
   get_cost_history: ['reading costs', 'read costs'],
   get_brief: ['reading the morning brief', 'read the morning brief'],
   get_attention: ['looking at what deserves attention', 'looked at what deserves attention'],
+  // Asked as one call and run as their reads (P2S.10), so the trail shows the
+  // reads; these words are for the call itself when it is refused whole.
+  get_change: ['seeing what changed and where', 'saw what changed and where'],
+  get_stock_health: ['checking the stock', 'checked the stock'],
   // ---- the things only he can see
   view_page: ['reading the page', 'read the page'],
   view_memory: ['checking what he thinks', 'checked what he thinks'],

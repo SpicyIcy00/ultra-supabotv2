@@ -163,7 +163,7 @@ def test_the_read_prefix_holds_by_construction_whatever_the_names():
     # second label tool ("compose") sorts before "get_...", so the prefix as
     # a whole is no longer alphabetical — and never needed to be.
     assert [s["name"] for s in read] == (
-        sorted(george_loop.TOOL_FUNCTIONS) + sorted(george_loop.FINDING_TOOL_FUNCTIONS)
+        sorted({*george_loop.TOOL_FUNCTIONS, *george_loop.one_call.FUNCTIONS}) + sorted(george_loop.FINDING_TOOL_FUNCTIONS)
     )
     injected = [s["name"] for s in both[len(read):]]
     assert injected == sorted(injected)

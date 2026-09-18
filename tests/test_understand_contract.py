@@ -192,7 +192,9 @@ def test_a_focused_message_that_asks_to_be_taken_apart_is_not_one_read(defs):
     # BROAD's second round is still named, and FOCUSED's floor is under BROAD's
     # ceiling — a focused message taken apart is not a broad one.
     broad_reads = req(defs, "investigation.scope.kinds.broad.reads")
-    assert "in ONE more" in broad_reads and "by time and by what sold" in broad_reads
+    # Since P2S.10 the second round is get_change, which reads by time and by
+    # what sold (one_call_reads.tools.get_change).
+    assert "in ONE more" in broad_reads and "get_change" in broad_reads
     assert int(apart["min_reads"]) < int(req(defs, "investigation.scope.kinds.broad.max_reads"))
 
 

@@ -380,3 +380,17 @@ def test_a_refusal_about_truth_is_not_listed():
         {"reason": "composition_rejected", "detail": "x: read 0 has no row for 'Magnolia'"},
     ]
     assert _c.refused_for_what_is_not_truth(warnings, calls) == []
+
+
+def test_reads_are_counted_as_the_cap_counts_them():
+    """P2S.10: a call asked as one counts once; a duplicate not at all."""
+    from tests.evals import checks as _c
+    calls = [
+        {"seq": 0, "tool": "get_sales", "one_call": {"of": 0, "asked": "get_change"}},
+        {"seq": 1, "tool": "get_sales", "one_call": {"of": 0, "asked": "get_change"}},
+        {"seq": 2, "tool": "get_stock_history", "one_call": {"of": 0, "asked": "get_change"}},
+        {"seq": 3, "tool": "get_attention"},
+        {"seq": 4, "tool": "get_attention", "duplicate_of": 3},
+        {"seq": 5, "tool": "compose"},
+    ]
+    assert _c.asked_reads(calls) == 2

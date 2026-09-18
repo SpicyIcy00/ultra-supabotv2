@@ -304,7 +304,8 @@ def test_the_tool_sits_inside_the_shared_prefix():
     bare = [t["name"] for t in george_loop.build_tool_schemas()]
     full = [t["name"] for t in george_loop.build_tool_schemas(include_write=True)]
     assert full[: len(bare)] == bare
-    reads = sorted(george_loop.TOOL_FUNCTIONS)
+    # The reads, and the reads asked as one call beside them (P2S.10).
+    reads = sorted({*george_loop.TOOL_FUNCTIONS, *george_loop.one_call.FUNCTIONS})
     assert bare == reads + sorted(george_loop.FINDING_TOOL_FUNCTIONS)
     assert george_loop.COMPOSE_TOOL in bare
 

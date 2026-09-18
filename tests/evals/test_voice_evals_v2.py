@@ -180,9 +180,10 @@ def _voice(name: str, turn: checks.Turn, *, extra_results: list | None = None,
     # a view or a pin is not searching. p2s6-gate.json's `analyze` made 11
     # reads and 2 composes, inside the loop's budget and outside this check
     # while it still counted every call; the check followed the definition.
-    reads = [c for c in turn.calls
-             if str(c.get("tool", "")).startswith("get_") and c.get("duplicate_of") is None]
-    assert len(reads) <= george_loop.MAX_TOOL_CALLS, (len(reads), turn.done)
+    # And since P2S.10 in CALLS, as the cap counts them: a get_change is one
+    # decision and seven reads (checks.asked_reads).
+    reads = checks.asked_reads(turn.calls)
+    assert reads <= george_loop.MAX_TOOL_CALLS, (reads, turn.done)
     assert turn.done.get("notice_forced") is False, "a notice had to be forced into the answer"
     assert not f["ungrounded_numerals"], f"figures no tool returned: {f['ungrounded_numerals']}"
     assert not f["internal_vocabulary"], f"internal vocabulary: {f['internal_vocabulary']}"
@@ -239,6 +240,7 @@ def test_gate_2_why(monkeypatch):
 
 
 @pytest.mark.gate
+@pytest.mark.core          # the owner's core question 4 (ops/EVAL_QUESTIONS.md)
 def test_gate_3_cannot(monkeypatch):
     """A refusal that stopped refusing. Expects NO figure, by design."""
     turn = _turn(monkeypatch, "What was the foot traffic at Rockwell last week?")
@@ -281,6 +283,7 @@ def _broad(turn: checks.Turn, f: dict) -> None:
 
 
 @pytest.mark.gate
+@pytest.mark.core          # the owner's core question 1 (ops/EVAL_QUESTIONS.md)
 def test_gate_5_how_are_we_doing(monkeypatch):
     """
     His most common question, added to the gate by P2S.6: a broad question
@@ -289,6 +292,46 @@ def test_gate_5_how_are_we_doing(monkeypatch):
     """
     turn = _turn(monkeypatch, "how are we doing?")
     _broad(turn, _voice("broad", turn))
+
+
+# =============================================================================
+# CORE — the owner's own questions (ops/EVAL_QUESTIONS.md, 2026-09-18: "just
+# keep main questions that you need to know to make sures its functional").
+# Questions 1 and 4 are the gate's broad and cannot, marked core above.
+# Question 3 — the per-gram instruction, then "how are our products?" — is
+# P2S.11's done-when and is written with the memory seam that card builds.
+# Every RUBRIC line is read by a person off the report; the CLOCK is recorded,
+# never asserted.
+# =============================================================================
+
+def _core_only(request) -> None:
+    """
+    The two core questions the full run does not already ask run only under
+    -m core, so the full run stays the eleven turns its measured $1.51 is for.
+    """
+    if "core" not in (request.config.getoption("markexpr") or ""):
+        pytest.skip("a core question: run with -m core")
+
+
+@pytest.mark.core
+def test_core_2_a_premise(monkeypatch, request):
+    """Judgment: yes or no, and disagreeing when the data says so (RUBRIC)."""
+    _core_only(request)
+    turn = _turn(monkeypatch, "I think Rockwell is our biggest problem. Am I right?")
+    f = _voice("premise", turn)
+    f["reads"] = [c.get("arguments") for c in turn.ok_calls]
+
+
+@pytest.mark.core
+def test_core_5_a_simple_lookup_is_fast(monkeypatch, request):
+    """Simple is fast: one or two reads, every figure from one (AUTO); the clock is reported."""
+    _core_only(request)
+    turn = _turn(monkeypatch, "Net sales by store yesterday")
+    f = _voice("simple", turn)
+    f["asked_reads"] = checks.asked_reads(turn.calls)
+    f["clock"] = {"duration_ms": turn.done.get("duration_ms"),
+                  "iterations": turn.done.get("iterations")}
+    assert f["asked_reads"] <= 2, f"{f['asked_reads']} reads for a lookup"
 
 
 # =============================================================================

@@ -281,7 +281,7 @@ def test_every_tool_george_can_call_has_words_on_the_room_surface():
     import re
     from pathlib import Path
 
-    from agent import composite_tools, loop, write_tools
+    from agent import composite_tools, loop, one_call, write_tools
 
     # The words moved to work.ts with P1.k, where the live trail, the line
     # above the claim and the Behind it view all read the same ones. One map,
@@ -292,6 +292,7 @@ def test_every_tool_george_can_call_has_words_on_the_room_surface():
     named = set(re.findall(r"^\s{2}(\w+):\s*\[", block, re.M))
 
     every = (set(loop.TOOL_FUNCTIONS)
+             | set(one_call.FUNCTIONS)
              | set(loop.FINDING_TOOL_FUNCTIONS)
              | set(write_tools.WRITE_TOOL_FUNCTIONS)
              | set(composite_tools.COMPOSITE_TOOL_FUNCTIONS))

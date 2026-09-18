@@ -130,11 +130,10 @@ def test_the_read_prefix_is_unchanged_by_the_write_tool():
     # Reads sorted, then the one label tool (record_findings, 2026-09-08): it
     # reads nothing and is offered to every session, so it belongs INSIDE the
     # shared prefix rather than after the part that varies by capability.
-    reads = sorted(george_loop.TOOL_FUNCTIONS)
+    # The reads, and the reads asked as one call beside them (P2S.10).
+    reads = sorted({*george_loop.TOOL_FUNCTIONS, *george_loop.one_call.FUNCTIONS})
     assert read_names == reads + sorted(george_loop.FINDING_TOOL_FUNCTIONS)
-    assert set(read_names) == set(george_loop.TOOL_FUNCTIONS) | set(
-        george_loop.FINDING_TOOL_FUNCTIONS
-    )
+    assert set(read_names) == set(reads) | set(george_loop.FINDING_TOOL_FUNCTIONS)
     injected = [s["name"] for s in both[len(read):]]
     assert injected == sorted(injected)
     assert set(injected) == set(george_loop.write_tools.WRITE_TOOL_FUNCTIONS) | set(

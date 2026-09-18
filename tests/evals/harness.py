@@ -314,6 +314,8 @@ atexit.register(METER.record)
 DONE_KEPT = (
     "iterations", "tool_calls", "executed_calls", "duplicate_reads", "status",
     "notice_forced",
+    # the reading calls George made, one asked as one counting once (P2S.10)
+    "asked_reads",
     # the clock (P0.3)
     "duration_ms", "iteration_ms", "corrective_turns",
     # the closing rounds not sent because the round before was the answer
@@ -463,7 +465,8 @@ class Report:
             "question": turn.question,
             "answer": turn.answer,
             "narration": turn.narration,
-            "calls": [{k: c.get(k) for k in ("seq", "tool", "arguments", "error", "row_count", "duplicate_of")}
+            "calls": [{k: c.get(k) for k in ("seq", "tool", "arguments", "error", "row_count", "duplicate_of",
+                                                   "one_call")}
                       for c in turn.calls],
             "notices": [n.get("kind") for n in turn.notices],
             "warnings": [w.get("reason") for w in turn.warnings],
