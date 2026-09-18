@@ -41,7 +41,7 @@ import type { GeorgeNotice, ReadingFrame, ToolCall } from '../types/george';
 import { Caveats } from './tiles';
 import { splitClaim } from './claim';
 import { placeFigures } from './figures';
-import { claimAndStanding } from './beside';
+import { claimAndStanding, unmark } from './beside';
 
 /**
  * EVERY FIGURE IN WHAT HE SAID, MARKED OR VISIBLY UNMARKED (P1.k, P2.b).
@@ -119,34 +119,6 @@ function Lit({ text, calls, onFigure }: {
   );
 }
 
-/**
- * `**x**` pairs out of the text, and where they were. An odd marker with no
- * partner is left in place: it is not emphasis, and removing it would be
- * changing what he wrote.
- */
-export function unmark(text: string): { plain: string; bold: [number, number][] } {
-  const bold: [number, number][] = [];
-  let plain = '';
-  let open = -1;
-  let i = 0;
-  const pairs = (text.match(/\*\*/g) ?? []).length;
-  const usable = pairs - (pairs % 2);
-  let used = 0;
-  while (i < text.length) {
-    if (text.startsWith('**', i) && used < usable) {
-      used += 1;
-      if (open < 0) { open = plain.length; } else { bold.push([open, plain.length]); open = -1; }
-      i += 2;
-      continue;
-    }
-    plain += text[i];
-    i += 1;
-  }
-  // Trimming the plain text moves every index by what was cut off the front.
-  const lead = plain.length - plain.trimStart().length;
-  return { plain: plain.trim(), bold: bold.map(([a, b]) => [a - lead, b - lead] as [number, number]) };
-}
-
 /** A slice of the answer, starting at `from`, with his bold ranges set in weight. */
 function Weighted({ text, from, bold, calls, onFigure }: {
   text: string; from: number; bold: [number, number][];
@@ -168,6 +140,18 @@ function Weighted({ text, from, bold, calls, onFigure }: {
       })}
     </>
   );
+}
+
+/**
+ * ONE OF HIS SENTENCES, WITH HIS EMPHASIS DRAWN — for a sentence cut out of the
+ * answer (`beside.thoughtsOf`), which carries its markers closed at its own
+ * edges. Never the asterisks (the log, 2026-09-18: `**Three.`).
+ */
+export function Marked({ text, calls, onFigure }: {
+  text: string; calls: ToolCall[]; onFigure?: (seq: number) => void;
+}) {
+  const { plain, bold } = unmark(text);
+  return <Weighted text={plain} from={0} bold={bold} calls={calls} onFigure={onFigure} />;
 }
 
 /**
@@ -238,7 +222,7 @@ export function Reading({ text, notices, reading, calls, onFigure, part = 'all',
     return (
       <section className="r-reading r-reading--rest" data-reading="rest">
         {caveat && <p className="r-caveat r-turn-caveat">{caveat}</p>}
-        {rest && <p className="r-say r-say--standing"><Figures text={rest} {...pieces} /></p>}
+        {rest && <p className="r-say r-say--standing"><Marked text={rest} {...pieces} /></p>}
       </section>
     );
   }

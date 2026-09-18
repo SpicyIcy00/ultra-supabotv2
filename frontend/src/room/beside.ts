@@ -37,6 +37,14 @@ import { placeFigures as figuresPlaced } from './figures';
  * use. A sentence citing none stays with the rest of his words. The claim's own
  * sentence is not moved: it is the headline. Not a character is rewritten; the
  * sentences are the answer's own slices, in order.
+ *
+ * SPLIT ON WHAT IS DRAWN, NOT ON WHAT WAS SENT (the log, 2026-09-18: the rest
+ * of his words printed `**Three.`). He writes `**Three. Four.**`; split raw,
+ * the first sentence kept an opening marker whose partner went to the second,
+ * and an unpaired marker is printed as he typed it. So the sentences are cut
+ * from the text with his markers out — the same text the headline is cut from
+ * — and each one gets back exactly the part of his emphasis that falls inside
+ * it, closed at its own edges. Draw one with `unmark` and nothing is printed.
  */
 export function thoughtsOf(text: string | null | undefined, claimSpan: string | null | undefined,
                            calls: ToolCall[],
@@ -49,21 +57,83 @@ export function thoughtsOf(text: string | null | undefined, claimSpan: string | 
                             */
                            thoughtful: ReadonlySet<number> = new Set()):
   { bySeq: Map<number, string[]>; unbound: string } {
-  const parts = claimAndStanding(text, claimSpan);
+  const { plain, bold } = unmark((text ?? '').trim());
+  const parts = claimAndStanding(plain, claimSpan);
   const bySeq = new Map<number, string[]>();
   const unbound: string[] = [];
-  for (const slice of [parts.before, parts.after]) {
-    for (const sentence of slice.trim() ? slice.trim().split(/(?<=[.!?])\s+/) : []) {
+  const afterAt = parts.before.length + parts.claimRaw.length;
+  for (const [slice, from] of [[parts.before, 0], [parts.after, afterAt]] as const) {
+    for (const { at, said } of sentencesOf(slice, from)) {
       const count = new Map<number, number>();
-      for (const piece of figuresPlaced(sentence, calls)) {
+      for (const piece of figuresPlaced(said, calls)) {
         if (piece.seq !== undefined) count.set(piece.seq, (count.get(piece.seq) ?? 0) + 1);
       }
+      const sentence = remark(said, at, bold);
       const best = [...count.entries()].sort((a, b) => b[1] - a[1])[0];
       if (best && !thoughtful.has(best[0])) bySeq.set(best[0], [...(bySeq.get(best[0]) ?? []), sentence]);
       else unbound.push(sentence);
     }
   }
   return { bySeq, unbound: unbound.join(' ') };
+}
+
+/** A slice's sentences, trimmed, each with where it starts in the whole text. */
+function sentencesOf(slice: string, from: number): { at: number; said: string }[] {
+  const out: { at: number; said: string }[] = [];
+  const push = (start: number, end: number) => {
+    const raw = slice.slice(start, end);
+    const said = raw.trim();
+    if (said) out.push({ at: from + start + (raw.length - raw.trimStart().length), said });
+  };
+  const re = /(?<=[.!?])\s+/g;
+  let start = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(slice))) { push(start, m.index); start = m.index + m[0].length; }
+  push(start, slice.length);
+  return out;
+}
+
+/** His emphasis back on one sentence: every bold range, cut to its edges. */
+function remark(said: string, at: number, bold: readonly [number, number][]): string {
+  const cuts: [number, number][] = [];
+  for (const [a, b] of bold) {
+    const s = Math.max(a, at) - at;
+    const e = Math.min(b, at + said.length) - at;
+    if (s < e) cuts.push([s, e]);
+  }
+  let out = said;
+  for (const [s, e] of cuts.sort((x, y) => y[0] - x[0])) {
+    out = `${out.slice(0, s)}**${out.slice(s, e)}**${out.slice(e)}`;
+  }
+  return out;
+}
+
+/**
+ * `**x**` pairs out of the text, and where they were. An odd marker with no
+ * partner is left in place: it is not emphasis, and removing it would be
+ * changing what he wrote.
+ */
+export function unmark(text: string): { plain: string; bold: [number, number][] } {
+  const bold: [number, number][] = [];
+  let plain = '';
+  let open = -1;
+  let i = 0;
+  const pairs = (text.match(/\*\*/g) ?? []).length;
+  const usable = pairs - (pairs % 2);
+  let used = 0;
+  while (i < text.length) {
+    if (text.startsWith('**', i) && used < usable) {
+      used += 1;
+      if (open < 0) { open = plain.length; } else { bold.push([open, plain.length]); open = -1; }
+      i += 2;
+      continue;
+    }
+    plain += text[i];
+    i += 1;
+  }
+  // Trimming the plain text moves every index by what was cut off the front.
+  const lead = plain.length - plain.trimStart().length;
+  return { plain: plain.trim(), bold: bold.map(([a, b]) => [a - lead, b - lead] as [number, number]) };
 }
 
 /* ------------------------------------------------------------ the frame */

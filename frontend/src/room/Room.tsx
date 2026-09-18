@@ -26,7 +26,7 @@ import { Board, turnNotices } from './render';
 import { FiguresArea, Wires, scrollToFigure, useMoreBelow } from './FiguresArea';
 import { AliveMark } from './AliveMark';
 import { markStateOf } from './alive';
-import { claimAndStanding, thoughtsOf } from './beside';
+import { claimAndStanding, thoughtsOf, unmark } from './beside';
 import { placeFigures as figuresInText } from './figures';
 import { identitiesFrom } from './identity';
 import { readStoreAppearance } from '../services/storesApi';
@@ -58,7 +58,8 @@ import { dismissStanding, useStandingOpening } from './useStandingOpening';
 import { decisionFor, leftBehind } from './decisions';
 import { recordDecision, type Outcome } from '../services/decisionsApi';
 import { forgetBelief } from '../services/beliefsApi';
-import { arrivedSince, firstUnseen, forgetLast, lastSeen, lastThread, remember } from './history';
+import { arrivedSince, firstUnseen, forgetLast, lastSeen, lastThread, questionsOf,
+         remember } from './history';
 import type { TileActions } from './tiles';
 import './room.css';
 
@@ -173,9 +174,26 @@ export default function Room() {
     if (!threadId && george.storedThreadId) navigate(`/w/${george.storedThreadId}`, { replace: true });
   }, [threadId, george.storedThreadId, navigate]);
 
-  const answers = useMemo(
+  const allAnswers = useMemo(
     () => george.turns.filter((t): t is AnswerTurn => t.role === 'george'),
     [george.turns],
+  );
+  // WHAT EACH ANSWER WAS ASKED, in the person's words (the log, 2026-09-18).
+  const questions = useMemo(() => questionsOf(george.turns), [george.turns]);
+  // BACK TO AN EARLIER QUESTION AND ITS RESULTS (the log, 2026-09-18: "when you
+  // can go to your last question and its last resutls"). Null is the newest.
+  // Stepping back draws the room AS IT WAS after that answer: the board is
+  // built from the stored turns up to it, by the same function that built it
+  // then, so it costs no model call and no read. A new answer, or asking,
+  // returns to the newest; while he works, the room is always the newest.
+  const [view, setView] = useState<number | null>(null);
+  useEffect(() => { setView(null); }, [allAnswers.length]);
+  const at = view === null || george.busy
+    ? allAnswers.length - 1 : Math.min(view, allAnswers.length - 1);
+  const atNewest = at === allAnswers.length - 1;
+  const answers = useMemo(
+    () => (atNewest ? allAnswers : allAnswers.slice(0, at + 1)),
+    [allAnswers, at, atNewest],
   );
   const board = useMemo(() => buildBoard(answers), [answers]);
   const busy = george.busy;
@@ -259,8 +277,6 @@ export default function Room() {
     )).filter((s): s is number => typeof s === 'number'));
     return thoughtsOf(latest.text, latest.reading?.claim, latest.toolCalls, thoughtful);
   }, [latest, busy, drawn, answers.length]);
-  const [moreOpen, setMoreOpen] = useState(false);
-  useEffect(() => { setMoreOpen(false); }, [answers.length]);
   // A NEW ANSWER IS READ FROM ITS TOP (the log, 2026-09-17: the headline shown
   // from its middle). While he works, the lines above the answer come and go
   // and the browser keeps the column's scroll where the old content was; when
@@ -271,7 +287,9 @@ export default function Room() {
 
   const lead = useMemo(() => {
     if (!latest || busy) return null;
-    const { claimRaw } = claimAndStanding(latest.text, latest.reading?.claim);
+    // Cut from the text with his markers out, as the headline is (Reading.tsx).
+    const { claimRaw } = claimAndStanding(unmark((latest.text ?? '').trim()).plain,
+                                          latest.reading?.claim);
     const cited = figuresInText(claimRaw, latest.toolCalls)
       .map((piece) => piece.seq)
       .filter((seq): seq is number => seq !== undefined);
@@ -324,12 +342,12 @@ export default function Room() {
   const askedHere = useRef<string | null>(null);
   useEffect(() => { if (busy && threadId) askedHere.current = threadId; }, [busy, threadId]);
   const sinceAt = askedHere.current === threadId ? null : openedSeen;
-  const arrived = arrivedSince(answers, sinceAt);
+  const arrived = arrivedSince(allAnswers, sinceAt);
   useEffect(() => { if (threadId) remember(threadId); }, [threadId]);
   useEffect(() => {
-    if (!threadId || busy || !answers.length) return;
-    remember(threadId, answers[answers.length - 1].at);
-  }, [threadId, busy, answers]);
+    if (!threadId || busy || !allAnswers.length) return;
+    remember(threadId, allAnswers[allAnswers.length - 1].at);
+  }, [threadId, busy, allAnswers]);
 
   // LOOKING INTO SOMETHING GEORGE NOTICED. The watch post carries the read
   // that fired it, so this is an ordinary reply in its thread — George re-runs
@@ -379,6 +397,9 @@ export default function Room() {
     const q = text.trim();
     if (!q) return;
     setDraft('');
+    // Asked from an earlier answer, the question travels with the board as it
+    // is drawn, and the room returns to the newest as he starts.
+    setView(null);
     // A REFUSAL BELONGS TO THE GESTURE THAT CAUSED IT (the dogfood log,
     // 2026-09-15). It was cleared only when the next replay STARTED, so a
     // refused move left its sentence under every turn after it — the owner's
@@ -704,13 +725,13 @@ export default function Room() {
     // so tomorrow George can say "raised Tuesday, left". A row already
     // decided is not also left.
     const already = new Set(Array.from(decided.current, (k) => k.split('|').slice(0, -1).join('|')));
-    for (const d of leftBehind(answers, board, already, threadId ?? null)) {
+    for (const d of leftBehind(allAnswers, buildBoard(allAnswers), already, threadId ?? null)) {
       decided.current.add(`${d.what}|${d.outcome}`);
       void recordDecision(d).catch(() => { /* see above */ });
     }
     // Leaving on purpose: "/" must not walk straight back in.
     forgetLast();
-    george.reset(); setSelection([]); setScope(null); setNamed([]); setFocused(null);
+    george.reset(); setSelection([]); setScope(null); setNamed([]); setFocused(null); setView(null);
     // Starting fresh is the whole estate again: the switch is a scope you put
     // on, and carrying it into a new board would be the room deciding what the
     // next question is about (P2.g).
@@ -718,7 +739,7 @@ export default function Room() {
     setRetuned({}); setShapes({}); setRefusal(null);
     setLocal({});
     navigate('/george');
-  }, [george, navigate, threadId, answers, board]);
+  }, [george, navigate, threadId, allAnswers]);
 
   return (
     <IdentityContext.Provider value={identities}>
@@ -741,7 +762,7 @@ export default function Room() {
       <main className="r-main">
         <div className="r-beside" ref={frameRef}>
           <Wires frameRef={frameRef} markRef={himRef} wordsRef={wordsRef} areaRef={areaRef}
-                 version={`${answers.length}:${drawn.length}:${busy}:${moreOpen}`} />
+                 version={`${answers.length}:${drawn.length}:${busy}`} />
 
           <div className="r-him" ref={himRef}>
             <AliveMark state={mark.state} failed={mark.failed} drawn={mark.reads}
@@ -749,6 +770,10 @@ export default function Room() {
           </div>
 
           <div className="r-words" ref={wordsRef} data-more-down={wordsMore ? 'yes' : 'no'}>
+            {/* WHAT YOU ASKED, SMALL, UNDER HIM, and the way back to what
+                you asked before (the log, 2026-09-18). */}
+            <Asked question={questions[at] ?? null} at={at} count={allAnswers.length}
+                   busy={busy} onStep={(to) => { setFocused(null); setView(to); }} />
             {/* WHILE HE WORKS, A LINE UNDER HIM (the log, 2026-09-17). */}
             <Doing turn={latest} live={busy} answering={Boolean((latest?.text ?? '').trim())} />
             <Narration said={(latest as { narration?: string } | null)?.narration} live={busy}
@@ -761,34 +786,27 @@ export default function Room() {
                     the mark this browser kept — derived, never guessed (UI rule
                     8) — one quiet line above the turn's caveat, only when there
                     is one. */}
-                {arrived > 0 && !busy && (
+                {arrived > 0 && !busy && atNewest && (
                   <p className="r-label r-since">
                     since you last looked · {arrived} {arrived === 1 ? 'answer' : 'answers'} arrived
                   </p>
                 )}
-                {/* UNDER HIM, THE HEADLINE — and what to ask or do next (the
-                    owner, 2026-09-17: "under the blob is the main headline and
-                    question suggestions"). A notice that says the data may be
-                    wrong stays above the headline (UI rule 4). The rest of what
-                    he said — his caveat, and any sentence no chart took — is
-                    one tap away, never gone. See Reading.tsx. */}
+                {/* UNDER HIM, THE HEADLINE, AND THEN ALL OF THE REST OF WHAT HE
+                    SAID (the log, 2026-09-18: "whats more from george? why is it
+                    hiding?"). The rest (his caveat, and any sentence no chart
+                    took) was one tap away behind "more from George"; the column
+                    runs down to the line and scrolls, so it is drawn whole. A
+                    notice that says the data may be wrong stays above the
+                    headline (UI rule 4). Then what to ask or do next. */}
                 <Reading part="claim" text={latest?.text} notices={drawnOnly(notices, explainsOnly)}
                          reading={latest?.reading} calls={latest?.toolCalls} onFigure={showFigure} />
+                {!busy && (
+                  <Reading part="rest" text={latest?.text} reading={latest?.reading}
+                           calls={latest?.toolCalls} onFigure={showFigure}
+                           standing={thoughts?.unbound} />
+                )}
                 <ReadingAsks reading={latest?.reading} busy={busy} onAsk={(q) => ask(q)} />
                 <ReadingNext reading={latest?.reading} />
-                {!busy && (latest?.reading?.caveat?.trim() || thoughts?.unbound) && (
-                  <div className="r-more-said">
-                    <button type="button" className="r-more-said-toggle" aria-expanded={moreOpen}
-                            onClick={() => setMoreOpen((o) => !o)}>
-                      {moreOpen ? 'less' : 'more from George'}
-                    </button>
-                    {moreOpen && (
-                      <Reading part="rest" text={latest?.text} reading={latest?.reading}
-                               calls={latest?.toolCalls} onFigure={showFigure}
-                               standing={thoughts?.unbound} />
-                    )}
-                  </div>
-                )}
                 {/* WHAT TO DO ABOUT ALL OF IT (P2.d) — the offers no row on a
                     figure could carry, beside `next`, where "what now" is read. */}
                 <FootOffers offers={offers.foot} answers={answers} on={on} />
@@ -885,6 +903,48 @@ export default function Room() {
     </div>
     </ExplainsOnlyContext.Provider>
     </IdentityContext.Provider>
+  );
+}
+
+/**
+ * WHAT YOU ASKED, AND THE WAY BACK (the log, 2026-09-18: "i should see what i
+ * ask too like around the area of the blob just something small and also be a
+ * track back feature").
+ *
+ * The question the answer on screen answered, in your words, small and quiet
+ * under him. With more than one answer in the thread, an arrow either side
+ * steps to the question before or after, and "latest" comes back. Nothing
+ * here is his and nothing here costs a turn. An answer nobody asked for has no
+ * question to draw, so only its arrows are.
+ */
+export function Asked({ question, at, count, busy, onStep }: {
+  question: string | null;
+  at: number;
+  count: number;
+  busy: boolean;
+  onStep(to: number | null): void;
+}) {
+  const steps = count > 1;
+  if (!question && !steps) return null;
+  const newest = at >= count - 1;
+  return (
+    <div className="r-asked" data-at={newest ? 'newest' : 'earlier'}>
+      {steps && (
+        <button type="button" className="r-asked-step" aria-label="the question before"
+                disabled={busy || at <= 0} onClick={() => onStep(at - 1)}>&lsaquo;</button>
+      )}
+      {question && (
+        <p className="r-asked-q"><b className="r-asked-label">you asked</b>{question}</p>
+      )}
+      {steps && (
+        <button type="button" className="r-asked-step" aria-label="the question after"
+                disabled={busy || newest}
+                onClick={() => onStep(at + 1 >= count - 1 ? null : at + 1)}>&rsaquo;</button>
+      )}
+      {steps && !newest && (
+        <button type="button" className="r-asked-latest" onClick={() => onStep(null)}>latest</button>
+      )}
+    </div>
   );
 }
 

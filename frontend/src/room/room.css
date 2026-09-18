@@ -521,7 +521,11 @@
   grid-template-rows: auto minmax(0, 1fr);
   grid-template-areas: "him right" "words right";
   column-gap: var(--comp-gap);
-  padding: max(5vh, 64px) 0 150px;
+  /* THE FOOT STOPS JUST ABOVE THE LINE (the log, 2026-09-18: "it stops too
+     early. it should stop almost right before the text bar"). It was 150px;
+     the line (.r-line-wrap) stands 20px off the bottom and is about 54px tall,
+     so the words and the figures now run to 12px above it. */
+  padding: max(5vh, 64px) 0 86px;
   align-items: start;
 }
 
@@ -579,14 +583,30 @@
 .r-ask:hover, .r-ask:focus-visible { border-color: var(--edge-strong); color: var(--ink); }
 @media (max-width: 900px) { .r-asks { align-items: flex-start; } .r-ask { text-align: left; } }
 
-/* THE REST OF WHAT HE SAID, one tap away under the headline and next. */
-.r-more-said { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
-.r-more-said-toggle {
-  background: none; border: 0; padding: 0; cursor: pointer;
-  font: 400 11px/1.5 var(--mono); color: var(--ink-3);
-  text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--edge-strong);
+/* WHAT YOU ASKED, SMALL, UNDER HIM, with the way back (the log, 2026-09-18).
+   Quiet: your own words, not his, so never his serif at his size, and never
+   the accent (UI rule 5). The arrows step through the thread's questions. */
+.r-asked { display: flex; align-items: baseline; justify-content: flex-end; gap: 6px; max-width: 100%; }
+.r-asked-q {
+  margin: 0; min-width: 0; max-width: 46ch;
+  font: 400 12.5px/1.5 var(--sans); color: var(--ink-3); overflow-wrap: anywhere;
 }
-.r-more-said-toggle:hover { color: var(--ink-2); }
+.r-asked-label {
+  font: 400 10.5px/1.5 var(--mono); letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-4); margin-right: 8px;
+}
+.r-asked-step, .r-asked-latest {
+  flex: none; background: none; border: 0; cursor: pointer; border-radius: 6px;
+  color: var(--ink-3); padding: 0 6px;
+}
+.r-asked-step { font: 400 16px/1.2 var(--sans); }
+.r-asked-latest {
+  font: 400 11px/1.5 var(--mono); text-decoration: underline;
+  text-underline-offset: 3px; text-decoration-color: var(--edge-strong);
+}
+.r-asked-step:hover:not(:disabled), .r-asked-latest:hover { color: var(--ink); background: var(--sunk); }
+.r-asked-step:disabled { color: var(--ink-4); opacity: 0.45; cursor: default; }
+@media (max-width: 900px) { .r-asked { justify-content: flex-start; } }
 
 /* WHAT HE IS DOING, while nothing he says has arrived. The trail's own mono
    words and clock; his narration under it in his serif, quieter. */

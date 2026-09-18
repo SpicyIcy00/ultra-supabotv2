@@ -27,7 +27,7 @@ import {
   ownNotices, type TileActions, type TileProps,
 } from './tiles';
 import { MarkBlock } from './marks';
-import { Figures } from './Reading';
+import { Marked } from './Reading';
 import type { ActionOffer, GeorgeNotice } from '../types/george';
 
 export interface BoardProps {
@@ -280,7 +280,7 @@ export function Board(p: BoardProps) {
                 return (
                   <div className="r-fig-thought" data-thought-for={seq}>
                     {said.map((s, i) => (
-                      <p key={i} className="r-say"><Figures text={s} calls={turn?.toolCalls ?? []} /></p>
+                      <p key={i} className="r-say"><Marked text={s} calls={turn?.toolCalls ?? []} /></p>
                     ))}
                   </div>
                 );

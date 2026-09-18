@@ -109,3 +109,20 @@ export function firstUnseen(answers: readonly { at?: string }[], seen: string | 
   const i = answers.findIndex((a) => after(a.at, seen));
   return i < 0 ? answers.length : i;
 }
+
+/**
+ * WHAT EACH ANSWER WAS ASKED (the log, 2026-09-18: "i should see what i ask
+ * too"), one entry per answer, in order. An answer's question is the person's
+ * line nearest before it and after the answer before it — their words, as they
+ * sent them. An answer nobody asked for (a standing question's, a watch's) has
+ * none, and none is drawn: the room never words a question for them.
+ */
+export function questionsOf(turns: readonly { role: string; text?: string }[]): (string | null)[] {
+  const out: (string | null)[] = [];
+  let pending: string | null = null;
+  for (const t of turns) {
+    if (t.role === 'user') pending = (t.text ?? '').trim() || null;
+    else if (t.role === 'george') { out.push(pending); pending = null; }
+  }
+  return out;
+}
