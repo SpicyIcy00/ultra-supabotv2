@@ -4621,3 +4621,8 @@ Four fixes to the room as it is live; the UI freeze covers redesign, not these (
 **All of what he said is drawn**: the one-tap rest (2026-09-17) hid words the column had room for. The rest printed `**` because sentences were cut from raw text; they are cut from the unmarked text, each carrying its share of his emphasis.
 **Your question is drawn in your words**, never worded by the room; an answer nobody asked for draws none.
 **Going back is a view, not a request**: an earlier answer is redrawn by `buildBoard` over the stored turns up to it, no model call and no read. Asking from there sends the board as drawn and returns to the newest.
+
+## 2026-09-18 · Under him, only what the screen does not already say
+
+Reverses 2026-09-17's "a sentence about a chart with its own thought stays with the rest of his words", at the owner's word (`f13df40`): shown twice is noise. A sentence citing a drawn read goes; a sentence about an undrawn read stays, because nothing else says it (it used to vanish).
+**"Already said" is word overlap, not meaning** (≥ 0.6 of a sentence's words in one other on-screen text), measured on the recorded answers: repeats scored 0.6–1.0, new sentences ≤ 0.5. No model reads the screen to decide what to draw. A paraphrase in different words gets through, and that is the known limit.

@@ -381,6 +381,29 @@ once changes the next answer. That is the card's own done-when.
 
 ## Fixed
 
+### 2026-09-18 — "if its stating whats already stated or shown in the page … then dont make it say that"
+
+> *"ok what is more from george text tho we just fixed? if its stating whats already stated or shown in the page (meaning charts section) then dont make it say that"*
+
+Said of `5b40454`, which drew the rest of his words under the headline. **What it
+was, read against every recorded answer:** the whole body of the answer. Every
+chart he draws carries its own thought, and a sentence citing a chart with a
+thought was deliberately left "with the rest of his words" (2026-09-17) — so no
+sentence was ever placed, and the rest restated the charts and closed on his
+`next` word for word. **Found underneath:** a sentence citing a read he did NOT
+draw was placed on a chart that did not exist, and vanished.
+
+**Fixed in `f13df40`, not verified by him.** Under him now is only what the
+screen does not already say: no sentence citing a drawn read, none restating
+the headline, `next`, an ask or a chart's title or thought, none carrying on
+from or leading into one that went ("So…", "Where it sits:"); the caveat loses
+what the answer says, even across two or three sentences. A sentence about an
+undrawn read stays. On the current prompt's recorded answers, "Why was North
+Edsa up" goes from 47 words to 10, "What should I look at today" from 213 to
+124. Held by `trackBack.dom.test.tsx`. **Still through:** the same point in
+different words — "Nothing counts people through the door" beside the caveat's
+"There is no door counter" — is not caught; it compares words, not meaning.
+
 ### 2026-09-18 — "it stops too early … whats more from george? why is it hiding? … i should see what i ask … a track back feature"
 
 > *"but some small changes it stops too early. it should stop almost right before the text bar. also whats more from george? why is it hiding? theres more space it can reach the end of where the blob reaches. i should see what i ask too like around the area of the blob just something small and also be a track back feature i dont know whats the best way to do it but when you can go to your last question and its last resutls"*
