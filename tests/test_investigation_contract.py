@@ -80,14 +80,22 @@ def test_the_kinds_that_open_one_are_kinds_a_message_can_be():
 
 def test_a_lookup_is_still_a_lookup():
     """
-    The mistake this change could cause is the opposite one: widening "how did
-    Rockwell do" into an investigation nobody asked for. The definitions say
-    what a lookup is and what it gets.
+    A lookup is not widened for its own sake — and since P2S.6 (2026-09-18)
+    one that shows a movement is investigated like anything else shown:
+    STANDARD §1 names Rockwell as the shop whose fall arrives explained.
     """
     lookup = req(OPENS, "a_lookup_is_not_one")
     assert "one subject, one metric, one window" in lookup["means"]
     assert lookup["example"]
     assert "nothing under it" in lookup["answered_with"]
+    assert "unless it moved" in lookup["answered_with"]
+
+
+def test_anything_shown_that_moved_is_investigated_before_it_is_shown():
+    """The opening of INVESTIGATING is what is SHOWN, not what is asked (P2S.6)."""
+    moved = " ".join(req(OPENS, "what_is_shown_that_moved").split())
+    assert "asked or not" in moved
+    assert moved in _prompt()
 
 
 def test_a_focused_message_asked_to_be_taken_apart_gets_a_second_read():
@@ -124,8 +132,18 @@ def test_driver_reading_is_qualitative_with_no_threshold():
 
 def test_stopping_reasons_include_the_ones_that_matter():
     reasons = " ".join(req(INV, "stop_when")).lower()
-    for needle in ("premise", "dominates", "unsupported", "mixed", "repeat", "cause"):
+    for needle in ("premise", "localized", "budget", "unsupported", "mixed", "repeat", "cause"):
         assert needle in reasons, needle
+
+
+def test_a_dominant_driver_is_where_localizing_starts_not_a_reason_to_stop():
+    """
+    P2S.6, 2026-09-18. "one driver clearly dominates" was a stopping reason,
+    so "it's transactions" ended the turn before LOCALIZE could run and the
+    check that says WHEN they were lost went to the owner as `next`.
+    """
+    assert not any("dominates" in r.lower() for r in req(INV, "stop_when"))
+    assert req(INV, "ladder.localize.one_round") is True
 
 
 def test_localize_reads_only_from_dimensions_a_tool_supports():
@@ -367,3 +385,40 @@ def test_the_lookup_guard_is_in_the_prompt_where_breadth_is_decided():
     assert lookup["means"] in prompt
     apart = req(INV, "scope.kinds.focused.taken_apart")
     assert f"taken apart gets {apart['min_reads']}, not one" in prompt
+
+
+# ---------------------------------------------------------------------------
+# 5. Initiative (P2S.6, 2026-09-18): he reads without being asked, and `next`
+#    is never a read he could have made
+# ---------------------------------------------------------------------------
+
+def test_the_persona_no_longer_waits():
+    """
+    "you tell the owner the one thing that matters, and wait" was the first
+    thing the prompt said about who George is. The owner: "i shouldnt need to
+    ask why, it has intiative".
+    """
+    prompt = _prompt()
+    assert "and wait" not in prompt
+    assert "you do the looking yourself" in prompt
+    assert "You read without asking and act on nothing alone" in prompt
+    assert "make the obvious next read yourself instead of offering it" in prompt
+
+
+def test_next_is_never_a_read_he_could_have_made():
+    """
+    The slot was "the one thing to do or check", and the ladder filled it with
+    "the one thing to check next" — so the localizing read the rule forbade
+    him went to the owner as homework. Said in both places the model reads it.
+    """
+    from agent.compose import compose
+    assert "never a read you could have made" in _prompt()
+    doc = " ".join((compose.__doc__ or "").split())
+    assert "never a read you could have made" in doc
+    assert "never one this answer already settles" in doc
+    assert "the one thing to check next" not in _prompt()
+
+
+def test_the_localizing_round_is_one_round_on_the_tool_that_makes_it():
+    from agent.loop import _tool_addenda
+    assert "in ONE round" in _tool_addenda(DEFS)["get_sales"]

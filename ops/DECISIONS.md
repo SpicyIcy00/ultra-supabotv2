@@ -4591,3 +4591,11 @@ P1.f closed the catalogue at six so George was not choosing between synonyms; th
 **Parts of a whole are steps of one ink** (`markParts.wash` of a DataColour), never a hue per part; no share, stack total or running total is printed.
 **A pin's shape rides on its stored calls (`drawn_as`), not a new column**, because no migration can be rehearsed here; a pin run returns the board's own blocks, so a kept page and the board are one renderer. `edit_page draw` is audited like every structural write.
 Recorded reads for the golden tests come from the vetted tools with no model (`ops/record_vocab_reads.py`), committed like `recorded-answers.json`. Gate 4/4, $0.72; George chose no new shape unasked on those four questions.
+
+## 2026-09-18 · P2S.6 — the prompt's reading policy restructured for initiative
+
+Asked to diagnose first, the session found "how are we doing" stopping at which shop moved was five instructions agreeing, not one: a persona that says little "and waits", depth chosen by the message's wording (BROAD/LOOKUP buckets), a ladder that STOPPED on a dominant driver before LOCALIZE, a `next` slot defined as "the one thing to check", and findings limited to one grouped read. The owner: *"can we just optimze or system prompt i needs more initiative"*.
+**Depth is decided by what the reads find** (`opens_when.what_is_shown_that_moved`): anything shown that moved is investigated before it is shown. A dominant driver is where LOCALIZE starts; time and what-sold go out in ONE round. `next` and `asks` never hold a read he could have made. A lookup that moved is explained (STANDARD §1's Rockwell). Trust rules unchanged in meaning.
+**Drift found:** `broad.reads` said "then ONE localization" and never reached the model — the prompt typed its own sentence. It renders the yaml now, held by a sentinel test.
+**Cost over speed, at the owner's word** (*"i care more about cost then fast asnwers"*): no fast mode. Each round re-caches the conversation (62% of spend, 7-day report), so rounds are the lever; a broad eval turn is held to $0.50 (`broad.eval_cost_ceiling_usd`), checked in code off the turn. The owner tests `next` himself; no model-graded check was added.
+Prompt 1,797 → 1,787 words; the desk's click list and three repeated clauses left it, mechanics moved to `get_sales`. Live gate not run.

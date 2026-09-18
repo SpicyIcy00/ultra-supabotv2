@@ -30,7 +30,7 @@ keep-page), and the Seikyo draft twice. Here the setup turns are shared, so
 is a real conversation rather than five cold starts, which is also closer to
 how George is actually used.
 
-    pytest tests/evals/test_voice_evals_v2.py -m gate   # 4 turns, ~$0.55
+    pytest tests/evals/test_voice_evals_v2.py -m gate   # 5 turns, ~$1.20 (P2S.6 added the fifth)
     pytest tests/evals/test_voice_evals_v2.py           # 11 turns, ~$1.15
 
 THE GATE'S FOUR SCENARIOS ARE UNCHANGED FROM THE FIRST TWELVE, wording
@@ -46,7 +46,7 @@ import pytest
 
 from tests.evals import checks
 from tests.evals import voice_checks as voice
-from tests.evals.harness import Report, required, run_turn
+from tests.evals.harness import Report, required, run_turn, turn_usd
 from tests.evals.test_page_workshop_evals import FakeWriter
 from tools._common import load_defs, req
 
@@ -203,8 +203,10 @@ def _voice(name: str, turn: checks.Turn, *, extra_results: list | None = None,
 
 
 # =============================================================================
-# TIER 1 — THE GATE. Four turns, ~$0.55. Run on every model-facing card.
-# Unchanged from the first twelve, wording included. Each catches something
+# TIER 1 — THE GATE. Five turns, ~$1.20 since P2S.6 (four were $0.72). Run on
+# every model-facing card.
+# The first four are unchanged from the first twelve, wording included; the
+# fifth is his most common question (P2S.6). Each catches something
 # no other scenario does; together they are every failure that has mattered.
 # =============================================================================
 
@@ -234,6 +236,33 @@ def test_gate_4_morning(monkeypatch):
     """The volunteering cap, and the rounded-figure gate. Caught the "801"."""
     turn = _turn(monkeypatch, "What should I look at today?")
     _voice("morning", turn)
+
+
+def _broad(turn: checks.Turn, f: dict) -> None:
+    """
+    A broad answer found WHERE the movement sits, and paid no more than its
+    ceiling for it (P2S.6). Both are read off the turn — the call arguments and
+    the usage on the done frame — so the check itself costs nothing.
+    """
+    loc = checks.localizing_reads(turn.calls)
+    usd = turn_usd(turn)
+    ceiling = float(req(DEFS, "investigation.scope.kinds.broad.eval_cost_ceiling_usd"))
+    f["localizing_reads"] = [c.get("arguments") for c in loc]
+    f["turn_usd"] = round(usd, 4)
+    assert loc, ("a broad answer read by store and nothing under it — "
+                 f"{[c.get('arguments') for c in turn.read_calls]}")
+    assert usd <= ceiling, f"the broad turn cost ${usd:.3f} against a ${ceiling:.2f} ceiling"
+
+
+@pytest.mark.gate
+def test_gate_5_how_are_we_doing(monkeypatch):
+    """
+    His most common question, added to the gate by P2S.6: a broad question
+    finds where the movement sits in the same turn, rather than handing
+    "why?" back as a question to tap.
+    """
+    turn = _turn(monkeypatch, "how are we doing?")
+    _broad(turn, _voice("broad", turn))
 
 
 # =============================================================================
@@ -270,7 +299,7 @@ def thread(monkeypatch_module):
 def test_thread_1_vague(thread):
     """His most common question, and the one the old suite never asked."""
     turn, carried = thread["vague"]
-    _voice("vague", turn, extra_results=carried)
+    _broad(turn, _voice("vague", turn, extra_results=carried))
 
 
 def test_thread_2_follow_up(thread):

@@ -146,7 +146,7 @@ refused-replay line sits on top of the charts rather than under the message box.
 
 **The two defects, in `0c9376d`:** the words column returns to its top when a
 turn settles, and the space before a figure is kept ("it: 54"). The refused line
-now closes (below). **The rest is card P2S.6**, written 2026-09-17 and taken before
+now closes (below). **The rest is card P2S.6** — BUILT 2026-09-18 as a restructure of the prompt's reading policy, unpushed, not verified live or by him — written 2026-09-17 and taken before
 P2S.4.
 
 **What a fix is, and its size.** A broad question climbs the ladder for what it

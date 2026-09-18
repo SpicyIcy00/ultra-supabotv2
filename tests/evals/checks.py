@@ -290,6 +290,27 @@ def _norm_window(dr: Any) -> str:
     return json.dumps(dr)
 
 
+# WHERE A MOVEMENT SITS (P2S.6, 2026-09-18). A broad answer that names the
+# shop that moved and stops there has read every row by store and nothing
+# under it; the owner then had to ask "why?". A localizing read is one whose
+# grouping reaches below the shop — a time bucket or what sold. Read off the
+# call's own arguments, so it costs nothing and flaps with nothing but him.
+LOCALIZING_DIMENSIONS = frozenset({"hour", "day", "week", "month", "product", "category"})
+
+
+def localizing_reads(calls: Iterable[dict]) -> list[dict]:
+    """The read calls whose group_by names a dimension under the shop."""
+    out = []
+    for c in calls:
+        if not str(c.get("tool", "")).startswith("get_") or c.get("error"):
+            continue
+        g = (c.get("arguments") or {}).get("group_by")
+        dims = {g} if isinstance(g, str) else set(g or [])
+        if dims & LOCALIZING_DIMENSIONS:
+            out.append(c)
+    return out
+
+
 def compared_windows(calls: Iterable[dict]) -> set[str]:
     """The distinct windows of every successful get_sales call carrying compare_to."""
     out = set()

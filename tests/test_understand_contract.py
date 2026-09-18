@@ -189,9 +189,10 @@ def test_a_focused_message_that_asks_to_be_taken_apart_is_not_one_read(defs):
     lookup = req(defs, "investigation.opens_when.a_lookup_is_not_one")
     assert f"taken apart gets {apart['min_reads']}, not one" in scope
     assert lookup["answered_with"] in scope
-    # BROAD's second read is still named, and FOCUSED's floor is under BROAD's
+    # BROAD's second round is still named, and FOCUSED's floor is under BROAD's
     # ceiling — a focused message taken apart is not a broad one.
-    assert "then ONE localization" in req(defs, "investigation.scope.kinds.broad.reads")
+    broad_reads = req(defs, "investigation.scope.kinds.broad.reads")
+    assert "in ONE more" in broad_reads and "by time and by what sold" in broad_reads
     assert int(apart["min_reads"]) < int(req(defs, "investigation.scope.kinds.broad.max_reads"))
 
 
@@ -216,7 +217,7 @@ def test_several_things_worth_saying_come_from_one_grouped_read(defs):
     pres = req(defs, "investigation.scope.presentation")
     scope = george_loop.SCOPE_SECTION
     assert f"{pres['findings_min']} to {pres['findings_max']} things worth saying" in scope
-    assert "off the same grouped read" in scope
+    assert f"each resting on {pres['rests_on']}" in scope
 
     # THE ROLES THAT USED TO ENFORCE THIS ARE GONE (P1.f, 2026-09-14) and the
     # rule is not. primary/driver/breakdown/context were validated on every
@@ -272,3 +273,22 @@ def test_the_matrix_agrees_with_the_definitions_behind_it(defs):
         assert allowed <= {"store", "hour", "day", "week", "month", "product", "category"}
         if name in ("net_sales", "average_transaction_value"):
             assert "product" not in allowed and "category" not in allowed
+
+
+def test_broad_reads_reach_the_model_as_the_definitions_say_them(defs):
+    """
+    P2S.6, 2026-09-18. `broad.reads` said "and then ONE localization" and the
+    prompt typed its own shorter sentence without it, so the definition and
+    what the model read disagreed for nine days and nobody could see it. The
+    scope section renders the yaml now — a sentinel proves it.
+    """
+    import copy
+
+    headline = ", ".join(str(m) for m in req(defs, "metric_sets.sales_headline.metrics"))
+    rendered = " ".join(str(req(defs, "investigation.scope.kinds.broad.reads")).split())
+    assert rendered.format(headline=headline) in george_loop.SCOPE_SECTION
+    assert "get_attention" in rendered, "a broad question reads beyond sales"
+
+    altered = copy.deepcopy(defs)
+    altered["investigation"]["scope"]["kinds"]["broad"]["reads"] = "SENTINEL {headline}"
+    assert f"SENTINEL {headline}" in george_loop._scope_section(altered)

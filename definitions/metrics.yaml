@@ -1337,6 +1337,16 @@ investigation:
   opens_when:
     executes_nothing: true
     introduced: "2026-09-16"
+    # ANYTHING SHOWN THAT MOVED IS INVESTIGATED BEFORE IT IS SHOWN (P2S.6,
+    # 2026-09-18). Until now a message had to ASK for the work — a verb, an
+    # intent, an observation — so "how are we doing" showed which shop fell
+    # and offered "why?" as a question to tap. The owner, ops/STANDARD.md §1:
+    # "If George decides Rockwell being down is important enough to show me,
+    # George should have already investigated why." Depth is decided by what
+    # the reads FIND; the wording of the message only decides where to start.
+    what_is_shown_that_moved: >
+      ANYTHING YOU SHOW THAT MOVED IS INVESTIGATED BEFORE YOU SHOW IT, asked
+      or not
     not_gated_on_the_word: why
     # The message asks for a figure to be TAKEN APART rather than looked up.
     asks_to_be_taken_apart: [why, what happened, analyze, look into,
@@ -1345,12 +1355,16 @@ investigation:
     # an intent is investigated for what it implies, an observation is
     # verified the way the ladder verifies a premise.
     message_kinds: [question, intent, observation]
-    # WHAT IS NOT ONE. Widening a lookup is the same mistake in the other
-    # direction, and it is the one this card can cause.
+    # A LOOKUP. It was "the read it names, and nothing under it" until P2S.6
+    # (2026-09-18) — and its example was the owner's own example of the
+    # opposite: STANDARD §1 names Rockwell as the shop whose fall must arrive
+    # already explained. So a lookup still starts with the read it names and
+    # is not widened for its own sake; when that read shows it moved, the
+    # movement is what gets investigated, exactly as in a broad answer.
     a_lookup_is_not_one:
       means: "one subject, one metric, one window, asked for the figure"
       example: "how did Rockwell do"
-      answered_with: "the read it names, and nothing under it"
+      answered_with: "the read it names, and nothing under it unless it moved"
 
   # The five rungs, in order. Each names what it establishes and which
   # trusted read establishes it. `reads` are get_sales argument shapes; the
@@ -1372,13 +1386,22 @@ investigation:
         category: "product_revenue (or units_sold) group_by='category', same window and compare_to, rank_by as above"
         time:     "the same metric group_by='day' WITHOUT compare_to — a series to characterise, never to difference"
       rule: "one grouped or ranked call per dimension, never one call per subject"
+      # BOTH DIMENSIONS IN ONE ROUND (P2S.6, 2026-09-18). Every model round
+      # re-caches the conversation so far, and that write was 62% of spend on
+      # the 7-day cost report of 2026-09-18 — so a round costs money whether
+      # or not it reads anything new. Time and what-sold are asked together.
+      one_round: true
+      # A DOMINANT DRIVER IS WHERE TO LOCALIZE, NOT A REASON TO STOP. Until
+      # P2S.6 `stop_when` listed "one driver clearly dominates" before this
+      # rung could run, so "it's transactions" ended the turn and the check
+      # that would say WHEN they were lost was handed to the owner as `next`.
     explain:
       establishes: "what the reads establish, said as what they are"
       registers:
         fact:           "a figure on a row — 'down 12.1%'"
         derived_fact:   "a figure a tool computed from others — ATP, change_pct"
         inference:      "a reading of measured figures — 'so basket value is the stronger measured driver'"
-        recommendation: "the next check — 'product-level comparison would be the next useful check'"
+        recommendation: "what you would do, or the check no read can make — 'a count of the shelf would settle it'; never a read George could have made himself"
       causality: >
         Localization is not cause. "The largest measured revenue declines
         were A and B" is a fact; "customers switched away from premium
@@ -1421,13 +1444,31 @@ investigation:
         means: >
           the message names no subject, no metric and no dimension, or names
           the business as a whole
+        # THIS SENTENCE NEVER REACHED THE MODEL until P2S.6 (2026-09-18): the
+        # prompt typed its own shorter version — the headline by store,
+        # compared — and dropped "then ONE localization", so a broad answer
+        # stopped at WHICH shop moved. `_scope_section` renders it now, with
+        # {headline} filled from metric_sets.sales_headline.
+        #
+        # get_attention joins the first round because "how are we doing" is
+        # not a sales question (STANDARD §2: "rather than simply returning a
+        # sales dashboard"): it is the read that notices across sources, each
+        # against its own declared normal, and it invents no threshold.
         reads: >
-          the sales_headline metric set grouped by store over a closed window
-          with compare_to='previous_period' — one grouped call per metric,
-          never one per store — and then ONE localization on whichever driver
-          moved more
+          {headline} by store over a closed window, compared, and
+          get_attention, in ONE round; then in ONE more, the moving driver at
+          the shop or two that moved most, by time and by what sold
         grouped_not_fanned_out: true
-        max_reads: 5
+        # 5 → 7 (P2S.6): three headline reads, get_attention, and one call per
+        # localizing dimension across both shops (group_by [store, day] with
+        # the two shops filtered is one call, not two).
+        max_reads: 7
+        # WHAT A BROAD TURN MAY COST, checked on the eval turn and nowhere in
+        # production (production does not meter a turn against a ceiling).
+        # Set 2026-09-18 by the owner's "i care more about cost then fast
+        # asnwers": a broad turn measured $0.33–0.48 over 2026-09-12..17, and
+        # investigating in the same turn replaces the "why?" that followed it.
+        eval_cost_ceiling_usd: 0.50
         never: >
           a read per subject; a second window; a metric no finding rests on
         # A GROUP TOTAL IS A READ, NOT A SUM (2026-09-09, from the live
@@ -1483,7 +1524,14 @@ investigation:
       # is not a second primary fact: a broad read produces several findings
       # from the SAME grouped call, which is why the one-primary rule in
       # agent/findings.py is untouched.
+      #
+      # P2S.6 (2026-09-18): the prompt said "each off the same grouped read",
+      # which forbade a finding from a localizing read — where the drop sits
+      # by day or by product — and so forbade connecting evidence at all. A
+      # finding may rest on a read made UNDER the primary fact, in its window;
+      # there is still one primary fact, so this flag and findings.py stand.
       from_the_same_primary: true
+      rests_on: "the verified fact or a read made under it, in its window"
       never_manufactured_to_fill_the_range: true
       no_synthetic_score: true
 
@@ -1528,7 +1576,10 @@ investigation:
   # When George stops. Any one of these is enough.
   stop_when:
     - "the premise is false — the figure is up, flat, or the comparison is missing"
-    - "one driver clearly dominates and nothing further was asked"
+    # Was "one driver clearly dominates and nothing further was asked" until
+    # P2S.6: a dominant driver is where LOCALIZE starts, not where it ends.
+    - "the movement is localized by time and by what sold, or neither shows where it sits"
+    - "the read budget for the turn is spent"
     - "the next decomposition is unsupported by any tool, or a tool refused it"
     - "the evidence is mixed"
     - "a further read would repeat one already made this turn"

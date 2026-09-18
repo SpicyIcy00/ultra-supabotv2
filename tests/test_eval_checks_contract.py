@@ -310,3 +310,23 @@ def test_voice_findings_carry_the_budget():
     f = voice.voice_findings("One reading here.\n\nA caveat in its own paragraph.", [], notices=1)
     assert f["paragraphs"] == 2 and f["paragraph_budget"] == 2
     assert f["leads_with_reading"] and f["closing_offers"] == 0
+
+
+def test_a_localizing_read_is_one_that_reaches_below_the_shop():
+    """P2S.6: the gate's broad turn must read under the shop, in time or in what sold."""
+    from tests.evals.checks import localizing_reads
+    by_store = {"tool": "get_sales", "arguments": {"group_by": "store"}}
+    by_day = {"tool": "get_sales", "arguments": {"group_by": ["store", "day"]}}
+    by_product = {"tool": "get_sales", "arguments": {"group_by": "product"}}
+    failed = {"tool": "get_sales", "arguments": {"group_by": "hour"}, "error": "refused"}
+    compose = {"tool": "compose", "arguments": {"group_by": "day"}}
+    assert localizing_reads([by_store]) == []
+    assert localizing_reads([by_store, by_day, by_product, failed, compose]) == [by_day, by_product]
+
+
+def test_a_turn_is_costed_at_the_meters_rates():
+    from tests.evals.checks import Turn
+    from tests.evals.harness import RATES, turn_usd
+    t = Turn(question="q", answer="a", done={"usage": {"cache_read": 1_000_000, "output": 0}})
+    assert turn_usd(t) == RATES["cache_read"]
+    assert turn_usd(Turn(question="q", answer="a")) == 0
