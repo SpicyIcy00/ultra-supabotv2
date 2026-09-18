@@ -32,7 +32,7 @@
  * geometry and not a figure — nobody reads it and no answer cites it.
  */
 import { useState, type CSSProperties } from 'react';
-import type { ToolMeta } from '../types/george';
+import type { ToolMeta } from '../types/bob';
 import {
   changeOf, fmt, measureOf, readAt, rowUnderClaim, rowsOf, sorted, subjectOf, tableShape, unitOf,
   valueOf,
@@ -46,7 +46,7 @@ import {
   Delta, Missing, MissingRow, OwnCaveat, Receipts, Shell, callFor, isLit,
   type TileProps,
 } from './tiles';
-import type { ActionOffer } from '../types/george';
+import type { ActionOffer } from '../types/bob';
 import { ObjectPanel, kindOf } from './ObjectPanel';
 import { dimensionOf } from './data';
 import { Swatch, useHueFor } from './swatch';
@@ -417,7 +417,7 @@ function Rows({ rows: all, meta, o, p }: { rows: Row[]; meta: Meta; o: TileProps
                   {shown.map((c) => {
                     // THE CELL THAT HOLDS THE ROW'S SUBJECT IS TAPPABLE, and
                     // only that one: a table of a shop's products has one
-                    // column that names something George can be asked about
+                    // column that names something Bob can be asked about
                     // and several that are measurements of it.
                     const subject = subjectOf(row);
                     const isSubject = typeof subject === 'string' && row[c] === subject;
@@ -485,7 +485,7 @@ export function MarkBlock(p: TileProps) {
   // This was `p.o.subject ?? subjectOf(rows[0])`, so a chart of seven shops
   // with no declared subject fell back to **whichever row sorted first** and
   // clicking the tile opened that shop's object. Greenhills was row one. The
-  // subject was not chosen by him, by George, or by the read — it was chosen
+  // subject was not chosen by him, by Bob, or by the read — it was chosen
   // by the sort, which is the "a label the model inferred" this whole surface
   // refuses, arriving through a `??`.
   //
@@ -503,7 +503,7 @@ export function MarkBlock(p: TileProps) {
   // path. `why` is the question the row's own button asks, and costs the turn
   // it says it costs; `open` opens the object below the mark, which is the
   // ~1s read the tile's own tap already makes. Nothing here is a new capability
-  // — an offer is George pointing at one of them.
+  // — an offer is Bob pointing at one of them.
   const offering = {
     offers: p.offers,
     seq: p.o.seq,

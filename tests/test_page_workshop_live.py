@@ -30,8 +30,8 @@ from tests import pages_live                                                  # 
 if not pages_live.available():
     pytest.skip("DATABASE_URL is not set", allow_module_level=True)
 
-from app.models.george_page import GeorgePage, GeorgePageEvent               # noqa: E402
-from app.models.george_pin import GeorgePin                                   # noqa: E402
+from app.models.bob_page import BobPage, BobPageEvent               # noqa: E402
+from app.models.bob_pin import BobPin                                   # noqa: E402
 from app.services import page_operations, page_writer, pin_writer             # noqa: E402
 from app.services.page_writer import (                                        # noqa: E402
     AmbiguousTarget,
@@ -41,7 +41,7 @@ from app.services.page_writer import (                                        # 
     PageValidationError,
     PinNotFound,
     SimilarPageError,
-    george_actor,
+    bob_actor,
 )
 
 SALES = {"tool": "get_sales",
@@ -62,10 +62,10 @@ def _dense(rows: list[tuple[str, int]]) -> bool:
     return [pos for _, pos in rows] == list(range(len(rows)))
 
 
-async def _events(s, page_id) -> list[GeorgePageEvent]:
+async def _events(s, page_id) -> list[BobPageEvent]:
     return list((await s.execute(
-        select(GeorgePageEvent).where(GeorgePageEvent.page_id == page_id)
-        .order_by(GeorgePageEvent.at.asc())
+        select(BobPageEvent).where(BobPageEvent.page_id == page_id)
+        .order_by(BobPageEvent.at.asc())
     )).scalars().all())
 
 
@@ -237,7 +237,7 @@ async def _scenario() -> None:
         # ---- edit: rename keeps the id; purpose; place; remove; move --------------
         res = await page_operations.apply_edit(
             s, owner=a, page_id=rock.id,
-            actor=george_actor(str(uuid.uuid4())),
+            actor=bob_actor(str(uuid.uuid4())),
             operations=[
                 {"op": "rename", "title": f"Rockwell Weekly {run}"},
                 {"op": "set_purpose", "purpose": "Weekly Rockwell performance."},
@@ -317,7 +317,7 @@ async def _scenario() -> None:
                 {"pin_id": str(p1.id)},                       # the ungrouped one
                 {"title": "Basket", "tool_calls": [ATP]},
             ],
-            actor=george_actor(str(uuid.uuid4())),
+            actor=bob_actor(str(uuid.uuid4())),
         )
         built_id = uuid.UUID(built.page["page_id"])
         assert await _positions(s, a, built_id) == [("Sales", 0), ("Net sales", 1), ("Basket", 2)]
@@ -352,7 +352,7 @@ async def _scenario() -> None:
         with pytest.raises(PageNotFound):
             await page_writer.get_page(s, a, built_id)
         survivors = (await s.execute(
-            select(GeorgePin).where(GeorgePin.created_by == a, GeorgePin.page_id.is_(None))
+            select(BobPin).where(BobPin.created_by == a, BobPin.page_id.is_(None))
         )).scalars().all()
         assert {p.title for p in survivors} >= {"Sales", "Net sales", "Basket"}
 
@@ -362,8 +362,8 @@ async def _scenario() -> None:
         assert ops[0] == "create"
         for expected in ("add", "rename", "set_purpose", "place", "remove", "move"):
             assert expected in ops, ops
-        george_rows = [e for e in evs if e.actor == "george"]
-        assert george_rows and all(e.conversation_id is not None for e in george_rows)
+        bob_rows = [e for e in evs if e.actor == "bob"]
+        assert bob_rows and all(e.conversation_id is not None for e in bob_rows)
         user_rows = [e for e in evs if e.actor == "user"]
         assert user_rows and all(e.conversation_id is None for e in user_rows)
         rename = next(e for e in evs if e.operation == "rename")

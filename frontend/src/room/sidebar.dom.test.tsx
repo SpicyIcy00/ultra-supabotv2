@@ -113,7 +113,7 @@ describe('collapsible, from the left edge (row 3)', () => {
     const was = root.getAttribute('data-side');
     fireEvent.keyDown(document, { key: '[' });
     await waitFor(() => expect(root.getAttribute('data-side')).not.toBe(was));
-    expect(localStorage.getItem('george.side')).toBe(root.getAttribute('data-side'));
+    expect(localStorage.getItem('bob.side')).toBe(root.getAttribute('data-side'));
     fireEvent.keyDown(document, { key: '[' });
     await waitFor(() => expect(root.getAttribute('data-side')).toBe(was));
   });
@@ -129,12 +129,12 @@ describe('collapsible, from the left edge (row 3)', () => {
   });
 
   it('collapses from its own button and reopens from the edge', async () => {
-    localStorage.setItem('george.side', 'open');
+    localStorage.setItem('bob.side', 'open');
     mount();
     fireEvent.click(screen.getByRole('button', { name: 'Collapse the sidebar' }));
     await waitFor(() => expect(document.documentElement.getAttribute('data-side')).toBe('closed'));
     fireEvent.click(screen.getByRole('button', { name: 'Open the sidebar' }));
     await waitFor(() => expect(document.documentElement.getAttribute('data-side')).toBe('open'));
-    expect(localStorage.getItem('george.side')).toBe('open');
+    expect(localStorage.getItem('bob.side')).toBe('open');
   });
 });

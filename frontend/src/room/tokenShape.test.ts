@@ -15,14 +15,14 @@
  *   (P1.i), and a turn that was never logged has no call to name.
  *
  *   A fragment resolves only against what is ON SCREEN, and an ambiguity is
- *   a question: two tokens answering to one word goes to George.
+ *   a question: two tokens answering to one word goes to Bob.
  *
  *   The correction is the one thing here that costs a turn, and it is
  *   recognised by the word the definitions gave it.
  */
 import { describe, expect, it } from 'vitest';
 import type { DeskDefinitions } from '../services/deskApi';
-import type { GeorgeTurn, ToolCall } from '../types/george';
+import type { BobTurn, ToolCall } from '../types/bob';
 import type { BoardObject } from './board';
 import type { AnswerTurn } from './data';
 import { pathFor, resolveFragment, retunedKey, tokensFor } from './tokenShape';
@@ -36,10 +36,10 @@ const call = (seq: number, args: Record<string, unknown>, tool = 'get_sales'): T
 } as unknown as ToolCall);
 
 const turn = (calls: ToolCall[], post: string | null = 'p1'): AnswerTurn => ({
-  role: 'george', text: '', thinking: '', toolCalls: calls, notices: [],
+  role: 'bob', text: '', thinking: '', toolCalls: calls, notices: [],
   pinned: [], saved: [], pageChanges: [], at: '2026-09-14T00:00:00Z',
   ...(post ? { post: { answer_post_id: post } } : {}),
-} as unknown as GeorgeTurn as AnswerTurn);
+} as unknown as BobTurn as AnswerTurn);
 
 const object = (over: Partial<BoardObject>): BoardObject => ({
   key: 'read-0', kind: 'table', weight: 'quiet', turn: 0, touched: 0, ...over,
@@ -181,7 +181,7 @@ describe('a token is true of the whole screen or it is not drawn', () => {
       .map((t) => t.argument)).toEqual(['window']);
   });
 
-  it('leaves an argument alone when a control George composed carries it', () => {
+  it('leaves an argument alone when a control Bob composed carries it', () => {
     const answers = [turn([call(0, { metric: 'product_revenue', date_range: 'last_week', group_by: ['store'] })])];
     const board = [
       object({ key: 'read-0', seq: 0 }),
@@ -226,7 +226,7 @@ describe('a fragment resolves against the tokens on screen, or it is a question'
     expect(resolveFragment('why', tokens(), DEFS)).toBeNull();
   });
 
-  it('sends anything longer than a fragment to George', () => {
+  it('sends anything longer than a fragment to Bob', () => {
     expect(resolveFragment('show me last month for Rockwell please',
                            tokens(), DEFS)).toBeNull();
   });
@@ -320,9 +320,9 @@ describe('a refusal does not outlive its gesture', () => {
   const ROOM = readFileSync(join(__dirname, 'Room.tsx'), 'utf8');
 
   it('clears it when a question is asked, not only when a replay starts', () => {
-    const ask = ROOM.slice(ROOM.indexOf('const askGeorge = useCallback'));
+    const ask = ROOM.slice(ROOM.indexOf('const askBob = useCallback'));
     const body = ask.slice(0, ask.indexOf('}, ['));
-    expect(body, 'askGeorge does not clear the refusal').toContain('setRefusal(null)');
+    expect(body, 'askBob does not clear the refusal').toContain('setRefusal(null)');
   });
 
   it('still clears it when the room is cleared, and when a replay begins', () => {

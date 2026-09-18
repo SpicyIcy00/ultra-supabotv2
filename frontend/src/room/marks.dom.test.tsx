@@ -46,7 +46,7 @@ const META = {
 
 function draw(o: Partial<BoardObject>, rows: Record<string, unknown>[], meta: unknown = META) {
   const turn = {
-    role: 'george', text: 'A reading.', thinking: '', at: '2026-09-11T08:00:00Z',
+    role: 'bob', text: 'A reading.', thinking: '', at: '2026-09-11T08:00:00Z',
     toolCalls: [{ seq: 1, tool: 'get_sales', arguments: {}, result: { rows, meta } }],
   } as unknown as AnswerTurn;
   const object = {
@@ -84,7 +84,7 @@ describe('every block is framed the same way round', () => {
     expect(src).toContain('read');
   });
 
-  it('puts George\'s note in the title when he characterised the shape', () => {
+  it('puts Bob\'s note in the title when he characterised the shape', () => {
     const { container } = draw({ kind: 'comparison', note: 'the barn, not the shops' }, COMPARED);
     expect(container.querySelector('.r-mk-title')?.textContent).toContain('the barn, not the shops');
   });
@@ -173,7 +173,7 @@ describe('ranked', () => {
     expect(container.querySelector('.r-mk-ranked b')?.textContent).toBe('₱555,147');
   });
 
-  it('cools every row but the one George pointed at', () => {
+  it('cools every row but the one Bob pointed at', () => {
     const plain = COMPARED.map(({ store, value }) => ({ store, value }));
     const { container } = draw({ kind: 'chart', form: 'bar', emphasise: 'Rockwell' }, plain);
     const lit = [...container.querySelectorAll('.r-mk-ranked .r-mk-row')]
@@ -255,7 +255,7 @@ describe('every block in the recorded runs', () => {
       it(`${run.run} · ${kind} (seq ${seq}) draws one of the six with a source line`, () => {
         const call = run.calls.find((c) => c.seq === seq)!;
         const turn = {
-          role: 'george', text: '', thinking: '', at: '2026-09-11T08:00:00Z',
+          role: 'bob', text: '', thinking: '', at: '2026-09-11T08:00:00Z',
           toolCalls: run.calls.map((c) => ({
             seq: c.seq, tool: c.tool, arguments: {}, result: c.result,
           })),
@@ -303,7 +303,7 @@ describe('a claim over a read that does not hold its subject', () => {
     subject: string,
   ) {
     const turn = {
-      role: 'george', text: '', thinking: '', at: '2026-09-11T08:00:00Z',
+      role: 'bob', text: '', thinking: '', at: '2026-09-11T08:00:00Z',
       toolCalls: [{ seq: call.seq, tool: call.tool, arguments: {}, result: call.result }],
     } as unknown as AnswerTurn;
     const object = {
@@ -326,11 +326,11 @@ describe('a claim over a read that does not hold its subject', () => {
     expect(container.textContent).not.toContain('206,800');
     expect(container.textContent).not.toContain('Rockwell');
     expect(container.querySelector('.r-mk-absent')?.getAttribute('data-absent')).toBe('Greenhills');
-    // SAID TO THE READER, about the read — not about George's composing (the
+    // SAID TO THE READER, about the read — not about Bob's composing (the
     // dogfood log, 2026-09-15, "a tile explaining itself to the reader").
     const said = container.querySelector('.r-mk-absent')?.textContent ?? '';
     expect(said).toContain('Greenhills is not in this read');
-    expect(said).not.toMatch(/George|composed/);
+    expect(said).not.toMatch(/Bob|composed/);
   });
 
   it('still draws the shop the read DOES hold, and its own row', () => {
@@ -394,7 +394,7 @@ describe('a claim over a read that does not hold its subject', () => {
  *
  * The pure placement is `actions.test.ts`. This is what a person sees: the
  * button lands inside the mark, on the row the offer named and on no other,
- * carrying George's reason and the cost the server derived. And it draws no
+ * carrying Bob's reason and the cost the server derived. And it draws no
  * colour — an offer is not a direction and not an approval.
  */
 describe('an offer on its row', () => {
@@ -407,7 +407,7 @@ describe('an offer on its row', () => {
   function drawWithOffers(o: Partial<BoardObject>, rows: Record<string, unknown>[],
                           offers: typeof OFFER[]) {
     const turn = {
-      role: 'george', text: 'A reading.', thinking: '', at: '2026-09-11T08:00:00Z',
+      role: 'bob', text: 'A reading.', thinking: '', at: '2026-09-11T08:00:00Z',
       toolCalls: [{ seq: 1, tool: 'get_sales', arguments: {}, result: { rows, meta: META } }],
     } as unknown as AnswerTurn;
     const object = {
@@ -446,7 +446,7 @@ describe('an offer on its row', () => {
       .querySelectorAll('.r-mk-contributors .r-mk-row .r-offer')).toHaveLength(1);
   });
 
-  it('asks George when `why` is tapped, about that row and not the block\'s', () => {
+  it('asks Bob when `why` is tapped, about that row and not the block\'s', () => {
     const { container } = drawWithOffers(
       { kind: 'comparison', subject: 'OPUS' }, COMPARED, [OFFER]);
     (container.querySelector('.r-offer') as HTMLButtonElement).click();
@@ -524,7 +524,7 @@ describe('tapping a row', () => {
 
   it('says which rows are already picked', () => {
     const turn = {
-      role: 'george', text: 'A reading.', thinking: '', at: '2026-09-11T08:00:00Z',
+      role: 'bob', text: 'A reading.', thinking: '', at: '2026-09-11T08:00:00Z',
       toolCalls: [{ seq: 1, tool: 'get_sales', arguments: {}, result: { rows: NAMED, meta: META } }],
     } as unknown as AnswerTurn;
     const object = { key: 'k', kind: 'ranked', weight: 'lead', seq: 1, tool: 'get_sales',
@@ -545,7 +545,7 @@ describe('tapping a row', () => {
 /* ---------------------------------------------------------------------------
  * A COMPARISON LIGHTS BOTH ROWS (the dogfood log, 2026-09-15)
  *
- * `emphasise` took one name. Asked to compare two shops George read the
+ * `emphasise` took one name. Asked to compare two shops Bob read the
  * estate and composed `emphasise: "Magnolia"` under the claim "Both selected
  * shops gave back basket value in August" — a sentence the drawing could not
  * support, with the comparison pushed into the prose because the picture had
@@ -613,7 +613,7 @@ describe('a click on a figure (the log, 2026-09-17)', () => {
 describe('a reopened read whose rows were not kept (the log, 2026-09-17)', () => {
   it('says the rows were not kept, not that the read came back empty', () => {
     const turn = {
-      role: 'george', text: '', thinking: '', at: '2026-09-11T08:00:00Z',
+      role: 'bob', text: '', thinking: '', at: '2026-09-11T08:00:00Z',
       toolCalls: [{ seq: 1, tool: 'get_sales', arguments: {}, result: { rows: [], row_count: 7, meta: META } }],
     } as unknown as AnswerTurn;
     const o = { key: 'k', kind: 'ranked', weight: 'supporting', seq: 1, tool: 'get_sales', turn: 0, touched: 0 } as BoardObject;

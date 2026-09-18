@@ -1,5 +1,5 @@
 /**
- * /pages — the workspaces George has made with people.
+ * /pages — the workspaces Bob has made with people.
  *
  * A page is a row now (2026-09-08): a title, a one-line purpose, an ordered
  * set of pins, and a time it last changed. What makes it worth opening is
@@ -15,7 +15,7 @@
  * plainly that no page has that name any more.
  *
  * THERE IS A "NEW PAGE" NOW, because an empty page is a real thing: a name
- * and a purpose, opened, and handed to George to fill from its foot. Nothing
+ * and a purpose, opened, and handed to Bob to fill from its foot. Nothing
  * is put on it unasked.
  */
 import { useMemo, useState } from 'react';
@@ -28,7 +28,7 @@ import {
   pageIdFromSegment,
   pagePath,
   pageViews,
-} from '../components/george/pageShape';
+} from '../components/bob/pageShape';
 import { RoomHead } from '../room/RoomShell';
 import type { SimilarPageConflict } from '../types/pins';
 import { createPage, listPages } from '../services/pagesApi';
@@ -90,7 +90,7 @@ export default function PagesPage() {
           {(pages.isError || pins.isError) && <p className="r-say">The pages could not be read.</p>}
           {pages.isSuccess && pins.isSuccess && views.length === 0 && (
             <p className="r-say">
-              Nothing kept yet. Make a page here and ask George to build it, or keep an
+              Nothing kept yet. Make a page here and ask Bob to build it, or keep an
               answer from the board and name a page for it.
             </p>
           )}

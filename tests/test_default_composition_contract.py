@@ -2,10 +2,10 @@
 The board fills when the data lands (P1.b, 2026-09-13).
 
 WHAT IS BEING HELD. The loop composes a default the moment reads return, so
-the screen is not empty for the round trip it takes George to say what the
+the screen is not empty for the round trip it takes Bob to say what the
 rows are. Two things have to be true of it or it is not worth having:
 
-  1. IT CANNOT SAY ANYTHING GEORGE COULD NOT. Every block goes through
+  1. IT CANNOT SAY ANYTHING BOB COULD NOT. Every block goes through
      `compose.validate` — the same gate, the same closed field list, the same
      refusals. The tests below assert the output of the default composer
      survives that gate unchanged, which is the only guarantee that matters:
@@ -17,7 +17,7 @@ rows are. Two things have to be true of it or it is not worth having:
      annotated a chart would be characterising rows nobody looked at.
 
 And one it must NOT do: a default never discharges a caveat. The notice gate
-(`_drawn_on_the_board`) is fed George's composition alone, because a caveat is
+(`_drawn_on_the_board`) is fed Bob's composition alone, because a caveat is
 surfaced by a person deciding to draw the read that raised it. That is asserted
 here against the loop, not left to the reader.
 """
@@ -210,7 +210,7 @@ def test_a_put_of_a_read_already_on_the_board_becomes_a_change(defs):
 
 def test_a_default_never_discharges_a_caveat():
     """
-    UI rule 4 is surfaced by an object GEORGE composed over the read that
+    UI rule 4 is surfaced by an object BOB composed over the read that
     raised the notice. A default drawing that read would discharge the check
     with nobody having decided anything, so the loop feeds the notice gate his
     blocks alone.
@@ -274,7 +274,7 @@ def test_the_board_has_room_or_nothing_is_added(defs):
 def test_the_model_is_never_told_a_default_was_composed():
     """
     It reaches the client and the answer post. If it reached the messages, it
-    would be a round trip's worth of tokens spent describing a board George
+    would be a round trip's worth of tokens spent describing a board Bob
     did not compose — and he would describe it as his.
     """
     source = open("agent/loop.py", encoding="utf-8").read()
@@ -288,7 +288,7 @@ def test_the_model_is_never_told_a_default_was_composed():
 #
 # Every other branch of `shape_for` reads the COLUMNS, because for a read of
 # the business the rows are all there is to go on. `view_memory`'s rows are
-# not the business — they are the views George holds, each with a Forget on
+# not the business — they are the views Bob holds, each with a Forget on
 # it — and by columns alone they are a table, which draws no Forget at all.
 # The read itself says which, so nothing is inferred.
 # ---------------------------------------------------------------------------
@@ -310,7 +310,7 @@ def test_what_he_remembers_is_drawn_as_a_memory_and_not_as_a_table(defs):
     assert block["kind"] == "memory"
 
 
-def test_the_default_memory_survives_the_same_gate_george_composes_through(defs):
+def test_the_default_memory_survives_the_same_gate_bob_composes_through(defs):
     """
     The guarantee that matters for every default: a block this produced and a
     block he produced are the same object, because there is one gate.
@@ -326,7 +326,7 @@ def test_the_default_memory_survives_the_same_gate_george_composes_through(defs)
 def test_a_memory_names_no_subject_so_no_view_can_be_left_out_of_it(defs):
     """
     `composition.widgets.memory` needs `seq` and nothing else. There is no
-    channel for George to choose which of his views you are shown, by design:
+    channel for Bob to choose which of his views you are shown, by design:
     a memory you cannot see all of is not one you can check.
     """
     assert set(defs["composition"]["widgets"]["memory"]["needs"]) == {"seq"}

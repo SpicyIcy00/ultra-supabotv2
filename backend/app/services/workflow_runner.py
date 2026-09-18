@@ -2,7 +2,7 @@
 Binding, validating and running a saved workflow.
 
 ONE IMPLEMENTATION, THREE CALLERS. The route (`POST /workflows/{id}/run`), the
-scheduler, and George in conversation all come through here. That is deliberate,
+scheduler, and Bob in conversation all come through here. That is deliberate,
 and it is the same reason app.services.pin_writer exists: the moment a scheduled
 run and a chat run are two implementations, one of them stops surfacing a notice
 and nobody finds out for a month.
@@ -39,7 +39,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 # agent/ and tools/ live at the repo root, one level above backend/ — the same
-# path insertion pin_runner.py and routes/george.py already do.
+# path insertion pin_runner.py and routes/bob.py already do.
 _ROOT = Path(__file__).resolve().parents[3]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
@@ -92,7 +92,7 @@ def validate_parameters(parameters: Any) -> list[dict]:
     Check the signature. Every parameter needs a name, a type and a DEFAULT.
 
     The default is not a convenience. It is what the fully-bound call is
-    validated against at save time, and what the provenance rule checks: George
+    validated against at save time, and what the provenance rule checks: Bob
     may only save a step at a binding he has actually watched run.
     """
     if parameters is None:
@@ -178,7 +178,7 @@ def _check_parameter_value(spec: dict, value: Any) -> None:
     """
     A light type check only. VALUES ARE THE TOOLS' BUSINESS.
 
-    Whether "Rockwell" is a store George knows about is decided by the tool
+    Whether "Rockwell" is a store Bob knows about is decided by the tool
     schema's enums, which are read from metrics.yaml, and enforced by
     validate_call on the fully-bound step. Duplicating that here would give the
     vocabulary a second home and let the two drift.
@@ -455,7 +455,7 @@ def default_calls(steps: list[dict], parameters: list[dict]) -> list[dict]:
     """
     Every step as the concrete {tool, arguments} it is at its defaults.
 
-    This is what the provenance check compares against: George may only save a
+    This is what the provenance check compares against: Bob may only save a
     step whose defaulted call he has actually run, successfully, in this
     conversation. See agent/write_tools.py.
     """

@@ -50,7 +50,7 @@ import yaml
 
 PARSER_VERSION = "1.0.0"
 
-# The definitions file is shared with George's tools; the LOADER is not. The
+# The definitions file is shared with Bob's tools; the LOADER is not. The
 # backend runs with cwd=backend (see Procfile), so the repo root is not on
 # sys.path and `tools._common` is not importable from here. Resolving the path
 # from __file__ keeps both sides reading the same single file.

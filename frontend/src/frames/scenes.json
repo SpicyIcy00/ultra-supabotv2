@@ -632,7 +632,7 @@
    "max_list_values": 12,
    "restore_on_open": "newest_per_seq",
    "max_restored_per_open": 4,
-   "rows_incomplete_says": "That returns more rows than this draws at once. Narrow it, or ask George to rank them.",
+   "rows_incomplete_says": "That returns more rows than this draws at once. Narrow it, or ask Bob to rank them.",
    "refused_leaks_says": "That change cannot be made to this read. The figures have not moved.",
    "refused_detail_word": "why",
    "changes_shape": [

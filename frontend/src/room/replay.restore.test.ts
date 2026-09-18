@@ -11,19 +11,19 @@
  * yesterday (UI rule 6).
  */
 import { describe, expect, it } from 'vitest';
-import type { CompositionBlock, GeorgeTurn } from '../types/george';
+import type { CompositionBlock, BobTurn } from '../types/bob';
 import type { Post } from '../types/river';
 import { shapedByReplay, type BoardObject } from './board';
 import { replaysToRestore } from './restore';
 
-const answer = (post: string | null): GeorgeTurn => ({
-  role: 'george', text: '', thinking: '', toolCalls: [], notices: [],
+const answer = (post: string | null): BobTurn => ({
+  role: 'bob', text: '', thinking: '', toolCalls: [], notices: [],
   pinned: [], saved: [], pageChanges: [], at: '2026-09-14T00:00:00Z',
   ...(post ? { post: { answer_post_id: post } } : {}),
-} as unknown as GeorgeTurn);
+} as unknown as BobTurn);
 
-const asked = (): GeorgeTurn => (
-  { role: 'user', text: 'how did we do?', at: '2026-09-14T00:00:00Z' } as GeorgeTurn);
+const asked = (): BobTurn => (
+  { role: 'user', text: 'how did we do?', at: '2026-09-14T00:00:00Z' } as BobTurn);
 
 const post = (id: string, replays: unknown[]): Post => (
   { id, payload: { replays } } as unknown as Post);

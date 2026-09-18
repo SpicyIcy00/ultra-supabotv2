@@ -5,7 +5,7 @@ Until 2026-09-08 a page was derived from its pins and the only page writes were
 a pin's label changing. Page Workshop makes a page a row (george.pages) and a
 pin's membership a foreign key with a position, and every way of changing
 either — the Rename link, the Move picker, the Move up / Move down links, the
-New page button, and George's `create_page` / `edit_page` through the injected
+New page button, and Bob's `create_page` / `edit_page` through the injected
 writer — comes through the functions below. The reason is the one pin_writer
 already gives: two implementations of "move" drift, and the half that drifts is
 the half that stops enforcing something.
@@ -34,7 +34,7 @@ WHAT IS ENFORCED HERE, ONCE
     exactly one candidate matches (exact match first; then a unique
     case-insensitive one). Two candidates is AmbiguousTarget, carrying every
     candidate with its id so the caller can choose. Nothing here guesses.
-  - EVERY STRUCTURAL WRITE LEAVES A page_events ROW: who (a person, or George
+  - EVERY STRUCTURAL WRITE LEAVES A page_events ROW: who (a person, or Bob
     in a named conversation), what, before and after — metadata, never a
     replayed result. A button and the injected writer produce the same record
     because they call the same function.
@@ -42,7 +42,7 @@ WHAT IS ENFORCED HERE, ONCE
 WHAT THE CALLER STILL OWNS: the identity (`owner` comes from the verified
 token, never from a body or a model) and the transaction (this module flushes,
 it does not commit). The route lets get_db commit at the end of the request;
-George's writer commits immediately, because it runs inside a long-lived SSE
+Bob's writer commits immediately, because it runs inside a long-lived SSE
 stream and the write must survive the stream dying later.
 
 Sections are deliberately absent (Page Workshop V1 decision). Positions are
@@ -60,8 +60,8 @@ from typing import Any, Literal, Optional
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.george_page import GeorgePage, GeorgePageEvent
-from app.models.george_pin import GeorgePin
+from app.models.bob_page import BobPage, BobPageEvent
+from app.models.bob_pin import BobPin
 from app.services.pin_runner import find_similar_page, normalize_page
 
 # Operational caps, like MAX_TOOL_CALLS_PER_PIN. Not business definitions.
@@ -72,7 +72,7 @@ MAX_PURPOSE_LEN = 200
 
 
 # ---------------------------------------------------------------------------
-# Failures — typed, so a route and George's writer can each render them
+# Failures — typed, so a route and Bob's writer can each render them
 # ---------------------------------------------------------------------------
 
 class PageValidationError(ValueError):
@@ -148,27 +148,27 @@ class Actor:
     """
     Who is making a structural write, for the audit row.
 
-    `user` is a person at a button. `george` is the injected writer acting on
+    `user` is a person at a button. `bob` is the injected writer acting on
     a request made in conversation, and carries the conversation it was made
     in. Neither changes what is allowed — ownership is the owner's, whoever
     presses the key — only what the record says.
     """
 
-    kind: Literal["user", "george"]
+    kind: Literal["user", "bob"]
     conversation_id: Optional[uuid.UUID] = None
 
 
 USER = Actor("user")
 
 
-def george_actor(conversation_id: Optional[str]) -> Actor:
+def bob_actor(conversation_id: Optional[str]) -> Actor:
     cid = None
     if conversation_id:
         try:
             cid = uuid.UUID(str(conversation_id))
         except ValueError:
             cid = None
-    return Actor("george", cid)
+    return Actor("bob", cid)
 
 
 # ---------------------------------------------------------------------------
@@ -223,13 +223,13 @@ def _now() -> datetime:
 # Reads that the writes need — every one scoped in the statement
 # ---------------------------------------------------------------------------
 
-async def list_pages(db: AsyncSession, owner: str) -> list[GeorgePage]:
+async def list_pages(db: AsyncSession, owner: str) -> list[BobPage]:
     """The caller's pages, most recently changed first; title as the tie-break."""
     rows = (
         await db.execute(
-            select(GeorgePage)
-            .where(GeorgePage.owner == owner)
-            .order_by(GeorgePage.updated_at.desc(), GeorgePage.title.asc())
+            select(BobPage)
+            .where(BobPage.owner == owner)
+            .order_by(BobPage.updated_at.desc(), BobPage.title.asc())
         )
     ).scalars().all()
     return list(rows)
@@ -239,23 +239,23 @@ async def lock_workspace(db: AsyncSession, owner: str) -> None:
     """Serialize structural writes for one owner until commit or rollback.
 
     Covers empty Pages and Ungrouped too, where no parent row can be locked.
-    This is a parameterized application-role query; George never connects.
+    This is a parameterized application-role query; Bob never connects.
     """
     await db.execute(select(func.pg_advisory_xact_lock(func.hashtextextended(owner, 87103))))
 
 
 async def page_titles(db: AsyncSession, owner: str) -> list[str]:
     rows = (
-        await db.execute(select(GeorgePage.title).where(GeorgePage.owner == owner))
+        await db.execute(select(BobPage.title).where(BobPage.owner == owner))
     ).scalars().all()
     return [r for r in rows if r]
 
 
-async def get_page(db: AsyncSession, owner: str, page_id: uuid.UUID) -> GeorgePage:
+async def get_page(db: AsyncSession, owner: str, page_id: uuid.UUID) -> BobPage:
     """One of the caller's pages, or PageNotFound. Foreign and missing are one answer."""
     page = (
         await db.execute(
-            select(GeorgePage).where(GeorgePage.id == page_id, GeorgePage.owner == owner)
+            select(BobPage).where(BobPage.id == page_id, BobPage.owner == owner)
         )
     ).scalar_one_or_none()
     if page is None:
@@ -263,19 +263,19 @@ async def get_page(db: AsyncSession, owner: str, page_id: uuid.UUID) -> GeorgePa
     return page
 
 
-async def find_page_by_title(db: AsyncSession, owner: str, title: str) -> Optional[GeorgePage]:
+async def find_page_by_title(db: AsyncSession, owner: str, title: str) -> Optional[BobPage]:
     """The caller's page with EXACTLY this normalised title, or None."""
     name = normalize_page(title)
     if not name:
         return None
     return (
         await db.execute(
-            select(GeorgePage).where(GeorgePage.owner == owner, GeorgePage.title == name)
+            select(BobPage).where(BobPage.owner == owner, BobPage.title == name)
         )
     ).scalar_one_or_none()
 
 
-async def resolve_page_title(db: AsyncSession, owner: str, title: str) -> GeorgePage:
+async def resolve_page_title(db: AsyncSession, owner: str, title: str) -> BobPage:
     """
     A page named by a person, resolved deterministically or refused.
 
@@ -304,7 +304,7 @@ async def resolve_page_title(db: AsyncSession, owner: str, title: str) -> George
 async def _count_pages(db: AsyncSession, owner: str) -> int:
     return (
         await db.execute(
-            select(func.count()).select_from(GeorgePage).where(GeorgePage.owner == owner)
+            select(func.count()).select_from(BobPage).where(BobPage.owner == owner)
         )
     ).scalar_one()
 
@@ -327,7 +327,7 @@ async def ensure_title_free(
             raise SimilarPageError(existing_page=similar, submitted_page=title)
 
 
-async def page_pins(db: AsyncSession, owner: str, page_id: Optional[uuid.UUID]) -> list[GeorgePin]:
+async def page_pins(db: AsyncSession, owner: str, page_id: Optional[uuid.UUID]) -> list[BobPin]:
     """
     The caller's pins on one page, in the page's order.
 
@@ -336,22 +336,22 @@ async def page_pins(db: AsyncSession, owner: str, page_id: Optional[uuid.UUID]) 
     outside). Ungrouped — page_id None — orders by created_at DESC, id DESC,
     because it has no positions.
     """
-    stmt = select(GeorgePin).where(GeorgePin.created_by == owner)
+    stmt = select(BobPin).where(BobPin.created_by == owner)
     if page_id is None:
-        stmt = stmt.where(GeorgePin.page_id.is_(None)).order_by(
-            GeorgePin.created_at.desc(), GeorgePin.id.desc()
+        stmt = stmt.where(BobPin.page_id.is_(None)).order_by(
+            BobPin.created_at.desc(), BobPin.id.desc()
         )
     else:
-        stmt = stmt.where(GeorgePin.page_id == page_id).order_by(
-            GeorgePin.position.asc(), GeorgePin.created_at.desc(), GeorgePin.id.desc()
+        stmt = stmt.where(BobPin.page_id == page_id).order_by(
+            BobPin.position.asc(), BobPin.created_at.desc(), BobPin.id.desc()
         )
     return list((await db.execute(stmt)).scalars().all())
 
 
-async def get_pin(db: AsyncSession, owner: str, pin_id: uuid.UUID) -> GeorgePin:
+async def get_pin(db: AsyncSession, owner: str, pin_id: uuid.UUID) -> BobPin:
     pin = (
         await db.execute(
-            select(GeorgePin).where(GeorgePin.id == pin_id, GeorgePin.created_by == owner)
+            select(BobPin).where(BobPin.id == pin_id, BobPin.created_by == owner)
         )
     ).scalar_one_or_none()
     if pin is None:
@@ -371,7 +371,7 @@ async def resolve_pin(
     db: AsyncSession, owner: str, *,
     pin_id: Optional[Any] = None, title: Optional[str] = None,
     within_page: Any = ANY_PAGE,
-) -> GeorgePin:
+) -> BobPin:
     """
     A pin named by id (authoritative) or by title (a convenience), resolved
     deterministically or refused.
@@ -395,14 +395,14 @@ async def resolve_pin(
     if not name:
         raise PageValidationError("Name the analysis by pin_id or by title.")
 
-    stmt = select(GeorgePin).where(GeorgePin.created_by == owner)
+    stmt = select(BobPin).where(BobPin.created_by == owner)
     if within_page is None:
-        stmt = stmt.where(GeorgePin.page_id.is_(None))
+        stmt = stmt.where(BobPin.page_id.is_(None))
     elif within_page is not ANY_PAGE:
-        stmt = stmt.where(GeorgePin.page_id == within_page)
-    pool = list((await db.execute(stmt.order_by(GeorgePin.created_at.desc()))).scalars().all())
+        stmt = stmt.where(BobPin.page_id == within_page)
+    pool = list((await db.execute(stmt.order_by(BobPin.created_at.desc()))).scalars().all())
 
-    def describe(p: GeorgePin) -> dict[str, Any]:
+    def describe(p: BobPin) -> dict[str, Any]:
         return {"pin_id": str(p.id), "title": p.title,
                 "page_id": str(p.page_id) if p.page_id else None,
                 "page_title": p.page}
@@ -431,8 +431,8 @@ def _event(
     db: AsyncSession, *, owner: str, actor: Actor, operation: str,
     page_id: Optional[uuid.UUID], pin_id: Optional[uuid.UUID] = None,
     before: Optional[dict[str, Any]] = None, after: Optional[dict[str, Any]] = None,
-) -> GeorgePageEvent:
-    row = GeorgePageEvent(
+) -> BobPageEvent:
+    row = BobPageEvent(
         id=uuid.uuid4(), page_id=page_id, owner=owner, actor=actor.kind,
         operation=operation, pin_id=pin_id, before=before, after=after,
         conversation_id=actor.conversation_id, at=_now(),
@@ -441,12 +441,12 @@ def _event(
     return row
 
 
-def _touch(page: Optional[GeorgePage]) -> None:
+def _touch(page: Optional[BobPage]) -> None:
     if page is not None:
         page.updated_at = _now()
 
 
-def renumber(pins: list[GeorgePin]) -> list[GeorgePin]:
+def renumber(pins: list[BobPin]) -> list[BobPin]:
     """Dense 0..n-1 in the order given. Pure; the caller flushes."""
     for i, pin in enumerate(pins):
         if pin.position != i:
@@ -461,7 +461,7 @@ def renumber(pins: list[GeorgePin]) -> list[GeorgePin]:
 async def create_page(
     db: AsyncSession, *, owner: str, title: str, purpose: Optional[str] = None,
     actor: Actor = USER, allow_similar_page: bool = False,
-) -> GeorgePage:
+) -> BobPage:
     """An empty page. It exists from this moment, with nothing on it yet."""
     await lock_workspace(db, owner)
     name = normalize_title(title)
@@ -473,7 +473,7 @@ async def create_page(
         )
     await ensure_title_free(db, owner, name, allow_similar_page=allow_similar_page)
     now = _now()
-    page = GeorgePage(id=uuid.uuid4(), owner=owner, title=name, purpose=why,
+    page = BobPage(id=uuid.uuid4(), owner=owner, title=name, purpose=why,
                       created_at=now, updated_at=now)
     db.add(page)
     _event(db, owner=owner, actor=actor, operation="create", page_id=page.id,
@@ -485,7 +485,7 @@ async def create_page(
 async def rename_page(
     db: AsyncSession, *, owner: str, page_id: uuid.UUID, title: str,
     actor: Actor = USER, allow_similar_page: bool = False,
-) -> GeorgePage:
+) -> BobPage:
     """
     A new title on the same row. Identity does not move: every thread bound
     to this page, every URL and every reader or writer closed over its id
@@ -511,7 +511,7 @@ async def rename_page(
 async def set_purpose(
     db: AsyncSession, *, owner: str, page_id: uuid.UUID, purpose: Optional[str],
     actor: Actor = USER,
-) -> GeorgePage:
+) -> BobPage:
     await lock_workspace(db, owner)
     page = await get_page(db, owner, page_id)
     why = normalize_purpose(purpose)
@@ -538,7 +538,7 @@ async def delete_page(
 ) -> DeletedPage:
     """
     Delete the page ROW. Every pin on it moves to Ungrouped; no pin is
-    deleted. Manual UI only — George has no delete in V1 — but it lives here
+    deleted. Manual UI only — Bob has no delete in V1 — but it lives here
     so the semantics cannot be re-decided by a route.
     """
     await lock_workspace(db, owner)
@@ -568,7 +568,7 @@ async def delete_page(
 Placement = dict[str, Any]   # {"before": pin_id} | {"after": pin_id} | {"at": "top"|"bottom"}
 
 
-def _placement_index(order: list[GeorgePin], moving: GeorgePin, place: Optional[Placement]) -> int:
+def _placement_index(order: list[BobPin], moving: BobPin, place: Optional[Placement]) -> int:
     """
     Where `moving` goes in `order` (which does not contain it). Bottom by
     default. Relational only — never a raw integer from a caller.
@@ -602,9 +602,9 @@ def _placement_index(order: list[GeorgePin], moving: GeorgePin, place: Optional[
 
 
 async def move_pin(
-    db: AsyncSession, *, owner: str, pin: GeorgePin, to_page: Optional[GeorgePage],
+    db: AsyncSession, *, owner: str, pin: BobPin, to_page: Optional[BobPage],
     place: Optional[Placement] = None, actor: Actor = USER,
-) -> GeorgePin:
+) -> BobPin:
     """
     Put a pin on a page (existing), off a page (None = Ungrouped), or at a
     place on the page it is already on. Every page touched is renumbered
@@ -683,8 +683,8 @@ async def move_pin(
 
 
 async def place_pin(
-    db: AsyncSession, *, owner: str, pin: GeorgePin, place: Placement, actor: Actor = USER,
-) -> GeorgePin:
+    db: AsyncSession, *, owner: str, pin: BobPin, place: Placement, actor: Actor = USER,
+) -> BobPin:
     """Reorder within the pin's own page. Refused for a pin in Ungrouped."""
     await lock_workspace(db, owner)
     if pin.page_id is None:
@@ -693,8 +693,8 @@ async def place_pin(
     return await move_pin(db, owner=owner, pin=pin, to_page=page, place=place, actor=actor)
 
 
-def record_draw(db: AsyncSession, *, owner: str, actor: Actor, page: GeorgePage,
-                pin: GeorgePin, before: Any, after: Any, call: int) -> None:
+def record_draw(db: AsyncSession, *, owner: str, actor: Actor, page: BobPage,
+                pin: BobPin, before: Any, after: Any, call: int) -> None:
     """
     A pin redrawn as another shape (P2S.3(g)) is a structural write like the
     others, so it is audited like them — `draw`, before and after.
@@ -705,9 +705,9 @@ def record_draw(db: AsyncSession, *, owner: str, actor: Actor, page: GeorgePage,
 
 
 async def append_new_pin(
-    db: AsyncSession, *, owner: str, pin: GeorgePin, to_page: Optional[GeorgePage],
+    db: AsyncSession, *, owner: str, pin: BobPin, to_page: Optional[BobPage],
     actor: Actor = USER,
-) -> GeorgePin:
+) -> BobPin:
     """
     A pin that is being CREATED joins a page at the bottom. Called by
     pin_writer.create_pin only; the pin is not yet flushed. Ungrouped is a
@@ -738,7 +738,7 @@ async def append_new_pin(
 async def page_for_write(
     db: AsyncSession, *, owner: str, title: Optional[str], actor: Actor = USER,
     allow_similar_page: bool = False,
-) -> Optional[GeorgePage]:
+) -> Optional[BobPage]:
     """
     The page a pin should land on when a caller named it by TITLE — the Pin
     dialog's "New page" box and pin_answer's `page` argument. An exact
@@ -758,14 +758,14 @@ async def page_for_write(
 
 
 async def events_for(db: AsyncSession, owner: str, page_id: uuid.UUID,
-                     limit: int = 100) -> list[GeorgePageEvent]:
+                     limit: int = 100) -> list[BobPageEvent]:
     """The audit rows for one of the caller's pages, newest first."""
     await get_page(db, owner, page_id)
     rows = (
         await db.execute(
-            select(GeorgePageEvent)
-            .where(GeorgePageEvent.owner == owner, GeorgePageEvent.page_id == page_id)
-            .order_by(GeorgePageEvent.at.desc())
+            select(BobPageEvent)
+            .where(BobPageEvent.owner == owner, BobPageEvent.page_id == page_id)
+            .order_by(BobPageEvent.at.desc())
             .limit(limit)
         )
     ).scalars().all()

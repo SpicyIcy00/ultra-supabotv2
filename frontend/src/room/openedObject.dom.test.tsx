@@ -7,10 +7,10 @@
  * seven shops. Greenhills was the first row.
  *
  * THE CAUSE. A block's subject was read as `o.subject ?? subjectOf(rows[0])`,
- * so a block George composed over a SET — which declares no subject, because
+ * so a block Bob composed over a SET — which declares no subject, because
  * it is not about one thing — borrowed whichever row the read happened to sort
  * first. Focusing the tile then opened that shop. The subject was chosen by
- * nobody: not by him, not by George, not by the read. By the ORDER BY.
+ * nobody: not by him, not by Bob, not by the read. By the ORDER BY.
  *
  * That is the "a label the model inferred" this whole surface refuses
  * (`surface.desk` Selection: "subject ids and labels the rows carried, never a
@@ -64,7 +64,7 @@ const SEVEN = [
 
 function draw(o: Partial<BoardObject>, rows: Record<string, unknown>[]) {
   const turn = {
-    role: 'george', text: 'Tradsnax fell hardest at OPUS.', thinking: '',
+    role: 'bob', text: 'Tradsnax fell hardest at OPUS.', thinking: '',
     at: '2026-09-15T15:41:00Z',
     toolCalls: [{ seq: 1, tool: 'get_sales', arguments: {}, result: { rows, meta: META } }],
   } as unknown as AnswerTurn;
@@ -103,14 +103,14 @@ describe('the object a focused block opens', () => {
     expect(screen.getByTestId('opened').textContent).toBe('OPUS');
   });
 
-  it('opens the subject George declared, whatever the rows are sorted like', () => {
+  it('opens the subject Bob declared, whatever the rows are sorted like', () => {
     draw({ subject: 'OPUS' }, SEVEN);
     expect(screen.getByTestId('opened').textContent).toBe('OPUS');
   });
 
   it('opens nothing at all until the block is focused', () => {
     const turn = {
-      role: 'george', text: 'A reading.', thinking: '', at: '2026-09-15T15:41:00Z',
+      role: 'bob', text: 'A reading.', thinking: '', at: '2026-09-15T15:41:00Z',
       toolCalls: [{ seq: 1, tool: 'get_sales', arguments: {},
                     result: { rows: [SEVEN[0]], meta: META } }],
     } as unknown as AnswerTurn;

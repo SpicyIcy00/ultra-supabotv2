@@ -1,17 +1,17 @@
 """
-The board fills when the data lands, not when George has finished thinking.
+The board fills when the data lands, not when Bob has finished thinking.
 
 WHY THIS EXISTS (P1.b, 2026-09-13). A turn's reads return in the first
 iteration and the screen stayed empty until the model came back round with a
 `compose` — a whole extra round trip later, measured at 8-17 s on the twelve.
 Everything needed to draw was already in hand; nobody had said so. So the loop
-now composes a DEFAULT the moment reads land, and George's own composition
+now composes a DEFAULT the moment reads land, and Bob's own composition
 supersedes it when it arrives.
 
 WHAT THIS IS NOT. It is not a second composer. Every block it produces goes
-through `agent/compose.validate` exactly as George's do — the same vocabulary,
+through `agent/compose.validate` exactly as Bob's do — the same vocabulary,
 the same closed field list, the same refusal when a subject no row carries is
-named. It cannot say anything George could not say, and it cannot say anything
+named. It cannot say anything Bob could not say, and it cannot say anything
 at all that the validator would not accept from him. A block it produced and a
 block he produced are indistinguishable downstream, which is the point: there
 is one gate and one grammar, and this is a caller of them.
@@ -31,17 +31,17 @@ tests/test_default_composition_contract.py is what keeps them saying the same
 thing. P2S.3 added three answers for a read grouped by TWO things, which until
 then fell to a line joining every store's weeks into one zigzag: a name over
 hours is a `heatmap`, a name over a calendar order is `multiples`, two names of
-parts are `stacked`. The other new shapes are George's to pick, never a
+parts are `stacked`. The other new shapes are Bob's to pick, never a
 default's — a default decides a noun from the columns, and "a pie" is not
 something the columns say.
 
 WHAT IT DELIBERATELY DOES NOT DO:
 
   - It never carries a claim, an emphasis or a word of the reading. Those are
-    readings, and a reading is George's — a machine that titled a block would
+    readings, and a reading is Bob's — a machine that titled a block would
     be characterising rows nobody looked at.
   - It never exempts a notice from prose. `_drawn_on_the_board` in the loop is
-    fed George's composition only: a caveat is discharged by a person deciding
+    fed Bob's composition only: a caveat is discharged by a person deciding
     to draw the read that raised it, not by a default doing it for him.
   - It never reaches the model. The model is not told a default was composed,
     is not shown its keys, and composes as though the board were empty — which
@@ -51,7 +51,7 @@ WHAT IT DELIBERATELY DOES NOT DO:
     object over a PREFIX draws a different chart (MAX_ROWS_TO_CLIENT).
 
 ONE LEAD, AND IT IS PROVISIONAL. The first composable read leads so the board
-has a shape rather than a pile; the rest are quiet. The moment George composes,
+has a shape rather than a pile; the rest are quiet. The moment Bob composes,
 his lead wins (board.ts `oneLead` keeps the most recently touched one) and the
 defaults over reads he composed are superseded by seq — see `editsFor` in
 frontend/src/room/board.ts for the supersession rule and why it is by seq
@@ -65,7 +65,7 @@ from typing import Any, Mapping, Optional, Sequence
 from agent import compose, vocabulary
 from agent.composite_tools import MEMORY_TOOL
 
-# Mirrors frontend/src/components/george/pinShape.ts. Where a constant appears
+# Mirrors frontend/src/components/bob/pinShape.ts. Where a constant appears
 # in both, it is the same constant for the same reason, and the reason is
 # written there.
 TIME_KEYS = ("day", "week", "month", "bucket", "date", "snapshot_date")
@@ -74,7 +74,7 @@ MIN_CHART_ROWS = 3
 _CATEGORICAL_SKIP = frozenset({"value", "unit", "measure", "section", "direction"})
 
 # A default is a holding shape, not a report. Well under composition.max_blocks
-# so George's own blocks always have room beside whatever is still standing.
+# so Bob's own blocks always have room beside whatever is still standing.
 MAX_DEFAULT_BLOCKS = 4
 
 
@@ -234,7 +234,7 @@ def compose_default(calls: Mapping[int, Mapping[str, Any]], *,
     """
     The validated default, or an empty list.
 
-    Through `compose.compose` rather than beside it: a block that George's
+    Through `compose.compose` rather than beside it: a block that Bob's
     composition would have been refused for is refused here too, and what comes
     back is the same validated shape the client already knows how to draw. A
     refusal here is silent — there is no model turn to spend on it and nothing
@@ -268,7 +268,7 @@ def compose_added(calls: Mapping[int, Mapping[str, Any]], *, drawn: set[int],
     that reason stays.
 
     Same rule as `blocks` and the same gate as `compose_default`; `drawn` is
-    every seq the turn's board already draws, George's and the defaults'.
+    every seq the turn's board already draws, Bob's and the defaults'.
     """
     if room <= 0:
         return []

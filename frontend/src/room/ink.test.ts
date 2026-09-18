@@ -7,7 +7,7 @@
  * want to dont lower others like maybe color to hightlight it just dont
  * desaturate or lower other things to emphsize something else"*.
  *
- * Held here: every class George's prose is drawn in uses the full ink; no row,
+ * Held here: every class Bob's prose is drawn in uses the full ink; no row,
  * figure or tile is drawn at reduced opacity for being the one he did not point
  * at; and the one he did point at gains weight and a ringed swatch, never a
  * band behind it (tried and refused the same day).
@@ -33,7 +33,7 @@ function top(selector: string, prop: string): string | undefined {
   return found;
 }
 
-describe('everything George says is drawn in the full ink', () => {
+describe('everything Bob says is drawn in the full ink', () => {
   const HIS = [
     '.r-say',                 // a chart's placed sentence, and the page's own lines
     '.r-say--claim',          // the headline

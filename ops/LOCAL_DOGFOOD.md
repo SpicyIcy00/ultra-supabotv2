@@ -1,8 +1,8 @@
-# Local George dogfood
+# Local Bob dogfood
 
 The rehearsal databases in [LOCAL_POSTGRES.md](LOCAL_POSTGRES.md) exist to prove
 a migration against synthetic rows. This environment exists so a person can open
-George in a browser and actually use it, against **real Aji figures**, on one
+Bob in a browser and actually use it, against **real Aji figures**, on one
 machine, with nothing writable outside it.
 
 The split is the whole design:
@@ -16,7 +16,7 @@ The split is the whole design:
      v
   uvicorn  127.0.0.1:8000
      |
-     +--> LOCAL PostgreSQL   127.0.0.1:55432/george_dogfood     READ/WRITE
+     +--> LOCAL PostgreSQL   127.0.0.1:55432/bob_dogfood     READ/WRITE
      |      app_users, role_page_access, george.pages, george.pins,
      |      george.posts, george.conversations, george.page_events
      |
@@ -24,7 +24,7 @@ The split is the whole design:
             business figures only; never written, never migrated, never seeded
 ```
 
-Everything George *remembers* is local. Everything George *reads* is the real
+Everything Bob *remembers* is local. Everything Bob *reads* is the real
 business data through the role that cannot change it. Nothing is copied between
 the two: no export, no restore, no snapshot.
 
@@ -32,15 +32,15 @@ the two: no export, no restore, no snapshot.
 
 | Variable | Host | Database | Role | Access |
 |---|---|---|---|---|
-| `DATABASE_URL` | 127.0.0.1:55432 | `george_dogfood` | `george_app` | read/write — application persistence |
+| `DATABASE_URL` | 127.0.0.1:55432 | `bob_dogfood` | `george_app` | read/write — application persistence |
 | `GEORGE_DATABASE_URL` | the Aji pooler | `postgres` | `george_ro` | SELECT only — business reads |
-| `GEORGE_LOG_DATABASE_URL` | 127.0.0.1:55432 | `george_dogfood` | `george_log` | INSERT only — the append-only log |
+| `GEORGE_LOG_DATABASE_URL` | 127.0.0.1:55432 | `bob_dogfood` | `george_log` | INSERT only — the append-only log |
 
 `george_ro` was audited against the live server on 2026-09-08 and holds: no
 superuser, createdb, createrole, bypassrls or replication attribute; membership
 in no other role; **zero INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES grants on any
-table in any schema**; no CREATE on any schema; and no USAGE on `george`, so the
-nine relations of George's own persistence are invisible to it. Its whole
+table in any schema**; no CREATE on any schema; and no USAGE on `bob`, so the
+nine relations of Bob's own persistence are invisible to it. Its whole
 surface is SELECT on 19 business tables and views.
 
 Three further guards apply at runtime, and they are independent of those grants:
@@ -54,7 +54,7 @@ Two residual capabilities are Postgres/Supabase defaults granted to `PUBLIC`,
 not to this role, and are recorded rather than glossed: `TEMP` on the database,
 and EXECUTE on pgsodium's SECURITY DEFINER key functions. Neither is reachable
 from a vetted tool — architecture rule 1 means no tool issues freehand SQL —
-and neither touches a business table. They are not a path George has.
+and neither touches a business table. They are not a path Bob has.
 
 ## Why a launcher and not a dotenv
 
@@ -62,7 +62,7 @@ and neither touches a business table. They are not a path George has.
 **not** loaded into `os.environ` — and `os.environ` is where
 `tools/_common.connect()` and `agent/loop.py` look for `GEORGE_DATABASE_URL` and
 `GEORGE_LOG_DATABASE_URL`. A dotenv would configure half the process and leave
-George's own connections unset, failing at the first question rather than at
+Bob's own connections unset, failing at the first question rather than at
 boot. [local_dogfood_serve.py](local_dogfood_serve.py) therefore builds the
 child environment in one place, asserts both local targets are loopback and that
 the read role is not administrative, and drops every inherited variable whose
@@ -116,7 +116,7 @@ account whose passcode is generated, hashed through the application's own
 `get_password_hash`, and written to the ignored
 `verification/postgres/dogfood-login.txt` — never printed. No authentication
 code is weakened, bypassed or duplicated, and the account exists only in
-`george_dogfood`.
+`bob_dogfood`.
 
 The legacy startup bootstrap, which seeds accounts of its own, stays disabled;
 `provision` creates only the `packing_lists_seq` sequence that `packing_lists`
@@ -124,8 +124,8 @@ declares a default against, because a table cannot be created without it.
 
 ## What the local schema is, and is not
 
-`george.*` is built by replaying the real George migrations through the true
-head, so the part George depends on has the migrated shape and
+`george.*` is built by replaying the real Bob migrations through the true
+head, so the part Bob depends on has the migrated shape and
 `alembic_version` is stamped honestly — `SCHEMA_CHECK=fail` passes because the
 database really is at head.
 

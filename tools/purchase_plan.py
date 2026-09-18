@@ -1,5 +1,5 @@
 """
-George — purchase planning tool.
+Bob — purchase planning tool.
 
 One public function: get_purchase_plan().
 
@@ -10,7 +10,7 @@ there was no way to ask "what do I buy from Seikyo, and how long will what I
 have last?"
 
 WHAT IT IS AND IS NOT. It produces a DRAFT to read and change. It writes
-nothing, sends nothing, and creates no purchase order; George has no write
+nothing, sends nothing, and creates no purchase order; Bob has no write
 access to StoreHub and none is needed for this.
 
 Architecture rules this module is built to (see CLAUDE.md):
@@ -150,7 +150,7 @@ ORDER BY last_order DESC NULLS LAST
 #
 # Deliberately a second statement rather than a join in the plan above. Over a
 # supplier's whole range this scan takes twelve seconds — most of it spent on
-# products that the ranking then discards — and George's role is capped at
+# products that the ranking then discards — and Bob's role is capped at
 # thirty. Asked only about the rows being returned it is immediate.
 _SELECT_STARVED = """
 SELECT d.product_id, COUNT(*) AS days_with_nothing

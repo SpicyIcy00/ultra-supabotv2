@@ -5,7 +5,7 @@ NO MODEL CALL. A check runs one vetted read, applies a named condition whose
 thresholds are metrics.yaml's, compares the result to the last one, and writes
 a post only if it changed. There is nothing here for a model to decide, which
 is why a watch is safe to run unattended in a way a free-form question is not —
-and why replying "investigate this" is where George actually thinks. The post
+and why replying "investigate this" is where Bob actually thinks. The post
 carries the exact call behind it, so that reply re-runs a fact rather than
 prose (CLAUDE.md architecture rule 10: an investigation is behaviour in an
 ordinary conversation, not an object).
@@ -34,7 +34,7 @@ from typing import Any, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.george_watch import GeorgeWatch
+from app.models.bob_watch import BobWatch
 from app.services import river_writer, slots, watches
 from tools._common import load_defs, req
 
@@ -57,7 +57,7 @@ def _brief(as_of: Optional[date]) -> dict:
 # The backtest
 # ---------------------------------------------------------------------------
 
-async def backtest(watch: GeorgeWatch, *, window_days: Optional[int] = None,
+async def backtest(watch: BobWatch, *, window_days: Optional[int] = None,
                    today: Optional[date] = None) -> dict[str, Any]:
     """
     What this watch would have done over the last N closed mornings.
@@ -136,7 +136,7 @@ async def backtest(watch: GeorgeWatch, *, window_days: Optional[int] = None,
 # One check
 # ---------------------------------------------------------------------------
 
-async def check(session: AsyncSession, watch: GeorgeWatch, *,
+async def check(session: AsyncSession, watch: BobWatch, *,
                 as_of: Optional[date] = None) -> dict[str, Any]:
     """
     Evaluate one watch and post only if the answer changed.
@@ -281,7 +281,7 @@ async def tick() -> None:
         async with AsyncSessionLocal() as session:
             try:
                 watch = (await session.execute(
-                    select(GeorgeWatch).where(GeorgeWatch.id == candidate["id"])
+                    select(BobWatch).where(BobWatch.id == candidate["id"])
                 )).scalars().first()
                 if watch is None or not watch.enabled:
                     continue

@@ -9,7 +9,7 @@
  * refuse, which is worse than one drawn a line lower.
  */
 import { describe, expect, it } from 'vitest';
-import type { ActionOffer, GeorgeTurn } from '../types/george';
+import type { ActionOffer, BobTurn } from '../types/bob';
 import type { BoardObject } from './board';
 import { cost, key, offersOf, onRow, placement, says } from './actions';
 import type { AnswerTurn } from './data';
@@ -28,7 +28,7 @@ const META = { source_table: 'new_transactions', filters_applied: [],
 
 function turn(calls: { seq: number; rows: Record<string, unknown>[] }[]): AnswerTurn {
   return {
-    role: 'george', text: 'A reading.', thinking: '', at: '2026-09-11T08:00:00Z',
+    role: 'bob', text: 'A reading.', thinking: '', at: '2026-09-11T08:00:00Z',
     toolCalls: calls.map((c) => ({
       seq: c.seq, tool: 'get_sales', arguments: {},
       result: { rows: c.rows, meta: META },
@@ -154,7 +154,7 @@ describe('what the button says', () => {
 describe('a turn that offered nothing', () => {
   it('draws exactly as it drew before offers existed', () => {
     expect(offersOf(null)).toEqual([]);
-    expect(offersOf({} as GeorgeTurn & { actions?: ActionOffer[] })).toEqual([]);
+    expect(offersOf({} as BobTurn & { actions?: ActionOffer[] })).toEqual([]);
     const { onRows, foot } = placement([], [object({})], [turn([{ seq: 1, rows: ROWS }])]);
     expect(onRows.size).toBe(0);
     expect(foot).toEqual([]);

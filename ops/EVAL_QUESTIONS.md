@@ -1,4 +1,4 @@
-# George's test questions — the core five
+# Bob's test questions — the core five
 
 At the owner's word, 2026-09-18: *"Maybe just keep main questions that you need
 to know to make sures its functional just a few will do."* Five questions, six

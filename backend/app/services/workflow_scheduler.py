@@ -1,5 +1,5 @@
 """
-George's own scheduler: saved workflows fired on their slots.
+Bob's own scheduler: saved workflows fired on their slots.
 
 SLOTS, NOT CRON TRIGGERS. Each tick computes the most recent slot at or before
 now and runs only if the schedule has not already run for it. That is the
@@ -44,10 +44,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import AsyncSessionLocal
-from app.models.george_workflow import (
-    GeorgeWorkflow,
-    GeorgeWorkflowSchedule,
-    GeorgeWorkflowVersion,
+from app.models.bob_workflow import (
+    BobWorkflow,
+    BobWorkflowSchedule,
+    BobWorkflowVersion,
 )
 from app.services import slots, telegram_sender, workflow_telegram
 from app.services.workflow_runner import (
@@ -74,7 +74,7 @@ MAX_SKIPPED_COUNTED = slots.MAX_SKIPPED_COUNTED
 TABLE = "george.workflow_schedules"
 
 
-def _shape(schedule: GeorgeWorkflowSchedule) -> dict:
+def _shape(schedule: BobWorkflowSchedule) -> dict:
     """One schedule row as the plain values slots.py works in."""
     return {
         "kind": schedule.kind,
@@ -85,12 +85,12 @@ def _shape(schedule: GeorgeWorkflowSchedule) -> dict:
     }
 
 
-def slot_for(schedule: GeorgeWorkflowSchedule, now: datetime) -> Optional[datetime]:
+def slot_for(schedule: BobWorkflowSchedule, now: datetime) -> Optional[datetime]:
     """The most recent occurrence of this schedule's slot at or before `now`."""
     return slots.slot_for(now=now, **_shape(schedule))
 
 
-def skipped_slots(schedule: GeorgeWorkflowSchedule, slot: datetime,
+def skipped_slots(schedule: BobWorkflowSchedule, slot: datetime,
                   last_slot: Optional[datetime]) -> list[datetime]:
     """The slots between the last one that ran and this one — the ones nobody got."""
     return slots.skipped_slots(slot=slot, last_slot=last_slot, **_shape(schedule))
@@ -105,7 +105,7 @@ async def claim_slot(db: AsyncSession, schedule_id, slot: datetime) -> bool:
 # Running one due schedule
 # ---------------------------------------------------------------------------
 
-async def run_due_schedule(db: AsyncSession, schedule: GeorgeWorkflowSchedule,
+async def run_due_schedule(db: AsyncSession, schedule: BobWorkflowSchedule,
                            slot: datetime, missed: list[datetime]) -> str:
     """
     Run one claimed slot: execute, record, deliver. Returns the run status.
@@ -115,13 +115,13 @@ async def run_due_schedule(db: AsyncSession, schedule: GeorgeWorkflowSchedule,
     """
     workflow = (
         await db.execute(
-            select(GeorgeWorkflow).where(GeorgeWorkflow.id == schedule.workflow_id)
+            select(BobWorkflow).where(BobWorkflow.id == schedule.workflow_id)
         )
     ).scalar_one()
     version = (
         await db.execute(
-            select(GeorgeWorkflowVersion).where(
-                GeorgeWorkflowVersion.id == schedule.version_id
+            select(BobWorkflowVersion).where(
+                BobWorkflowVersion.id == schedule.version_id
             )
         )
     ).scalar_one()
@@ -277,9 +277,9 @@ async def tick() -> None:
     async with AsyncSessionLocal() as session:
         due = (
             await session.execute(
-                select(GeorgeWorkflowSchedule)
-                .where(GeorgeWorkflowSchedule.enabled.is_(True))
-                .order_by(GeorgeWorkflowSchedule.last_slot.asc().nulls_first())
+                select(BobWorkflowSchedule)
+                .where(BobWorkflowSchedule.enabled.is_(True))
+                .order_by(BobWorkflowSchedule.last_slot.asc().nulls_first())
             )
         ).scalars().all()
         candidates = [(s.id, slot_for(s, now), s.last_slot) for s in due]
@@ -294,8 +294,8 @@ async def tick() -> None:
             try:
                 schedule = (
                     await session.execute(
-                        select(GeorgeWorkflowSchedule)
-                        .where(GeorgeWorkflowSchedule.id == schedule_id)
+                        select(BobWorkflowSchedule)
+                        .where(BobWorkflowSchedule.id == schedule_id)
                     )
                 ).scalar_one_or_none()
                 if schedule is None or not schedule.enabled:

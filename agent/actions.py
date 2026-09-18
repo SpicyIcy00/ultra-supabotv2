@@ -3,7 +3,7 @@ WHAT TO DO ABOUT IT, ON THE ROW IT IS ABOUT.
 
 The third statement `compose` carries (P2.d, 2026-09-15), beside the blocks and
 the reading. An action is not a tile and not a recommendation: it is a thing
-the SURFACE can already do, pointed at one row, carrying George's own few words
+the SURFACE can already do, pointed at one row, carrying Bob's own few words
 for why that row and not another.
 
 WHAT CAME BEFORE, AND WHY THIS IS NOT IT. `action` was a field on a
@@ -30,7 +30,7 @@ THE MODEL SUPPLIES THREE THINGS AND DERIVES NOTHING:
              scoped to — `compose._backs`, the identical test a block's
              subject passes. OPTIONAL: an action about the answer rather than
              about a row names none and is drawn at the foot.
-  `reason`   George's words. AN ANNOTATION under CLAUDE.md's bound, so it may
+  `reason`   Bob's words. AN ANNOTATION under CLAUDE.md's bound, so it may
              point at rows and characterise them and may never name a number.
 
 WHAT IT NEVER SUPPLIES IS THE COST. "~1s" and "a turn" are facts about this
@@ -40,7 +40,7 @@ draws what it finds. A person deciding whether to tap something is owed the
 difference between a second and a conversation.
 
 WHICH ACTS THERE ARE IS THE YAML'S BUSINESS, and it currently declares two:
-`why`, which asks George and costs a turn, and `open`, which opens the object
+`why`, which asks Bob and costs a turn, and `open`, which opens the object
 and costs about a second. `replay` is written down there as the act that is NOT
 offered, with the reason — it would need a value as well as an argument, and
 the preset values live in the renderer rather than in the definitions.

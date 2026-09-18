@@ -17,7 +17,7 @@ import type { AnswerTurn } from './data';
 afterEach(cleanup);
 
 const turn = (extra: object) => ({
-  role: 'george', text: '', thinking: '', at: new Date().toISOString(), toolCalls: [], ...extra,
+  role: 'bob', text: '', thinking: '', at: new Date().toISOString(), toolCalls: [], ...extra,
 }) as unknown as AnswerTurn;
 
 describe('while he works', () => {

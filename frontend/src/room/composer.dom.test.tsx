@@ -97,7 +97,7 @@ function mount(over: Partial<React.ComponentProps<typeof Composer>> = {}) {
   const view = render(
     <QueryClientProvider client={client}><Harness /></QueryClientProvider>,
   );
-  const line = screen.getByLabelText('Say something to George') as HTMLInputElement;
+  const line = screen.getByLabelText('Say something to Bob') as HTMLInputElement;
   return { ...props, onDraft, line, view };
 }
 

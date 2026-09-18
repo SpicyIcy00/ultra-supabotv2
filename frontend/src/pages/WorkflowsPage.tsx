@@ -15,8 +15,8 @@
  * as such. A hairline separates one rule from the next. No card is needed to
  * say where one workflow ends.
  *
- * NO BUILDER. Saving is George's (`save_workflow`, in conversation), promoting
- * is Needs you's, and running is George's too — so the one action here is a
+ * NO BUILDER. Saving is Bob's (`save_workflow`, in conversation), promoting
+ * is Needs you's, and running is Bob's too — so the one action here is a
  * draft dropped into Ask, for the person to read and send. Versions, runs and
  * backtests keep their existing semantics; this page only reads them.
  *
@@ -28,7 +28,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Caveats } from '../room/tiles';
-import { lastRunLine, workflowView } from '../components/george/workflowShape';
+import { lastRunLine, workflowView } from '../components/bob/workflowShape';
 import { RoomHead } from '../room/RoomShell';
 import { listRuns, listSchedules, listWorkflows } from '../services/workflowsApi';
 import type { Workflow } from '../types/workflows';
@@ -103,7 +103,7 @@ function WorkflowRow({ workflow }: { workflow: Workflow }) {
                   onClick={() => navigate('/', {
                     state: { ask: `Run the "${workflow.name}" workflow` },
                   })}>
-            Ask George to run it
+            Ask Bob to run it
           </button>
         </div>
       )}
@@ -134,7 +134,7 @@ export default function WorkflowsPage() {
           {workflows.isError && <p className="r-say">The rules could not be read.</p>}
           {workflows.data?.length === 0 && (
             <p className="r-say">
-              Nothing runs yet. Agree a rule with George and ask him to save it.
+              Nothing runs yet. Agree a rule with Bob and ask him to save it.
             </p>
           )}
         </div>

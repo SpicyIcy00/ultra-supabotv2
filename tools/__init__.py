@@ -1,1 +1,1 @@
-"""George's tools. Each module exposes exactly one public function."""
+"""Bob's tools. Each module exposes exactly one public function."""

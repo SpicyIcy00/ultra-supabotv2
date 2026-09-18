@@ -1,5 +1,5 @@
 """
-UNDERSTAND: what George is told, and how wide he reads.
+UNDERSTAND: what Bob is told, and how wide he reads.
 
 NO DATABASE, NO MODEL CALL. Everything here is the prompt as it is built at
 import, the definitions it is built from, and the bounded channel the
@@ -27,7 +27,7 @@ import pytest
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from agent import loop as george_loop                                  # noqa: E402
+from agent import loop as bob_loop                                  # noqa: E402
 from agent import surface                                              # noqa: E402
 from tools._common import load_defs, req                               # noqa: E402
 
@@ -43,7 +43,7 @@ def defs() -> dict:
 
 def test_a_full_workspace_with_nothing_selected_still_says_what_it_shows(defs):
     # THE FAILURE: this returned None unless something was selected or a
-    # window had moved, so a question asked from a full screen told George
+    # window had moved, so a question asked from a full screen told Bob
     # nothing about what the person was looking at.
     line = surface.desk_sentence(
         {
@@ -133,7 +133,7 @@ def test_a_client_cannot_smuggle_a_sentence_through_a_label(defs):
 
 
 def test_the_bounds_the_route_enforces_are_the_definitions_own(defs):
-    from app.api.v1.routes.george import _DESK_MAX_ATTENTION, _DESK_MAX_DRAWN
+    from app.api.v1.routes.bob import _DESK_MAX_ATTENTION, _DESK_MAX_DRAWN
 
     assert _DESK_MAX_DRAWN == int(req(defs, "surface.desk.context.max_drawn_subjects"))
     assert _DESK_MAX_ATTENTION == int(req(defs, "surface.desk.context.max_attention"))
@@ -142,7 +142,7 @@ def test_the_bounds_the_route_enforces_are_the_definitions_own(defs):
 def test_the_desk_context_model_refuses_a_reason_nobody_declared():
     from pydantic import ValidationError
 
-    from app.api.v1.routes.george import DeskAttention, DeskContext
+    from app.api.v1.routes.bob import DeskAttention, DeskContext
 
     assert DeskAttention(subject="OPUS", reason="ranked_first").reason == "ranked_first"
     with pytest.raises(ValidationError):
@@ -162,7 +162,7 @@ def test_a_broad_message_is_investigated_with_grouped_reads(defs):
 def test_a_group_total_must_be_read_and_never_summed_in_prose(defs):
     # FOUND IN THE LIVE DOGFOOD, 2026-09-09. A store-grouped read returns one
     # row per shop and carries no total — verified against the real tool — and
-    # George's first live broad answer said "across the group" with a figure.
+    # Bob's first live broad answer said "across the group" with a figure.
     # That is a calculation in prose, and a calculation in prose has no
     # receipt (architecture rule 9). Broad scope makes the temptation
     # structural, so the rule is stated where the breadth is decided.
@@ -174,7 +174,7 @@ def test_a_group_total_must_be_read_and_never_summed_in_prose(defs):
 def test_a_focused_message_is_not_widened_because_it_could_be(defs):
     broad = int(req(defs, "investigation.scope.kinds.broad.max_reads"))
     focused = int(req(defs, "investigation.scope.kinds.focused.max_reads"))
-    assert focused < broad <= george_loop.MAX_TOOL_CALLS
+    assert focused < broad <= bob_loop.MAX_TOOL_CALLS
 
 
 def test_a_focused_message_that_asks_to_be_taken_apart_is_not_one_read(defs):
@@ -184,7 +184,7 @@ def test_a_focused_message_that_asks_to_be_taken_apart_is_not_one_read(defs):
     read — so "analyze tradsnax per store" got one, inside the allowance. The
     prompt now says both halves in the place breadth is decided.
     """
-    scope = george_loop.SCOPE_SECTION
+    scope = bob_loop.SCOPE_SECTION
     apart = req(defs, "investigation.scope.kinds.focused.taken_apart")
     lookup = req(defs, "investigation.opens_when.a_lookup_is_not_one")
     assert f"taken apart gets {apart['min_reads']}, not one" in scope
@@ -217,7 +217,7 @@ def test_several_things_worth_saying_come_from_one_grouped_read(defs):
     # and it is what the prompt is built to say.
     assert req(defs, "investigation.scope.presentation.from_the_same_primary") is True
     pres = req(defs, "investigation.scope.presentation")
-    scope = george_loop.SCOPE_SECTION
+    scope = bob_loop.SCOPE_SECTION
     assert f"{pres['findings_min']} to {pres['findings_max']} things worth saying" in scope
     assert f"each resting on {pres['rests_on']}" in scope
 
@@ -244,10 +244,10 @@ def test_the_five_things_that_are_not_questions_are_named(defs):
 # 5. The grouping matrix is stated, not discovered by refusal
 # ---------------------------------------------------------------------------
 
-def test_george_is_told_which_metrics_break_down_by_which_subject(defs):
+def test_bob_is_told_which_metrics_break_down_by_which_subject(defs):
     # On get_sales since 2026-09-12 (voice.budget): the matrix is read where
     # the grouping is chosen, not in the prompt.
-    prompt = next(s for s in george_loop.build_tool_schemas() if s["name"] == "get_sales")["description"]
+    prompt = next(s for s in bob_loop.build_tool_schemas() if s["name"] == "get_sales")["description"]
     assert "NOT EVERY METRIC BREAKS DOWN BY EVERY SUBJECT" in prompt
 
     metrics = req(defs, "metrics")
@@ -265,7 +265,7 @@ def test_george_is_told_which_metrics_break_down_by_which_subject(defs):
 
 def test_the_matrix_agrees_with_the_definitions_behind_it(defs):
     # get_sales refuses a grouping the metric refuses, reading the same entry
-    # the sentence above is built from. If they ever disagree, George is being
+    # the sentence above is built from. If they ever disagree, Bob is being
     # told one thing and held to another.
     metrics = req(defs, "metrics")
     for name, m in metrics.items():
@@ -286,11 +286,11 @@ def test_broad_reads_reach_the_model_as_the_definitions_say_them(defs):
     """
     import copy
 
-    headline = george_loop._headline_read(defs)
+    headline = bob_loop._headline_read(defs)
     rendered = " ".join(str(req(defs, "investigation.scope.kinds.broad.reads")).split())
-    assert rendered.format(headline=headline) in george_loop.SCOPE_SECTION
+    assert rendered.format(headline=headline) in bob_loop.SCOPE_SECTION
     assert "get_attention" in rendered, "a broad question reads beyond sales"
 
     altered = copy.deepcopy(defs)
     altered["investigation"]["scope"]["kinds"]["broad"]["reads"] = "SENTINEL {headline}"
-    assert f"SENTINEL {headline}" in george_loop._scope_section(altered)
+    assert f"SENTINEL {headline}" in bob_loop._scope_section(altered)

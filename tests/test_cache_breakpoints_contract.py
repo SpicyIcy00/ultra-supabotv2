@@ -37,7 +37,7 @@ import pytest
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from agent import loop as george_loop                                          # noqa: E402
+from agent import loop as bob_loop                                          # noqa: E402
 from tests.test_convergence_cap_contract import FakeClient, _ToolUse           # noqa: E402
 from tests.test_loop_correction_contract import StubLog, _TextBlock            # noqa: E402
 
@@ -50,9 +50,9 @@ FINAL = "Rockwell leads on net sales; the rest are within the usual spread."
 def _requests(monkeypatch, replies):
     """Drive one turn and return the kwargs of every request it made."""
     fake = FakeClient(replies)
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
     StubLog.instances.clear()
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
 
     async def fake_read(name, args):
         return ({"rows": [{"store": "Rockwell", "value": 1.0}],
@@ -60,10 +60,10 @@ def _requests(monkeypatch, replies):
                           "snapshot_timestamp": "2026-09-13T00:00:00+00:00", "row_count": 1}},
                 None, 3)
 
-    monkeypatch.setattr(george_loop, "_call_tool", fake_read)
+    monkeypatch.setattr(bob_loop, "_call_tool", fake_read)
 
     async def collect():
-        return [f async for f in george_loop.run("net sales by store?")]
+        return [f async for f in bob_loop.run("net sales by store?")]
 
     asyncio.run(collect())
     return fake.messages.requests
@@ -115,7 +115,7 @@ def test_the_system_prompt_is_written_for_an_hour(turn):
 def test_the_prefix_ttl_is_the_constant_and_the_constant_is_an_hour():
     # Named, so the two markers cannot drift apart, and pinned, so raising it
     # is a decision rather than an edit.
-    assert george_loop.PREFIX_TTL == "1h"
+    assert bob_loop.PREFIX_TTL == "1h"
 
 
 def test_the_tools_array_and_the_system_prompt_do_not_change_within_a_turn(turn):
@@ -177,6 +177,6 @@ def test_three_breakpoints_are_used_of_the_four_allowed(turn):
 
 def test_the_row_cap_is_not_a_cost_lever(turn):
     # P0.6 considered cutting MAX_ROWS_TO_MODEL and refused: it reduces what
-    # George can SEE, which is the product, not the bill. Held here so reopening
+    # Bob can SEE, which is the product, not the bill. Held here so reopening
     # it has to be deliberate.
-    assert george_loop.MAX_ROWS_TO_MODEL == 200
+    assert bob_loop.MAX_ROWS_TO_MODEL == 200

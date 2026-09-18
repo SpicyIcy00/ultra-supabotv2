@@ -1,7 +1,7 @@
 """
 `@` — a name typed into the composer, resolved to an id before it is sent.
 
-WHY THIS EXISTS. A subject reached George as a WORD. "Rockwell" in a question
+WHY THIS EXISTS. A subject reached Bob as a WORD. "Rockwell" in a question
 is a string the model has to decide the meaning of, and it has two meanings in
 this estate — a shop, and every product sold in it. The surface already knew
 which one the person meant, because they were looking at a row that carried
@@ -14,7 +14,7 @@ the read it comes out of, and every one of those reads is vetted somewhere
 else: the shops are the store list in the definitions, a product is
 `get_product`, a supplier is `get_purchasing` grouped by supplier — the same
 reads `tools/objects.py` makes when somebody opens one of these things. A page
-and a rule are rows of George's own schema, read through the models the pages
+and a rule are rows of Bob's own schema, read through the models the pages
 and workflows routers already use. There is no SQL in this file.
 
 MATCHED, NEVER GUESSED. A prefix first, then a substring, both case-folded, and
@@ -27,7 +27,7 @@ WHAT EACH KIND BINDS IS THE DEFINITIONS' TO SAY. A shop, a product and a
 supplier are SUBJECTS and travel in `desk.selection`. A page binds
 `page_scope`, which is the field that injects a reader bound to the caller and
 that page. A rule binds neither — there is no request field for a workflow —
-so it is named to George on the question and what to do about it stays his
+so it is named to Bob on the question and what to do about it stays his
 call.
 """
 
@@ -45,7 +45,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.george_workflow import GeorgeWorkflow
+from app.models.bob_workflow import BobWorkflow
 from app.services import page_writer
 
 _ROOT = Path(__file__).resolve().parents[3]
@@ -300,9 +300,9 @@ async def rules(db: AsyncSession, query: str, defs: Mapping[str, Any],
     and the name it holds may since have been reused.
     """
     rows = (await db.execute(
-        select(GeorgeWorkflow)
-        .where(GeorgeWorkflow.status != "archived")
-        .order_by(func.lower(GeorgeWorkflow.name))
+        select(BobWorkflow)
+        .where(BobWorkflow.status != "archived")
+        .order_by(func.lower(BobWorkflow.name))
     )).scalars().all()
     found: list[tuple[int, dict]] = []
     for flow in rows:

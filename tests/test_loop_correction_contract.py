@@ -21,7 +21,7 @@ import pytest
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from agent import loop as george_loop                       # noqa: E402
+from agent import loop as bob_loop                       # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +81,7 @@ async def _writer(spec):                     # never reached; its presence is
     raise AssertionError("the stub never calls a tool")   # what enables the tool
 
 
-class StubLog(george_loop.ConversationLog):
+class StubLog(bob_loop.ConversationLog):
     """
     A ConversationLog that records its statements and never opens a connection.
 
@@ -118,12 +118,12 @@ def drive(monkeypatch, replies, question="pin that"):
     conversation log. A test that wants either for real has to say so.
     """
     fake = FakeClient(replies)
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
     StubLog.instances.clear()
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
 
     async def collect():
-        return [f async for f in george_loop.run(question, pin_writer=_writer)]
+        return [f async for f in bob_loop.run(question, pin_writer=_writer)]
 
     return asyncio.run(collect()), fake.messages.requests
 
@@ -182,7 +182,7 @@ def test_a_claimed_pin_that_never_happened_is_corrected(monkeypatch):
 
 def test_a_promised_pin_that_never_happened_is_corrected(monkeypatch):
     """
-    The gentler case: George may legitimately be waiting on the user, so the
+    The gentler case: Bob may legitimately be waiting on the user, so the
     instruction offers that as a way out rather than demanding a write.
     """
     frames, requests = drive(monkeypatch, [
@@ -203,7 +203,7 @@ def test_an_answer_claiming_nothing_is_left_alone(monkeypatch):
 
 
 def test_a_refusal_to_pin_is_left_alone(monkeypatch):
-    """Correcting George for declining would train the behaviour out."""
+    """Correcting Bob for declining would train the behaviour out."""
     frames, requests = drive(monkeypatch, [
         "I could not pin that — the weekly call has not been run in this conversation.",
     ])
@@ -258,12 +258,12 @@ def test_two_text_blocks_are_not_glued_together(monkeypatch):
 
     fake = FakeClient([])
     fake.messages = _Msgs([])
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
     StubLog.instances.clear()
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
 
     async def collect():
-        return [f async for f in george_loop.run("how did the week go?")]
+        return [f async for f in bob_loop.run("how did the week go?")]
 
     import asyncio as _asyncio
     import json as _json

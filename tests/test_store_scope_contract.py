@@ -24,7 +24,7 @@ import pytest
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from agent import loop as george_loop            # noqa: E402
+from agent import loop as bob_loop            # noqa: E402
 from tools._common import load_defs, req         # noqa: E402
 
 DEFS = load_defs()
@@ -51,8 +51,8 @@ def test_the_scope_sentence_is_read_from_the_definitions_not_typed():
         {"id": "w", "name": "SENTINEL DEPOT", "display_name": "SENTINEL DEPOT"},
     ]
 
-    before = george_loop._scope_sentence(DEFS)
-    after = george_loop._scope_sentence(grown)
+    before = bob_loop._scope_sentence(DEFS)
+    after = bob_loop._scope_sentence(grown)
 
     assert before != after, "the sentence does not move when the definitions do"
     assert str(len(req(grown, "stores.active_retail"))) in after
@@ -60,7 +60,7 @@ def test_the_scope_sentence_is_read_from_the_definitions_not_typed():
     assert "SENTINEL DEPOT" not in before
 
     # And the built sentence is what the prompt actually opens with.
-    assert george_loop.SYSTEM_PROMPT.startswith(before)
+    assert bob_loop.SYSTEM_PROMPT.startswith(before)
 
 
 def test_the_scope_sentence_states_no_count_the_definitions_do_not_support():
@@ -70,7 +70,7 @@ def test_the_scope_sentence_states_no_count_the_definitions_do_not_support():
         len(req(DEFS, "stores.pending_retail")),
         len(req(DEFS, "stores.warehouse")),
     }
-    sentence = george_loop._scope_sentence(DEFS)
+    sentence = bob_loop._scope_sentence(DEFS)
     for wrong in {1, 6, 7, 8, 9, 10} - counts:
         assert str(wrong) not in sentence, f"{wrong} is in the sentence and in no definition"
 
@@ -83,7 +83,7 @@ def test_the_scope_sentence_states_no_count_the_definitions_do_not_support():
 # did not exist: "Unknown store 'AJI BARN'. Valid stores: Fairview, ...". AJI
 # BARN is the warehouse. It was left out on purpose, for a reason already
 # written down in metrics.yaml, and the refusal said the opposite of that — so
-# George could not explain it and could only guess, three times, in the middle
+# Bob could not explain it and could only guess, three times, in the middle
 # of the one workflow the owner was actually building.
 # ---------------------------------------------------------------------------
 from tools._common import resolve_store, store_catalog  # noqa: E402
@@ -101,7 +101,7 @@ def test_an_excluded_store_is_out_of_scope_not_unknown():
     assert "not in scope for this reading" in said
     assert "it is a real store" in said.lower(), "the refusal must not deny it exists"
     assert "Unknown store" not in said
-    # Which group it is in, and the reason the caller declared — so George can
+    # Which group it is in, and the reason the caller declared — so Bob can
     # say WHY rather than guess.
     assert "warehouse" in said
     assert "dispatch counters" in said

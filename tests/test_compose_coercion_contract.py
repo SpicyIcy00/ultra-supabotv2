@@ -2,7 +2,7 @@
 What `compose` adjusts rather than refuses, and the line it will not cross.
 
 WHY THIS FILE EXISTS (P1.a, 2026-09-13). Half of every turn's tool calls were
-George labelling his own work, and `compose` was refused in two questions out
+Bob labelling his own work, and `compose` was refused in two questions out
 of three. Each refusal cost a whole model round trip — the slowest thing a
 turn does — and the four recorded runs of the twelve are unanimous about what
 was being refused:
@@ -15,7 +15,7 @@ was being refused:
      1  a note carried a digit
 
 Not one of them would have put a wrong figure on screen. The `cannot`
-scenario is the whole argument in one turn: George read transaction_count
+scenario is the whole argument in one turn: Bob read transaction_count
 filtered to Rockwell, composed a hero of it subject "Rockwell", and was
 refused — because `group_by: []` had left no column carrying the word. He
 dropped the subject: refused. Tried a figure: refused. Re-read the identical
@@ -87,7 +87,7 @@ def test_a_subject_the_read_is_filtered_to_is_backed_by_the_read(defs):
 
     `filters_applied` is the tool's own statement of what it read, in meta,
     beside the snapshot timestamp. A read scoped to Rockwell is about
-    Rockwell whether or not a column carries the word, and George naming it
+    Rockwell whether or not a column carries the word, and Bob naming it
     is selection, not invention — which is the only thing rule 9 cares about.
     """
     accepted, rejected, _ = run(
@@ -122,7 +122,7 @@ def test_a_one_row_read_takes_its_subject_from_its_own_scope(defs):
 def test_a_one_row_read_with_no_scope_draws_the_row_and_names_no_subject(defs):
     """
     Nothing declares a caption, so none is invented: the block stands with no
-    subject and the client labels it off the row it drew. A label George
+    subject and the client labels it off the row it drew. A label Bob
     supplied would be exactly the thing Selection forbids.
     """
     accepted, rejected, coerced = run(
@@ -164,14 +164,14 @@ def test_a_ranking_of_the_same_rows_needs_no_subject_at_all(defs):
 
 
 # ---------------------------------------------------------------------------
-# 2. The spec's discriminator, under every name George reached for
+# 2. The spec's discriminator, under every name Bob reached for
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("synonym", ["type", "kind", "node", "as"])
 def test_the_node_discriminator_is_renamed_not_refused(defs, synonym):
     """
-    Eleven of the 46 recorded refusals are this, and George spent three round
+    Eleven of the 46 recorded refusals are this, and Bob spent three round
     trips per run cycling `type` → `kind` → bare key → `layout`. The VALUES
     were the grammar's own words the whole time.
     """
@@ -224,7 +224,7 @@ def test_a_field_set_to_nothing_is_not_a_field(defs):
 def test_a_typed_figure_inside_a_renamed_node_is_still_refused(defs):
     """
     The rename happens BEFORE the checks, not instead of them. A node spelled
-    `type` and carrying `field: 203717` is a figure George typed, and it is
+    `type` and carrying `field: 203717` is a figure Bob typed, and it is
     refused in exactly the words it always was.
     """
     with pytest.raises(grammar.Rejected) as caught:
@@ -288,12 +288,12 @@ def test_the_slots_are_the_same_rules_reading_owns(defs):
     agent/reading.py owns every rule: this is one door into it, not a second
     set of checks.
     """
-    from agent import reading as george_reading
+    from agent import reading as bob_reading
 
     said = {"claim": "Rockwell is down", "caveat": "the count fell 412,999 short"}
-    returned = george_reading.returned_numbers(CALLS.values())
+    returned = bob_reading.returned_numbers(CALLS.values())
     through_compose = compose.compose(None, said, calls=CALLS, defs=defs)
-    accepted, rejected = george_reading.validate(said, defs, returned)
+    accepted, rejected = bob_reading.validate(said, defs, returned)
     assert through_compose["meta"]["reading"] == accepted
     assert through_compose["meta"]["rejected_slots"] == rejected
     assert len(rejected) == 1
@@ -334,7 +334,7 @@ def test_a_claim_titles_the_block_and_comes_back_flattened(defs):
 
 def test_every_coercion_is_named_on_the_result(defs):
     """
-    Silent divergence is the thing that is not allowed. George has to be able
+    Silent divergence is the thing that is not allowed. Bob has to be able
     to describe the board he actually got, so every adjustment comes back in
     words on `meta.coerced`, and the note tells him to describe THAT one.
     """
@@ -352,7 +352,7 @@ def test_every_coercion_is_named_on_the_result(defs):
 def test_the_allowed_fields_are_still_the_closed_set(defs):
     """
     The coercions add no field. If one ever needs a new key to hold what it
-    did, that key is a value George supplied and the coercion is wrong.
+    did, that key is a value Bob supplied and the coercion is wrong.
     """
     allowed = set(req(defs, "composition.allowed_fields"))
     out = compose.compose(

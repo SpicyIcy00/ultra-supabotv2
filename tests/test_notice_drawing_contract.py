@@ -16,7 +16,7 @@ What this holds, so the split cannot rot:
   - the desk definitions serve the split, so the room reads it rather than
     keeping a copy.
 
-It changes nothing George receives: the loop still hands him every notice.
+It changes nothing Bob receives: the loop still hands him every notice.
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ SOURCES = (
     list((ROOT / "tools").glob("*.py"))
     + list((ROOT / "agent").glob("*.py"))
     + list((ROOT / "backend" / "app" / "services").glob("*.py"))
-    + [ROOT / "backend" / "app" / "api" / "v1" / "routes" / "george.py"]
+    + [ROOT / "backend" / "app" / "api" / "v1" / "routes" / "bob.py"]
 )
 
 
@@ -74,7 +74,7 @@ def test_the_comparison_disclaimer_he_pointed_at_is_not_drawn():
 
 
 def test_the_desk_serves_the_split():
-    route = (ROOT / "backend" / "app" / "api" / "v1" / "routes" / "george.py").read_text(encoding="utf-8")
+    route = (ROOT / "backend" / "app" / "api" / "v1" / "routes" / "bob.py").read_text(encoding="utf-8")
     assert re.search(r"^\s+notices: dict\[str, List\[str\]\]", route, re.M)
     assert '_req(desk, "notices")' in route
 

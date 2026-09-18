@@ -9,7 +9,7 @@ that every notice reached the answer without being forced, that every figure
 in the prose is a figure a tool returned, that no share of a change was put
 on a driver, and — where the rows say one driver clearly moved more — that
 the prose names that one. The expected driver is computed by the eval from
-the rows George actually read, so a different but valid window still tests
+the rows Bob actually read, so a different but valid window still tests
 the same property.
 
 Surveyed 2026-09-08 over closed weeks (change_pct, net / transactions / ATP):
@@ -137,11 +137,11 @@ def _drivers_read(turn: Turn, store: str) -> tuple[dict, dict, dict]:
 
 
 def _assert_driver(turn: Turn, findings: dict, store: str, expected: str) -> None:
-    """The rows George read must show `expected`, and the prose must name it."""
+    """The rows Bob read must show `expected`, and the prose must name it."""
     ns, tx, atp = _drivers_read(turn, store)
     from_rows = checks.stronger_from_rows(tx.get("change_pct"), atp.get("change_pct"))
     findings["rows"] = {"net": ns.get("change_pct"), "tx": tx.get("change_pct"), "atp": atp.get("change_pct")}
-    assert from_rows == expected, f"the window George read does not show {expected}: {findings['rows']}"
+    assert from_rows == expected, f"the window Bob read does not show {expected}: {findings['rows']}"
     assert findings["named_driver"] == expected, (
         f"rows say {expected}, prose names {findings['named_driver']!r}: {turn.answer}"
     )
@@ -190,7 +190,7 @@ def test_atp_clearly_stronger(monkeypatch):
 @pytest.mark.xfail(
     strict=False,
     reason=(
-        "OPEN FINDING 2026-09-08: George reads the mixed case correctly — names no "
+        "OPEN FINDING 2026-09-08: Bob reads the mixed case correctly — names no "
         "single driver — but in 2 of 3 live runs he SUBTRACTED the two percentages "
         "(-8.0 and -8.3) to write '0.3 points apart', a derivation in prose that rule "
         "16 forbids and the numeral check catches. A prompt line against it did not "
@@ -422,7 +422,7 @@ def test_stops_when_cause_cannot_be_established(monkeypatch):
 # The window is pinned and the category is the one the surveyed week ranks
 # first, so the reads are stable. What is asserted is the DEPTH — the second
 # read, and where it went. Whether the answer carries a view is RECORDED and
-# not gated, for the reason v2 gives for every style row: what George chooses
+# not gated, for the reason v2 gives for every style row: what Bob chooses
 # to say flaps run to run, and a single draw of it is noise.
 # ---------------------------------------------------------------------------
 

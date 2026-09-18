@@ -3,7 +3,7 @@ import axios, { type AxiosAdapter, type InternalAxiosRequestConfig } from 'axios
 import { authenticatedFetch, createAuthenticatedClient, installAuthInterceptors } from './httpAuth';
 import { useAuthStore } from '../stores/authStore';
 
-const user = { id: 'a', username: 'a', role: 'admin', allowed_pages: ['george'] };
+const user = { id: 'a', username: 'a', role: 'admin', allowed_pages: ['bob'] };
 const login = (token = 'test-a') => useAuthStore.getState().setSession(token, { ...user, id: token });
 beforeEach(() => login());
 afterEach(() => { vi.unstubAllGlobals(); useAuthStore.getState().logout(); });
@@ -17,8 +17,8 @@ describe('shared authenticated transports', () => {
       expect(config.params).toEqual({ store: ['a', 'b'] });
       return { config, status: 200, statusText: 'OK', headers: {}, data: [] };
     };
-    await axios.get('/api/v1/george/pins', { adapter, params: { store: ['a', 'b'] } });
-    await createAuthenticatedClient({ baseURL: '/api/v1', adapter }).get('/george/pins', { params: { store: ['a', 'b'] } });
+    await axios.get('/api/v1/bob/pins', { adapter, params: { store: ['a', 'b'] } });
+    await createAuthenticatedClient({ baseURL: '/api/v1', adapter }).get('/bob/pins', { params: { store: ['a', 'b'] } });
   });
 
   it('does not send the session token to another origin', async () => {
@@ -45,14 +45,14 @@ describe('shared authenticated transports', () => {
 
   it.each([401, 403])('handles fetch %s without redirecting', async (status) => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status })));
-    await authenticatedFetch('/api/v1/george/river');
+    await authenticatedFetch('/api/v1/bob/river');
     expect(useAuthStore.getState().token).toBe(status === 401 ? null : 'test-a');
   });
 
   it.each([200, 401])('rejects a late fetch %s from a previous session', async (status) => {
     let finish!: (response: Response) => void;
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => { finish = resolve; })));
-    const pending = authenticatedFetch('/api/v1/george/river');
+    const pending = authenticatedFetch('/api/v1/bob/river');
     login('test-b');
     finish(new Response('{}', { status }));
     await expect(pending).rejects.toThrow('Session changed');
@@ -71,7 +71,7 @@ describe('shared authenticated transports', () => {
       };
       started();
     }) });
-    const pending = client.get('/george/river');
+    const pending = client.get('/bob/river');
     await ready;
     login('test-b');
     finish();
@@ -83,7 +83,7 @@ describe('shared authenticated transports', () => {
     const client = createAuthenticatedClient({ baseURL: '/api/v1', adapter: async (config) => {
       throw new axios.AxiosError('HTTP error', undefined, config, undefined, { config, status, statusText: '', headers: {}, data: '' });
     } });
-    await expect(client.get('/george/river')).rejects.toThrow('HTTP error');
+    await expect(client.get('/bob/river')).rejects.toThrow('HTTP error');
     expect(useAuthStore.getState().token).toBe(status === 401 ? null : 'test-a');
   });
 });

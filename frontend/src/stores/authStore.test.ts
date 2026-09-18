@@ -2,7 +2,7 @@ import { afterEach, expect, it } from 'vitest';
 import { queryClient } from '../services/queryClient';
 import { useAuthStore } from './authStore';
 
-const user = { id: 'a', username: 'a', role: 'admin', allowed_pages: ['george'] };
+const user = { id: 'a', username: 'a', role: 'admin', allowed_pages: ['bob'] };
 afterEach(() => useAuthStore.getState().logout());
 
 it('clears private queries and mutations on logout and direct account switching', () => {

@@ -6,7 +6,7 @@ them into the post list the UI renders — the same discipline chat_history.py
 follows, and for the same reason. The shaping is testable without a connection,
 and the route stays transport.
 
-WHAT A POST CARRIES, AND WHY IT IS NOT NEGOTIABLE PER KIND. Every George post
+WHAT A POST CARRIES, AND WHY IT IS NOT NEGOTIABLE PER KIND. Every Bob post
 carries `receipts` and `notices`, because UI rules 3, 4 and 6 apply to all of
 them without exception (CLAUDE.md vocabulary, "Post"). A card that cannot show
 a caveat is the wrong shape for the post, not a reason to drop the caveat — so
@@ -20,7 +20,7 @@ should not have. What it DOES do is tell the client which of the two reasons a
 post is visible for, so the UI can mark a private post as unshared.
 
 OWNER IS NOT AUTHOR, and the distinction is load-bearing. `author_user` is who
-WROTE a post and is NULL for George's, because George has no account.
+WROTE a post and is NULL for Bob's, because Bob has no account.
 `owner_user` is WHOSE IT IS while private — who may see it and who may share
 it. For a question they are the same person; for the answer to that question
 they are not. Filtering on the author made every private answer match neither
@@ -58,7 +58,7 @@ def build_post(row: Mapping[str, Any], viewer: str) -> dict[str, Any]:
             the UI offers a share action, and nothing else. It is never used to
             filter: that has already happened in SQL, on owner_user.
     """
-    author = row.get("author") or "george"
+    author = row.get("author") or "bob"
     author_user = row.get("author_user")
     owner_user = row.get("owner_user")
     return {
@@ -70,7 +70,7 @@ def build_post(row: Mapping[str, Any], viewer: str) -> dict[str, Any]:
         "author_user": author_user,
         "visibility": row.get("visibility") or "private",
         "owner_user": owner_user,
-        # OWNERSHIP, not authorship. George writes the answer to your question;
+        # OWNERSHIP, not authorship. Bob writes the answer to your question;
         # it is still yours to see and yours to share, and he has no account to
         # own anything with. Filtering on the author instead made every private
         # answer invisible to everyone (alembic p0q1r2s3t4u5).

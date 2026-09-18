@@ -2,7 +2,7 @@
 Reads asked as one call (P2S.10, 2026-09-18): get_change and get_stock_health.
 
 THIS FILE READS NOTHING AND COMPUTES NO FIGURE. Each function below turns one
-call George makes into the reads metrics.yaml `one_call_reads` lists — the
+call Bob makes into the reads metrics.yaml `one_call_reads` lists — the
 same tools, with the call's window and shop filled in — and the loop runs
 those reads as ordinary calls: each its own seq, frames, board object,
 receipts and pin (agent/loop._expand_sets). It is the metric set's
@@ -10,7 +10,7 @@ arrangement from P2S.9(b), widened from one tool to several.
 
 WHY IT IS NOT A COMPOSITE LIKE get_object. get_object returns SECTIONS, and a
 section cannot be drawn (compose refuses it, composite_tools.NOT_COMPOSABLE_
-READS) — so after opening a shop George re-ran the reads he wanted to show,
+READS) — so after opening a shop Bob re-ran the reads he wanted to show,
 and paid a round for it. Here every read is drawable the moment it lands.
 
 WHAT IT MAY NOT DO, and does not. No read consumes another's rows (the shelf

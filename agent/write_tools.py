@@ -1,5 +1,5 @@
 """
-George's write surface: pin_answer, save_workflow, create_page and edit_page.
+Bob's write surface: pin_answer, save_workflow, create_page and edit_page.
 
 WHY THIS FILE IS NOT IN tools/
 tools/ is the READ surface: ten functions that connect as george_ro and return
@@ -10,7 +10,7 @@ contain a pin, and would let the pin RUNNER write. Keeping the write surface in
 a separate registry closes both by construction rather than by a name check.
 
 HOW THE WRITE HAPPENS — READ THIS BEFORE ADDING A SECOND WRITE TOOL
-This module opens no connection and holds no credential. It cannot: George's two
+This module opens no connection and holds no credential. It cannot: Bob's two
 database identities are george_ro (read-only, SELECT on business tables) and
 george_log (INSERT on george.* with NO SELECT, so it could not read a pin count
 or a page list even if it were granted the table). Neither can create a pin, and
@@ -18,7 +18,7 @@ neither should gain the privilege — a role that can read every transaction and
 also write is exactly the boundary the split exists to keep.
 
 So the loop is handed a WRITER by whoever runs it. The web process constructs it
-in backend/app/api/v1/routes/george.py, closing over the AUTHENTICATED user and
+in backend/app/api/v1/routes/bob.py, closing over the AUTHENTICATED user and
 the application's own session, and the write runs on the application role — the
 same role, through the same service function, that POST /pins uses.
 
@@ -29,7 +29,7 @@ Three properties follow, and the next write tool should preserve all three:
     the backend side, and nothing the model emits can influence it.
   - agent/ never imports backend/. The dependency runs one way only.
 
-PROVENANCE: George may only pin calls he actually ran, successfully, in THIS
+PROVENANCE: Bob may only pin calls he actually ran, successfully, in THIS
 conversation. That single rule is what makes "pin that but daily" safe — the
 adjusted call is not in the executed set until it has been run, so the loop
 forces the re-run to happen (and to stream to the user) before the pin can
@@ -161,7 +161,7 @@ class WorkflowWriter(Protocol):
     form — parameters substituted for their defaults — and the code that does
     that substitution is the same code that runs workflows. Duplicating it here
     would give the binding two implementations, and the one that drifted would
-    be the one deciding what George is allowed to save.
+    be the one deciding what Bob is allowed to save.
 
     Both must raise WorkflowRefused — with a message a person could act on — for
     every expected failure. Anything else is a fault.
@@ -212,14 +212,14 @@ class PageReader(Protocol):
 
 
 class MemoryReader(Protocol):
-    """Reads what George currently believes. Bound to the caller in the web process."""
+    """Reads what Bob currently believes. Bound to the caller in the web process."""
 
     async def __call__(self) -> dict: ...
 
 
 class DecisionsReader(Protocol):
     """
-    Reads what people did with what George raised — kept, set aside, opened,
+    Reads what people did with what Bob raised — kept, set aside, opened,
     asked about, left — for the agenda to learn from. Bound in the web process
     or the standing runner; the model never sees the argument it fills
     (agent/loop.py INJECTED_READS).
@@ -286,7 +286,7 @@ class WatchWriter(Protocol):
 
 class BeliefStore(Protocol):
     """
-    Where George's understanding is kept. Implemented in the web process, bound
+    Where Bob's understanding is kept. Implemented in the web process, bound
     to the authenticated user for provenance only — beliefs are about the
     business and are shared, so there is no owner scope on the read.
 
@@ -382,14 +382,14 @@ class WriteContext:
     # The caller's pages, writable through the application role. Bound to the
     # owner (and to the page in scope, for "this page") in the web process.
     page_writer: Optional[PageWriter] = None
-    # Where George's understanding is kept. A write, injected like the others;
+    # Where Bob's understanding is kept. A write, injected like the others;
     # what he currently believes is READ before the loop starts and arrives as
     # part of the question, because it shapes the whole turn rather than being
     # fetched during one.
     belief_store: Optional[BeliefStore] = None
     # The two things that are most his and that he cannot otherwise see: his
     # own held views, and what the systems he built have been doing. Both live
-    # in the `george` schema, which george_ro has no access to. Reads, injected
+    # in the `bob` schema, which george_ro has no access to. Reads, injected
     # exactly like the page reader — bound to the authenticated user here, so
     # neither tool has an argument for whose memory or whose systems.
     #
@@ -409,12 +409,12 @@ class WriteContext:
     # the loop hands each value to the reads its declaration names, as a
     # keyword-only argument the model neither sees nor sends (P2S.11).
     settings: Optional[dict] = None
-    # The questions the caller has asked George to keep asking. A write, bound
+    # The questions the caller has asked Bob to keep asking. A write, bound
     # to the owner here like every other one. Deliberately NOT injected into a
     # scheduled ask (app/services/standing_runner.py): a question that can
     # reschedule itself is a thing that gets away from you.
     standing_writer: Optional[StandingQuestionWriter] = None
-    # The conditions the caller has asked George to keep an eye on. A write,
+    # The conditions the caller has asked Bob to keep an eye on. A write,
     # bound to the owner here. Withheld from a scheduled ask for the same
     # reason the standing writer is: nothing that runs unattended may change
     # what else runs unattended.
@@ -472,7 +472,7 @@ def _normalize_calls(tool_calls: Any) -> list[dict]:
 def _shaped(calls: list[dict], ctx: "WriteContext", coerced: list[str]) -> list[dict]:
     """
     EACH PINNED CALL KEEPS THE SHAPE IT HAS ON THE BOARD (P2S.3(g)): a pie
-    kept is a pie on its page. A shape George names himself is held to the
+    kept is a pie on its page. A shape Bob names himself is held to the
     vocabulary's rule — pie, treemap and gauge only when the person asked, in
     this question or by the object already being drawn that way — and one
     that fails it is left off, and said.
@@ -1116,7 +1116,7 @@ async def record_belief(beliefs: list[dict], *, ctx: WriteContext) -> dict:
     """
     if ctx.belief_store is None:
         raise PinRefused(
-            "George cannot keep beliefs in this session — it requires a signed-in "
+            "Bob cannot keep beliefs in this session — it requires a signed-in "
             "user. Say what you think in the answer; it will not be remembered."
         )
     from tools._common import load_defs   # local: agent/ imports tools/ lazily here
@@ -1177,7 +1177,7 @@ async def _record_beliefs(beliefs, *, defs, is_executed, store,
             "rejected": rejected,
             "stances": list(belief_rules.stances_for(defs)),
             "note": (
-                "What George now believes about these things, kept until a later "
+                "What Bob now believes about these things, kept until a later "
                 "read changes it. Nothing was read. A rejected belief is not held "
                 "and the answer must not describe it as though it were."
             ),
@@ -1191,7 +1191,7 @@ async def _record_beliefs(beliefs, *, defs, is_executed, store,
 # without. See build_tool_schemas.
 STANDING_TOOL = "set_standing_question"
 
-# Everything a person can say about a question they have George keep asking.
+# Everything a person can say about a question they have Bob keep asking.
 # Each is one sentence in conversation and one line in the service; there is
 # no field on any of them for a threshold, a metric or a window.
 STANDING_ACTIONS = (
@@ -1276,7 +1276,7 @@ async def set_standing_question(
     """
     if ctx.standing_writer is None:
         raise StandingRefused(
-            "George cannot keep standing questions in this session. Answer the "
+            "Bob cannot keep standing questions in this session. Answer the "
             "question now; it will not be asked again on its own."
         )
     if action not in STANDING_ACTIONS:
@@ -1395,7 +1395,7 @@ async def set_watch(
     """
     if ctx.watch_writer is None:
         raise WatchRefused(
-            "George cannot keep watches in this session. Say what would need "
+            "Bob cannot keep watches in this session. Say what would need "
             "to be true and answer it now; nothing will be checked later."
         )
     if action not in WATCH_ACTIONS:

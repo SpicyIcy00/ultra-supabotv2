@@ -1,5 +1,5 @@
 """
-George — the morning brief.
+Bob — the morning brief.
 
 One public function: get_brief().
 
@@ -438,7 +438,7 @@ def get_brief(as_of: Optional[date | str] = None) -> dict:
     # section could not run" would otherwise have to parse the notice's prose
     # for the difference — and a consumer that gets that wrong reports a
     # blind morning as a quiet one, which is the failure this whole block
-    # exists to prevent. See app/services/george_greeting.py.
+    # exists to prevent. See app/services/bob_greeting.py.
     for name, s in sections.items():
         blind = (
             (name == "stock_crossed_out" and not new_day)
@@ -525,7 +525,7 @@ def get_brief(as_of: Optional[date | str] = None) -> dict:
 # Which one item speaks first
 #
 # The brief is a list and stays one. This ranks the SAME rows for the single
-# place that can show exactly one of them — George's opening line on a new
+# place that can show exactly one of them — Bob's opening line on a new
 # chat, which has a sentence and not a screen.
 #
 # Pure: no database, no clock, no I/O beyond reading the definitions. The

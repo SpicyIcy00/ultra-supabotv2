@@ -291,8 +291,8 @@ def test_production_launcher_migrates_before_start(monkeypatch):
 
 
 @pytest.mark.parametrize('method,path,allowed', [
-    ('POST', '/api/v1/george/pins', True), ('POST', '/api/v1/george/pages', True),
-    ('PATCH', '/api/v1/george/pages/p', True), ('POST', '/api/v1/auth/login', True),
+    ('POST', '/api/v1/bob/pins', True), ('POST', '/api/v1/bob/pages', True),
+    ('PATCH', '/api/v1/bob/pages/p', True), ('POST', '/api/v1/auth/login', True),
     ('POST', '/api/v1/packing', False), ('POST', '/api/v1/brief/send', False),
     ('POST', '/api/v1/sheets', False), ('POST', '/api/v1/storehub-imports', False),
     ('POST', '/api/v1/barcodes/push', False), ('GET', '/api/v1/analytics', True),
@@ -320,7 +320,7 @@ def test_disabled_route_writer_is_absent_from_model_schema(monkeypatch):
     from agent.write_tools import WriteContext
     # Evaluate the actual writer expression passed by the route, then use the
     # loop's real capability registry and schema builder (no Anthropic client).
-    tree = ast.parse((ROOT / 'backend/app/api/v1/routes/george.py').read_text(encoding='utf-8'))
+    tree = ast.parse((ROOT / 'backend/app/api/v1/routes/bob.py').read_text(encoding='utf-8'))
     expressions = [kw.value for node in ast.walk(tree) if isinstance(node, ast.Call)
                    for kw in node.keywords if kw.arg == 'workflow_writer'
                    and isinstance(kw.value, ast.IfExp)]
@@ -337,5 +337,5 @@ def test_disabled_route_writer_is_absent_from_model_schema(monkeypatch):
 
 
 def test_workflow_gate_attached_to_real_router():
-    from app.api.v1.routes.george_workflows import router
+    from app.api.v1.routes.bob_workflows import router
     assert any(d.dependency is require_workflow_writes for d in router.dependencies)

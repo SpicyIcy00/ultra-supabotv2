@@ -53,7 +53,7 @@ describe('his thoughts, on the chart they cite', () => {
   });
 
   it('draws the thought on the first figure of its read', () => {
-    const turn = { role: 'george', text: TEXT, thinking: '', at: '2026-09-17T06:20:00Z', toolCalls: CALLS } as unknown as AnswerTurn;
+    const turn = { role: 'bob', text: TEXT, thinking: '', at: '2026-09-17T06:20:00Z', toolCalls: CALLS } as unknown as AnswerTurn;
     const board = [
       { key: 'sales', kind: 'dumbbell', seq: 0, tool: 'get_sales', weight: 'supporting', turn: 0, touched: 0 },
       { key: 'basket', kind: 'dumbbell', seq: 1, tool: 'get_sales', weight: 'supporting', turn: 0, touched: 0 },
@@ -94,9 +94,9 @@ describe('the headline apart from the rest', () => {
   });
 });
 
-describe('a thought George writes for a chart (2026-09-17)', () => {
+describe('a thought Bob writes for a chart (2026-09-17)', () => {
   it('draws it beside the mark, in his words', () => {
-    const turn = { role: 'george', text: 'OPUS fell.', thinking: '', at: '2026-09-17T06:20:00Z', toolCalls: CALLS } as unknown as AnswerTurn;
+    const turn = { role: 'bob', text: 'OPUS fell.', thinking: '', at: '2026-09-17T06:20:00Z', toolCalls: CALLS } as unknown as AnswerTurn;
     const board = [{
       key: 'sales', kind: 'dumbbell', seq: 0, tool: 'get_sales', weight: 'lead', turn: 0, touched: 0,
       claim: 'OPUS gave up the estate',

@@ -49,7 +49,7 @@ def _walk_numbers(obj: Any, out: set[float]) -> None:
     # A DECIMAL IS A NUMBER, AND UNTIL 2026-09-14 THIS COULD NOT SEE ONE.
     # Postgres `numeric` arrives as Decimal through psycopg, so every quantity
     # get_purchase_plan returns — `suggested_order_qty`, `units_per_day` — was
-    # invisible to every check in this module: a figure George read off a row
+    # invisible to every check in this module: a figure Bob read off a row
     # and quoted exactly was reported as a figure no tool returned. P1.f's run
     # found it, on `order`: "729 units", where the row says
     # suggested_order_qty 729. The loop's own frames are json-safe by then
@@ -248,7 +248,7 @@ def misstated_figures(answer: str, results: Iterable[dict],
     and the loop then asks for a rewrite. So on 2026-09-13 the two guards were
     complementary in the wrong direction: writing 801 tripped the gate and was
     corrected, and writing 800 tripped nothing and shipped. Imprecision was the
-    way PAST the guard, and the further off George was the safer he was from it.
+    way PAST the guard, and the further off Bob was the safer he was from it.
 
     Same direction as the rest of this module — a figure that IS on the board,
     said again — so it stays inside CLAUDE.md rule 9's line: nothing here asks
@@ -296,7 +296,7 @@ def enumerated_remainders(answer: str, results: Iterable[dict],
                           ) -> list[tuple[str, float, str]]:
     """
     (sentence, written, phrase) for every count in the prose that states what
-    is LEFT once George decided how many members to name.
+    is LEFT once Bob decided how many members to name.
 
     WHY THIS EXISTS, and it is the third way a figure with no receipt reaches
     the screen. Found by the twelve on 2026-09-13:

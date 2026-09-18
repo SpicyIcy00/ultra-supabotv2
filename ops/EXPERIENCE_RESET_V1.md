@@ -1,6 +1,6 @@
-# George Experience Reset — Phases 1 and 2
+# Bob Experience Reset — Phases 1 and 2
 
-Recorded 2026-09-09 on `integration/george-v1`. The decision record for the
+Recorded 2026-09-09 on `integration/bob-v1`. The decision record for the
 milestone: what the dogfood showed, what was built, what was deleted, what
 enforces each claim, and how a person judges it.
 
@@ -63,7 +63,7 @@ tool results ({rows, meta})        persisted posts (charted, calls, findings)
 - **`fieldLayout.ts`** — geometry. Area ∝ value (radius by square root), zero
   always in a change domain, a single axis spread down the plot in the tool's
   row order and labelled on x alone.
-- **`replay.ts` + `POST /george/replay`** — the same calls, one scope argument
+- **`replay.ts` + `POST /bob/replay`** — the same calls, one scope argument
   moved, through the validation a pin passes and the runner a tile uses. Roles
   carry across by position, so the field recomposes with the same primary and
   drivers.
@@ -71,14 +71,14 @@ tool results ({rows, meta})        persisted posts (charted, calls, findings)
   selection reaches the model as NAMES on the question, beside the work
   sentence, never in the cached prefix and never as a figure. Labels are
   neutralised (one line, no brackets) because they are client-supplied text.
-- **`GET /george/definitions/desk`** — the business, the presets and which
+- **`GET /bob/definitions/desk`** — the business, the presets and which
   include today, the window argument per tool, the resting reads, the
   selection bounds, the locations. Served so the client keeps no copy.
 
 ## 3. The decisions, and why each went the way it did
 
 **The desk is not a word the product uses.** It is the internal name of the
-workspace model. The product is George; the screen is the business.
+workspace model. The product is Bob; the screen is the business.
 
 **Ask and Today were deleted, not kept.** They were the metaphor the reset
 exists to remove. Their behaviour is absorbed: Ask is the line at the foot of
@@ -100,7 +100,7 @@ the origin reads as "no change", the opposite of what happened to a product
 that vanished.
 
 **The luminous language is presentation and encodes nothing.** The core of
-each ramp is `george-data-up` / `george-data-down` exactly — the pair
+each ramp is `bob-data-up` / `bob-data-down` exactly — the pair
 measured for protan and deutan separation on this cream — so the dense centre
 the eye fixes and every printed mark keep the validated contrast. The cloud is
 the same hue dissolving outward. Removing the glow removes no information;
@@ -131,7 +131,7 @@ default, and where it participates. The first declarations arrive with the
 purchasing definitions, which this milestone deliberately does not build.
 
 **System is the seventh word.** The user-facing object for something built
-with George; workflow stays the name of the executable rule inside it. Nothing
+with Bob; workflow stays the name of the executable rule inside it. Nothing
 was built on it here — it is recorded so the build grammar cannot arrive
 calling the same object a job or an automation.
 
@@ -171,7 +171,7 @@ free-form canvas; a notification centre; multiple desks; any new AI framework.
 ## 6. Known limitations
 
 - **The attention stream has no reader.** Today read it; the desk shows what
-  George initiated as the morning sentence, the counts and History. A brief's
+  Bob initiated as the morning sentence, the counts and History. A brief's
   follow-up chips are not on the desk. If the dogfood wants them back they
   belong on the resting workspace, not as a feed.
 - **The trail's step view is presentational.** Stepping back shows the earlier
@@ -180,7 +180,7 @@ free-form canvas; a notification centre; multiple desks; any new AI framework.
   than it looks.
 - **The inspector is desktop only** (`xl` and up) and is not yet a sheet on a
   phone. Receipts under the stage carry the same provenance at every width.
-- **A replayed window is not re-read by George.** The reading on screen
+- **A replayed window is not re-read by Bob.** The reading on screen
   belongs to the earlier window until he is asked; the desk does not yet say
   so in the trail.
 - **`figures` is the fallback stage** for anything the grammar cannot yet
@@ -191,10 +191,10 @@ free-form canvas; a notification centre; multiple desks; any new AI framework.
 
 ## 6b. The refinement (2026-09-09, after the human dogfood)
 
-The workspace behaved like a workspace and did not feel like George. Eight
+The workspace behaved like a workspace and did not feel like Bob. Eight
 things were wrong, and each has a decision.
 
-**1. The explanation was detached from the visual.** George's reading sat in
+**1. The explanation was detached from the visual.** Bob's reading sat in
 the left rail; the figures it read sat in the middle. Two failures at once —
 the explanation was in the one place a reader's eye does not go, and the
 persistent navigation a workspace needs had nowhere to live. The left column
@@ -204,14 +204,14 @@ all four drifted there once.
 
 **2. Words and visual did not explain each other.** The workspace now composes
 ONE answer in one reading order: the caveat, the figure, the reading, the
-drivers, the visual, what the data singles out, George's next move, the other
+drivers, the visual, what the data singles out, Bob's next move, the other
 moves. The reading sits BETWEEN the figure and the drivers it is about.
 
 **3. The reading was a paragraph.** It is one sentence and carries no numeral
 — "transactions rose while average transaction value fell, and transactions
 moved more; it carried the rise". That is a characterisation of rows, the same
 warrant `attentionLine` has had since V3, and it is why the composer may author
-it at all. George's own prose is drawn beneath, lead sentence first, the rest
+it at all. Bob's own prose is drawn beneath, lead sentence first, the rest
 behind a disclosure.
 
 **4. A spatial field was drawn whether or not position said anything.** The
@@ -261,7 +261,7 @@ step that is not stored is the one being made now; it is marked `current` and
 becomes server truth the moment anything is asked. No transcript, no
 localStorage, no client snapshot.
 
-**8. George waited to be asked.** He now explains, recommends and asks.
+**8. Bob waited to be asked.** He now explains, recommends and asks.
 Explain and recommend are DERIVED from trusted rows and the definitions'
 ladder: a recommendation is produced only by one of four grounds
 (`drivers_diverge`, `against_the_majority`, `ranked_first`,
@@ -280,7 +280,7 @@ therefore never offer the one move the ladder is built around. The desk
 definitions endpoint now serves `breakdown_dimensions`, computed from
 `metrics.yaml`, and the client decides nothing.
 
-### What still is not George
+### What still is not Bob
 
 - The `figures` fallback stage still draws through the old result primitives
   for anything the grammar cannot place — a time series, a mixed result.
@@ -289,7 +289,7 @@ definitions endpoint now serves `breakdown_dimensions`, computed from
 - ASK is prompt behaviour with no mechanical check, exactly as recorded.
 - The trail's step view is presentational: it shows earlier steps of the same
   surface, it does not re-derive the plan as it stood then.
-- A replayed window is not re-read by George, and the desk does not yet say
+- A replayed window is not re-read by Bob, and the desk does not yet say
   that the reading belongs to the earlier window.
 
 ## 6c. UNDERSTAND (2026-09-09, after the second human dogfood)
@@ -307,8 +307,8 @@ wrong rather than what was changed.
 | repeated backend 500s | two raw statements in `get_chat` still selected `george.pins.page`, dropped by Page Workshop V1 — 11 of 11 calls failed |
 | submitted messages not acknowledged | a live turn with no evidence composed to `statement`, which drew nothing, and the resting figures were dropped with it |
 | broad questions return too little | the prompt's "SMALLEST SURFACE" rule governed every message, including "how are we doing?" |
-| George waits to be told where to look | the same rule, plus no vocabulary for a message that is not a question |
-| I cannot watch George work | the desk imported no activity view; the loop's per-call frames reached the client and were discarded |
+| Bob waits to be told where to look | the same rule, plus no vocabulary for a message that is not a question |
+| I cannot watch Bob work | the desk imported no activity view; the loop's per-call frames reached the client and were discarded |
 | one chart dominates the answer | `attentionWords` joined a plural, per-subject, tool-derived list into one sentence under one drawing |
 | chart labels overlap | labels were placed at a fixed offset with only a left/right flip |
 | sidebar tabs map incorrectly | two hand-typed vocabularies for the same four destinations |
@@ -342,14 +342,14 @@ wrong rather than what was changed.
    deconfliction with a ranked fallback. The legacy `figures` path is named
    as a fallback. The History drawer reads the river only when opened.
 
-### What is still not George
+### What is still not Bob
 
 - ASK is prompt behaviour with no mechanical check, as recorded in V1.
 - The `figures` fallback still draws through the older primitives; it is now
   labelled rather than passed off as the workspace's own drawing.
 - Inbox, Pages and Workflows keep the old chrome, so leaving the desk still
   feels like leaving — though it no longer renames everything on the way.
-- A replayed window is not re-read by George; the ribbon says so, and the
+- A replayed window is not re-read by Bob; the ribbon says so, and the
   reading still belongs to the earlier window until he is asked.
 - The scope policy is prompt behaviour. It is held by contract tests and by
   the definitions, and its BEHAVIOUR needs the opt-in live evals to confirm.
@@ -392,5 +392,5 @@ be a guess at somebody else's code.
 
 See the dogfood script in the milestone report. The environment is
 [LOCAL_DOGFOOD.md](LOCAL_DOGFOOD.md), unchanged: local writable PostgreSQL for
-everything George remembers, the guarded `george_ro` pooler for real Aji
+everything Bob remembers, the guarded `george_ro` pooler for real Aji
 figures, and the model key omitted unless `--allow-model` is passed.

@@ -1,5 +1,5 @@
 """
-George — inventory tool.
+Bob — inventory tool.
 
 One public function: get_stock().
 
@@ -458,7 +458,7 @@ def get_stock(
         "row_limit": top_n or _MAX_ROWS,
         # THE WHOLE OF A GROUPED COUNT, AS A READ (P2S.7). Grouped by state,
         # the rows are 3,005 out and 536 in stock, and "3,005 of Greenhills'
-        # 3,541" is the sentence a person says — so George added them up
+        # 3,541" is the sentence a person says — so Bob added them up
         # himself (verification/p2s7-gate.json, a figure no tool returned). A
         # group total is a read, never a sum of rows on screen: the tool
         # states it, over the complete set only.

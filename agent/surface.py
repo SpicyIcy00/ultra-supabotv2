@@ -1,5 +1,5 @@
 """
-The work in front of the user, as George is told it — and what his prose may
+The work in front of the user, as Bob is told it — and what his prose may
 not say about it.
 
 WHY THIS EXISTS. "Why?", "compare that with Rockwell", "products" have no
@@ -231,7 +231,7 @@ def _estate_words(part_key: Any, defs: Mapping[str, Any]) -> Optional[str]:
     """
     WHICH BUSINESS THE QUESTION IS ABOUT (P2.g, 2026-09-15).
 
-    The owner's feature 23 — "George works across all my businesses and
+    The owner's feature 23 — "Bob works across all my businesses and
     understands which business/store/system I'm referring to". Both businesses
     have been readable since long before this card; what a person had no way to
     say was WHICH ONE "how are we doing" meant, so it always meant the shops.
@@ -249,7 +249,7 @@ def _estate_words(part_key: Any, defs: Mapping[str, Any]) -> Optional[str]:
     WHAT IT DOES NOT DO. It rewrites no call and filters no row. Scoping to the
     warehouse and asking for sales is refused by the sales tool in its own
     words, because the warehouse is excluded there and always has been
-    (`filters.excluded_from_sales`); this line is what lets George read the
+    (`filters.excluded_from_sales`); this line is what lets Bob read the
     refusal as the answer rather than as a surprise, and reach for stock
     instead. The enforcement stays where it already was.
     """
@@ -315,7 +315,7 @@ def _reference_words(refs: list[Any], defs: Mapping[str, Any]) -> Optional[str]:
     A mention resolves to one of five kinds. Three are subjects and travel in
     the selection; a page binds `page_scope`, which injects a reader. A rule
     binds neither, because there is no request field for a workflow — so it is
-    said here, by name and by id, and what to do about it is George's call and
+    said here, by name and by id, and what to do about it is Bob's call and
     his tool. A kind the definitions do not declare as `named_on_question` is
     dropped rather than repeated: this is client-supplied text on the same
     channel as the question.
@@ -348,7 +348,7 @@ def _drawn_words(drawn: Mapping[str, Any], defs: Mapping[str, Any]) -> Optional[
     What is on screen, in words: the representation, the subjects and the
     metric. Every value is checked against the definitions' own vocabularies
     before it is repeated, so a client cannot put a sentence of its own into
-    George's context by naming a representation that does not exist.
+    Bob's context by naming a representation that does not exist.
     """
     kinds = [str(k) for k in req(defs, "surface.desk.representation.kinds")]
     dims = [str(d) for d in req(defs, "surface.desk.selection.dimensions")]
@@ -424,14 +424,14 @@ def board_sentence(board: Optional[Any], defs: Mapping[str, Any]) -> Optional[st
 
     "Why?" "Products." "These two." "Last month." — the shortest and most
     natural things a person says — were resolved against the TRANSCRIPT until
-    2026-09-10, because that was all George could see. That worked while the
+    2026-09-10, because that was all Bob could see. That worked while the
     screen was the last answer and stopped working the moment the board could
     hold six things at once: "why?" meant the last thing said, not the thing
     being looked at.
 
     So the board travels with the question, as names and closed vocabulary:
 
-      key       the object's own key, which George chose when he composed it
+      key       the object's own key, which Bob chose when he composed it
       kind      one of composition.widgets, or composition.composed_kind
                 for a shape he composed himself
       weight    one of composition.weights — which of them is LEADING
@@ -440,7 +440,7 @@ def board_sentence(board: Optional[Any], defs: Mapping[str, Any]) -> Optional[st
       window    the window that read was taken over
 
     NOTHING HERE IS A FIGURE. Not a value, not a change, not a count of rows.
-    George is told what he is looking at and what each object is FOR; every
+    Bob is told what he is looking at and what each object is FOR; every
     number he says still comes from a tool result he can point at.
 
     The key matters more than it looks: naming it is what lets a follow-up
@@ -454,12 +454,12 @@ def board_sentence(board: Optional[Any], defs: Mapping[str, Any]) -> Optional[st
     voc = req(defs, "composition")
     # A COMPOSED SHAPE IS ON THE BOARD TOO. Its kind is `composed_kind`, which
     # is not a widget — and until 2026-09-14 this line skipped it, so a board
-    # whose LEADING object was a shape George composed said nothing about the
+    # whose LEADING object was a shape Bob composed said nothing about the
     # thing being looked at and "why?" landed on a quiet table beside it. The
     # kind still comes from the definitions, so a made-up one is still ignored.
     # AND A KIND THE BOARD STILL CARRIES FROM BEFORE P1.f. The vocabulary
     # narrowed to the six marks; a board composed before that still holds
-    # `hero` and `comparison`, and a board George cannot describe is a board
+    # `hero` and `comparison`, and a board Bob cannot describe is a board
     # "why?" lands on the wrong object of.
     kinds = (set(req(voc, "widgets")) | {str(req(voc, "composed_kind"))}
              | set(voc.get("retired_kinds") or []))
@@ -505,7 +505,7 @@ def desk_sentence(desk: Optional[Mapping[str, Any]], defs: Mapping[str, Any]) ->
 
     WHAT IT SAYS AND WHY. Until 2026-09-09 this returned None unless something
     was selected or a window had been moved, so a question asked from a full
-    workspace with nothing clicked told George nothing about what was on
+    workspace with nothing clicked told Bob nothing about what was on
     screen. Short steers refer to the WORKSPACE — "show me", "is that
     actually bad?", "what would you do?" — and they had no referent at all.
 
@@ -519,7 +519,7 @@ def desk_sentence(desk: Optional[Mapping[str, Any]], defs: Mapping[str, Any]) ->
       recommendation  the move already offered, by its ground
 
     NOTHING HERE IS A FIGURE, and every value is checked against the
-    definitions before it is repeated. George is told what he is looking at;
+    definitions before it is repeated. Bob is told what he is looking at;
     he still reads every number from a tool result.
     """
     if not desk:
@@ -643,7 +643,7 @@ def transaction_synonyms(answer: str, defs: Mapping[str, Any]) -> list[str]:
     is a word, not a translation.
 
     A USE THAT DENIES THE TRANSLATION IS NOT A LEAK. Asked for foot traffic,
-    George answered "I can't see foot traffic anywhere — nobody counts people
+    Bob answered "I can't see foot traffic anywhere — nobody counts people
     through the door, only tills… that's sales made, not people who walked
     in", which is the trust rules working exactly as written — and he was
     recorded as having leaked "people" and "traffic" for saying so. A check

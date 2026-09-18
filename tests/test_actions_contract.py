@@ -1,10 +1,10 @@
 """
-WHAT GEORGE MAY OFFER TO DO ABOUT A ROW, and what he may not.
+WHAT BOB MAY OFFER TO DO ABOUT A ROW, and what he may not.
 
 NO DATABASE. The vocabulary and the validator (agent/actions.py, P2.d).
 
 The danger an action carries is the same one a block's `claim` carries and one
-more besides. The same one: it is a channel for George's OWN words sitting over
+more besides. The same one: it is a channel for Bob's OWN words sitting over
 figures that have receipts, so a digit in it would be a figure with no source,
 stated above one that has. The extra one: it is a BUTTON, and a button that
 does nothing when it is tapped is worse than no button — so an act is one of
@@ -72,7 +72,7 @@ def test_an_offer_names_an_act_a_read_a_row_and_a_reason(defs):
 def test_an_offer_about_the_answer_names_no_row(defs):
     """
     Not every suggestion is about one shop. One with no target is drawn at the
-    foot beside `next`, and refusing it would push George back into saying it
+    foot beside `next`, and refusing it would push Bob back into saying it
     in the sentence — which is where the old `recommendation` tile lost.
     """
     stood = one({"act": "open", "seq": 1, "reason": "worth a look before the order"}, defs)
@@ -164,7 +164,7 @@ def test_an_act_the_surface_cannot_perform_is_refused(defs):
     """
     Nothing may be offered that the room cannot do when it is tapped. `order`
     is the shape of the thing that would be worst: an act that sounds like it
-    leaves George's hands.
+    leaves Bob's hands.
     """
     said = one({"act": "order", "seq": 1, "target": "OPUS", "reason": "it is running out"}, defs)
     assert "an act is one of" in said

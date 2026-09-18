@@ -6,11 +6,11 @@
  * puts the dashboard first — so a person lands in the BI app.
  *
  * FROM 2026-09-09 TO 2026-09-12 this rendered the room instead, on the reading
- * that George is the environment rather than a destination. The cost was that
+ * that Bob is the environment rather than a destination. The cost was that
  * the rest of Supabot BI — still routed, still allowed — was reachable from
- * nowhere a person stood, because the room's rail links only to George's own
- * screens. George is a page again, at `/george` (the owner's decision: "this
- * is still supabot, just make george a page").
+ * nowhere a person stood, because the room's rail links only to Bob's own
+ * screens. Bob is a page again, at `/bob` (the owner's decision: "this
+ * is still supabot, just make bob a page").
  *
  * No allowed page's path is "/", so this cannot loop.
  */

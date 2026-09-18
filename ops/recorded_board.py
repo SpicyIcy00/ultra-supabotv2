@@ -15,7 +15,7 @@ renders for real. No model, no database, no cost.
 
 WHAT IT CAN AND CANNOT RECOVER, said plainly because it bounds what the test
 proves. An eval report records every read's rows and `meta` whole, so the DATA
-is exactly what was on screen. It does NOT record the blocks George composed —
+is exactly what was on screen. It does NOT record the blocks Bob composed —
 the `compose` calls are in the call list with a row count and nothing else — so
 the blocks here are the LOADED DEFAULT (`agent/default_composition.py`), which
 is the board from the moment the reads land until his composition supersedes
@@ -94,7 +94,7 @@ def main(argv: list[str]) -> int:
     OUT.write_text(json.dumps({
         "from": list(argv[1:]),
         "how": "agent/default_composition.blocks over the recorded reads; "
-               "George's own blocks are not recorded in an eval report",
+               "Bob's own blocks are not recorded in an eval report",
         "runs": runs,
     }, indent=1), encoding="utf-8")
     total = sum(len(r["blocks"]) for r in runs)

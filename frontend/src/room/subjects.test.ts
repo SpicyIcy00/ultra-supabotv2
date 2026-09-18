@@ -2,7 +2,7 @@
  * A SUBJECT IS AN ID (P2.c) — held here, on the resolution and not on wording.
  *
  * The bug this card closes is one line long: the room sent
- * `{id: label, label}`, so "Rockwell" reached George as a word with two
+ * `{id: label, label}`, so "Rockwell" reached Bob as a word with two
  * meanings in this estate. The rows carried `store_id` the whole time, two
  * columns from the name that was sent instead.
  *
@@ -58,7 +58,7 @@ const PRODUCT = {
 
 function turn(seq: number, rows: Record<string, unknown>[]): AnswerTurn {
   return {
-    role: 'george', text: '', thinking: '', notices: [],
+    role: 'bob', text: '', thinking: '', notices: [],
     toolCalls: [{ seq, tool: 'get_sales', arguments: {}, result: { rows, meta: {} } }],
     post: { answer_post_id: 'post-1' },
   } as unknown as AnswerTurn;
@@ -200,7 +200,7 @@ describe('"compare these" is a question, not a replay', () => {
    * So the function is gone and nothing replaced it. What holds the behaviour
    * now is its ABSENCE, in two places — the definitions carry no
    * `selection.comparison`, and the room has no branch for it — so a short
-   * instruction with subjects picked goes to George with them attached, the
+   * instruction with subjects picked goes to Bob with them attached, the
    * way every other short instruction does. These assert the absence, because
    * a shortcut that grew back silently would take the report with it.
    */
@@ -213,7 +213,7 @@ describe('"compare these" is a question, not a replay', () => {
     expect(yaml, 'the comparison replay came back').not.toContain('replays_by_dimension');
   });
 
-  it('is not resolved as a fragment, so it cannot be answered without George', () => {
+  it('is not resolved as a fragment, so it cannot be answered without Bob', () => {
     // `resolveFragment` is the other door a typed word could take. It answers
     // against the tokens on screen, and no token offers a shop any more.
     for (const said of ['compare these', 'compare them', 'these two', 'compare']) {
@@ -222,7 +222,7 @@ describe('"compare these" is a question, not a replay', () => {
   });
 
   it('leaves the subjects to travel as ids on the question', () => {
-    // The half that did work and still does: what reaches George is ids with
+    // The half that did work and still does: what reaches Bob is ids with
     // the labels the rows carried, never a word the model has to guess at.
     const opus: Subject = { dimension: 'store', id: 's-opus', label: 'OPUS', from: 'rows' };
     const rock: Subject = { dimension: 'store', id: 's-rock', label: 'Rockwell', from: 'rows' };

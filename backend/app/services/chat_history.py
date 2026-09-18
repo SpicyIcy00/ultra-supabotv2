@@ -2,8 +2,8 @@
 Rebuild a chat from the conversation log.
 
 PURE. No database, no session: the routes fetch the rows and this module turns
-them into the turn list the George UI already renders — the same shape
-useGeorgeStream builds from a live stream, so a reopened chat and a live one
+them into the turn list the Bob UI already renders — the same shape
+useBobStream builds from a live stream, so a reopened chat and a live one
 are one component.
 
 WHAT A REOPENED CHAT CAN AND CANNOT SHOW. Per turn the log holds the question,
@@ -115,7 +115,7 @@ def build_turns(
     errors_by_conversation: Mapping[str, str],
 ) -> list[dict]:
     """
-    Conversation rows (oldest first) into alternating user / george turns.
+    Conversation rows (oldest first) into alternating user / bob turns.
 
     Args:
         rows: george.conversations rows for one thread, ordered by asked_at.
@@ -170,7 +170,7 @@ def build_turns(
             "cache_creation": int(row.get("cache_creation_tokens") or 0),
         }
         turns.append({
-            "role": "george",
+            "role": "bob",
             "text": row.get("final_answer") or "",
             "thinking": "",
             "at": _iso(row.get("logged_at")) or asked_at,

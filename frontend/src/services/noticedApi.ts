@@ -1,8 +1,8 @@
 /**
- * What George noticed — the posts a watch wrote.
+ * What Bob noticed — the posts a watch wrote.
  *
  * Only `watch` posts. A brief, a workflow run and an approval are also things
- * George initiated and each has its own home; putting them here would make
+ * Bob initiated and each has its own home; putting them here would make
  * this the river under a different name.
  */
 import axios from 'axios';
@@ -13,7 +13,7 @@ export interface NoticedItem {
   thread_id: string;
   /**
    * `watch` — something true about the business changed.
-   * `stuck` — something about GEORGE stopped working: a rule that failed on
+   * `stuck` — something about BOB stopped working: a rule that failed on
    * its schedule, a question that could not be asked, a watch that is no
    * longer watching. That kind matters precisely because it is otherwise
    * invisible: a watch's normal state is silence, so a broken one and a quiet
@@ -32,6 +32,6 @@ export interface NoticedItem {
 }
 
 export async function listNoticed(): Promise<NoticedItem[]> {
-  const { data } = await axios.get<NoticedItem[]>('/api/v1/george/noticed');
+  const { data } = await axios.get<NoticedItem[]>('/api/v1/bob/noticed');
   return data;
 }

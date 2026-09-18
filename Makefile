@@ -39,12 +39,12 @@ test: test-golden
 	@echo "Running frontend tests..."
 	cd frontend && npm run test
 
-# George's golden tests: pytest straight against the tools, no agent involved.
-# Read-only. Needs GEORGE_DATABASE_URL pointing at George's own role
+# Bob's golden tests: pytest straight against the tools, no agent involved.
+# Read-only. Needs GEORGE_DATABASE_URL pointing at Bob's own role
 # (tools/george_ro_role.sql); skips with a clear reason when it is unset, so
 # this is safe to leave wired into `make test` for developers without it.
 test-golden:
-	@echo "Running George golden tests..."
+	@echo "Running Bob golden tests..."
 	python -m pytest tests/golden.py -v
 
 test-backend:

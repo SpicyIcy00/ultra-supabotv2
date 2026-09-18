@@ -6,7 +6,7 @@ was a set of ROLES on reads: primary, driver, breakdown, context
 (agent/findings.py). The roles were validated exhaustively, recorded on the
 frame, stored on the post — and the room drew none of them. They were the
 model's channel for saying what a read MEANT, spent entirely on a vocabulary
-the screen had stopped speaking, and George paid a schema and a dozen items of
+the screen had stopped speaking, and Bob paid a schema and a dozen items of
 it on every turn. P1.f swaps the channel for the one the screen does draw:
 what he SAYS, in three slots instead of one paragraph.
 
@@ -19,7 +19,7 @@ WHAT THE MODEL SUPPLIES, EXACTLY. Three short strings, none of them required:
 WHY THIS IS NOT A HOLE IN RULE 9. A figure is still bound, never authored:
 
   `claim` IS THE ANSWER'S OWN WORDS. It is not drawn as a sentence of its
-  own — it is a HIGHLIGHT. The surface finds those words in what George
+  own — it is a HIGHLIGHT. The surface finds those words in what Bob
   actually said and lights them there, and a claim that does not appear in the
   answer is dropped rather than drawn. So the channel cannot put a character on
   screen that the answer does not already carry, and the answer is governed by
@@ -28,18 +28,18 @@ WHY THIS IS NOT A HOLE IN RULE 9. A figure is still bound, never authored:
 
   `caveat` AND `next` CARRY ONLY A FIGURE A READ RETURNED, checked here
   (`figures: returned`, 2026-09-14). They carried no digits at all until then,
-  and the rule made George vaguer than his evidence: "44 of 118 products have
+  and the rule made Bob vaguer than his evidence: "44 of 118 products have
   no figure on one side" — a count `meta.comparison.not_ranked` returned — was
   refused, and "roughly half" was what fitted. Three recorded runs refused 0, 6
   and 8 slots for it, every one of them a true qualification of the figures
   below it. What is still refused is the thing worth refusing: a number no read
-  returned, which is George doing arithmetic on the board. Dates and small
+  returned, which is Bob doing arithmetic on the board. Dates and small
   counts are not figures and never were.
 
   A BLOCK'S `claim` IS UNCHANGED and still carries no digits at all
   (agent/compose.py). That one IS an annotation — it titles a mark that draws
   the figure underneath it — and CLAUDE.md's bound on an annotation holds
-  exactly there. The reading is not an annotation; it is what George says.
+  exactly there. The reading is not an annotation; it is what Bob says.
 
 Every slot is bounded by metrics.yaml `voice.reading.slots`, and a slot that
 fails is DROPPED with a reason, the rest standing — the same way a block that
@@ -115,7 +115,7 @@ def over_length(name: str, text: str, spec: Mapping[str, Any], default_longest: 
     the definition's own `over_length` and never decided here.
 
     A length is not about truth, so by P1.a's line it is coerced, not refused:
-    about a tenth of verification/p2s6-gate*.json's $3.88 was George redoing a
+    about a tenth of verification/p2s6-gate*.json's $3.88 was Bob redoing a
     compose refused for a title ten characters long, or losing a caveat to
     its length. `kept_whole` is for the slots that carry notices — cutting a
     caveat could drop the very warning it exists for. `refuse` (the default,
@@ -172,7 +172,7 @@ def _correct_rounding(name: str, text: str, returned: set[float], presentation: 
     A ROUNDED FIGURE IS SAID EXACTLY, OR REFUSED WITH THE ROW'S OWN VALUE
     NAMED (P2S.7, 2026-09-18).
 
-    verification/p2s6-gate-2.json refused George's caveat for "about 13,100
+    verification/p2s6-gate-2.json refused Bob's caveat for "about 13,100
     pesos" over a row of 13,134 — true, and rounded — and with the caveat gone
     the notices it carried were unsurfaced, the answer was re-asked, and a
     block of them was forced in anyway. The failure was not the rounding; it
@@ -180,7 +180,7 @@ def _correct_rounding(name: str, text: str, returned: set[float], presentation: 
 
     So where exactly ONE returned figure rounds to what was written, the
     numeral is replaced by that figure, and said. Nothing is invented: the
-    value that goes on screen is one a read returned, in the place George put
+    value that goes on screen is one a read returned, in the place Bob put
     its rounding. Where two could be meant, nothing here chooses — the slot is
     refused and the refusal names them, so the next compose can say which.
     """
@@ -289,7 +289,7 @@ def validate(submitted: Any, defs: Mapping[str, Any],
     `returned` is every number this turn's reads returned. A turn that read
     nothing passes nothing, and then a slot under `figures: returned` may carry
     no figure at all — which is the same rule, not a stricter one: with no read
-    behind it, every figure is one George made up.
+    behind it, every figure is one Bob made up.
 
     `coerced` collects what was ADJUSTED rather than refused — a claim cut at
     a word, a caveat kept whole past its length, a rounded figure said
@@ -420,7 +420,7 @@ def was_said(answer: str, claim: Optional[str]) -> bool:
 
 def said_this_turn(answer: str, reading: Optional[Mapping[str, Any]]) -> str:
     """
-    Everything George says this turn, wherever it lands on the page.
+    Everything Bob says this turn, wherever it lands on the page.
 
     THE NOTICE GATE READS THIS, NOT THE ANSWER ALONE. A caveat moved out of the
     paragraph and into its own slot is more surfaced than it was, not less — it

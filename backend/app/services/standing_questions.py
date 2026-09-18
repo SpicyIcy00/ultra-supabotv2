@@ -13,8 +13,8 @@ a comparison. `hour` and `minute` are the only numbers that reach the table, and
 instead of 30%" cannot be half-written and half-refused: it has nowhere to go,
 and the refusal says which comparison already exists instead.
 
-ONE WRITE PATH. George's injected tool and any manual control call the SAME
-functions, exactly as pins and pages already work (CLAUDE.md rule 4). George
+ONE WRITE PATH. Bob's injected tool and any manual control call the SAME
+functions, exactly as pins and pages already work (CLAUDE.md rule 4). Bob
 holds no credential; the web process binds `owner` from the authenticated user,
 which is why no function here takes an owner from anything a model said.
 """
@@ -28,11 +28,11 @@ from typing import Any, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.george_standing import (
+from app.models.bob_standing import (
     MAX_INSTRUCTION_LENGTH,
     MAX_INSTRUCTIONS,
     MAX_PER_OWNER,
-    GeorgeStandingQuestion,
+    BobStandingQuestion,
 )
 from app.services import slots
 
@@ -53,7 +53,7 @@ class StandingRefused(ValueError):
 # Reading
 # ---------------------------------------------------------------------------
 
-def when(row: GeorgeStandingQuestion) -> str:
+def when(row: BobStandingQuestion) -> str:
     """The slot in words. Manila, like everything else that fires on its own."""
     at = f"{row.hour:02d}:{row.minute:02d}"
     if row.kind == "weekly" and row.days_of_week:
@@ -62,8 +62,8 @@ def when(row: GeorgeStandingQuestion) -> str:
     return f"every day at {at}"
 
 
-def as_row(row: GeorgeStandingQuestion) -> dict[str, Any]:
-    """One standing question as a row George can read and compose."""
+def as_row(row: BobStandingQuestion) -> dict[str, Any]:
+    """One standing question as a row Bob can read and compose."""
     return {
         "id": str(row.id),
         "question": row.question,
@@ -75,11 +75,11 @@ def as_row(row: GeorgeStandingQuestion) -> dict[str, Any]:
     }
 
 
-async def list_for(session: AsyncSession, owner: str) -> list[GeorgeStandingQuestion]:
+async def list_for(session: AsyncSession, owner: str) -> list[BobStandingQuestion]:
     return list((await session.execute(
-        select(GeorgeStandingQuestion)
-        .where(GeorgeStandingQuestion.owner == owner)
-        .order_by(GeorgeStandingQuestion.created_at.desc())
+        select(BobStandingQuestion)
+        .where(BobStandingQuestion.owner == owner)
+        .order_by(BobStandingQuestion.created_at.desc())
     )).scalars().all())
 
 
@@ -88,15 +88,15 @@ async def latest_answer(session: AsyncSession, owner: str) -> Optional[dict]:
     The newest standing answer waiting for this person, if there is one.
 
     This is what the room opens on: not "the briefing", which is a thing nobody
-    built, but the most recent answer to a question he asked George to keep
+    built, but the most recent answer to a question he asked Bob to keep
     answering. A question that has never run has no thread and is not offered.
     """
     row = (await session.execute(
-        select(GeorgeStandingQuestion)
-        .where(GeorgeStandingQuestion.owner == owner,
-               GeorgeStandingQuestion.last_thread_id.is_not(None),
-               GeorgeStandingQuestion.last_status == "ok")
-        .order_by(GeorgeStandingQuestion.last_run_at.desc())
+        select(BobStandingQuestion)
+        .where(BobStandingQuestion.owner == owner,
+               BobStandingQuestion.last_thread_id.is_not(None),
+               BobStandingQuestion.last_status == "ok")
+        .order_by(BobStandingQuestion.last_run_at.desc())
         .limit(1)
     )).scalars().first()
     if row is None:
@@ -110,11 +110,11 @@ async def latest_answer(session: AsyncSession, owner: str) -> Optional[dict]:
 
 
 async def _owned(session: AsyncSession, owner: str,
-                 which: Optional[str]) -> GeorgeStandingQuestion:
+                 which: Optional[str]) -> BobStandingQuestion:
     """
     The one this operation is about, resolved from the caller's own rows.
 
-    `which` is an id from a read George has already done. Not found and not
+    `which` is an id from a read Bob has already done. Not found and not
     yours are the SAME answer, as everywhere else in this system: a message
     that distinguishes them tells a stranger their guess was a real id.
 
@@ -207,12 +207,12 @@ async def create(session: AsyncSession, *, owner: str, question: str,
                  hour: int, minute: Optional[int] = None,
                  kind: Optional[str] = None,
                  days_of_week: Optional[list[int]] = None,
-                 instructions: Optional[list[str]] = None) -> GeorgeStandingQuestion:
+                 instructions: Optional[list[str]] = None) -> BobStandingQuestion:
     """
     Keep a question and ask it on a schedule. Created SWITCHED OFF.
 
     Off by default is the deliberate half, and it is the same reasoning as
-    architecture rule 7's "George may accept 'every Monday at 6' in
+    architecture rule 7's "Bob may accept 'every Monday at 6' in
     conversation — the schedule is created switched off". A thing that starts
     firing the moment it is described means a model gave itself a schedule
     mid-sentence. The owner turns it on, which takes one more sentence and is
@@ -233,7 +233,7 @@ async def create(session: AsyncSession, *, owner: str, question: str,
             f"That is more than {MAX_INSTRUCTIONS} standing instructions."
         )
 
-    row = GeorgeStandingQuestion(
+    row = BobStandingQuestion(
         id=uuid.uuid4(), owner=owner, question=clean, instructions=lines,
         enabled=False, **_clean_slot(kind, hour, minute, days_of_week),
     )
@@ -245,7 +245,7 @@ async def create(session: AsyncSession, *, owner: str, question: str,
 async def reschedule(session: AsyncSession, *, owner: str, which: Optional[str],
                      hour: int, minute: Optional[int] = None,
                      kind: Optional[str] = None,
-                     days_of_week: Optional[list[int]] = None) -> GeorgeStandingQuestion:
+                     days_of_week: Optional[list[int]] = None) -> BobStandingQuestion:
     """
     "Make it 9am instead of 8."
 
@@ -265,7 +265,7 @@ async def reschedule(session: AsyncSession, *, owner: str, which: Optional[str],
 
 async def add_instruction(session: AsyncSession, *, owner: str,
                           which: Optional[str],
-                          instruction: str) -> GeorgeStandingQuestion:
+                          instruction: str) -> BobStandingQuestion:
     """"Show more of Rockwell." Appended, never merged into the question."""
     row = await _owned(session, owner, which)
     lines = list(row.instructions or [])
@@ -286,7 +286,7 @@ async def add_instruction(session: AsyncSession, *, owner: str,
 
 async def remove_instruction(session: AsyncSession, *, owner: str,
                              which: Optional[str],
-                             instruction: str) -> GeorgeStandingQuestion:
+                             instruction: str) -> BobStandingQuestion:
     """Drop one standing instruction, matched on its text, case-insensitively."""
     row = await _owned(session, owner, which)
     lines = list(row.instructions or [])
@@ -305,7 +305,7 @@ async def remove_instruction(session: AsyncSession, *, owner: str,
 
 
 async def rewrite(session: AsyncSession, *, owner: str, which: Optional[str],
-                  question: str) -> GeorgeStandingQuestion:
+                  question: str) -> BobStandingQuestion:
     """Change what is asked. The schedule and the instructions stay."""
     row = await _owned(session, owner, which)
     row.question = _clean_question(question)
@@ -315,7 +315,7 @@ async def rewrite(session: AsyncSession, *, owner: str, which: Optional[str],
 
 
 async def switch(session: AsyncSession, *, owner: str, which: Optional[str],
-                 on: bool) -> GeorgeStandingQuestion:
+                 on: bool) -> BobStandingQuestion:
     """
     Start or stop asking it.
 
@@ -333,12 +333,12 @@ async def switch(session: AsyncSession, *, owner: str, which: Optional[str],
 
 
 async def remove(session: AsyncSession, *, owner: str,
-                 which: Optional[str]) -> GeorgeStandingQuestion:
+                 which: Optional[str]) -> BobStandingQuestion:
     """
     Forget the question entirely.
 
     The ANSWERS it produced are untouched: they are posts in the river, and a
-    thread is a record of something George actually said. Deleting the question
+    thread is a record of something Bob actually said. Deleting the question
     must not rewrite history.
     """
     row = await _owned(session, owner, which)
@@ -359,9 +359,9 @@ async def due(session: AsyncSession, now: datetime) -> list[dict]:
     session before claiming it, so nothing here may be held across that.
     """
     rows = (await session.execute(
-        select(GeorgeStandingQuestion)
-        .where(GeorgeStandingQuestion.enabled.is_(True))
-        .order_by(GeorgeStandingQuestion.last_slot.asc().nulls_first())
+        select(BobStandingQuestion)
+        .where(BobStandingQuestion.enabled.is_(True))
+        .order_by(BobStandingQuestion.last_slot.asc().nulls_first())
     )).scalars().all()
 
     candidates = []
@@ -393,7 +393,7 @@ async def record_outcome(session: AsyncSession, *, row_id, status: str,
     The failure is still recorded and still visible on the row.
     """
     row = (await session.execute(
-        select(GeorgeStandingQuestion).where(GeorgeStandingQuestion.id == row_id)
+        select(BobStandingQuestion).where(BobStandingQuestion.id == row_id)
     )).scalars().first()
     if row is None:
         return

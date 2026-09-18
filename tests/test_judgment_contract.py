@@ -1,10 +1,10 @@
 """
-Judgment — what George may think, held apart from what he may compute.
+Judgment — what Bob may think, held apart from what he may compute.
 
 NO DATABASE. Definitions and the prompt section built from them.
 
 WHY THIS EXISTS. Preventing invented figures worked, and it went one step too
-far: the rules that stop George inventing a number were being read as stopping
+far: the rules that stop Bob inventing a number were being read as stopping
 him forming a view, so he would report that seven shops moved and leave the
 reader to work out which one mattered. This section lets him say which one
 matters — and the danger of that change is obvious, which is why the tests
@@ -18,7 +18,7 @@ and if these tests ever pass while `may_not` has shrunk, the difference is gone.
 import pytest
 
 from tools._common import load_defs, req
-from agent import loop as george_loop
+from agent import loop as bob_loop
 
 
 @pytest.fixture(scope="module")
@@ -52,7 +52,7 @@ def test_the_composer_still_refuses_to_score_anything(defs):
     """
     THE BOUNDARY. `surface.attention` is a pure function over rows and must
     never invent an ordering the data does not carry. Judgment is about
-    GEORGE's prose. If this test ever fails, the change leaked from the place
+    BOB's prose. If this test ever fails, the change leaked from the place
     where a view is a reading into the place where it would be arithmetic in
     the presentation layer.
     """
@@ -70,7 +70,7 @@ def test_attribution_math_is_still_unsupported(defs):
 # ------------------------------------------------------ what is now allowed
 
 
-def test_george_may_rank_importance_declare_nothing_and_admit_ignorance(j):
+def test_bob_may_rank_importance_declare_nothing_and_admit_ignorance(j):
     may = req(j, "may")
     for allowed in ("rank_importance", "declare_unimportance", "declare_uncertainty",
                     "declare_ignorance", "disagree_with_the_framing", "change_his_mind"):
@@ -99,7 +99,7 @@ def test_the_stances_are_a_closed_set(j):
         "needs_attention", "unremarkable", "unexplained", "not_visible", "waiting",
         # THE SIXTH, ADDED 2026-09-15 (P2.f), and it is a different KIND of
         # word from the five above it. Those describe a business situation
-        # George read; `means` describes something a person TOLD him, and
+        # Bob read; `means` describes something a person TOLD him, and
         # there was no stance at all for that — so "we means the shops" could
         # not be kept, because `record_belief` refuses a view with no read
         # behind it and a correction has none. It is here rather than in the
@@ -133,7 +133,7 @@ def test_a_view_is_owed_and_not_merely_permitted(j):
 
 def test_the_prompt_asks_for_the_view_rather_than_permitting_it(j):
     owed = req(j, "a_view_is_owed")
-    section = george_loop.JUDGMENT_SECTION
+    section = bob_loop.JUDGMENT_SECTION
     assert "A VIEW IS OWED" in section
     assert req(owed, "when") in section
     for phrase in req(owed, "is"):
@@ -161,10 +161,10 @@ def test_the_section_is_built_from_the_definitions_not_typed():
     import copy
     altered = copy.deepcopy(defs)
     altered["judgment"]["stances"]["needs_attention"] = "SENTINEL VALUE"
-    rebuilt = george_loop._judgment_section(altered)
+    rebuilt = bob_loop._judgment_section(altered)
     assert "SENTINEL VALUE" in rebuilt
-    assert "SENTINEL VALUE" not in george_loop.JUDGMENT_SECTION
+    assert "SENTINEL VALUE" not in bob_loop.JUDGMENT_SECTION
 
 
 def test_the_section_is_in_the_system_prompt():
-    assert george_loop.JUDGMENT_SECTION in george_loop.SYSTEM_PROMPT
+    assert bob_loop.JUDGMENT_SECTION in bob_loop.SYSTEM_PROMPT

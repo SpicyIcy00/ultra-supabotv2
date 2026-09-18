@@ -354,7 +354,7 @@ export function Composer(p: ComposerProps) {
               onKeyUp={move}
               onClick={move}
               onSelect={move}
-              aria-label="Say something to George"
+              aria-label="Say something to Bob"
             />
           </span>
           {p.steer && <div className="r-steer">{p.steer}</div>}

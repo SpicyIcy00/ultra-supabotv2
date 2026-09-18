@@ -113,7 +113,7 @@ describe("his own colour, from Settings (the dogfood log, 2026-09-17)", () => {
 
   it("draws the dot in his colour where he set one, and the palette slot where he did not", () => {
     const turn = {
-      role: 'george', text: '', thinking: '', at: '2026-09-17T00:41:00Z',
+      role: 'bob', text: '', thinking: '', at: '2026-09-17T00:41:00Z',
       toolCalls: [{ seq: 1, tool: 'get_sales', arguments: {}, result: {
         rows: [{ store: 'Rockwell', value: 1, unit: 'PHP' }, { store: 'Greenhills', value: 2, unit: 'PHP' }],
         meta: META } }],
@@ -144,7 +144,7 @@ describe('Rockwell is one hue across the figures of one thread', () => {
     { day: '2026-09-07', value: 21244 }, { day: '2026-09-08', value: 12258 }, { day: '2026-09-09', value: 24020 },
   ];
   const turn = {
-    role: 'george', text: '', thinking: '', at: '2026-09-17T00:41:00Z',
+    role: 'bob', text: '', thinking: '', at: '2026-09-17T00:41:00Z',
     toolCalls: [
       { seq: 1, tool: 'get_sales', arguments: {}, result: { rows: byStore, meta: META } },
       { seq: 2, tool: 'get_sales', arguments: {}, result: { rows: plain, meta: META } },

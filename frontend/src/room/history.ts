@@ -19,7 +19,7 @@
  * count of turns with a time after that mark, never a guess.
  */
 
-const KEY = 'george.room.history';
+const KEY = 'bob.room.history';
 const THREADS = 12;
 
 interface Saved {
@@ -122,7 +122,7 @@ export function questionsOf(turns: readonly { role: string; text?: string }[]): 
   let pending: string | null = null;
   for (const t of turns) {
     if (t.role === 'user') pending = (t.text ?? '').trim() || null;
-    else if (t.role === 'george') { out.push(pending); pending = null; }
+    else if (t.role === 'bob') { out.push(pending); pending = null; }
   }
   return out;
 }

@@ -1,4 +1,4 @@
-"""What George costs, from what he already records. Read-only, one statement.
+"""What Bob costs, from what he already records. Read-only, one statement.
 
 WHY THIS EXISTS. Cost was invisible in exactly the way turn time was before
 `turn_clock.py`: every token count has been written to `george.conversations`
@@ -22,7 +22,7 @@ confidently:
      for a single heavy day put cache WRITES at 44% of spend, reads at 32%
      and output at 23%, with uncached input at effectively zero.
 
-So: use this to compare George's own turns with each other — iterations,
+So: use this to compare Bob's own turns with each other — iterations,
 tokens per turn, one build against another with `--since`. **For what you are
 actually charged, read the console**, filtered by API key and grouped by token
 type. The console is the authority; this is a lens on one population inside it.
@@ -121,7 +121,7 @@ def report(row: dict, window: str, ttl: str) -> int:
     total = sum(costs.values())
     presented = tokens["input"] + tokens["cache_read"] + tokens["cache_write"]
 
-    print(f"\n=== George, {window} — rates as of {RATES_AS_OF} ===")
+    print(f"\n=== Bob, {window} — rates as of {RATES_AS_OF} ===")
     print("THIS IS NOT THE BILL. It is the turns that reached ConversationLog:"
           "\n  missing — every EVAL turn (the harness stubs the log), retries,"
           "\n            and any turn that died before it could be written."

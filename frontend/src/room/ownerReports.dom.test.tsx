@@ -39,7 +39,7 @@ const call = (seq: number, rows: Record<string, unknown>[]) => ({
 describe('"its failing here" — what reached the screen', () => {
   it("never draws the loop's own warnings as a caveat", () => {
     const turn = {
-      role: 'george', text: '', thinking: '', at: '', toolCalls: [],
+      role: 'bob', text: '', thinking: '', at: '', toolCalls: [],
       notices: [
         { kind: 'reading_rejected', source: 'loop',
           message: 'caveat: caveat is at most 320 characters — it is one thing said once (voice.reading.slots.caveat) — said.' },
@@ -54,7 +54,7 @@ describe('"its failing here" — what reached the screen', () => {
 
   it('draws a folded table as its first rows and "all N", never nothing', () => {
     const rows = Array.from({ length: 20 }, (_, i) => ({ product: `P${i}`, units_per_day: i, on_hand: 3 * i }));
-    const turn = { role: 'george', text: '', thinking: '', at: '', toolCalls: [call(1, rows)], notices: [] } as unknown as AnswerTurn;
+    const turn = { role: 'bob', text: '', thinking: '', at: '', toolCalls: [call(1, rows)], notices: [] } as unknown as AnswerTurn;
     const o = { key: 'plan', kind: 'table', weight: 'quiet', seq: 1, tool: 'get_sales', turn: 0, touched: 0 } as BoardObject;
     const on: TileActions = { open: vi.fn(), pick: vi.fn(), why: vi.fn(), patch: vi.fn() };
     const { container } = render(<Board answers={[turn]} board={[o]} local={{}} focused={null}
@@ -97,7 +97,7 @@ describe('the headline reads as he wrote it', () => {
 describe('"why is there 2 thinkings"', () => {
   it('draws the work once, under him, as small steps with what he is doing now', () => {
     const turn = {
-      role: 'george', text: '', thinking: '', at: new Date().toISOString(), notices: [],
+      role: 'bob', text: '', thinking: '', at: new Date().toISOString(), notices: [],
       toolCalls: [call(1, [{ store: 'OPUS', value: 1 }]), { seq: 2, tool: 'get_sales', arguments: {} }],
     } as unknown as AnswerTurn;
     const { container } = render(<Doing turn={turn} live answering={false} />);

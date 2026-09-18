@@ -2,7 +2,7 @@
  * THE ARGUMENTS THE LOOP ACCEPTED, AS THINGS YOU CAN MOVE.
  *
  * A replay has existed since P1.i — one stored call, one changed scope
- * argument, no model — and there was no way to ask for one unless George
+ * argument, no model — and there was no way to ask for one unless Bob
  * happened to compose a `control` block. So the scope the work on screen is
  * ALREADY on is drawn under the reading: the window, the shop, the cut, how
  * many rows. Tapping one and typing one are the same act through the same
@@ -24,7 +24,7 @@
 import type { DeskAlternative, DeskDefinitions, DeskToken } from '../services/deskApi';
 import { callOf, type AnswerTurn } from './data';
 import type { BoardObject } from './board';
-import type { ToolCall } from '../types/george';
+import type { ToolCall } from '../types/bob';
 
 /** One read a token moves, named the way a replay names one. */
 export interface TokenTarget {
@@ -261,13 +261,13 @@ function nameFor(value: unknown, alternatives: DeskAlternative[],
 
 /**
  * What a short thing typed into the composer IS — or nothing, which sends it
- * to George exactly as it always went.
+ * to Bob exactly as it always went.
  *
  * IT RESOLVES AGAINST THE TOKENS ON SCREEN AND NOTHING ELSE
  * (`fragments.resolves_against: drawn_tokens`). The vocabulary is therefore
  * not a keyword list somebody wrote: it is the alternatives the person can
  * see. Two tokens answering to the same word is an ambiguity, and an
- * ambiguity is a question — it goes to George rather than being settled here.
+ * ambiguity is a question — it goes to Bob rather than being settled here.
  */
 export function resolveFragment(
   text: string, tokens: DrawnToken[], defs: DeskDefinitions | null | undefined,

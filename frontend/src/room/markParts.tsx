@@ -5,7 +5,7 @@
  * (shapes.tsx) draw a name, a lit row and a touch exactly as the six do.
  */
 import { type CSSProperties } from 'react';
-import type { ActionOffer, ToolMeta } from '../types/george';
+import type { ActionOffer, ToolMeta } from '../types/bob';
 import { pct, type Change, type Dimension } from './data';
 import type { DataColour } from './catalogue';
 import { Offer, type TileProps } from './tiles';
@@ -70,7 +70,7 @@ export function beat(n: number): CSSProperties {
 /* ------------------------------------------------------------------ offers */
 
 /**
- * WHAT GEORGE OFFERED TO DO ABOUT THIS ROW, drawn on it.
+ * WHAT BOB OFFERED TO DO ABOUT THIS ROW, drawn on it.
  *
  * `room/actions.placement` already decided this object may carry these; all
  * that is left is which row. Nothing is drawn where he offered nothing, which
@@ -105,7 +105,7 @@ export interface Offering {
    *
    * It was missing. `subjects.ts` resolved the id, the composer drew the
    * chip, `subjectOnBoard` was tested — and no mark ever called `pick`, so
-   * the only way an id could reach George was by typing `@`. The owner, on
+   * the only way an id could reach Bob was by typing `@`. The owner, on
    * the live build: *"i cant click any store cause theres no tap."* He was
    * describing the code exactly.
    */

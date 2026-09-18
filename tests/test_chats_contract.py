@@ -27,7 +27,7 @@ import pytest
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from agent import loop as george_loop                                 # noqa: E402
+from agent import loop as bob_loop                                 # noqa: E402
 from app.services.chat_history import (                               # noqa: E402
     LEGACY_NOTICE_SOURCE,
     TITLE_MAX,
@@ -41,10 +41,10 @@ from tests.test_loop_correction_contract import FakeClient, frames_of  # noqa: E
 
 def _drive(monkeypatch, replies, **run_kwargs):
     fake = FakeClient(replies)
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
 
     async def collect():
-        return [f async for f in george_loop.run("net sales yesterday?", **run_kwargs)]
+        return [f async for f in bob_loop.run("net sales yesterday?", **run_kwargs)]
 
     return asyncio.run(collect())
 
@@ -81,7 +81,7 @@ def test_a_continued_chat_echoes_the_thread_it_was_given(monkeypatch):
 
 def test_the_log_row_carries_thread_notices_and_receipts(monkeypatch):
     captured: list[tuple[str, tuple]] = []
-    log = george_loop.ConversationLog(thread_id="thread-1")
+    log = bob_loop.ConversationLog(thread_id="thread-1")
     monkeypatch.setattr(log, "_exec", lambda sql, params: captured.append((sql, params)))
 
     notice = {"kind": "low_stock_not_operational", "message": "Thresholds unset.",
@@ -110,7 +110,7 @@ def test_the_log_row_carries_thread_notices_and_receipts(monkeypatch):
 
 
 def test_a_new_log_defaults_its_thread_to_itself():
-    log = george_loop.ConversationLog()
+    log = bob_loop.ConversationLog()
     assert log.thread_id == log.conversation_id
 
 
@@ -189,7 +189,7 @@ def test_a_stored_chat_rebuilds_as_alternating_turns_with_calls_in_seq_order():
 
     turns = build_turns(rows, calls, pins, {None: 2}, {str(c2): "APIStatusError: 529"})
 
-    assert [t["role"] for t in turns] == ["user", "george", "user", "george"]
+    assert [t["role"] for t in turns] == ["user", "bob", "user", "bob"]
     g1 = turns[1]
     # Calls keep the order they were given (the route orders by seq) and keep
     # their error field — the client's own history filter drops errored ones.
@@ -219,14 +219,14 @@ def test_a_row_without_a_thread_is_its_own_thread():
 #
 # Page Workshop V1 replaced george.pins.page (text) with page_id (FK) and
 # migrated the ORM path. Two raw statements in get_chat kept selecting the
-# dropped column, so EVERY call to GET /george/chats/{id} raised
+# dropped column, so EVERY call to GET /bob/chats/{id} raised
 # UndefinedColumnError — 11 of 11 in the 2026-09-09 dogfood — and the desk
 # could never load a thread's history. These hold the fix without a database.
 
 def _get_chat_sql() -> str:
     import inspect as _inspect
 
-    from app.api.v1.routes.george import get_chat
+    from app.api.v1.routes.bob import get_chat
 
     return _inspect.getsource(get_chat)
 
@@ -242,7 +242,7 @@ def test_get_chat_never_selects_the_dropped_pins_page_column():
 
 def test_get_chat_reads_the_page_title_through_the_foreign_key():
     sql = _get_chat_sql()
-    # `page` is the TITLE of the page a pin sits on (george_pin.GeorgePin.page),
+    # `page` is the TITLE of the page a pin sits on (bob_pin.BobPin.page),
     # so raw SQL has to join for it. LEFT, because Ungrouped is page_id IS NULL
     # and must stay NULL rather than dropping the pin from the result.
     assert sql.count("LEFT JOIN george.pages pg ON pg.id = p.page_id") == 2
@@ -250,9 +250,9 @@ def test_get_chat_reads_the_page_title_through_the_foreign_key():
 
 
 def test_the_pin_model_has_no_page_column_to_select():
-    from app.models.george_pin import GeorgePin
+    from app.models.bob_pin import BobPin
 
-    columns = {c.name for c in GeorgePin.__table__.columns}
+    columns = {c.name for c in BobPin.__table__.columns}
     assert "page_id" in columns
     # If this ever comes back as a real column, the join above is wrong and
     # this test is the place that says so.

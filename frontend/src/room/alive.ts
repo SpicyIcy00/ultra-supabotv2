@@ -1,7 +1,7 @@
 /**
  * HIM, ALIVE — what the mark is doing, and how each state is drawn (P2S.2(d)).
  *
- * The design's `draw()` (`ops/ideal/george-ahead-of-me.html`), ported and
+ * The design's `draw()` (`ops/ideal/bob-ahead-of-me.html`), ported and
  * split in two so both halves can be held by a test:
  *
  *   `markStateOf`  WHICH state, read off the turn stream the room already

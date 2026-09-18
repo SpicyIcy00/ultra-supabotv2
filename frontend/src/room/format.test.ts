@@ -20,7 +20,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { fmt, unitOf } from './data';
-import type { ToolMeta } from '../types/george';
+import type { ToolMeta } from '../types/bob';
 
 describe('a figure is drawn in the unit its read declared', () => {
   it('draws a count as a count, whatever the column is called', () => {

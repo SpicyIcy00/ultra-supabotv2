@@ -1,7 +1,7 @@
 """
-What George believes about the business, and what makes a belief admissible.
+What Bob believes about the business, and what makes a belief admissible.
 
-WHY THIS EXISTS. Until now George forgot the business between questions. Every
+WHY THIS EXISTS. Until now Bob forgot the business between questions. Every
 conversation began cold, he could never say "this is the third week", and a view
 he formed on Tuesday was gone by Wednesday — which is why he produced answers
 rather than an understanding. A belief is that view, kept.
@@ -10,7 +10,7 @@ THIS MODULE DECIDES ADMISSIBILITY AND NOTHING ELSE. It opens no connection,
 holds no credential and stores nothing; the store is injected by whoever runs
 the loop, exactly as the pin, workflow and page writers are (agent/write_tools.py
 explains that pattern and this follows it without amending it). What lives here
-is the pure question: is this a belief George is allowed to hold?
+is the pure question: is this a belief Bob is allowed to hold?
 
 FOUR RULES, AND EACH ONE IS THE ANSWER TO A WAY MEMORY GOES WRONG.
 
@@ -29,7 +29,7 @@ FOUR RULES, AND EACH ONE IS THE ANSWER TO A WAY MEMORY GOES WRONG.
 
      THE SECOND GROUND, added 2026-09-15 for P2.f. "We means the shops, not
      the warehouse" is not a reading of anything, so under calls-only it could
-     not be kept at all — George was refused the one correction a person is
+     not be kept at all — Bob was refused the one correction a person is
      the sole authority on. A `means` view names `told` instead: what they
      said, in their words. That is not a weaker ground than a read, it is a
      different one, and the rule is EXACTLY ONE per view: a reading stance
@@ -135,7 +135,7 @@ def validate(
     resolve_category: Optional[Callable[[str], tuple[Optional[str], str]]] = None,
 ) -> tuple[list[dict], list[dict]]:
     """
-    Split proposed beliefs into those George may hold and those he may not.
+    Split proposed beliefs into those Bob may hold and those he may not.
 
     `is_executed` answers one question about one call: was this actually run,
     successfully, in this conversation? The predicate is supplied rather than
@@ -377,7 +377,7 @@ def record(beliefs: Any, *, defs: Mapping[str, Any],
 
     NO `source_table` IN meta, and for the same reason record_findings has none:
     the loop keeps the last meta that describes real data as the answer's
-    receipts, and this result read nothing. It is a statement about what George
+    receipts, and this result read nothing. It is a statement about what Bob
     now holds.
     """
     accepted, rejected = validate(beliefs, defs, is_executed=is_executed)
@@ -389,7 +389,7 @@ def record(beliefs: Any, *, defs: Mapping[str, Any],
             "rejected": rejected,
             "stances": list(stances_for(defs)),
             "note": (
-                "What George now believes about these things, kept until a later "
+                "What Bob now believes about these things, kept until a later "
                 "read changes it. Nothing was read. A rejected belief is not held "
                 "and the answer must not describe it as though it were."
             ),

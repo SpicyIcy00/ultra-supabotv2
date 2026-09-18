@@ -8,7 +8,7 @@ text streamed to the client as ordinary deltas and accumulated into the
 answer, while the loop's own `answer` was rebuilt from the LAST iteration's
 deltas alone. So a person watching saw "Rockwell is down. Let me look at
 the drivers." above the real answer, and the stored post had only the real
-answer: the live conversation and the stored one disagreed about what George
+answer: the live conversation and the stored one disagreed about what Bob
 concluded. An investigation makes this the common case, because a round of
 reads is what follows a sentence like that.
 
@@ -27,7 +27,7 @@ import pytest
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from agent import loop as george_loop                                          # noqa: E402
+from agent import loop as bob_loop                                          # noqa: E402
 from tests.test_convergence_cap_contract import FakeClient, _ToolUse           # noqa: E402
 from tests.test_loop_correction_contract import StubLog, _TextBlock, frames_of # noqa: E402
 
@@ -39,9 +39,9 @@ SALES = {"group_by": [], "date_range": "last_week", "metric": "net_sales",
 
 def _drive(monkeypatch, replies):
     fake = FakeClient(replies)
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
     StubLog.instances.clear()
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
 
     async def fake_read(name, args):
         return ({"rows": [{"value": 1.0, "baseline": 2.0, "change_pct": -50.0}],
@@ -49,10 +49,10 @@ def _drive(monkeypatch, replies):
                           "snapshot_timestamp": "2026-09-08T00:00:00+00:00", "row_count": 1}},
                 None, 3)
 
-    monkeypatch.setattr(george_loop, "_call_tool", fake_read)
+    monkeypatch.setattr(bob_loop, "_call_tool", fake_read)
 
     async def collect():
-        return [f async for f in george_loop.run("why is Rockwell down?")]
+        return [f async for f in bob_loop.run("why is Rockwell down?")]
 
     return asyncio.run(collect())
 
@@ -112,7 +112,7 @@ def test_the_stored_answer_is_the_final_text_alone(monkeypatch):
 # A LABEL CALL IS NOT A READ (2026-09-12)
 #
 # The reset fired on any tool_use, and `compose` is a tool_use. So the sentence
-# George had just written was pulled off the screen into the activity
+# Bob had just written was pulled off the screen into the activity
 # disclosure every time he arranged the board — two to four times in a typical
 # answer, and more whenever a compose was refused. The owner saw it against
 # "how are we doing": "stuff came out but it just disappeared."

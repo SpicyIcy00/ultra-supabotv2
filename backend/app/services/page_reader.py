@@ -1,8 +1,8 @@
 """
-Reading one page of the caller's pins, for George.
+Reading one page of the caller's pins, for Bob.
 
 WHAT THIS IS. A page is a collection of a person's pins, and until 2026-09-07
-George could be told its NAME and nothing else ("[The user is on the Pages /
+Bob could be told its NAME and nothing else ("[The user is on the Pages /
 AJI BARN Reorder page.]"). This module is what lets him read it: the pins on
 one page of one person, and — when asked — their current figures, replayed
 through the same runner a tile uses. It is the reader that
@@ -10,12 +10,12 @@ through the same runner a tile uses. It is the reader that
 role lives.
 
 THE SAME SPLIT AS EVERY OTHER INJECTED CAPABILITY. The definitions are read
-here on the application role, exactly as `GET /george/pins?page=` reads them,
+here on the application role, exactly as `GET /bob/pins?page=` reads them,
 because george_ro cannot see the george schema. The figures are read through
 pin_runner.run_pin, which connects as george_ro exactly as a tile does. Nothing
 new is granted to either role and no SQL is built from anything the model said.
 
-SCOPED IN SQL, ALWAYS. george.pins has RLS off (see routes/george_pins.py), so
+SCOPED IN SQL, ALWAYS. george.pins has RLS off (see routes/bob_pins.py), so
 every statement here carries created_by. A pin id that is not the caller's on
 this exact page is "not on this page" — whether it exists elsewhere, or belongs
 to somebody else, is not information the caller is entitled to, and the two
@@ -55,8 +55,8 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.george_page import GeorgePage
-from app.models.george_pin import GeorgePin
+from app.models.bob_page import BobPage
+from app.models.bob_pin import BobPin
 from app.services import page_writer
 from app.services.page_writer import PageNotFound  # noqa: F401 - the reader's own refusal
 from app.services.pin_runner import run_pin
@@ -96,7 +96,7 @@ class PageReadRefused(ValueError):
 
 async def list_page_pins(
     db: AsyncSession, *, username: str, page_id: Optional[uuid.UUID],
-) -> list[GeorgePin]:
+) -> list[BobPin]:
     """
     Every pin of the caller's on this page, in the page's order: by position
     on a real page, newest first in Ungrouped. Scoped to created_by IN THE
@@ -134,9 +134,9 @@ class Selection:
     """Which pins a read covers, and which it does not."""
 
     # The pins to read, IN PAGE ORDER — never in the order the ids were given.
-    chosen: list[GeorgePin]
+    chosen: list[BobPin]
     # The rest of the page, in page order: known to exist, not read.
-    remainder: list[GeorgePin]
+    remainder: list[BobPin]
     # Requested ids that are not the caller's pins on this page. One list for
     # "belongs to someone else" and "does not exist": they are the same answer.
     unavailable: list[str]
@@ -144,7 +144,7 @@ class Selection:
     limit: int
 
 
-def select_pins(pins: list[GeorgePin], requested: Optional[list[Any]]) -> Selection:
+def select_pins(pins: list[BobPin], requested: Optional[list[Any]]) -> Selection:
     """
     The default read is the newest DEFAULT_PINS. An explicit read is exactly
     the requested ids that resolve on this page, at most
@@ -196,11 +196,11 @@ class Replay:
 
     outcomes: dict[str, dict] = field(default_factory=dict)
     # Pins that were never started, with the reason. Order is page order.
-    not_started: list[tuple[GeorgePin, str]] = field(default_factory=list)
+    not_started: list[tuple[BobPin, str]] = field(default_factory=list)
 
 
 async def replay_pins(
-    chosen: list[GeorgePin],
+    chosen: list[BobPin],
     *,
     deadline_s: float = PAGE_DEADLINE_S,
     concurrency: int = PIN_REPLAY_CONCURRENCY,
@@ -249,7 +249,7 @@ def _iso(value: Optional[datetime]) -> Optional[str]:
     return value.isoformat() if value else None
 
 
-def _definition(pin: GeorgePin) -> dict:
+def _definition(pin: BobPin) -> dict:
     """A pin as the reader reports it: the row, with its calls as stored."""
     return {
         "pin_id": str(pin.id),
@@ -288,7 +288,7 @@ async def read_page(
     caller's pages, and PageReadRefused when the request itself cannot be
     honoured.
     """
-    page: Optional[GeorgePage] = None
+    page: Optional[BobPage] = None
     if page_id is not None:
         page = await page_writer.get_page(db, username, page_id)
     all_pins = await list_page_pins(db, username=username, page_id=page_id)

@@ -4,7 +4,7 @@ WHY A LAUNCHER AND NOT A DOTENV. backend/.env is read by pydantic Settings and
 therefore reaches settings.*, but it is NOT loaded into os.environ -- and
 os.environ is where tools/_common.connect() and agent/loop.py look for
 GEORGE_DATABASE_URL and GEORGE_LOG_DATABASE_URL. A dotenv would configure half
-the process and leave George's own connections unset, which fails at the first
+the process and leave Bob's own connections unset, which fails at the first
 question rather than at boot. So the environment is built here, in one place,
 where each variable can be justified beside the value it gets.
 
@@ -15,8 +15,8 @@ dotenv at launch and passed to the child process. Nothing is printed.
 
 THE THREE TARGETS.
 
-  DATABASE_URL             local  george_app @ 127.0.0.1/george_dogfood  WRITE
-  GEORGE_LOG_DATABASE_URL  local  george_log @ 127.0.0.1/george_dogfood  INSERT
+  DATABASE_URL             local  george_app @ 127.0.0.1/bob_dogfood  WRITE
+  GEORGE_LOG_DATABASE_URL  local  george_log @ 127.0.0.1/bob_dogfood  INSERT
   GEORGE_DATABASE_URL      remote guarded read-only role, Aji business data
 
 The first two are asserted to be loopback before the server starts. The third
@@ -26,7 +26,7 @@ session read-only and refuses any fallback.
 
 THE MODEL KEY IS OMITTED BY DEFAULT. Without ANTHROPIC_API_KEY in the
 environment, agent/loop.py's anthropic.AsyncAnthropic() cannot be constructed,
-so asking George a question fails loudly and locally instead of sending
+so asking Bob a question fails loudly and locally instead of sending
 business-derived evidence to a provider. Pass --allow-model only once that has
 been approved. Every other outbound integration -- Telegram, the brief token,
 StoreHub, Google Sheets, n8n -- is omitted unconditionally and has no flag.
@@ -47,7 +47,7 @@ from ops.local_dogfood import DATABASE, url  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = Path(r'C:\ultra-supabotv2-main\backend\.env')
 
-# Never run George's reads as one of these, whatever the dotenv says.
+# Never run Bob's reads as one of these, whatever the dotenv says.
 ADMIN_ROLES = {'postgres', 'supabase_admin', 'supabase_replication_admin', 'rds_superuser'}
 
 # Permanent local safety state. Each of these has a gate in the application:
@@ -107,12 +107,12 @@ def resolve(source: Path, allow_model: bool):
 
     read_url = values.get('GEORGE_DATABASE_URL')
     if not read_url:
-        raise SystemExit('GEORGE_DATABASE_URL is not defined in the source dotenv. George '
+        raise SystemExit('GEORGE_DATABASE_URL is not defined in the source dotenv. Bob '
                          'will not fall back to an application connection string.')
     read = describe('GEORGE_DATABASE_URL', read_url)
     if read['role'] in ADMIN_ROLES:
-        raise SystemExit(f"Refusing to launch: the George read role is {read['role']!r}, "
-                         f'which is administrative. George requires its own read-only role.')
+        raise SystemExit(f"Refusing to launch: the Bob read role is {read['role']!r}, "
+                         f'which is administrative. Bob requires its own read-only role.')
 
     app_url = url('george_app', DATABASE, async_driver=True)
     log_url = url('george_log', DATABASE)
@@ -141,7 +141,7 @@ def summarise(targets, allow_model: bool):
     purpose = {
         'DATABASE_URL': ('read/write', 'local application persistence'),
         'GEORGE_DATABASE_URL': ('SELECT only', 'guarded Aji business reads'),
-        'GEORGE_LOG_DATABASE_URL': ('INSERT only', 'George append-only log'),
+        'GEORGE_LOG_DATABASE_URL': ('INSERT only', 'Bob append-only log'),
     }
     for t in targets:
         access, note = purpose[t['label']]

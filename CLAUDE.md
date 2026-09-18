@@ -11,8 +11,8 @@ The rules that do not change. If a task seems to need one broken, stop and ask.
 
 ## What we're building
 
-**George — an AI operator for our businesses.** He **understands** the business,
-**builds** systems with you, and **runs** them: *"My business is here. George
+**Bob — an AI operator for our businesses.** He **understands** the business,
+**builds** systems with you, and **runs** them: *"My business is here. Bob
 understands it. We operate it together."* **Trustworthiness about numbers is the
 FLOOR, not the job** — `ops/STANDARD.md` is the job.
 
@@ -31,7 +31,7 @@ write a store count into a file, prompt or tool.
 3. **All business definitions live in `definitions/metrics.yaml`**, read at
    runtime. Never hardcode a formula, threshold, grouping or date-window
    convention in a tool; if one is missing, add it there and read it.
-4. **George uses a read-only Postgres role.** No writes, no DDL, no temp tables.
+4. **Bob uses a read-only Postgres role.** No writes, no DDL, no temp tables.
    A capability needing a write or a privileged read is a **writer injected by
    the web process**, bound to the authenticated user, calling its HTTP
    route's service function; the agent holds no credential. **No writer
@@ -48,7 +48,7 @@ write a store count into a file, prompt or tool.
 7. **Nothing runs unattended until backtested and promoted.** A schedule pins a
    version id, never "whatever is current"; an edit makes a new ungated version;
    promotion is an administrator's act against a recorded backtest of a closed
-   window. George may accept "every Monday at 6" — the schedule is born
+   window. Bob may accept "every Monday at 6" — the schedule is born
    **off**. With no authored logic to backtest (a scheduled question),
    **capability** stands in its place: reads, `compose`, `view_memory`,
    `view_automations`, `record_belief`, enforced by absence.
@@ -60,7 +60,7 @@ write a store count into a file, prompt or tool.
 9. **Important figures come from deterministic code and trusted definitions.
    The model selects, investigates, explains and interprets; it never computes
    one.** One-way: definition → vetted SQL → the tool's comparison →
-   `{rows, meta}` → George's reasoning → the surface. A ratio worked out in
+   `{rows, meta}` → Bob's reasoning → the surface. A ratio worked out in
    prose has no receipt; a group total is a READ (`group_by: []`), never a sum
    of rows on screen. **Enforced by the definitions, the tools and the golden
    tests — production does not check numerals in prose against rows**, which is
@@ -81,7 +81,7 @@ Vite ([main.py](backend/app/main.py), [services/](backend/app/services/),
 [routes/](backend/app/api/v1/routes/)). Datetime logic is **Asia/Manila**
 timezone-aware throughout.
 
-**George is not the existing chatbot.** `sql_generator.py`, `query_executor.py`,
+**Bob is not the existing chatbot.** `sql_generator.py`, `query_executor.py`,
 `query_validator.py` and `routes/chatbot.py` generate freehand SQL from a schema
 prompt — the pattern rule 1 forbids. Never extend them or reuse that path;
 `business_rules.yaml` is theirs. Reading them for schema is fine.
@@ -106,8 +106,8 @@ model key.
 
 ## UI/UX
 
-**Visual direction: the `beside` room of *George, Ahead of Me***
-(`ops/ideal/george-ahead-of-me.html`, https://claude.ai/artifact/BnwXtA3pPJxwui82FiKbpo),
+**Visual direction: the `beside` room of *Bob, Ahead of Me***
+(`ops/ideal/bob-ahead-of-me.html`, https://claude.ai/artifact/BnwXtA3pPJxwui82FiKbpo),
 declared by the owner 2026-09-17 after STANDARD §20 unlocked the direction; only the
 alive mark's shape and colour are still open. NOW.md §3 Phase 2S builds it. The rule
 under it stays: a representation earns its place by communicating better than the
@@ -130,7 +130,7 @@ necessary means the concept is probably wrong.
 - **Thread** — a post and its replies; not started, it **emerges**.
 - **Watch** — a saved condition checked on a schedule, posting only when the
   answer **changes**; silence is normal. Not "alert" or "trigger".
-- **System** — something built with George that persists: a workflow as its
+- **System** — something built with Bob that persists: a workflow as its
   logic, plus its settings, schedule, runs and approvals.
 - **Standing question** — asked on a schedule, answered fresh by the ordinary
   loop. It always speaks, what it says undecided in advance. One person's.
@@ -140,7 +140,7 @@ carried, never a label the model inferred and never a figure) are internal names
 
 ### Rules
 
-1. **George is on every page, not a page you navigate to**, and receives that
+1. **Bob is on every page, not a page you navigate to**, and receives that
    page as context.
 2. **One save gesture**: same icon, placement and confirmation everywhere.
 3. **Every number is inspectable.** Clicking a figure shows its receipts in the
@@ -153,7 +153,7 @@ carried, never a label the model inferred and never a figure) are internal names
    Raw diagnostics never reach the answer.
 5. **One colour means "needs you"** — approvals, nothing else. **A notice never
    wears the accent**: a caveat takes prominence from position and structure,
-   never hue. George's mark is the one exemption, and its error state changes
+   never hue. Bob's mark is the one exemption, and its error state changes
    the DRAWING, never the colour. Held by `accentUse.test.ts`, not by review.
 6. **No number displays without a timestamp.** A number with no time on it is a
    claim with no expiry.
@@ -171,7 +171,7 @@ name a number.
 
 **Analysis** is as automatic as the definitions allow, inventing no threshold or
 cause. **Decision is level four**: he recommends one course, the owner
-decides. **Action is never above level five**: everything leaving George's hands
+decides. **Action is never above level five**: everything leaving Bob's hands
 is a person's veto point. **Reasoning is shown every time** — an operator who
 cannot see why cannot take over. Moving a level is recorded in `ops/DECISIONS.md`
 first, with the test that holds it, before it is built.

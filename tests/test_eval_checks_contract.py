@@ -204,8 +204,8 @@ def test_a_contrast_names_the_driver_without_the_word():
     assert named_driver("Basket value, not traffic, is what moved.") == "atp"
 
 
-def test_george_s_own_phrasings_from_the_first_live_run_are_read_correctly():
-    """Sentences George actually wrote on 2026-09-08, which the first checks missed."""
+def test_bob_s_own_phrasings_from_the_first_live_run_are_read_correctly():
+    """Sentences Bob actually wrote on 2026-09-08, which the first checks missed."""
     assert named_driver(
         "It was traffic, not baskets. Transactions fell 21.2% (874 against 1,109); average "
         "transaction value actually rose 3.2%. So fewer people came in, and the ones who did spent slightly more each."

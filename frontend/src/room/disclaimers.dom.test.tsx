@@ -26,7 +26,7 @@ const EXPLAINS = explainsOnlyFrom({ notices: { explains_only: ['comparison_incom
 /** His screenshot's read: products compared, the incomplete-comparison notice on it. */
 function boardWith(notice: { kind: string; message: string }, explains?: ReadonlySet<string>) {
   const turn = {
-    role: 'george', text: '', thinking: '', at: '2026-09-17T06:20:00Z',
+    role: 'bob', text: '', thinking: '', at: '2026-09-17T06:20:00Z',
     toolCalls: [{
       seq: 1, tool: 'get_sales', arguments: {},
       result: {

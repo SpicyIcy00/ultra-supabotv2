@@ -1,5 +1,5 @@
 """
-Behavioural evaluations of George — live model, live database, opt in.
+Behavioural evaluations of Bob — live model, live database, opt in.
 
 These are not unit tests. Each runs one question through agent.loop.run with
 the real tools and the real model, then asserts STRUCTURE: which tools were

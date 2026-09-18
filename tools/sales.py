@@ -1,5 +1,5 @@
 """
-George — sales tool.
+Bob — sales tool.
 
 One public function: get_sales().
 
@@ -787,7 +787,7 @@ def get_sales(
         {"rows": [...], "meta": {...}}. A non-empty meta["notice"] MUST be
         surfaced to the user; it means the result is not what it appears.
 
-    `left_out` is not the model's: it is the categories a person told George
+    `left_out` is not the model's: it is the categories a person told Bob
     to leave out (metrics.yaml settings.declared.left_out_categories),
     supplied by the loop. Grouped by product or category they are left out
     and meta.filters_applied says so; any other grouping is a total and is

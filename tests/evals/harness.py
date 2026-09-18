@@ -23,7 +23,7 @@ from typing import Any, Callable, Optional
 
 import pytest
 
-from agent import loop as george_loop
+from agent import loop as bob_loop
 from agent.model_receipts import ModelReceipts
 from tests.evals import timing
 from tests.evals.checks import Turn
@@ -81,13 +81,13 @@ def run_turn(monkeypatch, question: str, *, history: Optional[list[dict]] = None
     """
     One live turn, as a Turn.
 
-    `page_writer` is the Page Workshop seam: a fake that records what George
+    `page_writer` is the Page Workshop seam: a fake that records what Bob
     asked to be written and answers as the committed write would. Nothing
-    reaches george.pages from here — the eval is about what George CHOOSES
+    reaches george.pages from here — the eval is about what Bob CHOOSES
     to write, and the service is proven separately.
     """
     captured: list[dict] = []
-    real = george_loop._call_tool
+    real = bob_loop._call_tool
 
     async def wrapped(name: str, args: dict):
         result, err, ms = await real(name, args)
@@ -101,7 +101,7 @@ def run_turn(monkeypatch, question: str, *, history: Optional[list[dict]] = None
     async def collect():
         started = time.perf_counter()
         out = []
-        async for f in george_loop.run(
+        async for f in bob_loop.run(
             question, history=history, page_reader=page_reader, page_scope=page_scope,
             page_writer=page_writer,
             page_references=page_references,
@@ -112,8 +112,8 @@ def run_turn(monkeypatch, question: str, *, history: Optional[list[dict]] = None
     # Restore the dispatcher after each turn: a second turn must not append
     # its results into the first turn's captured evidence.
     with monkeypatch.context() as turn_patch:
-        turn_patch.setattr(george_loop, "_call_tool", wrapped)
-        turn_patch.setattr(george_loop, "ConversationLog", StubLog)
+        turn_patch.setattr(bob_loop, "_call_tool", wrapped)
+        turn_patch.setattr(bob_loop, "ConversationLog", StubLog)
         frames = _parse(asyncio.run(collect()))
 
     turn = Turn(question=question, answer="", results=captured)
@@ -163,17 +163,17 @@ def run_turn(monkeypatch, question: str, *, history: Optional[list[dict]] = None
 
 def _result_sizes(turn: Turn) -> list[dict]:
     """Each read's size as handed to the model, and whole (P2S.9(c))."""
-    receipts = ModelReceipts(george_loop._load_defs())
+    receipts = ModelReceipts(bob_loop._load_defs())
     out = []
     for n, r in enumerate(turn.results):
         if r["error"] or not r["result"]:
             continue
-        capped = george_loop._truncate(r["result"] or {})
+        capped = bob_loop._truncate(r["result"] or {})
         seq = ((capped.get("meta") or {}).get("call_seq"))
         shown = receipts.copy(capped, int(seq) if isinstance(seq, int) else -1 - n)
         out.append({"tool": r["tool"], "rows": len(capped.get("rows") or []),
-                    "chars_to_model": len(json.dumps(george_loop._json_safe(shown))),
-                    "chars_full": len(json.dumps(george_loop._json_safe(capped)))})
+                    "chars_to_model": len(json.dumps(bob_loop._json_safe(shown))),
+                    "chars_full": len(json.dumps(bob_loop._json_safe(capped)))})
     return out
 
 
@@ -185,7 +185,7 @@ def evidence_summary(turn: Turn, max_rows: int = 15) -> str:
     the window, the comparison block (statuses, the not-ranked subjects) and
     the full notice text. The first run's judge called figures "fabricated"
     that were in meta.comparison.not_ranked — the summary had left them out,
-    so the judge was auditing George against less than George had read.
+    so the judge was auditing Bob against less than Bob had read.
     """
     lines = []
     for r in turn.results:
@@ -324,7 +324,7 @@ atexit.register(METER.record)
 DONE_KEPT = (
     "iterations", "tool_calls", "executed_calls", "duplicate_reads", "status",
     "notice_forced",
-    # the reading calls George made, one asked as one counting once (P2S.10)
+    # the reading calls Bob made, one asked as one counting once (P2S.10)
     "asked_reads",
     # the clock (P0.3)
     "duration_ms", "iteration_ms", "corrective_turns",
@@ -522,7 +522,7 @@ class Report:
             #           client's fallback already drew a quiet table per read,
             #           so this is the first read landing either way.
             #   shaped  when the board first held an object somebody CHOSE the
-            #           shape of. `before` is George's own compose, a whole
+            #           shape of. `before` is Bob's own compose, a whole
             #           round trip after the rows; `after` is the loop's
             #           default, in the same iteration as the reads.
             #
@@ -552,7 +552,7 @@ class Report:
             # characters the loop sends, after its own row cap. Measured, not
             # cut: in P2S.6's Greenhills turn $0.20 of $0.34 was caching
             # large stock and replenishment results, and the owner's rule is
-            # that cost never makes George read less.
+            # that cost never makes Bob read less.
             #
             # SINCE P2S.9, `chars_to_model` is what the model was actually
             # sent — the receipts shortened as the loop shortens them, in the

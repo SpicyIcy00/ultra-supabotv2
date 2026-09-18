@@ -1,7 +1,7 @@
 /**
  * Draw the board.
  *
- * Keyed by George's own key, so an edit to a key already on screen changes
+ * Keyed by Bob's own key, so an edit to a key already on screen changes
  * that node in place — that is the whole of "the workspace transforms". An
  * object nobody touched is not re-rendered into something new; it keeps
  * drawing the read it has always drawn, from the turn it came from.
@@ -21,14 +21,14 @@ import { FIGURE_GAP, columnsFor, needsWidth, placeFigures, revealAt } from './be
 import { readIndexes } from './work';
 import { PROCESS, callOf, rowsOf, tableShape, type AnswerTurn, type Dimension } from './data';
 import { markFor } from './catalogue';
-import type { ToolCall } from '../types/george';
+import type { ToolCall } from '../types/bob';
 import {
   ControlTile, DraftTile, MemoryTile, SpecTile, StateTile, SystemTile,
   ownNotices, type TileActions, type TileProps,
 } from './tiles';
 import { MarkBlock } from './marks';
 import { Marked } from './Reading';
-import type { ActionOffer, GeorgeNotice } from '../types/george';
+import type { ActionOffer, BobNotice } from '../types/bob';
 
 export interface BoardProps {
   /** Every answer turn, oldest first. An object names its own by index. */
@@ -37,7 +37,7 @@ export interface BoardProps {
   local: Record<string, Local>;
   focused: string | null;
   selection: string[];
-  /** True while George is still working — drives the landing sequence. */
+  /** True while Bob is still working — drives the landing sequence. */
   live: boolean;
   /**
    * Reads re-run by a token or a control, keyed `turn:seq` (`retunedKey`).
@@ -108,12 +108,12 @@ export function turnNotices(p: {
   board: BoardObject[];
   local: Record<string, Local>;
   focused: string | null;
-}): GeorgeNotice[] {
+}): BobNotice[] {
   const newest = p.answers.length - 1;
   // A WARNING THE LOOP RAISED ABOUT HIS OWN WORK IS NEVER A CAVEAT (the log,
   // 2026-09-17: "caveat: caveat is at most 320 characters … (voice.reading.slots.
   // caveat)" and a bare "header_total_mismatch" drawn above the headline). Every
-  // `warning` frame arrives as `source: 'loop'` (useGeorgeStream); a tool's
+  // `warning` frame arrives as `source: 'loop'` (useBobStream); a tool's
   // notice never does. The named list stays for turns stored before that.
   const all = (p.answers[newest]?.notices ?? [])
     .filter((n) => !PROCESS.has(n.kind) && n.source !== 'loop');
@@ -133,7 +133,7 @@ export function turnNotices(p: {
  * theres open space with the answer it should fill it"*, *"charts should go
  * from left to right then down"*, *"it still feels like its in squares"*. So:
  *
- *   NO LEAD ROW AND NO PACK. One flow, in George's order. How many columns is
+ *   NO LEAD ROW AND NO PACK. One flow, in Bob's order. How many columns is
  *   decided by how many figures there are (`columnsFor`); each figure goes to
  *   whichever column is shortest (`placeFigures`).
  *

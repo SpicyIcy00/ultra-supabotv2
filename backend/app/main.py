@@ -103,7 +103,7 @@ async def shutdown_event():
     SchemaContext.shutdown()
     print("SchemaContext shut down")
 
-from app.api.v1.routes import analytics, chatbot, stores, products, reports, report_presets, google_sheets, saved_queries, replenishment, store_filters, barcodes, scheduled_reports, vending, dashboard_defaults, auth, admin, packing, george, george_pins, george_pages, george_workflows, storehub_imports, brief
+from app.api.v1.routes import analytics, chatbot, stores, products, reports, report_presets, google_sheets, saved_queries, replenishment, store_filters, barcodes, scheduled_reports, vending, dashboard_defaults, auth, admin, packing, bob, bob_pins, bob_pages, bob_workflows, storehub_imports, brief
 
 app.include_router(auth.router, prefix=f"{settings.API_V1_PREFIX}/auth", tags=["auth"])
 app.include_router(admin.router, prefix=f"{settings.API_V1_PREFIX}/admin", tags=["admin"])
@@ -122,12 +122,19 @@ app.include_router(store_filters.router, prefix=f"{settings.API_V1_PREFIX}/store
 app.include_router(barcodes.router, prefix=f"{settings.API_V1_PREFIX}/barcodes", tags=["barcodes"])
 app.include_router(vending.router, prefix=f"{settings.API_V1_PREFIX}/vending", tags=["vending"])
 app.include_router(dashboard_defaults.router, prefix=f"{settings.API_V1_PREFIX}/dashboard-defaults", tags=["dashboard-defaults"])
-# George — vetted-tool agent. Separate from `chatbot`, which is the older
+# Bob — vetted-tool agent. Separate from `chatbot`, which is the older
 # NL->SQL system; the two deliberately share no code path.
-app.include_router(george.router, prefix=f"{settings.API_V1_PREFIX}/george", tags=["george"])
-app.include_router(george_pins.router, prefix=f"{settings.API_V1_PREFIX}/george/pins", tags=["george-pins"])
-app.include_router(george_pages.router, prefix=f"{settings.API_V1_PREFIX}/george/pages", tags=["george-pages"])
-app.include_router(george_workflows.router, prefix=f"{settings.API_V1_PREFIX}/george/workflows", tags=["george-workflows"])
+app.include_router(bob.router, prefix=f"{settings.API_V1_PREFIX}/bob", tags=["bob"])
+app.include_router(bob_pins.router, prefix=f"{settings.API_V1_PREFIX}/bob/pins", tags=["bob-pins"])
+app.include_router(bob_pages.router, prefix=f"{settings.API_V1_PREFIX}/bob/pages", tags=["bob-pages"])
+app.include_router(bob_workflows.router, prefix=f"{settings.API_V1_PREFIX}/bob/workflows", tags=["bob-workflows"])
+# THE OLD PATHS STAY AS ALIASES (the rename, 2026-09-19): Vercel and Railway
+# deploy minutes apart, and a front end still calling /george must keep
+# working until both have swapped. Same routers, second mount, nothing else.
+app.include_router(bob.router, prefix=f"{settings.API_V1_PREFIX}/george", include_in_schema=False)
+app.include_router(bob_pins.router, prefix=f"{settings.API_V1_PREFIX}/george/pins", include_in_schema=False)
+app.include_router(bob_pages.router, prefix=f"{settings.API_V1_PREFIX}/george/pages", include_in_schema=False)
+app.include_router(bob_workflows.router, prefix=f"{settings.API_V1_PREFIX}/george/workflows", include_in_schema=False)
 app.include_router(brief.router, prefix=f"{settings.API_V1_PREFIX}/brief", tags=["brief"])
 app.include_router(storehub_imports.router, prefix=f"{settings.API_V1_PREFIX}/storehub-imports", tags=["storehub-imports"])
 
@@ -208,15 +215,15 @@ async def health_check(response: Response):
     # cap it enforces — the number to read when the pooler complains.
     try:
         from tools._common import connection_gate_status
-        george_pool = connection_gate_status()
+        bob_pool = connection_gate_status()
     except Exception as exc:  # noqa: BLE001 - health must not fail on a readout
-        george_pool = {"error": f"{type(exc).__name__}: {exc}"}
+        bob_pool = {"error": f"{type(exc).__name__}: {exc}"}
     body = {
         "status": "healthy" if schema["ok"] else "schema_mismatch",
         "build": revision(),
         "schema": schema,
         "schema_checked": source,
-        "george_pool": george_pool,
+        "bob_pool": bob_pool,
     }
     if not schema["ok"]:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE

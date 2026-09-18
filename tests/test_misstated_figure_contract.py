@@ -3,7 +3,7 @@ A drawn figure said WRONG, which was the way past the restatement gate.
 
 PURE. No database, no model, no API.
 
-THE DEFECT THIS CLOSES (dogfood log, 2026-09-13). The twelve caught George
+THE DEFECT THIS CLOSES (dogfood log, 2026-09-13). The twelve caught Bob
 writing "nothing sells 800 grams-worth of one line and then some" over an
 attention row drawn as `was: 801.0`. The number on screen was not a number any
 read returned.
@@ -15,7 +15,7 @@ draws, and the turn is rewritten. It matches at the precision written, so:
     "801 grams-worth"   gate fires      -> rewritten, figure comes off screen
     "800 grams-worth"   gate SILENT     -> wrong figure ships
 
-Being imprecise was the way PAST the guard, and the further off George was the
+Being imprecise was the way PAST the guard, and the further off Bob was the
 safer he was from it. The eval caught it offline, on the runs where it
 happened; production caught nothing.
 

@@ -1,5 +1,5 @@
 """
-George's own posts, written into the river.
+Bob's own posts, written into the river.
 
 ONE FUNCTION PER KIND, and one place that decides ids and visibility, so the
 brief route, the scheduler and the workflow writer cannot each answer those
@@ -28,7 +28,7 @@ approval are company-level facts — but NOT all of it: a pin confirmation is
 private and owned by whoever pinned, because "a pin is one person's tile".
 That distinction is the model's to make, not this file's.
 
-THE NOTICE KIND IS DELIBERATELY ABSENT. `notice` means George noticed something
+THE NOTICE KIND IS DELIBERATELY ABSENT. `notice` means Bob noticed something
 BETWEEN briefs, which is what a Watch is (CLAUDE.md vocabulary, added
 2026-09-05). Filling it with the brief's other items would make a one-post
 morning into seven and would spend the word before the concept it was reserved
@@ -46,7 +46,7 @@ from typing import Any, Optional
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.george_post import default_visibility
+from app.models.bob_post import default_visibility
 from tools._common import load_defs, req
 
 # How many subjects one watch post may name before it says "and N more". From
@@ -60,7 +60,7 @@ INSERT INTO george.posts
     (id, thread_id, parent_id, kind, author, author_user, owner_user,
      visibility, body, payload, receipts, notices, conversation_id, created_at)
 VALUES
-    (:id, :thread_id, NULL, :kind, 'george', NULL, :owner_user,
+    (:id, :thread_id, NULL, :kind, 'bob', NULL, :owner_user,
      :visibility, :body, CAST(:payload AS jsonb), CAST(:receipts AS jsonb),
      CAST(:notices AS jsonb), :conversation_id, :created_at)
 ON CONFLICT (id) DO NOTHING
@@ -106,7 +106,7 @@ async def _write(
         text(_INSERT),
         {
             "id": pid,
-            # A George post with no replies is its own thread. A reply to it
+            # A Bob post with no replies is its own thread. A reply to it
             # carries this id forward, which is how a thread emerges.
             "thread_id": pid,
             "kind": kind,
@@ -271,10 +271,10 @@ async def post_pin_confirmation(
     owner: str, tool_calls: int, conversation_id: Optional[uuid.UUID] = None,
 ) -> Optional[uuid.UUID]:
     """
-    A pin George made because he was asked to, as a post.
+    A pin Bob made because he was asked to, as a post.
 
     PRIVATE, AND OWNED BY WHOEVER PINNED. "A pin is one person's tile"
-    (CLAUDE.md), so this is the one kind George authors that is nobody else's
+    (CLAUDE.md), so this is the one kind Bob authors that is nobody else's
     business — announcing "Ice pinned Rockwell net sales" to the whole company
     is not a company-level fact, it is somebody's workspace.
 
@@ -317,7 +317,7 @@ async def post_watch(
     """
     Something a watch noticed, as a post.
 
-    ORG, like everything George initiates — and unlike every other kind here,
+    ORG, like everything Bob initiates — and unlike every other kind here,
     most mornings this writes nothing at all. Silence is a watch's normal
     state (CLAUDE.md, Watch), so the existence of this post is itself the
     signal, before anybody reads a word of it.
@@ -331,7 +331,7 @@ async def post_watch(
 
     THE CALLS TRAVEL WITH IT, which is what makes "investigate this" an
     ordinary reply rather than new machinery. The post carries the exact
-    get_brief call behind it, so replying re-runs that read and George climbs
+    get_brief call behind it, so replying re-runs that read and Bob climbs
     the investigation ladder from a fact rather than from prose. No
     investigation object, no second path (CLAUDE.md architecture rule 10).
 

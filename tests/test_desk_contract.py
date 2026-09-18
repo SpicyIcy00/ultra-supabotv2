@@ -1,6 +1,6 @@
 """
 The desk: the one workspace, its vocabulary, and the channel a selection
-travels through. George Experience Reset, Phases 1 and 2 (2026-09-09).
+travels through. Bob Experience Reset, Phases 1 and 2 (2026-09-09).
 
 FOUR THINGS UNDER TEST.
 
@@ -14,9 +14,9 @@ FOUR THINGS UNDER TEST.
      The question post keeps the desk in its payload, so a reload restores
      the same focus from the same record.
 
-  3. The replay. `POST /george/replay` runs ONE call a person already has on
+  3. The replay. `POST /bob/replay` runs ONE call a person already has on
      screen, with ONE scope argument changed, through the validation a pin
-     passes and the runner a tile uses: no model, behind George's own page
+     passes and the runner a tile uses: no model, behind Bob's own page
      gate, and the call read off the record rather than taken from the body.
 
   4. Immutability. Nothing in the routes, the writer or the loop updates or
@@ -41,7 +41,7 @@ _ROOT = Path(__file__).resolve().parents[1]
 _FRONT = _ROOT / "frontend" / "src"
 _DATA_TS = _FRONT / "room" / "data.ts"
 _SUBJECTS_TS = _FRONT / "room" / "subjects.ts"
-_ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "george.py"
+_ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "bob.py"
 _WRITER = _ROOT / "backend" / "app" / "services" / "river_writer.py"
 _LOOP = _ROOT / "agent" / "loop.py"
 
@@ -126,7 +126,7 @@ def test_the_replay_is_deterministic_bounded_and_recorded():
     assert int(replay["max_recorded_per_post"]) > 0
     from app.services.pin_writer import MAX_TOOL_CALLS_PER_PIN
     assert replay["max_calls"] == MAX_TOOL_CALLS_PER_PIN
-    # Scope, never a threshold — and every control George can compose has one
+    # Scope, never a threshold — and every control Bob can compose has one
     # of these behind it, or it would draw a chip refused on every click.
     assert set(replay["arguments"]) == {"window", "store", "group_by", "rank_by", "top_n"}
     for control in DEFS["composition"]["control_arguments"]:
@@ -221,21 +221,21 @@ def test_desk_sentence_neutralises_labels_that_try_to_be_instructions():
 def _loop():
     pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
     pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
-    from agent import loop as george_loop
-    return george_loop
+    from agent import loop as bob_loop
+    return bob_loop
 
 
 def _drive(monkeypatch, replies, question, history=None, desk=None):
-    george_loop = _loop()
+    bob_loop = _loop()
     from tests.test_convergence_cap_contract import FakeClient
     from tests.test_loop_correction_contract import StubLog
     fake = FakeClient(replies)
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
     StubLog.instances.clear()
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
 
     async def collect():
-        return [f async for f in george_loop.run(question, history=history, desk=desk)]
+        return [f async for f in bob_loop.run(question, history=history, desk=desk)]
 
     return asyncio.run(collect()), fake.messages.requests
 
@@ -250,7 +250,7 @@ def test_the_desk_sentence_rides_on_the_question_not_the_system_prompt(monkeypat
     assert last_user["content"].rstrip().endswith("Why?")
     system = requests[-1]["system"]
     system_text = system if isinstance(system, str) else "".join(b.get("text", "") for b in system)
-    # The prompt NAMES the line so George knows what it is; the line itself,
+    # The prompt NAMES the line so Bob knows what it is; the line itself,
     # with the subject in it, is on the question and nowhere else.
     assert "[On the desk:" not in system_text
     assert "North Edsa" not in system_text
@@ -285,7 +285,7 @@ def test_an_empty_desk_stores_no_question_payload(monkeypatch):
 def test_the_request_model_accepts_a_bounded_desk():
     pytest.importorskip("fastapi")
     from pydantic import ValidationError
-    from app.api.v1.routes.george import AskRequest
+    from app.api.v1.routes.bob import AskRequest
     ok = AskRequest(question="Why?", desk={"selection": STORES,
                                            "window": {"kind": "preset", "name": "last_month"}})
     assert ok.desk is not None and ok.desk.selection.dimension == "store"
@@ -304,7 +304,7 @@ def test_replay_runs_the_stored_call_and_carries_the_service_s_refusals(monkeypa
     pytest.importorskip("fastapi")
     import uuid
     from fastapi import HTTPException
-    from app.api.v1.routes import george as route
+    from app.api.v1.routes import bob as route
 
     asked: list = []
 
@@ -348,10 +348,10 @@ def test_replay_runs_the_stored_call_and_carries_the_service_s_refusals(monkeypa
     assert raised.value.status_code == 422
 
 
-def test_replay_takes_one_call_and_one_argument_and_is_gated_by_georges_page():
+def test_replay_takes_one_call_and_one_argument_and_is_gated_by_bobs_page():
     pytest.importorskip("fastapi")
     from pydantic import ValidationError
-    from app.api.v1.routes import george as route
+    from app.api.v1.routes import bob as route
 
     # There is nowhere in the body to put a tool, an argument list, or a
     # second call. That is the bound now: one stored call, one changed
@@ -366,7 +366,7 @@ def test_replay_takes_one_call_and_one_argument_and_is_gated_by_georges_page():
 
     src = _ROUTE.read_text(encoding="utf-8")
     replay_src = src.split("async def replay(", 1)[1].split(chr(10) * 3, 1)[0]
-    assert "Depends(_george_user)" in replay_src
+    assert "Depends(_bob_user)" in replay_src
     assert "replay_service.replay(" in replay_src
     # The model is not consulted, and there is no path from here to it.
     assert "anthropic" not in replay_src
@@ -374,7 +374,7 @@ def test_replay_takes_one_call_and_one_argument_and_is_gated_by_georges_page():
 
 def test_the_desk_definitions_endpoint_mirrors_the_yaml():
     pytest.importorskip("fastapi")
-    from app.api.v1.routes import george as route
+    from app.api.v1.routes import bob as route
 
     class _User:
         username = "ice"
@@ -411,8 +411,8 @@ def test_the_desk_definitions_endpoint_mirrors_the_yaml():
 def test_nothing_updates_or_deletes_a_post_except_the_share():
     for path in (_ROUTE, _WRITER, _LOOP):
         src = path.read_text(encoding="utf-8")
-        assert not re.search(r"DELETE\s+FROM\s+george\.posts", src, re.I), path.name
-        updates = re.findall(r"UPDATE\s+george\.posts\s+SET\s+([a-z_]+)", src, re.I)
+        assert not re.search(r"DELETE\s+FROM\s+bob\.posts", src, re.I), path.name
+        updates = re.findall(r"UPDATE\s+bob\.posts\s+SET\s+([a-z_]+)", src, re.I)
         assert all(col == "visibility" for col in updates), (path.name, updates)
     src = _ROUTE.read_text(encoding="utf-8")
     assert src.count("UPDATE george.posts") == 1

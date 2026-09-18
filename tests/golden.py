@@ -1,5 +1,5 @@
 """
-Golden tests for George's tools.
+Golden tests for Bob's tools.
 
 Runs pytest directly against the tool functions — no agent, no LLM, no prompt.
 Every assertion is a value a human can check against the database by hand.
@@ -35,7 +35,7 @@ asserted structurally or not at all.
 CONNECTION
 
 These call the tools through the real read-only guard in tools/_common.connect,
-with no bypass. They need GEORGE_DATABASE_URL pointing at George's own
+with no bypass. They need GEORGE_DATABASE_URL pointing at Bob's own
 non-superuser role (see tools/george_ro_role.sql). Without it the whole module
 skips rather than failing.
 """
@@ -928,7 +928,7 @@ def test_snapshot_date_index_exists_and_is_fast():
 # top_n shipped broken: the generator had no integer branch, so it declared
 # {"type": "string"}, the model sent "10", and validate_top_n rejected it as a
 # str. Every tool-level test passed because they call the functions directly
-# with real ints. A 40-question run caught it only because George said so out
+# with real ints. A 40-question run caught it only because Bob said so out
 # loud: "top_n won't accept my value, so I'll omit it" — then made 25 calls.
 # ==========================================================================
 

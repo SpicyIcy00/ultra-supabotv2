@@ -13,7 +13,7 @@ import pytest
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from agent import loop as george_loop                       # noqa: E402
+from agent import loop as bob_loop                       # noqa: E402
 from app.services.pin_runner import (                       # noqa: E402
     PinValidationError,
     find_similar_page,
@@ -44,7 +44,7 @@ def test_a_valid_call_survives_validation():
 
 
 def test_a_tool_that_no_longer_exists_is_caught():
-    with pytest.raises(PinValidationError, match="no longer one of George's tools"):
+    with pytest.raises(PinValidationError, match="no longer one of Bob's tools"):
         validate_call({"tool": "get_revenue", "arguments": {}})
 
 
@@ -84,14 +84,14 @@ def test_a_valid_list_argument_is_accepted():
 
 def test_every_registered_tool_can_back_a_pin():
     """
-    A tool George can call is a tool an answer can be pinned from. If one cannot
+    A tool Bob can call is a tool an answer can be pinned from. If one cannot
     even be named here, pinning its answers would fail at an odd moment.
     """
-    for name in george_loop.TOOL_FUNCTIONS:
+    for name in bob_loop.TOOL_FUNCTIONS:
         with pytest.raises(PinValidationError) as exc:
             validate_call({"tool": name, "arguments": {"definitely_not_a_param": 1}})
         # It fails on the ARGUMENT, never on the tool being unknown.
-        assert "no longer one of George's tools" not in str(exc.value)
+        assert "no longer one of Bob's tools" not in str(exc.value)
 
 
 def test_a_pin_needs_at_least_one_call():

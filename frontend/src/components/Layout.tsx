@@ -19,7 +19,7 @@ interface NavItemProps {
   label: string;
   isActive: boolean;
   onClick?: () => void;
-  /** Router state to carry — the George link passes the page it left. */
+  /** Router state to carry — the Bob link passes the page it left. */
   state?: Record<string, unknown>;
 }
 
@@ -72,7 +72,7 @@ const navIcons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
     </svg>
   ),
-  george: (
+  bob: (
     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
     </svg>
@@ -115,16 +115,16 @@ const navItems = [
   // Dashboard owns two tabs: Stores (/) and Vending (/vending)
   { to: '/dashboard', page: 'dashboard', icon: navIcons.dashboard, label: 'Dashboard', match: (p: string) => p === '/dashboard' || p === '/vending' },
   { to: '/analytics', page: 'analytics', icon: navIcons.analytics, label: 'Analytics', match: (p: string) => p === '/analytics' },
-  // Kept, reachable, and named as what it is. George is the AI interface now;
+  // Kept, reachable, and named as what it is. Bob is the AI interface now;
   // this is the older one, and it is not removed because people may still be
   // using it and its route is somebody's bookmark.
   { to: '/ai-chat', page: 'ai_chat', icon: navIcons.chat, label: 'AI Chat (legacy)', match: (p: string) => p === '/ai-chat' },
-  // George: a page in this app like any other, at its own path since
+  // Bob: a page in this app like any other, at its own path since
   // 2026-09-12. It opens its own full-bleed workspace rather than rendering
   // in this chrome — the board is the width of the screen and its rail is
   // fixed — so the room carries a link back to here. It carries the page it
   // was clicked from, so a question asked next arrives with that context.
-  { to: '/george', page: 'george', icon: navIcons.george, label: 'George', match: (p: string) => p === '/george' || p.startsWith('/w/') },
+  { to: '/bob', page: 'bob', icon: navIcons.bob, label: 'Bob', match: (p: string) => p === '/bob' || p.startsWith('/w/') },
   // Warehouse owns two tabs: Replenishment Reports and Barcode Generator
   { to: '/warehouse', page: 'warehouse', icon: navIcons.warehouse, label: 'Warehouse', match: (p: string) => p === '/warehouse' },
   { to: '/packing', page: 'packing', icon: navIcons.packing, label: 'Packing', match: (p: string) => p === '/packing' },
@@ -146,11 +146,11 @@ export function Layout({ children }: LayoutProps) {
     (item) => user?.allowed_pages.includes(item.page) ?? false,
   );
 
-  // The page the person is on, by its access key — what George is told when
+  // The page the person is on, by its access key — what Bob is told when
   // they leave here to ask him something (CLAUDE.md UI rule 1, in part).
   const currentPage = navItems.find((item) => item.match(location.pathname))?.page;
   const stateFor = (item: { page: string }) =>
-    item.page === 'george' && currentPage && currentPage !== 'george'
+    item.page === 'bob' && currentPage && currentPage !== 'bob'
       ? { pageContext: currentPage }
       : undefined;
 

@@ -36,7 +36,7 @@ import pytest
 pytest.importorskip("psycopg", reason="the service imports the tools, which import psycopg")
 pytest.importorskip("sqlalchemy", reason="the service builds SQLAlchemy text()")
 
-from agent import loop as george_loop                                          # noqa: E402
+from agent import loop as bob_loop                                          # noqa: E402
 from app.services import replay as replay_service                              # noqa: E402
 from app.services.replay import (                                              # noqa: E402
     ReplayNotFound,
@@ -130,7 +130,7 @@ def a_tool(monkeypatch, *, rows=ROWS, meta=META, raises: Exception | None = None
     nothing at all.
     """
     seen: list[dict] = []
-    real = george_loop.TOOL_FUNCTIONS["get_sales"]
+    real = bob_loop.TOOL_FUNCTIONS["get_sales"]
 
     @functools.wraps(real)
     def fake(**kwargs):
@@ -139,7 +139,7 @@ def a_tool(monkeypatch, *, rows=ROWS, meta=META, raises: Exception | None = None
             raise raises
         return {"rows": list(rows), "meta": dict(meta)}
 
-    monkeypatch.setitem(george_loop.TOOL_FUNCTIONS, "get_sales", fake)
+    monkeypatch.setitem(bob_loop.TOOL_FUNCTIONS, "get_sales", fake)
     return seen
 
 
@@ -373,7 +373,7 @@ def test_nothing_reaches_the_model(monkeypatch):
     def never(*a, **k):
         raise AssertionError("a replay asked the model something")
 
-    monkeypatch.setattr(george_loop, "run", never)
+    monkeypatch.setattr(bob_loop, "run", never)
     a_tool(monkeypatch)
     assert run(FakeSession(payload=ANSWER))["status"] == "ok"
 
@@ -416,7 +416,7 @@ def test_more_rows_than_a_screen_is_sent_sends_none_of_them(monkeypatch):
     120 of 365 is not a smaller mark, it is a different and wrong one.
     """
     many = [{"store": f"s{i}", "value": float(i)}
-            for i in range(george_loop.MAX_ROWS_TO_CLIENT + 1)]
+            for i in range(bob_loop.MAX_ROWS_TO_CLIENT + 1)]
     a_tool(monkeypatch, rows=many)
     out = run(FakeSession(payload=ANSWER))
     assert out["status"] == "ok"
@@ -498,7 +498,7 @@ def test_the_definitions_say_the_record_is_on_the_post():
 
 def test_every_control_argument_names_a_replay_argument():
     """
-    A drawn control is replayed by tapping it, and George composes one in the
+    A drawn control is replayed by tapping it, and Bob composes one in the
     TOOL'S vocabulary (`date_range`). A control argument with no replay
     argument behind it draws a chip whose every option is refused on click —
     which is worse than no control, and is the same failure compose.py already

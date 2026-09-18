@@ -50,7 +50,7 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        // Overridable so two Georges can run side by side during a dogfood —
+        // Overridable so two Bobs can run side by side during a dogfood —
         // one on the reference branch, one on the branch being judged — without
         // stopping either. Unset, it is the port it has always been.
         target: process.env.GEORGE_API ?? 'http://localhost:8000',

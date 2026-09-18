@@ -30,7 +30,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { approvalsView } from '../components/george/approvalState';
+import { approvalsView } from '../components/bob/approvalState';
 import { RoomHead } from '../room/RoomShell';
 import { errorMessage } from '../services/pinsApi';
 import { listApprovals, promoteVersion } from '../services/workflowsApi';

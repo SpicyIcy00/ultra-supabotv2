@@ -3,7 +3,7 @@
  * THE OWNER'S REPORT ON THE LIVE ROOM, 2026-09-18 (ops/DOGFOOD_LOG.md):
  *
  *   "some small changes it stops too early. it should stop almost right before
- *   the text bar. also whats more from george? why is it hiding? … i should see
+ *   the text bar. also whats more from bob? why is it hiding? … i should see
  *   what i ask too like around the area of the blob just something small and
  *   also be a track back feature … when you can go to your last question and
  *   its last resutls"
@@ -47,9 +47,9 @@ describe('"it stops too early"', () => {
   });
 });
 
-describe('"whats more from george? why is it hiding?"', () => {
+describe('"whats more from bob? why is it hiding?"', () => {
   it('hides nothing behind a tap: what no chart took is under him', () => {
-    expect(ROOM).not.toMatch(/more from George'/);
+    expect(ROOM).not.toMatch(/more from Bob'/);
     expect(ROOM).not.toMatch(/moreOpen/);
     // The owner, later the same day: "with the charts thats it related to. and
     // if its not related then it can go under the blob".
@@ -162,11 +162,11 @@ describe('"add a indicatior … to let people know they can scroll down on it"',
 describe('"i should see what i ask too"', () => {
   it('pairs each answer with the question before it, in the person\'s words', () => {
     const turns = [
-      { role: 'george', text: 'Good morning.' },      // a standing answer nobody asked
+      { role: 'bob', text: 'Good morning.' },      // a standing answer nobody asked
       { role: 'user', text: '  how are we doing  ' },
-      { role: 'george', text: 'Down.' },
+      { role: 'bob', text: 'Down.' },
       { role: 'user', text: 'why?' },
-      { role: 'george', text: 'OPUS.' },
+      { role: 'bob', text: 'OPUS.' },
     ];
     expect(questionsOf(turns)).toEqual([null, 'how are we doing', 'why?']);
   });
@@ -204,7 +204,7 @@ describe('"a track back feature"', () => {
 
   it('redraws an earlier answer from the stored turns, with no model call', () => {
     // The board is built from the answers up to the one being looked at, by the
-    // same function that built it then; nothing on the step path asks George.
+    // same function that built it then; nothing on the step path asks Bob.
     expect(ROOM).toMatch(/allAnswers\.slice\(0, at \+ 1\)/);
     expect(ROOM).toMatch(/const board = useMemo\(\(\) => buildBoard\(answers\), \[answers\]\);/);
     expect(ROOM).toMatch(/onStep=\{\(to\) => \{ setFocused\(null\); setView\(to\); \}\}/);

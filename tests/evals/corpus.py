@@ -21,7 +21,7 @@ that changes what the model SEES has to buy new turns.
     .venv\Scripts\python.exe -m tests.evals.corpus verification/p1b-final.json
 
 WHAT IT CANNOT DO, stated so nobody mistakes it for a run: it cannot tell you
-whether George's BEHAVIOUR changed, because the answers are fixed. It tells
+whether Bob's BEHAVIOUR changed, because the answers are fixed. It tells
 you whether the checks, as they stand today, agree with what was recorded. A
 check that newly fires on a recorded answer is either a bug you just fixed or
 a false positive you just introduced, and the replay says which answer it was
@@ -105,7 +105,7 @@ def main(argv: list[str]) -> int:
     if len(argv) < 2:
         print(__doc__)
         return 2
-    # A FLAG QUOTES GEORGE, AND GEORGE WRITES IN PESOS. Windows hands a piped
+    # A FLAG QUOTES BOB, AND BOB WRITES IN PESOS. Windows hands a piped
     # stdout cp1252, which cannot encode ₱ — so this crashed halfway down the
     # list, after printing the clean rows and before printing the count, which
     # is the worst place for a verification tool to stop. Found in P1.e.

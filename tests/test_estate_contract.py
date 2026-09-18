@@ -6,7 +6,7 @@ and one endpoint.
 
 WHAT IS UNDER TEST, AND WHAT DELIBERATELY IS NOT.
 
-The owner's feature 23 is "George works across all my businesses and
+The owner's feature 23 is "Bob works across all my businesses and
 understands which business/store/system I'm referring to". Both businesses have
 been READ since long before this card — `get_vending`, the `_php` views, a
 whole `vending:` domain in metrics.yaml, and the warehouse as a place in
@@ -20,11 +20,11 @@ So what a card like this can hold is the CHANNEL, not the reading:
   * the default travels as nothing, so a question asked with the switch
     untouched is byte-identical to one asked before this existed;
   * a part the yaml does not declare is refused at the edge, not dropped;
-  * the sentence George is told says which places, what answers for them, and
+  * the sentence Bob is told says which places, what answers for them, and
     the two exclusions the definitions state — and carries no figure;
   * and it rides the QUESTION, never the cached system prompt.
 
-WHAT IT IS NOT. Whether George, told the question is scoped to the warehouse,
+WHAT IT IS NOT. Whether Bob, told the question is scoped to the warehouse,
 actually reaches for stock instead of sales is BEHAVIOUR, and behaviour is held
 by the evals, which this card does not run (its card says "No eval"). What IS
 enforced here and asserted below is the half that is deterministic: the sales
@@ -242,7 +242,7 @@ def test_the_vending_tool_has_no_store_argument_which_is_why_the_part_has_none()
 
 
 def test_every_tool_a_part_names_is_a_tool_that_exists():
-    """A part offering a read George does not have would be a promise the loop cannot keep."""
+    """A part offering a read Bob does not have would be a promise the loop cannot keep."""
     pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
     pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
     from agent.loop import TOOL_FUNCTIONS
@@ -270,7 +270,7 @@ def test_the_store_groups_are_a_definition_and_cover_every_group_present():
     assert len(found) == req(DEFS, "stores.total_rows_in_stores_table")
 
 
-# ------------------------------------------------ the sentence George is told
+# ------------------------------------------------ the sentence Bob is told
 
 
 def test_the_default_says_nothing_at_all():
@@ -342,7 +342,7 @@ def test_the_sentence_moves_when_the_definitions_do():
     """
     A hardcoded shop name or a typed list would pass every assertion above.
     This is the one that cannot survive one: open a shop in the yaml and the
-    scope George is told must change on its own.
+    scope Bob is told must change on its own.
     """
     grown = copy.deepcopy(DEFS)
     grown["stores"]["active_retail"] = list(grown["stores"]["active_retail"]) + [
@@ -374,27 +374,27 @@ def test_the_estate_is_the_widest_clause_on_the_desk_line():
 def _loop():
     pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
     pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
-    from agent import loop as george_loop
-    return george_loop
+    from agent import loop as bob_loop
+    return bob_loop
 
 
 def _drive(monkeypatch, question, desk):
-    george_loop = _loop()
+    bob_loop = _loop()
     from tests.test_convergence_cap_contract import FakeClient
     from tests.test_loop_correction_contract import StubLog, _TextBlock
     fake = FakeClient([[_TextBlock("Five lines are at zero.")]])
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
     StubLog.instances.clear()
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
 
     async def collect():
-        return [f async for f in george_loop.run(question, desk=desk)]
+        return [f async for f in bob_loop.run(question, desk=desk)]
 
     asyncio.run(collect())
     return fake.messages.requests
 
 
-def test_the_estate_reaches_george_on_the_question_and_not_in_the_prompt(monkeypatch):
+def test_the_estate_reaches_bob_on_the_question_and_not_in_the_prompt(monkeypatch):
     requests = _drive(monkeypatch, "how are we doing?", {"estate": "vending"})
     last_user = [m for m in requests[-1]["messages"] if m["role"] == "user"][-1]
     assert "scoped to the vending business" in last_user["content"]
@@ -433,7 +433,7 @@ def test_the_question_post_keeps_the_part_it_was_asked_under(monkeypatch):
 def test_the_route_refuses_a_part_the_definitions_do_not_declare():
     pytest.importorskip("fastapi")
     from pydantic import ValidationError
-    from app.api.v1.routes.george import AskRequest
+    from app.api.v1.routes.bob import AskRequest
 
     for key in [p["key"] for p in ESTATE["parts"]]:
         assert AskRequest(question="?", desk={"estate": key}).desk.estate == key
@@ -445,7 +445,7 @@ def test_the_route_refuses_a_part_the_definitions_do_not_declare():
 
 def test_the_endpoint_serves_the_pills_with_their_places_resolved():
     pytest.importorskip("fastapi")
-    from app.api.v1.routes import george as route
+    from app.api.v1.routes import bob as route
 
     class _User:
         username = "ice"
@@ -464,7 +464,7 @@ def test_the_endpoint_serves_the_pills_with_their_places_resolved():
     # nothing rather than borrowing a shop's name to have something to show.
     assert served["vending"].places == []
     # WHAT A PART MEANS IS NOT SERVED. Which domain answers for it and what it
-    # is excluded from are George's to be told on the question; a client
+    # is excluded from are Bob's to be told on the question; a client
     # drawing a pill has no use for either, and serving them would invite one
     # to act on a business rule it cannot read the reasoning for.
     fields = set(out.estate.parts[0].model_dump())
@@ -481,7 +481,7 @@ def test_the_sales_tool_already_refuses_the_warehouse_in_its_own_words():
     "Scoped to the barn reads stock, not sales" is not held by a sentence — it
     is held HERE, where it already was. The switch puts the warehouse in front
     of a refusal that has existed since 2026-09-13; this asserts the refusal is
-    still the one the estate sentence is telling George to expect.
+    still the one the estate sentence is telling Bob to expect.
     """
     from tools._common import resolve_store, store_catalog
 

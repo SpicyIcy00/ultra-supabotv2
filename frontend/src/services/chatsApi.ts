@@ -8,7 +8,7 @@
 import axios from 'axios';
 import type { ChatDetail, ChatSummary } from '../types/chats';
 
-const API_BASE = '/api/v1/george/chats';
+const API_BASE = '/api/v1/bob/chats';
 
 export const listChats = async (): Promise<ChatSummary[]> => {
   const { data } = await axios.get<ChatSummary[]>(API_BASE);

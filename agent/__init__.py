@@ -1,1 +1,1 @@
-"""George's agent loop. Model -> tool call -> answer, nothing deeper."""
+"""Bob's agent loop. Model -> tool call -> answer, nothing deeper."""

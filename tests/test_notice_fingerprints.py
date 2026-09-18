@@ -189,7 +189,7 @@ def test_no_fingerprint_outlives_its_notice():
 # whole notice mechanism exists to prevent.
 #
 # So each of the fingerprints added on 2026-09-03 is checked against prose that
-# conveys it and prose that ignores it, in the register George actually writes.
+# conveys it and prose that ignores it, in the register Bob actually writes.
 # ---------------------------------------------------------------------------
 
 PAIRS = {
@@ -298,11 +298,11 @@ PAIRS = {
 
 @pytest.mark.parametrize("kind", sorted(PAIRS))
 def test_a_fingerprint_accepts_prose_that_conveys_it(kind):
-    from agent import loop as george_loop
+    from agent import loop as bob_loop
     from tools._common import load_defs
 
     conveys, _ = PAIRS[kind]
-    missing = george_loop._unsurfaced(
+    missing = bob_loop._unsurfaced(
         [{"kind": kind, "message": "..."}], conveys, load_defs()
     )
     assert not missing, (
@@ -313,11 +313,11 @@ def test_a_fingerprint_accepts_prose_that_conveys_it(kind):
 
 @pytest.mark.parametrize("kind", sorted(PAIRS))
 def test_a_fingerprint_rejects_prose_that_ignores_it(kind):
-    from agent import loop as george_loop
+    from agent import loop as bob_loop
     from tools._common import load_defs
 
     _, ignores = PAIRS[kind]
-    missing = george_loop._unsurfaced(
+    missing = bob_loop._unsurfaced(
         [{"kind": kind, "message": "..."}], ignores, load_defs()
     )
     assert missing, (
@@ -356,7 +356,7 @@ def test_a_notice_drawn_on_the_board_counts_as_surfaced():
     caveat already on screen had to be reproduced in prose to pass the check.
     Measured over 51 real answers: one over data carrying four or more notices
     ran 386 words against 137 for one carrying none, almost all of it caveat.
-    George was not being verbose — he was discharging a check.
+    Bob was not being verbose — he was discharging a check.
     """
     from agent.loop import _drawn_on_the_board, _unsurfaced
     from tools._common import load_defs
@@ -406,7 +406,7 @@ def test_a_fingerprint_is_never_satisfied_by_naming_the_column():
     Held as a class rather than for that kind alone: no fingerprint anywhere
     may be satisfiable by a word only the schema uses.
     """
-    from agent import loop as george_loop
+    from agent import loop as bob_loop
     from tools._common import load_defs
 
     internal = ("warning_stock", "is_cancelled", "change_pct", "baseline_status",
@@ -427,7 +427,7 @@ def test_a_fingerprint_is_never_satisfied_by_naming_the_column():
     )
 
     # And the answer that does it is still reported as unsurfaced.
-    missing = george_loop._unsurfaced(
+    missing = bob_loop._unsurfaced(
         [{"kind": "low_stock_not_operational", "message": "..."}],
         "inventory.warning_stock is null on 100% of rows, so nothing is flagged.",
         load_defs(),

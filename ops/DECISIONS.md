@@ -4705,3 +4705,11 @@ The owner's own 30 days (78 turns that read, 351 calls) asked the same reads pie
 **One round for the drivers after the verify** — the ladder's first rung is kept; only what follows it is batched.
 **Measured once, $3.50: median 76.6 → 24.3 s, $0.34 → $0.25 a turn, 8 → 11 of 14.** The owner then asked that no further paid runs be spent on it; the two follow-ups (echo repair, the limitation regex) are held by tests and a free replay.
 **Not fixed:** a threaded answer that cites no figure at all (a writing flap, not a gate), and the two building/digging turns still over 100 s at high effort.
+
+## 2026-09-19 · George is Bob — the name and the code, not the database
+
+**At the owner's word ("were renaming george to bob everywhere"), scoped by him to name and code.** 345 files' text and 39 files' names: his name in the prompt and the room, identifiers, routes, tests, the plan page, the design page's copy, CLAUDE.md and NOW.md.
+**Kept as written:** the Postgres schema `george.*` and its tables, the roles `george_ro` / `george_log` / `george_app`, every `GEORGE_*` environment variable, the SQL role scripts, the alembic history, and this file and the dogfood log up to today — what was said then stays said.
+**The old API paths stay as aliases** (`/api/v1/george/...` mounted beside `/bob/...`, out of the schema) so Vercel and Railway can swap minutes apart without a dead front end; remove them one deploy later.
+**Suites after:** pure 2,028, vitest 986, `tsc -b --force` clean. No live run — a name is not logic.
+**Not renamed online:** the design artifact *George, Ahead of Me* on claude.ai is the owner's record; its file in the repo now says Bob. The plan page was republished under its new title.

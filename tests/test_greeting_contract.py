@@ -1,5 +1,5 @@
 """
-George's opening line: which item speaks, and what he says when none does.
+Bob's opening line: which item speaks, and what he says when none does.
 
 NO DATABASE — these run against synthetic briefs, for the same reason
 test_brief_render.py does. The two behaviours that matter most cannot be
@@ -19,11 +19,11 @@ from __future__ import annotations
 import pytest
 
 # The same guard test_pins_contract uses: nothing here opens a connection, but
-# george_greeting imports tools.brief, which imports tools/_common, which
+# bob_greeting imports tools.brief, which imports tools/_common, which
 # imports psycopg at module scope.
-pytest.importorskip("psycopg", reason="george_greeting imports the brief tool, which imports psycopg")
+pytest.importorskip("psycopg", reason="bob_greeting imports the brief tool, which imports psycopg")
 
-from app.services.george_greeting import (  # noqa: E402
+from app.services.bob_greeting import (  # noqa: E402
     MAX_CHIP_SUBJECT,
     MAX_FOLLOW_UPS,
     build_greeting,
@@ -418,7 +418,7 @@ def test_a_chip_only_ever_names_a_subject_the_brief_named():
     assert chips[0]["question"] == "Is Hello Panda on order for Fairview?"
 
 
-def test_the_first_chip_belongs_to_the_item_george_led_with():
+def test_the_first_chip_belongs_to_the_item_bob_led_with():
     """
     Ordered by the SAME ranking that chose the opening line. A chip list whose
     first entry was about a different item than the sentence above it would read
@@ -437,7 +437,7 @@ def test_the_first_chip_belongs_to_the_item_george_led_with():
 def test_a_quiet_morning_offers_no_chips():
     """
     Nothing crossed a threshold, so there is nothing to ask ABOUT. A chip here
-    would be a suggestion George invented, which is the one thing this whole
+    would be a suggestion Bob invented, which is the one thing this whole
     derivation avoids.
     """
     g = build_greeting(brief([]), defs=DEFS)

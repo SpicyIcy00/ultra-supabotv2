@@ -2,7 +2,7 @@
  * THE BOARD — what makes this a room rather than a screen.
  *
  * A composition is a set of EDITS — put, change, quiet, drop — and this folds
- * every turn's edits into one board that persists. An object George does not
+ * every turn's edits into one board that persists. An object Bob does not
  * mention stays exactly as it was: same read, same rows, same receipts, same
  * read time. He adds, changes, pushes aside and removes; he never redraws what
  * he has not touched. Ask about a supplier, then about a shop, and the draft
@@ -23,7 +23,7 @@
  *
  * What the person does to the board — focus something, set it aside, sort a
  * table — is not here. That is theirs, it lives in the page, and it is applied
- * on top. Mixing the two would let a click look like something George decided.
+ * on top. Mixing the two would let a click look like something Bob decided.
  */
 import type { AnswerTurn, Block } from './data';
 
@@ -41,7 +41,7 @@ export interface BoardObject {
   /**
    * A composed shape has no widget kind; it is `spec`. Until this was said,
    * a block with only a `spec` fell through `edit.kind ?? 'text'` and the
-   * board took George's leading shape for his prose — which is why the
+   * board took Bob's leading shape for his prose — which is why the
    * turn's caveats were drawn on every text tile on the board, including
    * three from earlier turns, the moment a spec led. `text` has since left
    * the vocabulary entirely (P1.c); it survives in the type for stored turns.
@@ -52,7 +52,7 @@ export interface BoardObject {
   tool?: string;
   subject?: string;
   subjects?: string[];
-  /** The few words titling it — George's claim about what it says. */
+  /** The few words titling it — Bob's claim about what it says. */
   claim?: Block['claim'];
   /** What he thinks it shows, drawn beside the mark (2026-09-17). */
   thought?: Block['thought'];
@@ -60,7 +60,7 @@ export interface BoardObject {
   label?: Block['label'];
   action?: Block['action'];
   argument?: Block['argument'];
-  /** A shape George composed, when no named widget fit. */
+  /** A shape Bob composed, when no named widget fit. */
   spec?: Block['spec'];
   seqs?: Block['seqs'];
   emphasise?: Block['emphasise'];
@@ -77,7 +77,7 @@ export interface BoardObject {
   touched: number;
 }
 
-/** What the PERSON has done to an object. Never George's, never a figure. */
+/** What the PERSON has done to an object. Never Bob's, never a figure. */
 export interface Local {
   sort?: { column: string; desc: boolean };
   open?: boolean;
@@ -116,7 +116,7 @@ function carried(edit: Block): Partial<BoardObject> {
 /**
  * WHAT A READ IS, for the purpose of "this is that".
  *
- * Measured 2026-09-12: 168 `put` edits to 3 `change`. George almost never
+ * Measured 2026-09-12: 168 `put` edits to 3 `change`. Bob almost never
  * changes the object he already has; asked the same thing again he puts a
  * twin beside it under a fresh key, and the board ends up holding the same
  * read drawn five ways. The key is his memory and he does not keep it. So
@@ -161,7 +161,7 @@ function drawnSeqs(blocks: readonly Block[]): Set<number> {
 /**
  * The edits a turn contributes.
  *
- * A turn George composed contributes his. A turn from before compose existed —
+ * A turn Bob composed contributes his. A turn from before compose existed —
  * or one where every edit was refused — contributes a plain fallback: the
  * prose, and each successful read as a quiet table, keyed to the turn because
  * a turn that composed nothing chose no keys.
@@ -172,14 +172,14 @@ function drawnSeqs(blocks: readonly Block[]): Set<number> {
  *
  * THE DEFAULT COMES FIRST, AND IS SUPERSEDED BY SEQ (P1.b, 2026-09-13). The
  * loop composes a board the moment the reads land, so an object is on screen a
- * round trip before George has said anything about it
+ * round trip before Bob has said anything about it
  * (agent/default_composition.py). When his composition arrives it is applied
  * ON TOP of the default's edits rather than in place of them, so the board
  * TRANSFORMS instead of being swapped out — and every default over a read he
  * composed over drops out, because he has now said what that read is.
  *
  * BY SEQ, NOT BY KEY, and the difference is the whole of why this is written
- * down. George never sees the default's keys, so he cannot compose the same
+ * down. Bob never sees the default's keys, so he cannot compose the same
  * one; what he does name is the READ, which is the identity the board already
  * uses (readIdentity). A default over a read he did NOT mention stays, quiet,
  * exactly as any object he does not mention stays.
@@ -243,7 +243,7 @@ const SUBJECT_FILTERS = ['store', 'product', 'product_id', 'sku', 'category',
 /**
  * WHAT SOMETHING IS ABOUT — the two facts the travel rule compares.
  *
- * `subjects` are names: off a block George composed, or off the scope its read
+ * `subjects` are names: off a block Bob composed, or off the scope its read
  * was filtered to. Lowercased, because "OPUS" and "Opus" are one shop.
  * `businesses` is what the read belongs to — the metric's own domain where it
  * declares one, and otherwise the tool, which names the business by
@@ -402,7 +402,7 @@ export function travel(
  * So what the newest turn did not touch is not drawn — it is one quiet line
  * above the finding, which opens. The board still HOLDS it: this folds the
  * SCREEN, not the board, so "why?" three turns later still resolves against
- * everything (boardContext is taken from the whole board) and nothing George
+ * everything (boardContext is taken from the whole board) and nothing Bob
  * put down has been thrown away.
  *
  * ONE THING NEVER FOLDS: what they are looking at right now.
@@ -447,7 +447,7 @@ function bounded(board: BoardObject[]): BoardObject[] {
 
 export function buildBoard(answers: AnswerTurn[], kept: ReadonlySet<string> = new Set()): BoardObject[] {
   let board: BoardObject[] = [];
-  // A key George chose for a twin, mapped to the key of the object it
+  // A key Bob chose for a twin, mapped to the key of the object it
   // replaced — so his later edits under the new name land on the old object.
   const aliases = new Map<string, string>();
   answers.forEach((turn, i) => {
@@ -503,7 +503,7 @@ export function buildBoard(answers: AnswerTurn[], kept: ReadonlySet<string> = ne
       }
       if (op === 'change') {
         // An edit naming nothing on the board changes nothing. Not an error —
-        // George may be editing an object the person has since set aside.
+        // Bob may be editing an object the person has since set aside.
         if (at < 0) continue;
         const prev = board[at];
         board[at] = {
@@ -554,11 +554,11 @@ function expired(board: BoardObject[], now: number, kept: ReadonlySet<string>): 
 }
 
 /**
- * The board as it should be drawn: George's order, with what the person opened
+ * The board as it should be drawn: Bob's order, with what the person opened
  * first.
  *
  * `focused` is a click, not a judgment — it makes one object lead for as long
- * as they are looking at it, and demotes George's lead rather than deleting
+ * as they are looking at it, and demotes Bob's lead rather than deleting
  * it, so clearing the focus puts his back.
  */
 export function inOrder(
@@ -567,10 +567,10 @@ export function inOrder(
   focused: string | null,
 ): BoardObject[] {
   // FOCUS NO LONGER REORDERS (the log, 2026-09-17: "we dont need the feature
-  // where when you click the chart it rearranges"). What leads is George's.
+  // where when you click the chart it rearranges"). What leads is Bob's.
   void focused;
   const shown = board;
-  // WHAT LEADS COMES FIRST, in George's order after it. There is no lead row
+  // WHAT LEADS COMES FIRST, in Bob's order after it. There is no lead row
   // any more (P2S.1(c)); leading is simply being first into the flow.
   const lead = shown.filter((o) => o.weight === 'lead');
   return [...lead, ...shown.filter((o) => o.weight !== 'lead')];
@@ -579,11 +579,11 @@ export function inOrder(
 /**
  * WHAT IS ON THE BOARD, as it travels with the next question — so "why?",
  * "products" and "these two" land on the thing being LOOKED at rather than the
- * last thing said. Carries the key George gave each object, because without it
+ * last thing said. Carries the key Bob gave each object, because without it
  * a follow-up could only ever add a second object beside the one meant.
  *
  * Nothing here is a figure: every field is a name off a row, a label from the
- * definitions, or a word George already chose.
+ * definitions, or a word Bob already chose.
  */
 export interface BoardContextObject {
   key: string;
@@ -635,7 +635,7 @@ export function boardContext(
  * claim above it was made about the old rows. So for those changes
  * (`surface.desk.replay.changes_shape`) the endpoint's own board frame is
  * used — `default_composition`, the one composer that names a shape for rows
- * and never a word about them, validated exactly as George's blocks are.
+ * and never a word about them, validated exactly as Bob's blocks are.
  *
  * THE OBJECT KEEPS ITS PLACE AND LOSES HIS WORDS. The key, the turn and the
  * arrangement the person made survive, because it is the same read in the

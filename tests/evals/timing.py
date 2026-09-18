@@ -95,7 +95,7 @@ def first_composed_object_ms(frames: Sequence[Frame], *, with_default: bool) -> 
     chose, rather than the fallback's quiet table per read.
 
     This is the number P1.b actually moves. Before it, the first composed
-    object was George's, a whole model round trip after the rows arrived;
+    object was Bob's, a whole model round trip after the rows arrived;
     after it, it is the loop's default, in the same iteration as the reads.
     """
     for event, data, at in frames:
@@ -135,7 +135,7 @@ def fragment_change_ms(replays: Sequence[float]) -> Optional[float]:
 
     `replays` are the durations of the replays one fragment fired, in seconds
     — one per drawn read on that argument. None for a fragment that fired
-    none, which is a fragment that did not resolve and went to George instead.
+    none, which is a fragment that did not resolve and went to Bob instead.
     """
     if not replays:
         return None
@@ -163,7 +163,7 @@ def analytical_figure_ms(replays: Sequence[float]) -> Optional[float]:
 # The owner: "it should still display like the normal data first and then it
 # goes deeper so theres something to see already and the more pop up so you
 # can really see it building". Measured before this card on
-# verification/p2s6-gate-2.json: the shops at 10.4 s, George's board at
+# verification/p2s6-gate-2.json: the shops at 10.4 s, Bob's board at
 # 59.6 s, the end at 105.7 s, and nothing new in between.
 
 def _drawn_order(blocks: Sequence[dict]) -> list[str]:

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { receiptsDetail, receiptsLine, windowLabel } from './data';
-import type { ToolMeta } from '../types/george';
+import type { ToolMeta } from '../types/bob';
 
 // THE LINE SAYS WHAT AND WHEN. "new_transactions · 2026-09-07 → 2026-09-12"
 // told the reader where the figures lived, not what they were; and the

@@ -3,7 +3,7 @@
  *
  * Two reads, and they answer different questions. The river's thread read is
  * what is SHOWN — everything the caller may see, filtered in SQL. The chats
- * read is what George is TOLD — the caller's own turns with the calls behind
+ * read is what Bob is TOLD — the caller's own turns with the calls behind
  * them, which is the only place tool provenance may come from. A 404 from
  * the second is an ordinary outcome: an org thread the caller has not
  * replied to has no chat of theirs, and that is `null`, not an error.

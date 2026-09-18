@@ -1,5 +1,5 @@
 """
-George — stock movement tool.
+Bob — stock movement tool.
 
 One public function: get_movement().
 

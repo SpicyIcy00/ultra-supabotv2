@@ -1,6 +1,6 @@
 # NOW — read this first
 
-The state of play for George, kept current. **Every working session starts by
+The state of play for Bob, kept current. **Every working session starts by
 reading this file.** It exists so a prompt can be one line without a fresh
 session having to re-derive where everything is.
 
@@ -8,7 +8,7 @@ Five files, five jobs: **CLAUDE.md** holds the rules that do not change (1,493
 words since P0.2), **ops/STANDARD.md** holds the owner's FINAL PRODUCT VISION (2026-09-16; it replaced the 26) — the
 standard everything is measured against — **ops/DECISIONS.md** holds why the
 rules got there plus the archive CLAUDE.md used to carry,
-**ops/DOGFOOD_LOG.md** holds what is wrong with George right now in the
+**ops/DOGFOOD_LOG.md** holds what is wrong with Bob right now in the
 owner's own words, and **this** holds where we are.
 
 If this file disagrees with a memory or an old plan, this file wins. **If
@@ -74,7 +74,7 @@ shippable. The full diagnosis is the report linked in section 6.
   "Stuff came out but it just disappeared", "where did my other pages go",
   "putting the text in a widget doesnt work", "i dont really know what im
   looking at" — every one correct, and two of them led straight to a cause in
-  the code. But "make george a page" then "make it full screen with a back
+  the code. But "make bob a page" then "make it full screen with a back
   button" was a design he had to revise the next day. That is the ordinary
   shape of being the person who USES a thing, and asking him to design is
   asking for the half he has already said he cannot do.
@@ -88,12 +88,12 @@ shippable. The full diagnosis is the report linked in section 6.
   is an hour or less. If it is bigger, write it as a card in section 3 and
   carry on with the current one — a queue of small fixes is how a phase dies.
 - **The plan's central assumption is still untested**, and honesty about it is
-  part of the job. Phase 1 assumes latency is what makes George feel like a
+  part of the job. Phase 1 assumes latency is what makes Bob feel like a
   chatbot. That came from reading the code and the recorded evals, not from the
   owner using the room — which is two days old and has never been dogfooded.
   **The deploy was the test, and it answered on 2026-09-13.** The first two
   complaints after deploying were not about speed: the BI pages were
-  unreachable behind George, and an answer vanished as it was written.
+  unreachable behind Bob, and an answer vanished as it was written.
   Phase 1 was re-ordered accordingly — correctness first — and that is a
   decision recorded in DECISIONS.md, not a failure of the plan.
 
@@ -104,11 +104,11 @@ shippable. The full diagnosis is the report linked in section 6.
 | | |
 |---|---|
 | Product branch | `main` — `feature/workspace` merged into it 2026-09-12 |
-| Head | **`3b99cae` — pushed 2026-09-18 14:59:44 UTC: P2S.5 (`b7caec9`, voice) with `3b99cae` (plan page, version 74). BOTH platforms: frontend (the mic, hands-free, `Mic.tsx`/`voice.ts`) and `definitions/metrics.yaml` (`fragments.read_aloud`), no migration; prompt byte-identical at 1,800 words sha `eec644cb`. **Vercel: `index-DrPe0zYY.js` → `index-BKAPVHeN.js` at 15:01:01, 77 s**; the served stylesheet carries `.r-mic[data-state=listening]` and the Room chunk says "Voice is not available in this browser". **Railway: `d1221fab` served to 15:04:04, three 502s at 15:04:09, :14 and :20, 200 on `3b99caee` at 15:04:25 — 281 s push to live**, schema `x8y9z0a1b2c3` current; `/george/definitions/desk` 401 (served, gated). Nobody has spoken to it yet.** Before it, **`86c8fa3` — pushed 2026-09-18 14:03:42 UTC: P2S.4 (`7138fd3`, same-store year over year and the sales record check) with `b728a00` and `86c8fa3` (plan page, version 73). BACKEND only (`tools/sales.py`, `tools/windows.py`, `definitions/metrics.yaml`), no migration, no frontend; prompt byte-identical at 1,800 words sha `eec644cb`, the `get_sales` schema gains `same_period_last_year`. `/health` served `9473e3e1` continuously to 14:10:02, then 200 on `86c8fa30` at 14:10:12 — **390 s push to live, the SLOWEST SWAP RECORDED** (previous worst 204 s), polled every 5–10 s with no failed poll, so no 502 was seen but a short one could have fallen between polls. Schema `x8y9z0a1b2c3` current, six clean polls after; `/george/definitions/desk` 401 (served, gated). No live turn has asked a year-over-year question yet.** Before it, **`9473e3e` — pushed 2026-09-18 13:35:49 UTC: P2S.11 (what he is told to leave out is kept on its own list and the reads apply it), with `9af6eb9` (docs) under it and the plan page at version 72. BACKEND only, no migration; prompt 1,800 of 1,800 words sha `eec644cb`. `/health` served `4a16cc5c` to 13:36:39, one 502 at 13:36:39, 200 on `9473e3e1` at 13:36:50 — **61 s push to live**, schema `x8y9z0a1b2c3` current, twelve clean polls after. No frontend file, so nothing to watch on Vercel. No live turn has run on it; nobody has told George to leave anything out yet.** Before it, **`4a16cc5` — pushed 2026-09-18 13:03:51 UTC: the dogfood fix `fd61f5c` (a call its tool cannot take is refused, not a crash) and P2S.10 (`a3ccf70`, `get_change` and `get_stock_health`), with the plan page at version 71. BACKEND and one FRONTEND file (`work.ts`'s words), no migration; prompt 1,796 words sha `b1be6950`. `/health` served `f90eeecf` to 13:04:31, one 502 at 13:04:37, 200 on `4a16cc5c` at 13:04:42 — **51 s push to live**, schema `x8y9z0a1b2c3` current, 60 clean polls after. Vercel: `index-C-RM57qH.js` → `index-DrPe0zYY.js` at 13:04:48, **57 s**. **Then Vercel's bot checkpoint answered 403 to every curl from 13:08** (about 60 polls in six minutes set it off), so the served bundle could NOT be grepped for the new words — poll Vercel every 15–20 s, not every 5. No live turn has run on it.** Before it, **`b1a4576` — pushed 2026-09-18 12:09:19 UTC: P2S.9 (`dbe6c87`) and its plan line. BACKEND (`agent/loop.py`, `agent/model_receipts.py`, `tools/sales.py`, `definitions/metrics.yaml`), no migration, no frontend; prompt 1,796 words sha `bb014fe0`. `/health` served `02d99c35` to 12:09:59, two 502s at 12:10:08 and :16, 200 on `b1a45765` at 12:10:24 — **65 s push to live**, schema `x8y9z0a1b2c3` current, eight clean polls after. No live turn has run on it yet; its numbers are P2S.✓'s.** Before it, **`cb46a9b` — pushed 2026-09-18 11:04 UTC; the owner's scroll indicator on his words (the figures' own arrow, shown only while there is more). FRONTEND ONLY: `index-BIWn0IDK.js` → `index-C-RM57qH.js` at 11:05:34, **70 s push to live**; the served stylesheet carries `.r-arr--words{grid-area:words;top:auto;bottom:0}`. Nobody has seen it by eye.** Before it, **`54b697f` — pushed 2026-09-18 10:54 UTC; the dogfood fix `56b40d2` (his words about a chart go under that chart; the rest under him; headings follow their line; `*x*` is emphasis). FRONTEND ONLY: `index-CPcZpSbL.js` → `index-BIWn0IDK.js` at 10:55:32, **70 s push to live**; the served `subjects-1Udv5t2P.js` draws `r-fig-thought` after the chart and has no `wordsOnCharts`. Nobody has seen it by eye.** Before it, **`1e17f06` — pushed 2026-09-18 10:41 UTC; the dogfood fix `589af9f` (under him only the headline and what to do next; his reading on the charts), after `88e2e65` (no band behind a lit row, pushed 10:34, 63 s). FRONTEND ONLY: `index-CNPhpyQ3.js` → `index-CPcZpSbL.js` at 10:42:53, **70 s push to live**; the served stylesheet carries the new `.r-fig-thought` rule. Nobody has seen it by eye.** Before it, **`d6c83d3` — pushed 2026-09-18 10:11 UTC; the dogfood fix `f7335f1` (his words in the full ink; emphasis adds and never dims). FRONTEND ONLY: `index-Bht1qOW_.js` → `index-CPDox-WT.js` at 10:12:33, **70 s push to live**; the served stylesheet has `.r-mk-thought{…color:var(--ink)…}` and the `tr[data-lit=yes]` band. Nobody has seen it by eye.** Before it, **`0ba41b0` — pushed 2026-09-18 10:00 UTC; the dogfood fix `f13df40` (under him, only what the screen does not already say). FRONTEND ONLY: `index-DBKZ5FjI.js` → `index-Bht1qOW_.js` at 10:01:26, **57 s push to live**; the served `subjects-BzFzbDVs.js` carries the new carry-on rule. Nobody has seen it by eye.** Before it, **`2a72150` — pushed 2026-09-18 09:39 UTC; the dogfood fix `5b40454` (the room runs to the line, shows all his words and your question, ‹ › back to earlier answers). FRONTEND ONLY, so Vercel is the deploy: `index-D32H63Ry.js` → `index-DBKZ5FjI.js` at 09:40:56, **91 s push to live**; the served `Room-BBLhPIQw.js` carries "you asked" and no "more from George", and the stylesheet's `.r-beside` ends in `86px`. Nobody has seen it by eye.** Before it, **`0b1808c` — pushed 2026-09-17: 43 commits (the standard, the artifact series, the Phase 2S plan), none touching deployable code, so nothing moved on Railway or Vercel.** Before them, the last deployable change: two dogfood fixes off his screenshots — a `QueryCanceled` was the whole answer, and `[Calls behind this answer: …]` was printed as prose. **BACKEND** (`agent/loop.py`, `tools/purchase_plan.py`, `definitions/metrics.yaml`, `ops/sweep_gaps.py`) so Railway deploys it and `/health` confirms it; **no migration**; **prompt byte-identical at 1,797 words, sha `bf57bd75`** — the new `failures` block is read at failure time, not into the cached prefix. 1,836 → 1,848 pure. Before it, **`22252c9` — pushed and live 2026-09-16 (Vercel).** Two tiles are PLACED, not balanced by height. **The morning's row rule fixed the wrong case**: read out of `george.posts`, the turn he screenshotted composed ONE block (a `change` to an object carried from an earlier turn) and both charts are `default_blocks`, so the board is three objects with both charts in the PACK — `data-rest="2"`, where a `data-rest="1"` rule could never fire. And the pack used `columns: 2`, which places by balancing HEIGHT: right for a pack of many, a coin toss for two equal tiles. Two and three are a grid now. **No backend file.** **MEASURED ON VERCEL: bundle read 05:34:25, pushed 05:34:28, `index-DqYRonHn.js` serving at 05:35:31 — 63 s**, against 50 s on `2017d79`; two measured frontend swaps now where the project had none. **VERIFIED FROM THE SERVED STYLESHEET** `index-BXJxoV6_.css`: the pack rule reads `display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start`, the row rule is there for the one-each case, one `--measure: 1320px`. **Still nobody has seen a pixel.** Before it, **`2017d79` — pushed 2026-09-16, and the FIRST FRONTEND DEPLOY THIS PROJECT HAS EVER MEASURED OR VERIFIED.** A page is a frame and a frame does not move: `--measure` no longer comes from the object count, the room has one frame, and a small board is a row rather than a stack. **No backend file** — the newest commit Railway runs is still `8f6824b`, already live inside `15d4ef7`, so Railway has nothing here to deploy and its sha label will drift to this commit on its own schedule meaning nothing. **MEASURED ON VERCEL, which no session has been able to do before**: bundle read at 05:11:53 UTC as `index-Dv-DyaVm.js`, pushed 05:11:55, `index-Dfdlylb6.js` serving at **05:12:45 — 50 s push to live**, no failed fetch in the window. **AND VERIFIED FROM PRODUCTION RATHER THAN FROM THE WORKING TREE**, which is the part that matters after three blind layout fixes: the live stylesheet `index-CXiM_7T8.css` carries `[data-rest="1"]:has(.r-board-lead){display:grid;grid-template-columns:1fr 1fr…}`, declares exactly one measure (`--measure: 1320px`), and contains **zero** rules setting a measure from `data-rest`. `:has()` and `:not(:has())` both survive minification. **What that still does not say is whether it LOOKS right** — no session has rendered a pixel. Before it, **`15d4ef7` — pushed and live 2026-09-16**: P2.m, the ladder climbed for an intent and a view owed (`8f6824b`, plus this row's own docs commit). **No migration.** **`SYSTEM_PROMPT` MOVED FOR THE FIRST TIME SINCE `c87fda5`: 1,791 → 1,797 words, sha `ee1d17d1` → `bf57bd75`**, and the `get_sales` tool schema with it — so this is a BACKEND deploy and `/health` can confirm it. The only files it runs are `definitions/metrics.yaml` and `agent/loop.py`; no frontend file is touched. Before it, **`815a614` — pushed and live 2026-09-15**: a chart of seven shops opens no shop. A block's subject fell back to `subjectOf(rows[0])`, so clicking a chart of the estate opened whichever shop sorted first — Greenhills. **No migration**, no backend file. Before it, **`46043e3` — pushed and live 2026-09-15**: a name may contain spaces, and categories have a door. Two of his reports in one message. **The client closed the `@` mention at the first space**, so `@Kiamoy strips` was never sent — and **3,719 of 3,728 product names contain a space**, so that door had worked for nine products since it was built. `tools/products.get_product_categories()` is the session's one new read (17 categories, verified against production) and is deliberately **not** in the model's schema. **No migration**, prompt byte-identical at 1,791 words sha `ee1d17d1`, schema still 15 tools. Before it, **`463c21f` — pushed and live 2026-09-15**: a warehouse in the `@` menu says it is one. Before it, **`fe60ce3` — pushed and live 2026-09-15.** Three estate corrections, all his own reports on P2.g inside one evening: AJI CMG is a warehouse and vending is the business; neither warehouse is filed as `retail` any more; and **the switch is BUSINESSES, so the warehouses lost their pills** — All · Aji Ichiban · vending. **No migration on any of them**, prompt byte-identical throughout at 1,791 words sha `ee1d17d1`. The third one found a THIRD copy of the store groups in Python (`backend/app/services/mentions.py`) and fixed it, without which `@AJI CMG` completed to nothing and the pill it replaces was its only door. **No migration**, prompt untouched at 1,791 words sha `ee1d17d1`; the only backend file is `definitions/metrics.yaml` and `agent/surface.py`, neither on the cached prefix. Before it, **`3bb55f2` — pushed and live 2026-09-15**: P2.g, the estate switch — four pills above the board, and which business a question is about travels beside the selection. **No migration.** `SYSTEM_PROMPT` is byte-identical at **1,791 words, sha `ee1d17d1`**: the estate rides the QUESTION, never the cached prefix, and the one prompt edit reads "AJI CMG" out of `stores.vending_stock_location` instead of having it typed — the same bytes, from the definitions. It touches BOTH platforms: Railway for `/definitions/desk` and the `desk.estate` field, Vercel for the pills. Before it, **`fd1ca6a` — pushed 2026-09-15**: a claim about two rows may light two rows. **It is `origin/main` and this file did not say so** — the row below still named `4cede90` as head, so a session reading it would have believed the emphasise fix was unpushed. No `/health` reading was taken for it. Before it, **`4cede90` — pushed and live 2026-09-15**: "compare these" is a question and the shop token is gone. **No migration**, prompt untouched at 1,791 words sha `ee1d17d1`. Before it, **`15e02d3` — pushed and live 2026-09-15**: a token names two shops instead of printing their ids. **No migration**, prompt untouched at 1,791 words sha `ee1d17d1`. Before it, **`f2d2585` — pushed and live 2026-09-15.** The opened object draws a change through `Delta` like every other surface, and its FIRST tests: it was `vi.mock`ed out of five suites and rendered by none, which is how it kept a second visual vocabulary. **No migration**, prompt untouched at 1,791 words sha `ee1d17d1`. Before it, **`b5f8791` — committed, NOT pushed.** The opened object draws a change through `Delta` like every other surface. Before it, **`eeb9aae` — pushed and live 2026-09-15**: the memory that stopped at four, and a refusal outliving its gesture. **No migration on either**, and `SYSTEM_PROMPT` is untouched at 1,791 words, sha `ee1d17d1`. Before it, **`fb6c4f5` — pushed and live 2026-09-15.** One commit: the dogfood log's top three items — the tap that was never built, and the refusal written for the model. **No migration.** `SYSTEM_PROMPT` is byte-identical at 1,791 words, sha `ee1d17d1`: the only `definitions/metrics.yaml` change is a `surface.desk.replay` block nothing on the model path reads. It touches BOTH platforms — Railway for the route serving `surface.prose.leaks`, Vercel for the room — and `/health` can only confirm the first. Before it, **`c87fda5` — pushed and live 2026-09-15.** One commit: P2.f, the memory drawn as a finding, what a person taught him, and Forget. **IT CARRIES THE FIRST MIGRATION SINCE P1.h** — `x8y9z0a1b2c3`, five columns on `george.beliefs`, a `NOT VALID` grounding check and the partial index re-cut. **It had been run on no machine at all before this push** (no local Postgres, no Docker, and `ops/local_postgres.py` wants binaries the checkout does not carry), so Railway executed that DDL first and cold. **It ran**: `/health` reports `x8y9z0a1b2c3` current and expected. `SYSTEM_PROMPT` moved for the first time since P2.c — 1,799 → 1,791 words, sha `fa166e19` → `ee1d17d1` — and the `record_belief` tool schema with it. Before it, **`2de57c9` — pushed and live 2026-09-15.** Two commits: P2.e, the walk, and the build fix under it. **No migration, and the only backend file is `definitions/metrics.yaml`** — a `surface.desk.work.replay` block that nothing on the model path reads, so `SYSTEM_PROMPT` is byte-identical at **1,799 words, sha `fa166e19`**, the same value P2.d recorded. Before it, **`f8762a4` — pushed and live 2026-09-15.** One commit: the colourless-rows fix off his second report of the day — every store keeps the direction its own tool measured, emphasis is weight. **No migration, no backend file.** Before it, **`e561a29` — live 2026-09-15.** One commit: P2.l, the shell stops carrying identity. **No migration, and no backend file** — the only Python touched is none at all; it is `frontend/src/room` plus the four ops documents. `SYSTEM_PROMPT` is untouched at 1,799 words. **THE SWAP WAS NOT WATCHED**: `/health` was read once, after it had already happened, so there is no 502 count for this one and none should be invented. **The room is served by VERCEL**, not by the build `/health` names, so a healthy backend is not evidence the new board is being served — a hard refresh is. Before it, **`51af583` — pushed and live 2026-09-15.** One commit: P2.c, the id behind a tapped subject, the `@` door and the two-shop comparison. **No migration.** It is the first commit since P1.h to touch a MODEL-FACING file: `definitions/metrics.yaml` gained a fourth subject dimension, and the desk sentence lists them, so `SYSTEM_PROMPT` went 1,798 → 1,799 words. Before it, **`b21533c` — live 2026-09-15.** One commit: P2.b, the figure markers, the two-voice scan and the five-colour guard. **No migration**, and **no backend file at all** — the only Python touched is `tests/test_visible_work_contract.py`, which tightened an existing contract onto the new rendering. A docs commit recording this deploy sits above it and is docs-only. Before it, `81c677c`: P2.0 (`13795bb`), the plan page (`07a7d3a`), the Fable-review correction (`81c677c`), and `896805c`, the Fable 5.1 review paragraph, which was already uncommitted in the tree when the P2.0 session started and was committed on its own rather than swept in. |
-| Live | **AND THE ROOM HAS AN ADDRESS AT LAST: `https://thesupabot.vercel.app`.** It came off the STATUS BAR of his own screenshot 2026-09-16, not from anybody asking — nine close-outs have said "nobody has seen it in a browser" and the Live row has said Vercel's origin is written down nowhere. It is written down now, here and in §4. **AND IT HAS A BUILD FINGERPRINT AFTER ALL**, which is the part worth having: the SPA's entry bundle is content-hashed, so `curl -s https://thesupabot.vercel.app/ | grep -o 'assets/index-[A-Za-z0-9._-]*\.js'` names the build — `index-Dv-DyaVm.js` at 05:0x UTC 2026-09-16, the same on `/` and on `/dashboard`. **It is not a sha and cannot be mapped to a commit**, but it CHANGES when the built content does, so a frontend swap can be watched exactly as Railway's is: read it before the push, poll until it differs. That is the thing nine close-outs said did not exist. **What it still cannot do is tell you the page LOOKS right** — that is a hard refresh and a human pair of eyes. **`15d4ef77`**, confirmed from `/health` 2026-09-16: healthy, schema `x8y9z0a1b2c3` current and expected, deployment `7a2233d3`, `george_pool` cap 8 with nothing in use, **no migration**. **MEASURED, AND THE TIGHTEST BOUND THE LOG HAS**: pushed 04:33:27 UTC, `cab4b62f` served continuously from 04:33:38 to **04:34:10**, and 200 on `15d4ef77` at **04:34:16** — so the swap is inside a six-second window and push-to-live is **43–49 s**. `GET /george/definitions/desk` and `GET /george/mentions?q=Seik` both answer **401**, so the routes are served and gated. **THIS IS THE FIRST DEPLOY SINCE `c87fda5` THAT CHANGES WHAT THE MODEL READS** — prompt 1,791 → 1,797 words, sha `ee1d17d1` → `bf57bd75` — so unlike the last nine rows, `/health` confirming the sha IS confirmation of the change. **AND THE FIRST POLL CORRECTED THE ROW BELOW.** It read **`cab4b62f`**, not `815a6148`: Railway had deployed `af92b70`, `d43eda5`, `5228984` and `cab4b62` after all. So the previous row's reading — that a frontend/ops commit produces no Railway swap — is **WRONG**, and the manual redeploy it describes was not needed for the reason it gives. What is true is narrower and still worth keeping: **a docs or frontend commit changes nothing Railway RUNS**, so its swap is invisible in behaviour and not worth watching — but the sha label does move, on its own schedule, and a session must not conclude from a label that has not moved in six minutes that it never will. The previous reading, kept: **`815a6148`**, confirmed from `/health` 2026-09-16 — and **one commit behind `main` ON PURPOSE, which cost a manual redeploy to learn.** He watched `5228984` not swap for six minutes and redeployed Railway by hand, saying *"something was wrong"*. Nothing was: **the newest commit containing ANY backend code is `46043e3`**, and `815a614` is newer than that. Everything after it — `af92b70`, `d43eda5`, `5228984` — is `frontend/` and `ops/` only. **Railway is not behind on a single line it runs**; its sha label is behind, and the label is the only thing that is. **SO `/health` CANNOT CONFIRM A FRONTEND FIX, AND A SESSION MUST SAY SO RATHER THAN WATCH FOR A SWAP THAT IS NOT COMING.** Before watching, check whether the commit touches `backend/ agent/ tools/ definitions/ alembic/ requirements.txt` at all: `git log -1 --format=%h -- backend/ agent/ tools/ definitions/`. If the answer is older than the live sha, the deploy to watch is **Vercel's** and there is nothing here to see. **AND VERCEL CANNOT BE CHECKED FROM A TERMINAL AT ALL, because its origin is written down nowhere.** `DEPLOYMENT_GUIDE.md` has `https://your-app.vercel.app` placeholders and nothing else; no ops file names the real one. That is why "nobody has seen it in a browser" has been the shortfall on nine cards running: **there is no `/health` for the half of the product he actually looks at.** One URL from the owner closes it. The reading itself: healthy, schema `x8y9z0a1b2c3` current and expected, deployment `1a28baba`, **no migration**. The previous reading, kept: **`815a6148`**, confirmed from `/health` 2026-09-15: healthy, schema `x8y9z0a1b2c3` current and expected, **no migration**. **MEASURED, AND THE FIRST SWAP THIS SESSION THAT IS**: pushed 15:57:59 UTC, `3f632962` served continuously to 16:00:58, **one 502 at 16:01:11**, and 200 on `815a6148` at **16:01:23** — **204 s push to live**, 25 of 26 polls served. **That is two to four times the 52–92 s of the measured swaps earlier today**, on a commit carrying no backend file at all (the only Python is `tests/`), so it is the platform's and not the diff's — and it is the widest spread the log has on this number. The watcher's `$TEMP` fix is what makes this row measurable at all. The previous reading, kept: **`46043e37`**, confirmed from `/health` 2026-09-15: healthy, schema `x8y9z0a1b2c3` current and expected, deployment `d6882c73`, **no migration**. **ZERO 502s — 48 of 48 polls served over 8m 56s**, watched from 8 s after the push, which is the second clean swap of the eighteen watched. `GET /george/definitions/desk` and `GET /george/mentions?q=Kiamoy%20strips` both answer **401**, so the routes this change touches are served and gated. **AND THE WATCHER'S OWN BUG IS FIXED, WITH THE CAUSE I GAVE IT LAST TIME CORRECTED.** The previous row said the per-poll build parse failed because it used "the system `python`, not the venv's". **That was wrong.** `curl` under Git Bash writes `/tmp/h.json`, which Git Bash maps to a real Windows path; the venv's Python is a NATIVE Windows interpreter, where `/tmp` means `C:\tmp` and does not exist. Either interpreter fails the same way, and the venv one did. A probe that writes with one toolchain and reads with another has to use a path both agree on (`$TEMP`). **What that costs the record: `fe60ce3`'s swap timing stays bounded and unmeasured, and this row is the first with a build attributed per poll.** **The room is VERCEL's**, so a healthy backend is not evidence the `@` menu is fixed — a hard refresh is. The previous reading, kept: **`fe60ce37`**, confirmed from `/health` 2026-09-15: healthy, schema `x8y9z0a1b2c3` current and expected, deployment `c1c1eaa4`, `george_pool` cap 8 with nothing in use, **no migration**. **ONE 502, at 14:52:55 UTC, and 44 of 45 polls served over 8m 21s** with nothing after it. **The poll started BEFORE the swap this time** — `/health` read `3bb55f22` immediately before the push at ~14:51:35 — so the swap is bounded at about **91 s**. **It is bounded and not measured, and the reason is a bug in the watcher, not in the deploy**: the per-poll build parse failed on every line (the system `python`, not the venv's), so every reading says 200 and none says which sha answered. The 502 is attributed to the restart because that is the pattern of the last six swaps, not because a reading says so. **A session quoting this should say which.** `GET /george/definitions/desk` and `GET /george/mentions?q=CMG` both answer **401** on the live build, so the two routes this change touches are served and gated. **The room is VERCEL's**, so a healthy backend is not evidence the three pills are being drawn — a hard refresh is. The previous reading, kept: **`3bb55f22`**, confirmed from `/health` 2026-09-15: healthy, schema `x8y9z0a1b2c3` current and expected, deployment `1eb96c2e`, `george_pool` cap 8 with nothing in use, **no migration**. **ONE 502 at 14:12:09 UTC**, 200 either side of it, **39 of 40 polls served over 8m 20s** with nothing after the swap. **The poll started after the push and the first readings were not attributed to a build**, so push-to-live is NOT measured for this one and nothing narrower than "inside three minutes" should be claimed. **It carries the estate switch with the pill the owner then corrected**, so the live build says AJI CMG is vending and the fix is unpushed. The previous reading, kept: **`4cede908`**, confirmed from `/health` 2026-09-15: healthy, schema `x8y9z0a1b2c3` current and expected, **no migration**. **Pushed 13:19:19 UTC, one 502 at 13:20:05, 200 on `4cede908` at 13:20:11 — 52 s push to live, measured**, and **149 of 150 polls served over 9m 10s** with nothing after the swap. The previous reading, kept: **`15e02d3d`**, confirmed from `/health` 2026-09-15: healthy, schema `x8y9z0a1b2c3` current and expected, **no migration**. **Pushed 13:06:35 UTC, 502s at 13:08:27, :31 and :34, 200 on `15e02d3d` at 13:08:39 — 124 s push to live, measured**, and **147 of 150 polls served over 9m 27s** with nothing after the swap. **THREE 502s, THE WORST OF THE LAST FOUR** and on a commit carrying no backend file at all — the only Python touched is `tests/`. Fourth confirmation that the 502s are the platform's restart and not the diff. The previous reading, kept: **`f2d2585c`**, confirmed from `/health` 2026-09-15: healthy, schema `x8y9z0a1b2c3` current and expected, **no migration**. **Pushed 12:18:49 UTC, one 502 at 12:19:38, 200 on `f2d2585c` at 12:19:42 — 53 s push to live, measured**, and **149 of 150 polls served over 9m 32s** with nothing after the swap. **Three consecutive swaps now at exactly one 502 and a clean tail, all three watched from before the push** — which is what the ordinary reading looks like when it is measured rather than sampled. The previous reading, kept: **`eeb9aae3`**, confirmed from `/health` 2026-09-15: healthy, schema `x8y9z0a1b2c3` current and expected, **no migration**. **Pushed 12:07:35 UTC, one 502 at 12:08:58, 200 on `eeb9aae3` at 12:09:07 — 92 s push to live, measured**, and **149 of 150 polls served over 10m 3s** with nothing after the swap. Two swaps running now at one 502 and a clean tail, both watched from before the push. `b5f8791` is committed and not pushed, so the live build does NOT have the panel's change colour. The previous reading, kept: **`fb6c4f59`**, confirmed from `/health` 2026-09-15: healthy, schema `x8y9z0a1b2c3` current and expected, **no migration**. **THE CLEANEST SWAP OF THE FIFTEEN, AND THE FIRST WATCHED PROPERLY ALL THE WAY THROUGH.** Pushed 11:48:55 UTC, 200 on `a14f2454` from 11:48:48, **one 502 at 11:49:41**, 200 on `fb6c4f59` at 11:49:47 — **52 s push to live, measured**, and **149 of 150 polls served over 8m 47s** with nothing after the swap at all. That last clause is the point: the previous swap's monitor stopped the moment the new sha answered and missed a second restart two minutes later. This one polled seven minutes past it and there was genuinely nothing. `GET /george/definitions/desk` and `POST /george/beliefs/{id}/forget` both answer **401**, so both are served and gated. The previous reading, kept: **`c87fda56`**, confirmed from `/health` 2026-09-15: healthy, **schema `x8y9z0a1b2c3` current and expected**, deployment `ece27020`, `george_pool` cap 8 with nothing in use. **THE MIGRATION RAN, AND THAT IS THE ONE THING THIS READING IS FOR** — the DDL had been rehearsed nowhere, so the deploy was the rehearsal. **THE SWAP WAS WATCHED FROM BEFORE THE PUSH, so the latency is MEASURED and not bounded for the first time**: pushed 11:17:46 UTC, 200 on `68ce93dc` continuously from 11:17:49, **two 502s at 11:18:46 and 11:18:49**, and 200 on `c87fda56` at 11:18:52 — **66 s push to swap**, 23 of 25 polls served. **This is the first watched swap that carried a migration at all**, so it is the only data point on that path: two 502s and 66 s, against an ordinary reading of one 502. It says nothing about the 50-minute outage on `8b0325a`, which is still unexplained. `POST /api/v1/george/beliefs/{id}/forget` answers **401** on the live build rather than 404, so the new route is served and gated. **AND THE MIGRATION COST THE SWAP NOTHING, which is the one thing a single data point could not have said.** The poller ran on for another six minutes and caught the DOCS commit `183a3aa` deploying behind it — 502s at 11:20:48 and 11:20:52, **two, the same as the migration's**, on a commit carrying no Python, no schema and no frontend. Two swaps 116 s apart, one with five columns of DDL and one with a markdown file, cost the same. So the 502s are the platform's restart, as `f8762a4`'s 18 already suggested, and `alembic upgrade head` added nothing measurable. **4 of 130 polls failed over 7m 15s**, in those two pairs and nowhere else. `schema_checked` read `cached` on the second probe and `live` is what the first reported; neither is a fault. The previous reading, kept: **`2de57c9c`**, confirmed from `/health` 2026-09-15: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `13121632`, `george_pool` cap 8 with nothing in use and a peak of 0, **no migration**. **THE SWAP WAS WATCHED AND COST ONE 502** — a poll at ~3 s read 200 on `7cb1ea5f` from 10:31:07 UTC, one 502 at 10:31:24, and 200 on `2de57c9c` at 10:31:27, with 12 of 12 polls 200 after it. **Push to swap is under 60 s** and nothing narrower should be claimed, because the poll started after the push again. **WHAT THIS READING CORRECTS: the backend was never red.** `/health` was serving `7cb1ea5f` before this push, so Railway deployed P2.d's commit fine — the `tsc -b` failure is **VERCEL's**, which serves the room, and no session has looked at a Vercel build from a terminal yet. So "nothing has deployed since `8037259`" was true of the FRONTEND and false of the backend, and a session should say which. The previous reading, kept: **`f8762a46`**, confirmed from `/health` 2026-09-15: healthy, schema `w7x8y9z0a1b2` ok, deployment `17bc522f`, **no migration**, and 15 of 15 polls 200 after it settled. **THIS SWAP WAS WATCHED AND IT COST 18 CONSECUTIVE 502s** — the worst of the twelve watched, against a previous worst of 4 — on a commit carrying no backend file and no migration, so the outage is the platform's restart and nothing in the diff. **Nobody should quote "one or two 502s" as the ordinary reading again without saying this one happened.** The previous reading, kept: **`e561a294`**, confirmed from `/health` 2026-09-15: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `61a2cf3a`, `george_pool` cap 8 with nothing in use and a peak of 0, **no migration**. Read once, after the swap, so **no 502 count for this deploy**. The previous reading, kept: **`51af583e`**, confirmed from `/health`: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `c978adc5`, `george_pool` cap 8 with nothing in use and a peak of 3, **no migration**. **ONE 502 in the swap** — a poll at ~3 s read 200 from 07:45:30 UTC, one 502 at 07:46:04, and 200 on `51af583e` after it: 99 of 100 polls served. `GET /api/v1/george/mentions?q=Seik` answers **401** on the live build rather than 404, so the new route is served and gated. The previous reading, kept: **`b21533ca`**, from `/health`: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `633119fb`, `george_pool` cap 8 with nothing in use, **no migration**. **THE SWAP COST NOTHING — not one 502.** A poll at ~3 s read 200 continuously from 06:49:52 UTC on `4ade8c43`, and **200 on `b21533ca` at 06:50:41**, with no failed reading between them: the first clean swap of the ten watched. **The push-to-swap latency is BOUNDED, not measured**, because the poll started after the push again — the first reading was 06:49:52 and the new build answered at 06:50:41, so it is **under 55 s** and nothing narrower should be claimed. Read `/health` rather than believing this row. |
+| Head | **`3b99cae` — pushed 2026-09-18 14:59:44 UTC: P2S.5 (`b7caec9`, voice) with `3b99cae` (plan page, version 74). BOTH platforms: frontend (the mic, hands-free, `Mic.tsx`/`voice.ts`) and `definitions/metrics.yaml` (`fragments.read_aloud`), no migration; prompt byte-identical at 1,800 words sha `eec644cb`. **Vercel: `index-DrPe0zYY.js` → `index-BKAPVHeN.js` at 15:01:01, 77 s**; the served stylesheet carries `.r-mic[data-state=listening]` and the Room chunk says "Voice is not available in this browser". **Railway: `d1221fab` served to 15:04:04, three 502s at 15:04:09, :14 and :20, 200 on `3b99caee` at 15:04:25 — 281 s push to live**, schema `x8y9z0a1b2c3` current; `/bob/definitions/desk` 401 (served, gated). Nobody has spoken to it yet.** Before it, **`86c8fa3` — pushed 2026-09-18 14:03:42 UTC: P2S.4 (`7138fd3`, same-store year over year and the sales record check) with `b728a00` and `86c8fa3` (plan page, version 73). BACKEND only (`tools/sales.py`, `tools/windows.py`, `definitions/metrics.yaml`), no migration, no frontend; prompt byte-identical at 1,800 words sha `eec644cb`, the `get_sales` schema gains `same_period_last_year`. `/health` served `9473e3e1` continuously to 14:10:02, then 200 on `86c8fa30` at 14:10:12 — **390 s push to live, the SLOWEST SWAP RECORDED** (previous worst 204 s), polled every 5–10 s with no failed poll, so no 502 was seen but a short one could have fallen between polls. Schema `x8y9z0a1b2c3` current, six clean polls after; `/bob/definitions/desk` 401 (served, gated). No live turn has asked a year-over-year question yet.** Before it, **`9473e3e` — pushed 2026-09-18 13:35:49 UTC: P2S.11 (what he is told to leave out is kept on its own list and the reads apply it), with `9af6eb9` (docs) under it and the plan page at version 72. BACKEND only, no migration; prompt 1,800 of 1,800 words sha `eec644cb`. `/health` served `4a16cc5c` to 13:36:39, one 502 at 13:36:39, 200 on `9473e3e1` at 13:36:50 — **61 s push to live**, schema `x8y9z0a1b2c3` current, twelve clean polls after. No frontend file, so nothing to watch on Vercel. No live turn has run on it; nobody has told Bob to leave anything out yet.** Before it, **`4a16cc5` — pushed 2026-09-18 13:03:51 UTC: the dogfood fix `fd61f5c` (a call its tool cannot take is refused, not a crash) and P2S.10 (`a3ccf70`, `get_change` and `get_stock_health`), with the plan page at version 71. BACKEND and one FRONTEND file (`work.ts`'s words), no migration; prompt 1,796 words sha `b1be6950`. `/health` served `f90eeecf` to 13:04:31, one 502 at 13:04:37, 200 on `4a16cc5c` at 13:04:42 — **51 s push to live**, schema `x8y9z0a1b2c3` current, 60 clean polls after. Vercel: `index-C-RM57qH.js` → `index-DrPe0zYY.js` at 13:04:48, **57 s**. **Then Vercel's bot checkpoint answered 403 to every curl from 13:08** (about 60 polls in six minutes set it off), so the served bundle could NOT be grepped for the new words — poll Vercel every 15–20 s, not every 5. No live turn has run on it.** Before it, **`b1a4576` — pushed 2026-09-18 12:09:19 UTC: P2S.9 (`dbe6c87`) and its plan line. BACKEND (`agent/loop.py`, `agent/model_receipts.py`, `tools/sales.py`, `definitions/metrics.yaml`), no migration, no frontend; prompt 1,796 words sha `bb014fe0`. `/health` served `02d99c35` to 12:09:59, two 502s at 12:10:08 and :16, 200 on `b1a45765` at 12:10:24 — **65 s push to live**, schema `x8y9z0a1b2c3` current, eight clean polls after. No live turn has run on it yet; its numbers are P2S.✓'s.** Before it, **`cb46a9b` — pushed 2026-09-18 11:04 UTC; the owner's scroll indicator on his words (the figures' own arrow, shown only while there is more). FRONTEND ONLY: `index-BIWn0IDK.js` → `index-C-RM57qH.js` at 11:05:34, **70 s push to live**; the served stylesheet carries `.r-arr--words{grid-area:words;top:auto;bottom:0}`. Nobody has seen it by eye.** Before it, **`54b697f` — pushed 2026-09-18 10:54 UTC; the dogfood fix `56b40d2` (his words about a chart go under that chart; the rest under him; headings follow their line; `*x*` is emphasis). FRONTEND ONLY: `index-CPcZpSbL.js` → `index-BIWn0IDK.js` at 10:55:32, **70 s push to live**; the served `subjects-1Udv5t2P.js` draws `r-fig-thought` after the chart and has no `wordsOnCharts`. Nobody has seen it by eye.** Before it, **`1e17f06` — pushed 2026-09-18 10:41 UTC; the dogfood fix `589af9f` (under him only the headline and what to do next; his reading on the charts), after `88e2e65` (no band behind a lit row, pushed 10:34, 63 s). FRONTEND ONLY: `index-CNPhpyQ3.js` → `index-CPcZpSbL.js` at 10:42:53, **70 s push to live**; the served stylesheet carries the new `.r-fig-thought` rule. Nobody has seen it by eye.** Before it, **`d6c83d3` — pushed 2026-09-18 10:11 UTC; the dogfood fix `f7335f1` (his words in the full ink; emphasis adds and never dims). FRONTEND ONLY: `index-Bht1qOW_.js` → `index-CPDox-WT.js` at 10:12:33, **70 s push to live**; the served stylesheet has `.r-mk-thought{…color:var(--ink)…}` and the `tr[data-lit=yes]` band. Nobody has seen it by eye.** Before it, **`0ba41b0` — pushed 2026-09-18 10:00 UTC; the dogfood fix `f13df40` (under him, only what the screen does not already say). FRONTEND ONLY: `index-DBKZ5FjI.js` → `index-Bht1qOW_.js` at 10:01:26, **57 s push to live**; the served `subjects-BzFzbDVs.js` carries the new carry-on rule. Nobody has seen it by eye.** Before it, **`2a72150` — pushed 2026-09-18 09:39 UTC; the dogfood fix `5b40454` (the room runs to the line, shows all his words and your question, ‹ › back to earlier answers). FRONTEND ONLY, so Vercel is the deploy: `index-D32H63Ry.js` → `index-DBKZ5FjI.js` at 09:40:56, **91 s push to live**; the served `Room-BBLhPIQw.js` carries "you asked" and no "more from Bob", and the stylesheet's `.r-beside` ends in `86px`. Nobody has seen it by eye.** Before it, **`0b1808c` — pushed 2026-09-17: 43 commits (the standard, the artifact series, the Phase 2S plan), none touching deployable code, so nothing moved on Railway or Vercel.** Before them, the last deployable change: two dogfood fixes off his screenshots — a `QueryCanceled` was the whole answer, and `[Calls behind this answer: …]` was printed as prose. **BACKEND** (`agent/loop.py`, `tools/purchase_plan.py`, `definitions/metrics.yaml`, `ops/sweep_gaps.py`) so Railway deploys it and `/health` confirms it; **no migration**; **prompt byte-identical at 1,797 words, sha `bf57bd75`** — the new `failures` block is read at failure time, not into the cached prefix. 1,836 → 1,848 pure. Before it, **`22252c9` — pushed and live 2026-09-16 (Vercel).** Two tiles are PLACED, not balanced by height. **The morning's row rule fixed the wrong case**: read out of `george.posts`, the turn he screenshotted composed ONE block (a `change` to an object carried from an earlier turn) and both charts are `default_blocks`, so the board is three objects with both charts in the PACK — `data-rest="2"`, where a `data-rest="1"` rule could never fire. And the pack used `columns: 2`, which places by balancing HEIGHT: right for a pack of many, a coin toss for two equal tiles. Two and three are a grid now. **No backend file.** **MEASURED ON VERCEL: bundle read 05:34:25, pushed 05:34:28, `index-DqYRonHn.js` serving at 05:35:31 — 63 s**, against 50 s on `2017d79`; two measured frontend swaps now where the project had none. **VERIFIED FROM THE SERVED STYLESHEET** `index-BXJxoV6_.css`: the pack rule reads `display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start`, the row rule is there for the one-each case, one `--measure: 1320px`. **Still nobody has seen a pixel.** Before it, **`2017d79` — pushed 2026-09-16, and the FIRST FRONTEND DEPLOY THIS PROJECT HAS EVER MEASURED OR VERIFIED.** A page is a frame and a frame does not move: `--measure` no longer comes from the object count, the room has one frame, and a small board is a row rather than a stack. **No backend file** — the newest commit Railway runs is still `8f6824b`, already live inside `15d4ef7`, so Railway has nothing here to deploy and its sha label will drift to this commit on its own schedule meaning nothing. **MEASURED ON VERCEL, which no session has been able to do before**: bundle read at 05:11:53 UTC as `index-Dv-DyaVm.js`, pushed 05:11:55, `index-Dfdlylb6.js` serving at **05:12:45 — 50 s push to live**, no failed fetch in the window. **AND VERIFIED FROM PRODUCTION RATHER THAN FROM THE WORKING TREE**, which is the part that matters after three blind layout fixes: the live stylesheet `index-CXiM_7T8.css` carries `[data-rest="1"]:has(.r-board-lead){display:grid;grid-template-columns:1fr 1fr…}`, declares exactly one measure (`--measure: 1320px`), and contains **zero** rules setting a measure from `data-rest`. `:has()` and `:not(:has())` both survive minification. **What that still does not say is whether it LOOKS right** — no session has rendered a pixel. Before it, **`15d4ef7` — pushed and live 2026-09-16**: P2.m, the ladder climbed for an intent and a view owed (`8f6824b`, plus this row's own docs commit). **No migration.** **`SYSTEM_PROMPT` MOVED FOR THE FIRST TIME SINCE `c87fda5`: 1,791 → 1,797 words, sha `ee1d17d1` → `bf57bd75`**, and the `get_sales` tool schema with it — so this is a BACKEND deploy and `/health` can confirm it. The only files it runs are `definitions/metrics.yaml` and `agent/loop.py`; no frontend file is touched. Before it, **`815a614` — pushed and live 2026-09-15**: a chart of seven shops opens no shop. A block's subject fell back to `subjectOf(rows[0])`, so clicking a chart of the estate opened whichever shop sorted first — Greenhills. **No migration**, no backend file. Before it, **`46043e3` — pushed and live 2026-09-15**: a name may contain spaces, and categories have a door. Two of his reports in one message. **The client closed the `@` mention at the first space**, so `@Kiamoy strips` was never sent — and **3,719 of 3,728 product names contain a space**, so that door had worked for nine products since it was built. `tools/products.get_product_categories()` is the session's one new read (17 categories, verified against production) and is deliberately **not** in the model's schema. **No migration**, prompt byte-identical at 1,791 words sha `ee1d17d1`, schema still 15 tools. Before it, **`463c21f` — pushed and live 2026-09-15**: a warehouse in the `@` menu says it is one. Before it, **`fe60ce3` — pushed and live 2026-09-15.** Three estate corrections, all his own reports on P2.g inside one evening: AJI CMG is a warehouse and vending is the business; neither warehouse is filed as `retail` any more; and **the switch is BUSINESSES, so the warehouses lost their pills** — All · Aji Ichiban · vending. **No migration on any of them**, prompt byte-identical throughout at 1,791 words sha `ee1d17d1`. The third one found a THIRD copy of the store groups in Python (`backend/app/services/mentions.py`) and fixed it, without which `@AJI CMG` completed to nothing and the pill it replaces was its only door. **No migration**, prompt untouched at 1,791 words sha `ee1d17d1`; the only backend file is `definitions/metrics.yaml` and `agent/surface.py`, neither on the cached prefix. Before it, **`3bb55f2` — pushed and live 2026-09-15**: P2.g, the estate switch — four pills above the board, and which business a question is about travels beside the selection. **No migration.** `SYSTEM_PROMPT` is byte-identical at **1,791 words, sha `ee1d17d1`**: the estate rides the QUESTION, never the cached prefix, and the one prompt edit reads "AJI CMG" out of `stores.vending_stock_location` instead of having it typed — the same bytes, from the definitions. It touches BOTH platforms: Railway for `/definitions/desk` and the `desk.estate` field, Vercel for the pills. Before it, **`fd1ca6a` — pushed 2026-09-15**: a claim about two rows may light two rows. **It is `origin/main` and this file did not say so** — the row below still named `4cede90` as head, so a session reading it would have believed the emphasise fix was unpushed. No `/health` reading was taken for it. Before it, **`4cede90` — pushed and live 2026-09-15**: "compare these" is a question and the shop token is gone. **No migration**, prompt untouched at 1,791 words sha `ee1d17d1`. Before it, **`15e02d3` — pushed and live 2026-09-15**: a token names two shops instead of printing their ids. **No migration**, prompt untouched at 1,791 words sha `ee1d17d1`. Before it, **`f2d2585` — pushed and live 2026-09-15.** The opened object draws a change through `Delta` like every other surface, and its FIRST tests: it was `vi.mock`ed out of five suites and rendered by none, which is how it kept a second visual vocabulary. **No migration**, prompt untouched at 1,791 words sha `ee1d17d1`. Before it, **`b5f8791` — committed, NOT pushed.** The opened object draws a change through `Delta` like every other surface. Before it, **`eeb9aae` — pushed and live 2026-09-15**: the memory that stopped at four, and a refusal outliving its gesture. **No migration on either**, and `SYSTEM_PROMPT` is untouched at 1,791 words, sha `ee1d17d1`. Before it, **`fb6c4f5` — pushed and live 2026-09-15.** One commit: the dogfood log's top three items — the tap that was never built, and the refusal written for the model. **No migration.** `SYSTEM_PROMPT` is byte-identical at 1,791 words, sha `ee1d17d1`: the only `definitions/metrics.yaml` change is a `surface.desk.replay` block nothing on the model path reads. It touches BOTH platforms — Railway for the route serving `surface.prose.leaks`, Vercel for the room — and `/health` can only confirm the first. Before it, **`c87fda5` — pushed and live 2026-09-15.** One commit: P2.f, the memory drawn as a finding, what a person taught him, and Forget. **IT CARRIES THE FIRST MIGRATION SINCE P1.h** — `x8y9z0a1b2c3`, five columns on `george.beliefs`, a `NOT VALID` grounding check and the partial index re-cut. **It had been run on no machine at all before this push** (no local Postgres, no Docker, and `ops/local_postgres.py` wants binaries the checkout does not carry), so Railway executed that DDL first and cold. **It ran**: `/health` reports `x8y9z0a1b2c3` current and expected. `SYSTEM_PROMPT` moved for the first time since P2.c — 1,799 → 1,791 words, sha `fa166e19` → `ee1d17d1` — and the `record_belief` tool schema with it. Before it, **`2de57c9` — pushed and live 2026-09-15.** Two commits: P2.e, the walk, and the build fix under it. **No migration, and the only backend file is `definitions/metrics.yaml`** — a `surface.desk.work.replay` block that nothing on the model path reads, so `SYSTEM_PROMPT` is byte-identical at **1,799 words, sha `fa166e19`**, the same value P2.d recorded. Before it, **`f8762a4` — pushed and live 2026-09-15.** One commit: the colourless-rows fix off his second report of the day — every store keeps the direction its own tool measured, emphasis is weight. **No migration, no backend file.** Before it, **`e561a29` — live 2026-09-15.** One commit: P2.l, the shell stops carrying identity. **No migration, and no backend file** — the only Python touched is none at all; it is `frontend/src/room` plus the four ops documents. `SYSTEM_PROMPT` is untouched at 1,799 words. **THE SWAP WAS NOT WATCHED**: `/health` was read once, after it had already happened, so there is no 502 count for this one and none should be invented. **The room is served by VERCEL**, not by the build `/health` names, so a healthy backend is not evidence the new board is being served — a hard refresh is. Before it, **`51af583` — pushed and live 2026-09-15.** One commit: P2.c, the id behind a tapped subject, the `@` door and the two-shop comparison. **No migration.** It is the first commit since P1.h to touch a MODEL-FACING file: `definitions/metrics.yaml` gained a fourth subject dimension, and the desk sentence lists them, so `SYSTEM_PROMPT` went 1,798 → 1,799 words. Before it, **`b21533c` — live 2026-09-15.** One commit: P2.b, the figure markers, the two-voice scan and the five-colour guard. **No migration**, and **no backend file at all** — the only Python touched is `tests/test_visible_work_contract.py`, which tightened an existing contract onto the new rendering. A docs commit recording this deploy sits above it and is docs-only. Before it, `81c677c`: P2.0 (`13795bb`), the plan page (`07a7d3a`), the Fable-review correction (`81c677c`), and `896805c`, the Fable 5.1 review paragraph, which was already uncommitted in the tree when the P2.0 session started and was committed on its own rather than swept in. |
+| Live | **AND THE ROOM HAS AN ADDRESS AT LAST: `https://thesupabot.vercel.app`.** It came off the STATUS BAR of his own screenshot 2026-09-16, not from anybody asking — nine close-outs have said "nobody has seen it in a browser" and the Live row has said Vercel's origin is written down nowhere. It is written down now, here and in §4. **AND IT HAS A BUILD FINGERPRINT AFTER ALL**, which is the part worth having: the SPA's entry bundle is content-hashed, so `curl -s https://thesupabot.vercel.app/ | grep -o 'assets/index-[A-Za-z0-9._-]*\.js'` names the build — `index-Dv-DyaVm.js` at 05:0x UTC 2026-09-16, the same on `/` and on `/dashboard`. **It is not a sha and cannot be mapped to a commit**, but it CHANGES when the built content does, so a frontend swap can be watched exactly as Railway's is: read it before the push, poll until it differs. That is the thing nine close-outs said did not exist. **What it still cannot do is tell you the page LOOKS right** — that is a hard refresh and a human pair of eyes. **`15d4ef77`**, confirmed from `/health` 2026-09-16: healthy, schema `x8y9z0a1b2c3` current and expected, deployment `7a2233d3`, `bob_pool` cap 8 with nothing in use, **no migration**. **MEASURED, AND THE TIGHTEST BOUND THE LOG HAS**: pushed 04:33:27 UTC, `cab4b62f` served continuously from 04:33:38 to **04:34:10**, and 200 on `15d4ef77` at **04:34:16** — so the swap is inside a six-second window and push-to-live is **43–49 s**. `GET /bob/definitions/desk` and `GET /bob/mentions?q=Seik` both answer **401**, so the routes are served and gated. **THIS IS THE FIRST DEPLOY SINCE `c87fda5` THAT CHANGES WHAT THE MODEL READS** — prompt 1,791 → 1,797 words, sha `ee1d17d1` → `bf57bd75` — so unlike the last nine rows, `/health` confirming the sha IS confirmation of the change. **AND THE FIRST POLL CORRECTED THE ROW BELOW.** It read **`cab4b62f`**, not `815a6148`: Railway had deployed `af92b70`, `d43eda5`, `5228984` and `cab4b62` after all. So the previous row's reading — that a frontend/ops commit produces no Railway swap — is **WRONG**, and the manual redeploy it describes was not needed for the reason it gives. What is true is narrower and still worth keeping: **a docs or frontend commit changes nothing Railway RUNS**, so its swap is invisible in behaviour and not worth watching — but the sha label does move, on its own schedule, and a session must not conclude from a label that has not moved in six minutes that it never will. The previous reading, kept: **`815a6148`**, confirmed from `/health` 2026-09-16 — and **one commit behind `main` ON PURPOSE, which cost a manual redeploy to learn.** He watched `5228984` not swap for six minutes and redeployed Railway by hand, saying *"something was wrong"*. Nothing was: **the newest commit containing ANY backend code is `46043e3`**, and `815a614` is newer than that. Everything after it — `af92b70`, `d43eda5`, `5228984` — is `frontend/` and `ops/` only. **Railway is not behind on a single line it runs**; its sha label is behind, and the label is the only thing that is. **SO `/health` CANNOT CONFIRM A FRONTEND FIX, AND A SESSION MUST SAY SO RATHER THAN WATCH FOR A SWAP THAT IS NOT COMING.** Before watching, check whether the commit touches `backend/ agent/ tools/ definitions/ alembic/ requirements.txt` at all: `git log -1 --format=%h -- backend/ agent/ tools/ definitions/`. If the answer is older than the live sha, the deploy to watch is **Vercel's** and there is nothing here to see. **AND VERCEL CANNOT BE CHECKED FROM A TERMINAL AT ALL, because its origin is written down nowhere.** `DEPLOYMENT_GUIDE.md` has `https://your-app.vercel.app` placeholders and nothing else; no ops file names the real one. That is why "nobody has seen it in a browser" has been the shortfall on nine cards running: **there is no `/health` for the half of the product he actually looks at.** One URL from the owner closes it. The reading itself: healthy, schema `x8y9z0a1b2c3` current and expected, deployment `1a28baba`, **no migration**. The previous reading, kept: **`815a6148`**, confirmed from `/health` 2026-09-15: healthy, schema `x8y9z0a1b2c3` current and expected, **no migration**. **MEASURED, AND THE FIRST SWAP THIS SESSION THAT IS**: pushed 15:57:59 UTC, `3f632962` served continuously to 16:00:58, **one 502 at 16:01:11**, and 200 on `815a6148` at **16:01:23** — **204 s push to live**, 25 of 26 polls served. **That is two to four times the 52–92 s of the measured swaps earlier today**, on a commit carrying no backend file at all (the only Python is `tests/`), so it is the platform's and not the diff's — and it is the widest spread the log has on this number. The watcher's `$TEMP` fix is what makes this row measurable at all. The previous reading, kept: **`46043e37`**, confirmed from `/health` 2026-09-15: healthy, schema `x8y9z0a1b2c3` current and expected, deployment `d6882c73`, **no migration**. **ZERO 502s — 48 of 48 polls served over 8m 56s**, watched from 8 s after the push, which is the second clean swap of the eighteen watched. `GET /bob/definitions/desk` and `GET /bob/mentions?q=Kiamoy%20strips` both answer **401**, so the routes this change touches are served and gated. **AND THE WATCHER'S OWN BUG IS FIXED, WITH THE CAUSE I GAVE IT LAST TIME CORRECTED.** The previous row said the per-poll build parse failed because it used "the system `python`, not the venv's". **That was wrong.** `curl` under Git Bash writes `/tmp/h.json`, which Git Bash maps to a real Windows path; the venv's Python is a NATIVE Windows interpreter, where `/tmp` means `C:\tmp` and does not exist. Either interpreter fails the same way, and the venv one did. A probe that writes with one toolchain and reads with another has to use a path both agree on (`$TEMP`). **What that costs the record: `fe60ce3`'s swap timing stays bounded and unmeasured, and this row is the first with a build attributed per poll.** **The room is VERCEL's**, so a healthy backend is not evidence the `@` menu is fixed — a hard refresh is. The previous reading, kept: **`fe60ce37`**, confirmed from `/health` 2026-09-15: healthy, schema `x8y9z0a1b2c3` current and expected, deployment `c1c1eaa4`, `bob_pool` cap 8 with nothing in use, **no migration**. **ONE 502, at 14:52:55 UTC, and 44 of 45 polls served over 8m 21s** with nothing after it. **The poll started BEFORE the swap this time** — `/health` read `3bb55f22` immediately before the push at ~14:51:35 — so the swap is bounded at about **91 s**. **It is bounded and not measured, and the reason is a bug in the watcher, not in the deploy**: the per-poll build parse failed on every line (the system `python`, not the venv's), so every reading says 200 and none says which sha answered. The 502 is attributed to the restart because that is the pattern of the last six swaps, not because a reading says so. **A session quoting this should say which.** `GET /bob/definitions/desk` and `GET /bob/mentions?q=CMG` both answer **401** on the live build, so the two routes this change touches are served and gated. **The room is VERCEL's**, so a healthy backend is not evidence the three pills are being drawn — a hard refresh is. The previous reading, kept: **`3bb55f22`**, confirmed from `/health` 2026-09-15: healthy, schema `x8y9z0a1b2c3` current and expected, deployment `1eb96c2e`, `bob_pool` cap 8 with nothing in use, **no migration**. **ONE 502 at 14:12:09 UTC**, 200 either side of it, **39 of 40 polls served over 8m 20s** with nothing after the swap. **The poll started after the push and the first readings were not attributed to a build**, so push-to-live is NOT measured for this one and nothing narrower than "inside three minutes" should be claimed. **It carries the estate switch with the pill the owner then corrected**, so the live build says AJI CMG is vending and the fix is unpushed. The previous reading, kept: **`4cede908`**, confirmed from `/health` 2026-09-15: healthy, schema `x8y9z0a1b2c3` current and expected, **no migration**. **Pushed 13:19:19 UTC, one 502 at 13:20:05, 200 on `4cede908` at 13:20:11 — 52 s push to live, measured**, and **149 of 150 polls served over 9m 10s** with nothing after the swap. The previous reading, kept: **`15e02d3d`**, confirmed from `/health` 2026-09-15: healthy, schema `x8y9z0a1b2c3` current and expected, **no migration**. **Pushed 13:06:35 UTC, 502s at 13:08:27, :31 and :34, 200 on `15e02d3d` at 13:08:39 — 124 s push to live, measured**, and **147 of 150 polls served over 9m 27s** with nothing after the swap. **THREE 502s, THE WORST OF THE LAST FOUR** and on a commit carrying no backend file at all — the only Python touched is `tests/`. Fourth confirmation that the 502s are the platform's restart and not the diff. The previous reading, kept: **`f2d2585c`**, confirmed from `/health` 2026-09-15: healthy, schema `x8y9z0a1b2c3` current and expected, **no migration**. **Pushed 12:18:49 UTC, one 502 at 12:19:38, 200 on `f2d2585c` at 12:19:42 — 53 s push to live, measured**, and **149 of 150 polls served over 9m 32s** with nothing after the swap. **Three consecutive swaps now at exactly one 502 and a clean tail, all three watched from before the push** — which is what the ordinary reading looks like when it is measured rather than sampled. The previous reading, kept: **`eeb9aae3`**, confirmed from `/health` 2026-09-15: healthy, schema `x8y9z0a1b2c3` current and expected, **no migration**. **Pushed 12:07:35 UTC, one 502 at 12:08:58, 200 on `eeb9aae3` at 12:09:07 — 92 s push to live, measured**, and **149 of 150 polls served over 10m 3s** with nothing after the swap. Two swaps running now at one 502 and a clean tail, both watched from before the push. `b5f8791` is committed and not pushed, so the live build does NOT have the panel's change colour. The previous reading, kept: **`fb6c4f59`**, confirmed from `/health` 2026-09-15: healthy, schema `x8y9z0a1b2c3` current and expected, **no migration**. **THE CLEANEST SWAP OF THE FIFTEEN, AND THE FIRST WATCHED PROPERLY ALL THE WAY THROUGH.** Pushed 11:48:55 UTC, 200 on `a14f2454` from 11:48:48, **one 502 at 11:49:41**, 200 on `fb6c4f59` at 11:49:47 — **52 s push to live, measured**, and **149 of 150 polls served over 8m 47s** with nothing after the swap at all. That last clause is the point: the previous swap's monitor stopped the moment the new sha answered and missed a second restart two minutes later. This one polled seven minutes past it and there was genuinely nothing. `GET /bob/definitions/desk` and `POST /bob/beliefs/{id}/forget` both answer **401**, so both are served and gated. The previous reading, kept: **`c87fda56`**, confirmed from `/health` 2026-09-15: healthy, **schema `x8y9z0a1b2c3` current and expected**, deployment `ece27020`, `bob_pool` cap 8 with nothing in use. **THE MIGRATION RAN, AND THAT IS THE ONE THING THIS READING IS FOR** — the DDL had been rehearsed nowhere, so the deploy was the rehearsal. **THE SWAP WAS WATCHED FROM BEFORE THE PUSH, so the latency is MEASURED and not bounded for the first time**: pushed 11:17:46 UTC, 200 on `68ce93dc` continuously from 11:17:49, **two 502s at 11:18:46 and 11:18:49**, and 200 on `c87fda56` at 11:18:52 — **66 s push to swap**, 23 of 25 polls served. **This is the first watched swap that carried a migration at all**, so it is the only data point on that path: two 502s and 66 s, against an ordinary reading of one 502. It says nothing about the 50-minute outage on `8b0325a`, which is still unexplained. `POST /api/v1/bob/beliefs/{id}/forget` answers **401** on the live build rather than 404, so the new route is served and gated. **AND THE MIGRATION COST THE SWAP NOTHING, which is the one thing a single data point could not have said.** The poller ran on for another six minutes and caught the DOCS commit `183a3aa` deploying behind it — 502s at 11:20:48 and 11:20:52, **two, the same as the migration's**, on a commit carrying no Python, no schema and no frontend. Two swaps 116 s apart, one with five columns of DDL and one with a markdown file, cost the same. So the 502s are the platform's restart, as `f8762a4`'s 18 already suggested, and `alembic upgrade head` added nothing measurable. **4 of 130 polls failed over 7m 15s**, in those two pairs and nowhere else. `schema_checked` read `cached` on the second probe and `live` is what the first reported; neither is a fault. The previous reading, kept: **`2de57c9c`**, confirmed from `/health` 2026-09-15: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `13121632`, `bob_pool` cap 8 with nothing in use and a peak of 0, **no migration**. **THE SWAP WAS WATCHED AND COST ONE 502** — a poll at ~3 s read 200 on `7cb1ea5f` from 10:31:07 UTC, one 502 at 10:31:24, and 200 on `2de57c9c` at 10:31:27, with 12 of 12 polls 200 after it. **Push to swap is under 60 s** and nothing narrower should be claimed, because the poll started after the push again. **WHAT THIS READING CORRECTS: the backend was never red.** `/health` was serving `7cb1ea5f` before this push, so Railway deployed P2.d's commit fine — the `tsc -b` failure is **VERCEL's**, which serves the room, and no session has looked at a Vercel build from a terminal yet. So "nothing has deployed since `8037259`" was true of the FRONTEND and false of the backend, and a session should say which. The previous reading, kept: **`f8762a46`**, confirmed from `/health` 2026-09-15: healthy, schema `w7x8y9z0a1b2` ok, deployment `17bc522f`, **no migration**, and 15 of 15 polls 200 after it settled. **THIS SWAP WAS WATCHED AND IT COST 18 CONSECUTIVE 502s** — the worst of the twelve watched, against a previous worst of 4 — on a commit carrying no backend file and no migration, so the outage is the platform's restart and nothing in the diff. **Nobody should quote "one or two 502s" as the ordinary reading again without saying this one happened.** The previous reading, kept: **`e561a294`**, confirmed from `/health` 2026-09-15: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `61a2cf3a`, `bob_pool` cap 8 with nothing in use and a peak of 0, **no migration**. Read once, after the swap, so **no 502 count for this deploy**. The previous reading, kept: **`51af583e`**, confirmed from `/health`: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `c978adc5`, `bob_pool` cap 8 with nothing in use and a peak of 3, **no migration**. **ONE 502 in the swap** — a poll at ~3 s read 200 from 07:45:30 UTC, one 502 at 07:46:04, and 200 on `51af583e` after it: 99 of 100 polls served. `GET /api/v1/bob/mentions?q=Seik` answers **401** on the live build rather than 404, so the new route is served and gated. The previous reading, kept: **`b21533ca`**, from `/health`: healthy, schema `w7x8y9z0a1b2` current and expected, deployment `633119fb`, `bob_pool` cap 8 with nothing in use, **no migration**. **THE SWAP COST NOTHING — not one 502.** A poll at ~3 s read 200 continuously from 06:49:52 UTC on `4ade8c43`, and **200 on `b21533ca` at 06:50:41**, with no failed reading between them: the first clean swap of the ten watched. **The push-to-swap latency is BOUNDED, not measured**, because the poll started after the push again — the first reading was 06:49:52 and the new build answered at 06:50:41, so it is **under 55 s** and nothing narrower should be claimed. Read `/health` rather than believing this row. |
 | Last deploy | `815a614`, and before it `3f63296` (docs), and before it `46043e3`, and before it `463c21f`, and before it `b866592` (docs), and before it `fe60ce3`, and before it `3bb55f2`, and before it `fd1ca6a`, and before it `4cede90`, and before it `15e02d3`, and before it `f2d2585`, and before it `eeb9aae`, and before it `fb6c4f5`, and before it `183a3aa` (docs) and `c87fda5`, and before it `2de57c9`, and before it `f8762a4`, `e561a29`, `51af583`, `b21533c`, `81c677c`, `1267b52`, `e1ceb5e`, `9261c2e`, `ab01579`, `69d1fbf`, `1edf8fb`, `079359f` and `8ba0080`. **The 502 count per swap now reads 1, 0, 1, 1, 1, 3, 1, 1, 1, 2, 2, 1, 18, 1, 0, 1, 1, 1, 1, 0, 2, 4, 2, newest first** — `46043e3` cost NOTHING over a 9-minute watch started 8 s after the push, the second clean swap of the eighteen watched — today's `fe60ce3` and `3bb55f2` cost one each, which is the ordinary reading; `fd1ca6a` was pushed by a session that took no reading at all and is counted from neither, so the two newest entries are the two estate deploys — today's `c87fda5` cost two and is the only one of them carrying a MIGRATION; `2de57c9` cost one, which is the ordinary reading; yesterday's 18 on `f8762a4` remains five times the previous worst and is still unexplained by any diff. `e561a29`'s swap is not in the list because nobody watched it. Thirteen of the fourteen carried no migration; `c87fda5` is the first that did, and it cost two 502s and 66 s — **the same two the docs-only `183a3aa` cost 116 s later**, which is as close to a control as this log gets and says the DDL added nothing. Neither explains the 50-minute outage on `8b0325a`. |
 | Phase | **1 is CLOSED — P1.a through P1.k and P1.✓, every card of it.** **Phase 2 is under way: P2.0, P2.a, P2.b, P2.c, P2.l, P2.d, P2.e, P2.f, P2.g and P2.m are closed, four cards and the close remain.** **Its gate is further away again — the log's Open went from empty to five on 2026-09-15 and the count restarts from the first day it is empty. It was already further away than it had been that morning**: the log's Open must be empty **five days running**, it reached day two, and **2026-09-15 put two items back in it** — the colour question, and the claim-over-another-shop's-figure found underneath it. **The count is back to zero and starts again the first day Open is empty.** By the log's own rule nothing in section 3 is started while Open has anything in it, so the next session takes the log, not P2.d. The other three gate conditions are met or named — median 17.1 s against < 10 s with its cause on the card, a navigation fragment redraws with no model call at 760 ms, trust rows unchanged. **The Fable 5.1 review of Phase 1 HAS happened** (2026-09-14, recorded in `ops/DECISIONS.md`, confirmed by the owner 2026-09-15). It confirms every number in the close-out and names four things Phase 2 should not trust: **760 ms is a unit timer**, in-process with no HTTP, browser or render, so the gate's fragment condition is met by a measurement nobody has seen on the live build; **19.0 → 17.1 includes `correction` reading nothing at low effort**, and low is most turns in a one-thread UI; **effort is unobservable in production** — not persisted, and a revoked beta pins the process to high; and **five empty days are vacuous if the room is not used**. |
-| Next card | **THE SPEED FIX, 2026-09-19 (dogfood: "slow and really rough"), BUILT, MEASURED ONCE ($3.50) AND COMMITTED, UNPUSHED: median 76.6 → 24.3 s, $0.34 → $0.25 a turn, 8 → 11 of 14; effort by kind restored, a grounding gate on prose figures, accessories no longer cost a round, unknown fields dropped, one round for the drivers; the owner: no more paid runs on it (§DOGFOOD Fixed, DECISIONS 2026-09-19).** Then: **P3.a, Needs you as a queue — the first Phase 3 card, and the gate to Phase 3 is NOT met (13 Open, median 76.6 s); the owner decides whether Phase 3 starts.** Before it: **P2S.✓ CLOSED 2026-09-18, UNPUSHED — the close ran: six of eight scenes rendered beside the design and looked at (`situation`, `doing`, `nothing`, `draw`, `memory`, `vocab`×3), `touch` as the hover-and-receipt frame, `judgment` as the run's correction turn; voice on the live build NOT tried (no microphone here). ONE FULL RUN: **14 scenarios, $4.79 — the plan said 11 and $1.51; re-priced in both copies** — 8 of 14 passed; three trust rows are rounded ranges George wrote in prose that no tool returned (`why`, `vague`, `follow-up`), `analyze` needed a notice forced, `run-monday` died on an API error, `cannot` is the checker's vocabulary. The seven gate questions took 504 s against the recorded 422 and $2.84 against $1.91 — P2S.9's and P2S.10's promises NOT met on this run. Suites exact: pure 2,015, vitest 986, tsc clean (§3).** Before that, **P2S.5 BUILT AND CLOSED 2026-09-18, UNPUSHED — voice: hold the mic and release to send, tap to speak and correct; what is picked travels with it and a spoken steer replays, through the same `ask` typing uses; hands-free reads the claim aloud and any tap stops it; "read it to me" is in metrics.yaml; a frame of the line listening beside the design. "Last 90 days" is no defined window, so spoken it is a question, as typed (§3).** Before that, **P2S.5, voice.** Before it: **P2S.4 BUILT AND CLOSED 2026-09-18, UNPUSHED — same-store year over year: a `same_store` rule (wording awaits the owner) and `compare_to='same_period_last_year'`, counted and left-out shops named on the receipt; the card's December question refuses because the sales record holds six days between 2024-09-01 and 2024-12-31 (2, 3, 10, 17, 24 September and 1 October) and none in November or December, which a record check now says instead of blaming the shops (§3).** Before that, **P2S.4, same-store year-over-year.** Before it: **P2S.11 BUILT AND CLOSED AS BUILT 2026-09-18, UNPUSHED — what he is told to leave out is kept on its own list and applied by the reads: a seventh stance `leave_out` binds the first declared setting, `left_out_categories`; lists leave the category out with the instruction in `filters_applied`, totals stay whole; no migration; prompt 1,800 of 1,800 words (§3).** Before that, **P2S.11, what you tell him, he keeps and acts on.** Before it: **P2S.10 BUILT AND CLOSED AS BUILT 2026-09-18, UNPUSHED — `get_change` and `get_stock_health`, each one call for the model and the listed existing reads for everything else (the third tool is P2S.9's set); the budget counts calls; the dogfood fix `fd61f5c` beside it; offline estimate ~22–31 s a turn on the three, cheaper at risk on broad (§3).** Before that, **P2S.10, three tools where he now makes many reads.** Before it: **P2S.9 BUILT AND CLOSED AS BUILT 2026-09-18, UNPUSHED — no empty last round, the sales headline in one call, the model's receipts carrying each note once; offline estimate 10.1% of the time and −9.9% of result characters on `p2s7-gate-2.json`, measured for real at P2S.✓ (§3).** Before it: **P2S.9, fewer rounds for the same work — the answer to the top of the log ("slow and really rough"). Since 2026-09-18 no card runs its own test, at the owner's word: P2S.6 and P2S.7 are CLOSED AS BUILT (both live) and their trust check moves to the P2S.✓ full run, the only run left in the phase (§3).** Before it: **P2S.7 BUILT 2026-09-18, UNPUSHED, NOT CLOSED — run 2 passed 6 of 7 (one trust row: "₱25–45k" in `morning`), both allowed runs spent; the owner decides on a third (§3).** Before it: **P2S.3 CLOSED 2026-09-17, UNPUSHED — seventeen shapes each with the rule that picks it, "ruled out", pins that remember their shape and kept pages drawn by the room (§3); next is P2S.6, George finds the why on a broad question — written 2026-09-17 at the owner's word and put ahead of P2S.4; **BUILT 2026-09-18 as a restructure of the prompt's reading policy (more initiative, same trust rules, 1,787 words), UNPUSHED, live gate not run** (§3). P2S.1–P2S.3 are pushed and live (`634423e`); the owner's small screen reports that evening are fixed in `0c9376d`, unpushed.** THE PLAN WAS RE-DERIVED 2026-09-17 (§6): the owner declared the beside room of *George, Ahead of Me* the design — *"everything ive been leading you to this final artifact is it. except the alive we can workshop the shape color and everything."* Phase 2S below builds it in four sessions, re-cut from nine at his word: P2S.1 the room first.** The dogfood log still outranks it: **six Open**. The owner's nine reports on the live P2S.2 build (2026-09-17) were fixed the same day, unpushed and not yet verified by him — his colours from Settings, a line under the mark while he works, words that start where the mark stops moving and scroll, no click-to-rearrange, the claim's chart leading at full width with at most two columns and names that wrap, and UI rule 4 changed at his word so only a notice that says the data may be wrong is drawn. **"More text with each chart" moved to Fixed:** the thought on every chart shipped in `c6226ee` and P2S.3 closed the card it was written to — not verified by him. Two older ones wait on the owner (NOT VERIFIED BY ANYBODY). **Phase 2 merged into Phase 2S on 2026-09-17** (P2.k → P2S.3(g), P2.i → P2S.4, P2.✓ → P2S.✓, P2.j → P3.g, P2.h parked): after Phase 2S comes Phase 3. The finding that still stands from 2026-09-15: **0 standing questions, 0 watches, 0 workflow schedules ever created** — feature 12 has never spoken; switching it on is the first Phase 3 act, not a build. |
+| Next card | **RENAMED 2026-09-19: George is Bob in the name and the code (345 files, 39 renamed), not the database — schema, roles, `GEORGE_*` variables, SQL scripts and migrations stay; `/api/v1/george/...` kept as aliases; suites exact after (DECISIONS 2026-09-19). Unpushed.** Before it: **THE SPEED FIX, 2026-09-19 (dogfood: "slow and really rough"), BUILT, MEASURED ONCE ($3.50) AND COMMITTED, UNPUSHED: median 76.6 → 24.3 s, $0.34 → $0.25 a turn, 8 → 11 of 14; effort by kind restored, a grounding gate on prose figures, accessories no longer cost a round, unknown fields dropped, one round for the drivers; the owner: no more paid runs on it (§DOGFOOD Fixed, DECISIONS 2026-09-19).** Then: **P3.a, Needs you as a queue — the first Phase 3 card, and the gate to Phase 3 is NOT met (13 Open, median 76.6 s); the owner decides whether Phase 3 starts.** Before it: **P2S.✓ CLOSED 2026-09-18, UNPUSHED — the close ran: six of eight scenes rendered beside the design and looked at (`situation`, `doing`, `nothing`, `draw`, `memory`, `vocab`×3), `touch` as the hover-and-receipt frame, `judgment` as the run's correction turn; voice on the live build NOT tried (no microphone here). ONE FULL RUN: **14 scenarios, $4.79 — the plan said 11 and $1.51; re-priced in both copies** — 8 of 14 passed; three trust rows are rounded ranges Bob wrote in prose that no tool returned (`why`, `vague`, `follow-up`), `analyze` needed a notice forced, `run-monday` died on an API error, `cannot` is the checker's vocabulary. The seven gate questions took 504 s against the recorded 422 and $2.84 against $1.91 — P2S.9's and P2S.10's promises NOT met on this run. Suites exact: pure 2,015, vitest 986, tsc clean (§3).** Before that, **P2S.5 BUILT AND CLOSED 2026-09-18, UNPUSHED — voice: hold the mic and release to send, tap to speak and correct; what is picked travels with it and a spoken steer replays, through the same `ask` typing uses; hands-free reads the claim aloud and any tap stops it; "read it to me" is in metrics.yaml; a frame of the line listening beside the design. "Last 90 days" is no defined window, so spoken it is a question, as typed (§3).** Before that, **P2S.5, voice.** Before it: **P2S.4 BUILT AND CLOSED 2026-09-18, UNPUSHED — same-store year over year: a `same_store` rule (wording awaits the owner) and `compare_to='same_period_last_year'`, counted and left-out shops named on the receipt; the card's December question refuses because the sales record holds six days between 2024-09-01 and 2024-12-31 (2, 3, 10, 17, 24 September and 1 October) and none in November or December, which a record check now says instead of blaming the shops (§3).** Before that, **P2S.4, same-store year-over-year.** Before it: **P2S.11 BUILT AND CLOSED AS BUILT 2026-09-18, UNPUSHED — what he is told to leave out is kept on its own list and applied by the reads: a seventh stance `leave_out` binds the first declared setting, `left_out_categories`; lists leave the category out with the instruction in `filters_applied`, totals stay whole; no migration; prompt 1,800 of 1,800 words (§3).** Before that, **P2S.11, what you tell him, he keeps and acts on.** Before it: **P2S.10 BUILT AND CLOSED AS BUILT 2026-09-18, UNPUSHED — `get_change` and `get_stock_health`, each one call for the model and the listed existing reads for everything else (the third tool is P2S.9's set); the budget counts calls; the dogfood fix `fd61f5c` beside it; offline estimate ~22–31 s a turn on the three, cheaper at risk on broad (§3).** Before that, **P2S.10, three tools where he now makes many reads.** Before it: **P2S.9 BUILT AND CLOSED AS BUILT 2026-09-18, UNPUSHED — no empty last round, the sales headline in one call, the model's receipts carrying each note once; offline estimate 10.1% of the time and −9.9% of result characters on `p2s7-gate-2.json`, measured for real at P2S.✓ (§3).** Before it: **P2S.9, fewer rounds for the same work — the answer to the top of the log ("slow and really rough"). Since 2026-09-18 no card runs its own test, at the owner's word: P2S.6 and P2S.7 are CLOSED AS BUILT (both live) and their trust check moves to the P2S.✓ full run, the only run left in the phase (§3).** Before it: **P2S.7 BUILT 2026-09-18, UNPUSHED, NOT CLOSED — run 2 passed 6 of 7 (one trust row: "₱25–45k" in `morning`), both allowed runs spent; the owner decides on a third (§3).** Before it: **P2S.3 CLOSED 2026-09-17, UNPUSHED — seventeen shapes each with the rule that picks it, "ruled out", pins that remember their shape and kept pages drawn by the room (§3); next is P2S.6, Bob finds the why on a broad question — written 2026-09-17 at the owner's word and put ahead of P2S.4; **BUILT 2026-09-18 as a restructure of the prompt's reading policy (more initiative, same trust rules, 1,787 words), UNPUSHED, live gate not run** (§3). P2S.1–P2S.3 are pushed and live (`634423e`); the owner's small screen reports that evening are fixed in `0c9376d`, unpushed.** THE PLAN WAS RE-DERIVED 2026-09-17 (§6): the owner declared the beside room of *Bob, Ahead of Me* the design — *"everything ive been leading you to this final artifact is it. except the alive we can workshop the shape color and everything."* Phase 2S below builds it in four sessions, re-cut from nine at his word: P2S.1 the room first.** The dogfood log still outranks it: **six Open**. The owner's nine reports on the live P2S.2 build (2026-09-17) were fixed the same day, unpushed and not yet verified by him — his colours from Settings, a line under the mark while he works, words that start where the mark stops moving and scroll, no click-to-rearrange, the claim's chart leading at full width with at most two columns and names that wrap, and UI rule 4 changed at his word so only a notice that says the data may be wrong is drawn. **"More text with each chart" moved to Fixed:** the thought on every chart shipped in `c6226ee` and P2S.3 closed the card it was written to — not verified by him. Two older ones wait on the owner (NOT VERIFIED BY ANYBODY). **Phase 2 merged into Phase 2S on 2026-09-17** (P2.k → P2S.3(g), P2.i → P2S.4, P2.✓ → P2S.✓, P2.j → P3.g, P2.h parked): after Phase 2S comes Phase 3. The finding that still stands from 2026-09-15: **0 standing questions, 0 watches, 0 workflow schedules ever created** — feature 12 has never spoken; switching it on is the first Phase 3 act, not a build. |
 
 **Where the app actually is.** Frontend on **Vercel**, backend on **Railway**
 at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
@@ -116,7 +116,7 @@ at `https://ultra-supabotv2-production.up.railway.app`, both auto-deploying
 call is the relative `/api/v1`, and **`frontend/middleware.ts` rewrites those
 to Railway** — `frontend/routing/backend.ts` holds the origin and fails closed
 on a preview deployment without staging config. It is NOT in `vercel.json`,
-which is what `VERCEL_ENV_SETUP.md` and the comment in `useGeorgeStream.ts`
+which is what `VERCEL_ENV_SETUP.md` and the comment in `useBobStream.ts`
 both claim; they are stale, the middleware is real, and `routing.test.ts`
 covers it.
 
@@ -135,22 +135,22 @@ branch, deployment id, service and environment beside it. `git` locally.
 Railway's git variables or a `backend/BUILD_REVISION` stamp, which
 `app/core/build.py` already reads.
 
-**The product is Supabot BI, and George is a tab in it** (the owner,
-2026-09-12: *"this is still supabot, just make george a page"*, and 09-13:
-*"can you put george just in the tabs of the main page"*). `/` redirects to
-the first page a person may see, which is the Dashboard. George sits in the
+**The product is Supabot BI, and Bob is a tab in it** (the owner,
+2026-09-12: *"this is still supabot, just make bob a page"*, and 09-13:
+*"can you put bob just in the tabs of the main page"*). `/` redirects to
+the first page a person may see, which is the Dashboard. Bob sits in the
 same sidebar as Analytics, Warehouse and Packing, renders **inside the same
 chrome**, and owns tabs of its own — Board, Needs you, Kept, Running — the
 way Dashboard owns Stores and Vending.
 
-From 09-09 to 09-12 `/` RENDERED George and the rest of the BI app, though
+From 09-09 to 09-12 `/` RENDERED Bob and the rest of the BI app, though
 still routed and still allowed, was reachable from nowhere a person stood.
 **A surface you cannot leave is not a page** — if a future change makes
-George the landing again, this is the reason not to.
+Bob the landing again, this is the reason not to.
 
-George's own surface is **the room** (`frontend/src/room/`, at `/george` and
+Bob's own surface is **the room** (`frontend/src/room/`, at `/bob` and
 `/w/:threadId`, with its tabs at `/inbox`, `/pages` and `/workflows`). Its
-fixed left rail became `GeorgeTabs.tsx` on 09-13. The desk, the river pages,
+fixed left rail became `BobTabs.tsx` on 09-13. The desk, the river pages,
 the shell chrome and the `/w2` renderer were deleted on 09-12; a reference to
 any of them is stale prose, not code.
 
@@ -203,7 +203,7 @@ Measured 2026-09-13: the script saw 9.4M presented tokens over 30 days while
 the console showed **51.6M on the same key**. 18%. Two confident conclusions
 came out of that gap in one afternoon and both were wrong.
 
-**For the bill, read the Anthropic console** — filter by the `george` API key,
+**For the bill, read the Anthropic console** — filter by the `bob` API key,
 group by *token type*, and read the day, not a rolling window. The token-type
 split is the part that matters and the script cannot produce it. One heavy day
 (2026-09-13, $18.20):
@@ -220,7 +220,7 @@ not reopen the TTL or chase the hit rate. What that day actually was: roughly
 six full eval runs and the turns sessions fired while building, against 193
 real turns in the whole month. **The bill is the building, not the product.**
 
-Use `cost_report.py` for what it is good for — comparing George's own turns
+Use `cost_report.py` for what it is good for — comparing Bob's own turns
 with each other, across builds with `--since`.
 
 Checking first is not optional. The first run's loudest finding was 89
@@ -281,7 +281,7 @@ a first run made with `-x`, which stops on the first scenario and pays for it
 twice. **P1.f went over by 7%, and the reason
 is the card**: every turn now writes three slots as well as an answer, so
 output tokens rose. $1.51 is still the right estimate for a run that changes
-nothing about what George says. **Drop `-x` on a gate run**; four
+nothing about what Bob says. **Drop `-x` on a gate run**; four
 scenarios is the unit, and a partial one buys a fifth of the signal for a
 third of the price.
 **The earlier $9.10 and $11.04 were both wrong, because the meter was and then
@@ -393,7 +393,7 @@ that a cache lifetime does not change an answer — and it cannot, because the
 model receives the same bytes either way. The standing gate applies to cards
 that can move behaviour; for the others, say why no run was needed and move on.
 
-### George already records his own failures, and nobody reads them
+### Bob already records his own failures, and nobody reads them
 
 `agent/loop.py` writes a row to `george.gaps` for **23 kinds** of trouble.
 Fourteen are literals — `api_error`, `api_retry`, `unhandled`, `tool_refused`,
@@ -410,12 +410,12 @@ did.
 
 **Exactly two of them are ever read back** — `api_error` and `unhandled`, and
 only when rebuilding a stored chat so a failed turn shows its error
-(`routes/george.py`). The other **eleven have been written since the first
+(`routes/bob.py`). The other **eleven have been written since the first
 commit and read by nothing**. A turn that hit its iteration cap, refused a
 tool, or forced a caveat in has been recorded every time and seen by no one.
 
 That is a defect feed nobody is reading, which is why the weekly sweep exists
-and why P0.5 makes it routine. Rule: **an error George records is a defect
+and why P0.5 makes it routine. Rule: **an error Bob records is a defect
 report he filed himself** — it goes through the dogfood log like any other,
 rather than being fixed silently or ignored.
 
@@ -579,12 +579,12 @@ card below that is not marked done. One per session either way.
         the model; it changes the bill and nothing else. The array check is
         diagnostic.
       - *Bounded, already gated.* Fewer iterations (P1.a/P1.b) removes round
-        trips spent LABELLING, not database reads — George sees the same
+        trips spent LABELLING, not database reads — Bob sees the same
         evidence in fewer trips. Effort per turn (P1.h) genuinely could dull
         him, which is why that card already fails if any quality check on the
         twelve regresses.
       - **REFUSED: cutting `MAX_ROWS_TO_MODEL` from 200.** It was on the list
-        and came off on 2026-09-13. It is the one lever that makes George worse
+        and came off on 2026-09-13. It is the one lever that makes Bob worse
         at his job: it reduces what he can SEE, so more answers land as "this
         is a sample" instead of a reading. Truncation is honest — he is told it
         is a sample and told not to total visible rows, and `meta` aggregates
@@ -682,7 +682,7 @@ check, because they behave differently:
 - **The style checks flap, and `leads_with_reading` is all of it.** It failed
   on `morning`, then `product` and `follow-up`, then `order` — every non-trust
   failure in four runs. The check is not broken: `order` genuinely opened with
-  "...for the whole 90 days". George simply leads with a figure some runs and
+  "...for the whole 90 days". Bob simply leads with a figure some runs and
   not others. **v2 acts on this**: style is reported as a rate and asserted
   only under `GEORGE_VOICE_STRICT=1`, which is why §4 now says not to set it.
   P1.e's run set it and got 8 "failures" of which 7 were this one row, over a
@@ -715,7 +715,7 @@ the column starts NULL and there is nothing to backfill it from.
 model round trip, and it is iterations — not database reads — that make a turn
 slow. Reads are already batched and already run concurrently
 (`asyncio.gather`, `agent/loop.py`), so **parallelism is not a lever and is not
-a card.** Half of all tool calls are George labelling his own work, and
+a card.** Half of all tool calls are Bob labelling his own work, and
 `compose` is refused in two questions out of three, each refusal costing a
 whole round trip. One question ("cannot") spent 8 iterations and 4 `compose`
 calls to answer "I can't see foot traffic".
@@ -746,7 +746,7 @@ calls to answer "I can't see foot traffic".
 
       **The twelve scored 11 of 12, and `cannot` is the failure.** It is a
       wording match, not a trust failure, and it is reported as a failure
-      anyway. George answered *"There's no footfall counter at Rockwell —
+      anyway. Bob answered *"There's no footfall counter at Rockwell —
       nothing in the system counts people through the door, so the closest I
       can give you is transactions rung up, and that's receipts, not
       visitors… what that doesn't settle is whether more people came or the
@@ -769,7 +769,7 @@ calls to answer "I can't see foot traffic".
       comparison naming no subjects, 1 a `quiet` restating its seq, 1 a note
       with a digit. The card's three were built anyway — they are cheap and
       correct — but the win came from the two it had not seen.
-      The `cannot` scenario is the whole argument: George read
+      The `cannot` scenario is the whole argument: Bob read
       transaction_count filtered to Rockwell, composed a hero subject
       "Rockwell", and was refused because `group_by: []` had left no column
       carrying the word; dropped the subject, refused; tried a figure,
@@ -823,7 +823,7 @@ calls to answer "I can't see foot traffic".
       card's own measure did not move, because the thing it assumed was empty
       was not.** Built as written: `agent/default_composition.py` composes a
       default the moment reads land, through `compose.validate` — the same
-      gate, the same closed vocabulary, so a default block and one of George's
+      gate, the same closed vocabulary, so a default block and one of Bob's
       are the same object. It rides the `compose` frame saying `default: true`,
       is stored on the answer post beside his, and his supersede it BY SEQ
       (he never sees the default's keys, so he cannot name one).
@@ -841,7 +841,7 @@ calls to answer "I can't see foot traffic".
       in flight. What it was empty of was anything SHAPED — and that is the
       row that moved, 16.8 s to 8.2 s median, on 8 of the 10 turns that
       compose anything at all. The other two (`shop`, `product`) are unchanged
-      because George composed BEFORE their composable reads landed; nothing
+      because Bob composed BEFORE their composable reads landed; nothing
       here can beat him to it.
 
       **2 s is missed 3.5x, and this card cannot reach it — say that rather
@@ -863,7 +863,7 @@ calls to answer "I can't see foot traffic".
       DOGFOOD_LOG rather than explained away.
 
       **What it does NOT do, deliberately.** It never carries a note, an
-      emphasis or a finding — those are readings, and a reading is George's.
+      emphasis or a finding — those are readings, and a reading is Bob's.
       And it never reaches `_drawn_on_the_board`: a caveat is discharged by a
       person deciding to draw the read that raised it, not by a default doing
       it for him. Held by `tests/test_default_composition_contract.py` (22
@@ -871,7 +871,7 @@ calls to answer "I can't see foot traffic".
 
       **And it inherits the top Open defect on a path nobody chose.** With a
       default on the board, `editsFor` no longer falls through to the reading
-      tile — so a turn George never composes text into is shapes and silence,
+      tile — so a turn Bob never composes text into is shapes and silence,
       which is exactly complaint 1 above. **The floor was not built here**,
       because the log forbids that shape of fix: the agreed change is to
       remove `text` from the widget vocabulary entirely and draw the reading
@@ -931,7 +931,7 @@ before believing it.
       every trust check and then failing `grounded_numerals`: **not one figure
       any tool returned appears in any of the four answers.** Two rules ask
       for opposite things. `voice.restatement.max_restated_sentences: 0`
-      forbids a sentence restating a DRAWN figure; everything George reads IS
+      forbids a sentence restating a DRAWN figure; everything Bob reads IS
       drawn; so every figure he could cite is corrected out, and an assertion
       that he cite one can never pass.
       **The answer is the one the Ideal UI already assumes: a reading may
@@ -942,7 +942,7 @@ before believing it.
       metrics.yaml, with the reason recorded beside it. The log says this
       "should be answered once, for both" — the other entry it points at is
       the same question wearing widgets, which is P1.e.
-      Done when: "how are we doing" and "any problems" both show George's
+      Done when: "how are we doing" and "any problems" both show Bob's
       words above whatever is drawn, on the live build; **the four gate
       scenarios carry a real figure without the restatement correction firing
       on the claim, while a two-figure recitation still trips it**; the two
@@ -1015,7 +1015,7 @@ before believing it.
          `get_replenishment`'s own notice, quoted: *"those lines account for
          4,764 of the 6,344 units requested, 75% of the plan."* The check
          reads the phrase, not the receipt. Filed in the dogfood log; the fix
-         is in `checks.attribution_claims`, not in George. The other two are
+         is in `checks.attribution_claims`, not in Bob. The other two are
          the style row above.
 - [x] **P1.d the board transforms; it never accumulates** — the rule decided
       in the log: a question sharing no subject with the board CLEARS it; one
@@ -1093,7 +1093,7 @@ before believing it.
       claim-title, a subtitle derived from `meta` (metric, window, unit),
       its own source line. Colour is direction only; digits mono and
       tabular; direct labels, no legends. Existing compose blocks are MAPPED
-      onto the six so nothing George says stops rendering. Done when: every
+      onto the six so nothing Bob says stops rendering. Done when: every
       block in four recorded runs renders as one of the six with a source
       line; a palette test fails on a fifth data colour.
 
@@ -1149,7 +1149,7 @@ before believing it.
       quietly fall out of both. Every OTHER declared widget is a reading and
       draws as one of the six.
 
-      **2. The claim-title is George's `note`, or the read's own name.** The
+      **2. The claim-title is Bob's `note`, or the read's own name.** The
       grammar has no field for a title and must not get one — a claim typed
       into a block is a sentence with no receipt. `note` is what he already
       has: a characterisation, validated to carry no digits. A recommendation
@@ -1157,7 +1157,7 @@ before believing it.
       that is the one word a read has not got.
 
       **COLOUR IS DIRECTION, WHICH REVERSES A TEST.** Four data colours —
-      `up`, `down`, `flat`, and `george` for the emphasised row of a read that
+      `up`, `down`, `flat`, and `bob` for the emphasised row of a read that
       declared no direction — held by `palette.test.ts`, which reads the
       source: one `paint()` producing every colour, no literal hex or rgb
       anywhere, `--accent` refused, and identity's `--hue` allowed exactly
@@ -1175,7 +1175,7 @@ before believing it.
       `frontend/src/room/__fixtures__/recorded-runs.json`, and
       `marks.dom.test.tsx` renders every one for real. **Eight runs, 13
       blocks, all six-or-fewer marks, all with a source line.** The bound: an
-      eval report does NOT record the blocks George composed, only that he
+      eval report does NOT record the blocks Bob composed, only that he
       composed some, so these are the loaded default — a real board state, and
       not his. It reaches figure, dumbbell, ranked and table; contributors and
       line are held by row-shape tests instead, and by `catalogue.test.ts`,
@@ -1250,7 +1250,7 @@ before believing it.
       capability refusal), where there is arguably nothing to claim. The other
       four losses are **my own no-digits rule refusing what he wrote**: five
       slots across four turns, three caveats and two nexts, plus one caveat
-      refused for length. So the number to report is not "George did not say
+      refused for length. So the number to report is not "Bob did not say
       it" — it is "he said it and the validator dropped it".
 
       **THE CLAIM IS THE PART THAT WORKED: 9 of 9 landed.** Every claim he
@@ -1295,7 +1295,7 @@ before believing it.
       its report, never by running it again**; the report holds every number
       the summary printed and `tests/evals/corpus.py` replays it for $0.00.
 - [x] **P1.g arithmetic in prose, and a column name in the answer** — done
-      2026-09-13, `c508965`. The two trust failures George filed himself
+      2026-09-13, `c508965`. The two trust failures Bob filed himself
       ("and 45 others"; `warning_stock`; a forced caveat). Pure suite
       **1,497 → 1,535**, 30 skipped, 0 failing; frontend room 103. Gate run,
       four live turns, **$0.64**: `ungrounded_numerals` `[]`,
@@ -1309,7 +1309,7 @@ before believing it.
       figures on the board". That was not built, for two reasons: with N drawn
       figures there are ~N² sums and differences, so nearly any numeral
       matches one and the gate would fire on coincidence; and it would not
-      reliably catch `45` anyway, which needs `3` — how many products George
+      reliably catch `45` anyway, which needs `3` — how many products Bob
       CHOSE to name — to be a drawn figure, and it is not. What shipped fires
       on the shape: a count beside "others"/"more"/"the other" is by
       definition what is LEFT once the writer chose how many to name, so no
@@ -1329,7 +1329,7 @@ before believing it.
       **The card's "NO EVAL, $0.00" was also wrong, and cost $0.64.** It is
       true that a check is a pure function of (answer, results). But half of
       this card was a FINGERPRINT and a notice MESSAGE — both model-facing —
-      so it changed what George sees, and the conftest's own rule (run `-m
+      so it changed what Bob sees, and the conftest's own rule (run `-m
       gate` on anything model-facing) applied. The gate is what proved the
       forced caveat gone.
 
@@ -1414,7 +1414,7 @@ before believing it.
       Suites exact: **1,569 pure** (was 1,542), **903 vitest**, `tsc -b` and
       `build` clean. No frontend file was touched.
 - [x] **P1.i replay: the endpoint** — **CLOSED 2026-09-14.**
-      `POST /george/replay` takes a stored call NAMED, not sent: `{post, seq,
+      `POST /bob/replay` takes a stored call NAMED, not sent: `{post, seq,
       argument, value}`. The arguments come off `payload.calls` — what the
       loop recorded from `dict(b.input)` — so the only thing a client can
       change is the one argument it asked to change. **It used to take a whole
@@ -1495,7 +1495,7 @@ before believing it.
       drawn (`fragments.resolves_against: drawn_tokens`), and the words each
       answers to are SERVED (`tokens.spoken`) — no stemmer, no fuzzy match,
       no "did you mean". Two tokens answering to one word is an ambiguity and
-      goes to George; so does anything over four words, anything asked with a
+      goes to Bob; so does anything over four words, anything asked with a
       selection, and anything that does not resolve. **The failure mode of the
       whole feature is a model turn**, which is what would have happened
       anyway.
@@ -1507,7 +1507,7 @@ before believing it.
       So a `group_by` token offers only what the call's own metric permits
       (`permitted_by`, from `metrics.<metric>.valid_group_by`), intersected
       across every read it would move, and **"products" on a sales board is
-      still George's question**. And **the replay endpoint was sending rows
+      still Bob's question**. And **the replay endpoint was sending rows
       the loop would have withheld**: over `MAX_ROWS_TO_CLIENT` the loop sends
       `rows_complete: false` and NO rows, and this sent 200 whole — so moving
       a window on a day-grouped read over a year put 365 rows into a mark
@@ -1532,7 +1532,7 @@ before believing it.
       card's second analytical example and it names no scope — the ladder
       answers it by reading the metric's declared DRIVERS, which is a
       different call, and a replay changes one argument of one call. It goes
-      to George, as it always did. **And a tapped shop in the rows is still a
+      to Bob, as it always did. **And a tapped shop in the rows is still a
       selection, not a navigation fragment**: the store token moves the shop,
       and changing what a tap on a row means would be a rebuild of a
       load-bearing mechanism for no complaint anybody has made.
@@ -1712,7 +1712,7 @@ before believing it.
 
       **THE RELAXED CAVEAT RULE, CONFIRMED LIVE.** Slot refusals fell **8 →
       2** against P1.h's run, and the two survivors are the two the dogfood
-      entry predicted: the remainder George worked out himself ("the other 87
+      entry predicted: the remainder Bob worked out himself ("the other 87
       products") and the 320-character bound, which `order`'s caveat still
       overruns. The replay said 7 of that run's 8 would stand; live, on
       different sentences, 6 of the 8 never arose at all.
@@ -1751,7 +1751,7 @@ before believing it.
       a phase with no cards left in it.
 
 **The standing gate on every Phase 1 card, and on P0.6.** This phase dismantles
-the machinery that enforces George's trust guarantees, so each card that is
+the machinery that enforces Bob's trust guarantees, so each card that is
 model-facing re-runs the twelve and reports, beside its own number: notices
 surfaced (must stay 100%), no figure in prose that no tool returned, refusals
 still refusing. A card that buys speed **or cheapness** by losing one of those
@@ -1803,16 +1803,16 @@ P2S.5 at the owner's word**, built to that sentence's bar instead.
 - [x] **P2.a a thread is already a page** — **CLOSED 2026-09-15.** The thread
       has a header with three views — **Talk · Behind it · Page** — and Behind
       it, which P1.k built as a view with nowhere to be reached from, is now
-      one of them. **Keep as page is one write**: `POST /george/pages` grew an
+      one of them. **Keep as page is one write**: `POST /bob/pages` grew an
       `analyses` field and BOTH cases — empty and with sections — now go
-      through `page_operations.build_page`, the same service function George's
+      through `page_operations.build_page`, the same service function Bob's
       own `create_page` reaches through the injected writer, so the page and
       its pins commit together or not at all and the button cannot grow a
-      second set of bounds. The route writes as `USER`, never as `george`.
+      second set of bounds. The route writes as `USER`, never as `bob`.
       **The Page view says what it would leave off, and why, before anything
       is written** — `room/keeping.ts` is a pure plan over the thread's turns:
       one section per question, named by the PERSON'S words and never by
-      George's, holding the calls the loop marked `pinnable` on its own frame.
+      Bob's, holding the calls the loop marked `pinnable` on its own frame.
       Four reasons a turn is left off, each in words: it read nothing that can
       be run again; it took more reads than one section holds; every read
       behind it is already kept above; it is older than the six a page is kept
@@ -1823,7 +1823,7 @@ P2S.5 at the owner's word**, built to that sentence's bar instead.
       sorts every level too — a `date_range` pair nested in an argument reads
       as a duplicate on both sides, which is the 422 nobody could have read in
       advance. **A kept thread shows its page**, off a new `thread_id` scope on
-      `GET /george/pins`: a pin records the conversation it was made in, a
+      `GET /bob/pins`: a pin records the conversation it was made in, a
       thread is a list of conversations, and `thread_access.conversations_in_thread`
       is that resolution given a name rather than a second copy of `get_chat`'s
       SQL. Two scopes on one listing is a 422 naming both, because one of them
@@ -1867,7 +1867,7 @@ P2S.5 at the owner's word**, built to that sentence's bar instead.
 
       **A FIGURE NOW SAYS WHICH READ, AND A FIGURE WITH NO READ SAYS THAT.**
       P1.k made a placed figure tappable and stopped there, so a numeral
-      George worked out himself and a numeral a tool returned were drawn
+      Bob worked out himself and a numeral a tool returned were drawn
       IDENTICALLY — the only way to tell them apart was to tap one and see
       whether anything happened. A placed figure now carries the read's index
       after it (`.r-figure-n`, the receipt face, `--ink-3`), so two figures out
@@ -1927,7 +1927,7 @@ P2S.5 at the owner's word**, built to that sentence's bar instead.
       bounded them from outside, which is the same hole that let the room's
       needs-you badge wear `--down`. `--up` and `--down` may now be named by
       **no file at all** (a mark reaches them through `paint()`), `--flat` by
-      `marks.tsx` and `room.css`, `--george` by four files with a reason each.
+      `marks.tsx` and `room.css`, `--bob` by four files with a reason each.
       Comments are stripped first, so a token named in a docstring is not a
       token used.
       **The card's "quiet" is the room's `--flat`** — the colour of a row
@@ -1949,7 +1949,7 @@ P2S.5 at the owner's word**, built to that sentence's bar instead.
       in this card.
 - [x] **P2.c a subject becomes an id — by tap, and by `@`** — **CLOSED
       2026-09-15.** The bug was one line: the room sent
-      `{id: label, label}`, so every subject reached George as a WORD while
+      `{id: label, label}`, so every subject reached Bob as a WORD while
       the rows had carried `store_id` two columns away the whole time.
       **`room/subjects.ts` reads the declared identity column out of the row
       it tapped** — `selection.identity` and a new `selection.label_columns`,
@@ -1958,7 +1958,7 @@ P2S.5 at the owner's word**, built to that sentence's bar instead.
       definition of a category and of a supplier: there is no supplier master).
       **A supplier is now a subject dimension**, because `@Seikyo` had nowhere
       to travel and would have arrived as a word in the question.
-      **The `@` door is `GET /george/mentions`**, five kinds off the reads
+      **The `@` door is `GET /bob/mentions`**, five kinds off the reads
       that already define them — the store list, `get_product(name=)`,
       `get_purchasing(group_by=supplier)`, the caller's own pages, the
       company's rules. **No SQL in the service and no model anywhere on the
@@ -2007,7 +2007,7 @@ P2S.5 at the owner's word**, built to that sentence's bar instead.
       DIRECTION — and three of the seven shop hues sat on the three semantic
       colours.
       **THE SHELL CARRIES NO IDENTITY AND NO MAGNITUDE.** `Shell` lost `hue`,
-      `change`, `solid` and `george`; `.r-tile` lost its hue border, its
+      `change`, `solid` and `bob`; `.r-tile` lost its hue border, its
       `--bloom` wash, the fully coloured `--solid` variant and the twelve
       rules that bridged the room's ink onto it; hover, focus and picked are
       the chrome's greys, where they were the object's hue at three alphas.
@@ -2097,7 +2097,7 @@ P2S.5 at the owner's word**, built to that sentence's bar instead.
       offered at all**, which is one of the three acts the card names and the
       only one whose cost label the card spelled out. **And no live turn has
       produced an offer**: every test drives the validator and the renderer
-      directly, so whether George reaches for the channel unprompted is
+      directly, so whether Bob reaches for the channel unprompted is
       unknown until P2.✓.
 - [x] **P2.e replay an investigation** — CLOSED 2026-09-15. **Replay is the
       thread's fourth view**, beside Talk, Behind it and Page: every STEP of
@@ -2159,8 +2159,8 @@ P2S.5 at the owner's word**, built to that sentence's bar instead.
       the table. In the prompt block a taught line says YOU WERE TOLD and is
       **never marked unconfirmed** — no amount of new data makes it less true
       that this is what they meant.
-      **FORGET IS A PERSON'S GESTURE AND GEORGE HAS NO TOOL FOR IT.**
-      `POST /george/beliefs/{id}/forget` stamps `forgotten_at` and the hand
+      **FORGET IS A PERSON'S GESTURE AND BOB HAS NO TOOL FOR IT.**
+      `POST /bob/beliefs/{id}/forget` stamps `forgotten_at` and the hand
       that did it; the row stays and stops being current, which takes it out
       of the prompt and out of `view_memory` in the same breath. The absence
       from his schema is the guarantee, as for every write. A second Forget on
@@ -2189,13 +2189,13 @@ P2S.5 at the owner's word**, built to that sentence's bar instead.
       being nothing here to run it on — and `/health` reports
       `x8y9z0a1b2c3` current and expected on `c87fda56`. The swap cost two
       502s over 66 s, watched from before the push, and
-      `POST /george/beliefs/{id}/forget` answers 401 rather than 404, so the
+      `POST /bob/beliefs/{id}/forget` answers 401 rather than 404, so the
       route is served and gated.
       **THE SHORTFALL. The done-when is not held by anything that ran.**
       "We means the shops, taught once, changes the next how are we doing" is
       two model behaviours — forming the view on a correction, and scoping the
       next answer to it — and behaviour is held by the evals, which this card
-      does not run. Every mechanism under it is tested; whether George reaches
+      does not run. Every mechanism under it is tested; whether Bob reaches
       for them is unknown until P2.✓. **And nobody has seen any of it in a
       browser** — the seventh card running with that gap.
 - [x] **P2.g the estate switch** — CLOSED 2026-09-15. **Four pills above
@@ -2215,7 +2215,7 @@ P2S.5 at the owner's word**, built to that sentence's bar instead.
       at the warehouse has refused in its own words since 2026-09-13
       (`filters.excluded_from_sales`), and vending is its own domain read
       through the `_php` views. What the card adds is the scope in FRONT of
-      that, named to George on the question beside the selection — widest
+      that, named to Bob on the question beside the selection — widest
       clause first, since a subject and a window sit inside one estate.
       **`SYSTEM_PROMPT` IS BYTE-IDENTICAL** at 1,791 words, sha `ee1d17d1`:
       the estate rides the question, never the cached prefix, and the one
@@ -2274,7 +2274,7 @@ P2S.5 at the owner's word**, built to that sentence's bar instead.
       **1,817 → 1,821 pure here (1,817 in CI), 1,284 vitest unchanged.**
       **THE SHORTFALL. Two of the three done-whens are not held by anything
       that ran.** "Scoped to the barn reads stock, not sales" and "scoped to
-      vending returns the honest state" are model BEHAVIOUR — whether George,
+      vending returns the honest state" are model BEHAVIOUR — whether Bob,
       told the scope, reaches for `get_stock` instead of `get_sales` — and
       behaviour is held by the evals, which this card does not run. Every
       mechanism under them is tested: the sentence, the refusal it tells him
@@ -2290,7 +2290,7 @@ P2S.5 at the owner's word**, built to that sentence's bar instead.
       2026-09-16. **His words, 2026-09-15:** *"it only showed me 1 chart when i
       thought i would go in depth products per store and what i thinks … i
       feels very limited not limitless"*. **And his words opening this session,
-      which widened it:** *"the root problem is george isnt thinking for
+      which widened it:** *"the root problem is bob isnt thinking for
       himself he actually just analyzed the data i want him to see the data and
       make his own, this is not just a chatbot"*.
       **THE GATE IS THE INTENT NOW.** `investigation.opens_when` in the yaml:
@@ -2332,7 +2332,7 @@ P2S.5 at the owner's word**, built to that sentence's bar instead.
       `tests/evals/test_investigation_evals.py`** — "analyze tradsnax per store
       …" asserting a second, different, deeper read, and "how did Rockwell do
       …" asserting a lookup was not widened — and **neither has been run**.
-      Whether George reaches for the second read, and whether he says what he
+      Whether Bob reaches for the second read, and whether he says what he
       thinks, is unknown until one is. The depth is asserted; the VIEW is
       recorded and not gated, for v2's own reason — what he chooses to say
       flaps run to run.
@@ -2341,11 +2341,11 @@ P2S.5 at the owner's word**, built to that sentence's bar instead.
 **Phase 2S — the design, built.** Four sessions, re-cut from nine on
 2026-09-17 at the owner's word (*"can we do it faster by putting stuff
 together? only do it if we still preserve function"*). Function is preserved
-because only one card here touches what George reads or writes; the other
+because only one card here touches what Bob reads or writes; the other
 work is how the same data is drawn and placed, and every done-when below is
 still its own test. The nine cards survive as the numbered parts inside the
 four, each committed on its own inside the session, one deploy per session.
-Measure everything against `ops/ideal/george-ahead-of-me.html`, the `beside`
+Measure everything against `ops/ideal/bob-ahead-of-me.html`, the `beside`
 room — **and port its markup and CSS into the React room rather than
 re-deriving them from a description: the page is already the thing.**
 
@@ -2369,10 +2369,10 @@ thtough"*. **The answer splits in two, and the split is the point:**
 | Card | Decision | Why |
 |---|---|---|
 | P2.k one renderer for a kept page | **into P2S.3 as part (g)** | its goal is §12 ("without feeling like I switched to a completely different product"), but it ported pages onto the six-mark `marks.tsx` that P2S.2 redraws and P2S.3 replaces — building it first is porting onto a renderer about to go. Pages draw with P2S.3's shapes; its deletion list moves with it. |
-| P2.i same-store year-over-year | **kept, renamed P2S.4** | changes what George can SAY, not how it looks; §1 lists "historical periods" among what he investigates. Independent of the redraw, so it may be pulled ahead of any P2S card any day — it is the seasonal one. |
+| P2.i same-store year-over-year | **kept, renamed P2S.4** | changes what Bob can SAY, not how it looks; §1 lists "historical periods" among what he investigates. Independent of the redraw, so it may be pulled ahead of any P2S card any day — it is the seasonal one. |
 | P2.✓ close | **into P2S.✓** | two closes walking the same four scenes against the same artifact is one close. The merged close keeps P2.✓'s full run and its gate to Phase 3. |
 | P2.j stock watch before the stock-out | **moved to Phase 3 as P3.g** | §10 ("notice situations himself") and §13–14; a watch is operating mode, not the design. Backend only, no surface. |
-| P2.h voice, hands-free | **parked by the merge, then RESTORED as P2S.5 the same day** — the owner: *"we need to make it"*. Built to §8's first-class bar, not as the dictation P2.h described. Why it was parked, kept for the record: | §8 says, in the owner's words: *"Eventually voice should become a first-class way of operating George rather than simply speech-to-chat."* P2.h was browser speech into the composer — speech-to-chat, the version the standard rules out, for a capability it calls "eventually". Parked under Candidates with that sentence. |
+| P2.h voice, hands-free | **parked by the merge, then RESTORED as P2S.5 the same day** — the owner: *"we need to make it"*. Built to §8's first-class bar, not as the dictation P2.h described. Why it was parked, kept for the record: | §8 says, in the owner's words: *"Eventually voice should become a first-class way of operating Bob rather than simply speech-to-chat."* P2.h was browser speech into the composer — speech-to-chat, the version the standard rules out, for a capability it calls "eventually". Parked under Candidates with that sentence. |
 
 Eval spend is unchanged at **$4.30**: P2S.3's subset, the merged close's full
 run, and P3.✓'s. (P2S.3's subset ran 2026-09-17 for $0.72; **$3.02** is left.) Open cards 16 → 13, then 14 when voice came back as P2S.5.
@@ -2382,7 +2382,7 @@ IS FINISHED (2026-09-17).** The owner: *"so at the end of p2s we will have my id
 ui? make sure we will and is this the best way to do it?"* **At the end of Phase 2S
 he has the room and EIGHT of the fifteen scenes — not all fifteen, and nothing
 may say otherwise.** The design has one scene per part of his vision
-(`data-scene` in `ops/ideal/george-ahead-of-me.html`); five need Phase 3's
+(`data-scene` in `ops/ideal/bob-ahead-of-me.html`); five need Phase 3's
 surfaces and two need a source only he can supply. This table is held by
 `tests/test_plan_alignment_contract.py`: every scene in the artifact appears
 here exactly once, and the close it names must name the scene in its own card.
@@ -2416,7 +2416,7 @@ looked at before the card closes. P2S.1 writes the script that does it
 (`ops/frames.py`); every later card reuses it.
 
 **LOOK AND BEHAVIOUR ARE TWO CHECKS, NOT ONE.** The artifact's words and figures
-are authored; George's live answer to the same question will not match them word
+are authored; Bob's live answer to the same question will not match them word
 for word, and should not be forced to. So the LOOK is held on fixtures — the same
 rows drawn the same way — and the BEHAVIOUR is held live at the close: the eight
 scenes' questions asked on the live build in the full run, including the two
@@ -2429,7 +2429,7 @@ keeps ten closed cards of working behaviour (selection, memory, the ladder,
 actions, the business switch) and deletes the old screens under a line-count
 rule; rebuilding from the artifact as a new app would throw that away and is
 what §1 of this file forbids. What was weak was never the order but the proof:
-four of fifteen scenes checked, in jsdom, against a design whose words George
+four of fifteen scenes checked, in jsdom, against a design whose words Bob
 does not write. That is what this block changes.
 
 **THE AUDIT, 2026-09-17 — Phase 2S checked line by line against the artifact's
@@ -2466,7 +2466,7 @@ here and said why, so the owner can point rather than design:
 | Tab grey completion (`ghosts.ts`, P2.d) | unchanged, in the same line | as above |
 | drag, resize, bring forward, undo (`drag.ts`, `arrangement.ts`) | **removed** | his rows 6 and 7 ask the figures to flow left to right, then down, filling the space; a hand-placed figure breaks the rule he gave, and undo exists only to undo the drag. Deleted with the layout they served |
 | set aside a figure | **removed** — no control on the figure, no set-aside list; `Local.closed`, the "set aside" chips in `Room.tsx` and their tests are deleted | the owner: *"remove"* (2026-09-17) |
-| keep a figure (P2.a pins) | **the per-figure keep control is removed** — the owner: *"remove"* (2026-09-17). Keeping itself stays, because standard §12 asks for it: saying *"keep this"* / *"make this a page"* (George's pin and page tools, unchanged) and the thread header's Page view with *Keep as page* (P2.a), which is now the one save gesture (UI rule 2) | nothing that §12 asks for is lost; only the button on each chart goes |
+| keep a figure (P2.a pins) | **the per-figure keep control is removed** — the owner: *"remove"* (2026-09-17). Keeping itself stays, because standard §12 asks for it: saying *"keep this"* / *"make this a page"* (Bob's pin and page tools, unchanged) and the thread header's Page view with *Keep as page* (P2.a), which is now the one save gesture (UI rule 2) | nothing that §12 asks for is lost; only the button on each chart goes |
 | after a turn: *"4 reads · 7 tools · 3 caveats · behind it"* (`Working.tsx` WorkLine) | the thread header, beside its tabs | it describes the thread, not the answer |
 | *"since you last looked · N answers arrived"* (`history.ts`) | one quiet line above the turn caveat, only when N > 0 | UI 8: drawn only from a loaded count |
 | a refused replay's line (`refusalForPerson`) | under the composer chips, where the replay was asked | a refusal belongs to the gesture that caused it |
@@ -2494,7 +2494,7 @@ From `buildBeside()`, `place()`, `wire()`, `arrows()`, `draw()`:
 | ≤ 900px | him (max 420px wide) → words left-aligned, *next*'s rule moves to its left → figures in one column; no wires, no arrows; the page scrolls | P2S.1(b) |
 | sidebar | open by default when the window is wider than 820px, remembered per browser, `[` toggles it (not while typing) | P2S.1(h) |
 | the mark | a 680×420 canvas; idle breathes with three motes on a wide orbit; reading pulses once per read and turns a ring; writing settles the motes close and steadies the ring; need is warm and still | P2S.1(b) place and size; P2S.2(d) life |
-| **not product** — the artifact's own devices | the console switch, the example-scene list, double-click "back to how George brought it", the hidden `.bs-mood` line | not built |
+| **not product** — the artifact's own devices | the console switch, the example-scene list, double-click "back to how Bob brought it", the hidden `.bs-mood` line | not built |
 
 **AND THE TRANSLATION, HONESTLY.** The owner asked whether moving the artifact into
 the product is hard. **Half of it is copying and half of it is not.** The tokens,
@@ -2504,7 +2504,7 @@ and the arrows are small pieces of vanilla script that port to React directly. *
 part that is real work is that the artifact is hand-authored and the product is
 not**: every claim, figure and number on that page was typed by a person for one
 scene, and **its sixteen chart shapes are static SVG with fixed coordinates**
-(the `vocab` scene), not renderers. In the room each must be produced from George's
+(the `vocab` scene), not renderers. In the room each must be produced from Bob's
 actual turn — the read order, the say line per figure, which read was ruled out (a
 flag that does not exist until P2S.3), and sixteen shapes drawn from real rows with
 their empty, one-row and too-many-row cases. That is why P2S.3 is a card of its own
@@ -2566,15 +2566,15 @@ each is a row a card must show:
 | the four board scenarios (was P2.✓, now P2S.✓) | re-pointed to the artifact's scenes |
 
 **WHAT GOES — no old UI stays because it exists.** Counted 2026-09-17:
-`frontend/src/components/george/` is **10,510 non-test lines** — the OLD
-George surface (river feed, `PinnedPage.tsx` 637, `Instruments.tsx` 449,
+`frontend/src/components/bob/` is **10,510 non-test lines** — the OLD
+Bob surface (river feed, `PinnedPage.tsx` 637, `Instruments.tsx` 449,
 `workUnit.ts` 707, result surface, workspace). The room imports two of its
 modules (`threadHistory`, `pageScope`); the rest is reached only by
 `InboxPage`, `PagesPage`, `WorkflowsPage` and `RiverPreview`. **Rule for the
 phase: every card ends with a deletion list — what it made unreachable is
 deleted in the same commit, and the close-out states the directory's line
 count, which must fall at every close and reach zero by P3.✓.** In order:
-P2S.1 deletes `RiverPreview` and its `/george/preview` route, the `--measure`
+P2S.1 deletes `RiverPreview` and its `/bob/preview` route, the `--measure`
 frame and the 2/3-tile grid rules, the console-less leftovers in `room.css`;
 P2S.3 deletes `markFor`'s mapping of the seven retired widget names once a
 migration rewrites stored boards (or keeps it with a test that says why);
@@ -2582,7 +2582,7 @@ migration rewrites stored boards (or keeps it with a test that says why);
 `Instruments`, `ResultSurface`, `ResultBlocks`, their shapes) — it is written
 into that card below; **P3.a** deletes `InboxPage` and the river feed;
 **P3.d** deletes `WorkflowsPage`. **Not touched without the owner's word:**
-`pages/AIChatPage.tsx` is the Supabot chatbot (freehand SQL, CLAUDE.md "George
+`pages/AIChatPage.tsx` is the Supabot chatbot (freehand SQL, CLAUDE.md "Bob
 is not the existing chatbot") — deleting it is a product decision, not
 cleanup; he decides.
 
@@ -2603,7 +2603,7 @@ cleanup; he decides.
       figures were in the card and the session found the mark arriving one
       card after the lines drawn from it and the frame that contains it).
       From the artifact's own rules (`.bs-him`, `.bs-left` in
-      `ops/ideal/george-ahead-of-me.html`): the grid is `"him right" "words
+      `ops/ideal/bob-ahead-of-me.html`): the grid is `"him right" "words
       right"`; the mark's canvas is **136% of its 580 column**, aspect
       680:420, pulled up by `-6vh` and out by `-18%` each side so its glow
       runs past the column while its BODY spans at least 70% of it (his
@@ -2625,7 +2625,7 @@ cleanup; he decides.
       the mark to the claim and to every figure, redrawn on resize and on the
       figures area moving. The words: claim, standing text with read
       superscripts, *what I'd do next*, right-aligned toward the figures.
-      **(h) the chrome** — the rail as the artifact's sidebar: George, the
+      **(h) the chrome** — the rail as the artifact's sidebar: Bob, the
       date, the business switch (P2.g), Pages, Systems with state, Automations
       · Watches, People (whoever the system already knows), collapsible with
       `[`; the composer as one line with its prompts, the offers, "tap anything
@@ -2668,7 +2668,7 @@ cleanup; he decides.
       1,022 (21 files of deleted modules gone; 3 added — `beside`,
       `sidebar`, `figuresArea` — and `layout` re-derived), pure 1,852 + 1
       failing → 1,850, `tsc -b --force` clean, `vite build` clean.
-      **`frontend/src/components/george/`: 10,510 → 5,087 non-test lines** —
+      **`frontend/src/components/bob/`: 10,510 → 5,087 non-test lines** —
       RiverPreview was the last importer of 32 old river modules.
       **SHORTFALLS, each a row above not fully met:** the known / likely /
       possible / unknown line is not drawn — no turn carries one, and a line
@@ -2750,7 +2750,7 @@ cleanup; he decides.
       touchable marks, draw 10 and 10. Looked at: doing, draw (touch), memory,
       beside the design's draw. **Suites:** vitest 68 files / 1,022 → **71 /
       1,056**; pure **1,850** local (unchanged); `tsc -b --force` and `vite
-      build` clean. **`frontend/src/components/george/`: 5,087 → 5,087 — IT DID
+      build` clean. **`frontend/src/components/bob/`: 5,087 → 5,087 — IT DID
       NOT FALL**: nothing this card touched lived there; `kindOfRead` in the room
       was deleted when (e) left it no caller.
       **SHORTFALLS:** no PIE exists until P2S.3, so "a dumbbell, a line, a bar
@@ -2766,10 +2766,10 @@ cleanup; he decides.
       different channel, which nothing measured says a reader will not confuse.
       **Nobody has seen it live** — unpushed.
       **The log's "a tile explaining itself to the reader" is fixed with it**:
-      `Missing`/`MissingRow` said "George composed this from X, which this read
+      `Missing`/`MissingRow` said "Bob composed this from X, which this read
       does not carry"; they now say what is not in the read. Moved to Fixed.
 - [x] **P2S.3 the vocabulary, and "ruled out"** — alone, because it is the one
-      card that changes what George sees. The catalogue grows from six marks to
+      card that changes what Bob sees. The catalogue grows from six marks to
       the artifact's sixteen shapes: bar against usual, small multiples, area,
       stacked, pie, scatter, heatmap, calendar, waterfall, treemap, funnel,
       gauge with its bullet, map — figure, dumbbell, ranked, contributors, line
@@ -2784,7 +2784,7 @@ cleanup; he decides.
       the catalogue at six on purpose; this reopens it on purpose, with the
       rule that decides unasked.
       **AND A THOUGHT ON EVERY CHART (the owner, 2026-09-17: *"more text of what
-      george thinks should be integrated on the charts so when you see the
+      bob thinks should be integrated on the charts so when you see the
       visual and you here his thought you can get a good picture of whats
       happening"*).** A block's `claim` is "a few words, no digits" (P1.f), and a
       read he did not compose carries none, so the `speak` layout can only place
@@ -2797,7 +2797,7 @@ cleanup; he decides.
       beacause its not, so make it."* A kept page is still drawn by
       `PinnedPage` → `PinTile` → `ResultBlocks`/`Instruments`, the pre-P1.e
       renderer. The seam exists: `agent/default_composition.blocks` is what the
-      board and `/george/replay` are drawn from, so the pin-run route returns
+      board and `/bob/replay` are drawn from, so the pin-run route returns
       the same blocks and a page draws them with THIS card's sixteen shapes —
       which is why it lives here and not before P2S.2: done earlier, it would
       port pages onto a renderer this phase replaces. The page's controls
@@ -2806,7 +2806,7 @@ cleanup; he decides.
       **Deletes** (the phase rule): `PinnedPage.tsx`, `PinTile.tsx`,
       `Instruments.tsx`, `ResultSurface.tsx`, `ResultBlocks.tsx`, their
       `*Shape.ts` modules and tests — and states the line count of
-      `frontend/src/components/george/` at close, against 10,510 on
+      `frontend/src/components/bob/` at close, against 10,510 on
       2026-09-17.
       **Done when:** each shape has a golden render test off recorded rows;
       "make that one a pie" changes that pin and only that pin, on the board
@@ -2838,9 +2838,9 @@ cleanup; he decides.
       **no migration**; `pin_answer` keeps the shape a read has on the board
       (`write_ctx.shapes`); `edit_page` `draw` redraws one pin's call, only when asked,
       audited as `draw`. **Deleted** PinnedPage, PinTile, Instruments, ResultSurface,
-      ResultBlocks, GeorgeChart, NoticeBanner, noticeLabel, ReceiptsBlock, receiptShape,
+      ResultBlocks, BobChart, NoticeBanner, noticeLabel, ReceiptsBlock, receiptShape,
       AskComposer, PagePicker, instrumentShape, resultShape, pinShape and their tests:
-      **`frontend/src/components/george/` 5,087 → 1,394 non-test lines.**
+      **`frontend/src/components/bob/` 5,087 → 1,394 non-test lines.**
       **Frames** (`verification/frames/p2s3/`): `vocab`, `vocab2`, `vocab3` — three scenes,
       because the board draws one read once and several shapes were recorded over the same
       read — at 1440 and 1920, sidebar open and closed, and a page at a time: centre offset
@@ -2855,7 +2855,7 @@ cleanup; he decides.
       kind description 1,820 → 3,734 characters on the cached prefix; `SYSTEM_PROMPT`
       untouched at 1,797 words.
       **SHORTFALLS:** map and funnel declined, so 14 of 16; **on the four gate questions
-      George picked no new shape unasked** (table, figure, dumbbell, ranked) and set
+      Bob picked no new shape unasked** (table, figure, dumbbell, ranked) and set
       `ruled_out` nowhere — no gate question calls for either, so those rules are unseen
       live; a read he did not compose still carries no thought; a pin is redrawn only by
       words — no control on a kept page does it, by his "remove" of per-figure controls;
@@ -2864,14 +2864,14 @@ cleanup; he decides.
       stands beside the room; the touch tip clips at the figures area's left edge (seen on
       the gauge; not new). **Found and fixed:** P2S.1 deleted `.r-act` while Kept and Needs
       you still drew their actions with it. **Nobody has seen it live** — unpushed.
-- [x] **P2S.6 George finds the why on a broad question — TAKEN BEFORE P2S.4** —
+- [x] **P2S.6 Bob finds the why on a broad question — TAKEN BEFORE P2S.4** —
       written 2026-09-17 at the owner's word (*"do both"*), after: *"this is
       basically a dashboard and its telling me what stores are down but its not
       saying why and then it suggests me to ask why next … i shouldnt need to ask
       why, it has intiative, it really reads the data on its owm and forms its own
       opinions not just reading it back to me"*. **It is his standard, word for
-      word** (ops/STANDARD.md §2, §4, §5): *"If George decides Rockwell being down is
-      important enough to show me, George should have already investigated why"*;
+      word** (ops/STANDARD.md §2, §4, §5): *"If Bob decides Rockwell being down is
+      important enough to show me, Bob should have already investigated why"*;
       *"NOTICE → INVESTIGATE → CONNECT THE EVIDENCE → FORM A VIEW → SHOW ME THE
       SITUATION"*; *"I should be able to ask broad things like 'How are we doing?' …
       He should investigate across relevant areas rather than simply returning a
@@ -2950,10 +2950,10 @@ cleanup; he decides.
       eval checks that `next` names no read (the owner tests that himself,
       2026-09-18); the cost ceiling is checked on eval turns only.
       **EXTENDED THE SAME DAY — "understanding, not breadcrumbs".** Shown a
-      simulation of eight questions run on real reads, the owner: *"George
+      simulation of eight questions run on real reads, the owner: *"Bob
       doesn't wait for me to ask the next obvious question … investigates the
       likely drivers, checks relevant explanations, determines whether it
-      actually matters, and forms a view … not because George made me ask
+      actually matters, and forms a view … not because Bob made me ask
       'why?' five times"*. Built: `investigation.principle` rendered at the
       head of INVESTIGATING; a **CHECK** rung (the other shops — estate or
       this shop; the stock record of the lines that fell — an empty shelf;
@@ -2974,7 +2974,7 @@ cleanup; he decides.
       likely reads 9 times over ~5 model rounds, so the $0.50 ceiling is at
       risk and is held, not raised.**
       **THEN THE RUNTIME, AT THE OWNER'S WORD** (*"cost should not hold us back
-      in functionality, i just want to optimize cost not make our george work
+      in functionality, i just want to optimize cost not make our bob work
       worse"*): the $0.50 ceiling is withdrawn (cost is recorded, never
       asserted); WHO YOU ARE and VOICE rewritten to his hierarchy (responsible
       for understanding, an operator not a reporter, "nothing here concerns
@@ -3010,13 +3010,13 @@ cleanup; he decides.
       must pass every trust row on the questions this card changed (the
       morning's "₱25–45k" is the known failure to beat).
 
-- [x] **P2S.7 George builds the answer in front of you — and the fixes P2S.6's
+- [x] **P2S.7 Bob builds the answer in front of you — and the fixes P2S.6's
       live runs found** — written 2026-09-18 at the owner's word: *"when it
       does how are we doing it should still display like the normal data first
       and then it goes deeper so theres something to see already and the more
       pop up so you can really see it building"*. **Measured, not guessed**
       (`verification/p2s6-gate-2.json`): "how are we doing?" drew the shops'
-      figures at **10.4 s**, George's own board at **59.6 s**, and finished at
+      figures at **10.4 s**, Bob's own board at **59.6 s**, and finished at
       **105.7 s**; the morning 4.8 / 62.5 / 72.6 s. Between the first charts
       and the end NOTHING new appears, for two reasons in the code: the default
       board is drawn once a turn and never again (`agent/default_composition.py`,
@@ -3028,7 +3028,7 @@ cleanup; he decides.
       that ADD to the board and change their own by key; nothing already drawn
       moves (P1.b's reason stands). Each block's thought says what it shows so
       far; the headline settles last. "compose once" becomes "compose as you
-      go". A read that lands after George's first compose is drawn by the
+      go". A read that lands after Bob's first compose is drawn by the
       default rule as a quiet added block, never a rearrangement.
       **(b) the trust fixes the two runs found:** a caveat refused for a
       rounded figure ("about 13,100" over 13,134) left a notice to be forced —
@@ -3038,12 +3038,12 @@ cleanup; he decides.
       check; the deletion gates no longer leave an orphaned sentence ("That's
       a bookkeeping problem" with its subject deleted, 3 of 14 turns); the
       convergence cap's forced answer stops printing a tool call to the reader
-      (rule 9); George can see the category names, so "tradsnax" is not four
+      (rule 9); Bob can see the category names, so "tradsnax" is not four
       reads of spelling.
       **(c) a broad answer leads with the view and its few findings** — 503
       words on run 2; data-quality notes belong in the caveat, not the body.
       **(d) stop paying for refusals that protect nothing — the owner, "ok add
-      all of those fixes": ~10% of the two runs' $3.88 was George redoing a
+      all of those fixes": ~10% of the two runs' $3.88 was Bob redoing a
       board or reading the check refused (6 extra compose rounds and 1
       corrective turn in 14 turns).** By P1.a's own line — coerce what cannot
       change what a figure says, refuse what can — these become coercions,
@@ -3057,7 +3057,7 @@ cleanup; he decides.
       "read 0 has no row for 'North Edsa'" on a `group_by: []` read filtered
       to North Edsa, and the same for an action on Rockwell — which P1.a says
       is accepted; the transaction-wording check fires on the foot-traffic
-      REFUSAL, where George says a transaction is NOT a person (both runs) —
+      REFUSAL, where Bob says a transaction is NOT a person (both runs) —
       it must tell explaining the difference from confusing the two; the
       store-wide stock-out view returns 1,000 rows with no sign it was cut,
       and a product absent from it read as "not out" in the 2026-09-18
@@ -3067,7 +3067,7 @@ cleanup; he decides.
       **(f) worth measuring, NOT cutting:** in the Greenhills turn $0.20 of
       $0.34 was caching large results (stock and replenishment, up to 200
       rows each). Record result size per read on the eval report and say
-      what a smaller default would save — the owner: cost never makes George
+      what a smaller default would save — the owner: cost never makes Bob
       work worse, so nothing he reads is trimmed on this card.
       **Its own card, not this one:** a holiday calendar in metrics.yaml. The
       CHECK rung sees an unusual baseline day as a series; nothing says WHY it
@@ -3253,7 +3253,7 @@ cleanup; he decides.
       call that cannot expand (a warehouse, a window in progress, an unknown
       argument) is refused ONCE and reads nothing. **The budget counts calls
       now**: the convergence cap, the prompt's "at most 9/6" and the eval's
-      trust row count what George asked for, a call asked as one counting once
+      trust row count what Bob asked for, a call asked as one counting once
       (`done.asked_reads`, `checks.asked_reads`); `executed_calls` still counts
       reads. The broad policy's second round is `get_change` at the shop or
       two that moved most; the ladder gains "get_change reads VERIFY to CHECK
@@ -3288,10 +3288,10 @@ cleanup; he decides.
       against the code and `george.beliefs` the same day: **not reliably, and
       not in what it reads.** (1) A `told` view exists (P2.f) and fits —
       `subject_kind: category`, stance `means` — but **0 of 33 stored beliefs
-      are told**: it has never happened. Whether George records one is his
+      are told**: it has never happened. Whether Bob records one is his
       choice. (2) **It would silently lapse**: `belief_store.as_block` attaches
       the 12 most recently confirmed (`MAX_IN_PROMPT`, `ORDER BY confirmed_at
-      DESC`), George re-confirms his own views constantly, so a told view slides
+      DESC`), Bob re-confirms his own views constantly, so a told view slides
       off within about a day. (3) **It changes words, not reads**: no tool can
       leave a category out (`get_sales` filters narrow to one), so charts and
       rankings still lead with per-gram lines while he talks around them.
@@ -3302,7 +3302,7 @@ cleanup; he decides.
       rankings, category breakdowns, `get_object`'s sections and P2S.10's tools
       leave the category out, and `meta.filters_applied` says *"per gram left
       out at your instruction, <date>"*; the definitions say which settings
-      exist and what they touch, nothing typed into a tool; (c) George is told
+      exist and what they touch, nothing typed into a tool; (c) Bob is told
       plainly to record one when the person says what to focus on or ignore.
       **Done when:** "don't focus on per gram, it doesn't matter" in one
       conversation, then "what fell at North Edsa?" in a new one the next day:
@@ -3347,7 +3347,7 @@ cleanup; he decides.
       1,796 → **1,800 of 1,800** words, sha `b1be6950` → `eec644cb` — the
       seventh stance in its list; the budget is now full. No frontend.
 - [x] **P2S.4 same-store year-over-year** — **was P2.i, kept by the merge
-      2026-09-17 because it changes what George can SAY, not how it looks,
+      2026-09-17 because it changes what Bob can SAY, not how it looks,
       and so is untouched by the redraw.** It may be taken ahead of any P2S
       card on any day; it is the seasonal one.
       `comparisons.not_supported.same_period_last_year` refuses YoY because
@@ -3411,13 +3411,13 @@ cleanup; he decides.
       byte-identical, 1,800 words sha `eec644cb`; the `get_sales` schema
       gains the option and one sentence, so the cached prefix is written
       once cold after deploy. No migration, no frontend. Two reads ~0.8 s.
-- [x] **P2S.5 voice — a first-class way of operating George** — **restored by
+- [x] **P2S.5 voice — a first-class way of operating Bob** — **restored by
       the owner 2026-09-17**, after the merge had parked it: *"we need to make
       it"*. The bar is his own standard, §8: *"Eventually voice should become a
-      first-class way of operating George rather than simply speech-to-chat"*,
+      first-class way of operating Bob rather than simply speech-to-chat"*,
       and *"Language is for intent. Direct interaction is for reference. They
       should work naturally together."* So this is NOT dictation into a box.
-      Needs P2S.1's composer line; changes nothing George reads. Five parts:
+      Needs P2S.1's composer line; changes nothing Bob reads. Five parts:
       **(a) speaking goes with pointing** — hold the mic (or tap to start, tap to
       stop) and speak; the words appear in the composer line as they are heard
       and send on release; whatever is selected on screen travels with them
@@ -3427,7 +3427,7 @@ cleanup; he decides.
       spoken resolve through the same fragment path as the composer chips: a
       window, grouping or count change replays with no model turn.
       **(c) hands-free** — a switch on the composer line: when an answer lands
-      George reads the CLAIM aloud (browser speech synthesis) and nothing else,
+      Bob reads the CLAIM aloud (browser speech synthesis) and nothing else,
       never the figures or the receipts; the claim is lit while he speaks;
       speaking or tapping anything stops him at once; "read it to me" reads the
       current claim on demand.
@@ -3439,7 +3439,7 @@ cleanup; he decides.
       current Safari; where the browser has none the mic is not drawn and one
       line says voice is not available in this browser. **Chrome's recognition
       sends the audio to Google's speech service**; the close-out says so
-      plainly, and George stores nothing spoken beyond the question text, exactly
+      plainly, and Bob stores nothing spoken beyond the question text, exactly
       as if it had been typed.
       Done when: hold the mic, say "how are we doing", release — the words appear
       as heard and send; with two shops tapped, a spoken "compare these" sends
@@ -3483,7 +3483,7 @@ cleanup; he decides.
       and refused the microphone — the room drew "The microphone is not
       allowed for this site…" above the line, which is state (d) seen in a
       real browser. **Chrome's recognition sends the audio to Google's speech
-      service; George stores only the question text, as typed.** **Not
+      service; Bob stores only the question text, as typed.** **Not
       done:** hands-free does not listen while he speaks (an open mic hears
       his own voice through the speakers), so "speaking stops him" means
       pressing the mic; no live browser has been spoken to. Suites exact:
@@ -3513,7 +3513,7 @@ cleanup; he decides.
       instruction. A failure there names the card it came from. Suites exact, numbers at close, the old
       surface's line count against 10,510. **Gate to Phase 3:** Open empty
       five days; the four scenes work as drawn; median still under target.
- **CLOSED 2026-09-18, UNPUSHED, nothing built — a close; THE GATE IS NOT MET.** THE LOOK, held by pixels (`verification/frames/p2sclose/`, 40 images; `p2sclose-vocab/`, 24): `situation`, `doing`, `nothing`, `draw`, `memory` and `vocab` (three scenes) rendered from the recorded fixtures at 1440 and 1920, rail open and closed, beside the design's scenes, every pair looked at. On all 32 room frames the centre is 0 px off, the columns 433/703 and 580/940, no scrollbar, the page does not scroll, one wire per landed figure plus one to the claim, a receipt with `read HH:MM` under every figure. `touch` is the `-touch.png` frame: a hover on the headline figure shows value, change and read time and its receipt opens in place under it. `judgment` has no fixture scene; it is the run's `correction` turn (passed). What differs from the design, by eye: the claim starts under the mark, not inside its lower edge — the owner's own fix of 2026-09-17 (`6975200`), so `claim_starts_inside_mark_lower_edge` is false on every frame BY DECISION; `memory` is the belief list with Forget, not the design's timeline of holds (P2S.2 said so); the fixtures' words are the recorded turns', not the design's; the `nothing` fixture draws a 15-row table where the design draws no figure. Found by eye and logged, not fixed: the memory figure prints a stance as its raw name (`NEEDS_ATTENTION`); the by-hour heatmap in `vocab` is near-flat; the scatter's small-shop labels overlap. THE BEHAVIOUR, one full run (`verification/p2sclose-v2.json`): **14 scenarios, 14 live turns, $4.79 — not 11 and not $1.51.** The suite grew at P2S.6, P2S.7 and P2S.10 and nobody re-priced it; 3.2× the plan's figure, now corrected in both copies and in `FULL_USD`. **8 of 14 passed.** Trust rows failed on three: `why` (₱6,569), `vague` (₱28,000–36,700), `follow-up` (₱13,500–21,000) — each a rounded range or pairing George wrote in prose over day rows, figures no tool returned (rule 9). `analyze` needed a notice forced; `run-monday` died on an `anthropic.APIError` after four rounds, detail unrecoverable (the harness stubs the gaps log); `cannot` is the checker's regex — George said *"I don't have footfall"* and the pattern wants *cannot establish*. Compose refused 3/14 (target ≤ 1). Which card: the ranges are prose over rows read on his own initiative — P2S.6's reading policy is the likely source, NOT bisected. P2S.9's promise (10% faster, 10–15% cheaper on the seven gate questions): **the seven took 504.4 s against 421.7 (+20%) and $2.84 against $1.91 (+48%)** — `broad` 85→117 s on 19 reads, `lookup` 40→83 s on 11 reads; `why` and `cannot` each saved one round, nothing else did. P2S.10 (about 30 s faster on the morning, broad and analyze): morning 84→72, broad 85→117, analyze 117→117. P2S.11's per-gram instruction: no scenario asks it; unchecked. **Median 76.6 s a turn over the 14; the target is under 10.** Suites: pure 2,015 (local; CI is four fewer), vitest 70 files / 986, `tsc -b --force` clean, `test_eval_report_contract` on the new report. `frontend/src/components/george/` **1,394 non-test lines against 10,510**. Voice on the live build NOT tried: a headless session has no microphone; it waits on the owner, with "feels right". Seven scenes are not this phase's: `morning`, `decide`, `build`, `life`, `run` finish at P3.✓; `docs` at S.4; `team` at S.6. **Gate to Phase 3: NOT MET** — 13 Open in the dogfood log, three from today; the six scenes with fixtures work as drawn; the median is not under target.
+ **CLOSED 2026-09-18, UNPUSHED, nothing built — a close; THE GATE IS NOT MET.** THE LOOK, held by pixels (`verification/frames/p2sclose/`, 40 images; `p2sclose-vocab/`, 24): `situation`, `doing`, `nothing`, `draw`, `memory` and `vocab` (three scenes) rendered from the recorded fixtures at 1440 and 1920, rail open and closed, beside the design's scenes, every pair looked at. On all 32 room frames the centre is 0 px off, the columns 433/703 and 580/940, no scrollbar, the page does not scroll, one wire per landed figure plus one to the claim, a receipt with `read HH:MM` under every figure. `touch` is the `-touch.png` frame: a hover on the headline figure shows value, change and read time and its receipt opens in place under it. `judgment` has no fixture scene; it is the run's `correction` turn (passed). What differs from the design, by eye: the claim starts under the mark, not inside its lower edge — the owner's own fix of 2026-09-17 (`6975200`), so `claim_starts_inside_mark_lower_edge` is false on every frame BY DECISION; `memory` is the belief list with Forget, not the design's timeline of holds (P2S.2 said so); the fixtures' words are the recorded turns', not the design's; the `nothing` fixture draws a 15-row table where the design draws no figure. Found by eye and logged, not fixed: the memory figure prints a stance as its raw name (`NEEDS_ATTENTION`); the by-hour heatmap in `vocab` is near-flat; the scatter's small-shop labels overlap. THE BEHAVIOUR, one full run (`verification/p2sclose-v2.json`): **14 scenarios, 14 live turns, $4.79 — not 11 and not $1.51.** The suite grew at P2S.6, P2S.7 and P2S.10 and nobody re-priced it; 3.2× the plan's figure, now corrected in both copies and in `FULL_USD`. **8 of 14 passed.** Trust rows failed on three: `why` (₱6,569), `vague` (₱28,000–36,700), `follow-up` (₱13,500–21,000) — each a rounded range or pairing Bob wrote in prose over day rows, figures no tool returned (rule 9). `analyze` needed a notice forced; `run-monday` died on an `anthropic.APIError` after four rounds, detail unrecoverable (the harness stubs the gaps log); `cannot` is the checker's regex — Bob said *"I don't have footfall"* and the pattern wants *cannot establish*. Compose refused 3/14 (target ≤ 1). Which card: the ranges are prose over rows read on his own initiative — P2S.6's reading policy is the likely source, NOT bisected. P2S.9's promise (10% faster, 10–15% cheaper on the seven gate questions): **the seven took 504.4 s against 421.7 (+20%) and $2.84 against $1.91 (+48%)** — `broad` 85→117 s on 19 reads, `lookup` 40→83 s on 11 reads; `why` and `cannot` each saved one round, nothing else did. P2S.10 (about 30 s faster on the morning, broad and analyze): morning 84→72, broad 85→117, analyze 117→117. P2S.11's per-gram instruction: no scenario asks it; unchecked. **Median 76.6 s a turn over the 14; the target is under 10.** Suites: pure 2,015 (local; CI is four fewer), vitest 70 files / 986, `tsc -b --force` clean, `test_eval_report_contract` on the new report. `frontend/src/components/bob/` **1,394 non-test lines against 10,510**. Voice on the live build NOT tried: a headless session has no microphone; it waits on the owner, with "feels right". Seven scenes are not this phase's: `morning`, `decide`, `build`, `life`, `run` finish at P3.✓; `docs` at S.4; `team` at S.6. **Gate to Phase 3: NOT MET** — 13 Open in the dogfood log, three from today; the six scenes with fixtures work as drawn; the median is not under target.
 
 **Candidates, not cards — parked 2026-09-13 so they are neither lost nor
 started.** Each is grounded in data that already exists; none is scheduled,
@@ -3570,12 +3570,12 @@ objects; none recomposes on a question.
 - [ ] **P3.f "usual" as a definition, then as a band** — `usual_weekday` in
       metrics.yaml (same weekday over the last N closed weeks: low, high,
       middle band, computed in the tool), THEN the band mark with today's
-      marker. George may not draw "usual" before the definition exists.
+      marker. Bob may not draw "usual" before the definition exists.
       **No eval** — same reason as P2.i: no gate scenario asks for a usual
       band. Contract tests are the check; it rides P3.✓.
 - [ ] **P3.g the stock watch fires before the stock-out, not after** — was
       P2.j, moved here by the merge 2026-09-17: a watch is operating mode
-      (standard §10, *"George notices it … determines whether it actually
+      (standard §10, *"Bob notices it … determines whether it actually
       matters"*), and it touches no surface. Today a watch fires when a line
       crosses zero, which reports a stock-out that has already cost the sale.
       The useful condition is "will cross zero before it can be restocked".
@@ -3623,7 +3623,7 @@ objects; none recomposes on a question.
       same rules (idempotent, whole-file, ledgered, definitions from the yaml).
       **Done when:** a purchase-order export uploaded from the page lands, and
       the same file uploaded again inserts nothing; a document-only transfer
-      export is refused with the reason; the ledger lists both; George's
+      export is refused with the reason; the ledger lists both; Bob's
       `get_purchasing` reads the new orders; the API question is answered with
       its source. **No eval** — nothing on the model path changes.
 - [ ] **P3.✓ close: the Seikyo arc, timed** — and the five scenes the ledger
@@ -3654,7 +3654,7 @@ for it.`):
   and then checked: `tools/vending.py`, the `get_vending` tool, the
   `v_vending_order_lines_php` / `v_vending_orders_php` / `v_vending_goods_php`
   views and a whole `vending:` domain in `definitions/metrics.yaml` all exist
-  and are read today. **George already covers two businesses, not one.**
+  and are read today. **Bob already covers two businesses, not one.**
   Feature 23 was designed-not-built (P2.g), not blocked, and the switch
   landed 2026-09-15. Two live constraints that ARE real:
   `vending.never_join_to_store_domain: true`, so the two domains are compared
@@ -3667,7 +3667,7 @@ for it.`):
 - **S.5 a supplier channel** (25) — how an order goes to Seikyo today; then
   "Send" is the one action that leaves his hands, behind the provisional
   frame, level five.
-- **S.6 people and permissions** (8) — who else uses George and what each
+- **S.6 people and permissions** (8) — who else uses Bob and what each
   may see.
 
 **Calendar, honestly.** One card a day, Fridays for the sweep, one session in
@@ -3677,7 +3677,7 @@ Phase 2 eleven, Phase 3 seven. (Twelve remain open as of 2026-09-15: five of
 Phase 2, seven of Phase 3, and the two closes among them.) (P1.m was a card until 2026-09-13 and is now the tail
 of P1.e: the letter is retired, not reused.) The sources
 decide whether 8, 23, 24 and 25 land inside that or after. The readable copy
-of this plan, with every card's prompt, is **George, The Build Plan** in §6.
+of this plan, with every card's prompt, is **Bob, The Build Plan** in §6.
 
 ---
 
@@ -3705,7 +3705,7 @@ Measured 2026-09-13: the script saw 9.4M presented tokens over 30 days while
 the console showed **51.6M on the same key**. 18%. Two confident conclusions
 came out of that gap in one afternoon and both were wrong.
 
-**For the bill, read the Anthropic console** — filter by the `george` API key,
+**For the bill, read the Anthropic console** — filter by the `bob` API key,
 group by *token type*, and read the day, not a rolling window. The token-type
 split is the part that matters and the script cannot produce it. One heavy day
 (2026-09-13, $18.20):
@@ -3722,7 +3722,7 @@ not reopen the TTL or chase the hit rate. What that day actually was: roughly
 six full eval runs and the turns sessions fired while building, against 193
 real turns in the whole month. **The bill is the building, not the product.**
 
-Use `cost_report.py` for what it is good for — comparing George's own turns
+Use `cost_report.py` for what it is good for — comparing Bob's own turns
 with each other, across builds with `--since`.        # the weekly sweep
     .venv\Scripts\python.exe ops/turn_clock.py --days 7        # the clock (P0.3)
     .venv\Scripts\python.exe ops/turn_clock.py --days 30 --user-only
@@ -3789,11 +3789,11 @@ happily while serving old code. Probe a new route before trusting one.
 ## 5. Standing facts a session keeps getting wrong
 
 - **Never print a secret's value.** `backend/.env` holds a superuser
-  `DATABASE_URL`, both George role passwords, `BRIEF_TOKEN` and the model key.
+  `DATABASE_URL`, both Bob role passwords, `BRIEF_TOKEN` and the model key.
   Print the variable NAME and set/unset, never the value or a prefix. See
   CLAUDE.md — this rule was written after a probe printed all of them.
 - **The store list lives in `definitions/metrics.yaml` and nowhere else.**
-- **George's model is `claude-opus-5`**, never Fable in the interactive loop.
+- **Bob's model is `claude-opus-5`**, never Fable in the interactive loop.
   Claude Code sessions: Opus 5 to build, Fable 5.1 to review and for the weekly
   numbers.
 - **A test that asserts prompt wording is not a guarantee.** Behaviour is held
@@ -3808,9 +3808,9 @@ happily while serving old code. Probe a new route before trusting one.
 **THE DESIGN IS SETTLED — 2026-09-17.** `ops/STANDARD.md` is the owner's
 FINAL PRODUCT VISION (twenty sections, 2026-09-16); its §20 unlocked the
 visual direction, and the owner then reached the design himself by pointing
-at thirty-nine versions of one page: **George, Ahead of Me** —
+at thirty-nine versions of one page: **Bob, Ahead of Me** —
 https://claude.ai/artifact/BnwXtA3pPJxwui82FiKbpo (source:
-`ops/ideal/george-ahead-of-me.html`, the `beside` room; the other rooms in
+`ops/ideal/bob-ahead-of-me.html`, the `beside` room; the other rooms in
 that file are the record of how it was reached and are not targets). His
 words, 2026-09-17: *"remember all the things i told you today about this
 artifact is exactly what i want from my design everything ive been leading
@@ -3829,10 +3829,10 @@ standard and re-pointed on 2026-09-17; the links that follow are kept as the
 record of the earlier reading.
 
 The diagnosis behind this plan, the research, and the literal prompt for every
-card: **George, Eleven Days In** —
+card: **Bob, Eleven Days In** —
 https://claude.ai/code/artifact/90f62cb2-81f5-4ca1-b444-9ef3c92c858a
 
-**The design is one page: George, Ideal UI** —
+**The design is one page: Bob, Ideal UI** —
 https://claude.ai/code/artifact/7d69541a-ab54-4cfc-b622-77be5c7679c4.
 A working mockup with all 26 functions in it, and a "26" button on its rail
 that maps each function to where it lives and whether it is built, designed
@@ -3842,7 +3842,7 @@ the four earlier renders (Whole, Borrowed, Borrowed II, Assembled), which
 stay only as the reasoning behind it; the borrowings and what was declined
 are in `ops/DECISIONS.md` under 2026-09-13.
 
-**The plan to build it: George, The Build Plan** —
+**The plan to build it: Bob, The Build Plan** —
 https://claude.ai/code/artifact/41329abe-5de8-4168-af7a-9817798877d5. Also at https://claude.ai/artifact/93xBc9gC4yd6XxsXjSjskp
 (the link the platform returned on the 2026-09-18 republish, version 75 after P2S.✓). **Since
 2026-09-18 the page carries only what is ahead** (the owner: *"only keep future

@@ -6,8 +6,8 @@ the TypeScript is read as text, and the migration is read as text. What is
 under test is that four separate declarations of "what a post is" agree:
 
     migration n8o9p0q1r2s3   KINDS + the CHECK constraint
-    app/models/george_post   POST_KINDS
-    routes/george.RiverPost  the wire model
+    app/models/bob_post   POST_KINDS
+    routes/bob.RiverPost  the wire model
     types/river.ts           PostKind + Post
 
 A kind that exists in one and not the others renders as a blank card, or is
@@ -28,7 +28,7 @@ import pytest
 
 pytest.importorskip("pydantic", reason="the route module defines Pydantic models")
 
-from app.models.george_post import (  # noqa: E402
+from app.models.bob_post import (  # noqa: E402
     GEORGE_KINDS,
     POST_AUTHORS,
     POST_KINDS,
@@ -132,7 +132,7 @@ def test_authors_and_visibility_agree(ts: str) -> None:
 
 
 def test_the_wire_model_and_typescript_carry_the_same_fields(ts: str) -> None:
-    from app.api.v1.routes.george import RiverPost
+    from app.api.v1.routes.bob import RiverPost
 
     assert _ts_interface_fields(ts, "Post") == set(RiverPost.model_fields)
 
@@ -151,7 +151,7 @@ def test_a_post_always_offers_receipts_and_notices(ts: str) -> None:
 # Visibility — the asymmetry, in one place
 # ---------------------------------------------------------------------------
 
-def test_georges_own_posts_are_org_level() -> None:
+def test_bobs_own_posts_are_org_level() -> None:
     """
     A brief that fires into a group chat at 06:00 is not private, and
     pretending otherwise would make the app the least informed place to read it.
@@ -175,7 +175,7 @@ def test_every_kind_has_a_default() -> None:
         assert default_visibility(kind) in POST_VISIBILITY
 
 
-def test_george_kinds_are_a_subset_of_the_kinds() -> None:
+def test_bob_kinds_are_a_subset_of_the_kinds() -> None:
     assert set(GEORGE_KINDS) <= set(POST_KINDS)
     assert "question" not in GEORGE_KINDS
 
@@ -190,7 +190,7 @@ def _row(**kw):
         "thread_id": "11111111-1111-1111-1111-111111111111",
         "parent_id": None,
         "kind": "answer",
-        "author": "george",
+        "author": "bob",
         "author_user": None,
         "visibility": "org",
         "owner_user": None,
@@ -209,7 +209,7 @@ def test_mine_is_OWNERSHIP_and_never_a_filter() -> None:
     """
     `mine` decides whether a share action is offered, and nothing else.
 
-    Ownership, not authorship: George writes the answer to your question and it
+    Ownership, not authorship: Bob writes the answer to your question and it
     is still yours. Getting this backwards is what made every private answer
     invisible to everybody (alembic p0q1r2s3t4u5).
     """
@@ -217,8 +217,8 @@ def test_mine_is_OWNERSHIP_and_never_a_filter() -> None:
                            owner_user="ice", kind="question"), "ice")["mine"]
     assert not build_post(_row(author="user", author_user="sam",
                                owner_user="sam", kind="question"), "ice")["mine"]
-    # George AUTHORED this answer; the person who asked OWNS it.
-    answer = build_post(_row(author="george", author_user=None,
+    # Bob AUTHORED this answer; the person who asked OWNS it.
+    answer = build_post(_row(author="bob", author_user=None,
                              owner_user="ice", visibility="private"), "ice")
     assert answer["mine"] is True
     assert answer["author_user"] is None
@@ -231,12 +231,12 @@ def test_an_answer_is_reachable_by_the_person_who_asked() -> None:
     """
     The regression this whole migration exists for.
 
-    A private answer has author_user NULL, because George wrote it and George
+    A private answer has author_user NULL, because Bob wrote it and Bob
     has no account. Under the old filter — `visibility = 'org' OR
     author_user = :me` — it matched neither branch and was visible to nobody:
     125 of 125, measured on the real database.
     """
-    row = _row(author="george", author_user=None, owner_user="ice",
+    row = _row(author="bob", author_user=None, owner_user="ice",
                visibility="private", kind="answer")
     old_filter = row["visibility"] == "org" or row["author_user"] == "ice"
     new_filter = row["visibility"] == "org" or row["owner_user"] == "ice"
@@ -302,12 +302,12 @@ from datetime import datetime, timezone  # noqa: E402
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from agent import loop as george_loop  # noqa: E402
+from agent import loop as bob_loop  # noqa: E402
 
 
 def _capture(monkeypatch, thread_id=None):
     captured: list[tuple[str, tuple]] = []
-    log = george_loop.ConversationLog(thread_id=thread_id)
+    log = bob_loop.ConversationLog(thread_id=thread_id)
     monkeypatch.setattr(log, "_exec", lambda sql, params: captured.append((sql, params)))
     return log, captured
 
@@ -324,7 +324,7 @@ def test_post_ids_match_the_backfills_rule() -> None:
     Verified against the real Postgres on 2026-09-05 over 400 derivations —
     `(md5(c.id::text || ':question'))::uuid` and this agree exactly.
     """
-    log = george_loop.ConversationLog()
+    log = bob_loop.ConversationLog()
     question_id, answer_id = log.post_ids()
     for got, role in ((question_id, "question"), (answer_id, "answer")):
         digest = hashlib.md5(f"{log.conversation_id}:{role}".encode()).hexdigest()
@@ -334,7 +334,7 @@ def test_post_ids_match_the_backfills_rule() -> None:
 
 def test_post_ids_are_stable_across_calls() -> None:
     """The SSE frame and the INSERT must name the same post."""
-    log = george_loop.ConversationLog()
+    log = bob_loop.ConversationLog()
     assert log.post_ids() == log.post_ids()
 
 
@@ -379,10 +379,10 @@ def test_a_turn_writes_a_question_and_an_answer(monkeypatch) -> None:
     a = _by_column(*captured[1])
 
     assert q["kind"] == "question" and q["author"] == "user"
-    assert a["kind"] == "answer" and a["author"] == "george"
+    assert a["kind"] == "answer" and a["author"] == "bob"
 
     # AUTHOR is who wrote it: the person for the question, nobody for the
-    # answer, because George has no account.
+    # answer, because Bob has no account.
     assert q["author_user"] == "ice"
     assert a["author_user"] is None
 
@@ -419,7 +419,7 @@ def test_both_posts_are_private(monkeypatch) -> None:
 def test_a_turn_with_no_answer_writes_only_the_question(monkeypatch) -> None:
     """
     A crashed turn is a question nobody answered — true, and worth seeing. An
-    empty answer post would imply George said nothing, which is a different
+    empty answer post would imply Bob said nothing, which is a different
     claim. Matches what the backfill does and what chat_history already renders.
     """
     log, captured = _capture(monkeypatch)

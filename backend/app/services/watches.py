@@ -4,7 +4,7 @@ Watches: what one is, when it speaks, and how one is kept.
 CLAUDE.md reserved the word on 2026-09-05 and left it unbuilt on purpose, so
 that it could not be built under a different name in the meantime. The
 definition there is the one implemented here: *a condition plus a channel;
-George evaluates it on a schedule and posts only when the answer changes.
+Bob evaluates it on a schedule and posts only when the answer changes.
 Silence is its normal state.*
 
 THREE THINGS THIS FILE IS CAREFUL ABOUT, each of which is a way a watch turns
@@ -38,7 +38,7 @@ from typing import Any, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.george_watch import GeorgeWatch, GeorgeWatchCheck
+from app.models.bob_watch import BobWatch, BobWatchCheck
 from app.services import slots
 from tools._common import load_defs, req
 
@@ -177,7 +177,7 @@ def diff(previous: Optional[dict[str, str]],
     return {"added": sorted(added), "cleared": sorted(cleared)}
 
 
-def label(watch: GeorgeWatch, defs: Optional[dict] = None) -> str:
+def label(watch: BobWatch, defs: Optional[dict] = None) -> str:
     """
     What this watch is, in words, derived rather than stored.
 
@@ -192,7 +192,7 @@ def label(watch: GeorgeWatch, defs: Optional[dict] = None) -> str:
     return f"{says}{way} — {where}"
 
 
-def when(watch: GeorgeWatch) -> str:
+def when(watch: BobWatch) -> str:
     at = f"{watch.hour:02d}:{watch.minute:02d}"
     if watch.kind == "weekly" and watch.days_of_week:
         days = ", ".join(DAY_NAMES[d] for d in sorted(watch.days_of_week) if 0 <= d <= 6)
@@ -200,8 +200,8 @@ def when(watch: GeorgeWatch) -> str:
     return f"every day at {at}"
 
 
-def as_row(watch: GeorgeWatch, defs: Optional[dict] = None) -> dict[str, Any]:
-    """One watch as a row George can read and compose."""
+def as_row(watch: BobWatch, defs: Optional[dict] = None) -> dict[str, Any]:
+    """One watch as a row Bob can read and compose."""
     backtest = watch.backtest or {}
     return {
         "id": str(watch.id),
@@ -226,15 +226,15 @@ def as_row(watch: GeorgeWatch, defs: Optional[dict] = None) -> dict[str, Any]:
 # Keeping one
 # ---------------------------------------------------------------------------
 
-async def list_for(session: AsyncSession, owner: str) -> list[GeorgeWatch]:
+async def list_for(session: AsyncSession, owner: str) -> list[BobWatch]:
     return list((await session.execute(
-        select(GeorgeWatch).where(GeorgeWatch.owner == owner)
-        .order_by(GeorgeWatch.created_at.desc())
+        select(BobWatch).where(BobWatch.owner == owner)
+        .order_by(BobWatch.created_at.desc())
     )).scalars().all())
 
 
 async def _owned(session: AsyncSession, owner: str,
-                 which: Optional[str]) -> GeorgeWatch:
+                 which: Optional[str]) -> BobWatch:
     """
     The one this operation is about, from the caller's own rows.
 
@@ -322,7 +322,7 @@ async def create(session: AsyncSession, *, owner: str, condition: str,
                  direction: str = "either",
                  stores: Optional[list[str]] = None,
                  kind: Optional[str] = None,
-                 days_of_week: Optional[list[int]] = None) -> GeorgeWatch:
+                 days_of_week: Optional[list[int]] = None) -> BobWatch:
     """
     Set a watch up. It is NOT switched on, and it cannot be until it has been
     backtested (architecture rule 7, and the CHECK constraint on the table).
@@ -345,7 +345,7 @@ async def create(session: AsyncSession, *, owner: str, condition: str,
             f"({limit}). Remove one first."
         )
 
-    watch = GeorgeWatch(
+    watch = BobWatch(
         id=uuid.uuid4(), owner=owner, condition=condition, direction=direction,
         stores=_clean_stores(stores, defs), enabled=False,
         **_clean_slot(kind, hour, minute, days_of_week),
@@ -358,7 +358,7 @@ async def create(session: AsyncSession, *, owner: str, condition: str,
 async def reschedule(session: AsyncSession, *, owner: str, which: Optional[str],
                      hour: int, minute: Optional[int] = None,
                      kind: Optional[str] = None,
-                     days_of_week: Optional[list[int]] = None) -> GeorgeWatch:
+                     days_of_week: Optional[list[int]] = None) -> BobWatch:
     watch = await _owned(session, owner, which)
     for key, value in _clean_slot(kind, hour, minute, days_of_week).items():
         setattr(watch, key, value)
@@ -371,7 +371,7 @@ async def reschedule(session: AsyncSession, *, owner: str, which: Optional[str],
 async def rescope(session: AsyncSession, *, owner: str, which: Optional[str],
                   stores: Optional[list[str]] = None,
                   direction: Optional[str] = None,
-                  all_shops: bool = False) -> GeorgeWatch:
+                  all_shops: bool = False) -> BobWatch:
     """
     Point an existing watch at different shops, or at a different direction.
 
@@ -414,7 +414,7 @@ async def rescope(session: AsyncSession, *, owner: str, which: Optional[str],
 
 
 async def switch(session: AsyncSession, *, owner: str, which: Optional[str],
-                 on: bool) -> GeorgeWatch:
+                 on: bool) -> BobWatch:
     """
     Start or stop checking.
 
@@ -446,7 +446,7 @@ async def switch(session: AsyncSession, *, owner: str, which: Optional[str],
 
 
 async def remove(session: AsyncSession, *, owner: str,
-                 which: Optional[str]) -> GeorgeWatch:
+                 which: Optional[str]) -> BobWatch:
     """
     Forget the watch. Its posts and its checks are untouched — what it once
     told somebody is a record, and deleting the watch must not rewrite it.
@@ -458,7 +458,7 @@ async def remove(session: AsyncSession, *, owner: str,
 
 
 async def record_backtest(session: AsyncSession, *, owner: str,
-                          which: Optional[str], result: dict) -> GeorgeWatch:
+                          which: Optional[str], result: dict) -> BobWatch:
     watch = await _owned(session, owner, which)
     watch.backtest = result
     watch.updated_at = datetime.now(slots.MANILA)
@@ -472,8 +472,8 @@ async def record_backtest(session: AsyncSession, *, owner: str,
 
 async def due(session: AsyncSession, now: datetime) -> list[dict]:
     rows = (await session.execute(
-        select(GeorgeWatch).where(GeorgeWatch.enabled.is_(True))
-        .order_by(GeorgeWatch.last_slot.asc().nulls_first())
+        select(BobWatch).where(BobWatch.enabled.is_(True))
+        .order_by(BobWatch.last_slot.asc().nulls_first())
     )).scalars().all()
 
     candidates = []
@@ -502,7 +502,7 @@ async def record_check(session: AsyncSession, *, watch_id, as_of, fired: bool,
     "broken for eleven days" look identical from outside, and the second is
     the one somebody needs to know.
     """
-    session.add(GeorgeWatchCheck(
+    session.add(BobWatchCheck(
         id=uuid.uuid4(), watch_id=watch_id, as_of=as_of, fired=fired,
         state=state, changed=changed, post_id=post_id,
         definitions_version=str(req(load_defs(), "version")),

@@ -129,7 +129,7 @@ def start_scheduler() -> None:
         coalesce=True,
         next_run_time=datetime.now(MANILA) + timedelta(seconds=45),
     )
-    # George's saved workflows. A third job on the SAME scheduler rather than a
+    # Bob's saved workflows. A third job on the SAME scheduler rather than a
     # third scheduler: one process, one event loop, one place to look when
     # something did not fire. It guards overlap in the DATABASE rather than with
     # a module-level lock like the two jobs above, because a claim in the row is
@@ -143,9 +143,9 @@ def start_scheduler() -> None:
         coalesce=True,
         next_run_time=datetime.now(MANILA) + timedelta(seconds=60),
     )
-    # George's standing questions. The fourth job, and the only one that makes
+    # Bob's standing questions. The fourth job, and the only one that makes
     # a MODEL call on its own — see app/services/standing_runner.py for what an
-    # unattended George is given and what is withheld from him. Claimed in the
+    # unattended Bob is given and what is withheld from him. Claimed in the
     # database like the workflows above, through the same app/services/slots.
     _scheduler.add_job(
         standing_tick,

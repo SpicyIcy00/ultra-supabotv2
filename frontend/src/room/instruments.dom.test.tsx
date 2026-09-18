@@ -35,7 +35,7 @@ const COMPARED = [
 ];
 const meta = { source_table: 'new_transactions', snapshot_timestamp: '2026-09-11T08:00:00Z', filters_applied: [] };
 const TURN = {
-  role: 'george', text: 'A reading.', thinking: '', at: '2026-09-11T08:00:00Z',
+  role: 'bob', text: 'A reading.', thinking: '', at: '2026-09-11T08:00:00Z',
   toolCalls: [
     { seq: 1, tool: 'get_sales', arguments: {}, result: { rows: DAYS, meta } },
     { seq: 2, tool: 'get_sales', arguments: {}, result: { rows: HOURS, meta } },

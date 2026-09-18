@@ -18,7 +18,7 @@ from typing import Any, Optional
 
 JUDGE_MODEL = "claude-opus-5"
 
-RUBRIC = """You are auditing an answer written by a business analyst named George.
+RUBRIC = """You are auditing an answer written by a business analyst named Bob.
 He may state only figures his tools returned, may call a driver "stronger" only
 by comparing the measured changes, may not put a percentage share of a change on
 a driver, and may not state a CAUSE (why customers behaved as they did) unless
@@ -62,7 +62,7 @@ def judge(question: str, answer: str, evidence: str) -> Optional[dict[str, Any]]
                 "role": "user",
                 "content": (
                     f"QUESTION:\n{question}\n\nEVIDENCE THE TOOLS RETURNED (summarised):\n"
-                    f"{evidence}\n\nGEORGE'S ANSWER:\n{answer}"
+                    f"{evidence}\n\nBOB'S ANSWER:\n{answer}"
                 ),
             }],
         )

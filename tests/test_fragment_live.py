@@ -113,7 +113,7 @@ def test_and_both_reads_moved_to_the_same_window():
 # which is a different METRIC and therefore a different call, and a replay
 # changes one scope argument and never the measure. So a product token is
 # offered on a product-revenue read and on no other, and "products" asked of a
-# net-sales board goes to George, as it always did.
+# net-sales board goes to Bob, as it always did.
 PRODUCTS = {"metric": "product_revenue", "group_by": ["store"],
             "date_range": "last_week", "filters": {"store": "OPUS"}}
 
@@ -121,7 +121,7 @@ PRODUCTS = {"metric": "product_revenue", "group_by": ["store"],
 def test_an_analytical_fragment_has_its_figure_inside_the_budget():
     """
     "products" — a change of the CUT, which is the one kind that still asks
-    George. The figure is what is measured; his reading follows it.
+    Bob. The figure is what is measured; his reading follows it.
     """
     grouped = [PRODUCTS]
     _fragment("group_by", ["product"], grouped)             # the warm-up

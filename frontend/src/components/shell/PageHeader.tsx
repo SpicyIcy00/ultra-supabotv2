@@ -1,5 +1,5 @@
 /**
- * The top of a George page.
+ * The top of a Bob page.
  *
  * ONE HEADER, so Inbox, Pages and Workflows read as rooms in one place
  * rather than three screens that happen to share a rail. Each was setting
@@ -32,15 +32,15 @@ export function PageHeader({
   children?: ReactNode;
 }) {
   return (
-    <header className="mb-8 border-b border-george-line pb-5">
+    <header className="mb-8 border-b border-bob-line pb-5">
       <div className="flex items-baseline justify-between gap-4">
-        <h1 className="font-george-serif text-[30px] leading-none tracking-[-0.01em] text-george-navy md:text-[34px]">
+        <h1 className="font-bob-serif text-[30px] leading-none tracking-[-0.01em] text-bob-navy md:text-[34px]">
           {title}
         </h1>
         {children}
       </div>
       {meta && (
-        <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-george-slate">{meta}</p>
+        <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-bob-slate">{meta}</p>
       )}
     </header>
   );
@@ -55,6 +55,6 @@ export function PageHeader({
  */
 export function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <p className="mb-3 text-[11px] uppercase tracking-[0.12em] text-george-muted">{children}</p>
+    <p className="mb-3 text-[11px] uppercase tracking-[0.12em] text-bob-muted">{children}</p>
   );
 }

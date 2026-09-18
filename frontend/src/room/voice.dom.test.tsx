@@ -27,7 +27,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Composer } from './Composer';
 import { HOLD_MS } from './Mic';
 import { FAILURE_SAYS, NOT_IN_THIS_BROWSER, type Recognition, type RecognitionCtor } from './voice';
-import { GeorgeCtx, type GeorgeContext } from '../components/george/georgeContext';
+import { BobCtx, type BobContext } from '../components/bob/bobContext';
 import { useAuthStore } from '../stores/authStore';
 import frames from '../frames/scenes.json';
 import type { Subject } from './subjects';
@@ -109,7 +109,7 @@ function mountComposer(over: Partial<React.ComponentProps<typeof Composer>> = {}
   }
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(<QueryClientProvider client={client}><Harness /></QueryClientProvider>);
-  const line = screen.getByLabelText('Say something to George') as HTMLInputElement;
+  const line = screen.getByLabelText('Say something to Bob') as HTMLInputElement;
   return { onSay, onSend, line };
 }
 
@@ -281,13 +281,13 @@ function mountRoom() {
     return ok([]);
   };
   useAuthStore.setState({
-    user: { id: 'voice', username: 'owner', display_name: 'You', role: 'owner', allowed_pages: ['george'] },
+    user: { id: 'voice', username: 'owner', display_name: 'You', role: 'owner', allowed_pages: ['bob'] },
   } as never);
   const ask = vi.fn(async () => {});
   const turns = [
     { role: 'user', text: 'how are we doing', at: '2026-09-18T06:00:00Z' },
     {
-      role: 'george', text: ANSWER, thinking: '', at: '2026-09-18T06:00:05Z',
+      role: 'bob', text: ANSWER, thinking: '', at: '2026-09-18T06:00:05Z',
       reading: { claim: 'Rockwell fell hardest', caveat: null, next: null, asks: [] },
       toolCalls: [{
         seq: 0, tool: 'get_sales',
@@ -301,29 +301,29 @@ function mountRoom() {
     },
   ];
   const noop = () => {};
-  const george = {
+  const bob = {
     turns, busy: false, threadId: null, storedThreadId: null,
     open: noop, ask, reset: noop, cancel: noop, setComposer: noop,
     presence: 'idle', live: null, composer: 'idle',
-  } as unknown as GeorgeContext;
+  } as unknown as BobContext;
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return { ask, replays, george, client };
+  return { ask, replays, bob, client };
 }
 
-function tree(george: GeorgeContext, client: QueryClient) {
+function tree(bob: BobContext, client: QueryClient) {
   return (
     <QueryClientProvider client={client}>
-      <GeorgeCtx.Provider value={george}>
-        <MemoryRouter initialEntries={['/george']}>
+      <BobCtx.Provider value={bob}>
+        <MemoryRouter initialEntries={['/bob']}>
           <Routes><Route path="*" element={<Room />} /></Routes>
         </MemoryRouter>
-      </GeorgeCtx.Provider>
+      </BobCtx.Provider>
     </QueryClientProvider>
   );
 }
 
-async function renderRoom(george: GeorgeContext, client: QueryClient) {
-  const view = render(tree(george, client));
+async function renderRoom(bob: BobContext, client: QueryClient) {
+  const view = render(tree(bob, client));
   // The definitions have loaded when the read-as chips are drawn.
   await waitFor(() => expect(document.querySelector('.r-steer .r-token')).not.toBeNull());
   return view;
@@ -355,8 +355,8 @@ describe('in the room: speaking is the same door as typing', () => {
   };
 
   it('two shops tapped and "compare these" spoken sends both as the selection', async () => {
-    const { ask, george, client } = mountRoom();
-    await renderRoom(george, client);
+    const { ask, bob, client } = mountRoom();
+    await renderRoom(bob, client);
     const names = () => Array.from(document.querySelectorAll('button.r-mk-name--tap'));
     await waitFor(() => expect(names().length).toBeGreaterThanOrEqual(2));
     fireEvent.click(names().find((b) => b.textContent?.includes('Rockwell'))!);
@@ -375,8 +375,8 @@ describe('in the room: speaking is the same door as typing', () => {
   });
 
   it('a spoken "last 30 days" replays the read with no model call', async () => {
-    const { ask, replays, george, client } = mountRoom();
-    await renderRoom(george, client);
+    const { ask, replays, bob, client } = mountRoom();
+    await renderRoom(bob, client);
     hold('Last 30 days');
     await waitFor(() => expect(replays).toHaveLength(1));
     expect(replays[0]).toMatchObject({ post: 'post-1', seq: 0, value: 'last_30_days' });
@@ -384,21 +384,21 @@ describe('in the room: speaking is the same door as typing', () => {
   });
 
   it('a spoken "last 90 days" is a question, exactly as typed — no window by that name is defined', async () => {
-    const { ask, replays, george, client } = mountRoom();
-    await renderRoom(george, client);
+    const { ask, replays, bob, client } = mountRoom();
+    await renderRoom(bob, client);
     hold('last 90 days');
     expect(ask).toHaveBeenCalledWith('last 90 days', expect.anything());
     expect(replays).toHaveLength(0);
   });
 
   it('hands-free reads the claim and nothing else, lit while he speaks, and a tap stops him', async () => {
-    const { george, client } = mountRoom();
-    const busy = { ...george, busy: true } as GeorgeContext;
+    const { bob, client } = mountRoom();
+    const busy = { ...bob, busy: true } as BobContext;
     const view = await renderRoom(busy, client);
     fireEvent.click(document.querySelector('.r-hands')!);
     expect(document.querySelector('.r-hands')?.getAttribute('aria-pressed')).toBe('true');
     // The answer lands.
-    view.rerender(tree(george, client));
+    view.rerender(tree(bob, client));
     await waitFor(() => expect(synth.spoken).toHaveLength(1));
     expect(synth.spoken[0]).toBe(CLAIM);
     // Nothing else: none of the rest of what he said, no figure the claim did not carry.
@@ -412,16 +412,16 @@ describe('in the room: speaking is the same door as typing', () => {
   });
 
   it('never reads an answer that was already there when the room opened', async () => {
-    try { localStorage.setItem('george.handsFree', 'on'); } catch { /* none */ }
-    const { george, client } = mountRoom();
-    await renderRoom(george, client);
+    try { localStorage.setItem('bob.handsFree', 'on'); } catch { /* none */ }
+    const { bob, client } = mountRoom();
+    await renderRoom(bob, client);
     expect(document.querySelector('.r-hands')?.getAttribute('aria-pressed')).toBe('true');
     expect(synth.spoken).toHaveLength(0);
   });
 
-  it('"read it to me", spoken, reads the claim on screen and asks George nothing', async () => {
-    const { ask, george, client } = mountRoom();
-    await renderRoom(george, client);
+  it('"read it to me", spoken, reads the claim on screen and asks Bob nothing', async () => {
+    const { ask, bob, client } = mountRoom();
+    await renderRoom(bob, client);
     hold('read it to me');
     expect(synth.spoken).toEqual([CLAIM]);
     expect(ask).not.toHaveBeenCalled();

@@ -6,7 +6,7 @@
  * hues, over rows whose labels already said which shop each one was. One
  * series, one measurement, and colour spent decoding nothing — the reference
  * calls it the most common way a chart misses its point. So inside a mark
- * colour is DIRECTION: `--up`, `--down`, `--flat`, and `--george` for the row
+ * colour is DIRECTION: `--up`, `--down`, `--flat`, and `--bob` for the row
  * that matters in a read that declared no direction.
  *
  * WHAT THIS FILE USED TO SAY, in its own words: *"identity keeps its hue where
@@ -84,7 +84,7 @@ function rule(selector: string): Record<string, string> | null {
 const STRUCTURAL = new Set([
   'track', 'card', 'sunk', 'raise', 'ground', 'paper', 'edge', 'edge-strong',
   'ink', 'ink-2', 'ink-3', 'ink-4',
-  // The design's serif (P2S.1(a)): George's voice, and a face is not a colour.
+  // The design's serif (P2S.1(a)): Bob's voice, and a face is not a colour.
   'sans', 'mono', 'serif', 'ease', 'radius', 'size', 'd',
 ]);
 // `on-colour`, `on-colour-2` and `i` left this list with P2.l: the first two

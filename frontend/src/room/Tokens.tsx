@@ -7,7 +7,7 @@
  * could be instead and choosing costs a replay, not a question.
  *
  * IT IS NOT A CLAIM ABOUT ANYTHING. A token is an argument's own value and a
- * list the definitions bound — never a figure, never a word George wrote, and
+ * list the definitions bound — never a figure, never a word Bob wrote, and
  * never a count of something loaded (UI rule 8). Nothing is drawn until a
  * read is on screen carrying the argument, and a token whose reads disagree
  * about the value is not drawn at all.

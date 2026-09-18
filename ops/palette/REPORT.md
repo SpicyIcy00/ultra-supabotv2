@@ -3,7 +3,7 @@
 P2S.2(e): a store keeps one hue everywhere, on its **swatch** only; the mark
 beside it carries the verdict. The eight slots are the dataviz skill's
 validated categorical palette (the same eight the design,
-`ops/ideal/george-ahead-of-me.html`, draws its `--c-*` from), stepped per
+`ops/ideal/bob-ahead-of-me.html`, draws its `--c-*` from), stepped per
 theme, and re-run here against the room's OWN grounds rather than the skill's
 default surfaces. `validate_palette.js` is the skill's validator, copied in so
 this can be re-run from the repo.

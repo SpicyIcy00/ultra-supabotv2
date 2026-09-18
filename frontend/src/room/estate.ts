@@ -1,7 +1,7 @@
 /**
  * WHICH BUSINESS THE NEXT QUESTION IS ABOUT (P2.g).
  *
- * The owner's feature 23 — "George works across all my businesses and
+ * The owner's feature 23 — "Bob works across all my businesses and
  * understands which business/store/system I'm referring to". Both businesses
  * have been READ since long before this card: `get_vending` and the `_php`
  * views are live and the warehouse has been a place in the store list all

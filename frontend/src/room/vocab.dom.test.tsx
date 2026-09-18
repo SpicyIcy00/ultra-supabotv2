@@ -41,7 +41,7 @@ const on: TileActions = { open: vi.fn(), pick: vi.fn(), why: vi.fn(), patch: vi.
 
 function draw(kind: string, read: Read, extra: Partial<BoardObject> = {}) {
   const turn = {
-    role: 'george', text: 'A reading.', thinking: '', at: '2026-09-17T08:00:00Z',
+    role: 'bob', text: 'A reading.', thinking: '', at: '2026-09-17T08:00:00Z',
     toolCalls: [{ seq: 1, tool: read.tool, arguments: read.arguments,
                   result: { rows: read.rows, meta: read.meta } }],
   } as unknown as AnswerTurn;

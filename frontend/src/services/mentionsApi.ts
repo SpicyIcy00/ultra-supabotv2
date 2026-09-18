@@ -10,7 +10,7 @@
  */
 import axios from 'axios';
 
-const API_BASE = '/api/v1/george';
+const API_BASE = '/api/v1/bob';
 
 /** One thing an `@` could mean, and what picking it would do. */
 export interface MentionCandidate {

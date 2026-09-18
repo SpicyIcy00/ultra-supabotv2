@@ -16,8 +16,8 @@ def require_business_writes(request: Request) -> None:
         return
     prefix = settings.API_V1_PREFIX
     path = request.url.path
-    # Personal George work is allowed. Workflow mutations have their own gate.
-    if path.startswith(prefix + "/george/") or path in {
+    # Personal Bob work is allowed. Workflow mutations have their own gate.
+    if path.startswith(prefix + "/bob/") or path in {
         prefix + "/auth/login", prefix + "/auth/change-passcode",
     }:
         return

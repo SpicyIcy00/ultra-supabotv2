@@ -1,7 +1,7 @@
 /**
  * WHAT THE ROOM OPENS ON.
  *
- * You arrive in the morning and George has already said something. Not because
+ * You arrive in the morning and Bob has already said something. Not because
  * a "briefing" was rendered for you — nothing in this app renders one — but
  * because a question you asked him to keep asking came round at 06:00, he
  * answered it with the same tools and the same board as any other answer, and
@@ -25,7 +25,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { latestStanding, type StandingLatest } from '../services/standingApi';
 
-const DISMISSED = 'george.standing.dismissed';
+const DISMISSED = 'bob.standing.dismissed';
 
 function dismissed(): string[] {
   try {

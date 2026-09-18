@@ -1,5 +1,5 @@
 """
-Pure tests for watches — a condition George checks, which posts when it fires.
+Pure tests for watches — a condition Bob checks, which posts when it fires.
 
 NO DATABASE. A watch's whole correctness is a decision about whether to speak,
 and that decision is a pure function of two firing sets, so it is all testable
@@ -223,7 +223,7 @@ def test_an_unknown_condition_is_refused_with_the_real_ones_named():
 
 def test_deliveries_are_recorded_as_unavailable_with_what_would_fix_them():
     """
-    An absence reads as George being bad at something. This is the record that
+    An absence reads as Bob being bad at something. This is the record that
     it is a data problem, and the record of what would end it.
     """
     gap = req(DEFS, "watches.not_available.deliveries")
@@ -233,12 +233,12 @@ def test_deliveries_are_recorded_as_unavailable_with_what_would_fix_them():
 
 
 def test_the_table_has_no_threshold_column():
-    from app.models.george_watch import GeorgeWatch
+    from app.models.bob_watch import BobWatch
 
-    columns = set(GeorgeWatch.__table__.columns.keys())
+    columns = set(BobWatch.__table__.columns.keys())
     for forbidden in ("threshold", "pct", "percent", "floor", "amount", "metric"):
         assert forbidden not in columns
-    numeric = {c.name for c in GeorgeWatch.__table__.columns
+    numeric = {c.name for c in BobWatch.__table__.columns
                if str(c.type).upper().startswith("INTEGER")}
     assert numeric == {"hour", "minute"}
 
@@ -248,9 +248,9 @@ def test_the_table_has_no_threshold_column():
 # ---------------------------------------------------------------------------
 
 def test_the_backtest_gate_is_a_constraint_not_only_a_service_rule():
-    from app.models.george_watch import GeorgeWatch
+    from app.models.bob_watch import BobWatch
 
-    checks = {c.name: str(c.sqltext) for c in GeorgeWatch.__table__.constraints
+    checks = {c.name: str(c.sqltext) for c in BobWatch.__table__.constraints
               if hasattr(c, "sqltext")}
     gate = checks.get("ck_watches_backtested_before_enabled")
     assert gate and "enabled" in gate and "backtest" in gate
@@ -376,9 +376,9 @@ def test_the_label_is_derived_so_it_cannot_lie():
     There is no name column: a stored label could say something the watch does
     not do, and nothing would ever catch it.
     """
-    from app.models.george_watch import GeorgeWatch
+    from app.models.bob_watch import BobWatch
 
-    assert "name" not in GeorgeWatch.__table__.columns.keys()
+    assert "name" not in BobWatch.__table__.columns.keys()
 
     class _W:
         condition, direction, stores = "sales_moved", "down", ["Rockwell"]
@@ -463,21 +463,21 @@ def test_every_service_that_claims_a_slot_is_allowed_to():
 # A watch that fires must be visible to the person it fired for
 # ---------------------------------------------------------------------------
 
-def test_what_george_noticed_is_only_watch_posts():
+def test_what_bob_noticed_is_only_watch_posts():
     """
-    A brief, a workflow run and an approval are also things George initiated,
+    A brief, a workflow run and an approval are also things Bob initiated,
     and each already has its own home. Putting them here would make this the
     river under a different name — and would bury the one kind that has
     nowhere else to appear.
     """
-    from app.api.v1.routes import george as route
+    from app.api.v1.routes import bob as route
 
     source = inspect.getsource(route.read_noticed)
     assert "p.kind = 'watch'" in source
     assert "NOTICED_LIMIT" in source or ":limit" in source
 
 
-def test_what_george_noticed_is_never_the_approvals_colour():
+def test_what_bob_noticed_is_never_the_approvals_colour():
     """
     UI rule 5: the accent belongs to the approval queue and nothing else. An
     approval is something you must act on; a watch is something that happened.
@@ -514,11 +514,11 @@ def test_paging_the_river_keeps_the_stream_filter():
     """
     THE BUG THIS FOUND. `cursor` was ASSIGNED when a `before` cursor was
     present, discarding the stream clause built a line earlier — so the first
-    page of `attention` was George's own posts and the second page was
+    page of `attention` was Bob's own posts and the second page was
     everything. The filter stopped applying exactly when somebody scrolled far
     enough to care.
     """
-    from app.api.v1.routes import george as route
+    from app.api.v1.routes import bob as route
 
     source = inspect.getsource(route.read_river)
     assert 'cursor += " AND p.created_at < :before"' in source
@@ -548,7 +548,7 @@ def test_things_you_have_not_started_are_not_escalated_as_broken():
     Held as a rule because the temptation to widen this is exactly what makes
     attention surfaces useless.
     """
-    from app.api.v1.routes import george as route
+    from app.api.v1.routes import bob as route
 
     source = inspect.getsource(route._stuck)
     # Only states that mean "was running, is not working".
@@ -563,7 +563,7 @@ def test_things_you_have_not_started_are_not_escalated_as_broken():
 def test_a_failed_run_never_wears_the_approvals_colour():
     """
     CLAUDE.md UI rule 5, in its own words: "A failed run is not an approval and
-    must not borrow the colour." The exception report lands beside what George
+    must not borrow the colour." The exception report lands beside what Bob
     noticed, in his colour, and the accent stays with the queue.
     """
     import re
@@ -573,4 +573,4 @@ def test_a_failed_run_never_wears_the_approvals_colour():
              / "frontend" / "src" / "room" / "Noticed.tsx").read_text(encoding="utf-8")
     code = re.sub(r"/\*.*?\*/", "", panel, flags=re.S)
     code = re.sub(r"//.*", "", code)
-    assert "--accent" not in code and "george-accent" not in code
+    assert "--accent" not in code and "bob-accent" not in code

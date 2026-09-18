@@ -13,9 +13,9 @@
  * value the tool already returned, and format it.
  */
 import { useState, type CSSProperties, type ReactNode } from 'react';
-import type { GeorgeNotice, ToolMeta } from '../types/george';
+import type { BobNotice, ToolMeta } from '../types/bob';
 import type { BoardObject, Local } from './board';
-import type { ToolCall } from '../types/george';
+import type { ToolCall } from '../types/bob';
 import {
   callOf, fmt, pct, receiptsDetail, receiptsLine, rowFor, rowsOf, splitCaveat, tone,
   type AnswerTurn, type Change, type Dimension,
@@ -25,14 +25,14 @@ import { Spec } from './Spec';
 import { Swatch } from './swatch';
 import { useDrawnOnly } from './noticeDrawing';
 import { cost, says } from './actions';
-import type { ActionOffer } from '../types/george';
+import type { ActionOffer } from '../types/bob';
 
 export interface TileActions {
   /** Bring it forward and give it the room. */
   open(key: string): void;
   /** Put it in the selection, so the next thing said is about it. */
   pick(subject: string, dimension: Dimension | null): void;
-  /** Ask George about this one thing, now. */
+  /** Ask Bob about this one thing, now. */
   why(subject: string, dimension: Dimension | null): void;
   patch(key: string, local: Local): void;
   /**
@@ -43,7 +43,7 @@ export interface TileActions {
    */
   retune?(key: string, argument: string, value: string | number): void;
   /**
-   * Stop holding a view. A PERSON'S GESTURE and never George's: he may revise
+   * Stop holding a view. A PERSON'S GESTURE and never Bob's: he may revise
    * a view a read contradicts, he may not decide to stop knowing something
    * because somebody disagreed. Optional, so a surface that has not wired it
    * draws the row with no Forget rather than one that does nothing.
@@ -70,11 +70,11 @@ export interface TileProps {
   selected: boolean;
   earlier: boolean;
   on: TileActions;
-  notices?: GeorgeNotice[];
+  notices?: BobNotice[];
   /** What the person has picked, so a comparison can mark its own subjects. */
   selection?: string[];
   /**
-   * WHAT GEORGE OFFERED TO DO ABOUT A ROW OF THIS OBJECT (P2.d).
+   * WHAT BOB OFFERED TO DO ABOUT A ROW OF THIS OBJECT (P2.d).
    *
    * Already placed: `room/actions.placement` decided once, for the whole
    * screen, which offers this object can carry — so a mark filters to the row
@@ -93,7 +93,7 @@ export interface TileProps {
 /**
  * ONE OFFER, WHERE THE THING IT IS ABOUT IS DRAWN.
  *
- * Three parts and no fourth: the act in the surface's own word, George's
+ * Three parts and no fourth: the act in the surface's own word, Bob's
  * reason, and what it costs. The reason is why this is not a menu item — a
  * button saying "why" beside a row is a control, and a button saying "why —
  * the only shop that fell while takings rose" is a suggestion you can
@@ -247,8 +247,8 @@ export function Receipts({ meta, tool }: {
 
 /*
  * BOTH SENTENCES ARE ADDRESSED TO THE READER (the dogfood log, 2026-09-15,
- * "a tile explaining itself to the reader"). They said *"George composed this
- * from Rockwell, which this read does not carry"* — true, and about George's
+ * "a tile explaining itself to the reader"). They said *"Bob composed this
+ * from Rockwell, which this read does not carry"* — true, and about Bob's
  * composing rather than the business, to a person who did not compose it. Now
  * they say what is and is not in the read, which is the thing the reader can
  * use; refusing to draw a wrong number is unchanged.
@@ -303,14 +303,14 @@ export function callFor(p: TileProps): ToolCall | null {
  *
  * Until now every notice from every read was stacked above the whole board,
  * so a draft order arrived under five warnings that belonged to it and to
- * nothing else, and George had to repeat all five in prose to surface them.
+ * nothing else, and Bob had to repeat all five in prose to surface them.
  * Measured over 51 answers: an answer over data with four-plus notices ran
  * 386 words against 137 with none — almost three times, all of it caveat.
  *
  * A caveat on the thing it qualifies is read on the way to the figure, which
  * is where it does its work.
  */
-export function ownNotices(meta?: ToolMeta | null): GeorgeNotice[] {
+export function ownNotices(meta?: ToolMeta | null): BobNotice[] {
   const notice = meta?.notice;
   if (!notice) return [];
   // A `multiple` is a container and is never drawn itself — the loop checks
@@ -320,7 +320,7 @@ export function ownNotices(meta?: ToolMeta | null): GeorgeNotice[] {
 
 export function OwnCaveat({ meta }: { meta?: ToolMeta | null }) {
   // ONLY WHAT SAYS THE FIGURE MAY BE WRONG (UI rule 4, 2026-09-17): a notice
-  // that explains how it was measured is George's to say, not a box's.
+  // that explains how it was measured is Bob's to say, not a box's.
   const notices = useDrawnOnly(ownNotices(meta));
   if (!notices.length) return null;
   return <Caveats notices={notices} />;
@@ -328,14 +328,14 @@ export function OwnCaveat({ meta }: { meta?: ToolMeta | null }) {
 
 
 /**
- * Whether a row is one George pointed at.
+ * Whether a row is one Bob pointed at.
  *
  * Shared by every tile that draws a list, so "the row that matters" looks the
  * same whichever widget is showing it — and so a sentence naming it becomes
  * unnecessary rather than merely redundant.
  *
  * SEVERAL ROWS, SINCE 2026-09-15. It took one name, and a comparison is about
- * two: asked to compare two shops George drew the estate, lit ONE of them and
+ * two: asked to compare two shops Bob drew the estate, lit ONE of them and
  * titled it "Both selected shops gave back basket value" — a claim the
  * drawing could not support, with the comparison pushed into the prose
  * because the picture had nowhere to hold it. A string still means one row,
@@ -351,7 +351,7 @@ export function isLit(o: BoardObject, row: Record<string, unknown>): boolean {
     (v) => typeof v === 'string' && want.includes(v.trim().toLowerCase()));
 }
 
-/** George's few words about what is drawn. Never a figure. */
+/** Bob's few words about what is drawn. Never a figure. */
 function Note({ o }: { o: BoardObject }) {
   if (!o.note) return null;
   return <p className="r-spec-note r-spec-note--over">{o.note}</p>;
@@ -360,7 +360,7 @@ function Note({ o }: { o: BoardObject }) {
 
 
 /**
- * A DRAFT — an order George produced. The quantity a person nudges is theirs
+ * A DRAFT — an order Bob produced. The quantity a person nudges is theirs
  * and lives here until they say to keep it; nothing is sent by nudging, and
  * the suggested figure stays beside it so an edit is always an edit OF
  * something.
@@ -479,7 +479,7 @@ export function StateTile(p: TileProps) {
 
 /* ---------------------------------------------------------------- caveats */
 
-function Caveat({ notice }: { notice: GeorgeNotice }) {
+function Caveat({ notice }: { notice: BobNotice }) {
   const [open, setOpen] = useState(false);
   const { head, detail } = splitCaveat(notice.message);
   return (
@@ -498,7 +498,7 @@ function Caveat({ notice }: { notice: GeorgeNotice }) {
   );
 }
 
-export function Caveats({ notices }: { notices?: GeorgeNotice[] }) {
+export function Caveats({ notices }: { notices?: BobNotice[] }) {
   if (!notices || notices.length === 0) return null;
   return (
     <div className="r-caveats" data-caveats={notices.length}>
@@ -622,7 +622,7 @@ export function MemoryTile(p: TileProps) {
   const call = callFor(p);
   // EVERY VIEW, NOT A PICK OF THEM. The vocabulary gives this kind `seq` and
   // nothing else (`composition.widgets.memory`), so there is no channel for
-  // George to choose which of his views you are shown — which is right: a
+  // Bob to choose which of his views you are shown — which is right: a
   // memory you cannot see all of is not a memory you can check.
   const shown = rowsOf(call);
   const forgotten = new Set(p.local?.forgot ?? []);
@@ -713,7 +713,7 @@ export function MemoryTile(p: TileProps) {
 
 /* -------------------------------------------------------------- composed
  *
- * A shape George composed rather than named. The tile is the ordinary shell —
+ * A shape Bob composed rather than named. The tile is the ordinary shell —
  * so it cools, sets aside and carries receipts exactly like every other
  * object — and what is inside it is his tree (Spec.tsx).
  *

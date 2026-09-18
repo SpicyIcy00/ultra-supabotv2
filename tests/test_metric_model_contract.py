@@ -258,9 +258,9 @@ def test_ffr_is_recorded_as_unavailable_not_stubbed():
 def test_the_sales_schema_offers_the_derived_metric():
     pytest.importorskip("psycopg")
     pytest.importorskip("anthropic")
-    from agent import loop as george_loop
+    from agent import loop as bob_loop
 
-    schema = next(s for s in george_loop.build_tool_schemas() if s["name"] == "get_sales")
+    schema = next(s for s in bob_loop.build_tool_schemas() if s["name"] == "get_sales")
     assert "average_transaction_value" in schema["input_schema"]["properties"]["metric"]["enum"]
 
 
@@ -269,15 +269,15 @@ def test_the_sales_schema_offers_the_derived_metric():
 # what the model may and may not compute
 # ---------------------------------------------------------------------------
 
-def _george_loop():
+def _bob_loop():
     pytest.importorskip("psycopg")
     pytest.importorskip("anthropic")
-    from agent import loop as george_loop
-    return george_loop
+    from agent import loop as bob_loop
+    return bob_loop
 
 
 def test_the_sales_schema_offers_exactly_the_supported_comparisons():
-    schema = next(s for s in _george_loop().build_tool_schemas() if s["name"] == "get_sales")
+    schema = next(s for s in _bob_loop().build_tool_schemas() if s["name"] == "get_sales")
     prop = schema["input_schema"]["properties"]["compare_to"]
     offered = sorted(k for k, v in req(DEFS, "comparisons").items()
                      if isinstance(v, dict) and "get_sales" in (v.get("applies_to") or []))
@@ -291,7 +291,7 @@ def test_the_sales_schema_offers_exactly_the_supported_comparisons():
 
 
 def test_no_other_tool_offers_a_comparison_yet():
-    loop = _george_loop()
+    loop = _bob_loop()
     for s in loop.build_tool_schemas():
         if s["name"] == "get_sales":
             continue

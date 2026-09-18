@@ -6,7 +6,7 @@
  * The owner, on the board he was handed: "with the widgets i dont really know
  * what im looking at, what visual language is better". The diagnosis in the
  * dogfood log is that the board draws EXPLORATORY — every series equal weight,
- * colour for identity, nothing annotated — while George is explanatory by
+ * colour for identity, nothing annotated — while Bob is explanatory by
  * definition, because he has already done the analysis. Fourteen widget kinds,
  * six of which were ways to show a measurement, is a menu a reader has to
  * decode before they can read anything.
@@ -41,7 +41,7 @@
  * the card's one deviation and it is recorded in ops/DECISIONS.md.
  */
 import type { BoardObject } from './board';
-import type { ToolMeta } from '../types/george';
+import type { ToolMeta } from '../types/bob';
 import { ORDER_KEYS, changeOf, unitOf, valueOf, windowLabel, type Change } from './data';
 
 /**
@@ -250,7 +250,7 @@ export function hasChange(rows: Row[]): boolean {
 /**
  * WHICH OF THE SIX A BLOCK DRAWS AS.
  *
- * The kind George named decides the FAMILY — a figure is not a series however
+ * The kind Bob named decides the FAMILY — a figure is not a series however
  * many rows come back — and the rows decide the form inside it. Nothing here
  * reads a threshold, a formula or a figure; it reads which columns exist,
  * which is the same rule `default_composition.shape_for` uses on the way out
@@ -296,7 +296,7 @@ export function markFor(o: Pick<BoardObject, 'kind' | 'form' | 'subject' | 'subj
     case 'comparison':
       return rows.length === 1 ? 'figure' : ranking(rows);
     default:
-      // A shape George composed, or a kind this renderer does not draw as a
+      // A shape Bob composed, or a kind this renderer does not draw as a
       // mark. `Piece` never asks about those; a caller that does gets the
       // honest answer, which is the rows'.
       return rows.length === 1 ? 'figure' : ranking(rows);
@@ -322,7 +322,7 @@ function ranking(rows: Row[]): Mark {
 /* --------------------------------------------------------------- the frame */
 
 /**
- * `composition.recommendation_actions`, in words. George chooses WHICH verb,
+ * `composition.recommendation_actions`, in words. Bob chooses WHICH verb,
  * never invents one, and never supplies the figure that justifies it.
  */
 const ACTIONS: Record<string, string> = {
@@ -331,7 +331,7 @@ const ACTIONS: Record<string, string> = {
 };
 
 /**
- * THE CLAIM-TITLE OVER A BLOCK — George's few words where he gave them, the
+ * THE CLAIM-TITLE OVER A BLOCK — Bob's few words where he gave them, the
  * read's own where he did not.
  *
  * P1.e drew it from `note`, a characterisation borrowed for a job it was not
@@ -346,7 +346,7 @@ const ACTIONS: Record<string, string> = {
 export function titleFor(o: Pick<BoardObject, 'claim' | 'note' | 'subject' | 'subjects' | 'tool' | 'action'>,
                          meta: ToolMeta | null | undefined): string {
   if (o.claim && o.claim.trim()) return o.claim.trim();
-  // A STORED RECOMMENDATION'S VERB, from before P1.f. It was George's word
+  // A STORED RECOMMENDATION'S VERB, from before P1.f. It was Bob's word
   // off a closed list and the one thing the block carried that no read did;
   // a board composed today says the same thing in the `next` slot, where
   // every answer has one.
@@ -394,16 +394,16 @@ export function subtitleFor(meta: ToolMeta | null | undefined, rows: Row[]): str
  * a thing moved and nothing else, and the row that matters is lit while the
  * rest cool.
  *
- * `george` is the fourth and it is not a direction: it is the emphasised row
+ * `bob` is the fourth and it is not a direction: it is the emphasised row
  * of a read that declared none — "this is the one", where nothing rose or
  * fell. A FIFTH fails `palette.test.ts`, which reads this list.
  */
-export const DATA_COLOURS = ['up', 'down', 'flat', 'george'] as const;
+export const DATA_COLOURS = ['up', 'down', 'flat', 'bob'] as const;
 export type DataColour = (typeof DATA_COLOURS)[number];
 
 /**
  * The colour one row of a mark burns in. A row nobody emphasised in a read
- * with no direction is `flat`; the emphasised one is `george`.
+ * with no direction is `flat`; the emphasised one is `bob`.
  */
 export function colourOf(change: Change | null, lit: boolean): DataColour {
   // A ROW KEEPS THE DIRECTION ITS OWN TOOL MEASURED, LIT OR NOT (2026-09-15).
@@ -424,7 +424,7 @@ export function colourOf(change: Change | null, lit: boolean): DataColour {
   if (change && change.pct !== null && change.direction && change.direction !== 'flat') {
     return change.direction;
   }
-  return lit ? 'george' : 'flat';
+  return lit ? 'bob' : 'flat';
 }
 
 /** The change a row declares, for `colourOf`. Null where it declares none. */

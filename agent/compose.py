@@ -1,5 +1,5 @@
 """
-George composes the workspace. This module decides whether a composition is one
+Bob composes the workspace. This module decides whether a composition is one
 he is allowed to make.
 
 WHY THIS EXISTS. Until 2026-09-10 the screen was a pure function of rows: a
@@ -9,7 +9,7 @@ was a document — a chart, then findings, then prose — and a document with it
 paragraphs reordered is still a document. Three rebuilds of the same screen
 felt the same because the structure never changed.
 
-Now George says what you see. A composition is a short list of blocks: which
+Now Bob says what you see. A composition is a short list of blocks: which
 result, as which kind of object, at what weight, under which key. The client
 draws exactly that and nothing else.
 
@@ -21,7 +21,7 @@ already lives by:
     conversation. A widget over a call that failed, or that never happened, is
     a picture of nothing.
   - A SUBJECT IS A ROW. "Rockwell" on a figure is admissible only if a row of
-    that read carries it. George may choose which row leads; he may not
+    that read carries it. Bob may choose which row leads; he may not
     introduce one.
   - NO FIELD BUT THE ALLOWED ONES. A colour, a width, a value, a title — any
     key outside metrics.yaml composition.allowed_fields refuses the block. This
@@ -34,10 +34,10 @@ already lives by:
     from stacking.
   - A COMPOSITION IS A SET OF EDITS, NOT A SCREEN (2026-09-10). `put`,
     `change`, `quiet` and `drop` apply to a board that persists between turns,
-    so an object George does not mention this turn simply stays — with its own
+    so an object Bob does not mention this turn simply stays — with its own
     read, its own receipts and its own read time. Only `put` needs a whole
     block; the other three need a key and what is changing. A `change` that
-    names a subject must name the read it comes from, or George could rename
+    names a subject must name the read it comes from, or Bob could rename
     what an object is about while it still draws an older read's rows.
 
 WHAT IS COERCED RATHER THAN REFUSED (P1.a, 2026-09-13). The rules above are
@@ -46,7 +46,7 @@ ceremony. Four recorded runs of the twelve carry 46 refusals between them and
 NONE of them would have put a wrong figure on screen — they are a
 discriminator under another name, a subject the read was already filtered to,
 a `quiet` that carried the seq it was quieting, a change that changed nothing.
-Each cost a whole model round trip, and George spent up to four composes on
+Each cost a whole model round trip, and Bob spent up to four composes on
 one answer finding the spelling.
 
 So: a block is coerced where the coercion cannot change what a figure SAYS,
@@ -122,7 +122,7 @@ def _read(calls: Mapping[int, Mapping[str, Any]], seq: Any) -> Mapping[str, Any]
     if call is None:
         raise Rejected(f"read {seq} did not run in this conversation")
     if not call.get("is_read"):
-        # Naming the way round matters: this fires most often when George has
+        # Naming the way round matters: this fires most often when Bob has
         # just CHANGED something and wants the result on screen. An object is
         # drawn over a read so a figure always has receipts behind it, and a
         # write is not one — but the thing he changed is almost always
@@ -165,7 +165,7 @@ def _scope_values(call: Mapping[str, Any]) -> set[str]:
     A read filtered to Rockwell is about Rockwell whether or not a column
     survives the grouping. `get_sales(group_by=[], filters={"store":
     "Rockwell"})` returns ONE row of totals with no store column in it, and
-    refusing `subject: "Rockwell"` over that row is what sent George round the
+    refusing `subject: "Rockwell"` over that row is what sent Bob round the
     loop in the `cannot` scenario: a figure with a subject, refused; without
     one, refused; then a whole extra read of the same
     figure grouped by store so the word would appear in a cell. Four
@@ -275,7 +275,7 @@ def _demote(key: str, lead_key: str, weights: list, coerced: list[str]) -> str:
     """
     A second block asking to lead takes the next weight down.
 
-    ONE LEAD IS STILL THE RULE — what changes is what happens when George
+    ONE LEAD IS STILL THE RULE — what changes is what happens when Bob
     breaks it. The composition he meant is legible: this block matters, and
     the one already leading matters more by having arrived first. Refusing
     the block drew nothing and cost a round trip; demoting it draws the
@@ -292,7 +292,7 @@ def _demote(key: str, lead_key: str, weights: list, coerced: list[str]) -> str:
 def _claim(text: Any, voc: Mapping[str, Any], coerced: Optional[list[str]] = None,
            key: Optional[str] = None) -> str:
     """
-    THE FEW WORDS OVER A BLOCK, and the one thing on it George writes.
+    THE FEW WORDS OVER A BLOCK, and the one thing on it Bob writes.
 
     Held to the same rule a note is held to, and for the same reason: an
     annotation may point at what is drawn and characterise it, and may never
@@ -329,7 +329,7 @@ def _drawn_as(kind: str, item: Mapping[str, Any], call: Mapping[str, Any], key: 
               defs: Mapping[str, Any], question: Optional[str], board: Any,
               coerced: list[str]) -> str:
     """
-    THE SHAPE A BLOCK IS DRAWN AS (P2S.3): the one George named, unless his
+    THE SHAPE A BLOCK IS DRAWN AS (P2S.3): the one Bob named, unless his
     rows cannot make it or it is a shape drawn only when asked and nobody
     asked. Then it is the shape those rows make by default, and the coercion
     is named. A drawing changes; no value does (agent/vocabulary.py).
@@ -394,7 +394,7 @@ def validate(
 
     def ruled_out_of(flag: Any) -> bool:
         # A FLAG, NEVER A SENTENCE (composition.ruled_out): why a read was
-        # ruled out is George's to say in the reading, with its receipts.
+        # ruled out is Bob's to say in the reading, with its receipts.
         if not isinstance(flag, bool):
             raise Rejected("ruled_out is true or false — the why belongs in what you say")
         return flag
@@ -440,7 +440,7 @@ def validate(
             # carrying `value: 412884`, `colour`, `width` or `title` is not a
             # misspelling — it is the attempt this file exists to stop, and
             # "dropped the field, drew the rest" teaches nothing while
-            # "refused, George composes and the system draws" teaches the
+            # "refused, Bob composes and the system draws" teaches the
             # rule. It costs nothing either: the tool schema is
             # additionalProperties:false, so a well-formed call cannot carry
             # one, and four recorded runs of the twelve contain zero of them.
@@ -457,11 +457,11 @@ def validate(
                 refused = extra & set((defs.get("composition") or {}).get("refused_fields") or ())
                 if refused:
                     raise Rejected(
-                        f"a block may not carry {sorted(refused)}: George composes, the system "
+                        f"a block may not carry {sorted(refused)}: Bob composes, the system "
                         f"draws (metrics.yaml composition.allowed_fields)"
                     )
                 coerced.append(
-                    f"{item.get('key', '?')!r}: {sorted(extra)} dropped — George composes, "
+                    f"{item.get('key', '?')!r}: {sorted(extra)} dropped — Bob composes, "
                     f"the system draws (metrics.yaml composition.allowed_fields)"
                 )
                 item = {k: v for k, v in item.items() if k in allowed}
@@ -480,7 +480,7 @@ def validate(
             # changes. Nothing here can name a figure, so a partial edit is as
             # safe as a whole one — with the one exception below.
             if op in ("drop", "quiet"):
-                # NAMING THE KEY IS THE WHOLE EDIT, and anything else George
+                # NAMING THE KEY IS THE WHOLE EDIT, and anything else Bob
                 # restated alongside it is ignored rather than refused. A
                 # `quiet` that carries the seq it is quieting says the same
                 # thing twice; refusing it lost a round trip and quieted
@@ -709,7 +709,7 @@ def validate(
                 block["thought"] = thought_of(item["thought"])
             if "emphasise" in item:
                 # ONE ROW OR SEVERAL (2026-09-15). It took one, and a
-                # comparison is about two: asked to compare two shops George
+                # comparison is about two: asked to compare two shops Bob
                 # lit one of them and wrote "Both selected shops" as the
                 # claim, which the drawing could not support. Each name is
                 # held to exactly the rule one name was held to; the cap is
@@ -755,7 +755,7 @@ def validate(
                     # block names it or not. So the block stands, captioned
                     # from the read's own scope where it declares one and from
                     # the row itself where it does not — never from anything
-                    # George supplied. On a many-row read this is still a
+                    # Bob supplied. On a many-row read this is still a
                     # refusal, because there choosing IS the judgement.
                     if len(call.get("rows") or []) != 1:
                         raise Rejected(
@@ -942,7 +942,7 @@ def fold(board: list[dict], edits: Iterable[Mapping[str, Any]], *,
     edits. Returns a new list; nothing already on it MOVES.
 
     WHY. Until today each compose frame REPLACED the turn's composition — here
-    and in the client — so George's second compose had to restate the whole
+    and in the client — so Bob's second compose had to restate the whole
     board, and one that did not erased it: `why` in verification/p2s6-gate-2
     .json composed three blocks, then `{"key": "stores-week", "op": "change",
     "weight": "lead"}`, and the frame that carried only that change left a

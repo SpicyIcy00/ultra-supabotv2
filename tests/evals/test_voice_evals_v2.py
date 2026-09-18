@@ -8,9 +8,9 @@ are present. Delete `test_voice_evals.py` in the card that does that, not here.
 
 WHAT WAS WRONG WITH THE FIRST TWELVE, measured rather than asserted:
 
-  1. Nothing checked that George ANSWERED. Fed "I cannot establish that from
+  1. Nothing checked that Bob ANSWERED. Fed "I cannot establish that from
      these reads" with no tool calls, the suite passed it on all seven of its
-     checks. Every assertion was about form and honesty, so a George that
+     checks. Every assertion was about form and honesty, so a Bob that
      shrugs at everything scored full marks — and the trust machinery pushes
      him toward exactly that. `checks.grounded_numerals` is the fix and
      `expects_figure` is where it is applied.
@@ -28,7 +28,7 @@ live turns for 12 scenarios: "How is Rockwell doing?" was asked FOUR times
 keep-page), and the Seikyo draft twice. Here the setup turns are shared, so
 11 turns cover 11 scenarios — about 31% cheaper per full run, and the thread
 is a real conversation rather than five cold starts, which is also closer to
-how George is actually used.
+how Bob is actually used.
 
     pytest tests/evals/test_voice_evals_v2.py -m gate   # 5 turns, ~$1.20 (P2S.6 added the fifth)
     pytest tests/evals/test_voice_evals_v2.py           # 11 turns, ~$1.15
@@ -52,10 +52,10 @@ from tools._common import load_defs, req
 
 DEFS = load_defs()
 
-from agent import loop as george_loop
-from agent import reading as george_reading
+from agent import loop as bob_loop
+from agent import reading as bob_reading
 
-MAX_ITERATIONS = george_loop.MAX_ITERATIONS
+MAX_ITERATIONS = bob_loop.MAX_ITERATIONS
 STRICT = os.environ.get("GEORGE_VOICE_STRICT") == "1"
 
 report = Report()
@@ -143,7 +143,7 @@ def _voice(name: str, turn: checks.Turn, *, extra_results: list | None = None,
     results = [r["result"] for r in turn.results if not r["error"]] + list(extra_results or [])
     f = voice.voice_findings(turn.answer, results, notices=len(turn.notices))
     # WHETHER THE READING HAS ITS THREE PARTS (P1.f). A rate and not a gate,
-    # for v2's stated reason: what George chooses to say flaps run to run, and
+    # for v2's stated reason: what Bob chooses to say flaps run to run, and
     # a single draw of it is noise. `claim_lit` is the one that matters most —
     # a claim he did not say lights nothing, and the surface draws the reading
     # whole instead.
@@ -151,11 +151,11 @@ def _voice(name: str, turn: checks.Turn, *, extra_results: list | None = None,
     f["reading"] = said
     f["has_claim"] = bool(said.get("claim"))
     f["has_next"] = bool(said.get("next"))
-    f["claim_lit"] = george_reading.was_said(turn.answer, said.get("claim"))
+    f["claim_lit"] = bob_reading.was_said(turn.answer, said.get("claim"))
     f["compose_rejected"] = [w.get("detail") for w in turn.warnings
                              if w.get("reason") == "composition_rejected"]
     f["label_calls"] = len([c for c in turn.calls
-                            if c.get("tool") == george_loop.COMPOSE_TOOL])
+                            if c.get("tool") == bob_loop.COMPOSE_TOOL])
     f["ungrounded_numerals"] = [x.text for x in checks.ungrounded_numerals(turn.answer, results)]
     f["grounded_numerals"] = [x.text for x in checks.grounded_numerals(turn.answer, results)]
     f["internal_vocabulary"] = checks.internal_vocabulary(turn.answer)
@@ -183,7 +183,7 @@ def _voice(name: str, turn: checks.Turn, *, extra_results: list | None = None,
     # And since P2S.10 in CALLS, as the cap counts them: a get_change is one
     # decision and seven reads (checks.asked_reads).
     reads = checks.asked_reads(turn.calls)
-    assert reads <= george_loop.MAX_TOOL_CALLS, (reads, turn.done)
+    assert reads <= bob_loop.MAX_TOOL_CALLS, (reads, turn.done)
     assert turn.done.get("notice_forced") is False, "a notice had to be forced into the answer"
     assert not f["ungrounded_numerals"], f"figures no tool returned: {f['ungrounded_numerals']}"
     assert not f["internal_vocabulary"], f"internal vocabulary: {f['internal_vocabulary']}"
@@ -266,7 +266,7 @@ def _broad(turn: checks.Turn, f: dict) -> None:
     # COST IS REPORTED, NEVER ASSERTED (2026-09-18). A $0.50 ceiling was set
     # here the same morning and the owner withdrew it: "cost should not hold
     # us back in functionality, i just want to optimize cost not make our
-    # george work worse". The figure goes on the record for the close-out.
+    # bob work worse". The figure goes on the record for the close-out.
     f["localizing_reads"] = [c.get("arguments") for c in loc]
     f["turn_usd"] = round(turn_usd(turn), 4)
     assert loc, ("a broad answer read by store and nothing under it — "
@@ -362,7 +362,7 @@ def test_depth_2_lookup(monkeypatch):
 # TIER 2 — THE THREAD. Five turns, chained, in the owner's own register.
 # One conversation instead of five cold starts: it costs four fewer live turns
 # than the old suite's equivalents AND tests something they never did, which is
-# whether George holds a thread.
+# whether Bob holds a thread.
 # =============================================================================
 
 @pytest.fixture(scope="module")
@@ -411,7 +411,7 @@ def test_thread_4_a_preference_taught(thread):
     """
     "i value sales more" is a BELIEF arriving mid-conversation, and the first
     twelve had no scenario for one. It is the shape "not what I meant" takes
-    in real use, and what George does with it decides whether memory is worth
+    in real use, and what Bob does with it decides whether memory is worth
     anything.
     """
     turn, carried = thread["taught"]

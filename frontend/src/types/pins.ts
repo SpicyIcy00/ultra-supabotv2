@@ -2,12 +2,12 @@
  * Types for the pins and pages API.
  *
  * These mirror the Pydantic models in
- * backend/app/api/v1/routes/george_pins.py and george_pages.py one-for-one,
- * the same discipline types/george.ts sets for the SSE frames. There is no
+ * backend/app/api/v1/routes/bob_pins.py and bob_pages.py one-for-one,
+ * the same discipline types/bob.ts sets for the SSE frames. There is no
  * runtime validation, so drift shows up as an undefined field in the UI rather
  * than an error.
  */
-import type { GeorgeNotice, ToolMeta } from './george';
+import type { BobNotice, ToolMeta } from './bob';
 
 /** What gets stored — the calls behind an answer, never the answer. */
 export interface PinToolCall {
@@ -78,7 +78,7 @@ export interface PinCallResult {
   duration_ms: number;
   rows: Record<string, unknown>[];
   meta: ToolMeta;
-  notices: GeorgeNotice[];
+  notices: BobNotice[];
   error?: string;
 }
 
@@ -87,7 +87,7 @@ export interface PinRun {
   title: string;
   status: PinStatus;
   results: PinCallResult[];
-  notices: GeorgeNotice[];
+  notices: BobNotice[];
   /** The PREVIOUS success when this run failed, so a tile can say how old the last good figure was. */
   last_ok_at: string | null;
   ran_at: string;
@@ -96,7 +96,7 @@ export interface PinRun {
    * same rule, the board is drawn from — one per call that came back with
    * rows, each call's `seq` its index in `results`.
    */
-  blocks: import('./george').CompositionBlock[];
+  blocks: import('./bob').CompositionBlock[];
 }
 
 export interface CreatePinRequest {
@@ -151,7 +151,7 @@ export interface PageRenameResult {
 /**
  * One section of a page being created: a new analysis with its calls, or one
  * the caller already has, by id. Never both — the service refuses that, as it
- * refuses it for George's own `create_page`.
+ * refuses it for Bob's own `create_page`.
  */
 export interface CreatePageAnalysis {
   title?: string;
@@ -193,7 +193,7 @@ export interface PageDeleted {
 export interface PageEvent {
   id: string;
   page_id: string | null;
-  actor: 'user' | 'george';
+  actor: 'user' | 'bob';
   operation: string;
   pin_id: string | null;
   before: Record<string, unknown> | null;

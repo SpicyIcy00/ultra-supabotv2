@@ -2,14 +2,14 @@
  * THE READING, AND THE DEFECT IT CLOSES.
  *
  * The owner, 2026-09-13: *"i asked how are doing like and those 4 widgets are
- * all the poped up … no text no george actually talking to me"*. His prose
+ * all the poped up … no text no bob actually talking to me"*. His prose
  * reached the board only as a `text` block he composed, so a turn that
  * composed figures and forgot one dropped the answer on the floor: it was in
  * the turn, the board had nowhere to put it, and the person saw shapes and
  * silence.
  *
  * These hold the fix, which is a subtraction: `text` is not a widget, the
- * reading is a region drawn from the turn's own words, and nothing George
+ * reading is a region drawn from the turn's own words, and nothing Bob
  * composes — or fails to compose — can take it off the screen.
  */
 import { cleanup, render } from '@testing-library/react';
@@ -17,7 +17,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { Reading, ReadingNext } from './Reading';
 import { buildBoard } from './board';
 import type { AnswerTurn } from './data';
-import type { GeorgeNotice } from '../types/george';
+import type { BobNotice } from '../types/bob';
 
 afterEach(cleanup);
 
@@ -37,7 +37,7 @@ const ROWS = [
 ];
 
 const TURN = {
-  role: 'george',
+  role: 'bob',
   text: 'OPUS carried the week; Rockwell held. Nothing here needs you today.',
   at: '2026-09-14T08:00:00Z',
   toolCalls: [{
@@ -80,9 +80,9 @@ describe('the reading is drawn from the turn, not composed', () => {
   });
 
   it('puts the caveats above the reading, never beside or under it', () => {
-    const notices: GeorgeNotice[] = [
+    const notices: BobNotice[] = [
       { kind: 'dead_stock_share', message: '1802 of 3397 products recorded no sale.',
-        source: 'tool' } as unknown as GeorgeNotice,
+        source: 'tool' } as unknown as BobNotice,
     ];
     const { container } = render(<Reading text={TURN.text} notices={notices} />);
     const text = container.textContent ?? '';

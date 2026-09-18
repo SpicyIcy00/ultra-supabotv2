@@ -3,7 +3,7 @@
   "verification/p1c-gate-2.json",
   "verification/dogfood-remainder-caveats.json"
  ],
- "how": "agent/default_composition.blocks over the recorded reads; George's own blocks are not recorded in an eval report",
+ "how": "agent/default_composition.blocks over the recorded reads; Bob's own blocks are not recorded in an eval report",
  "runs": [
   {
    "run": "p1c-gate-2/caveats",

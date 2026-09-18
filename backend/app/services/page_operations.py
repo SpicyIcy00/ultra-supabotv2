@@ -1,7 +1,7 @@
 """
 Page Workshop — a page built or edited as ONE atomic act.
 
-George's two write tools (`create_page`, `edit_page` in agent/write_tools.py)
+Bob's two write tools (`create_page`, `edit_page` in agent/write_tools.py)
 end here, through the injected PageWriter, and so may a route that wants the
 same batch semantics. Everything each function does is either all persisted or
 none of it:
@@ -39,8 +39,8 @@ from typing import Any, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.george_page import GeorgePage
-from app.models.george_pin import GeorgePin
+from app.models.bob_page import BobPage
+from app.models.bob_pin import BobPin
 from app.services import page_writer, pin_writer
 from app.services.page_writer import (
     ANY_PAGE,
@@ -71,7 +71,7 @@ EDIT_OPERATIONS = (
 # Shapes
 # ---------------------------------------------------------------------------
 
-def _analysis_row(pin: GeorgePin) -> dict[str, Any]:
+def _analysis_row(pin: BobPin) -> dict[str, Any]:
     return {
         "pin_id": str(pin.id),
         "title": pin.title,
@@ -81,7 +81,7 @@ def _analysis_row(pin: GeorgePin) -> dict[str, Any]:
     }
 
 
-def page_summary(page: GeorgePage, pins: list[GeorgePin]) -> dict[str, Any]:
+def page_summary(page: BobPage, pins: list[BobPin]) -> dict[str, Any]:
     """The page after a write, as every caller reports it."""
     return {
         "page_id": str(page.id),
@@ -114,7 +114,7 @@ class _NewAnalysis:
 
 @dataclass(frozen=True)
 class _ExistingAnalysis:
-    pin: GeorgePin
+    pin: BobPin
 
 
 def _normalize_analysis_title(title: Any, calls: list[dict]) -> str:
@@ -242,7 +242,7 @@ async def build_page(
 class _Plan:
     """Everything resolved and checked, before the first mutation."""
 
-    page: GeorgePage
+    page: BobPage
     steps: list[dict[str, Any]] = field(default_factory=list)
 
 
@@ -257,7 +257,7 @@ def _one_of(op: dict, *keys: str) -> Optional[str]:
 
 async def _resolve_target_pin(
     db: AsyncSession, owner: str, op: dict, *, within: Any,
-) -> GeorgePin:
+) -> BobPin:
     which = _one_of(op, "pin_id", "title")
     if which is None:
         raise PageValidationError(f"{op.get('op')}: name the analysis by pin_id or title.")
@@ -269,7 +269,7 @@ async def _resolve_target_pin(
 
 async def _resolve_destination(
     db: AsyncSession, owner: str, op: dict,
-) -> Optional[GeorgePage]:
+) -> Optional[BobPage]:
     """Writes accept stable identity only; title discovery belongs to reads."""
     if "page_title" in op:
         raise PageValidationError("Resolve the destination from owned Page metadata and supply page_id.")
@@ -437,7 +437,7 @@ async def plan_edit(
 
 async def _preflight_order(db: AsyncSession, owner: str, plan: _Plan) -> None:
     """Simulate all memberships and relational placements without changing ORM rows."""
-    orders: dict[uuid.UUID, list[GeorgePin]] = {}
+    orders: dict[uuid.UUID, list[BobPin]] = {}
     locations: dict[uuid.UUID, Optional[uuid.UUID]] = {}
 
     async def order(pid):
@@ -450,7 +450,7 @@ async def _preflight_order(db: AsyncSession, owner: str, plan: _Plan) -> None:
         if kind in ("rename", "set_purpose", "draw"):
             continue
         if kind == "add":
-            pin = GeorgePin(id=uuid.uuid4())
+            pin = BobPin(id=uuid.uuid4())
             source = None
         else:
             pin = step["pin"]

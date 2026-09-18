@@ -2,7 +2,7 @@
  * A SUBJECT IS AN ID, NOT A WORD (P2.c).
  *
  * The surface has always known which thing a person tapped: they tapped a row,
- * and the row carried `store_id`. What travelled to George was the LABEL —
+ * and the row carried `store_id`. What travelled to Bob was the LABEL —
  * `{id: label, label}` — so "Rockwell" reached him as a string with two
  * meanings in this estate, a shop and every product sold in it, and he had to
  * decide which. The id was two columns away the whole time.
@@ -21,7 +21,7 @@ import type { DeskDefinitions } from '../services/deskApi';
 import { callOf, rowsOf, type AnswerTurn, type Dimension } from './data';
 import type { BoardObject } from './board';
 import { retunedKey } from './tokenShape';
-import type { ToolCall } from '../types/george';
+import type { ToolCall } from '../types/bob';
 
 /** One thing the person is talking about, as it travels. */
 export interface Subject {

@@ -1,5 +1,5 @@
 """
-What George may compose, and — mostly — what he may not.
+What Bob may compose, and — mostly — what he may not.
 
 NO DATABASE. The vocabulary and the validator.
 
@@ -106,11 +106,11 @@ def test_anything_that_is_a_pixel_or_a_figure_is_refused(defs, field, value):
         {"kind": "figure", "key": "r", "seq": 1, "subject": "Rockwell", field: value},
     ], defs)
     assert accepted == []
-    assert "George composes, the system draws" in rejected[0]["reason"]
+    assert "Bob composes, the system draws" in rejected[0]["reason"]
 
 
 def test_a_subject_that_is_not_a_row_is_refused(defs):
-    """George may choose which row leads; he may not introduce one."""
+    """Bob may choose which row leads; he may not introduce one."""
     accepted, rejected = only([
         {"kind": "figure", "key": "x", "seq": 1, "subject": "Shangri-La", "weight": "lead"},
     ], defs)
@@ -144,7 +144,7 @@ def test_only_one_block_leads_and_the_second_is_demoted_not_refused(defs):
     ONE LEAD IS STILL THE RULE; breaking it no longer costs a round trip.
 
     Until P1.a the second block was refused and drew nothing, which is not
-    what George meant by weighting it: he meant this matters, and the object
+    what Bob meant by weighting it: he meant this matters, and the object
     already leading matters more by having arrived first. So it draws, one
     rank down, and the adjustment is named — nothing about a weight can change
     what a figure says.
@@ -311,7 +311,7 @@ def test_a_change_that_changes_nothing_is_ignored_not_refused(defs):
     """
     The object stays exactly as it is either way, so the only thing the
     refusal ever changed was the round-trip count (P1.a). It is reported, so
-    George does not describe an object as having moved.
+    Bob does not describe an object as having moved.
     """
     accepted, rejected, coerced = with_coercions(
         [{"op": "change", "key": "shops"}], defs)
@@ -345,7 +345,7 @@ def test_the_ops_are_the_definitions(defs):
 
 # ---------------------------------------------------------------------------
 # THE BOARD LINE (2026-09-10). "Why?" "Products." "These two." were resolved
-# against the transcript, because that was all George could see. That worked
+# against the transcript, because that was all Bob could see. That worked
 # while the screen was the last answer and broke the moment the board could
 # hold six things: "why?" meant the last thing SAID, not the thing being
 # LOOKED at. So what is on the board travels with the question — as names,
@@ -387,11 +387,11 @@ def test_the_board_line_carries_no_figure(defs):
         assert leak not in line, f"{leak!r} is a figure and reached the prompt"
 
 
-def test_the_board_line_names_a_shape_george_composed(defs):
+def test_the_board_line_names_a_shape_bob_composed(defs):
     """
     THE DEFECT THIS HOLDS (dogfood log, 2026-09-14; fixed in P1.d). The line
     skipped every kind that was not a widget, and a composed shape's kind is
-    `spec` — so a board whose LEADING object was a shape George composed said
+    `spec` — so a board whose LEADING object was a shape Bob composed said
     nothing at all about it. "Why?" then resolved against whatever quiet table
     was beside it, and a follow-up could only put a second object next to the
     one meant.
@@ -431,11 +431,11 @@ def test_the_board_line_is_bounded_by_the_definitions(defs):
 
 
 def test_the_loop_puts_the_board_line_on_the_question():
-    """Held here because a line George never receives is a line that does nothing."""
+    """Held here because a line Bob never receives is a line that does nothing."""
     import ast
     import inspect
-    from agent import loop as george_loop
-    tree = ast.parse(inspect.getsource(george_loop.run))
+    from agent import loop as bob_loop
+    tree = ast.parse(inspect.getsource(bob_loop.run))
     calls = [n for n in ast.walk(tree)
              if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
              and n.func.attr == "board_sentence"]
@@ -443,7 +443,7 @@ def test_the_loop_puts_the_board_line_on_the_question():
 
 
 # ---------------------------------------------------------------------------
-# THE SELF-READS (2026-09-11). George gained two reads for the things he could
+# THE SELF-READS (2026-09-11). Bob gained two reads for the things he could
 # not otherwise see: what he believes, and what the saved rules have been
 # doing. Both are COMPOSITES because they need injection — and `compose`
 # decided "is a read" by excluding every composite, so the first time he used
@@ -482,11 +482,11 @@ def test_a_page_read_is_still_not_composable():
 
 
 def test_the_loop_agrees_with_the_declaration():
-    """A read the loop marks unreadable is a tool George cannot compose over."""
+    """A read the loop marks unreadable is a tool Bob cannot compose over."""
     import ast
     import inspect
-    from agent import loop as george_loop
-    src = inspect.getsource(george_loop.run)
+    from agent import loop as bob_loop
+    src = inspect.getsource(bob_loop.run)
     assert "COMPOSABLE_READS" in src, "the loop no longer honours the declaration"
     ast.parse(src)
 
@@ -524,19 +524,19 @@ def test_what_feature_one_names_is_still_composable(defs):
 
 def test_a_recommendation_is_a_sentence_now_and_still_carries_no_figure_of_his_own(defs):
     """
-    George picks the words; the number is not his to write. The `next` slot
+    Bob picks the words; the number is not his to write. The `next` slot
     carries only a figure one of this turn's reads returned, so "order 806
     units" over reads that returned no such number is unrepresentable there —
     the quantity stays on the draft the block draws, with its receipts.
     """
-    from agent import reading as george_reading
+    from agent import reading as bob_reading
 
-    ok, no = george_reading.validate({"next": "Send the Seikyo order as it stands"}, defs)
+    ok, no = bob_reading.validate({"next": "Send the Seikyo order as it stands"}, defs)
     assert ok["next"] and no == []
-    ok, no = george_reading.validate({"next": "Order 806 units of Aji Mix"}, defs)
+    ok, no = bob_reading.validate({"next": "Order 806 units of Aji Mix"}, defs)
     assert ok == {} and "no read returned" in no[0]["reason"]
     # And where the plan itself returned 806, saying it is the reason to act.
-    ok, no = george_reading.validate({"next": "Order 806 units of Aji Mix"}, defs, {806.0})
+    ok, no = bob_reading.validate({"next": "Order 806 units of Aji Mix"}, defs, {806.0})
     assert no == [] and ok["next"].startswith("Order 806")
 
     # And the verb is no longer a closed list, because it is a sentence a
@@ -585,7 +585,7 @@ def test_a_system_is_drawn_over_the_read_that_returns_one(defs):
     """
     Something that RUNS is an object like any other, and it is drawn over
     view_automations — the read that can see the george schema — rather than
-    from a name George remembered.
+    from a name Bob remembered.
     """
     calls = {0: {"tool": "view_automations", "is_read": True,
                  "rows": [{"what": "Seikyo PO", "state": "scheduled"}]}}
@@ -625,7 +625,7 @@ def test_a_control_must_name_an_argument_its_read_actually_takes(defs):
     The closed list says which arguments a control MAY change. It does not say
     this read has one.
 
-    Live, George put a window control on a get_purchase_plan draft and it was
+    Live, Bob put a window control on a get_purchase_plan draft and it was
     accepted: that tool's window is `lookback_days`, a number of days, so the
     four date presets drawn beside the order would each have been refused on
     click. A control whose every option fails is worse than no control, and it
@@ -662,7 +662,7 @@ def test_a_control_must_name_an_argument_its_read_actually_takes(defs):
 def test_a_put_of_a_read_already_on_the_board_becomes_a_change_of_that_object(defs):
     """
     THE BUG THIS HOLDS. 168 puts to 3 changes on the dogfood record: asked
-    the same thing again, George put a twin beside the object he had. The
+    the same thing again, Bob put a twin beside the object he had. The
     board carries the read behind each object; a put of that read under a
     new key is rewritten — not refused — to a change of the existing key,
     and the rewrite is named so he uses that key from here on.
@@ -795,7 +795,7 @@ def test_the_board_clears_and_folds_rather_than_accumulating():
 # ---------------------------------------------------------------------------
 # A COMPARISON IS ABOUT TWO ROWS, AND `emphasise` TOOK ONE (2026-09-15)
 #
-# Read off the answer he actually got: asked to compare two shops, George read
+# Read off the answer he actually got: asked to compare two shops, Bob read
 # the estate and composed
 #
 #   {"kind": "dumbbell", "claim": "Both selected shops gave back basket value
@@ -856,8 +856,8 @@ def test_every_emphasised_name_is_held_to_the_rule_one_name_was_held_to(defs):
 
 
 def test_the_schema_offers_the_model_both_shapes():
-    from agent import loop as george_loop
-    schema = next(t for t in george_loop.build_tool_schemas(include_write=True)
+    from agent import loop as bob_loop
+    schema = next(t for t in bob_loop.build_tool_schemas(include_write=True)
                   if t["name"] == "compose")
     blocks = schema["input_schema"]["properties"]["blocks"]["items"]["properties"]
     kinds = {entry["type"] for entry in blocks["emphasise"]["anyOf"]}

@@ -1,5 +1,5 @@
 """
-Pure tests for the grammar — shapes George composes that nobody listed.
+Pure tests for the grammar — shapes Bob composes that nobody listed.
 
 NO DATABASE, NO MODEL. The whole of what makes an unbounded space of shapes
 safe is a validator, and a validator is decidable from its inputs.
@@ -69,7 +69,7 @@ def test_a_column_the_read_does_not_have_is_refused():
 
 def test_a_colour_is_a_column_never_a_colour():
     """
-    A hue George picked would be a figure by another route: it would mean
+    A hue Bob picked would be a figure by another route: it would mean
     whatever he felt rather than what a row says. `colour` names the column
     whose VALUE chooses the hue — an identity or a direction.
     """
@@ -83,7 +83,7 @@ def test_a_colour_is_a_column_never_a_colour():
 def test_a_node_may_carry_nothing_but_the_declared_fields():
     """
     The closed field set is the guarantee. `text`, `value`, `title`, `style` —
-    each would be somewhere for words or figures to arrive from George.
+    each would be somewhere for words or figures to arrive from Bob.
     """
     for smuggled in ("text", "value", "title", "style", "html"):
         why = refused({"mark": "value", "seq": 0, "field": "value", smuggled: "x"})
@@ -135,7 +135,7 @@ def test_a_shape_cannot_draw_his_words():
 
 def test_a_panel_heading_is_a_column_too():
     """
-    A title George wrote is a label nobody measured. A heading names a column,
+    A title Bob wrote is a label nobody measured. A heading names a column,
     for the same reason a mark does.
     """
     ok = valid({"layout": "panel", "heading": {"seq": 0, "field": "store"},
@@ -220,7 +220,7 @@ def test_a_composed_block_is_accepted_and_keeps_its_reads():
 def test_the_refusal_names_the_node_that_was_wrong():
     """
     A tree has many places to be wrong. "invalid composition" would send
-    George back to redo all of it; naming the node lets him fix the part.
+    Bob back to redo all of it; naming the node lets him fix the part.
     """
     ok, no = compose.validate({"blocks": [
         {"key": "shaped", "spec": {"layout": "row", "children": [
@@ -287,7 +287,7 @@ def test_the_named_widgets_survive_and_are_the_catalogue():
 
 def test_a_subject_says_which_row_and_is_checked_against_them():
     """
-    THE BUG THIS HOLDS, found the first time George used the grammar. He
+    THE BUG THIS HOLDS, found the first time Bob used the grammar. He
     composed a panel per shop, and every panel drew the FIRST row: seven
     panels, identical figures, each headed with the same shop's name.
     Plausible and wrong, which is worse than not drawing at all.
@@ -327,7 +327,7 @@ def test_a_subject_is_still_never_a_figure():
 
 def test_a_refusal_teaches_the_fix_rather_than_stating_the_failure():
     """
-    Live, George passed `subject: "store"` — the NAME of a column where a
+    Live, Bob passed `subject: "store"` — the NAME of a column where a
     value belongs. "read 0 has no row for 'store'" is true and useless. A
     refusal that names the mistake and shows values that would have worked is
     the difference between a retry and a correct retry.
@@ -351,7 +351,7 @@ def test_a_note_may_characterise_and_may_never_state_a_figure():
 
     That is what lets a picture take over from a sentence. "carries the whole
     order" beside the bar deletes the paragraph under the chart; "carries 40%
-    of the order" would be George putting a figure on screen that no tool
+    of the order" would be Bob putting a figure on screen that no tool
     computed, which is the one thing none of this may ever do.
     """
     ok = valid({"mark": "bar", "seq": 0, "field": "value", "by": "store",
@@ -415,7 +415,7 @@ def valid_more(spec):
 
 def test_every_instrument_is_a_mark_the_model_is_told_about():
     """The design board earned five; a mark that is not in the schema is one
-    George cannot reach for."""
+    Bob cannot reach for."""
     for mark in ("range", "bullet", "ring", "dots", "calendar"):
         assert mark in GRAMMAR["marks"], mark
     schema = next(s for s in loop.build_tool_schemas() if s["name"] == "compose")

@@ -1,5 +1,5 @@
 """
-What George is allowed to believe.
+What Bob is allowed to believe.
 
 NO DATABASE. The admissibility rules only; the store is injected and is tested
 where it lives.
@@ -178,7 +178,7 @@ def test_a_turn_cannot_rewrite_the_whole_picture(defs):
     """
     A turn that changes six views is an investigation, not a view. The cap is
     not about cost: it is about a single answer quietly replacing everything
-    George thinks.
+    Bob thinks.
     """
     accepted, rejected = only([good(subject=f"Shop {chr(65+i)}")
                                for i in range(beliefs.MAX_BELIEFS_PER_TURN + 2)], defs)
@@ -238,12 +238,12 @@ def test_a_refused_belief_never_reaches_the_store(defs):
 # annotation is list[dict], the schema builder had no branch for it, and the
 # model was told {"type": "string"}. It obediently sent the list as a JSON
 # string; the validator iterated the string's characters and refused each one
-# as "not an object". George formed a view in prose every turn and held none.
+# as "not an object". Bob formed a view in prose every turn and held none.
 # ---------------------------------------------------------------------------
 
 def test_the_schema_offers_a_list_of_objects_and_not_a_string():
-    from agent import loop as george_loop
-    schema = next(t for t in george_loop.build_tool_schemas(include_write=True)
+    from agent import loop as bob_loop
+    schema = next(t for t in bob_loop.build_tool_schemas(include_write=True)
                   if t["name"] == "record_belief")
     beliefs_schema = schema["input_schema"]["properties"]["beliefs"]
     assert beliefs_schema["type"] == "array"
@@ -324,7 +324,7 @@ def test_a_taught_view_may_not_also_name_reads(defs):
 
 def test_a_reading_of_data_may_not_rest_on_what_somebody_said(defs):
     """The other half of the same rule, and the one that matters more: a
-    judgment about a shop is not settled by being asserted at George."""
+    judgment about a shop is not settled by being asserted at Bob."""
     accepted, rejected = beliefs.validate(
         [good(told="Rockwell is fine, trust me", evidence=[RAN])], defs,
         is_executed=executed_only(RAN))

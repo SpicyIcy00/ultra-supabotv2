@@ -13,7 +13,7 @@ What is held here is the server half of making it the same app:
      is validated against the vocabulary, never changes what runs, and is
      drawn as long as the rows can make it.
   3. KEEPING A CHART KEEPS ITS DRAWING. `pin_answer` stores the shape the read
-     has on the board; a pie George names himself is held to "only when asked".
+     has on the board; a pie Bob names himself is held to "only when asked".
   4. "MAKE THAT ONE A PIE" ON A PAGE is `edit_page` `draw`: that pin's call and
      only that one, audited, and refused when nobody asked for a pie.
 
@@ -131,7 +131,7 @@ def test_a_chart_kept_from_the_board_keeps_its_shape():
     assert writer.spec.tool_calls[0]["drawn_as"] == {"kind": "pie"}
 
 
-def test_a_shape_george_names_unasked_is_left_off_and_said():
+def test_a_shape_bob_names_unasked_is_left_off_and_said():
     ctx, writer, call = _ctx("keep the shops")
     out = _run(write_tools.pin_answer([{**call, "drawn_as": "treemap"}], "Shops", ctx=ctx))
     assert "drawn_as" not in writer.spec.tool_calls[0]

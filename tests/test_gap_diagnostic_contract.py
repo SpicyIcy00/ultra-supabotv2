@@ -31,7 +31,7 @@ import pytest
 pytest.importorskip("psycopg", reason="agent.loop imports the tools")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from agent import loop as george_loop  # noqa: E402
+from agent import loop as bob_loop  # noqa: E402
 from tests.test_loop_correction_contract import StubLog  # noqa: E402
 from tests.test_convergence_cap_contract import FakeClient, _ToolUse  # noqa: E402
 
@@ -46,7 +46,7 @@ CAUSE = 'column "intent" does not exist [ZZ-CAUSE-MARKER]'
 
 
 def _raised_from(inner: BaseException, message: str) -> BaseException:
-    """The exact shape routes/george.py raises: a sanitised sentence, `from exc`."""
+    """The exact shape routes/bob.py raises: a sanitised sentence, `from exc`."""
     try:
         raise inner
     except BaseException as exc:  # noqa: BLE001
@@ -61,7 +61,7 @@ def _raised_from(inner: BaseException, message: str) -> BaseException:
 # ---------------------------------------------------------------------------
 def test_the_model_is_told_only_that_it_broke():
     exc = _raised_from(ValueError(CAUSE), SANITISED)
-    payload, err, _ms = george_loop._refusal(exc, 0.0)
+    payload, err, _ms = bob_loop._refusal(exc, 0.0)
     assert err == SANITISED
     assert payload["meta"]["error"] == SANITISED
     assert "ZZ-CAUSE-MARKER" not in err
@@ -70,8 +70,8 @@ def test_the_model_is_told_only_that_it_broke():
 
 def test_the_cause_is_carried_beside_it():
     exc = _raised_from(ValueError(CAUSE), SANITISED)
-    payload, _err, _ms = george_loop._refusal(exc, 0.0)
-    assert CAUSE in payload[george_loop.DIAGNOSTIC_KEY]
+    payload, _err, _ms = bob_loop._refusal(exc, 0.0)
+    assert CAUSE in payload[bob_loop.DIAGNOSTIC_KEY]
 
 
 def test_a_refusal_with_no_cause_carries_no_diagnostic():
@@ -79,14 +79,14 @@ def test_a_refusal_with_no_cause_carries_no_diagnostic():
     A read tool refusing says the whole truth in its own message — there is no
     second half, and an empty key would be noise in every row.
     """
-    payload, _err, _ms = george_loop._refusal(ValueError("Unknown store 'Narnia'."), 0.0)
-    assert george_loop.DIAGNOSTIC_KEY not in payload
+    payload, _err, _ms = bob_loop._refusal(ValueError("Unknown store 'Narnia'."), 0.0)
+    assert bob_loop.DIAGNOSTIC_KEY not in payload
 
 
 def test_a_chain_of_causes_is_followed_but_bounded():
     inner = _raised_from(KeyError("deepest"), "middle")
     outer = _raised_from(inner, SANITISED)
-    diagnostic = george_loop._refusal(outer, 0.0)[0][george_loop.DIAGNOSTIC_KEY]
+    diagnostic = bob_loop._refusal(outer, 0.0)[0][bob_loop.DIAGNOSTIC_KEY]
     assert "middle" in diagnostic and "deepest" in diagnostic
     assert len(diagnostic) <= 1500
 
@@ -100,7 +100,7 @@ def test_a_credential_in_the_cause_is_redacted():
     exc = _raised_from(
         OSError("could not connect: postgresql://george_log:hunter2@db.host:5432/postgres"),
         "The workflow could not be saved: OSError.")
-    diagnostic = george_loop._refusal(exc, 0.0)[0][george_loop.DIAGNOSTIC_KEY]
+    diagnostic = bob_loop._refusal(exc, 0.0)[0][bob_loop.DIAGNOSTIC_KEY]
     assert "hunter2" not in diagnostic
     assert "george_log:hunter2" not in diagnostic
     # Still useful: the host and the failure survive.
@@ -123,21 +123,21 @@ def _drive_a_failing_write(monkeypatch):
     # were reading an empty request list and passed against a deliberately
     # broken loop.
     fake = FakeClient(replies)
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
 
     async def failing_write(name, args, ctx):
-        return george_loop._refusal(
+        return bob_loop._refusal(
             _raised_from(ValueError(CAUSE), SANITISED), 0.0)
 
-    monkeypatch.setattr(george_loop, "_call_write_tool", failing_write)
+    monkeypatch.setattr(bob_loop, "_call_write_tool", failing_write)
     StubLog.instances.clear()
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
 
     async def writer(spec):                    # presence enables the tool
         raise AssertionError("not reached")
 
     async def collect():
-        return [f async for f in george_loop.run(
+        return [f async for f in bob_loop.run(
             "add top sellers by sales not units", workflow_writer=writer)]
 
     frames = asyncio.run(collect())
@@ -170,7 +170,7 @@ def test_the_diagnostic_never_reaches_the_model(monkeypatch):
     _frames, _log, requests = _drive_a_failing_write(monkeypatch)
     assert requests, "the model was never called"
     sent = json.dumps(requests, default=str)
-    assert george_loop.DIAGNOSTIC_KEY not in sent, "the transport key reached the model"
+    assert bob_loop.DIAGNOSTIC_KEY not in sent, "the transport key reached the model"
     assert "ZZ-CAUSE-MARKER" not in sent, "the cause reached the model"
     # The sanitised sentence did reach it — the tool still reports the failure.
     assert "could not be saved" in sent
@@ -179,7 +179,7 @@ def test_the_diagnostic_never_reaches_the_model(monkeypatch):
 def test_the_diagnostic_never_reaches_the_client_either(monkeypatch):
     frames, _log, _requests = _drive_a_failing_write(monkeypatch)
     streamed = json.dumps(frames)
-    assert george_loop.DIAGNOSTIC_KEY not in streamed
+    assert bob_loop.DIAGNOSTIC_KEY not in streamed
     assert "ZZ-CAUSE-MARKER" not in streamed
 
 
@@ -189,10 +189,10 @@ def test_the_leak_test_actually_bites(monkeypatch):
     sent carries the cause — so this reproduces that by hand and proves the
     assertion above would catch it, rather than passing for some other reason.
     """
-    payload, _err, _ms = george_loop._refusal(
+    payload, _err, _ms = bob_loop._refusal(
         _raised_from(ValueError(CAUSE), SANITISED), 0.0)
-    unstripped = george_loop._truncate(payload)
+    unstripped = bob_loop._truncate(payload)
     assert unstripped is payload, "_truncate passes a rowless payload straight through"
-    assert george_loop.DIAGNOSTIC_KEY in json.dumps(unstripped), (
+    assert bob_loop.DIAGNOSTIC_KEY in json.dumps(unstripped), (
         "without the strip the cause is in what the model would be sent"
     )

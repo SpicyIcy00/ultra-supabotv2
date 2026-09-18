@@ -5,7 +5,7 @@ WHY THE BACKEND RENDERS THIS. "Notices always surface" is a product guarantee
 (CLAUDE.md UI rule 4), and templating a message in the delivery layer is how a
 guarantee becomes a suggestion — the first person to tidy the layout deletes the
 caveats. Same argument ops/n8n/README.md makes about the morning brief, and the
-reason a workflow's schedule is George's rather than n8n's.
+reason a workflow's schedule is Bob's rather than n8n's.
 
 THREE THINGS EVERY BLOCK CARRIES, because a scheduled message is read in a hurry
 on a phone and is the only place these figures appear:

@@ -34,7 +34,7 @@ from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.services import telegram_sender
 from app.services.brief_telegram import render
-from app.services.george_greeting import build_greeting
+from app.services.bob_greeting import build_greeting
 from app.services.river_writer import post_brief
 
 MANILA = ZoneInfo("Asia/Manila")
@@ -45,7 +45,7 @@ def _manila_today() -> date:
     return datetime.now(MANILA).date()
 
 # agent/ and tools/ live at the repo root, one level above backend/ — the same
-# path insertion routes/george.py does.
+# path insertion routes/bob.py does.
 _ROOT = Path(__file__).resolve().parents[5]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))

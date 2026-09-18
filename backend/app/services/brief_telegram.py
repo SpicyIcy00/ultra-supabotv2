@@ -10,7 +10,7 @@ caveats. n8n is left a dumb pipe: fetch, post.
 NOTICES GO AT THE TOP OF EACH SECTION. Telegram truncates, phones cut off, and
 nobody scrolls a 6am message to the end — a caveat below the fold is a caveat
 nobody reads. They sit above the figures they qualify, which is also where
-GeorgeConversation puts them in chat.
+BobConversation puts them in chat.
 
 SPLITTING, NOT TRUNCATING. telegram_sender.send_message() silently cuts at 4,096
 characters and appends "(truncated)", which for a brief means losing whole items

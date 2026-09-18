@@ -13,7 +13,7 @@
  * exist, no SQL in the service and no model on the path — because a page title
  * is the one of the three sources the screen does not already hold.
  *
- * IT OFFERS ONLY WHAT THE ROOM CAN ALREADY DO WITHOUT ASKING GEORGE. Three
+ * IT OFFERS ONLY WHAT THE ROOM CAN ALREADY DO WITHOUT ASKING BOB. Three
  * kinds, and each one lands somewhere that exists:
  *
  *   replay   the spoken word for one alternative of a token drawn under the
@@ -34,7 +34,7 @@
  * everything typed so far is the start of something the room can do, which is
  * rare, obvious, and never in the way.
  *
- * NOTHING HERE IS A FIGURE, and nothing here is a word George wrote: every
+ * NOTHING HERE IS A FIGURE, and nothing here is a word Bob wrote: every
  * candidate is a label the server served (`tokens.spoken`, a store name off a
  * row, a page title), so a ghost cannot put a number or a claim on the line.
  */

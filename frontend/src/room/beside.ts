@@ -1,7 +1,7 @@
 /**
  * THE BESIDE ROOM, IN NUMBERS (P2S.1(b)(c)).
  *
- * `ops/ideal/george-ahead-of-me.html` is the design — the owner, 2026-09-17:
+ * `ops/ideal/bob-ahead-of-me.html` is the design — the owner, 2026-09-17:
  * *"everything ive been leading you to this final artifact is it"*. Its beside
  * room is built by four small functions (`buildBeside`, `place`, `wire`,
  * `arrows`) and a canvas mark (`draw`). This file is those functions, ported
@@ -24,12 +24,12 @@
  * millisecond.
  */
 
-import type { ToolCall } from '../types/george';
+import type { ToolCall } from '../types/bob';
 import { placeFigures as figuresPlaced } from './figures';
 
 /**
  * HIS SENTENCES, BY THE CHART THEY ARE ABOUT (the owner, 2026-09-17: *"more text
- * of what george thinks should be integrated on the charts so when you see the
+ * of what bob thinks should be integrated on the charts so when you see the
  * visual and you here his thought you can get a good picture"*).
  *
  * A sentence that cites figures from a read belongs beside that read's chart —

@@ -1,5 +1,5 @@
 // Runs a page under jsdom and reports script errors, the scene buttons, and what a click shows.
-// Usage (from frontend/): NODE_PATH=node_modules node ../ops/check_page.cjs ../ops/ideal/george-ahead-of-me.html
+// Usage (from frontend/): NODE_PATH=node_modules node ../ops/check_page.cjs ../ops/ideal/bob-ahead-of-me.html
 // Added 2026-09-16 after it found a parse error and a duplicate id that no test and no person had seen.
 const { JSDOM, VirtualConsole } = require('jsdom');
 const fs = require('fs');

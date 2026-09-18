@@ -2,7 +2,7 @@
  * THE OFFERS NO ROW COULD CARRY, at the foot beside `next`.
  *
  * Two kinds land here, and they are drawn the same because a reader does not
- * need to know the difference: an offer George made about the ANSWER rather
+ * need to know the difference: an offer Bob made about the ANSWER rather
  * than about one row (it named no target), and one he aimed at a row the board
  * did not end up drawing — a read shown as a line chart, a tile the person
  * folded away. `actions.placement` decides both halves in one pass, so an
@@ -18,7 +18,7 @@
  * dressing it in the same colour is how the one signal stops meaning anything.
  */
 import { useState } from 'react';
-import type { ActionOffer } from '../types/george';
+import type { ActionOffer } from '../types/bob';
 import { Offer, type TileActions } from './tiles';
 import { callOf, dimensionOf, rowsOf, type AnswerTurn } from './data';
 import { ObjectPanel, kindOf } from './ObjectPanel';

@@ -51,7 +51,7 @@ const ROWS = [
 ];
 
 const TURN = {
-  role: 'george', text: 'Two things.', thinking: '', at: '2026-09-15T09:00:00Z',
+  role: 'bob', text: 'Two things.', thinking: '', at: '2026-09-15T09:00:00Z',
   toolCalls: [{ seq: 1, tool: 'view_memory', arguments: {}, result: { rows: ROWS, meta: META } }],
 } as unknown as AnswerTurn;
 
@@ -189,7 +189,7 @@ describe('holding nothing', () => {
   it('shows every view he holds, because he cannot be given a subset', () => {
     /**
      * `composition.widgets.memory` needs `seq` and nothing else, so there is
-     * no channel for George to choose which of his views you are shown. A
+     * no channel for Bob to choose which of his views you are shown. A
      * memory you cannot see all of is not one you can check.
      */
     draw(acts());
@@ -215,7 +215,7 @@ describe('a memory longer than the tile', () => {
 
   function drawMany(meta: Record<string, unknown> = META) {
     const turn = {
-      role: 'george', text: 'Six things.', thinking: '', at: '2026-09-15T09:00:00Z',
+      role: 'bob', text: 'Six things.', thinking: '', at: '2026-09-15T09:00:00Z',
       toolCalls: [{ seq: 1, tool: 'view_memory', arguments: {},
                     result: { rows: MANY, meta } }],
     } as unknown as AnswerTurn;
@@ -249,7 +249,7 @@ describe('a memory longer than the tile', () => {
 
   it('says nothing about a count when there is nothing to count', () => {
     const turn = {
-      role: 'george', text: '', thinking: '', at: '2026-09-15T09:00:00Z',
+      role: 'bob', text: '', thinking: '', at: '2026-09-15T09:00:00Z',
       toolCalls: [{ seq: 1, tool: 'view_memory', arguments: {},
                     result: { rows: [], meta: META } }],
     } as unknown as AnswerTurn;

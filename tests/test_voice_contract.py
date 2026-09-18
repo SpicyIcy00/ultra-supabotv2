@@ -14,7 +14,7 @@ WHAT CAN AND CANNOT BE TESTED HERE, STATED PLAINLY.
              second, insisting turn is not blocked.
 
   NOT        that the model actually writes in the register. No test here
-             asserts George is dry, and none could. Those are the live samples,
+             asserts Bob is dry, and none could. Those are the live samples,
              which are read by a person.
 
 The cap is the honest part of volunteering: it counts lines that ANNOUNCE
@@ -30,7 +30,7 @@ import pytest
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from agent import loop as george_loop                                    # noqa: E402
+from agent import loop as bob_loop                                    # noqa: E402
 from agent.loop import SYSTEM_PROMPT                                     # noqa: E402
 from tools._common import load_defs, req                                 # noqa: E402
 from tests.test_loop_correction_contract import (                        # noqa: E402
@@ -60,8 +60,8 @@ def test_system_prompt_is_byte_stable() -> None:
     uuid, a dict iteration order — would invalidate the cached prefix on every
     single request and quietly multiply the bill.
     """
-    once = george_loop._scope_sentence(load_defs())
-    twice = george_loop._scope_sentence(load_defs())
+    once = bob_loop._scope_sentence(load_defs())
+    twice = bob_loop._scope_sentence(load_defs())
     assert once == twice
     assert SYSTEM_PROMPT.startswith(once)
 
@@ -112,7 +112,7 @@ def test_two_volunteered_lines_are_trimmed_without_a_round_trip(monkeypatch) -> 
 
     Until 2026-09-14 this cost a whole model round trip: the answer was thrown
     away and rewritten. Deletion is exact and one-way — it cannot introduce a
-    figure, a claim or a caveat George did not write — and the cap is on what
+    figure, a claim or a caveat Bob did not write — and the cap is on what
     he ADDED, so the first volunteered line stays exactly as he wrote it.
     """
     frames, requests = drive(
@@ -188,9 +188,9 @@ def test_the_cap_does_not_claim_to_verify_sourcing() -> None:
     numeral in prose against a tool result, and a cap mistaken for provenance
     would be more dangerous than no cap at all.
     """
-    assert george_loop._volunteered("Worth knowing: the moon is made of cheese.", DEFS)
+    assert bob_loop._volunteered("Worth knowing: the moon is made of cheese.", DEFS)
     # No numeral anywhere, no tool result anywhere, and it still counts as one.
-    assert len(george_loop._volunteered("Worth noting: nothing.", DEFS)) == 1
+    assert len(bob_loop._volunteered("Worth noting: nothing.", DEFS)) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -220,7 +220,7 @@ def test_pushback_must_offer_an_alternative() -> None:
 
 def test_an_opinion_yields_when_the_user_insists(monkeypatch) -> None:
     """
-    George says his piece once, then does what he is asked.
+    Bob says his piece once, then does what he is asked.
 
     Tested where it is testable: the loop must not block or correct a second
     attempt at the same request. Nothing in the loop may turn a stated opinion
@@ -231,7 +231,7 @@ def test_an_opinion_yields_when_the_user_insists(monkeypatch) -> None:
 
     history = [
         {"role": "user", "text": "compare last week to yesterday", "tool_calls": []},
-        {"role": "george",
+        {"role": "bob",
          "text": "I wouldn't compare those two — one is a week and one is a day. "
                  "I'd put yesterday against the same weekday instead.",
          "tool_calls": []},
@@ -242,7 +242,7 @@ def test_an_opinion_yields_when_the_user_insists(monkeypatch) -> None:
                 if w["reason"] in {"volunteering_over_cap", "unsurfaced_notice"}]
     assert answer_of(frames)
     # The prior turn is replayable as ordinary history; nothing special-cases it.
-    assert george_loop._seed_history(history, {})
+    assert bob_loop._seed_history(history, {})
 
 
 # ---------------------------------------------------------------------------
@@ -286,17 +286,17 @@ def _drive_drawn(monkeypatch, texts, rows=ROWS):
     """One read that gets charted, then the scripted answers."""
     fake = FakeClient([[_ToolUse("tu-1", "get_sales", {"group_by": "store", "date_range": "last_week"})]]
                       + [[_TextBlock(t)] for t in texts])
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
     StubLog.instances.clear()
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
 
     async def fake_read(name, args):
         return ({"rows": list(rows), "meta": {**META, "row_count": len(rows)}}, None, 3)
 
-    monkeypatch.setattr(george_loop, "_call_tool", fake_read)
+    monkeypatch.setattr(bob_loop, "_call_tool", fake_read)
 
     async def collect():
-        return [f async for f in george_loop.run("how did the shops do?")]
+        return [f async for f in bob_loop.run("how did the shops do?")]
 
     return asyncio.run(collect()), fake.messages.requests
 
@@ -315,7 +315,7 @@ def _standing_answer(frames) -> str:
 
 
 # ONE SENTENCE CARRYING THE FIGURE ITS CLAIM IS ABOUT. Allowed since P1.c
-# (2026-09-14): everything George reads is drawn, so at 0 every figure he could
+# (2026-09-14): everything Bob reads is drawn, so at 0 every figure he could
 # cite was corrected out and the standing answers carried none at all.
 CLAIM = "OPUS took ₱61,500.50 last week, and that is the week — Rockwell never got close."
 # ONE PAST THE ALLOWANCE, WHICH IS THE RECITATION THE GATE IS FOR. Since

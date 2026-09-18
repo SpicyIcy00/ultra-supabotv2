@@ -1,9 +1,9 @@
 """
-Record one real read per shape George can draw (P2S.3).
+Record one real read per shape Bob can draw (P2S.3).
 
 WHY. The card's done-when is "each shape has a golden render test off recorded
 rows", and no eval has ever recorded a read grouped by two things — store by
-hour, store by category, store by week — because George has never had a shape
+hour, store by category, store by week — because Bob has never had a shape
 to draw one as. So this runs the vetted tools directly, read-only, with no
 model in the loop, and writes what they returned — rows and `meta` whole — to
 `frontend/src/room/__fixtures__/vocab-reads.json`. The golden tests

@@ -2,7 +2,7 @@
  * THE CLAIM IS A HIGHLIGHT, AND THIS IS WHAT MAKES IT ONE.
  *
  * P1.f gave the reading three slots — claim, caveat, next. Two of them are
- * lines George writes; the CLAIM is not. It is the few words of his answer
+ * lines Bob writes; the CLAIM is not. It is the few words of his answer
  * that ARE the point, and the surface lights them where he said them.
  *
  * That is the whole of why a text channel is safe here. A slot that drew a

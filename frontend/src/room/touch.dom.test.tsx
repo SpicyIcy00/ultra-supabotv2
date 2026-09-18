@@ -30,7 +30,7 @@ const CAVEATS = runs.find((r) => r.run === 'dogfood-remainder-caveats/caveats')!
 function drawRecorded(run: { calls: Call[] }, seq: number, kind: string, on?: Partial<TileActions>) {
   const actions: TileActions = { open: vi.fn(), pick: vi.fn(), why: vi.fn(), patch: vi.fn(), retune: vi.fn(), ...on };
   const turn = {
-    role: 'george', text: '', thinking: '', at: '2026-09-13T15:18:00Z',
+    role: 'bob', text: '', thinking: '', at: '2026-09-13T15:18:00Z',
     toolCalls: run.calls.map((c) => ({ seq: c.seq, tool: c.tool, arguments: {}, result: c.result })),
   } as unknown as AnswerTurn;
   const call = run.calls.find((c) => c.seq === seq)!;

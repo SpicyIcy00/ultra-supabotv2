@@ -4,7 +4,7 @@
  *
  * The room speaks in two faces and they mean different things:
  *
- *   THE PROSE FACE (`--sans`, the card's "serif") is what George says and what
+ *   THE PROSE FACE (`--sans`, the card's "serif") is what Bob says and what
  *   a tool says in words it wrote to be read. It is a voice with a point of
  *   view — it can be wrong, and it is read as an argument.
  *   THE RECEIPT FACE (`--mono`) is what the frames carried: a source table, a
@@ -140,7 +140,7 @@ const SAID = 'Rockwell is down ₱18,400 on last week, and it is basket size '
 
 /** Three reads, one refusal and a label call — every shape a line can take. */
 const TURN: AnswerTurn = {
-  role: 'george',
+  role: 'bob',
   text: SAID,
   thinking: '',
   at: '2026-09-14T08:00:00Z',

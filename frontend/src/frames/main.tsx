@@ -3,7 +3,7 @@
  *
  * `ops/frames.py` opens `frames.html?scene=…&rail=open|closed` in headless
  * Chrome and screenshots it beside the same scene of the design
- * (`ops/ideal/george-ahead-of-me.html`). NOW.md, 2026-09-17: nine cards closed
+ * (`ops/ideal/bob-ahead-of-me.html`). NOW.md, 2026-09-17: nine cards closed
  * with "nobody has seen it in a browser"; every Phase 2S card is held by
  * pixels instead, and this is what the pixels are taken of.
  *
@@ -21,7 +21,7 @@ import ReactDOM from 'react-dom/client';
 import axios, { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { GeorgeCtx, type GeorgeContext } from '../components/george/georgeContext';
+import { BobCtx, type BobContext } from '../components/bob/bobContext';
 import { useAuthStore } from '../stores/authStore';
 import Room from '../room/Room';
 import scenes from './scenes.json';
@@ -46,13 +46,13 @@ const scene = all.find((s) => s.scene === params.get('scene')) ?? all[0];
 
 try {
   localStorage.clear();
-  localStorage.setItem('george.side', params.get('rail') === 'closed' ? 'closed' : 'open');
+  localStorage.setItem('bob.side', params.get('rail') === 'closed' ? 'closed' : 'open');
   const theme = params.get('theme');
   if (theme === 'light' || theme === 'dark') localStorage.setItem('room-theme', theme);
 } catch { /* the frame still draws */ }
 
 useAuthStore.setState({
-  user: { id: 'frames', username: 'owner', display_name: 'You', role: 'owner', allowed_pages: ['george'] },
+  user: { id: 'frames', username: 'owner', display_name: 'You', role: 'owner', allowed_pages: ['bob'] },
 });
 
 const desk = (scenes as { desk: unknown }).desk;
@@ -78,7 +78,7 @@ const blocks = lit ? scene.blocks.map((b) => ({ ...b, emphasise: lit })) : scene
 const turns = [
   { role: 'user', text: scene.question, at: scene.at },
   {
-    role: 'george', text: scene.answer, thinking: '', at: scene.at,
+    role: 'bob', text: scene.answer, thinking: '', at: scene.at,
     toolCalls: scene.calls, defaultComposition: { blocks }, notices: scene.notices ?? [],
     ...(scene.reading ? { reading: scene.reading } : {}),
     ...(scene.composed?.length ? { composition: { blocks: scene.composed } } : {}),
@@ -86,11 +86,11 @@ const turns = [
 ];
 
 const noop = () => {};
-const george = {
+const bob = {
   turns, busy: false, threadId: null, storedThreadId: null,
   open: noop, ask: async () => {}, reset: noop, cancel: noop, setComposer: noop,
   presence: 'idle', live: null, composer: null,
-} as unknown as GeorgeContext;
+} as unknown as BobContext;
 
 // ?voice=listening (P2S.5): a recogniser that hears "compare these two" and
 // keeps listening, so `ops/frames.py --voice` can hold the mic and shoot the
@@ -118,13 +118,13 @@ const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={client}>
-      <GeorgeCtx.Provider value={george}>
-        <MemoryRouter initialEntries={['/george']}>
+      <BobCtx.Provider value={bob}>
+        <MemoryRouter initialEntries={['/bob']}>
           <Routes>
             <Route path="*" element={<Room />} />
           </Routes>
         </MemoryRouter>
-      </GeorgeCtx.Provider>
+      </BobCtx.Provider>
     </QueryClientProvider>
   </React.StrictMode>,
 );

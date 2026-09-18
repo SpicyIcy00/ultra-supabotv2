@@ -1,6 +1,6 @@
 # Local verification record — 2026-09-08
 
-Branch: `integration/george-v1`, based on
+Branch: `integration/bob-v1`, based on
 `dbc7311256e60f38c3d8bbdf83ce708983fd6a6d`.
 Runtime/CI changes tested at `2e450cc`; the following commit adds documentation
 only. Obtain the final documentation-inclusive SHA with `git rev-parse HEAD`.
@@ -20,7 +20,7 @@ only. Obtain the final documentation-inclusive SHA with `git rev-parse HEAD`.
 Contract tests are a subset of the pure suite, not 746 additional distinct tests.
 Pure coverage includes 22 deployment, 99 legacy Operations authorization,
 102 workflow, 35 Page Workshop, 28 Page writer, 30 Page reader and 37 Page context
-tests. The remaining existing George contracts, parser and presentation tests
+tests. The remaining existing Bob contracts, parser and presentation tests
 also execute in the pure suite. No DB/model credentials were needed.
 
 `npx tsc -b --noEmit`: PASS, including routing middleware/configuration types.
@@ -46,7 +46,7 @@ The online Page migration completed on both rehearsal databases. The dedicated
 downgrade target then completed `q1r2s3t4u5v6 -> p0q1r2s3t4u5`. Independent
 verification passed on all three final states: exact Pin and conversation UUIDs,
 tool calls, owner-separated same-title Pages, Ungrouped Pins, dense position,
-restored legacy grouping, application ownership, `george_ro` read-only/no-George
+restored legacy grouping, application ownership, `george_ro` read-only/no-Bob
 access, and `george_log` INSERT-only/no-read access.
 
 The full read/golden suite was also attempted to define the synthetic boundary:

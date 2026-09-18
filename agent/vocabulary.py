@@ -19,7 +19,7 @@ WHAT IT DOES WHEN THE ROWS CANNOT MAKE THE SHAPE: nothing here refuses.
 never a value, which is the line P1.a drew between coercing and refusing.
 
 ONLY WHEN ASKED. Three shapes read worse than a ranking for what they show —
-pie, treemap, gauge — and George never picks them on his own. "Asked" is the
+pie, treemap, gauge — and Bob never picks them on his own. "Asked" is the
 person's question naming the shape (`asked_by`), or the object already being
 drawn that way on the board: "make that one a pie" makes a pie that STAYS one
 when a later turn touches it.

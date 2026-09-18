@@ -1,5 +1,5 @@
 """
-George — purchasing tool.
+Bob — purchasing tool.
 
 One public function: get_purchasing().
 

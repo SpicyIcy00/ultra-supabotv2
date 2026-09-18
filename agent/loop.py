@@ -1,5 +1,5 @@
 """
-George — the agent loop.
+Bob — the agent loop.
 
 Model -> tool call -> answer. No planner, no decomposition, no sub-agents
 (CLAUDE.md rule 5). Depth lives in the tools, not here.
@@ -22,7 +22,7 @@ TWO DATABASE IDENTITIES, DELIBERATELY
 Neither can do the other's job. See agent/sql/george_log_role.sql.
 
 AND A WRITE SURFACE THAT IS NOT A THIRD CONNECTION
-George can pin his own answer when asked (`pin_answer`). That is a write, and
+Bob can pin his own answer when asked (`pin_answer`). That is a write, and
 neither role above can perform it: george_ro is read-only, and george_log has
 INSERT without SELECT, so it could not read the pin count or the page list the
 write needs. Granting either of them more would hand one identity both the
@@ -119,7 +119,7 @@ PREFIX_TTL = "1h"
 # Rows handed to the model per tool result. meta aggregates are NEVER truncated.
 #
 # NOT A COST LEVER, and it was refused as one on 2026-09-13 (P0.6). It decides
-# what George can SEE: cutting it turns readings into "this is a sample". The
+# what Bob can SEE: cutting it turns readings into "this is a sample". The
 # truncation that does happen is honest — he is told it is a sample and told not
 # to total visible rows, and meta aggregates are never truncated — but that is
 # why it is safe, not a reason to make it smaller.
@@ -183,13 +183,13 @@ TOOL_FUNCTIONS: dict[str, Callable[..., dict]] = {
     "get_attention": attention.get_attention,
     # One object, opened up. Writes no SQL — it calls the reads above and keeps
     # each result whole, so what a person sees when they TAP a shop and what
-    # George sees when he reasons about one are the same figures from the same
+    # Bob sees when he reasons about one are the same figures from the same
     # definitions (tools/objects.py).
     "get_object": objects.get_object,
 }
 
 # The one tool that reads nothing. It says what the person SEES — which reads,
-# as which kind of object, at what weight — and what George is about to SAY,
+# as which kind of object, at what weight — and what Bob is about to SAY,
 # in the reading's three slots: claim, caveat, next. The loop validates all of
 # it against the executed set and metrics.yaml before any of it reaches a
 # client (agent/compose.py, agent/reading.py).
@@ -558,7 +558,7 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
         # A belief is a list of objects, and the schema has to SAY so. Until
         # 2026-09-10 this fell through to {"type": "string"}, the model
         # obediently sent the list as a JSON string, and the validator saw a
-        # string's characters — so George formed views in prose every turn
+        # string's characters — so Bob formed views in prose every turn
         # and held none (`beliefs held: 0` across the whole dogfood).
         from agent import beliefs as _beliefs
         _defs = _load_defs()
@@ -815,7 +815,7 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
         # time, weekdays, and sentences. Declared HERE as well as in the tool
         # because `days` is a list[int] and would otherwise fall through the
         # int branch below and arrive as a single integer — the same class of
-        # bug that made George hold zero beliefs for a fortnight.
+        # bug that made Bob hold zero beliefs for a fortnight.
         if pname == "action":
             return {"type": "string", "enum": list(write_tools.STANDING_ACTIONS)}
         if pname == "days":
@@ -839,7 +839,7 @@ def _param_schema(fn_name: str, pname: str, annotation: Any, enums: dict) -> dic
 
     # Integers must be declared as integers. Without this branch top_n fell
     # through to "string", the model dutifully sent "10", and validate_top_n
-    # rejected it as a str — so the parameter was unusable and George brute-
+    # rejected it as a str — so the parameter was unusable and Bob brute-
     # forced instead (25 get_stock calls for one out-of-stock ranking). The
     # tool-level tests missed it because they call the functions directly with
     # real ints and never see the schema the model is given.
@@ -863,7 +863,7 @@ def injected_surface(ctx: WriteContext) -> dict[str, Callable[..., Any]]:
     Per TOOL, not per session: a caller that injected a pin writer but no
     workflow writer is offered pin_answer and NOT save_workflow. Offering a tool
     that would refuse every call teaches the model to try it and teaches the
-    user that George is broken.
+    user that Bob is broken.
     """
     surface: dict[str, Callable[..., Any]] = {}
     for name, fn in write_tools.WRITE_TOOL_FUNCTIONS.items():
@@ -897,7 +897,7 @@ def build_tool_schemas(defs: Optional[dict] = None,
     another workflow.
 
     include_write merges the whole write registry regardless of capability, for
-    the /george/tools introspection endpoint — "what can George do" is a
+    the /bob/tools introspection endpoint — "what can Bob do" is a
     question about the surface, not about one session. A real session passes
     `extra` instead; see injected_surface.
 
@@ -988,7 +988,7 @@ def build_tool_schemas(defs: Optional[dict] = None,
 # estate and none of them said so. metrics.yaml is now the only place any of
 # them comes from: stores.active_retail, stores.pending_retail,
 # stores.warehouse. Open a store, move it up in the yaml, and the sentence
-# George is given changes with it.
+# Bob is given changes with it.
 #
 # Editing the prompt text itself therefore costs exactly ONE cache miss per
 # deploy — the first request after the new bytes go live writes a fresh prefix
@@ -997,7 +997,7 @@ def build_tool_schemas(defs: Optional[dict] = None,
 # --------------------------------------------------------------------------
 
 def _scope_sentence(defs: dict) -> str:
-    """Who George is and who he works for — the shops counted and named from the definitions, never typed."""
+    """Who Bob is and who he works for — the shops counted and named from the definitions, never typed."""
     active = len(req(defs, "stores.active_retail"))
     pending = len(req(defs, "stores.pending_retail"))
     warehouses = [s.get("display_name") or s["name"] for s in req(defs, "stores.warehouse")]
@@ -1015,7 +1015,7 @@ def _scope_sentence(defs: dict) -> str:
         if pending else ""
     )
     return (
-        f"You are George. You work for Aji Ichiban — {active} active retail candy "
+        f"You are Bob. You work for Aji Ichiban — {active} active retail candy "
         f"stores in the Philippines, the {', '.join(warehouses)} "
         f"warehouse, and the {', '.join(vending)} vending machines.{pending_part}"
     )
@@ -1048,7 +1048,7 @@ def _grouping_sentence(defs: dict) -> str:
 
     The tool schema offers `group_by` as the UNION of every metric's
     `valid_group_by` — it has to, because one enum cannot depend on another
-    argument's value — so George was offered `product` for net_sales and then
+    argument's value — so Bob was offered `product` for net_sales and then
     refused for it. The investigation ladder localizes by product, so the one
     move it is built around looked unavailable until a call had already
     failed. This states the matrix once, from `metrics.<m>.valid_group_by`,
@@ -1090,7 +1090,7 @@ def _opening_sentence(defs: dict) -> str:
     WHAT OPENS AN INVESTIGATION, built from metrics.yaml `opens_when`.
 
     Since P2S.6 (2026-09-18) it opens with what is SHOWN, not what is asked:
-    anything George shows that moved is investigated before he shows it.
+    anything Bob shows that moved is investigated before he shows it.
 
     Before that it read '"Why" is an investigation', which gated the
     ladder on a word: "analyze tradsnax per store" asks for the same work and
@@ -1115,7 +1115,7 @@ def _depth_sentence(defs: dict) -> str:
     a call rather than in the prompt (voice.budget's own route).
 
     FOCUSED read "the smallest set that completely answers it" and nothing
-    else, so George stopped at one read for "analyze tradsnax per store" and
+    else, so Bob stopped at one read for "analyze tradsnax per store" and
     was inside his allowance doing it (P2.m). BROAD has named its second read
     since UNDERSTAND; this is FOCUSED's, from the same file.
     """
@@ -1179,7 +1179,7 @@ INVESTIGATING_SECTION = _investigating_section(_load_defs())
 def _pages_addenda(defs: dict) -> dict[str, str]:
     """
     What the prompt used to say about pages, on the two tools that make them
-    — from metrics.yaml `pages.workshop`, so the bounds George is told are
+    — from metrics.yaml `pages.workshop`, so the bounds Bob is told are
     the bounds the tools enforce, read at the moment of building a page.
     """
     w = req(defs, "pages.workshop")
@@ -1470,7 +1470,7 @@ class _SetMember:
     It answers to the model's tool_use id — the model made ONE call and gets
     one result — and to everything else it is an ordinary call: its own seq,
     its own frames, its own object on the board, its own receipts, pinnable
-    as the call it is. So asking as one changes how many calls George
+    as the call it is. So asking as one changes how many calls Bob
     writes, and nothing about what is read, drawn or kept.
 
     `set_name` is what the model asked for (a set's name, or the one-call
@@ -1504,7 +1504,7 @@ def _expand_set(b: Any, defs: dict, outer: Optional[_SetMember] = None) -> list:
 def _expand_sets(tool_uses: list, defs: dict) -> list:
     """
     Each call asked as one, replaced by the reads it names. Nothing computes
-    across them: each is the tool's own read, exactly as if George had
+    across them: each is the tool's own read, exactly as if Bob had
     written it himself.
 
     A one-call tool (get_change, get_stock_health) becomes its listed reads
@@ -1861,7 +1861,7 @@ def _drawn_on_the_board(blocks: list[dict], charted: list[dict]) -> set[str]:
     caveat already on screen had to be reproduced in prose to pass. Measured
     over 51 answers: one over data carrying four or more notices ran 386 words
     against 137 for one carrying none, and nearly all of the difference was
-    caveat. George was not being verbose; he was discharging a check.
+    caveat. Bob was not being verbose; he was discharging a check.
 
     WHAT IS STILL REQUIRED. A notice from a read that NOTHING on the board
     draws is not on screen at all, and stays mandatory in prose — which is the
@@ -1891,7 +1891,7 @@ def _drawn_on_the_board(blocks: list[dict], charted: list[dict]) -> set[str]:
 
 def _his(blocks: list[dict]) -> list[dict]:
     """
-    The blocks GEORGE composed, without the loop's defaults (P2S.7). Since the
+    The blocks BOB composed, without the loop's defaults (P2S.7). Since the
     turn's board became one list, the defaults ride in it flagged — and the
     notice gate must never be fed one (P1.b): a caveat is discharged by a
     person deciding to draw the read that raised it, not by the machine.
@@ -1937,7 +1937,7 @@ def _pin_claim(answer: str, defs: dict) -> Optional[str]:
     """
     Whether an answer says a pin was made ("claimed") or will be ("promised").
 
-    Used only when NO pin was made. A pin is one of the two things George can
+    Used only when NO pin was made. A pin is one of the two things Bob can
     say that change something outside the conversation, so it is worth checking
     against what actually happened. Both failures were observed live on the same
     question a run apart: "then pinned it" with no tool call, and "I'll run the
@@ -1966,7 +1966,7 @@ def _page_claim(answer: str, defs: dict, committed: Optional[set[str]] = None) -
     renamed, added to, moved, removed from or reordered.
 
     Its own vocabulary (pages.claim_check), page-specific on purpose: "moved"
-    alone is a word INVESTIGATING asks George to use about drivers, so a
+    alone is a word INVESTIGATING asks Bob to use about drivers, so a
     claim here names the page act — "moved it to", "renamed the page".
     """
     spec = dict(req(defs, "pages.claim_check"))
@@ -1990,7 +1990,7 @@ def _volunteered(answer: str, defs: dict) -> list[str]:
     That is a deliberate limit, not an oversight. The alternative is deciding
     from prose which sentences answered the question and which went beyond it,
     which is a judgement the loop has no basis for. Counting the announced ones
-    catches the failure that actually happens — George warming to his theme and
+    catches the failure that actually happens — Bob warming to his theme and
     appending three of them — and leaves the honest single line alone.
 
     It does NOT verify that a volunteered figure came from a tool result.
@@ -2026,7 +2026,7 @@ def _volunteered(answer: str, defs: dict) -> list[str]:
 # read as a mapping and not as a set.
 #
 # NOT A PLANNER (CLAUDE.md rule 5). It chooses one request parameter. It does
-# not decide what George reads, which tools he holds or what he may say, and
+# not decide what Bob reads, which tools he holds or what he may say, and
 # every trust guarantee in this system is held by the loop, the definitions and
 # the tools, none of which can see this value.
 # --------------------------------------------------------------------------
@@ -2114,7 +2114,7 @@ def _effort_unsupported(exc: BaseException) -> bool:
 #
 # A sentence that recites a drawn figure is removed by DELETING IT. Deletion is
 # exact, costs nothing, and cannot introduce anything: no numeral, no caveat
-# and no claim can appear that George did not write. What it can do is take
+# and no claim can appear that Bob did not write. What it can do is take
 # something away, so both guards below are about what must survive.
 # --------------------------------------------------------------------------
 
@@ -2196,7 +2196,7 @@ def _claim(answer: str, spec: dict) -> Optional[str]:
     Whether an answer asserts a write happened ("claimed") or will ("promised").
 
     A phrase preceded by a negation inside the window is a DENIAL, not a
-    statement: "I could not pin that" and "I won't save it" are George behaving
+    statement: "I could not pin that" and "I won't save it" are Bob behaving
     correctly and must not be corrected. Claims are reported ahead of intents,
     since an answer that does both has already asserted the stronger thing.
     """
@@ -2271,7 +2271,7 @@ def _answer_payload(charted: Optional[list], calls: Optional[list],
                     actions: Optional[list] = None) -> Optional[str]:
     """
     The answer post's payload: the charted snapshot, the calls behind it, and
-    the page George read to produce it.
+    the page Bob read to produce it.
 
     NONE when there is nothing to carry, exactly as before `calls` existed,
     so a post with no figures and no reads stores no payload rather than an
@@ -2283,7 +2283,7 @@ def _answer_payload(charted: Optional[list], calls: Optional[list],
     `page_context` is the compact evidence of a page read — which page, when,
     which pins with what status, what was not read and why — and NOT the
     replayed results, which are already in george.tool_calls. It is what lets
-    a reopened thread show what George considered, and what lets the thread's
+    a reopened thread show what Bob considered, and what lets the thread's
     page scope be restored after a reload (pageScope.ts).
     """
     payload: dict = {}
@@ -2306,7 +2306,7 @@ def _answer_payload(charted: Optional[list], calls: Optional[list],
     if actions:
         payload["actions"] = actions
     # The composition that stood (2026-09-10): the validated blocks, so a
-    # reopened thread draws the screen George composed, from the charted rows
+    # reopened thread draws the screen Bob composed, from the charted rows
     # beside it, and never a layout the client derived.
     if composition or default_composition:
         payload["composition"] = {"blocks": composition or []}
@@ -2476,7 +2476,7 @@ class ConversationLog:
         A turn that produced no answer writes only the question, exactly as
         the backfill does and exactly as chat_history already renders it: a
         crashed turn is a question nobody answered, which is true and worth
-        seeing, rather than an empty answer that implies George said nothing.
+        seeing, rather than an empty answer that implies Bob said nothing.
 
         Both are PRIVATE. A person's question and its answer belong to them
         until they share it (CLAUDE.md, "The river"), and the loop never
@@ -2514,7 +2514,7 @@ class ConversationLog:
         if not answer:
             return
 
-        # author_user is NULL because GEORGE wrote it; owner_user is the person
+        # author_user is NULL because BOB wrote it; owner_user is the person
         # who asked, because it is theirs to see and theirs to share. Those two
         # facts were one column until 2026-09-05, and every answer post was
         # invisible to everybody as a result (alembic p0q1r2s3t4u5).
@@ -2523,7 +2523,7 @@ class ConversationLog:
             "(id, thread_id, parent_id, kind, author, author_user, owner_user, "
             " visibility, body, payload, receipts, notices, conversation_id, "
             " created_at) "
-            "VALUES (%s,%s,%s,'answer','george',NULL,%s,'private',%s,%s,%s,%s,%s,%s)",
+            "VALUES (%s,%s,%s,'answer','bob',NULL,%s,'private',%s,%s,%s,%s,%s,%s)",
             (
                 answer_id, self.thread_id, question_id, owner, answer,
                 # The chart, so it survives a reload.
@@ -2630,30 +2630,30 @@ def _reset_answer(reason: str) -> str:
 MAX_HISTORY_TURNS = 20
 MAX_HISTORY_TEXT = 20000
 
-# What precedes a history that opens with George.
+# What precedes a history that opens with Bob.
 #
-# THREADS GEORGE STARTS ARE REAL STARTING POINTS. The morning brief, a workflow
-# run, an approval: each is a post George wrote with nobody having asked, and
+# THREADS BOB STARTS ARE REAL STARTING POINTS. The morning brief, a workflow
+# run, an approval: each is a post Bob wrote with nobody having asked, and
 # a person replying to it sends it back as the first turn of the history — a
-# George turn, before any user turn. The API requires the first message to be
+# Bob turn, before any user turn. The API requires the first message to be
 # the user's, and until 2026-09-07 a leading assistant turn was simply dropped,
-# so the one thing the reply was ABOUT was the one thing George could not see.
+# so the one thing the reply was ABOUT was the one thing Bob could not see.
 #
-# So a leading George turn is kept, and this line is put in front of it as the
+# So a leading Bob turn is kept, and this line is put in front of it as the
 # user's. It is a statement of fact about the thread, not a question and not
-# a paraphrase of anything: the brief follows it verbatim, as George's own
+# a paraphrase of anything: the brief follows it verbatim, as Bob's own
 # words, and the person's actual question comes after. Nothing here invents
 # content, and the constant is exported so the suite can hold the client and
 # the loop to the same words.
-THREAD_OPENER = "[This thread opened with the post below, written by George.]"
+THREAD_OPENER = "[This thread opened with the post below, written by Bob.]"
 
 
 def _page_sentence(page_context: Optional[str], page_scope: Optional[dict],
                    readable: bool, writable: bool = False) -> Optional[str]:
     """
-    What George is told about where the user is.
+    What Bob is told about where the user is.
 
-    A George page in scope, with a reader to read it, is stated as a page he
+    A Bob page in scope, with a reader to read it, is stated as a page he
     CAN read and HAS NOT read — the tool is his to call when the question
     needs it, and a question that does not ("what's ₱ to the dollar") should
     not cost a replay. With a writer as well, he is told it is the page
@@ -2687,9 +2687,9 @@ def _page_sentence(page_context: Optional[str], page_scope: Optional[dict],
 
 
 def _work_sentence(history: Optional[list], defs: dict) -> Optional[str]:
-    """The surface the newest George turn left on screen, from its calls."""
+    """The surface the newest Bob turn left on screen, from its calls."""
     for turn in reversed(history or []):
-        if turn.get("role") == "george":
+        if turn.get("role") == "bob":
             return surface.work_sentence(turn.get("tool_calls") or [], defs)
     return None
 
@@ -2702,7 +2702,7 @@ def _strip_history_marker(answer: str) -> tuple[str, bool]:
     """
     The seeded call list, if the model wrote one of its own.
 
-    2026-09-16: every prior George turn in the history ended with the marker
+    2026-09-16: every prior Bob turn in the history ended with the marker
     below, so the model produced one too — and the owner's screen showed a
     good answer followed by `[Calls behind this answer: compose({...}),
     record_belief({...})]`. The marker is this file's own template, so it is
@@ -2718,9 +2718,9 @@ def _seed_history(history: Optional[list], executed: dict) -> list[dict]:
 
     Mutates `executed`. Returns messages ready to precede the new question:
     consecutive same-role turns merged, blank turns dropped, and a leading
-    George turn kept behind THREAD_OPENER — the API requires a user message
+    Bob turn kept behind THREAD_OPENER — the API requires a user message
     first, and the post a person is replying to must not be the one thing
-    George cannot see.
+    Bob cannot see.
 
     WHERE THE CALL LIST GOES (2026-09-16). It used to close every assistant
     turn, and a model shown twenty answers that all end the same way ends its
@@ -2733,7 +2733,7 @@ def _seed_history(history: Optional[list], executed: dict) -> list[dict]:
     messages: list[dict] = []
     carry = ""
     for turn in (history or [])[-MAX_HISTORY_TURNS:]:
-        role = "assistant" if turn.get("role") == "george" else "user"
+        role = "assistant" if turn.get("role") == "bob" else "user"
         content = (turn.get("text") or "").strip()[:MAX_HISTORY_TEXT]
 
         calls = turn.get("tool_calls") or []
@@ -2761,7 +2761,7 @@ def _seed_history(history: Optional[list], executed: dict) -> list[dict]:
         if messages and messages[-1]["role"] == role:
             messages[-1]["content"] += "\n\n" + content
         elif not messages and role == "assistant":
-            # A thread George opened. Kept, behind a user line that says so.
+            # A thread Bob opened. Kept, behind a user line that says so.
             messages.append({"role": "user", "content": THREAD_OPENER})
             messages.append({"role": role, "content": content})
         else:
@@ -2810,21 +2810,21 @@ async def run(
         question: what the user asked.
         user_id: who asked, for the conversation log. The caller takes this from
             a verified identity; nothing here or in the model can set it.
-        page_context: the page the user is on. George is available on every page
+        page_context: the page the user is on. Bob is available on every page
             and receives that page as context (CLAUDE.md, UI rule 1), so it is
             given to the model as context on the question — NOT in the system
             prompt, which must stay byte-stable for the cache.
-        pin_writer: if supplied, George can pin his own answers. This is the ONLY
+        pin_writer: if supplied, Bob can pin his own answers. This is the ONLY
             way a write reaches the loop; without it the write tool is not in the
             schema at all. See agent/write_tools.py.
         history: the conversation so far, replayed by the client as
-            [{role: "user"|"george", text, tool_calls}]. Without it every
+            [{role: "user"|"bob", text, tool_calls}]. Without it every
             question stands alone and "pin that" has no referent. The calls it
             carries seed the executed set — see _seed_history.
-        workflow_writer: if supplied, George can save agreed logic as a
+        workflow_writer: if supplied, Bob can save agreed logic as a
             versioned workflow. Injected exactly as pin_writer is, and gating
             exactly one tool: without it save_workflow is not in the schema.
-        workflow_runner: if supplied, George can run a saved workflow, including
+        workflow_runner: if supplied, Bob can run a saved workflow, including
             backtesting one against a past window. A READ, but injected all the
             same — the workflows live in a schema george_ro cannot see.
         thread_id: the chat this question continues. None starts a new chat,
@@ -2832,7 +2832,7 @@ async def run(
             `start` frame so the client can send it on the next turn. The
             caller verifies ownership before passing one in; the loop cannot,
             because its logging role cannot read.
-        beliefs: what George currently BELIEVES about the business, built by
+        beliefs: what Bob currently BELIEVES about the business, built by
             the caller (backend/app/services/belief_store.as_block). Views,
             not figures: they shape the turn, so they arrive with the
             question rather than being fetched during it.
@@ -2857,7 +2857,7 @@ async def run(
         parent_id: the post this question replies to, inside thread_id, or
             None. Written onto the question post as given; the caller verified
             it is in the thread and visible, because the loop cannot read.
-        page_reader: if supplied, George can read the page the user is on —
+        page_reader: if supplied, Bob can read the page the user is on —
             its pins and, on request, their current figures. A READ, injected
             like workflow_runner because the pins live in a schema george_ro
             cannot see, and bound in the web process to the authenticated
@@ -2866,11 +2866,11 @@ async def run(
         page_scope: the identity of that page, as {"page_id": str | None,
             "name": str | None} — a null page_id is the ungrouped pins. Read
             out to the model as context on the question in place of the
-            page_context sentence, so George is told he is on a page he can
+            page_context sentence, so Bob is told he is on a page he can
             read and has not read yet. The id itself never reaches the
             model; the reader and writer are bound to it on the server.
             Never parsed out of page_context: the two travel separately.
-        page_writer: if supplied, George can create and edit the user's
+        page_writer: if supplied, Bob can create and edit the user's
             pages — create_page and edit_page — through the application
             role, closed over the owner and the page in scope. Without it
             neither tool is in the schema. See agent/write_tools.py.
@@ -3020,7 +3020,7 @@ async def run(
     # investigation the prompt asks for. The owner: "cost should not hold us
     # back in functionality". Drawing and remembering are not searching.
     executed_reads = 0
-    # AND WHAT IT COUNTS THEM IN SINCE P2S.10: the calls George MADE that
+    # AND WHAT IT COUNTS THEM IN SINCE P2S.10: the calls Bob MADE that
     # read something, a call asked as one counting once. A get_change is
     # seven reads and one decision; the cap guards against enumerating a
     # subject per call (25 calls on one question, 2026-09-04), which a
@@ -3086,7 +3086,7 @@ async def run(
     # PROSE WRITTEN BESIDE A COMPOSE IS THE ANSWER, AND IT OUTLIVES ITS ROUND
     # (P2S.7, 2026-09-18). A round that only composes, labels or writes is not
     # narration — the reset below fires only before a READ — so its words stay
-    # on screen. But `answer` was the LAST round's text alone: George, told to
+    # on screen. But `answer` was the LAST round's text alone: Bob, told to
     # compose as he goes, wrote his answer beside his final compose and a
     # closing line in the next round, and the gates, the notice check and the
     # stored post saw only the closing line (verification/p2s7-gate.json,
@@ -3104,13 +3104,13 @@ async def run(
     # prose that still states the old figure. See ConversationLog.posts.
     charted: list[dict] = []
     # EVERY result this turn, complete or capped, for the grounding gate: a
-    # figure George cites may come from a read too large to chart whole.
+    # figure Bob cites may come from a read too large to chart whole.
     turn_results: list[dict] = []
     # Figures earlier answers in this thread already carried. A follow-up may
     # cite what the turn before it established; those rows are not replayed
     # into this request, but their figures were grounded when they were said.
     history_figures: set[float] = {
-        n for t in (history or []) if t.get("role") == "george"
+        n for t in (history or []) if t.get("role") == "bob"
         for n, _d in _prose.figures(t.get("text") or "")
     }
 
@@ -3160,12 +3160,12 @@ async def run(
 
     # THE BOARD BEFORE HE HAS SPOKEN (P1.b, 2026-09-13). What the reads that
     # have landed would look like if nobody had composed them — validated by
-    # the same gate, sent as its own frame, and superseded by George's
+    # the same gate, sent as its own frame, and superseded by Bob's
     # composition the moment it arrives.
     #
     # SEPARATE FROM composition_recorded ON PURPOSE, and it is a trust
     # boundary rather than tidiness: `_drawn_on_the_board` exempts a caveat
-    # from prose because an object George composed draws the read that raised
+    # from prose because an object Bob composed draws the read that raised
     # it. A default drawing that read would discharge the same check with
     # nobody having decided anything, so the notice gate is fed his blocks
     # alone and this list never reaches it.
@@ -3176,7 +3176,7 @@ async def run(
     # moves nothing, so every batch now draws what it brought
     # (default_composition.compose_added), and the reason for the latch stands.
 
-    # What George read of the page, for the ANSWER POST and the UI: compact
+    # What Bob read of the page, for the ANSWER POST and the UI: compact
     # evidence — which page, when, which pins with what status — never the
     # replayed results, which are the tool_calls log's. Merged across reads
     # in one turn; see merge_page_evidence.
@@ -3383,7 +3383,7 @@ async def run(
             # answer again from nothing.
             # ONLY A READ MAKES PROSE NARRATION (fixed 2026-09-12). This fired
             # on ANY tool_use, and `compose` is a tool_use — so the sentence
-            # George had just written was pulled off the screen and folded into
+            # Bob had just written was pulled off the screen and folded into
             # the activity disclosure every time he arranged the board. He
             # composes two to four times in a typical answer, and `compose` is
             # refused in 8 of the 12 eval questions, each refusal costing
@@ -3456,7 +3456,7 @@ async def run(
                     continue
 
                 # The same check for the other write. Only when a workflow
-                # writer exists: without one George cannot save, and correcting
+                # writer exists: without one Bob cannot save, and correcting
                 # him for saying so would be correcting the truth.
                 save = (
                     None if saves_made or workflow_writer is None
@@ -3495,7 +3495,7 @@ async def run(
                     continue
 
                 # The same check for the third write. Only when a page writer
-                # exists: without one George cannot change a page, and
+                # exists: without one Bob cannot change a page, and
                 # correcting him for saying so would be correcting the truth.
                 page_claim = (
                     None if page_writer is None
@@ -3549,7 +3549,7 @@ async def run(
                 #
                 # A recited sentence is now REMOVED rather than rewritten.
                 # Deletion is exact and one-way: it cannot introduce a numeral,
-                # a caveat or a claim George did not write. What it can do is
+                # a caveat or a claim Bob did not write. What it can do is
                 # take something away, so the two guards below are entirely
                 # about what has to survive it - a caveat, and a figure.
                 #
@@ -4027,7 +4027,7 @@ async def run(
                         "type": "text",
                         # WRITTEN FOR THE PERSON WHO READS THE ANSWER (P2S.7).
                         # It asked for "the single grouped or ranked call —
-                        # naming the tool and arguments", and George obeyed:
+                        # naming the tool and arguments", and Bob obeyed:
                         # verification/p2s6-gate-2.json's `analyze` printed
                         # `get_sales(metric='product_revenue', …)` to the owner
                         # under a numbered account of his own search — rule 9
@@ -4073,7 +4073,7 @@ async def run(
                 frame = {"seq": seq, "tool": b.name, "arguments": b.input}
                 if isinstance(b, _SetMember):
                     # Which call this read was asked as, so a count of what
-                    # George DECIDED to read can be made off the frames.
+                    # Bob DECIDED to read can be made off the frames.
                     first_of_call.setdefault(b.id, seq)
                     frame["one_call"] = {"of": first_of_call[b.id], "asked": b.set_name,
                                          **({"part": b.part} if b.part else {})}
@@ -4176,7 +4176,7 @@ async def run(
                 # "read 5 of 7" line from this, never from the model's prose.
                 # Deliberately NOT added to the executed set — reading a page
                 # makes nothing on it pinnable; a pin is a call the user has
-                # watched George run in this conversation.
+                # watched Bob run in this conversation.
                 if (err is None and b.name == composite_tools.PAGE_CONTEXT_TOOL
                         and (result.get("meta") or {}).get("evidence")):
                     page_evidence = merge_page_evidence(
@@ -4356,7 +4356,7 @@ async def run(
                             + (f" — said: {r['said']!r}" if r.get("said") else "")
                             for r in said_rejected)
                         # Recorded as well as warned. A refused slot is a thing
-                        # George tried to say and could not, and the weekly
+                        # Bob tried to say and could not, and the weekly
                         # sweep is where a pattern of them would show up —
                         # a caveat he keeps putting a figure into is a prompt
                         # problem, and nothing here would otherwise say so.
@@ -4455,7 +4455,7 @@ async def run(
                     # Whether this call may become a pin: a READ tool that
                     # ran without error. Said by the loop so the client never
                     # decides from a name — a workflow run and a page read are
-                    # calls George made, and neither is a tile.
+                    # calls Bob made, and neither is a tile.
                     "pinnable": bool(not err and not is_duplicate and b.name in TOOL_FUNCTIONS),
                     # Which earlier call this one repeats, when it does. The
                     # row for it says "same as call N, not re-read".
@@ -4554,7 +4554,7 @@ async def run(
             # are in hand; the only thing missing is somebody saying what shape
             # they are, and waiting for the model to say it costs a whole round
             # trip with the screen empty. So the loop says it — through the
-            # same validator, in the same vocabulary — and George's own
+            # same validator, in the same vocabulary — and Bob's own
             # composition supersedes it when it arrives.
             #
             # AND IT KEEPS FILLING (P2S.7). Every batch's new reads are drawn,
@@ -4613,7 +4613,7 @@ async def run(
                                  f"reaching an answer."})
 
         if status == "ok" and seq == 0:
-            # George answering with no tool call is itself a smell worth logging.
+            # Bob answering with no tool call is itself a smell worth logging.
             log.gap("no_tool_call", question[:2000])
 
         # A TURN THAT SAID NOTHING (P1.c, 2026-09-14). The reading is the
@@ -4717,7 +4717,7 @@ async def run(
     # The full meta of the last tool result, so the answer can show where its
     # numbers came from, which filters were applied and when the data was read.
     #
-    # THIS FRAME WAS MISSING. useGeorgeStream has handled `receipts` and
+    # THIS FRAME WAS MISSING. useBobStream has handled `receipts` and
     # ReceiptsBlock has rendered snapshot_timestamp and filters_applied since
     # they were written, but nothing ever emitted it, so turn.receipts was
     # always undefined and the block never appeared. UI rules 3 and 6 ("every
@@ -4761,7 +4761,7 @@ async def run(
         # from this turn's own record without reaching one.
         "executed_calls": seq - duplicate_reads,
         "duplicate_reads": duplicate_reads,
-        # The reading calls George MADE, a call asked as one counting once —
+        # The reading calls Bob MADE, a call asked as one counting once —
         # what the convergence cap counts (P2S.10).
         "asked_reads": len(asked_reads),
         "status": status,

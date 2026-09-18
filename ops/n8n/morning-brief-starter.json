@@ -1,5 +1,5 @@
 {
-  "name": "George — morning brief (06:00 Manila)",
+  "name": "Bob — morning brief (06:00 Manila)",
   "nodes": [
     {
       "parameters": {
@@ -33,7 +33,7 @@
       "typeVersion": 4.2,
       "position": [220, 0],
       "onError": "continueErrorOutput",
-      "notes": "Pick the 'George brief token' Header Auth credential in this node. The backend builds AND renders the brief — n8n is deliberately a dumb pipe, because 'notices always surface' is a product guarantee and templating the message here would move it into something anyone can edit."
+      "notes": "Pick the 'Bob brief token' Header Auth credential in this node. The backend builds AND renders the brief — n8n is deliberately a dumb pipe, because 'notices always surface' is a product guarantee and templating the message here would move it into something anyone can edit."
     },
     {
       "parameters": {

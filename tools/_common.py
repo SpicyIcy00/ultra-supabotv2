@@ -1,5 +1,5 @@
 """
-Shared plumbing for George's tools.
+Shared plumbing for Bob's tools.
 
 Definition loading, the fail-closed read-only connection, and store resolution
 live here so there is exactly ONE copy of each. The connection guard in
@@ -33,7 +33,7 @@ DEFS_PATH = Path(__file__).resolve().parent.parent / "definitions" / "metrics.ya
 # one result set so a large table cannot be returned whole. Always reported.
 DEFAULT_MAX_ROWS = 1000
 
-# Roles George must never run as, even if GEORGE_DATABASE_URL points at one.
+# Roles Bob must never run as, even if GEORGE_DATABASE_URL points at one.
 FORBIDDEN_ROLES = {"postgres", "supabase_admin", "supabase_replication_admin"}
 
 _DEFS: Optional[dict] = None
@@ -45,7 +45,7 @@ def load_defs() -> dict:
     if _DEFS is None:
         if not DEFS_PATH.exists():
             raise FileNotFoundError(
-                f"Business definitions not found at {DEFS_PATH}. George cannot "
+                f"Business definitions not found at {DEFS_PATH}. Bob cannot "
                 f"answer questions without them."
             )
         with DEFS_PATH.open(encoding="utf-8") as fh:
@@ -74,7 +74,7 @@ def req(node: Any, path: str) -> Any:
 # --------------------------------------------------------------------------
 # Connection gate — how many george_ro connections this process may hold
 #
-# George reads through the Supabase SESSION-mode pooler (port 5432), where
+# Bob reads through the Supabase SESSION-mode pooler (port 5432), where
 # every client connection is one server backend and the pool for a role is
 # capped — 15 here. Every tool opens its own connection for the duration of
 # one call, and every caller fans calls out with asyncio.gather: the chat loop
@@ -200,13 +200,13 @@ def _open_checked(url: str):
         conn.close()
         raise RuntimeError(
             f"Refusing to run: GEORGE_DATABASE_URL connects as superuser '{role}'. "
-            f"George requires a non-superuser, SELECT-only role."
+            f"Bob requires a non-superuser, SELECT-only role."
         )
     if role in FORBIDDEN_ROLES:
         conn.close()
         raise RuntimeError(
             f"Refusing to run: GEORGE_DATABASE_URL connects as '{role}', which is "
-            f"an administrative role. George requires its own read-only role."
+            f"an administrative role. Bob requires its own read-only role."
         )
     if read_only != "on":
         conn.close()
@@ -216,7 +216,7 @@ def _open_checked(url: str):
 
 def connect():
     """
-    Open a read-only connection as George's own role, through the gate.
+    Open a read-only connection as Bob's own role, through the gate.
 
     Three independent guards, because any one of them can be misconfigured:
       1. GEORGE_DATABASE_URL only. No fallback to DATABASE_URL and none to any
@@ -233,7 +233,7 @@ def connect():
     url = os.environ.get("GEORGE_DATABASE_URL")
     if not url:
         raise RuntimeError(
-            "GEORGE_DATABASE_URL is not set. George connects only through its "
+            "GEORGE_DATABASE_URL is not set. Bob connects only through its "
             "own read-only role; it will not fall back to an application or "
             "admin connection string. See tools/george_ro_role.sql."
         )
@@ -339,7 +339,7 @@ def resolve_store(
     told a caller asking about an excluded store that it did not exist:
     "Unknown store 'AJI BARN'. Valid stores: Fairview, ...". AJI BARN is the
     warehouse. It was excluded on purpose, for a reason written down in
-    metrics.yaml, and the refusal said the opposite of that — so George could
+    metrics.yaml, and the refusal said the opposite of that — so Bob could
     not explain it and could only guess, three times, in the middle of the one
     workflow the owner was actually building.
 
@@ -430,14 +430,14 @@ def label_store(catalog: dict[str, dict], store_id: str) -> str:
 #
 # The owner, 2026-09-18: "if i tell it some info like dont focus on [per gram]
 # ... will it remeber it and actually use that info?" Until this, no read could
-# leave a category out, so a told view changed George's words while every
+# leave a category out, so a told view changed Bob's words while every
 # ranking still led with per-gram lines.
 #
 # ONE COPY, for the same reason the connection guard has one: each read that
 # takes the setting builds its predicate and its receipt here, so "left out at
 # your instruction" means the same thing on every read that says it. The value
 # arrives as a keyword-only argument the loop supplies from what the person
-# told George (metrics.yaml settings.declared.left_out_categories); the model
+# told Bob (metrics.yaml settings.declared.left_out_categories); the model
 # can neither see it nor set it.
 #
 # LISTS, NEVER TOTALS. A read that is a total says in meta.settings that the

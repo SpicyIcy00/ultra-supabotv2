@@ -1,5 +1,5 @@
 """
-What George says to a person, and what he says to himself.
+What Bob says to a person, and what he says to himself.
 
 UI System V2 Stage 2. Three boundaries, none of which existed before
 2026-09-08, and all three had leaked the same way: text written for the MODEL
@@ -180,7 +180,7 @@ def test_no_yaml_value_a_notice_message_interpolates_names_a_column():
 
     `_forced_caveats` appends a notice `message` to the answer VERBATIM, and
     the room draws every message above the figure it qualifies. So a value
-    interpolated into a message is answer text whether or not George ever
+    interpolated into a message is answer text whether or not Bob ever
     writes it himself — and three of them named tables and columns:
 
         inventory.low_stock_blocked_reason  "inventory.warning_stock is NULL…"
@@ -227,7 +227,7 @@ def test_a_value_a_notice_message_interpolates_is_reader_text_too():
     scan saw `"Low-stock thresholds are not set…"` and never saw the value that
     lands in the middle of it. That value was
     `inventory.warning_stock is NULL on 100% of rows`, and it reached an answer
-    verbatim: George's own wording missed the fingerprint, the caveat was
+    verbatim: Bob's own wording missed the fingerprint, the caveat was
     FORCED, and `_forced_caveats` appends a notice `message` unchanged.
 
     So the yaml value is checked here directly. The schema's version of the
@@ -251,7 +251,7 @@ def test_a_value_a_notice_message_interpolates_is_reader_text_too():
 def test_the_forced_caveat_carries_the_message_and_never_the_guidance():
     """
     The path that turned a notice into prose. It appends `message` — so a
-    message is answer text whether or not George ever writes it himself.
+    message is answer text whether or not Bob ever writes it himself.
     """
     from agent.loop import _forced_caveats
 

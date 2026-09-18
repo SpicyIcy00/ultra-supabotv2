@@ -8,7 +8,7 @@ this calls those tools and keeps each result WHOLE, with its own receipts,
 exactly as tools/brief.py returns three sections at once.
 
 The consequence is the point: there is one definition of what a shop's week is,
-shared by the object view, the morning brief, a watch, and anything George
+shared by the object view, the morning brief, a watch, and anything Bob
 reasons with. A second implementation would be a second definition, and the two
 would disagree on a Tuesday with nobody able to say which was right.
 
@@ -18,10 +18,10 @@ and definitions live in metrics.yaml behind vetted SQL. Sections sit beside
 each other. No total is summed across them, no ratio is taken between them, and
 no row from one is filtered by a row from another.
 
-WHY IT EXISTS AT ALL, given George could just be asked. Opening a shop by
+WHY IT EXISTS AT ALL, given Bob could just be asked. Opening a shop by
 asking him costs a model turn and roughly forty seconds. It is the same four
 reads every time — there is no judgement in it — so the client calls this
-directly when somebody taps, and it takes about a second. George is given the
+directly when somebody taps, and it takes about a second. Bob is given the
 identical tool, so what a person sees when they tap and what he sees when he
 thinks cannot drift apart.
 
@@ -416,7 +416,7 @@ def get_object(kind: str, name: str,
             "object": {"kind": kind, "name": name},
             # NOT `window`. Every other tool uses meta.window for a STRUCTURED
             # window — {kind, name, start, end} — and the result vocabulary and
-            # george_recall both read it as one. Putting a bare preset string
+            # bob_recall both read it as one. Putting a bare preset string
             # there crashed recall for every later question in any conversation
             # that had opened an object (AttributeError: 'str' has no 'get').
             # An object view has no single window anyway: each section carries

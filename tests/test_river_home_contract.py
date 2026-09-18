@@ -1,5 +1,5 @@
 """
-The home of George's work: the river's two streams, and who reads which.
+The home of Bob's work: the river's two streams, and who reads which.
 
 THE STREAMS ARE UNCHANGED AND ARE STILL INFRASTRUCTURE. One table, one
 visibility clause, one cursor; the split is a WHERE on `kind`, and nothing a
@@ -8,10 +8,10 @@ caller may not see in one stream can appear in the other.
 WHO READS THEM CHANGED ON 2026-09-09, with the Experience Reset. Ask and Today
 were two pages: one read the WORK stream, the other the ATTENTION stream. They
 are not pages any more — the desk is the environment, its own line is where
-George is asked, and its resting state is the business rather than a feed. So
+Bob is asked, and its resting state is the business rather than a feed. So
 the WORK stream is read by the desk, to compose the work a person has done;
 the whole river is read by History, which is the river's one remaining
-user-facing role; and what George initiated reaches a person as the morning
+user-facing role; and what Bob initiated reaches a person as the morning
 sentence, the needs-you count and the marks on the objects themselves, rather
 than as a second feed to scroll.
 
@@ -32,7 +32,7 @@ pytest.importorskip("fastapi", reason="the route module imports fastapi")
 from fastapi import HTTPException                                      # noqa: E402
 
 _ROOT = Path(__file__).resolve().parents[1]
-_ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "george.py"
+_ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "bob.py"
 
 
 def _source(path: Path) -> str:
@@ -65,7 +65,7 @@ class _User:
 
 
 def _read(stream=None):
-    from app.api.v1.routes.george import read_river
+    from app.api.v1.routes.bob import read_river
 
     session = _FakeSession()
     asyncio.run(read_river(limit=40, before=None, stream=stream, db=session, user=_User()))
@@ -87,7 +87,7 @@ def test_the_work_stream_is_questions_and_answers():
     assert "p.kind IN ('question', 'answer')" in sql
 
 
-def test_the_attention_stream_is_everything_george_initiated():
+def test_the_attention_stream_is_everything_bob_initiated():
     sql = _read("attention")
     assert "p.kind NOT IN ('question', 'answer')" in sql
 

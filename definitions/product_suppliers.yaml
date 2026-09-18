@@ -18,7 +18,7 @@ generated: "2026-09-10"
 generated_by: ops/propose_supplier_map.py
 derived_from: "purchase_order_lines.product_id -> purchase_orders.supplier_name"
 
-# proposed | approved. A person sets this, never the generator and never George.
+# proposed | approved. A person sets this, never the generator and never Bob.
 status: approved
 approved_by: "Ice"
 approved_at: "2026-09-10"

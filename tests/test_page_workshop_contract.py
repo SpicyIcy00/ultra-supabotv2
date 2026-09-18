@@ -1,5 +1,5 @@
 """
-Pure tests for George's page tools: create_page and edit_page.
+Pure tests for Bob's page tools: create_page and edit_page.
 
 NO DATABASE. Every decision that makes a conversational page write safe is
 decidable without one, and all of them live here:
@@ -34,7 +34,7 @@ import pytest
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from agent import composite_tools, loop as george_loop, write_tools              # noqa: E402
+from agent import composite_tools, loop as bob_loop, write_tools              # noqa: E402
 from agent.write_tools import (                                                   # noqa: E402
     PAGE_EDIT_OPERATIONS,
     PageBuildSpec,
@@ -113,7 +113,7 @@ def _ctx(writer=None, executed=()):
 
 
 def _schema(name):
-    return next(s for s in george_loop.build_tool_schemas(include_write=True) if s["name"] == name)
+    return next(s for s in bob_loop.build_tool_schemas(include_write=True) if s["name"] == name)
 
 
 # ---------------------------------------------------------------------------
@@ -121,9 +121,9 @@ def _schema(name):
 # ---------------------------------------------------------------------------
 
 def test_the_tools_are_absent_without_a_writer_and_present_with_one():
-    assert "create_page" not in george_loop.injected_surface(_ctx())
-    assert "edit_page" not in george_loop.injected_surface(_ctx())
-    surface = george_loop.injected_surface(_ctx(FakeWriter()))
+    assert "create_page" not in bob_loop.injected_surface(_ctx())
+    assert "edit_page" not in bob_loop.injected_surface(_ctx())
+    surface = bob_loop.injected_surface(_ctx(FakeWriter()))
     assert {"create_page", "edit_page"} <= set(surface)
 
 
@@ -131,7 +131,7 @@ def test_the_registries_agree():
     for name in ("create_page", "edit_page"):
         assert name in write_tools.WRITE_TOOL_FUNCTIONS
         assert write_tools.WRITE_TOOL_REQUIRES[name] == "page_writer"
-        assert name not in george_loop.TOOL_FUNCTIONS
+        assert name not in bob_loop.TOOL_FUNCTIONS
         assert name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS
     assert set(write_tools.PAGE_WRITE_TOOLS) == {"create_page", "edit_page"}
 
@@ -155,22 +155,22 @@ def test_the_read_prefix_holds_by_construction_whatever_the_names():
     cached prefix is still shared — and the guarantee no longer depends on
     the name a tool happens to have.
     """
-    read = george_loop.build_tool_schemas()
-    both = george_loop.build_tool_schemas(include_write=True)
+    read = bob_loop.build_tool_schemas()
+    both = bob_loop.build_tool_schemas(include_write=True)
     assert both[: len(read)] == read
     # Reads sorted, then the label tools sorted: the structure the builder
     # guarantees, which is what a shared prefix needs. Since 2026-09-10 the
     # second label tool ("compose") sorts before "get_...", so the prefix as
     # a whole is no longer alphabetical — and never needed to be.
     assert [s["name"] for s in read] == (
-        sorted({*george_loop.TOOL_FUNCTIONS, *george_loop.one_call.FUNCTIONS}) + sorted(george_loop.FINDING_TOOL_FUNCTIONS)
+        sorted({*bob_loop.TOOL_FUNCTIONS, *bob_loop.one_call.FUNCTIONS}) + sorted(bob_loop.FINDING_TOOL_FUNCTIONS)
     )
     injected = [s["name"] for s in both[len(read):]]
     assert injected == sorted(injected)
     # The property is that the injected names are SORTED and disjoint from the
     # reads, so a session with one capability shares a byte-identical prefix
     # with a session that has another. Which name happens to sort last was
-    # incidental, and stopped being view_page when George gained the two reads
+    # incidental, and stopped being view_page when Bob gained the two reads
     # that let him see his own views and his own rules (2026-09-11).
     assert injected[0] == "create_page"
     assert composite_tools.PAGE_CONTEXT_TOOL in injected
@@ -180,13 +180,13 @@ def test_the_read_prefix_holds_by_construction_whatever_the_names():
 def test_a_page_can_never_hold_a_page_read_or_a_write():
     items = _schema("create_page")["input_schema"]["properties"]["analyses"]["items"]
     allowed = items["properties"]["tool_calls"]["items"]["properties"]["tool"]["enum"]
-    assert set(allowed) == set(george_loop.TOOL_FUNCTIONS)
+    assert set(allowed) == set(bob_loop.TOOL_FUNCTIONS)
     for forbidden in ("view_page", "pin_answer", "create_page", "edit_page", "run_workflow"):
         assert forbidden not in allowed
     ops = _schema("edit_page")["input_schema"]["properties"]["operations"]["items"]
     assert set(ops["properties"]["op"]["enum"]) == set(PAGE_EDIT_OPERATIONS)
     add_tools = ops["properties"]["tool_calls"]["items"]["properties"]["tool"]["enum"]
-    assert set(add_tools) == set(george_loop.TOOL_FUNCTIONS)
+    assert set(add_tools) == set(bob_loop.TOOL_FUNCTIONS)
 
 
 def test_placement_in_the_schema_is_relational_only():
@@ -330,7 +330,7 @@ def test_without_a_writer_the_call_is_a_refusal_not_a_crash():
 
 def test_the_writers_refusal_reaches_the_model_intact():
     w = FakeWriter(raises=PageRefused("'ATP' matches 2 of your pins: ...; name the one you mean by its id."))
-    result, err, _ = _run(george_loop._call_write_tool(
+    result, err, _ = _run(bob_loop._call_write_tool(
         "edit_page", {"operations": [{"op": "remove", "title": "ATP"}]}, _ctx(w)))
     assert err.startswith("'ATP' matches 2 of your pins")
     assert result == {"rows": [], "meta": {"error": err}}
@@ -338,7 +338,7 @@ def test_the_writers_refusal_reaches_the_model_intact():
 
 def test_a_fault_in_the_writer_is_a_failed_tool_that_says_nothing_changed():
     w = FakeWriter(raises=RuntimeError("The page could not be created: OperationalError. Nothing was written"))
-    result, err, _ = _run(george_loop._call_write_tool(
+    result, err, _ = _run(bob_loop._call_write_tool(
         "create_page", {"title": "P"}, _ctx(w)))
     assert "Nothing was written" in err
 
@@ -349,8 +349,8 @@ def test_a_fault_in_the_writer_is_a_failed_tool_that_says_nothing_changed():
 
 def _drive(monkeypatch, replies, writer, question="make me a Rockwell page", **context):
     fake = FakeClient(replies)
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
 
     async def fake_read(name, args):
         return ({"rows": [{"value": 1.0}],
@@ -358,10 +358,10 @@ def _drive(monkeypatch, replies, writer, question="make me a Rockwell page", **c
                           "snapshot_timestamp": "2026-09-08T00:00:00+00:00", "row_count": 1}},
                 None, 3)
 
-    monkeypatch.setattr(george_loop, "_call_tool", fake_read)
+    monkeypatch.setattr(bob_loop, "_call_tool", fake_read)
 
     async def collect():
-        return [f async for f in george_loop.run(question, page_writer=writer, **context)]
+        return [f async for f in bob_loop.run(question, page_writer=writer, **context)]
 
     return asyncio.run(collect()), fake.messages.requests
 
@@ -429,10 +429,10 @@ def test_a_rename_does_not_license_a_claim_that_an_analysis_moved(monkeypatch):
 
 def test_committed_operation_claim_check_keeps_negations():
     defs = load_defs()
-    assert george_loop._page_claim("Renamed the page.", defs, {"rename"}) is None
-    assert george_loop._page_claim("I have not moved it to Overview.", defs, {"rename"}) is None
-    assert george_loop._page_claim("Created the page.", defs, {"rename"}) == "claimed"
-    assert george_loop._page_claim("Moved it to Overview.", defs, {"move_to_page"}) is None
+    assert bob_loop._page_claim("Renamed the page.", defs, {"rename"}) is None
+    assert bob_loop._page_claim("I have not moved it to Overview.", defs, {"rename"}) is None
+    assert bob_loop._page_claim("Created the page.", defs, {"rename"}) == "claimed"
+    assert bob_loop._page_claim("Moved it to Overview.", defs, {"move_to_page"}) is None
 
 
 def test_a_promised_page_change_is_corrected_too(monkeypatch):
@@ -452,22 +452,22 @@ def test_ordinary_investigation_prose_is_not_a_page_claim():
         "That SKU was removed from the range in June.",
         "I moved on to the product ranking next.",
     ):
-        assert george_loop._page_claim(text, defs) is None, text
+        assert bob_loop._page_claim(text, defs) is None, text
 
 
 def test_a_denied_page_change_is_not_a_claim():
     defs = load_defs()
-    assert george_loop._page_claim("I could not rename the page: that title is taken.", defs) is None
-    assert george_loop._page_claim("I haven't moved it to Aji Overview yet.", defs) is None
+    assert bob_loop._page_claim("I could not rename the page: that title is taken.", defs) is None
+    assert bob_loop._page_claim("I haven't moved it to Aji Overview yet.", defs) is None
 
 
 def test_without_a_writer_no_page_claim_is_checked(monkeypatch):
     fake = FakeClient([[_TextBlock("I renamed the page to Rockwell Weekly.")]])
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
 
     async def collect():
-        return [f async for f in george_loop.run("rename it")]
+        return [f async for f in bob_loop.run("rename it")]
 
     frames = asyncio.run(collect())
     assert not [f for f in frames_of(frames, "warning") if f["reason"].startswith("page_")]
@@ -487,35 +487,35 @@ def test_a_page_write_satisfies_the_pin_claim_too(monkeypatch):
 
 
 def test_the_page_sentence_names_the_page_and_never_its_id():
-    with_writer = george_loop._page_sentence(
+    with_writer = bob_loop._page_sentence(
         None, {"page_id": "abc-123", "name": "Rockwell"}, True, True)
     assert "their page 'Rockwell'" in with_writer
     assert "edit_page without page_id" in with_writer
     assert "abc-123" not in with_writer
-    ungrouped = george_loop._page_sentence(None, {"page_id": None, "name": None}, True, True)
+    ungrouped = bob_loop._page_sentence(None, {"page_id": None, "name": None}, True, True)
     assert "ungrouped pins" in ungrouped and "cannot be edited" in ungrouped
     # Reader without writer: the sentence it always had.
-    assert "edit_page" not in george_loop._page_sentence(
+    assert "edit_page" not in bob_loop._page_sentence(
         None, {"page_id": "abc", "name": "Rockwell"}, True)
 
 
 def test_the_context_carries_the_writer_and_the_loop_accepts_it():
     assert WriteContext().page_writer is None
-    assert "page_writer" in inspect.signature(george_loop.run).parameters
-    src = inspect.getsource(george_loop.run)
+    assert "page_writer" in inspect.signature(bob_loop.run).parameters
+    src = inspect.getsource(bob_loop.run)
     assert "page_writer=page_writer" in src
 
 
 def test_the_route_binds_the_writer_to_the_owner_and_the_scope():
     from pathlib import Path
     src = (Path(__file__).resolve().parents[1] / "backend" / "app" / "api" / "v1"
-           / "routes" / "george.py").read_text(encoding="utf-8")
+           / "routes" / "bob.py").read_text(encoding="utf-8")
     assert "class _PageWriter:" in src
     ask = src[src.index("async def ask("):]
     assert "page_writer=_PageWriter(" in ask
     assert "user.username" in ask[ask.index("_PageWriter("):ask.index("_PageWriter(") + 300]
-    # The writer's actor is George, in the conversation the request logs.
-    assert "george_actor(spec.conversation_id)" in src
+    # The writer's actor is Bob, in the conversation the request logs.
+    assert "bob_actor(spec.conversation_id)" in src
     # Every refusal type the service raises is a PageRefused to the model.
     for name in ("AmbiguousTarget", "NotAPage", "PageQuotaError", "SimilarPageError"):
         assert name in src[src.index("class _PageWriter:"):src.index("async def _resolve_scope")]

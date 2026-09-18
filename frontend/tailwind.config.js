@@ -21,17 +21,17 @@ export default {
           foreground: '#ffffff',
         },
 
-        // George's palette. ADDITIVE — the tokens above are the existing dark
-        // app theme and keep their meaning exactly. George is cream-on-navy and
+        // Bob's palette. ADDITIVE — the tokens above are the existing dark
+        // app theme and keep their meaning exactly. Bob is cream-on-navy and
         // would invert every existing page if it redefined `background` or
         // `primary`, so it namespaces instead. Only components under
-        // src/components/george and GeorgePage use `george-*`.
-        george: {
+        // src/components/bob and BobPage use `bob-*`.
+        bob: {
           // THE SIX CHROME TOKENS FOLLOW THE ROOM'S THEME (2026-09-15).
           // They were these exact hexes and still are outside the room; the
           // values now live in src/index.css as RGB channels and are
           // overridden inside `.room` per theme in room/room.css. The channel
-          // form is what keeps `bg-george-line/40` working. The reason is at
+          // form is what keeps `bg-bob-line/40` working. The reason is at
           // the top of index.css: /pages/:id renders these components inside
           // the room's dark chrome, where a fixed navy is unreadable.
           cream: 'rgb(var(--g-cream) / <alpha-value>)',   // page surface
@@ -82,7 +82,7 @@ export default {
         // kept page in Georgia was "its a different font". The fallback chain
         // is the value the variable carries outside the room, so nothing that
         // is still on cream moved.
-        'george-serif': 'var(--g-serif)',
+        'bob-serif': 'var(--g-serif)',
       },
       minHeight: {
         'touch': '44px',

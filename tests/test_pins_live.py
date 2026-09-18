@@ -106,7 +106,7 @@ def test_a_refusal_keeps_its_own_message():
 @pytest.mark.parametrize(
     "call, expect",
     [
-        ({"tool": "get_revenue", "arguments": {}}, "no longer one of George's tools"),
+        ({"tool": "get_revenue", "arguments": {}}, "no longer one of Bob's tools"),
         ({"tool": "get_sales", "arguments": {**SALES["arguments"], "metrik": 1}},
          "unexpected keyword argument"),
         ({"tool": "get_sales", "arguments": {**SALES["arguments"], "metric": "gross_profit"}},

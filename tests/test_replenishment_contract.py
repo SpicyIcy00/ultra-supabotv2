@@ -3,7 +3,7 @@ Replenishment — the definitions the tool rests on, and the caveats it owes.
 
 NO DATABASE. Definitions, SQL templates and argument validation only.
 
-WHY THIS EXISTS. shipment_plans is not George's figure: it is written by
+WHY THIS EXISTS. shipment_plans is not Bob's figure: it is written by
 backend/app/services/replenishment_service.py, and this tool reads it back.
 That makes a particular failure easy — restating the engine's arithmetic
 slightly differently, or reporting a stored number without the condition that
@@ -187,7 +187,7 @@ def test_the_tool_is_on_the_read_surface():
 
 def test_a_missing_grant_is_reported_as_configuration_not_as_a_crash():
     """
-    George's role is granted table by table on purpose, so a new table is
+    Bob's role is granted table by table on purpose, so a new table is
     unreadable until somebody decides to expose it. The tool names the grant
     and the file rather than letting a driver permission error reach the user.
     """

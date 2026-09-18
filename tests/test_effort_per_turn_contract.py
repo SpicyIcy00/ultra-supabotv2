@@ -1,5 +1,5 @@
 """
-How hard George thinks, per turn (P1.h, 2026-09-14).
+How hard Bob thinks, per turn (P1.h, 2026-09-14).
 
 NO DATABASE, NO API. Scripted client, stubbed read, stubbed log.
 
@@ -32,7 +32,7 @@ pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
 import anthropic                                                               # noqa: E402
 
-from agent import loop as george_loop                                          # noqa: E402
+from agent import loop as bob_loop                                          # noqa: E402
 from tests.test_convergence_cap_contract import FakeClient                     # noqa: E402
 from tests.test_loop_correction_contract import StubLog, _TextBlock, frames_of  # noqa: E402
 from tools._common import load_defs, req                                       # noqa: E402
@@ -55,7 +55,7 @@ def test_the_default_in_the_yaml_is_the_one_the_request_carries() -> None:
     starts sending a marker for a level it was already at, or stops sending one
     for a level it is not.
     """
-    assert george_loop.EFFORT == DEFAULT
+    assert bob_loop.EFFORT == DEFAULT
 
 
 def test_every_kind_names_a_level_the_api_accepts() -> None:
@@ -108,7 +108,7 @@ HISTORY = [{"role": "user", "text": "how did we do?", "tool_calls": []}]
     ("analyze tradsnax per store", None, ("high", "ladder")),
 ])
 def test_the_kind_a_question_is(question, history, expected) -> None:
-    assert george_loop.turn_effort(question, history, DEFS) == expected
+    assert bob_loop.turn_effort(question, history, DEFS) == expected
 
 
 def test_a_fragment_with_no_thread_behind_it_is_a_fresh_question() -> None:
@@ -117,20 +117,20 @@ def test_a_fragment_with_no_thread_behind_it_is_a_fresh_question() -> None:
     message of a conversation has nothing to refine — there is no board and no
     previous reading — so it is a question in its own right and is not hurried.
     """
-    assert george_loop.turn_effort("how about rockwell", None, DEFS)[1] == "fresh"
-    assert george_loop.turn_effort("how about rockwell", [], DEFS)[1] == "fresh"
+    assert bob_loop.turn_effort("how about rockwell", None, DEFS)[1] == "fresh"
+    assert bob_loop.turn_effort("how about rockwell", [], DEFS)[1] == "fresh"
 
 
 def test_a_long_message_in_a_thread_is_not_a_fragment() -> None:
     """
     Over the word bound it is a question, whatever came before it. "add top
     sellers by sales not units, i value sales more" is a preference being
-    taught and the thing George does with it decides whether memory is worth
+    taught and the thing Bob does with it decides whether memory is worth
     anything — see the v2 evals' `taught`.
     """
     long_one = "add top sellers by sales not units, i value sales more"
     assert len(long_one.split()) > req(DEFS, "effort.follow_up_max_words")
-    assert george_loop.turn_effort(long_one, HISTORY, DEFS)[1] == "fresh"
+    assert bob_loop.turn_effort(long_one, HISTORY, DEFS)[1] == "fresh"
 
 
 # ---------------------------------------------------------------------------
@@ -139,12 +139,12 @@ def test_a_long_message_in_a_thread_is_not_a_fragment() -> None:
 
 def _drive(monkeypatch, question, history=None):
     fake = FakeClient([[_TextBlock("Rockwell held up; nothing else moved.")]])
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
     StubLog.instances.clear()
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
 
     async def collect():
-        return [f async for f in george_loop.run(question, history=history)]
+        return [f async for f in bob_loop.run(question, history=history)]
 
     return asyncio.run(collect()), fake.messages.requests
 
@@ -246,26 +246,26 @@ def test_an_unavailable_beta_drops_the_marker_and_answers_anyway(monkeypatch) ->
     answer. The marker goes, the level falls back to the default, and the turn
     completes — which is exactly what every turn did before this card.
     """
-    monkeypatch.setattr(george_loop, "_EFFORT_BETA_OK", True)
+    monkeypatch.setattr(bob_loop, "_EFFORT_BETA_OK", True)
     inner = FakeClient([[_TextBlock("Rockwell held up.")]])
     refusing = _RefusingOnce(inner)
 
     class _Client:
         messages = refusing
 
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic",
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic",
                         lambda *a, **k: _Client())
     StubLog.instances.clear()
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
 
     async def collect():
-        return [f async for f in george_loop.run("pin that", history=HISTORY)]
+        return [f async for f in bob_loop.run("pin that", history=HISTORY)]
 
     frames = asyncio.run(collect())
     done = frames_of(frames, "done")[0]
     assert refusing.refused == 1
     assert done["status"] == "ok" and done["effort"] == DEFAULT
-    assert george_loop._EFFORT_BETA_OK is False, (
+    assert bob_loop._EFFORT_BETA_OK is False, (
         "it asks once per process, not once per turn")
     # And the request that succeeded carried neither the marker nor the header.
     last = refusing.requests[-1]
@@ -281,8 +281,8 @@ def test_a_400_that_is_not_about_the_beta_still_surfaces(monkeypatch) -> None:
     other = anthropic.BadRequestError(
         message="messages: at least one message is required",
         response=_FakeResponse(), body=None)
-    assert george_loop._effort_unsupported(other) is False
+    assert bob_loop._effort_unsupported(other) is False
     named = anthropic.BadRequestError(
         message="output_config.effort requires a model that supports per-turn effort",
         response=_FakeResponse(), body=None)
-    assert george_loop._effort_unsupported(named) is True
+    assert bob_loop._effort_unsupported(named) is True

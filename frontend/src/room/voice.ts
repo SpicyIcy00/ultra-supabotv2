@@ -1,14 +1,14 @@
 /**
- * VOICE — a first-class way of operating George, not speech-to-chat (P2S.5).
+ * VOICE — a first-class way of operating Bob, not speech-to-chat (P2S.5).
  *
  * The owner's standard, §8: *"Eventually voice should become a first-class way
- * of operating George rather than simply speech-to-chat"*, and *"Language is
+ * of operating Bob rather than simply speech-to-chat"*, and *"Language is
  * for intent. Direct interaction is for reference. They should work naturally
  * together."* So nothing here is a second path. What is heard is put in the
  * line exactly as typing would put it there and sent through the SAME `ask`:
  * whatever is picked on screen travels with it, a short steer ("last 30 days")
  * resolves through the same fragment path as the chips and replays with no
- * model turn, and everything else is an ordinary question. George cannot tell
+ * model turn, and everything else is an ordinary question. Bob cannot tell
  * a spoken question from a typed one, and stores nothing of it but its text.
  *
  * THIS FILE IS THE RULES, with no DOM — which browser has a recogniser, what

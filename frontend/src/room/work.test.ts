@@ -15,7 +15,7 @@ import { describe, expect, it } from 'vitest';
 import type { AnswerTurn } from './data';
 import { durationWords, stepsOf } from './work';
 import { figuresIn, placeFigures } from './figures';
-import type { ToolCall } from '../types/george';
+import type { ToolCall } from '../types/bob';
 
 const META = {
   source_table: 'new_transactions',
@@ -45,7 +45,7 @@ const LANDED = call({
 
 function turn(over: Partial<AnswerTurn> = {}): AnswerTurn {
   return {
-    role: 'george', text: '', thinking: '', at: '2026-09-14T08:00:00Z',
+    role: 'bob', text: '', thinking: '', at: '2026-09-14T08:00:00Z',
     toolCalls: [], notices: [], pinned: [], saved: [], pageChanges: [],
     ...over,
   } as AnswerTurn;

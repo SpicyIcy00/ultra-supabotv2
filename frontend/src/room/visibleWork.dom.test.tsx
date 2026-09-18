@@ -52,7 +52,7 @@ function read(seq: number, tool: string, ms: number, rows: Record<string, unknow
 
 /** "why is Rockwell down": the primary, its two drivers, the breakdown, the board. */
 const WHY: AnswerTurn = {
-  role: 'george',
+  role: 'bob',
   text: 'Rockwell is down ₱18,400 on last week, and it is basket size rather than footfall.',
   thinking: '',
   at: '2026-09-14T08:00:00Z',
@@ -143,7 +143,7 @@ describe('a figure in the claim jumps to its read', () => {
 /**
  * THE RECORDED RUNS — the same eight the marks were replayed through (P1.e),
  * and the reason they are here rather than a fixture of my own: every filter
- * line, every source table and every snapshot in them is a real read George
+ * line, every source table and every snapshot in them is a real read Bob
  * really made, and a view that holds over invented meta is a view that holds
  * over what I imagined a tool returns.
  */

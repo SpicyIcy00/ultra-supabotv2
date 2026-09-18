@@ -1,12 +1,12 @@
 """
-Pure tests for George's write surface: pin_answer.
+Pure tests for Bob's write surface: pin_answer.
 
 NO DATABASE. Every decision that makes a chat-driven pin safe is decidable
 without one, and all three live here:
 
   1. The write tool is not part of the READ surface, so a pin can never contain
      a pin and the pin RUNNER can never write.
-  2. George may only pin calls he actually ran in this conversation. That single
+  2. Bob may only pin calls he actually ran in this conversation. That single
      rule is what forces "pin that but daily" to re-run the adjusted call — and
      to show the user its result — before it can be pinned.
   3. The write is a capability handed IN. No writer, no tool in the schema, and
@@ -23,7 +23,7 @@ import pytest
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from agent import loop as george_loop                       # noqa: E402
+from agent import loop as bob_loop                       # noqa: E402
 from agent.write_tools import (                             # noqa: E402
     PinRefused,
     PinSpec,
@@ -87,22 +87,22 @@ def test_pin_answer_is_not_a_pinnable_tool():
     table. A write tool in there would let a pin hold a pin, and would let
     pin_runner.run_call write while replaying a tile.
     """
-    assert "pin_answer" not in george_loop.TOOL_FUNCTIONS
+    assert "pin_answer" not in bob_loop.TOOL_FUNCTIONS
 
 
 def test_a_stored_call_can_never_be_a_write():
-    with pytest.raises(PinValidationError, match="no longer one of George's tools"):
+    with pytest.raises(PinValidationError, match="no longer one of Bob's tools"):
         validate_call({"tool": "pin_answer", "arguments": {}})
 
 
 def test_the_read_schema_does_not_advertise_the_write_tool():
     """The default matters: pin_runner validates stored calls against this."""
-    names = [s["name"] for s in george_loop.build_tool_schemas()]
+    names = [s["name"] for s in bob_loop.build_tool_schemas()]
     assert "pin_answer" not in names
 
 
 def test_the_write_tool_appears_only_when_asked_for():
-    names = [s["name"] for s in george_loop.build_tool_schemas(include_write=True)]
+    names = [s["name"] for s in bob_loop.build_tool_schemas(include_write=True)]
     assert "pin_answer" in names
 
 
@@ -122,8 +122,8 @@ def test_the_read_prefix_is_unchanged_by_the_write_tool():
     longer depends on an injected name happening to sort after "get_..." —
     create_page and edit_page do not, and were not renamed to fit.
     """
-    read = george_loop.build_tool_schemas()
-    both = george_loop.build_tool_schemas(include_write=True)
+    read = bob_loop.build_tool_schemas()
+    both = bob_loop.build_tool_schemas(include_write=True)
     assert both[: len(read)] == read
 
     read_names = [s["name"] for s in read]
@@ -131,24 +131,24 @@ def test_the_read_prefix_is_unchanged_by_the_write_tool():
     # reads nothing and is offered to every session, so it belongs INSIDE the
     # shared prefix rather than after the part that varies by capability.
     # The reads, and the reads asked as one call beside them (P2S.10).
-    reads = sorted({*george_loop.TOOL_FUNCTIONS, *george_loop.one_call.FUNCTIONS})
-    assert read_names == reads + sorted(george_loop.FINDING_TOOL_FUNCTIONS)
-    assert set(read_names) == set(reads) | set(george_loop.FINDING_TOOL_FUNCTIONS)
+    reads = sorted({*bob_loop.TOOL_FUNCTIONS, *bob_loop.one_call.FUNCTIONS})
+    assert read_names == reads + sorted(bob_loop.FINDING_TOOL_FUNCTIONS)
+    assert set(read_names) == set(reads) | set(bob_loop.FINDING_TOOL_FUNCTIONS)
     injected = [s["name"] for s in both[len(read):]]
     assert injected == sorted(injected)
-    assert set(injected) == set(george_loop.write_tools.WRITE_TOOL_FUNCTIONS) | set(
-        george_loop.composite_tools.COMPOSITE_TOOL_FUNCTIONS
+    assert set(injected) == set(bob_loop.write_tools.WRITE_TOOL_FUNCTIONS) | set(
+        bob_loop.composite_tools.COMPOSITE_TOOL_FUNCTIONS
     )
     # And no read tool has slipped after an injected one, whatever the names.
     assert not set(read_names) & set(injected)
 
 
 def test_a_pin_cannot_be_declared_to_hold_a_write():
-    schema = next(s for s in george_loop.build_tool_schemas(include_write=True)
+    schema = next(s for s in bob_loop.build_tool_schemas(include_write=True)
                   if s["name"] == "pin_answer")
     allowed = schema["input_schema"]["properties"]["tool_calls"]["items"]["properties"]["tool"]
     assert "pin_answer" not in allowed["enum"]
-    assert set(allowed["enum"]) == set(george_loop.TOOL_FUNCTIONS)
+    assert set(allowed["enum"]) == set(bob_loop.TOOL_FUNCTIONS)
 
 
 def test_the_loops_own_arguments_are_not_offered_to_the_model():
@@ -157,7 +157,7 @@ def test_the_loops_own_arguments_are_not_offered_to_the_model():
     keyword-only, and keyword-only parameters are the loop's — if one leaked
     into the schema the model could hand itself a writer.
     """
-    schema = next(s for s in george_loop.build_tool_schemas(include_write=True)
+    schema = next(s for s in bob_loop.build_tool_schemas(include_write=True)
                   if s["name"] == "pin_answer")
     props = schema["input_schema"]["properties"]
     assert "ctx" not in props
@@ -253,9 +253,9 @@ def test_history_makes_pin_that_work_as_a_follow_up():
     form work at all.
     """
     executed: dict = {}
-    messages = george_loop._seed_history([
+    messages = bob_loop._seed_history([
         {"role": "user", "text": "net sales by store last month", "tool_calls": []},
-        {"role": "george", "text": "OPUS led at ₱2.4M.", "tool_calls": [SALES]},
+        {"role": "bob", "text": "OPUS led at ₱2.4M.", "tool_calls": [SALES]},
     ], executed)
 
     assert [m["role"] for m in messages] == ["user", "assistant"]
@@ -274,14 +274,14 @@ def test_replayed_calls_are_rendered_in_the_form_that_matches():
     text is rendered with sorted keys — call_key's own form — so what it copies
     matches what ran.
     """
-    messages = george_loop._seed_history(
-        [{"role": "george", "text": "an answer", "tool_calls": [DAILY]}], {}
+    messages = bob_loop._seed_history(
+        [{"role": "bob", "text": "an answer", "tool_calls": [DAILY]}], {}
     )
     assert messages == [] or "get_sales(" in messages[-1]["content"]
 
-    seeded = george_loop._seed_history([
+    seeded = bob_loop._seed_history([
         {"role": "user", "text": "q", "tool_calls": []},
-        {"role": "george", "text": "a", "tool_calls": [DAILY]},
+        {"role": "bob", "text": "a", "tool_calls": [DAILY]},
     ], {})
     rendered = seeded[-1]["content"]
     assert '"date_range": "last_month"' in rendered
@@ -291,25 +291,25 @@ def test_replayed_calls_are_rendered_in_the_form_that_matches():
 def test_history_never_produces_a_message_list_the_api_will_reject():
     """
     Blank turns dropped, consecutive same-role turns merged, and a replay that
-    starts with George kept behind THREAD_OPENER so the list still opens with
+    starts with Bob kept behind THREAD_OPENER so the list still opens with
     a user message. A client that sends something odd must not take the
     request down before it starts.
 
-    Until 2026-09-07 a leading George turn was discarded. It is now the post a
+    Until 2026-09-07 a leading Bob turn was discarded. It is now the post a
     person is replying to — a brief, a run — and dropping it made the one
-    thing the reply was about the one thing George could not see. See
+    thing the reply was about the one thing Bob could not see. See
     test_thread_continue_contract.
     """
-    messages = george_loop._seed_history([
-        {"role": "george", "text": "opening post", "tool_calls": []},
+    messages = bob_loop._seed_history([
+        {"role": "bob", "text": "opening post", "tool_calls": []},
         {"role": "user", "text": "  ", "tool_calls": []},
         {"role": "user", "text": "first", "tool_calls": []},
         {"role": "user", "text": "second", "tool_calls": []},
-        {"role": "george", "text": "answer", "tool_calls": []},
+        {"role": "bob", "text": "answer", "tool_calls": []},
     ], {})
 
     assert [m["role"] for m in messages] == ["user", "assistant", "user", "assistant"]
-    assert messages[0]["content"] == george_loop.THREAD_OPENER
+    assert messages[0]["content"] == bob_loop.THREAD_OPENER
     assert messages[1]["content"] == "opening post"
     assert messages[2]["content"] == "first\n\nsecond"
     assert all(m["content"].strip() for m in messages)
@@ -317,14 +317,14 @@ def test_history_never_produces_a_message_list_the_api_will_reject():
 
 def test_history_is_bounded():
     turns = [{"role": "user", "text": f"q{i}", "tool_calls": []} for i in range(200)]
-    messages = george_loop._seed_history(turns, {})
+    messages = bob_loop._seed_history(turns, {})
     # All one role, so they merge — what matters is that only the tail was read.
     assert "q0" not in messages[0]["content"]
     assert f"q{199}" in messages[0]["content"]
 
     long_turn = [{"role": "user", "text": "x" * 99999, "tool_calls": []}]
-    assert len(george_loop._seed_history(long_turn, {})[0]["content"]) \
-        <= george_loop.MAX_HISTORY_TEXT
+    assert len(bob_loop._seed_history(long_turn, {})[0]["content"]) \
+        <= bob_loop.MAX_HISTORY_TEXT
 
 
 def test_a_multi_call_answer_needs_every_call_to_have_run():
@@ -350,7 +350,7 @@ def test_a_pin_needs_a_title():
 # ---------------------------------------------------------------------------
 # A pin claimed but never made
 #
-# Observed live 2026-09-03 on "pin that but weekly": George re-ran the weekly
+# Observed live 2026-09-03 on "pin that but weekly": Bob re-ran the weekly
 # query, wrote "Ran the weekly version first, then pinned it", and never called
 # the tool. Nothing was written and no tile existed — the answer was the only
 # evidence of the pin, and it was wrong.
@@ -366,7 +366,7 @@ def test_a_claimed_pin_is_detected():
         "Done — the tile is now on Replenishment.",
         "I've pinned that for you.",
     ):
-        assert george_loop._pin_claim(answer, DEFS) == "claimed", answer
+        assert bob_loop._pin_claim(answer, DEFS) == "claimed", answer
 
 
 def test_a_promised_pin_is_detected():
@@ -379,12 +379,12 @@ def test_a_promised_pin_is_detected():
         "Let me pin that for you.",
         "I'll pin it to Replenishment.",
     ):
-        assert george_loop._pin_claim(answer, DEFS) == "promised", answer
+        assert bob_loop._pin_claim(answer, DEFS) == "promised", answer
 
 
 def test_a_refusal_to_pin_is_neither():
     """
-    George declining to pin is George behaving correctly. Correcting him for it
+    Bob declining to pin is Bob behaving correctly. Correcting him for it
     would train the behaviour out.
     """
     for answer in (
@@ -395,17 +395,17 @@ def test_a_refusal_to_pin_is_neither():
         "I ran it but did not pin it, since you only asked for the figures.",
         "I won't pin it until you say which page.",
     ):
-        assert george_loop._pin_claim(answer, DEFS) is None, answer
+        assert bob_loop._pin_claim(answer, DEFS) is None, answer
 
 
 def test_a_claim_outranks_an_intent():
     """An answer that does both has already asserted the stronger thing."""
-    assert george_loop._pin_claim(
+    assert bob_loop._pin_claim(
         "I'll pin that now. Pinned to Replenishment.", DEFS) == "claimed"
 
 
 def test_an_ordinary_answer_is_neither():
-    assert george_loop._pin_claim(
+    assert bob_loop._pin_claim(
         "Net sales last month were ₱8,069,394.16 across seven stores.", DEFS
     ) is None
 
@@ -460,7 +460,7 @@ def test_a_write_returns_rows_and_meta_like_every_other_tool():
 
 def test_the_writers_refusal_reaches_the_model_intact():
     """
-    A page-name collision is a decision for the user, not a guess for George.
+    A page-name collision is a decision for the user, not a guess for Bob.
     The writer's words are the words POST /pins already uses.
     """
     writer = FakeWriter(raises=PinRefused(

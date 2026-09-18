@@ -1,5 +1,5 @@
 /**
- * THE READING — what George says, above everything he drew.
+ * THE READING — what Bob says, above everything he drew.
  *
  * It is a REGION, not an object, and that is the first half of this file.
  * Until 2026-09-14 his prose reached the screen as a `text` block he composed
@@ -37,7 +37,7 @@
  * nothing is a defect, and it is recorded as one by the loop
  * (`answer_without_prose`), not narrated to the person by the screen.
  */
-import type { GeorgeNotice, ReadingFrame, ToolCall } from '../types/george';
+import type { BobNotice, ReadingFrame, ToolCall } from '../types/bob';
 import { Caveats } from './tiles';
 import { splitClaim } from './claim';
 import { placeFigures } from './figures';
@@ -56,7 +56,7 @@ import { claimAndStanding, unmark } from './beside';
  *
  * A NUMERAL NO READ HOLDS IS DRAWN QUIETLY — the caveat's own ink, no
  * underline, no marker. That is not a verdict on his arithmetic (CLAUDE.md
- * rule 9 leaves checking prose numerals to the evals, and George works out
+ * rule 9 leaves checking prose numerals to the evals, and Bob works out
  * differences and remainders himself all the time). It is the one thing the
  * surface does know: there is nothing here to open. Before P2.b the two kinds
  * looked identical, so the screen said a number was openable by saying
@@ -182,7 +182,7 @@ export function Reading({ text, notices, reading, calls, onFigure, part = 'all',
   /** The turn's own words. Streaming, so it fills as he speaks. */
   text: string | null | undefined;
   /** The turn's caveats, already filtered to the ones no object carries. */
-  notices?: GeorgeNotice[];
+  notices?: BobNotice[];
   /** The three slots, as the loop validated them. */
   reading?: ReadingFrame;
   /** The turn's calls, so a figure in the claim can find the read behind it. */

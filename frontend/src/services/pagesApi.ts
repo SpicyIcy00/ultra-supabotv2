@@ -4,7 +4,7 @@
  * A page is a row: it can be created empty, renamed without anything bound
  * to it moving, given a one-line purpose, and deleted — which moves its pins
  * to Ungrouped and deletes none of them. Every rule lives in the backend
- * service (app/services/page_writer.py), which is also what George's
+ * service (app/services/page_writer.py), which is also what Bob's
  * create_page and edit_page call, so a button and a sentence cannot drift.
  *
  * Bare axios, as pinsApi.ts.
@@ -18,7 +18,7 @@ import type {
   UpdatePageRequest,
 } from '../types/pins';
 
-const API_BASE = '/api/v1/george/pages';
+const API_BASE = '/api/v1/bob/pages';
 
 /** The caller's pages, most recently changed first, empty ones included. */
 export const listPages = async (): Promise<Page[]> => {

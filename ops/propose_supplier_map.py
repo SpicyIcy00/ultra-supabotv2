@@ -26,7 +26,7 @@ asked. Run it yourself:
     python ops/propose_supplier_map.py --check    # reports drift, writes nothing
 
 It connects with DATABASE_URL because it reads purchase history to PROPOSE a
-definition, which is a maintenance job rather than something George does.
+definition, which is a maintenance job rather than something Bob does.
 """
 
 from __future__ import annotations
@@ -134,7 +134,7 @@ def main() -> int:
     w("generated_by: ops/propose_supplier_map.py")
     w("derived_from: \"purchase_order_lines.product_id -> purchase_orders.supplier_name\"")
     w("")
-    w("# proposed | approved. A person sets this, never the generator and never George.")
+    w("# proposed | approved. A person sets this, never the generator and never Bob.")
     w("status: proposed")
     w("approved_by: null")
     w("approved_at: null")

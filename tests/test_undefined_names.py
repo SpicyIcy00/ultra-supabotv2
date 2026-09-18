@@ -1,8 +1,8 @@
 """
 No module may reference a name it never bound.
 
-WHY THIS EXISTS. routes/george_pins.py imported `datetime` but called
-`datetime.now(timezone.utc)`, so POST /george/pins/{id}/run raised NameError on
+WHY THIS EXISTS. routes/bob_pins.py imported `datetime` but called
+`datetime.now(timezone.utc)`, so POST /bob/pins/{id}/run raised NameError on
 every request — the pin runner was unreachable through its own route, and
 nothing caught it. Import-time checks could not: the name is resolved when the
 line RUNS, and that line only runs when someone loads a tile.
@@ -36,7 +36,7 @@ from pyflakes.messages import (  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# Everything George's answers pass through: the tools that produce the numbers,
+# Everything Bob's answers pass through: the tools that produce the numbers,
 # the loop and its write surface, and the backend that serves and schedules
 # them.
 SCANNED = ("agent", "tools", "backend/app")

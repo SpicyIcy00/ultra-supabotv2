@@ -18,7 +18,7 @@ Ungrouped is `page_id = NULL`, not a Page row or a reserved title. It cannot be
 renamed, described, deleted or reordered. Pins can move into and out of it.
 
 Purpose is visible, editable descriptive text, limited to one line and 200
-characters. George receives it explicitly as user-authored Page purpose. It
+characters. Bob receives it explicitly as user-authored Page purpose. It
 cannot override system instructions, business definitions, tool constraints or
 security boundaries. Title validation retains the existing naming rule: trim,
 collapse whitespace, reject blank, preserve case, at most 100 characters.
@@ -41,7 +41,7 @@ Per-owner transaction advisory locks serialize structural writes, including
 creation of empty Pages and moves from Ungrouped.
 
 The injected PageWriter is bound to the authenticated owner and supports explicit
-owned Page targets as well as current scope. George has two Page tools:
+owned Page targets as well as current scope. Bob has two Page tools:
 
 - `create_page(title, purpose, analyses)` creates an empty Page or an atomic
   collection of analyses from executed pinnable calls or existing owned Pins.
@@ -49,7 +49,7 @@ owned Page targets as well as current scope. George has two Page tools:
   supplied owned Page. It supports rename, purpose, add, add existing, remove,
   move to another Page and relational placement. It has no delete operation.
 
-Trusted request context includes lightweight owned Page IDs and titles. George
+Trusted request context includes lightweight owned Page IDs and titles. Bob
 can resolve a human title without replaying Page contents, then supply an ID.
 The write service refuses destination titles. Pin IDs are authoritative too;
 an ambiguous convenience title returns candidates with IDs and Page labels.
@@ -79,7 +79,7 @@ by contract tests. Tool schemas reflect the build/edit bounds.
 
 ## Confirmation and audit
 
-George's remove means **Remove from Page → kept in Ungrouped**, never deletion.
+Bob's remove means **Remove from Page → kept in Ungrouped**, never deletion.
 The confirmation says “Removed ATP from Rockwell Weekly · kept in Ungrouped”.
 Manual **Delete** retains actual Pin deletion. Manual **Delete Page** deletes
 only the Page object and moves all its Pins to Ungrouped.
@@ -87,7 +87,7 @@ only the Page object and moves all its Pins to Ungrouped.
 `george.page_events` is the append-only structural audit: owner, Page ID, actor,
 operation, relevant Pin ID, metadata before/after, conversation ID and timestamp.
 It contains no replay results. Manual and conversational changes use the same
-service semantics. George's ordinary tool-call log also remains intact.
+service semantics. Bob's ordinary tool-call log also remains intact.
 
 `page_changed` confirms committed mutations with Page ID, title, purpose,
 operations and updated time. The UI refreshes queries and preserves scope by ID.

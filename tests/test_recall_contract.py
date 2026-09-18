@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from app.services.george_recall import (
+from app.services.bob_recall import (
     MAX_ANSWER_HEAD,
     MAX_QUESTION,
     MAX_RECALL_TURNS,
@@ -168,7 +168,7 @@ def test_recall_survives_receipts_it_did_not_expect():
     Both halves are fixed and both are held: the tool no longer overloads the
     key (test_objects_contract), and this tolerates anything.
     """
-    from app.services.george_recall import _figure
+    from app.services.bob_recall import _figure
 
     assert _figure({"metric": "net_sales", "window": "last_week"}) == "net_sales"
     assert _figure({"metric": "x", "window": ["a", "b"]}) == "x"

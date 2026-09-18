@@ -31,7 +31,7 @@ import pytest
 
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 
-from agent import compose, loop as george_loop, prose, reading                # noqa: E402
+from agent import compose, loop as bob_loop, prose, reading                # noqa: E402
 from tools._common import load_defs, req                                       # noqa: E402
 from tests.evals import checks                                                 # noqa: E402
 from tests.test_loop_correction_contract import frames_of                      # noqa: E402
@@ -47,11 +47,11 @@ RETURNED = prose.allowed_numbers([{"rows": ROWS, "meta": {}}])      # 48,210 and
 # ---------------------------------------------------------------------------
 
 def test_a_lookup_and_a_follow_up_are_no_longer_high_and_a_dig_still_is() -> None:
-    assert george_loop.turn_effort("how did Rockwell do?", None, DEFS) == ("medium", "fresh")
-    assert george_loop.turn_effort("no i meant last week", [{"role": "user"}], DEFS) == ("medium", "follow_up")
-    assert george_loop.turn_effort("analyze tradsnax per store", None, DEFS) == ("high", "ladder")
-    assert george_loop.turn_effort("how are we doing?", None, DEFS) == ("high", "broad")
-    assert george_loop.turn_effort("lets build an ordering system", None, DEFS) == ("high", "build")
+    assert bob_loop.turn_effort("how did Rockwell do?", None, DEFS) == ("medium", "fresh")
+    assert bob_loop.turn_effort("no i meant last week", [{"role": "user"}], DEFS) == ("medium", "follow_up")
+    assert bob_loop.turn_effort("analyze tradsnax per store", None, DEFS) == ("high", "ladder")
+    assert bob_loop.turn_effort("how are we doing?", None, DEFS) == ("high", "broad")
+    assert bob_loop.turn_effort("lets build an ordering system", None, DEFS) == ("high", "build")
 
 
 # ---------------------------------------------------------------------------
@@ -124,7 +124,7 @@ def test_a_turn_that_read_nothing_is_conversation(monkeypatch) -> None:
 # ---------------------------------------------------------------------------
 
 def test_an_ask_or_an_action_refused_leaves_the_round_standing() -> None:
-    keeps = george_loop._refusal_keeps_the_round
+    keeps = bob_loop._refusal_keeps_the_round
     assert keeps({"rejected_slots": [{"slot": "asks", "reason": "a figure"}]}, DEFS) is False
     assert keeps({"rejected_actions": [{"action": "why", "reason": "no row"}]}, DEFS) is False
     assert keeps({"rejected_slots": [{"slot": "caveat", "reason": "a figure"}]}, DEFS) is True

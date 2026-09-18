@@ -33,7 +33,7 @@ import pytest
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from agent import loop as george_loop                                          # noqa: E402
+from agent import loop as bob_loop                                          # noqa: E402
 from tests.test_convergence_cap_contract import FakeClient, _ToolUse           # noqa: E402
 from tests.test_loop_correction_contract import StubLog, _TextBlock, frames_of # noqa: E402
 
@@ -45,9 +45,9 @@ REFUSED = {"group_by": "day", "date_range": "last_week", "metric": "net_sales",
 def _drive(monkeypatch, replies, history=None):
     """Run the loop; return (frames, requests, executed) where executed lists every call a tool saw."""
     fake = FakeClient(replies)
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
     StubLog.instances.clear()
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
     executed: list[tuple[str, dict]] = []
 
     async def fake_read(name, args):
@@ -64,10 +64,10 @@ def _drive(monkeypatch, replies, history=None):
                           "snapshot_timestamp": f"2026-09-08T00:00:0{len(executed)}+00:00",
                           "row_count": 1}}, None, 3)
 
-    monkeypatch.setattr(george_loop, "_call_tool", fake_read)
+    monkeypatch.setattr(bob_loop, "_call_tool", fake_read)
 
     async def collect():
-        return [f async for f in george_loop.run("why is Rockwell down?", history=history)]
+        return [f async for f in bob_loop.run("why is Rockwell down?", history=history)]
 
     return asyncio.run(collect()), fake.messages.requests, executed
 
@@ -200,7 +200,7 @@ def test_a_changed_argument_is_a_fresh_read(monkeypatch):
 # ---------------------------------------------------------------------------
 
 def test_duplicates_do_not_count_against_the_read_budget(monkeypatch):
-    n = george_loop.MAX_TOOL_CALLS
+    n = bob_loop.MAX_TOOL_CALLS
     uniques = [_ToolUse(f"tu-{i}", "get_sales", {**SALES, "top_n": i + 1}) for i in range(n - 1)]
     frames, _, executed = _drive(monkeypatch, [
         uniques,                                                    # 11 executed
@@ -215,7 +215,7 @@ def test_duplicates_do_not_count_against_the_read_budget(monkeypatch):
 
 
 def test_the_cap_counts_executed_reads_and_the_duplicate_is_still_served_past_it(monkeypatch):
-    n = george_loop.MAX_TOOL_CALLS
+    n = bob_loop.MAX_TOOL_CALLS
     uniques = [_ToolUse(f"tu-{i}", "get_sales", {**SALES, "top_n": i + 1}) for i in range(n)]
     frames, requests, executed = _drive(monkeypatch, [
         uniques,                                                    # 12 executed: budget spent
@@ -236,7 +236,7 @@ def test_the_cap_counts_executed_reads_and_the_duplicate_is_still_served_past_it
 def test_a_call_in_the_replayed_history_is_not_a_duplicate(monkeypatch):
     history = [
         {"role": "user", "text": "net sales by store last week?"},
-        {"role": "george", "text": "Rockwell took ₱1.", "tool_calls": [{"tool": "get_sales", "arguments": SALES}]},
+        {"role": "bob", "text": "Rockwell took ₱1.", "tool_calls": [{"tool": "get_sales", "arguments": SALES}]},
     ]
     frames, _, executed = _drive(monkeypatch, [
         [_ToolUse("tu-1", "get_sales", dict(SALES))],

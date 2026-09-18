@@ -1,5 +1,5 @@
 /**
- * The board fills when the data lands, and George's composition transforms it
+ * The board fills when the data lands, and Bob's composition transforms it
  * rather than replacing it (P1.b, 2026-09-13).
  *
  * The loop composes a default the moment the reads return
@@ -17,7 +17,7 @@
  * And one thing it must not do: a default must never outrank what he decided.
  */
 import { describe, expect, it } from 'vitest';
-import type { CompositionBlock, GeorgeTurn, ToolCall } from '../types/george';
+import type { CompositionBlock, BobTurn, ToolCall } from '../types/bob';
 import { buildBoard } from './board';
 import type { AnswerTurn } from './data';
 
@@ -30,10 +30,10 @@ const call = (seq: number, tool = 'get_sales', args: Record<string, unknown> = {
 } as unknown as ToolCall);
 
 const turn = (over: Partial<AnswerTurn>): AnswerTurn => ({
-  role: 'george', text: '', thinking: '', toolCalls: [], notices: [],
+  role: 'bob', text: '', thinking: '', toolCalls: [], notices: [],
   pinned: [], saved: [], pageChanges: [], at: '2026-09-13T00:00:00Z',
   ...over,
-} as unknown as GeorgeTurn as AnswerTurn);
+} as unknown as BobTurn as AnswerTurn);
 
 const frame = (blocks: CompositionBlock[], isDefault = false) =>
   ({ seq: -1, blocks, rejected: [], ...(isDefault ? { default: true } : {}) });
@@ -43,7 +43,7 @@ const seeded: CompositionBlock[] = [
   { op: 'put', kind: 'table', key: 'read-1', weight: 'quiet', seq: 1 },
 ];
 
-describe('the board before George has spoken', () => {
+describe('the board before Bob has spoken', () => {
   it('holds the default the loop composed, in the shape it named', () => {
     const board = buildBoard([turn({
       toolCalls: [call(0), call(1, 'get_stock')],
@@ -67,7 +67,7 @@ describe('the board before George has spoken', () => {
   });
 });
 
-describe('when George composes', () => {
+describe('when Bob composes', () => {
   it('his block replaces the default over the same read, and his leads', () => {
     const board = buildBoard([turn({
       toolCalls: [call(0), call(1, 'get_stock')],

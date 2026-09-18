@@ -1,5 +1,5 @@
 """
-Pure tests for the page reader: what George is allowed to read of a page.
+Pure tests for the page reader: what Bob is allowed to read of a page.
 
 NO DATABASE, NO API. What makes a page read safe is decidable from the
 statement it emits, the selection it makes and the way it schedules work:
@@ -38,8 +38,8 @@ pytest.importorskip("psycopg", reason="agent.loop imports the tools, which impor
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
 from agent.write_tools import PageReadRefused as AgentPageReadRefused, WriteContext  # noqa: E402
-from app.models.george_page import GeorgePage                                     # noqa: E402
-from app.models.george_pin import GeorgePin                                       # noqa: E402
+from app.models.bob_page import BobPage                                     # noqa: E402
+from app.models.bob_pin import BobPin                                       # noqa: E402
 from app.services.page_reader import (                                            # noqa: E402
     DEFAULT_PINS,
     MAX_PINS_PER_PAGE_READ,
@@ -56,7 +56,7 @@ from app.services.page_reader import (                                          
 )
 
 _ROOT = Path(__file__).resolve().parents[1]
-_ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "george.py"
+_ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "bob.py"
 
 ME = "ice"
 SALES = {"tool": "get_sales",
@@ -66,7 +66,7 @@ STOCK = {"tool": "get_stock", "arguments": {"location": "AJI BARN"}}
 T0 = datetime(2026, 9, 7, tzinfo=timezone.utc)
 
 # The page every fixture pin sits on. A row, with an id: that id is the scope.
-PAGE = GeorgePage(id=uuid.UUID(int=0xA11), owner=ME, title="AJI BARN Reorder",
+PAGE = BobPage(id=uuid.UUID(int=0xA11), owner=ME, title="AJI BARN Reorder",
                   purpose=None, created_at=T0, updated_at=T0)
 PAGE_ID = PAGE.id
 
@@ -75,9 +75,9 @@ def _run(coro):
     return asyncio.run(coro)
 
 
-def _pin(i: int, page: GeorgePage | None = PAGE, calls=(SALES,)) -> GeorgePin:
+def _pin(i: int, page: BobPage | None = PAGE, calls=(SALES,)) -> BobPin:
     """Pin number i, created i hours after T0 — so a higher i is newer."""
-    pin = GeorgePin(
+    pin = BobPin(
         id=uuid.UUID(int=i + 1),
         created_by=ME,
         created_at=T0 + timedelta(hours=i),
@@ -95,7 +95,7 @@ def _pin(i: int, page: GeorgePage | None = PAGE, calls=(SALES,)) -> GeorgePin:
     return pin
 
 
-def _page(n: int, **kw) -> list[GeorgePin]:
+def _page(n: int, **kw) -> list[BobPin]:
     """n pins in PAGE ORDER, as the list statement returns them."""
     pins = [_pin(i, **kw) for i in range(n - 1, -1, -1)]
     for pos, pin in enumerate(pins):
@@ -120,7 +120,7 @@ class FakeSession:
     statement's own entity, never from call order.
     """
 
-    def __init__(self, pins: list[GeorgePin], page: GeorgePage | None = PAGE) -> None:
+    def __init__(self, pins: list[BobPin], page: BobPage | None = PAGE) -> None:
         self.pins = pins
         self.page = page
         self.statements: list = []
@@ -129,13 +129,13 @@ class FakeSession:
         self.statements.append(stmt)
         assert isinstance(stmt, Select), type(stmt)
         first = stmt.column_descriptions[0]
-        if first.get("entity") is GeorgePage:
+        if first.get("entity") is BobPage:
             return _Scalars([self.page] if self.page is not None else [])
         return _Scalars(self.pins)
 
     def pin_statements(self) -> list:
         return [st for st in self.statements
-                if st.column_descriptions[0].get("entity") is GeorgePin]
+                if st.column_descriptions[0].get("entity") is BobPin]
 
 
 def _compiled(stmt) -> str:
@@ -365,7 +365,7 @@ def test_an_empty_ungrouped_scope_is_reported_not_invented():
 
 
 def test_the_read_carries_identity_and_the_users_own_purpose():
-    page = GeorgePage(id=uuid.UUID(int=0xB22), owner=ME, title="Rockwell Weekly",
+    page = BobPage(id=uuid.UUID(int=0xB22), owner=ME, title="Rockwell Weekly",
                       purpose="Watch Rockwell.", created_at=T0, updated_at=T0)
     pins = _page(2, page=page)
     out = _run(read_page(FakeSession(pins, page=page), username=ME, page_id=page.id,
@@ -507,7 +507,7 @@ def test_the_agent_side_refusal_is_a_value_error():
 
 
 def test_the_request_accepts_a_scope_by_id_and_legacy_callers_still_work():
-    from app.api.v1.routes.george import AskRequest, PageScope
+    from app.api.v1.routes.bob import AskRequest, PageScope
 
     legacy = AskRequest(question="hi", page_context="warehouse")
     assert legacy.page_scope is None

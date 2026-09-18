@@ -1,11 +1,11 @@
 /**
  * WHAT YOU DID TO THE BOARD, kept between visits.
  *
- * George arranges the board because he knows what matters. You rearrange it
+ * Bob arranges the board because he knows what matters. You rearrange it
  * because you know what you want to look at — and an arrangement that
  * evaporated on reload would teach you not to bother making one.
  *
- * PER VIEWER, PER THREAD, AND NEVER SENT BACK. None of this reaches George: a
+ * PER VIEWER, PER THREAD, AND NEVER SENT BACK. None of this reaches Bob: a
  * position you chose is not a judgement he made, and feeding it back would let
  * your habit of dragging something to the top read to him as importance.
  *
@@ -14,7 +14,7 @@
  */
 import type { Local } from './board';
 
-const KEY = 'george.room.arrangement';
+const KEY = 'bob.room.arrangement';
 const THREADS = 12;
 
 type Saved = Record<string, Record<string, Local>>;

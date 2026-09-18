@@ -1,10 +1,10 @@
 """
-The grammar: validating a shape George composed that nobody listed in advance.
+The grammar: validating a shape Bob composed that nobody listed in advance.
 
 WHAT THIS IS FOR. `agent/compose.py` takes a block naming one of fourteen
 widgets. That is a menu, and a menu cannot become whatever the work needs
 however long it gets. A block may instead carry a `spec` — a tree of layouts
-and marks — and then the shape is George's, not a choice from mine.
+and marks — and then the shape is Bob's, not a choice from mine.
 
 THE ONE RULE THAT MAKES AN INFINITE SPACE OF SHAPES SAFE. A mark names a READ
 and a FIELD. The renderer resolves the value from the rows. There is nowhere
@@ -21,7 +21,7 @@ a flat block does.
 FIVE THINGS ARE REFUSED, each because of what it would let onto the screen:
 
   a field a node may not carry           — the closed set is the guarantee
-  a value in a value position            — that is a figure George typed
+  a value in a value position            — that is a figure Bob typed
   a field the read does not have         — a column that does not exist
                                             renders as blank authority
   a read that never ran, or failed       — same rule the widget path has
@@ -30,7 +30,7 @@ FIVE THINGS ARE REFUSED, each because of what it would let onto the screen:
 AND ONE THING IS NOT (P1.a, 2026-09-13). A node whose DISCRIMINATOR is under
 another name — `type`, `kind`, `node`, or the layout's own word as the key —
 is renamed, not refused. The four recorded runs of the twelve are unanimous
-about what this cost: George wrote `{"type": "row", ...}`, was refused, wrote
+about what this cost: Bob wrote `{"type": "row", ...}`, was refused, wrote
 `{"kind": "row", ...}`, was refused, wrote `{"row": {...}}`, was refused, and
 landed on `{"layout": "row", ...}` on the fourth try — three round trips, in
 every run, to say a thing he had said correctly the first time. The VALUES
@@ -47,7 +47,7 @@ from __future__ import annotations
 from typing import Any, Mapping, Optional, Sequence
 
 # A value position is a channel: it must name a COLUMN, so what arrives has to
-# be a string that some row actually carries. Anything numeric here is George
+# be a string that some row actually carries. Anything numeric here is Bob
 # having typed a figure, which is the one thing the grammar exists to prevent.
 # `against` is the whole a bullet's field is part of: a column of the SAME row,
 # so a bar is measured against a figure the tool put beside it and never
@@ -73,7 +73,7 @@ EMPHASISE = "emphasise"
 NOTE = "note"
 
 
-# THE DISCRIMINATOR, UNDER EVERY NAME GEORGE HAS REACHED FOR. A node says
+# THE DISCRIMINATOR, UNDER EVERY NAME BOB HAS REACHED FOR. A node says
 # whether it is a layout or a mark; these are the words he used for that
 # instead, each observed in a real run of the twelve. The VALUE is what
 # decides which it becomes, so a synonym carrying a word that is neither a
@@ -104,7 +104,7 @@ def _no_row(call: Mapping[str, Any], subject: str, path: str, seq: Any) -> str:
     """
     Why a subject matched nothing — and the mistake it usually is.
 
-    Live, George passed `subject: "store"`: the NAME of a column where a value
+    Live, Bob passed `subject: "store"`: the NAME of a column where a value
     belongs. "read 0 has no row for 'store'" is true and unhelpful. Saying
     which mistake it is, and naming values that would have worked, turns a
     refusal into the next correct attempt.
@@ -136,7 +136,7 @@ def _check_channel(name: str, value: Any, call: Optional[Mapping[str, Any]],
     """
     One channel: it names a column, and the column exists.
 
-    THE NUMERIC CHECK IS NOT PEDANTRY. `field: 203717` is George putting a
+    THE NUMERIC CHECK IS NOT PEDANTRY. `field: 203717` is Bob putting a
     figure on screen through the one door left open, and it would render as a
     number nobody read. A channel is a name; a name is a string.
     """
@@ -162,7 +162,7 @@ def _check_channel(name: str, value: Any, call: Optional[Mapping[str, Any]],
 def _normalise(item: Any, *, layouts: Mapping[str, Any], marks: Mapping[str, Any],
                path: str, coerced: list[str]) -> Any:
     """
-    The node George wrote, in the words the grammar uses.
+    The node Bob wrote, in the words the grammar uses.
 
     Three shapes arrive meaning the same thing, and only the third is spelled
     the way this file spells it:
@@ -243,7 +243,7 @@ def _node(item: Any, *, calls: Mapping[int, Mapping[str, Any]],
     extra = set(item.keys()) - allowed
     if extra:
         raise Rejected(
-            f"{path}: a node may not carry {sorted(extra)} — George composes, "
+            f"{path}: a node may not carry {sorted(extra)} — Bob composes, "
             f"the system draws (composition.grammar.allowed_fields)"
         )
 
@@ -309,7 +309,7 @@ def _node(item: Any, *, calls: Mapping[int, Mapping[str, Any]],
                 raise Rejected(f"{path}: cols is a whole number from 1 to {max_cols}")
             out["cols"] = cols
 
-        # A panel's heading names a column too — never a title George wrote,
+        # A panel's heading names a column too — never a title Bob wrote,
         # for the same reason a mark never carries a figure.
         if "heading" in item:
             heading = item["heading"]
@@ -451,7 +451,7 @@ def validate_spec(spec: Any, *, calls: Mapping[int, Mapping[str, Any]],
     """
     One composed shape, checked whole.
 
-    Raises Rejected with a reason naming the node, so a refusal tells George
+    Raises Rejected with a reason naming the node, so a refusal tells Bob
     which part of the tree was wrong rather than that the tree was.
 
     `coerced` collects every rename made on the way down, for the caller to

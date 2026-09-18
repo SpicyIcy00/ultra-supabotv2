@@ -1,7 +1,7 @@
 """
 Page Workshop V1 — behavioural evals. LIVE MODEL, LIVE DATABASE, OPT IN.
 
-What is under test is what George CHOOSES to write, not whether the write
+What is under test is what Bob CHOOSES to write, not whether the write
 lands: the page writer is a fake that records every spec and answers as the
 committed write would, so nothing reaches george.pages, while the reads are
 the real tools against the real database on CLOSED windows. The service
@@ -65,7 +65,7 @@ def _outcome(record) -> str:
 
 
 # ---------------------------------------------------------------------------
-# The fake writer, and a page George can read
+# The fake writer, and a page Bob can read
 # ---------------------------------------------------------------------------
 
 PAGE_ID = "11111111-2222-3333-4444-555555555555"
@@ -82,7 +82,7 @@ ATP_CALL = {"tool": "get_sales", "arguments": {**NS_CALL["arguments"], "metric":
 
 
 class FakeWriter:
-    """Records what George asked to be written; answers as a committed write would."""
+    """Records what Bob asked to be written; answers as a committed write would."""
 
     def __init__(self, title="Rockwell", pins=None, refuse_edit: Exception | None = None):
         self.title = title
@@ -327,7 +327,7 @@ def test_an_ambiguous_title_is_put_to_the_user_not_picked(monkeypatch):
     f = _common("ambiguous_title", turn, w)
     edits = turn.page_writes
     # Refused once is fine; refused, then retried with one of the two ids
-    # picked by George, is the guess this test exists to catch.
+    # picked by Bob, is the guess this test exists to catch.
     assert len(edits) <= 1, f"retried without clarification: {[e.get('arguments') for e in edits]}"
     assert not w.edits and not turn.page_changes
     assert all(not o.get("pin_id") for e in edits for o in e["arguments"].get("operations", [])), \

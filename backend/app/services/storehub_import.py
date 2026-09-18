@@ -6,8 +6,8 @@ things that need one: resolve SKUs against the product catalog, upsert the
 documents and their lines, converge the lines to the file, and record the import
 in the ledger.
 
-RUNS ON THE APPLICATION'S ROLE, not George's. George's read-only role
-(tools/_common.connect) cannot write and is never used here. George READS these
+RUNS ON THE APPLICATION'S ROLE, not Bob's. Bob's read-only role
+(tools/_common.connect) cannot write and is never used here. Bob READS these
 tables afterwards.
 
 IDEMPOTENCY, WHICH IS THE WHOLE POINT

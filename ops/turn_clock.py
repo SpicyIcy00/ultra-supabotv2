@@ -1,4 +1,4 @@
-"""The clock: how long a turn actually took, read back from George's own log.
+"""The clock: how long a turn actually took, read back from Bob's own log.
 
 Phase 1's targets are all times — first visible change under 2 s, median
 answer under 10 s — and until 2026-09-13 none of them could be reported from
@@ -8,7 +8,7 @@ status, and not one second.
 This is the reading. One window of `george.conversations`, one window of
 `george.tool_calls`, and four numbers per turn: how long it took, how many
 model round trips it spent, how many tool calls it made, and how many times
-deterministic code made George write the answer again. It writes nothing.
+deterministic code made Bob write the answer again. It writes nothing.
 
 TWO CLOCKS, AND THEY ARE NOT THE SAME NUMBER.
 
@@ -55,7 +55,7 @@ from typing import Iterable, Optional, Sequence
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# The users that are not a person using George. `coverage` is the scripted
+# The users that are not a person using Bob. `coverage` is the scripted
 # sweep that produced 145 of the first 193 turns; a run with --user-only drops
 # them so the median is a median of use.
 SCRIPTED_USERS = {"coverage", "brief", "scheduler", "backtest", None}

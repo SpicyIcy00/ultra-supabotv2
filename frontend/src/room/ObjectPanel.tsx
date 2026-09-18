@@ -4,10 +4,10 @@
  * Tapping a shop used to focus its tile and show the same one figure larger.
  * The complaint was exact — "there's so little data shown, there's nothing to
  * expand" — and this is the inside: its week, what moved it, what is selling,
- * what has run out, and what George thinks about it.
+ * what has run out, and what Bob thinks about it.
  *
  * NO MODEL TURN. One request, about a second, the same reads every time. The
- * server runs the identical tool George is given, so tapping and asking cannot
+ * server runs the identical tool Bob is given, so tapping and asking cannot
  * show different numbers.
  *
  * THIS IS PLUMBING, NOT A DESIGN. It reuses the room's existing type, table and
@@ -28,7 +28,7 @@ import { useQuery } from '@tanstack/react-query';
 import { openObject, type ObjectSection, type ObjectView } from '../services/objectApi';
 import type { AnswerTurn, Dimension } from './data';
 import { changeOf, fmt, receiptsDetail, receiptsLine, unitOf } from './data';
-import type { ToolMeta } from '../types/george';
+import type { ToolMeta } from '../types/bob';
 import { Spec } from './Spec';
 import { Delta } from './tiles';
 
@@ -121,7 +121,7 @@ function group(sections: ObjectSection[]): [string, ObjectSection[]][] {
 
 /**
  * THE SECTIONS THAT ARE INSTRUMENTS. A shop's thirty days are a range and a
- * calendar, its hours are dots — the same marks George composes with, drawn
+ * calendar, its hours are dots — the same marks Bob composes with, drawn
  * over the section's own rows, so opening a shop looks like the board and
  * not like a report about it. Every other section is rows.
  */
@@ -180,13 +180,13 @@ function Section({ section }: { section: ObjectSection }) {
   );
 }
 
-/** What George thinks, with when he formed it and whether it has been checked since. */
+/** What Bob thinks, with when he formed it and whether it has been checked since. */
 function View({ view }: { view: ObjectView['view'] }) {
   if (!view) {
     // NOT the same as "he thinks nothing is wrong", and it must not read that way.
     return (
       <p className="r-note" style={{ marginTop: 6 }}>
-        George has not formed a view on this yet.
+        Bob has not formed a view on this yet.
       </p>
     );
   }
@@ -195,7 +195,7 @@ function View({ view }: { view: ObjectView['view'] }) {
   }
   return (
     <div style={{ marginTop: 6 }}>
-      <p className="r-note" style={{ color: 'rgb(var(--george))' }}>{view.claim}</p>
+      <p className="r-note" style={{ color: 'rgb(var(--bob))' }}>{view.claim}</p>
       <p className="r-label" style={{ marginTop: 6, opacity: 0.75 }}>
         {view.stance}
         {view.held_since && ` · held since ${new Date(view.held_since).toLocaleDateString()}`}
@@ -229,7 +229,7 @@ export function ObjectPanel({ kind, name }: { kind: string; name: string }) {
         </p>
       )}
       <div style={{ marginTop: 18 }}>
-        <p className="r-label">what George thinks</p>
+        <p className="r-label">what Bob thinks</p>
         <View view={data.view} />
       </div>
       {/* One heading per section, however many reads it took. `drivers` is

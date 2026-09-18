@@ -1,5 +1,5 @@
 {
- "why": "No eval report has ever recorded a view_memory read, so the memory scene cannot be lifted from one. These rows are the shape self_reader returns (the same two frontend/src/room/memory.dom.test.tsx draws); the question is the owner's own words from the dogfood log. The answer is a fixture line, not George's.",
+ "why": "No eval report has ever recorded a view_memory read, so the memory scene cannot be lifted from one. These rows are the shape self_reader returns (the same two frontend/src/room/memory.dom.test.tsx draws); the question is the owner's own words from the dogfood log. The answer is a fixture line, not Bob's.",
  "question": "what do you remember?",
  "answer": "Two views, and what each rests on.",
  "at": "2026-09-15T09:00:00Z",

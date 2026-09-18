@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from agent import loop as george_loop
+from agent import loop as bob_loop
 from agent import write_tools
 
 pytest.importorskip("sqlalchemy")
@@ -100,7 +100,7 @@ def test_believing_nothing_produces_no_block():
 
 
 def test_every_belief_carries_its_id_so_it_can_be_revised():
-    """Without the id George cannot supersede a view, only duplicate it."""
+    """Without the id Bob cannot supersede a view, only duplicate it."""
     assert "[id: b1]" in belief_store.as_block([belief()], now=NOW)
 
 
@@ -114,7 +114,7 @@ def test_the_block_is_capped_and_says_how_many_it_left_out():
     """
     A view of the business somebody can hold in their head is a handful. Past
     the cap it stops being context and becomes a document — and silently
-    truncating would hide views George still holds.
+    truncating would hide views Bob still holds.
     """
     many = [belief(id=f"b{i}", subject=f"Shop {i}") for i in range(belief_store.MAX_IN_PROMPT + 3)]
     block = belief_store.as_block(many, now=NOW)
@@ -136,7 +136,7 @@ def test_the_tool_is_gated_on_an_injected_store():
 
 def test_the_tool_is_absent_without_a_store():
     from agent.write_tools import WriteContext
-    assert "record_belief" not in george_loop.injected_surface(WriteContext())
+    assert "record_belief" not in bob_loop.injected_surface(WriteContext())
 
 
 def test_the_tool_is_present_with_one():
@@ -146,17 +146,17 @@ def test_the_tool_is_present_with_one():
         async def record(self, accepted):
             return []
 
-    assert "record_belief" in george_loop.injected_surface(WriteContext(belief_store=Store()))
+    assert "record_belief" in bob_loop.injected_surface(WriteContext(belief_store=Store()))
 
 
 def test_beliefs_reach_the_loop_as_a_question_block_not_a_tool():
     """
-    What George believes shapes the whole turn, so it arrives WITH the question
+    What Bob believes shapes the whole turn, so it arrives WITH the question
     rather than being fetched during it — the same way recall does. Fetching it
     mid-turn would mean the frame arrived after the reading had started.
     """
     import inspect
-    params = inspect.signature(george_loop.run).parameters
+    params = inspect.signature(bob_loop.run).parameters
     assert "beliefs" in params
     assert "belief_store" in params
 
@@ -183,7 +183,7 @@ def test_the_stream_wrapper_forwards_everything_it_accepts():
     import inspect
     import sys, pathlib
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "backend"))
-    from app.api.v1.routes import george as route
+    from app.api.v1.routes import bob as route
 
     src = inspect.getsource(route._safe_stream)
     wrapper = [n for n in inspect.signature(route._safe_stream).parameters
@@ -191,7 +191,7 @@ def test_the_stream_wrapper_forwards_everything_it_accepts():
     dropped = [n for n in wrapper if f"{n}={n}" not in src]
     assert not dropped, f"_safe_stream accepts but never forwards: {dropped}"
 
-    accepted_by_loop = set(inspect.signature(george_loop.run).parameters)
+    accepted_by_loop = set(inspect.signature(bob_loop.run).parameters)
     unknown = [n for n in wrapper if n not in accepted_by_loop]
     assert not unknown, f"_safe_stream forwards what the loop cannot take: {unknown}"
 
@@ -207,7 +207,7 @@ def test_the_route_only_passes_the_wrapper_what_it_accepts():
     import inspect
     import sys, pathlib
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "backend"))
-    from app.api.v1.routes import george as route
+    from app.api.v1.routes import bob as route
 
     accepted = set(inspect.signature(route._safe_stream).parameters)
     tree = ast.parse(pathlib.Path(route.__file__).read_text(encoding="utf-8"))
@@ -243,7 +243,7 @@ def test_a_taught_view_says_it_was_told_and_quotes_them():
     """
     The block is where "we means the shops" reaches the next question, so the
     line has to say it was TOLD rather than read — otherwise the strongest
-    thing on the block is indistinguishable from a reading George made up.
+    thing on the block is indistinguishable from a reading Bob made up.
     """
     block = belief_store.as_block([TAUGHT], latest_data=NOW, now=NOW)
     assert "you were told" in block
@@ -254,7 +254,7 @@ def test_a_taught_view_says_it_was_told_and_quotes_them():
 def test_a_taught_view_is_never_marked_unconfirmed():
     """
     THE ONE PLACE THE FRESHNESS RULE MUST NOT APPLY. Data landing since cannot
-    make it less true that this is what they meant, and telling George to
+    make it less true that this is what they meant, and telling Bob to
     re-read before relying on it would be sending him to find a fact no read
     contains. The reading beside it is still marked, in the same block.
     """

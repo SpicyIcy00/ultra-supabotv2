@@ -11,10 +11,10 @@
  * held back; before they load, or for a kind they do not name, everything is
  * drawn. A notice hidden because nobody decided is the one outcome ruled out.
  *
- * George still receives every notice; this is the screen, nothing more.
+ * Bob still receives every notice; this is the screen, nothing more.
  */
 import { createContext, useContext } from 'react';
-import type { GeorgeNotice } from '../types/george';
+import type { BobNotice } from '../types/bob';
 
 export const ExplainsOnlyContext = createContext<ReadonlySet<string>>(new Set());
 
@@ -24,10 +24,10 @@ export function explainsOnlyFrom(defs: { notices?: { explains_only?: string[] } 
 }
 
 /** The notices a person is shown: every one that is not only an explanation. */
-export function drawnOnly(notices: GeorgeNotice[] | undefined, explains: ReadonlySet<string>): GeorgeNotice[] {
+export function drawnOnly(notices: BobNotice[] | undefined, explains: ReadonlySet<string>): BobNotice[] {
   return (notices ?? []).filter((n) => !explains.has(String(n.kind)));
 }
 
-export function useDrawnOnly(notices: GeorgeNotice[] | undefined): GeorgeNotice[] {
+export function useDrawnOnly(notices: BobNotice[] | undefined): BobNotice[] {
   return drawnOnly(notices, useContext(ExplainsOnlyContext));
 }

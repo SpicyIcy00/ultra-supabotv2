@@ -1,6 +1,6 @@
 # The morning brief — n8n schedule
 
-Delivers George's brief to Telegram at 06:00 Manila.
+Delivers Bob's brief to Telegram at 06:00 Manila.
 
 Two workflow files, same behaviour:
 
@@ -17,7 +17,7 @@ Import via Workflows → ⋯ → Import from File.
 
 ## Starter: the two credentials
 
-**Header Auth** — name it `George brief token`:
+**Header Auth** — name it `Bob brief token`:
 - Name: `Authorization`
 - Value: `Bearer <BRIEF_TOKEN>`
 

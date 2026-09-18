@@ -23,7 +23,7 @@ BIN = RUNTIME / 'pgsql' / 'bin'
 DATA = RUNTIME / 'data'
 CONFIG = RUNTIME / 'credentials.json'
 PORT = 55432
-DATABASES = ('george_integration', 'george_upgrade_rehearsal', 'george_downgrade_rehearsal')
+DATABASES = ('bob_integration', 'bob_upgrade_rehearsal', 'bob_downgrade_rehearsal')
 BASE_REVISION = 'p0q1r2s3t4u5'
 PAGE_REVISION = 'q1r2s3t4u5v6'
 
@@ -83,7 +83,7 @@ def initialize():
         finally:
             password_file.unlink(missing_ok=True)
         with (DATA / 'postgresql.conf').open('a', encoding='utf-8') as f:
-            f.write("\n# George synthetic local integration only\nlisten_addresses = '127.0.0.1'\n"
+            f.write("\n# Bob synthetic local integration only\nlisten_addresses = '127.0.0.1'\n"
                     f"port = {PORT}\ntimezone = 'Asia/Manila'\nmax_connections = 40\n"
                     "log_statement = 'none'\nlog_min_error_statement = 'panic'\n"
                     "log_error_verbosity = 'terse'\n")
@@ -195,13 +195,13 @@ def baseline(database):
             print(database + ': creating public.' + table.name + '...')
             table.create(conn, checkfirst=True)
         source = (ROOT / 'agent/sql/george_log_role.sql').read_text(encoding='utf-8')
-        start = source.index('CREATE SCHEMA IF NOT EXISTS george;')
+        start = source.index('CREATE SCHEMA IF NOT EXISTS bob;')
         end = source.index('-- NOTE: no FOREIGN KEY', start)
-        print(database + ': creating George baseline tables...')
+        print(database + ': creating Bob baseline tables...')
         conn.exec_driver_sql(source[start:end])
         for table in ('conversations', 'tool_calls', 'gaps'):
-            conn.exec_driver_sql(f'ALTER TABLE george.{table} ENABLE ROW LEVEL SECURITY')
-            conn.exec_driver_sql(f'CREATE POLICY george_log_write ON george.{table} FOR INSERT TO george_log WITH CHECK (true)')
+            conn.exec_driver_sql(f'ALTER TABLE bob.{table} ENABLE ROW LEVEL SECURITY')
+            conn.exec_driver_sql(f'CREATE POLICY bob_log_write ON bob.{table} FOR INSERT TO george_log WITH CHECK (true)')
         revisions = ['j4k5l6m7n8o9', 'k5l6m7n8o9p0', 'l6m7n8o9p0q1',
                      'm7n8o9p0q1r2', 'n8o9p0q1r2s3', 'o9p0q1r2s3t4', BASE_REVISION]
         with Operations.context(MigrationContext.configure(conn)):
@@ -218,8 +218,8 @@ def baseline(database):
         seed(conn)
         conn.exec_driver_sql('GRANT USAGE ON SCHEMA public TO george_ro')
         conn.exec_driver_sql('GRANT SELECT ON stores, products, new_transactions, new_transaction_items, inventory, inventory_snapshots, purchase_orders, purchase_order_lines, stock_transfers, stock_transfer_lines, storehub_imports TO george_ro')
-        conn.exec_driver_sql('REVOKE ALL ON SCHEMA george FROM PUBLIC, george_ro')
-        conn.exec_driver_sql('GRANT USAGE ON SCHEMA george TO george_log')
+        conn.exec_driver_sql('REVOKE ALL ON SCHEMA bob FROM PUBLIC, george_ro')
+        conn.exec_driver_sql('GRANT USAGE ON SCHEMA bob TO george_log')
         conn.exec_driver_sql('GRANT INSERT ON george.conversations, george.tool_calls, george.gaps, george.posts TO george_log')
         conn.exec_driver_sql("CREATE TABLE local_fixture_manifest (kind text NOT NULL CHECK (kind='synthetic'), baseline_revision text NOT NULL)")
         conn.execute(text("INSERT INTO local_fixture_manifest VALUES ('synthetic', :v)"), {'v': BASE_REVISION})

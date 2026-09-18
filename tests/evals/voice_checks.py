@@ -1,5 +1,5 @@
 """
-The deterministic checks for HOW George talks.
+The deterministic checks for HOW Bob talks.
 
 PURE — no model, no database — and additive to checks.py, which holds the
 trust checks (numeral grounding, attribution, enumeration). These hold the

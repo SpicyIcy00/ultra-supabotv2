@@ -180,13 +180,13 @@ def test_the_page_is_publishable():
 # THE FIFTEEN SCENES (2026-09-17)
 #
 # The owner asked: "so at the end of p2s we will have my ideal ui? make sure we
-# will". The ideal is `ops/ideal/george-ahead-of-me.html`, and it has one scene
+# will". The ideal is `ops/ideal/bob-ahead-of-me.html`, and it has one scene
 # per part of his vision. Phase 2S finishes eight of them, not fifteen — so the
 # claim "the ideal UI is built" is only true when every scene has a close that
 # owns it, and each close's own card says so. These hold that, so a scene cannot
 # quietly fall between phases and a close cannot claim more than it walks.
 # ---------------------------------------------------------------------------
-ARTIFACT = ROOT / "ops" / "ideal" / "george-ahead-of-me.html"
+ARTIFACT = ROOT / "ops" / "ideal" / "bob-ahead-of-me.html"
 CLOSES = {"P2S.✓", "P3.✓", "S.4", "S.6"}
 
 

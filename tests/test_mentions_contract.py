@@ -40,7 +40,7 @@ from agent import surface  # noqa: E402
 
 _ROOT = Path(__file__).resolve().parents[1]
 _SERVICE = _ROOT / "backend" / "app" / "services" / "mentions.py"
-_ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "george.py"
+_ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "bob.py"
 
 DEFS = load_defs()
 SEL = DEFS["surface"]["desk"]["selection"]
@@ -71,7 +71,7 @@ def test_compare_these_is_a_question_and_no_definition_makes_it_a_replay():
     feature 7: "Select two stores → Compare these").
 
     The definition is gone and its ABSENCE is the behaviour: a short
-    instruction with subjects picked goes to George with them attached, the
+    instruction with subjects picked goes to Bob with them attached, the
     way every other one does. This asserts it stays gone, because a shortcut
     that grew back silently would take the report with it.
     """
@@ -230,8 +230,8 @@ def test_the_service_writes_no_sql_and_reaches_the_catalogue_through_the_tools()
     assert {"get_product", "get_purchasing"} <= called
     for banned in ("SELECT ", "select(", "text(", "FROM "):
         if banned == "select(":
-            # `select(GeorgeWorkflow)` is the ORM, which is how every other
-            # George route reads George's own schema — not freehand SQL.
+            # `select(BobWorkflow)` is the ORM, which is how every other
+            # Bob route reads Bob's own schema — not freehand SQL.
             continue
         assert banned not in source, f"{banned!r} is SQL in a file that must hold none"
 
@@ -241,7 +241,7 @@ def test_the_route_consults_no_model_and_writes_nothing():
     at = source.index("async def mentions(")
     body = source[at:at + 1400]
     assert "mentions_service.resolve" in body
-    for banned in ("george_loop", "anthropic", "INSERT", "UPDATE", "_writer("):
+    for banned in ("bob_loop", "anthropic", "INSERT", "UPDATE", "_writer("):
         assert banned not in body
 
 
@@ -249,7 +249,7 @@ def test_the_route_consults_no_model_and_writes_nothing():
 
 def test_the_request_model_accepts_exactly_the_declared_dimensions():
     from pydantic import ValidationError
-    from app.api.v1.routes.george import DeskSelection
+    from app.api.v1.routes.bob import DeskSelection
 
     for dimension in SEL["dimensions"]:
         DeskSelection(dimension=dimension, subjects=[{"id": "x", "label": "X"}])
@@ -257,7 +257,7 @@ def test_the_request_model_accepts_exactly_the_declared_dimensions():
         DeskSelection(dimension="machine", subjects=[])
 
 
-def test_a_supplier_and_a_named_rule_reach_george_as_words_with_no_figure():
+def test_a_supplier_and_a_named_rule_reach_bob_as_words_with_no_figure():
     line = surface.desk_sentence({
         "selection": {"dimension": "supplier",
                       "subjects": [{"id": "Seikyo", "label": "Seikyo"}]},
@@ -271,7 +271,7 @@ def test_a_supplier_and_a_named_rule_reach_george_as_words_with_no_figure():
 def test_a_reference_of_a_kind_that_binds_something_else_is_dropped():
     # A page binds `page_scope`, which injects a reader. Repeating it here as
     # well would be the same fact on two channels, and a client could put a
-    # kind of its own invention into George's context.
+    # kind of its own invention into Bob's context.
     line = surface.desk_sentence({
         "references": [{"kind": "page", "id": "p-1", "label": "Replenishment"},
                        {"kind": "machine", "id": "m-1", "label": "Nowhere"}],
@@ -394,7 +394,7 @@ def test_the_read_behind_the_category_kind_exists_and_is_not_freehand():
 def test_the_category_read_is_not_in_the_models_schema():
     """
     DELIBERATE, and worth a test because the obvious next edit is to add it.
-    This is a person's completion list, not a question George is asked — he
+    This is a person's completion list, not a question Bob is asked — he
     reaches for `get_product(category=)` when a category is named. A tool
     added to the schema rewrites the 1h-cached prefix for every request in the
     deploy, to serve a menu.

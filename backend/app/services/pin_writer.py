@@ -1,8 +1,8 @@
 """
-Creating a pin — the ONE write path, shared by the button and by George.
+Creating a pin — the ONE write path, shared by the button and by Bob.
 
 This module exists because there are two ways to pin an answer: the Pin button
-on a chat turn (POST /pins) and George pinning his own answer when asked in
+on a chat turn (POST /pins) and Bob pinning his own answer when asked in
 conversation (the `pin_answer` tool). They must not be two implementations.
 Every guarantee a pin carries — that its calls still run against the live tool
 surface, that a page name is not a case-typo of an existing page, that a tile
@@ -13,12 +13,12 @@ WHAT THE CALLER STILL OWNS
   - The identity. `username` is passed in and is never derived from anything a
     request body (or a model) said. Both callers take it from the verified token.
   - The transaction. This module flushes; it does not commit. The route lets
-    get_db commit at the end of the request; George's writer commits
+    get_db commit at the end of the request; Bob's writer commits
     immediately, because it runs inside a long-lived SSE stream and the pin must
     survive the stream dying later.
 
 FAILURES ARE TYPED, NOT FORMATTED. The route turns them into status codes, and
-George turns them into a refusal the model can act on. Neither reads a string to
+Bob turns them into a refusal the model can act on. Neither reads a string to
 decide which is which.
 
 MEMBERSHIP MOVED TO page_writer (2026-09-08, Page Workshop V1). A page is a row
@@ -42,8 +42,8 @@ from typing import Any, Optional
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.george_page import GeorgePage
-from app.models.george_pin import GeorgePin
+from app.models.bob_page import BobPage
+from app.models.bob_pin import BobPin
 from app.services import page_writer
 from app.services.page_writer import (   # noqa: F401 - re-exported for the routes and tests
     USER,
@@ -92,8 +92,8 @@ class CreatedPin:
     sessionmaker sets expire_on_commit=False.
     """
 
-    row: GeorgePin
-    # How many pins now sit on that page, this one included. Lets George say
+    row: BobPin
+    # How many pins now sit on that page, this one included. Lets Bob say
     # "added to Replenishment, which now has four" instead of guessing.
     pins_on_page: int
 
@@ -106,15 +106,15 @@ async def pages_for(db: AsyncSession, username: str) -> list[str]:
 async def count_pins(db: AsyncSession, username: str) -> int:
     return (
         await db.execute(
-            select(func.count()).select_from(GeorgePin).where(GeorgePin.created_by == username)
+            select(func.count()).select_from(BobPin).where(BobPin.created_by == username)
         )
     ).scalar_one()
 
 
 async def _count_on_page(db: AsyncSession, username: str, page_id: Optional[uuid.UUID]) -> int:
-    stmt = select(func.count()).select_from(GeorgePin).where(GeorgePin.created_by == username)
-    stmt = stmt.where(GeorgePin.page_id.is_(None) if page_id is None
-                      else GeorgePin.page_id == page_id)
+    stmt = select(func.count()).select_from(BobPin).where(BobPin.created_by == username)
+    stmt = stmt.where(BobPin.page_id.is_(None) if page_id is None
+                      else BobPin.page_id == page_id)
     return (await db.execute(stmt)).scalar_one()
 
 
@@ -144,9 +144,9 @@ async def ensure_pin_quota(db: AsyncSession, username: str, adding: int = 1) -> 
 def new_pin_row(
     *, username: str, calls: list[dict], title: Optional[str], question: Optional[str],
     conversation_id: Optional[uuid.UUID],
-) -> GeorgePin:
+) -> BobPin:
     """The row, unattached. page_writer.append_new_pin puts it somewhere."""
-    return GeorgePin(
+    return BobPin(
         id=uuid.uuid4(),
         created_by=username,
         created_at=datetime.now(timezone.utc),
@@ -197,7 +197,7 @@ async def create_pin(
     calls = validate_pin_calls(tool_calls)
     await ensure_pin_quota(db, username, adding=1)
 
-    target: Optional[GeorgePage] = None
+    target: Optional[BobPage] = None
     if page_id is not UNSET:
         if page_id is not None:
             target = await page_writer.get_page(db, username, uuid.UUID(str(page_id)))
@@ -214,9 +214,9 @@ async def create_pin(
     await db.flush()
 
     # The pin in the river, so it has a durable record beside everything else
-    # George did. PRIVATE and owned by whoever pinned: a pin is one person's
-    # tile (app/models/george_post.PRIVATE_GEORGE_KINDS). Here rather than in
-    # the route, because this is the path the route AND George's injected
+    # Bob did. PRIVATE and owned by whoever pinned: a pin is one person's
+    # tile (app/models/bob_post.PRIVATE_BOB_KINDS). Here rather than in
+    # the route, because this is the path the route AND Bob's injected
     # writer both take. Idempotent on the pin id. Never fatal.
     if announce:
         try:
@@ -236,7 +236,7 @@ async def create_pin(
 class MovedPin:
     """The pin after its membership changed, plus where it now sits."""
 
-    row: GeorgePin
+    row: BobPin
     pins_on_page: int
 
 

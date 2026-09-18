@@ -3,7 +3,7 @@
  *
  * The whole safety argument for a text slot rests here: `splitClaim` returns a
  * span of the ANSWER or nothing at all, so the surface can emphasise what
- * George said and can never write a word he did not. Mirrored in
+ * Bob said and can never write a word he did not. Mirrored in
  * agent/reading.py `was_said`, which decides only whether it landed.
  */
 import { describe, expect, it } from 'vitest';

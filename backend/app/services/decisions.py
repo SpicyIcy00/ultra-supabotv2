@@ -1,9 +1,9 @@
 """
-What people did with what George raised, and how it is read back.
+What people did with what Bob raised, and how it is read back.
 
-WHY A SERVICE AND NOT A TOOL. Decisions live in the `george` schema, which
+WHY A SERVICE AND NOT A TOOL. Decisions live in the `bob` schema, which
 george_ro cannot see, so the rule that governs pins, beliefs and page reads
-governs this: the room writes through `POST /george/decisions` on the
+governs this: the room writes through `POST /bob/decisions` on the
 application role; the agenda reads through an injected reader bound in the
 web process or the standing runner; agent/ never imports backend/.
 
@@ -29,7 +29,7 @@ from typing import Any, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.george_decision import DECISION_OUTCOMES, GeorgeDecision
+from app.models.bob_decision import DECISION_OUTCOMES, BobDecision
 
 #: Held equal to metrics.yaml attention.learning.window_days by the contract.
 WINDOW_DAYS = 30
@@ -43,7 +43,7 @@ class DecisionRefused(ValueError):
 
 async def record(session: AsyncSession, *, what: str, source: str, subject: str,
                  outcome: str, decided_by: str, raised_at: Optional[datetime] = None,
-                 thread_id: Optional[str] = None) -> GeorgeDecision:
+                 thread_id: Optional[str] = None) -> BobDecision:
     """One gesture on one attention row. Never updates; a change of mind is another row."""
     if outcome not in DECISION_OUTCOMES:
         raise DecisionRefused(
@@ -52,7 +52,7 @@ async def record(session: AsyncSession, *, what: str, source: str, subject: str,
     what = (what or "").strip()
     if not what:
         raise DecisionRefused("A decision has to be about something: `what` is blank.")
-    row = GeorgeDecision(
+    row = BobDecision(
         id=str(uuid.uuid4()),
         what=what[:500],
         source=(source or "").strip()[:100],
@@ -71,15 +71,15 @@ async def recent(session: AsyncSession, *, window_days: int = WINDOW_DAYS) -> li
     """Every decision in the window, newest first. Shared: no owner scope."""
     since = datetime.now(timezone.utc) - timedelta(days=int(window_days))
     rows = (await session.execute(
-        select(GeorgeDecision)
-        .where(GeorgeDecision.decided_at >= since)
-        .order_by(GeorgeDecision.decided_at.desc())
+        select(BobDecision)
+        .where(BobDecision.decided_at >= since)
+        .order_by(BobDecision.decided_at.desc())
         .limit(MAX_RECENT)
     )).scalars().all()
     return [as_row(r) for r in rows]
 
 
-def as_row(row: GeorgeDecision) -> dict[str, Any]:
+def as_row(row: BobDecision) -> dict[str, Any]:
     return {
         "id": row.id,
         "what": row.what,

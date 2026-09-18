@@ -5,7 +5,7 @@
  * `/w2` renderer was deleted: this was the only function in that module the
  * room still used, and everything else it exported is in `room/data.ts`.
  */
-import type { ActionOffer, CompositionBlock as Block, GeorgeTurn, ReadingFrame, ToolCall, ToolMeta } from '../types/george';
+import type { ActionOffer, CompositionBlock as Block, BobTurn, ReadingFrame, ToolCall, ToolMeta } from '../types/bob';
 import type { Post } from '../types/river';
 
 /** A result an answer post kept, as the loop stores it (`payload.charted`). */
@@ -21,16 +21,16 @@ interface Charted {
  * A reopened thread, made drawable.
  *
  * A stored chat turn keeps its calls but not their rows (chat_history.py), and
- * the composition lives on the answer post. So for each George turn that has
+ * the composition lives on the answer post. So for each Bob turn that has
  * a post, this reads `payload.charted` back onto the calls by seq, and
  * `payload.composition` onto the turn — both exactly as the loop stored them,
  * nothing reconstructed. A turn whose post kept neither draws as it did: the
  * prose, and whatever the calls still carry.
  */
-export function restoreFromPosts(turns: GeorgeTurn[], posts: Post[]): GeorgeTurn[] {
+export function restoreFromPosts(turns: BobTurn[], posts: Post[]): BobTurn[] {
   const byId = new Map(posts.map((p) => [p.id, p] as const));
   return turns.map((t) => {
-    if (t.role !== 'george' || !t.post?.answer_post_id) return t;
+    if (t.role !== 'bob' || !t.post?.answer_post_id) return t;
     const payload = byId.get(t.post.answer_post_id)?.payload as
       { charted?: unknown; reading?: unknown; actions?: unknown;
         composition?: { blocks?: unknown; default_blocks?: unknown } }
@@ -111,16 +111,16 @@ export interface RecordedReplay {
  * the truth about that window today.
  */
 export function replaysToRestore(
-  turns: GeorgeTurn[], posts: Post[], max: number,
+  turns: BobTurn[], posts: Post[], max: number,
 ): RecordedReplay[] {
   let newest = -1;
   for (let i = 0; i < turns.length; i += 1) {
-    if (turns[i].role === 'george') newest += 1;
+    if (turns[i].role === 'bob') newest += 1;
   }
   // The index of the newest answer among ANSWERS, which is how the board
   // names a turn — and the turn itself, which is how its post is found.
-  const answer = [...turns].reverse().find((t) => t.role === 'george');
-  const post = answer && answer.role === 'george' ? answer.post?.answer_post_id : null;
+  const answer = [...turns].reverse().find((t) => t.role === 'bob');
+  const post = answer && answer.role === 'bob' ? answer.post?.answer_post_id : null;
   if (!post || newest < 0) return [];
   const payload = posts.find((p) => p.id === post)?.payload as
     { replays?: unknown } | null | undefined;

@@ -22,7 +22,7 @@ const START = '2026-09-13T08:00:00.000Z';
 
 function turn(extra: Partial<AnswerTurn> = {}): AnswerTurn {
   return {
-    role: 'george', text: '', thinking: '', at: START,
+    role: 'bob', text: '', thinking: '', at: START,
     toolCalls: [], notices: [], pinned: [], saved: [], pageChanges: [],
     ...extra,
   } as AnswerTurn;

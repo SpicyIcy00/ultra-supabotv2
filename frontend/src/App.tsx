@@ -1,16 +1,16 @@
 /**
  * Routing.
  *
- * "/" IS GEORGE (2026-09-09, the Experience Reset). The desk is the
- * environment, not a destination inside one: a person with George lands on
+ * "/" IS BOB (2026-09-09, the Experience Reset). The desk is the
+ * environment, not a destination inside one: a person with Bob lands on
  * the business at rest and a piece of work has its own address at
  * `/w/:threadId`. Today, Ask, Inbox, Pages and Workflows stopped being five
  * places to navigate between — Ask is the line on the desk, Today is the desk
  * at rest, and the other three are rooms reachable from the line above it.
  * Everything anybody bookmarked still resolves: the old paths redirect.
  *
- * TWO CHROMES DURING THE MIGRATION, ONE GEORGE ABOVE BOTH. The desk draws its
- * own five regions and wears no rail. GeorgeShell remains the chrome for the
+ * TWO CHROMES DURING THE MIGRATION, ONE BOB ABOVE BOTH. The desk draws its
+ * own five regions and wears no rail. BobShell remains the chrome for the
  * rooms, and Layout is the existing application on dark, every route at its
  * own path. The stream provider sits above all of it, so an answer keeps
  * arriving whichever surface the person is on.
@@ -24,10 +24,10 @@ import { Dashboard } from './pages/Dashboard';
 import { SessionGuard } from './components/SessionGuard';
 import { RequirePage, NoAccessPage } from './components/RequirePage';
 import { LandingRedirect } from './components/LandingRedirect';
-import { GeorgeStreamProvider } from './components/george/GeorgeStreamProvider';
+import { BobStreamProvider } from './components/bob/BobStreamProvider';
 import { RoomShell } from './room/RoomShell';
 
-// George. One surface: the room he composes, at "/" and at a thread's own
+// Bob. One surface: the room he composes, at "/" and at a thread's own
 // address. It replaced the desk and the parallel /w2 board on 2026-09-11 —
 // three half-built answers to the same question became one.
 const Room = React.lazy(() => import('./room/Room'));
@@ -37,7 +37,7 @@ const PagesPage = React.lazy(() => import('./pages/PagesPage'));
 const WorkflowsPage = React.lazy(() => import('./pages/WorkflowsPage'));
 
 // The existing application. AIChatPage is the legacy NL->SQL chatbot and is
-// not George; it stays reachable under Operations, unchanged.
+// not Bob; it stays reachable under Operations, unchanged.
 const AnalyticsPage = React.lazy(() => import('./pages/AnalyticsPage'));
 const AIChatPage = React.lazy(() => import('./pages/AIChatPage'));
 const WarehousePage = React.lazy(() => import('./pages/WarehousePage'));
@@ -58,9 +58,9 @@ function WorkRedirect() {
   return <Navigate to={`/w/${threadId}`} replace />;
 }
 
-/** George's routes. One page key for all of them. */
-function george(element: React.ReactNode) {
-  return <RequirePage pageKey="george">{element}</RequirePage>;
+/** Bob's routes. One page key for all of them. */
+function bob(element: React.ReactNode) {
+  return <RequirePage pageKey="bob">{element}</RequirePage>;
 }
 
 /** Everything that renders inside the legacy chrome. */
@@ -100,10 +100,10 @@ function App() {
         {/* The legacy shared-code AuthGuard is gone: passcode login replaces it,
             and stacking the two meant typing two codes to reach the app. */}
         <SessionGuard>
-          {/* One George above every route, so an answer keeps arriving while
+          {/* One Bob above every route, so an answer keeps arriving while
               the person moves around the app. Inside SessionGuard, which keys
               its subtree on the session, so logout tears the stream down. */}
-          <GeorgeStreamProvider>
+          <BobStreamProvider>
             <Suspense fallback={<PageSpinner />}>
               <Routes>
                 {/* The print sheet sits outside every chrome so there is no
@@ -114,38 +114,38 @@ function App() {
                 />
 
                 {/* "/" is a redirect to the first page a person may see, which
-                    is the dashboard. George is a page in the app, at its own
+                    is the dashboard. Bob is a page in the app, at its own
                     path, so it can be left as well as reached (2026-09-12). */}
                 <Route path="/" element={<LandingRedirect />} />
-                <Route path="/george" element={george(<Room />)} />
-                <Route path="/w/:threadId" element={george(<Room />)} />
+                <Route path="/bob" element={bob(<Room />)} />
+                <Route path="/w/:threadId" element={bob(<Room />)} />
                 {/* The parallel board's addresses, kept so a link still lands. */}
-                <Route path="/w2" element={<Navigate to="/george" replace />} />
+                <Route path="/w2" element={<Navigate to="/bob" replace />} />
                 <Route path="/w2/:threadId" element={<WorkRedirect />} />
 
-                {/* The rooms, in George's chrome. */}
+                {/* The rooms, in Bob's chrome. */}
                 {/* THE ROOM'S OWN CHROME, not the shell that came before it.
-                    These three are George's screens and they had been left in
+                    These three are Bob's screens and they had been left in
                     the previous surface — a wide rail of words, serif display
                     headings, its own type scale — so following a link out of
                     the board landed somewhere that looked like another app. */}
                 <Route element={<RoomShellRoute />}>
-                  <Route path="/inbox" element={george(<InboxPage />)} />
-                  <Route path="/pages" element={george(<PagesPage />)} />
-                  <Route path="/pages/:pageId" element={george(<PagesPage />)} />
-                  <Route path="/workflows" element={george(<WorkflowsPage />)} />
+                  <Route path="/inbox" element={bob(<InboxPage />)} />
+                  <Route path="/pages" element={bob(<PagesPage />)} />
+                  <Route path="/pages/:pageId" element={bob(<PagesPage />)} />
+                  <Route path="/workflows" element={bob(<WorkflowsPage />)} />
                 </Route>
 
-                {/* Where George used to live. Every one of these still resolves. */}
-                <Route path="/ask" element={<Navigate to="/george" replace />} />
+                {/* Where Bob used to live. Every one of these still resolves. */}
+                <Route path="/ask" element={<Navigate to="/bob" replace />} />
                 <Route path="/ask/:threadId" element={<WorkRedirect />} />
-                <Route path="/today" element={<Navigate to="/george" replace />} />
-                <Route path="/george/t/:threadId" element={<WorkRedirect />} />
+                <Route path="/today" element={<Navigate to="/bob" replace />} />
+                <Route path="/bob/t/:threadId" element={<WorkRedirect />} />
 
                 <Route path="*" element={<ChromeRoutes />} />
               </Routes>
             </Suspense>
-          </GeorgeStreamProvider>
+          </BobStreamProvider>
         </SessionGuard>
       </BrowserRouter>
     </QueryClientProvider>

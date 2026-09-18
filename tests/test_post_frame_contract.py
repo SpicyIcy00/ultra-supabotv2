@@ -6,7 +6,7 @@ wrote; the client keeps them on the turn and drops its live copy the moment a
 fetched post carries the same id. Nothing else — not the question text, not
 the answer text, not a timestamp — may be used to decide that two things are
 one exchange. So the field names have to agree byte for byte between
-agent/loop.py, which writes the frame, and types/george.ts, which reads it,
+agent/loop.py, which writes the frame, and types/bob.ts, which reads it,
 and a field on one side and not the other must fail here rather than render
 as an undefined that quietly disables the reconciliation.
 """
@@ -25,8 +25,8 @@ from tests.test_loop_correction_contract import drive, frames_of  # noqa: E402
 from tests.test_river_contract import _ts_interface_fields        # noqa: E402
 
 _ROOT = Path(__file__).resolve().parents[1]
-_TS = _ROOT / "frontend" / "src" / "types" / "george.ts"
-_HOOK = _ROOT / "frontend" / "src" / "hooks" / "useGeorgeStream.ts"
+_TS = _ROOT / "frontend" / "src" / "types" / "bob.ts"
+_HOOK = _ROOT / "frontend" / "src" / "hooks" / "useBobStream.ts"
 
 
 @pytest.fixture(scope="module")
@@ -63,6 +63,6 @@ def test_the_client_handles_every_frame_the_loop_emits(hook):
     handled = set(re.findall(r"case '([a-z_]+)':", hook))
     missing = emitted - handled
     assert not missing, (
-        f"the loop emits {sorted(missing)} and useGeorgeStream has no case for "
+        f"the loop emits {sorted(missing)} and useBobStream has no case for "
         f"them — a frame the client drops is a fact the UI cannot show"
     )

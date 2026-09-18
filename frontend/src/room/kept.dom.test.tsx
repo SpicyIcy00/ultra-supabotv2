@@ -21,15 +21,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { AnswerTurn } from './data';
 import type { Pin, PinRun } from '../types/pins';
-import type { CompositionBlock } from '../types/george';
+import type { CompositionBlock } from '../types/bob';
 import { buildBoard } from './board';
 import { Board } from './render';
 import { KeptPin, turnFromRun } from './KeptPage';
 import reads from './__fixtures__/vocab-reads.json';
 
 vi.mock('./ObjectPanel', () => ({ ObjectPanel: () => null, kindOf: () => null }));
-vi.mock('../hooks/useGeorge', () => ({
-  useGeorge: () => ({ ask: vi.fn(), reset: vi.fn(), busy: false }),
+vi.mock('../hooks/useBob', () => ({
+  useBob: () => ({ ask: vi.fn(), reset: vi.fn(), busy: false }),
 }));
 const runPin = vi.fn();
 vi.mock('../services/pinsApi', async (original) => ({
@@ -175,7 +175,7 @@ describe('a run drawn as what it is', () => {
     expect(container.textContent).toContain('not a zero');
   });
 
-  it('says it could not reach George, and when the pin last worked', async () => {
+  it('says it could not reach Bob, and when the pin last worked', async () => {
     const { container } = kept(new Error('network down'));
     await waitFor(() => expect(container.querySelector('[data-state="failed"]')).not.toBeNull());
     expect(container.textContent).toContain('Last worked');

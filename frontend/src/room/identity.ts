@@ -30,7 +30,7 @@
  * A STORE'S COLOUR IS THE ONE HE SET (the dogfood log, 2026-09-17: *"color
  * mapping should be more like these colors but in our theme style"*). Supabot
  * already has one per store — `stores.color`, chosen on the Settings page,
- * served by `/analytics/stores`, drawn by every BI chart. George uses it,
+ * served by `/analytics/stores`, drawn by every BI chart. Bob uses it,
  * matched by id to the served `locations`, TONED for the room: hue kept,
  * lightness and chroma brought into the band each ground needs (`toned`). A
  * store with no colour set falls back to its palette slot.

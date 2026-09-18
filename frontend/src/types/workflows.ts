@@ -2,7 +2,7 @@
  * Types for the workflows API.
  *
  * These mirror the Pydantic models in
- * backend/app/api/v1/routes/george_workflows.py one-for-one, the same
+ * backend/app/api/v1/routes/bob_workflows.py one-for-one, the same
  * discipline types/pins.ts and types/chats.ts set. There is no runtime
  * validation, so drift shows up as an undefined field in the UI rather than an
  * error — tests/test_approvals_contract.py holds the field names to that.
@@ -12,7 +12,7 @@
  * 2026-09-07 for the Workflows page — read-oriented, and modelled only as far
  * as that page reads.
  */
-import type { GeorgeNotice } from './george';
+import type { BobNotice } from './bob';
 
 /**
  * One row of the approval queue: a version that cannot yet run unattended.
@@ -100,5 +100,5 @@ export interface WorkflowRun {
   status: string;
   started_at: string;
   finished_at: string | null;
-  notices: GeorgeNotice[];
+  notices: BobNotice[];
 }

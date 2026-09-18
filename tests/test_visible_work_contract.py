@@ -77,7 +77,7 @@ def test_every_field_the_work_surfaces_read_is_already_on_a_frame():
     loop = (_ROOT / "agent" / "loop.py").read_text(encoding="utf-8")
     assert '"duration_ms"' in loop
     assert '_sse("notice"' in loop
-    types = (_ROOT / "frontend" / "src" / "types" / "george.ts").read_text(encoding="utf-8")
+    types = (_ROOT / "frontend" / "src" / "types" / "bob.ts").read_text(encoding="utf-8")
     assert "duration_ms: number;" in types, "the tool result's own clock"
     assert "duration_ms?: number;" in types, "the turn's clock on the done frame"
 

@@ -1,5 +1,5 @@
 /**
- * DRAWING A SHAPE GEORGE COMPOSED.
+ * DRAWING A SHAPE BOB COMPOSED.
  *
  * The fourteen widgets are shapes I chose in advance. This draws shapes he
  * chose — a tree of layouts and marks, validated in agent/grammar.py — so the
@@ -13,7 +13,7 @@
  * renderer never looks for one.
  *
  * So an unbounded space of shapes costs nothing in trust: the numbers on a
- * shape George invented came from the same rows, with the same receipts, as
+ * shape Bob invented came from the same rows, with the same receipts, as
  * the numbers on one I did.
  *
  * WHICH ROW A MARK USES, stated because it is the only ambiguity in the
@@ -22,7 +22,7 @@
  * draw one per row. `line` connects rows in `by` order. `rows` is the table.
  */
 import type { CSSProperties } from 'react';
-import type { SpecNode, ToolCall } from '../types/george';
+import type { SpecNode, ToolCall } from '../types/bob';
 import type { AnswerTurn } from './data';
 import { callOf, changeOf, fmt, rowsOf, sorted, unitOf } from './data';
 import { directionRgb } from './identity';
@@ -89,7 +89,7 @@ function rowsFor(node: SpecNode, call: ToolCall | null): Record<string, unknown>
  * ELSE IS FLAT — it used to be looked up as an IDENTITY, so `colour: store`
  * drew the seven shop hues inside a composed shape, which is the owner's
  * seven-shops-seven-hues report surviving in the grammar after P1.e took it
- * out of the six marks. A hue George picked would be a claim he made rather
+ * out of the six marks. A hue Bob picked would be a claim he made rather
  * than one a row carries, which is why the grammar cannot express one; a hue
  * his COLUMN picked was that same claim one step removed.
  */
@@ -123,7 +123,7 @@ function paint(node: SpecNode, row: Record<string, unknown>): string {
  * `emphasise` names a row that stays lit while the others cool — the same
  * thing the board already does with weight at the object level, applied
  * inside a mark. It is how a picture says "this is the one that matters"
- * without a sentence underneath saying it, and a third of George's sentences
+ * without a sentence underneath saying it, and a third of Bob's sentences
  * were doing exactly that job.
  *
  * With nothing emphasised, every row is lit: a chart with no point to make

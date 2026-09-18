@@ -3,12 +3,12 @@ Asking a standing question when its slot comes round.
 
 WHAT THIS IS NOT. It is not a briefing generator. Nothing in this file decides
 what goes on the board, which shops matter, or what the morning means — it asks
-George a question and keeps what he says. The composition, the reading and the
+Bob a question and keeps what he says. The composition, the reading and the
 judgment are his, made with the same tools and the same prompt as a question
 typed at 11pm. That is the whole point of the correction that produced it:
-*"we're supposed to make George able to make those briefs on its own"*.
+*"we're supposed to make Bob able to make those briefs on its own"*.
 
-WHAT AN UNATTENDED GEORGE MAY DO, AND WHY THE LIST IS SHORT.
+WHAT AN UNATTENDED BOB MAY DO, AND WHY THE LIST IS SHORT.
 
 Architecture rule 7 gates unattended WORKFLOWS behind a backtest and a
 promotion, because a workflow computes: its steps are fixed, so a backtest
@@ -32,7 +32,7 @@ enforced by absence, not by refusal: a tool with no injected capability is not
 in the model's schema at all (CLAUDE.md rule 4), so there is nothing to decline.
 
 REMEMBERING IS DELIBERATELY ON THE GIVEN SIDE. A morning read that settles what
-George thinks and then forgets it is the exact failure the beliefs table was
+Bob thinks and then forgets it is the exact failure the beliefs table was
 built to end, and the mornings are when most of his views will form. A belief
 is append-only, carries no figure, and names the calls behind it, so the worst
 an unattended one can do is be wrong in a sentence that is dated, attributable
@@ -54,8 +54,8 @@ from typing import Any, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent import loop as george_loop
-from app.models.george_standing import GeorgeStandingQuestion
+from agent import loop as bob_loop
+from app.models.bob_standing import BobStandingQuestion
 from app.services import belief_store as beliefs_service
 from app.services import self_reader, slots, standing_questions
 
@@ -64,7 +64,7 @@ from app.services import self_reader, slots, standing_questions
 MAX_SECONDS = 300
 
 
-def instructions_block(row: GeorgeStandingQuestion) -> Optional[str]:
+def instructions_block(row: BobStandingQuestion) -> Optional[str]:
     """
     The owner's standing instructions, labelled as his words.
 
@@ -93,9 +93,9 @@ def _belief_store(owner: str):
     """
     Where a scheduled turn's views are kept.
 
-    The SAME service function the /george/ask route binds (belief_store.record)
+    The SAME service function the /bob/ask route binds (belief_store.record)
     — this one is bound to the standing question's owner rather than to an
-    authenticated session, because there is no session. George holds no
+    authenticated session, because there is no session. Bob holds no
     credential either way.
     """
     from app.core.database import AsyncSessionLocal
@@ -113,7 +113,7 @@ def _belief_store(owner: str):
 
 
 def _memory_reader(owner: str):
-    """What George currently believes. Same service function the route binds."""
+    """What Bob currently believes. Same service function the route binds."""
     from app.core.database import AsyncSessionLocal
 
     async def read() -> dict:
@@ -124,7 +124,7 @@ def _memory_reader(owner: str):
 
 
 def _decisions_reader():
-    """What people did with what George raised. Same service function the route binds."""
+    """What people did with what Bob raised. Same service function the route binds."""
     from app.core.database import AsyncSessionLocal
     from app.services import decisions as decisions_service
 
@@ -152,9 +152,9 @@ async def _beliefs_block() -> tuple[Optional[str], dict]:
     those views have bound (P2S.11), so a scheduled question leaves out what
     a typed one would.
 
-    Never fatal: a lookup that fails costs the block, not the morning. George
-    without his beliefs is the George of a fortnight ago, which is worse than
-    this morning's George and better than no answer.
+    Never fatal: a lookup that fails costs the block, not the morning. Bob
+    without his beliefs is the Bob of a fortnight ago, which is worse than
+    this morning's Bob and better than no answer.
     """
     from app.core.database import AsyncSessionLocal
 
@@ -211,7 +211,7 @@ def _parse(frame: str) -> tuple[Optional[str], dict]:
     return event, data
 
 
-async def ask(row: GeorgeStandingQuestion, *, slot: datetime,
+async def ask(row: BobStandingQuestion, *, slot: datetime,
               missed: Optional[list[datetime]] = None) -> dict[str, Any]:
     """
     Ask one standing question and keep what comes back.
@@ -224,7 +224,7 @@ async def ask(row: GeorgeStandingQuestion, *, slot: datetime,
         notice = slots.describe_skipped(
             missed, source="app.services.standing_runner"
         )
-        # Told to George rather than rendered around him: he is writing the
+        # Told to Bob rather than rendered around him: he is writing the
         # answer, so the caveat has to be in his hands, above the figures,
         # exactly as UI rule 4 requires of every other surface.
         standing = "\n\n".join(filter(None, [
@@ -241,7 +241,7 @@ async def ask(row: GeorgeStandingQuestion, *, slot: datetime,
 
     held, bound = await _beliefs_block()
     try:
-        async for frame in george_loop.run(
+        async for frame in bob_loop.run(
             row.question,
             user_id=row.owner,
             history=[],
@@ -285,7 +285,7 @@ async def run_due(session: AsyncSession, row_id, slot: datetime,
                   missed: list[datetime]) -> str:
     """Ask one claimed question and write down what happened."""
     row = (await session.execute(
-        select(GeorgeStandingQuestion).where(GeorgeStandingQuestion.id == row_id)
+        select(BobStandingQuestion).where(BobStandingQuestion.id == row_id)
     )).scalars().first()
     if row is None or not row.enabled:
         return "gone"
@@ -320,8 +320,8 @@ async def tick() -> None:
         async with AsyncSessionLocal() as session:
             try:
                 row = (await session.execute(
-                    select(GeorgeStandingQuestion)
-                    .where(GeorgeStandingQuestion.id == candidate["id"])
+                    select(BobStandingQuestion)
+                    .where(BobStandingQuestion.id == candidate["id"])
                 )).scalars().first()
                 if row is None or not row.enabled:
                     continue

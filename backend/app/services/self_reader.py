@@ -1,15 +1,15 @@
 """
-George reading his own mind, and his own systems.
+Bob reading his own mind, and his own systems.
 
-WHY THIS HAS TO EXIST. George reads on `george_ro`, which has no access to the
-`george` schema at all. So the two things that are most his — what he currently
+WHY THIS HAS TO EXIST. Bob reads on `george_ro`, which has no access to the
+`bob` schema at all. So the two things that are most his — what he currently
 believes, and what the systems he built have been doing — are the two things he
 cannot see. He is handed his beliefs as text before a turn starts, which is
 enough to REASON with but not enough to put on the board: composing an object
 needs a read with a seq behind it, and there was no read.
 
 That gap is why an earlier pass hand-wrote a briefing composer in Python. The
-composer was reaching into tables George could not reach. The fix is not to
+composer was reaching into tables Bob could not reach. The fix is not to
 compose for him; it is to let him see.
 
 Both are READS, injected exactly the way the page reader is (CLAUDE.md rule 4):
@@ -39,7 +39,7 @@ MAX_RUNS = 20
 
 async def read_memory(session: AsyncSession, *, username: str) -> dict:
     """
-    What George currently believes about the business, as rows he can compose.
+    What Bob currently believes about the business, as rows he can compose.
 
     Reuses `belief_store.current` so there is one definition of "the views that
     still stand" — superseded ones are excluded there, and this cannot drift
@@ -164,9 +164,9 @@ def _reads(evidence: Any) -> str:
 async def view_of(session: AsyncSession, *, subject_kinds: tuple[str, ...],
                   subject: str) -> Optional[dict]:
     """
-    What George currently thinks about ONE thing, for the object view.
+    What Bob currently thinks about ONE thing, for the object view.
 
-    WHY THIS IS NOT A SECTION OF get_object. Beliefs live in the `george`
+    WHY THIS IS NOT A SECTION OF get_object. Beliefs live in the `bob`
     schema, which the read-only role the tools run on cannot see at all. That
     boundary is right rather than inconvenient: it means a replay of a past
     morning can never accidentally show today's opinion, because the tool that
@@ -179,8 +179,8 @@ async def view_of(session: AsyncSession, *, subject_kinds: tuple[str, ...],
     repo exists to prevent.
 
     Returns None when he has no view of this thing, and None is a real answer
-    the caller must render as one: "George has not formed a view" is different
-    from "George thinks nothing is wrong".
+    the caller must render as one: "Bob has not formed a view" is different
+    from "Bob thinks nothing is wrong".
     """
     held = await belief_store.current(session)
     latest_data = await belief_store.latest_data_at(session)

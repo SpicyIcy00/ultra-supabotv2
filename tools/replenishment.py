@@ -1,11 +1,11 @@
 """
-George — replenishment tool.
+Bob — replenishment tool.
 
 One public function: get_replenishment().
 
 WHY THIS EXISTS. `shipment_plans` holds 125,283 rows across 59 runs — computed
 min and max levels, safety stock and a requested shipment quantity per SKU per
-store — and nothing in George could read a single one of them. That absence had
+store — and nothing in Bob could read a single one of them. That absence had
 a cost beyond the missing figures: this repository recorded "no low-stock
 threshold has ever been set" as a fact about the business, which is true of
 `inventory.warning_stock` and false about the company, because a replenishment
@@ -238,7 +238,7 @@ def get_replenishment(
             cur.execute("SELECT now() AS read_at")
             snapshot_timestamp = cur.fetchone()["read_at"]
 
-            # George's role is granted table by table on purpose, so a new
+            # Bob's role is granted table by table on purpose, so a new
             # table is unreadable until somebody decides to expose it. Say that
             # plainly instead of letting a driver-level permission error reach
             # the user as a crash.
@@ -246,7 +246,7 @@ def get_replenishment(
                 cur.execute("SELECT 1 FROM shipment_plans LIMIT 1")
             except psycopg.errors.InsufficientPrivilege as exc:
                 raise RuntimeError(
-                    "George cannot read the replenishment plan: his read-only role has "
+                    "Bob cannot read the replenishment plan: his read-only role has "
                     "not been granted SELECT on shipment_plans. Apply "
                     "`GRANT SELECT ON shipment_plans TO george_ro;` — see "
                     "tools/george_ro_role.sql, which is applied by hand and never by "

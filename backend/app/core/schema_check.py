@@ -3,12 +3,12 @@ Boot-time schema verification: the database must be at the alembic head this
 code was written against, or the process refuses to serve.
 
 WHY THIS EXISTS. On 2026-09-04 the chats feature deployed and production
-returned 500 on GET /george/chats and POST /george/ask. The code expected
+returned 500 on GET /bob/chats and POST /bob/ask. The code expected
 `george.conversations.thread_id`; the database was two migrations behind. The
 start command reads `alembic upgrade head && uvicorn ...`, so either alembic
 never ran or it ran against something else — and either way the app booted,
 looked healthy, and served 500s until a person noticed. The workflows
-migration had been missing the same way since the day before (George's saves
+migration had been missing the same way since the day before (Bob's saves
 failed with ProgrammingError), which nobody caught because nothing checked.
 
 An app that boots against a schema it cannot use is worse than one that does

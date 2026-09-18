@@ -44,14 +44,14 @@ pytest.importorskip("psycopg", reason="agent.loop imports the tools, which impor
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 pytest.importorskip("sqlalchemy", reason="the scheduler imports the models")
 
-from agent import composite_tools, loop as george_loop, write_tools   # noqa: E402
+from agent import composite_tools, loop as bob_loop, write_tools   # noqa: E402
 from agent.write_tools import (                                       # noqa: E402
     WorkflowRefused,
     WorkflowSpec,
     WriteContext,
     call_key,
 )
-from app.models.george_workflow import GeorgeWorkflowSchedule         # noqa: E402
+from app.models.bob_workflow import BobWorkflowSchedule         # noqa: E402
 from app.services import workflow_scheduler, workflow_telegram        # noqa: E402
 from app.services.pin_runner import PinValidationError, validate_call  # noqa: E402
 from app.services.workflow_runner import (                            # noqa: E402
@@ -107,7 +107,7 @@ def test_every_tool_is_classified_for_backtesting():
         | set(g["window_arguments"])
         | set(g["point_in_time_tools"])
     )
-    tools = set(george_loop.TOOL_FUNCTIONS)
+    tools = set(bob_loop.TOOL_FUNCTIONS)
     assert not (tools - classified), (
         "These tools are not classified in metrics.yaml workflows.backtest, so a "
         f"backtest would silently claim they reproduce the past: "
@@ -147,7 +147,7 @@ def test_the_named_time_arguments_actually_exist_on_the_tools():
     g = _groups()
     for group in ("as_of_arguments", "window_arguments"):
         for tool, arg in g[group].items():
-            sig = inspect.signature(george_loop.TOOL_FUNCTIONS[tool])
+            sig = inspect.signature(bob_loop.TOOL_FUNCTIONS[tool])
             assert arg in sig.parameters, (
                 f"metrics.yaml workflows.backtest.{group} says {tool} takes "
                 f"{arg!r}, but its signature is {tuple(sig.parameters)}"
@@ -363,31 +363,31 @@ def test_run_workflow_is_not_a_storable_call():
     hold another workflow, and would let the pin runner reach a capability the
     pin's owner never granted.
     """
-    assert "run_workflow" not in george_loop.TOOL_FUNCTIONS
-    with pytest.raises(PinValidationError, match="no longer one of George's tools"):
+    assert "run_workflow" not in bob_loop.TOOL_FUNCTIONS
+    with pytest.raises(PinValidationError, match="no longer one of Bob's tools"):
         validate_call({"tool": "run_workflow", "arguments": {"name": "PO Maker"}})
 
 
 def test_a_workflow_step_cannot_be_a_workflow_or_a_write():
-    with pytest.raises(WorkflowValidationError, match="no longer one of George's tools"):
+    with pytest.raises(WorkflowValidationError, match="no longer one of Bob's tools"):
         validate_steps([{"name": "Nested", "tool": "run_workflow",
                          "arguments": {"name": "PO Maker"}}], [])
-    with pytest.raises(WorkflowValidationError, match="no longer one of George's tools"):
+    with pytest.raises(WorkflowValidationError, match="no longer one of Bob's tools"):
         validate_steps([{"name": "Sneaky", "tool": "pin_answer", "arguments": {}}], [])
 
 
 def test_the_schema_cannot_express_a_step_that_is_not_a_read():
-    schema = next(s for s in george_loop.build_tool_schemas(include_write=True)
+    schema = next(s for s in bob_loop.build_tool_schemas(include_write=True)
                   if s["name"] == "save_workflow")
     allowed = schema["input_schema"]["properties"]["steps"]["items"]["properties"]["tool"]
-    assert set(allowed["enum"]) == set(george_loop.TOOL_FUNCTIONS)
+    assert set(allowed["enum"]) == set(bob_loop.TOOL_FUNCTIONS)
     assert "run_workflow" not in allowed["enum"]
     assert "save_workflow" not in allowed["enum"]
 
 
 def test_the_read_schema_advertises_neither_new_tool():
     """The default matters: workflow steps are validated against this."""
-    names = [s["name"] for s in george_loop.build_tool_schemas()]
+    names = [s["name"] for s in bob_loop.build_tool_schemas()]
     assert "save_workflow" not in names and "run_workflow" not in names
 
 
@@ -414,25 +414,25 @@ class _FakeWorkflowWriter:
 
 def test_a_session_with_only_a_pin_writer_is_not_offered_save_workflow():
     ctx = WriteContext(writer=object())
-    assert set(george_loop.injected_surface(ctx)) == {"pin_answer"}
+    assert set(bob_loop.injected_surface(ctx)) == {"pin_answer"}
 
 
 def test_a_session_with_only_a_workflow_writer_is_not_offered_pin_answer():
     ctx = WriteContext(workflow_writer=_FakeWorkflowWriter())
-    assert set(george_loop.injected_surface(ctx)) == {"save_workflow"}
+    assert set(bob_loop.injected_surface(ctx)) == {"save_workflow"}
 
 
 def test_the_workflow_runner_gates_run_workflow_on_its_own():
     async def runner(name, bindings, as_of):
         return {}
 
-    assert set(george_loop.injected_surface(WriteContext(workflow_runner=runner))) == {
+    assert set(bob_loop.injected_surface(WriteContext(workflow_runner=runner))) == {
         "run_workflow"
     }
 
 
 def test_no_injection_means_no_extra_tools_at_all():
-    assert george_loop.injected_surface(WriteContext()) == {}
+    assert bob_loop.injected_surface(WriteContext()) == {}
 
 
 def test_every_injected_tool_declares_what_it_needs():
@@ -546,18 +546,18 @@ def test_saving_is_unavailable_without_a_writer():
     ("Net sales last month were PHP 8,069,394.16.", None),
 ])
 def test_a_save_claim_is_detected_and_a_denial_is_not(answer, expected):
-    assert george_loop._save_claim(answer, DEFS) == expected
+    assert bob_loop._save_claim(answer, DEFS) == expected
 
 
 def test_the_two_claim_checks_do_not_answer_for_each_other():
     """
     Separate vocabularies, so a correction never names the wrong write. An
-    answer about pinning must not trip the workflow check, or George would be
+    answer about pinning must not trip the workflow check, or Bob would be
     told to call save_workflow about a tile.
     """
     pinned = 'Pinned "Net sales by store" to the Replenishment page.'
-    assert george_loop._pin_claim(pinned, DEFS) == "claimed"
-    assert george_loop._save_claim(pinned, DEFS) is None
+    assert bob_loop._pin_claim(pinned, DEFS) == "claimed"
+    assert bob_loop._save_claim(pinned, DEFS) is None
 
 
 # ---------------------------------------------------------------------------
@@ -684,7 +684,7 @@ def test_a_run_of_nothing_is_refused_before_it_reaches_a_tool():
 @pytest.fixture
 def fake_sales(monkeypatch):
     def install(fn):
-        monkeypatch.setitem(george_loop.TOOL_FUNCTIONS, "get_sales", fn)
+        monkeypatch.setitem(bob_loop.TOOL_FUNCTIONS, "get_sales", fn)
         return fn
     return install
 
@@ -908,8 +908,8 @@ def test_the_divergence_notice_can_be_satisfied_by_honest_prose():
     )
     ignores = "Units sold last month came to 41,204 across the seven stores."
     notice = {"kind": "version_divergence"}
-    assert george_loop._unsurfaced([notice], conveys, DEFS) == []
-    assert george_loop._unsurfaced([notice], ignores, DEFS) == [notice]
+    assert bob_loop._unsurfaced([notice], conveys, DEFS) == []
+    assert bob_loop._unsurfaced([notice], ignores, DEFS) == [notice]
 
 
 def test_the_run_record_keeps_the_divergence(fake_sales):
@@ -973,8 +973,8 @@ def test_the_flat_notice_list_leads_with_the_run_level_ones(fake_sales):
 # Slots
 # ---------------------------------------------------------------------------
 
-def _schedule(**kw) -> GeorgeWorkflowSchedule:
-    return GeorgeWorkflowSchedule(
+def _schedule(**kw) -> BobWorkflowSchedule:
+    return BobWorkflowSchedule(
         kind=kw.pop("kind", "weekly"), hour=kw.pop("hour", 6),
         minute=kw.pop("minute", 0), days_of_week=kw.pop("days_of_week", [0]),
         day_of_month=kw.pop("day_of_month", None), **kw

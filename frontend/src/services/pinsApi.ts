@@ -23,7 +23,7 @@ import type {
   UpdatePinRequest,
 } from '../types/pins';
 
-const API_BASE = '/api/v1/george/pins';
+const API_BASE = '/api/v1/bob/pins';
 
 /**
  * The caller's pins. `undefined` is every pin, newest first; `null` is the

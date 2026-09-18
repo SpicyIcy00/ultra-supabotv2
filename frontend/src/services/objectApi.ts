@@ -1,17 +1,17 @@
 /**
  * Opening an object — a shop, a product, a supplier, an order.
  *
- * THE WHOLE POINT IS THAT THIS IS NOT A QUESTION. Asking George to open
+ * THE WHOLE POINT IS THAT THIS IS NOT A QUESTION. Asking Bob to open
  * Rockwell costs a model turn and roughly forty seconds; the figures are the
  * same five reads every time and choosing them involves no judgement, so
  * tapping calls this directly and gets them in about a second.
  *
- * The server runs the identical tool George is given, so what you see when you
+ * The server runs the identical tool Bob is given, so what you see when you
  * tap and what he sees when he reasons cannot drift apart.
  */
 import axios from 'axios';
 
-const API_BASE = '/api/v1/george/object';
+const API_BASE = '/api/v1/bob/object';
 
 /**
  * available | empty | refused | failed | unresolved — and they are five
@@ -45,7 +45,7 @@ export interface ObjectView {
   sections: ObjectSection[];
   meta: Record<string, unknown>;
   /**
-   * What George currently thinks about this thing, or null.
+   * What Bob currently thinks about this thing, or null.
    *
    * NULL IS A REAL ANSWER and must render as one: "he has not formed a view"
    * is a different fact from "he thinks nothing is wrong" (UI rule 8).

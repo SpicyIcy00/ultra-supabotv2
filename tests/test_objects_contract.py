@@ -16,7 +16,7 @@ structure and its call construction:
   4. FOUR OUTCOMES PER SECTION, and they are distinct: available, empty,
      failed, unresolved. Collapsing them turns "I do not know which product you
      mean" into "this product has no sales".
-  5. WHAT GEORGE THINKS IS NOT A SECTION, because the tool physically cannot
+  5. WHAT BOB THINKS IS NOT A SECTION, because the tool physically cannot
      reach it — and that boundary is the reason a replayed morning cannot show
      today's opinion.
 """
@@ -93,10 +93,10 @@ def test_every_section_names_a_tool_that_exists_and_is_a_read():
             )
 
 
-def test_the_tool_is_the_one_george_gets():
+def test_the_tool_is_the_one_bob_gets():
     """
     One definition of what a shop is, not two. If the client called something
-    else, a person tapping a shop and George reasoning about one would be
+    else, a person tapping a shop and Bob reasoning about one would be
     looking at different numbers.
     """
     assert loop.TOOL_FUNCTIONS["get_object"] is objects.get_object
@@ -208,7 +208,7 @@ def test_an_ambiguous_product_is_not_guessed_at():
 
 
 # ---------------------------------------------------------------------------
-# 5. What George thinks is composed on top, never a section
+# 5. What Bob thinks is composed on top, never a section
 # ---------------------------------------------------------------------------
 
 def test_a_belief_is_not_a_section_of_any_kind():
@@ -218,7 +218,7 @@ def test_a_belief_is_not_a_section_of_any_kind():
     assert bool(req(DEFS, "objects.belief_is_composed_on_top"))
 
 
-def test_the_tool_cannot_reach_the_george_schema():
+def test_the_tool_cannot_reach_the_bob_schema():
     """
     Not a policy — a fact about the role the tools run on, and the reason a
     replay of a past morning can never show today's opinion.
@@ -241,7 +241,7 @@ def test_sections_are_bounded_and_the_bound_is_declared():
 
 def test_the_thin_kinds_say_why_and_what_would_change_it():
     """
-    An absence reads as George being bad at something. Supplier and order sit
+    An absence reads as Bob being bad at something. Supplier and order sit
     on frozen imports, and that is recorded rather than left to look like an
     oversight.
     """
@@ -331,7 +331,7 @@ def test_the_warehouse_notice_is_fingerprinted_like_every_other():
 def test_the_object_view_does_not_overload_the_window_key():
     """
     meta.window is a STRUCTURED window everywhere else — {kind, name, start,
-    end} — and both the result vocabulary and george_recall read it as one.
+    end} — and both the result vocabulary and bob_recall read it as one.
     An object view has no single window (each section carries its own), so
     putting a bare preset string there was a type collision on a conventional
     key, and it took down the ask endpoint for every conversation that had

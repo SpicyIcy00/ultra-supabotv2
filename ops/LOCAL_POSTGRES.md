@@ -30,9 +30,9 @@ $Python = Resolve-Path ..\..\.venv\Scripts\python.exe
 
 | Database | Purpose |
 |---|---|
-| `george_integration` | repeatable transactional Page/Pin live tests |
-| `george_upgrade_rehearsal` | persistent online upgrade to `q1r2s3t4u5v6` |
-| `george_downgrade_rehearsal` | disposable upgrade/live-test/downgrade cycle |
+| `bob_integration` | repeatable transactional Page/Pin live tests |
+| `bob_upgrade_rehearsal` | persistent online upgrade to `q1r2s3t4u5v6` |
+| `bob_downgrade_rehearsal` | disposable upgrade/live-test/downgrade cycle |
 
 The fixtures contain invented store, product, transaction, inventory,
 conversation, call, and pin rows. Store IDs match `metrics.yaml` so vetted scope
@@ -42,17 +42,17 @@ production connection or data-copy operation in the helper.
 Run the migration and Page/Pin checks with:
 
 ```powershell
-& $Python ops/local_postgres.py tests --database george_integration
-& $Python ops/local_postgres.py app-tests --database george_integration
+& $Python ops/local_postgres.py tests --database bob_integration
+& $Python ops/local_postgres.py app-tests --database bob_integration
 
-& $Python ops/local_postgres.py upgrade --database george_upgrade_rehearsal
-& $Python ops/local_postgres.py tests --database george_upgrade_rehearsal
-& $Python ops/local_postgres.py verify --database george_upgrade_rehearsal
+& $Python ops/local_postgres.py upgrade --database bob_upgrade_rehearsal
+& $Python ops/local_postgres.py tests --database bob_upgrade_rehearsal
+& $Python ops/local_postgres.py verify --database bob_upgrade_rehearsal
 
-& $Python ops/local_postgres.py upgrade --database george_downgrade_rehearsal
-& $Python ops/local_postgres.py tests --database george_downgrade_rehearsal
-& $Python ops/local_postgres.py downgrade --database george_downgrade_rehearsal
-& $Python ops/local_postgres.py verify --database george_downgrade_rehearsal
+& $Python ops/local_postgres.py upgrade --database bob_downgrade_rehearsal
+& $Python ops/local_postgres.py tests --database bob_downgrade_rehearsal
+& $Python ops/local_postgres.py downgrade --database bob_downgrade_rehearsal
+& $Python ops/local_postgres.py verify --database bob_downgrade_rehearsal
 ```
 
 `verify` checks the loopback connection, manifest and Alembic revision; exact
@@ -64,7 +64,7 @@ boundaries. Downgrade is hard-restricted to its dedicated database.
 The original Alembic history is not a complete empty-database bootstrap: its
 first revision assumes legacy tables already exist. The helper therefore builds
 a documented synthetic pre-Page baseline from the current model subset and the
-George migrations through `p0q1r2s3t4u5`. This proves Page migration behavior on
+Bob migrations through `p0q1r2s3t4u5`. This proves Page migration behavior on
 representative shapes. It does not prove restore compatibility, migration lock
 duration, or results over the full Aji schema and row distribution.
 

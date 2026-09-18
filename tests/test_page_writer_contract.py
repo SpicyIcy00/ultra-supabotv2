@@ -32,8 +32,8 @@ from sqlalchemy.dialects import postgresql
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from app.models.george_page import GeorgePage, PAGE_OPERATIONS               # noqa: E402
-from app.models.george_pin import GeorgePin                                   # noqa: E402
+from app.models.bob_page import BobPage, PAGE_OPERATIONS               # noqa: E402
+from app.models.bob_pin import BobPin                                   # noqa: E402
 from app.services import page_operations, page_writer, pin_writer             # noqa: E402
 from app.services.page_writer import (                                        # noqa: E402
     ANY_PAGE,
@@ -61,14 +61,14 @@ ME = "ice"
 OTHER = "somebody-else"
 
 
-def _page(title="Rockwell", owner=ME) -> GeorgePage:
+def _page(title="Rockwell", owner=ME) -> BobPage:
     now = datetime(2026, 9, 8, tzinfo=timezone.utc)
-    return GeorgePage(id=uuid.uuid4(), owner=owner, title=title, purpose=None,
+    return BobPage(id=uuid.uuid4(), owner=owner, title=title, purpose=None,
                       created_at=now, updated_at=now)
 
 
-def _pin(title="Net sales", page: GeorgePage | None = None, position=0, owner=ME) -> GeorgePin:
-    pin = GeorgePin(
+def _pin(title="Net sales", page: BobPage | None = None, position=0, owner=ME) -> BobPin:
+    pin = BobPin(
         id=uuid.uuid4(), created_by=owner,
         created_at=datetime(2026, 9, 8, tzinfo=timezone.utc),
         title=title, question=None, conversation_id=None,
@@ -114,15 +114,15 @@ class FakeSession:
         assert isinstance(stmt, Select), type(stmt)
         first = stmt.column_descriptions[0]
         entity, name = first.get("entity"), first["name"]
-        if entity is GeorgePage and name == "GeorgePage":
+        if entity is BobPage and name == "BobPage":
             # Honour an exact-title WHERE, so a lookup by title behaves as the
             # database would rather than returning every page.
             params = stmt.compile(dialect=postgresql.dialect()).params
             wanted = params.get("title_1")
             return _Result([p for p in self.pages if wanted is None or p.title == wanted])
-        if entity is GeorgePage and name == "title":
+        if entity is BobPage and name == "title":
             return _Result([p.title for p in self.pages])
-        if entity is GeorgePin and name == "GeorgePin":
+        if entity is BobPin and name == "BobPin":
             return _Result(self.pins)
         return _Result([len(self.pages)])
 

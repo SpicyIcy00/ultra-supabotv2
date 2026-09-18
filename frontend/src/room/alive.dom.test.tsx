@@ -116,7 +116,7 @@ describe('four states, four drawings', () => {
 
 describe('the state comes from the stream, not a clock', () => {
   const turn = (calls: { seq: number; tool: string; result?: unknown }[], extra: object = {}) => ({
-    role: 'george', text: '', thinking: '', at: '2026-09-17T00:00:00Z', toolCalls: calls, ...extra,
+    role: 'bob', text: '', thinking: '', at: '2026-09-17T00:00:00Z', toolCalls: calls, ...extra,
   }) as unknown as AnswerTurn;
   const landed = { seq: 1, tool: 'get_sales', result: { rows: [{ value: 1 }], meta: {} } };
   const running = { seq: 2, tool: 'get_stock' };

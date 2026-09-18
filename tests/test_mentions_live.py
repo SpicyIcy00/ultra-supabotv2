@@ -2,7 +2,7 @@
 `@` against the real estate, ROLLED BACK — the other half of P2.c's Done-when.
 
 NEEDS DATABASE_URL (the application role, for the pages and the rules) and
-GEORGE_DATABASE_URL (George's read-only role, for the catalogue and the
+GEORGE_DATABASE_URL (Bob's read-only role, for the catalogue and the
 purchase orders). Skips without either. The pages and the rule written here
 are rolled back; nothing else is written anywhere.
 
@@ -34,7 +34,7 @@ if not pages_live.available():
 if not os.environ.get("GEORGE_DATABASE_URL"):
     pytest.skip("GEORGE_DATABASE_URL is not set", allow_module_level=True)
 
-from app.models.george_workflow import GeorgeWorkflow  # noqa: E402
+from app.models.bob_workflow import BobWorkflow  # noqa: E402
 from app.services import mentions, page_writer  # noqa: E402
 from tools._common import load_defs  # noqa: E402
 
@@ -74,7 +74,7 @@ def test_seik_offers_the_supplier_the_page_and_the_rule_told_apart():
             page = await page_writer.create_page(
                 s, owner=ME, title="Seikyo orders",
                 purpose="what is on the water")
-            s.add(GeorgeWorkflow(id=uuid.uuid4(), name="Seikyo reorder",
+            s.add(BobWorkflow(id=uuid.uuid4(), name="Seikyo reorder",
                                  created_by=ME, status="draft"))
             await s.flush()
             # Somebody else's page of the same name, which must not be offered.

@@ -16,7 +16,7 @@ already exists in the definitions, and a source with no floor is listed as
 unable to notice, with the reason, rather than left silent.
 
 WHAT IT IS NOT. It is not a score, a rating or a composite (SCOPE forbids
-inventing a number). It does not decide what George SAYS — the opening turn
+inventing a number). It does not decide what Bob SAYS — the opening turn
 still reads this, composes the board and writes the line — and it holds no
 figure the brief's own rows do not carry: each row is a brief row, whole, with
 its own receipts.

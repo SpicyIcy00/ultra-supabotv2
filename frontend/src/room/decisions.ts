@@ -3,7 +3,7 @@
  *
  * A keep, a set-aside, an open or a "why?" on any object is just arranging
  * the board — except when the object is a row of the agenda. Then it is the
- * one thing George can learn from: what you did with what he raised. This
+ * one thing Bob can learn from: what you did with what he raised. This
  * module decides, from the read behind an object and nothing else, whether a
  * gesture is such a decision, and what it is about.
  *

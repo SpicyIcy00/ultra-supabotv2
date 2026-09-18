@@ -1,5 +1,5 @@
 /**
- * WHAT GEORGE NOTICED WHILE YOU WERE AWAY.
+ * WHAT BOB NOTICED WHILE YOU WERE AWAY.
  *
  * A watch checks on a schedule and posts only when the answer changes. Until
  * this existed the post went into the river and the room never showed it, so a
@@ -13,7 +13,7 @@
  * exactly as a caveat's does.
  *
  * "LOOK INTO IT" IS AN ORDINARY REPLY. The post carries the exact read that
- * fired it, so replying in its thread lets George re-run that call and climb
+ * fired it, so replying in its thread lets Bob re-run that call and climb
  * from a fact rather than from the sentence. No investigation object, no
  * second path (CLAUDE.md architecture rule 10).
  *
@@ -24,7 +24,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { listNoticed, type NoticedItem } from '../services/noticedApi';
 
-const DISMISSED = 'george.noticed.dismissed';
+const DISMISSED = 'bob.noticed.dismissed';
 
 function dismissedIds(): string[] {
   try {
@@ -64,8 +64,8 @@ export function Noticed({ onLookInto }: {
 
   return (
     <div style={{ marginBottom: 22 }}>
-      <p className="r-label" style={{ color: 'rgb(var(--george))' }}>
-        {items.length === 1 ? 'George noticed something' : `George noticed ${items.length} things`}
+      <p className="r-label" style={{ color: 'rgb(var(--bob))' }}>
+        {items.length === 1 ? 'Bob noticed something' : `Bob noticed ${items.length} things`}
       </p>
       {items.map((item) => (
         <div
@@ -87,7 +87,7 @@ export function Noticed({ onLookInto }: {
               {item.body}
             </p>
             {/* What it said, then the one thing that would unstick it. Both
-                come from the system's own record — neither is George guessing
+                come from the system's own record — neither is Bob guessing
                 at a cause he has not established. */}
             {item.why && (
               <p className="r-label" style={{ marginTop: 4, opacity: 0.8 }}>{item.why}</p>

@@ -6,7 +6,7 @@
  * Relative base for the same reason as everywhere else — same-origin through
  * the proxy, so no CORS preflight in production.
  *
- * Behind the same require_page("george") gate as every other George route, so
+ * Behind the same require_page("bob") gate as every other Bob route, so
  * this needs no credential the app is not already carrying.
  */
 import axios from 'axios';
@@ -17,7 +17,7 @@ import type {
   WorkflowSchedule,
 } from '../types/workflows';
 
-const API_BASE = '/api/v1/george/workflows';
+const API_BASE = '/api/v1/bob/workflows';
 
 /**
  * The versions waiting on a person.

@@ -93,7 +93,7 @@ describe('the token row', () => {
     expect(screen.queryByRole('button', { name: 'why' })).toBeNull();
   });
 
-  it('reduces a refusal written for George to one line, with his words on tap', () => {
+  it('reduces a refusal written for Bob to one line, with his words on tap', () => {
     /**
      * The dogfood log, 2026-09-15. The tool names the argument and the yaml
      * key because the model has to fix its own call; that sentence was on the

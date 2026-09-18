@@ -46,12 +46,12 @@ from pathlib import Path
 from typing import Any, Optional
 
 # agent/ and tools/ live at the repo root, one level above backend/ — the same
-# path insertion routes/george.py already does.
+# path insertion routes/bob.py already does.
 _ROOT = Path(__file__).resolve().parents[3]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from agent import loop as george_loop  # noqa: E402
+from agent import loop as bob_loop  # noqa: E402
 
 # A single pinned call gets less time than a chat call: a page of tiles loads
 # them together and one slow query must not hold the page. george_ro also
@@ -135,11 +135,11 @@ def validate_call(call: Any) -> tuple[str, dict]:
             f"{name}: arguments must be an object, got {type(args).__name__}."
         )
 
-    fn = george_loop.TOOL_FUNCTIONS.get(name)
+    fn = bob_loop.TOOL_FUNCTIONS.get(name)
     if fn is None:
         raise PinValidationError(
-            f"{name!r} is no longer one of George's tools. Available: "
-            f"{', '.join(sorted(george_loop.TOOL_FUNCTIONS))}."
+            f"{name!r} is no longer one of Bob's tools. Available: "
+            f"{', '.join(sorted(bob_loop.TOOL_FUNCTIONS))}."
         )
 
     # Structural check: catches an argument that was removed or renamed, and one
@@ -194,7 +194,7 @@ def validate_calls(calls: Any) -> list[dict]:
 
 
 def _schema_for(name: str) -> dict:
-    for s in george_loop.build_tool_schemas():
+    for s in bob_loop.build_tool_schemas():
         if s["name"] == name:
             return s
     return {}
@@ -275,7 +275,7 @@ async def run_call(call: dict) -> dict:
     except PinValidationError as exc:
         return _done("unrunnable", error=str(exc))
 
-    fn = george_loop.TOOL_FUNCTIONS[name]
+    fn = bob_loop.TOOL_FUNCTIONS[name]
     try:
         result = await asyncio.wait_for(
             asyncio.to_thread(fn, **args), timeout=CALL_TIMEOUT_S
@@ -291,12 +291,12 @@ async def run_call(call: dict) -> dict:
     except Exception as exc:  # noqa: BLE001 - a tile must not take down the page
         return _done("failed", error=f"{type(exc).__name__}: {exc}")
 
-    capped = george_loop._truncate(result)
+    capped = bob_loop._truncate(result)
     return _done(
         "ok",
-        rows=george_loop._json_safe(capped.get("rows") or []),
-        meta=george_loop._json_safe(capped.get("meta") or {}),
-        notices=george_loop._json_safe(george_loop._notices_from(capped)),
+        rows=bob_loop._json_safe(capped.get("rows") or []),
+        meta=bob_loop._json_safe(capped.get("meta") or {}),
+        notices=bob_loop._json_safe(bob_loop._notices_from(capped)),
     )
 
 
@@ -315,6 +315,6 @@ async def run_pin(tool_calls: list[dict]) -> dict:
         "status": status,
         "results": list(results),
         # Flattened for a tile that shows one notice strip above its figures,
-        # the way GeorgeConversation puts notices above the answer.
+        # the way BobConversation puts notices above the answer.
         "notices": [n for r in results for n in r["notices"]],
     }

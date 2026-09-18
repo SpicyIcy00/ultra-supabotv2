@@ -17,7 +17,7 @@ TWO FINDINGS OF P1.✓, HELD HERE SO NEITHER CAN RECUR.
      Nothing failed; a session noticed, three cards later.
 
 Both are the same shape: a claim about a run that the run's own record could
-not support. The tests below are about the RECORD, not about George.
+not support. The tests below are about the RECORD, not about Bob.
 """
 
 from __future__ import annotations

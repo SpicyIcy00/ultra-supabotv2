@@ -5,7 +5,7 @@
  *
  * He was right about the cause. `/pages/:id` renders `PinnedPage` and the tree
  * under it — `PinTile`, `ResultBlocks`, `Instruments`, `ReceiptsBlock` — and
- * every colour in that tree comes from SIX `george-*` chrome tokens that
+ * every colour in that tree comes from SIX `bob-*` chrome tokens that
  * described one surface: a cream page with navy text. The three LIST screens
  * (Kept, Needs you, Running) were converted to room classes on 2026-09-12; the
  * page a person opens FROM Kept was not, and nothing said so. Inside the room's
@@ -37,7 +37,7 @@ import postcss from 'postcss';
 import { describe, expect, it } from 'vitest';
 
 import { subtitleFor } from './catalogue';
-import type { ToolMeta } from '../types/george';
+import type { ToolMeta } from '../types/bob';
 
 const ROOT = join(__dirname, '..', '..');
 const CONFIG = readFileSync(join(ROOT, 'tailwind.config.js'), 'utf8');
@@ -95,14 +95,14 @@ function valuesOn(root: postcss.Root, selector: string): Record<string, string> 
 const DARK = '.room';
 const LIGHT = ':root[data-room-theme="light"] .room';
 
-/** The chrome tokens every `george-*` component paints with. Not the accent. */
+/** The chrome tokens every `bob-*` component paints with. Not the accent. */
 const CHROME = ['cream', 'paper', 'line', 'navy', 'slate', 'muted'] as const;
 
 describe('the six chrome tokens the old components paint with', () => {
   it.each(CHROME)('%s is a variable in the config, never a hex', (name) => {
     const declared = new RegExp(`\\b${name}:\\s*'([^']+)'`).exec(CONFIG);
-    expect(declared, `george.${name} is not declared in tailwind.config.js`).toBeTruthy();
-    // The alpha form matters as much as the variable: `bg-george-line/40` is
+    expect(declared, `bob.${name} is not declared in tailwind.config.js`).toBeTruthy();
+    // The alpha form matters as much as the variable: `bg-bob-line/40` is
     // written in these components, and a bare `var(--x)` silently drops the
     // modifier rather than failing.
     expect(declared![1]).toBe(`rgb(var(--g-${name}) / <alpha-value>)`);
@@ -160,7 +160,7 @@ describe('the six chrome tokens the old components paint with', () => {
     // "its a different font" — 2026-09-15. The room has no serif at all: its
     // headings and its figures are both `--sans`, and a kept page in Georgia
     // was a different app on the same screen.
-    expect(CONFIG).toContain("'george-serif': 'var(--g-serif)'");
+    expect(CONFIG).toContain("'bob-serif': 'var(--g-serif)'");
     expect(valuesOn(ROOM, DARK)['--g-serif']).toBe('var(--sans)');
     // Outside the room it is the exact stack it always was.
     expect(valuesOn(INDEX, ':root')['--g-serif']).toContain('Georgia');

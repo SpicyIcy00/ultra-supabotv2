@@ -1,10 +1,10 @@
 """
-Pure tests for standing questions — a question George is asked on a schedule.
+Pure tests for standing questions — a question Bob is asked on a schedule.
 
 NO DATABASE. Everything that makes an unattended model call safe is decidable
 without one, and all of it lives here:
 
-  1. WHAT AN UNATTENDED GEORGE IS GIVEN. The scheduled ask injects reads,
+  1. WHAT AN UNATTENDED BOB IS GIVEN. The scheduled ask injects reads,
      compose, his own memory and nothing else. Not "refuses the rest" — the
      rest is absent from the schema, which is a stronger property and the one
      CLAUDE.md rule 4 actually promises.
@@ -28,13 +28,13 @@ import pytest
 
 from agent import loop, write_tools
 from app.services import slots, standing_questions, standing_runner
-from app.models.george_standing import MAX_INSTRUCTIONS, MAX_INSTRUCTION_LENGTH
+from app.models.bob_standing import MAX_INSTRUCTIONS, MAX_INSTRUCTION_LENGTH
 
 MANILA = slots.MANILA
 
 
 # ---------------------------------------------------------------------------
-# 1. What an unattended George is given
+# 1. What an unattended Bob is given
 # ---------------------------------------------------------------------------
 
 class _Row:
@@ -63,7 +63,7 @@ def _capture_run(monkeypatch) -> dict:
         yield 'event: start\ndata: {"thread_id": "t-1"}\n\n'
         yield 'event: done\ndata: {"status": "ok", "thread_id": "t-1"}\n\n'
 
-    monkeypatch.setattr(standing_runner.george_loop, "run", fake_run)
+    monkeypatch.setattr(standing_runner.bob_loop, "run", fake_run)
 
     async def no_beliefs():
         return None, {}
@@ -145,7 +145,7 @@ def test_an_instruction_is_labelled_as_attention_not_as_truth():
     assert standing_runner.instructions_block(_Row(instructions=[])) is None
 
 
-def test_a_missed_morning_is_told_to_george_not_hidden(monkeypatch):
+def test_a_missed_morning_is_told_to_bob_not_hidden(monkeypatch):
     seen = _capture_run(monkeypatch)
     now = datetime.now(MANILA)
     asyncio.run(standing_runner.ask(
@@ -179,7 +179,7 @@ def test_the_tool_has_nowhere_to_put_a_threshold():
 
 def test_days_are_a_list_of_integers_in_the_schema():
     """
-    The bug class that made George hold zero beliefs for a fortnight: a
+    The bug class that made Bob hold zero beliefs for a fortnight: a
     list[int] falling through to the int branch, the model sending one number,
     and the tool rejecting every call.
     """

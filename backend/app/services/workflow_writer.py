@@ -1,6 +1,6 @@
 """
 Every write a saved workflow can make. One path, shared by the route and by
-George, for the reason pin_writer already gives: two implementations of "save"
+Bob, for the reason pin_writer already gives: two implementations of "save"
 drift, and the half that drifts is the half that stops enforcing something.
 
 WHAT THE CALLER STILL OWNS
@@ -8,17 +8,17 @@ WHAT THE CALLER STILL OWNS
     a request body or from anything a model said. Both callers take them from
     the verified token.
   - The transaction. This module flushes; it does not commit. The route lets
-    get_db commit at the end of the request; George's writer commits
+    get_db commit at the end of the request; Bob's writer commits
     immediately, because it runs inside a long-lived SSE stream and the save
     must survive that stream dying later.
 
 FAILURES ARE TYPED, NOT FORMATTED, so the route can pick a status code and
-George can turn the same failure into a refusal the model can act on. Neither
+Bob can turn the same failure into a refusal the model can act on. Neither
 reads a string to decide which is which.
 
 THE PERMISSION MODEL IS ORG-LEVEL AND IS READ FROM metrics.yaml
 Workflows are the company's rules, not one person's tiles, so the verbs are
-separated (workflows.permissions): anyone with George access RUNS, the creator
+separated (workflows.permissions): anyone with Bob access RUNS, the creator
 or an admin EDITS, and an admin — and only an admin — PROMOTES a version past
 the backtest gate. Nobody schedules their own unreviewed logic. The policy
 strings are read at runtime rather than hardcoded here, and an unrecognised one
@@ -45,11 +45,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.river_writer import post_approval
-from app.models.george_workflow import (
-    GeorgeWorkflow,
-    GeorgeWorkflowRun,
-    GeorgeWorkflowSchedule,
-    GeorgeWorkflowVersion,
+from app.models.bob_workflow import (
+    BobWorkflow,
+    BobWorkflowRun,
+    BobWorkflowSchedule,
+    BobWorkflowVersion,
 )
 from app.services.workflow_runner import (
     WorkflowValidationError,
@@ -62,7 +62,7 @@ from app.services.workflow_runner import (
 )
 
 # Safe below the import above, which puts the repo root on sys.path — the same
-# arrangement pin_runner and routes/george.py use.
+# arrangement pin_runner and routes/bob.py use.
 from tools._common import load_defs as _load_defs, req as _req  # noqa: E402
 
 MANILA = ZoneInfo("Asia/Manila")
@@ -113,8 +113,8 @@ class PromotionRefused(ValueError):
 class SavedVersion:
     """What both callers want back: the workflow, the version, and its number."""
 
-    workflow: GeorgeWorkflow
-    version: GeorgeWorkflowVersion
+    workflow: BobWorkflow
+    version: BobWorkflowVersion
     created: bool  # True when the workflow itself was new
 
 
@@ -137,7 +137,7 @@ def check_permission(defs: dict, verb: str, *, username: str, role: str,
     """
     policy = _policy(defs, verb)
 
-    if policy == "any_george_user":
+    if policy == "any_bob_user":
         return
     if policy == "admin_only":
         if role == "admin":
@@ -158,7 +158,7 @@ def check_permission(defs: dict, verb: str, *, username: str, role: str,
     raise NotAllowed(
         f"metrics.yaml workflows.permissions.{verb} is {policy!r}, which this "
         f"build does not recognise, so the action is refused. Valid policies: "
-        f"any_george_user, creator_or_admin, admin_only."
+        f"any_bob_user, creator_or_admin, admin_only."
     )
 
 
@@ -177,13 +177,13 @@ def normalize_name(name: Any) -> str:
     return cleaned
 
 
-async def find_by_name(db: AsyncSession, name: str) -> Optional[GeorgeWorkflow]:
+async def find_by_name(db: AsyncSession, name: str) -> Optional[BobWorkflow]:
     """Case-insensitive lookup, which is also how "run PO Maker" resolves."""
     return (
         await db.execute(
-            select(GeorgeWorkflow).where(
-                func.lower(GeorgeWorkflow.name) == name.lower(),
-                GeorgeWorkflow.status != "archived",
+            select(BobWorkflow).where(
+                func.lower(BobWorkflow.name) == name.lower(),
+                BobWorkflow.status != "archived",
             )
         )
     ).scalar_one_or_none()
@@ -227,7 +227,7 @@ async def save_workflow(
 
     if existing is None:
         count = (
-            await db.execute(select(func.count()).select_from(GeorgeWorkflow))
+            await db.execute(select(func.count()).select_from(BobWorkflow))
         ).scalar_one()
         if count >= MAX_WORKFLOWS:
             raise WorkflowQuotaError(
@@ -236,7 +236,7 @@ async def save_workflow(
             )
         check_permission(defs, "edit", username=username, role=role,
                          created_by=username)
-        workflow = GeorgeWorkflow(
+        workflow = BobWorkflow(
             id=uuid.uuid4(),
             name=clean,
             created_by=username,
@@ -257,13 +257,13 @@ async def save_workflow(
         workflow = existing
         number = (
             await db.execute(
-                select(func.coalesce(func.max(GeorgeWorkflowVersion.version), 0))
-                .where(GeorgeWorkflowVersion.workflow_id == workflow.id)
+                select(func.coalesce(func.max(BobWorkflowVersion.version), 0))
+                .where(BobWorkflowVersion.workflow_id == workflow.id)
             )
         ).scalar_one() + 1
         created = False
 
-    version = GeorgeWorkflowVersion(
+    version = BobWorkflowVersion(
         id=uuid.uuid4(),
         workflow_id=workflow.id,
         version=number,
@@ -310,8 +310,8 @@ async def save_workflow(
 async def record_run(
     db: AsyncSession,
     *,
-    workflow: GeorgeWorkflow,
-    version: GeorgeWorkflowVersion,
+    workflow: BobWorkflow,
+    version: BobWorkflowVersion,
     outcome: dict,
     mode: str,
     requested_by: str,
@@ -319,16 +319,16 @@ async def record_run(
     schedule_id: Optional[uuid.UUID] = None,
     started_at: Optional[datetime] = None,
     delivery: Optional[dict] = None,
-) -> GeorgeWorkflowRun:
+) -> BobWorkflowRun:
     """
     Store what a run produced. The run is the receipt; see cap_for_storage.
 
     A backtest that completed also stamps the version's gate fields, which is
     what an admin later promotes against. Stamped here rather than in the route
-    so the scheduler and George cannot record a backtest that does not count.
+    so the scheduler and Bob cannot record a backtest that does not count.
     """
     now = datetime.now(timezone.utc)
-    run = GeorgeWorkflowRun(
+    run = BobWorkflowRun(
         id=uuid.uuid4(),
         workflow_id=workflow.id,
         version_id=version.id,
@@ -372,7 +372,7 @@ async def run_named_workflow(
     """
     Find a workflow by name, run it, record the run, and return the outcome.
 
-    The ONE implementation of "run PO Maker", used by the route and by George's
+    The ONE implementation of "run PO Maker", used by the route and by Bob's
     injected runner alike. An `as_of` makes it a BACKTEST: the run is recorded
     as one, it is never delivered anywhere, and it is what an administrator
     later promotes against.
@@ -386,9 +386,9 @@ async def run_named_workflow(
     if workflow is None:
         existing = (
             await db.execute(
-                select(GeorgeWorkflow.name)
-                .where(GeorgeWorkflow.status != "archived")
-                .order_by(GeorgeWorkflow.name)
+                select(BobWorkflow.name)
+                .where(BobWorkflow.status != "archived")
+                .order_by(BobWorkflow.name)
             )
         ).scalars().all()
         raise WorkflowNotFound(
@@ -406,17 +406,17 @@ async def run_named_workflow(
 
 async def resolve_version(
     db: AsyncSession,
-    workflow: GeorgeWorkflow,
+    workflow: BobWorkflow,
     version_number: Optional[int] = None,
-) -> GeorgeWorkflowVersion:
+) -> BobWorkflowVersion:
     """The named version, or the current one — which is always the newest."""
-    stmt = select(GeorgeWorkflowVersion).where(
-        GeorgeWorkflowVersion.workflow_id == workflow.id
+    stmt = select(BobWorkflowVersion).where(
+        BobWorkflowVersion.workflow_id == workflow.id
     )
     stmt = (
-        stmt.where(GeorgeWorkflowVersion.version == version_number)
+        stmt.where(BobWorkflowVersion.version == version_number)
         if version_number is not None
-        else stmt.where(GeorgeWorkflowVersion.id == workflow.current_version_id)
+        else stmt.where(BobWorkflowVersion.id == workflow.current_version_id)
     )
     version = (await db.execute(stmt)).scalar_one_or_none()
     if version is None:
@@ -429,8 +429,8 @@ async def resolve_version(
 
 async def version_context(
     db: AsyncSession,
-    workflow: GeorgeWorkflow,
-    version: GeorgeWorkflowVersion,
+    workflow: BobWorkflow,
+    version: BobWorkflowVersion,
 ) -> dict:
     """
     Which version is about to run, and which versions the schedules fire.
@@ -443,11 +443,11 @@ async def version_context(
     """
     rows = (
         await db.execute(
-            select(GeorgeWorkflowSchedule, GeorgeWorkflowVersion.version)
-            .join(GeorgeWorkflowVersion,
-                  GeorgeWorkflowVersion.id == GeorgeWorkflowSchedule.version_id)
-            .where(GeorgeWorkflowSchedule.workflow_id == workflow.id)
-            .order_by(GeorgeWorkflowSchedule.created_at)
+            select(BobWorkflowSchedule, BobWorkflowVersion.version)
+            .join(BobWorkflowVersion,
+                  BobWorkflowVersion.id == BobWorkflowSchedule.version_id)
+            .where(BobWorkflowSchedule.workflow_id == workflow.id)
+            .order_by(BobWorkflowSchedule.created_at)
         )
     ).all()
 
@@ -475,8 +475,8 @@ async def run_workflow_version(
     *,
     username: str,
     role: str,
-    workflow: GeorgeWorkflow,
-    version: GeorgeWorkflowVersion,
+    workflow: BobWorkflow,
+    version: BobWorkflowVersion,
     bindings: Optional[dict] = None,
     as_of: Optional[str] = None,
 ) -> dict:
@@ -540,7 +540,7 @@ async def run_workflow_version(
 # The approval queue
 # ---------------------------------------------------------------------------
 
-async def pending_promotion(db: AsyncSession) -> list[tuple[GeorgeWorkflow, GeorgeWorkflowVersion]]:
+async def pending_promotion(db: AsyncSession) -> list[tuple[BobWorkflow, BobWorkflowVersion]]:
     """
     The approval queue: the newest version of every workflow that has not been
     promoted. UI rule 5's one colour belongs to exactly these rows.
@@ -552,12 +552,12 @@ async def pending_promotion(db: AsyncSession) -> list[tuple[GeorgeWorkflow, Geor
     """
     rows = (
         await db.execute(
-            select(GeorgeWorkflow, GeorgeWorkflowVersion)
-            .join(GeorgeWorkflowVersion,
-                  GeorgeWorkflowVersion.id == GeorgeWorkflow.current_version_id)
-            .where(GeorgeWorkflow.status != "archived",
-                   GeorgeWorkflowVersion.promoted_at.is_(None))
-            .order_by(GeorgeWorkflowVersion.created_at.desc())
+            select(BobWorkflow, BobWorkflowVersion)
+            .join(BobWorkflowVersion,
+                  BobWorkflowVersion.id == BobWorkflow.current_version_id)
+            .where(BobWorkflow.status != "archived",
+                   BobWorkflowVersion.promoted_at.is_(None))
+            .order_by(BobWorkflowVersion.created_at.desc())
         )
     ).all()
     return [(w, v) for w, v in rows]
@@ -568,9 +568,9 @@ async def promote(
     *,
     username: str,
     role: str,
-    workflow: GeorgeWorkflow,
-    version: GeorgeWorkflowVersion,
-) -> GeorgeWorkflowVersion:
+    workflow: BobWorkflow,
+    version: BobWorkflowVersion,
+) -> BobWorkflowVersion:
     """
     Let a version fire on a schedule. Admin only, and only after a backtest.
 
@@ -605,7 +605,7 @@ async def promote(
 
     run = (
         await db.execute(
-            select(GeorgeWorkflowRun).where(GeorgeWorkflowRun.id == version.backtest_run_id)
+            select(BobWorkflowRun).where(BobWorkflowRun.id == version.backtest_run_id)
         )
     ).scalar_one_or_none()
     if run is None:
@@ -648,8 +648,8 @@ async def create_schedule(
     *,
     username: str,
     role: str,
-    workflow: GeorgeWorkflow,
-    version: GeorgeWorkflowVersion,
+    workflow: BobWorkflow,
+    version: BobWorkflowVersion,
     kind: str,
     hour: int,
     minute: int = 0,
@@ -658,14 +658,14 @@ async def create_schedule(
     bindings: Optional[dict] = None,
     telegram_chat_ids: Optional[list[str]] = None,
     enabled: bool = False,
-) -> GeorgeWorkflowSchedule:
+) -> BobWorkflowSchedule:
     """
     Attach a slot to a PINNED version.
 
     Created disabled unless the version is already promoted, and enabling it
     later goes through set_enabled, which applies the same rule. A schedule
     whose version is not promoted exists, is visible in the approval queue, and
-    fires nothing — which is what lets George accept "every Monday at 6" in
+    fires nothing — which is what lets Bob accept "every Monday at 6" in
     conversation without that instruction quietly bypassing the gate.
     """
     defs = _load_defs()
@@ -703,7 +703,7 @@ async def create_schedule(
     resolved = resolve_bindings(version.parameters or [], bindings)
     validate_steps(version.steps, version.parameters or [])
 
-    schedule = GeorgeWorkflowSchedule(
+    schedule = BobWorkflowSchedule(
         id=uuid.uuid4(),
         workflow_id=workflow.id,
         version_id=version.id,
@@ -732,10 +732,10 @@ async def repoint_schedule(
     *,
     username: str,
     role: str,
-    workflow: GeorgeWorkflow,
-    schedule: GeorgeWorkflowSchedule,
-    version: GeorgeWorkflowVersion,
-) -> GeorgeWorkflowSchedule:
+    workflow: BobWorkflow,
+    schedule: BobWorkflowSchedule,
+    version: BobWorkflowVersion,
+) -> BobWorkflowSchedule:
     """
     Point a schedule at a different version — the act that ENDS a divergence.
 
@@ -780,11 +780,11 @@ async def set_enabled(
     *,
     username: str,
     role: str,
-    workflow: GeorgeWorkflow,
-    version: GeorgeWorkflowVersion,
-    schedule: GeorgeWorkflowSchedule,
+    workflow: BobWorkflow,
+    version: BobWorkflowVersion,
+    schedule: BobWorkflowSchedule,
     enabled: bool,
-) -> GeorgeWorkflowSchedule:
+) -> BobWorkflowSchedule:
     """
     Turn a schedule on or off.
 

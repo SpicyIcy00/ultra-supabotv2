@@ -7,7 +7,7 @@
  * piece of live code it was the only cover for.
  */
 import { describe, expect, it } from 'vitest';
-import type { GeorgeTurn, ToolCall } from '../types/george';
+import type { BobTurn, ToolCall } from '../types/bob';
 import type { Post } from '../types/river';
 import { restoreFromPosts } from './restore';
 import { buildBoard } from './board';
@@ -18,18 +18,18 @@ const ROWS = [
 ];
 const META = { source_table: 'purchase_plan', filters_applied: {}, snapshot_timestamp: '2026-09-12T00:00:00Z' };
 
-const stored = (): GeorgeTurn => ({
-  role: 'george',
+const stored = (): BobTurn => ({
+  role: 'bob',
   text: 'x',
   toolCalls: [{ seq: 2, tool: 'get_purchase_plan', arguments: { supplier: 'Seikyo SEK001' } } as ToolCall],
   post: {
     question_post_id: 'q1', answer_post_id: 'a1', thread_id: 't',
     conversation_id: 'c', visibility: 'private', stored: true,
   },
-} as unknown as GeorgeTurn);
+} as unknown as BobTurn);
 
 const post = (payload: unknown): Post => ({
-  id: 'a1', thread_id: 't', parent_id: 'q1', kind: 'answer', author: 'george',
+  id: 'a1', thread_id: 't', parent_id: 'q1', kind: 'answer', author: 'bob',
   author_user: null, owner_user: 'me', visibility: 'private', mine: true, body: 'x',
   receipts: null, notices: [], conversation_id: 'c', created_at: null, payload,
 } as unknown as Post);
@@ -40,7 +40,7 @@ describe('a reopened thread', () => {
       charted: [{ seq: 2, tool: 'get_purchase_plan', arguments: { supplier: 'Seikyo SEK001' }, rows: ROWS, meta: META }],
       composition: { blocks: [{ op: 'put', kind: 'draft', key: 'seikyo-order', weight: 'lead', seq: 2 }] },
     })]);
-    if (restored.role !== 'george') throw new Error('expected george');
+    if (restored.role !== 'bob') throw new Error('expected bob');
 
     expect(restored.composition?.blocks.map((b) => b.key)).toEqual(['seikyo-order']);
     expect(restored.toolCalls[0].result?.rows).toHaveLength(2);
@@ -59,7 +59,7 @@ describe('a reopened thread', () => {
         default_blocks: [{ op: 'put', kind: 'table', key: 'read-9', weight: 'quiet', seq: 9 }],
       },
     })]);
-    if (restored.role !== 'george') throw new Error('expected george');
+    if (restored.role !== 'bob') throw new Error('expected bob');
 
     expect(restored.defaultComposition?.default).toBe(true);
     expect(buildBoard([restored]).map((o) => o.key).sort()).toEqual(['read-9', 'seikyo-order']);
@@ -75,14 +75,14 @@ describe('a reopened thread', () => {
                  caveat: 'Purchase orders are a frozen export',
                  next: 'Send it before the cut-off' },
     })]);
-    if (restored.role !== 'george') throw new Error('expected george');
+    if (restored.role !== 'bob') throw new Error('expected bob');
     expect(restored.reading?.claim).toBe('Seikyo is the one to order from');
     expect(restored.reading?.next).toBe('Send it before the cut-off');
   });
 
   it('leaves a turn whose post kept nothing exactly as it was', () => {
     const [bare] = restoreFromPosts([stored()], [post(null)]);
-    if (bare.role !== 'george') throw new Error('expected george');
+    if (bare.role !== 'bob') throw new Error('expected bob');
     expect(bare.composition).toBeUndefined();
     expect(bare.reading).toBeUndefined();
     expect(bare.toolCalls[0].result).toBeUndefined();

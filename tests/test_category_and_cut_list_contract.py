@@ -79,7 +79,7 @@ def test_the_models_own_row_cap_says_the_same():
 
 def test_a_grouped_count_states_its_whole():
     """verification/p2s7-gate.json: "3,005 of Greenhills' 3,541" — the 3,541
-    was George's sum. The tool now states the whole of a complete grouping."""
+    was Bob's sum. The tool now states the whole of a complete grouping."""
     source = open("tools/inventory.py", encoding="utf-8").read()
     assert '"product_count_all_groups"' in source
     assert "if group_by and not truncated and full_row_count == len(rows)" in source

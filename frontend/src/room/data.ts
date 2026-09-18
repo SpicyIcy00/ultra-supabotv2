@@ -5,10 +5,10 @@
  * is this row about, what is its figure, which way did it move. None of it
  * computes a business figure.
  */
-import type { CompositionBlock, GeorgeTurn, ToolCall, ToolMeta } from '../types/george';
+import type { CompositionBlock, BobTurn, ToolCall, ToolMeta } from '../types/bob';
 
 export type Block = CompositionBlock;
-export type AnswerTurn = Extract<GeorgeTurn, { role: 'george' }>;
+export type AnswerTurn = Extract<BobTurn, { role: 'bob' }>;
 export type Direction = 'up' | 'down' | 'flat';
 export type Dimension = 'store' | 'product' | 'category' | 'supplier';
 
@@ -112,7 +112,7 @@ export function subjectOf(row: Record<string, unknown>): string | null {
 /**
  * What KIND of thing a subject is, from the column its name came out of.
  * Never guessed from the text — a product called "Rockwell Crackers" is a
- * product, and asking George why a *shop* of that name moved would send him
+ * product, and asking Bob why a *shop* of that name moved would send him
  * looking for something that does not exist.
  */
 export function dimensionOf(rows: Record<string, unknown>[], subject: string): Dimension | null {
@@ -323,7 +323,7 @@ export function sorted(
  * disclosure that gives no hint it is there. What it may not do is push the
  * answer off the screen — an earlier build opened with forty product names and
  * the word NULL. Where the message goes on to ENUMERATE, the list sits behind
- * one word. The split is at a punctuation boundary in George's own text; this
+ * one word. The split is at a punctuation boundary in Bob's own text; this
  * never rewrites or summarises him.
  */
 const CAVEAT_HEAD_MAX = 200;
@@ -466,7 +466,7 @@ export function rowsOf(call: ToolCall | null): Record<string, unknown>[] {
 }
 
 /**
- * WARNINGS THE LOOP RAISES ABOUT GEORGE'S OWN EDITS — never a tool's notice.
+ * WARNINGS THE LOOP RAISES ABOUT BOB'S OWN EDITS — never a tool's notice.
  *
  * "rockwell-hours: a block carries a kind or a spec, never both" is process,
  * not a caveat on a figure: the refusal is already enforced and already

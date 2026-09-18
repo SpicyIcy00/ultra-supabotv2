@@ -26,35 +26,35 @@ from app.models.vending import (
     VendingOrder,
     VendingOrderLine,
 )
-from app.models.george_watch import (
-    GeorgeWatch,
-    GeorgeWatchCheck,
+from app.models.bob_watch import (
+    BobWatch,
+    BobWatchCheck,
     WATCH_DIRECTIONS,
     WATCH_KINDS,
     WATCH_STATUSES,
 )
-from app.models.george_standing import (
-    GeorgeStandingQuestion,
+from app.models.bob_standing import (
+    BobStandingQuestion,
     STANDING_KINDS,
     STANDING_STATUSES,
 )
-from app.models.george_decision import (
-    GeorgeDecision,
+from app.models.bob_decision import (
+    BobDecision,
     DECISION_OUTCOMES,
 )
-from app.models.george_page import (
-    GeorgePage,
-    GeorgePageEvent,
+from app.models.bob_page import (
+    BobPage,
+    BobPageEvent,
     PAGE_EVENT_ACTORS,
     PAGE_OPERATIONS,
 )
-from app.models.george_pin import GeorgePin, PIN_STATUSES
-from app.models.george_post import (
-    GeorgePost,
+from app.models.bob_pin import BobPin, PIN_STATUSES
+from app.models.bob_post import (
+    BobPost,
     POST_AUTHORS,
     POST_KINDS,
     POST_VISIBILITY,
-    PRIVATE_GEORGE_KINDS,
+    PRIVATE_BOB_KINDS,
     default_visibility,
 )
 from app.models.storehub import (
@@ -91,25 +91,25 @@ __all__ = [
     "VendingAisle",
     "VendingOrder",
     "VendingOrderLine",
-    "GeorgeWatch",
-    "GeorgeWatchCheck",
+    "BobWatch",
+    "BobWatchCheck",
     "WATCH_DIRECTIONS",
     "WATCH_KINDS",
     "WATCH_STATUSES",
-    "GeorgeStandingQuestion",
+    "BobStandingQuestion",
     "STANDING_KINDS",
     "STANDING_STATUSES",
-    "GeorgePage",
-    "GeorgePageEvent",
+    "BobPage",
+    "BobPageEvent",
     "PAGE_EVENT_ACTORS",
     "PAGE_OPERATIONS",
-    "GeorgePin",
+    "BobPin",
     "PIN_STATUSES",
-    "GeorgePost",
+    "BobPost",
     "POST_KINDS",
     "POST_AUTHORS",
     "POST_VISIBILITY",
-    "PRIVATE_GEORGE_KINDS",
+    "PRIVATE_BOB_KINDS",
     "default_visibility",
     "StorehubImport",
     "PurchaseOrder",

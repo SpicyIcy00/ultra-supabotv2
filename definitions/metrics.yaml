@@ -1,5 +1,5 @@
 # =============================================================================
-# metrics.yaml — the single source of truth for George's business definitions.
+# metrics.yaml — the single source of truth for Bob's business definitions.
 #
 # Tools READ from this file. A definition may not be hardcoded in a tool; if a
 # rule is missing here, add it here rather than inlining it. See CLAUDE.md.
@@ -9,7 +9,7 @@
 #   resolves: the prior contradiction this entry settles, if any
 #
 # SQL fragments below are vetted, parameterized building blocks — they are the
-# ONLY SQL George composes against these tables. Standard aliases:
+# ONLY SQL Bob composes against these tables. Standard aliases:
 #   t  = new_transactions      ti = new_transaction_items
 #   p  = products              s  = stores               i = inventory
 # =============================================================================
@@ -307,14 +307,14 @@ sales_day:
 #      no config file. It is included here.
 #
 # Match on `id`, never on a name. The names below are recorded so a rename is
-# detectable; `display_name` is what George shows the user.
+# detectable; `display_name` is what Bob shows the user.
 # NOTE: "(6) Aji Ichiban  OPUS" contains a DOUBLE SPACE. Preserved verbatim.
 stores:
   # ---------------------------------------------------------------------------
   # ALL 22 ROWS OF `stores` ARE CLASSIFIED BELOW, counted 2026-09-10:
   #   7 active_retail · 1 warehouse · 2 pending_retail · 2 closed
   #   1 vending_stock_location · 9 non_trading
-  # A row that appears in none of these is a place George cannot name, and a row
+  # A row that appears in none of these is a place Bob cannot name, and a row
   # in two of them is a place he would count twice. test_store_scope_contract
   # holds both properties.
   # ---------------------------------------------------------------------------
@@ -357,7 +357,7 @@ stores:
     - id: "69c73fcb277aa600076dfaaa"
       name: "Ajiichiban SHANG"
       # The store record's own display_name is "Shangri-La"; this file said
-      # "Shang" and George therefore called it something the business does not.
+      # "Shang" and Bob therefore called it something the business does not.
       # Corrected 2026-09-10.
       display_name: "Shangri-La"
 
@@ -554,7 +554,7 @@ filters:
     # OPEN QUESTION — do not resolve by guessing.
     # Return rows store a positive `total`. Whether that figure is the refunded
     # amount (so net-of-returns = sales - returns) or something else has not been
-    # confirmed with the business. Until it is, George reports returns as their
+    # confirmed with the business. Until it is, Bob reports returns as their
     # own figure and must NOT publish a "net of returns" number.
     net_of_returns_supported: false
 
@@ -701,7 +701,7 @@ filters:
 # what it WAS — base or derived, which business it measured, what it depended
 # on — lived in prose comments a tool could not read and a test could not
 # hold. The fields below are declared on every metric in every domain so that
-# George, the tools and the tests can inspect a figure's identity without
+# Bob, the tools and the tests can inspect a figure's identity without
 # reading a comment. Additive by construction: see version_policy.
 #
 # EXECUTION STAYS DOMAIN-SPECIFIC. `metrics` (retail sales), `vending.metrics`
@@ -795,7 +795,7 @@ metrics:
     # this list to that formula — one driver must be the derived metric whose
     # numerator is this metric, the other must be its denominator.
     #
-    # READING IS QUALITATIVE. George reads change_pct off each driver's
+    # READING IS QUALITATIVE. Bob reads change_pct off each driver's
     # compared row and names the one that moved more; he may NOT say what
     # share of the change each accounts for. Splitting a change in a product
     # between its factors has no unique answer (log, sequential and Shapley
@@ -813,7 +813,7 @@ metrics:
       attribution_reason: >
         Splitting a change in a product of two factors between them has no
         unique answer; the split is a convention, which makes it a definition,
-        and no definition has been chosen. George names the driver with the
+        and no definition has been chosen. Bob names the driver with the
         larger measured change_pct and never a share.
     # source: t.total is the measure used by every store-level example in
     #   business_rules.yaml (examples 2, 7, 8, 11, 12, 13, 15, 18, 20, 21, 23,
@@ -999,7 +999,7 @@ metrics:
   # net_sales / transaction_count, over EXACTLY the guards both components
   # use: not cancelled, type Sale, active retail, half-open Manila window. It
   # is the trusted answer to "is the problem transactions or basket size?" —
-  # a question George could previously only answer by dividing two figures in
+  # a question Bob could previously only answer by dividing two figures in
   # prose, which is the one calculation this file exists to keep out of prose.
   #
   # WHAT WAS INSPECTED BEFORE WRITING THIS DOWN (live, 2026-09-07):
@@ -1070,7 +1070,7 @@ metrics:
 # METRIC SETS — guidance, not execution. Added 2026-09-07.
 #
 # Names the group of metrics a question like "how did Rockwell do last week?"
-# is asking for, so George reads it here rather than guessing, and so the
+# is asking for, so Bob reads it here rather than guessing, and so the
 # frontend can show the three figures under one heading when their calls
 # agree on scope. NOTHING EXECUTES A SET: get_sales runs one metric per call,
 # the loop runs the calls together, and the composition on screen is
@@ -1078,7 +1078,7 @@ metrics:
 # calculation path, which is what this block must never become.
 #
 # ASKED AS ONE CALL SINCE P2S.9 (2026-09-18), and still executing nothing.
-# George asked for the three as three calls in 4 of the 7 answers of
+# Bob asked for the three as three calls in 4 of the 7 answers of
 # verification/p2s7-gate-2.json — the same scope written out three times, and
 # three results back. Now `get_sales(metric='sales_headline', ...)` is one
 # call, and agent/loop.py `_expand_sets` runs it as the three single-metric
@@ -1118,7 +1118,7 @@ metric_sets:
 # set's arrangement (metric_sets.*.asked_as_one_call) widened to several
 # tools. The model makes ONE call; the loop runs the reads below, each an
 # ordinary call from then on: its own seq, frames, board object, receipts and
-# pin, exactly as if George had written them himself. No read here consumes
+# pin, exactly as if Bob had written them himself. No read here consumes
 # another's rows, nothing is summed or joined across them, and the tools
 # they name are unchanged. So there is still one calculation path per figure.
 #
@@ -1185,7 +1185,7 @@ one_call_reads:
           compared: true
           window: date_range
           scope: filters
-        # The empty-shelf check as George already makes it (tool_calls,
+        # The empty-shelf check as Bob already makes it (tool_calls,
         # 2026-09-15..18: stockouts, ranked most_days_out, 10–15 rows). A
         # product that fell and is not in these rows is not known to have
         # been on the shelf — the read's full_row_count says how many went out.
@@ -1344,7 +1344,7 @@ same_store:
 # A period-over-period figure has a baseline, and WHICH baseline is a business
 # definition: brief.sales_vs_same_weekday rejected `previous_day` in favour of
 # `same_weekday_last_week` after measuring both. Until this section existed the
-# only comparison George could make outside the brief was arithmetic in prose,
+# only comparison Bob could make outside the brief was arithmetic in prose,
 # with no receipt for the baseline. Now a tool computes it, both windows go on
 # the receipt, and the model reads change_pct rather than deriving it.
 #
@@ -1519,7 +1519,7 @@ comparisons:
     inherits: previous_period
     # THE EXPECTATION READ for a day. What the brief judges every morning —
     # yesterday against the same weekday a week earlier — promoted to a read
-    # George can make for any closed day or explicit window: the whole window
+    # Bob can make for any closed day or explicit window: the whole window
     # shifted back by the offset the brief measured. For a seven-day window it
     # is previous_period by another route; for one day it is the brief's own
     # comparison WITHOUT the brief's noise floor, because the floor belongs to
@@ -1597,13 +1597,13 @@ comparisons:
 
 
 # =============================================================================
-# INVESTIGATION — how George reasons about "why", as a definition. Added
+# INVESTIGATION — how Bob reasons about "why", as a definition. Added
 # 2026-09-08 (Investigation V1).
 #
 # NOTHING HERE EXECUTES. An investigation is reasoning behaviour inside an
 # ordinary conversation: no planner, no table, no workflow, no page type, no
 # composite tool. The loop stays model -> tool call -> answer (CLAUDE.md rule
-# 5). What this section holds is the VOCABULARY George is given — the ladder,
+# 5). What this section holds is the VOCABULARY Bob is given — the ladder,
 # where each rung reads from, when to stop, and what he may and may not say —
 # so that the prompt is built from definitions rather than typed, and so a
 # change of mind here is one edit.
@@ -1629,14 +1629,14 @@ investigation:
   # vocabulary: it executes nothing and matches nothing, and the verbs below
   # are examples of the intent rather than a list to test a message against.
   # UNDERSTANDING, NOT BREADCRUMBS (2026-09-18). The owner, the same day
-  # P2S.6 was built: "George doesn't wait for me to ask the next obvious
-  # question. When I ask about an area of the business, George investigates
+  # P2S.6 was built: "Bob doesn't wait for me to ask the next obvious
+  # question. When I ask about an area of the business, Bob investigates
   # it far enough to understand what is happening before responding. When
-  # George discovers something important, he investigates the likely
+  # Bob discovers something important, he investigates the likely
   # drivers, checks relevant explanations, determines whether it actually
-  # matters, and forms a view. George brings me understanding, not
+  # matters, and forms a view. Bob brings me understanding, not
   # breadcrumbs. I should ask follow-up questions because I want to steer,
-  # challenge, explore, decide or act — not because George made me ask
+  # challenge, explore, decide or act — not because Bob made me ask
   # 'why?' five times to get to the useful part."
   principle: >
     UNDERSTANDING, NOT BREADCRUMBS: asked about an area, investigate far
@@ -1651,8 +1651,8 @@ investigation:
     # 2026-09-18). Until now a message had to ASK for the work — a verb, an
     # intent, an observation — so "how are we doing" showed which shop fell
     # and offered "why?" as a question to tap. The owner, ops/STANDARD.md §1:
-    # "If George decides Rockwell being down is important enough to show me,
-    # George should have already investigated why." Depth is decided by what
+    # "If Bob decides Rockwell being down is important enough to show me,
+    # Bob should have already investigated why." Depth is decided by what
     # the reads FIND; the wording of the message only decides where to start.
     what_is_shown_that_moved: >
       ANYTHING YOU SHOW THAT MOVED IS INVESTIGATED BEFORE YOU SHOW IT, asked
@@ -1710,7 +1710,7 @@ investigation:
     # an explanation is offered, the ones the data CAN test are tested, with
     # reads that already exist. The simulation of 2026-09-18 is why: OPUS
     # "fell 15.9%" against a week holding the 31 Aug holiday Monday, and
-    # nothing let George see it — the time read is never differenced, and no
+    # nothing let Bob see it — the time read is never differenced, and no
     # definition names holidays. Reading the baseline window's own days as a
     # SERIES (characterised, never subtracted) shows a week with one day far
     # out of line; a holiday calendar is its own card.
@@ -1727,12 +1727,12 @@ investigation:
         fact:           "a figure on a row — 'down 12.1%'"
         derived_fact:   "a figure a tool computed from others — ATP, change_pct"
         inference:      "a reading of measured figures — 'so basket value is the stronger measured driver'"
-        recommendation: "what you would do, or the check no read can make — 'a count of the shelf would settle it'; never a read George could have made himself"
+        recommendation: "what you would do, or the check no read can make — 'a count of the shelf would settle it'; never a read Bob could have made himself"
       # WHETHER IT MATTERS (2026-09-18, "determines whether it actually
       # matters"). A reading, not a threshold: its size against the shop's
       # own week and the estate's, and whether it is local or estate-wide.
       # "the rows' own figures, never a cut-off of yours" added 2026-09-18:
-      # on the first live run George sized the estate with "five of the other
+      # on the first live run Bob sized the estate with "five of the other
       # six shops moved less than ₱17,000 either way" — a line he drew, which
       # no tool returned. Size is read off the rows; a band is a threshold.
       matters: "large or small by the rows' own figures, never a cut-off of yours, and local or estate-wide"
@@ -1747,7 +1747,7 @@ investigation:
       one_line: true
 
   # Driver reading in V1 is qualitative and there is NO numeric threshold for
-  # "similar". A threshold would make George subtract two percentages, and a
+  # "similar". A threshold would make Bob subtract two percentages, and a
   # tool that compared metrics across calls would execute a metric set, which
   # metric_sets forbids. Clear cases are held by behavioural evals; if they
   # show he cannot tell dominant from mixed movement, that is reported, not
@@ -1801,7 +1801,7 @@ investigation:
         # the two shops filtered is one call, not two).
         # 7 → 9 (2026-09-18): the CHECK round — the baseline's days and the
         # stock record for the lines that fell.
-        # COUNTED IN CALLS SINCE P2S.10: what George asks for, a call asked as
+        # COUNTED IN CALLS SINCE P2S.10: what Bob asks for, a call asked as
         # one (one_call_reads, metric_sets) counting once, exactly as the
         # loop's convergence cap counts. Broad is about four now.
         max_reads: 9
@@ -1834,7 +1834,7 @@ investigation:
         # right instruction for a lookup and the wrong one for "analyze X per
         # store", where the named read is where the answer STARTS. BROAD
         # already names its second read — "and then ONE localization" — and
-        # FOCUSED named none, so George stopped at the first and was correct
+        # FOCUSED named none, so Bob stopped at the first and was correct
         # to. `min_reads` is a floor on the reading, not a quota: a read that
         # establishes nothing is not made to reach it, and what it could not
         # establish is said instead.
@@ -1916,10 +1916,10 @@ investigation:
   dominance_threshold: none
   dominance_threshold_reason: >
     A percentage-point threshold is a business definition nobody has set,
-    and applying one would be arithmetic in prose. George names the driver
+    and applying one would be arithmetic in prose. Bob names the driver
     that moved more and says "both moved" when they are close.
 
-  # When George stops. Any one of these is enough.
+  # When Bob stops. Any one of these is enough.
   stop_when:
     - "the premise is false — the figure is up, flat, or the comparison is missing"
     # Was "one driver clearly dominates and nothing further was asked" until
@@ -1946,7 +1946,7 @@ investigation:
 
 
 # =============================================================================
-# DATA AVAILABILITY — what George cannot measure because the data is not here
+# DATA AVAILABILITY — what Bob cannot measure because the data is not here
 # =============================================================================
 data_availability:
   # Recorded 2026-09-07 after probing the production database as george_ro.
@@ -1955,14 +1955,14 @@ data_availability:
   # not exist in this database in any form: no store rows, no tables, no
   # products, no categories. "FFR Overview" appears only as a placeholder page
   # name in test fixtures. Nothing FFR-specific is defined, stubbed or
-  # exampled anywhere in George until an authoritative FFR source arrives.
+  # exampled anywhere in Bob until an authoritative FFR source arrives.
   ffr:
     available: false
     verified: "2026-09-07"
     blocked_metrics: [ffr_atp, drink_attachment, side_attachment, rice_mix]
     requires:
       - "FFR stores, listed here with ids the way stores.active_retail lists candy stores"
-      - "FFR transactions and line items in tables George's role can read"
+      - "FFR transactions and line items in tables Bob's role can read"
       - "product/category ROLES (drink, side, rice, main) as data, not prose"
       - "the business-rule mappings (free vs paid beverages, water, siomai, side exclusions) as entries in this file, sourced from the business"
       - "a decided attachment denominator (transactions containing X vs all transactions)"
@@ -2058,7 +2058,7 @@ inventory:
   # There is a replenishment engine computing stock levels per SKU per store,
   # and it ran three days before this note was written.
   #
-  # So "nobody has ever set a threshold" was a sentence George said many times
+  # So "nobody has ever set a threshold" was a sentence Bob said many times
   # while a system next door was setting them daily. The lesson is not about
   # low stock: a limitation measured on one column was recorded as a fact about
   # the company, and every design decision downstream inherited it.
@@ -2410,7 +2410,7 @@ products:
     # TWO MATCHING RULES, ONE FOR EACH DIRECTION. They are not in conflict; they
     # serve different callers.
     #
-    #   match (case_insensitive)  — a HUMAN typing a SKU at George. A person who
+    #   match (case_insensitive)  — a HUMAN typing a SKU at Bob. A person who
     #     types "tky105" should not get an empty result because the catalog
     #     stores "TKY105". The ambiguity_policy above is what keeps this safe:
     #     a case-insensitive hit on more than one product is separated or
@@ -3877,7 +3877,7 @@ purchasing:
       #
       # This is the workflow promotion gate applied to a definition rather than
       # to a rule: proposed by machine, evidenced, made permanent by a person.
-      # It is the smallest safe instance of George extending what he knows, and
+      # It is the smallest safe instance of Bob extending what he knows, and
       # it is deliberately the first, because a wrong entry here costs one
       # wrong line on a draft order that somebody is going to read anyway.
       map_file: definitions/product_suppliers.yaml
@@ -4214,7 +4214,7 @@ brief:
   #
   # The brief is a LIST and stays one: nothing here drops an item or reorders
   # the brief itself. This ranks the same rows for the one place that can show
-  # exactly one of them — George's opening line on a new chat, which has a
+  # exactly one of them — Bob's opening line on a new chat, which has a
   # sentence and not a screen. Everything below it is still the whole brief.
   #
   # WHY SALES LEADS. It is money, it is estate-wide, and it is the only section
@@ -4257,7 +4257,7 @@ brief:
 # THE JUDGEMENT LAYER. The brief is a fixed read at a fixed time; this is the
 # judgement over it: which sources can NOTICE (carry a definition of normal),
 # how their survivors rank against one another, and which senses are blind and
-# why. tools/attention.py composes it; George reads it for "what should I look
+# why. tools/attention.py composes it; Bob reads it for "what should I look
 # at", "what changed" and the morning.
 #
 # NO NEW THRESHOLD. Every `floor` below is a REFERENCE to a definition that
@@ -4311,7 +4311,7 @@ attention:
       says: "days of cover is measured per supplier plan, not estate-wide; a supplier's plan is watched as a standing question of its own"
 
   # ---------------------------------------------------------------------------
-  # LEARNING FROM WHAT YOU DO. Added 2026-09-12. The one place George's
+  # LEARNING FROM WHAT YOU DO. Added 2026-09-12. The one place Bob's
   # ranking changes because of a person, and every change is a RECORDED
   # GESTURE — kept, set aside, opened, asked about, or left when the morning
   # was put away — written to george.decisions by the room and read back
@@ -4319,7 +4319,7 @@ attention:
   # Nothing is inferred from silence: a row nobody touched is a row nobody
   # touched. Every adjustment is written on the row (`learning.reason`) so a
   # reader can see why the order is what it is, and the rules are
-  # definitions, so changing what George learns from is one edit here.
+  # definitions, so changing what Bob learns from is one edit here.
   # ---------------------------------------------------------------------------
   learning:
     introduced: "2026-09-12"
@@ -4411,7 +4411,7 @@ notices:
     must_convey_checks_the_answer_not_the_message: true
 
   # THE VOCABULARY IS THE READER'S, and on 2026-09-13 it was the column's.
-  # George wrote "the shop's low-stock warning level has never been set on a
+  # Bob wrote "the shop's low-stock warning level has never been set on a
   # single product, so nothing can ever be flagged as low", which is the caveat
   # said better than the notice says it — and group 1 did not contain the word
   # he used. Two corrective turns, then the caveat was forced, and the forced
@@ -4698,7 +4698,7 @@ notices:
       # "metrics.yaml" came out on 2026-09-13, with `warning_stock` and for the
       # same reason: an alternative only the repository knows about makes the
       # one wording that breaks UI rule 4 the cheapest way past the gate.
-      # "definition"/"definitions" is what a person says, and George saying
+      # "definition"/"definitions" is what a person says, and Bob saying
       # "the definitions changed" satisfies it.
       - [definition, definitions]
       - [changed, change, differ, drift, since, "no longer", updated, revised]
@@ -4794,9 +4794,9 @@ notices:
 # =============================================================================
 # PINS — the vocabulary for one integrity check
 #
-# A pin is a WRITE, and the only claim George can make that changes something
+# A pin is a WRITE, and the only claim Bob can make that changes something
 # outside the conversation. Observed live on 2026-09-03, answering "pin that but
-# weekly": George re-ran the weekly query, then wrote "Ran the weekly version
+# weekly": Bob re-ran the weekly query, then wrote "Ran the weekly version
 # first, then pinned it. **Pinned:** ... → Replenishment page" — having never
 # called pin_answer. No tile existed. Nothing had been written. The answer was
 # the only evidence of a pin, and it was wrong.
@@ -4822,7 +4822,7 @@ pins:
     # run later: "I'll run the weekly version first, then pin that exact call" —
     # followed by the weekly table and no pin_answer call at all. A promise the
     # user will believe is as misleading as a false claim, so it gets the same
-    # check, with a gentler correction: George may legitimately be waiting on
+    # check, with a gentler correction: Bob may legitimately be waiting on
     # them ("I'll pin it once you tell me which page"), and is asked to say so
     # rather than to pin regardless.
     intents:
@@ -4864,7 +4864,7 @@ pins:
 # PAGES — Page Workshop V1 (2026-09-08)
 #
 # A page is a person's ordered collection of pins, with a title and a one-line
-# purpose. George can build one and change one in conversation through two
+# purpose. Bob can build one and change one in conversation through two
 # injected write tools, create_page and edit_page (agent/write_tools.py), which
 # call the same service a person's buttons call (app/services/page_writer.py).
 #
@@ -4875,7 +4875,7 @@ pins:
 # app/services/page_writer.py, the way MAX_TOOL_CALLS_PER_PIN is, and a
 # contract test holds the two sets equal. Nothing here is a business
 # definition, and a page's PURPOSE is descriptive text a person wrote — it is
-# read back to George labelled as theirs and never as an instruction.
+# read back to Bob labelled as theirs and never as an instruction.
 # =============================================================================
 pages:
   workshop:
@@ -4887,22 +4887,22 @@ pages:
     # add an analysis.
     max_operations_per_edit: 10
     max_adds_per_edit: 6
-    # What George's `remove` means. Recorded so it cannot be re-decided in a
+    # What Bob's `remove` means. Recorded so it cannot be re-decided in a
     # prompt: a removed analysis leaves the page and is KEPT in Ungrouped.
     remove_means: kept_in_ungrouped
     # The words for the confirmation. Structured operations produce them in
-    # the UI; the prompt asks George for the same distinction.
+    # the UI; the prompt asks Bob for the same distinction.
     remove_wording: "Removed {analysis} from {page} · kept in Ungrouped"
 
   # ---- The claim check, exactly as for pins and workflows ---------------------
-  # A page write is the third kind of thing George can say that changes
+  # A page write is the third kind of thing Bob can say that changes
   # something outside the conversation. Same failure, same remedy: if the
   # answer says a page was created, renamed, added to, moved, removed from or
   # reordered and no page tool returned this turn, the user goes looking for
   # a workspace that does not exist.
   #
   # THE PHRASES ARE PAGE-SPECIFIC ON PURPOSE. "moved" and "removed" alone would
-  # match ordinary prose — INVESTIGATING asks George to say "both drivers
+  # match ordinary prose — INVESTIGATING asks Bob to say "both drivers
   # moved" — so a claim here names the page act: moved IT, removed it FROM,
   # renamed THE PAGE. A looser list would correct him for describing a sales
   # figure.
@@ -4982,7 +4982,7 @@ pages:
 # =============================================================================
 # SAVED WORKFLOWS
 #
-# A workflow is logic George and a user agreed on in conversation, saved as a
+# A workflow is logic Bob and a user agreed on in conversation, saved as a
 # versioned rule: named steps over existing READ tools, parameters, and the
 # reasoning behind each choice. It runs on demand or on a schedule.
 #
@@ -5002,13 +5002,13 @@ workflows:
   # A pin is one person's tile. A workflow that fires every Monday at 06:00 and
   # sends the result to a group chat is the company's rule, and giving it a
   # single owner means it dies with that person's account. So the three verbs
-  # are separated: running is for anyone who can use George at all, editing is
+  # are separated: running is for anyone who can use Bob at all, editing is
   # for whoever wrote it or an admin, and promoting a version past the backtest
   # gate is for an admin only. Nobody can schedule their own unreviewed logic.
   permissions:
-    # Checked against app_users.role. The route gate is require_page("george")
+    # Checked against app_users.role. The route gate is require_page("bob")
     # first; these narrow it further.
-    run: any_george_user
+    run: any_bob_user
     edit: creator_or_admin
     promote: admin_only
     delete: creator_or_admin
@@ -5133,7 +5133,7 @@ workflows:
       - get_cost_history
 
   # ---- The claim check, exactly as for pins --------------------------------
-  # Saving a workflow is a write, and the second thing George can say that
+  # Saving a workflow is a write, and the second thing Bob can say that
   # changes something outside the conversation. Same failure mode, same remedy:
   # if the answer says a workflow was saved and save_workflow never returned,
   # the user goes looking for a rule that does not exist.
@@ -5199,7 +5199,7 @@ workflows:
 #
 # WHY THIS EXISTS: a 40-question coverage run found 6 of 11 refusals were caused
 # by the 200-row cap between the tools and the model, not by missing data. On
-# "what's out of stock across all stores" George correctly said: "the list is
+# "what's out of stock across all stores" Bob correctly said: "the list is
 # 24,180 lines long, and I only have visibility into a small, quantity-sorted
 # slice of it. I must not total or characterise the rest." 19 of 40 answers
 # mentioned truncation. top_n moves the ranking server-side so the model gets a
@@ -5273,7 +5273,7 @@ ranking:
 # =============================================================================
 # DEAD STOCK — held but not selling
 #
-# The anti-join the tool surface was missing. The coverage run showed George
+# The anti-join the tool surface was missing. The coverage run showed Bob
 # attempting this shape three times and being unable to complete it: "dead
 # products at Fairview", "in stock everywhere but selling nowhere", and
 # "products never sold anywhere" (which timed out at 32.2s because the only
@@ -5309,7 +5309,7 @@ dead_stock:
 
 
 # =============================================================================
-# VOICE — how George says it
+# VOICE — how Bob says it
 #
 # Everything above this point governs what is TRUE. This section governs the
 # register it is said in, and it exists here rather than only in the prompt for
@@ -5331,7 +5331,7 @@ voice:
     - warm
     - precise
     - occasionally dry
-  # What George is not. "Sycophantic" is first because it is the failure a
+  # What Bob is not. "Sycophantic" is first because it is the failure a
   # chat model reaches for by default.
   never:
     - sycophantic
@@ -5378,7 +5378,7 @@ voice:
   #
   # A FIGURE A READ RETURNED, AND NO OTHER (`figures: returned`, 2026-09-14).
   # Until this afternoon `caveat` and `next` carried no digits at all, and the
-  # rule made George vaguer than his evidence: he could not write "44 of 118
+  # rule made Bob vaguer than his evidence: he could not write "44 of 118
   # products have no figure on one side" — a count `meta.comparison.not_ranked`
   # returned — and reached for "roughly half" instead. Three recorded runs
   # refused 0, then 6, then 8 slots for it, six of the eight one rule, and
@@ -5401,7 +5401,7 @@ voice:
   #
   # A block's `claim` is unchanged and still carries no digits: it titles a
   # mark that draws the figure underneath it, which is CLAUDE.md's bound on an
-  # annotation. The reading is not an annotation — it is what George says.
+  # annotation. The reading is not an annotation — it is what Bob says.
   #
   # They ride the `compose` call that already happens, so none of this is a
   # round trip: agent/reading.py validates, agent/loop.py records.
@@ -5438,7 +5438,7 @@ voice:
         # is not a bound on verbosity, it is a bound on saying the second
         # thing. Two blind spots is the common case; three is a paragraph.
         # 320 → 640 (2026-09-18): verification/p2s6-gate.json refused the
-        # caveat on 2 of 7 turns once George investigated — a partial product
+        # caveat on 2 of 7 turns once Bob investigated — a partial product
         # comparison AND frozen purchase orders is two honest things, and the
         # refusal lost the slot. A caveat is still one thing said whole.
         max_length: 640
@@ -5449,7 +5449,7 @@ voice:
       next:
         # Rewritten 2026-09-18. It said "the one thing you would do or check
         # next … where an investigation stopped, this is where it says what to
-        # look at" — the breadcrumb, on the schema George reads at the moment
+        # look at" — the breadcrumb, on the schema Bob reads at the moment
         # he writes, after the prompt had forbidden it.
         about: >
           ONE sentence, drawn last: what you would do — or what no read can
@@ -5519,7 +5519,7 @@ voice:
   # has nothing on screen to restate.
   #
   # 0 → 1, DECIDED 2026-09-14 (P1.c), because 0 and `grounded_numerals` asked
-  # for opposite things and George could satisfy only one. Everything a turn
+  # for opposite things and Bob could satisfy only one. Everything a turn
   # reads is drawn, so every figure he could cite IS a drawn figure; at 0 the
   # gate rewrote each one out, and the P1.g gate run found all four scenarios
   # passing every trust check with not one figure between them. An answer that
@@ -5536,7 +5536,7 @@ voice:
   # real understanding". Walking the rows is still what a fifth catches.
   # A FIGURE IN PROSE THAT NO READ RETURNED (the speed fix, 2026-09-19). The
   # P2S.✓ run failed three trust rows the same way: "₱28,000–36,700" as the
-  # run of days, "₱13,500–21,000", "₱6,569 down to ₱398" — George rounding or
+  # run of days, "₱13,500–21,000", "₱6,569 down to ₱398" — Bob rounding or
   # pairing figures himself over rows he had read. Rule 9: a figure in prose
   # has no receipt. Until now this was an eval only; the loop now runs the
   # same matcher (agent/prose.unreturned_prose_figures) and does, in order:
@@ -5559,7 +5559,7 @@ voice:
   # THE SAME FIGURE, SAID WRONG — and until 2026-09-13 it was the way past the
   # gate above. Quoting a drawn figure exactly tripped `restatement` and was
   # corrected; writing it rounded off tripped nothing and shipped, so the
-  # further off George was, the safer he was from the guard. Found by the
+  # further off Bob was, the safer he was from the guard. Found by the
   # twelve, on "nothing sells 800 grams-worth" over a row drawn as 801.
   #
   # Never tolerated, so there is no max_sentences here: one wrong figure on
@@ -5577,7 +5577,7 @@ voice:
     min_significant_digits: 2
     warning_reason: misstated_figure
 
-  # A REMAINDER GEORGE WORKED OUT HIMSELF — the third way a figure with no
+  # A REMAINDER BOB WORKED OUT HIMSELF — the third way a figure with no
   # receipt reaches the screen, and the third found by the twelve on
   # 2026-09-13:
   #
@@ -5616,7 +5616,7 @@ voice:
 # VOLUNTEERING — the second-order fact nobody asked for
 #
 # The thing that separates a colleague from a query tool: having read the
-# result, George says the one further thing a person would want to know. Not a
+# result, Bob says the one further thing a person would want to know. Not a
 # summary of what he just said, and not a suggestion — a FACT, from a result
 # already in this turn.
 #
@@ -5675,7 +5675,7 @@ volunteering:
 #
 #   REFUSAL   "I can't"    the tool declines to produce a misleading number,
 #                          or no tool can answer. A fact about the system.
-#   PUSHBACK  "I wouldn't"  George thinks the question is the wrong one, and
+#   PUSHBACK  "I wouldn't"  Bob thinks the question is the wrong one, and
 #                          says why and what he would do instead. An opinion.
 #
 # The distinction is the whole point. Dressing an opinion as an impossibility
@@ -5683,7 +5683,7 @@ volunteering:
 # impossibility as a preference invites them to insist on something that cannot
 # happen. So the vocabularies are kept apart here, and tested apart.
 #
-# AN OPINION YIELDS. Having said his piece once, George does what he is asked
+# AN OPINION YIELDS. Having said his piece once, Bob does what he is asked
 # on the second attempt. Pushback that repeats itself is not an opinion, it is
 # an obstacle — and the person asking has more context than he does.
 # =============================================================================
@@ -5736,7 +5736,7 @@ pushback:
     - "I'd push back"
     - "I don't think"
     - "I doubt"
-  # An impossibility. Never used for something George merely dislikes.
+  # An impossibility. Never used for something Bob merely dislikes.
   refusal:
     - "I can't"
     - "I cannot"
@@ -5744,7 +5744,7 @@ pushback:
     - "there is no"
   # Disagreeing without saying what to do instead is just an objection.
   must_offer_alternative: true
-  # Said once. The second time the user asks, George does it.
+  # Said once. The second time the user asks, Bob does it.
   complies_when_insisted: true
   max_restatements: 1
 
@@ -5753,8 +5753,8 @@ pushback:
 # SURFACE — the work in front of the user, as a definition. Added 2026-09-09,
 # Generative Workspace V3.
 #
-# George decides WHAT matters; deterministic code decides how trusted data
-# becomes pixels (frontend/src/components/george/surfaceCompose.ts). This block
+# Bob decides WHAT matters; deterministic code decides how trusted data
+# becomes pixels (frontend/src/components/bob/surfaceCompose.ts). This block
 # records the vocabulary both sides read, so neither can drift from the other:
 # the closed set of refinements a surface may offer, the words that must never
 # reach a reader, and the wording rule for transactions.
@@ -5766,28 +5766,28 @@ pushback:
 # and it must not be).
 # =============================================================================
 # =============================================================================
-# JUDGMENT — what George may think, as opposed to what he may compute.
+# JUDGMENT — what Bob may think, as opposed to what he may compute.
 #
 # Added 2026-09-10. The rule is: DETERMINISTIC FACTS, INTELLIGENT JUDGMENT.
 #
 # WHY THIS EXISTS. Preventing invented figures worked, and it went one step too
-# far: the same rules that stop George inventing a number were being read as
+# far: the same rules that stop Bob inventing a number were being read as
 # stopping him forming a view. He would report that seven shops moved and leave
 # the reader to work out which one mattered — which is the reader doing the job
-# George is for. "Rockwell is what I'd look at first" is a reading of figures
+# Bob is for. "Rockwell is what I'd look at first" is a reading of figures
 # the tools returned, exactly as "basket value fell more than transactions" is,
 # and neither needs a score to be sayable.
 #
 # WHAT THIS DOES NOT CHANGE, and the boundary is the whole point.
 # `surface.attention` below still refuses a score, a threshold and a severity,
 # and that is untouched: the COMPOSER is a pure function over rows and must not
-# invent an ordering the data does not carry. This section is about GEORGE's
+# invent an ordering the data does not carry. This section is about BOB's
 # prose, where a view is allowed and has always been — it is the same warrant
 # investigation.driver_reading already grants for saying which driver moved
-# more. The composer computes nothing; George thinks.
+# more. The composer computes nothing; Bob thinks.
 # =============================================================================
 # =============================================================================
-# WATCHES — a condition George checks on a schedule, which posts when it fires.
+# WATCHES — a condition Bob checks on a schedule, which posts when it fires.
 #
 # THE ONE PROPERTY THAT MAKES A WATCH DIFFERENT FROM EVERYTHING ELSE HERE:
 # SILENCE IS ITS NORMAL STATE. A pin that finds nothing still renders. A
@@ -5800,7 +5800,7 @@ pushback:
 # those is a reference to a threshold that already exists in `brief:` — measured
 # against a noise floor on real data, with the measurement written down beside
 # it. So a watch can never disagree with the briefing about what "down" means,
-# and George can never invent a threshold, because there is no field for one.
+# and Bob can never invent a threshold, because there is no field for one.
 # "Alert me when Rockwell drops 10% instead of 30%" is a request to change a
 # DEFINITION, and the answer is to change it in `brief:` — where the evidence
 # for the current number is — or to say why it should not change.
@@ -5817,7 +5817,7 @@ pushback:
 # its own receipts, exactly as `brief:` returns three sections at once.
 #
 # The consequence is the point: there is ONE definition of what a shop's week
-# is, shared by the object view, the morning brief, a watch and anything George
+# is, shared by the object view, the morning brief, a watch and anything Bob
 # reasons with. A second implementation would be a second definition, and the
 # two would disagree on a Tuesday.
 #
@@ -5826,10 +5826,10 @@ pushback:
 # combination is a definition, and definitions live in this file behind vetted
 # SQL. Sections sit beside each other; the reader does the joining.
 #
-# WHY TAPPING MUST NOT COST A MODEL TURN. Opening a shop by asking George takes
+# WHY TAPPING MUST NOT COST A MODEL TURN. Opening a shop by asking Bob takes
 # roughly forty seconds and a model call. The same figures through this tool
 # take about a second and no model call at all, because nothing here is a
-# judgement — it is the same four reads every time. George uses the identical
+# judgement — it is the same four reads every time. Bob uses the identical
 # tool when he is reasoning, so what a person sees when they tap and what he
 # sees when he thinks cannot drift apart.
 #
@@ -5941,12 +5941,12 @@ objects:
       export with a per-line received quantity and a date is what would make
       these as deep as a shop.
 
-  # WHAT GEORGE THINKS ABOUT THIS OBJECT is deliberately NOT a section here.
-  # Beliefs live in the `george` schema, which the read-only role cannot see at
+  # WHAT BOB THINKS ABOUT THIS OBJECT is deliberately NOT a section here.
+  # Beliefs live in the `bob` schema, which the read-only role cannot see at
   # all, so this tool physically cannot reach them — and that is the right
   # boundary rather than a limitation to work around. The view is composed on
   # top, on the application role, by the endpoint the client calls
-  # (backend/app/api/v1/routes/george.py), carrying its own receipts. A
+  # (backend/app/api/v1/routes/bob.py), carrying its own receipts. A
   # backtest of a past day therefore cannot accidentally show today's opinion.
   belief_is_composed_on_top: true
 
@@ -5987,7 +5987,7 @@ watches:
       says: "a product crossed 30 days without a sale"
 
   # WHAT IS NOT AVAILABLE, AND WHAT WOULD MAKE IT AVAILABLE. Recorded here
-  # rather than left as an absence, because an absence reads as George being
+  # rather than left as an absence, because an absence reads as Bob being
   # bad at something.
   not_available:
     deliveries:
@@ -6063,7 +6063,7 @@ watches:
   # The river, and only the river, in V1. A watch that also messaged Telegram
   # would be a second delivery path to keep in step with the first, and the
   # river is the one surface (CLAUDE.md, "The river"). Watch posts are org —
-  # what George initiates is a company-level fact.
+  # what Bob initiates is a company-level fact.
   channel: river
   post_kind: watch
 
@@ -6083,7 +6083,7 @@ judgment:
   # THE GROUNDING RULE, and it is the only thing standing between a view and an
   # invention. A judgment names the FACT that produced it — a figure a tool
   # returned, a comparison it made, a read that came back empty, a caveat it
-  # attached. Not a number George worked out, and not a feeling.
+  # attached. Not a number Bob worked out, and not a feeling.
   grounding:
     required: true
     rests_on: [a figure a tool returned, a comparison a tool made,
@@ -6091,7 +6091,7 @@ judgment:
     never_rests_on: [a score, a computed ranking, a threshold, an impression]
     ungrounded_judgment_is: an invention
 
-  # What George MAY assert. Each is a reading of facts already established, and
+  # What Bob MAY assert. Each is a reading of facts already established, and
   # each is something a colleague says and a reporting system cannot.
   may:
     rank_importance: >
@@ -6127,7 +6127,7 @@ judgment:
   # The owner, on the answer that opened this card: "i thought i would go in
   # depth products per store AND WHAT I THINKS". `may.rank_importance` has
   # permitted the view since this section was written; nothing ASKED for one
-  # at the moment of answering, and a George who narrates what is already
+  # at the moment of answering, and a Bob who narrates what is already
   # drawn is a reporting tool with a chat box on it.
   #
   # This widens nothing. A view still rests on `grounding.rests_on` and every
@@ -6148,10 +6148,10 @@ judgment:
   #
   # FIVE ARE READINGS OF DATA. `means` is the sixth and it is a different
   # thing, added 2026-09-15 for P2.f: five stances describe a business
-  # SITUATION George read, and there was no word at all for something a person
+  # SITUATION Bob read, and there was no word at all for something a person
   # TOLD him. "We means the shops, not the warehouse" is not a reading of
   # anything — it is what the question means here, and until it had a stance
-  # George could not keep it, because `record_belief` refuses a view with no
+  # Bob could not keep it, because `record_belief` refuses a view with no
   # read behind it and a correction has none. See `taught` below.
   stances:
     needs_attention: "this matters, and here is the fact that makes it matter"
@@ -6194,14 +6194,14 @@ judgment:
   subject_kinds: [store, warehouse, supplier, product, category, estate]
 
 # =============================================================================
-# COMPOSITION — George composes the workspace; the system draws it.
+# COMPOSITION — Bob composes the workspace; the system draws it.
 #
 # Added 2026-09-10. Until now the screen was a pure function of rows: a
 # composer derived a layout and the model had one integer-and-a-word channel
 # into it. That produced a document — chart, findings, prose, in a fixed order
 # — and a document with its paragraphs reordered is still a document.
 #
-# Now George says what you see: which of the results he read, as which kind of
+# Now Bob says what you see: which of the results he read, as which kind of
 # object, at what weight. He does this through `compose`, a label tool like
 # record_findings — it reads nothing, it is validated here before any of it
 # reaches a client, and what is refused is named as a warning.
@@ -6216,12 +6216,12 @@ composition:
   executes_nothing: true
 
   # THE VOCABULARY. Closed. `needs` says what a block must carry to be drawn;
-  # `about` is the one-line meaning George is taught, `when` the rule that
+  # `about` is the one-line meaning Bob is taught, `when` the rule that
   # picks it unasked (P2S.3), and `rows` what the read must carry.
   #
   # IT IS THE CATALOGUE THE RENDERER DRAWS, AND NOTHING ELSE (P1.f,
   # 2026-09-14). Until now this list held fourteen names and the renderer drew
-  # six shapes, so seven of the words George could say were synonyms he had to
+  # six shapes, so seven of the words Bob could say were synonyms he had to
   # choose between and a reader had to decode: `hero`, `subject`,
   # `comparison`, `chart`, `distribution` and `timeline` all arrived as one of
   # the six, decided by the rows. A menu that is wider than what it draws
@@ -6239,7 +6239,7 @@ composition:
   # no drawing of rows has.
   #
   # THERE IS NO `text` WIDGET, AND THAT IS THE POINT (P1.c, 2026-09-14). The
-  # reading used to be one of these — a block George composed like any other,
+  # reading used to be one of these — a block Bob composed like any other,
   # which meant he could forget it (four widgets and not one word, the dogfood
   # log's top report) and that when he did compose it, his words were drawn as
   # a peer of the things they interpret. The owner, on seeing it: "putting the
@@ -6253,12 +6253,12 @@ composition:
     # ---- the marks: ways of drawing what a read returned --------------------
     #
     # THE CATALOGUE REOPENED ON PURPOSE (P2S.3, 2026-09-17). P1.f closed it at
-    # six so George was not choosing between synonyms; the owner then asked for
+    # six so Bob was not choosing between synonyms; the owner then asked for
     # the rest — *"it should have the ability to make all those different kinds
     # of charts and visualizations like pie and others cause if it builds a
     # dashboard it needs that"*. What keeps eighteen from being a menu is the
     # rule that decides unasked, written on every shape as `when`, and three
-    # shapes George never picks on his own (`only_when_asked`).
+    # shapes Bob never picks on his own (`only_when_asked`).
     #
     # EVERY SHAPE NAMES WHAT ITS ROWS MUST CARRY (`rows`, one of `shape_rows`
     # below). A shape the read cannot make is not refused — it is drawn as the
@@ -6421,12 +6421,12 @@ composition:
   # A READ THE LADDER RULED OUT (P2S.3). A block may say it drew a read that was
   # checked and did not explain the thing — the holiday that was not it, the
   # stock that was fine — and it is drawn `READ n · RULED OUT`, dimmed. It is
-  # a flag, never a sentence: the why is George's to say.
+  # a flag, never a sentence: the why is Bob's to say.
   ruled_out:
     about: "true when this read was checked and ruled out as the explanation — drawn dimmed, marked ruled out"
 
   # THE CLAIM-TITLE — the few words over a block, and the one thing on it
-  # George writes rather than binds.
+  # Bob writes rather than binds.
   #
   # P1.e drew this title from `note`, a characterisation borrowed for a job it
   # was not named for, and said the grammar "has no field for a title and must
@@ -6443,7 +6443,7 @@ composition:
   # kept beside `claim` as a synonym for it.
   claim:
     about: >
-      What this block SAYS, in George's own few words: "OPUS added more than
+      What this block SAYS, in Bob's own few words: "OPUS added more than
       the next two shops together". Not what it is — the subtitle already says
       the metric, the window and the unit off `meta`. Where he gives none, the
       block titles itself from the read.
@@ -6477,11 +6477,11 @@ composition:
 
 
   # ===========================================================================
-  # THE GRAMMAR — how George composes a shape nobody listed in advance.
+  # THE GRAMMAR — how Bob composes a shape nobody listed in advance.
   #
   # WHY THIS EXISTS. The widgets above are a MENU: fourteen forms, decided
   # ahead of time, for questions nobody had asked yet. That was a deliberate
-  # trade — a block has no field for a figure, so George cannot invent one —
+  # trade — a block has no field for a figure, so Bob cannot invent one —
   # but the owner's feature 1 asks for an interface that becomes whatever the
   # work needs, and a menu cannot do that however long it gets.
   #
@@ -6598,7 +6598,7 @@ composition:
         about: >
           the column whose VALUE chooses a hue. Identity where the value names
           a thing the palette knows (a shop), direction where the column is a
-          direction. Never a colour George picked: a hue that meant whatever
+          direction. Never a colour Bob picked: a hue that meant whatever
           he felt would be a figure by another route.
         from_field_only: true
       order: "the column to sort by"
@@ -6615,7 +6615,7 @@ composition:
           a subject.
         names_a_value_not_a_column: true
         # SEVERAL, SINCE 2026-09-15. It took one row, and a comparison is
-        # about two. Asked to compare two shops, George drew the estate,
+        # about two. Asked to compare two shops, Bob drew the estate,
         # emphasised ONE of them and wrote "Both selected shops gave back
         # basket value" as the claim — a sentence the drawing could not
         # support, with the comparison pushed into the prose because the
@@ -6636,7 +6636,7 @@ composition:
           number. So a note carries no digits at all, which is checked, and
           it is short by construction.
 
-          It exists because a third of George's sentences restate a figure the
+          It exists because a third of Bob's sentences restate a figure the
           board is already drawing. A word on the bar deletes the sentence
           under it.
         no_digits: true
@@ -6679,7 +6679,7 @@ composition:
       only ones a node may carry at all.
 
   # THERE IS NO `recommendation` WIDGET ANY MORE, AND THE RECOMMENDATION DID
-  # NOT GO WITH IT (P1.f, 2026-09-14). It was a figure with George's verb
+  # NOT GO WITH IT (P1.f, 2026-09-14). It was a figure with Bob's verb
   # above it, chosen from a closed list — order, investigate, check, hold,
   # switch_on, leave_it — and the renderer drew it as a figure. What it said
   # that a figure does not is "here is the one thing I would do", and that
@@ -6717,7 +6717,7 @@ composition:
   max_blocks: 8
 
   # KEYS ARE HOW THE WORKSPACE TRANSFORMS INSTEAD OF STACKING. Every block has
-  # a short key George chooses — "rockwell", "seikyo-order". A follow-up that
+  # a short key Bob chooses — "rockwell", "seikyo-order". A follow-up that
   # is about the same thing composes the SAME key, and the object on screen
   # changes rather than being drawn again beneath itself.
   key_pattern: "^[a-z0-9][a-z0-9-]{0,30}$"
@@ -6726,13 +6726,13 @@ composition:
   # THE BOARD. Added 2026-09-10, and it is the difference between a screen and
   # a place.
   #
-  # Until now a composition WAS the screen: whatever George composed this turn
+  # Until now a composition WAS the screen: whatever Bob composed this turn
   # was drawn, and everything from the turn before disappeared. That made the
   # workspace a function of the last question — ask about Seikyo, then ask
   # about North Edsa, and the draft order is gone. A workspace holds things.
   #
   # So a composition is now a set of EDITS to a board that persists. An object
-  # George does not mention stays exactly as it was, with its own receipts and
+  # Bob does not mention stays exactly as it was, with its own receipts and
   # its own read time. He adds, changes, pushes aside and removes; he never
   # redraws what he has not touched.
   # ---------------------------------------------------------------------------
@@ -6740,18 +6740,18 @@ composition:
   # names no widget, so the board records it under this kind instead — and
   # everything that reads the board by kind has to know the word. Until
   # 2026-09-14 the line that travels with the question skipped every kind that
-  # was not a widget, so a board whose LEADING object was a shape George
+  # was not a widget, so a board whose LEADING object was a shape Bob
   # composed said nothing at all about it, and "why?" resolved against
   # whatever quiet table happened to be beside it.
   composed_kind: spec
 
-  # KINDS A BOARD MAY STILL CARRY AND GEORGE MAY NO LONGER COMPOSE (P1.f).
+  # KINDS A BOARD MAY STILL CARRY AND BOB MAY NO LONGER COMPOSE (P1.f).
   # The board persists between turns and across a deploy: a browser that had
   # `hero` and `comparison` on screen when this shipped still has them. They
   # are not in `widgets`, so composing one is refused — and they ARE named
   # here, so the line that travels with the question still says what is being
   # looked at, and the renderer still maps them onto the six marks
-  # (frontend/src/room/catalogue.ts). A board George cannot describe is a
+  # (frontend/src/room/catalogue.ts). A board Bob cannot describe is a
   # board "why?" lands on the wrong object of.
   retired_kinds: [hero, subject, comparison, chart, distribution, timeline,
                   recommendation, text]
@@ -6814,7 +6814,7 @@ composition:
     # board still holds it — this is what the screen spends a column on.
     fold_untouched: true
 
-  # A CHANGE THAT NAMES A SUBJECT MUST NAME ITS READ. Without this, George
+  # A CHANGE THAT NAMES A SUBJECT MUST NAME ITS READ. Without this, Bob
   # could rename what an object is about while it still draws an older read's
   # rows — a subject the data behind it never carried. Weight may change on its
   # own, because a weight is not a figure.
@@ -6825,7 +6825,7 @@ composition:
   # `emphasise` is an ANNOTATION, not a shape, so a named widget takes it as
   # readily as a composed one. Without that, pointing at the row that matters
   # was only possible by abandoning the widget that was right for the job —
-  # and George kept writing the sentence instead.
+  # and Bob kept writing the sentence instead.
   #
   # FOUR LEFT WITH THE WIDGETS THEY SERVED (P1.f): `subjects` (a comparison),
   # `form` (a chart), `action` (a recommendation), and the block-level `note`,
@@ -6849,7 +6849,7 @@ composition:
   # the figures it was recommending, and every answer has a `next` sentence
   # while few answers had that tile. What came back is not that tile. An
   # action is an ANNOTATION on a row — a thing the surface can already do,
-  # pointed at one subject, carrying George's few words for WHY.
+  # pointed at one subject, carrying Bob's few words for WHY.
   #
   # THE MODEL SUPPLIES THREE THINGS AND DERIVES NOTHING: which act, which read
   # and row it is about, and the reason. It never writes what the act costs,
@@ -6873,7 +6873,7 @@ composition:
     acts:
       why:
         about: "climb the ladder on this row — what moved it"
-        # It asks George a question, so it is a turn, and the label says so.
+        # It asks Bob a question, so it is a turn, and the label says so.
         costs: "a turn"
         model_turn: true
       open:
@@ -6999,7 +6999,7 @@ surface:
       - shoppers
     # Saying a word is not the same as using it as a translation.
     #
-    # The scan above exists so George cannot quietly call transactions
+    # The scan above exists so Bob cannot quietly call transactions
     # "customers" — a transaction is a sale, and dressing it as a person
     # overstates what was counted. But the answer that DISCLAIMS the
     # substitution has to say the word too: "that's sales made, not people who
@@ -7043,7 +7043,7 @@ surface:
     # Both P2S.6 runs raised a wording warning on the foot-traffic refusal —
     # "If footfall itself is the question … that needs a counter at the
     # door", "this is a floor under traffic, not a measure of it" — which is
-    # George saying a transaction is NOT a person, the thing the scan exists
+    # Bob saying a transaction is NOT a person, the thing the scan exists
     # to protect. A sentence that is hypothetical, names the instrument that
     # would measure the thing, or says the figure is not a measure of it, is
     # an explanation; a sentence that USES the word for the transactions
@@ -7056,11 +7056,11 @@ surface:
       - because of
 
   # ---------------------------------------------------------------------------
-  # THE DESK — the one workspace, and what may change on it without George.
-  # Added 2026-09-09, George Experience Reset (Phases 1 and 2).
+  # THE DESK — the one workspace, and what may change on it without Bob.
+  # Added 2026-09-09, Bob Experience Reset (Phases 1 and 2).
   #
   # "Desk" is the INTERNAL name of the workspace model. It is not a word a
-  # person is asked to learn: the product is George, and the screen is the
+  # person is asked to learn: the product is Bob, and the screen is the
   # business laid out in front of them. Recorded here so the client, the loop
   # and the prompt read one vocabulary for it.
   #
@@ -7083,7 +7083,7 @@ surface:
     # comparison with rows that have no baseline, a ratio with no denominator,
     # a closed shop, two bases not summed — is not drawn.
     #
-    # WHAT THIS DOES NOT CHANGE: the tools still raise every notice, George
+    # WHAT THIS DOES NOT CHANGE: the tools still raise every notice, Bob
     # still receives every one, and the loop's rule that he surfaces them in
     # his own words is untouched (changing that is the trust machinery, and it
     # needs a live run). This is what the room DRAWS, nothing more.
@@ -7174,7 +7174,7 @@ surface:
       short: "AJI"
 
     # -------------------------------------------------------------------------
-    # THE ESTATE SWITCH (P2.g, 2026-09-15). The owner's feature 23: "George
+    # THE ESTATE SWITCH (P2.g, 2026-09-15). The owner's feature 23: "Bob
     # works across all my businesses and understands which business/store/system
     # I'm referring to."
     #
@@ -7187,7 +7187,7 @@ surface:
     # a sentence and hoping.
     #
     # IT IS SCOPE ON THE NEXT QUESTION, AND NOTHING ELSE. A part travels the
-    # way a selection travels (`selection.stored_on`) — named to George on the
+    # way a selection travels (`selection.stored_on`) — named to Bob on the
     # question, kept on the question post, never in the cached prefix and never
     # a figure. It does not rewrite a call, does not narrow a tool schema and
     # does not filter rows: the TOOLS decide what a scope means, and they
@@ -7254,7 +7254,7 @@ surface:
         # WHAT THAT COST, SAID PLAINLY: there is no longer a one-press way to
         # scope a question to the barn. `@AJI BARN` is the way, `@AJI CMG` was
         # NOT until this same edit (the mentions service had its own stale
-        # list), and the sentence below still tells George the warehouses in
+        # list), and the sentence below still tells Bob the warehouses in
         # this scope carry no sales — so "what is at the barn" keeps its answer
         # without keeping its pill.
         # -------------------------------------------------------------------
@@ -7291,7 +7291,7 @@ surface:
           # list — this is the only one that does not, and it is the shape a
           # genuinely separate business takes here. Its places are machines,
           # which live in Weimi and not in this file, so nothing below names
-          # one: the tools take `machine` and George asks them.
+          # one: the tools take `machine` and Bob asks them.
           places_from: []
           has_no_store_scope: true
           domain: vending
@@ -7309,7 +7309,7 @@ surface:
 
     # What a person may do on the desk WITHOUT a model turn. Each is either a
     # change of view over rows already on screen, or a deterministic replay of
-    # calls already recorded. George is consulted for interpretation and for
+    # calls already recorded. Bob is consulted for interpretation and for
     # evidence the desk does not hold — never as a substitute for a click.
     direct_manipulation:
       - select          # a set of subjects, by id, from the rows drawn
@@ -7325,13 +7325,13 @@ surface:
 
     # Selection is semantic context. It travels on the question as
     # `desk.selection` — ids and labels the rows carried, never labels the
-    # model inferred — and the loop names the subjects to George on the
+    # model inferred — and the loop names the subjects to Bob on the
     # question, beside the work sentence. The question post keeps it in its
     # payload so a reload restores the same focus from the same record.
     selection:
       # A SUPPLIER IS A SUBJECT (P2.c, 2026-09-15). `@Seikyo` had nowhere to
       # travel: a mention resolved to a supplier and the only channel to
-      # George was a dimension list that did not hold one, so it would have
+      # Bob was a dimension list that did not hold one, so it would have
       # arrived as a word in the question — which is exactly the "a label the
       # model inferred" this block exists to refuse.
       dimensions: [store, product, category, supplier]
@@ -7378,7 +7378,7 @@ surface:
       # a turn.
       #
       # So there is no entry here any more, and the absence IS the behaviour:
-      # a short instruction with subjects picked goes to George with them
+      # a short instruction with subjects picked goes to Bob with them
       # attached, exactly as every other short instruction does. Speed that
       # communicates nothing is not a feature.
 
@@ -7505,16 +7505,16 @@ surface:
             reads: the company's saved workflows
             # A RULE IS NAMED, NOT SCOPED. There is no request field a
             # workflow binds — `page_scope` is a page's and a selection is a
-            # subject's — so a mentioned rule travels as what it is: George is
+            # subject's — so a mentioned rule travels as what it is: Bob is
             # told its name and its id on the question, and running or editing
             # it is his tool call and his decision to make (level four).
             binds: named_on_question
             says: rule
 
-    # WHAT THE WORKSPACE TELLS GEORGE ABOUT ITSELF (2026-09-09, UNDERSTAND).
+    # WHAT THE WORKSPACE TELLS BOB ABOUT ITSELF (2026-09-09, UNDERSTAND).
     #
     # A selection used to be the only thing on this channel, so a question
-    # asked with nothing clicked told George nothing about what was on
+    # asked with nothing clicked told Bob nothing about what was on
     # screen. "Show me", "is that actually bad?" and "what would you do?"
     # refer to the WORKSPACE, not to the transcript, and they had no
     # referent at all.
@@ -7524,7 +7524,7 @@ surface:
     # is the model's own account of anything: `drawn` comes from the layout
     # the composer produced, `attention` from marks the tools' own rows
     # established, and `standing_recommendation` from a ground in
-    # `initiative.recommend.grounded_in`. George is told what he is looking
+    # `initiative.recommend.grounded_in`. Bob is told what he is looking
     # at; he still reads every figure from a tool result.
     context:
       sends: [drawn, attention, standing_recommendation]
@@ -7565,7 +7565,7 @@ surface:
       # happened. Each replay is appended to the answer post's payload —
       # `replays: [{seq, argument, was, value, status, at}]` — which is the
       # same record the charted rows and the composition already live in, so a
-      # replayed figure has a receipt of its own rather than George's.
+      # replayed figure has a receipt of its own rather than Bob's.
       #
       # APPENDED, NEVER REWRITTEN, and never on top of what he said: no key the
       # answer already carries is touched. A post that was never written — a
@@ -7595,7 +7595,7 @@ surface:
 
       # A CONTROL NAMES THE TOOL'S ARGUMENT; A REPLAY NAMES THE SCOPE. A drawn
       # control is replayed by tapping it, and `composition.control_arguments`
-      # is the vocabulary George composes one in — `date_range`, the tool's own
+      # is the vocabulary Bob composes one in — `date_range`, the tool's own
       # argument. This says which replay argument each of those IS, so the
       # translation lives here rather than in a component quietly holding its
       # own copy of both lists. Every control argument must appear.
@@ -7641,9 +7641,9 @@ surface:
       # why it is here and not in a component.
       rows_incomplete_says: >-
         That returns more rows than this draws at once. Narrow it, or ask
-        George to rank them.
+        Bob to rank them.
 
-      # A REFUSAL WRITTEN FOR GEORGE IS NOT SHOWN TO A PERSON (the dogfood
+      # A REFUSAL WRITTEN FOR BOB IS NOT SHOWN TO A PERSON (the dogfood
       # log, 2026-09-15).
       #
       # A tool that declines names the yaml key and the argument, because the
@@ -7676,13 +7676,13 @@ surface:
     # THE ARGUMENTS THE LOOP ACCEPTED, DRAWN (P1.j, 2026-09-14).
     #
     # A replay has existed since P1.i and there was no way to ask for one
-    # unless George happened to compose a control. So the scope the work is
+    # unless Bob happened to compose a control. So the scope the work is
     # ALREADY on is drawn under the reading as tokens — the window, the shop,
     # the cut, how many rows — taken from `payload.calls`, which is what the
     # tools accepted and answered. Tapping one offers its alternatives, and
     # choosing one is a replay: no model, no new question, the same call.
     #
-    # NOTHING HERE IS A FIGURE and nothing here is George's account of
+    # NOTHING HERE IS A FIGURE and nothing here is Bob's account of
     # anything. A token is an argument's own value, and its alternatives come
     # from the definitions that already bound that argument — the date presets,
     # the store list, the subject dimensions. A client never invents one.
@@ -7708,7 +7708,7 @@ surface:
         # THE METRIC'S OWN LIST, NOT THE DESK'S (2026-09-14). A token offering
         # a cut the tool refuses is worse than no token: `net_sales` is
         # transaction grain and declines a product grouping in its own
-        # sentence, so "products" on a sales read is George's question and not
+        # sentence, so "products" on a sales read is Bob's question and not
         # a replay. Which groupings a call permits therefore depends on the
         # metric the call carries, and `permitted_by` is how that reaches the
         # screen.
@@ -7736,7 +7736,7 @@ surface:
         week: [week, weeks, weekly]
         month: [month, months, monthly]
       never_a_figure: true
-      # A control George composed already carries that argument for that call.
+      # A control Bob composed already carries that argument for that call.
       # Drawing a token beside it would put two window pickers on one screen
       # disagreeing about which is the control.
       not_when_a_control_carries_it: true
@@ -7754,7 +7754,7 @@ surface:
     #
     # ANYTHING THAT DOES NOT RESOLVE IS A QUESTION. There is no fuzzy match,
     # no stemming and no "did you mean": a fragment that is not on screen goes
-    # to George exactly as it always has. The failure mode of this feature is
+    # to Bob exactly as it always has. The failure mode of this feature is
     # a model turn, which is what would have happened anyway.
     fragments:
       max_words: 4
@@ -7768,7 +7768,7 @@ surface:
       # ANALYTICAL changes WHAT you are looking at. A grouping by product
       # where there was a grouping by shop is a different set of subjects, and
       # somebody has to read it. The replay draws FIRST, so the figure is on
-      # screen in the time a read takes; the question still goes to George in
+      # screen in the time a read takes; the question still goes to Bob in
       # the same turn and his reading lands under it.
       kind_by_argument:
         window: navigation
@@ -7800,7 +7800,7 @@ surface:
 
       # "READ IT TO ME" (P2S.5(c)). Said or typed whole, the room reads the
       # claim on screen aloud — the headline sentence, never the figures or
-      # the receipts — and asks George nothing. Matched whole like every
+      # the receipts — and asks Bob nothing. Matched whole like every
       # fragment; anything else is a question. The words are here, beside the
       # correction token, so what the room answers to is a definition.
       read_aloud:
@@ -7863,7 +7863,7 @@ surface:
             compare_to: previous_period
             metric: net_sales
 
-    # George's presence on the desk is where he is READING: a soft light under
+    # Bob's presence on the desk is where he is READING: a soft light under
     # the objects a running call names, from tool_call frames and nothing
     # else. No hue of its own — the approvals colour stays the mark's and the
     # count's — and nothing lights when no frame is in flight.
@@ -7926,7 +7926,7 @@ surface:
       guidance_max_sentences: 2
 
     # -------------------------------------------------------------------------
-    # INITIATIVE — what George says without being asked, and what grounds it.
+    # INITIATIVE — what Bob says without being asked, and what grounds it.
     #
     # THREE THINGS, AND EACH HAS A DIFFERENT WARRANT. Explain and recommend are
     # DERIVED from rows the tools returned and the definitions' own ladder, so
@@ -7957,7 +7957,7 @@ surface:
         must_carry_an_action: true
       ask:
         # NOT MECHANICALLY ENFORCED, and this file will not claim it is. The
-        # prompt tells George when a question is worth more than a guess; no
+        # prompt tells Bob when a question is worth more than a guess; no
         # scan checks that he obeyed.
         enforced_by: prompt
         when: >
@@ -7993,10 +7993,10 @@ surface:
 
 
 # =============================================================================
-# SYSTEMS — the user-facing word for something built with George
+# SYSTEMS — the user-facing word for something built with Bob
 #
-# Approved 2026-09-09, George Experience Reset. A System is the persistent
-# object a person and George construct together: its executable logic is a
+# Approved 2026-09-09, Bob Experience Reset. A System is the persistent
+# object a person and Bob construct together: its executable logic is a
 # WORKFLOW (versions, backtest, promotion — everything the `workflows` section
 # above defines, unchanged), and around that logic it gathers the settings it
 # was bound with, its schedule, its runs, its outputs and the approvals it is
@@ -8032,14 +8032,14 @@ systems:
 # run's receipts.
 #
 # WHAT THE MODEL MAY AND MAY NOT DO is stated here so the prompt and the
-# tools read one rule. George may explain a setting and, when asked, bind a
+# tools read one rule. Bob may explain a setting and, when asked, bind a
 # value within its bounds through the same service a control uses. He may not
 # invent a setting the definition does not declare, escape its bounds, supply a
 # formula, replace a calculation with reasoning, or change a value without
 # saying so.
 #
 # ONE IS DECLARED, since 2026-09-18 (P2S.11): `left_out_categories`, bound
-# by what a person told George rather than by a control. A contract test
+# by what a person told Bob rather than by a control. A contract test
 # holds the contract keys and refuses any declaration that omits one of the
 # five required fields.
 # =============================================================================
@@ -8066,7 +8066,7 @@ settings:
     # read could leave a category out, so a told view changed his words while
     # every ranking still led with per-gram lines.
     #
-    # BOUND BY A PERSON, THROUGH A TOLD VIEW. George records what they said as
+    # BOUND BY A PERSON, THROUGH A TOLD VIEW. Bob records what they said as
     # a `leave_out` view about the category (judgment.taught); the web
     # process reads the views that stand and hands the loop the bound value;
     # the loop gives it to the reads below as `argument`, a keyword-only
@@ -8080,7 +8080,7 @@ settings:
     # products or categories — the rankings the owner was complaining about.
     left_out_categories:
       meaning: >
-        Product categories a person told George to leave out of what he ranks,
+        Product categories a person told Bob to leave out of what he ranks,
         lists and breaks down, because they do not matter to them.
       type: list of category names, spelled as products.category_normalization spells them
       bounds:
@@ -8108,7 +8108,7 @@ settings:
 
 
 # =============================================================================
-# EFFORT — HOW HARD GEORGE THINKS, PER TURN (P1.h, 2026-09-14)
+# EFFORT — HOW HARD BOB THINKS, PER TURN (P1.h, 2026-09-14)
 #
 # One knob, three settings, and it buys ROUND TRIPS. Cost per turn is round
 # trips (P0.6's finding), and effort is what decides how many the model takes
@@ -8117,7 +8117,7 @@ settings:
 # where the 27.4 s median comes from.
 #
 # WHAT THIS IS NOT. It is not a planner and it decides nothing about what
-# George reads, which tools he has, or what he may say. Every guarantee in
+# Bob reads, which tools he has, or what he may say. Every guarantee in
 # this file — figures from tools, notices surfaced, refusals refusing — is
 # held by the loop and the definitions and is untouched by how long he
 # thinks. The kinds below are ORDERED and matched on the question as typed;
@@ -8251,7 +8251,7 @@ effort:
     build:
       level: high
       means: >
-        building something with George — a system, an order, a draft, a
+        building something with Bob — a system, an order, a draft, a
         rule — where a wrong plan costs a person's time. Kept at high when
         `fresh` went back to medium (the speed fix, 2026-09-19).
       phrases:
@@ -8282,12 +8282,12 @@ effort:
 # The owner: "is our tool use really optimized?" Measured on
 # verification/p2s7-gate-2.json (7 questions, 422 s, $1.91): 65 rounds for 81
 # reads, ~14 s a round; spend 47% cache writes, 31% output, 22% cache reads.
-# Three changes, none of which changes what George can read, say or show.
+# Three changes, none of which changes what Bob can read, say or show.
 # =============================================================================
 rounds:
   introduced: "2026-09-18"
 
-  # (a) NO EMPTY LAST ROUND. George wrote his answer beside his last compose
+  # (a) NO EMPTY LAST ROUND. Bob wrote his answer beside his last compose
   # and the loop sent the compose back to him for a closing line — 2 to 10 s
   # a turn, 42 s of the 422. A round whose ONLY calls are compose, where every
   # compose stood whole (nothing refused, no slot or action rejected), one of

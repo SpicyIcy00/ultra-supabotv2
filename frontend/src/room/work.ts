@@ -25,14 +25,14 @@
  * only numbers this module produces are counts of calls, counts of rows and
  * milliseconds off a clock. It never opens a row.
  */
-import type { ToolCall, ToolMeta } from '../types/george';
+import type { ToolCall, ToolMeta } from '../types/bob';
 import type { AnswerTurn } from './data';
 
 /**
  * What each tool is, in words: what it looks like happening, and what it looks
  * like having happened.
  *
- * EVERY TOOL GEORGE CAN CALL HAS AN ENTRY, and a contract test fails when one
+ * EVERY TOOL BOB CAN CALL HAS AN ENTRY, and a contract test fails when one
  * does not — a tool with no words is a tool whose work is invisible, and the
  * screen says "thinking…" while something quite specific is going on.
  *
@@ -80,7 +80,7 @@ export const WORDS: Record<string, [string, string]> = {
   set_standing_question: ['keeping the question', 'kept the question'],
   set_watch: ['setting the watch', 'set the watch'],
   // ---- RETIRED, and still narrated. record_findings was folded into compose
-  // on 2026-09-13 (P1.a) and George cannot call it any more, but conversations
+  // on 2026-09-13 (P1.a) and Bob cannot call it any more, but conversations
   // recorded before that hold real calls to it, and a stored turn whose work
   // reads "thinking…" has lost the thing this line exists to show. A name
   // leaves this map when no stored turn can carry it, which is never.

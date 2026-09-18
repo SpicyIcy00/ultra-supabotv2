@@ -12,7 +12,7 @@
  *
  * THE PAGE'S CONTROLS SURVIVE, as room controls: rename, purpose and delete
  * for the page; refresh, move up, move down, move, remove from page and delete
- * for each analysis; and a line at the foot to ask George about the page. Two
+ * for each analysis; and a line at the foot to ask Bob about the page. Two
  * acts keep two words — "Remove from page" keeps the analysis in Ungrouped,
  * "Delete" deletes it — for the reason PinnedPage gave when it split them.
  *
@@ -25,16 +25,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import type { AnswerTurn } from './data';
 import type { Page, Pin, PinRun, SimilarPageConflict } from '../types/pins';
-import { useGeorge } from '../hooks/useGeorge';
+import { useBob } from '../hooks/useBob';
 import { deletePage, getPage, updatePage } from '../services/pagesApi';
 import {
   deletePin, errorMessage, listPinPages, listPins, runPin, similarPageConflict, updatePin,
 } from '../services/pinsApi';
 import { readDeskDefinitions } from '../services/deskApi';
 import { readStoreAppearance } from '../services/storesApi';
-import { choiceBody, choiceFor, movesPin, type PageChoice } from '../components/george/pageChoice';
-import { pageScopeFor } from '../components/george/pageScope';
-import { pageContextFor, UNGROUPED_NAME } from '../components/george/pageShape';
+import { choiceBody, choiceFor, movesPin, type PageChoice } from '../components/bob/pageChoice';
+import { pageScopeFor } from '../components/bob/pageScope';
+import { pageContextFor, UNGROUPED_NAME } from '../components/bob/pageShape';
 import { buildBoard } from './board';
 import { Board } from './render';
 import { identitiesFrom } from './identity';
@@ -61,7 +61,7 @@ export function ago(iso?: string | null): string {
  */
 export function turnFromRun(run: PinRun): AnswerTurn {
   return {
-    role: 'george', text: '', thinking: '', at: run.ran_at,
+    role: 'bob', text: '', thinking: '', at: run.ran_at,
     toolCalls: run.results.map((r, seq) => ({
       seq, tool: r.tool, arguments: r.arguments,
       result: r.status === 'ok' ? { rows: r.rows, meta: r.meta } : { error: r.error ?? r.status },
@@ -142,7 +142,7 @@ export function KeptPage({ pageId, onBack }: {
               <p className="r-note">
                 {pageId === null
                   ? 'Pins taken off a page land here. Nothing is ungrouped at the moment.'
-                  : 'Ask George to build this page below, or keep an answer from the board and name this page.'}
+                  : 'Ask Bob to build this page below, or keep an answer from the board and name this page.'}
               </p>
             </div>
           )}
@@ -208,7 +208,7 @@ export function KeptPin({ pin, pageId, title, actions }: {
   pin: Pin; pageId: string | null; title: string | null; actions?: React.ReactNode;
 }) {
   const qc = useQueryClient();
-  const george = useGeorge();
+  const bob = useBob();
   const navigate = useNavigate();
   const run = useMutation<PinRun, unknown, void>({
     mutationFn: () => runPin(pin.id),
@@ -223,23 +223,23 @@ export function KeptPin({ pin, pageId, title, actions }: {
   const missing = (data?.results ?? []).filter((r) => r.status !== 'ok');
   const empty = (data?.results ?? []).filter((r) => r.status === 'ok' && !r.rows?.length);
 
-  // A TAP ON A ROW ASKS GEORGE ABOUT IT, from this page — the room's `why`,
+  // A TAP ON A ROW ASKS BOB ABOUT IT, from this page — the room's `why`,
   // with the id the row carried and the page as scope. Nothing here is a
   // control that does nothing.
   const on: TileActions = useMemo(() => {
     const about = (label: string, dimension: Parameters<TileActions['why']>[1]) => {
       const subject = subjectOnBoard({ answers, board, retuned: {}, defs: null }, label, dimension ?? 'store');
       const selection = asSelection([subject]);
-      george.reset();
-      void george.ask('why?', {
+      bob.reset();
+      void bob.ask('why?', {
         ...(selection ? { desk: { selection } } : {}),
         pageContext: pageContextFor(pageId === null ? null : title),
         pageScope: pageScopeFor(pageId, title),
       });
-      navigate('/george');
+      navigate('/bob');
     };
     return { open: () => {}, patch: () => {}, pick: about, why: about };
-  }, [answers, board, george, navigate, pageId, title]);
+  }, [answers, board, bob, navigate, pageId, title]);
 
   return (
     <section className="r-kept-pin" data-pin={pin.id}>
@@ -258,7 +258,7 @@ export function KeptPin({ pin, pageId, title, actions }: {
       {(run.isPending || run.isIdle) && !data && <p className="r-note">Reading…</p>}
       {run.isError && !data && (
         <p className="r-say" data-state="failed">
-          Could not reach George. {errorMessage(run.error)} <span className="r-src">Last worked {ago(pin.last_ok_at)}</span>
+          Could not reach Bob. {errorMessage(run.error)} <span className="r-src">Last worked {ago(pin.last_ok_at)}</span>
         </p>
       )}
       {data && (
@@ -440,29 +440,29 @@ function MoveControl({ pin, onMoved }: { pin: Pin; onMoved: () => void }) {
 }
 
 /**
- * ASK GEORGE ABOUT THIS PAGE. Sent, not drafted: the question goes now, bound
+ * ASK BOB ABOUT THIS PAGE. Sent, not drafted: the question goes now, bound
  * to this page's identity as its scope, and the room is where the answer
  * arrives. Nothing on the page travels with it but the page itself.
  */
 function PageAsk({ pageId, title }: { pageId: string | null; title: string | null }) {
-  const george = useGeorge();
+  const bob = useBob();
   const navigate = useNavigate();
   const [q, setQ] = useState('');
   return (
     <form className="r-kept-ask" onSubmit={(e) => {
       e.preventDefault();
       const text = q.trim();
-      if (!text || george.busy) return;
-      george.reset();
-      void george.ask(text, {
+      if (!text || bob.busy) return;
+      bob.reset();
+      void bob.ask(text, {
         pageContext: pageContextFor(pageId === null ? null : title),
         pageScope: pageScopeFor(pageId, title),
       });
-      navigate('/george');
+      navigate('/bob');
     }}>
       <input type="text" className="r-field" value={q} onChange={(e) => setQ(e.target.value)}
-             placeholder="Ask George about this page…" aria-label="Ask George about this page" />
-      <button type="submit" className="r-act" disabled={!q.trim() || george.busy}>Ask</button>
+             placeholder="Ask Bob about this page…" aria-label="Ask Bob about this page" />
+      <button type="submit" className="r-act" disabled={!q.trim() || bob.busy}>Ask</button>
     </form>
   );
 }

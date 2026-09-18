@@ -180,8 +180,8 @@ def test_latest_answer_offers_only_answers():
     from app.services import standing_questions
     src = inspect.getsource(standing_questions.latest_answer)
     assert 'last_status == "ok"' in src
-    from app.models.george_standing import GeorgeStandingQuestion
-    checks = " ".join(str(c.sqltext) for c in GeorgeStandingQuestion.__table__.constraints
+    from app.models.bob_standing import BobStandingQuestion
+    checks = " ".join(str(c.sqltext) for c in BobStandingQuestion.__table__.constraints
                       if getattr(c, "sqltext", None) is not None)
     assert "'silent'" in checks
 
@@ -216,9 +216,9 @@ def test_every_row_carries_a_stable_identity_from_source_subject_and_shop():
 
 def test_the_closed_set_of_outcomes_is_one_list_held_in_three_places():
     outcomes = list(req(LDEFS, "outcomes"))
-    from app.models.george_decision import DECISION_OUTCOMES, GeorgeDecision
+    from app.models.bob_decision import DECISION_OUTCOMES, BobDecision
     assert list(DECISION_OUTCOMES) == outcomes
-    checks = " ".join(str(c.sqltext) for c in GeorgeDecision.__table__.constraints
+    checks = " ".join(str(c.sqltext) for c in BobDecision.__table__.constraints
                       if getattr(c, "sqltext", None) is not None)
     for o in outcomes:
         assert f"'{o}'" in checks
@@ -347,7 +347,7 @@ def test_the_loop_injects_it_from_a_reader_the_context_carries():
 
 def test_the_web_process_and_the_standing_runner_both_bind_the_reader():
     import inspect
-    from app.api.v1.routes import george as route
+    from app.api.v1.routes import bob as route
     from app.services import standing_runner
     assert "decisions_reader=_decisions_reader()" in inspect.getsource(route)
     assert "decisions_reader=_decisions_reader()" in inspect.getsource(standing_runner)

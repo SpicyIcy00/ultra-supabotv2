@@ -8,7 +8,7 @@ the main headline and question suggestions".
 WHAT THIS HOLDS, without a model:
 
   - a block may carry a `thought`: bounded, and a figure only when a read this
-    turn returned it — George's reading of the chart, never arithmetic on it;
+    turn returned it — Bob's reading of the chart, never arithmetic on it;
   - a reading may carry `asks`: at most three short questions, same figure
     rule, a failing one dropped with its reason and the rest standing;
   - the compose tool's schema tells him both, from metrics.yaml;
@@ -21,7 +21,7 @@ import pytest
 pytest.importorskip("yaml")
 
 from agent import compose, reading  # noqa: E402
-from agent import loop as george_loop  # noqa: E402
+from agent import loop as bob_loop  # noqa: E402
 from tools._common import load_defs  # noqa: E402
 
 DEFS = load_defs()
@@ -82,8 +82,8 @@ def test_the_asks_are_kept_bounded_and_held_to_the_figure_rule():
 
 
 def test_the_compose_schema_tells_him_both():
-    schema = next(t for t in george_loop.build_tool_schemas()
-                  if t["name"] == george_loop.COMPOSE_TOOL)["input_schema"]["properties"]
+    schema = next(t for t in bob_loop.build_tool_schemas()
+                  if t["name"] == bob_loop.COMPOSE_TOOL)["input_schema"]["properties"]
     thought = schema["blocks"]["items"]["properties"]["thought"]
     assert thought["maxLength"] == DEFS["composition"]["thought"]["max_length"]
     assert "go through it together" in thought["description"]
@@ -92,5 +92,5 @@ def test_the_compose_schema_tells_him_both():
 
 def test_it_was_not_said_in_the_system_prompt():
     # On the tool it describes, not in the prompt, which is at its budget.
-    words = len(george_loop.SYSTEM_PROMPT.split())
+    words = len(bob_loop.SYSTEM_PROMPT.split())
     assert words <= DEFS["voice"]["budget"]["max_words"]

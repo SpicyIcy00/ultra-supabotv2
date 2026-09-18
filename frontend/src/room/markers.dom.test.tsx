@@ -3,7 +3,7 @@
  * A MARKER ON EVERY FIGURE, OR VISIBLY NONE (P2.b).
  *
  * P1.k made a figure with a read behind it tappable. It did not make the
- * DIFFERENCE visible: a numeral George worked out himself and a numeral a
+ * DIFFERENCE visible: a numeral Bob worked out himself and a numeral a
  * tool returned were drawn identically, so the only way to find out which one
  * you were looking at was to tap it and see whether anything happened. That
  * is a surface answering a question about trust by saying nothing.
@@ -18,7 +18,7 @@
  *             leaves checking prose numerals to the evals.
  *
  * THE LAST DESCRIBE IS THE CARD'S DONE-WHEN, and it is over real answers:
- * forty-four turns George actually took across the four recorded v2 runs,
+ * forty-four turns Bob actually took across the four recorded v2 runs,
  * with the rows those turns actually read. Every business figure in every one
  * of them is drawn as one of the two, and the reading still says exactly what
  * he said — the scan cannot lose a word or double one.
@@ -26,7 +26,7 @@
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { ToolCall } from '../types/george';
+import type { ToolCall } from '../types/bob';
 import type { AnswerTurn } from './data';
 import { Reading } from './Reading';
 import { Working } from './Working';
@@ -119,7 +119,7 @@ describe('a figure says which read it came out of', () => {
     const indexes = readIndexes(CALLS);
     expect([...indexes.entries()]).toEqual([[0, 1], [1, 2], [2, 3]]);
     const turn = {
-      role: 'george', text: SAID, thinking: '', at: '2026-09-14T08:00:00Z',
+      role: 'bob', text: SAID, thinking: '', at: '2026-09-14T08:00:00Z',
       toolCalls: CALLS, notices: [], pinned: [], saved: [], pageChanges: [],
       done: { duration_ms: 9_000 },
     } as unknown as AnswerTurn;

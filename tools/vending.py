@@ -1,5 +1,5 @@
 """
-George — vending tool (AJI CMG / Weimi machines, brand "Hello Aji").
+Bob — vending tool (AJI CMG / Weimi machines, brand "Hello Aji").
 
 Two public functions:
     get_vending()        — sales from the order-line fact table

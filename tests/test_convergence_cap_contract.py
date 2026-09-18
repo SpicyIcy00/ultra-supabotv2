@@ -25,7 +25,7 @@ import pytest
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from agent import loop as george_loop                                          # noqa: E402
+from agent import loop as bob_loop                                          # noqa: E402
 from tests.test_loop_correction_contract import _Final, _Stream, _TextBlock, frames_of  # noqa: E402
 
 
@@ -83,21 +83,21 @@ async def _fake_read(name, args):
 
 def _drive(monkeypatch, replies, writes: list):
     fake = FakeClient(replies)
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
-    monkeypatch.setattr(george_loop, "_call_tool", _fake_read)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop, "_call_tool", _fake_read)
 
     async def fake_write(name, args, ctx):
         writes.append((name, args))
         return ({"rows": [{"pin_id": "p-1", "title": "Net sales", "page": None,
                            "pins_on_page": 1, "tool_calls": []}], "meta": {}}, None, 2)
 
-    monkeypatch.setattr(george_loop, "_call_write_tool", fake_write)
+    monkeypatch.setattr(bob_loop, "_call_write_tool", fake_write)
 
     async def writer(spec):                     # presence enables pin_answer
         raise AssertionError("not reached: _call_write_tool is stubbed")
 
     async def collect():
-        return [f async for f in george_loop.run("net sales by store?", pin_writer=writer)]
+        return [f async for f in bob_loop.run("net sales by store?", pin_writer=writer)]
 
     return asyncio.run(collect()), fake.messages.requests
 
@@ -124,7 +124,7 @@ def _assert_every_tool_use_is_answered(messages: list[dict]) -> None:
 def test_a_write_after_the_budget_is_not_refused(monkeypatch):
     writes: list = []
     frames, requests = _drive(monkeypatch, [
-        _reads(george_loop.MAX_TOOL_CALLS + 1),                     # 13 reads at once
+        _reads(bob_loop.MAX_TOOL_CALLS + 1),                     # 13 reads at once
         [_TextBlock("Here they are. "),
          _ToolUse("tu-pin", "pin_answer", {"title": "Net sales", "tool_calls": []})],
         [_TextBlock("Pinned “Net sales” with no page. The tile re-runs its 13 calls.")],
@@ -143,7 +143,7 @@ def test_a_write_after_the_budget_is_not_refused(monkeypatch):
 
 def test_reads_past_the_budget_are_refused_with_tool_results(monkeypatch):
     writes: list = []
-    n = george_loop.MAX_TOOL_CALLS + 1
+    n = bob_loop.MAX_TOOL_CALLS + 1
     frames, requests = _drive(monkeypatch, [
         _reads(n),
         _reads(2, start=n),                                        # two more
@@ -198,7 +198,7 @@ def test_a_write_does_not_spend_the_read_budget(monkeypatch):
     minus one reads, a pin, then one more read: every read runs.
     """
     writes: list = []
-    n = george_loop.MAX_TOOL_CALLS - 1
+    n = bob_loop.MAX_TOOL_CALLS - 1
     frames, requests = _drive(monkeypatch, [
         _reads(n),
         [_ToolUse("tu-pin", "pin_answer", {"title": "Net sales", "tool_calls": []})],

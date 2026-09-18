@@ -4,7 +4,7 @@
  * Two things are held here and they cover the vocabulary between them.
  *
  * BY EXHAUSTION: `composition.widgets` in definitions/metrics.yaml is the
- * closed list of kinds George may name, and every one of them either maps to a
+ * closed list of kinds Bob may name, and every one of them either maps to a
  * mark or is in `NOT_A_MARK` with a reason. A kind in neither would render as
  * nothing at all, which is the failure this catches — and the yaml is READ,
  * not copied, so adding a widget there fails this test until the renderer has
@@ -156,7 +156,7 @@ describe('the rows decide which of the six', () => {
 });
 
 describe('the frame a block is drawn in', () => {
-  it('takes the title from George\'s note when he gave one', () => {
+  it('takes the title from Bob\'s note when he gave one', () => {
     expect(titleFor({ note: 'carries the whole order' } as BoardObject, null))
       .toBe('carries the whole order');
   });
@@ -200,7 +200,7 @@ describe('the frame a block is drawn in', () => {
 
 describe('colour is direction', () => {
   it('has four data colours and no more', () => {
-    expect([...DATA_COLOURS]).toEqual(['up', 'down', 'flat', 'george']);
+    expect([...DATA_COLOURS]).toEqual(['up', 'down', 'flat', 'bob']);
   });
 
   it('paints a row the way the tool said it moved', () => {
@@ -208,9 +208,9 @@ describe('colour is direction', () => {
     expect(colourOf({ pct: -7.6, direction: 'down' }, true)).toBe('down');
   });
 
-  it('paints the emphasised row of a read with no direction in George\'s own colour', () => {
-    expect(colourOf(null, true)).toBe('george');
-    expect(colourOf({ pct: null, direction: null }, true)).toBe('george');
+  it('paints the emphasised row of a read with no direction in Bob\'s own colour', () => {
+    expect(colourOf(null, true)).toBe('bob');
+    expect(colourOf({ pct: null, direction: null }, true)).toBe('bob');
   });
 
   it('keeps a row\'s own direction when nobody pointed at it', () => {
@@ -231,6 +231,6 @@ describe('colour is direction', () => {
     // flat, which is the colour of exactly that.
     expect(colourOf(null, false)).toBe('flat');
     expect(colourOf({ pct: null, direction: null }, false)).toBe('flat');
-    expect(colourOf(null, true)).toBe('george');
+    expect(colourOf(null, true)).toBe('bob');
   });
 });

@@ -1,5 +1,5 @@
 """
-George — product catalog tool.
+Bob — product catalog tool.
 
 Two public functions: get_product() and get_product_categories().
 
@@ -366,7 +366,7 @@ def get_product_categories() -> dict:
     the store list, for the same reason.
 
     NOT IN THE MODEL'S SCHEMA, deliberately. This is a person's menu, not a
-    question George is asked: he reaches for `get_product(category=)` when a
+    question Bob is asked: he reaches for `get_product(category=)` when a
     category is named, and adding a tool would rewrite the cached prefix for
     every request to serve a completion list. `TOOL_FUNCTIONS` is what a pin
     or a workflow step may hold, and nothing here is pinnable — it returns no

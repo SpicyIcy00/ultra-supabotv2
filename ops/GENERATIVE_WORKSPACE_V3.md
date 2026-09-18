@@ -1,6 +1,6 @@
 # Generative Workspace V3 — Surface Composer and the living Work Surface
 
-Recorded 2026-09-09 on `integration/george-v1`. This is the decision record
+Recorded 2026-09-09 on `integration/bob-v1`. This is the decision record
 for the milestone: what was inspected, what was evaluated and declined, what
 was built, what enforces it, and how a person judges it.
 
@@ -25,7 +25,7 @@ because the architecture still **was** that. Three facts, read from the code:
   comparison started a new answer. Identity and analysis shape were one key.
 - **Every result earned screen space.** Nothing between the tools and the
   primitives asked whether a read was the answer, the evidence, or merely
-  something George looked at on the way. A chain-wide comparison read beside
+  something Bob looked at on the way. A chain-wide comparison read beside
   a single-store question was drawn at full size because it existed.
 
 Everything else was sound and is preserved: the finding frame as the model's
@@ -33,14 +33,14 @@ only channel into composition, `inferShape`/`resultShape`/`dedupe`, the
 instruments, receipts, notices, the append-only river, thread access, page
 scope, the live→stored handoff by post id, auto-follow, the accent rule.
 
-## 2. AG-UI, A2UI, CopilotKit — evaluated against what George needs
+## 2. AG-UI, A2UI, CopilotKit — evaluated against what Bob needs
 
 | | AG-UI | A2UI | CopilotKit |
 |---|---|---|---|
 | What it is | An event protocol between an agent runtime and a UI: run lifecycle, text deltas, tool call start/args/end, `STATE_SNAPSHOT` / `STATE_DELTA`, custom events, over SSE/WS | A declarative UI protocol: the agent emits a component tree in JSON against a client-side catalog; the client renders it and reports events back | A React SDK: provider, shared agent/app state (`useCoAgent`), generative UI hooks, human-in-the-loop actions; speaks AG-UI to a runtime |
-| Would replace / simplify | Our SSE frame vocabulary (`_sse` in `agent/loop.py`: `tool_call`, `tool_result`, `text`, `thinking`, `notice`, `finding`, `page_context`, `post`, `done`) and `useGeorgeStream`'s reducer | The `ResultBlocks`/`Instruments` selection path, if the model chose components | `GeorgeStreamProvider`, `useGeorgeStream`, the composer, the action chips |
-| Overlaps code we have | Almost one-to-one. Our frames are already typed, mirrored in `types/george.ts`, and carry things AG-UI has no slot for: `notice` with `must_convey` fingerprints, `finding` (validated roles), `page_context` (evidence, never a figure), `post` (persistence ids for the handoff) | `inferShape` + `resultShape` + `composeWork` already ARE a declarative composition — from **rows and meta**, never from the model | The provider, the stream hook, the presence model, Pin/Save gestures, the approvals colour rule |
-| Complexity now | Adapter both sides, a second frame vocabulary to keep in sync, custom-event escape hatches for every George-specific frame. Net increase | A catalog the model can address is a third vocabulary beside `metrics.yaml` and the finding roles. Net increase, plus a new attack surface | Two providers and two state owners for one live HTTP response; the client-side "shared state" is exactly the second source of truth Part 5 forbids |
+| Would replace / simplify | Our SSE frame vocabulary (`_sse` in `agent/loop.py`: `tool_call`, `tool_result`, `text`, `thinking`, `notice`, `finding`, `page_context`, `post`, `done`) and `useBobStream`'s reducer | The `ResultBlocks`/`Instruments` selection path, if the model chose components | `BobStreamProvider`, `useBobStream`, the composer, the action chips |
+| Overlaps code we have | Almost one-to-one. Our frames are already typed, mirrored in `types/bob.ts`, and carry things AG-UI has no slot for: `notice` with `must_convey` fingerprints, `finding` (validated roles), `page_context` (evidence, never a figure), `post` (persistence ids for the handoff) | `inferShape` + `resultShape` + `composeWork` already ARE a declarative composition — from **rows and meta**, never from the model | The provider, the stream hook, the presence model, Pin/Save gestures, the approvals colour rule |
+| Complexity now | Adapter both sides, a second frame vocabulary to keep in sync, custom-event escape hatches for every Bob-specific frame. Net increase | A catalog the model can address is a third vocabulary beside `metrics.yaml` and the finding roles. Net increase, plus a new attack surface | Two providers and two state owners for one live HTTP response; the client-side "shared state" is exactly the second source of truth Part 5 forbids |
 | Deterministic truth, security, provenance | Neutral on truth; but `STATE_DELTA` from the agent is a write into UI state the model authors, which is the reach architecture rule 9 forbids unless every field is validated server-side (which is what `finding` already does, narrowly) | **Violates it as designed.** A model-emitted component tree can name a component, a colour, a width, a label with a figure in it. Our rule is that the model may not reach the renderer | Its generative-UI hooks render on tool-call arguments the model wrote. Same problem |
 | Future: voice, bidirectional state, approval, tool events, surface mutation, workflows | Good shape for tool events and approval; voice is orthogonal; surface mutation would need our semantics on top anyway | Bidirectional events are its strength; nothing about mutation semantics | Approval flows are its strength; everything else is a React layer we already have |
 | Migration cost | Medium: an adapter on the loop and a reducer rewrite, plus retesting every contract that reads frames | High: every instrument re-expressed as catalog entries; every contract test that holds the one-way path rewritten | High: provider swap, state ownership change, and it drags AG-UI in |
@@ -163,7 +163,7 @@ builds and holds the live composition structurally equal to the stored one.
 The model is told the same state the same way: `agent/surface.py
 work_sentence` builds `[The work in front of the user: net sales,
 transactions and average transaction value for OPUS, last week, compared
-with the previous period. …]` from the newest George turn's **calls** — no
+with the previous period. …]` from the newest Bob turn's **calls** — no
 row, no figure — and the loop puts it on the question beside the page
 sentence, never in the cached system prompt. "Why?" now has a deterministic
 referent on both sides.
@@ -173,7 +173,7 @@ referent on both sides.
 `SurfaceInstruction = explain | break_down(dimension) |
 compare_subject(subject) | focus_subject(subject)`. A chip, a row click and
 (later) a spoken phrase all become one of these; `instructionQuestion` turns
-it into the business-language question George is asked — deterministically,
+it into the business-language question Bob is asked — deterministically,
 from meta and anchor, with no DOM read and no tool vocabulary. `actionShape`
 now delegates here so a lone entry and a surface phrase identical questions.
 Instructions do not call tools, choose formulas or reach the renderer; they go
@@ -251,7 +251,7 @@ the loop's own call numbers is never lost.
 ## 7. Known limitations
 
 - **Disjoint subjects under a typed reply start a new surface.** "Compare it
-  with Rockwell" typed as prose depends on George making the grouped chain
+  with Rockwell" typed as prose depends on Bob making the grouped chain
   call (the prompt now says so, and rule 6 already pushes that way). Two
   scoped reads, one per shop, also join (subjects union). A single scoped
   read of Rockwell alone would stand apart — deliberately, because "And
@@ -289,7 +289,7 @@ Ask each line in order, in one sitting, as a reply to the previous (the
 composer continues the newest own thread by default).
 
 **A. "How did OPUS do last week?"** — Expect one object titled *Why it moved ·
-OPUS · Last week* (or *Performance · OPUS · Last week* if George recorded no
+OPUS · Last week* (or *Performance · OPUS · Last week* if Bob recorded no
 driver roles): the figure, then *What moved it* as one split; no chain data
 unless a folded line *Also read — outside this work's scope* names it; prose
 of one to three sentences under the figures.
@@ -301,13 +301,13 @@ reading. Not a second avatar, not a second title.
 
 **C. "Compare it with Rockwell."** — Expect the same object retitled
 *Compared · Last week*: the store comparison leads, the earlier OPUS set
-becomes a lower section, the trail shows three lines. If George reads only
+becomes a lower section, the trail shows three lines. If Bob reads only
 Rockwell alone the object splits — that is the limitation in §7, and it is
 worth recording which he did.
 
 **D. "Show me the products."** — Expect *Where it sits* added beneath, as a
 change ranking of product revenue at OPUS (the definitions refuse net sales
-by product; George should say so if asked for that). If the tool refuses, the
+by product; Bob should say so if asked for that). If the tool refuses, the
 refusal is the answer and the surface does not change.
 
 **E. "Compare all stores last week and show me what deserves attention."** —

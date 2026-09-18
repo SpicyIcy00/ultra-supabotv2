@@ -8,7 +8,7 @@
  *   NOTHING HERE IS INVENTED. Every line comes from a frame the loop sent —
  *   a call that started, a result that landed, a refusal. There is no
  *   progress bar counting to a number nobody knows, no spinner standing in
- *   for a step, and no reasoning text. If George is doing nothing, this shows
+ *   for a step, and no reasoning text. If Bob is doing nothing, this shows
  *   nothing.
  *
  *   IT IS IN WORDS, NOT IN TOOL NAMES. "reading sales", never
@@ -64,7 +64,7 @@ function useElapsed(startedAt: string | undefined, live: boolean): number | null
   const started = startedAt ? Date.parse(startedAt) : NaN;
   if (!Number.isFinite(started)) return null;
   // Never negative: a client clock nudged backwards mid-turn would otherwise
-  // count down, which reads as a bug in George rather than in the clock.
+  // count down, which reads as a bug in Bob rather than in the clock.
   return Math.max(0, Math.round((now - started) / 1000));
 }
 

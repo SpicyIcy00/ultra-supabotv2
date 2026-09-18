@@ -1,7 +1,7 @@
 /**
  * THE SIDEBAR — what persists, on the left edge, collapsible (P2S.1(h)).
  *
- * The design's own (`.side` in `ops/ideal/george-ahead-of-me.html`), after the
+ * The design's own (`.side` in `ops/ideal/bob-ahead-of-me.html`), after the
  * owner's two fixes: *"too wide … should be space of the sides for a sidebar
  * for pages workflows, automations etc"*, then *"make the sidebar to the left
  * edge and collapseable"*. It is a list of things you OWN — pages, systems,
@@ -19,7 +19,7 @@
  * draws *loading*, *could not be read* and what came back as three different
  * things; "no pages yet" is said only from a loaded, empty result.
  *
- * THE WAY OUT COMES FIRST: George takes the whole screen, so the arrow back to
+ * THE WAY OUT COMES FIRST: Bob takes the whole screen, so the arrow back to
  * Supabot BI is the only route to the Dashboard while you are here.
  */
 import { useEffect, useState, type ReactNode } from 'react';
@@ -44,7 +44,7 @@ export interface RailProps {
   estate?: ReactNode;
 }
 
-const SIDE_KEY = 'george.side';
+const SIDE_KEY = 'bob.side';
 
 /** Open unless the person closed it; closed by default on a narrow window. */
 export function restoreSide(width = typeof window === 'undefined' ? 1920 : window.innerWidth): boolean {
@@ -138,7 +138,7 @@ export function Rail({ busy, needsYou, onNew, estate }: RailProps) {
 
   return (
     <>
-      <nav className="r-side" aria-label="George" data-open={open ? 'yes' : 'no'} aria-hidden={!open}>
+      <nav className="r-side" aria-label="Bob" data-open={open ? 'yes' : 'no'} aria-hidden={!open}>
         <button type="button" className="r-side-collapse" title="Collapse the sidebar  ["
                 aria-label="Collapse the sidebar" onClick={() => setOpen(false)}>‹</button>
 
@@ -146,9 +146,9 @@ export function Rail({ busy, needsYou, onNew, estate }: RailProps) {
         <NavLink to="/dashboard" className="r-side-back" title="Back to Supabot"
                  aria-label="Back to Supabot BI">← Supabot</NavLink>
 
-        <button type="button" className="r-side-name" onClick={() => navigate('/george')}
-                title="The room" aria-label="George — the room">
-          George{busy && <span className="r-side-busy" aria-label="reading"> · reading</span>}
+        <button type="button" className="r-side-name" onClick={() => navigate('/bob')}
+                title="The room" aria-label="Bob — the room">
+          Bob{busy && <span className="r-side-busy" aria-label="reading"> · reading</span>}
         </button>
         <p className="r-side-date">{today(now)}</p>
 

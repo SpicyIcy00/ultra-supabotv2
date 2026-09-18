@@ -1,7 +1,7 @@
 """
 The model's copy of a result's receipts (P2S.9(c), 2026-09-18).
 
-WHY. Measured on verification/p2s7-gate-2.json: 59% of what George reads back
+WHY. Measured on verification/p2s7-gate-2.json: 59% of what Bob reads back
 from a tool is `meta`, and most of that is the same explanatory note on every
 read of a turn — what `full_row_count` means, why a missing day is absent and
 not zero, why a reconciliation does not apply to this metric, where the

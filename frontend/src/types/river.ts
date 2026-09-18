@@ -2,16 +2,16 @@
  * Types for the river.
  *
  * These mirror RiverPost / RiverPage in
- * backend/app/api/v1/routes/george.py one-for-one, the same discipline
+ * backend/app/api/v1/routes/bob.py one-for-one, the same discipline
  * types/pins.ts and types/workflows.ts set. No runtime validation, so drift
  * shows up as an undefined field in the UI rather than an error —
  * tests/test_river_contract.py holds the field names to that.
  */
-import type { GeorgeNotice, ToolMeta } from './george';
+import type { BobNotice, ToolMeta } from './bob';
 
 /**
  * The eight kinds a post can be. Mirrors POST_KINDS in
- * backend/app/models/george_post.py and the CHECK constraint in migration
+ * backend/app/models/bob_post.py and the CHECK constraint in migration
  * n8o9p0q1r2s3 — a kind in one place and not the others must fail loudly
  * rather than render as a blank card.
  */
@@ -26,13 +26,13 @@ export type PostKind =
   | 'watch'
   | 'system';
 
-export type PostAuthor = 'george' | 'user';
+export type PostAuthor = 'bob' | 'user';
 export type PostVisibility = 'org' | 'private';
 
 /**
  * One utterance in the river.
  *
- * EVERY GEORGE POST CARRIES ITS RECEIPTS AND ITS NOTICES. UI rules 3, 4 and 6
+ * EVERY BOB POST CARRIES ITS RECEIPTS AND ITS NOTICES. UI rules 3, 4 and 6
  * apply to all eight kinds without exception (CLAUDE.md vocabulary, "Post"). A
  * card that cannot show a caveat is the wrong shape for the post — it is never
  * a reason to drop the caveat.
@@ -44,9 +44,9 @@ export interface Post {
   /** The post being replied to. Null for a root. */
   parent_id: string | null;
   kind: PostKind;
-  /** Which side of the thread this is drawn on. George has no account. */
+  /** Which side of the thread this is drawn on. Bob has no account. */
   author: PostAuthor;
-  /** Who WROTE it. Null for George's posts — he has no account. */
+  /** Who WROTE it. Null for Bob's posts — he has no account. */
   author_user: string | null;
   /**
    * WHOSE IT IS while private: who may see it and who may share it. For a
@@ -69,7 +69,7 @@ export interface Post {
   /** Kind-specific structure: rows, chips, buttons, ids. */
   payload: Record<string, unknown> | null;
   receipts: ToolMeta | null;
-  notices: GeorgeNotice[];
+  notices: BobNotice[];
   /** Back-reference into george.conversations. */
   conversation_id: string | null;
   created_at: string | null;

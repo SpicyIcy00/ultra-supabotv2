@@ -5,7 +5,7 @@ The tools connect through tools/_common.connect(), which refuses to run without
 GEORGE_DATABASE_URL and refuses superuser or admin roles. That guard is NOT
 bypassed here — these tests exercise the same connection path production uses.
 
-Consequence: the suite needs George's own read-only role to exist. Until
+Consequence: the suite needs Bob's own read-only role to exist. Until
 tools/george_ro_role.sql has been applied and GEORGE_DATABASE_URL is set, the
 whole module skips with a clear reason rather than reporting failures that are
 really a missing credential.
@@ -45,7 +45,7 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         "markers",
-        "depth: the two questions that show whether George goes deep enough "
+        "depth: the two questions that show whether Bob goes deep enough "
         "and no deeper (P2.m wrote them, P2S.6 first ran them) — 'analyze "
         "tradsnax per store' and 'how did Rockwell do?'. Two live turns; run "
         "with -m depth on a card that changes how far he reads.",
@@ -61,7 +61,7 @@ def pytest_configure(config):
 
 
 @pytest.fixture(autouse=True)
-def _george_log_isolation(request):
+def _bob_log_isolation(request):
     """
     No test touches a database it did not ask for.
 
@@ -121,7 +121,7 @@ def _george_log_isolation(request):
 # with ZERO fixture strings — a deliberate evaluation sweep, not pollution.
 # Checking that before deleting is the only reason it still exists.
 #
-# The gap log is the record of what George could NOT do — the half that usually
+# The gap log is the record of what Bob could NOT do — the half that usually
 # goes unmeasured — so junk in it is not cosmetic; it is a metric somebody
 # reads.
 #
@@ -162,7 +162,7 @@ PURE_BY_NAME = (
 
 def _needs_database(item) -> bool:
     """
-    Whether a test needs George's read-only role.
+    Whether a test needs Bob's read-only role.
 
     THE RULE IS THE FILE'S NAME, and it used to be a list. Every `*_contract.py`
     is pure — that is what the suffix means in this repo, and `*_live.py` is
@@ -193,7 +193,7 @@ def pytest_collection_modifyitems(config, items):
     if not os.environ.get("GEORGE_DATABASE_URL"):
         skip = pytest.mark.skip(
             reason=(
-                "GEORGE_DATABASE_URL is not set. These tests run against George's "
+                "GEORGE_DATABASE_URL is not set. These tests run against Bob's "
                 "read-only Postgres role — apply tools/george_ro_role.sql and set "
                 "the variable. The suite deliberately does not fall back to an "
                 "application or admin connection string."
@@ -209,7 +209,7 @@ def pytest_collection_modifyitems(config, items):
 
         connect().close()
     except Exception as exc:  # noqa: BLE001 - the reason text is the point
-        skip = pytest.mark.skip(reason=f"cannot connect as George's role: {exc}")
+        skip = pytest.mark.skip(reason=f"cannot connect as Bob's role: {exc}")
         for item in items:
             if _needs_database(item):
                 item.add_marker(skip)

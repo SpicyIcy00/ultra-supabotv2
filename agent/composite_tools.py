@@ -1,5 +1,5 @@
 """
-George's composite read surface: run_workflow, and view_page.
+Bob's composite read surface: run_workflow, and view_page.
 
 WHY THIS IS A THIRD REGISTRY AND NOT JUST ANOTHER ENTRY IN tools/
 agent.loop.TOOL_FUNCTIONS is load-bearing twice over. It is the dispatch table,
@@ -21,7 +21,7 @@ one tool call that happens to replay several vetted queries — the same thing a
 pinned tile does when it loads, with names on the parts.
 
 INJECTED, LIKE EVERY OTHER CAPABILITY
-The workflow it has to find lives in the `george` schema, which george_ro cannot
+The workflow it has to find lives in the `bob` schema, which george_ro cannot
 see. So the runner is handed in by the web process (WriteContext.workflow_runner)
 and this module opens no connection, holds no credential, and imports nothing
 from backend/. No runner injected, no run_workflow in the schema at all.
@@ -220,7 +220,7 @@ async def run_workflow(
 # COMPACT FOR THE MODEL. A row is a pin and its current results with their own
 # receipts. The stored ARGUMENTS behind each pin are not repeated on the row —
 # the receipts already say what each result was filtered to — and travel once,
-# in meta.evidence, which is also what the UI draws the "what George
+# in meta.evidence, which is also what the UI draws the "what Bob
 # considered" line from and what the answer post keeps.
 
 # NAMED TO SORT LAST. Tools render first in the cached prefix and every
@@ -255,7 +255,7 @@ _RECEIPT_KEYS = (
     # The metric model and a comparison (2026-09-07): what the figure IS —
     # base or derived, and its name — and, when the pin compares, both
     # periods, the method and the per-row status counts. Without these a
-    # page read would hand George change_pct rows with no baseline window
+    # page read would hand Bob change_pct rows with no baseline window
     # to cite. Nothing more: the formula, the SQL and the diagnostics are
     # the direct call's to show.
     "metric_kind", "metric_label", "comparison",
@@ -384,7 +384,7 @@ def _snapshot_of(pin: dict) -> Optional[str]:
 def _evidence(read: dict, rows: list[dict], *, partial: bool, truncated: bool,
               notice_kinds: list[str], rows_dropped: int) -> dict:
     """
-    What George considered, compactly: the page, the read, each pin's status
+    What Bob considered, compactly: the page, the read, each pin's status
     and the calls behind it, what was not read and why. This is the ONE place
     the stored arguments appear, and it is what the UI draws and the answer
     post keeps.
@@ -718,7 +718,7 @@ COMPOSITE_TOOL_FUNCTIONS = {
 #
 # `compose` refuses an object over anything that is not a read, which is right:
 # a widget over a write draws nothing. But it decided "is a read" by excluding
-# every composite, and that swept up the two self-reads — so George called
+# every composite, and that swept up the two self-reads — so Bob called
 # view_automations, tried to put what is running on the board, and was refused
 # for using the very tool that exists to let him.
 #

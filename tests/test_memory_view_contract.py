@@ -56,7 +56,7 @@ def taught(**over):
 
 @pytest.fixture
 def held(monkeypatch):
-    """The views George holds, for one call to read_memory."""
+    """The views Bob holds, for one call to read_memory."""
     rows: list[dict] = []
 
     async def current(session):
@@ -181,7 +181,7 @@ def test_the_timestamp_is_when_the_memory_was_read_not_when_data_landed(held):
 # ---------------------------------------------------------------------------
 # FORGET IS A PERSON'S GESTURE, AND IT IS WIRED AS ONE
 #
-# George may revise a view a read contradicts — `record_belief` against the
+# Bob may revise a view a read contradicts — `record_belief` against the
 # id, with the reason. He may not decide to stop knowing something because
 # somebody disagreed with him. So Forget is an HTTP route the room calls on
 # the person's own authority, and there is no tool for it at all: the absence
@@ -189,18 +189,18 @@ def test_the_timestamp_is_when_the_memory_was_read_not_when_data_landed(held):
 # ---------------------------------------------------------------------------
 
 
-def test_george_has_no_tool_that_forgets_a_view():
-    from agent import loop as george_loop, write_tools
+def test_bob_has_no_tool_that_forgets_a_view():
+    from agent import loop as bob_loop, write_tools
     from agent.write_tools import WriteContext
 
     assert not [n for n in write_tools.WRITE_TOOL_FUNCTIONS if "forget" in n]
-    everything = george_loop.injected_surface(WriteContext(
+    everything = bob_loop.injected_surface(WriteContext(
         belief_store=object(), memory_reader=lambda: None))
     assert not [n for n in everything if "forget" in n]
 
 
 def test_the_room_reaches_one_route_and_it_names_the_belief():
-    from app.api.v1.routes import george as route
+    from app.api.v1.routes import bob as route
     paths = [r.path for r in route.router.routes if "belief" in r.path]
     assert paths == ["/beliefs/{belief_id}/forget"]
 
@@ -210,7 +210,7 @@ def test_a_forget_that_finds_no_held_view_is_a_404_and_not_a_shrug():
     Telling somebody it worked twice is telling them something untrue once.
     """
     import inspect
-    from app.api.v1.routes import george as route
+    from app.api.v1.routes import bob as route
     src = inspect.getsource(route.forget_belief)
     assert "BeliefNotHeld" in src
     assert "HTTP_404_NOT_FOUND" in src
@@ -226,7 +226,7 @@ def test_the_count_moves_with_the_block_and_never_costs_a_turn():
     way, which is the rule every lookup on this path already follows.
     """
     import inspect
-    from app.api.v1.routes import george as route
+    from app.api.v1.routes import bob as route
     src = inspect.getsource(route._beliefs_for)
     # The views counted are exactly the views the block carried.
     assert "mark_applied(" in src and "in_prompt(rows)" in src

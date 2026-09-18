@@ -5,12 +5,12 @@
  * george.conversations. It is not a page: a page is a collection of pins, and
  * "Ungrouped" holds pins with no page and nothing else.
  *
- * These mirror the Pydantic models in backend/app/api/v1/routes/george.py
+ * These mirror the Pydantic models in backend/app/api/v1/routes/bob.py
  * (ChatSummary, ChatDetail, ChatTurn) one-for-one, the same discipline
  * types/pins.ts sets. No runtime validation, so drift shows up as an undefined
  * field in the UI rather than an error.
  */
-import type { DoneFrame, GeorgeNotice, GeorgeTurn, PinnedFrame, ToolMeta } from './george';
+import type { DoneFrame, BobNotice, BobTurn, PinnedFrame, ToolMeta } from './bob';
 
 export interface ChatSummary {
   thread_id: string;
@@ -43,12 +43,12 @@ export interface ChatToolCall {
 export type ChatTurn =
   | { role: 'user'; text: string; at: string | null }
   | {
-      role: 'george';
+      role: 'bob';
       text: string;
       at: string | null;
       thinking: string | null;
       tool_calls: ChatToolCall[] | null;
-      notices: GeorgeNotice[] | null;
+      notices: BobNotice[] | null;
       pinned: PinnedFrame[] | null;
       receipts: ToolMeta | null;
       done: DoneFrame | null;
@@ -63,15 +63,15 @@ export interface ChatDetail {
 
 /**
  * Stored turns into the shape the conversation column renders — the SAME
- * shape useGeorgeStream builds from a live stream, so a reopened chat and a
+ * shape useBobStream builds from a live stream, so a reopened chat and a
  * live one go through one component and one Pin button.
  */
-export function toGeorgeTurns(turns: ChatTurn[]): GeorgeTurn[] {
+export function toBobTurns(turns: ChatTurn[]): BobTurn[] {
   return turns.map((t) => {
     const at = t.at ?? new Date(0).toISOString();
     if (t.role === 'user') return { role: 'user', text: t.text, at };
     return {
-      role: 'george',
+      role: 'bob',
       text: t.text,
       thinking: t.thinking ?? '',
       toolCalls: (t.tool_calls ?? []).map((c) => ({

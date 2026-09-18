@@ -3,7 +3,7 @@ A stored read, run again with ONE argument changed. No model.
 
 WHAT THIS IS FOR. A person looking at a figure for last week wants it for
 August, or for one shop, or ranked the other way round. That is a change of
-SCOPE over work George already did — not a new question — and until this
+SCOPE over work Bob already did — not a new question — and until this
 existed the only way to get it was to ask him, which costs a round trip, a
 model turn, and the risk that he reads the request as something else.
 
@@ -60,7 +60,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.pin_runner import PinValidationError, run_call, validate_call
 
 # agent/ and tools/ live at the repo root, one level above backend/ — the same
-# path insertion pin_runner and routes/george.py already do.
+# path insertion pin_runner and routes/bob.py already do.
 _ROOT = Path(__file__).resolve().parents[3]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
@@ -101,7 +101,7 @@ def canonical(argument: str, defs: Optional[Mapping[str, Any]] = None) -> str:
     The replay argument a caller means, when they named a control's instead.
 
     A drawn control carries the TOOL'S argument — `date_range`, the vocabulary
-    George composes a control in (`composition.control_arguments`) — and
+    Bob composes a control in (`composition.control_arguments`) — and
     tapping one is a replay. The two names meet in the definitions
     (`surface.desk.replay.from_control`) rather than in a component holding its
     own copy of both lists.
@@ -127,7 +127,7 @@ def target(tool: str, argument: str, defs: Optional[Mapping[str, Any]] = None) -
         raise ReplayRefused(
             f"{argument!r} is not something a replay may change. A replay "
             f"changes scope: {', '.join(sorted(spec))}. Anything else is a new "
-            f"question, and a threshold is a definition — ask George."
+            f"question, and a threshold is a definition — ask Bob."
         )
     landing = spec[argument] or {}
     if "path" in landing:
@@ -319,7 +319,7 @@ async def record(db: AsyncSession, *, username: str, post_id: uuid.UUID,
 
     `jsonb_set` over `replays` alone, with the array trimmed to its last
     `max_recorded_per_post`: no key the answer already carries is read or
-    written, so the record of what George said cannot be touched by somebody
+    written, so the record of what Bob said cannot be touched by somebody
     moving a window. Ownership is in the UPDATE, not checked first — a check
     and a write are two statements and the row can change between them.
 

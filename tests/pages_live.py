@@ -32,7 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 ROOT = Path(__file__).resolve().parent.parent
 MIGRATION = ROOT / "backend" / "alembic" / "versions" / (
-    "2026_09_08_0001-q1r2s3t4u5v6_add_george_pages.py"
+    "2026_09_08_0001-q1r2s3t4u5v6_add_bob_pages.py"
 )
 
 
@@ -41,7 +41,7 @@ def available() -> bool:
 
 
 def _load_migration():
-    spec = importlib.util.spec_from_file_location("george_pages_migration", MIGRATION)
+    spec = importlib.util.spec_from_file_location("bob_pages_migration", MIGRATION)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
     spec.loader.exec_module(module)

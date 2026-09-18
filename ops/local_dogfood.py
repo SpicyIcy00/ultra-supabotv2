@@ -1,7 +1,7 @@
-"""Local dogfood environment: a writable local application database for George.
+"""Local dogfood environment: a writable local application database for Bob.
 
 The rehearsal databases in ops/local_postgres.py exist to prove a migration.
-This one exists so a person can OPEN George and use it. It is a fourth,
+This one exists so a person can OPEN Bob and use it. It is a fourth,
 separate database on the same loopback cluster, and it is deliberately not in
 that helper's DATABASES tuple: a rehearsal is disposable and re-provisioned,
 whereas a dogfood database accumulates the pins, pages and posts that are the
@@ -9,20 +9,20 @@ whole point of using the product.
 
 WHAT THIS DOES AND DOES NOT TOUCH.
 
-  local  (127.0.0.1:55432/george_dogfood)  application persistence, WRITABLE
+  local  (127.0.0.1:55432/bob_dogfood)  application persistence, WRITABLE
          app_users, role_page_access, george.pages, george.pins,
-         george.posts, george.conversations - everything George writes.
+         george.posts, george.conversations - everything Bob writes.
 
   remote (the guarded george_ro connection)  Aji business data, READ ONLY
          Not touched here at all. This script opens no connection to it,
-         holds no credential for it, and copies nothing out of it. George's
+         holds no credential for it, and copies nothing out of it. Bob's
          read tools reach it through tools/_common.connect(), which accepts
          GEORGE_DATABASE_URL and refuses to fall back to anything else.
 
 The public schema is created from the application's own models rather than by
 replaying Alembic, for the reason ops/LOCAL_POSTGRES.md already records: the
 migration history is not a complete empty-database bootstrap. The george schema
-IS built by replaying the real George migrations, so the part George depends on
+IS built by replaying the real Bob migrations, so the part Bob depends on
 is the migrated shape and alembic_version is stamped at the true head.
 
 No dotenv file is read. No credential is printed. The generated dogfood
@@ -44,16 +44,16 @@ from ops.local_postgres import (  # noqa: E402
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-DATABASE = 'george_dogfood'
+DATABASE = 'bob_dogfood'
 HEAD_REVISION = 'q1r2s3t4u5v6'
 GEORGE_REVISIONS = ('j4k5l6m7n8o9', 'k5l6m7n8o9p0', 'l6m7n8o9p0q1', 'm7n8o9p0q1r2',
                     'n8o9p0q1r2s3', 'o9p0q1r2s3t4', 'p0q1r2s3t4u5', HEAD_REVISION)
 LOGIN_FILE = RUNTIME / 'dogfood-login.txt'
 DOGFOOD_USERNAME = 'dogfood'
 
-# The George shell lives behind the 'george' page key; Operations lists the
+# The Bob shell lives behind the 'bob' page key; Operations lists the
 # legacy pages. Granted for the dogfood role only, in the local database only.
-DOGFOOD_PAGES = ('george', 'dashboard', 'analytics', 'settings', 'admin')
+DOGFOOD_PAGES = ('bob', 'dashboard', 'analytics', 'settings', 'admin')
 
 
 def url(role: str, database: str = DATABASE, *, async_driver: bool = False) -> str:
@@ -126,19 +126,19 @@ def build_schema():
             Base.metadata.create_all(conn, tables=public_tables, checkfirst=True)
 
             source = (ROOT / 'agent/sql/george_log_role.sql').read_text(encoding='utf-8')
-            start = source.index('CREATE SCHEMA IF NOT EXISTS george;')
+            start = source.index('CREATE SCHEMA IF NOT EXISTS bob;')
             end = source.index('-- NOTE: no FOREIGN KEY', start)
-            print(f'{DATABASE}: creating the George baseline tables...')
+            print(f'{DATABASE}: creating the Bob baseline tables...')
             conn.exec_driver_sql(source[start:end])
             for table in ('conversations', 'tool_calls', 'gaps'):
-                conn.exec_driver_sql(f'ALTER TABLE george.{table} ENABLE ROW LEVEL SECURITY')
+                conn.exec_driver_sql(f'ALTER TABLE bob.{table} ENABLE ROW LEVEL SECURITY')
                 conn.exec_driver_sql(
-                    f'CREATE POLICY george_log_write ON george.{table} '
+                    f'CREATE POLICY bob_log_write ON bob.{table} '
                     f'FOR INSERT TO george_log WITH CHECK (true)')
 
             with Operations.context(MigrationContext.configure(conn)):
                 for revision in GEORGE_REVISIONS:
-                    print(f'{DATABASE}: applying George revision {revision}...')
+                    print(f'{DATABASE}: applying Bob revision {revision}...')
                     path, = (ROOT / 'backend/alembic/versions').glob('*-' + revision + '_*.py')
                     spec = importlib.util.spec_from_file_location('dogfood_' + revision, path)
                     module = importlib.util.module_from_spec(spec)
@@ -150,11 +150,11 @@ def build_schema():
             print(f'{DATABASE}: stamped at the true head revision {HEAD_REVISION}')
 
         # george_log keeps INSERT without SELECT on george.*, and nothing else.
-        conn.exec_driver_sql('GRANT USAGE ON SCHEMA george TO george_log')
-        conn.exec_driver_sql('GRANT INSERT ON ALL TABLES IN SCHEMA george TO george_log')
+        conn.exec_driver_sql('GRANT USAGE ON SCHEMA bob TO george_log')
+        conn.exec_driver_sql('GRANT INSERT ON ALL TABLES IN SCHEMA bob TO george_log')
         conn.exec_driver_sql('REVOKE SELECT, UPDATE, DELETE, TRUNCATE ON ALL TABLES '
-                             'IN SCHEMA george FROM george_log')
-        conn.exec_driver_sql('REVOKE ALL ON SCHEMA george FROM george_ro')
+                             'IN SCHEMA bob FROM george_log')
+        conn.exec_driver_sql('REVOKE ALL ON SCHEMA bob FROM george_ro')
         conn.exec_driver_sql('REVOKE ALL ON SCHEMA public FROM george_ro')
     engine.dispose()
 
@@ -191,13 +191,13 @@ def create_account():
                 {'u': DOGFOOD_USERNAME, 'ph': get_password_hash(secrets.token_urlsafe(24)),
                  'pc': get_password_hash(passcode), 'r': 'admin', 'd': 'Local dogfood'})
             LOGIN_FILE.write_text(
-                f'Local George dogfood login (this file is gitignored)\n'
+                f'Local Bob dogfood login (this file is gitignored)\n'
                 f'\n'
                 f'  URL       http://127.0.0.1:5173/\n'
                 f'  passcode  {passcode}\n'
                 f'\n'
                 f'Sign-in is passcode-only; there is no username field.\n'
-                f'This account exists only in the local george_dogfood database.\n',
+                f'This account exists only in the local bob_dogfood database.\n',
                 encoding='utf-8')
             print(f'Local account created; passcode written to {LOGIN_FILE} and not displayed')
 

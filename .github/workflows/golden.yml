@@ -1,8 +1,8 @@
-﻿name: George integration checks
+﻿name: Bob integration checks
 
 on:
   push:
-    branches: [main, integration/george-v1]
+    branches: [main, integration/bob-v1]
   pull_request:
   workflow_dispatch:
     inputs:
@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: george-${{ github.ref }}
+  group: bob-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -59,13 +59,13 @@ jobs:
 
   live-db:
     if: github.event_name == 'workflow_dispatch' && inputs.live_db
-    environment: george-staging
+    environment: bob-staging
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       # Environment-scoped secrets only; do not reuse repository production secrets.
       DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
-      GEORGE_DATABASE_URL: ${{ secrets.STAGING_GEORGE_DATABASE_URL }}
+      GEORGE_DATABASE_URL: ${{ secrets.STAGING_BOB_DATABASE_URL }}
       STAGING_DATABASE_VERIFIED: ${{ vars.STAGING_DATABASE_VERIFIED }}
     steps:
       - uses: actions/checkout@v4
@@ -78,11 +78,11 @@ jobs:
 
   model-evals:
     if: github.event_name == 'workflow_dispatch' && inputs.model_evals
-    environment: george-model-evals
+    environment: bob-model-evals
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      GEORGE_DATABASE_URL: ${{ secrets.STAGING_GEORGE_DATABASE_URL }}
+      GEORGE_DATABASE_URL: ${{ secrets.STAGING_BOB_DATABASE_URL }}
       ANTHROPIC_API_KEY: ${{ secrets.STAGING_ANTHROPIC_API_KEY }}
       STAGING_DATABASE_VERIFIED: ${{ vars.STAGING_DATABASE_VERIFIED }}
       GEORGE_EVALS: '1'

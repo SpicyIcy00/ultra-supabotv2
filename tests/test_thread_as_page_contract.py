@@ -3,14 +3,14 @@ A thread is already a page (P2.a) — the two HTTP shapes that make it one.
 
 NO DATABASE, NO MODEL. Both halves are decidable without either:
 
-  1. KEEPING A THREAD IS ONE ACT. POST /george/pages goes through
-     page_operations.build_page — the SAME service function George's
+  1. KEEPING A THREAD IS ONE ACT. POST /bob/pages goes through
+     page_operations.build_page — the SAME service function Bob's
      `create_page` reaches through the injected writer — whether or not it
      carries sections. One path, so the page and its pins commit together or
      not at all, and the button cannot grow a second set of bounds. Every
      refusal the service raises has an HTTP code here and a sentence a person
      can act on.
-  2. A THREAD CAN FIND ITS PAGE. GET /george/pins takes `thread_id` and joins
+  2. A THREAD CAN FIND ITS PAGE. GET /bob/pins takes `thread_id` and joins
      on the conversations IN that thread, scoped to the caller — never on a
      title, never on a guess. Two scopes on one listing is refused rather than
      one of them silently winning.
@@ -31,7 +31,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.api.v1.routes import george_pages, george_pins
+from app.api.v1.routes import bob_pages, bob_pins
 from app.core.database import get_db
 from app.services import page_operations, page_writer, pin_writer
 from app.services.page_operations import PageResult
@@ -82,9 +82,9 @@ def pages_client(monkeypatch):
 
     monkeypatch.setattr(page_operations, "build_page", fake_build)
     app = FastAPI()
-    app.include_router(george_pages.router, prefix="/pages")
+    app.include_router(bob_pages.router, prefix="/pages")
     app.dependency_overrides[get_db] = lambda: Session()
-    app.dependency_overrides[george_pages._page_user] = lambda: ME
+    app.dependency_overrides[bob_pages._page_user] = lambda: ME
     with TestClient(app) as client:
         yield client, seen
 
@@ -99,9 +99,9 @@ def refusing_pages_client(monkeypatch):
 
     monkeypatch.setattr(page_operations, "build_page", fake_build)
     app = FastAPI()
-    app.include_router(george_pages.router, prefix="/pages")
+    app.include_router(bob_pages.router, prefix="/pages")
     app.dependency_overrides[get_db] = lambda: Session()
-    app.dependency_overrides[george_pages._page_user] = lambda: ME
+    app.dependency_overrides[bob_pages._page_user] = lambda: ME
     with TestClient(app) as client:
         yield client, box
 
@@ -110,7 +110,7 @@ def refusing_pages_client(monkeypatch):
 # 1. Keeping a thread is ONE act
 # ---------------------------------------------------------------------------
 
-def test_a_create_with_sections_reaches_the_same_service_george_does(pages_client):
+def test_a_create_with_sections_reaches_the_same_service_bob_does(pages_client):
     client, seen = pages_client
     body = {
         "title": "how are we doing",
@@ -136,19 +136,19 @@ def test_a_create_with_sections_reaches_the_same_service_george_does(pages_clien
 def test_an_empty_create_takes_the_same_path(pages_client):
     """One path, not two: the route has no branch a bound could hide behind."""
     client, seen = pages_client
-    r = client.post("/pages", json={"title": "Empty", "purpose": "Hand it to George."})
+    r = client.post("/pages", json={"title": "Empty", "purpose": "Hand it to Bob."})
     assert r.status_code == 201, r.text
     assert len(seen) == 1
     assert seen[0]["analyses"] is None
-    assert seen[0]["purpose"] == "Hand it to George."
+    assert seen[0]["purpose"] == "Hand it to Bob."
     assert r.json()["pins"] == 0
 
 
-def test_the_route_never_writes_as_george(pages_client):
+def test_the_route_never_writes_as_bob(pages_client):
     """
-    A person pressing a button is not George. `actor` is left at the service's
+    A person pressing a button is not Bob. `actor` is left at the service's
     default, USER, which is what the audit row records — and a page event that
-    said `george` would answer "who moved this" with the wrong name.
+    said `bob` would answer "who moved this" with the wrong name.
     """
     client, seen = pages_client
     client.post("/pages", json={"title": "Mine"})
@@ -227,11 +227,11 @@ def pins_client(monkeypatch):
             seen["statement"] = str(statement)
             return Result()
 
-    monkeypatch.setattr(george_pins, "conversations_in_thread", fake_conversations)
+    monkeypatch.setattr(bob_pins, "conversations_in_thread", fake_conversations)
     app = FastAPI()
-    app.include_router(george_pins.router, prefix="/pins")
+    app.include_router(bob_pins.router, prefix="/pins")
     app.dependency_overrides[get_db] = lambda: Recording()
-    app.dependency_overrides[george_pins._pin_user] = lambda: ME
+    app.dependency_overrides[bob_pins._pin_user] = lambda: ME
     with TestClient(app) as client:
         yield client, seen, conversations
 
@@ -255,11 +255,11 @@ def test_a_thread_nobody_has_a_turn_in_is_an_empty_list_and_not_a_404(monkeypatc
     async def none(db, username, thread_id):
         return []
 
-    monkeypatch.setattr(george_pins, "conversations_in_thread", none)
+    monkeypatch.setattr(bob_pins, "conversations_in_thread", none)
     app = FastAPI()
-    app.include_router(george_pins.router, prefix="/pins")
+    app.include_router(bob_pins.router, prefix="/pins")
     app.dependency_overrides[get_db] = lambda: Session()
-    app.dependency_overrides[george_pins._pin_user] = lambda: ME
+    app.dependency_overrides[bob_pins._pin_user] = lambda: ME
     with TestClient(app) as client:
         r = client.get("/pins", params={"thread_id": str(THREAD)})
     assert r.status_code == 200

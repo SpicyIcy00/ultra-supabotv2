@@ -1,5 +1,5 @@
 """
-George's own posts: ids, idempotency, and which kinds are wired.
+Bob's own posts: ids, idempotency, and which kinds are wired.
 
 NO DATABASE. The session is a stub that records the statement and its
 parameters, the same technique test_chats_contract uses on the INSERT-only log
@@ -23,9 +23,9 @@ import pytest
 
 pytest.importorskip("sqlalchemy", reason="the writers build SQLAlchemy text()")
 
-from app.models.george_post import (  # noqa: E402
+from app.models.bob_post import (  # noqa: E402
     POST_KINDS,
-    PRIVATE_GEORGE_KINDS,
+    PRIVATE_BOB_KINDS,
     default_visibility,
 )
 from app.services import river_writer  # noqa: E402
@@ -219,7 +219,7 @@ def test_an_approval_distinguishes_its_two_blocking_reasons() -> None:
 # Visibility, and the kinds that are wired
 # ---------------------------------------------------------------------------
 
-def test_georges_own_posts_are_org_level() -> None:
+def test_bobs_own_posts_are_org_level() -> None:
     """From default_visibility, not decided per writer."""
     for run, kind in (
         (lambda s: post_brief(s, greeting=GREETING, as_of=date(2026, 9, 5)), "brief"),
@@ -235,11 +235,11 @@ def test_georges_own_posts_are_org_level() -> None:
         assert s.params()["visibility"] == "org" == default_visibility(kind)
 
 
-def test_georges_posts_never_have_an_author() -> None:
-    """author_user is who WROTE it, and George has no account."""
+def test_bobs_posts_never_have_an_author() -> None:
+    """author_user is who WROTE it, and Bob has no account."""
     s = FakeSession()
     asyncio.run(post_brief(s, greeting=GREETING, as_of=date(2026, 9, 5)))
-    assert "'george', NULL," in s.calls[0][0]
+    assert "'bob', NULL," in s.calls[0][0]
 
 
 def test_an_org_post_belongs_to_nobody_in_particular() -> None:
@@ -255,14 +255,14 @@ def test_an_org_post_belongs_to_nobody_in_particular() -> None:
 
 
 # ---------------------------------------------------------------------------
-# A pin somebody made — the one kind George writes that is NOT org
+# A pin somebody made — the one kind Bob writes that is NOT org
 # ---------------------------------------------------------------------------
 
 def test_a_pin_confirmation_is_private_and_owned() -> None:
     """
     "A pin is one person's tile" (CLAUDE.md).
 
-    This defaulted to 'org' with the rest of George's kinds until the writer
+    This defaulted to 'org' with the rest of Bob's kinds until the writer
     was wired, which would have announced "Ice pinned Rockwell net sales" to
     the whole company the first time anybody pinned anything.
     """
@@ -273,8 +273,8 @@ def test_a_pin_confirmation_is_private_and_owned() -> None:
         owner="ice", tool_calls=1))
     assert s.params()["visibility"] == "private"
     assert s.params()["owner_user"] == "ice"
-    # Still authored by George — he made the pin, it is theirs.
-    assert "'george', NULL," in s.calls[0][0]
+    # Still authored by Bob — he made the pin, it is theirs.
+    assert "'bob', NULL," in s.calls[0][0]
 
 
 def test_a_pin_confirmation_states_no_figure() -> None:
@@ -314,7 +314,7 @@ def test_a_pin_announces_itself_once() -> None:
 # The kinds nothing writes yet, each with the reason. A kind leaves this list
 # by being wired, not by being added to it.
 UNWIRED = {
-    # Still reserved. It was held for Watch — "George noticed something BETWEEN
+    # Still reserved. It was held for Watch — "Bob noticed something BETWEEN
     # briefs" — and Watch arrived on 2026-09-11 with its own kind rather than
     # borrowing this one, because a watch is a saved thing with a schedule, a
     # backtest and a state, and `notice` is a bare remark. Nothing raises one.
@@ -342,13 +342,13 @@ def test_every_kind_is_either_wired_or_deliberately_not() -> None:
     )
 
 
-def test_the_private_george_kinds_are_the_two_that_belong_to_somebody() -> None:
+def test_the_private_bob_kinds_are_the_two_that_belong_to_somebody() -> None:
     """
-    George AUTHORS all of his kinds; only two BELONG to a person. Conflating
+    Bob AUTHORS all of his kinds; only two BELONG to a person. Conflating
     those is what made pin_confirmation default to org.
     """
-    assert set(PRIVATE_GEORGE_KINDS) == {"answer", "pin_confirmation"}
-    for kind in PRIVATE_GEORGE_KINDS:
+    assert set(PRIVATE_BOB_KINDS) == {"answer", "pin_confirmation"}
+    for kind in PRIVATE_BOB_KINDS:
         assert default_visibility(kind) == "private", kind
 
 

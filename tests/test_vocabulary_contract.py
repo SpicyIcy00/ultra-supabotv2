@@ -1,7 +1,7 @@
 """
-The vocabulary George draws with, reopened on purpose (P2S.3, 2026-09-17).
+The vocabulary Bob draws with, reopened on purpose (P2S.3, 2026-09-17).
 
-P1.f closed the catalogue at six marks so George was not choosing between
+P1.f closed the catalogue at six marks so Bob was not choosing between
 synonyms. The owner then asked for the rest — "it should have the ability to
 make all those different kinds of charts and visualizations like pie and
 others cause if it builds a dashboard it needs that". What is held here is

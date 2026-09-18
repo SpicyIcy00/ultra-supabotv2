@@ -4,7 +4,7 @@ The board builds in front of him (P2S.7, 2026-09-18).
 The owner: *"when it does how are we doing it should still display like the
 normal data first and then it goes deeper so theres something to see already
 and the more pop up so you can really see it building"*. Measured on
-verification/p2s6-gate-2.json: the shops at 10.4 s, George's board at 59.6 s,
+verification/p2s6-gate-2.json: the shops at 10.4 s, Bob's board at 59.6 s,
 the end at 105.7 s — and nothing new in between, because the default was
 drawn once a turn and every compose REPLACED the turn's board.
 
@@ -121,7 +121,7 @@ def test_the_loop_folds_rather_than_replaces():
 
 def _scripted_turn(monkeypatch):
     import asyncio
-    from agent import loop as george_loop
+    from agent import loop as bob_loop
     from tests.test_convergence_cap_contract import FakeClient, _ToolUse
     from tests.test_loop_correction_contract import StubLog, _TextBlock
 
@@ -154,12 +154,12 @@ def _scripted_turn(monkeypatch):
         [_TextBlock("OPUS is the shop that moved, and it fell through the afternoon.")],
     ]
     fake = FakeClient(replies)
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
-    monkeypatch.setattr(george_loop, "_call_tool", fake_read)
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop, "_call_tool", fake_read)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
 
     async def collect():
-        return [f async for f in george_loop.run("how are we doing?")]
+        return [f async for f in bob_loop.run("how are we doing?")]
 
     return asyncio.run(collect())
 
@@ -183,7 +183,7 @@ def test_prose_beside_a_compose_is_part_of_the_answer_the_loop_keeps(monkeypatch
     closing line in the next round — the reader saw both, the loop kept and
     judged only the closing line, and the two were joined "overnight.My read"."""
     import asyncio
-    from agent import loop as george_loop
+    from agent import loop as bob_loop
     from tests.test_convergence_cap_contract import FakeClient, _ToolUse
     from tests.test_loop_correction_contract import StubLog, _TextBlock, frames_of
 
@@ -206,12 +206,12 @@ def test_prose_beside_a_compose_is_part_of_the_answer_the_loop_keeps(monkeypatch
         def conversation(self, **kw):
             kept.append(kw.get("final_answer"))
 
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
-    monkeypatch.setattr(george_loop, "_call_tool", fake_read)
-    monkeypatch.setattr(george_loop, "ConversationLog", Log)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop, "_call_tool", fake_read)
+    monkeypatch.setattr(bob_loop, "ConversationLog", Log)
 
     async def collect():
-        return [f async for f in george_loop.run("how are we doing?")]
+        return [f async for f in bob_loop.run("how are we doing?")]
 
     frames = asyncio.run(collect())
     shown = "".join(f["delta"] for f in frames_of(frames, "text"))

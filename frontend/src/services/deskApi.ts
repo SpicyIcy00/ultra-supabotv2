@@ -1,16 +1,16 @@
 /**
- * The desk's two reads that are not George: the definitions it is drawn
+ * The desk's two reads that are not Bob: the definitions it is drawn
  * from, and a replay of one call already on screen.
  *
- * Bare axios, matching pinsApi and riverApi. Both routes sit behind George's
+ * Bare axios, matching pinsApi and riverApi. Both routes sit behind Bob's
  * own page gate. Neither consults a model: the definitions are metrics.yaml
  * served, and a replay is the pin runner over a call the loop recorded.
  */
 import axios from 'axios';
-import type { CompositionBlock, DeskDimension, GeorgeNotice, ToolMeta } from '../types/george';
+import type { CompositionBlock, DeskDimension, BobNotice, ToolMeta } from '../types/bob';
 import type { PinStatus, PinToolCall } from '../types/pins';
 
-const API_BASE = '/api/v1/george';
+const API_BASE = '/api/v1/bob';
 
 /** One date preset as the definitions state it (metrics.yaml sales_day.presets). */
 export interface DeskWindowDef {
@@ -86,7 +86,7 @@ export interface DeskToken {
   permitted_by?: { argument: string; permits: Record<string, string[]> } | null;
 }
 
-/** Mirrors DeskDefinitions in backend/app/api/v1/routes/george.py. */
+/** Mirrors DeskDefinitions in backend/app/api/v1/routes/bob.py. */
 export interface DeskDefinitions {
   business: { name: string; short: string };
   windows: DeskWindowDef[];
@@ -181,7 +181,7 @@ export const readDeskDefinitions = async (): Promise<DeskDefinitions> => {
   return data;
 };
 
-/** Mirrors ReplayOut in backend/app/api/v1/routes/george.py. */
+/** Mirrors ReplayOut in backend/app/api/v1/routes/bob.py. */
 export interface ReplayOut {
   status: PinStatus;
   tool: string;
@@ -200,7 +200,7 @@ export interface ReplayOut {
    */
   rows_complete: boolean;
   meta: ToolMeta;
-  notices: GeorgeNotice[];
+  notices: BobNotice[];
   /** The tool's own words when it refused. Never rephrased here. */
   refusal: string | null;
   /**

@@ -5,7 +5,7 @@
  * what you kept, what runs on its own — and until now they rendered in the
  * shell that existed BEFORE the room: a wide rail of words on cream, serif
  * headings, its own type scale, its own idea of a card. Clicking the rail
- * took you out of George's surface and into the previous one, which is what
+ * took you out of Bob's surface and into the previous one, which is what
  * "why is it showing the old UI" was.
  *
  * They are not a different product, so they do not get a different chrome.
@@ -21,13 +21,13 @@
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { useGeorge } from '../hooks/useGeorge';
+import { useBob } from '../hooks/useBob';
 import { listApprovals } from '../services/workflowsApi';
 import { Rail } from './Rail';
 import './room.css';
 
 export function RoomShell({ children }: { children: ReactNode }) {
-  const george = useGeorge();
+  const bob = useBob();
   const navigate = useNavigate();
   // The same read the board's rail makes, for the same reason: a count is a
   // claim about the world, so it is drawn from a result or not at all.
@@ -39,8 +39,8 @@ export function RoomShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="room">
-      <Rail busy={george.busy} needsYou={approvals.data?.length}
-            onNew={() => navigate('/george')} />
+      <Rail busy={bob.busy} needsYou={approvals.data?.length}
+            onNew={() => navigate('/bob')} />
       {/* A LIST, NOT THE BESIDE ROOM: the same ground, sidebar and type, and a
           column centred in the room the sidebar leaves (P2S.1(h)). */}
       <main className="r-main r-main--list">

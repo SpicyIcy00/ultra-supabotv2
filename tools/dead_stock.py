@@ -1,10 +1,10 @@
 """
-George — dead stock tool.
+Bob — dead stock tool.
 
 One public function: get_dead_stock().
 
 THE ANTI-JOIN THE TOOL SURFACE WAS MISSING. A 40-question coverage run found
-George attempting this shape three times and unable to complete it:
+Bob attempting this shape three times and unable to complete it:
   - "Which products are dead at Fairview?"          -> refused
   - "Are there products in stock everywhere but selling nowhere?" -> refused
   - "Which products have never sold anywhere?"      -> timed out at 32.2s,
@@ -12,7 +12,7 @@ George attempting this shape three times and unable to complete it:
     history.
 
 Every other tool answers "what IS". None answered "what is in A but not in B",
-so George kept fetching both sides and trying to intersect them in its head —
+so Bob kept fetching both sides and trying to intersect them in its head —
 which the 200-row cap then made impossible.
 
 Architecture rules (see CLAUDE.md): one SELECT template, predicates read from

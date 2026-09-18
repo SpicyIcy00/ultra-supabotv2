@@ -1,5 +1,5 @@
 """
-Window arithmetic George's tools share: a preset anchored on a day, and the
+Window arithmetic Bob's tools share: a preset anchored on a day, and the
 period immediately before a window.
 
 WHY THIS IS A MODULE OF ITS OWN. metrics.yaml states every date preset twice

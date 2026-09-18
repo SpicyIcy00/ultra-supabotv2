@@ -1,17 +1,17 @@
 """
-Continuing a thread: who may, what a reply carries, and what George sees.
+Continuing a thread: who may, what a reply carries, and what Bob sees.
 
 NO DATABASE, NO API. Three things are under test, none of which needs either:
 
   1. The decision. Exactly two ways into a thread — the caller's own
-     conversation, or a root post George wrote at org level — expressed as a
+     conversation, or a root post Bob wrote at org level — expressed as a
      pure function and two SQL strings the suite inspects. This is an
      authorization boundary on private content; it stays narrow, and this
      file is what keeps it narrow.
   2. The reply. A question may name the post it replies to; the loop writes
      that onto the question post as given, and the route validates it is in
      the thread before the stream opens.
-  3. What George sees. A history that opens with a George post — the brief
+  3. What Bob sees. A history that opens with a Bob post — the brief
      somebody is replying to — is KEPT, behind THREAD_OPENER, instead of
      being dropped as it was until 2026-09-07.
 """
@@ -28,7 +28,7 @@ import pytest
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from agent import loop as george_loop                                  # noqa: E402
+from agent import loop as bob_loop                                  # noqa: E402
 from app.services.thread_access import (                               # noqa: E402
     ORG_ROOT_SQL,
     OWN_CONVERSATION_SQL,
@@ -38,20 +38,20 @@ from app.services.thread_access import (                               # noqa: E
 from tests.test_loop_correction_contract import FakeClient, StubLog   # noqa: E402
 
 _ROOT = Path(__file__).resolve().parents[1]
-_ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "george.py"
-_HOOK = _ROOT / "frontend" / "src" / "hooks" / "useGeorgeStream.ts"
-_HISTORY = _ROOT / "frontend" / "src" / "components" / "george" / "threadHistory.ts"
+_ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "bob.py"
+_HOOK = _ROOT / "frontend" / "src" / "hooks" / "useBobStream.ts"
+_HISTORY = _ROOT / "frontend" / "src" / "components" / "bob" / "threadHistory.ts"
 
 
 def _run(monkeypatch, replies, **kwargs):
     """Drive the loop with the model and the log both stubbed."""
     fake = FakeClient(replies)
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
     StubLog.instances.clear()
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
 
     async def collect():
-        return [f async for f in george_loop.run("and for Rockwell?", **kwargs)]
+        return [f async for f in bob_loop.run("and for Rockwell?", **kwargs)]
 
     return asyncio.run(collect()), fake.messages.requests
 
@@ -82,7 +82,7 @@ def test_the_org_root_rule_reads_the_root_and_only_the_root():
     # The root is the post whose id IS the thread id. A reply somebody shared
     # into the thread must not open it: it is not its own thread.
     assert "p.id = :t AND p.thread_id = :t" in ORG_ROOT_SQL
-    assert "p.author = 'george'" in ORG_ROOT_SQL
+    assert "p.author = 'bob'" in ORG_ROOT_SQL
     assert "p.visibility = 'org'" in ORG_ROOT_SQL
     assert "p.hidden_at IS NULL" in ORG_ROOT_SQL
     # Ownership plays no part in the org branch: an org root belongs to
@@ -111,7 +111,7 @@ def test_the_route_uses_the_new_check_and_the_old_one_is_gone():
 
 
 def test_the_request_model_accepts_a_parent():
-    from app.api.v1.routes.george import AskRequest
+    from app.api.v1.routes.bob import AskRequest
     assert "parent_id" in AskRequest.model_fields
     assert "thread_id" in AskRequest.model_fields
     req = AskRequest(question="why?", thread_id=uuid.uuid4(), parent_id=uuid.uuid4())
@@ -152,19 +152,19 @@ def test_a_question_that_opens_its_own_thread_has_no_parent(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# 3. What George sees
+# 3. What Bob sees
 # ---------------------------------------------------------------------------
 
 BRIEF = "Fairview took ₱18,400 on Sat 6 Sep 2026 — 41% below the same Saturday last week."
 
 
-def test_a_history_that_opens_with_george_is_kept_behind_the_opener():
+def test_a_history_that_opens_with_bob_is_kept_behind_the_opener():
     executed: dict = {}
-    messages = george_loop._seed_history(
-        [{"role": "george", "text": BRIEF, "tool_calls": []}], executed,
+    messages = bob_loop._seed_history(
+        [{"role": "bob", "text": BRIEF, "tool_calls": []}], executed,
     )
     assert messages == [
-        {"role": "user", "content": george_loop.THREAD_OPENER},
+        {"role": "user", "content": bob_loop.THREAD_OPENER},
         {"role": "assistant", "content": BRIEF},
     ]
     # No calls were replayed, so nothing is recorded as executed — a brief
@@ -173,26 +173,26 @@ def test_a_history_that_opens_with_george_is_kept_behind_the_opener():
 
 
 def test_a_history_that_opens_with_a_person_gets_no_opener():
-    messages = george_loop._seed_history(
+    messages = bob_loop._seed_history(
         [{"role": "user", "text": "sales?", "tool_calls": []},
-         {"role": "george", "text": "₱9,120.", "tool_calls": []}], {},
+         {"role": "bob", "text": "₱9,120.", "tool_calls": []}], {},
     )
     assert messages[0] == {"role": "user", "content": "sales?"}
-    assert george_loop.THREAD_OPENER not in [m["content"] for m in messages]
+    assert bob_loop.THREAD_OPENER not in [m["content"] for m in messages]
 
 
 def test_an_empty_history_is_still_empty():
-    assert george_loop._seed_history([], {}) == []
-    assert george_loop._seed_history(None, {}) == []
+    assert bob_loop._seed_history([], {}) == []
+    assert bob_loop._seed_history(None, {}) == []
 
 
 def test_the_model_is_shown_the_post_being_replied_to(monkeypatch):
     _, requests = _run(
         monkeypatch, ["Confectionery carried most of the drop."],
-        history=[{"role": "george", "text": BRIEF, "tool_calls": []}],
+        history=[{"role": "bob", "text": BRIEF, "tool_calls": []}],
     )
     sent = requests[0]["messages"]
-    assert sent[0] == {"role": "user", "content": george_loop.THREAD_OPENER}
+    assert sent[0] == {"role": "user", "content": bob_loop.THREAD_OPENER}
     assert sent[1] == {"role": "assistant", "content": BRIEF}
     # Then the person's actual question, as the LAST user turn — since P1.h an
     # effort marker can sit between the history and the question, and what
@@ -205,22 +205,22 @@ def test_the_model_is_shown_the_post_being_replied_to(monkeypatch):
 
 def test_the_opener_is_a_statement_and_not_a_question():
     # It names a fact about the thread. If it ever grew into an instruction
-    # or a paraphrase of the post, George would be answering the opener.
-    assert george_loop.THREAD_OPENER.startswith("[") and george_loop.THREAD_OPENER.endswith("]")
-    assert "?" not in george_loop.THREAD_OPENER
+    # or a paraphrase of the post, Bob would be answering the opener.
+    assert bob_loop.THREAD_OPENER.startswith("[") and bob_loop.THREAD_OPENER.endswith("]")
+    assert "?" not in bob_loop.THREAD_OPENER
 
 
-def test_the_client_never_sends_tool_calls_for_a_george_post():
+def test_the_client_never_sends_tool_calls_for_a_bob_post():
     # threadHistory.ts builds the history for a thread the caller has no
-    # chat detail for: post bodies only. A George post's charted rows have
+    # chat detail for: post bodies only. A Bob post's charted rows have
     # no arguments, and inventing them would fabricate provenance.
     if not _HISTORY.exists():
         pytest.skip("threadHistory.ts not written yet")
     source = _HISTORY.read_text(encoding="utf-8")
     # The turn shape's field is toolCalls; toHistory maps it to tool_calls on
-    # the wire. A George post's turn is built with the empty list, literally.
+    # the wire. A Bob post's turn is built with the empty list, literally.
     assert re.search(r"toolCalls:\s*\[\]", source), (
-        "threadHistory.ts must build a George post's turn with no tool calls"
+        "threadHistory.ts must build a Bob post's turn with no tool calls"
     )
     # The charted rows live in `payload`; a history builder that never reads
     # the payload cannot reconstruct a call from them.

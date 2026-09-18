@@ -17,10 +17,10 @@ closes. P2S.1 writes this; every later card reuses it.
 WHAT IT DOES, in order:
 
   1. Builds `frontend/src/frames/scenes.json` from a recorded eval report
-     (default `verification/p1close-v2.json`): the question, George's answer,
+     (default `verification/p1close-v2.json`): the question, Bob's answer,
      every read's rows and `meta` exactly as recorded, and the board
      `agent/default_composition.blocks` draws over them — the same conversion
-     `ops/recorded_board.py` makes. George's own blocks are not in an eval
+     `ops/recorded_board.py` makes. Bob's own blocks are not in an eval
      report, so a frame shows the loaded default board, which is a real board
      state and says so.
   2. Serves the frontend with Vite and opens `frames.html`, which mounts the
@@ -86,7 +86,7 @@ sys.path.insert(0, str(ROOT))
 
 FRONTEND = ROOT / "frontend"
 SCENES_OUT = FRONTEND / "src" / "frames" / "scenes.json"
-DESIGN = ROOT / "ops" / "ideal" / "george-ahead-of-me.html"
+DESIGN = ROOT / "ops" / "ideal" / "bob-ahead-of-me.html"
 CHROME_CANDIDATES = [
     Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe"),
     Path(r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"),
@@ -95,7 +95,7 @@ CHROME_CANDIDATES = [
 ]
 
 SCENE_OF = {"situation": "follow-up", "doing": "vague", "nothing": "caveats", "draw": "taught",
-            # A gate run records George's compose call, so these draw HIS
+            # A gate run records Bob's compose call, so these draw HIS
             # blocks, thoughts and questions (2026-09-17).
             "low": "caveats", "morning": "morning"}
 # A scene no eval report has ever recorded, drawn from a checked-in fixture
@@ -138,7 +138,7 @@ def build_scenes(report_path: Path, scenes: list[str]) -> dict[str, Any]:
             if fx.get("notices"):
                 item["notices"] = fx["notices"]
             if "default_blocks" in fx:
-                # A recorded post: George's own blocks that name a read of THIS
+                # A recorded post: Bob's own blocks that name a read of THIS
                 # turn are the composition; the loop's defaults stand beside.
                 item["composed"] = [b for b in fx["blocks"] if b.get("seq") is not None]
                 item["blocks"] = fx["default_blocks"]
@@ -164,7 +164,7 @@ def build_scenes(report_path: Path, scenes: list[str]) -> dict[str, Any]:
             calls.append({"seq": seq, "tool": r.get("tool"),
                           "arguments": r.get("arguments") or {},
                           "result": {"rows": rows, "meta": meta}})
-        # GEORGE'S OWN COMPOSITION, where the report kept his compose call: his
+        # BOB'S OWN COMPOSITION, where the report kept his compose call: his
         # blocks (with their claims and thoughts) and his reading (with its
         # asks). A report that kept none draws the loop's default board.
         composes = [x for x in (case.get("calls") or [])
@@ -225,8 +225,8 @@ def desk_definitions() -> dict[str, Any] | None:
     """The served desk definitions, built by the route's own function, or None."""
     sys.path.insert(0, str(ROOT / "backend"))
     try:
-        from app.api.v1.routes import george  # type: ignore
-        got = asyncio.run(george.desk_definitions(user=None))
+        from app.api.v1.routes import bob  # type: ignore
+        got = asyncio.run(bob.desk_definitions(user=None))
         return json.loads(got.model_dump_json())
     except Exception as exc:  # noqa: BLE001 — a frame without tokens still draws
         print(f"  desk definitions not built ({type(exc).__name__}: {exc}); the business switch will say so")
@@ -522,7 +522,7 @@ def main(argv: list[str]) -> int:
     scenes = [s["scene"] for s in fixture["scenes"]]
 
     vite_port, cdp_port = free_port(), free_port()
-    profile = tempfile.mkdtemp(prefix="george-frames-")
+    profile = tempfile.mkdtemp(prefix="bob-frames-")
     vite = start_vite(vite_port)
     chrome = None
     try:

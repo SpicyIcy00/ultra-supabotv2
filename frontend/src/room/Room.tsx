@@ -2,21 +2,21 @@
  * THE ROOM — where the work is.
  *
  * You arrive somewhere rather than starting a session. What is on screen is
- * the board: every object George has put there, still drawing the read it was
+ * the board: every object Bob has put there, still drawing the read it was
  * made from. It is not the last answer, and a follow-up transforms an object
  * rather than drawing a second one beneath it.
  *
- * DRAWN AS THE DESIGN'S BESIDE ROOM since P2S.1 (`ops/ideal/george-ahead-of-me.html`):
+ * DRAWN AS THE DESIGN'S BESIDE ROOM since P2S.1 (`ops/ideal/bob-ahead-of-me.html`):
  * him, his words under him, the figures flowing on the right, a line from him
  * to each. What is yours: open a figure, sort a table, pick a subject to talk
- * about. All instant, all local, never sent back to George as though he had
+ * about. All instant, all local, never sent back to Bob as though he had
  * decided it. Only a new FACT costs a turn.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { useGeorge } from '../hooks/useGeorge';
+import { useBob } from '../hooks/useBob';
 import { useThread } from '../hooks/useThread';
-import { threadHistory } from '../components/george/threadHistory';
+import { threadHistory } from '../components/bob/threadHistory';
 import { replaysToRestore, restoreFromPosts } from './restore';
 import { boardContext, buildBoard, folded, shapedByReplay,
          type Local, type BoardObject } from './board';
@@ -42,13 +42,13 @@ import { estateFor, scopeChip } from './estate';
 import { readDeskDefinitions, replayStoredCall, type DeskAlternative } from '../services/deskApi';
 import { Tokens } from './Tokens';
 import { Composer, type NamedReference } from './Composer';
-import { pageScopeFor } from '../components/george/pageScope';
+import { pageScopeFor } from '../components/bob/pageScope';
 import type { Bound } from './mentions';
 import { asSelection, maxSubjects, subjectOnBoard,
          toggleSubject, type Subject } from './subjects';
 import { pathFor, refusalForPerson, resolveFragment, retunedKey, tokensFor,
          type DrawnToken } from './tokenShape';
-import type { ToolCall } from '../types/george';
+import type { ToolCall } from '../types/bob';
 import { Noticed } from './Noticed';
 import { Doing } from './Working';
 import { useQuery } from '@tanstack/react-query';
@@ -70,7 +70,7 @@ export default function Room() {
   const navigate = useNavigate();
   const location = useLocation();
   const asked = useRef<string | null>(null);
-  const george = useGeorge();
+  const bob = useBob();
   const thread = useThread(threadId ?? '');
 
   /**
@@ -79,14 +79,14 @@ export default function Room() {
    * A tap resolves the id out of the row it tapped; an `@` resolves it out of
    * a vetted read. Both land here, both travel in `desk.selection`, and the
    * id is what travels: "Rockwell" is a shop and also every product sold in
-   * one, and until this card George had to decide which.
+   * one, and until this card Bob had to decide which.
    */
   const [selection, setSelection] = useState<Subject[]>([]);
   // The page an `@page` bound, which is `page_scope` on the question — the
   // field that injects a reader bound to this caller and this page. A page
   // MENTIONED is a page in scope; nothing here writes one.
   const [scope, setScope] = useState<{ id: string; title: string } | null>(null);
-  // What was named and binds nothing: a rule, today. George is told its name
+  // What was named and binds nothing: a rule, today. Bob is told its name
   // and its id, and what to do about it stays his tool call.
   const [named, setNamed] = useState<NamedReference[]>([]);
   // WHAT YOU HAVE DONE TO THE BOARD — where things sit, how big they are,
@@ -97,7 +97,7 @@ export default function Room() {
     () => restoreLocal(threadId));
   const [focused, setFocused] = useState<string | null>(null);
   // Reads re-run because somebody moved a token or a control, keyed
-  // `turn:seq`. Deliberately not sent back to George as though he had decided
+  // `turn:seq`. Deliberately not sent back to Bob as though he had decided
   // it: what he is told is the window on the desk, on the next question
   // (metrics.yaml surface.desk.replay).
   //
@@ -124,16 +124,16 @@ export default function Room() {
   // and nothing else. Kept per browser — a switch you turned on stays on — and
   // off wherever storage is not there to say otherwise.
   const [handsFree, setHandsFree] = useState<boolean>(() => {
-    try { return localStorage.getItem('george.handsFree') === 'on'; } catch { return false; }
+    try { return localStorage.getItem('bob.handsFree') === 'on'; } catch { return false; }
   });
   useEffect(() => {
-    try { localStorage.setItem('george.handsFree', handsFree ? 'on' : 'off'); } catch { /* kept for this visit only */ }
+    try { localStorage.setItem('bob.handsFree', handsFree ? 'on' : 'off'); } catch { /* kept for this visit only */ }
   }, [handsFree]);
   const reader = useReader();
 
   // THE DEFINITIONS THE TOKENS ARE DRAWN FROM — metrics.yaml, served. Which
   // arguments are movable, what each may be moved to, the words each answers
-  // to when typed. Nothing here is a figure and nothing here is George's, so
+  // to when typed. Nothing here is a figure and nothing here is Bob's, so
   // it is read once and never again.
   const desk = useQuery({
     queryKey: ['desk-definitions'],
@@ -176,22 +176,22 @@ export default function Room() {
   useEffect(() => {
     if (!threadId || !thread.ready || opened.current === threadId) return;
     opened.current = threadId;
-    george.open(
+    bob.open(
       restoreFromPosts(threadHistory(thread.posts, thread.chat, threadId), thread.posts),
       threadId,
     );
-  }, [threadId, thread.ready, thread.posts, thread.chat, george]);
+  }, [threadId, thread.ready, thread.posts, thread.chat, bob]);
 
   useEffect(() => {
-    if (!threadId && george.storedThreadId) navigate(`/w/${george.storedThreadId}`, { replace: true });
-  }, [threadId, george.storedThreadId, navigate]);
+    if (!threadId && bob.storedThreadId) navigate(`/w/${bob.storedThreadId}`, { replace: true });
+  }, [threadId, bob.storedThreadId, navigate]);
 
   const allAnswers = useMemo(
-    () => george.turns.filter((t): t is AnswerTurn => t.role === 'george'),
-    [george.turns],
+    () => bob.turns.filter((t): t is AnswerTurn => t.role === 'bob'),
+    [bob.turns],
   );
   // WHAT EACH ANSWER WAS ASKED, in the person's words (the log, 2026-09-18).
-  const questions = useMemo(() => questionsOf(george.turns), [george.turns]);
+  const questions = useMemo(() => questionsOf(bob.turns), [bob.turns]);
   // BACK TO AN EARLIER QUESTION AND ITS RESULTS (the log, 2026-09-18: "when you
   // can go to your last question and its last resutls"). Null is the newest.
   // Stepping back draws the room AS IT WAS after that answer: the board is
@@ -200,7 +200,7 @@ export default function Room() {
   // returns to the newest; while he works, the room is always the newest.
   const [view, setView] = useState<number | null>(null);
   useEffect(() => { setView(null); }, [allAnswers.length]);
-  const at = view === null || george.busy
+  const at = view === null || bob.busy
     ? allAnswers.length - 1 : Math.min(view, allAnswers.length - 1);
   const atNewest = at === allAnswers.length - 1;
   const answers = useMemo(
@@ -208,7 +208,7 @@ export default function Room() {
     [allAnswers, at, atNewest],
   );
   const board = useMemo(() => buildBoard(answers), [answers]);
-  const busy = george.busy;
+  const busy = bob.busy;
   const latest = answers[answers.length - 1] ?? null;
   // WHAT CAME BEFORE THIS FINDING FOLDS TO A LINE (P1.d). Clearing handles a
   // question that shares nothing with the board; this handles the one that
@@ -352,13 +352,13 @@ export default function Room() {
   });
 
   // THE COLD OPEN. Arriving with nothing in hand, the room opens on the
-  // newest answer George gave to a question he was asked to keep asking —
+  // newest answer Bob gave to a question he was asked to keep asking —
   // this morning's, normally — IF IT IS NEWER THAN YOUR LAST LOOK AT IT.
   // Otherwise it opens where you were: the thread you left is the thread
   // you return to. Nothing here builds a briefing or knows what one is; it
   // opens a thread, and the thread contains whatever he decided. Nowhere to
   // go back to and nothing new is a real answer, and stays the empty room.
-  const nothingInHand = !threadId && !george.storedThreadId && !george.busy;
+  const nothingInHand = !threadId && !bob.storedThreadId && !bob.busy;
   const standing = useStandingOpening(nothingInHand);
   useEffect(() => {
     if (!nothingInHand) return;
@@ -389,8 +389,8 @@ export default function Room() {
     remember(threadId, allAnswers[allAnswers.length - 1].at);
   }, [threadId, busy, allAnswers]);
 
-  // LOOKING INTO SOMETHING GEORGE NOTICED. The watch post carries the read
-  // that fired it, so this is an ordinary reply in its thread — George re-runs
+  // LOOKING INTO SOMETHING BOB NOTICED. The watch post carries the read
+  // that fired it, so this is an ordinary reply in its thread — Bob re-runs
   // that call and climbs from a fact. The question rides in router state so it
   // survives the navigation, and `asked` makes sure it happens once.
   const pending = (location.state as { ask?: string } | null)?.ask;
@@ -399,8 +399,8 @@ export default function Room() {
     if (asked.current === threadId) return;
     asked.current = threadId;
     navigate(location.pathname, { replace: true, state: null });
-    void george.ask(pending);
-  }, [pending, threadId, thread.ready, george, navigate, location.pathname]);
+    void bob.ask(pending);
+  }, [pending, threadId, thread.ready, bob, navigate, location.pathname]);
 
 
   const patch = useCallback((key: string, p: Local) => {
@@ -433,7 +433,7 @@ export default function Room() {
 
   // WHAT A QUESTION TRAVELS WITH. Named apart from `ask` because a fragment
   // never reaches it: this is the one path that costs a model turn.
-  const askGeorge = useCallback((text: string, subjects = selection) => {
+  const askBob = useCallback((text: string, subjects = selection) => {
     const q = text.trim();
     if (!q) return;
     setDraft('');
@@ -450,7 +450,7 @@ export default function Room() {
     // IDS, NOT LABELS (P2.c). `asSelection` reads the ids the rows carried —
     // or the ones a completion resolved — and keeps the one dimension that
     // travels, which is `DeskSelection`'s own shape. It used to send
-    // `{id: label}`, so every subject reached George as a word.
+    // `{id: label}`, so every subject reached Bob as a word.
     const picked = asSelection(subjects);
     const desk = {
       // WHICH BUSINESS (P2.g). The key, or nothing on the default — the
@@ -461,19 +461,19 @@ export default function Room() {
       ...(named.length ? { references: named } : {}),
       ...(board.length ? { board: boardContext(answers, board, local, focused) } : {}),
     };
-    void george.ask(q, {
+    void bob.ask(q, {
       ...(Object.keys(desk).length ? { desk } : {}),
       // An `@page` is the page this is asked FROM: the route injects a reader
       // bound to this caller and this page, and without it the tool is not in
       // his schema at all (architecture rule 4).
       ...(scope ? { pageScope: pageScopeFor(scope.id, scope.title) } : {}),
     });
-  }, [george, selection, named, scope, scoped, answers, board, local, focused]);
+  }, [bob, selection, named, scope, scoped, answers, board, local, focused]);
 
   /**
    * ONE REPLAY PATH, FOR EVERY DOOR INTO IT (P1.j).
    *
-   * A tapped token, a typed fragment and a control George composed are three
+   * A tapped token, a typed fragment and a control Bob composed are three
    * gestures and one act: run reads already on screen again with one scope
    * argument changed. No model. The call is NAMED, not sent (P1.i) — the
    * request carries the answer post and the call's seq, and the server reads
@@ -541,7 +541,7 @@ export default function Room() {
    * A NAVIGATION change is answered by the replay alone: the figures carry
    * their own receipts and their own read time, and there is nothing left to
    * interpret that they do not say. An ANALYTICAL one draws the figure first
-   * and then asks George to read it — `fragments.analytical_asks_anyway`,
+   * and then asks Bob to read it — `fragments.analytical_asks_anyway`,
    * because the number is not the answer and a reading is not a thing to drop
    * in order to win a stopwatch.
    */
@@ -549,10 +549,10 @@ export default function Room() {
     token: DrawnToken, alternative: DeskAlternative, said?: string,
   ) => {
     const ran = await runReplay(token.targets, token.argument, alternative.value);
-    if (ran && token.kind === 'analytical') askGeorge(said ?? alternative.label);
-  }, [runReplay, askGeorge]);
+    if (ran && token.kind === 'analytical') askBob(said ?? alternative.label);
+  }, [runReplay, askBob]);
 
-  // A control George composed, through the same path. Its own name for its
+  // A control Bob composed, through the same path. Its own name for its
   // argument travels as it is: the two vocabularies meet in metrics.yaml
   // (surface.desk.replay.from_control), never in a component holding a copy
   // of both lists.
@@ -580,13 +580,13 @@ export default function Room() {
   const restored = useRef<string | null>(null);
   useEffect(() => {
     if (!threadId || !thread.ready || !desk.data) return;
-    if (restored.current === threadId || !george.turns.length) return;
+    if (restored.current === threadId || !bob.turns.length) return;
     restored.current = threadId;
     const max = Number(desk.data.replay?.max_restored_per_open ?? 0);
-    for (const r of replaysToRestore(george.turns, thread.posts, max)) {
+    for (const r of replaysToRestore(bob.turns, thread.posts, max)) {
       void runReplay([{ post: r.post, turn: r.turn, seq: r.seq }], r.argument, r.value);
     }
-  }, [threadId, thread.ready, thread.posts, desk.data, george.turns, runReplay]);
+  }, [threadId, thread.ready, thread.posts, desk.data, bob.turns, runReplay]);
 
   // THE ARGUMENTS THE LOOP ACCEPTED, over what is DRAWN — a token for a read
   // nobody can see would offer to move something that is not on the screen.
@@ -657,20 +657,20 @@ export default function Room() {
     // two shops, and "compare" asks for something said.
     //
     // So the shortcut is gone and nothing replaced it: with subjects picked,
-    // `fragment` is already null and the line below sends the words to George
+    // `fragment` is already null and the line below sends the words to Bob
     // with the selection attached, exactly as every other short instruction
     // goes. The behaviour is the absence, which is why there is no branch
     // here to read.
     const fragment = subjects.length ? null : resolveFragment(q, tokens, desk.data);
-    if (!fragment) { askGeorge(q, subjects); return; }
+    if (!fragment) { askBob(q, subjects); return; }
     setDraft('');
     // The one token that costs a turn on purpose. What is asked of him is a
     // definition (`fragments.correction.asks`) rather than a string somebody
     // typed into a button — and whether a belief is recorded is HIS act: the
     // room holds no writer and may not (architecture rule 4).
-    if (fragment.kind === 'correction') { askGeorge(fragment.asks, subjects); return; }
+    if (fragment.kind === 'correction') { askBob(fragment.asks, subjects); return; }
     void move(fragment.token, fragment.alternative, q);
-  }, [askGeorge, move, tokens, desk.data, selection, runReplay, targetsFor, reader, latest]);
+  }, [askBob, move, tokens, desk.data, selection, runReplay, targetsFor, reader, latest]);
 
   /**
    * WHAT AN `@` PICKED, PUT WHERE IT BELONGS (P2.c).
@@ -680,7 +680,7 @@ export default function Room() {
    * same place a tap puts one — one mechanism, two doors. A page binds the
    * SCOPE, which is what injects a reader bound to this caller and that page.
    * A rule binds neither and is named on the question: there is no request
-   * field for a workflow, and running one is George's tool call and the
+   * field for a workflow, and running one is Bob's tool call and the
    * owner's decision.
    *
    * WHICH IS WHICH IS THE DEFINITIONS' TO SAY, read in `mentions.bind` off
@@ -701,7 +701,7 @@ export default function Room() {
       : [...held, { kind: b.kind, id: b.id, label: b.label }]));
   }, [desk.data]);
 
-  // A GESTURE ON AN AGENDA ROW IS A DECISION, and George learns from it: what
+  // A GESTURE ON AN AGENDA ROW IS A DECISION, and Bob learns from it: what
   // you open, ask about or leave decides where it ranks next morning
   // (metrics.yaml attention.learning). The per-figure keep and dismiss went
   // with their controls in P2S.1, so those two outcomes are no longer written
@@ -769,7 +769,7 @@ export default function Room() {
     dismissStanding(threadId);
     // PUTTING THE MORNING AWAY IS A GESTURE TOO. Every agenda row still on
     // the board that nobody touched is recorded as left — not dismissed —
-    // so tomorrow George can say "raised Tuesday, left". A row already
+    // so tomorrow Bob can say "raised Tuesday, left". A row already
     // decided is not also left.
     const already = new Set(Array.from(decided.current, (k) => k.split('|').slice(0, -1).join('|')));
     for (const d of leftBehind(allAnswers, buildBoard(allAnswers), already, threadId ?? null)) {
@@ -778,15 +778,15 @@ export default function Room() {
     }
     // Leaving on purpose: "/" must not walk straight back in.
     forgetLast();
-    george.reset(); setSelection([]); setScope(null); setNamed([]); setFocused(null); setView(null);
+    bob.reset(); setSelection([]); setScope(null); setNamed([]); setFocused(null); setView(null);
     // Starting fresh is the whole estate again: the switch is a scope you put
     // on, and carrying it into a new board would be the room deciding what the
     // next question is about (P2.g).
     setEstate(null);
     setRetuned({}); setShapes({}); setRefusal(null);
     setLocal({});
-    navigate('/george');
-  }, [george, navigate, threadId, allAnswers]);
+    navigate('/bob');
+  }, [bob, navigate, threadId, allAnswers]);
 
   return (
     <IdentityContext.Provider value={identities}>
@@ -802,7 +802,7 @@ export default function Room() {
             )} />
 
       {/* THE BESIDE ROOM (P2S.1(b)) — the design's composition, ported from
-          `ops/ideal/george-ahead-of-me.html`: him top-left, his words under
+          `ops/ideal/bob-ahead-of-me.html`: him top-left, his words under
           him set toward the figures, the figures filling the right, and a
           leading line from him to each. Two fixed columns, 580 and 940,
           centred in the room; the sidebar slides it and never shrinks it. */}
@@ -943,7 +943,7 @@ export default function Room() {
         onSay={(said) => ask(said)}
         handsFree={handsFree}
         onHandsFree={reader.can ? setHandsFree : undefined}
-        onStop={() => george.cancel()}
+        onStop={() => bob.cancel()}
         onClear={() => { setDraft(''); setSelection([]); setScope(null); setNamed([]); }}
         steer={(
           <Tokens
@@ -956,7 +956,7 @@ export default function Room() {
             onMove={(token, alternative) => { void move(token, alternative); }}
             onCorrect={() => {
               const asks = desk.data?.fragments?.correction?.asks;
-              if (asks) askGeorge(asks);
+              if (asks) askBob(asks);
             }}
           />
         )}
@@ -1022,7 +1022,7 @@ function Opening({ loading }: { loading: boolean }) {
       <p className="r-greeting-sub">What are we looking at?</p>
       {/*
         NOTHING SUGGESTED HERE. Three example questions used to sit on this
-        screen — mine, not George's. Proposing what to ask is his job and he
+        screen — mine, not Bob's. Proposing what to ask is his job and he
         has the whole business to draw on; a hardcoded list is me pretending to
         be him, and it is exactly the habit this build keeps falling into.
         Until he speaks first (the briefing), the door stays open and empty.

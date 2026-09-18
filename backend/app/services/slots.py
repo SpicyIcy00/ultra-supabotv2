@@ -2,7 +2,7 @@
 Slots and claims, in one place, for every schedule in this system.
 
 WHY THIS IS ONE MODULE AND NOT THREE COPIES. Three things now fire on their
-own: the weekly auto-report, George's saved workflows, and — as of today — his
+own: the weekly auto-report, Bob's saved workflows, and — as of today — his
 standing questions. All three need the same two answers, and getting either
 wrong is invisible until a morning goes missing:
 

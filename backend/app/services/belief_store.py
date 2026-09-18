@@ -1,7 +1,7 @@
 """
-Where George's understanding is kept, and how it is read back.
+Where Bob's understanding is kept, and how it is read back.
 
-WHY A SERVICE AND NOT A TOOL. Beliefs live in the `george` schema, which
+WHY A SERVICE AND NOT A TOOL. Beliefs live in the `bob` schema, which
 george_ro cannot see, so the same rule that governs pins, workflows and page
 reads governs this: the loop is handed a capability by whoever runs it, the
 write happens on the application role, and agent/ never imports backend/.
@@ -10,7 +10,7 @@ and what comes back.
 
 THREE THINGS THIS FILE DOES THAT THE VALIDATOR CANNOT.
 
-  RE-RECORDING A VIEW IS A CONFIRMATION, NOT A DUPLICATE. If George already
+  RE-RECORDING A VIEW IS A CONFIRMATION, NOT A DUPLICATE. If Bob already
   holds the same stance about the same subject, `confirmed_at` moves and
   nothing else does. That is what makes "held since Friday, confirmed this
   morning" a true sentence rather than a decorative one, and it is why the
@@ -27,7 +27,7 @@ THREE THINGS THIS FILE DOES THAT THE VALIDATOR CANNOT.
   a stored figure would cause, arriving through a stored sentence instead.
 
 BELIEFS ARE SHARED. Unlike a pin or a page there is no owner scope: there is
-one Rockwell, and what George thinks about it is not one person's.
+one Rockwell, and what Bob thinks about it is not one person's.
 `created_by` is provenance and no query filters by it.
 
 TWO MORE THINGS THIS FILE DOES, ADDED 2026-09-15 FOR P2.f.
@@ -63,7 +63,7 @@ MAX_IN_PROMPT = 12
 
 #: How many views a person TOLD him reach the prompt — their own list, never
 #: pushed out by his (P2S.11). Until 2026-09-18 the two shared the twelve,
-#: newest-confirmed first, and George re-confirms his own views every few
+#: newest-confirmed first, and Bob re-confirms his own views every few
 #: turns, so "leave per gram out" would have slid off within about a day. A
 #: bound all the same, because a list that only grows is a document.
 MAX_TOLD_IN_PROMPT = 24
@@ -75,7 +75,7 @@ def _told(row: dict[str, Any]) -> bool:
 
 async def current(session: AsyncSession) -> list[dict[str, Any]]:
     """
-    Everything George currently believes.
+    Everything Bob currently believes.
 
     A belief is current until it is superseded OR forgotten, and those are two
     different endings: the first was replaced by a better view, the second was
@@ -145,7 +145,7 @@ async def record(
                "stance": belief["stance"]})
         same = held.mappings().first()
 
-        # A view George already holds, read again and still true. Nothing new
+        # A view Bob already holds, read again and still true. Nothing new
         # is stored: the clock moves and what it rests on is refreshed.
         if same is not None and not belief.get("supersedes"):
             await session.execute(text("""
@@ -169,7 +169,7 @@ async def record(
             row = prior.mappings().first()
             if row is None:
                 out.append({"subject": belief["subject"], "outcome": "refused",
-                            "reason": ("the view being replaced is not one George "
+                            "reason": ("the view being replaced is not one Bob "
                                        "currently holds")})
                 continue
             # A change of wording does not reset the clock on a view held for
@@ -209,7 +209,7 @@ async def record(
 
 
 class BeliefNotHeld(LookupError):
-    """Forget was asked for a view George is not currently holding."""
+    """Forget was asked for a view Bob is not currently holding."""
 
 
 async def mark_applied(session: AsyncSession, ids: list[str]) -> int:
@@ -254,7 +254,7 @@ async def forget(session: AsyncSession, belief_id: str, *,
     explanation for it would make the easiest gesture on the surface the one
     that costs the most.
 
-    Raises BeliefNotHeld when the id is not a view George currently holds,
+    Raises BeliefNotHeld when the id is not a view Bob currently holds,
     which includes one already forgotten: telling somebody it worked twice is
     telling them something untrue once.
     """
@@ -266,7 +266,7 @@ async def forget(session: AsyncSession, belief_id: str, *,
     """), {"id": belief_id, "by": by})).mappings().first()
     if row is None:
         raise BeliefNotHeld(
-            "That is not a view George is currently holding — it was never "
+            "That is not a view Bob is currently holding — it was never "
             "formed, it has already been replaced, or it has already been "
             "forgotten."
         )
@@ -282,7 +282,7 @@ def _json(value: Any) -> str:
 def as_block(rows: list[dict[str, Any]], latest_data: Optional[datetime] = None,
              now: Optional[datetime] = None) -> Optional[str]:
     """
-    What George currently believes, as the block attached to a question.
+    What Bob currently believes, as the block attached to a question.
 
     THE FRESHNESS MARK IS THE POINT. A belief last confirmed before the newest
     data is labelled `UNCONFIRMED — data has landed since`, because a stored
@@ -294,7 +294,7 @@ def as_block(rows: list[dict[str, Any]], latest_data: Optional[datetime] = None,
     data goes stale and says so; "we means the shops" does not, because no
     amount of new data can make it less true that this is what they meant. So
     a `told` view carries their words and when they said them, and never the
-    unconfirmed mark — which would be the block asking George to re-read his
+    unconfirmed mark — which would be the block asking Bob to re-read his
     way to a fact no read contains.
 
     WHAT THEY TOLD HIM IS ITS OWN LIST (P2S.11): every told view, up to
@@ -302,7 +302,7 @@ def as_block(rows: list[dict[str, Any]], latest_data: Optional[datetime] = None,
     are re-confirmed constantly and a told one is not, so sharing one cap by
     recency is how "leave per gram out" would have lapsed in a day.
 
-    Returns None when George believes nothing, so the first ever conversation
+    Returns None when Bob believes nothing, so the first ever conversation
     carries no empty scaffolding.
     """
     if not rows:

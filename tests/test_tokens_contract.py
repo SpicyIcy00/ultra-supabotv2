@@ -58,7 +58,7 @@ def _served():
     import sys
 
     sys.path.insert(0, str(_ROOT / "backend"))
-    from app.api.v1.routes import george as route  # noqa: E402
+    from app.api.v1.routes import bob as route  # noqa: E402
 
     return asyncio.run(route.desk_definitions(user=None))
 
@@ -190,7 +190,7 @@ def test_every_spelling_resolves_to_exactly_one_alternative():
                 where = f"{token.argument}:{alternative.label}"
                 assert key not in seen or seen[key] == where, (
                     f"{spelling!r} would resolve to both {seen.get(key)} and "
-                    f"{where}; an ambiguous fragment must reach George, and "
+                    f"{where}; an ambiguous fragment must reach Bob, and "
                     f"a client cannot tell that from a resolved one"
                 )
                 seen[key] = where
@@ -247,10 +247,10 @@ def test_a_fragment_that_does_not_resolve_is_a_question():
     shape = _SHAPE_TS.read_text(encoding="utf-8")
     assert "hits.length === 1 ? hits[0] : null" in shape, (
         "two tokens answering to one word is an ambiguity, and an ambiguity "
-        "goes to George"
+        "goes to Bob"
     )
     room = _ROOM_TSX.read_text(encoding="utf-8")
-    assert "if (!fragment) { askGeorge(q, subjects); return; }" in room
+    assert "if (!fragment) { askBob(q, subjects); return; }" in room
 
 
 # ------------------------------------------------------- 5. the record back --

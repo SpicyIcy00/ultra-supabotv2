@@ -1,9 +1,9 @@
 """
-A count George worked out himself — the third way past a gate that checks quoting.
+A count Bob worked out himself — the third way past a gate that checks quoting.
 
 PURE. No database, no model, no API.
 
-THE DEFECT THIS CLOSES (dogfood log, 2026-09-13). The twelve caught George
+THE DEFECT THIS CLOSES (dogfood log, 2026-09-13). The twelve caught Bob
 writing, of a product comparison:
 
     "48 sold last week with nothing in the week before (Aji Cuttlefish

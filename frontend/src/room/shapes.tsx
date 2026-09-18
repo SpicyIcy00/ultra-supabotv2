@@ -5,7 +5,7 @@
  * The owner, 2026-09-16: *"it should have the ability to make all those
  * different kinds of charts and visualizations like pie and others cause if it
  * builds a dashboard it needs that"*. The design draws them as static SVG with
- * coordinates typed by hand for one scene (`ops/ideal/george-ahead-of-me.html`,
+ * coordinates typed by hand for one scene (`ops/ideal/bob-ahead-of-me.html`,
  * the `vocab` scene); here each is drawn from the rows a tool returned.
  *
  * THE SAME RULES THE SIX KEEP, and nothing looser:

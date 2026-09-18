@@ -21,7 +21,7 @@
  * rows name shops; "why?" is `get_sales` scoped to one shop with its drivers.
  */
 import { describe, expect, it } from 'vitest';
-import type { CompositionBlock, GeorgeTurn, ToolCall } from '../types/george';
+import type { CompositionBlock, BobTurn, ToolCall } from '../types/bob';
 import { buildBoard, folded, travel } from './board';
 import type { AnswerTurn } from './data';
 
@@ -40,10 +40,10 @@ const call = (
 } as unknown as ToolCall);
 
 const turn = (toolCalls: ToolCall[], blocks: CompositionBlock[]): AnswerTurn => ({
-  role: 'george', text: 'x', thinking: '', toolCalls, notices: [],
+  role: 'bob', text: 'x', thinking: '', toolCalls, notices: [],
   pinned: [], saved: [], pageChanges: [], at: '2026-09-14T00:00:00Z',
   composition: { seq: -1, blocks, rejected: [] },
-} as unknown as GeorgeTurn as AnswerTurn);
+} as unknown as BobTurn as AnswerTurn);
 
 /** "How are we doing?" — three estate-wide measures, nothing scoped to a shop. */
 const HOW_ARE_WE_DOING = turn(

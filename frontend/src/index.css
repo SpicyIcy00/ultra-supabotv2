@@ -3,10 +3,10 @@
 @tailwind utilities;
 
 /* ---------------------------------------------------------------------------
-   THE SIX CHROME TOKENS `george-*` IS BUILT FROM.
+   THE SIX CHROME TOKENS `bob-*` IS BUILT FROM.
 
    They were six fixed hexes in tailwind.config.js describing ONE surface: a
-   cream page with navy text. Every component under src/components/george reads
+   cream page with navy text. Every component under src/components/bob reads
    them, and three of those — PinnedPage, PinTile and what they draw — are what
    `/pages/:id` renders. That route moved inside the room's chrome on
    2026-09-12, the room's own default is DARK, and a fixed navy on a near-black
@@ -17,7 +17,7 @@
    classes then; the page a person opens from Kept was not, and nothing said so.
 
    So the tokens follow the theme instead. Defined here as RGB channels, which
-   is what Tailwind's `rgb(var(--x) / <alpha-value>)` needs for `bg-george-line/40`
+   is what Tailwind's `rgb(var(--x) / <alpha-value>)` needs for `bg-bob-line/40`
    to keep working; overridden inside `.room` per theme in room/room.css.
    Outside the room these keep their exact original values, so a surface that
    is still on cream is untouched.
@@ -96,31 +96,31 @@ body {
   }
 }
 /* ---------------------------------------------------------------------------
-   George — markdown inside the conversation column.
-   Scoped to .george-prose so it cannot touch the existing dark chat, which
+   Bob — markdown inside the conversation column.
+   Scoped to .bob-prose so it cannot touch the existing dark chat, which
    renders its own markdown elsewhere.
    --------------------------------------------------------------------------- */
-.george-prose > * + * { margin-top: 0.75rem; }
-.george-prose h1, .george-prose h2, .george-prose h3 {
+.bob-prose > * + * { margin-top: 0.75rem; }
+.bob-prose h1, .bob-prose h2, .bob-prose h3 {
   font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif;
   color: #12233F;
   line-height: 1.25;
 }
-.george-prose h1 { font-size: 1.375rem; }
-.george-prose h2 { font-size: 1.125rem; margin-top: 1.25rem; }
-.george-prose h3 { font-size: 1rem; }
-.george-prose strong { color: #12233F; font-weight: 600; }
-.george-prose ul, .george-prose ol { padding-left: 1.15rem; }
-.george-prose ul { list-style: disc; }
-.george-prose ol { list-style: decimal; }
-.george-prose li + li { margin-top: 0.25rem; }
-.george-prose code {
+.bob-prose h1 { font-size: 1.375rem; }
+.bob-prose h2 { font-size: 1.125rem; margin-top: 1.25rem; }
+.bob-prose h3 { font-size: 1rem; }
+.bob-prose strong { color: #12233F; font-weight: 600; }
+.bob-prose ul, .bob-prose ol { padding-left: 1.15rem; }
+.bob-prose ul { list-style: disc; }
+.bob-prose ol { list-style: decimal; }
+.bob-prose li + li { margin-top: 0.25rem; }
+.bob-prose code {
   background: #FBF7EF; border: 1px solid #E4DCCB; border-radius: 4px;
   padding: 0.05rem 0.3rem; font-size: 0.85em;
 }
-/* THE LEDE. George leads with the conclusion, so the opening paragraph is
+/* THE LEDE. Bob leads with the conclusion, so the opening paragraph is
    the finding and the rest is the working. A size says so. */
-.george-prose--lede > p:first-child {
+.bob-prose--lede > p:first-child {
   font-size: 1.0625rem;
   line-height: 1.65;
 }
@@ -142,33 +142,33 @@ body {
 
    The wrapper scrolls only as a last resort, for a table that is neither.
    --------------------------------------------------------------------------- */
-.george-table-wrap { overflow-x: auto; }
-.george-prose table { width: 100%; border-collapse: collapse; }
-.george-prose th, .george-prose td {
+.bob-table-wrap { overflow-x: auto; }
+.bob-prose table { width: 100%; border-collapse: collapse; }
+.bob-prose th, .bob-prose td {
   border-bottom: 1px solid #E4DCCB; padding: 0.4rem 0.6rem;
   text-align: left; font-size: 0.875rem;
   /* Deliberately NOT nowrap: wrapping is what makes the table fit. */
   overflow-wrap: break-word;
 }
-.george-prose th {
+.bob-prose th {
   color: #4A5D78; font-weight: 500;
   font-size: 0.6875rem; letter-spacing: 0.04em; text-transform: uppercase;
 }
-.george-prose td:not(:first-child) { font-variant-numeric: tabular-nums; }
-.george-prose td:first-child { color: #12233F; }
+.bob-prose td:not(:first-child) { font-variant-numeric: tabular-nums; }
+.bob-prose td:first-child { color: #12233F; }
 
 @media (max-width: 639px) {
-  .george-prose table.george-table--stack,
-  .george-prose table.george-table--stack tbody,
-  .george-prose table.george-table--stack tr,
-  .george-prose table.george-table--stack td { display: block; width: 100%; }
+  .bob-prose table.bob-table--stack,
+  .bob-prose table.bob-table--stack tbody,
+  .bob-prose table.bob-table--stack tr,
+  .bob-prose table.bob-table--stack td { display: block; width: 100%; }
   /* The header row's job has moved to the labels on each cell. */
-  .george-prose table.george-table--stack thead { display: none; }
-  .george-prose table.george-table--stack tr {
+  .bob-prose table.bob-table--stack thead { display: none; }
+  .bob-prose table.bob-table--stack tr {
     border-bottom: 1px solid #E4DCCB;
     padding: 0.5rem 0;
   }
-  .george-prose table.george-table--stack td {
+  .bob-prose table.bob-table--stack td {
     border: 0;
     padding: 0.15rem 0;
     display: flex;
@@ -176,25 +176,25 @@ body {
     justify-content: space-between;
     align-items: baseline;
   }
-  .george-prose table.george-table--stack td::before {
+  .bob-prose table.bob-table--stack td::before {
     color: #8496AC;
     font-size: 0.6875rem;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     flex: 0 0 auto;
   }
-  .george-prose table.george-table--stack td:nth-child(1)::before { content: var(--col-1, ""); }
-  .george-prose table.george-table--stack td:nth-child(2)::before { content: var(--col-2, ""); }
-  .george-prose table.george-table--stack td:nth-child(3)::before { content: var(--col-3, ""); }
-  .george-prose table.george-table--stack td:nth-child(4)::before { content: var(--col-4, ""); }
-  .george-prose table.george-table--stack td:nth-child(5)::before { content: var(--col-5, ""); }
-  .george-prose table.george-table--stack td:nth-child(6)::before { content: var(--col-6, ""); }
-  .george-prose table.george-table--stack td:nth-child(7)::before { content: var(--col-7, ""); }
-  .george-prose table.george-table--stack td:nth-child(8)::before { content: var(--col-8, ""); }
+  .bob-prose table.bob-table--stack td:nth-child(1)::before { content: var(--col-1, ""); }
+  .bob-prose table.bob-table--stack td:nth-child(2)::before { content: var(--col-2, ""); }
+  .bob-prose table.bob-table--stack td:nth-child(3)::before { content: var(--col-3, ""); }
+  .bob-prose table.bob-table--stack td:nth-child(4)::before { content: var(--col-4, ""); }
+  .bob-prose table.bob-table--stack td:nth-child(5)::before { content: var(--col-5, ""); }
+  .bob-prose table.bob-table--stack td:nth-child(6)::before { content: var(--col-6, ""); }
+  .bob-prose table.bob-table--stack td:nth-child(7)::before { content: var(--col-7, ""); }
+  .bob-prose table.bob-table--stack td:nth-child(8)::before { content: var(--col-8, ""); }
 }
 
 /* ---------------------------------------------------------------------------
-   George's mark — state motion.
+   Bob's mark — state motion.
 
    The mark is hand-perturbed and has no exact symmetry, so there is no angle
    at which a rotation loops without a jump. Everything here is a SWAY instead:
@@ -216,8 +216,8 @@ body {
    pins the origin to the drawing's design centre rather than to its bounding
    box, which the perturbation has nudged off centre.
    --------------------------------------------------------------------------- */
-.george-mark,
-.george-mark-pulse {
+.bob-mark,
+.bob-mark-pulse {
   transform-box: view-box;
   transform-origin: 50% 50%;
 }
@@ -228,7 +228,7 @@ body {
    by a quarter of a pixel. 1.8% with a slight tilt, on uneven stops, reads as
    alive at 32px and stays quiet at 80px. Still felt more than watched: the
    cycle is long enough that nothing appears to be happening on purpose. */
-@keyframes george-breathe-idle {
+@keyframes bob-breathe-idle {
   0%   { transform: rotate(-0.6deg) scale(1);      }
   34%  { transform: rotate(0.3deg)  scale(1.014);  }
   61%  { transform: rotate(0.9deg)  scale(1.018);  }
@@ -238,21 +238,21 @@ body {
 /* Answering: settle out of the sway, then keep breathing while the words
    arrive. The settle alone ran for 400ms and left the mark ABSOLUTELY STILL
    for the rest of the answer — often twenty seconds — which is the longest
-   and most attended part of a turn and the one place George most looked like
+   and most attended part of a turn and the one place Bob most looked like
    a printed logo. The breath is slower and shallower than idle's: he is
    working, but the work is writing rather than reading. */
-@keyframes george-breathe-answering {
+@keyframes bob-breathe-answering {
   0%, 100% { transform: scale(1);     }
   50%      { transform: scale(1.012); }
 }
 
-@keyframes george-breathe {
+@keyframes bob-breathe {
   0%, 100% { transform: scale(1); }
   50%      { transform: scale(1.03); }
 }
 
 /* Working, and visibly so. */
-@keyframes george-sway {
+@keyframes bob-sway {
   0%   { transform: rotate(-7deg)   scale(1);      }
   19%  { transform: rotate(-2.2deg) scale(1.022);  }
   37%  { transform: rotate(4.1deg)  scale(1.010);  }
@@ -263,7 +263,7 @@ body {
 }
 
 /* The same hand, hurrying. */
-@keyframes george-sway-fast {
+@keyframes bob-sway-fast {
   0%   { transform: rotate(-9deg)   scale(1);      }
   19%  { transform: rotate(-2.6deg) scale(1.026);  }
   37%  { transform: rotate(5.4deg)  scale(1.012);  }
@@ -275,88 +275,88 @@ body {
 
 /* Comes to rest as the answer starts arriving. One-shot, from roughly where
    the sway leaves off, so the mark settles rather than snapping square. */
-@keyframes george-settle {
+@keyframes bob-settle {
   from { transform: rotate(3deg) scale(1.02); }
   to   { transform: none; }
 }
 
 /* One tool result landed. A single beat on an OUTER group, so it composes with
    the sway underneath instead of restarting it. */
-@keyframes george-pulse {
+@keyframes bob-pulse {
   0%   { transform: scale(1); }
   38%  { transform: scale(1.045); }
   100% { transform: scale(1); }
 }
 
-.george-mark--idle      { animation: george-breathe-idle 6.5s ease-in-out infinite; }
-.george-mark--listening { animation: george-breathe 3s ease-in-out infinite; }
-.george-mark--thinking  { animation: george-sway 6s ease-in-out infinite; }
-.george-mark--running   { animation: george-sway-fast 1.9s ease-in-out infinite; }
+.bob-mark--idle      { animation: bob-breathe-idle 6.5s ease-in-out infinite; }
+.bob-mark--listening { animation: bob-breathe 3s ease-in-out infinite; }
+.bob-mark--thinking  { animation: bob-sway 6s ease-in-out infinite; }
+.bob-mark--running   { animation: bob-sway-fast 1.9s ease-in-out infinite; }
 /* Two animations, in order: settle out of the sway once, then hold a breath
    for as long as the answer takes. Without the second the mark froze the
    moment the first word arrived. */
-.george-mark--answering {
-  animation: george-settle 400ms cubic-bezier(0.2, 0.7, 0.3, 1) both,
-             george-breathe-answering 4.5s 400ms ease-in-out infinite;
+.bob-mark--answering {
+  animation: bob-settle 400ms cubic-bezier(0.2, 0.7, 0.3, 1) both,
+             bob-breathe-answering 4.5s 400ms ease-in-out infinite;
 }
 /* Building: the answer is being assembled over results that have landed. A
    half-beat quicker than answering and no larger — the difference has to be
    felt rather than watched, or the mark starts performing. */
-.george-mark--building {
-  animation: george-breathe-answering 3s ease-in-out infinite;
+.bob-mark--building {
+  animation: bob-breathe-answering 3s ease-in-out infinite;
 }
 
 /* Complete: one settle, once, and then nothing. It does not loop, because a
    finished turn is not an activity — the mark holds still and the state
    returns to idle on its own (COMPLETE_SETTLE_MS). No flash, no colour
    change, no tick: an answer arriving is its own confirmation. */
-.george-mark--complete {
-  animation: george-settle 500ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+.bob-mark--complete {
+  animation: bob-settle 500ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 
 /* Error moves not at all. It dims, and the path itself gaps a petal — form,
    never hue: no orange is added or intensified here (UI rule 5 amendment). */
-.george-mark--error     { animation: none; opacity: 0.45; }
+.bob-mark--error     { animation: none; opacity: 0.45; }
 
-.george-mark-pulse      { animation: george-pulse 260ms cubic-bezier(0.3, 0.8, 0.4, 1); }
+.bob-mark-pulse      { animation: bob-pulse 260ms cubic-bezier(0.3, 0.8, 0.4, 1); }
 
 /* The work spine (WorkSpine.tsx). A segment fills once, when its result lands:
-   George did this, therefore this changed. Nothing loops. */
-.george-spine-segment {
+   Bob did this, therefore this changed. Nothing loops. */
+.bob-spine-segment {
   transition: background-color 320ms ease-out, opacity 320ms ease-out,
               border-color 320ms ease-out;
 }
 /* A refused call: hatched, never coloured. The tool answered by declining. */
-.george-spine-segment--refused {
+.bob-spine-segment--refused {
   background-image: repeating-linear-gradient(
     135deg, currentColor 0 1px, transparent 1px 3px);
-  color: #4A5D78; /* george-slate */
+  color: #4A5D78; /* bob-slate */
 }
 
 @media (prefers-reduced-motion: reduce) {
   /* The spine fills instantly. The state is carried by the segment's form
      and its label, so nothing is lost by not animating the fill. */
-  .george-spine-segment { transition: none; }
+  .bob-spine-segment { transition: none; }
   /* Opacity only, and no beat on a tool result. The state is still carried by
      the aria-live label under the mark, so nothing is lost by standing still. */
-  .george-mark--listening,
-  .george-mark--thinking,
-  .george-mark--running {
-    animation: george-mark-fade 3s ease-in-out infinite;
+  .bob-mark--listening,
+  .bob-mark--thinking,
+  .bob-mark--running {
+    animation: bob-mark-fade 3s ease-in-out infinite;
   }
-  .george-mark--idle,
-  .george-mark--answering,
-  .george-mark-pulse { animation: none; }
+  .bob-mark--idle,
+  .bob-mark--answering,
+  .bob-mark-pulse { animation: none; }
   /* Building keeps the fade for the same reason answering does — it is a
      state a reader sits with. Complete is a one-shot settle, which is
      motion for its own sake here, so it simply does not happen. */
-  .george-mark--building { animation: george-mark-fade 3.5s ease-in-out infinite; }
-  .george-mark--complete { animation: none; }
+  .bob-mark--building { animation: bob-mark-fade 3.5s ease-in-out infinite; }
+  .bob-mark--complete { animation: none; }
   /* Answering keeps the fade rather than nothing at all: it is the state a
      reader sits with longest, and stillness there is indistinguishable from
      a stalled turn. */
-  .george-mark--answering { animation: george-mark-fade 4s ease-in-out infinite; }
-  @keyframes george-mark-fade {
+  .bob-mark--answering { animation: bob-mark-fade 4s ease-in-out infinite; }
+  @keyframes bob-mark-fade {
     0%, 100% { opacity: 1; }
     50%      { opacity: 0.72; }
   }
@@ -374,13 +374,13 @@ body {
    is rendering. Nothing here encodes anything the rows do not.
 
    THE ONE COLOUR THAT IS NOT HERE is the accent. A figure never needs you
-   (UI rule 5), so `george-accent` appears nowhere on the desk's surface —
+   (UI rule 5), so `bob-accent` appears nowhere on the desk's surface —
    only on the mark, the needs-you count and the one Promote.
 
    COLOUR IS NEVER THE ONLY SIGNAL. Every object prints its figure and its
    delta beside it, every field has the same rows one control away as a list,
    and the ramps below are built on the validated pair: the CORE of each
-   gradient is `george-data-up` / `george-data-down` exactly, so the dense
+   gradient is `bob-data-up` / `bob-data-down` exactly, so the dense
    middle and every printed mark keep the contrast and the protan/deutan
    separation the palette was measured for. What the ramp adds is light.
    --------------------------------------------------------------------------- */
@@ -476,7 +476,7 @@ body {
   transition: r 520ms cubic-bezier(0.22, 0.68, 0.24, 1);
 }
 
-/* George is reading this object: a diffuse light under it, for as long as a
+/* Bob is reading this object: a diffuse light under it, for as long as a
    call naming it is in flight. Nothing pulses when nothing is running. */
 .desk-object__light {
   opacity: 0;

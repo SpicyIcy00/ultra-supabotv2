@@ -1,8 +1,8 @@
-# George Integration + Staging V1
+# Bob Integration + Staging V1
 
 Starting commit: `dbc7311256e60f38c3d8bbdf83ce708983fd6a6d`.
-Branch: `integration/george-v1`; history preserved, no rebase or cherry-pick.
-Local worktree: `C:/ultra-supabotv2-main/.worktrees/george-v1`.
+Branch: `integration/bob-v1`; history preserved, no rebase or cherry-pick.
+Local worktree: `C:/ultra-supabotv2-main/.worktrees/bob-v1`.
 Production main and Shell PR #2 remain unchanged. No push, deployment, provider
 mutation, database connection or live-model evaluation is authorized in this phase.
 
@@ -45,21 +45,21 @@ All five gates default to true to preserve current production compatibility.
 Staging MUST explicitly set all five false before first boot:
 
 - `SCHEDULERS_ENABLED`: checked before constructing the scheduler or registering
-  its auto-report, chat-report and George workflow jobs. Disabled state is logged.
+  its auto-report, chat-report and Bob workflow jobs. Disabled state is logged.
 - `GEORGE_ENABLE_WORKFLOW_WRITES`: omits the workflow writer from the web route.
   The loop's existing capability registry consequently omits `save_workflow`.
   The workflow router also rejects create, promote and schedule mutation requests.
   Read/list operations and manual deterministic `/run` remain available, including
   their staging run receipts. Promotion/backtest rules are unchanged.
 - `BUSINESS_WRITES_ENABLED`: closes non-read application HTTP methods outside
-  George's personal work and login/passcode change. Blocks operational imports,
+  Bob's personal work and login/passcode change. Blocks operational imports,
   purchasing/packing writes, Sheets calls and brief sending even for admins.
   This is an HTTP gate, not a replacement for DB grants or delivery-credential
   omission. Legacy read endpoints are not a guarantee of zero local lazy writes.
 - `STARTUP_BOOTSTRAP_ENABLED`: controls legacy DDL/backfills/seeds.
 - `AUTO_MIGRATE_ON_START`: controls launcher Alembic execution.
 
-George's complete write registry is `pin_answer`, `save_workflow`, `create_page`,
+Bob's complete write registry is `pin_answer`, `save_workflow`, `create_page`,
 `edit_page`. There is no purchasing/StoreHub/Telegram writer in that registry.
 Pin and Page writers stay enabled and owner-bound; workflow writer is omitted.
 
@@ -162,7 +162,7 @@ Required database contents:
 
 - `public` with actual retail, inventory, purchasing/transfer and vending schema,
   auth/permission and legacy Operations tables, and `alembic_version`.
-- `george` with conversations, tool_calls, gaps, pins/pin_runs, workflows,
+- `bob` with conversations, tool_calls, gaps, pins/pin_runs, workflows,
   versions, schedules, runs and posts at the SOURCE revision. Pages/page_events
   are added by q1r2s3t4u5v6 if the source predates it.
 - Vending views `v_vending_order_lines_php`, `v_vending_orders_php`,
@@ -174,9 +174,9 @@ Required database contents:
 
 Roles, with fresh staging passwords and no reused production credentials:
 
-1. A provisioning/migration owner (not held by George) for restores and Alembic.
+1. A provisioning/migration owner (not held by Bob) for restores and Alembic.
 2. An application login for DATABASE_URL: CONNECT, schema USAGE; SELECT on
-   required public tables; required CRUD on personal George Pages/Pins, run
+   required public tables; required CRUD on personal Bob Pages/Pins, run
    records, posts and conversation visibility; appropriate auth/passcode access.
    Give RLS policies for the actual role. Historical migrations create policies
    for the migration role, so using a DIFFERENT application role requires explicit
@@ -186,8 +186,8 @@ Roles, with fresh staging passwords and no reused production credentials:
    `tools/george_ro_role.sql` lists retail/inventory/StoreHub grants. Also verify
    SELECT on the three vending views and direct vending sources used by tools;
    the script's vending RLS policies are not a complete vending GRANT manifest.
-   No access to `george`.
-4. `george_log`: LOGIN NOINHERIT, USAGE on george, INSERT-only on conversations,
+   No access to `bob`.
+4. `george_log`: LOGIN NOINHERIT, USAGE on bob, INSERT-only on conversations,
    tool_calls, gaps and posts, with INSERT RLS policies. No SELECT, UPDATE,
    DELETE or business-table access. See `agent/sql/george_log_role.sql` and the
    posts migration. Do not blindly replay CREATE ROLE/TABLE scripts on a clone.
@@ -248,7 +248,7 @@ every skip. It removes model/DB credentials from its child environment. CI runs
 this and full frontend tests/typecheck/build on main/integration pushes and PRs.
 Manual live jobs use protected environment-scoped STAGING secrets, not repository
 production secrets; missing configuration fails. Configure required reviewers on
-`george-staging` and `george-model-evals`. Model evaluations are manual-only and
+`bob-staging` and `bob-model-evals`. Model evaluations are manual-only and
 remain unapproved. CI execution itself was not triggered locally.
 
 Once a database is provisioned and identity/grants are independently verified:
@@ -261,7 +261,7 @@ support/system variables; no production redirects/aliases; protected GitHub
 environments; separate URL; no branch push that auto-deploys onto production.
 
 Proposed later publish command (NOT RUN):
-`git push --set-upstream origin integration/george-v1` from this worktree.
+`git push --set-upstream origin integration/bob-v1` from this worktree.
 No main update, no force push, no PR. Deployment is a separate approval: connect
 only the dedicated staging services to this branch, run explicit migration on
 the verified staging target, launch with gates disabled, then check health/auth,

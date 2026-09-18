@@ -2,7 +2,7 @@
 
 Run explicitly when provisioning a staging clone; normal staging boot disables
 STARTUP_BOOTSTRAP_ENABLED. See ops/GEORGE_INTEGRATION_V1.md for classification.
-This is outside George and uses the application role.
+This is outside Bob and uses the application role.
 """
 
 async def bootstrap():

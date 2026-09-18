@@ -1,5 +1,5 @@
 """
-The deterministic checks a behavioural eval applies to one George turn.
+The deterministic checks a behavioural eval applies to one Bob turn.
 
 PURE. No model, no database. Every check reads the turn's frames and results
 and returns a finding, so the checks themselves can be unit-tested
@@ -14,7 +14,7 @@ WHAT IS AND IS NOT CHECKED HERE.
                        prose numerals).
   attribution math     no "X% of the decline came from Y".
   driver naming        which driver the prose names as stronger, so a
-                       scenario can compare it with the rows George read.
+                       scenario can compare it with the rows Bob read.
   window consistency   every compared call in a round shares one window.
   enumeration          no fan-out of the same call over subjects.
   limitation           the answer says what the reads do not establish.
@@ -89,7 +89,7 @@ def grounded_numerals(answer: str, results: Iterable[dict],
     checks — no ungrounded numerals, no internal vocabulary, leads with a
     reading, inside the paragraph budget, nothing restated, no closing offer.
     An eval that cannot tell a colleague from a shrug is not measuring the
-    product, and the trust machinery pushes George toward the shrug.
+    product, and the trust machinery pushes Bob toward the shrug.
 
     A scenario that asks for a figure asserts this is non-empty. One that
     expects a refusal does not.
@@ -107,7 +107,7 @@ def grounded_numerals(answer: str, results: Iterable[dict],
             decimals -= 3 if suffix == "k" else 6
         # THE ONE EXCLUSION THIS DOES NOT SHARE WITH `ungrounded_numerals`, and
         # the docstring above used to promise it shared every one. That promise
-        # was wrong, and P1.e's v2 run is where it showed: George answered "what
+        # was wrong, and P1.e's v2 run is where it showed: Bob answered "what
         # is running low at Greenhills?" by naming the product that empties
         # today and the 1 unit left on it — both figures `get_replenishment`
         # returned — and this reported that he had cited none, so the gate
@@ -213,7 +213,7 @@ def attribution_claims(answer: str, results: Iterable[dict] = ()) -> list[str]:
     here on "those account for 75% of the units the plan requests" — which is
     `get_replenishment`'s own notice, quoted back in its own words: *"those
     lines account for 4,764 of the 6,344 units requested, 75% of the plan."*
-    George had a receipt; the check read the phrase and not the receipt, and a
+    Bob had a receipt; the check read the phrase and not the receipt, and a
     gate that fails the same true sentence on every run is a gate people stop
     reading.
 
@@ -312,7 +312,7 @@ def named_driver(answer: str) -> Optional[str]:
 def stronger_from_rows(tx_change_pct: Optional[float], atp_change_pct: Optional[float],
                        clear_gap: float = 5.0) -> Optional[str]:
     """
-    What the rows George read say: the driver with the larger |change_pct|,
+    What the rows Bob read say: the driver with the larger |change_pct|,
     or 'both' when the two are within `clear_gap` points. None when either
     is missing. This is the eval's own arithmetic over tool rows — it never
     reaches the answer.
@@ -360,7 +360,7 @@ def localizing_reads(calls: Iterable[dict]) -> list[dict]:
 
 def asked_reads(calls: Iterable[dict]) -> int:
     """
-    The reading calls George MADE, as the loop's convergence cap counts them
+    The reading calls Bob MADE, as the loop's convergence cap counts them
     (P2S.10): a call asked as one — a metric set, get_change — counts once
     however many reads it became, and a duplicate served from the turn's
     own record does not count at all.
@@ -533,7 +533,7 @@ class Turn:
     done: dict = field(default_factory=dict)
     page_context: Optional[dict] = None
     narration: str = ""
-    # page_changed frames, in order: a page George created or changed, from
+    # page_changed frames, in order: a page Bob created or changed, from
     # the committed result (Page Workshop V1).
     page_changes: list[dict] = field(default_factory=list)
     # EVERY FRAME WITH THE CLOCK ON IT (P1.b, 2026-09-13): (event, data,
@@ -564,7 +564,7 @@ class Turn:
                  for c in self.ok_calls if c.get("pinnable")]
         return [
             {"role": "user", "text": self.question},
-            {"role": "george", "text": self.answer, "tool_calls": calls},
+            {"role": "bob", "text": self.answer, "tool_calls": calls},
         ]
 
 

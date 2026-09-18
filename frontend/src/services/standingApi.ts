@@ -1,5 +1,5 @@
 /**
- * Standing questions — questions George has been asked to keep asking.
+ * Standing questions — questions Bob has been asked to keep asking.
  *
  * There is no "briefing" endpoint here, and there will not be one. What the
  * room opens on is the newest ANSWER to a standing question, drawn by the
@@ -12,7 +12,7 @@
  */
 import axios from 'axios';
 
-const API_BASE = '/api/v1/george/standing';
+const API_BASE = '/api/v1/bob/standing';
 
 export interface StandingQuestion {
   id: string;

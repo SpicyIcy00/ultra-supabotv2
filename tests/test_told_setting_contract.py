@@ -6,7 +6,7 @@ per gram products cause they kinda dont matter and product categories too
 will it remeber it and actually use that info?" Checked against the code the
 same day, three things were wrong, and each has its own section here:
 
-  1. IT WOULD LAPSE. Told views shared the twelve prompt slots with George's
+  1. IT WOULD LAPSE. Told views shared the twelve prompt slots with Bob's
      own, newest-confirmed first, and he re-confirms his own constantly.
   2. IT CHANGED WORDS, NOT READS. No read could leave a category out, so the
      rankings still led with per-gram lines while he talked around them.
@@ -25,7 +25,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from agent import beliefs, loop as george_loop, write_tools
+from agent import beliefs, loop as bob_loop, write_tools
 from tools import _common
 from tools._common import load_defs, req
 
@@ -290,28 +290,28 @@ def test_the_loop_hands_the_setting_to_exactly_the_reads_it_declares():
     ctx = _Ctx({"left_out_categories": BOUND})
     declared = req(DEFS, "settings.declared.left_out_categories.participates_in")
     for tool in declared:
-        assert george_loop._bound_settings_for(tool, ctx) == {"left_out": BOUND}
-    assert george_loop._bound_settings_for("get_attention", ctx) == {}
-    assert george_loop._bound_settings_for("get_sales", _Ctx(None)) == {}
+        assert bob_loop._bound_settings_for(tool, ctx) == {"left_out": BOUND}
+    assert bob_loop._bound_settings_for("get_attention", ctx) == {}
+    assert bob_loop._bound_settings_for("get_sales", _Ctx(None)) == {}
 
 
 def test_every_read_the_declaration_names_takes_it_and_the_model_never_sees_it():
     import inspect
     declared = req(DEFS, "settings.declared.left_out_categories.participates_in")
     for tool in declared:
-        param = inspect.signature(george_loop.TOOL_FUNCTIONS[tool]).parameters["left_out"]
+        param = inspect.signature(bob_loop.TOOL_FUNCTIONS[tool]).parameters["left_out"]
         assert param.kind is inspect.Parameter.KEYWORD_ONLY
-    for schema in george_loop.build_tool_schemas(DEFS):
+    for schema in bob_loop.build_tool_schemas(DEFS):
         assert "left_out" not in schema["input_schema"]["properties"], schema["name"]
 
 
 def test_a_left_out_the_model_sends_is_dropped():
     """He may record what he was told; he may never bind a value himself."""
     import asyncio
-    args = asyncio.run(george_loop._injected_args(
+    args = asyncio.run(bob_loop._injected_args(
         "get_sales", {"group_by": "product", "left_out": ["tradsnax"]}, _Ctx(None)))
     assert "left_out" not in args
-    args = asyncio.run(george_loop._injected_args(
+    args = asyncio.run(bob_loop._injected_args(
         "get_sales", {"group_by": "product", "left_out": ["tradsnax"]},
         _Ctx({"left_out_categories": BOUND})))
     assert args["left_out"] == BOUND
@@ -325,7 +325,7 @@ def test_he_is_told_on_the_tool_to_record_what_to_ignore_the_same_turn():
 
 def test_the_web_process_and_the_schedule_both_pass_what_is_bound():
     import inspect
-    from app.api.v1.routes import george as route
+    from app.api.v1.routes import bob as route
     from app.services import standing_runner
     assert "bound_settings(rows, _load_defs())" in inspect.getsource(route._beliefs_for)
     assert "bound_settings=bound_settings or None" in inspect.getsource(route.ask)
@@ -349,9 +349,9 @@ def test_a_turn_hands_the_bound_setting_to_its_reads_and_not_to_the_model(monkey
     fake = FakeClient([[_ToolUse("tu-1", "get_sales", products),
                         _ToolUse("tu-2", "get_change", {"store": "North Edsa"})],
                        [_TextBlock("Done.")]])
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
     StubLog.instances.clear()
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
     dispatched: list[tuple[str, dict]] = []
 
     async def fake_read(name, args):
@@ -360,10 +360,10 @@ def test_a_turn_hands_the_bound_setting_to_its_reads_and_not_to_the_model(monkey
                                       "snapshot_timestamp": "2026-09-19T00:00:00+00:00"}},
                 None, 1)
 
-    monkeypatch.setattr(george_loop, "_call_tool", fake_read)
+    monkeypatch.setattr(bob_loop, "_call_tool", fake_read)
 
     async def collect():
-        return [f async for f in george_loop.run(
+        return [f async for f in bob_loop.run(
             "what fell?", bound_settings={"left_out_categories": BOUND})]
 
     frames = asyncio.run(collect())

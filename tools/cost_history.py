@@ -1,5 +1,5 @@
 """
-George — cost history tool.
+Bob — cost history tool.
 
 One public function: get_cost_history(sku).
 

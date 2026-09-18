@@ -1,5 +1,5 @@
 """
-Investigation V1 — the definitions George reasons with, held to the trusted
+Investigation V1 — the definitions Bob reasons with, held to the trusted
 definitions they rest on.
 
 NO DATABASE, NO API. Definitions and pure functions only.
@@ -12,7 +12,7 @@ could drift from what they claim to rest on, and each is pinned here:
   1. metrics.net_sales.drivers claims a relationship. It is not asserted
      there; it is the ATP formula rearranged, so the list must be exactly the
      derived metric whose numerator is net_sales plus that metric's
-     denominator. A driver list that named something else would be George
+     denominator. A driver list that named something else would be Bob
      decomposing a figure by a relationship nobody defined.
   2. comparisons.previous_period.valid_group_by grew by product and category.
      It must never grow by a time bucket — that is the lag series the file
@@ -73,7 +73,7 @@ def test_an_investigation_is_opened_by_an_intent_and_not_by_a_word():
 
 
 def test_the_kinds_that_open_one_are_kinds_a_message_can_be():
-    """A kind named here and nowhere else would be vocabulary George cannot use."""
+    """A kind named here and nowhere else would be vocabulary Bob cannot use."""
     declared = set(req(INV, "message_kinds.kinds"))
     assert set(req(OPENS, "message_kinds")) <= declared
     # An intent and an observation carry the request without a verb, which is
@@ -105,7 +105,7 @@ def test_a_focused_message_asked_to_be_taken_apart_gets_a_second_read():
     """
     BROAD has named its second read since UNDERSTAND ("and then ONE
     localization"). FOCUSED named none, so "the smallest set that completely
-    answers it" was one read and George was inside his allowance making it.
+    answers it" was one read and Bob was inside his allowance making it.
     """
     focused = req(INV, "scope.kinds.focused")
     apart = req(focused, "taken_apart")
@@ -345,7 +345,7 @@ def test_the_get_sales_description_names_the_drivers_and_the_product_route():
 def test_the_prompt_no_longer_opens_the_ladder_on_the_word_why():
     """
     The defect, in one line of the prompt. It is not enough that the verbs are
-    in the yaml: the sentence George reads has to name the intent.
+    in the yaml: the sentence Bob reads has to name the intent.
     """
     prompt = _prompt()
     assert '"Why" is an investigation' not in prompt
@@ -399,7 +399,7 @@ def test_the_lookup_guard_is_in_the_prompt_where_breadth_is_decided():
 def test_the_persona_no_longer_waits():
     """
     "you tell the owner the one thing that matters, and wait" was the first
-    thing the prompt said about who George is. The owner: "i shouldnt need to
+    thing the prompt said about who Bob is. The owner: "i shouldnt need to
     ask why, it has intiative".
     """
     prompt = _prompt()
@@ -416,7 +416,7 @@ def test_the_persona_no_longer_waits():
 
 def test_understanding_not_breadcrumbs_is_the_owners_principle_rendered():
     """
-    The owner, 2026-09-18: "George brings me understanding, not breadcrumbs.
+    The owner, 2026-09-18: "Bob brings me understanding, not breadcrumbs.
     I should ask follow-up questions because I want to steer, challenge,
     explore, decide or act". The prompt renders the yaml's sentence whole.
     """
@@ -428,7 +428,7 @@ def test_understanding_not_breadcrumbs_is_the_owners_principle_rendered():
 def test_explanations_the_data_can_test_are_tested_before_one_is_offered():
     """
     CHECK, 2026-09-18. The simulation that day: OPUS "fell 15.9%" against a
-    week holding the 31 Aug holiday Monday, and nothing let George see it.
+    week holding the 31 Aug holiday Monday, and nothing let Bob see it.
     Each explanation names a read that already exists, and the prompt says
     all of them, plus what to do with one it cannot test.
     """
@@ -492,7 +492,7 @@ def test_the_schema_he_writes_with_says_what_the_prompt_says():
     compose schema — read at the moment he writes — still said "the one thing
     you would do or check next … where an investigation stopped, this is where
     it says what to look at", and asked for `asks` "you could answer with a
-    read or two". The schema George actually receives is checked, not the yaml.
+    read or two". The schema Bob actually receives is checked, not the yaml.
     """
     import json as _json
     from agent.loop import build_tool_schemas

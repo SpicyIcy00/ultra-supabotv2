@@ -34,7 +34,7 @@ from tests import pages_live                                                  # 
 if not pages_live.available():
     pytest.skip("DATABASE_URL is not set", allow_module_level=True)
 
-from app.models.george_pin import GeorgePin                                   # noqa: E402
+from app.models.bob_pin import BobPin                                   # noqa: E402
 from app.services import page_operations                                      # noqa: E402
 from app.services.thread_access import conversations_in_thread                # noqa: E402
 
@@ -142,8 +142,8 @@ def test_keeping_a_thread_writes_a_page_the_thread_can_find_again():
             ids = await conversations_in_thread(s, me, thread)
             assert second in ids and first in ids
             pins = (await s.execute(
-                select(GeorgePin).where(GeorgePin.created_by == me,
-                                        GeorgePin.conversation_id.in_(ids))
+                select(BobPin).where(BobPin.created_by == me,
+                                        BobPin.conversation_id.in_(ids))
             )).scalars().all()
             assert len(pins) == 2
             assert {str(p.page_id) for p in pins} == {page_id}
@@ -155,7 +155,7 @@ def test_keeping_a_thread_writes_a_page_the_thread_can_find_again():
 
 def test_a_page_built_against_no_conversation_is_not_found_by_any_thread():
     """
-    George's `create_page` fills the conversation in from the loop and the
+    Bob's `create_page` fills the conversation in from the loop and the
     button fills it in from the room, but a caller may send none — and then the
     page is a page, not a kept thread. It must not be attributed to a thread by
     a title, a time, or anything else that looks close.
@@ -173,8 +173,8 @@ def test_a_page_built_against_no_conversation_is_not_found_by_any_thread():
             await s.flush()
             ids = await conversations_in_thread(s, me, thread)
             pins = (await s.execute(
-                select(GeorgePin).where(GeorgePin.created_by == me,
-                                        GeorgePin.conversation_id.in_(ids))
+                select(BobPin).where(BobPin.created_by == me,
+                                        BobPin.conversation_id.in_(ids))
             )).scalars().all()
             assert pins == []
 

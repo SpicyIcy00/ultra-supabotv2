@@ -1,5 +1,5 @@
 """
-George — stock history tool.
+Bob — stock history tool.
 
 One public function: get_stock_history().
 

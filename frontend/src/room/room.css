@@ -1,7 +1,7 @@
 /*
- * THE ROOM — George's surface.
+ * THE ROOM — Bob's surface.
  *
- * The beside room of *George, Ahead of Me* (`ops/ideal/george-ahead-of-me.html`),
+ * The beside room of *Bob, Ahead of Me* (`ops/ideal/bob-ahead-of-me.html`),
  * ported rather than re-derived: its tokens, its type, its composition.
  *
  * NO GRAIN. NO NOISE. NO TEXTURE. Asked for explicitly, in those words.
@@ -16,7 +16,7 @@
  *
  * What is left, each meaning one thing and nothing else:
  *   --up / --down / --flat   the direction a tool declared, inside a mark
- *   --george                 his voice — chrome, never a measurement
+ *   --bob                 his voice — chrome, never a measurement
  *   --accent                 "needs you". Approvals, and nothing else.
  * And identity, on ONE channel since P2S.2(e): a store's swatch — the 8px
  * dot before its name — and an opened object's rule in the same hue. Never a
@@ -28,7 +28,7 @@
 /*
  * THE GROUND IS THE DESIGN'S (P2S.1(a), 2026-09-17).
  *
- * Every value in this block is copied from `ops/ideal/george-ahead-of-me.html`,
+ * Every value in this block is copied from `ops/ideal/bob-ahead-of-me.html`,
  * the page the owner declared the design: *"everything ive been leading you to
  * this final artifact is it"*. His first fix in it was *"i dont like the color
  * scheme"*, and the answer was a GRAPHITE ground — near-black with a cool
@@ -77,10 +77,10 @@
   --up: 47, 168, 116;       /* #2FA874 */
   --down: 232, 98, 75;      /* #E8624B */
   --flat: 138, 143, 152;    /* #8a8f98 */
-  /* George's voice. The artifact draws him in the primary ink and nothing
+  /* Bob's voice. The artifact draws him in the primary ink and nothing
      warmer: the one warm hue on the page is "needs you". */
-  --george: 247, 248, 248;
-  --on-george: #0f1011;
+  --bob: 247, 248, 248;
+  --on-bob: #0f1011;
 
   /* THE ONE COLOUR THAT MEANS "NEEDS YOU" (CLAUDE.md UI rule 5). The design's
      own warm accent, with the ink that sits on it. */
@@ -115,7 +115,7 @@
 /* THE OLD COMPONENTS, LIT FOR THIS ROOM (2026-09-15).
 
    `/pages/:id` renders PinnedPage and everything under it, and every colour in
-   that tree comes from six `george-*` chrome tokens (src/index.css). They are
+   that tree comes from six `bob-*` chrome tokens (src/index.css). They are
    redefined here to this room's own ground and ink, so a kept page sits on the
    same graphite as the board — until P2S.3(g) deletes that renderer. */
 .room {
@@ -128,7 +128,7 @@
 }
 
 /* AND THE TYPE. The old headings take the chrome's sans: the design's serif is
-   George's VOICE (the claim, the standing text, next), and a kept page's
+   Bob's VOICE (the claim, the standing text, next), and a kept page's
    heading is chrome. The bar a ranking draws is bridged to no direction. */
 .room {
   --g-serif: var(--sans);
@@ -147,7 +147,7 @@
     --shadow-1: 0 1px 2px rgba(16, 17, 19, 0.08);
     --shadow-2: 0 1px 2px rgba(16, 17, 19, 0.08), 0 12px 32px -18px rgba(16, 17, 19, 0.35);
     --up: 26, 138, 90; --down: 200, 68, 43; --flat: 107, 112, 121;
-    --george: 16, 17, 19; --on-george: #ffffff;
+    --bob: 16, 17, 19; --on-bob: #ffffff;
     --accent: 183, 121, 31; --on-accent: #ffffff;
     --c-1: #2a78d6; --c-2: #eb6834; --c-3: #1baf7a; --c-4: #eda100;
     --c-5: #e87ba4; --c-6: #008300; --c-7: #4a3aa7; --c-8: #e34948;
@@ -164,7 +164,7 @@
   --shadow-1: 0 1px 2px rgba(16, 17, 19, 0.08);
   --shadow-2: 0 1px 2px rgba(16, 17, 19, 0.08), 0 12px 32px -18px rgba(16, 17, 19, 0.35);
   --up: 26, 138, 90; --down: 200, 68, 43; --flat: 107, 112, 121;
-  --george: 16, 17, 19; --on-george: #ffffff;
+  --bob: 16, 17, 19; --on-bob: #ffffff;
   --accent: 183, 121, 31; --on-accent: #ffffff;
   --c-1: #2a78d6; --c-2: #eb6834; --c-3: #1baf7a; --c-4: #eda100;
   --c-5: #e87ba4; --c-6: #008300; --c-7: #4a3aa7; --c-8: #e34948;
@@ -193,7 +193,7 @@
 .r-say--lead { font-size: 20px; line-height: 1.55; }
 
 /* THE WORDS (P2S.1(c)) — the design's `.bs-claim`, `.bs-stand` and `.bs-next`.
-   Serif, because this is George speaking; the chrome around it is sans. */
+   Serif, because this is Bob speaking; the chrome around it is sans. */
 .r-reading { margin: 0; }
 .r-say--claim {
   margin: 0;
@@ -210,7 +210,7 @@
 /* HIS WORDS ARE NEVER GREY (the owner, 2026-09-18: "i dont like how alot of text
    is grey if it says something in a chart it should already be white just use
    other methods to emphasize things … just dont desaturate or lower other things
-   to emphsize something else"). Everything George SAYS, on a chart or under
+   to emphsize something else"). Everything Bob SAYS, on a chart or under
    him, is drawn in --ink; what stands out does so by size, weight and italic,
    never by greying what is around it. Grey is left to the frame: labels, axis
    ticks, the read-time receipts. Held by `ink.test.ts`. */
@@ -1029,7 +1029,7 @@
   border: 0; background: none; padding: 0; cursor: pointer; font: inherit;
   color: var(--ink); text-decoration: underline; text-underline-offset: 3px;
 }
-.r-more:hover { color: rgb(var(--george)); }
+.r-more:hover { color: rgb(var(--bob)); }
 
 /* ------------------------------------------------------------- opened object
    THE ONE PLACE A HUE STILL MEANS SOMETHING (P2.l, 2026-09-15).
@@ -1084,7 +1084,7 @@
 .r-work {
   margin: 0;
   font: 400 12.5px/1.6 var(--sans);
-  color: rgb(var(--george));
+  color: rgb(var(--bob));
   display: flex; align-items: baseline; gap: 8px;
 }
 .r-work--done { color: var(--ink-3); }
@@ -1175,7 +1175,7 @@
 /* --------------------------------------------------------- composed shapes
    The marks of the grammar (Spec.tsx). Every colour here is a DIRECTION a row
    declared, or `--flat` where it declared none (P2.l): there is no palette
-   choice in this block, because a hue George picked would be a claim no tool
+   choice in this block, because a hue Bob picked would be a claim no tool
    made — and a hue his COLUMN picked was the same claim one step removed. */
 .r-spec-panel {
   border: 1px solid var(--edge); border-radius: 14px; padding: 14px 16px;
@@ -1283,7 +1283,7 @@
   border: 0; background: none; padding: 0; cursor: pointer;
   color: inherit; font: inherit;
 }
-.r-item-link:hover .r-item-name, .r-item-link:focus-visible .r-item-name { color: rgb(var(--george)); }
+.r-item-link:hover .r-item-name, .r-item-link:focus-visible .r-item-name { color: rgb(var(--bob)); }
 
 /* A word that says what state something is in. Never a colour on its own —
    the word is the carrier and the tint only agrees with it. */
@@ -1338,7 +1338,7 @@
 .r-empty { padding: 34px 0; }
 
 .r-link { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
-.r-link:hover { color: rgb(var(--george)); }
+.r-link:hover { color: rgb(var(--bob)); }
 
 .r-newpage { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
 .r-field {
@@ -1415,7 +1415,7 @@
 .r-spec-extreme--lo { color: var(--ink-2); }
 
 /* since you last looked — one line, above what lands */
-.r-since { margin: 0 0 14px; color: rgb(var(--george)); }
+.r-since { margin: 0 0 14px; color: rgb(var(--bob)); }
 
 /* WHAT CAME BEFORE THIS FINDING — one quiet line above the reading
    (Earlier.tsx). Quiet on purpose: it is the board remembering, not the board
@@ -1437,7 +1437,7 @@
 
 /* ------------------------------------------------------- how to read it
    One quiet line under an instrument saying what the drawing means — the
-   track, the fill, the mark. Never a figure of George's; the only numbers
+   track, the fill, the mark. Never a figure of Bob's; the only numbers
    here are a row's own. The design board carried these and the room did
    not, and an instrument nobody can read is decoration. */
 .r-spec-how {
@@ -1453,7 +1453,7 @@
    element in the room that wears a categorical hue, always beside the name it
    stands for, so identity is never colour alone (and the light theme's three
    sub-3:1 slots are relieved by that label, as the validator requires). A row
-   George pointed at rings its swatch; the mark beside it is the verdict. */
+   Bob pointed at rings its swatch; the mark beside it is the verdict. */
 .r-sw {
   display: inline-block; flex: none;
   width: 8px; height: 8px; border-radius: 50%;
@@ -1472,7 +1472,7 @@
 /* THE ROW HE POINTED AT GAINS; NOTHING ELSE LOSES (the owner, 2026-09-18: "use
    other methods to emphasize … just dont desaturate or lower other things").
    Its name in weight and its swatch ringed — and NO BAND behind it: a band of
-   `--george` was tried the same day and the owner's screenshots came back with
+   `--bob` was tried the same day and the owner's screenshots came back with
    "wtf happend here dont do that" — on the dark ground it read as grey boxes,
    and neighbouring lit rows stacked into a slab. */
 tr[data-lit="yes"] td { font-weight: 600; }
@@ -1485,7 +1485,7 @@ tr[data-lit="yes"] td { font-weight: 600; }
  * learns one layout and reads every block with it.
  *
  * COLOUR IS DIRECTION. Four data colours and no more: `--up`, `--down`,
- * `--flat`, and `--george` for the row that matters where the read declared
+ * `--flat`, and `--bob` for the row that matters where the read declared
  * no direction. `palette.test.ts` fails on a fifth. Identity never enters a
  * drawing: a store's hue is its swatch, beside its name (the section above).
  *
@@ -1653,7 +1653,7 @@ button.r-mk-name[aria-pressed="true"], .r-mk-cellname[aria-pressed="true"] {
   text-transform: uppercase;
   color: var(--ink-2);
 }
-/* GEORGE'S OWN WORDS, in the sans he speaks in — never the mono the derived
+/* BOB'S OWN WORDS, in the sans he speaks in — never the mono the derived
    lines use. The two voices are told apart by TYPE and nothing else, and a
    reason is something he wrote. */
 .r-offer-why { font: 400 12.5px/1.45 var(--sans); color: var(--ink-2); }

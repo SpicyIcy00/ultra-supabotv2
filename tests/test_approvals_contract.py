@@ -27,7 +27,7 @@ import pytest
 
 pytest.importorskip("pydantic", reason="the route module defines Pydantic models")
 
-from app.api.v1.routes.george_workflows import ApprovalOut  # noqa: E402
+from app.api.v1.routes.bob_workflows import ApprovalOut  # noqa: E402
 
 _ROOT = Path(__file__).resolve().parents[1]
 _TS = _ROOT / "frontend" / "src" / "types" / "workflows.ts"

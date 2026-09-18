@@ -5,7 +5,7 @@
  * is that, and the whole of it: a numeral in the claim that some read's rows
  * already hold is drawn underlined, and touching it opens that read. Nothing
  * here decides what a figure MEANS and nothing here computes one — it is a
- * lookup, from a numeral George wrote to a number a tool returned.
+ * lookup, from a numeral Bob wrote to a number a tool returned.
  *
  * A MIRROR OF agent/prose.py, DELIBERATELY. The server matches prose numerals
  * against returned rows in three places already — the restatement gate, the
@@ -21,7 +21,7 @@
  * nowhere is worse than no link. CLAUDE.md rule 9 stands: production does not
  * check the answer's numerals against the rows, and this does not either. It
  * answers a different question — which read holds this one — and a numeral it
- * cannot place carries George's own words and nothing else.
+ * cannot place carries Bob's own words and nothing else.
  *
  * AND IT NOW SAYS WHICH READ, NOT JUST THAT THERE IS ONE (P2.b). A placed
  * figure carries the read's index, so two figures out of the same read wear
@@ -29,7 +29,7 @@
  * is returned as a piece of its own rather than folded back into the prose,
  * so the reading can draw it quietly instead of identically.
  */
-import type { ToolCall } from '../types/george';
+import type { ToolCall } from '../types/bob';
 import { readIndexes } from './work';
 
 /**
@@ -190,7 +190,7 @@ export interface ClaimPiece {
  * the string it was given without asking whether anything was found.
  *
  * AN UNPLACED FIGURE IS NOT AN ACCUSATION. It says there is nothing here to
- * open, and no more than that: George works out differences and remainders in
+ * open, and no more than that: Bob works out differences and remainders in
  * his own head and is allowed to, CLAUDE.md rule 9 leaves checking prose
  * numerals to the evals, and this module cannot see the arithmetic. What the
  * surface owes a person is the honest difference between a figure with a read

@@ -1,4 +1,4 @@
-"""The weekly sweep: read back the failures George records about himself.
+"""The weekly sweep: read back the failures Bob records about himself.
 
 `agent/loop.py` writes a row to `george.gaps` every time a turn goes wrong —
 an API error, a refused tool, a read that came back empty, a caveat forced
@@ -12,7 +12,7 @@ turns in the same window, and shows the most recent example of each with the
 question that provoked it. It writes nothing and creates nothing: the rows are
 already there.
 
-**An error George records is a defect report he filed himself.** What comes
+**An error Bob records is a defect report he filed himself.** What comes
 out of here goes into `ops/DOGFOOD_LOG.md` like any other report, rather than
 being fixed quietly or shrugged at. The run prompt is in `ops/NOW.md` 2b.
 
@@ -22,7 +22,7 @@ The credential is named, never printed: `--url-env` gives the environment
 variable to connect with, `DATABASE_URL` by default, loaded from `backend/.env`
 if it is not already in the environment. `george_log` cannot be used — it holds
 INSERT and no SELECT, which is the whole point of that role — and `george_ro`
-is deliberately kept out of the `george` schema, so reading the log is an
+is deliberately kept out of the `bob` schema, so reading the log is an
 operator's act with an operator's credential.
 """
 from __future__ import annotations
@@ -67,7 +67,7 @@ KINDS: dict[str, str] = {
     "duplicate_read":          "the same read was asked for twice in one turn",
     "convergence_cap":         "the answer was rewritten until the cap stopped it",
     "iteration_cap":           "the turn ran out of iterations without finishing",
-    "no_tool_call":            "George answered without reading anything",
+    "no_tool_call":            "Bob answered without reading anything",
     "answer_without_prose":    "the turn drew objects and said nothing — shapes and silence",
     "notice_forced":           "a caveat had to be forced into the answer",
     "claim_not_said":          "the claim he asked to be lit is not in what he said, so nothing was lit",
@@ -90,7 +90,7 @@ KINDS: dict[str, str] = {
 
 # A gap whose presence is a defect by itself, versus one that is ordinary
 # operating noise. `empty_result` on a question about a shop that closed is
-# George behaving correctly; `unhandled` never is. The report separates them
+# Bob behaving correctly; `unhandled` never is. The report separates them
 # so a week with two hundred rows still says which ten matter.
 DEFECTS = {
     "api_error", "unhandled", "iteration_cap", "convergence_cap",

@@ -46,7 +46,7 @@ const ROWS = [
 ];
 
 const TURN: AnswerTurn = {
-  role: 'george',
+  role: 'bob',
   text: 'Both shops are up on last week.',
   thinking: '',
   at: '2026-09-11T08:00:00Z',
@@ -143,7 +143,7 @@ describe('a control hands back the right intent', () => {
 describe('a recommendation shows the verb and the read’s figure', () => {
   it('never invents a number of its own', () => {
     draw([object('recommendation', { subject: 'Rockwell', action: 'order' })]);
-    // The verb is George's, from the closed list. Since P1.e it LEADS the
+    // The verb is Bob's, from the closed list. Since P1.e it LEADS the
     // block as its title, because it is the one word the read has not got.
     expect(screen.getByText('Order Rockwell')).toBeTruthy();
     // The figure is the read's, rendered by the system.
@@ -152,7 +152,7 @@ describe('a recommendation shows the verb and the read’s figure', () => {
 });
 
 
-describe('a shape George composed', () => {
+describe('a shape Bob composed', () => {
   // The grammar's whole promise: a shape nobody listed in advance, drawing
   // only values the renderer resolved from rows.
   const SPEC = {
@@ -229,7 +229,7 @@ describe('nothing on a figure arranges it by hand (P2S.1)', () => {
     expect(document.querySelector('.r-acts, .r-grip')).toBeNull();
   });
 
-  it('keeps George\'s order, and opening a figure does not move it', async () => {
+  it('keeps Bob\'s order, and opening a figure does not move it', async () => {
     const { inOrder } = await import('./board');
     const board = [
       object('subject', { key: 'a', weight: 'lead', subject: 'Rockwell' }),
@@ -318,7 +318,7 @@ describe('the figures flow into columns, left to right then down (P2S.1(c))', ()
 });
 
 describe('the picture points, so the sentence does not have to', () => {
-  it('lights the row George named and lowers none of the rest', () => {
+  it('lights the row Bob named and lowers none of the rest', () => {
     const { container } = draw([object('table', { emphasise: 'OPUS' })]);
     const rows = [...container.querySelectorAll('tbody tr')] as HTMLElement[];
     const lit = rows.filter((r) => r.getAttribute('data-lit') === 'yes');
@@ -377,7 +377,7 @@ describe('a bar chart names its bars', () => {
     expect(fills[1]).toBe('rgb(var(--up))');
   });
 
-  it('marks the row George pointed at and lowers none of the others', () => {
+  it('marks the row Bob pointed at and lowers none of the others', () => {
     const { container } = draw([object('chart', { form: 'bar', emphasise: 'OPUS' })]);
     const rows = [...container.querySelectorAll('.r-mk-ranked .r-mk-row')] as HTMLElement[];
     expect(rows.map((r) => r.getAttribute('data-lit'))).toEqual(['no', 'yes']);
@@ -491,7 +491,7 @@ describe('a comparison is drawn as an instrument, not only a pill', () => {
 
 describe('the board maintains, not accumulates', () => {
   // THE BUG THIS HOLDS. 168 puts to 3 changes: asked the same thing again,
-  // George put a twin beside the object he had, under a fresh key, and the
+  // Bob put a twin beside the object he had, under a fresh key, and the
   // board held the same read drawn five ways. An object is identified by
   // the read it draws; a later put of that read replaces it where it stands.
   const read = { seq: 0, tool: 'get_sales', arguments: { group_by: ['store'], date_range: 'last_week' },

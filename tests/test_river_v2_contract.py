@@ -41,14 +41,14 @@ pytest.importorskip("fastapi", reason="the route module imports fastapi")
 from fastapi import HTTPException                                      # noqa: E402
 
 _ROOT = Path(__file__).resolve().parents[1]
-_ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "george.py"
+_ROUTE = _ROOT / "backend" / "app" / "api" / "v1" / "routes" / "bob.py"
 # The workspace, since the Experience Reset (2026-09-09): the desk, and the
 # hook that wires it to persistence. Ask stopped being a page.
 # The one renderer both a live turn and a stored post go through (Stage 1).
 _ROOM = _ROOT / "frontend" / "src" / "room" / "Room.tsx"
 # The parts both renderers draw from since Generative Workspace V3 (2026-09-09):
 # an entry on its own, and a surface composed of several.
-_HOOK = _ROOT / "frontend" / "src" / "hooks" / "useGeorgeStream.ts"
+_HOOK = _ROOT / "frontend" / "src" / "hooks" / "useBobStream.ts"
 _THREAD_HOOK = _ROOT / "frontend" / "src" / "hooks" / "useThread.ts"
 
 
@@ -108,7 +108,7 @@ class _User:
 
 
 def _read_thread(session, thread_id=None):
-    from app.api.v1.routes.george import read_thread
+    from app.api.v1.routes.bob import read_thread
 
     return asyncio.run(
         read_thread(thread_id or uuid.uuid4(), db=session, user=_User())
@@ -143,7 +143,7 @@ def test_the_404_does_not_say_which_kind_of_absence_it_is():
 
 
 def test_the_continuable_check_uses_the_session_the_route_already_holds():
-    # Every George database URL goes through the 5432 session-mode pooler and
+    # Every Bob database URL goes through the 5432 session-mode pooler and
     # connections are the scarce thing (supabase-pooler-session-cap). A read
     # holding a session must not open a second one.
     session = _FakeSession(posts=[], continuable=True)

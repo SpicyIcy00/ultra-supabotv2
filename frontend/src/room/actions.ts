@@ -18,7 +18,7 @@
  * reopened thread would then show a different promise from the one the person
  * was actually shown. It is drawn exactly as it is given.
  */
-import type { ActionOffer } from '../types/george';
+import type { ActionOffer } from '../types/bob';
 import type { BoardObject } from './board';
 import { callOf, rowsOf, subjectOf, type AnswerTurn } from './data';
 import { markFor, type Mark } from './catalogue';

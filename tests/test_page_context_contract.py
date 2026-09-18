@@ -1,5 +1,5 @@
 """
-Pure tests for view_page: how George reads the page he is on.
+Pure tests for view_page: how Bob reads the page he is on.
 
 NO DATABASE, NO API. The reader is a fake handed in the way the web process
 hands in the real one; the model is a stub. What is under test is the tool's
@@ -31,7 +31,7 @@ import pytest
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from agent import composite_tools, loop as george_loop, write_tools          # noqa: E402
+from agent import composite_tools, loop as bob_loop, write_tools          # noqa: E402
 from agent.composite_tools import (                                           # noqa: E402
     MAX_PAGE_CONTEXT_BYTES,
     MAX_ROWS_PER_PAGE_READ,
@@ -152,12 +152,12 @@ def _pins_ok(n):
 # ---------------------------------------------------------------------------
 
 def test_the_tool_is_absent_without_a_reader_and_present_with_one():
-    assert PAGE_CONTEXT_TOOL not in george_loop.injected_surface(_ctx())
-    assert PAGE_CONTEXT_TOOL in george_loop.injected_surface(_ctx(FakeReader()))
+    assert PAGE_CONTEXT_TOOL not in bob_loop.injected_surface(_ctx())
+    assert PAGE_CONTEXT_TOOL in bob_loop.injected_surface(_ctx(FakeReader()))
 
 
 def test_the_tool_has_no_user_and_no_page_argument():
-    [schema] = [s for s in george_loop.build_tool_schemas(include_write=True)
+    [schema] = [s for s in bob_loop.build_tool_schemas(include_write=True)
                 if s["name"] == PAGE_CONTEXT_TOOL]
     props = schema["input_schema"]["properties"]
     assert set(props) == {"figures", "pins"}
@@ -174,9 +174,9 @@ def test_the_tool_sorts_after_every_other_tool():
     So a session without a page has a tools list that is an exact PREFIX of a
     session with one, and the cached prefix is shared up to the tail.
     """
-    names = [s["name"] for s in george_loop.build_tool_schemas(include_write=True)]
+    names = [s["name"] for s in bob_loop.build_tool_schemas(include_write=True)]
     assert names[-1] == PAGE_CONTEXT_TOOL
-    without = [s["name"] for s in george_loop.build_tool_schemas(
+    without = [s["name"] for s in bob_loop.build_tool_schemas(
         extra={k: v for k, v in write_tools.WRITE_TOOL_FUNCTIONS.items()}
         | {"run_workflow": composite_tools.run_workflow}
     )]
@@ -196,7 +196,7 @@ def test_without_a_reader_the_call_is_a_failed_tool_not_a_crash():
 
 def test_the_readers_refusal_reaches_the_model_intact():
     reader = FakeReader(raises=PageReadRefused("You have no page called 'Nowhere'."))
-    result, err, _ = _run(george_loop._call_composite_tool(PAGE_CONTEXT_TOOL, {}, _ctx(reader)))
+    result, err, _ = _run(bob_loop._call_composite_tool(PAGE_CONTEXT_TOOL, {}, _ctx(reader)))
     assert err == "You have no page called 'Nowhere'."
     assert result == {"rows": [], "meta": {"error": err}}
 
@@ -212,8 +212,8 @@ def test_the_arguments_reach_the_reader_as_given_and_nothing_else():
 # ---------------------------------------------------------------------------
 
 def test_a_page_read_is_not_a_read_tool():
-    assert PAGE_CONTEXT_TOOL not in george_loop.TOOL_FUNCTIONS
-    assert PAGE_CONTEXT_TOOL not in [s["name"] for s in george_loop.build_tool_schemas()]
+    assert PAGE_CONTEXT_TOOL not in bob_loop.TOOL_FUNCTIONS
+    assert PAGE_CONTEXT_TOOL not in [s["name"] for s in bob_loop.build_tool_schemas()]
 
 
 def test_a_pin_cannot_contain_a_page_read():
@@ -400,7 +400,7 @@ def test_several_notices_become_the_container_the_loop_expands():
     notice = out["meta"]["notice"]
     assert notice["kind"] == "multiple"
     assert [n["kind"] for n in notice["items"]] == ["page_context_partial", "page_context_truncated"]
-    assert [n["kind"] for n in george_loop._notices_from(out)] == [
+    assert [n["kind"] for n in bob_loop._notices_from(out)] == [
         "page_context_partial", "page_context_truncated",
     ]
 
@@ -417,8 +417,8 @@ def test_the_reasons_are_the_readers_reasons():
 def test_page_context_partial_must_be_conveyed():
     defs = load_defs()
     pending = [{"kind": "page_context_partial", "message": "..."}]
-    assert george_loop._unsurfaced(pending, "Stock at AJI BARN is 4,120 units.", defs)
-    assert not george_loop._unsurfaced(
+    assert bob_loop._unsurfaced(pending, "Stock at AJI BARN is 4,120 units.", defs)
+    assert not bob_loop._unsurfaced(
         pending, "Two pins on this page could not be reproduced now.", defs,
     )
 
@@ -426,8 +426,8 @@ def test_page_context_partial_must_be_conveyed():
 def test_page_context_truncated_must_be_conveyed():
     defs = load_defs()
     pending = [{"kind": "page_context_truncated", "message": "..."}]
-    assert george_loop._unsurfaced(pending, "Stock at AJI BARN is 4,120 units.", defs)
-    assert not george_loop._unsurfaced(
+    assert bob_loop._unsurfaced(pending, "Stock at AJI BARN is 4,120 units.", defs)
+    assert not bob_loop._unsurfaced(
         pending, "I read the newest 5 of the 12 pins; the other 7 are not inspected here.", defs,
     )
 
@@ -438,15 +438,15 @@ def test_page_context_truncated_must_be_conveyed():
 
 def _drive(monkeypatch, replies, captured, *, reader, page_scope=None, page_context=None):
     fake = FakeClient(replies)
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
     StubLog.instances.clear()
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
 
     async def fake_read(name, args):
         return ({"rows": [{"store": "Fame", "value": 1.0}], "meta": {**META, "row_count": 1}},
                 None, 3)
 
-    monkeypatch.setattr(george_loop, "_call_tool", fake_read)
+    monkeypatch.setattr(bob_loop, "_call_tool", fake_read)
 
     def capture(self, **kw):
         captured.append(kw)
@@ -454,7 +454,7 @@ def _drive(monkeypatch, replies, captured, *, reader, page_scope=None, page_cont
     monkeypatch.setattr(StubLog, "posts", capture)
 
     async def collect():
-        return [f async for f in george_loop.run(
+        return [f async for f in bob_loop.run(
             "what's on here?", page_reader=reader, page_scope=page_scope,
             page_context=page_context,
         )]
@@ -482,19 +482,19 @@ def test_the_preamble_names_the_page_as_readable_and_unread(monkeypatch):
 
 
 def test_the_ungrouped_scope_is_said_as_such_and_never_as_a_name():
-    sentence = george_loop._page_sentence(None, {"name": None}, True)
+    sentence = bob_loop._page_sentence(None, {"name": None}, True)
     assert "ungrouped pins" in sentence and "'Ungrouped'" not in sentence
 
 
 def test_a_scope_without_a_reader_falls_back_to_the_legacy_sentence():
-    assert george_loop._page_sentence("Pages / X", {"name": "X"}, False) == \
+    assert bob_loop._page_sentence("Pages / X", {"name": "X"}, False) == \
         "[The user is on the Pages / X page.]"
 
 
 def test_legacy_page_context_callers_get_the_sentence_they_always_had():
-    assert george_loop._page_sentence("warehouse", None, False) == \
+    assert bob_loop._page_sentence("warehouse", None, False) == \
         "[The user is on the warehouse page.]"
-    assert george_loop._page_sentence(None, None, False) is None
+    assert bob_loop._page_sentence(None, None, False) is None
 
 
 def test_a_page_read_is_a_frame_and_evidence_never_a_figure(monkeypatch):
@@ -533,7 +533,7 @@ def test_a_page_read_is_a_frame_and_evidence_never_a_figure(monkeypatch):
     assert [c["tool"] for c in post["charted"]] == ["get_sales"]
     assert [c["tool"] for c in post["calls"]] == ["get_sales"]
     assert post["page_context"]["pins_inspected"] == 2
-    payload = json.loads(george_loop._answer_payload(post["charted"], post["calls"],
+    payload = json.loads(bob_loop._answer_payload(post["charted"], post["calls"],
                                                      post["page_context"]))
     assert set(payload) == {"charted", "calls", "page_context"}
     assert payload["page_context"]["page"] == "AJI BARN Reorder"
@@ -551,7 +551,7 @@ def test_a_page_read_adds_nothing_to_the_executed_set(monkeypatch):
         seen["executed"] = dict(ctx.executed)
         return ({"rows": [], "meta": {"error": "no"}}, "no", 1)
 
-    monkeypatch.setattr(george_loop, "_call_write_tool", fake_write)
+    monkeypatch.setattr(bob_loop, "_call_write_tool", fake_write)
     replies = [
         [_ToolUse("t1", PAGE_CONTEXT_TOOL, {}),
          _ToolUse("t2", "pin_answer", {"tool_calls": [SALES], "title": "x"})],
@@ -562,11 +562,11 @@ def test_a_page_read_adds_nothing_to_the_executed_set(monkeypatch):
         raise AssertionError("never reached")
 
     fake = FakeClient(replies)
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
 
     async def collect():
-        return [f async for f in george_loop.run(
+        return [f async for f in bob_loop.run(
             "pin it", page_reader=reader, page_scope={"name": "P"}, pin_writer=writer,
         )]
 
@@ -606,13 +606,13 @@ def test_merging_evidence_unions_pins_and_keeps_the_later_status():
     b = {"pins": [{"pin_id": "2", "status": "ok"}, {"pin_id": "3", "status": "ok"}],
          "not_inspected": [{"pin_id": "1"}], "partial": False, "truncated": True,
          "notice_kinds": ["page_context_truncated"], "unavailable": ["zzz"]}
-    m = george_loop.merge_page_evidence(a, b)
+    m = bob_loop.merge_page_evidence(a, b)
     assert {p["pin_id"]: p["status"] for p in m["pins"]} == {"1": "ok", "2": "ok", "3": "ok"}
     assert m["not_inspected"] == [] and m["truncated"] is False
     assert m["partial"] is True and m["unavailable"] == ["zzz"]
     assert m["notice_kinds"] == ["page_context_partial", "page_context_truncated"]
     assert m["reads"] == 2 and m["pins_inspected"] == 3 and m["pins_reproduced"] == 3
-    assert george_loop.merge_page_evidence(None, b) == b
+    assert bob_loop.merge_page_evidence(None, b) == b
 
 
 # ---------------------------------------------------------------------------
@@ -631,7 +631,7 @@ COMPARISON = {
 
 def test_a_page_read_keeps_the_comparison_and_the_metric_identity():
     """
-    A pinned comparison replayed through a page read must hand George the
+    A pinned comparison replayed through a page read must hand Bob the
     current period, the baseline period, which metric it is and in what
     unit, and the per-row status counts — or he is reading change_pct
     rows with no baseline window to cite. Exactly those; the SQL, the

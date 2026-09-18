@@ -25,7 +25,7 @@ import pytest
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from agent import loop as george_loop                                          # noqa: E402
+from agent import loop as bob_loop                                          # noqa: E402
 from agent import one_call                                                      # noqa: E402
 from tests.test_convergence_cap_contract import FakeClient, _ToolUse           # noqa: E402
 from tests.test_loop_correction_contract import StubLog, _TextBlock, frames_of # noqa: E402
@@ -39,11 +39,11 @@ ANSWER = "North Edsa fell on fewer transactions."
 
 def _drive(monkeypatch, replies, refuse=lambda name, args: None):
     fake = FakeClient(replies)
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
     StubLog.instances.clear()
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
     executed: list[tuple[str, dict]] = []
-    real_call_tool = george_loop._call_tool
+    real_call_tool = bob_loop._call_tool
 
     async def fake_read(name, args):
         if name in one_call.FUNCTIONS:          # a one-call tool that would not expand
@@ -57,10 +57,10 @@ def _drive(monkeypatch, replies, refuse=lambda name, args: None):
                           "snapshot_timestamp": "2026-09-18T00:00:00+00:00",
                           "row_count": 1}}, None, 3)
 
-    monkeypatch.setattr(george_loop, "_call_tool", fake_read)
+    monkeypatch.setattr(bob_loop, "_call_tool", fake_read)
 
     async def collect():
-        return [f async for f in george_loop.run("how is north edsa doing?")]
+        return [f async for f in bob_loop.run("how is north edsa doing?")]
 
     return asyncio.run(collect()), fake.messages.requests, executed
 
@@ -221,7 +221,7 @@ def test_a_warehouse_has_no_plan_and_the_shelf_still_reads(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# The budget counts what George decided to read
+# The budget counts what Bob decided to read
 # ---------------------------------------------------------------------------
 
 def test_the_cap_counts_a_call_asked_as_one_once(monkeypatch):
@@ -243,9 +243,9 @@ def test_the_cap_counts_a_call_asked_as_one_once(monkeypatch):
     assert not [w for w in frames_of(frames, "warning") if w.get("reason") == "convergence_cap"]
     assert executed[-1][1].get("group_by") == "hour", "the check read after them ran"
     done = frames_of(frames, "done")[0]
-    assert done["asked_reads"] == 5 and done["executed_calls"] > george_loop.MAX_TOOL_CALLS
+    assert done["asked_reads"] == 5 and done["executed_calls"] > bob_loop.MAX_TOOL_CALLS
     broad = int(req(DEFS, "investigation.scope.kinds.broad.max_reads"))
-    assert 4 <= broad <= george_loop.MAX_TOOL_CALLS
+    assert 4 <= broad <= bob_loop.MAX_TOOL_CALLS
 
 
 # ---------------------------------------------------------------------------
@@ -265,36 +265,36 @@ def test_every_listed_read_is_an_existing_read_its_tool_accepts():
     for name, fn in one_call.FUNCTIONS.items():
         for kw in variants[name]:
             for call in fn(**kw):
-                assert call["tool"] in george_loop.TOOL_FUNCTIONS, call
+                assert call["tool"] in bob_loop.TOOL_FUNCTIONS, call
                 args = dict(call["arguments"])
                 if args.get("metric") in req(DEFS, "metric_sets"):
                     args["metric"] = req(DEFS, f"metric_sets.{args['metric']}.metrics")[0]
-                tool = george_loop.TOOL_FUNCTIONS[call["tool"]]
-                assert george_loop._unfit_arguments(call["tool"], tool, args) is None, call
+                tool = bob_loop.TOOL_FUNCTIONS[call["tool"]]
+                assert bob_loop._unfit_arguments(call["tool"], tool, args) is None, call
 
 
 def test_the_tools_are_offered_and_never_pinnable():
-    schemas = {s["name"]: s for s in george_loop.build_tool_schemas()}
+    schemas = {s["name"]: s for s in bob_loop.build_tool_schemas()}
     for name in one_call.FUNCTIONS:
         assert name in schemas, name
-        assert name not in george_loop.TOOL_FUNCTIONS, "a pin holds the reads, never the call"
+        assert name not in bob_loop.TOOL_FUNCTIONS, "a pin holds the reads, never the call"
         doc = inspect.getdoc(one_call.FUNCTIONS[name]) or ""
         assert "Args:" in doc
     retail = [s["display_name"] for s in req(DEFS, "stores.active_retail")]
     assert schemas["get_change"]["input_schema"]["properties"]["store"]["enum"] == retail
     assert schemas["get_change"]["input_schema"]["required"] == []
     # Offered among the reads, ahead of compose: the cached prefix is reads, then labels.
-    names = [s["name"] for s in george_loop.build_tool_schemas()]
-    assert names.index("get_change") < names.index(george_loop.COMPOSE_TOOL)
+    names = [s["name"] for s in bob_loop.build_tool_schemas()]
+    assert names.index("get_change") < names.index(bob_loop.COMPOSE_TOOL)
 
 
 def test_every_shop_at_a_glance_is_already_one_call():
     """The card's second tool is P2S.9(b)'s set; a second name for it would be a choice."""
-    sales = next(t for t in george_loop.build_tool_schemas() if t["name"] == "get_sales")
+    sales = next(t for t in bob_loop.build_tool_schemas() if t["name"] == "get_sales")
     assert "sales_headline" in sales["input_schema"]["properties"]["metric"]["enum"]
     assert "every shop at a glance" not in json.dumps(req(DEFS, "one_call_reads.tools"))
 
 
 def test_the_prompt_names_it_where_the_rounds_are_decided():
-    assert "get_change at the shop or two that moved most" in george_loop.SCOPE_SECTION
-    assert "get_change reads VERIFY to CHECK in one call." in george_loop.SYSTEM_PROMPT
+    assert "get_change at the shop or two that moved most" in bob_loop.SCOPE_SECTION
+    assert "get_change reads VERIFY to CHECK in one call." in bob_loop.SYSTEM_PROMPT

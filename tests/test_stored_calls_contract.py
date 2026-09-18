@@ -27,7 +27,7 @@ import pytest
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from agent import loop as george_loop                                          # noqa: E402
+from agent import loop as bob_loop                                          # noqa: E402
 from agent import write_tools                                                  # noqa: E402
 from tests.test_convergence_cap_contract import (                              # noqa: E402
     FakeClient,
@@ -53,7 +53,7 @@ def _drive(monkeypatch, tool_uses, outcomes, captured: list, writer=None):
     name to (rows, error). The posts() call is captured instead of written.
     """
     fake = FakeClient([tool_uses, [_TextBlock("Here are the figures.")]])
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
 
     async def fake_read(name, args):
         rows, error = outcomes[name]
@@ -61,22 +61,22 @@ def _drive(monkeypatch, tool_uses, outcomes, captured: list, writer=None):
             return ({"rows": [], "meta": {"error": error}}, error, 3)
         return ({"rows": list(rows), "meta": {**META, "row_count": len(rows)}}, None, 3)
 
-    monkeypatch.setattr(george_loop, "_call_tool", fake_read)
+    monkeypatch.setattr(bob_loop, "_call_tool", fake_read)
 
     async def fake_write(name, args, ctx):
         return ({"rows": [{"pin_id": "p-1", "title": "T", "page": None,
                            "pins_on_page": 1, "tool_calls": []}], "meta": {}}, None, 2)
 
-    monkeypatch.setattr(george_loop, "_call_write_tool", fake_write)
+    monkeypatch.setattr(bob_loop, "_call_write_tool", fake_write)
 
     def capture(self, **kw):
         captured.append(kw)
 
-    monkeypatch.setattr(george_loop.ConversationLog, "posts", capture)
+    monkeypatch.setattr(bob_loop.ConversationLog, "posts", capture)
 
     async def collect():
         kwargs = {"pin_writer": writer} if writer else {}
-        return [f async for f in george_loop.run("figures?", **kwargs)]
+        return [f async for f in bob_loop.run("figures?", **kwargs)]
 
     return asyncio.run(collect())
 
@@ -126,7 +126,7 @@ def test_a_large_result_is_not_charted_but_its_call_is_still_stored(monkeypatch)
     """
     captured: list = []
     _drive(monkeypatch, [_ToolUse("tu-1", "get_sales", ARGS_A)],
-           {"get_sales": (_rows(george_loop.MAX_ROWS_TO_CLIENT + 1), None)}, captured)
+           {"get_sales": (_rows(bob_loop.MAX_ROWS_TO_CLIENT + 1), None)}, captured)
     [kw] = captured
     assert kw["charted"] == []
     assert [c["arguments"] for c in kw["calls"]] == [ARGS_A]
@@ -184,7 +184,7 @@ def test_a_write_is_never_stored_as_a_call(monkeypatch):
 # ---------------------------------------------------------------------------
 
 def test_the_payload_carries_both_or_is_absent():
-    payload = george_loop._answer_payload
+    payload = bob_loop._answer_payload
     assert payload(None, None) is None
     assert payload([], []) is None
 
@@ -205,6 +205,6 @@ def test_a_legacy_payload_shape_is_still_producible_and_carries_no_calls():
     something real.
     """
     charted = [{"seq": 1, "tool": "get_sales", "rows": [{"value": 1}], "meta": META}]
-    legacy = json.loads(george_loop._answer_payload(charted, None))
+    legacy = json.loads(bob_loop._answer_payload(charted, None))
     assert legacy == {"charted": charted}
     assert "calls" not in legacy

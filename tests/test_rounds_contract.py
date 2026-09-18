@@ -6,7 +6,7 @@ bookkeeping is what is under test.
 
 The owner: "is our tool use really optimized?" Measured on
 verification/p2s7-gate-2.json: 65 rounds for 81 reads, ~14 s a round, and
-59% of what George reads back is `meta`. Three changes, each held here:
+59% of what Bob reads back is `meta`. Three changes, each held here:
 
   (a) NO EMPTY LAST ROUND. A round of composes only — each standing whole,
       one naming the claim, words beside them — is the answer. The loop
@@ -33,7 +33,7 @@ import pytest
 pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
 pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
 
-from agent import loop as george_loop                                          # noqa: E402
+from agent import loop as bob_loop                                          # noqa: E402
 from agent.model_receipts import ModelReceipts                                 # noqa: E402
 from tests.test_convergence_cap_contract import FakeClient, _ToolUse           # noqa: E402
 from tests.test_loop_correction_contract import StubLog, _TextBlock, frames_of # noqa: E402
@@ -62,9 +62,9 @@ def _meta(n: int, **extra) -> dict:
 
 def _drive(monkeypatch, replies, notice=None):
     fake = FakeClient(replies)
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
     StubLog.instances.clear()
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
     executed: list[tuple[str, dict]] = []
 
     async def fake_read(name, args):
@@ -80,10 +80,10 @@ def _drive(monkeypatch, replies, notice=None):
                            "direction": "down", "baseline_status": "ok"}],
                  "meta": meta}, None, 3)
 
-    monkeypatch.setattr(george_loop, "_call_tool", fake_read)
+    monkeypatch.setattr(bob_loop, "_call_tool", fake_read)
 
     async def collect():
-        return [f async for f in george_loop.run("how did Rockwell do last week?")]
+        return [f async for f in bob_loop.run("how did Rockwell do last week?")]
 
     return asyncio.run(collect()), fake.messages.requests, executed
 
@@ -196,7 +196,7 @@ def test_a_settled_answer_still_faces_the_gates_and_a_rewrite_gets_its_round(mon
 
 
 def test_the_compose_tool_says_the_claim_ends_the_turn():
-    compose = next(t for t in george_loop.build_tool_schemas() if t["name"] == "compose")
+    compose = next(t for t in bob_loop.build_tool_schemas() if t["name"] == "compose")
     said = " ".join(str(req(DEFS, "rounds.settle.tool_sentence")).split())
     assert said in compose["description"]
 
@@ -258,7 +258,7 @@ def test_the_set_is_offered_by_the_definitions_and_still_executes_nothing():
     spec = req(DEFS, "metric_sets.sales_headline")
     assert spec["executes_nothing"] is True
     assert spec["asked_as_one_call"]["tool"] == "get_sales"
-    sales = next(t for t in george_loop.build_tool_schemas() if t["name"] == "get_sales")
+    sales = next(t for t in bob_loop.build_tool_schemas() if t["name"] == "get_sales")
     assert "sales_headline" in sales["input_schema"]["properties"]["metric"]["enum"]
     # The tool itself has no idea a set exists: no second calculation path.
     from tools.sales import get_sales
@@ -267,7 +267,7 @@ def test_the_set_is_offered_by_the_definitions_and_still_executes_nothing():
 
 
 def test_the_broad_policy_names_the_one_call():
-    assert "metric='sales_headline'" in george_loop.SCOPE_SECTION
+    assert "metric='sales_headline'" in bob_loop.SCOPE_SECTION
 
 
 # ---------------------------------------------------------------------------

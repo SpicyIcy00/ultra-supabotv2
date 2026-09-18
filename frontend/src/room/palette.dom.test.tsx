@@ -95,7 +95,7 @@ const STORES = ['Rockwell', 'Fairview', 'Greenhills', 'North EDSA', 'Magnolia', 
 
 function boardOf(rows: Record<string, unknown>[], o: Partial<BoardObject>) {
   const turn = {
-    role: 'george', text: 'A reading.', thinking: '', at: '2026-09-11T08:00:00Z',
+    role: 'bob', text: 'A reading.', thinking: '', at: '2026-09-11T08:00:00Z',
     toolCalls: [{ seq: 1, tool: 'get_sales', arguments: {}, result: { rows, meta: META } }],
   } as unknown as AnswerTurn;
   const object = {
@@ -124,7 +124,7 @@ describe('a board of seven shops', () => {
     const { container } = boardOf(SEVEN, { kind: 'comparison' });
     for (const row of container.querySelectorAll('.r-mk-dumbbells .r-mk-row')) {
       for (const part of row.querySelectorAll<HTMLElement>('.r-mk-seg, .r-mk-dot--now')) {
-        expect(part.getAttribute('style') ?? '').toMatch(/rgb\(var\(--(up|down|flat|george)\)\)/);
+        expect(part.getAttribute('style') ?? '').toMatch(/rgb\(var\(--(up|down|flat|bob)\)\)/);
         expect(part.getAttribute('style') ?? '').not.toMatch(/--c-/);
       }
     }
@@ -176,7 +176,7 @@ describe('every block in the eight recorded runs', () => {
       it(`${run.run} · ${kind} (seq ${seq}) draws no fifth meaning`, () => {
         const call = run.calls.find((c) => c.seq === seq)!;
         const turn = {
-          role: 'george', text: '', thinking: '', at: '2026-09-11T08:00:00Z',
+          role: 'bob', text: '', thinking: '', at: '2026-09-11T08:00:00Z',
           toolCalls: run.calls.map((c) => ({
             seq: c.seq, tool: c.tool, arguments: {}, result: c.result,
           })),

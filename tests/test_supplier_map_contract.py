@@ -3,7 +3,7 @@ The product -> supplier map, and the gate that keeps it from being believed earl
 
 NO DATABASE. Definitions, the generated file, and the selection function.
 
-WHY THIS EXISTS. This is the first thing George proposes that becomes permanent,
+WHY THIS EXISTS. This is the first thing Bob proposes that becomes permanent,
 and the gate is the whole point: a machine reads purchase history and proposes,
 a person reads the proposal and approves, and only then does anything change.
 Three properties keep that honest, and each is pinned here:

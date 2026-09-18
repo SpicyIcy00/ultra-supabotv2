@@ -1,5 +1,5 @@
 """
-The surface: what George is told the user is looking at, and what his prose
+The surface: what Bob is told the user is looking at, and what his prose
 may not say about it. Generative Workspace V3, 2026-09-09.
 
 THREE THINGS UNDER TEST.
@@ -11,7 +11,7 @@ THREE THINGS UNDER TEST.
      vocabulary metrics.yaml lists, as whole words, and nothing else.
 
   2. The loop's wiring. The sentence rides on the QUESTION (never the cached
-     system prompt), from the newest George turn's calls; the scans emit
+     system prompt), from the newest Bob turn's calls; the scans emit
      warning frames and never rewrite the answer.
 
   3. The prompt and the definitions agree with the client. The SURFACE
@@ -102,7 +102,7 @@ def test_transaction_synonyms_are_read_only_beside_transactions():
 def test_denying_the_translation_is_not_leaking_it():
     """
     THE ANSWER THIS CHECK USED TO PUNISH, verbatim from the twelve on
-    2026-09-13. Asked for foot traffic, George refused, named what the data
+    2026-09-13. Asked for foot traffic, Bob refused, named what the data
     actually is, and said what the substitute would hide — CLAUDE.md rule 10,
     exactly. He was recorded as leaking "people" and "traffic" for saying so.
 
@@ -175,18 +175,18 @@ def test_the_shapes_a_denial_actually_takes(denial):
 def _loop():
     pytest.importorskip("psycopg", reason="agent.loop imports the tools, which import psycopg")
     pytest.importorskip("anthropic", reason="agent.loop imports anthropic")
-    from agent import loop as george_loop
-    return george_loop
+    from agent import loop as bob_loop
+    return bob_loop
 
 
 def _drive(monkeypatch, replies, question, history=None):
-    george_loop = _loop()
+    bob_loop = _loop()
     from tests.test_convergence_cap_contract import FakeClient
     from tests.test_loop_correction_contract import StubLog
     fake = FakeClient(replies)
-    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    monkeypatch.setattr(bob_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
     StubLog.instances.clear()
-    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+    monkeypatch.setattr(bob_loop, "ConversationLog", StubLog)
 
     async def fake_read(name, args):
         return ({"rows": [{"value": 1.0, "baseline": 2.0, "change_pct": -50.0}],
@@ -194,10 +194,10 @@ def _drive(monkeypatch, replies, question, history=None):
                           "snapshot_timestamp": "2026-09-08T00:00:00+00:00", "row_count": 1}},
                 None, 3)
 
-    monkeypatch.setattr(george_loop, "_call_tool", fake_read)
+    monkeypatch.setattr(bob_loop, "_call_tool", fake_read)
 
     async def collect():
-        return [f async for f in george_loop.run(question, history=history)]
+        return [f async for f in bob_loop.run(question, history=history)]
 
     return asyncio.run(collect()), fake.messages.requests
 
@@ -211,7 +211,7 @@ def test_the_work_sentence_rides_on_the_question_not_the_system_prompt(monkeypat
     from tests.test_loop_correction_contract import _TextBlock
     history = [
         {"role": "user", "text": "How did OPUS do last week?", "tool_calls": []},
-        {"role": "george", "text": "OPUS is up.", "tool_calls": OPUS},
+        {"role": "bob", "text": "OPUS is up.", "tool_calls": OPUS},
     ]
     _, requests = _drive(monkeypatch, [[_TextBlock("Basket value led it.")]], "Why?", history)
     # The loop appends its own reply to the same list, so read the last USER
@@ -265,7 +265,7 @@ def test_identity_and_shape_are_declared_and_attention_has_no_score():
     assert sorted(s["attention"]["reasons"]) == ["against_the_majority", "ranked_first"]
 
 
-def test_every_tool_george_can_call_has_words_on_the_room_surface():
+def test_every_tool_bob_can_call_has_words_on_the_room_surface():
     """
     THE OWNER'S FEATURE 13: feel him working. That means the screen says what
     he is DOING, in words — "reading sales", not `get_sales {...}`, which is
@@ -297,7 +297,7 @@ def test_every_tool_george_can_call_has_words_on_the_room_surface():
              | set(write_tools.WRITE_TOOL_FUNCTIONS)
              | set(composite_tools.COMPOSITE_TOOL_FUNCTIONS))
 
-    # A tool George can no longer call, whose words a STORED turn still needs.
+    # A tool Bob can no longer call, whose words a STORED turn still needs.
     # record_findings was folded into compose on 2026-09-13 (P1.a); every
     # conversation before that holds calls to it, and dropping the words would
     # have made their work read "thinking…" on reload. Declared here so a

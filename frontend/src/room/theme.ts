@@ -1,7 +1,7 @@
 /**
  * DARK OR LIGHT — THREE THEMES, THE DESIGN'S STRUCTURE (P2S.1(a)).
  *
- * The design (`ops/ideal/george-ahead-of-me.html`) is dark-native: a graphite
+ * The design (`ops/ideal/bob-ahead-of-me.html`) is dark-native: a graphite
  * ground. Its light theme is the same set on paper, not an inversion, and it
  * is reached two ways — the system asking for light when nobody chose, or a
  * person choosing it. A person's choice wins either way. room.css declares all
