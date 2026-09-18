@@ -267,7 +267,7 @@ where a regression was speculative AND **the four gate scenarios could not
 have seen it.** A new comparison (`P2S.4`, `P3.f`) is a capability no gate
 scenario asks for, so a run there proves nothing; `P2.c`, `P2.d` and `P2.f`
 are context and rendering; `P1.c` breaks or fixes compose refusals, which are
-its own numbers. **Seven live runs across 17 open cards, $6.22** (P2S.6, P2S.7, P2S.8, P2S.9 and P2S.10 subsets and the two full closes; P2S.3's subset was spent 2026-09-17, $0.72 against $0.64) — P2.m closed 2026-09-16 and **its own run has not been made**, so the paragraph below it is the record of what that costs — the two
+its own numbers. **Eight live runs across 18 open cards, $6.86** (P2S.6, P2S.7, P2S.8, P2S.9, P2S.10 and P2S.11 subsets and the two full closes; P2S.3's subset was spent 2026-09-17, $0.72 against $0.64) — P2.m closed 2026-09-16 and **its own run has not been made**, so the paragraph below it is the record of what that costs — the two
 phase closes still to come, at $1.51 each on v2, the measured price.
 Every remaining gate was dropped or absorbed, so two FULL runs is the whole
 of it.
@@ -3175,6 +3175,35 @@ cleanup; he decides.
       trust row holds, and time and cost are reported against
       `p2s7-gate-2.json` beside the estimate (about 30 s faster and 15–25%
       cheaper on those three). **eval: subset**.
+- [ ] **P2S.11 what you tell him, he keeps and acts on** — the owner,
+      2026-09-18: *"if i tell it some info like dont focus on [per gram]
+      beacause its per gram products cause they kinda dont matter and product
+      categories too will it remeber it and actually use that info?"* Checked
+      against the code and `george.beliefs` the same day: **not reliably, and
+      not in what it reads.** (1) A `told` view exists (P2.f) and fits —
+      `subject_kind: category`, stance `means` — but **0 of 33 stored beliefs
+      are told**: it has never happened. Whether George records one is his
+      choice. (2) **It would silently lapse**: `belief_store.as_block` attaches
+      the 12 most recently confirmed (`MAX_IN_PROMPT`, `ORDER BY confirmed_at
+      DESC`), George re-confirms his own views constantly, so a told view slides
+      off within about a day. (3) **It changes words, not reads**: no tool can
+      leave a category out (`get_sales` filters narrow to one), so charts and
+      rankings still lead with per-gram lines while he talks around them.
+      **Build:** (a) told views are their own list — always attached, never
+      pushed out by his views, in the memory screen with the Forget that exists;
+      (b) a told exclusion is a **bounded setting** the reads apply (architecture
+      rule 6: a person binds it, every run records it) — product and category
+      rankings, category breakdowns, `get_object`'s sections and P2S.10's tools
+      leave the category out, and `meta.filters_applied` says *"per gram left
+      out at your instruction, <date>"*; the definitions say which settings
+      exist and what they touch, nothing typed into a tool; (c) George is told
+      plainly to record one when the person says what to focus on or ignore.
+      **Done when:** "don't focus on per gram, it doesn't matter" in one
+      conversation, then "what fell at North Edsa?" in a new one the next day:
+      no per-gram line in the ranking, its receipt names the instruction, and
+      "include per gram again" brings them back; a contract test that a told
+      view is attached even with 40 newer beliefs; every trust row holds on the
+      live gate. **eval: subset**.
 - [ ] **P2S.4 same-store year-over-year** — **was P2.i, kept by the merge
       2026-09-17 because it changes what George can SAY, not how it looks,
       and so is untouched by the redraw.** It may be taken ahead of any P2S
