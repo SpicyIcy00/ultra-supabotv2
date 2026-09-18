@@ -117,6 +117,16 @@ def run_turn(monkeypatch, question: str, *, history: Optional[list[dict]] = None
         frames = _parse(asyncio.run(collect()))
 
     turn = Turn(question=question, answer="", results=captured)
+    # WHAT WENT TO THE GAPS LOG (2026-09-19). The P2S.✓ run's one api_error
+    # lost its reason: the loop tells the person a sentence and writes the
+    # exception to george.gaps, and the stub log threw the statement away.
+    # The stubbed statements are read back here, so a report carries the
+    # exception's own words without the stream ever carrying them.
+    turn.gaps = [
+        {"kind": params[2], "tool": params[3], "detail": params[4]}
+        for log in StubLog.instances for sql, params in log.statements
+        if "george.gaps" in sql and len(params) >= 5
+    ]
     text: list[str] = []
     narration: list[str] = []
     calls: dict[int, dict] = {}
@@ -321,6 +331,8 @@ DONE_KEPT = (
     # the closing rounds not sent because the round before was the answer
     # (P2S.9(a)) — what P2S.✓ measures that card by
     "rounds_saved",
+    # the grounding gate's round trips (voice.grounding, 2026-09-19)
+    "grounding_corrections",
     # what the gates did without a round trip, and how hard he thought (P1.h)
     "deterministic_edits", "effort", "effort_kind",
     # the four token counts, which are the only record of what a turn cost:
@@ -480,6 +492,10 @@ class Report:
                 {"reason": w.get("reason"), "detail": w.get("detail")}
                 for w in turn.warnings if w.get("detail")
             ],
+            # The exception behind an api_error or an unhandled turn, from
+            # the gaps log rather than the stream (2026-09-19).
+            "error_detail": [g for g in getattr(turn, "gaps", [])
+                             if g.get("kind") in ("api_error", "unhandled")],
             # duration_ms, iteration_ms and corrective_turns are the clock
             # (P0.3). The twelve are where the Phase 1 wall-clock baseline
             # comes from — real model, real reads — and a measurement the

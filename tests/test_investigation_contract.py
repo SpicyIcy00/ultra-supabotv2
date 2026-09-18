@@ -351,7 +351,7 @@ def test_the_prompt_no_longer_opens_the_ladder_on_the_word_why():
     assert '"Why" is an investigation' not in prompt
     for v in req(OPENS, "asks_to_be_taken_apart"):
         assert f'"{v}"' in prompt, v
-    assert 'the word "why" is not the gate' in prompt
+    assert '"why" is not the gate' in prompt
 
 
 def test_the_opening_sentence_is_built_from_the_definitions_not_typed():

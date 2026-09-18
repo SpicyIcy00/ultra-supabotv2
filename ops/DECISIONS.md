@@ -4696,3 +4696,12 @@ The owner's own 30 days (78 turns that read, 351 calls) asked the same reads pie
 **A ticked close card still names every scene it owns:** the contract reads `[x]` as well as `[ ]`.
 **Voice on the live build was not tried** — a headless session has no microphone. It waits on the owner, with "feels right".
 **The gate to Phase 3 is not met and the close says so:** 13 Open, median 76.6 s a turn against under 10. Whether Phase 3 starts anyway is the owner's call.
+
+## 2026-09-19 · The speed fix: six changes, one paid run, and where the seconds went
+
+**The regression since 14 September was rounds and writing, not reads.** Output tokens per turn went 897 → 4,160 in four days; the P2S.6 flattening of effort to high on every kind was most of it. Follow-ups and fresh questions are medium again; the ladder, broad questions and a new `build` kind stay high, and "analyze" / "investigate" / "compare" open the ladder.
+**A figure in prose that no read returned is now a production gate** (`voice.grounding`), the eval's matcher run by the loop: repair a rounding one read explains, else one rewrite, else the sentence goes. Rule 9's sentence that production does not check prose numerals is now understated, not broken; the owner asked for it.
+**Refusing an ask or an action no longer costs a round** (`rounds.settle.stands_without`), and an unknown block field is dropped rather than refused, with `composition.refused_fields` keeping the figure-typing names refused.
+**One round for the drivers after the verify** — the ladder's first rung is kept; only what follows it is batched.
+**Measured once, $3.50: median 76.6 → 24.3 s, $0.34 → $0.25 a turn, 8 → 11 of 14.** The owner then asked that no further paid runs be spent on it; the two follow-ups (echo repair, the limitation regex) are held by tests and a free replay.
+**Not fixed:** a threaded answer that cites no figure at all (a writing flap, not a gate), and the two building/digging turns still over 100 s at high effort.

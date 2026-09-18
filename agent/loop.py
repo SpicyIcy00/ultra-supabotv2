@@ -1102,9 +1102,9 @@ def _opening_sentence(defs: dict) -> str:
     verbs = ", ".join(f'"{v}"' for v in req(o, "asks_to_be_taken_apart"))
     moved = " ".join(str(req(o, "what_is_shown_that_moved")).split())
     return (
-        f"{moved} — and so is a figure asked to be taken apart ({verbs}); the word "
-        f"\"{req(o, 'not_gated_on_the_word')}\" is not the gate. Rounds, each deciding "
-        f"the next; a shop that is fine is not dug into."
+        f"{moved} — and so is a figure asked to be taken apart ({verbs}); "
+        f"\"{req(o, 'not_gated_on_the_word')}\" is not the gate. A fine shop is "
+        f"not dug into."
     )
 
 
@@ -1168,7 +1168,7 @@ INVESTIGATING
 
 {_opening_sentence(defs)}
 
-VERIFY the primary fact first, compared over a closed window; if the premise does not hold, say so and stop. DECOMPOSE — {_drivers_sentence(defs)} Read change_pct off each driver's row: the stronger moved more, close means both moved, and a share of the change — "most of the gap" — is nobody's. LOCALIZE the driver that moved — dominating is where to look, not a reason to stop — by time and by what sold, both in ONE round. CHECK what the data can test before offering an explanation: {checks}; {req(chk, 'unchecked')}. EXPLAIN, keeping the kinds apart: "down 12%" is measured, "basket value is the stronger driver" is your reading, and localization is not cause — and say whether it MATTERS: {matters}. STOP when the premise is false, the movement is localized and checked, no tool goes further, the evidence is mixed or the reads are spent. {_one_call_sentence(defs)}
+VERIFY the primary fact first, compared over a closed window; if the premise does not hold, say so and stop. DECOMPOSE — {_drivers_sentence(defs)} Read change_pct off each driver's row: the stronger moved more, close means both moved, and a share of the change — "most of the gap" — is nobody's. LOCALIZE the driver that moved — dominating is where to look, not a reason to stop — by time and by what sold. DECOMPOSE, LOCALIZE and CHECK are ONE round after VERIFY: ask every read they need together. CHECK what the data can test before offering an explanation: {checks}; {req(chk, 'unchecked')}. EXPLAIN, keeping the kinds apart: "down 12%" is measured, "basket value is the stronger driver" is your reading, and localization is not cause — and say whether it MATTERS: {matters}. STOP when the premise is false, the movement is localized and checked, no tool goes further, the evidence is mixed or the reads are spent. {_one_call_sentence(defs)}
 
 Every read keeps the primary fact's window — the baseline's own days aside — store scope and filters. COMPOSE AS YOU GO: each round's findings go on the board in the same call as the next reads; the claim settles last.
 """
@@ -2220,6 +2220,38 @@ def _claim(answer: str, spec: dict) -> Optional[str]:
     return None
 
 
+def _refusal_keeps_the_round(verdict: dict, defs: dict) -> bool:
+    """
+    Whether a compose's refusals stop the round from being the answer
+    (metrics.yaml rounds.settle.stands_without, 2026-09-19).
+
+    A refused block or slot means the model's answer is not what stands, so
+    the round keeps its round. A refused ACCESSORY — an ask carrying a figure
+    no read returned, an action on a row the read does not have — is dropped
+    with its reason and the answer stands as drawn.
+    """
+    accessories = set(req(defs, "rounds.settle.stands_without"))
+    if verdict.get("rejected"):
+        return True
+    for slot in verdict.get("rejected_slots") or []:
+        if (slot or {}).get("slot") not in accessories:
+            return True
+    if verdict.get("rejected_actions") and "actions" not in accessories:
+        return True
+    return False
+
+
+def _unreceipted_line(unbacked: list[tuple[str, str, float]]) -> str:
+    """
+    The caveat drawn when a figure with no receipt could not be removed
+    (voice.grounding): named, not hidden, so the reader knows which numbers
+    in the words above have no read behind them.
+    """
+    named = ", ".join(dict.fromkeys(t for _s, t, _v in unbacked))
+    return (f"\n\nNo read this turn returned {named} — treat those figures as "
+            f"unverified; the board's figures each carry their receipt.")
+
+
 def _forced_caveats(missing: list[dict]) -> str:
     lines = ["", "", "**Caveats** *(added automatically — these qualify the figures above)*", ""]
     for n in missing:
@@ -2998,6 +3030,11 @@ async def run(
     first_of_call: dict[str, int] = {}
     corrective_turns = 0
     max_corrective = req(defs, "notices.max_corrective_turns")
+    # A figure in prose that no read returned (voice.grounding, 2026-09-19):
+    # one corrective turn after the deterministic repair, then the sentence.
+    max_ground = int(req(defs, "voice.grounding.max_corrective_turns"))
+    ground_reason = str(req(defs, "voice.grounding.warning_reason"))
+    ground_corrections = 0
     # Writes actually made this run, and the budget for asking the model to
     # reconcile a claimed pin with reality.
     pins_made = 0
@@ -3066,6 +3103,16 @@ async def run(
     # from, and re-running the call instead would put a fresh chart beside
     # prose that still states the old figure. See ConversationLog.posts.
     charted: list[dict] = []
+    # EVERY result this turn, complete or capped, for the grounding gate: a
+    # figure George cites may come from a read too large to chart whole.
+    turn_results: list[dict] = []
+    # Figures earlier answers in this thread already carried. A follow-up may
+    # cite what the turn before it established; those rows are not replayed
+    # into this request, but their figures were grounded when they were said.
+    history_figures: set[float] = {
+        n for t in (history or []) if t.get("role") == "george"
+        for n, _d in _prose.figures(t.get("text") or "")
+    }
 
     # The read calls that ran and returned, kept so the ANSWER POST can be
     # pinned after a reload. A live turn pins from its tool_call frames; a
@@ -3736,6 +3783,113 @@ async def run(
                 # not the only thing that has ever been wrong - is caught in
                 # the same pass instead of on a second one.
 
+                # A FIGURE NO READ RETURNED (voice.grounding, 2026-09-19).
+                # Three of the fourteen P2S.✓ turns wrote a rounded range
+                # over day rows — "₱28,000–36,700" — that no tool returned.
+                # In order: a rounding ONE returned figure explains is said
+                # exactly, with no round trip; what is left buys one rewrite;
+                # what survives that goes with its sentence, and when nothing
+                # can go it is named under the answer. Checked against every
+                # result of this turn and the figures earlier answers in the
+                # thread already carried.
+                # A turn that read nothing is conversation — a refusal, a pin
+                # confirmed, a page named — and its figures, if any, are the
+                # thread's; the eval's ungrounded row still counts them.
+                if answer and turn_results:
+                    returned_now = _prose.allowed_numbers(turn_results) | history_figures
+                    presentation_now = reading.presentation_max(defs)
+                    # WHAT THE GATES ABOVE OWN IS LEFT TO THEM: a drawn figure
+                    # said wrong (an echo — voice.misstatement) and a count
+                    # worked out in prose (voice.enumerated_remainder) each
+                    # have their own gate, message and gap kind, and they ran
+                    # first. This gate takes only what neither could see.
+                    drawn_now = _prose.allowed_numbers(charted)
+                    remainder_sentences = {
+                        s for s, _n, _p in (_prose.enumerated_remainders(
+                            answer, charted, remainder_tails, remainder_leaders)
+                            if charted else [])}
+
+                    def _owned_elsewhere(sentence: str, value: float) -> bool:
+                        return (sentence in remainder_sentences
+                                or _prose._echo_of(value, drawn_now, misstate_min_digits) is not None)
+
+                    # THE REPAIR TAKES ECHOES TOO. The misstatement gate ran
+                    # first and had its one pass; a drawn figure it could not
+                    # delete out of a sentence ("ran ₱27,000–48,000 in both
+                    # weeks", speedfix-v2's broad turn) is said exactly here
+                    # when ONE drawn figure is what it rounds — no round trip,
+                    # and the figure on screen is the read's own.
+                    repaired_text, repaired = reading.repair_rounding_in_prose(
+                        answer, returned_now, presentation_now)
+                    if repaired:
+                        answer = repaired_text
+                        deterministic_edits += 1
+                        log.gap(ground_reason, "rounded figures said exactly: "
+                                + " | ".join(repaired)[:1800])
+                        yield _sse("warning", {
+                            "reason": ground_reason,
+                            "corrected": "deterministic",
+                            "repaired": len(repaired),
+                            "detail": "; ".join(repaired)[:600],
+                        })
+                        yield _reset_answer(ground_reason)
+                        kept_prose = ""
+                        yield _sse("text", {"delta": answer})
+                    unbacked = [(s, t, v) for s, t, v in _prose.unreturned_prose_figures(
+                        answer, returned_now, presentation_now)
+                        if not _owned_elsewhere(s, v)]
+                    if unbacked and ground_corrections < max_ground:
+                        ground_corrections += 1
+                        listed = "\n".join(f"- {t} in: {s}" for s, t, _v in unbacked[:6])
+                        log.gap(ground_reason, f"{len(unbacked)} figures no read returned: "
+                                + " | ".join(f"{t} - {s}" for s, t, _v in unbacked)[:1800])
+                        yield _sse("warning", {
+                            "reason": ground_reason,
+                            "corrected": "round_trip",
+                            "found": len(unbacked),
+                            "detail": "; ".join(t for _s, t, _v in unbacked)[:600],
+                        })
+                        yield _reset_answer(ground_reason)
+                        kept_prose = ""
+                        answer = ""
+                        messages.append({
+                            "role": "user",
+                            "content": (
+                                "These figures in your answer were returned by no "
+                                f"read this turn:\n{listed}\n\n"
+                                "A figure in prose has no receipt. Rewrite the "
+                                "answer saying only figures the reads returned, "
+                                "exactly as they returned them — or describe the "
+                                "run of days without a number and let the board "
+                                "carry it. Keep every caveat exactly as it was."
+                            ),
+                        })
+                        continue
+                    if unbacked:
+                        edited, dropped = _drop_safely(
+                            answer, [s for s, _t, _v in unbacked], _still_surfaces)
+                        yield _sse("warning", {
+                            "reason": ground_reason,
+                            "corrected": "deterministic",
+                            "found": len(unbacked),
+                            "removed": len(dropped),
+                            "detail": "; ".join(t for _s, t, _v in unbacked)[:600],
+                        })
+                        if dropped:
+                            answer = edited
+                            deterministic_edits += 1
+                            log.gap(ground_reason, f"{len(dropped)} sentences removed: "
+                                    + " | ".join(dropped)[:1800])
+                            yield _reset_answer(ground_reason)
+                            kept_prose = ""
+                            yield _sse("text", {"delta": answer})
+                        else:
+                            forced = _unreceipted_line(unbacked)
+                            answer += forced
+                            log.gap(ground_reason, "named under the answer: "
+                                    + ", ".join(t for _s, t, _v in unbacked)[:1800])
+                            yield _sse("text", {"delta": forced})
+
                 # WHAT HE SAID THIS TURN, WHEREVER IT LANDS ON THE PAGE. A
                 # caveat moved out of the paragraph and into its own slot is
                 # drawn whole, above the figures — more surfaced than it was,
@@ -4122,8 +4276,7 @@ async def run(
                 ms = int((time.perf_counter() - started) * 1000)
                 done_calls.append(((gseq, b), (result, err, ms)))
                 verdict = result.get("meta") or {}
-                if err is not None or any(verdict.get(k) for k in (
-                        "rejected", "rejected_slots", "rejected_actions")):
+                if err is not None or _refusal_keeps_the_round(verdict, defs):
                     round_stood = False
                 if err is None and (verdict.get("reading") or {}).get("claim"):
                     round_claimed = True
@@ -4312,6 +4465,8 @@ async def run(
                 # all-or-none rule as the frame above: a result that could not
                 # be sent whole is not stored at all, because a chart drawn
                 # from a prefix is a different chart. See charted_results.
+                if not err and not is_duplicate:
+                    turn_results.append({"rows": full_rows, "meta": meta})
                 if rows_complete and full_rows:
                     charted.append({
                         "seq": gseq, "tool": b.name,
@@ -4510,7 +4665,7 @@ async def run(
     # `deterministic_edits`, reported beside this.
     corrections_total = (corrective_turns + pin_corrections + save_corrections
                          + page_corrections + volunteer_corrections
-                         + restate_corrections)
+                         + restate_corrections + ground_corrections)
 
     log.conversation(
         user_id=user_id, asked_at=asked_at, question=question,
@@ -4621,6 +4776,9 @@ async def run(
         # The closing rounds not sent because the round before was the answer
         # (P2S.9(a)) — the number that card is measured on.
         "rounds_saved": rounds_saved,
+        # The grounding gate's round trips (voice.grounding), apart, so a run
+        # can say what the new gate cost.
+        "grounding_corrections": ground_corrections,
         # What the gates did WITHOUT a round trip (P1.h), and how hard he
         # thought. Both are on the frame because both are what this card is
         # measured on, and neither could be read back from anywhere else.

@@ -59,26 +59,14 @@ def ungrounded_numerals(answer: str, results: Iterable[dict],
     rounded representation of a returned figure is grounded; a figure that
     appears nowhere is not, and is what this exists to catch.
     """
+    # ONE DEFINITION WITH THE LOOP (2026-09-19): the gate in agent/loop.py runs
+    # `agent.prose.unreturned_prose_figures`; this reads the same function so
+    # the measure cannot drift from the gate.
+    from agent import prose as _prose_mod
     allowed = allowed_numbers(results)
-    # Blank out dates so their digits are not read as figures.
-    text = _DATE_PARTS.sub(" ", answer)
     found: list[NumeralFinding] = []
-    for m in _NUMERAL.finditer(text):
-        raw = m.group("num")
-        suffix = (m.group("suffix") or "").lower()
-        n = float(raw.replace(",", ""))
-        decimals = len(raw.split(".")[1]) if "." in raw else 0
-        if suffix in ("k", "m"):
-            n *= 1000 if suffix == "k" else 1_000_000
-            # "₱1.49M" is precise to ±5,000; shift the tolerance with the scale.
-            decimals -= 3 if suffix == "k" else 6
-        if suffix != "%" and n == int(n) and 0 <= n <= presentation_max and decimals == 0:
-            continue
-        if n in (2024.0, 2025.0, 2026.0, 2027.0):
-            continue
-        if _matches(n, decimals, allowed):
-            continue
-        found.append(NumeralFinding(text=m.group(0).strip(), value=n))
+    for _sentence, raw, n in _prose_mod.unreturned_prose_figures(answer, allowed, presentation_max):
+        found.append(NumeralFinding(text=raw, value=n))
     return found
 
 
@@ -451,7 +439,18 @@ _LIMITATION = re.compile(
     r"|(?:no|nothing) (?:here|in these reads|in the data) (?:says|shows|tells|establishes)"
     r"|what (?:it|this|these|they|the reads?|the data) (?:doesn't|does not|don't|do not|can't|cannot)(?::|\s)"
     r"|before anyone concludes"
-    r"|(?:i|we)'d (?:want|need) (?:the |a )?(?:\w+ ){0,3}(?:before|first)",
+    r"|(?:i|we)'d (?:want|need) (?:the |a )?(?:\w+ ){0,3}(?:before|first)"
+    # WHAT HE CANNOT SEE, said his way (2026-09-19): the P2S.✓ run failed
+    # "I don't have footfall — no door counter feeds into anything I can
+    # read" for want of the words "cannot establish".
+    r"|(?:i |we )?(?:don't|do not|doesn't|does not) have (?:\w+[ ,]+){0,4}"
+    r"|(?:no|nothing|neither)\b[^.]{0,60}?\b(?:feeds?|exists?|is recorded|is captured)\b[^.]{0,40}?"
+    r"(?:into|in|anywhere|for) (?:anything |the |these |my )?(?:i can read|data|reads?|record)"
+    r"|(?:isn't|is not|aren't|are not|not) (?:in|anywhere in) (?:the|any|these|my) (?:data|reads?|record|figures)"
+    r"|(?:nothing|no \w+) i can (?:read|see|measure)"
+    r"|(?:we |i )?(?:don't|do not|doesn't|does not|can't|cannot) (?:count|see|measure|track|record|read|observe) \w+"
+    r"|(?:isn't|is not|aren't|are not|not) (?:counted|measured|recorded|tracked|captured) (?:anywhere|at all|here)"
+    r"|(?:that|this|it) (?:needs|would need|would take) (?:a |an )?(?:\w+ ){0,3}(?:counter|sensor|source|feed|export|record) ",
     re.I,
 )
 
@@ -541,6 +540,10 @@ class Turn:
     # milliseconds since the turn started). The turn's duration says how long
     # it took; only this says when the screen first had something on it.
     frames: list[tuple] = field(default_factory=list)
+    # What the loop wrote to the gaps log during the turn, read back from the
+    # stubbed statements (2026-09-19): the exception behind an api_error lives
+    # here and nowhere the stream carries.
+    gaps: list[dict] = field(default_factory=list)
 
     @property
     def read_calls(self) -> list[dict]:

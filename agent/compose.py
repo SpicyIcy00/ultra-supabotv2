@@ -448,10 +448,23 @@ def validate(
             # is a bad trade in one direction only.
             extra = set(item.keys()) - allowed
             if extra:
-                raise Rejected(
-                    f"a block may not carry {sorted(extra)}: George composes, the system "
-                    f"draws (metrics.yaml composition.allowed_fields)"
+                # DROPPED, NOT REFUSED, SINCE 2026-09-19 — except the names
+                # that are the attempt itself (composition.refused_fields):
+                # `claim_note` cost the P2S.✓ follow-up turn a whole round
+                # and the renderer never reads a field it does not know, so
+                # dropping one changes nothing drawn. `value`, `colour`,
+                # `size`, `title` and their kin still refuse, and still teach.
+                refused = extra & set((defs.get("composition") or {}).get("refused_fields") or ())
+                if refused:
+                    raise Rejected(
+                        f"a block may not carry {sorted(refused)}: George composes, the system "
+                        f"draws (metrics.yaml composition.allowed_fields)"
+                    )
+                coerced.append(
+                    f"{item.get('key', '?')!r}: {sorted(extra)} dropped — George composes, "
+                    f"the system draws (metrics.yaml composition.allowed_fields)"
                 )
+                item = {k: v for k, v in item.items() if k in allowed}
 
             op = item.get("op", default_op)
             if op not in ops:

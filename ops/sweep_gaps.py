@@ -79,6 +79,7 @@ KINDS: dict[str, str] = {
     "restated_figure":         "prose said again what the board already draws",
     "misstated_figure":        "prose wrote a drawn figure WRONG — 800 over a row of 801",
     "enumerated_remainder":    "prose counted the rest itself — \"and 45 others\" after naming three",
+    "ungrounded_figure":       "prose carried a figure no read returned — a range or a pairing worked out over the rows (voice.grounding)",
     "pin_claimed_not_made":    "the answer said a pin was made; none was",
     "pin_promised_not_made":   "the answer promised a pin; none followed",
     "save_claimed_not_made":   "the answer said a workflow was saved; none was",

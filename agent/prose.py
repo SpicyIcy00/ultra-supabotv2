@@ -132,10 +132,15 @@ def _is_business_figure(n: float, decimals: int, is_percent: bool,
     return True
 
 
-def figures(text: str, presentation_max: int = PRESENTATION_MAX) -> list[tuple[float, int]]:
-    """(value, decimals) of every business figure in `text`, dates and small counts excused."""
+def figure_spans(text: str, presentation_max: int = PRESENTATION_MAX
+                 ) -> list[tuple[str, float, int]]:
+    """
+    (as written, value, decimals) of every business figure in `text`, dates
+    and small counts excused — the one walk every prose gate shares, so the
+    answer's paragraph and the eval read a numeral the same way.
+    """
     text = _DATE_PARTS.sub(" ", text)
-    out: list[tuple[float, int]] = []
+    out: list[tuple[str, float, int]] = []
     for m in _NUMERAL.finditer(text):
         raw = m.group("num")
         suffix = (m.group("suffix") or "").lower()
@@ -146,8 +151,13 @@ def figures(text: str, presentation_max: int = PRESENTATION_MAX) -> list[tuple[f
             decimals -= 3 if suffix == "k" else 6
         if not _is_business_figure(n, decimals, suffix == "%", presentation_max):
             continue
-        out.append((n, decimals))
+        out.append((m.group(0).strip(), n, decimals))
     return out
+
+
+def figures(text: str, presentation_max: int = PRESENTATION_MAX) -> list[tuple[float, int]]:
+    """(value, decimals) of every business figure in `text`, dates and small counts excused."""
+    return [(n, d) for _raw, n, d in figure_spans(text, presentation_max)]
 
 
 def restated_sentences(answer: str, results: Iterable[dict]) -> list[str]:
@@ -172,6 +182,31 @@ def unreturned_figures(text: str, allowed: set[float],
     """
     return [n for n, d in figures(text, presentation_max)
             if not _matches(n, d, allowed)]
+
+
+def unreturned_prose_figures(answer: str, allowed: set[float],
+                             presentation_max: int = PRESENTATION_MAX
+                             ) -> list[tuple[str, str, float]]:
+    """
+    (sentence, figure as written, value) for every figure in the ANSWER that
+    no returned number matches at the precision written — the eval's
+    `ungrounded_numerals`, now run by the loop as well (voice.grounding,
+    2026-09-19), so the measure and the gate are one function.
+
+    The exclusions are `_is_business_figure`'s: dates, years, and integers up
+    to `presentation_max` (day numbers, "3 of 7 shops") are never figures. A
+    rounded copy of a returned figure at the precision written is grounded —
+    "₱1.49M" over 1,486,212 — and `reading.repair_rounding_in_prose` is what
+    says a rounding exactly before this runs.
+    """
+    out: list[tuple[str, str, float]] = []
+    parts = _sentences(answer)          # every sentence, a bare figure included
+    for raw, n, d in figure_spans(answer, presentation_max):
+        if _matches(n, d, allowed):
+            continue
+        sentence = next((s for s in parts if raw in s), answer.strip())
+        out.append((sentence, raw, n))
+    return out
 
 
 #: How much of a drawn figure a prose numeral must keep to count as that figure

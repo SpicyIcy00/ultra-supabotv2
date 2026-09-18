@@ -57,20 +57,6 @@ on compose frame" does.
 
 ## Open
 
-### 2026-09-18 — found by the session: rounded ranges in his prose that no tool returned
-
-In the P2S.✓ full run (`verification/p2sclose-v2.json`) three answers carried
-figures no read returned: *"₱28,000–36,700"* and *"₱13,500–21,000"* as the run
-of days, and *"₱6,569 down to ₱398"* for a product — each a rounding or a
-pairing George did in prose over day rows (rule 9: a figure in prose has no
-receipt). The board's figures were fine; the sentence was not. Likely P2S.6's
-reading policy (initiative over the rows), not bisected. In the same run
-`analyze tradsnax per store` had a notice forced into the answer and `run it
-every monday at 6` died on an `anthropic.APIError` after four rounds, detail
-lost because the harness stubs the gaps log; and the `cannot` check's regex
-does not recognise *"I don't have footfall"* as saying what he cannot tell —
-the check is stale, not the answer. Not fixed: the close.
-
 ### 2026-09-18 — found by the session: the memory figure prints a stance as its raw name
 
 `what do you remember?` draws each belief's stance as the enum, uppercased by
@@ -103,16 +89,6 @@ so either may have opened earlier than the record shows.
 reads `surface.desk.selection.comparison`, which the definitions no longer
 have. The tools are fine; the tests are stale. Checked by running them with
 P2S.4's changes stashed. Not fixed: not the card.
-
-### 2026-09-18 — "it does feel slow and really rough, it didn't feel like it was investigating"
-
-> *"Its does feel slow and really rough, It didn't feel like it was investigating, Is there ways to make this better in the way it works and uses tools or something?"*
-
-Said after P2S.7 (`4338529`) was pushed. The recorded runs agree on the slow
-half: in `verification/p2s7-gate-2.json` a broad turn took 85 s in 5 model
-rounds, the morning 84 s in 6, "analyze tradsnax" 117 s in 7 — about 17 s a
-round, each one thinking at high effort before the next reads can start. Not
-yet diagnosed on the live build.
 
 ### 2026-09-17 — "its failing here" (an ordering system for the top 5 suppliers)
 
@@ -427,6 +403,54 @@ once changes the next answer. That is the card's own done-when.
 ---
 
 ## Fixed
+
+### 2026-09-18 — "it does feel slow and really rough, it didn't feel like it was investigating"
+
+> *"Its does feel slow and really rough, It didn't feel like it was investigating, Is there ways to make this better in the way it works and uses tools or something?"*
+
+Said after P2S.7 (`4338529`) was pushed. The recorded runs agree on the slow
+half: in `verification/p2s7-gate-2.json` a broad turn took 85 s in 5 model
+rounds, the morning 84 s in 6, "analyze tradsnax" 117 s in 7 — about 17 s a
+round, each one thinking at high effort before the next reads can start. Not
+yet diagnosed on the live build.
+
+**Fixed 2026-09-19 (the speed fix), measured on one live run
+(`verification/speedfix-v2.json`, $3.50):** median answer 76.6 s → 24.3 s over
+the fourteen questions, $0.34 → $0.25 a turn, 8 → 11 of 14 passed. Six
+changes: effort back to medium for follow-ups and fresh questions (the ladder,
+broad questions and building stay high; "analyze", "investigate", "compare"
+now open the ladder); a figure in prose that no read returned is said exactly
+when one read explains its rounding, else bought one rewrite, else removed with
+its sentence (`voice.grounding`); an ask or an action refused no longer costs a
+rewrite round; an unknown block field is dropped instead of refused, a typed
+figure still refused; one round for the drivers after the verify; the eval
+harness keeps an api_error's reason from the gaps log. Held by
+`tests/test_grounding_gate_contract.py`. What is still slow: "analyze" (127 s,
+7 rounds) and the order draft (108 s) — building and digging at high effort.
+
+### 2026-09-18 — found by the session: rounded ranges in his prose that no tool returned
+
+In the P2S.✓ full run (`verification/p2sclose-v2.json`) three answers carried
+figures no read returned: *"₱28,000–36,700"* and *"₱13,500–21,000"* as the run
+of days, and *"₱6,569 down to ₱398"* for a product — each a rounding or a
+pairing George did in prose over day rows (rule 9: a figure in prose has no
+receipt). The board's figures were fine; the sentence was not. Likely P2S.6's
+reading policy (initiative over the rows), not bisected. In the same run
+`analyze tradsnax per store` had a notice forced into the answer and `run it
+every monday at 6` died on an `anthropic.APIError` after four rounds, detail
+lost because the harness stubs the gaps log; and the `cannot` check's regex
+does not recognise *"I don't have footfall"* as saying what he cannot tell —
+the check is stale, not the answer. Not fixed: the close.
+
+**Fixed 2026-09-19 (the speed fix).** The loop now runs the eval's own
+matcher on the answer (`agent/prose.unreturned_prose_figures`): a rounding one
+read explains is replaced by the read's figure with no round trip, what no read
+explains buys one rewrite, and what survives goes with its sentence or is named
+under the answer. On the live run the three rows passed; a fourth ("how are we
+doing", "₱27,000–48,000" over drawn days) was an echo the misstatement gate
+had given up on, and the repair now takes those too. The api_error's reason is
+kept in the report; the `cannot` check recognises "I don't have" and "we don't
+count". Still open in that run: one threaded answer cited no figure at all.
 
 ### 2026-09-18 — found by the session: a tool call missing a required argument breaks the whole answer
 

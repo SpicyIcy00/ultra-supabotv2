@@ -1639,8 +1639,8 @@ investigation:
   # challenge, explore, decide or act — not because George made me ask
   # 'why?' five times to get to the useful part."
   principle: >
-    UNDERSTANDING, NOT BREADCRUMBS: asked about an area, investigate it far
-    enough to understand what is happening before you answer. Their next
+    UNDERSTANDING, NOT BREADCRUMBS: asked about an area, investigate far
+    enough to understand it before you answer. Their next
     question should steer, challenge, decide or act — never a "why?" you
     could have answered.
 
@@ -5534,6 +5534,21 @@ voice:
   # answer that had investigated three things could give a number to one of
   # them and the gate deleted the rest: the owner's "don't artificially squeeze
   # real understanding". Walking the rows is still what a fifth catches.
+  # A FIGURE IN PROSE THAT NO READ RETURNED (the speed fix, 2026-09-19). The
+  # P2S.✓ run failed three trust rows the same way: "₱28,000–36,700" as the
+  # run of days, "₱13,500–21,000", "₱6,569 down to ₱398" — George rounding or
+  # pairing figures himself over rows he had read. Rule 9: a figure in prose
+  # has no receipt. Until now this was an eval only; the loop now runs the
+  # same matcher (agent/prose.unreturned_prose_figures) and does, in order:
+  # a rounded figure that ONE returned value explains is said exactly (no
+  # round trip); what is left buys one corrective turn; what survives that is
+  # removed with its sentence, or, when nothing can go, named in a caveat
+  # line under the answer. Every step is on the run record.
+  grounding:
+    introduced: "2026-09-19"
+    max_corrective_turns: 1
+    warning_reason: ungrounded_figure
+
   restatement:
     introduced: "2026-09-12"
     max_restated_sentences: 4
@@ -6818,6 +6833,14 @@ composition:
   allowed_fields: [op, kind, key, weight, seq, subject, label,
                    argument, spec, emphasise, claim, thought,
                    field, against, ruled_out]
+  # AN UNKNOWN FIELD IS DROPPED, NOT REFUSED — except these (the speed fix,
+  # 2026-09-19). `claim_note` and `key_note` cost the P2S.✓ follow-up turn a
+  # whole round, and the renderer never reads a field it does not know, so
+  # dropping one changes nothing drawn. The names below are the attempt the
+  # refusal exists to stop — typing a figure, a colour or a size onto a block —
+  # and they stay refused so the boundary is still taught.
+  refused_fields: [value, values, number, figure, figures, total, sum, count,
+                   colour, color, width, height, size, title, text, type]
 
   # WHAT TO DO ABOUT IT, ON THE ROW IT IS ABOUT (P2.d, 2026-09-15).
   #
@@ -8151,6 +8174,16 @@ effort:
         - "what's going on"
         - "whats going on"
         - "how come"
+        # A figure asked to be taken apart is the ladder too (the speed fix,
+        # 2026-09-19): "analyze tradsnax per store" ran at `fresh`, and when
+        # `fresh` went back to medium this is what keeps the digging at high.
+        - "analy"
+        - "investigate"
+        - "dig into"
+        - "look into"
+        - "take apart"
+        - "drill into"
+        - "compare"
     broad:
       level: high
       means: >
@@ -8198,7 +8231,12 @@ effort:
     # should not hold us back in functionality". A pure scope move with no
     # model at all is the replay path (P1.i/P1.j), which this never reaches.
     follow_up:
-      level: high
+      # MEDIUM SINCE THE SPEED FIX (2026-09-19). P2S.6 raised every kind to
+      # high; the P2S.✓ run then spent 86 s on "no i meant last week" and
+      # 81 s on "run it every monday at 6". At low (14 September) every trust
+      # row on these turns held; medium keeps the scope understood and buys
+      # back most of the time.
+      level: medium
       means: >
         a short message inside a thread that refines the work on screen —
         "how about rockwell", "no i meant last week". It moves the scope, and
@@ -8210,8 +8248,30 @@ effort:
     # week going?" and "whats happening at greenhills" all landed here, so the
     # questions the owner most wants investigated thought least. Only a
     # label-only act, which has nothing to reason about, stays low.
-    fresh:
+    build:
       level: high
+      means: >
+        building something with George — a system, an order, a draft, a
+        rule — where a wrong plan costs a person's time. Kept at high when
+        `fresh` went back to medium (the speed fix, 2026-09-19).
+      phrases:
+        - "build"
+        - "brainstorm"
+        - "system for"
+        - "set up "
+        - "design "
+        - "draft "
+        - "automate"
+        - "workflow"
+        - "purchase order"
+        - "po system"
+        - "ordering system"
+        - "schedule"
+    fresh:
+      # MEDIUM SINCE THE SPEED FIX (2026-09-19), as it was until P2S.6. What
+      # made P2S.6 raise it — "analyze" ran here — is now a ladder phrase, so
+      # a question that digs is still high and a lookup is not.
+      level: medium
       means: a question in its own right, which is everything else
       default_kind: true
 
@@ -8237,6 +8297,12 @@ rounds:
   # the round it always had.
   settle:
     ends_on: compose_only_with_claim_and_words
+    # A refused ACCESSORY does not un-settle the round (the speed fix,
+    # 2026-09-19): an ask with a figure no read returned, or an action on a
+    # row the read does not have, is dropped with its reason and the answer
+    # stands — the `order` turn of the P2S.✓ run bought a whole round for one
+    # dropped ask. A refused block or slot still keeps its round.
+    stands_without: [asks, actions]
     # Said on the compose tool, where the model reads it at the moment of
     # composing (agent/loop.py _board_addendum).
     tool_sentence: >

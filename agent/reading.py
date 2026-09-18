@@ -51,7 +51,7 @@ would change a figure.
 from __future__ import annotations
 
 import re
-from typing import Any, Iterable, Mapping, Optional
+from typing import Callable, Any, Iterable, Mapping, Optional
 
 from agent import prose as _prose
 
@@ -210,6 +210,40 @@ def _correct_rounding(name: str, text: str, returned: set[float], presentation: 
                 f"read ({named}) — say the one you mean exactly ({where})"
             )
     return out
+
+
+def repair_rounding_in_prose(text: str, returned: set[float], presentation: int,
+                             skip: Optional[Callable[[float], bool]] = None,
+                             ) -> tuple[str, list[str]]:
+    """
+    THE ANSWER'S OWN ROUNDINGS SAID EXACTLY (voice.grounding, 2026-09-19) —
+    `_correct_rounding` for the paragraph rather than a slot, and it never
+    refuses: a numeral that ONE returned figure explains is replaced by that
+    figure; one that two could mean, or none, is left for the gate that runs
+    after this. Returns the text and what was replaced, for the run record.
+    """
+    out = text
+    repaired: list[str] = []
+    for m in reversed(list(_prose._NUMERAL.finditer(_prose._DATE_PARTS.sub(
+            lambda d: " " * len(d.group(0)), text)))):
+        raw = m.group("num")
+        if m.group("suffix"):
+            continue
+        n = float(raw.replace(",", ""))
+        decimals = len(raw.split(".")[1]) if "." in raw else 0
+        if not _prose._is_business_figure(n, decimals, False, presentation):
+            continue
+        if _prose._matches(n, decimals, returned):
+            continue
+        if skip is not None and skip(n):
+            continue                     # another gate's — see the loop
+        meant = _rounded_from(n, decimals, returned)
+        if len(meant) == 1:
+            exact = _say(meant[0], raw)
+            start, end = m.span("num")
+            out = out[:start] + exact + out[end:]
+            repaired.append(f"{raw} is {exact} rounded, so it says {exact}")
+    return out, list(reversed(repaired))
 
 
 def _check(name: str, value: Any, spec: Mapping[str, Any],

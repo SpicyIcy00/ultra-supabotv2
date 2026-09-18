@@ -97,14 +97,15 @@ HISTORY = [{"role": "user", "text": "how did we do?", "tool_calls": []}]
     ("pin that", HISTORY, ("low", "label_only")),
     # A fragment inside a thread moves the scope — and since 2026-09-18 the
     # new scope is understood before it is shown, so it is not hurried.
-    ("how about rockwell", HISTORY, ("high", "follow_up")),
-    ("no i meant last week", HISTORY, ("high", "follow_up")),
+    ("how about rockwell", HISTORY, ("medium", "follow_up")),
+    ("no i meant last week", HISTORY, ("medium", "follow_up")),
     # And everything else — high since 2026-09-18: "analyze tradsnax per
     # store" was landing here at medium, the question most wanting depth.
-    ("What is running low at Greenhills?", None, ("high", "fresh")),
+    ("What is running low at Greenhills?", None, ("medium", "fresh")),
+    # Building stays high when fresh went back to medium (2026-09-19).
     ("lets brainstorm ideas for a po system for seikyo, 8 weeks of cover",
-     None, ("high", "fresh")),
-    ("analyze tradsnax per store", None, ("high", "fresh")),
+     None, ("high", "build")),
+    ("analyze tradsnax per store", None, ("high", "ladder")),
 ])
 def test_the_kind_a_question_is(question, history, expected) -> None:
     assert george_loop.turn_effort(question, history, DEFS) == expected
