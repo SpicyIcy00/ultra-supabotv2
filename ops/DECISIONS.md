@@ -4610,3 +4610,7 @@ Prompt 1,797 → 1,787 words; the desk's click list and three repeated clauses l
 **Coerced, per P1.a's line, declared in the yaml (`over_length`):** claims, thoughts and action reasons are cut, caveat/next/asks are kept whole, emphasis keeps the first three, and a slot's rounded figure is said exactly when one read figure rounds to it. A figure no read returned is still refused. Refusals not about truth fell 5, 4 → 0, 0.
 **`filters_applied` is a list of statements in production**; the scope check read a mapping and every test passed one. The argument now proposes and the tool's statement confirms.
 Two runs (the maximum): $2.56 at 2/7, $1.91 at 6/7. The failure was "₱25–45k", a range no read returned, which is eval-only by rule 9. A third run is the owner's call. The move and the orphan in that turn are fixed with tests but have not been seen live.
+
+## 2026-09-18 · The UI is frozen as it is live; the page layout is parked
+
+After a render of the answer as a page under the mark (P2S.8, written the same day), the owner: *"actually no more changing how our ui works i like it right now."* P2S.8 is parked, not deleted; the render stays as the record. The remaining cards (P2S.9 fewer rounds, P2S.10 three tools, P2S.11 what he is told) change how George works underneath, not the screen — where one would touch the screen (P2S.11's memory list), it uses the screen that exists.

@@ -267,7 +267,7 @@ where a regression was speculative AND **the four gate scenarios could not
 have seen it.** A new comparison (`P2S.4`, `P3.f`) is a capability no gate
 scenario asks for, so a run there proves nothing; `P2.c`, `P2.d` and `P2.f`
 are context and rendering; `P1.c` breaks or fixes compose refusals, which are
-its own numbers. **Eight live runs across 18 open cards, $6.86** (P2S.6, P2S.7, P2S.8, P2S.9, P2S.10 and P2S.11 subsets and the two full closes; P2S.3's subset was spent 2026-09-17, $0.72 against $0.64) — P2.m closed 2026-09-16 and **its own run has not been made**, so the paragraph below it is the record of what that costs — the two
+its own numbers. **Seven live runs across 17 open cards, $6.22** (P2S.6, P2S.7, P2S.9, P2S.10 and P2S.11 subsets and the two full closes; P2S.3's subset was spent 2026-09-17, $0.72 against $0.64) — P2.m closed 2026-09-16 and **its own run has not been made**, so the paragraph below it is the record of what that costs — the two
 phase closes still to come, at $1.51 each on v2, the measured price.
 Every remaining gate was dropped or absorbed, so two FULL runs is the whole
 of it.
@@ -3110,7 +3110,11 @@ cleanup; he decides.
       products, 74k characters to the model (≈$0.13 a turn a 50-row default
       would save — measured, not cut, at the owner's word). Pure 1,883 →
       1,927 here, vitest 924 → 927. Prompt 1,793 → 1,798 words.
-- [ ] **P2S.8 the answer is a page under the mark** — written 2026-09-18 at the
+- [parked] **P2S.8 the answer is a page under the mark** — **PARKED 2026-09-18 at
+      the owner's word, the same day it was written: *"actually no more changing
+      how our ui works i like it right now"*.** The UI stays as it is live; the
+      render is kept as the record, and one word from him revives the card.
+      Written 2026-09-18 at the
       owner's word: *"it still builds widgets in mind when i think it should
       build more page like more loose … text and blob on top and build below
       it"*, after *"its does feel slow and really rough, it didn't feel like it
