@@ -2973,6 +2973,37 @@ cleanup; he decides.
       Kiamoy White seven days running. **Not run live; a broad turn now
       likely reads 9 times over ~5 model rounds, so the $0.50 ceiling is at
       risk and is held, not raised.**
+      **THEN THE RUNTIME, AT THE OWNER'S WORD** (*"cost should not hold us back
+      in functionality, i just want to optimize cost not make our george work
+      worse"*): the $0.50 ceiling is withdrawn (cost is recorded, never
+      asserted); WHO YOU ARE and VOICE rewritten to his hierarchy (responsible
+      for understanding, an operator not a reporter, "nothing here concerns
+      me" is a conclusion, the slots are places not a length — "one
+      paragraph", "at most two figures", "3 sentences" gone); the compose
+      schema's `next`/`asks` stopped contradicting the prompt; effort `fresh`
+      and `follow_up` → high; one figure-sentence per finding (restatement 1 →
+      4); the 12-call cap counts READS; caveat 320 → 640, next 160 → 320
+      characters; two text blocks in one reply are two paragraphs. Prompt
+      **1,793 words**. **Pure 1,878 → 1,884.**
+      **LIVE, TWO RUNS (the card's maximum), 5 gate + 2 depth turns:**
+      `verification/p2s6-gate.json` $1.73, `p2s6-gate-2.json` $2.15. **Each run
+      failed one trust row on "how are we doing?"** — run 1 a figure no tool
+      returned ("less than ₱17,000", a cut-off he drew; MATTERS reworded), run
+      2 a notice forced (he said the stale sources in prose, but his caveat was
+      refused for "about 13,100" against a row of 13,134). **What worked:** the
+      morning took apart its top item and found North Edsa's −42% is last
+      Thursday's Aji Mix day, not yesterday's problem; the broad turn found
+      OPUS's week sits in its weekend (run 1: the 31 Aug Monday); Rockwell was
+      left alone; the Greenhills answer found the four real lines. **What did
+      not:** the broad answer swung from squeezed to 503 words; the deletion
+      gates now leave orphaned sentences ("That's a bookkeeping problem" with
+      its subject deleted) in 3 of 14 turns; "analyze tradsnax" spent 4 reads
+      finding the category's spelling, hit the cap, and the cap's forced
+      answer printed a tool call to the reader; "₱10,701 of the ₱11,843 gap"
+      and "roughly half the gap" are share-shaped sentences the attribution
+      check does not catch. Gate cost for the four old questions $0.72 →
+      $0.97; broad $0.30 / $0.51; slowest turn 113 s. **NOT DONE — the trust
+      rows moved, so this is not pushable as a close.**
 - [ ] **P2S.4 same-store year-over-year** — **was P2.i, kept by the merge
       2026-09-17 because it changes what George can SAY, not how it looks,
       and so is untouched by the redraw.** It may be taken ahead of any P2S

@@ -404,7 +404,12 @@ def test_the_persona_no_longer_waits():
     """
     prompt = _prompt()
     assert "and wait" not in prompt
-    assert "you do the looking yourself" in prompt
+    assert "You do the looking yourself" in prompt
+    # The owner's identity, 2026-09-18: responsible for understanding the
+    # business; an operator, not a reporter; nothing-concerns-me is an answer.
+    assert "responsible for understanding this business" in prompt
+    assert "An operator, not a reporter." in prompt
+    assert "nothing here concerns me" in prompt
     assert "You read without asking and act on nothing alone" in prompt
     assert "UNDERSTANDING, NOT BREADCRUMBS" in prompt
 
@@ -466,3 +471,34 @@ def test_next_is_never_a_read_he_could_have_made():
 def test_the_localizing_round_is_one_round_on_the_tool_that_makes_it():
     from agent.loop import _tool_addenda
     assert "in ONE round" in _tool_addenda(DEFS)["get_sales"]
+
+
+def test_the_answer_is_as_long_as_the_understanding_takes():
+    """
+    "One paragraph ... at most two [figures]" and "3 short sentences or fewer"
+    were lengths; the owner: "don't artificially squeeze real understanding
+    into one paragraph/two figures". The slots are places, not a length.
+    """
+    prompt = _prompt()
+    assert "at most two in a paragraph" not in prompt
+    assert "short sentences or fewer" not in prompt
+    assert "The slots are places, not a length." in prompt
+    assert " ".join(req(DEFS, "surface.prose.words_carry").split()) in prompt
+
+
+def test_the_schema_he_writes_with_says_what_the_prompt_says():
+    """
+    Found 2026-09-18: the prompt forbade a `next` that names a read, and the
+    compose schema — read at the moment he writes — still said "the one thing
+    you would do or check next … where an investigation stopped, this is where
+    it says what to look at", and asked for `asks` "you could answer with a
+    read or two". The schema George actually receives is checked, not the yaml.
+    """
+    import json as _json
+    from agent.loop import build_tool_schemas
+    compose = [t for t in build_tool_schemas() if t["name"] == "compose"][0]
+    text = " ".join(_json.dumps(compose).split())
+    assert "where it says what to look at" not in text
+    assert "answer with a read or two" not in text
+    assert "never a read you could have made" in text
+    assert "steer, challenge, decide or act" in text

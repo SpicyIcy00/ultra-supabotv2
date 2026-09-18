@@ -38,10 +38,17 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         "markers",
-        "gate: one of the four voice scenarios that make up the TRUST GATE "
-        "(caveats, why, cannot, morning). Four live model turns, ~$0.55. Run "
+        "gate: one of the five voice scenarios that make up the TRUST GATE "
+        "(caveats, why, cannot, morning, broad). Five live model turns. Run "
         "with -m gate on any card that can change what the model sees; the "
         "full suite only at a phase close. See tests/evals/test_voice_evals_v2.py.",
+    )
+    config.addinivalue_line(
+        "markers",
+        "depth: the two questions that show whether George goes deep enough "
+        "and no deeper (P2.m wrote them, P2S.6 first ran them) — 'analyze "
+        "tradsnax per store' and 'how did Rockwell do?'. Two live turns; run "
+        "with -m depth on a card that changes how far he reads.",
     )
 
 

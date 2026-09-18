@@ -56,7 +56,6 @@ from agent import loop as george_loop
 from agent import reading as george_reading
 
 MAX_ITERATIONS = george_loop.MAX_ITERATIONS
-MAX_CALLS = 12
 STRICT = os.environ.get("GEORGE_VOICE_STRICT") == "1"
 
 report = Report()
@@ -172,7 +171,13 @@ def _voice(name: str, turn: checks.Turn, *, extra_results: list | None = None,
     assert turn.done.get("status") == "ok", (turn.warnings, turn.answer[:300])
     assert turn.answer, "no answer"
     assert turn.done["iterations"] <= MAX_ITERATIONS, turn.done
-    assert turn.done.get("executed_calls", turn.done["tool_calls"]) <= MAX_CALLS, turn.done
+    # READS, as the loop's own cap counts them since 2026-09-18 — a compose,
+    # a view or a pin is not searching. p2s6-gate.json's `analyze` made 11
+    # reads and 2 composes, inside the loop's budget and outside this check
+    # while it still counted every call; the check followed the definition.
+    reads = [c for c in turn.calls
+             if str(c.get("tool", "")).startswith("get_") and c.get("duplicate_of") is None]
+    assert len(reads) <= george_loop.MAX_TOOL_CALLS, (len(reads), turn.done)
     assert turn.done.get("notice_forced") is False, "a notice had to be forced into the answer"
     assert not f["ungrounded_numerals"], f"figures no tool returned: {f['ungrounded_numerals']}"
     assert not f["internal_vocabulary"], f"internal vocabulary: {f['internal_vocabulary']}"
@@ -240,18 +245,19 @@ def test_gate_4_morning(monkeypatch):
 
 def _broad(turn: checks.Turn, f: dict) -> None:
     """
-    A broad answer found WHERE the movement sits, and paid no more than its
-    ceiling for it (P2S.6). Both are read off the turn — the call arguments and
-    the usage on the done frame — so the check itself costs nothing.
+    A broad answer found WHERE the movement sits (P2S.6), read off the call
+    arguments, and what the turn cost, read off the done frame and recorded.
+    Neither costs anything to check.
     """
     loc = checks.localizing_reads(turn.calls)
-    usd = turn_usd(turn)
-    ceiling = float(req(DEFS, "investigation.scope.kinds.broad.eval_cost_ceiling_usd"))
+    # COST IS REPORTED, NEVER ASSERTED (2026-09-18). A $0.50 ceiling was set
+    # here the same morning and the owner withdrew it: "cost should not hold
+    # us back in functionality, i just want to optimize cost not make our
+    # george work worse". The figure goes on the record for the close-out.
     f["localizing_reads"] = [c.get("arguments") for c in loc]
-    f["turn_usd"] = round(usd, 4)
+    f["turn_usd"] = round(turn_usd(turn), 4)
     assert loc, ("a broad answer read by store and nothing under it — "
                  f"{[c.get('arguments') for c in turn.read_calls]}")
-    assert usd <= ceiling, f"the broad turn cost ${usd:.3f} against a ${ceiling:.2f} ceiling"
 
 
 @pytest.mark.gate
@@ -263,6 +269,30 @@ def test_gate_5_how_are_we_doing(monkeypatch):
     """
     turn = _turn(monkeypatch, "how are we doing?")
     _broad(turn, _voice("broad", turn))
+
+
+# =============================================================================
+# DEPTH — written by P2.m (2026-09-16) and first run by P2S.6. One asks for
+# the work in a verb that is not "why"; the other is a lookup, which is
+# explained only if it moved. Opt-in with -m depth.
+# =============================================================================
+
+@pytest.mark.depth
+def test_depth_1_analyze(monkeypatch):
+    """Taken apart: the read it names, then the one it cannot show."""
+    turn = _turn(monkeypatch, "analyze tradsnax per store")
+    f = _voice("analyze", turn)
+    f["reads"] = [c.get("arguments") for c in turn.ok_calls]
+    floor = int(req(DEFS, "investigation.scope.kinds.focused.taken_apart.min_reads"))
+    assert len(turn.ok_calls) >= floor, f"{len(turn.ok_calls)} reads for a message taken apart"
+
+
+@pytest.mark.depth
+def test_depth_2_lookup(monkeypatch):
+    """A lookup: the read it names, and under it only if it moved."""
+    turn = _turn(monkeypatch, "how did Rockwell do?")
+    f = _voice("lookup", turn)
+    f["reads"] = [c.get("arguments") for c in turn.ok_calls]
 
 
 # =============================================================================

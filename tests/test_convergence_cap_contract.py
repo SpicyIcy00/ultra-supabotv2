@@ -183,3 +183,30 @@ def test_the_budget_is_still_a_budget_for_reads(monkeypatch):
     assert frames_of(frames, "warning") == []
     assert not [r for r in frames_of(frames, "tool_result") if r["error"]]
     _assert_every_tool_use_is_answered(requests[-1]["messages"])
+
+
+# ---------------------------------------------------------------------------
+# The budget is READS (2026-09-18)
+# ---------------------------------------------------------------------------
+
+def test_a_write_does_not_spend_the_read_budget(monkeypatch):
+    """
+    The cap counted every call, so a turn that drew its board and recorded a
+    view had two fewer reads than the prompt promised — nine reads plus a
+    compose and a belief met the cap at the edge of the investigation. The
+    owner: "cost should not hold us back in functionality". Here the budget
+    minus one reads, a pin, then one more read: every read runs.
+    """
+    writes: list = []
+    n = george_loop.MAX_TOOL_CALLS - 1
+    frames, requests = _drive(monkeypatch, [
+        _reads(n),
+        [_ToolUse("tu-pin", "pin_answer", {"title": "Net sales", "tool_calls": []})],
+        _reads(1, start=n),
+        [_TextBlock("Pinned, and the last shop read.")],
+    ], writes)
+
+    assert [w[0] for w in writes] == ["pin_answer"]
+    assert "convergence_cap" not in [w["reason"] for w in frames_of(frames, "warning")]
+    assert not [r for r in frames_of(frames, "tool_result") if r["error"]]
+    _assert_every_tool_use_is_answered(requests[-1]["messages"])

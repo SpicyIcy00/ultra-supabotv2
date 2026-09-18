@@ -318,22 +318,27 @@ def _standing_answer(frames) -> str:
 # (2026-09-14): everything George reads is drawn, so at 0 every figure he could
 # cite was corrected out and the standing answers carried none at all.
 CLAIM = "OPUS took ₱61,500.50 last week, and that is the week — Rockwell never got close."
-# TWO, WHICH IS THE RECITATION THE GATE IS ACTUALLY FOR: the second sentence
-# walks the rows the board already draws.
+# ONE PAST THE ALLOWANCE, WHICH IS THE RECITATION THE GATE IS FOR. Since
+# 2026-09-18 a finding may carry its figure — one sentence per finding, up to
+# presentation.findings_max — so reciting the board is the sentence past that:
+# here the fifth, walking rows already drawn and said.
 RECITING = ("Rockwell took ₱48,210 last week. OPUS took ₱61,500.50. "
-            "Rockwell is the one to watch.")
+            "That leaves Rockwell at ₱48,210. And OPUS at ₱61,500.50. "
+            "Once more, OPUS took ₱61,500.50. Rockwell is the one to watch.")
 READING = "OPUS carried the week and Rockwell did not; the split is on the board. Worth a look at OPUS's products?"
 
 
 def test_the_gate_is_a_definition_and_the_evals_measure_with_the_same_function() -> None:
     r = req(DEFS, "voice.restatement")
-    assert r["max_restated_sentences"] == 1 and r["max_corrective_turns"] == 1
+    # One figure-sentence per finding (2026-09-18), held to the findings bound.
+    assert r["max_restated_sentences"] == req(DEFS, "investigation.scope.presentation.findings_max")
+    assert r["max_corrective_turns"] == 1
     assert r["warning_reason"] == "restated_figure"
     from tests.evals import checks, voice_checks
     assert checks.allowed_numbers is prose.allowed_numbers
     assert voice_checks.restated_sentences(RECITING, [{"rows": ROWS, "meta": META}]) == \
         prose.restated_sentences(RECITING, [{"rows": ROWS, "meta": META}])
-    assert len(prose.restated_sentences(RECITING, [{"rows": ROWS, "meta": META}])) == 2
+    assert len(prose.restated_sentences(RECITING, [{"rows": ROWS, "meta": META}])) == 5
     assert len(prose.restated_sentences(CLAIM, [{"rows": ROWS, "meta": META}])) == 1
     assert prose.restated_sentences(READING, [{"rows": ROWS, "meta": META}]) == []
 
@@ -346,17 +351,18 @@ def test_a_recitation_of_the_board_costs_nothing_now(monkeypatch) -> None:
     """
     frames, requests = _drive_drawn(monkeypatch, [RECITING])
     warnings = [w for w in frames_of(frames, "warning") if w["reason"] == "restated_figure"]
-    assert len(warnings) == 1 and warnings[0]["found"] == 2 and warnings[0]["limit"] == 1
+    limit = req(DEFS, "voice.restatement.max_restated_sentences")
+    assert len(warnings) == 1 and warnings[0]["found"] == 5 and warnings[0]["limit"] == limit
     assert warnings[0]["corrected"] == "deterministic" and warnings[0]["removed"] == 1
     assert [r["reason"] for r in frames_of(frames, "answer_reset")] == ["restated_figure"]
     standing = _standing_answer(frames)
     # THE ALLOWANCE IS WHAT KEEPS A FIGURE ON SCREEN. P1.c raised it 0 -> 1
     # because a reading with no figure in it is its own failure; the edit keeps
     # the first restating sentence for the same reason and drops the recitation.
-    assert "48,210" in standing, "the figure the claim rests on survived"
-    assert "61,500.50" not in standing, "the sentence that walked the board did not"
+    assert "48,210" in standing and "61,500.50" in standing, "each finding kept its figure"
+    assert "Once more" not in standing, "the sentence past the allowance did not"
     assert "Rockwell is the one to watch." in standing, "the reading is untouched"
-    assert len(prose.restated_sentences(standing, [{"rows": ROWS, "meta": META}])) == 1
+    assert len(prose.restated_sentences(standing, [{"rows": ROWS, "meta": META}])) == limit
     # And nothing was put to the model: the read and the answer, nothing more.
     assert len(requests) == 2
     sent = [m["content"] for req_ in requests for m in req_["messages"]

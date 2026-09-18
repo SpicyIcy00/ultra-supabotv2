@@ -95,14 +95,16 @@ HISTORY = [{"role": "user", "text": "how did we do?", "tool_calls": []}]
     # A surface act over work already done.
     ("can you make it a page?", HISTORY, ("low", "label_only")),
     ("pin that", HISTORY, ("low", "label_only")),
-    # A fragment inside a thread, which moves the scope of a reading already
-    # made rather than making a new one.
-    ("how about rockwell", HISTORY, ("low", "follow_up")),
-    ("no i meant last week", HISTORY, ("low", "follow_up")),
-    # And everything else.
-    ("What is running low at Greenhills?", None, ("medium", "fresh")),
+    # A fragment inside a thread moves the scope — and since 2026-09-18 the
+    # new scope is understood before it is shown, so it is not hurried.
+    ("how about rockwell", HISTORY, ("high", "follow_up")),
+    ("no i meant last week", HISTORY, ("high", "follow_up")),
+    # And everything else — high since 2026-09-18: "analyze tradsnax per
+    # store" was landing here at medium, the question most wanting depth.
+    ("What is running low at Greenhills?", None, ("high", "fresh")),
     ("lets brainstorm ideas for a po system for seikyo, 8 weeks of cover",
-     None, ("medium", "fresh")),
+     None, ("high", "fresh")),
+    ("analyze tradsnax per store", None, ("high", "fresh")),
 ])
 def test_the_kind_a_question_is(question, history, expected) -> None:
     assert george_loop.turn_effort(question, history, DEFS) == expected
@@ -114,8 +116,8 @@ def test_a_fragment_with_no_thread_behind_it_is_a_fresh_question() -> None:
     message of a conversation has nothing to refine — there is no board and no
     previous reading — so it is a question in its own right and is not hurried.
     """
-    assert george_loop.turn_effort("how about rockwell", None, DEFS) == ("medium", "fresh")
-    assert george_loop.turn_effort("how about rockwell", [], DEFS) == ("medium", "fresh")
+    assert george_loop.turn_effort("how about rockwell", None, DEFS)[1] == "fresh"
+    assert george_loop.turn_effort("how about rockwell", [], DEFS)[1] == "fresh"
 
 
 def test_a_long_message_in_a_thread_is_not_a_fragment() -> None:
@@ -127,7 +129,7 @@ def test_a_long_message_in_a_thread_is_not_a_fragment() -> None:
     """
     long_one = "add top sellers by sales not units, i value sales more"
     assert len(long_one.split()) > req(DEFS, "effort.follow_up_max_words")
-    assert george_loop.turn_effort(long_one, HISTORY, DEFS) == ("medium", "fresh")
+    assert george_loop.turn_effort(long_one, HISTORY, DEFS)[1] == "fresh"
 
 
 # ---------------------------------------------------------------------------
@@ -159,7 +161,7 @@ def test_a_default_level_turn_sends_no_marker_and_no_header(monkeypatch) -> None
 
 
 def test_a_lowered_turn_carries_the_marker_and_the_beta(monkeypatch) -> None:
-    _, requests = _drive(monkeypatch, "how about rockwell", history=HISTORY)
+    _, requests = _drive(monkeypatch, "pin that", history=HISTORY)
     sent = requests[0]
     markers = [m for m in sent["messages"] if m["role"] == "system"]
     assert markers == [{"role": "system", "content": [],
@@ -173,7 +175,7 @@ def test_the_top_level_effort_never_moves(monkeypatch) -> None:
     this one does not. So the top-level value is the same on a lowered turn as
     on a default one, and the difference is entirely inside `messages`.
     """
-    _, low = _drive(monkeypatch, "how about rockwell", history=HISTORY)
+    _, low = _drive(monkeypatch, "pin that", history=HISTORY)
     _, high = _drive(monkeypatch, "Why was North Edsa up so much last week?")
     assert low[0]["output_config"] == high[0]["output_config"] == {"effort": DEFAULT}
 
@@ -184,13 +186,13 @@ def test_the_marker_sits_after_the_history_and_before_the_question(monkeypatch) 
     turn has to reproduce renders before the marker, and the marker is followed
     by the question it governs.
     """
-    _, requests = _drive(monkeypatch, "how about rockwell", history=HISTORY)
+    _, requests = _drive(monkeypatch, "pin that", history=HISTORY)
     msgs = requests[0]["messages"]
     # The captured list is the loop's own and grows as the turn runs, so the
     # question is located rather than counted from the end.
     at = [i for i, m in enumerate(msgs) if m["role"] == "system"][0]
     assert msgs[at + 1]["role"] == "user"
-    assert "how about rockwell" in msgs[at + 1]["content"]
+    assert "pin that" in msgs[at + 1]["content"]
     assert all(m["role"] in ("user", "assistant") for m in msgs[:at])
     assert [m["role"] for m in msgs].count("system") == 1
 
@@ -200,9 +202,9 @@ def test_the_level_is_on_the_done_frame(monkeypatch) -> None:
     Recorded, because it is what the card is measured on and nothing else can
     be asked for it afterwards.
     """
-    frames, _ = _drive(monkeypatch, "how about rockwell", history=HISTORY)
+    frames, _ = _drive(monkeypatch, "pin that", history=HISTORY)
     done = frames_of(frames, "done")[0]
-    assert done["effort"] == "low" and done["effort_kind"] == "follow_up"
+    assert done["effort"] == "low" and done["effort_kind"] == "label_only"
 
 
 # ---------------------------------------------------------------------------
@@ -256,7 +258,7 @@ def test_an_unavailable_beta_drops_the_marker_and_answers_anyway(monkeypatch) ->
     monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
 
     async def collect():
-        return [f async for f in george_loop.run("how about rockwell", history=HISTORY)]
+        return [f async for f in george_loop.run("pin that", history=HISTORY)]
 
     frames = asyncio.run(collect())
     done = frames_of(frames, "done")[0]

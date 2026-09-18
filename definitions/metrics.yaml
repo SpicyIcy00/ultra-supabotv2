@@ -1437,7 +1437,11 @@ investigation:
       # WHETHER IT MATTERS (2026-09-18, "determines whether it actually
       # matters"). A reading, not a threshold: its size against the shop's
       # own week and the estate's, and whether it is local or estate-wide.
-      matters: "large or small against the shop's week and the estate's, and local or estate-wide"
+      # "the rows' own figures, never a cut-off of yours" added 2026-09-18:
+      # on the first live run George sized the estate with "five of the other
+      # six shops moved less than ₱17,000 either way" — a line he drew, which
+      # no tool returned. Size is read off the rows; a band is a threshold.
+      matters: "large or small by the rows' own figures, never a cut-off of yours, and local or estate-wide"
       causality: >
         Localization is not cause. "The largest measured revenue declines
         were A and B" is a fact; "customers switched away from premium
@@ -1501,12 +1505,11 @@ investigation:
         # 7 → 9 (2026-09-18): the CHECK round — the baseline's days and the
         # stock record for the lines that fell.
         max_reads: 9
-        # WHAT A BROAD TURN MAY COST, checked on the eval turn and nowhere in
-        # production (production does not meter a turn against a ceiling).
-        # Set 2026-09-18 by the owner's "i care more about cost then fast
-        # asnwers": a broad turn measured $0.33–0.48 over 2026-09-12..17, and
-        # investigating in the same turn replaces the "why?" that followed it.
-        eval_cost_ceiling_usd: 0.50
+        # NO COST CEILING. One was set here on 2026-09-18 ($0.50 a broad eval
+        # turn) and withdrawn the same day by the owner: "cost should not hold
+        # us back in functionality". The eval records each broad turn's cost
+        # (harness.turn_usd) against the $0.33–0.48 measured 2026-09-12..17;
+        # cost work is caching and fewer rounds, never less investigation.
         never: >
           a read per subject; a second window other than the baseline's own
           days read to check it; a metric no finding rests on
@@ -5096,17 +5099,27 @@ voice:
         # characters. A bound that the design it is built toward cannot fit
         # is not a bound on verbosity, it is a bound on saying the second
         # thing. Two blind spots is the common case; three is a paragraph.
-        max_length: 320
+        # 320 → 640 (2026-09-18): verification/p2s6-gate.json refused the
+        # caveat on 2 of 7 turns once George investigated — a partial product
+        # comparison AND frozen purchase orders is two honest things, and the
+        # refusal lost the slot. A caveat is still one thing said whole.
+        max_length: 640
       next:
+        # Rewritten 2026-09-18. It said "the one thing you would do or check
+        # next … where an investigation stopped, this is where it says what to
+        # look at" — the breadcrumb, on the schema George reads at the moment
+        # he writes, after the prompt had forbidden it.
         about: >
-          ONE sentence: the one thing you would do or check next, drawn last,
-          under the evidence. Where an investigation stopped, this is where it
-          says what to look at. A figure belongs here only when a read returned
-          it — the reason to act is often a number on the board — and never one
-          you worked out yourself. Leave it out only when there is genuinely
-          nothing to do next.
+          ONE sentence, drawn last: what you would do — or what no read can
+          settle (a person, a count, a document) — never a read you could have
+          made. A figure belongs here only when a read returned it, never one
+          you worked out yourself. Leave it out when there is genuinely nothing
+          to do.
         figures: returned
-        max_length: 160
+        # 160 → 320 (2026-09-18): "I'd have OPUS check the kiamoy and
+        # bayberry facings on the floor — the counts say three packs for …"
+        # was refused at 160; what to do and why is one sentence, not a tag.
+        max_length: 320
     # WHAT IS NOT A FIGURE, wherever `figures: returned` is declared. A whole
     # number to here, with no decimals and no per-cent sign, is a day number or
     # a small count — "3 of 7 shops", "the 12th", "8 weeks from delivery" — and
@@ -5119,10 +5132,13 @@ voice:
     # tapping one asks it. Not a slot of the three — a short list — and held to
     # the same figure rule as `caveat` and `next`.
     asks:
+      # Rewritten 2026-09-18: "each one you could answer with a read or two"
+      # asked for exactly the questions the answer should already have closed.
       about: >
         two or three short questions the person might ask you next, in their
-        own words — each one you could answer with a read or two. They are
-        drawn under your headline to tap. A figure only when a read returned it.
+        own words — to steer, challenge, decide or act, never one this answer
+        already settles. They are drawn under your headline to tap. A figure
+        only when a read returned it.
       max_items: 3
       max_length: 90
       figures: returned
@@ -5166,9 +5182,14 @@ voice:
   # that. A reading may carry the figure its claim is about — "OPUS added
   # ₱130,016, more than the next two together" is the claim — and a second
   # sentence walking the rows is the recitation this still catches.
+  # 1 → 4 (2026-09-18): one sentence per FINDING may carry the figure it
+  # rests on — presentation.findings_max, held equal by a test. At 1, an
+  # answer that had investigated three things could give a number to one of
+  # them and the gate deleted the rest: the owner's "don't artificially squeeze
+  # real understanding". Walking the rows is still what a fifth catches.
   restatement:
     introduced: "2026-09-12"
-    max_restated_sentences: 1
+    max_restated_sentences: 4
     max_corrective_turns: 1
     matched_on: digits
     warning_reason: restated_figure
@@ -6525,15 +6546,16 @@ surface:
 
   # Prose is INTERPRETATION once the figures are drawn.
   prose:
-    # Sentences of prose when the drawn figures already carry the answer. Not
-    # a hard cap — a caveat or an uncertainty that needs explaining may take
-    # more — but the default the prompt asks for.
-    sentences_when_drawn: 3
-    # WHAT THE DEFAULT MAKES ROOM FOR (P2.m, 2026-09-16). It read as three
-    # sentences full stop, with a caveat the single exception — so a reading
-    # the drawing cannot carry had nowhere to go, and the answer that opened
-    # P2.m was one sentence over one chart.
-    more_for: [a caveat, a reading the drawing cannot carry]
+    # WHAT THE WORDS ARE FOR ONCE THE FIGURES ARE DRAWN (2026-09-18). This was
+    # `sentences_when_drawn: 3`, "more for a caveat or a reading the drawing
+    # cannot carry" — a length, where the owner asked for the opposite: "Don't
+    # dump data, but don't artificially squeeze real understanding into one
+    # paragraph". What stays forbidden is walking the rows (the restatement
+    # gate); how long the understanding takes is the situation's.
+    words_carry: >
+      THE BOARD CARRIES THE FIGURES; YOUR WORDS CARRY THE UNDERSTANDING — what
+      they mean together, what you ruled out, what is still unknown — as long
+      as that takes and no longer
     # Words that must never reach a reader. The loop scans the answer for
     # these and records a gap; the prompt (rule 17 and SURFACE) forbids them.
     # Whole-word, case-insensitive. Not a licence to be vague: the caveat is
@@ -7722,16 +7744,25 @@ effort:
         - "put that on"
         - "call it "
         - "rename"
+    # low → high (2026-09-18). A follow-up that moves the scope — "how about
+    # rockwell", "no i meant last week" — is a new area to understand, and
+    # since P2S.6 anything shown that moved is investigated. The owner: "cost
+    # should not hold us back in functionality". A pure scope move with no
+    # model at all is the replay path (P1.i/P1.j), which this never reaches.
     follow_up:
-      level: low
+      level: high
       means: >
         a short message inside a thread that refines the work on screen —
-        "how about rockwell", "no i meant last week". The reading is already
-        done; this moves its scope.
+        "how about rockwell", "no i meant last week". It moves the scope, and
+        the new scope is understood before it is shown.
       requires_history: true
       max_words: 8
     # ---- medium ----------------------------------------------------------
+    # medium → high (2026-09-18): "analyze tradsnax per store", "how is this
+    # week going?" and "whats happening at greenhills" all landed here, so the
+    # questions the owner most wants investigated thought least. Only a
+    # label-only act, which has nothing to reason about, stays low.
     fresh:
-      level: medium
+      level: high
       means: a question in its own right, which is everything else
       default_kind: true

@@ -1079,8 +1079,7 @@ def _opening_sentence(defs: dict) -> str:
     verbs = ", ".join(f'"{v}"' for v in req(o, "asks_to_be_taken_apart"))
     moved = " ".join(str(req(o, "what_is_shown_that_moved")).split())
     return (
-        f"{moved} — and so is a figure asked to be taken apart ({verbs}), a goal "
-        f"to read into or a claim to check; the word "
+        f"{moved} — and so is a figure asked to be taken apart ({verbs}); the word "
         f"\"{req(o, 'not_gated_on_the_word')}\" is not the gate. Rounds, each deciding "
         f"the next; a shop that is fine is not dug into."
     )
@@ -1134,7 +1133,7 @@ INVESTIGATING
 
 {_opening_sentence(defs)}
 
-VERIFY the primary fact first, compared over a closed window; if the premise does not hold, say so and stop. DECOMPOSE — {_drivers_sentence(defs)} Read change_pct off each driver's row: the stronger moved more, close means both moved, and a share of the change is nobody's. LOCALIZE the driver that moved — dominating is where to look, not a reason to stop — by time and by what sold, both in ONE round. CHECK what the data can test before offering an explanation: {checks}; {req(chk, 'unchecked')}. EXPLAIN, keeping the kinds apart: "down 12%" is measured, "basket value is the stronger driver" is your reading, and localization is not cause — and say whether it MATTERS: {matters}. STOP when the premise is false, the movement is localized and checked, no tool goes further, the evidence is mixed or the reads are spent; then say where the movement sits, what that establishes and what it does not.
+VERIFY the primary fact first, compared over a closed window; if the premise does not hold, say so and stop. DECOMPOSE — {_drivers_sentence(defs)} Read change_pct off each driver's row: the stronger moved more, close means both moved, and a share of the change is nobody's. LOCALIZE the driver that moved — dominating is where to look, not a reason to stop — by time and by what sold, both in ONE round. CHECK what the data can test before offering an explanation: {checks}; {req(chk, 'unchecked')}. EXPLAIN, keeping the kinds apart: "down 12%" is measured, "basket value is the stronger driver" is your reading, and localization is not cause — and say whether it MATTERS: {matters}. STOP when the premise is false, the movement is localized and checked, no tool goes further, the evidence is mixed or the reads are spent.
 
 Every read keeps the primary fact's window — the baseline's own days aside — store scope and filters. compose once, the reading on the same call.
 """
@@ -1172,13 +1171,13 @@ def _pages_addenda(defs: dict) -> dict[str, str]:
 def _surface_section(defs: dict) -> str:
     """THE SURFACE, built at import from metrics.yaml `surface`: the leak list and the prose default are the ones the loop scans for."""
     p = req(defs, "surface.prose")
-    more_for = " or ".join(str(x) for x in req(p, "more_for"))
+    words = " ".join(str(req(p, "words_carry")).split())
     narration = next(f'"{t}"' for t in req(p, "leaks") if isinstance(t, str) and " " in t)
     synonyms = ", ".join(str(t) for t in req(p, "transaction_synonyms_not_established"))
     return f"""
 THE SURFACE
 
-The screen is ONE piece of work your reads compose into; a short follow-up — "why?", "the products" — REFINES it, keeping its window, filters and comparison. PROSE IS SECONDARY ONCE THE FIGURES ARE DRAWN: {req(p, "sentences_when_drawn")} short sentences or fewer, more for {more_for}. No narration such as {narration}. A transaction is a transaction, not {synonyms}.
+The screen is ONE piece of work your reads compose into; a short follow-up — "why?", "the products" — REFINES it, keeping its window, filters and comparison. {words}. No narration such as {narration}. A transaction is a transaction, not {synonyms}.
 """
 
 SURFACE_SECTION = _surface_section(_load_defs())
@@ -1223,7 +1222,7 @@ WHAT A MESSAGE IS — answer the one that was sent:
 
 {message_lines}
 
-HOW WIDE TO READ; what the reads find decides how deep. BROAD — no subject, metric or dimension named, or the business as a whole: do not ask where to look — {broad_reads}, at most {req(broad, 'max_reads')} reads; a broad message answered with one figure has not been answered. FOCUSED — a subject, metric, dimension or window named: {req(focused, 'reads')}, at most {req(focused, 'max_reads')}. A LOOKUP gets {req(lookup, 'answered_with')} — {req(lookup, 'means')} — and a message asking to be taken apart gets {req(apart, 'min_reads')}, not one. AMBIGUOUS — "why?", "products", "is that bad?": resolve it from the desk, the board and this conversation; ask only when those cannot settle it and the readings would differ.
+HOW WIDE TO READ; what the reads find decides how deep. BROAD — no subject, metric or dimension named, or the business as a whole: do not ask where to look — {broad_reads}, at most {req(broad, 'max_reads')} reads. FOCUSED — a subject, metric, dimension or window named: {req(focused, 'reads')}, at most {req(focused, 'max_reads')}. A LOOKUP gets {req(lookup, 'answered_with')} — {req(lookup, 'means')} — and a message asking to be taken apart gets {req(apart, 'min_reads')}, not one. AMBIGUOUS — "why?", "products", "is that bad?": resolve it from the desk, the board and this conversation; ask only when those cannot settle it and the readings would differ.
 
 A GROUP TOTAL IS A READ, NOT A SUM: "across the estate" is read with {req(broad, 'estate_total_read_with')}, never figures you add up from the rows in front of you. {req(pres, 'findings_min')} to {req(pres, 'findings_max')} things worth saying when the figures establish that many — never invent one to fill the range — each resting on {req(pres, 'rests_on')}, so a broad answer still rests on one verified fact.
 """
@@ -1250,7 +1249,7 @@ JUDGMENT
 
 STANCES: {stances}. A view rests on a fact a tool established or on what they told you — not on {never}. Still forbidden: {may_not}. You may not invent a FIGURE; you may absolutely form a VIEW.
 
-KEEPING A VIEW. Say what you already think rather than rediscovering it, and never contradict it silently — `record_belief` the change against its id with the reason. UNCONFIRMED means data landed since it was checked: re-read first.
+KEEPING A VIEW. When an investigation reaches a view that matters, record it, so the next question starts from it; say what you already think rather than rediscovering it, and never contradict it silently — `record_belief` the change against its id with the reason. UNCONFIRMED means data landed since it was checked: re-read first.
 """
 
 JUDGMENT_SECTION = _judgment_section(_load_defs())
@@ -1268,7 +1267,7 @@ def _desk_section(defs: dict) -> str:
     return f"""
 THE DESK
 
-The person operates the surface directly, so a question may carry a line beginning "[On the desk" naming what they selected (a {dims}) and the window they moved to; a short instruction applies to that selection, the window is the work's from then on, and nothing there is a figure. INITIATIVE: recommend only what the evidence supports.
+The person operates the surface directly, so a question may carry a line beginning "[On the desk" naming what they selected (a {dims}) and the window they moved to; a short instruction applies to that selection, the window is the work's from then on, and nothing there is a figure.
 """
 
 DESK_SECTION = _desk_section(_load_defs())
@@ -1335,13 +1334,13 @@ SYSTEM_PROMPT = _scope_sentence(_load_defs()) + """
 
 WHO YOU ARE
 
-You have read everything — every sale, every shelf, every order — and you do the looking yourself, then say what you found in few words. First person, always.
+You are responsible for understanding this business, and you run it with the owner. You do the looking yourself: you understand before you speak, keep that understanding as the data moves, follow what one area says into another, and bring the owner what is worth knowing, deciding, challenging or doing. An operator, not a reporter. First person, always.
 
 Warm, precise, occasionally dry — never sycophantic, corporate, breathless or apologetic. No manners for an opening: "Great question" and its kind say nothing.
 
-You lead with what it means: name the figure your point rests on, say what it settles, what it does not, and what you would do. The same voice for good news and bad; dry only when it costs nothing. WIT NEVER SOFTENS A CAVEAT: a caveat is a clause in the same breath, in the plainest words.
+You lead with your view: what is happening, why as far as the data shows, whether it matters, what you ruled out, what is still unknown, and what you would do. "I checked; nothing here concerns me" is a conclusion — say it and stop. The same voice for good news and bad. WIT NEVER SOFTENS A CAVEAT: a caveat is a clause in the same breath, in the plainest words.
 
-You would rather say "I can't tell from this" than guess, and say what would let you tell. You hold views as views, with what would change your mind, and say so when a read contradicts one. Unsure what was meant, you ask one question rather than answer two.
+You hold views as views, with what would change your mind, and say so when a read contradicts one.
 
 You read without asking and act on nothing alone: you draft, you propose, you ask "shall I?"
 
@@ -1349,9 +1348,9 @@ You read without asking and act on nothing alone: you draft, you propose, you as
 
 VOICE — THE SHAPE OF AN ANSWER
 
-One paragraph, in THREE SLOTS you name on `compose`: the CLAIM, what it means in a sentence or two — with the few words that ARE the point repeated in `claim`; the CAVEAT, what qualifies the figures, whole, drawn above them; the NEXT, one sentence, drawn last: what you would do, or what no read can settle — never a read you could have made.
+As much as the situation needs and no more: a quiet week is a line; a situation you investigated is the few findings that make it understood. The screen holds THREE SLOTS you name on `compose`: the CLAIM, your view, with the few words that ARE the point repeated in `claim`; the CAVEAT, what qualifies the figures, drawn above them; the NEXT, drawn last: what you would do, never a read you could have made. The slots are places, not a length.
 
-SAY THE FIGURE YOUR CLAIM IS ABOUT, with its date or window from the result — at most two in a paragraph. The board drawing it is no reason to leave it out; reciting the rows it draws is. No preamble, no restating the question, no summary. WHAT PROSE IS FOR: what the figures mean together, what they do not establish, what is absent.
+GIVE EACH FINDING THE FIGURE IT RESTS ON, with its date or window from the result. The board drawing it is no reason to leave it out; reciting the rows it draws is. No preamble, no restating the question, no summary.
 
 THE RULES — held by the system as well as by you
 
@@ -1362,7 +1361,7 @@ THE RULES — held by the system as well as by you
 5. Prefer one ranked or grouped query — `group_by`, `top_n`, `rank_by`, `meta.full_row_count` — to reading once per store.
 6. A figure made from figures comes from a tool, never from you: `average_transaction_value` is a metric, and `compare_to='previous_period'` puts the baseline, the change and `baseline_status` on every row — read them, and say why when `baseline_status` is not ok.
 7. A write happened only when its tool returned; a schedule is born switched OFF and you say so; name the version you ran, and, when `meta.diverges_from_schedule` is true, which version the schedule fires.
-8. Volunteer at most ONE further fact, from a result already read, with its window — or nothing; what the reads establish, and do not, is NOT a volunteered fact but part of answering (INVESTIGATING).
+8. Volunteer at most ONE fact from outside what was asked, from a result already read, with its window — or nothing; what the reads establish, and do not, is NOT a volunteered fact but part of answering (INVESTIGATING).
 9. The reader does not know your tools exist: business words, not a tool (`get_sales`), an argument (`group_by`, `rank_by`, `top_n`, `compare_to`), a field (`change_pct`, `baseline_status`) or a file (`metrics.yaml`) — THE EXCEPTION is being asked how a figure was made. NOT A LICENCE TO BE VAGUE: a caveat that sounded technical is rewritten in plain words, not dropped.
 """ + SCOPE_SECTION + JUDGMENT_SECTION + INVESTIGATING_SECTION + SURFACE_SECTION + DESK_SECTION + COMPOSING_SECTION
 
@@ -2697,6 +2696,12 @@ async def run(
     # the log was a refusal retried verbatim (34 of 34, all time).
     served_reads: dict[str, tuple[dict, Optional[str], int, int]] = {}
     duplicate_reads = 0
+    # READS THAT RAN, the one thing the convergence cap counts (2026-09-18).
+    # It counted every call — compose, record_belief, a pin — so a broad turn
+    # of nine reads plus its board and a view met the cap at the edge of the
+    # investigation the prompt asks for. The owner: "cost should not hold us
+    # back in functionality". Drawing and remembering are not searching.
+    executed_reads = 0
     corrective_turns = 0
     max_corrective = req(defs, "notices.max_corrective_turns")
     # Writes actually made this run, and the budget for asking the model to
@@ -2932,6 +2937,17 @@ async def run(
                         }
                     async with client.messages.stream(**stream_kwargs) as stream:
                         async for event in stream:
+                            # TWO TEXT BLOCKS ARE TWO PARAGRAPHS (2026-09-18).
+                            # A reply may hold more than one text block — the
+                            # answer, then a closing line after thinking — and
+                            # joining their deltas bare printed "numbers.I'd"
+                            # in 4 of the 7 turns of verification/p2s6-gate.json.
+                            if (event.type == "content_block_start"
+                                    and getattr(event.content_block, "type", "") == "text"
+                                    and text_parts
+                                    and not "".join(text_parts)[-1:].isspace()):
+                                text_parts.append("\n\n")
+                                yield _sse("text", {"delta": "\n\n"})
                             if event.type == "content_block_delta":
                                 d = event.delta
                                 if d.type == "text_delta":
@@ -3455,9 +3471,10 @@ async def run(
                           if b.name not in write_tools.WRITE_TOOL_FUNCTIONS
                           and b.name not in composite_tools.COMPOSITE_TOOL_FUNCTIONS
                           and call_key(b.name, dict(b.input)) not in served_reads]
-            # The budget is what actually ran. A duplicate served from this
-            # turn's own record did no work and is not counted against it.
-            executed = seq - duplicate_reads
+            # The budget is the READS that actually ran. A duplicate served
+            # from this turn's own record did no work and is not counted, and
+            # since 2026-09-18 neither is a compose, a view or a write.
+            executed = executed_reads
             if executed >= MAX_TOOL_CALLS and not conceded and more_reads:
                 conceded = True
                 attempted = ", ".join(
@@ -3515,7 +3532,7 @@ async def run(
                     "content": refused + [{
                         "type": "text",
                         "text": (
-                            f"STOP CALLING TOOLS. You have made {executed} calls on this "
+                            f"STOP CALLING TOOLS. You have made {executed} reads on this "
                             f"question ({attempted}) without reaching an answer, "
                             f"which is past the limit of {MAX_TOOL_CALLS}.\n\n"
                             "Do not call another tool. Answer now with three things:\n"
@@ -3558,6 +3575,7 @@ async def run(
                                              else batch_keys[key])
                 elif key is not None:
                     batch_keys[key] = seq
+                    executed_reads += 1
                 batch.append((seq, b))
                 called_tools.append(b.name)
                 yield _sse("tool_call", frame)

@@ -223,3 +223,51 @@ def test_the_loop_corrects_once_and_then_lets_the_answer_stand(monkeypatch):
     assert len(frames_of(frames, "warning")) == 1
     assert len(requests) == 2
     assert frames_of(frames, "done")[0]["status"] == "ok"
+
+
+# ---------------------------------------------------------------------------
+# Two text blocks in one reply are two paragraphs (2026-09-18)
+# ---------------------------------------------------------------------------
+
+class _BlockStart:
+    def __init__(self): self.type, self.content_block = "content_block_start", _TextBlock("")
+
+
+class _TwoBlockStream(_Stream):
+    """A reply whose text arrives as two blocks, as the answer and a closing line do."""
+
+    def __aiter__(self):
+        async def gen():
+            yield _BlockStart()
+            yield _Event("OPUS carried the week.")
+            yield _BlockStart()
+            yield _Event("I'd leave Rockwell alone.")
+        return gen()
+
+
+def test_two_text_blocks_are_not_glued_together(monkeypatch):
+    """
+    verification/p2s6-gate.json printed "numbers.I'd" in 4 of 7 answers: the
+    deltas of two text blocks were joined bare. The second block now opens
+    with a paragraph break, on the stream and in the answer that stands.
+    """
+    class _Msgs(_Messages):
+        def stream(self, **kwargs):
+            self.requests.append(kwargs)
+            return _TwoBlockStream("")
+
+    fake = FakeClient([])
+    fake.messages = _Msgs([])
+    monkeypatch.setattr(george_loop.anthropic, "AsyncAnthropic", lambda *a, **k: fake)
+    StubLog.instances.clear()
+    monkeypatch.setattr(george_loop, "ConversationLog", StubLog)
+
+    async def collect():
+        return [f async for f in george_loop.run("how did the week go?")]
+
+    import asyncio as _asyncio
+    import json as _json
+    frames = _asyncio.run(collect())
+    said = "".join(_json.loads(f.partition("data: ")[2]).get("delta", "")
+                   for f in frames if f.startswith("event: text"))
+    assert said == "OPUS carried the week.\n\nI'd leave Rockwell alone."

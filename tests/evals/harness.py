@@ -182,9 +182,9 @@ RATES_AS_OF = "2026-06-24"
 
 def turn_usd(turn) -> float:
     """
-    What one turn cost at the same rates the Meter uses (P2S.6). A broad turn
-    is held to `investigation.scope.kinds.broad.eval_cost_ceiling_usd` — the
-    owner, 2026-09-18: "i care more about cost then fast asnwers".
+    What one turn cost at the same rates the Meter uses (P2S.6) — recorded,
+    never asserted: the owner, 2026-09-18, "cost should not hold us back in
+    functionality, i just want to optimize cost".
     """
     usage = (turn.done or {}).get("usage") or {}
     return sum(int(usage.get(k) or 0) / 1e6 * RATES[k] for k in RATES)
