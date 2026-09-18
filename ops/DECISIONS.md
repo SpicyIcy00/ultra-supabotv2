@@ -4626,3 +4626,9 @@ Four fixes to the room as it is live; the UI freeze covers redesign, not these (
 
 Reverses 2026-09-17's "a sentence about a chart with its own thought stays with the rest of his words", at the owner's word (`f13df40`): shown twice is noise. A sentence citing a drawn read goes; a sentence about an undrawn read stays, because nothing else says it (it used to vanish).
 **"Already said" is word overlap, not meaning** (≥ 0.6 of a sentence's words in one other on-screen text), measured on the recorded answers: repeats scored 0.6–1.0, new sentences ≤ 0.5. No model reads the screen to decide what to draw. A paraphrase in different words gets through, and that is the known limit.
+
+## 2026-09-18 · Emphasis adds; it never takes away
+
+At the owner's word (`f7335f1`): *"dont desaturate or lower other things to emphsize something else"*. This finishes 2026-09-15's "all stores still matter" (dimming 0.5 → 0.75) by ending dimming: `COOL` is 1, and the grammar's `litness` is a hit test, never an opacity.
+**What stands out gains**: weight, a ringed swatch, and a band of `--george`, the colour already meaning "the one he pointed at". Not the accent, which stays "needs you" (UI rule 5).
+**All of his prose is `--ink`.** Grey is the frame's (labels, ticks, read-times), and `ink.test.ts` holds the list of his classes.

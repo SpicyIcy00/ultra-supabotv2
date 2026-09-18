@@ -381,6 +381,26 @@ once changes the next answer. That is the card's own done-when.
 
 ## Fixed
 
+### 2026-09-18 — "i dont like how alot of text is grey … dont desaturate or lower other things to emphsize something else"
+
+> *"also i dont like how alot of text is grey if it says something in a chart it should already be white just use other methods to emphasize things you want to dont lower others like maybe color to hightlight it just dont desaturate or lower other things to emphsize something else"*
+
+Said with three screenshots: two chart thoughts, and the words under him on the
+live build. **Found:** his prose was drawn a step or two below the headline
+everywhere — chart titles and thoughts, the rest, the caveat (`--ink-2`), his
+narration (`--ink-3`) — and emphasis worked by DIMMING: every row he did not
+point at at 75% (`COOL`), the grammar's shapes at 28%, table rows at 40%, a
+ruled-out figure at 55%, a quiet tile at 86%. The third screenshot's `- ` mid-line
+is the pre-`f13df40` build; the new one strips the marker but ran list items
+into one paragraph.
+
+**Fixed in `f7335f1`, not verified by him.** Everything George says is `--ink`;
+nothing is drawn at reduced opacity for not being the point; the row he points
+at gains a band of his own colour (`--george`) with its name in weight and its
+swatch ringed; list items and paragraphs under him stay lines. Grey is left to
+labels, axis ticks and read-times — the frame, not his words. Held by
+`ink.test.ts`; frame-checked at 1440.
+
 ### 2026-09-18 — "if its stating whats already stated or shown in the page … then dont make it say that"
 
 > *"ok what is more from george text tho we just fixed? if its stating whats already stated or shown in the page (meaning charts section) then dont make it say that"*
