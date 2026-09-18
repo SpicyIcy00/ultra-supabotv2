@@ -389,7 +389,7 @@ Said of `589af9f` with five screenshots: whole answers stacked above one chart,
 "Three." alone, bold headings cut from their lines, `*number*` printed.
 **Found:** `589af9f` gave everything no chart took to the lead chart, ABOVE it.
 
-**Fixed in the commit after `cf11d26`, not verified by him.** A sentence about a
+**Fixed in `56b40d2`, not verified by him.** A sentence about a
 chart is drawn UNDER that chart; one about no chart is under him; a repeat of
 what is on screen is not drawn. A heading or lead-in goes wherever the line it
 heads goes, and `*x*` is emphasis, never asterisks. `wordsOnCharts` is deleted.
