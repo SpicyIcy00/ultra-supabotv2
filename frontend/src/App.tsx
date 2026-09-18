@@ -120,6 +120,9 @@ function App() {
                 <Route path="/bob" element={bob(<Room />)} />
                 <Route path="/w/:threadId" element={bob(<Room />)} />
                 {/* The parallel board's addresses, kept so a link still lands. */}
+                {/* His old address, kept for bookmarks (the rename, 2026-09-19). */}
+                <Route path="/george" element={<Navigate to="/bob" replace />} />
+                <Route path="/george/*" element={<Navigate to="/bob" replace />} />
                 <Route path="/w2" element={<Navigate to="/bob" replace />} />
                 <Route path="/w2/:threadId" element={<WorkRedirect />} />
 

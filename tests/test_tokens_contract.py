@@ -259,7 +259,7 @@ def test_the_room_reads_the_replay_record_back_on_opening():
     restore = _RESTORE_TS.read_text(encoding="utf-8")
     assert "export function replaysToRestore" in restore
     room = _ROOM_TSX.read_text(encoding="utf-8")
-    assert "replaysToRestore(george.turns, thread.posts, max)" in room
+    assert "replaysToRestore(bob.turns, thread.posts, max)" in room
     assert "max_restored_per_open" in room
 
 

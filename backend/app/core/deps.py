@@ -16,13 +16,13 @@ from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.app_user import AppUser
-from app.models.role_page_access import RolePageAccess
+from app.models.role_page_access import RolePageAccess, canonical_page_key, stored_keys_for
 
 # auto_error=False so a missing header produces our own 401 with a clear
 # message rather than FastAPI's bare "Not authenticated".
@@ -103,12 +103,21 @@ def require_page(page_key: str):
         user: AppUser = Depends(get_current_user),
         db: AsyncSession = Depends(get_db),
     ) -> AppUser:
-        result = await db.execute(
-            select(RolePageAccess.enabled).where(
+        # A renamed key answers to its old stored name too (role_page_access
+        # PAGE_KEY_ALIASES): any enabled row under either name grants it. A
+        # page with no alias keeps the exact statement it always had.
+        keys = stored_keys_for(page_key)
+        if len(keys) == 1:
+            statement = select(RolePageAccess.enabled).where(
                 RolePageAccess.role == user.role,
                 RolePageAccess.page_key == page_key,
             )
-        )
+        else:
+            statement = select(func.bool_or(RolePageAccess.enabled)).where(
+                RolePageAccess.role == user.role,
+                RolePageAccess.page_key.in_(keys),
+            )
+        result = await db.execute(statement)
         enabled = result.scalar_one_or_none()
 
         # Absent row == no access. Denying by default means adding a new page
@@ -130,4 +139,6 @@ async def get_allowed_pages(db: AsyncSession, role: str) -> list[str]:
         .where(RolePageAccess.role == role, RolePageAccess.enabled.is_(True))
         .order_by(RolePageAccess.page_key)
     )
-    return list(result.scalars().all())
+    # Stored names become current ones (a stale `george` row reads as `bob`),
+    # once each, in the stored order.
+    return list(dict.fromkeys(canonical_page_key(k) for k in result.scalars().all()))

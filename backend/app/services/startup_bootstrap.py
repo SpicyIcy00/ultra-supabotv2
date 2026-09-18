@@ -200,6 +200,7 @@ async def bootstrap():
                     ('admin',           'dashboard', TRUE),
                     ('admin',           'analytics', TRUE),
                     ('admin',           'ai_chat',   TRUE),
+                    ('admin',           'bob',       TRUE),
                     ('admin',           'warehouse', TRUE),
                     ('admin',           'settings',  TRUE),
                     ('admin',           'packing',   TRUE),
@@ -208,6 +209,7 @@ async def bootstrap():
                     ('warehouse_staff', 'dashboard', FALSE),
                     ('warehouse_staff', 'analytics', FALSE),
                     ('warehouse_staff', 'ai_chat',   FALSE),
+                    ('warehouse_staff', 'bob',       FALSE),
                     ('warehouse_staff', 'warehouse', FALSE),
                     ('warehouse_staff', 'settings',  FALSE),
                     ('warehouse_staff', 'admin',     FALSE)

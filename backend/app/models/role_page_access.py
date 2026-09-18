@@ -34,3 +34,24 @@ PAGE_KEYS: list[str] = [
 ]
 
 ROLES: list[str] = ["admin", "warehouse_staff"]
+
+# A PAGE KEY THAT WAS RENAMED KEEPS ANSWERING TO ITS OLD NAME (2026-09-19).
+# The rename to Bob changed the key in code; the row the owner toggled on in
+# the admin screen still says `george`, and the database was deliberately
+# left as it was. So a stored `george` grants `bob`: the guard reads both
+# names, and the allowed-page list reports the current one. Remove the alias
+# once the rows have been renamed by hand.
+PAGE_KEY_ALIASES: dict[str, tuple[str, ...]] = {"bob": ("george",)}
+
+
+def stored_keys_for(page_key: str) -> tuple[str, ...]:
+    """Every key a row may carry that grants `page_key`, current name first."""
+    return (page_key, *PAGE_KEY_ALIASES.get(page_key, ()))
+
+
+def canonical_page_key(stored: str) -> str:
+    """The current name of a stored key, so a stale row reads as today's page."""
+    for current, olds in PAGE_KEY_ALIASES.items():
+        if stored in olds:
+            return current
+    return stored
