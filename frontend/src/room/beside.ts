@@ -556,3 +556,32 @@ export function claimAndStanding(text: string | null | undefined, span?: string 
   const standing = [before.trim(), after.trim()].filter(Boolean).join(' ');
   return { claim: claimRaw.trim(), standing, before, claimRaw, after };
 }
+
+/**
+ * WHERE HIS WORDS GO: THE CHARTS, NOT UNDER HIM (the owner, 2026-09-18: "that
+ * should only be the headline and suggestions what to do next … i dont want it
+ * tell me what i tihnks about data with charts cause that should be with those
+ * charts").
+ *
+ * Every sentence a chart took stays on it (`thoughtsOf`). What no chart took —
+ * the sentences placed on none, and his caveat — goes on the chart the headline
+ * rests on: the one his claim cites (`lead`), else the one he weighted `lead`,
+ * else the first he drew this turn. `under` is true only when this turn drew no
+ * chart at all, and then the words stay under him: there is nowhere else.
+ */
+export function wordsOnCharts(
+  thoughts: { bySeq: Map<number, string[]>; unbound: string; caveat?: string },
+  objects: readonly { key: string; turn: number; weight?: string; seq?: number; seqs?: readonly number[] }[],
+  newest: number,
+  lead: string | null,
+): { onCharts: Map<number, string[]>; under: boolean } {
+  const mine = objects.filter((o) => o.turn === newest && (o.seq ?? o.seqs?.[0]) !== undefined);
+  const host = mine.find((o) => o.key === lead) ?? mine.find((o) => o.weight === 'lead') ?? mine[0];
+  const seq = host ? (host.seq ?? host.seqs?.[0]) : undefined;
+  if (seq === undefined) return { onCharts: thoughts.bySeq, under: true };
+  const rest = [thoughts.unbound, thoughts.caveat ?? ''].map((x) => x.trim()).filter(Boolean);
+  if (!rest.length) return { onCharts: thoughts.bySeq, under: false };
+  const onCharts = new Map(thoughts.bySeq);
+  onCharts.set(seq, [...(onCharts.get(seq) ?? []), ...rest]);
+  return { onCharts, under: false };
+}

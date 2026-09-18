@@ -17,7 +17,7 @@ import { join } from 'node:path';
 import postcss from 'postcss';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/react';
-import { caveatUnshown, thoughtsOf } from './beside';
+import { caveatUnshown, thoughtsOf, wordsOnCharts } from './beside';
 import { Reading } from './Reading';
 import { questionsOf } from './history';
 
@@ -47,10 +47,35 @@ describe('"it stops too early"', () => {
 });
 
 describe('"whats more from george? why is it hiding?"', () => {
-  it('draws the rest of what he said without a tap', () => {
+  it('hides nothing behind a tap — and puts his reading of the data on the charts', () => {
     expect(ROOM).not.toMatch(/more from George'/);
     expect(ROOM).not.toMatch(/moreOpen/);
-    expect(ROOM).toMatch(/\{!busy && \(\s*<Reading part="rest"/);
+    // Under him only when the turn drew no chart (the owner, later the same day:
+    // "that should only be the headline and suggestions what to do next").
+    expect(ROOM).toMatch(/\{!busy && words\.under && \(\s*<Reading part="rest"/);
+    expect(ROOM).toMatch(/thoughts=\{words\.onCharts\}/);
+  });
+
+  it('gives what no chart took to the chart the headline rests on', () => {
+    const t = { bySeq: new Map([[2, ['On read two.']]]), unbound: 'Nothing else moved.', caveat: 'Stock counts are stale.' };
+    const objects = [
+      { key: 'a', turn: 1, weight: 'supporting', seq: 2 },
+      { key: 'b', turn: 1, weight: 'lead', seq: 4 },
+      { key: 'old', turn: 0, weight: 'lead', seq: 9 },
+    ];
+    // The one his claim cites wins; else the one he weighted lead; else the first.
+    expect(wordsOnCharts(t, objects, 1, 'a').onCharts.get(2)).toEqual(['On read two.', 'Nothing else moved.', 'Stock counts are stale.']);
+    const byWeight = wordsOnCharts(t, objects, 1, null);
+    expect(byWeight.onCharts.get(4)).toEqual(['Nothing else moved.', 'Stock counts are stale.']);
+    expect(byWeight.onCharts.get(2)).toEqual(['On read two.']);
+    expect(byWeight.under).toBe(false);
+    // An earlier turn's chart never takes this turn's words.
+    expect(wordsOnCharts(t, [objects[2]], 1, null)).toEqual({ onCharts: t.bySeq, under: true });
+  });
+
+  it('keeps them under him when the turn drew no chart', () => {
+    const t = { bySeq: new Map<number, string[]>(), unbound: 'There is no door counter.', caveat: '' };
+    expect(wordsOnCharts(t, [], 0, null).under).toBe(true);
   });
 
   it('never prints a marker when his emphasis runs across a sentence', () => {

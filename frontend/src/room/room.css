@@ -683,6 +683,11 @@
 }
 .r-fig { min-width: 0; position: relative; }
 .r-fig-body { padding-bottom: 34px; }
+/* HIS WORDS ON A CHART — including, on the chart the headline rests on, what no
+   chart took (the owner, 2026-09-18: "that should be with those charts"). His
+   line breaks stay line breaks; a gap between his paragraphs. */
+.r-fig-thought { display: flex; flex-direction: column; gap: 8px; margin: 0 0 14px; }
+.r-fig-thought .r-say { font: 400 15px/1.55 var(--serif); white-space: pre-line; max-width: 62ch; }
 /* ARRIVING: invisible until its moment, then drawn in (row 13). */
 .r-fig[data-arrived="no"] { opacity: 0; transform: translateY(6px); }
 .r-fig[data-arrived="yes"] { opacity: 1; transform: none; transition: opacity 420ms var(--ease), transform 420ms var(--ease); }

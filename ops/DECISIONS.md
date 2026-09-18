@@ -4633,3 +4633,7 @@ At the owner's word (`f7335f1`): *"dont desaturate or lower other things to emph
 **What stands out gains**: weight, a ringed swatch, and a band of `--george`, the colour already meaning "the one he pointed at". Not the accent, which stays "needs you" (UI rule 5).
 **All of his prose is `--ink`.** Grey is the frame's (labels, ticks, read-times), and `ink.test.ts` holds the list of his classes.
 **Amended the same day: no band.** The `--george` band behind a lit row was refused on sight (*"wtf happend here dont do that"*); it read as grey slabs on the dark ground. Emphasis is weight and a ringed swatch only, and `ink.test.ts` forbids a background or shadow on a lit row.
+
+## 2026-09-18 · Under him, the headline and what to do next; his reading on the charts
+
+At the owner's word (*"that should only be the headline and suggestions what to do next … that should be with those charts"*): the left column is the question, the headline, `next`, the asks and the offers. His analysis sentences and caveat go on the chart the headline rests on (`wordsOnCharts`). They are under him only when the turn drew no chart. This supersedes the morning's "draw the rest under him" (`5b40454`); the chart-repeat filter (`f13df40`) still applies.

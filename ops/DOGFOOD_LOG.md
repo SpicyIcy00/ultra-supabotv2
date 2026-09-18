@@ -381,6 +381,23 @@ once changes the next answer. That is the card's own done-when.
 
 ## Fixed
 
+### 2026-09-18 — "theres still alot of text on the left … that should only be the headline and suggestions what to do next"
+
+> *"also theres still alot of text on the left remeber that should only be the headline and suggestions what to do next and stuff like thaat like i dont want it tell me what i tihnks about data with charts cause that should be with those charts simple logic you know"*
+
+Said with a screenshot of the live build: under the headline, a long run of his
+analysis (Dikiam Sweet Taiwan's shops, Greenhills' restocking, 1,854 dead lines).
+**Found:** `5b40454` had drawn the whole rest under him, and `f13df40` only
+removed repeats — what no chart took, and his caveat, still sat on the left.
+
+**Fixed in the commit after `88e2e65`, not verified by him.** Under him now: the
+question, the headline, what he'd do next and the questions to tap. His reading
+of the data is on the charts: each sentence on the chart it cites, and what no
+chart took, with his caveat, on the chart the headline rests on (the one his
+claim cites, else the one he weighted lead, else the first he drew). Only a turn
+that drew no chart keeps them under him. `wordsOnCharts` in `beside.ts`, held by
+`trackBack.dom.test.tsx`; frame-checked at 1440.
+
 ### 2026-09-18 — "i dont like how alot of text is grey … dont desaturate or lower other things to emphsize something else"
 
 > *"also i dont like how alot of text is grey if it says something in a chart it should already be white just use other methods to emphasize things you want to dont lower others like maybe color to hightlight it just dont desaturate or lower other things to emphsize something else"*

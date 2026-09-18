@@ -26,7 +26,7 @@ import { Board, turnNotices } from './render';
 import { FiguresArea, Wires, scrollToFigure, useMoreBelow } from './FiguresArea';
 import { AliveMark } from './AliveMark';
 import { markStateOf } from './alive';
-import { caveatUnshown, claimAndStanding, thoughtsOf, unmark } from './beside';
+import { caveatUnshown, claimAndStanding, thoughtsOf, unmark, wordsOnCharts } from './beside';
 import { placeFigures as figuresInText } from './figures';
 import { identitiesFrom } from './identity';
 import { readStoreAppearance } from '../services/storesApi';
@@ -316,6 +316,19 @@ export default function Room() {
     }
     return null;
   }, [latest, busy, answers.length, drawn]);
+
+  // UNDER HIM, ONLY THE HEADLINE AND WHAT TO DO NEXT; HIS READING OF THE DATA
+  // GOES WITH THE CHARTS (the owner, 2026-09-18: "that should only be the
+  // headline and suggestions what to do next … i dont want it tell me what i
+  // tihnks about data with charts cause that should be with those charts").
+  // What no chart took — his caveat, and the sentences placed on none — goes on
+  // the chart the headline rests on, picked as the board picks its lead. Only a
+  // turn that drew no chart keeps them under him: there is nowhere else.
+  const words = useMemo(
+    () => (thoughts ? wordsOnCharts(thoughts, drawn, answers.length - 1, lead)
+      : { onCharts: undefined, under: false }),
+    [thoughts, drawn, answers.length, lead],
+  );
 
   // WHAT HE IS DOING, off the stream and nothing else (P2S.2(d)). `need` only
   // from a LOADED approvals count (UI rule 8); a failed turn breaks the
@@ -807,16 +820,15 @@ export default function Room() {
                     since you last looked · {arrived} {arrived === 1 ? 'answer' : 'answers'} arrived
                   </p>
                 )}
-                {/* UNDER HIM, THE HEADLINE, AND THEN ALL OF THE REST OF WHAT HE
-                    SAID (the log, 2026-09-18: "whats more from george? why is it
-                    hiding?"). The rest (his caveat, and any sentence no chart
-                    took) was one tap away behind "more from George"; the column
-                    runs down to the line and scrolls, so it is drawn whole. A
-                    notice that says the data may be wrong stays above the
-                    headline (UI rule 4). Then what to ask or do next. */}
+                {/* UNDER HIM, THE HEADLINE AND WHAT TO DO NEXT — nothing else
+                    (the owner, 2026-09-18: "that should only be the headline and
+                    suggestions what to do next"). His reading of the data is on
+                    the charts (`words` above); only a turn with no chart keeps it
+                    here. A notice that says the data may be wrong stays above
+                    the headline (UI rule 4). */}
                 <Reading part="claim" text={latest?.text} notices={drawnOnly(notices, explainsOnly)}
                          reading={latest?.reading} calls={latest?.toolCalls} onFigure={showFigure} />
-                {!busy && (
+                {!busy && words.under && (
                   <Reading part="rest" text={latest?.text} reading={latest?.reading}
                            calls={latest?.toolCalls} onFigure={showFigure}
                            standing={thoughts?.unbound} caveat={thoughts?.caveat} />
@@ -865,7 +877,7 @@ export default function Room() {
                     seenUpTo={firstUnseen(answers, sinceAt)}
                     onLanding={onLanding}
                     lead={lead}
-                    thoughts={thoughts?.bySeq}
+                    thoughts={words.onCharts}
                     sameOrder
                   />
                 </>
