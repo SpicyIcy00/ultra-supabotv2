@@ -1014,11 +1014,6 @@
 
 /* --------------------------------------------------------------- opening */
 
-.r-greeting {
-  font: 300 clamp(30px, 5vw, 44px) / 1.15 var(--sans);
-  letter-spacing: -0.032em; color: var(--ink); margin: 0;
-}
-.r-greeting-sub { margin-top: 10px; color: var(--ink-3); font: 400 15px/1.5 var(--sans); }
 
 /* A caveat. Above the work, never behind a hint-less disclosure, and never in
    a direction colour — it qualifies a figure, it is not one. */

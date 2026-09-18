@@ -404,6 +404,16 @@ once changes the next answer. That is the card's own done-when.
 
 ## Fixed
 
+### 2026-09-19 — "get rid of this" (the cold open's "Morning. / What are we looking at?")
+
+> *"get rid of this"* — a screenshot of the greeting and its line.
+
+**Fixed 2026-09-19 the same hour.** The cold open draws nothing: no greeting,
+no line, no suggested questions. Only the loading state ("Opening…") still
+draws, so a thread being opened is never mistaken for an empty room. The
+`greeting()` helper and the two `.r-greeting` rules are gone (`Room.tsx`,
+`room.css`). Front end only. vitest 986, tsc clean.
+
 ### 2026-09-18 — "it does feel slow and really rough, it didn't feel like it was investigating"
 
 > *"Its does feel slow and really rough, It didn't feel like it was investigating, Is there ways to make this better in the way it works and uses tools or something?"*

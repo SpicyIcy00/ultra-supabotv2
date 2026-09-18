@@ -1010,30 +1010,13 @@ export function Asked({ question, at, count, busy, onStep }: {
 }
 
 /**
- * The cold open. A greeting and nothing else — asked for in those words. The
- * openers below it are the shortest way into the three things he actually does
- * on a normal morning, not a menu.
+ * The cold open. Nothing at all — the owner, 2026-09-19, of "Morning. / What
+ * are we looking at?": "get rid of this". Only the loading state draws, so a
+ * thread being opened is never mistaken for an empty room (UI rule 8). No
+ * greeting, no suggested questions: until he speaks first (the briefing),
+ * the door stays open and empty.
  */
 function Opening({ loading }: { loading: boolean }) {
   if (loading) return <p className="r-label" style={{ paddingTop: '16vh' }}>Opening…</p>;
-  return (
-    <div style={{ paddingTop: '14vh', maxWidth: 640 }}>
-      <p className="r-greeting">{greeting()}</p>
-      <p className="r-greeting-sub">What are we looking at?</p>
-      {/*
-        NOTHING SUGGESTED HERE. Three example questions used to sit on this
-        screen — mine, not Bob's. Proposing what to ask is his job and he
-        has the whole business to draw on; a hardcoded list is me pretending to
-        be him, and it is exactly the habit this build keeps falling into.
-        Until he speaks first (the briefing), the door stays open and empty.
-      */}
-    </div>
-  );
-}
-
-function greeting(): string {
-  const hour = Number(new Date().toLocaleString('en-PH', { hour: 'numeric', hour12: false, timeZone: 'Asia/Manila' }));
-  if (hour < 12) return 'Morning.';
-  if (hour < 18) return 'Afternoon.';
-  return 'Evening.';
+  return null;
 }
