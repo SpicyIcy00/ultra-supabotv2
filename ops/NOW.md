@@ -3843,7 +3843,7 @@ are in `ops/DECISIONS.md` under 2026-09-13.
 
 **The plan to build it: George, The Build Plan** —
 https://claude.ai/code/artifact/41329abe-5de8-4168-af7a-9817798877d5. Also at https://claude.ai/artifact/93xBc9gC4yd6XxsXjSjskp
-(the link the platform returned on the 2026-09-18 republish, version 73 after P2S.4). **Since
+(the link the platform returned on the 2026-09-18 republish, version 74 after P2S.5). **Since
 2026-09-18 the page carries only what is ahead** (the owner: *"only keep future
 plan get rid of done"*): finished phases and cards are in this file and the git log.
 The same cards as section 3, with every session's prompt, the phase gates,
