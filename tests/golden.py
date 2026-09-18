@@ -79,6 +79,14 @@ WEEK_AUG_24 = ("2026-08-24", "2026-08-31")
 # figure and the week before it has none — the no-baseline edge, closed.
 SHANG_FIRST_WEEK = ("2026-03-30", "2026-04-06")
 
+# Year over year (P2S.4). Closed Augusts; the shops that traded through both.
+AUG_2025 = ("2025-08-01", "2025-09-01")
+AUG_SAME_STORE = ["Rockwell", "Fairview", "Greenhills", "North Edsa", "Magnolia"]
+# The sales record has a hole: 5 days of September 2024, 1 of October, none
+# of November or December (metrics.yaml same_store.record).
+SEP_2025 = ("2025-09-01", "2025-10-01")
+DEC_2025 = ("2025-12-01", "2026-01-01")
+
 SH1 = "663c7869391c7c00079595a8"  # "Aji Mix", the traced AJI BARN product
 
 
@@ -218,6 +226,34 @@ GOLDEN = [
          sales.get_sales("product", WEEK_AUG_24, metric="product_revenue",
                          compare_to="previous_period", top_n=5)["meta"]),
      ("value", True, 5)),
+
+    # ---- same_period_last_year, same-store (4) -------------------------------
+    # P2S.4, 2026-09-18. August 2026 against August 2025: five shops traded
+    # through both; OPUS (first sale on record 2025-09-30) and Shangri-La
+    # (2026-04-05) had not opened in the earlier August, and AJI PINA's last
+    # sale was 2025-08-08. Cross-checked by the same tool read plainly over
+    # those five shops in each window — 4,581,914.01 and 6,919,157.17 —
+    # which is the same-store figure's whole claim: it is those shops, both
+    # years, nothing else.
+    ("yoy/aug-same-store-total",
+     lambda: (lambda r: (r["value"], r["baseline"], r["change"], r["change_pct"],
+                         r["baseline_status"]))(
+         sales.get_sales([], AUG_2026, compare_to="same_period_last_year")["rows"][0]),
+     (4581914.01, 6919157.17, -2337243.16, -33.8, "ok")),
+    ("yoy/aug-same-store-is-those-shops-read-plainly",
+     lambda: tuple(_val(sales.get_sales([], w, filters={"store": AUG_SAME_STORE}))
+                   for w in (AUG_2026, AUG_2025)),
+     (4581914.01, 6919157.17)),
+    ("yoy/aug-counted-and-left-out-by-name",
+     lambda: (lambda s: (s["counted"], [(x["store"], x["reason"]) for x in s["excluded"]]))(
+         sales.get_sales([], AUG_2026, compare_to="same_period_last_year")
+         ["meta"]["comparison"]["same_store"]),
+     (AUG_SAME_STORE, [("OPUS", "first_sale_after_start"),
+                       ("Shangri-La", "first_sale_after_start"),
+                       ("AJI PINA", "last_sale_before_end")])),
+    ("yoy/aug-by-store-is-the-five",
+     lambda: sales.get_sales("store", AUG_2026, compare_to="same_period_last_year")
+     ["meta"]["comparison"]["baseline_statuses"], {"ok": 5}),
 
     # ---- inventory (4) ---------------------------------------------------
     # as_of reads inventory_snapshots, which is immutable history.
@@ -1150,3 +1186,62 @@ def test_transaction_count_by_product_compares_and_still_says_it_was_redefined()
     kinds = [n["kind"] for n in notice["items"]] if notice.get("kind") == "multiple" else [notice["kind"]]
     assert "metric_redefined" in kinds
     assert all(isinstance(row["change"], int) for row in r["rows"])
+
+
+# ==========================================================================
+# SAME-STORE YEAR OVER YEAR — who is left out, and what the record lacks (P2S.4)
+# ==========================================================================
+
+def test_last_december_against_the_year_before_refuses_in_the_records_words():
+    """
+    The card's own question. The sales record holds no sale from any shop in
+    December 2024, so there is nothing to compare — and the refusal says the
+    RECORD is empty, not that eight shops failed to trade.
+    """
+    with pytest.raises(ValueError) as e:
+        sales.get_sales([], DEC_2025, compare_to="same_period_last_year")
+    msg = str(e.value)
+    assert "no sale from any shop between 2024-12-01 and 2024-12-31" in msg
+    assert "same_store.record" in msg
+    assert "Rockwell" not in msg
+
+
+def test_a_shop_that_opened_mid_window_is_left_out_by_name():
+    """
+    September 2025 against September 2024. North Edsa's first sale on record
+    is 2024-09-02, inside the earlier September; OPUS's is 2025-09-30, inside
+    the later one. Both are named with the date that decided it, on the
+    receipt and in the notice; only Rockwell and Greenhills are counted.
+    """
+    r = sales.get_sales("store", SEP_2025, compare_to="same_period_last_year")
+    ss = r["meta"]["comparison"]["same_store"]
+    assert ss["counted"] == ["Rockwell", "Greenhills"]
+    assert [row["store"] for row in r["rows"]] == ["Rockwell", "Greenhills"]
+    out = {x["store"]: x for x in ss["excluded"]}
+    assert out["North Edsa"]["reason"] == "first_sale_after_start"
+    assert out["North Edsa"]["first_sale_on_record"] == "2024-09-02"
+    assert out["OPUS"]["first_sale_on_record"] == "2025-09-30"
+    receipt = " ".join(r["meta"]["filters_applied"])
+    assert "North Edsa (first sale on record 2024-09-02" in receipt
+    assert "OPUS (first sale on record 2025-09-30" in receipt
+    kinds = {n["kind"] for n in _notices(r)}
+    assert "same_store_scope" in kinds
+
+
+def test_a_window_the_record_barely_covers_says_so_above_the_figure():
+    """
+    September 2024 has sales on 5 of its 30 days. Rockwell reads +567% on it,
+    which is the gap and not trade — so the drawn notice counts the silent
+    days, and the record's coverage is on the receipt.
+    """
+    r = sales.get_sales([], SEP_2025, compare_to="same_period_last_year")
+    rec = r["meta"]["comparison"]["same_store"]["record"]
+    assert (rec["baseline"]["days_with_a_sale"], rec["baseline"]["silent_days"]) == (5, 25)
+    assert rec["current"]["silent_days"] == 0
+    silent = [n for n in _notices(r) if n["kind"] == "sales_record_silent_days"]
+    assert silent and "25 of the 30 days from 2024-09-01 to 2024-09-30" in silent[0]["message"]
+
+
+def test_a_whole_estate_august_has_no_silent_days_and_no_record_notice():
+    r = sales.get_sales([], AUG_2026, compare_to="same_period_last_year")
+    assert "sales_record_silent_days" not in {n["kind"] for n in _notices(r)}

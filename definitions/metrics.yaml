@@ -1253,6 +1253,92 @@ one_call_reads:
 
 
 # =============================================================================
+# SAME STORE — which shops a comparison a year apart may count. Added
+# 2026-09-18 (P2S.4).
+#
+# A year apart the estate is a different shape: North Edsa's first sale on
+# record is 2 September 2024 and OPUS's is 30 September 2025 — each has a
+# part-month in one September and a whole month (or nothing) in the other, so an estate total a year apart measures
+# openings as much as trade. The rule keeps a shop only when it traded
+# through the WHOLE of both windows, and every shop it leaves out is named
+# on the receipt with the dates that decided it. A shop is never silently
+# dropped.
+#
+# THE WORDING IS PROPOSED, NOT YET THE OWNER'S. The card said the owner
+# confirms it (it is a definition, not a design question); until he does,
+# `confirmed_by_owner` stays false and this is the sentence he is asked.
+# =============================================================================
+same_store:
+  display_name: "same-store"
+  introduced: "2026-09-18"
+  confirmed_by_owner: false
+  rule: >
+    A shop is counted when it traded through the whole of both windows: its
+    first sale on record is on or before the first day of the earlier window,
+    its last sale on record is on or after the last day of the later window,
+    and it made a sale in each window. Every other shop is left out of both
+    windows, by name, with the reason.
+  # Who is judged. The shops a sales read covers (stores.active_retail, or
+  # the ones the question named) and, when no shop was named, the closed
+  # shops too — a shop that traded last year and has since shut is exactly
+  # the one a year-over-year figure must say it left out. A closed location
+  # that was never a shop (AJI MACOPA, kind: warehouse) is not judged.
+  candidates:
+    scope: sales_scope               # the stores the read would otherwise sum
+    plus_closed_when_unfiltered: true
+    closed_kind: retail
+  # What "traded" means: a sale under the same guards every sales figure
+  # uses — not cancelled (filters.cancelled), a sale and not a return
+  # (filters.returns.sale_sql). A day with only a return is not a day traded.
+  trading_guards: [filters.cancelled.sql, filters.returns.sale_sql]
+  # "On record" is literal: the sales history begins in June 2024, so a
+  # first sale is the first one the database holds. The receipt says "first
+  # sale on record", never "opened".
+  #
+  # Why a shop was left out, in the order they are tested. The reason a
+  # reader sees is the first that applies; the dates behind it are on the
+  # receipt either way.
+  exclusion_reasons:
+    first_sale_after_start: "first sale on record {first_sale}, after the earlier window began {baseline_start}"
+    last_sale_before_end: "last sale on record {last_sale}, before the later window's last day {current_last_day}"
+    no_sale_in_baseline: "no sale in the earlier window, {baseline_start} to {baseline_last_day}"
+    no_sale_in_current: "no sale in the later window, {current_start} to {current_last_day}"
+    never_traded: "no sale on record"
+  # WHAT THE RULE DOES NOT SEE, said so nobody reads more into it: a shop
+  # shut for a week inside a window (a refit) and trading either side of it
+  # is counted, and its shut week is in its figure. The rule is about shops
+  # that were not yet open or no longer open, not about days.
+  does_not_see: "a shop closed for part of a window but trading before and after it"
+  # THE RECORD ITSELF, judged before any shop. Measured 2026-09-18 while this
+  # rule was built: the sales history HAS A HOLE. Every shop sold on every
+  # day of August 2024 and of January 2025, and between them the record
+  # holds 5 days of September 2024, 1 of October and none of November or
+  # December — so "December 2025 against December 2024" has no December
+  # 2024 to read, and September 2024 is a sixth of a month. Without this
+  # check the rule blamed the shops ("no sale in the earlier window") for
+  # what is missing from the record, and a 5-day September against a whole
+  # one read as +567%.
+  #
+  # A SILENT DAY is a day in a window on which no shop in the estate
+  # recorded a sale. The record cannot say why — every shop shut (Holy Week
+  # 2026 has three) or the sales never reached the database — and the
+  # notice says both, never one. Not a threshold: one silent day is
+  # reported, and none is the only silence that is not.
+  record:
+    estate: [stores.active_retail, stores.closed]   # closed: kind retail only, as candidates
+    silent_day: "a day in the window on which no shop recorded a sale"
+    # A window with no sale on any day is refused: nothing was recorded to
+    # compare, and the shops are not blamed for it.
+    none_recorded: refuse
+    # A window with some silent days is answered, with this notice drawn
+    # above the figure (surface.desk.notices.data_may_be_wrong).
+    silent_days_notice_kind: sales_record_silent_days
+  # No shop counted is a refusal, not an empty result: a comparison over no
+  # shops is not a comparison, and an empty list reads as "nothing to report".
+  none_counted: refuse
+
+
+# =============================================================================
 # COMPARISONS — "vs what?", as a definition. Added 2026-09-07.
 #
 # A period-over-period figure has a baseline, and WHICH baseline is a business
@@ -1442,14 +1528,47 @@ comparisons:
     offset_days: brief.sales_vs_same_weekday.baseline_offset_days
     partial_window_policy: refuse      # to_date_same_elapsed is the partial read
 
+  # ---------------------------------------------------------------------------
+  # YEAR OVER YEAR, added 2026-09-18 (P2S.4). Listed as not supported until
+  # then, with its own fix named: "Define that rule first, then add the
+  # comparison." The estate is not the same shape a year apart — 5 shops
+  # traded in August 2025 against 7 in August 2026 — so the rule came first
+  # (same_store, above) and this mode reads only the shops it counts.
+  #
+  # INHERITS previous_period like the two modes above: row fields, statuses,
+  # arithmetic, ranking and the groupings it allows. What is its own is where
+  # the baseline sits and WHICH SHOPS are in both windows.
+  # ---------------------------------------------------------------------------
+  same_period_last_year:
+    display_name: "vs the same period last year"
+    introduced: "2026-09-18"
+    applies_to: [get_sales]
+    inherits: previous_period
+    # THE SAME CALENDAR DATES A YEAR EARLIER. December 2025 against December
+    # 2024; a closed preset resolves on today's Manila date first, then both
+    # of its bounds move back a year. Calendar dates rather than 52 weeks
+    # (364 days) because the question this answers is seasonal and the
+    # season here is dated: Christmas is the 25th every year. The cost is
+    # stated rather than hidden — a holiday that moves (Chinese New Year)
+    # can fall in one window and not the other, and a month's weekday mix
+    # differs by a day or two a year apart.
+    window_rule: shift_back_by_years
+    years_back: 1
+    # 29 February has no counterpart. A window STARTING on it starts on the
+    # 28th a year earlier; a window whose exclusive end is the 29th (its last
+    # day the 28th) ends on 1 March, so its last day is still the 28th. Every
+    # other bound keeps its day and month, so a month is always the whole
+    # month: February 2025 against all 29 days of February 2024. The receipt
+    # carries both windows' dates, so a baseline a day longer or shorter is
+    # visible, never silent.
+    leap_day: start_to_28_february_end_to_1_march
+    partial_window_policy: refuse      # same_elapsed_last_year, below, is not built
+    # WHO IS IN BOTH WINDOWS: the rule, read from here at run time.
+    population: same_store
+    # Explains how the figure was measured — surface.desk.notices.explains_only.
+    scope_notice_kind: same_store_scope
+
   not_supported:
-    same_period_last_year:
-      supported: false
-      reason: >
-        The estate is not the same shape a year apart — 5 stores traded in
-        August 2025 against 7 in August 2026 — so a company-wide year-over-year
-        figure compares different populations unless a same-store rule exists.
-        Define that rule first, then add the comparison.
     # to_date_same_elapsed was listed here until 2026-09-12; it is now a mode.
     full_period_extrapolation:
       supported: false
@@ -1459,6 +1578,16 @@ comparisons:
         the part that has — a convention nobody chose, and the afternoon does
         not sell like the morning. to_date_same_elapsed says where the period
         stands against the same point in the period before, which is a fact.
+    # same_period_last_year was listed here until 2026-09-18 (P2S.4); it is
+    # now a mode, on the same_store rule above that this entry asked for.
+    same_elapsed_last_year:
+      supported: false
+      reason: >
+        "How is this year going against last year?" is a period still in
+        progress against the same elapsed portion a year earlier, and the
+        same-store rule would have to be judged on a window that ends now.
+        Not built: ask for a closed window (last month, or explicit dates)
+        against the same period last year.
     per_bucket_lag:
       supported: false
       reason: "each bucket against its predecessor is a lag series; the chart of the series already shows it"
@@ -4516,10 +4645,30 @@ notices:
   comparison_incomplete:
     must_convey:
       - [baseline, previous period, prior period, earlier period, period before,
-         last period, "week before", "month before", "days before", compared, comparison]
+         last period, "week before", "month before", "days before", compared, comparison,
+         last year, year before, a year earlier, a year ago]
       - ["no ", none, zero, nothing, undefined, missing, absent, not comparable,
          cannot compare, could not compare, "no figure", did not trade, "not trading",
          "no sales", "no transactions", "wasn't trading", "was not trading", "not open", "not yet open"]
+
+  # A year-over-year figure counts only the shops that traded through both
+  # windows (same_store). Raised whenever the rule left a shop out, so the
+  # answer says the figure is same-store and does not read as the estate.
+  # Explains how the figure was measured; not drawn (surface.desk.notices).
+  same_store_scope:
+    must_convey:
+      - [same-store, same store, like-for-like, like for like, comparable,
+         left out, leaves out, excluded, excluding, not counted, only counts,
+         counts only, only the shops, shops that traded, traded in both]
+
+  # The sales record is silent on some days of a same-store window: no shop
+  # recorded a sale (same_store.record). Drawn: if the days are missing
+  # rather than shut, the figure is wrong by what they held.
+  sales_record_silent_days:
+    must_convey:
+      - [day, days]
+      - ["no sale", "no sales", "no recorded", "not recorded", missing, gap,
+         silent, "no record", "nothing recorded"]
 
   # ---- Saved workflows -----------------------------------------------------
   # Emitted by backend/app/services/workflow_runner.py, which builds a run for
@@ -6944,6 +7093,7 @@ surface:
         - replenishment_allocation_not_binding
         - replenishment_mixed_algorithms
         - replenishment_days_of_stock_tail
+        - same_store_scope
       data_may_be_wrong:
         - reconciliation_failed
         - header_total_mismatch
@@ -6954,6 +7104,7 @@ surface:
         - snapshot_coverage_gap
         - history_coverage
         - negative_on_hand
+        - sales_record_silent_days
         - purchase_plan_negative_on_hand
         - replenishment_negative_on_hand
         - replenishment_partial_run

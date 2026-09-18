@@ -264,6 +264,35 @@ def shifted_back_by_days(start: date, end: date, days: int) -> tuple[date, date]
     return start - d, end - d
 
 
+def years_back(day: date, years: int, *, bound: str = "start") -> date:
+    """
+    The same calendar date `years` earlier. 29 February has no counterpart in
+    most years (comparisons.same_period_last_year.leap_day): as a START it
+    moves to 28 February; as an exclusive END — a window whose last day is
+    the 28th — it moves to 1 March, so that window's last day is still the
+    28th. Every other date keeps its day and month.
+    """
+    year = day.year - int(years)
+    if day.month == 2 and day.day == 29 and not calendar.isleap(year):
+        return date(year, 3, 1) if bound == "end" else date(year, 2, 28)
+    return day.replace(year=year)
+
+
+def shifted_back_by_years(start: date, end: date, years: int) -> tuple[date, date]:
+    """
+    The same calendar dates `years` earlier — comparisons.same_period_last_year.
+    2025-12-01..2026-01-01 with 1 -> 2024-12-01..2025-01-01. Both bounds
+    move on their own, so a month stays the month: February 2025 against
+    all 29 days of February 2024, and February 2024 against the 28 of 2023.
+    """
+    if end <= start:
+        raise ValueError(
+            f"Window end ({end}) must be after start ({start}); ranges are "
+            f"half-open [start, end)."
+        )
+    return years_back(start, years), years_back(end, years, bound="end")
+
+
 def as_date(value: Any) -> date:
     """A date, from a date or an ISO string. Anything else is refused by name."""
     if isinstance(value, date):

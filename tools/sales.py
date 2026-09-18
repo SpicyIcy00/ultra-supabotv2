@@ -18,7 +18,7 @@ Architecture rules this module is built to (see CLAUDE.md):
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any, Optional, Sequence
 
@@ -45,6 +45,11 @@ from ._common import (
 # Postgres overload and lands 8 hours late.
 _EXPLICIT_START = "(%(win_start)s)::timestamp AT TIME ZONE 'Asia/Manila'"
 _EXPLICIT_END = "(%(win_end)s)::timestamp AT TIME ZONE 'Asia/Manila'"
+
+
+def _bound(param: str) -> str:
+    """The same Manila-date bound as _EXPLICIT_START, on a parameter of its own."""
+    return _EXPLICIT_START.replace("win_start", param)
 
 # Filter keys the caller may pass. Anything else raises rather than being
 # ignored — a silently dropped filter returns a number for the wrong question.
@@ -446,6 +451,254 @@ def _rank_compared(compared: list[dict], mode: str, top_n: Optional[int],
     return ranked, not_ranked
 
 
+# ---------------------------------------------------------------------------
+# SAME STORE — which shops a comparison a year apart counts (P2S.4)
+#
+# metrics.yaml same_store holds the rule and every reason a shop is left out;
+# this is the arithmetic on it. Split in two so the rule is testable with no
+# database: _same_store_split judges trading dates it is handed, and
+# _same_store reads those dates in ONE statement and builds the receipt.
+# ---------------------------------------------------------------------------
+
+def _same_store_split(
+    defs: dict,
+    candidates: Sequence[str],
+    labels: dict[str, str],
+    trading: dict[str, dict],
+    current: tuple[date, date],
+    baseline: tuple[date, date],
+) -> tuple[list[str], list[dict]]:
+    """
+    (counted ids, excluded entries) under metrics.yaml same_store.
+
+    `trading[sid]` carries first_sale and last_sale (Manila dates, over the
+    whole record) and baseline_sales / current_sales (counts in each window);
+    a candidate with no entry never traded. Windows are half-open [start,
+    end) of dates. Reasons are tested in the file's order and the first that
+    applies is the one given; a shop is either counted or excluded, never
+    neither.
+    """
+    reasons = _req(defs, "same_store.exclusion_reasons")
+    b_start, b_end = baseline
+    c_start, c_end = current
+    dates = {
+        "baseline_start": b_start.isoformat(),
+        "baseline_last_day": (b_end - timedelta(days=1)).isoformat(),
+        "current_start": c_start.isoformat(),
+        "current_last_day": (c_end - timedelta(days=1)).isoformat(),
+    }
+    counted: list[str] = []
+    excluded: list[dict] = []
+    for sid in candidates:
+        t = trading.get(sid)
+        if not t or t.get("first_sale") is None:
+            code = "never_traded"
+        elif t["first_sale"] > b_start:
+            code = "first_sale_after_start"
+        elif t["last_sale"] < c_end - timedelta(days=1):
+            code = "last_sale_before_end"
+        elif not t.get("baseline_sales"):
+            code = "no_sale_in_baseline"
+        elif not t.get("current_sales"):
+            code = "no_sale_in_current"
+        else:
+            counted.append(sid)
+            continue
+        first = t["first_sale"].isoformat() if t and t.get("first_sale") else None
+        last = t["last_sale"].isoformat() if t and t.get("last_sale") else None
+        excluded.append({
+            "store": labels.get(sid, sid),
+            "store_id": sid,
+            "reason": code,
+            "why": _req(reasons, code).format(first_sale=first, last_sale=last, **dates),
+            "first_sale_on_record": first,
+            "last_sale_on_record": last,
+        })
+    return counted, excluded
+
+
+def _record_days(current: tuple[date, date], baseline: tuple[date, date],
+                 recorded: dict[str, int]) -> dict:
+    """
+    How much of each window the sales record covers (same_store.record):
+    `recorded[window]` is the number of days on which any shop in the
+    estate recorded a sale. A day with none is silent — shut, or missing
+    from the record; the record cannot say which.
+    """
+    out = {}
+    for name, (start, end) in (("baseline", baseline), ("current", current)):
+        days = (end - start).days
+        with_sale = int(recorded.get(name) or 0)
+        out[name] = {
+            "start": start.isoformat(),
+            "last_day": (end - timedelta(days=1)).isoformat(),
+            "days": days,
+            "days_with_a_sale": with_sale,
+            "silent_days": days - with_sale,
+        }
+    return out
+
+
+def _same_store(
+    cur,
+    defs: dict,
+    store_ids: Sequence[str],
+    catalog: dict[str, dict],
+    *,
+    unfiltered: bool,
+    current: tuple[date, date],
+    baseline: tuple[date, date],
+) -> dict:
+    """
+    Judge the shops for a same_store comparison, in the caller's transaction.
+
+    Candidates are the shops the read covers and, when no shop was named,
+    the closed shops of the kind the rule judges (same_store.candidates) —
+    so a shop that traded last year and has since shut is named as left out
+    rather than never mentioned. A counted closed shop joins `catalog` so its
+    rows carry its name. Refuses when no shop is counted
+    (same_store.none_counted): a comparison over no shops is not one.
+    """
+    rule = _req(defs, "same_store")
+    cand_rule = _req(rule, "candidates")
+    candidates = list(store_ids)
+    judged = {sid: dict(catalog[sid]) for sid in store_ids if sid in catalog}
+    if unfiltered and cand_rule.get("plus_closed_when_unfiltered"):
+        for entry in _req(defs, "stores.closed"):
+            if entry.get("kind") == _req(cand_rule, "closed_kind") and entry["id"] not in judged:
+                candidates.append(entry["id"])
+                judged[entry["id"]] = dict(entry)
+    labels = {sid: _label_store(judged, sid) for sid in candidates}
+
+    guards = " AND ".join(_req(defs, ref) for ref in _req(rule, "trading_guards"))
+    windows_params = {"ss_b_start": baseline[0], "ss_b_end": baseline[1],
+                      "ss_c_start": current[0], "ss_c_end": current[1]}
+    in_baseline = f"t.transaction_time >= {_bound('ss_b_start')} AND t.transaction_time < {_bound('ss_b_end')}"
+    in_current = f"t.transaction_time >= {_bound('ss_c_start')} AND t.transaction_time < {_bound('ss_c_end')}"
+
+    # THE RECORD FIRST (same_store.record): on how many days of each window
+    # did ANY shop in the estate record a sale? Whatever shop was asked
+    # about, silence across the whole estate is the record's, not a shop's.
+    estate_ids = [s["id"] for s in _req(defs, "stores.active_retail")] + [
+        e["id"] for e in _req(defs, "stores.closed")
+        if e.get("kind") == _req(cand_rule, "closed_kind")
+    ]
+    cur.execute(
+        f"""
+        SELECT count(DISTINCT d) FILTER (WHERE in_b) AS baseline,
+               count(DISTINCT d) FILTER (WHERE in_c) AS current
+        FROM (
+          SELECT (t.transaction_time AT TIME ZONE 'Asia/Manila')::date AS d,
+                 ({in_baseline}) AS in_b, ({in_current}) AS in_c
+          FROM new_transactions t
+          WHERE {guards}
+            AND t.store_id = ANY(%(ss_estate)s)
+            AND (({in_baseline}) OR ({in_current}))
+        ) x
+        """,
+        {**windows_params, "ss_estate": estate_ids},
+    )
+    record = _record_days(current, baseline, dict(cur.fetchone()))
+    record_rule = _req(rule, "record")
+    for name, which in (("baseline", "earlier"), ("current", "later")):
+        w = record[name]
+        if w["days_with_a_sale"] == 0:
+            raise ValueError(
+                f"The sales record holds no sale from any shop between "
+                f"{w['start']} and {w['last_day']} (the {which} window), so "
+                f"there is nothing to compare a year apart — those days are "
+                f"missing from the record or every shop was shut, and the "
+                f"record cannot say which. (metrics.yaml: same_store.record)"
+            )
+    notices: list[dict] = []
+    silent = [(which, record[name]) for name, which in
+              (("baseline", "earlier"), ("current", "later"))
+              if record[name]["silent_days"]]
+    if silent:
+        # A literal so tests/test_notice_fingerprints can see it; the yaml
+        # names the same kind, and this holds the two together.
+        assert _req(record_rule, "silent_days_notice_kind") == "sales_record_silent_days"
+        notices.append({
+            "kind": "sales_record_silent_days",
+            "message": (
+                "The sales record has no sale from any shop on "
+                + "; and on ".join(
+                    f"{w['silent_days']} of the {w['days']} days from {w['start']} "
+                    f"to {w['last_day']}" for _, w in silent)
+                + ". Those days are either days every shop was shut or sales "
+                "missing from the record, and the record does not tell them apart — if "
+                "they are missing, this comparison is wrong by what they held."
+            ),
+            "guidance": (
+                "Say how many days of which period have no recorded sales, and "
+                "that the change may be the gap rather than trade. Never "
+                "estimate what the missing days held."
+            ),
+            "source": "definitions/metrics.yaml: same_store.record",
+        })
+
+    cur.execute(
+        f"""
+        SELECT t.store_id,
+               (min(t.transaction_time) AT TIME ZONE 'Asia/Manila')::date AS first_sale,
+               (max(t.transaction_time) AT TIME ZONE 'Asia/Manila')::date AS last_sale,
+               count(*) FILTER (WHERE t.transaction_time >= {_bound('ss_b_start')}
+                                  AND t.transaction_time <  {_bound('ss_b_end')}) AS baseline_sales,
+               count(*) FILTER (WHERE t.transaction_time >= {_bound('ss_c_start')}
+                                  AND t.transaction_time <  {_bound('ss_c_end')}) AS current_sales
+        FROM new_transactions t
+        WHERE {guards}
+          AND t.store_id = ANY(%(ss_candidates)s)
+        GROUP BY t.store_id
+        """,
+        {**windows_params, "ss_candidates": candidates},
+    )
+    trading = {r["store_id"]: dict(r) for r in cur.fetchall()}
+    counted, excluded = _same_store_split(defs, candidates, labels, trading,
+                                          current, baseline)
+    left_out = "; ".join(f"{x['store']} ({x['why']})" for x in excluded)
+    if not counted:
+        raise ValueError(
+            "No shop traded through both windows, so there is nothing to "
+            f"compare a year apart: {left_out}. (metrics.yaml: same_store)"
+        )
+    for sid in counted:
+        catalog.setdefault(sid, judged[sid])
+    names = ", ".join(labels[s] for s in counted)
+    rule_text = " ".join(_req(rule, "rule").split())
+    return {
+        "rule": rule_text,
+        "confirmed_by_owner": bool(rule.get("confirmed_by_owner")),
+        "counted": [labels[s] for s in counted],
+        "counted_ids": counted,
+        "excluded": excluded,
+        "judged": len(candidates),
+        "record": record,
+        "source": "definitions/metrics.yaml: same_store",
+        "filters_applied": (
+            f"t.store_id IN ({len(counted)}: {names}) — the shops that traded "
+            f"through both windows"
+            + (f"; left out: {left_out}" if excluded else "")
+            + "   # metrics.yaml: same_store (of stores.active_retail"
+            + (" and stores.closed" if len(candidates) > len(store_ids) else "")
+            + ")"
+        ),
+        "notices": notices + ([{
+            "kind": "same_store_scope",
+            "message": (
+                f"Same-store figure: it counts the {len(counted)} shop"
+                f"{'' if len(counted) == 1 else 's'} that traded through both "
+                f"periods ({names}). Left out: {left_out}."
+            ),
+            "guidance": (
+                "Say the figure is same-store and name the shops left out and "
+                "why; never present it as the whole estate."
+            ),
+            "source": "definitions/metrics.yaml: same_store",
+        }] if excluded else []),
+    }
+
+
 def get_sales(
     group_by: Any,
     date_range: Any,
@@ -506,7 +759,13 @@ def get_sales(
                     week going?" is this_week + 'to_date_same_elapsed'.
                     'same_weekday_last_week' is a closed day or explicit
                     window against the same days a week earlier — the
-                    comparison the morning brief makes, for any day. To
+                    comparison the morning brief makes, for any day.
+                    'same_period_last_year' is a closed window against the
+                    same calendar dates a year earlier ("last December against
+                    the year before" is 2025-12-01..2026-01-01), counting only
+                    the shops that traded through both (same-store): the
+                    shops left out, and why, are in meta.comparison.same_store
+                    and must be named. To
                     explain a change in net_sales, read its drivers —
                     transaction_count and average_transaction_value — with
                     the same date_range, filters and compare_to (metrics.yaml
@@ -700,6 +959,7 @@ def get_sales(
     window_rule = (cdef or {}).get("window_rule") or "previous_period"
     elapsed_rule = window_rule == "same_elapsed_portion_of_the_period_before"
     day_shift_rule = window_rule == "shift_back_by_days"
+    year_rule = window_rule == "shift_back_by_years"
     elapsed_meta: Optional[dict] = None
     if cdef is None:
         start_sql, end_sql, win_params, window_meta = _resolve_window(defs, date_range)
@@ -732,6 +992,11 @@ def get_sales(
                 b_start, b_end = _windows.shifted_back_by_days(
                     win_params["win_start"], win_params["win_end"], offset
                 )
+            elif year_rule:
+                b_start, b_end = _windows.shifted_back_by_years(
+                    win_params["win_start"], win_params["win_end"],
+                    int(_req(cdef, "years_back")),
+                )
             else:
                 b_start, b_end = _windows.previous_period_explicit(
                     win_params["win_start"], win_params["win_end"]
@@ -742,6 +1007,8 @@ def get_sales(
                              "convention": "half-open [start, end)"}
             if day_shift_rule:
                 baseline_meta["shifted_back_days"] = offset
+            if year_rule:
+                baseline_meta["shifted_back_years"] = int(_req(cdef, "years_back"))
 
     # ---- shape of the query ---------------------------------------------
     grain = _req(mdef, "grain")
@@ -786,6 +1053,10 @@ def get_sales(
     ]
     params: dict[str, Any] = {"store_ids": store_ids, **win_params}
 
+    # Which line of the receipt names the shops: same_store narrows them and
+    # rewrites that line rather than leaving one that is no longer true.
+    _scope_statement = 2
+    same_store_meta: Optional[dict] = None
     filters_applied = [
         f"{_req(defs, 'filters.cancelled.sql')}   # metrics.yaml: filters.cancelled",
         f"{type_sql}   # metrics.yaml: filters.returns",
@@ -799,6 +1070,7 @@ def get_sales(
         f"{', '.join(_req(defs, 'filters.excluded_from_sales.excluded_labels')[i] for i in excluded_ids)}"
         f"   # metrics.yaml: filters.excluded_from_sales.excluded_store_ids",
     ]
+    assert "stores.active_retail" in filters_applied[_scope_statement]
     if window_meta["kind"] == "explicit":
         filters_applied.append(
             f"transaction_time >= {window_meta['start']} AND < {window_meta['end']} "
@@ -918,6 +1190,23 @@ def get_sales(
                         convention="half-open [start, end), Manila timestamps",
                         resolved_against=head["manila_now"].isoformat(sep=" "),
                     )
+                elif year_rule:
+                    # The preset's own window on today's Manila date, then
+                    # both bounds a year back — last_month against the same
+                    # month a year earlier.
+                    years = int(_req(cdef, "years_back"))
+                    c_iso = _windows.resolve_preset(defs, preset_to_compare, head["manila_today"])
+                    c_start, c_end = date.fromisoformat(c_iso[0]), date.fromisoformat(c_iso[1])
+                    b_start, b_end = _windows.shifted_back_by_years(c_start, c_end, years)
+                    baseline_meta = {"kind": "preset", "name": preset_to_compare,
+                                     "shifted_back_years": years,
+                                     "start": b_start.isoformat(), "end": b_end.isoformat(),
+                                     "convention": "half-open [start, end)"}
+                    window_meta.update(
+                        start=c_start.isoformat(), end=c_end.isoformat(),
+                        convention="half-open [start, end)",
+                        resolved_against=head["manila_today"].isoformat(),
+                    )
                 elif day_shift_rule:
                     offset = int(_req(defs, _req(cdef, "offset_days")))
                     c_iso = _windows.resolve_preset(defs, preset_to_compare, head["manila_today"])
@@ -956,6 +1245,25 @@ def get_sales(
                     f"{compare_to}, same metric, grouping, stores and guards)"
                     f"   # metrics.yaml: comparisons.{compare_to}"
                 )
+
+            # ---- same store (P2S.4) ----------------------------------------
+            # A comparison a year apart counts only the shops that traded
+            # through BOTH windows (metrics.yaml same_store). Judged here, in
+            # the same transaction, before either window is read; the shops
+            # it leaves out are named on the receipt with the dates that
+            # decided it, and never silently dropped.
+            if cdef is not None and cdef.get("population") == "same_store":
+                same_store_meta = _same_store(
+                    cur, defs, store_ids, catalog,
+                    unfiltered=filters.get("store") is None,
+                    current=(win_params["win_start"], win_params["win_end"]),
+                    baseline=(base_win["win_start"], base_win["win_end"]),
+                )
+                params["store_ids"] = same_store_meta["counted_ids"]
+                filters_applied[_scope_statement] = same_store_meta["filters_applied"]
+                notices.extend(same_store_meta["notices"])
+                same_store_meta = {k: v for k, v in same_store_meta.items()
+                                   if k not in ("filters_applied", "notices")}
             # base_params IS BUILT WHERE IT IS USED, not here. It used to be
             # snapshotted at this line — before the SKU resolution below adds
             # `sku_product_ids` to `params` — so a compared read with a sku
@@ -1292,6 +1600,8 @@ def get_sales(
         }
         if not_ranked_meta is not None:
             comparison_meta["not_ranked"] = not_ranked_meta
+        if same_store_meta is not None:
+            comparison_meta["same_store"] = same_store_meta
         if elapsed_meta is not None:
             # How much of the period the figure covers, from the windows the
             # tool bound — never from the clock on whoever reads it.

@@ -57,6 +57,32 @@ on compose frame" does.
 
 ## Open
 
+### 2026-09-18 — found by the session: the sales record has no autumn 2024
+
+Found building P2S.4 (year over year). `new_transactions` has every shop on
+every day of August 2024 and of January 2025, and between them only **six
+days**: 2, 3, 10, 17 and 24 September and 1 October 2024 — none in November or
+December. So "last December against the year before" cannot be answered, and
+any year-over-year read touching September–December 2024 compares against a
+fragment. **George now says so** (P2S.4's record check refuses an empty window
+and draws a notice over a partial one), so nothing is wrong on screen — but the
+figures are missing. **Needs the owner:** a StoreHub transaction export for
+2024-09-01 to 2024-12-31, if StoreHub still holds it. Fairview's first sale on
+record (2024-10-01) and Magnolia's (2025-01-01) fall at the edges of the hole,
+so either may have opened earlier than the record shows.
+
+### 2026-09-18 — found by the session: five live tests fail on HEAD
+
+`tests/golden.py` — `test_no_baseline_is_reported_not_invented`,
+`test_zero_baseline_keeps_the_count_and_nulls_the_percentage`,
+`test_an_undefined_ratio_is_null_with_a_notice`,
+`test_a_store_per_row_comparison_reports_the_one_with_no_baseline` — filter on
+`"Shang"`, which stopped resolving when the shop became "Shangri-La"
+(2026-09-10). `tests/test_comparison_live.py::test_the_comparison_words_are_the_definitions_and_the_shop_is_a_replay_scope`
+reads `surface.desk.selection.comparison`, which the definitions no longer
+have. The tools are fine; the tests are stale. Checked by running them with
+P2S.4's changes stashed. Not fixed: not the card.
+
 ### 2026-09-18 — "it does feel slow and really rough, it didn't feel like it was investigating"
 
 > *"Its does feel slow and really rough, It didn't feel like it was investigating, Is there ways to make this better in the way it works and uses tools or something?"*

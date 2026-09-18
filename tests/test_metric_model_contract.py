@@ -282,7 +282,8 @@ def test_the_sales_schema_offers_exactly_the_supported_comparisons():
     offered = sorted(k for k, v in req(DEFS, "comparisons").items()
                      if isinstance(v, dict) and "get_sales" in (v.get("applies_to") or []))
     assert prop["enum"] == offered
-    assert set(offered) == {"previous_period", "same_weekday_last_week", "to_date_same_elapsed"}
+    assert set(offered) == {"previous_period", "same_weekday_last_week", "to_date_same_elapsed",
+                            "same_period_last_year"}
     assert "compare_to" not in schema["input_schema"]["required"]
     # What was declined is documentation, never a choice offered.
     for declined in req(DEFS, "comparisons.not_supported"):
@@ -321,7 +322,9 @@ def test_a_pin_cannot_hold_a_comparison_the_definitions_do_not_support():
     with pytest.raises(PinValidationError, match="no longer a valid value"):
         validate_call({"tool": "get_sales", "arguments": {
             "group_by": [], "date_range": "last_week", "metric": "net_sales",
-            "compare_to": "same_period_last_year",
+            # same_period_last_year was the example here until P2S.4 built it;
+            # its year-to-date sibling is still declined.
+            "compare_to": "same_elapsed_last_year",
         }})
 
 
