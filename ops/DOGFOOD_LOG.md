@@ -390,7 +390,7 @@ analysis (Dikiam Sweet Taiwan's shops, Greenhills' restocking, 1,854 dead lines)
 **Found:** `5b40454` had drawn the whole rest under him, and `f13df40` only
 removed repeats — what no chart took, and his caveat, still sat on the left.
 
-**Fixed in the commit after `88e2e65`, not verified by him.** Under him now: the
+**Fixed in `589af9f`, not verified by him.** Under him now: the
 question, the headline, what he'd do next and the questions to tap. His reading
 of the data is on the charts: each sentence on the chart it cites, and what no
 chart took, with his caveat, on the chart the headline rests on (the one his
