@@ -124,7 +124,12 @@ def test_the_quoted_total_matches_the_cards():
 def test_each_phase_states_its_own_size(phase):
     n = len([c for c in now_cards() if c.startswith(phase + ".")])
     heading = {"P1": "Phase 1", "P2": "Phase 2", "P3": "Phase 3"}[phase]
-    m = re.search(re.escape(heading) + r"[^<]*</h2>\s*<p class=\"ph\">([^<.]*)", _plan())
+    m = re.search(re.escape(heading) + r" [^<]*</h2>\s*<p class=\"ph\">([^<.]*)", _plan())
+    if n == 0 and not m:
+        # THE PAGE CARRIES ONLY WHAT IS AHEAD (the owner, 2026-09-18: "only keep
+        # future plan get rid of done"). A finished phase may be gone from it;
+        # one that is still shown must still say its size.
+        return
     assert m, f"no '{heading}' heading with a summary line on the page"
     assert m.group(1).strip().lower().startswith(WORDS[n].lower() + " session"), (
         f"{heading} has {n} open cards; the page says {m.group(1).strip()!r}"
@@ -133,9 +138,11 @@ def test_each_phase_states_its_own_size(phase):
 
 def test_the_headline_session_count_matches():
     n = len(now_cards())
-    assert f"{WORDS[n]} sessions in four phases" in _plan(), (
-        f"{n} cards are open; the page's headline does not say "
-        f"'{WORDS[n]} sessions in four phases'"
+    phases = len(re.findall(r'<section class="phase">\s*<h2>Phase ', _plan()))
+    said = f"{WORDS[n]} sessions in {WORDS[phases].lower()} phases"
+    assert said in _plan(), (
+        f"{n} cards are open over {phases} phases on the page; its headline "
+        f"does not say '{said}'"
     )
 
 
