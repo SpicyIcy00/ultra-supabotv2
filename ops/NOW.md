@@ -3036,12 +3036,45 @@ cleanup; he decides.
       reads of spelling.
       **(c) a broad answer leads with the view and its few findings** — 503
       words on run 2; data-quality notes belong in the caveat, not the body.
+      **(d) stop paying for refusals that protect nothing — the owner, "ok add
+      all of those fixes": ~10% of the two runs' $3.88 was George redoing a
+      board or reading the check refused (6 extra compose rounds and 1
+      corrective turn in 14 turns).** By P1.a's own line — coerce what cannot
+      change what a figure says, refuse what can — these become coercions,
+      each recorded on `meta.coerced`: a block claim over 80 characters and a
+      reading claim over 120 are cut at a word boundary; `emphasise` past 3
+      rows keeps the first 3; a caveat or next over its length is kept whole
+      (it carries notices — cutting one could drop a warning). A figure no read
+      returned ("about 13,100") STAYS a refusal: that one is about truth.
+      **(e) the bugs the two runs found under those refusals:** a subject the
+      read is FILTERED to is refused when the read has no subject column —
+      "read 0 has no row for 'North Edsa'" on a `group_by: []` read filtered
+      to North Edsa, and the same for an action on Rockwell — which P1.a says
+      is accepted; the transaction-wording check fires on the foot-traffic
+      REFUSAL, where George says a transaction is NOT a person (both runs) —
+      it must tell explaining the difference from confusing the two; the
+      store-wide stock-out view returns 1,000 rows with no sign it was cut,
+      and a product absent from it read as "not out" in the 2026-09-18
+      simulation — the meta says when the list is capped and that a line is
+      checked by its sku; the eval report printer crashes on a Windows
+      console ("≤" in cp1252), so a run's summary was lost once.
+      **(f) worth measuring, NOT cutting:** in the Greenhills turn $0.20 of
+      $0.34 was caching large results (stock and replenishment, up to 200
+      rows each). Record result size per read on the eval report and say
+      what a smaller default would save — the owner: cost never makes George
+      work worse, so nothing he reads is trimmed on this card.
+      **Its own card, not this one:** a holiday calendar in metrics.yaml. The
+      CHECK rung sees an unusual baseline day as a series; nothing says WHY it
+      was unusual (31 Aug, the OPUS Monday).
       **Done when:** on the live gate, "how are we doing?" shows the shops'
       figures first and **at least one deeper block lands before the answer
       finishes** (timed off the compose frames); nothing drawn earlier moves;
       every trust row clean on the gate and depth turns; no orphaned sentence
-      in the seven answers; the recorded cost per turn reported beside
-      `p2s6-gate-2.json`. **eval: subset** — the five gate and two depth turns.
+      in the seven answers; **no compose or reading refused for a length or
+      an emphasis count, and none for a subject the read is filtered to**;
+      the foot-traffic turn raises no wording warning; the recorded cost per
+      turn reported beside `p2s6-gate-2.json`, with the rounds the coercions
+      saved. **eval: subset** — the five gate and two depth turns.
 - [ ] **P2S.4 same-store year-over-year** — **was P2.i, kept by the merge
       2026-09-17 because it changes what George can SAY, not how it looks,
       and so is untouched by the redraw.** It may be taken ahead of any P2S
