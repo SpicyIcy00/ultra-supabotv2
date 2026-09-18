@@ -57,27 +57,6 @@ on compose frame" does.
 
 ## Open
 
-### 2026-09-18 — "it stops too early … whats more from george? why is it hiding? … i should see what i ask … a track back feature"
-
-> *"but some small changes it stops too early. it should stop almost right before the text bar. also whats more from george? why is it hiding? theres more space it can reach the end of where the blob reaches. i should see what i ask too like around the area of the blob just something small and also be a track back feature i dont know whats the best way to do it but when you can go to your last question and its last resutls"*
-
-Said of the live build with three screenshots (a replenishment answer, "Yes — but not the engine."). Fixes to the room as it is — the UI freeze of the same day is on redesign, not on these. Found underneath, not fixed:
-
-1. **The figures and words stop 150 px above the bottom.** `.r-beside` pads its
-   bottom by 150 px (`room.css`), while the message line needs about 90. Stop
-   them just above the line.
-2. **"more from George" hides his words on purpose** — the 2026-09-17 rule put
-   only the headline and asks under the mark and the rest one tap away. With
-   the column's height free, show it all, down to the line, scrolling in place.
-   **And a real bug under it:** the opened text prints markdown raw
-   (`**Three.`) — the "rest" part is not rendered as the headline is.
-3. **His question is nowhere on screen.** A small line near the mark: what he
-   asked, in his words.
-4. **No way back to the last question.** Decided here, not asked: arrows on
-   that question line step to the previous question and back, redrawing its
-   words and charts exactly as they were from the stored turn — no new model
-   call, no cost — and "latest" returns.
-
 ### 2026-09-18 — "it does feel slow and really rough, it didn't feel like it was investigating"
 
 > *"Its does feel slow and really rough, It didn't feel like it was investigating, Is there ways to make this better in the way it works and uses tools or something?"*
@@ -401,6 +380,45 @@ once changes the next answer. That is the card's own done-when.
 ---
 
 ## Fixed
+
+### 2026-09-18 — "it stops too early … whats more from george? why is it hiding? … i should see what i ask … a track back feature"
+
+> *"but some small changes it stops too early. it should stop almost right before the text bar. also whats more from george? why is it hiding? theres more space it can reach the end of where the blob reaches. i should see what i ask too like around the area of the blob just something small and also be a track back feature i dont know whats the best way to do it but when you can go to your last question and its last resutls"*
+
+Said of the live build with three screenshots (a replenishment answer, "Yes — but not the engine."). Fixes to the room as it is — the UI freeze of the same day is on redesign, not on these. Found underneath, not fixed:
+
+1. **The figures and words stop 150 px above the bottom.** `.r-beside` pads its
+   bottom by 150 px (`room.css`), while the message line needs about 90. Stop
+   them just above the line.
+2. **"more from George" hides his words on purpose** — the 2026-09-17 rule put
+   only the headline and asks under the mark and the rest one tap away. With
+   the column's height free, show it all, down to the line, scrolling in place.
+   **And a real bug under it:** the opened text prints markdown raw
+   (`**Three.`) — the "rest" part is not rendered as the headline is.
+3. **His question is nowhere on screen.** A small line near the mark: what he
+   asked, in his words.
+4. **No way back to the last question.** Decided here, not asked: arrows on
+   that question line step to the previous question and back, redrawing its
+   words and charts exactly as they were from the stored turn — no new model
+   call, no cost — and "latest" returns.
+
+**Fixed in `5b40454`, not verified by him.** All four, as found:
+1. The room's foot is 86 px, not 150: the words and the figures stop 12 px above
+   the message line.
+2. "more from George" is gone; his caveat and every sentence no chart took are
+   drawn under the headline, the column scrolling in place. The `**Three.` was a
+   bold span across two sentences, cut from the raw text so each half kept one
+   marker; sentences are cut from the unmarked text now and his emphasis is drawn
+   in weight — on the chart thoughts too, which had the same bug.
+3. "YOU ASKED" and his question, small, at the top of the words under the mark.
+4. ‹ › on that line step to the previous or next answer; the board is rebuilt
+   from the stored turns up to it, so no model call and no read; "latest"
+   returns, and asking (or a new answer) returns to the newest.
+
+Held by `trackBack.dom.test.tsx` (8 tests). Frame-checked headless at 1440
+(`ops/frames.py`) for 1–3; the fixtures hold one answer, so no frame shows the
+arrows. Still open: when the chips above the line are showing, they sit over the
+last 30 px or so of the words, where the column fades.
 
 ### 2026-09-17 — "down arrow should be in the center of the charts"
 

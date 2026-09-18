@@ -4614,3 +4614,10 @@ Two runs (the maximum): $2.56 at 2/7, $1.91 at 6/7. The failure was "₱25–45k
 ## 2026-09-18 · The UI is frozen as it is live; the page layout is parked
 
 After a render of the answer as a page under the mark (P2S.8, written the same day), the owner: *"actually no more changing how our ui works i like it right now."* P2S.8 is parked, not deleted; the render stays as the record. The remaining cards (P2S.9 fewer rounds, P2S.10 three tools, P2S.11 what he is told) change how George works underneath, not the screen — where one would touch the screen (P2S.11's memory list), it uses the screen that exists.
+
+## 2026-09-18 · Dogfood: the room runs to the line, shows all his words, your question, and a way back
+
+Four fixes to the room as it is live; the UI freeze covers redesign, not these (`5b40454`).
+**All of what he said is drawn**: the one-tap rest (2026-09-17) hid words the column had room for. The rest printed `**` because sentences were cut from raw text; they are cut from the unmarked text, each carrying its share of his emphasis.
+**Your question is drawn in your words**, never worded by the room; an answer nobody asked for draws none.
+**Going back is a view, not a request**: an earlier answer is redrawn by `buildBoard` over the stored turns up to it, no model call and no read. Asking from there sends the board as drawn and returns to the newest.
